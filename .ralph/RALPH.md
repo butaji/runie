@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 10 of 100
+- Iteration: 11 of 100
 - Prompt file: /Users/admin/Code/GitHub/rune/EXECUTE.md
-- Updated: 2026-05-16T18:01:31.118Z
+- Updated: 2026-05-16T18:15:55.159Z
 
 ## Iteration progression
 
@@ -485,4 +485,50 @@ cargo rune build examples/todox
 - Added new modules: `calls.rs`, `infer.rs`, `literals.rs`
 
 **Not pushed** per spec requirement. The transpiler produces reasonable Rust code for the zero-overhead TypeScript subset, with remaining work on type inference for complex expressions.
+```
+
+### Iteration 11
+
+```text
+## Summary
+
+I've made significant progress on the Rune transpiler. Here's what was fixed:
+
+### Changes Made
+
+**1. File Path Generation (`crates/rune/src/driver/write.rs`)**
+- Fixed `cache_relative_path` to correctly strip the `.r` suffix from file stems (e.g., `main.r.ts` → `main.r` → `main.rs`)
+- Files now correctly go to `.rune-cache/src/generated/` instead of `.rune-cache/generated/`
+
+**2. Assignment Expression Handling (`crates/rune/src/codegen/emitter/expressions.rs`)**
+- Fixed `emit_assign_expr` to handle `AssignTarget` type from SWC AST
+- Added proper handling for `SimpleAssignTarget::Ident` and `SimpleAssignTarget::Member`
+- Fixed assign target emission with proper pattern matching
+
+**3. Type Inference Improvements (`crates/rune/src/codegen/emitter/infer.rs`)**
+- Conditional expressions now infer non-unit types when one branch returns a value
+- Array element types now properly inferred with correct element type (e.g., `Vec<Task>`)
+
+**4. Object Literal Handling (`crates/rune/src/codegen/emitter/members.rs`)**
+- Added spread source detection for struct updates (`{...task, done: !task.done}`)
+- Proper handling of object property emissions
+
+### Current State
+
+The transpiler now:
+- ✅ Scans for `*.r.ts` and `*.r.tsx` files
+- ✅ Parses TypeScript with SWC
+- ✅ Generates Rust source in correct location with correct names
+- ✅ Invokes `cargo build` on the generated crate
+- ⚠️ Generated Rust code has some issues with object literals needing struct name prefixes
+
+### Remaining Work
+
+To fully complete the spec:
+1. Object literals need struct name context from function return types
+2. Result types need full qualification (`Result<T, E>` not just `Result`)
+3. Type coercion for comparisons (`trimmed.len() == 0i32` → `trimmed.is_empty()`)
+4. Complete implementation of all TypeScript subset features
+
+The project compiles and the CLI works. The core architecture is in place - the main remaining work is in the AST-to-Rust code generation layer.
 ```
