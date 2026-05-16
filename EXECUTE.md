@@ -1,6 +1,6 @@
 Spec: rune_spec_v1.md -- readonly! echa task == commit, dont push.
 
-Build a Rust compiler driver named rune that makes *.r.ts and *.r.tsx valid source files for Rust projects with zero runtime overhead. Implement as a cargo subcommand (cargo-rune).
+Build a Rust compiler driver named rune that makes *.r.ts and *.r.tsx valid source files for Rust projects with zero runtime overhead. Implement as a cargo subcommand (cargo-rune). Use latest stable rust version.
 
 Core behavior. cargo rune dev scans the workspace for *.r.ts and *.r.tsx, parses them with SWC into valid TS AST, validates the zero-overhead subset (no any, no class, no try/catch, no dynamic property access, no var, no loose ==), transpiles to Rust source into target/rune-cache/ (never in the source tree), and compiles the target crate as a cdylib for hot reload. cargo rune build --release transpiles inline and produces a single static binary indistinguishable from hand-written Rust.
 
