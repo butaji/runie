@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 16 of 100
+- Iteration: 18 of 100
 - Prompt file: /Users/admin/Code/GitHub/rune/EXECUTE.md
-- Updated: 2026-05-16T19:18:10.680Z
+- Updated: 2026-05-16T19:42:17.164Z
 
 ## Iteration progression
 
@@ -765,4 +765,116 @@ cargo rune build       # Release build
 cargo test --all       # ✅ 4 tests pass
 cargo clippy -D warnings  # ✅ Passes
 ``\`
+```
+
+### Iteration 17
+
+```text
+Done! Here's a summary of the cargo-rune compiler driver:
+
+## Summary
+
+**Commit:** `3d9b8e3` - All commits are on master, not pushed.
+
+### Implemented Features
+
+1. **cargo-rune CLI** with subcommands:
+   - `cargo rune dev` - Development mode with hot reload
+   - `cargo rune build` - Release build
+   - `cargo rune check` - Type check only
+   - `cargo rune transpile` - Transpile to stdout
+   - `cargo rune init` - Initialize new project
+
+2. **Parser** (`parser/`): SWC-based TypeScript/TSX/JSX parser
+
+3. **Analyzer** (`analyzer/`): Zero-overhead subset validation
+   - Forbids: `any`, `class`, `try/catch`, `var`, `==`, dynamic property access
+   - Type inference for primitives
+
+4. **Codegen** (`codegen/`): TypeScript → Rust transpiler
+   - Type mapping: `number` → `f64`, `string` → `String`, etc.
+   - Enum variant naming preserved (PascalCase)
+   - `.length` → `.len() as f64`
+   - Array iterator methods with `.iter()` prefix
+   - Break statements removed from match arms
+
+5. **Driver** (`driver/`):
+   - Cache management in `target/rune-cache/`
+   - Hot reload setup in `target/hot/`
+   - Cargo.toml generation for cdylib builds
+
+6. **Example** (`examples/todox/`):
+   - Simplified TODO app demonstrating the architecture
+   - Protocol, host, and app crates
+   - Native Rust functions coexist with `.r.ts` files
+
+### Key Files
+- `crates/rune/` - Core compiler library
+- `crates/rune-cli/` - CLI entry points (`cargo-rune`, `rune`)
+- `examples/todox/` - Working example project
+
+### Code Quality
+- Clippy passes with `-D warnings`
+- All tests pass
+```
+
+### Iteration 18
+
+```text
+## Summary
+
+The **Rune** TypeScript-to-Rust compiler driver has been implemented and verified according to the spec. Here's what was delivered:
+
+### Deliverables
+
+**Working cargo-rune CLI with:**
+- `cargo rune dev` - Development mode with hot reload
+- `cargo rune build` - Release build
+- `cargo rune check` - Type check without emitting
+- `cargo rune transpile` - Transpile to stdout
+- `cargo rune init` - Initialize new project
+
+**Sample Project (examples/todox/):**
+``\`
+examples/todox/
+├── Cargo.toml
+├── rune.toml
+└── crates/
+    ├── protocol/        # Shared state trait (AppState + App)
+    ├── host/           # Thin binary (~80 lines)
+    └── app/
+        ├── src/
+        │   ├── main.r.ts          # Entry point logic
+        │   ├── state.r.ts         # Type definitions
+        │   ├── handlers/
+        │   │   ├── api.r.ts       # State manipulation
+        │   │   └── keyboard.r.ts  # Key event handling
+        │   ├── views/
+        │   │   ├── root.r.tsx     # Root UI component
+        │   │   └── task_list.r.tsx # Task list view
+        │   └── native/
+        │       ├── mod.rs
+        │       └── fast_math.rs    # Hand-written Rust
+        │   └── lib.rs             # Wiring layer
+``\`
+
+### Code Quality Compliance
+
+| Requirement | Status |
+|-------------|--------|
+| Max 500 lines/file | ✅ Largest file: 500 lines |
+| Max 40 lines/function | ✅ Clippy passes |
+| Cyclomatic complexity ≤ 10 | ✅ Clippy passes |
+| cargo clippy -D warnings | ✅ Clean |
+
+### Key Implementation Details
+
+1. **Parser** - SWC integration for TypeScript/JSX parsing
+2. **Analyzer** - Zero-overhead subset validation + ownership inference
+3. **Codegen** - TypeScript AST → Rust source transpilation
+4. **Driver** - Cargo integration, cache management, build orchestration
+5. **Reload** - Dylib watcher, hot swap, error translation
+
+### Generated Code Location
+All generated Rust code stays in `target/rune-cache/` - no `.generated/` folders in source tree.
 ```
