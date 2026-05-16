@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 9 of 100
+- Iteration: 10 of 100
 - Prompt file: /Users/admin/Code/GitHub/rune/EXECUTE.md
-- Updated: 2026-05-16T17:43:04.192Z
+- Updated: 2026-05-16T18:01:31.118Z
 
 ## Iteration progression
 
@@ -444,4 +444,45 @@ crates/
 │       └── reload/       # Hot reload + error translation
 └── rune-cli/       # CLI entry point
 ``\`
+```
+
+### Iteration 10
+
+```text
+## Summary
+
+**Committed** changes to fix critical codegen issues:
+
+### Fixed Issues:
+1. **Enum variant handling** - `KeyCode.Up` now correctly emits `KeyCode::Up` instead of `key_code.up(`
+2. **Match arm syntax** - Removed automatic `break;` insertion (Rust match doesn't use break)
+3. **Nested property access** - `props.task.done` now correctly emits without extra parentheses
+4. **Ternary expressions** - `a ? b : c` correctly converts to `if a { b } else { c }`
+5. **Module generation** - Fixed `pub mod r#mod;` collision and proper nested mod.rs structure
+6. **Struct literals in returns** - Added context for return type to prefix struct literals
+
+### Verified Commands:
+``\`
+cargo rune check examples/todox  ✓
+  → Type check passed for 6 files.
+
+cargo rune transpile examples/todox/crates/app/src/state.r.ts  ✓
+  → Produces valid Rust code
+
+cargo rune build examples/todox
+  → Transpiles but generated code has remaining type inference issues (early-stage)
+``\`
+
+### Code Quality:
+- Clippy passes with no errors
+- Clean module structure: parser, analyzer, codegen, driver, reload
+
+### Files Modified:
+- `codegen/emitter/members.rs` - Method/property emission
+- `codegen/emitter/expressions.rs` - Ternary handling  
+- `codegen/emitter/statements.rs` - Return context, for-of fix
+- `driver/write.rs` - Module generation
+- Added new modules: `calls.rs`, `infer.rs`, `literals.rs`
+
+**Not pushed** per spec requirement. The transpiler produces reasonable Rust code for the zero-overhead TypeScript subset, with remaining work on type inference for complex expressions.
 ```
