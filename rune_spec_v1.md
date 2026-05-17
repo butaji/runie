@@ -482,12 +482,26 @@ while (active) {
 
 ### 3.6 JSX / TSX (UI Layer)
 
-Standard JSX syntax. Maps to Rust function calls returning widget types.
+Standard JSX syntax. Emitted as ratatui builder chains with zero overhead.
+
+Supported widgets: `Paragraph`, `Block`, `List`, `ListItem` (extensible fallback for unknown tags).
+
+| JSX attribute | Ratatui mapping |
+|---|---|
+| `text="…"` | `Widget::new("…")` |
+| `title="…"` | `.title("…")` |
+| `borders="ALL"` | `.borders(Borders::ALL)` |
+| `border_type="rounded"` | `.border_type(BorderType::Rounded)` |
+| `alignment="center"` | `.alignment(Alignment::Center)` |
+| `style={…}` | `.style(…)` |
+
+Nesting rules:
+- `<Block>` wrapping a child → `.block(Block::bordered()…)` on the child
+- `<List>` with `<ListItem>` children → `List::new(vec![…])`
+- `<ListItem>` text children → `ListItem::new(text)`
 
 ```tsx
 // views/root.r.tsx
-import { Block, List, ListItem } from "rune/ui";
-
 interface Props {
   tasks: Task[];
   selected: number;
@@ -495,7 +509,7 @@ interface Props {
 
 export function RootView(props: Props): Widget {
   return (
-    <Block title="TODOX" borders="single">
+    <Block title="TODOX" borders="ALL">
       <List selected={props.selected}>
         {props.tasks.map((task, i) => (
           <ListItem bold={i === props.selected}>
@@ -511,6 +525,7 @@ export function RootView(props: Props): Widget {
 
 **Emitted:**
 ```rust
+use ratatui::layout::Alignment;
 use ratatui::widgets::{Block, Borders, List, ListItem};
 use ratatui::style::{Style, Modifier};
 
@@ -521,14 +536,12 @@ pub struct RootViewProps<'a> {
 
 pub fn root_view(props: &RootViewProps) -> impl ratatui::widgets::Widget {
     let items: Vec<ListItem> = props.tasks.iter().enumerate().map(|(i, task)| {
-        let bold = i == props.selected;
         let text = format!("{}{}", if task.done { "[x] " } else { "[ ] " }, task.title);
-        let style = if bold { Style::new().add_modifier(Modifier::BOLD) } else { Style::default() };
-        ListItem::new(text).style(style)
+        ListItem::new(text)
     }).collect();
 
     List::new(items)
-        .block(Block::default().title("TODOX").borders(Borders::SINGLE))
+        .block(Block::bordered().title("TODOX").borders(Borders::ALL))
         .highlight_symbol(">")
 }
 ```
