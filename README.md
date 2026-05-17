@@ -135,12 +135,25 @@ myproject/
 
 ## Examples
 
-See `examples/todox/` for a complete TODO application with:
+See `rune_framework_examples.md` for 12 framework-specific examples showing zero-overhead TS→Rust mappings:
 
-- `.r.ts` logic files
-- `.r.tsx` Ratatui views
-- `.rs` native math functions
-- Full hot reload support
+| # | Framework | Pattern |
+|---|---|---|
+| 1 | Axum | REST API with extractors |
+| 2 | Actix-web | Scope-based routing |
+| 3 | Ratatui + clap | TUI dashboard |
+| 4 | Tauri | Desktop commands |
+| 5 | Dioxus | Cross-platform UI |
+| 6 | egui | Immediate-mode tools |
+| 7 | Leptos | Full-stack reactive |
+| 8 | Yew | Component-based WASM |
+| 9 | Bevy | ECS game systems |
+| 10 | SQLx | Compile-time checked DB |
+| 11 | Tonic | gRPC services |
+| 12 | Candle | LLM inference |
+
+Source files live in `examples/01_axum_api/` through `examples/12_candle_infer/`.
+Tests in `framework_example_tests.rs` verify each example parses and emits key patterns.
 
 ## Architecture
 
