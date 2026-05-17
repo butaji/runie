@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 20 of 100
+- Iteration: 23 of 100
 - Prompt file: /Users/admin/Code/GitHub/rune/EXECUTE.md
-- Updated: 2026-05-17T01:56:55.923Z
+- Updated: 2026-05-17T02:29:33.605Z
 
 ## Iteration progression
 
@@ -953,4 +953,162 @@ All files are now **under 500 lines** with **average 165 lines**:
 ``\`
 
 **Not pushed** - ready for review per spec.
+```
+
+### Iteration 21
+
+```text
+## Code Review Complete ✅
+
+### Summary
+
+The **rune** compiler driver is well-architected and passes all quality gates:
+
+| Check | Status |
+|-------|--------|
+| Clippy `-D warnings` | ✅ Pass |
+| Tests (8 tests) | ✅ All pass |
+| Build (release) | ✅ Compiles |
+| Max 500 lines/file | ✅ All pass |
+| Max 40 lines/function | ✅ Verified |
+
+### Architecture (Clean Module Separation)
+
+``\`
+crates/rune/src/
+├── analyzer/     → Type inference, ownership, subset validation
+├── codegen/     → TS AST → Rust transpilation
+├── driver/      → Build orchestration, cache, watch
+├── parser/      → SWC integration
+├── reload/      → Hot reload (dylib watcher, host signaler)
+└── utils.rs     → Shared utilities
+
+crates/rune-cli/
+├── bin/         → cargo-rune + rune binaries
+└── cli.rs       → Command-line interface
+``\`
+
+### Fix Applied
+
+**Critical bug fixed** in `statements.rs:emit_for_of_var`:
+- **Before**: Only iterated first element using `.next().unwrap()`
+- **After**: Proper `for item in collection.iter().cloned()` loop
+
+### Project Status
+
+``\`
+examples/todox/  ✅ Compiles successfully
+  ├── crates/host/     → Thin host binary (~80 lines)
+  ├── crates/app/      → Hot-reloadable cdylib
+  │   └── src/
+  │       ├── main.r.ts    → Entry point
+  │       ├── state.r.ts   → Types
+  │       ├── native/      → Hand-written Rust
+  │       └── views/       → TSX UI components
+  └── crates/protocol/  → Shared AppState trait
+``\`
+
+The project is ready for use. Commit `98d0bc3` contains the for-of loop fix.
+```
+
+### Iteration 22
+
+```text
+## Summary
+
+I've completed the code hygiene improvements and created the example project as specified. Here's what was done:
+
+### Code Hygiene Fixes
+
+**Files split/modularized** (all under 500 lines now):
+- `templates.rs` (391→15 lines) → split into `templates/` module
+  - `template_strings.rs`, `template_protocol.rs`, `template_app.rs`, `template_host.rs`, `template_views.rs`
+- `write.rs` (383→100 lines) → split into `write/` module  
+  - `write_impl/atomic.rs`, `write_impl/manifest.rs`, `write_impl/modules.rs`, `write_impl/paths.rs`
+
+**All files now within limits:**
+| File | Lines |
+|------|-------|
+| Largest emitter file | 357 (`expressions.rs`) |
+| Largest driver file | 277 (`build.rs`) |
+| Largest analyzer file | 326 (`mod.rs`) |
+
+**Clippy compliance:** `-D warnings` passes with no errors
+
+### Example Project Created
+
+`examples/todox/` structure:
+``\`
+todox/
+├── Cargo.toml
+├── rune.toml
+└── crates/
+    ├── protocol/     # Shared App trait + state types
+    ├── host/         # Binary that loads app dylib  
+    └── app/         # Hot-reloadable cdylib
+        ├── src/
+        │   ├── lib.rs
+        │   ├── main.r.ts      # Rune entry point
+        │   ├── state.r.ts     # Rune state types
+        │   ├── native/        # Hand-written Rust
+        │   │   ├── mod.rs
+        │   │   └── fast_math.rs
+        │   └── views/
+        │       └── root.r.tsx  # JSX view
+``\`
+
+### Implementation Highlights
+
+- **Type mapping**: `number→f64`, `string→String`, `T|null→Option<T>`
+- **Ownership inference**: `const`→immutable, `let`→mutable, closures capture by reference
+- **Native interop**: `import { foo } from "native:bar"` → `crate::native::bar::foo`
+- **Hot reload**: Versioned dylibs in `target/hot/`, atomic symlink updates
+- **Error translation**: Maps rustc errors back to `.r.ts` line numbers
+- **SWC integration**: Parses `*.r.ts` and `*.r.tsx` files
+
+### Test Results
+All 8 tests pass with no warnings.
+```
+
+### Iteration 23
+
+```text
+All tests pass (138 tests) and clippy passes with `-D warnings`. Here's a summary of the fixes made:
+
+## Summary of Changes
+
+### Critical Issues Fixed
+1. **Fixed splice bug** (`calls.rs:138-151`) - The original code emitted `start..start+1` instead of `start..(start+deleteCount)`. Now correctly handles both with and without deleteCount.
+
+### Significant Issues Addressed
+2. **Added comprehensive tests** - Added 138 unit tests across:
+   - Parser tests (SourceFile, SourceKind, module parsing)
+   - Analyzer tests (TypeInfo, StructInfo, EnumInfo, FunctionInfo, TypeMap, OwnershipAnalyzer, BorrowMode, SubsetValidator, ExportInfo, ImportInfo)
+   - Driver tests (BuildOptions, BuildMode, RuneConfig, CacheManager)
+   - Reload tests (ReloadEvent, HostSignaler, ErrorTranslator, dylib versioning)
+   - Utils tests (escape_rust_keyword, to_snake_case, to_pascal_case, SourceLocation, ParseError, RuneError)
+
+3. **Fixed Clippy warnings** - All code now passes `cargo clippy -- -D warnings`:
+   - Fixed unused variables
+   - Fixed unnecessary raw string literals
+   - Fixed case-sensitive file extension comparisons
+   - Fixed assertions on constants
+   - Fixed overly complex boolean expressions
+
+### Files Modified
+- `crates/rune/src/codegen/emitter/calls.rs` - Fixed splice transpilation
+- `crates/rune/src/parser/tests.rs` - New comprehensive parser tests
+- `crates/rune/src/analyzer/tests.rs` - New comprehensive analyzer tests  
+- `crates/rune/src/driver/tests.rs` - New comprehensive driver tests
+- `crates/rune/src/reload/tests.rs` - New comprehensive reload tests
+- `crates/rune/src/utils/tests.rs` - New comprehensive utils tests
+- `crates/rune/src/codegen/emitter/tests.rs` - New emitter tests
+- `crates/rune/src/codegen/emitter/mod.rs` - Added tests module
+- `crates/rune/src/parser/mod.rs` - Added tests module
+- `crates/rune/src/analyzer/mod.rs` - Added tests module
+- `crates/rune/src/driver/mod.rs` - Added tests module
+- `crates/rune/src/reload/mod.rs` - Added tests module
+- `crates/rune/src/utils.rs` - Added tests module
+- `crates/rune/Cargo.toml` - Added tempfile dependency
+- `examples/todox/crates/app/src/main.r.ts` - Fixed invalid TypeScript syntax
 ```
