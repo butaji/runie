@@ -8,7 +8,6 @@ crate-type = ["lib"]
 
 [dependencies]
 protocol = { workspace = true }
-ratatui = { workspace = true }
-crossterm = { workspace = true }
+tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

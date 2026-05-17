@@ -1,14 +1,8 @@
 [package]
-name = "app"
+name = "protocol"
 version.workspace = true
 edition.workspace = true
 
-[lib]
-crate-type = ["lib"]
-
 [dependencies]
-protocol = { workspace = true }
-ratatui = { workspace = true }
-crossterm = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
