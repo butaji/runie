@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 10 of 100
+- Iteration: 14 of 100
 - Prompt file: /Users/admin/Code/GitHub/rune/EXECUTE.md
-- Updated: 2026-05-17T06:14:37.737Z
+- Updated: 2026-05-17T07:13:57.368Z
 
 ## Iteration progression
 
@@ -578,4 +578,169 @@ I've reviewed and fixed the Rune project according to the specification in `rune
 - **Examples**: All 7 compile successfully
 - **Architecture**: Clean separation (parser, analyzer, codegen, driver, reload)
 - **Documentation**: Spec file `rune_spec_v1.md` is comprehensive
+```
+
+### Iteration 11
+
+```text
+I've completed the code hygiene fixes and refactoring. Here's the summary:
+
+## Changes Made
+
+### 1. Clippy Fixes (`integration_tests.rs`)
+- Fixed 19 unnecessary raw string literals (`r#"..."#` → `"..."`)
+- Fixed unused variable warning
+
+### 2. Function Complexity Reduction (`statements.rs`)
+- Refactored `emit_for_stmt` (63 lines → 6 lines) into smaller helper functions:
+  - `emit_counting_loop` - generates Rust range-based loops
+  - `emit_while_fallback_for_loop` - converts for loops to while loops
+  - `emit_for_init`, `emit_var_init_list`, `emit_var_declaration` - variable initialization
+  - `emit_while_with_update`, `emit_loop_condition`, `emit_update_expr` - while loop generation
+  - `try_parse_counting_loop`, `extract_comparison`, `is_increment`, `expr_to_string` - pattern matching
+
+### 3. File Size Compliance
+- All files now under 500 lines
+- All functions under 40 lines
+- All 240 tests pass
+- Clippy clean with `-D warnings`
+
+### 4. Example Fix (`root.r.tsx`)
+- Fixed invalid TypeScript syntax (Rust `::` namespace syntax)
+- Changed to valid JSX syntax (`<Paragraph text={...} />`)
+- Now transpiles correctly to Rust widget construction
+
+### Test Results
+``\`
+running 240 tests
+test result: ok. 240 passed; 0 failed
+``\`
+
+### Clippy Status
+``\`
+cargo clippy --all-targets -D warnings  # Clean
+``\`
+
+The codebase is now compliant with the spec's code hygiene requirements: max 500 lines/file, max 40 lines/function, max 10 complexity, and strict Clippy enforcement.
+```
+
+### Iteration 12
+
+```text
+**Summary of changes:**
+
+**Code Hygiene:**
+- All source files are now under 500 lines
+- Split the large `example_validation_tests.rs` (694 lines) into a modular structure:
+  - `state_tests.rs` (271 lines) - state management examples
+  - `expression_tests.rs` (208 lines) - expression/type examples  
+  - `feature_tests.rs` (221 lines) - feature examples
+  - `mod.rs` (7 lines) - module declaration
+
+**Comprehensive Test Coverage:**
+- Added 17 new example validation tests covering:
+  - **State Management:** todox, ui_demo, data_processing, ratatui, async_http
+  - **Expressions:** hello_world, calculator, keyboard handling, native imports, Option/Result patterns
+  - **Features:** arrays, strings, closures, control flow (for/while/if), objects, maps
+
+**Verification:**
+- All 257 tests pass
+- No clippy warnings
+- All source files under 500 lines
+- Examples verified: hello_world, calculator, todox, ratatui_demo, ui_demo, async_http, data_processing
+
+**Committed:** `7e32477` - Add comprehensive example validation tests
+```
+
+### Iteration 13
+
+```text
+**Summary of changes made:**
+
+## Critical Fixes
+
+**1. Array subscript bug** (`members.rs` + `calls.rs`)
+- `arr[idx]` and `arr.get(idx)` were both emitting `.get(idx)` which returns `Option<&T>`, not `&T`. Fixed: both now emit direct `[idx as usize]` indexing (matches JS semantics).
+- Also removed 6 dead helper functions (`is_identifier_with_array_type`, `infer_type_from_expr`, etc.).
+
+**2. Result pattern return type** (`type_resolver.rs` + `members.rs`)
+- Union return types like `| {ok:true, value:T} | {ok:false, error:E}` were being resolved as `()` (Unknown). Added Result pattern detection in `resolve_union` → now correctly emits `Result<f64, String>` in function signatures.
+- Added `is_result_type_name` check in `emit_object` → `{ok:true, value:x}` now emits `Ok(x)` instead of `Result<...> {ok:true, value:x}`.
+
+**3. Array slice single-arg missing bracket** (`calls.rs`)
+- `arr.slice(0)` was emitting `arr.as_slice()[0..` without closing bracket. Fixed to emit `arr.as_slice()[0..arr.len() as usize]`.
+
+## Test Coverage
+
+Added 14 new comprehensive codegen tests covering:
+- Array subscript direct indexing (no `.get()`)
+- `arr.get(idx)` → `[idx]`
+- Array `.slice()` with both single and range args
+- String `+` concatenation → `format!`
+- Result pattern → `Ok(...)` / `Err(...)`
+- Tagged union switch → `match` with PascalCase variants
+- `for...of` → `.iter()`
+- `native:` imports → `crate::native::`
+- `Option<T>` in signatures
+- `async fn` generation
+
+## Final State
+
+| Metric | Result |
+|--------|--------|
+| Tests | **267 passing** (↑ from 257) |
+| Clippy | **0 warnings** |
+| Max file size | **<500 lines** (all files) |
+| Max fn size | **<40 lines** (enforced by clippy) |
+| Complexity | **<10** (enforced by clippy) |
+| Examples | **7 build successfully** |
+```
+
+### Iteration 14
+
+```text
+## Summary
+
+I've completed the task of fixing critical and major issues in the Rune compiler driver. Here's what was done:
+
+### Critical Fixes
+
+1. **Fixed missing variable declaration handling in function bodies** (`statements.rs`)
+   - Added `Stmt::Decl` case to `emit_body_stmt` to properly emit variable declarations inside functions
+   - This was causing variable declarations like `const n = parseFloat(s)` to not be emitted
+
+2. **Fixed `parseFloat` type inference** (`infer.rs`)
+   - Added `parseFloat` to the list of recognized built-in functions
+   - Now correctly infers return type as `Option<f64>`
+
+3. **Fixed `Record<K, V>` type resolution** (`variables.rs`)
+   - Added `resolve_generic_type_ref` function to handle generic type parameters
+   - `Record<string, number>` now correctly resolves to `std::collections::HashMap<String, f64>`
+
+4. **Fixed `number | null` union type resolution** (`variables.rs`)
+   - Added `resolve_union_type` to convert TS union types like `number | null` to Rust `Option<f64>`
+
+5. **Fixed HashMap subscript access** (`members.rs`, `infer.rs`)
+   - HashMap subscript `vars[key]` now correctly emits `.get(&key).copied().unwrap_or_default()`
+   - Added type inference for computed property access on HashMap types
+
+6. **Fixed `.get()` method return type inference** (`infer.rs`)
+   - `unwrap_hashmap_value` extracts the value type from `HashMap<K, V>` correctly
+
+### Code Quality
+
+- All 267 tests pass
+- Clippy passes with `-D warnings`
+- All files under 500 lines (max is 472 for `statements.rs`)
+- All examples build and pass type checking
+
+### Examples Status
+
+All 7 examples (`hello_world`, `calculator`, `data_processing`, `async_http`, `ratatui_demo`, `todox`, `ui_demo`) build and type-check successfully. Warnings about dynamic property access (`obj[key]`) are expected per the spec - this is the forbidden subset that triggers warnings.
+
+### Known Limitations
+
+1. **Type inference for function parameters**: When a variable's type cannot be determined from context (e.g., function parameters), the type defaults to `()`. Users should add explicit type annotations for better results.
+
+2. **Arrow function expressions in certain contexts**: Arrow functions used as values (not as callback parameters) may need explicit typing.
 ```
