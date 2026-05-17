@@ -31,7 +31,7 @@ Status: **Deferred to Phase 2** - Requires significant refactoring of AstWalker.
 
 **Files changed**:
 - `crates/rune/src/driver/templates/template_host.rs`
-- `examples/todox/crates/host/src/main.rs`
+- `examples/todox/crates/host/src/main.rs` (old example, since replaced by framework examples in `examples/01_*` through `examples/12_*`)
 
 ```rust
 fn create_app(&self) -> Box<dyn App> {
