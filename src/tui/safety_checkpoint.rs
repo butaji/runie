@@ -23,21 +23,13 @@ pub enum RiskLevel {
 }
 
 impl RiskLevel {
+    /// Human-readable label for the risk level
     fn label(&self) -> &'static str {
         match self {
             RiskLevel::Low => "LOW",
             RiskLevel::Medium => "MEDIUM",
             RiskLevel::High => "HIGH",
             RiskLevel::Critical => "CRITICAL",
-        }
-    }
-
-    fn color(&self) -> Color {
-        match self {
-            RiskLevel::Low => Color::Green,
-            RiskLevel::Medium => Color::Yellow,
-            RiskLevel::High => Color::Red,
-            RiskLevel::Critical => Color::Red,
         }
     }
 

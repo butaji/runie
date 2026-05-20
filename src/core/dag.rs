@@ -1,6 +1,7 @@
 //! DAG executor - structured concurrency for plan execution
 //! Uses tokio for parallel task execution with cancellation propagation
 
+use super::git::GitOps;
 use super::plan::{Action, Plan, PlanStep};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -54,6 +55,8 @@ impl StepResult {
 pub struct ExecContext {
     pub working_dir: std::path::PathBuf,
     pub model_id: String,
+    /// Git operations for committing completed work
+    pub git: Option<GitOps>,
 }
 
 /// Callback for step execution
@@ -102,6 +105,7 @@ impl DagExecutor {
         let ctx_clone = ExecContext {
             working_dir: ctx.working_dir.clone(),
             model_id: ctx.model_id.clone(),
+            git: ctx.git.clone(),
         };
         let plan = self.plan.clone();
 
@@ -267,8 +271,12 @@ pub fn execute_action(action: &Action, ctx: &ExecContext) -> anyhow::Result<Stri
             Ok(format!("Build target '{}' would run here", target_str))
         }
         Action::Commit { message } => {
-            let msg = message.as_deref().unwrap_or("Auto-commit from anvil");
-            Ok(format!("Would commit with message: {}", msg))
+            let msg = message.as_deref().unwrap_or("[anvil] auto-commit | task complete");
+            if let Some(ref git) = ctx.git {
+                git.commit(msg)
+            } else {
+                Ok(format!("Would commit with message: {}", msg))
+            }
         }
         Action::AskHuman { question } => Ok(format!("Waiting for human input: {}", question)),
         Action::Review => Ok("Review step completed".to_string()),
@@ -289,6 +297,7 @@ mod tests {
         let ctx = ExecContext {
             working_dir: std::path::PathBuf::from("."),
             model_id: "test".to_string(),
+            git: None,
         };
 
         let results = executor.execute(&ctx).await.unwrap();
@@ -310,6 +319,7 @@ mod tests {
         let ctx = ExecContext {
             working_dir: std::path::PathBuf::from("."),
             model_id: "test".to_string(),
+            git: None,
         };
 
         // Cancel immediately
@@ -326,6 +336,7 @@ mod tests {
         let ctx = ExecContext {
             working_dir: std::path::PathBuf::from("."),
             model_id: "test".to_string(),
+            git: None,
         };
 
         let action = Action::Review;

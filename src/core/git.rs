@@ -79,6 +79,7 @@ impl Worktree {
 }
 
 /// Git operations for anvil
+#[derive(Clone)]
 pub struct GitOps {
     repo_path: PathBuf,
 }

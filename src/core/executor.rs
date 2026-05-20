@@ -2,6 +2,7 @@
 //! Connects the parser/generator/executor to the TUI via tokio channels
 
 use crate::core::dag::{DagExecutor, ExecContext, StepState};
+use crate::core::git::GitOps;
 use crate::core::intent::Intent;
 use crate::core::plan::Plan;
 use crate::script::runtime::JsRuntime;
@@ -274,9 +275,13 @@ impl Executor {
         let current_model = model_db.models.keys().next().cloned().unwrap_or_default();
         drop(model_db);
 
+        let working_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let git = GitOps::new(working_dir.clone());
+
         let ctx = ExecContext {
-            working_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
+            working_dir,
             model_id: current_model.clone(),
+            git: Some(git),
         };
 
         let executor = DagExecutor::new(plan.clone());

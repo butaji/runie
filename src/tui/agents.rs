@@ -31,25 +31,7 @@ pub enum AgentStatus {
     Done,
 }
 
-impl AgentStatus {
-    fn label(&self) -> &'static str {
-        match self {
-            AgentStatus::Running => "running",
-            AgentStatus::Waiting => "waiting",
-            AgentStatus::Blocked => "blocked",
-            AgentStatus::Done => "done",
-        }
-    }
 
-    fn color(&self) -> Color {
-        match self {
-            AgentStatus::Running => Color::Green,
-            AgentStatus::Waiting => Color::Yellow,
-            AgentStatus::Blocked => Color::Red,
-            AgentStatus::Done => Color::DarkGray,
-        }
-    }
-}
 
 /// Agent swarm panel — shown when ^a is pressed
 pub struct AgentsPanel {
@@ -456,23 +438,6 @@ mod tests {
         assert!(panel.panel_height() >= 12);
     }
 
-    #[test]
-    fn test_agent_status_colors() {
-        use ratatui::style::Color;
-        
-        assert_eq!(AgentStatus::Running.color(), Color::Green);
-        assert_eq!(AgentStatus::Waiting.color(), Color::Yellow);
-        assert_eq!(AgentStatus::Blocked.color(), Color::Red);
-        assert_eq!(AgentStatus::Done.color(), Color::DarkGray);
-    }
-
-    #[test]
-    fn test_agent_status_labels() {
-        assert_eq!(AgentStatus::Running.label(), "running");
-        assert_eq!(AgentStatus::Waiting.label(), "waiting");
-        assert_eq!(AgentStatus::Blocked.label(), "blocked");
-        assert_eq!(AgentStatus::Done.label(), "done");
-    }
 
     #[test]
     fn test_render_empty_when_hidden() {

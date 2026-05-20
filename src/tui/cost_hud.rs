@@ -81,12 +81,6 @@ impl CostHud {
                 let health = status.health.dots();
                 let model_bar = Self::progress_bar(model_pct, 10);
 
-                let _health_color = match status.health {
-                    crate::router::HealthLevel::Healthy | crate::router::HealthLevel::Good => Color::Green,
-                    crate::router::HealthLevel::Degraded => Color::Yellow,
-                    crate::router::HealthLevel::Critical => Color::Red,
-                };
-
                 lines.push(Line::from(vec![
                     Span::raw("│  "),
                     Span::styled(model_name, Style::new().fg(Color::White)),
