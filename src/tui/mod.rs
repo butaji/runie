@@ -6,11 +6,13 @@ mod cost_hud;
 mod header;
 mod help;
 mod input;
+mod skills;
 pub mod safety_checkpoint;
 mod selector;
 pub mod stream;
 
 pub use agents::AgentsPanel;
+pub use skills::SkillsPanel;
 pub use app::run;
 pub use command::{CommandAction, CommandPalette};
 pub use cost_hud::CostHud;

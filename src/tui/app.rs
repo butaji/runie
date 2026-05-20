@@ -2,7 +2,7 @@ use crate::core::safety::{SafetyConfig, SafetyEnvelope};
 use crate::router::ModelDatabase;
 use crate::tui::{
     AgentsPanel, CheckpointAction, CommandAction, CommandPalette, CostHud, Header,
-    HelpOverlay, Input, ModelSelector, SafetyCheckpoint, Stream,
+    HelpOverlay, Input, ModelSelector, SafetyCheckpoint, SkillsPanel, Stream,
 };
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -33,6 +33,8 @@ enum AppMode {
     CostHud,
     /// Agent swarm panel open
     Agents,
+    /// Skills panel open (Tab cycles tabs)
+    Skills,
     /// Help overlay open
     Help,
     /// Safety checkpoint blocking execution
@@ -50,6 +52,7 @@ pub struct App {
     agents_panel: AgentsPanel,
     help_overlay: HelpOverlay,
     safety_checkpoint: SafetyCheckpoint,
+    skills_panel: SkillsPanel,
     models: ModelDatabase,
     safety: SafetyEnvelope,
     mode: AppMode,
@@ -70,6 +73,7 @@ impl App {
             cost_hud: CostHud::new(),
             agents_panel: AgentsPanel::new(),
             help_overlay: HelpOverlay::new(),
+            skills_panel: SkillsPanel::new(),
             safety_checkpoint: SafetyCheckpoint::new(),
             models: ModelDatabase::new(),
             safety: SafetyEnvelope::new(SafetyConfig::default()),
@@ -104,20 +108,25 @@ impl App {
                 }
             }
 
-            // ── Mode cycling ────────────────────────────────
+            // ── Tab: toggle skills panel ──────────────────────
             KeyCode::Tab => {
-                self.mode = match self.mode {
-                    AppMode::Input => AppMode::Navigation,
-                    AppMode::Navigation => AppMode::Input,
-                    AppMode::CommandPalette | AppMode::ModelSelector
-                    | AppMode::CostHud | AppMode::Agents | AppMode::Help => AppMode::Input,
-                    AppMode::SafetyCheckpoint => AppMode::SafetyCheckpoint,
-                };
-                self.command_palette.hide();
-                self.model_selector.hide();
-                self.cost_hud.hide();
-                self.agents_panel.hide();
-                self.help_overlay.hide();
+                self.skills_panel.toggle();
+                if self.skills_panel.visible {
+                    self.mode = AppMode::Skills;
+                    self.command_palette.hide();
+                    self.model_selector.hide();
+                    self.cost_hud.hide();
+                    self.agents_panel.hide();
+                    self.help_overlay.hide();
+                } else {
+                    self.mode = AppMode::Input;
+                }
+            }
+
+            // ── Shift-Tab: switch to navigation mode ────────
+            KeyCode::BackTab => {
+                self.skills_panel.hide();
+                self.mode = AppMode::Navigation;
             }
 
             // ── ^h: jump to top ─────────────────────────────
@@ -191,6 +200,7 @@ impl App {
                 self.cost_hud.hide();
                 self.agents_panel.hide();
                 self.help_overlay.hide();
+                self.skills_panel.hide();
                 self.mode = AppMode::Input;
             }
 
@@ -221,6 +231,9 @@ impl App {
                 }
                 AppMode::Agents => {
                     self.agents_panel.handle_key(key.code);
+                }
+                AppMode::Skills => {
+                    self.skills_panel.handle_key(key);
                 }
                 AppMode::CostHud | AppMode::Help => {
                     // Only Esc closes these
@@ -489,6 +502,18 @@ pub fn run() -> anyhow::Result<()> {
                 let area = Rect::new(ax, ay, aw, ah);
                 f.render_widget(Clear, area);
                 f.render_widget(app.agents_panel.render(), area);
+            }
+
+            // ── Skills panel ─────────────────────────────────
+            if app.skills_panel.visible {
+                let sw = 55.min(size.width.saturating_sub(4));
+                let sh = app.skills_panel.panel_height()
+                    .min(size.height.saturating_sub(4));
+                let sx = (size.width - sw) / 2;
+                let sy = (size.height - sh) / 2;
+                let area = Rect::new(sx, sy, sw, sh);
+                f.render_widget(Clear, area);
+                app.skills_panel.render(f, area);
             }
 
             // ── Command palette ─────────────────────────────

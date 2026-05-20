@@ -72,11 +72,22 @@
 - [x] cargo build --release → succeeds
 - [x] git commit
 
-## Remaining Gaps (Phase 2+)
+## Phase 8: Core Execution Engine (2026-05-19) ✅ DONE
+- [x] Intent parser (src/core/intent.rs) - NL → typed Intent
+- [x] Plan generator (src/core/plan.rs) - static DAG from Intent
+- [x] DAG executor (src/core/dag.rs) - tokio JoinSet structured concurrency
+- [x] Skills panel (src/tui/skills.rs) - Tab cycles: Hooks | Plugins | Marketplace | Skills | MCP
+- [x] petgraph + regex dependencies added for DAG/graph operations
+- [x] 9 new unit tests for core execution engine (intent, plan, dag, skills)
+
+## Ralph Loop 2026-05-19 (4th pass) ✅ COMPLETE
+- [x] cargo check → passes
+- [x] 59 tests → all pass (42 original + 17 new)
+- [x] cargo build --release → succeeds
+- [x] git commit
+
+## Remaining Gaps
 - [ ] models.dev live API fetch at startup (fetch_from_models_dev() present, not called)
-- [ ] Real intent parser (NL → typed Intent)
-- [ ] Plan generator (static DAG)
-- [ ] DAG executor (dagx + tokio JoinSet)
-- [ ] rquickjs runtime integration (stubs present, not wired)
+- [ ] rquickjs runtime integration (stubs present in src/script/)
 - [ ] Git worktree wired into agent spawning
-- [ ] Skills panel (Tab cycles tabs)
+- [ ] Wire intent parser → plan generator → DAG executor into TUI execution flow
