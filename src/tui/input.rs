@@ -45,22 +45,19 @@ impl Input {
                 self.text.insert(self.cursor_position, c);
                 self.cursor_position += 1;
             }
-            crossterm::event::KeyCode::Backspace => {
-                if self.cursor_position > 0 {
+            crossterm::event::KeyCode::Backspace
+                if self.cursor_position > 0 => {
                     self.cursor_position -= 1;
                     self.text.remove(self.cursor_position);
                 }
-            }
-            crossterm::event::KeyCode::Left => {
-                if self.cursor_position > 0 {
+            crossterm::event::KeyCode::Left
+                if self.cursor_position > 0 => {
                     self.cursor_position -= 1;
                 }
-            }
-            crossterm::event::KeyCode::Right => {
-                if self.cursor_position < self.text.len() {
+            crossterm::event::KeyCode::Right
+                if self.cursor_position < self.text.len() => {
                     self.cursor_position += 1;
                 }
-            }
             crossterm::event::KeyCode::Enter => {
                 // Handled in app.rs via execute_input();
                 // just clear locally so stale text doesn't persist

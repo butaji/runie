@@ -174,23 +174,20 @@ impl Stream {
     pub fn handle_key(&mut self, key: crossterm::event::KeyCode, viewport_height: usize) {
         let vis_h = viewport_height.saturating_sub(4);
         match key {
-            crossterm::event::KeyCode::Char('j') | crossterm::event::KeyCode::Down => {
-                if self.selected < self.entries.len().saturating_sub(1) {
+            crossterm::event::KeyCode::Char('j') | crossterm::event::KeyCode::Down
+                if self.selected < self.entries.len().saturating_sub(1) => {
                     self.selected += 1;
                     self.ensure_selection_visible(vis_h);
                 }
-            }
-            crossterm::event::KeyCode::Char('k') | crossterm::event::KeyCode::Up => {
-                if self.selected > 0 {
+            crossterm::event::KeyCode::Char('k') | crossterm::event::KeyCode::Up
+                if self.selected > 0 => {
                     self.selected -= 1;
                     self.ensure_selection_visible(vis_h);
                 }
-            }
-            crossterm::event::KeyCode::Char(' ') => {
-                if self.selected < self.entries.len() {
+            crossterm::event::KeyCode::Char(' ')
+                if self.selected < self.entries.len() => {
                     self.entries[self.selected].expanded = !self.entries[self.selected].expanded;
                 }
-            }
             crossterm::event::KeyCode::PageDown => {
                 self.selected = (self.selected + vis_h).min(self.entries.len().saturating_sub(1));
                 self.ensure_selection_visible(vis_h);
@@ -224,7 +221,7 @@ impl Stream {
     }
 
     pub fn scroll_to_bottom(&mut self, viewport_height: usize) {
-        self.scroll_offset = self.line_count().saturating_sub(viewport_height as usize);
+        self.scroll_offset = self.line_count().saturating_sub(viewport_height);
         self.selected = self.entries.len().saturating_sub(1);
     }
 

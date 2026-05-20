@@ -91,8 +91,8 @@ impl SafetyCheckpoint {
             return Paragraph::new("");
         }
 
-        let _choices = vec!["Y", "n", "e"];
-        let _descriptions = vec!["Approve and continue", "Reject and pause", "Edit plan"];
+        let _choices = ["Y", "n", "e"];
+        let _descriptions = ["Approve and continue", "Reject and pause", "Edit plan"];
 
         let mut lines = vec![
             Line::from(vec![
@@ -191,19 +191,17 @@ impl SafetyCheckpoint {
             crossterm::event::KeyCode::Left | crossterm::event::KeyCode::Char('h') => {
                 self.selected = self.selected.saturating_sub(1);
             }
-            crossterm::event::KeyCode::Right | crossterm::event::KeyCode::Char('l') => {
-                if self.selected < 2 {
+            crossterm::event::KeyCode::Right | crossterm::event::KeyCode::Char('l')
+                if self.selected < 2 => {
                     self.selected += 1;
                 }
-            }
             crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
                 self.selected = self.selected.saturating_sub(1);
             }
-            crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
-                if self.selected < 2 {
+            crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j')
+                if self.selected < 2 => {
                     self.selected += 1;
                 }
-            }
             crossterm::event::KeyCode::Enter => {
                 let action = match self.selected {
                     0 => Some(CheckpointAction::Approve),

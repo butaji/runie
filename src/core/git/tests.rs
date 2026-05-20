@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn test_git_ops_new() {
         let repo_path = PathBuf::from("/tmp/test-repo");
-        let git_ops = GitOps::new(repo_path.clone());
+        let _git_ops = GitOps::new(repo_path.clone());
         
         // GitOps should be created without panicking
         assert!(true);

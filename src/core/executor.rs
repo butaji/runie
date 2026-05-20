@@ -154,7 +154,7 @@ impl PlanGenerator {
         let steps: Vec<PlanStep> = steps
             .iter()
             .enumerate()
-            .filter_map(|(i, v)| {
+            .map(|(i, v)| {
                 let id = v.get("id").and_then(|s| s.as_str()).unwrap_or("step");
                 let action_str = v.get("action").and_then(|s| s.as_str()).unwrap_or("review");
                 let action = match action_str {
@@ -181,7 +181,7 @@ impl PlanGenerator {
                     .and_then(|a| serde_json::from_value(a.clone()).ok())
                     .unwrap_or_default();
                 let step = PlanStep::new(&format!("{}_{}", id, i), action);
-                Some(step.after(&depends_on.join("")))
+                step.after(&depends_on.join(""))
             })
             .collect();
 

@@ -263,8 +263,7 @@ impl App {
         }
 
         // Route commands
-        if text.starts_with('/') {
-            let cmd = &text[1..];
+        if let Some(cmd) = text.strip_prefix('/') {
             let action = match cmd.trim_start_matches("spawn").trim() {
                 s if s.starts_with("spawn") => Some(CommandAction::Spawn),
                 "models" | "model" => Some(CommandAction::Models),
@@ -369,7 +368,7 @@ impl App {
         self.header.repo = self
             .current_model
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown")
             .to_string();
     }
@@ -402,19 +401,16 @@ impl App {
         self.models.track_spend(&self.current_model, amount);
         if let Err(violation) = self.safety.check_cost(amount) {
             // Trigger safety checkpoint
-            match violation {
-                crate::core::safety::SafetyViolation::CostExceeded { limit, actual } => {
-                    self.safety_checkpoint.show_with(
-                        format!(
-                            "Cost limit exceeded: ${:.2} > ${:.2}",
-                            actual, limit
-                        ),
-                        vec![],
-                        crate::tui::safety_checkpoint::RiskLevel::High,
-                    );
-                    self.mode = AppMode::SafetyCheckpoint;
-                }
-                _ => {}
+            if let crate::core::safety::SafetyViolation::CostExceeded { limit, actual } = violation {
+                self.safety_checkpoint.show_with(
+                    format!(
+                        "Cost limit exceeded: ${:.2} > ${:.2}",
+                        actual, limit
+                    ),
+                    vec![],
+                    crate::tui::safety_checkpoint::RiskLevel::High,
+                );
+                self.mode = AppMode::SafetyCheckpoint;
             }
         } else {
             self.safety.track_spend(amount);

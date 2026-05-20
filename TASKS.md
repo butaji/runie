@@ -95,5 +95,18 @@
 ## Remaining Gaps
 - [x] models.dev live API fetch at startup (fetch_from_models_dev() called in executor::init)
 - [x] rquickjs runtime integration (agent discovery, eval, run_agent_script)
-- [ ] Git worktree wired into agent spawning (GitOps/Worktree exist, not yet in TUI agents panel)
+- [x] Git worktree wired into agent spawning (AgentWorktree + spawn/cancel/view methods in AgentsPanel)
 - [x] Wire intent parser → plan generator → DAG executor into TUI execution flow
+
+## Ralph Loop 2026-05-19 (6th pass) ✅ COMPLETE
+- [x] cargo check → passes
+- [x] 89 tests → all pass (47 unit + 42 integration)
+- [x] cargo build --release → succeeds
+- [x] Git worktree wired into agents panel (AgentWorktree, spawn_agent, cancel_agent, selected_worktree)
+- [x] 8 new unit tests for git module, 12 new tests for agents panel with worktree support
+
+## Ralph Loop 2026-05-19 (7th pass) ✅ COMPLETE
+- [x] cargo check → passes
+- [x] 89 tests → all pass (47 unit + 42 integration)
+- [x] cargo build --release → succeeds
+- [x] All phases implemented and verified

@@ -110,11 +110,10 @@ impl ModelSelector {
                     self.selected = model_count.saturating_sub(1);
                 }
             }
-            crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
-                if self.selected < model_count.saturating_sub(1) {
+            crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j')
+                if self.selected < model_count.saturating_sub(1) => {
                     self.selected += 1;
                 }
-            }
             _ => {}
         }
     }
