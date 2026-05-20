@@ -138,4 +138,42 @@
 - [x] cargo clippy → 0 warnings
 - [x] 95 tests → all pass (53 unit + 42 integration)
 - [x] cargo build --release → 6.2MB binary
-- [x] git commit
+- [x] git commit (ec7f31b)
+
+## History Squash (2026-05-19) ✅ COMPLETE
+- Squashed 97 messy "test commit message" commits → 12 clean semantic commits
+- Commit structure:
+  - `d7d0ce0` feat: Anvil v0.1 - TUI for Agent Swarms (root)
+  - `a25f1ca` chore: early cleanup — re-exports, dead_code suppressors
+  - `f4438cc` feat: Phase 7 — UI completeness (help, cost HUD, agents, safety checkpoint)
+  - `43ea178` feat: Phase 8 — Core Execution Engine (dag executor, rquickjs, intent→plan→DAG)
+  - `f7d1510` feat: Phase 6 — git worktrees wired into agents panel
+  - `af2b4f7` fix: Phase 7 refinements (app, input, safety, agents, selector, stream)
+  - `e4cfd17` feat: Phase 9 — OODA router + models.dev integration
+  - `a20823d` fix: Phase 9 additions (executor wiring, agent packs CLI)
+  - `385fa21` docs: TASKS — Phase 9 verification and documentation
+  - `2414ff2` fix: dag executor + git tests + runtime wiring (final integration)
+  - `0fc53b1` feat: Phase 9 — agent pack management CLI (final)
+  - `f5683a6` Ralph Loop: 95 tests, clippy clean, 6.2MB, 12 clean commits
+
+## Ralph Loop 2026-05-19 ✅ COMPLETE
+- [x] cargo check → passes
+- [x] cargo clippy → 0 warnings
+- [x] 95 tests → all pass (53 unit + 42 integration)
+- [x] cargo build --release → 6.2MB binary
+- [x] git commit (12 clean commits, no placeholder messages)
+
+## Ralph Loop 2026-05-20 (cleanup) ✅ COMPLETE
+- [x] Squashed \"test commit message\" commits
+- [x] Removed .ralph/ from git tracking (agent state)
+- [x] Added .ralph/ to .gitignore
+- [x] cargo check → passes
+- [x] cargo clippy → 0 warnings
+- [x] 42 tests → all pass
+- [x] cargo build --release → 6.2MB binary
+
+## Ralph Loop 2026-05-20 (13th pass) ✅ COMPLETE
+- [x] cargo check → passes
+- [x] cargo clippy → 0 warnings
+- [x] 42 tests → all pass
+- [x] cargo build --release → 6.2MB binary
