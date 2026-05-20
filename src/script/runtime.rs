@@ -138,6 +138,93 @@ impl JsRuntime {
 
         Ok("ok".to_string())
     }
+
+    /// Run an anvil.js hook with the full ctx API injected.
+    /// Builds the ctx object as plain JS (stubs) and evaluates the user script in that scope.
+    /// Available to scripts: task, session, git, run, ui, router, safety, human.
+    pub async fn run_with_ctx(
+        &self,
+        script: &str,
+        ctx_api: &crate::script::api::AnvilContext,
+    ) -> anyhow::Result<serde_json::Value> {
+        use rquickjs::{Context, Runtime};
+
+        let rt = Runtime::new()
+            .map_err(|e| anyhow::anyhow!("rquickjs Runtime::new failed: {}", e))?;
+        let ctx = Context::full(&rt)
+            .map_err(|e| anyhow::anyhow!("rquickjs Context::full failed: {}", e))?;
+
+        // Serialize ctx parts to JSON for JS
+        let task_json = serde_json::to_string(&serde_json::json!({
+            "id": ctx_api.task.id,
+            "type": ctx_api.task.task_type,
+            "intent": ctx_api.task.intent,
+            "estimatedTokens": ctx_api.task.estimated_tokens,
+            "severity": ctx_api.task.severity,
+        }))?;
+
+        let session_json = serde_json::to_string(&serde_json::json!({
+            "cost": ctx_api.session.cost,
+            "budget": ctx_api.session.budget,
+            "elapsed": ctx_api.session.elapsed,
+        }))?;
+
+                // Build JS ctx object + safety helper
+        // Embeds ctx as JSON strings parsed in JS to avoid Rust format conflicts
+        let js = format!(
+            r#"
+            (function() {{
+                var __task = JSON.parse('{task}');
+                var __session = JSON.parse('{session}');
+                function __checkPath(path) {{
+                    var protected = ['.env', 'secrets', '.ssh', 'key.pem', '.pem'];
+                    for (var i = 0; i < protected.length; i++) {{
+                        if (path.indexOf(protected[i]) !== -1) return false;
+                    }}
+                    return true;
+                }}
+                var ctx = {{
+                    task: __task,
+                    session: __session,
+                    git: {{
+                        commit: function(msg) {{ return 'Would commit: ' + msg; }},
+                        changedFiles: function() {{ return []; }},
+                        worktree: null,
+                    }},
+                    run: function(cmd) {{ return {{ 'exitCode': 0, 'stdout': 'Would run: ' + cmd, 'stderr': '' }}; }},
+                    ui: {{
+                        showError: function(title, detail) {{ console.error('[ERROR] ' + title + ': ' + detail); }},
+                        showInfo: function(msg) {{ console.log('[INFO] ' + msg); }},
+                    }},
+                    safety: {{
+                        checkPath: __checkPath,
+                        requireApproval: function(reason) {{ return true; }},
+                        pause: function(reason) {{}},
+                    }},
+                    router: {{
+                        estimateCost: function(tokens) {{ return (tokens / 1000000.0) * 3.0; }},
+                        downgradeModel: function(task) {{}},
+                        models: {{}},
+                    }},
+                    human: {{
+                        confirm: function(opts) {{ return true; }},
+                        select: function(opts) {{ return null; }},
+                        input: function(prompt) {{ return ''; }},
+                    }},
+                }};
+                {user_script}
+            }})();
+            "#,
+            task = task_json,
+            session = session_json,
+            user_script = script,
+        );
+
+        ctx.with(|ctx| {{
+            ctx.eval::<(), _>(js.as_str())
+                .map_err(|e| anyhow::anyhow!("Script error: {}", e))
+        }})?;Ok(serde_json::json!({ "ok": true }))
+    }
 }
 
 impl Default for JsRuntime {

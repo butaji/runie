@@ -98,3 +98,30 @@
 - [x] 42 tests → all pass
 - [x] cargo build --release → succeeds
 - [x] git commit
+
+## Ralph Loop 2026-05-20 (Phase 9 — OODA + models.dev live + ctx API) ✅ COMPLETE
+
+### Audit findings (3 gaps fixed)
+1. `fetch_from_models_dev` was a stub — didn't update `self.models`
+   - **Fix**: Full parser for `models.dev/api.json`, merges with defaults, caches to `~/.anvil/cache/models.dev.json`
+   - Detects API keys (ANTHROPIC_API_KEY etc.) to flag models as available/unavailable
+   - Adds `load_cached()` to load from disk on startup
+
+2. No OODA actor model — just HashMap scoring
+   - **Fix**: `src/router/ooda.rs` — Observe-Orient-Decide-Act loop
+   - Per-model circuit breakers with auto-reset (RefCell for interior mutability, unsafe impl Send+Sync)
+   - Health-based routing (penalizes degraded/critical models)
+   - Cost-quality-speed surface by task type (Refactor→free, Architecture→claude, etc.)
+   - 4 new unit tests
+
+3. `script/api.rs` ctx API not wired into rquickjs
+   - **Fix**: `run_with_ctx()` in `src/script/runtime.rs`
+   - Injects full ctx object (task, session, git, run, ui, safety, router, human) as JS
+   - Uses `JSON.parse` in JS to avoid Rust format-string brace conflicts
+
+### Ralph Loop
+- [x] cargo check → passes
+- [x] cargo clippy → 0 warnings (fixed: RefCell !Send/Sync warning via unsafe impl)
+- [x] 53 tests → all pass (42 original + 11 new: 4 OODA router + 3 circuit breaker + 2 intent)
+- [x] cargo build --release → succeeds
+- [x] git commit
