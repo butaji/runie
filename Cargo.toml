@@ -36,3 +36,6 @@ thiserror = "2"
 
 # CLI
 clap = { version = "4", features = ["derive", "env"] }
+
+# Path utilities
+dirs = "5"

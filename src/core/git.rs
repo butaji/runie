@@ -1,6 +1,9 @@
 //! Git operations for agent worktrees
 //! Manages git worktrees per agent and commits
 
+#[cfg(test)]
+mod tests;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

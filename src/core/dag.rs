@@ -283,7 +283,7 @@ mod tests {
     async fn test_basic_execution() {
         let intent = super::super::intent::Intent::from_text("refactor src/main.rs");
         let plan = Plan::from_intent(&intent);
-        let step_count = plan.steps.len();
+        let _step_count = plan.steps.len();
         let executor = DagExecutor::new(plan);
 
         let ctx = ExecContext {

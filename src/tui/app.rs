@@ -1,3 +1,4 @@
+use crate::core::executor::ExecEvent;
 use crate::core::safety::{SafetyConfig, SafetyEnvelope};
 use crate::router::ModelDatabase;
 use crate::tui::{
@@ -60,10 +61,17 @@ pub struct App {
     current_model: String,
     /// Whether to auto-scroll stream to bottom on next draw
     first_draw: bool,
+    /// Receives ExecEvents from the background executor thread
+    exec_rx: tokio::sync::mpsc::Receiver<ExecEvent>,
+    /// Sends user input to the background executor thread
+    input_tx: tokio::sync::mpsc::Sender<crate::core::executor::ExecutorInput>,
 }
 
 impl App {
-    fn new() -> Self {
+    fn new(
+        exec_rx: tokio::sync::mpsc::Receiver<ExecEvent>,
+        input_tx: tokio::sync::mpsc::Sender<crate::core::executor::ExecutorInput>,
+    ) -> Self {
         Self {
             header: Header::new(),
             stream: Stream::new(),
@@ -81,6 +89,8 @@ impl App {
             paused: false,
             current_model: "anthropic/claude-sonnet-4".to_string(),
             first_draw: true,
+            exec_rx,
+            input_tx,
         }
     }
 
@@ -279,8 +289,11 @@ impl App {
                 self.execute_command(action);
             }
         } else {
-            // Natural language input — add to stream as a task entry
+            // Natural language input → intent → plan → DAG → stream
+            // Add immediately as pending entry so user sees something happened
             self.stream.push_input_entry(text);
+            // Send to background executor for processing
+            self.send_to_executor(text);
         }
 
         self.input.clear();
@@ -413,36 +426,71 @@ impl App {
         self.header.entry_count = self.stream.entry_count();
     }
 
-    /// Estimate stream height from terminal height
-    fn stream_height(terminal_height: u16) -> usize {
-        // header (3) + input (3) = 6 fixed rows
-        (terminal_height.saturating_sub(6)) as usize
+    /// Process any pending executor events and push to stream
+    fn process_exec_events(&mut self, viewport_height: usize) {
+        while let Ok(event) = self.exec_rx.try_recv() {
+            let entry = event.to_stream_entry();
+            self.stream.entries.push(entry);
+            // Auto-scroll: keep near bottom
+            if self.stream.entries.len() > 10 {
+                self.stream.scroll_offset = self.stream.entries.len().saturating_sub(viewport_height / 2);
+            }
+            self.stream.selected = self.stream.entries.len().saturating_sub(1);
+            // Track cost if step completed
+            if let ExecEvent::StepCompleted { cost, .. } = &event {
+                self.track_cost(*cost);
+            }
+        }
+    }
+
+    /// Send user input to the executor for processing
+    fn send_to_executor(&self, text: &str) {
+        let _ = self.input_tx.try_send(crate::core::executor::ExecutorInput::Execute(text.to_string()));
     }
 }
 
 impl Default for App {
     fn default() -> Self {
-        Self::new()
+        // Default impl for tests — creates disconnected channels
+        let (_, exec_rx) = tokio::sync::mpsc::channel::<ExecEvent>(32);
+        let (input_tx, _) = tokio::sync::mpsc::channel(32);
+        Self::new(exec_rx, input_tx)
     }
+}
+
+/// Compute stream height from terminal height
+fn stream_height(terminal_height: u16) -> usize {
+    (terminal_height.saturating_sub(6)) as usize
 }
 
 /// Run the TUI event loop
 pub fn run() -> anyhow::Result<()> {
+    // ── Executor channels ──────────────────────────────────
+    // exec_rx: TUI receives ExecEvents from executor
+    // input_tx: TUI sends user input text to executor for processing
+    let (exec_rx, input_tx) = crate::core::executor::start_executor_thread();
+
+    // ── TUI setup ─────────────────────────────────────────
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = ratatui::backend::CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new();
+    let mut app = App::new(exec_rx, input_tx);
 
     loop {
         app.update_header();
 
+        // Process executor events (non-blocking)
+        if let Ok(size) = terminal.size() {
+            app.process_exec_events(stream_height(size.height));
+        }
+
         // Auto-scroll to bottom on first draw
         if app.first_draw {
             if let Ok(size) = terminal.size() {
-                let sh = App::stream_height(size.height);
+                let sh = stream_height(size.height);
                 app.stream.scroll_to_bottom(sh);
             }
             app.first_draw = false;

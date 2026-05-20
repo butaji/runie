@@ -86,8 +86,14 @@
 - [x] cargo build --release → succeeds
 - [x] git commit
 
+## Ralph Loop 2026-05-19 (5th pass) ✅ COMPLETE
+- [x] cargo check → passes
+- [x] 67 tests → all pass (25 unit incl. executor + 42 integration)
+- [x] cargo build --release → succeeds
+- [x] git commit (cff27fd)
+
 ## Remaining Gaps
-- [ ] models.dev live API fetch at startup (fetch_from_models_dev() present, not called)
-- [ ] rquickjs runtime integration (stubs present in src/script/)
-- [ ] Git worktree wired into agent spawning
-- [ ] Wire intent parser → plan generator → DAG executor into TUI execution flow
+- [x] models.dev live API fetch at startup (fetch_from_models_dev() called in executor::init)
+- [x] rquickjs runtime integration (agent discovery, eval, run_agent_script)
+- [ ] Git worktree wired into agent spawning (GitOps/Worktree exist, not yet in TUI agents panel)
+- [x] Wire intent parser → plan generator → DAG executor into TUI execution flow
