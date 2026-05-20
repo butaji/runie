@@ -1,3 +1,4 @@
+use anvil::core::executor::run_headless;
 use anvil::router::ModelDatabase;
 use anvil::tui;
 
@@ -64,7 +65,9 @@ fn main() -> Result<()> {
                 if cli.offline {
                     eprintln!("[anvil] offline mode");
                 }
-                // TODO (Phase 2+): intent parser → plan → execute → git commit
+                if let Err(e) = run_headless(intent) {
+                    eprintln!("[anvil] headless error: {}", e);
+                }
                 Ok(())
             } else {
                 if cli.offline {

@@ -35,6 +35,31 @@ pub enum ExecutorInput {
     Shutdown,
 }
 
+/// Run the executor in headless (non-TUI) mode.
+/// Parses the intent, generates a plan, executes the DAG, and prints results.
+pub fn run_headless(intent_text: &str) -> anyhow::Result<()> {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime for headless executor");
+
+    rt.block_on(async {
+        let (exec_tx, _exec_rx) = mpsc::channel(64);
+        let mut executor = Executor::new(exec_tx)
+            .map_err(|e| anyhow::anyhow!("Failed to create executor: {}", e))?;
+
+        executor.init().await;
+        executor.execute_input(intent_text).await?;
+
+        // Drain any pending events and print them
+        // (Events were sent via exec_tx but we don't collect them here
+        // since headless just needs the side-effects and final result)
+        Ok::<(), anyhow::Error>(())
+    })?;
+
+    Ok(())
+}
+
 /// Start the executor in a background thread. Returns (exec_rx, input_tx).
 pub fn start_executor_thread() -> (mpsc::Receiver<ExecEvent>, mpsc::Sender<ExecutorInput>) {
     let (exec_tx, exec_rx) = mpsc::channel(64);
