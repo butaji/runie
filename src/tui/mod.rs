@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 mod agents;
 mod app;
 pub mod command;

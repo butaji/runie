@@ -171,59 +171,62 @@ impl JsRuntime {
 
                 // Build JS ctx object + safety helper
         // Embeds ctx as JSON strings parsed in JS to avoid Rust format conflicts
-        let js = format!(
-            r#"
-            (function() {{
-                var __task = JSON.parse('{task}');
-                var __session = JSON.parse('{session}');
-                function __checkPath(path) {{
-                    var protected = ['.env', 'secrets', '.ssh', 'key.pem', '.pem'];
-                    for (var i = 0; i < protected.length; i++) {{
-                        if (path.indexOf(protected[i]) !== -1) return false;
-                    }}
-                    return true;
-                }}
-                var ctx = {{
-                    task: __task,
-                    session: __session,
-                    git: {{
-                        commit: function(msg) {{ return 'Would commit: ' + msg; }},
-                        changedFiles: function() {{ return []; }},
-                        worktree: null,
-                    }},
-                    run: function(cmd) {{ return {{ 'exitCode': 0, 'stdout': 'Would run: ' + cmd, 'stderr': '' }}; }},
-                    ui: {{
-                        showError: function(title, detail) {{ console.error('[ERROR] ' + title + ': ' + detail); }},
-                        showInfo: function(msg) {{ console.log('[INFO] ' + msg); }},
-                    }},
-                    safety: {{
-                        checkPath: __checkPath,
-                        requireApproval: function(reason) {{ return true; }},
-                        pause: function(reason) {{}},
-                    }},
-                    router: {{
-                        estimateCost: function(tokens) {{ return (tokens / 1000000.0) * 3.0; }},
-                        downgradeModel: function(task) {{}},
-                        models: {{}},
-                    }},
-                    human: {{
-                        confirm: function(opts) {{ return true; }},
-                        select: function(opts) {{ return null; }},
-                        input: function(prompt) {{ return ''; }},
-                    }},
-                }};
-                {user_script}
-            }})();
-            "#,
-            task = task_json,
-            session = session_json,
-            user_script = script,
-        );
+        // Build JS ctx string with format args. We escape ALL { and } as {{ and }}
+        // so the format! macro treats them as literal characters. The three format
+        // arguments (task, session, user_script) use single braces.
+        let js_raw = r#"
+(function() {
+    var __task = JSON.parse("{task}");
+    var __session = JSON.parse("{session}");
+    function __checkPath(path) {
+        var protected = [".env", "secrets", ".ssh", "key.pem", ".pem"];
+        for (var i = 0; i < protected.length; i++) {
+            if (path.indexOf(protected[i]) !== -1) return false;
+        }
+        return true;
+    }
+    var ctx = {
+        task: __task,
+        session: __session,
+        git: {
+            commit: function(msg) { return "Would commit: " + msg; },
+            changedFiles: function() { return []; },
+            worktree: null,
+        },
+        run: function(cmd) { return { "exitCode": 0, "stdout": "Would run: " + cmd, "stderr": "" }; },
+        ui: {
+            showError: function(title, detail) { console.error("[ERROR] " + title + ": " + detail); },
+            showInfo: function(msg) { console.log("[INFO] " + msg); },
+        },
+        safety: {
+            checkPath: __checkPath,
+            requireApproval: function(reason) { return true; },
+            pause: function(reason) {},
+        },
+        router: {
+            estimateCost: function(tokens) { return (tokens / 1000000.0) * 3.0; },
+            downgradeModel: function(task) {},
+            models: {},
+        },
+        human: {
+            confirm: function(opts) { return true; },
+            select: function(opts) { return null; },
+            input: function(prompt) { return ""; },
+        },
+    };
+    {user_script}
+})();
+"#;
+        let js = js_raw
+            .replace("{task}", &task_json)
+            .replace("{session}", &session_json)
+            .replace("{user_script}", script);
 
-        ctx.with(|ctx| {{
+        ctx.with(|ctx| {
             ctx.eval::<(), _>(js.as_str())
                 .map_err(|e| anyhow::anyhow!("Script error: {}", e))
-        }})?;Ok(serde_json::json!({ "ok": true }))
+        })?;
+        Ok(serde_json::json!({ "ok": true }))
     }
 }
 
