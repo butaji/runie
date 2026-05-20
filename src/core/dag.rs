@@ -294,7 +294,7 @@ mod tests {
         let results = executor.execute(&ctx).await.unwrap();
         assert!(!results.is_empty());
         // Results should include all steps (may include cancelled ones)
-        assert!(results.len() >= 1);
+        assert!(!results.is_empty());
 
         // All should succeed (or at least attempted)
         let successful = results.iter().filter(|r| matches!(r.state, StepState::Completed)).count();

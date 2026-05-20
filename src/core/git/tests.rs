@@ -1,7 +1,7 @@
 //! Tests for git operations
 
 #[cfg(test)]
-mod tests {
+mod git_tests {
     use crate::core::git::{GitOps, Worktree};
     use std::path::Path;
 
@@ -83,9 +83,6 @@ mod tests {
     fn test_git_ops_new() {
         let repo_path = PathBuf::from("/tmp/test-repo");
         let _git_ops = GitOps::new(repo_path.clone());
-        
-        // GitOps should be created without panicking
-        assert!(true);
     }
 
     #[test]

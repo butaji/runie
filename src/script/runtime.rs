@@ -262,6 +262,5 @@ mod tests {
         let mut rt = JsRuntime::new().unwrap();
         let _packs = rt.discover_agents();
         // May be empty if no ~/.anvil/agents exists — that's fine
-        assert!(true); // packs may be empty — that's fine
     }
 }

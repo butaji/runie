@@ -492,7 +492,7 @@ mod tests {
         let mut panel = AgentsPanel::new();
         panel.show();
         assert!(panel.visible);
-        assert!(panel.len() > 0);
+        assert!(!panel.is_empty());
         // First agent should be "general" role
         assert!(panel.agents[0].role == "general");
     }
