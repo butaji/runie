@@ -1,42 +1,62 @@
+use crate::core::safety::{SafetyConfig, SafetyEnvelope};
+use crate::router::ModelDatabase;
+use crate::tui::{
+    AgentsPanel, CheckpointAction, CommandAction, CommandPalette, CostHud, Header,
+    HelpOverlay, Input, ModelSelector, SafetyCheckpoint, Stream,
+};
+
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
-    Terminal,
-    backend::CrosstermBackend,
     layout::Rect,
     widgets::Clear,
+    Terminal,
 };
 use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{enable_raw_mode, disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    event::{EnableMouseCapture, DisableMouseCapture, KeyEvent, KeyCode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io;
 
-use crate::router::ModelDatabase;
-use crate::tui::{
-    command::{CommandPalette, CommandAction},
-    header::Header,
-    input::Input,
-    selector::ModelSelector,
-    stream::Stream,
-};
+/// Application modes
+#[derive(Clone, Copy, PartialEq)]
+enum AppMode {
+    /// Typing in the command input bar
+    Input,
+    /// Navigating the stream with j/k
+    Navigation,
+    /// Command palette is open
+    CommandPalette,
+    /// Model selector is open
+    ModelSelector,
+    /// Cost HUD expanded
+    CostHud,
+    /// Agent swarm panel open
+    Agents,
+    /// Help overlay open
+    Help,
+    /// Safety checkpoint blocking execution
+    SafetyCheckpoint,
+}
 
+/// Main TUI application state
 pub struct App {
     header: Header,
     stream: Stream,
     input: Input,
     command_palette: CommandPalette,
     model_selector: ModelSelector,
+    cost_hud: CostHud,
+    agents_panel: AgentsPanel,
+    help_overlay: HelpOverlay,
+    safety_checkpoint: SafetyCheckpoint,
     models: ModelDatabase,
+    safety: SafetyEnvelope,
     mode: AppMode,
     paused: bool,
     current_model: String,
-}
-
-enum AppMode {
-    Input,
-    Navigation,
-    CommandPalette,
-    ModelSelector,
+    /// Whether to auto-scroll stream to bottom on next draw
+    first_draw: bool,
 }
 
 impl App {
@@ -47,93 +67,261 @@ impl App {
             input: Input::new(),
             command_palette: CommandPalette::new(),
             model_selector: ModelSelector::new(),
+            cost_hud: CostHud::new(),
+            agents_panel: AgentsPanel::new(),
+            help_overlay: HelpOverlay::new(),
+            safety_checkpoint: SafetyCheckpoint::new(),
             models: ModelDatabase::new(),
+            safety: SafetyEnvelope::new(SafetyConfig::default()),
             mode: AppMode::Input,
             paused: false,
             current_model: "anthropic/claude-sonnet-4".to_string(),
+            first_draw: true,
         }
     }
 
+    /// Returns true when the app should quit
     fn handle_key(&mut self, key: KeyEvent) -> bool {
-        match key.code {
-            KeyCode::Char('q') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
-                return true; // Quit
+        // Safety checkpoint intercepts all input
+        if self.safety_checkpoint.visible {
+            if let Some(action) = self.safety_checkpoint.handle_key(key.code) {
+                self.handle_checkpoint_action(action);
             }
+            return false;
+        }
+
+        match key.code {
+            // ── Global quit ──────────────────────────────────
+            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => return true,
+
+            // ── Help overlay ────────────────────────────────
+            KeyCode::Char('?') => {
+                self.help_overlay.toggle();
+                if self.help_overlay.visible {
+                    self.mode = AppMode::Help;
+                } else {
+                    self.mode = AppMode::Input;
+                }
+            }
+
+            // ── Mode cycling ────────────────────────────────
             KeyCode::Tab => {
                 self.mode = match self.mode {
                     AppMode::Input => AppMode::Navigation,
                     AppMode::Navigation => AppMode::Input,
-                    AppMode::CommandPalette => AppMode::Input,
-                    AppMode::ModelSelector => AppMode::Input,
+                    AppMode::CommandPalette | AppMode::ModelSelector
+                    | AppMode::CostHud | AppMode::Agents | AppMode::Help => AppMode::Input,
+                    AppMode::SafetyCheckpoint => AppMode::SafetyCheckpoint,
                 };
                 self.command_palette.hide();
                 self.model_selector.hide();
+                self.cost_hud.hide();
+                self.agents_panel.hide();
+                self.help_overlay.hide();
             }
-            KeyCode::Char('h') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
-                self.stream.selected = 0; // Home
+
+            // ── ^h: jump to top ─────────────────────────────
+            KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.stream.selected = 0;
+                self.stream.scroll_offset = 0;
             }
-            KeyCode::Char('l') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+
+            // ── ^c: cancel one agent ────────────────────────
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.header.agent_count = self.header.agent_count.saturating_sub(1);
+            }
+
+            // ── ^$: cost HUD ────────────────────────────────
+            KeyCode::Char('$') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.cost_hud.toggle();
+                if self.cost_hud.visible {
+                    self.mode = AppMode::CostHud;
+                    self.command_palette.hide();
+                    self.model_selector.hide();
+                    self.agents_panel.hide();
+                    self.help_overlay.hide();
+                } else {
+                    self.mode = AppMode::Input;
+                }
+            }
+
+            // ── ^a: agent swarm ─────────────────────────────
+            KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.agents_panel.toggle();
+                if self.agents_panel.visible {
+                    self.mode = AppMode::Agents;
+                    self.command_palette.hide();
+                    self.model_selector.hide();
+                    self.cost_hud.hide();
+                    self.help_overlay.hide();
+                } else {
+                    self.mode = AppMode::Input;
+                }
+            }
+
+            // ── ^p: cycle previous model ────────────────────
+            KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.cycle_model(-1);
+            }
+
+            // ── ^l: model selector ──────────────────────────
+            KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.mode = AppMode::ModelSelector;
                 self.model_selector.show();
+                self.command_palette.hide();
+                self.cost_hud.hide();
+                self.agents_panel.hide();
+                self.help_overlay.hide();
             }
+
+            // ── / or >: command palette ─────────────────────
             KeyCode::Char('/') | KeyCode::Char('>') => {
                 self.mode = AppMode::CommandPalette;
                 self.command_palette.show();
+                self.model_selector.hide();
+                self.cost_hud.hide();
+                self.agents_panel.hide();
+                self.help_overlay.hide();
             }
+
+            // ── Esc: close all panels ───────────────────────
             KeyCode::Esc => {
-                self.mode = AppMode::Input;
                 self.command_palette.hide();
                 self.model_selector.hide();
+                self.cost_hud.hide();
+                self.agents_panel.hide();
+                self.help_overlay.hide();
+                self.mode = AppMode::Input;
             }
-            _ => {
-                match self.mode {
-                    AppMode::Input => {
-                        self.input.handle_key(key);
-                    }
-                    AppMode::Navigation => {
-                        self.stream.handle_key(key.code);
-                    }
-                    AppMode::CommandPalette => {
-                        if let Some(action) = self.command_palette.handle_key(key) {
-                            self.execute_command(action);
-                        }
-                    }
-                    AppMode::ModelSelector => {
-                        self.model_selector.handle_key(key.code, self.models.models.len());
-                        if let KeyCode::Enter = key.code {
-                            self.select_model();
-                        }
+
+            // ── Mode-specific handlers ───────────────────────
+            _ => match self.mode {
+                AppMode::Input => {
+                    self.input.handle_key(key);
+                    // Enter → execute command input
+                    if let KeyCode::Enter = key.code {
+                        self.execute_input();
                     }
                 }
-            }
+                AppMode::Navigation => {
+                    let term_height = 30; // estimate; actual used in draw
+                    self.stream.handle_key(key.code, term_height);
+                }
+                AppMode::CommandPalette => {
+                    if let Some(action) = self.command_palette.handle_key(key) {
+                        self.execute_command(action);
+                    }
+                }
+                AppMode::ModelSelector => {
+                    self.model_selector
+                        .handle_key(key.code, self.models.models.len());
+                    if let KeyCode::Enter = key.code {
+                        self.select_model();
+                    }
+                }
+                AppMode::Agents => {
+                    self.agents_panel.handle_key(key.code);
+                }
+                AppMode::CostHud | AppMode::Help => {
+                    // Only Esc closes these
+                }
+                AppMode::SafetyCheckpoint => {
+                    // Handled above
+                }
+            },
         }
         false
+    }
+
+    fn execute_input(&mut self) {
+        let text = self.input.text().trim();
+        if text.is_empty() {
+            return;
+        }
+
+        // Route commands
+        if text.starts_with('/') {
+            let cmd = &text[1..];
+            let action = match cmd.trim_start_matches("spawn").trim() {
+                s if s.starts_with("spawn") => Some(CommandAction::Spawn),
+                "models" | "model" => Some(CommandAction::Models),
+                "cost" | "budget" => Some(CommandAction::Cost),
+                "pause" | "stop" => Some(CommandAction::Pause),
+                "resume" | "continue" => Some(CommandAction::Resume),
+                "cancel" | "abort" => Some(CommandAction::Cancel),
+                "help" | "?" => {
+                    self.help_overlay.show();
+                    self.mode = AppMode::Help;
+                    return;
+                }
+                "quit" | "exit" => {
+                    // Would quit; for now just clear input
+                    self.input.clear();
+                    return;
+                }
+                _ => None,
+            };
+
+            if let Some(action) = action {
+                self.execute_command(action);
+            }
+        } else {
+            // Natural language input — add to stream as a task entry
+            self.stream.push_input_entry(text);
+        }
+
+        self.input.clear();
     }
 
     fn execute_command(&mut self, action: CommandAction) {
         match action {
             CommandAction::Spawn => {
                 self.input.set_text("/spawn ");
+                self.mode = AppMode::Input;
             }
             CommandAction::Models => {
                 self.mode = AppMode::ModelSelector;
                 self.model_selector.show();
             }
             CommandAction::Cost => {
-                // Mock cost update
-                self.header.cost_spent += 0.01;
+                self.cost_hud.show();
+                self.mode = AppMode::CostHud;
             }
             CommandAction::Pause => {
                 self.paused = true;
                 self.header.agent_count = 0;
+                self.mode = AppMode::Input;
             }
             CommandAction::Resume => {
                 self.paused = false;
                 self.header.agent_count = 4;
+                self.mode = AppMode::Input;
             }
-            CommandAction::Cancel => {}
-            CommandAction::Help => {}
-            CommandAction::Quit => {}
+            CommandAction::Cancel => {
+                if self.header.agent_count > 0 {
+                    self.header.agent_count -= 1;
+                }
+                self.mode = AppMode::Input;
+            }
+            CommandAction::Help => {
+                self.help_overlay.show();
+                self.mode = AppMode::Help;
+            }
+            CommandAction::Quit => {
+                // Would set quit flag
+                self.mode = AppMode::Input;
+            }
+        }
+    }
+
+    fn cycle_model(&mut self, delta: i32) {
+        let models: Vec<_> = self.models.models.keys().collect();
+        if let Some(cur) = models.iter().position(|m| *m == &self.current_model) {
+            let new_idx = ((cur as i32 + delta) % models.len() as i32)
+                .wrapping_add(models.len() as i32) as usize
+                % models.len();
+            self.current_model = models[new_idx].clone();
+            self.update_active_model();
         }
     }
 
@@ -141,97 +329,204 @@ impl App {
         let models: Vec<_> = self.models.models.keys().collect();
         if self.model_selector.selected < models.len() {
             self.current_model = models[self.model_selector.selected].clone();
-            
-            // Update status
-            for (id, status) in self.models.statuses.iter_mut() {
-                status.is_active = id == &self.current_model;
-            }
+            self.update_active_model();
         }
         self.model_selector.hide();
         self.mode = AppMode::Input;
     }
 
-    fn update_header(&mut self) {
-        // Update header with current model info
-        self.header.repo = self.current_model.split('/').last().unwrap_or("unknown").to_string();
-        self.header.cost_spent = self.models.total_spent();
-        
-        // Count active models
-        let active_count = self.models.statuses.values()
-            .filter(|s| s.is_active)
-            .count();
-        if active_count > 0 {
-            self.header.agent_count = active_count;
+    fn update_active_model(&mut self) {
+        for (id, status) in self.models.statuses.iter_mut() {
+            status.is_active = id == &self.current_model;
         }
+        // Update header repo to show current model
+        self.header.repo = self
+            .current_model
+            .split('/')
+            .last()
+            .unwrap_or("unknown")
+            .to_string();
+    }
+
+    fn handle_checkpoint_action(&mut self, action: CheckpointAction) {
+        match action {
+            CheckpointAction::Approve => {
+                // Safety envelope approved — continue
+                self.safety_checkpoint.hide();
+                self.mode = AppMode::Input;
+            }
+            CheckpointAction::Reject => {
+                // Pause all agents
+                self.paused = true;
+                self.header.agent_count = 0;
+                self.safety_checkpoint.hide();
+                self.mode = AppMode::Input;
+            }
+            CheckpointAction::EditPlan => {
+                // Return to input to edit plan
+                self.safety_checkpoint.hide();
+                self.input.set_text("/plan ");
+                self.mode = AppMode::Input;
+            }
+        }
+    }
+
+    /// Track cost for the current model and update safety envelope
+    fn track_cost(&mut self, amount: f64) {
+        self.models.track_spend(&self.current_model, amount);
+        if let Err(violation) = self.safety.check_cost(amount) {
+            // Trigger safety checkpoint
+            match violation {
+                crate::core::safety::SafetyViolation::CostExceeded { limit, actual } => {
+                    self.safety_checkpoint.show_with(
+                        format!(
+                            "Cost limit exceeded: ${:.2} > ${:.2}",
+                            actual, limit
+                        ),
+                        vec![],
+                        crate::tui::safety_checkpoint::RiskLevel::High,
+                    );
+                    self.mode = AppMode::SafetyCheckpoint;
+                }
+                _ => {}
+            }
+        } else {
+            self.safety.track_spend(amount);
+        }
+    }
+
+    fn update_header(&mut self) {
+        self.header.cost_spent = self.models.total_spent();
+        self.header.entry_count = self.stream.entry_count();
+    }
+
+    /// Estimate stream height from terminal height
+    fn stream_height(terminal_height: u16) -> usize {
+        // header (3) + input (3) = 6 fixed rows
+        (terminal_height.saturating_sub(6)) as usize
     }
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Run the TUI event loop
 pub fn run() -> anyhow::Result<()> {
-    // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
+    let backend = ratatui::backend::CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app state
     let mut app = App::new();
 
-    // Fetch models in background (skip for now in skeleton)
-    // tokio::spawn(async move {
-    //     app.models.fetch_from_models_dev().await;
-    // });
-
-    // Main event loop
     loop {
         app.update_header();
-        
+
+        // Auto-scroll to bottom on first draw
+        if app.first_draw {
+            if let Ok(size) = terminal.size() {
+                let sh = App::stream_height(size.height);
+                app.stream.scroll_to_bottom(sh);
+            }
+            app.first_draw = false;
+        }
+
         terminal.draw(|f| {
             let size = f.area();
-            
-            // Calculate layout
-            let header_height = 3;
-            let input_height = 3;
-            let stream_height = size.height.saturating_sub(header_height + input_height);
+            let header_height = 3u16;
+            let input_height = 3u16;
+            let stream_height = size
+                .height
+                .saturating_sub(header_height + input_height);
 
-            // Render header
+            // ── Header ──────────────────────────────────────
             let header_area = Rect::new(0, 0, size.width, header_height);
             f.render_widget(app.header.render(), header_area);
 
-            // Render stream
+            // ── Stream ─────────────────────────────────────
             let stream_area = Rect::new(0, header_height, size.width, stream_height);
-            f.render_widget(app.stream.render(), stream_area);
+            let sh = stream_height as usize;
+            let (para, _scrollbar, _sb_state) = app.stream.render(sh as u16);
+            f.render_widget(para, stream_area);
 
-            // Render input at bottom
+            // ── Input bar ───────────────────────────────────
             let input_area = Rect::new(0, size.height - input_height, size.width, input_height);
             f.render_widget(app.input.render(), input_area);
 
-            // Render command palette overlay if visible
-            if app.command_palette.visible {
-                let palette_width = 50.min(size.width.saturating_sub(4));
-                let palette_height = 15.min(size.height.saturating_sub(4));
-                let palette_x = (size.width - palette_width) / 2;
-                let palette_y = (size.height - palette_height) / 2;
-                let palette_area = Rect::new(palette_x, palette_y, palette_width, palette_height);
-                
-                f.render_widget(Clear, palette_area);
-                f.render_widget(app.command_palette.render(), palette_area);
+            // ── Help overlay ─────────────────────────────────
+            if app.help_overlay.visible {
+                let pw = 50.min(size.width.saturating_sub(4));
+                let ph = 35.min(size.height.saturating_sub(4));
+                let px = (size.width - pw) / 2;
+                let py = (size.height - ph) / 2;
+                let area = Rect::new(px, py, pw, ph);
+                f.render_widget(Clear, area);
+                f.render_widget(app.help_overlay.render(), area);
             }
 
-            // Render model selector overlay if visible
+            // ── Cost HUD ────────────────────────────────────
+            if app.cost_hud.visible {
+                let cw = 48.min(size.width.saturating_sub(4));
+                let ch = 18.min(size.height.saturating_sub(4));
+                let cx = (size.width - cw) / 2;
+                let cy = (size.height - ch) / 2;
+                let area = Rect::new(cx, cy, cw, ch);
+                f.render_widget(Clear, area);
+                f.render_widget(app.cost_hud.render(&app.models), area);
+            }
+
+            // ── Agent swarm panel ───────────────────────────
+            if app.agents_panel.visible {
+                let aw = 50.min(size.width.saturating_sub(4));
+                let ah = app.agents_panel.panel_height()
+                    .min(size.height.saturating_sub(4));
+                let ax = (size.width - aw) / 2;
+                let ay = (size.height - ah) / 2;
+                let area = Rect::new(ax, ay, aw, ah);
+                f.render_widget(Clear, area);
+                f.render_widget(app.agents_panel.render(), area);
+            }
+
+            // ── Command palette ─────────────────────────────
+            if app.command_palette.visible {
+                let pw = 50.min(size.width.saturating_sub(4));
+                let ph = 15.min(size.height.saturating_sub(4));
+                let px = (size.width - pw) / 2;
+                let py = (size.height - ph) / 2;
+                let area = Rect::new(px, py, pw, ph);
+                f.render_widget(Clear, area);
+                f.render_widget(app.command_palette.render(), area);
+            }
+
+            // ── Model selector ──────────────────────────────
             if app.model_selector.visible {
-                let selector_width = 55.min(size.width.saturating_sub(4));
-                let selector_height = ((app.models.models.len() + 5) as u16).min(size.height.saturating_sub(4));
-                let selector_x = (size.width - selector_width) / 2;
-                let selector_y = (size.height - selector_height) / 2;
-                let selector_area = Rect::new(selector_x, selector_y, selector_width, selector_height);
-                
-                f.render_widget(Clear, selector_area);
-                f.render_widget(app.model_selector.render(&app.models), selector_area);
+                let sw = 55.min(size.width.saturating_sub(4));
+                let sh = ((app.models.models.len() + 5) as u16)
+                    .min(size.height.saturating_sub(4));
+                let sx = (size.width - sw) / 2;
+                let sy = (size.height - sh) / 2;
+                let area = Rect::new(sx, sy, sw, sh);
+                f.render_widget(Clear, area);
+                f.render_widget(app.model_selector.render(&app.models), area);
+            }
+
+            // ── Safety checkpoint ────────────────────────────
+            if app.safety_checkpoint.visible {
+                let sw = 58.min(size.width.saturating_sub(4));
+                let sh = 22.min(size.height.saturating_sub(4));
+                let sx = (size.width - sw) / 2;
+                let sy = (size.height - sh) / 2;
+                let area = Rect::new(sx, sy, sw, sh);
+                f.render_widget(Clear, area);
+                f.render_widget(app.safety_checkpoint.render(), area);
             }
         })?;
 
-        // Handle input with timeout
+        // ── Keyboard input ──────────────────────────────────
         if crossterm::event::poll(std::time::Duration::from_millis(100))? {
             if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
                 if app.handle_key(key) {
@@ -241,8 +536,11 @@ pub fn run() -> anyhow::Result<()> {
         }
     }
 
-    // Cleanup
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     Ok(())
 }

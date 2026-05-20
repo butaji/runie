@@ -30,6 +30,15 @@ impl Input {
         self.cursor_position = text.len();
     }
 
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn clear(&mut self) {
+        self.text.clear();
+        self.cursor_position = 0;
+    }
+
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
         match key.code {
             crossterm::event::KeyCode::Char(c) => {
@@ -53,7 +62,8 @@ impl Input {
                 }
             }
             crossterm::event::KeyCode::Enter => {
-                // TODO: execute command
+                // Handled in app.rs via execute_input();
+                // just clear locally so stale text doesn't persist
                 self.text.clear();
                 self.cursor_position = 0;
             }
