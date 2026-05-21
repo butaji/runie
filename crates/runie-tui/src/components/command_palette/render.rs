@@ -87,6 +87,20 @@ fn draw_panes(
     accent_secondary: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
 ) {
+    let (pane_w, pane_h, pane_y, object_x, action_x, arg_x) = compute_pane_layout(area);
+    let inner_y = area.y + 1;
+
+    draw_pane_headers(object_x, action_x, arg_x, inner_y, palette, buf, accent_secondary, text_secondary);
+    draw_vertical_separators(pane_y, pane_h, action_x, arg_x, area, buf, text_secondary);
+
+    let object_area = Rect::new(object_x, pane_y, pane_w.saturating_sub(1), pane_h);
+    let action_area = Rect::new(action_x, pane_y, pane_w.saturating_sub(1), pane_h);
+    let arg_area = Rect::new(arg_x, pane_y, pane_w.saturating_sub(1), pane_h);
+
+    render_panes_by_step(palette, area, buf, theme, object_area, action_area, arg_area);
+}
+
+fn compute_pane_layout(area: Rect) -> (u16, u16, u16, u16, u16, u16) {
     let inner_x = area.x + 1;
     let inner_y = area.y + 1;
     let inner_w = area.width.saturating_sub(2);
@@ -99,14 +113,18 @@ fn draw_panes(
     let object_x = inner_x;
     let action_x = inner_x + pane_w;
     let arg_x = inner_x + pane_w * 2;
+    (pane_w, pane_h, pane_y, object_x, action_x, arg_x)
+}
 
-    draw_pane_headers(object_x, action_x, arg_x, inner_y, palette, buf, accent_secondary, text_secondary);
-    draw_vertical_separators(pane_y, pane_h, action_x, arg_x, area, buf, text_secondary);
-
-    let object_area = Rect::new(object_x, pane_y, pane_w.saturating_sub(1), pane_h);
-    let action_area = Rect::new(action_x, pane_y, pane_w.saturating_sub(1), pane_h);
-    let arg_area = Rect::new(arg_x, pane_y, pane_w.saturating_sub(1), pane_h);
-
+fn render_panes_by_step(
+    palette: &CommandPalette,
+    area: Rect,
+    buf: &mut Buffer,
+    theme: &ThemeWrapper,
+    object_area: Rect,
+    action_area: Rect,
+    arg_area: Rect,
+) {
     match palette.step {
         PaletteStep::Object => {
             render_pane_items(object_area, buf, theme, palette, &palette.filtered_objects, &palette.objects, PaletteStep::Object);
@@ -202,36 +220,59 @@ pub fn render_pane_items(
     };
 
     for i in 0..visible_items {
-        let item_idx = start_idx + i;
-        if item_idx >= indices.len() {
-            break;
-        }
-        let global_idx = indices[item_idx];
-        let item = &items[global_idx];
-        let is_selected = item_idx == palette.selected;
-        let is_active_pane = match pane_step {
-            PaletteStep::Object => palette.step == PaletteStep::Object,
-            PaletteStep::Action => palette.step == PaletteStep::Action,
-            PaletteStep::Arguments => false,
-        };
+        render_single_pane_item(area, buf, palette, indices, items, pane_step.clone(), text_primary, text_muted, accent_secondary, start_idx, i);
+    }
+}
 
-        let y = area.y + i as u16;
-        let icon = if is_selected && is_active_pane {
-            "▸".to_string()
-        } else {
-            " ".to_string()
-        };
+fn render_single_pane_item(
+    area: Rect,
+    buf: &mut Buffer,
+    palette: &CommandPalette,
+    indices: &[usize],
+    items: &[PaletteItem],
+    pane_step: PaletteStep,
+    text_primary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+    accent_secondary: ratatui::style::Color,
+    start_idx: usize,
+    i: usize,
+) {
+    let item_idx = start_idx + i;
+    if item_idx >= indices.len() {
+        return;
+    }
+    let global_idx = indices[item_idx];
+    let item = &items[global_idx];
+    let is_selected = item_idx == palette.selected;
+    let is_active_pane = is_pane_active(pane_step, palette.step.clone());
 
-        let label_style = if is_selected && is_active_pane {
-            Style::default().fg(accent_secondary).add_modifier(Modifier::BOLD)
-        } else if is_selected {
-            Style::default().fg(text_primary)
-        } else {
-            Style::default().fg(text_muted)
-        };
+    let y = area.y + i as u16;
+    let icon = if is_selected && is_active_pane { "▸" } else { " " };
+    let label_style = compute_label_style(is_selected, is_active_pane, accent_secondary, text_primary, text_muted);
 
-        buf.set_string(area.x + 1, y, &icon, label_style);
-        buf.set_string(area.x + 3, y, &item.label, label_style);
+    buf.set_string(area.x + 1, y, icon, label_style);
+    buf.set_string(area.x + 3, y, &item.label, label_style);
+}
+
+fn is_pane_active(pane_step: PaletteStep, current_step: PaletteStep) -> bool {
+    match pane_step {
+        PaletteStep::Object => current_step == PaletteStep::Object,
+        PaletteStep::Action => current_step == PaletteStep::Action,
+        PaletteStep::Arguments => false,
+    }
+}
+
+fn compute_label_style(
+    is_selected: bool,
+    is_active_pane: bool,
+    accent_secondary: ratatui::style::Color,
+    text_primary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+) -> Style {
+    match (is_selected, is_active_pane) {
+        (true, true) => Style::default().fg(accent_secondary).add_modifier(Modifier::BOLD),
+        (true, false) => Style::default().fg(text_primary),
+        (false, _) => Style::default().fg(text_muted),
     }
 }
 
@@ -266,41 +307,56 @@ fn draw_input_area(
     text_secondary: ratatui::style::Color,
 ) {
     let inner_x = area.x + 1;
+    draw_query_input(inner_x, area, buf, palette, accent_primary, text_primary, text_muted);
+    draw_argument_input(inner_x, area, buf, palette, text_primary, text_muted, text_secondary);
+    draw_navigation_hint(inner_x, area, buf, text_muted);
+}
 
+fn draw_query_input(
+    inner_x: u16,
+    area: Rect,
+    buf: &mut Buffer,
+    palette: &CommandPalette,
+    accent_primary: ratatui::style::Color,
+    text_primary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+) {
     let input_y = area.y + area.height - 3;
-    let input_prompt = "▸ ";
-    buf.set_string(inner_x, input_y, input_prompt, Style::default().fg(accent_primary));
+    buf.set_string(inner_x, input_y, "▸ ", Style::default().fg(accent_primary));
 
-    let query_text = if palette.query.is_empty() {
-        "type to filter..."
-    } else {
-        &palette.query
-    };
+    let query_text = if palette.query.is_empty() { "type to filter..." } else { &palette.query };
     let query_style = if palette.query.is_empty() {
         Style::default().fg(text_muted)
     } else {
         Style::default().fg(text_primary)
     };
     buf.set_string(inner_x + 2, input_y, query_text, query_style);
+}
 
-    if palette.step == PaletteStep::Arguments {
-        let arg_y = area.y + area.height - 4;
-        let arg_label = "value: ";
-        buf.set_string(inner_x, arg_y, arg_label, Style::default().fg(text_secondary));
-        let arg_text = if palette.argument_input.is_empty() {
-            "enter value..."
-        } else {
-            &palette.argument_input
-        };
-        let arg_style = if palette.argument_input.is_empty() {
-            Style::default().fg(text_muted)
-        } else {
-            Style::default().fg(text_primary)
-        };
-        buf.set_string(inner_x + 7, arg_y, arg_text, arg_style);
+fn draw_argument_input(
+    inner_x: u16,
+    area: Rect,
+    buf: &mut Buffer,
+    palette: &CommandPalette,
+    text_primary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+) {
+    if palette.step != PaletteStep::Arguments {
+        return;
     }
+    let arg_y = area.y + area.height - 4;
+    buf.set_string(inner_x, arg_y, "value: ", Style::default().fg(text_secondary));
+    let arg_text = if palette.argument_input.is_empty() { "enter value..." } else { &palette.argument_input };
+    let arg_style = if palette.argument_input.is_empty() {
+        Style::default().fg(text_muted)
+    } else {
+        Style::default().fg(text_primary)
+    };
+    buf.set_string(inner_x + 7, arg_y, arg_text, arg_style);
+}
 
+fn draw_navigation_hint(inner_x: u16, area: Rect, buf: &mut Buffer, text_muted: ratatui::style::Color) {
     let instr_y = area.y + area.height - 2;
-    let instructions = "[↑↓] navigate  [Enter] select  [Esc] close";
-    buf.set_string(inner_x, instr_y, instructions, Style::default().fg(text_muted));
+    buf.set_string(inner_x, instr_y, "[↑↓] navigate  [Enter] select  [Esc] close", Style::default().fg(text_muted));
 }
