@@ -19,5 +19,5 @@ pub use loop_mod::{AgentLoop, AgentLoopError};
 pub use agent::{Agent, AgentError, CodingAgent};
 
 // Pi types re-exports
-pub use events::{AgentEvent, AgentMessage, ContentPart, ImageSource, TokenUsage, ToolResult};
+pub use events::{AgentEvent, AgentMessage, ContentPart, ImageSource, PermissionDecision, TokenUsage, ToolResult};
 pub use pi::{AgentState as PiAgentState, AgentTool, Agent as PiAgent, EventListener};

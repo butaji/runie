@@ -18,6 +18,7 @@ pub async fn run_agent_loop(
     provider: &dyn Provider,
     tools: &[AgentTool],
     event_tx: mpsc::UnboundedSender<AgentEvent>,
+    mut permission_rx: mpsc::UnboundedReceiver<PermissionDecision>,
 ) -> Result<(), String> {
     let mut messages = initial_messages;
 
@@ -111,6 +112,73 @@ pub async fn run_agent_loop(
                 event_tx.send(AgentEvent::ToolExecutionStart {
                     tool_call_id: id.clone(),
                 }).ok();
+
+                // Send permission request
+                event_tx.send(AgentEvent::PermissionRequest {
+                    tool_call_id: id.clone(),
+                    tool_name: name.clone(),
+                    tool_args: serde_json::to_string(input).unwrap_or_default(),
+                }).ok();
+
+                // Wait for permission decision
+                let decision = tokio::time::timeout(
+                    std::time::Duration::from_secs(300), // 5 minute timeout
+                    permission_rx.recv()
+                ).await;
+
+                let should_execute = match decision {
+                    Ok(Some(PermissionDecision::Allow)) | Ok(Some(PermissionDecision::AllowAlways)) => {
+                        event_tx.send(AgentEvent::PermissionGranted {
+                            tool_call_id: id.clone(),
+                        }).ok();
+                        true
+                    }
+                    Ok(Some(PermissionDecision::Skip)) => {
+                        event_tx.send(AgentEvent::PermissionDenied {
+                            tool_call_id: id.clone(),
+                        }).ok();
+                        false // Skip this tool but continue with others
+                    }
+                    _ => {
+                        // Timeout or deny
+                        event_tx.send(AgentEvent::PermissionDenied {
+                            tool_call_id: id.clone(),
+                        }).ok();
+                        false
+                    }
+                };
+
+                if !should_execute {
+                    // Add a fake error result
+                    let result = ToolResult {
+                        tool_call_id: id.clone(),
+                        tool_name: name.clone(),
+                        input: input.clone(),
+                        content: vec![ContentPart::Text { text: "Tool execution denied by user".to_string() }],
+                        is_error: true,
+                    };
+
+                    event_tx.send(AgentEvent::ToolExecutionEnd {
+                        tool_call_id: id.clone(),
+                        result: result.clone(),
+                    }).ok();
+
+                    messages.push(AgentMessage {
+                        role: "tool".to_string(),
+                        content: vec![ContentPart::ToolResult {
+                            tool_use_id: id.clone(),
+                            content: result.content.clone(),
+                            is_error: result.is_error,
+                        }],
+                        timestamp: Utc::now().timestamp_millis(),
+                        usage: None,
+                        stop_reason: None,
+                        error_message: None,
+                    });
+
+                    tool_results.push(result);
+                    continue;
+                }
 
                 // Find and execute tool
                 let result = if let Some(tool) = tools.iter().find(|t| t.name == *name) {

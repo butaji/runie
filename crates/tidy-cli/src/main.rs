@@ -1,7 +1,8 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc;
-use tidy_agent::events::{AgentEvent, AgentMessage, ContentPart};
+use tidy_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 use tidy_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
 use tidy_agent::pi::AgentTool;
 use tidy_ai::providers::MockProvider;
@@ -140,6 +141,9 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
 
     // Create async channels for agent communication
     let (agent_event_tx, mut agent_event_rx) = mpsc::unbounded_channel::<AgentEvent>();
+    let (permission_tx, permission_rx) = mpsc::unbounded_channel::<PermissionDecision>();
+    let permission_rx = Arc::new(tokio::sync::Mutex::new(Some(permission_rx)));
+    let permission_tx = Arc::new(tokio::sync::Mutex::new(permission_tx));
 
     // Track conversation history and agent task
     let mut conversation_history: Vec<AgentMessage> = vec![];
@@ -182,25 +186,43 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                             thinking_level: "low".to_string(),
                                         };
 
-                                        agent_task = Some(tokio::spawn(async move {
-                                            let provider = MockProvider::new();
-                                            let tools: Vec<AgentTool> = vec![];
+                                        agent_task = Some(tokio::spawn({
+                                            let event_tx = agent_event_tx.clone();
+                                            let permission_rx = permission_rx.clone();
+                                            let permission_tx = permission_tx.clone();
 
-                                            match run_agent_loop(
-                                                messages,
-                                                config,
-                                                &provider,
-                                                &tools,
-                                                event_tx,
-                                            ).await {
-                                                Ok(_) => {},
-                                                Err(e) => eprintln!("Agent error: {}", e),
+                                            async move {
+                                                let provider = MockProvider::new();
+                                                let tools: Vec<AgentTool> = vec![];
+                                                let rx = permission_rx.lock().await.take().unwrap();
+
+                                                match run_agent_loop(
+                                                    messages,
+                                                    config,
+                                                    &provider,
+                                                    &tools,
+                                                    event_tx,
+                                                    rx,
+                                                ).await {
+                                                    Ok(_) => {},
+                                                    Err(e) => eprintln!("Agent error: {}", e),
+                                                }
                                             }
                                         }));
                                     }
                                 }
                                 TuiAction::Command(cmd) => {
                                     println!("Command: {}", cmd);
+                                }
+                                TuiAction::ToolPermission { tool: _, action } => {
+                                    let decision = match action {
+                                        tidy_tui::components::PermissionAction::Confirm => PermissionDecision::Allow,
+                                        tidy_tui::components::PermissionAction::Cancel => PermissionDecision::Deny,
+                                        tidy_tui::components::PermissionAction::Always => PermissionDecision::AllowAlways,
+                                        tidy_tui::components::PermissionAction::Skip => PermissionDecision::Skip,
+                                    };
+                                    let tx = permission_tx.lock().await;
+                                    tx.send(decision).ok();
                                 }
                                 _ => {}
                             }
@@ -211,11 +233,27 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
 
             // Handle agent events
             Some(event) = agent_event_rx.recv() => {
-                // Check if agent ended to clear the task
-                if let AgentEvent::AgentEnd { .. } = &event {
-                    agent_task = None;
+                match &event {
+                    AgentEvent::PermissionRequest { tool_call_id: _, tool_name, tool_args } => {
+                        // Show permission modal in TUI instead of adding to message feed
+                        tui.request_permission(
+                            tool_name,
+                            tool_args,
+                            &format!("The agent wants to execute tool '{}'", tool_name)
+                        );
+                    }
+                    AgentEvent::AgentEnd { .. } => {
+                        agent_task = None;
+                        // Reset permission channel for next potential agent
+                        let (new_tx, new_rx) = mpsc::unbounded_channel::<PermissionDecision>();
+                        *permission_tx.lock().await = new_tx;
+                        *permission_rx.lock().await = Some(new_rx);
+                        tui.on_agent_event(event);
+                    }
+                    _ => {
+                        tui.on_agent_event(event);
+                    }
                 }
-                tui.on_agent_event(event);
             }
         }
 
