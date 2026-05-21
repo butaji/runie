@@ -1,152 +1,279 @@
-# Tidy TUI Design System
+# Tidy TUI Design System v2.0 — "GrokCrush" Hybrid
 
 ## Philosophy
 
-Tidy is a dark, industrial, data-dense terminal interface for AI agent orchestration. It balances the visual density of system monitors (btop) with the refined minimalism of modern TUIs (Crush), using careful contrast hierarchies and selective accent colors to guide attention.
+Tidy is the love child of Grok Build (precise, ratatui-engineered, multi-layer professional control center) and Crush (vibrant Charm glam, personality-forward, energetic). The result is a premium terminal-native agentic IDE that feels like a cyberpunk command deck: surgically precise yet delightfully alive.
 
-The interface reads like a dashboard when you need overview, and fades into the background when you need focus. Everything serves the conversation between human and agent.
+**Tagline vibe:** "Precise. Electric. Yours."
+
+### Core Rules (Non-Negotiable)
+
+1. **Terminal as Canvas** — Respect grid constraints. No fake shadows unless via Unicode/ANSI. All updates buttery-smooth (ratatui double-buffering).
+2. **Information Density** — 70% content, 20% whitespace/breathing room, 10% accents/glyphs.
+3. **High Contrast First** — Minimum 4.5:1 WCAG contrast. Body text must be readable for 8+ hour sessions.
+4. **Keyboard + Vim First** — All actions accessible via keyboard. Mouse is optional enhancement.
+5. **Semantic Color = Instant State** — Color conveys meaning without reading. No decorative color.
+6. **Max 3 Accents On Screen** — Never overload. One primary, one secondary, one semantic (success/error/warning).
+7. **Flicker-Free** — All rendering happens off-screen via ratatui buffers. No partial draws.
+8. **Alt-Screen Full Takeover** — Enter alternate screen on startup. No scrollback. Clean exit restores terminal.
+9. **60+ FPS Target** — Re-render loop at 60Hz minimum. No blocking operations on main thread.
+10. **No Cursor Blink in Static Areas** — Hardware cursor only in input bar. Static content areas show no cursor.
+11. **Bold Only for Headings + Active Status** — Body text never bold. Bold reserved for section headers and active/current state indicators.
+12. **Underlines Only for Links/Focus** — No underlined body text. Underline reserved for hyperlinks and keyboard focus indicators.
 
 ---
 
-## Color System
+## Color Palette
 
-All colors are provided by the [Opaline](https://docs.rs/opaline) theme system. The default theme is `silkcircuit_neon`. Colors are accessed via semantic tokens, never hardcoded.
+### Base (Deep Space)
 
-### Base Palette
+| Token | Hex | Usage | WCAG Ratio |
+|-------|-----|-------|------------|
+| `bg.base` | `#0a0a0f` | Main background — deepest black with cool undertone | — |
+| `bg.panel` | `#111118` | Panel/card backgrounds — barely lifted from base | — |
+| `bg.code` | `#16161f` | Code block backgrounds | — |
+| `bg.overlay` | `#0d0d14` | Modal backdrop — 70% opacity dark tint | — |
+| `bg.highlight` | `#1e1e2e` | Hover/selection states | — |
+| `bg.selection` | `#2a2a3c` | Active selection | — |
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `bg.base` | `#121218` | Main background — near-black with slight warmth |
-| `bg.panel` | `#181820` | Panel/card backgrounds — barely lighter than base |
-| `bg.code` | `#1e1e28` | Code block backgrounds |
-| `bg.highlight` | `#37324b` | Hover/selection backgrounds |
-| `bg.selection` | `#3c3c50` | Active selection |
+### Text (Cool White Hierarchy)
 
-### Text Hierarchy
+| Token | Hex | Usage | Ratio on `#0a0a0f` |
+|-------|-----|-------|-------------------|
+| `text.primary` | `#e0e0ff` | Primary text — soft cool white | ~14:1 |
+| `text.secondary` | `#a0a0cc` | Body text, comfortable for long reading | ~8:1 |
+| `text.muted` | `#6e6e99` | Labels, hints, disabled state | ~4.8:1 |
+| `text.dim` | `#444466` | Subtle borders, separators, inactive | ~2.5:1 |
 
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `text.primary` | `#f8f8f2` | Primary text — bright but not white |
-| `text.secondary` | `#bcbcca` | Body text — comfortable reading |
-| `text.muted` | `#82879f` | Labels, hints, disabled state |
-| `text.dim` | `#6e7daf` | Subtle borders, separators |
-
-### Accent Colors
-
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `accent.primary` | `#e135ff` | **Purple** — primary brand color, active states, chevrons |
-| `accent.secondary` | `#80ffea` | **Cyan** — secondary actions, running states, focus rings |
-| `accent.tertiary` | `#ff6ac1` | **Coral/Pink** — special highlights, user input |
-
-### Semantic Colors
+### Accents (Electric + Glam)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `success` | `#50fa7b` | Success, passing tests, completed agents |
-| `warning` | `#f1fa8c` | Warnings, pending states, attention needed |
-| `error` | `#ff6363` | Errors, failures, destructive actions |
-| `info` | `#80ffea` | Information, running processes, active tools |
+| `accent.primary` | `#00f0ff` | **Electric Cyan** — primary brand, active states, chevrons, focus rings, running indicators |
+| `accent.secondary` | `#ff2aff` | **Hot Magenta** — secondary highlights, user input pills, brand moments (sparingly) |
+| `accent.tertiary` | `#b14cff` | **Purple** — gradients, agent identity, model badges |
+
+### Semantic (Clear State Communication)
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `success` | `#39ff8c` | Success, approved plans, completed agents, passing tests |
+| `warning` | `#ff9d3a` | Warnings, pending approvals, attention needed |
+| `error` | `#ff4d6d` | Errors, failures, destructive actions, rejected plans |
+| `info` | `#00f0ff` | Same as accent.primary — running processes, active tools, thinking state |
+
+### Diffs
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `diff.added` | `#39ff8c` | Added lines in diff view |
+| `diff.removed` | `#ff4d6d` | Removed lines in diff view |
+| `diff.hunk` | `#00f0ff` | Diff hunk headers |
+| `diff.context` | `#6e6e99` | Unchanged context lines |
 
 ### Borders
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `border.focused` | `#80ffea` | Focused/selected borders |
-| `border.unfocused` | `#82879f` | Inactive borders, separators |
+| `border.focused` | `#00f0ff` | Active/focused borders — bright cyan glow |
+| `border.unfocused` | `#444466` | Inactive borders — dim gray |
+| `border.accent` | `#ff2aff` | Special accent borders — magenta for user content |
+
+### Gradients (Simulated via Color Blocks)
+
+| Name | Start | End | Usage |
+|------|-------|-----|-------|
+| `gradient.cyan-magenta` | `#00f0ff` | `#ff2aff` | User message pills, progress bars |
+| `gradient.purple-cyan` | `#b14cff` | `#00f0ff` | Agent identity, model badges |
+| `gradient.status` | `#b14cff` | `#00f0ff` | Thinking/thought indicators |
 
 ### Contrast Rules
 
-- **Low contrast default**: Most text uses `text.secondary` (`#bcbcca`) on `bg.base` (`#121218`) — ratio ~5:1, comfortable but not harsh
-- **High contrast for importance**: Critical elements use `text.primary` (`#f8f8f2`) — ratio ~9:1
-- **Accent for recognition**: `accent.primary` (purple) creates immediate visual landmarks for active elements, input prompts, and the agent identity
-- **Muted for background**: `text.dim` (`#6e7daf`) for borders, separators, inactive elements
+- **Body text**: `text.secondary` on `bg.base` — ratio ~8:1, comfortable for 8+ hour sessions
+- **Critical/headers**: `text.primary` — ratio ~14:1, maximum readability
+- **Accents for recognition**: `accent.primary` (cyan) creates immediate landmarks for active elements
+- **Muted for background**: `text.dim` for borders, separators, inactive elements only
+- **Semantic for state**: Success/error/warning convey status without reading text
+- **Never use low contrast for body text** — only for decorative/inactive elements
 
 ---
 
 ## Visual Language
 
-### Glyphs & Symbols
+### Glyphs & Symbols (The Complete Set)
 
-The interface uses a carefully curated set of Unicode symbols to create a distinctive visual language:
+#### Core Box Drawing
+
+| Weight | Horizontal | Vertical | Top-Left | Top-Right | Bottom-Left | Bottom-Right | Usage |
+|--------|-----------|----------|----------|-----------|-------------|--------------|-------|
+| Heavy | `━` | `┃` | `┏` | `┓` | `┗` | `┛` | Active panels, main borders |
+| Light | `─` | `│` | `┌` | `┐` | `└` | `┘` | Inactive panels, separators |
+| Rounded | `─` | `│` | `╭` | `╮` | `╰` | `╯` | Floating modals, user content |
+| Tee | — | — | `┣` | `┫` | `┳` | `┻` | Tree branches, panel joins |
+
+#### Status & State Glyphs
+
+| Symbol | Name | Color Token | Usage |
+|--------|------|-------------|-------|
+| `❯` | Chevron | `accent.primary` | Input prompt, active navigation |
+| `▌` | Bookmark bar | `accent.primary` | Left-edge attention marker on active lines |
+| `▸` | Triangle right | `text.muted` → `accent.primary` | List items, collapsible headers (muted when closed, cyan when open) |
+| `▼` | Triangle down | `accent.primary` | Expanded sections |
+| `●` | Filled circle | `accent.primary` (pulsing) | Running/active state |
+| `○` | Empty circle | `text.muted` | Waiting/idle state |
+| `◐` | Half circle left | `accent.primary` | Animation frame 1 |
+| `◑` | Half circle right | `accent.primary` | Animation frame 2 |
+| `✓` | Check | `success` | Completed, approved, success |
+| `✗` | Cross | `error` | Failed, rejected, error |
+| `✎` | Pencil | `accent.secondary` | Edit in progress |
+| `◆` | Diamond | `accent.tertiary` | Important marker, system events |
+| `⟐` | Circled dot | `accent.primary` | Thinking/processing state (alternative to ●) |
+| `◌` | Dotted circle | `text.muted` | Subagent traces, background tasks |
+| `▒` | Medium shade | `text.dim` | Modal backdrop dimming |
+| `░` | Light shade | `text.dim` | Shadow edges |
+
+#### Progress & Fill
 
 | Symbol | Usage |
 |--------|-------|
-| `❯` | Input prompt chevron — primary accent color |
-| `▌` | Bookmark/attention marker — accent color, left edge |
-| `▸` | List item indicator — muted, expands to accent when selected |
-| `●` | Running/active state — cyan accent |
-| `✓` | Completed/success — green |
-| `✗` | Failed/error — red |
-| `○` | Waiting/idle — muted |
-| `│` | Thin separator — unfocused border color |
-| `─` | Horizontal rule — unfocused border color |
-| `╭╮╰╯` | Rounded corners for boxes — unfocused border color |
-| `░` | Shadow/fade effect — dim |
-| `▒` | Modal backdrop dim — dim with background |
+| `█` | Full block — filled progress |
+| `▓` | Dark shade — partial progress |
+| `▒` | Medium shade — partial progress |
+| `░` | Light shade — empty progress |
+| `·` | Middle dot — separator, inactive items |
+| `•` | Bullet — active items in lists |
 
-### No Traditional Borders
+#### Navigation
 
-Panels and containers use:
-- **Background color shifts** (`bg.base` → `bg.panel`) to define areas
-- **Single accent bars** (`▌`) for focus indicators
-- **Subtle separators** (`─`, `│`) only when needed for scanning
-- **Never** heavy box borders around the main content area
+| Symbol | Usage |
+|--------|-------|
+| `↑` | Scroll up indicator |
+| `↓` | Scroll down indicator |
+| `→` | Forward, next |
+| `←` | Back, previous |
+| `↵` | Enter/return action |
 
-### Shadows
+#### File & Code
 
-Modals and floating panels cast a subtle shadow:
-- Right edge: `░` characters, 1 cell offset
-- Bottom edge: `░` characters, 1 cell offset
-- Corner: `▒` character for depth
+| Symbol | Usage |
+|--------|-------|
+| `├` | Tree branch middle |
+| `└` | Tree branch end |
+| `│` | Tree vertical line |
+| `+` | Added line prefix (diffs) |
+| `-` | Removed line prefix (diffs) |
+
+### Border Rules
+
+1. **Main panels**: Heavy borders (`━┃┏┓┗┛`) in `border.unfocused`
+2. **Active panel**: Heavy borders in `border.focused` (cyan)
+3. **Floating modals**: Rounded borders (`╭╮╰╯`) in `border.unfocused`
+4. **User content**: Rounded borders in `border.accent` (magenta)
+5. **Internal separators**: Light borders (`─│`) in `text.dim`
+6. **Never mix heavy and light in same panel** — choose one weight per container
+
+### Shadow System
+
+Modals cast a terminal-native shadow:
+```
+  ╭──────╮
+  │Modal │░
+  │      │░
+  ╰──────╯░
+   ░░░░░░░▒
+```
+
+- Right edge: `░` at x+1, same y range
+- Bottom edge: `░` at y+1, same x range (offset by 1)
+- Corner: `▒` at x+width, y+height
 - Color: `text.dim` on `bg.base`
-
-This creates a lifted effect without terminal transparency support.
 
 ---
 
 ## Layout System
 
-### Zones
+### Zones (The Blueprint)
 
 ```
-┌─────────────────────────────────────────────┐
-│ TopBar (repo · branch · status)             │  height: 1
-├──────────────────────────────────────────────┤
-│                                              │
-│  Center Feed      │  Right Sidebar          │
-│  (Messages +      │  (Agents as cards)      │
-│   Events)         │                         │
-│                   │  ╭─ coder ───────────╮  │
-│                   │  │ ● editing files  │  │
-│                   │  │ claude-4 · 45s   │  │
-│                   │  ╰──────────────────╯  │
-│                   │                         │
-│                   │  ╭─ test ────────────╮  │
-│                   │  │ ✓ running tests  │  │
-│                   │  │ gpt-4 · 12s      │  │
-│                   │  ╰──────────────────╯  │
-│                                              │
-├──────────────────────────────────────────────┤
-│ InputBar                                    │  dynamic height
-├──────────────────────────────────────────────┤
-│ StatusBar (^b sidebar · ^k cmd)             │  height: 1
-└──────────────────────────────────────────────┘
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ repo/branch · path            checks ✓  ┃  TopBar (1 line)
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┫
+┃                             ┃ AGENTS    ┃
+┃   Center Feed               ┃━━━━━▶━━━━━┃
+┃                             ┃ ● coder   ┃
+┃   User message        ←──── ┃   editing ┃
+┃                             ┃   cl· 45s ┃
+┃   Assistant reply           ┃ ········· ┃
+┃                             ┃ ○ test    ┃
+┃   thinking... 2.3s          ┃   running ┃
+┃                             ┃   gp· 12s ┃
+┃   ▼ Tool: read_file()       ┃           ┃
+┃   ✓ read_file: done         ┃           ┃
+┃                             ┃           ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━┫
+┃╭───────────────────────────────────────╮ ┃
+┃❯ user input here                        ┃  InputBar (dynamic)
+┃╰─────────── model: claude-4 ───────────╯ ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ Enter send · ^b sidebar · ^k cmd · ^q q ┃  StatusBar (1 line)
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
-### Margins & Spacing
+### Composition Rules
 
-- **Screen margin**: 2 chars horizontal, 1 char vertical
-- **Between zones**: 0 lines (zones touch, separated by background color)
-- **Inside cards**: 1 char padding
+1. **Top Bar** (1 line):
+   - Left: repo name / branch / path in `text.secondary`
+   - Right: status indicators (checks, progress %) in `accent.primary`
+   - Heavy bottom border (`━`)
+
+2. **Main Content Area** (60-70% width):
+   - **Center Feed**: Message history, tool calls, thoughts
+   - **Overlays**: Plan reviewer, diff viewer, subagent traces (floating, centered)
+   - Background: `bg.base`
+
+3. **Right Sidebar** (30-40% width):
+   - Agent cards, modified files, model info, token counts
+   - Background: `bg.panel`
+   - Heavy left border (`┃`) separating from main
+   - Collapsible sections
+
+4. **Input Bar** (dynamic height):
+   - Rounded corners (`╭╮╰╯`)
+   - `❯` prompt in `accent.primary`
+   - Info text at bottom-right (model name, token count)
+   - Minimum 3 lines (border + 1 line + border)
+
+5. **Status Bar** (1 line):
+   - Keyboard shortcuts in `text.muted`
+   - Active key in `accent.primary`
+   - Heavy top border (`━`)
+
+### Spacing
+
+- **Screen margin**: 1 char all sides (tighter than before for density)
+- **Between zones**: 0 lines (touching, separated by borders)
+- **Inside panels**: 1 char padding minimum, 2 chars for breathing room
 - **Between cards**: 1 blank line
-- **Input bar**: grows with content, minimum 3 lines (border + 1 line + border)
+- **Between messages**: 1 blank line
 
 ### Responsive Behavior
 
-- Terminal < 60 cols: Sidebar auto-hides, full-width feed
-- Terminal < 40 cols: Status bar abbreviates, minimal mode
-- Terminal < 30 cols: Error message, terminal too small
+| Width | Behavior |
+|-------|----------|
+| < 80 cols | Sidebar collapses to overlay (toggle with `^b`) |
+| < 60 cols | Minimal mode: hide agent cards, show only status icons |
+| < 40 cols | Compact status bar, single-line input only |
+| < 30 cols | Error: "Terminal too small. Minimum 30 columns required." |
+
+### Z-Depth Hierarchy
+
+1. `bg.base` — Frame background
+2. `bg.panel` — Sidebar background
+3. Main content (messages, code)
+4. Modal backdrop (`bg.overlay` + `▒` dim)
+5. Modal shadow (`░` offset)
+6. Modal content (floating panels)
+7. Cursor (hardware)
 
 ---
 
@@ -154,102 +281,209 @@ This creates a lifted effect without terminal transparency support.
 
 ### Input Bar
 
-The input bar is the primary interaction surface. It should feel premium and responsive.
-
-**Structure:**
 ```
-╭───────────────────────────────────────────╮
+╭──────────────────────────────────────────╮
 │❯ user input here                          │
-╰───────────────────────── model: claude-4 ─╯
+│  second line if multi-line                │
+╰─────────── model: claude-4 ──────────────╯
 ```
 
 **Design:**
-- Rounded corners (`╭╮╰╯`)
-- `❯` prompt in `accent.primary` (purple)
-- Hardware cursor as thin bar (`SteadyBar`) — terminal-native, no color control
-- Info text at bottom-right corner (model name, status)
-- Info spaced with single spaces: `─ text ─`
-- Multi-line support with `Shift+Enter` or `Ctrl+J`
+- Rounded corners (`╭╮╰╯`) in `border.unfocused`
+- Focused: border changes to `border.focused` (cyan)
+- `❯` prompt in `accent.primary` (cyan)
+- Hardware cursor: `SteadyBar` (thin line)
+- Bottom-right info: model name, token count (e.g., "model: claude-4 · 4.2k tokens")
+- Info format: `─ text ─` with single spaces
+- Multi-line: `Shift+Enter` or `Ctrl+J`
 - Each logical line = 1 visual line (no wrapping)
 
-### Message Feed
+### User Messages (Gradient Pills)
 
-The center feed mixes different message types into a single chronological stream.
+```
+                    ╭────── message ──────╮
+                    │◗  user text here   ◖│
+                    ╰─────────────────────╯
+```
 
-**Message Types:**
+**Design:**
+- Right-aligned within feed
+- Rounded pill shape (`╭╮╰╯` or `◗`/`◖` caps)
+- Gradient background: `accent.tertiary` (purple) → `accent.secondary` (magenta)
+- Text: `text.primary` (cool white)
+- Simulated gradient via per-cell color interpolation
+- No `❯` prompt inside pill — clean text only
 
-| Type | Visual |
-|------|--------|
-| **User** | Right-aligned, `accent.tertiary` (coral), subtle background |
-| **Assistant** | Left-aligned, `text.primary`, full width |
-| **Tool Call** | Collapsible, `text.muted` header, `▼` expand icon |
-| **Tool Result** | Collapsible, success/error icon, code block if needed |
-| **Thought** | Italic, `text.dim`, shows duration |
-| **System** | Centered, `warning` or `info` color, subtle |
+### Assistant Messages
 
-**Code Blocks:**
-- Background: `bg.code`
-- Line numbers: `text.muted`
-- Syntax highlighting: Opaline `code.*` tokens
-- No language badge (cleaner)
+```
+  Assistant text here in primary color
+  spanning multiple lines if needed
+  
+  ```rust
+  1 │ code block with syntax highlighting
+  2 │ using bg.code background
+  ```
+```
+
+**Design:**
+- Left-aligned, full width (minus padding)
+- Text: `text.primary`
+- No background (uses `bg.base`)
+- Code blocks: `bg.code` background, line numbers in `text.muted`
+- Syntax highlighting via Opaline `code.*` tokens
+
+### Tool Calls
+
+```
+  ▼ Tool: read_file (collapsed)
+  ▶ Tool: write_file (collapsed)
+  
+  ▼ Tool: bash
+  │ $ cargo test
+  │    Compiling tidy-core v0.1.0
+  │    Finished test [unoptimized]
+  │     Running unittests
+  │ 
+  │ test result: ok. 78 passed
+  │
+```
+
+**Design:**
+- Collapsible header: `▼`/`▶` + "Tool: name" in `text.muted`
+- Expanded: command/output in `bg.code` with left border
+- Success: `✓` icon in `success` color
+- Error: `✗` icon in `error` color
+
+### Thought Bubbles
+
+```
+  ⟐ thinking... 2.3s
+```
+
+**Design:**
+- Italic text in `text.muted`
+- Pulsing `⟐` or `●` indicator (cycles `○◐◑●`)
+- Duration updates every 100ms
+- Gradient accent bar on left: `accent.tertiary` → `accent.primary`
 
 ### Agent Cards (Sidebar)
 
-Agents render as bordered cards, not a flat list.
-
 ```
-╭─ agent-name ────────────────╮
-│ ● current task description  │
-│ model-name · elapsed-time  │
-╰─────────────────────────────╯
-```
-
-**States:**
-- **Running**: `●` in `accent.secondary` (cyan), pulsing indicator
-- **Completed**: `✓` in `success` (green)
-- **Failed**: `✗` in `error` (red)
-- **Waiting**: `○` in `text.muted`
-
-### Modals
-
-Permission modal, command palette, and dialogs share a consistent style:
-
-```
-╭─ Title ────────────────────── [Esc] ─╮
-│                                      │
-│  Content here                        │
-│                                      │
-│  [Y] Confirm  [N] Cancel            │
-╰──────────────────────────────────────╯
+┏━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ● coder                ┃
+┃   editing files        ┃
+┃   claude-4 · 45s       ┃
+┃························┃
+┃ ○ test                 ┃
+┃   running tests        ┃
+┃   gpt-4 · 12s          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 **Design:**
-- Rounded corners, `border.unfocused` color
-- Title in `accent.primary` with bold
-- `[Esc]` hint on top-right
-- Shadow offset 1 cell right, 1 cell down
-- Backdrop dimmed to `bg.base`
+- Heavy borders (`┏┓┗┛`) in `border.unfocused`
+- Header "AGENTS" in `accent.primary` with bold
+- Status icon on left:
+  - Running: `●` pulsing in `accent.primary`
+  - Completed: `✓` in `success`
+  - Failed: `✗` in `error`
+  - Waiting: `○` in `text.muted`
+- Agent name: `text.primary` bold
+- Description: `text.secondary`
+- Model + duration: `text.muted`
+- Separator between cards: `·` dots in `text.dim`
+
+### Plan Review Overlay
+
+```
+    ╭────────────────────────────────────╮
+    ╭─ Review Plan ───────────── [Esc] ─╮
+    │                                    │
+    │  1. Read file src/main.rs          │
+    │  2. Edit function handle_input()   │
+    │  3. Run tests                      │
+    │                                    │
+    │  [Ctrl+Y] Approve  [Ctrl+N] Reject │
+    ╰────────────────────────────────────╯
+```
+
+**Design:**
+- Floating modal, centered
+- Rounded corners (`╭╮╰╯`)
+- Shadow offset 1 cell right/down
+- Backdrop: `bg.overlay` with `▒` dim
+- Title: `accent.primary` bold
+- Plan items: numbered list in `text.secondary`
+- Actions: `[key]` in `accent.primary`, description in `text.secondary`
+
+### Diff Viewer Overlay
+
+```
+    ╭────────────────────────────────────╮
+    ╭─ Diff: src/main.rs ───── [Esc] ───╮
+    │                                    │
+    │  @@ -45,7 +45,7 @@                │
+    │  -    let x = old_value;           │
+    │  +    let x = new_value;           │
+    │       println!("{}", x);           │
+    │                                    │
+    │  [↑/↓] navigate  [Enter] apply     │
+    ╰────────────────────────────────────╯
+```
+
+**Design:**
+- Hunk headers: `accent.primary` (cyan)
+- Removed lines: `diff.removed` (red) background
+- Added lines: `diff.added` (green) background
+- Context lines: `text.secondary`
+- Line numbers: `text.muted`
 
 ### Command Palette
 
-Object/Action/Arguments flow with 3-pane layout:
-
 ```
-╭─ Command Palette ──────────── [Esc] ─╮
-│ OBJECT     ACTION      ARGS          │
-│ ▸ File...                             │
-│   Agent...                            │
-│   Model...                            │
-│                                      │
-│ ▸ type to filter...                   │
-│ [↑↓] navigate  [Enter] select        │
-╰──────────────────────────────────────╯
+    ╭────────────────────────────────────╮
+    ╭─ Command Palette ─────── [Esc] ───╮
+    │                                    │
+    │  OBJECT    ACTION     ARGS         │
+    │  ▸ File...                         │
+    │    Agent...                        │
+    │    Model...                        │
+    │                                    │
+    │  ▸ type to filter...               │
+    │  [↑↓] navigate  [Enter] select     │
+    ╰────────────────────────────────────╯
 ```
 
 **Design:**
-- Active pane header in `accent.secondary` (cyan)
-- Selected item with `▸` indicator
-- Query input with `❯` prompt
+- Active pane header: `accent.primary` bold
+- Selected item: `▸` indicator + `text.primary`
+- Unselected: `text.muted`
+- Query input: `❯` prompt in `accent.primary`
+
+### Permission Modal
+
+```
+    ╭────────────────────────────────────╮
+    ╭─ Permission Required ─── [Esc] ───╮
+    │                                    │
+    │  Tool: bash                        │
+    │  Args: rm -rf /                    │
+    │                                    │
+    │  This will delete all files.       │
+    │                                    │
+    │  [Y] Confirm  [N] Cancel           │
+    │  [A] Always   [S] Skip             │
+    ╰────────────────────────────────────╯
+```
+
+**Design:**
+- Red left accent bar (`▌`) indicating danger
+- Title: `warning` color (orange)
+- Tool name: `accent.primary` bold
+- Args: `code.path` (cyan) in code style
+- Warning text: `text.secondary`
+- Actions: selected = `accent.primary`, unselected = `text.muted`
 
 ---
 
@@ -257,99 +491,136 @@ Object/Action/Arguments flow with 3-pane layout:
 
 ### Principles
 
-- **Subtle**: Motion should be felt, not noticed
-- **Functional**: Animations convey state changes, not decoration
-- **Terminal-friendly**: No smooth transitions (terminals are discrete), use stepped frames
+1. **Subtle** — 200-300ms perception, not attention-grabbing
+2. **Functional** — Convey state changes only
+3. **Terminal-friendly** — Stepped frames, no smooth transitions
+4. **No strobing** — Never flash faster than 500ms
 
-### Specific Animations
+### Animation Definitions
 
-| Animation | Implementation |
-|-----------|----------------|
-| **Running indicator** | `●` cycles through `○◐◑●` every 500ms (stepped, not smooth) |
-| **Progress bars** | Filled blocks (`█`) with gradient from `accent.primary` to `accent.secondary` |
-| **Typing indicator** | Three dots that cycle `·` `··` `···` |
-| **Sidebar toggle** | Instant show/hide (terminals can't animate width) |
-| **Modal appear** | Shadow draws first, then content (2-frame sequence) |
-| **Scroll** | Instant jump with optional `↑`/`↓` indicators at edges |
+| Animation | Frames | Timing | Implementation |
+|-----------|--------|--------|----------------|
+| **Running pulse** | `●` → `◐` → `◑` → `●` | 500ms cycle | Cycle through chars on timer |
+| **Thinking indicator** | `⟐` → `◉` → `⟐` | 800ms cycle | Subtle pulse |
+| **Typing dots** | `·` → `··` → `···` | 400ms cycle | Append dots cyclically |
+| **Progress fill** | `░` → `▒` → `█` | Per segment | Fill blocks left to right |
+| **Modal appear** | Shadow → Content | 2 frames | Draw shadow first, then content |
+| **Status change** | Color wipe | Instant | Change color on next frame |
+| **Border glow** | Dim → Bright | Focus event | Change border color on focus |
 
-### Progress Indicators
+### Specific Behaviors
 
-For long-running operations:
-- **Determinate**: `███████░░░ 70%` with gradient colors
-- **Indeterminate**: `◐◑◒◓` spinning in `accent.secondary`
-- **Agent thinking**: Duration counter that updates every 100ms: `thinking... 1.2s`
+- **Agent running**: `●` pulses with gradient `accent.tertiary` → `accent.primary`
+- **Progress bars**: `███████░░░` with gradient from `accent.tertiary` to `accent.primary`
+- **Indeterminate**: `◐◑◒◓` spins in `accent.primary`
+- **Thinking**: Duration counter updates every 100ms ("thinking... 1.2s")
+- **Sidebar toggle**: Instant show/hide (no animation — terminal constraint)
+- **Scroll**: Instant jump with `↑`/`↓` ghost indicators at edges
 
 ---
 
 ## Typography
 
-### Fonts (Terminal-Dependent)
+### Fonts
 
-- **Monospace required** — all rendering is grid-based
-- **Recommended**: JetBrains Mono, Fira Code, or any font with good Unicode box-drawing support
-- **Nerd Fonts optional** — for extra glyph variety, but not required
+- **Required**: Monospace (grid-based rendering)
+- **Recommended**: JetBrains Mono, Fira Code, Cascadia Code
+- **Nerd Fonts**: Optional but recommended for extra glyphs
+- **Minimum**: Unicode box-drawing + block elements support
 
 ### Text Styles
 
-| Purpose | Style |
-|---------|-------|
-| Headers | Bold, `accent.primary` |
-| Body | Normal, `text.secondary` |
-| Code | Normal, `bg.code` background, syntax-colored |
-| Labels | Normal, `text.muted` |
-| Active | Bold, `accent.secondary` |
-| Error | Normal, `error` |
+| Purpose | Style | Color |
+|---------|-------|-------|
+| Headers | Bold | `accent.primary` |
+| Body | Normal | `text.secondary` |
+| Primary content | Normal | `text.primary` |
+| Code | Normal | Syntax-colored on `bg.code` |
+| Labels | Normal | `text.muted` |
+| Active/Selected | Bold | `accent.primary` |
+| Error | Normal | `error` |
+| Warning | Normal | `warning` |
+| Success | Normal | `success` |
+| Italic (thoughts) | Italic | `text.muted` |
+
+### Line Height
+
+- **Single spacing**: Messages, agent cards, list items
+- **Double spacing**: Between major sections (after assistant reply, before next user message)
+- **Compact mode**: All single spacing when terminal < 50 lines
 
 ---
 
 ## Interaction Patterns
 
-### Keyboard-First
+### Keyboard-First (All Actions)
 
-All actions accessible via keyboard. Mouse is optional.
+| Key | Action | Context |
+|-----|--------|---------|
+| `Enter` | Send message / Confirm | Chat / Modal |
+| `Shift+Enter` | New line in input | Input bar |
+| `Esc` | Close modal / Cancel | Any modal |
+| `Ctrl+B` | Toggle sidebar | Chat |
+| `Ctrl+K` / `Ctrl+P` | Command palette | Chat |
+| `Ctrl+Y` | Approve plan | Plan review modal |
+| `Ctrl+N` | Reject plan | Plan review modal |
+| `Ctrl+C` / `Ctrl+Q` | Quit | Any |
+| `↑/↓` | Navigate lists / Scroll | Lists / Feed |
+| `j/k` | Vim-style navigate | Lists / Feed |
+| `Tab` | Next field / focus | Forms / Palette |
+| `?` | Show help overlay | Chat |
+| `gg` | Go to top | Feed |
+| `G` | Go to bottom | Feed |
+
+### Bash-Style Input (Readline)
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Send message / Confirm |
-| `Shift+Enter` | New line in input |
-| `Esc` | Close modal / Cancel |
-| `Ctrl+B` | Toggle sidebar |
-| `Ctrl+K` / `Ctrl+P` | Command palette |
-| `Ctrl+C` / `Ctrl+Q` | Quit |
-| `↑/↓` | Navigate lists |
-| `Tab` | Next field |
+| `Ctrl+A` | Start of line |
+| `Ctrl+E` | End of line |
+| `Ctrl+W` | Delete word backward |
+| `Ctrl+U` | Delete to start of line |
+| `Ctrl+K` | Delete to end of line |
+| `Ctrl+D` | Forward delete char |
+| `Ctrl+B` | Back char |
+| `Ctrl+F` | Forward char |
+| `Ctrl+N` | Next line (multi-line) |
+| `Ctrl+P` | Previous line (multi-line) |
+| `Alt+B` | Back word |
+| `Alt+F` | Forward word |
 
-### Bash-Style Input
+### Mouse Support (Optional Enhancement)
 
-Full readline-style editing in input bar:
-- `Ctrl+A` / `Ctrl+E` — Start/end of line
-- `Ctrl+W` — Delete word backward
-- `Ctrl+U` / `Ctrl+K` — Delete to start/end
-- `Ctrl+B` / `Ctrl+F` — Back/forward char
-- `Ctrl+N` / `Ctrl+P` — Next/prev line (in multi-line)
+- Click to focus panels
+- Click to expand/collapse tool calls
+- Click to approve/reject in modals
+- Scroll wheel for feed navigation
 
 ---
 
 ## Theme System
 
-All visual properties are tokenized through Opaline:
+All colors via Opaline semantic tokens:
 
 ```rust
-// Getting a color
-theme.color("text.primary")     // -> OpalineColor
-theme.color("accent.secondary") // -> OpalineColor
+// Colors
+theme.color("bg.base")           // Background
+theme.color("text.primary")      // Primary text
+theme.color("accent.primary")    // Electric cyan
+theme.color("accent.secondary")  // Hot magenta
+theme.color("success")           // Green
 
-// Converting to ratatui Color
+// Convert to ratatui Color
 let fg: ratatui::style::Color = theme.color("text.primary").into();
 ```
 
-### Adding New Themes
+### Adding Themes
 
-1. Create a `.toml` theme file in Opaline format
-2. Register in the theme discovery system
-3. All components automatically use the new palette
+1. Create `.toml` theme file in Opaline format
+2. Register in theme discovery
+3. All components auto-adapt
 
-No component should ever hardcode a color. All visual decisions are made through semantic tokens.
+**No hardcoded colors anywhere.**
 
 ---
 
@@ -358,45 +629,108 @@ No component should ever hardcode a color. All visual decisions are made through
 ### Rendering Order
 
 1. Clear frame with `bg.base`
-2. Draw top bar
-3. Draw content area (message list + sidebar)
-4. Draw input bar
-5. Draw status bar
-6. Draw modal shadow (if any)
-7. Draw modal content (if any)
-8. Position hardware cursor
+2. Draw top bar (heavy bottom border)
+3. Draw sidebar (heavy left border, agent cards)
+4. Draw center feed (messages, code, thoughts)
+5. Draw input bar (rounded borders)
+6. Draw status bar (heavy top border)
+7. Draw modal backdrop (`bg.overlay` + `▒`)
+8. Draw modal shadow (`░` offset)
+9. Draw modal content
+10. Position hardware cursor
 
 ### Performance
 
-- Re-render entire frame on every tick (terminal constraint)
+- Re-render entire frame every tick
 - Minimize allocations in render loop
+- Cache theme lookups
 - Use `Buffer::empty()` for off-screen compositing
-- Cache theme color lookups (they're cheap but not free)
+- No partial redraws (ratatui handles optimization)
 
-### Testing
+### Testing Requirements
 
-All components must have unit tests for:
 - Render output verification
 - State machine transitions
 - Keyboard input handling
 - Edge cases (empty, overflow, wrap)
+- Contrast ratio verification (automated)
 
 ---
 
-## Future Considerations
+## Flow States
 
-- **Split panes**: Horizontal splits for diff/code view (btop-style)
-- **Mouse support**: Click-to-select, scroll, resize handles
-- **Images**: Sixel/kitty graphics for rich content (if terminal supports)
-- **More themes**: Light mode, high-contrast mode, colorblind-friendly
-- **Animated transitions**: If we ever get a terminal with compositing
+### Planning State
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ repo/main · src/              planning ● ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┫
+┃ ╭───────────────────────╮   ┃ AGENTS    ┃
+┃ │ Plan: Refactor auth   │   ┃━━━━━▶━━━━━┃
+┃ │ 1. Read auth.rs       │   ┃ ● planner ┃
+┃ │ 2. Extract validate() │   ┃   planning┃
+┃ │ 3. Update tests       │   ┃   cl· 3s  ┃
+┃ │                       │   ┃           ┃
+┃ │ [Ctrl+Y] Approve      │   ┃           ┃
+┃ │ [Ctrl+N] Reject       │   ┃           ┃
+┃ ╰───────────────────────╯   ┃           ┃
+┃                             ┃           ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━┫
+┃╭───────────────────────────────────────╮ ┃
+┃❯ approve plan                           ┃
+┃╰─────────── model: claude-4 ───────────╯ ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+### Editing State
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ repo/main · src/auth.rs        editing ● ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┫
+┃ @@ -45,7 +45,7 @@           ┃ AGENTS    ┃
+┃  -    let x = old;           ┃━━━━━▶━━━━━┃
+┃  +    let x = new;           ┃ ● editor  ┃
+┃       println!("{}", x);     ┃   editing ┃
+┃                              ┃   cl· 12s ┃
+┃ [↑/↓] navigate [Enter] apply ┃           ┃
+┃                             ┃           ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━┫
+┃╭───────────────────────────────────────╮ ┃
+┃❯ apply changes                          ┃
+┃╰─────────── model: claude-4 ───────────╯ ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+### Running State
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ repo/main · src/                running ● ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┫
+┃                             ┃ AGENTS    ┃
+┃   Running tests...          ┃━━━━━▶━━━━━┃
+┃                             ┃ ● runner  ┃
+┃   $ cargo test              ┃   running ┃
+┃      Compiling...           ┃   cl· 8s  ┃
+┃      Finished               ┃           ┃
+┃      Running 78 tests       ┃           ┃
+┃      test result: ok        ┃           ┃
+┃                             ┃           ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━┫
+┃╭───────────────────────────────────────╮ ┃
+┃❯                                        ┃
+┃╰─────────── model: claude-4 ───────────╯ ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
 
 ---
 
 ## References
 
-- **btop** — Visual density, color-coded data, gradient bars
-- **Crush** — Dark theme, thick accent bars, block glyphs, minimal chrome
-- **Opaline** — Token-based theming system, semantic color naming
-- **Ratatui** — Rust TUI framework, buffer-based rendering
+- **Grok Build** — Precise engineering, multi-layer overlays, plan review, diff viewer, status micro-details
+- **Crush** — Vibrant glam, electric accents, personality-forward, playful glyphs
+- **btop** — Visual density, color-coded data, gradient bars, system monitor aesthetics
+- **Opaline** — Token-based theming, semantic color naming
+- **Ratatui** — Rust TUI framework, buffer-based rendering, flicker-free
 - **Crossterm** — Cross-platform terminal control, input handling

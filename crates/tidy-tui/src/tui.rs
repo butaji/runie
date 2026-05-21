@@ -35,6 +35,7 @@ use crate::{
         PaletteCommand,
     },
 };
+use tidy_agent::events::{AgentEvent, ContentPart};
 
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
@@ -69,6 +70,8 @@ pub struct Tui {
     pub show_sidebar: bool,
     pub agent_list: AgentList,
     pub context_panel: ContextPanel,
+    pub agent_running: bool,
+    pub current_model: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -140,6 +143,8 @@ impl Tui {
                 model_name: "claude-4".to_string(),
                 session_info: "demo-session-001".to_string(),
             },
+            agent_running: false,
+            current_model: None,
         })
     }
 
@@ -345,7 +350,7 @@ impl Tui {
                 } else {
                     let text = self.input_bar.submit();
                     if !text.is_empty() {
-                        self.message_list.messages.push(MessageItem::User { text: text.clone() });
+                        self.message_list.messages.push(MessageItem::User { text: text.clone(), model: Some("You".to_string()) });
                         Some(TuiAction::Submit(text))
                     } else {
                         None
@@ -576,6 +581,81 @@ impl Tui {
 
     pub fn add_message(&mut self, item: MessageItem) {
         self.message_list.messages.push(item);
+    }
+
+    pub fn on_agent_event(&mut self, event: AgentEvent) {
+        match event {
+            AgentEvent::MessageStart { message } => {
+                self.agent_running = true;
+                self.current_model = Some(message.role.clone());
+                // Add empty assistant message that will be updated
+                self.message_list.messages.push(MessageItem::Assistant {
+                    text: String::new(),
+                    model: self.current_model.clone(),
+                });
+            }
+            AgentEvent::MessageUpdate { message } => {
+                // Update the last assistant message with new text
+                if let Some(last) = self.message_list.messages.last_mut() {
+                    if let MessageItem::Assistant { ref mut text, .. } = last {
+                        // Extract text from content parts
+                        let new_text = message.content.iter()
+                            .filter_map(|part| {
+                                if let ContentPart::Text { text } = part { Some(text.as_str()) } else { None }
+                            })
+                            .collect::<Vec<_>>()
+                            .join("");
+                        *text = new_text;
+                    }
+                }
+            }
+            AgentEvent::MessageEnd { message } => {
+                // Finalize the assistant message
+                if let Some(last) = self.message_list.messages.last_mut() {
+                    if let MessageItem::Assistant { ref mut text, .. } = last {
+                        let final_text = message.content.iter()
+                            .filter_map(|part| {
+                                if let ContentPart::Text { text } = part { Some(text.as_str()) } else { None }
+                            })
+                            .collect::<Vec<_>>()
+                            .join("");
+                        *text = final_text;
+                    }
+                }
+            }
+            AgentEvent::ToolExecutionStart { tool_call_id } => {
+                self.message_list.messages.push(MessageItem::ToolCall {
+                    name: tool_call_id,  // We'll improve this later with actual tool names
+                    args: String::new(),
+                });
+            }
+            AgentEvent::ToolExecutionEnd { tool_call_id: _, result } => {
+                let result_text = result.content.iter()
+                    .filter_map(|part| {
+                        if let ContentPart::Text { text } = part { Some(text.as_str()) } else { None }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                self.message_list.messages.push(MessageItem::ToolResult {
+                    name: result.tool_name,
+                    result: result_text,
+                    is_error: result.is_error,
+                });
+            }
+            AgentEvent::TurnEnd { .. } => {
+                // Turn complete, could update status
+            }
+            AgentEvent::AgentEnd { .. } => {
+                self.agent_running = false;
+                self.current_model = None;
+            }
+            AgentEvent::Error { message } => {
+                self.message_list.messages.push(MessageItem::System {
+                    text: format!("Error: {}", message),
+                });
+                self.agent_running = false;
+            }
+        }
     }
 
     pub fn show_overlay(&mut self, overlay: Overlay) {

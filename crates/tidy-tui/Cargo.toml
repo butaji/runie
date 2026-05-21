@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 tidy-core = { path = "../tidy-core" }
+tidy-agent = { path = "../tidy-agent" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 opaline = "0.1"
