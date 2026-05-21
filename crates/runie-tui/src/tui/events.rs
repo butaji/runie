@@ -10,59 +10,68 @@ pub fn event_to_msg(event: Event, state: &AppState) -> Option<Msg> {
 
 pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     match state.mode {
-        TuiMode::Chat => match key.code {
-            KeyCode::Char('c') | KeyCode::Char('q')
-                if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Quit),
-            KeyCode::Enter => {
-                if key.modifiers.contains(KeyModifiers::SHIFT) {
-                    Some(Msg::InsertNewline)
-                } else {
-                    Some(Msg::Submit)
-                }
-            }
-            KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::InsertNewline),
-            KeyCode::Char('k') | KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::OpenCommandPalette),
-            KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorToStart),
-            KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorToEnd),
-            KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::DeleteWordBackward),
-            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::DeleteToStart),
-            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::DeleteForward),
-            KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::ToggleSidebar),
-            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorRight),
-            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorDown),
-            KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Backspace),
-            KeyCode::Char(c) => Some(Msg::InsertChar(c)),
-            KeyCode::Backspace => Some(Msg::Backspace),
-            KeyCode::Left => Some(Msg::MoveCursorLeft),
-            KeyCode::Right => Some(Msg::MoveCursorRight),
-            KeyCode::Up => Some(Msg::MoveCursorUp),
-            KeyCode::Down => Some(Msg::MoveCursorDown),
-            KeyCode::PageUp => Some(Msg::ScrollUp),
-            KeyCode::PageDown => Some(Msg::ScrollDown),
-            _ => None,
-        },
-        TuiMode::Permission => match key.code {
-            KeyCode::Enter => Some(Msg::PermissionConfirm),
-            KeyCode::Esc => Some(Msg::PermissionCancel),
-            KeyCode::Char('y') => Some(Msg::PermissionConfirm),
-            KeyCode::Char('n') => Some(Msg::PermissionCancel),
-            KeyCode::Char('a') => Some(Msg::PermissionAlways),
-            KeyCode::Char('s') => Some(Msg::PermissionSkip),
-            _ => None,
-        },
-        TuiMode::CommandPalette => match key.code {
-            KeyCode::Esc => Some(Msg::CloseModal),
-            KeyCode::Enter => Some(Msg::CommandPaletteConfirm),
-            KeyCode::Up => Some(Msg::CommandPaletteUp),
-            KeyCode::Down => Some(Msg::CommandPaletteDown),
-            KeyCode::Backspace => Some(Msg::CommandPaletteBackspace),
-            KeyCode::Char(c) => Some(Msg::CommandPaletteFilter(c)),
-            _ => None,
-        },
+        TuiMode::Chat => key_to_chat_msg(key),
+        TuiMode::Permission => key_to_permission_msg(key),
+        TuiMode::CommandPalette => key_to_palette_msg(key),
         _ => None,
     }
 }
 
-// ─── to_agent_messages ─────────────────────────────────────────────────────────
-// Convert MessageItem list to AgentMessage list for spawning agent
+fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        return ctrl_chat_key(key);
+    }
+    match key.code {
+        KeyCode::Enter => Some(Msg::Submit),
+        KeyCode::Char(c) => Some(Msg::InsertChar(c)),
+        KeyCode::Backspace => Some(Msg::Backspace),
+        KeyCode::Left => Some(Msg::MoveCursorLeft),
+        KeyCode::Right => Some(Msg::MoveCursorRight),
+        KeyCode::Up => Some(Msg::MoveCursorUp),
+        KeyCode::Down => Some(Msg::MoveCursorDown),
+        KeyCode::PageUp => Some(Msg::ScrollUp),
+        KeyCode::PageDown => Some(Msg::ScrollDown),
+        _ => None,
+    }
+}
 
+fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Char('c') | KeyCode::Char('q') => Some(Msg::Quit),
+        KeyCode::Char('j') => Some(Msg::InsertNewline),
+        KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
+        KeyCode::Char('a') => Some(Msg::MoveCursorToStart),
+        KeyCode::Char('e') => Some(Msg::MoveCursorToEnd),
+        KeyCode::Char('w') => Some(Msg::DeleteWordBackward),
+        KeyCode::Char('u') => Some(Msg::DeleteToStart),
+        KeyCode::Char('d') => Some(Msg::DeleteForward),
+        KeyCode::Char('b') => Some(Msg::ToggleSidebar),
+        KeyCode::Char('f') => Some(Msg::MoveCursorRight),
+        KeyCode::Char('n') => Some(Msg::MoveCursorDown),
+        KeyCode::Char('h') => Some(Msg::Backspace),
+        KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Msg::InsertNewline),
+        _ => None,
+    }
+}
+
+fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Enter | KeyCode::Char('y') => Some(Msg::PermissionConfirm),
+        KeyCode::Esc | KeyCode::Char('n') => Some(Msg::PermissionCancel),
+        KeyCode::Char('a') => Some(Msg::PermissionAlways),
+        KeyCode::Char('s') => Some(Msg::PermissionSkip),
+        _ => None,
+    }
+}
+
+fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseModal),
+        KeyCode::Enter => Some(Msg::CommandPaletteConfirm),
+        KeyCode::Up => Some(Msg::CommandPaletteUp),
+        KeyCode::Down => Some(Msg::CommandPaletteDown),
+        KeyCode::Backspace => Some(Msg::CommandPaletteBackspace),
+        KeyCode::Char(c) => Some(Msg::CommandPaletteFilter(c)),
+        _ => None,
+    }
+}
