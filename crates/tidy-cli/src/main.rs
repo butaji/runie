@@ -162,7 +162,7 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     let mut conversation_history: Vec<AgentMessage> = vec![];
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
-    while tui.running {
+    while tui.state.running {
         tokio::select! {
             // Handle terminal events immediately (no 50ms polling delay)
             Some(event) = term_event_rx.recv() => {
@@ -171,7 +171,7 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                         match action {
                             TuiAction::Quit => break,
                             TuiAction::Submit(text) => {
-                                // Add user message to history
+                                // Add user message to history for agent
                                 let user_msg = AgentMessage {
                                     role: "user".to_string(),
                                     content: vec![ContentPart::Text { text: text.clone() }],
@@ -181,8 +181,6 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                     error_message: None,
                                 };
                                 conversation_history.push(user_msg);
-
-                                // User message already added to UI in handle_chat_key
 
                                 // Spawn agent if not running
                                 if agent_task.is_none() {
@@ -197,7 +195,6 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                     agent_task = Some(tokio::spawn({
                                         let event_tx = agent_event_tx.clone();
                                         let permission_rx = permission_rx.clone();
-                                        let permission_tx = permission_tx.clone();
 
                                         async move {
                                             let provider = MockProvider::new();
@@ -229,8 +226,7 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                     tidy_tui::components::PermissionAction::Always => PermissionDecision::AllowAlways,
                                     tidy_tui::components::PermissionAction::Skip => PermissionDecision::Skip,
                                 };
-                                let tx = permission_tx.lock().await;
-                                tx.send(decision).ok();
+                                permission_tx.lock().await.send(decision).ok();
                             }
                             _ => {}
                         }
@@ -240,27 +236,10 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
 
             // Handle agent events
             Some(event) = agent_event_rx.recv() => {
-                match &event {
-                    AgentEvent::PermissionRequest { tool_call_id: _, tool_name, tool_args } => {
-                        // Show permission modal in TUI instead of adding to message feed
-                        tui.request_permission(
-                            tool_name,
-                            tool_args,
-                            &format!("The agent wants to execute tool '{}'", tool_name)
-                        );
-                    }
-                    AgentEvent::AgentEnd { .. } => {
-                        agent_task = None;
-                        // Reset permission channel for next potential agent
-                        let (new_tx, new_rx) = mpsc::unbounded_channel::<PermissionDecision>();
-                        *permission_tx.lock().await = new_tx;
-                        *permission_rx.lock().await = Some(new_rx);
-                        tui.on_agent_event(event);
-                    }
-                    _ => {
-                        tui.on_agent_event(event);
-                    }
+                if let AgentEvent::AgentEnd { .. } = &event {
+                    agent_task = None;
                 }
+                tui.on_agent_event(event);
             }
         }
 
