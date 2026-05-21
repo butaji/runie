@@ -114,14 +114,14 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     let config = TuiConfig::default();
     let mut tui = Tui::new(config)?;
 
-    tui.top_bar.repo_name = "tidy".to_string();
-    tui.top_bar.branch = if mock { "mock/main".to_string() } else { "main".to_string() };
-    tui.top_bar.path = workspace.display().to_string();
-    tui.top_bar.checks_passed = Some(4);
-    tui.top_bar.checks_total = Some(4);
-    tui.top_bar.percentage = Some(4.56);
+    tui.state.top_bar_repo = "tidy".to_string();
+    tui.state.top_bar_branch = if mock { "mock/main".to_string() } else { "main".to_string() };
+    tui.state.top_bar_path = workspace.display().to_string();
+    tui.state.top_bar_checks_passed = Some(4);
+    tui.state.top_bar_checks_total = Some(4);
+    tui.state.top_bar_percentage = Some(4.56);
 
-    tui.input_bar.right_info = if mock {
+    tui.state.input_right_info = if mock {
         "mock-provider · no-api-key".to_string()
     } else {
         "tidy-main · always-approve".to_string()
