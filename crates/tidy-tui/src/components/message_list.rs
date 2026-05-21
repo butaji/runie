@@ -74,11 +74,7 @@ impl MessageList {
         }
 
         // Iterate messages in REVERSE order (newest first)
-        // Skip empty assistant messages (still streaming, prevents blinking)
         let messages_iter: Vec<&MessageItem> = messages.iter()
-            .filter(|msg| {
-                !matches!(msg, MessageItem::Assistant { text, .. } if text.is_empty())
-            })
             .rev()
             .skip(scroll_offset)
             .collect();
@@ -169,21 +165,29 @@ impl MessageList {
                 }
 
                 MessageItem::Assistant { text, .. } => {
-                    // Plain text response — no glyph, just gray text
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
-                    let msg_height = wrapped.len() as u16;
+                    if text.is_empty() {
+                        // Streaming indicator — subtle placeholder
+                        let dot = Line::raw("·")
+                            .style(Style::default().fg(text_muted));
+                        buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
+                        row += 1;
+                    } else {
+                        // Plain text response — no glyph, just gray text
+                        let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
+                        let msg_height = wrapped.len() as u16;
 
-                    // Draw text lines starting at margin (no glyph)
-                    for (i, line_text) in wrapped.iter().enumerate() {
-                        if row + i as u16 >= max_rows {
-                            break;
+                        // Draw text lines starting at margin (no glyph)
+                        for (i, line_text) in wrapped.iter().enumerate() {
+                            if row + i as u16 >= max_rows {
+                                break;
+                            }
+                            let line = Line::raw(line_text.as_str())
+                                .style(Style::default().fg(text_secondary));
+                            buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
                         }
-                        let line = Line::raw(line_text.as_str())
-                            .style(Style::default().fg(text_secondary));
-                        buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
-                    }
 
-                    row += msg_height;
+                        row += msg_height;
+                    }
                 }
 
                 MessageItem::Thought { duration_secs } => {
