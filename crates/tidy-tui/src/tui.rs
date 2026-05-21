@@ -32,7 +32,7 @@ use crate::{
         CommandPalette,
     },
 };
-use tidy_agent::events::{AgentEvent, ContentPart};
+use tidy_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
@@ -77,8 +77,8 @@ pub struct AppState {
     pub permission_modal_tool: Option<String>,
     pub permission_modal_args: Option<String>,
     pub permission_modal_desc: Option<String>,
-    pub action_log: Vec<Action>,         // NEW: history of all actions for time-travel debugging
-    pub action_log_capacity: usize,       // NEW: max actions to keep (default 1000)
+    pub action_log: Vec<Msg>,         // NEW: history of all actions for time-travel debugging
+    pub action_log_capacity: usize,    // NEW: max actions to keep (default 1000)
     pub command_palette_open: bool,
     pub command_palette_filter: String,
     pub command_palette_selected: usize,
@@ -132,7 +132,7 @@ impl AppState {
     pub fn action_log_summary(&self) -> Vec<String> {
         self.action_log.iter()
             .enumerate()
-            .map(|(i, action)| format!("{:4}: {:?}", i, action))
+            .map(|(i, msg)| format!("{:4}: {:?}", i, msg))
             .collect()
     }
 }
@@ -489,13 +489,12 @@ fn render_context_panel(state: &AppState, area: Rect, buf: &mut Buffer, theme: &
     }
 }
 
-// ─── Action ────────────────────────────────────────────────────────────────────
-// All state changes described as actions (unidirectional data flow)
+// ─── Msg ────────────────────────────────────────────────────────────────────────
+// All state changes described as messages (unidirectional data flow)
 
 #[derive(Debug, Clone)]
-pub enum Action {
-    Quit,
-    Submit,
+pub enum Msg {
+    // Input (user typing)
     InsertChar(char),
     Backspace,
     DeleteForward,
@@ -508,96 +507,83 @@ pub enum Action {
     InsertNewline,
     DeleteWordBackward,
     DeleteToStart,
+
+    // App
+    Submit,
+    Quit,
     ToggleSidebar,
     OpenCommandPalette,
     CloseModal,
     ConfirmModal,
-    AgentEvent(tidy_agent::events::AgentEvent),
+    ScrollUp,
+    ScrollDown,
+
+    // Permission
     PermissionConfirm,
     PermissionCancel,
     PermissionAlways,
     PermissionSkip,
-    OverlayClosed,
+
+    // Command palette
     CommandPaletteFilter(char),
     CommandPaletteBackspace,
     CommandPaletteUp,
     CommandPaletteDown,
     CommandPaletteConfirm,
-    ScrollUp,
-    ScrollDown,
+
+    // Events from outside
+    AgentEvent(AgentEvent),
+}
+
+// ─── Cmd ────────────────────────────────────────────────────────────────────────
+// Effects returned by update() to be executed by the runtime
+
+#[derive(Debug, Clone)]
+pub enum Cmd {
+    SpawnAgent { messages: Vec<AgentMessage> },
+    SendPermission { decision: PermissionDecision },
 }
 
 // ─── update() ─────────────────────────────────────────────────────────────────
-// Pure reducer: takes state + action, returns new state (no side effects)
+// Pure reducer: takes state + msg, returns Vec<Cmd> (no side effects)
 
-/// Helper struct for fast visual state comparison (render batching)
-#[derive(PartialEq)]
-struct VisualState {
-    messages_len: usize,
-    last_message_text: String,
-    input_lines: Vec<String>,
-    mode: TuiMode,
-    show_sidebar: bool,
-    agent_running: bool,
-    permission_modal_open: bool,
-    command_palette_open: bool,
-}
+pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
+    let mut cmds = vec![];
 
-impl VisualState {
-    fn snapshot(state: &AppState) -> Self {
-        Self {
-            messages_len: state.messages.len(),
-            last_message_text: state.messages.last()
-                .map(|m| match m {
-                    MessageItem::Assistant { text, .. } => text.clone(),
-                    _ => String::new(),
-                })
-                .unwrap_or_default(),
-            input_lines: state.input_lines.clone(),
-            mode: state.mode.clone(),
-            show_sidebar: state.show_sidebar,
-            agent_running: state.agent_running,
-            permission_modal_open: state.permission_modal_tool.is_some(),
-            command_palette_open: state.command_palette_open,
-        }
-    }
-}
-
-pub fn update(state: &mut AppState, action: Action) -> bool {
-    // Log action before applying (for time-travel debugging)
+    // Log msg before applying (for time-travel debugging)
     if state.action_log.len() >= state.action_log_capacity {
         state.action_log.remove(0); // Remove oldest when at capacity
     }
-    state.action_log.push(action.clone());
+    state.action_log.push(msg.clone());
 
-    // Snapshot visual state before changes
-    let old_visual = VisualState::snapshot(state);
+    match msg {
+        Msg::Quit => state.running = false,
 
-    match action {
-        Action::Quit => state.running = false,
-
-        Action::Submit => {
+        Msg::Submit => {
             let text = state.input_lines.join("\n");
             if !text.is_empty() {
                 state.messages.push(MessageItem::User {
-                    text,
+                    text: text.clone(),
                     model: Some("You".to_string()),
                     timestamp: None,
                 });
                 state.input_lines = vec![String::new()];
                 state.cursor_col = 0;
                 state.cursor_row = 0;
+                cmds.push(Cmd::SpawnAgent {
+                    messages: to_agent_messages(&state.messages),
+                });
             }
         }
 
-        Action::InsertChar(c) => {
+        Msg::InsertChar(c) => {
             if state.cursor_row < state.input_lines.len() {
                 state.input_lines[state.cursor_row].insert(state.cursor_col, c);
                 state.cursor_col += 1;
             }
         }
 
-        Action::Backspace => {
+        Msg::Backspace => {
             if state.cursor_col > 0 {
                 state.input_lines[state.cursor_row].remove(state.cursor_col - 1);
                 state.cursor_col -= 1;
@@ -609,7 +595,7 @@ pub fn update(state: &mut AppState, action: Action) -> bool {
             }
         }
 
-        Action::InsertNewline => {
+        Msg::InsertNewline => {
             if state.cursor_row < state.input_lines.len() {
                 let remainder = state.input_lines[state.cursor_row].split_off(state.cursor_col);
                 state.cursor_row += 1;
@@ -618,7 +604,7 @@ pub fn update(state: &mut AppState, action: Action) -> bool {
             }
         }
 
-        Action::MoveCursorLeft => {
+        Msg::MoveCursorLeft => {
             if state.cursor_col > 0 {
                 state.cursor_col -= 1;
             } else if state.cursor_row > 0 {
@@ -627,7 +613,7 @@ pub fn update(state: &mut AppState, action: Action) -> bool {
             }
         }
 
-        Action::MoveCursorRight => {
+        Msg::MoveCursorRight => {
             if state.cursor_col < state.input_lines[state.cursor_row].len() {
                 state.cursor_col += 1;
             } else if state.cursor_row + 1 < state.input_lines.len() {
@@ -636,33 +622,33 @@ pub fn update(state: &mut AppState, action: Action) -> bool {
             }
         }
 
-        Action::MoveCursorUp => {
+        Msg::MoveCursorUp => {
             if state.cursor_row > 0 {
                 state.cursor_row -= 1;
                 state.cursor_col = state.cursor_col.min(state.input_lines[state.cursor_row].len());
             }
         }
 
-        Action::MoveCursorDown => {
+        Msg::MoveCursorDown => {
             if state.cursor_row + 1 < state.input_lines.len() {
                 state.cursor_row += 1;
                 state.cursor_col = state.cursor_col.min(state.input_lines[state.cursor_row].len());
             }
         }
 
-        Action::MoveCursorToStart => state.cursor_col = 0,
+        Msg::MoveCursorToStart => state.cursor_col = 0,
 
-        Action::MoveCursorToEnd => {
+        Msg::MoveCursorToEnd => {
             state.cursor_col = state.input_lines[state.cursor_row].len();
         }
 
-        Action::DeleteForward => {
+        Msg::DeleteForward => {
             if state.cursor_col < state.input_lines[state.cursor_row].len() {
                 state.input_lines[state.cursor_row].remove(state.cursor_col);
             }
         }
 
-        Action::DeleteWordBackward => {
+        Msg::DeleteWordBackward => {
             let line = &state.input_lines[state.cursor_row];
             let before = &line[..state.cursor_col];
             if let Some(pos) = before.rfind(|c: char| c.is_whitespace()) {
@@ -674,37 +660,32 @@ pub fn update(state: &mut AppState, action: Action) -> bool {
             }
         }
 
-        Action::DeleteToStart => {
+        Msg::DeleteToStart => {
             state.input_lines[state.cursor_row].drain(..state.cursor_col);
             state.cursor_col = 0;
         }
 
-        Action::ToggleSidebar => state.show_sidebar = !state.show_sidebar,
+        Msg::ToggleSidebar => state.show_sidebar = !state.show_sidebar,
 
-        Action::OpenCommandPalette => {
+        Msg::OpenCommandPalette => {
             state.command_palette_open = true;
             state.mode = TuiMode::CommandPalette;
             state.command_palette_filter.clear();
             state.command_palette_selected = 0;
         }
 
-        Action::CloseModal => {
+        Msg::CloseModal => {
             state.mode = TuiMode::Chat;
             state.command_palette_open = false;
             state.permission_modal_tool = None;
         }
 
-        Action::ConfirmModal => {
+        Msg::ConfirmModal => {
             state.mode = TuiMode::Chat;
             state.permission_modal_tool = None;
         }
 
-        Action::OverlayClosed => {
-            state.mode = TuiMode::Chat;
-        }
-
-        Action::AgentEvent(event) => {
-use tidy_agent::events::AgentEvent;
+        Msg::AgentEvent(event) => {
             match event {
                 AgentEvent::MessageStart { message } => {
                     state.agent_running = true;
@@ -803,50 +784,143 @@ use tidy_agent::events::AgentEvent;
             }
         }
 
-        Action::PermissionConfirm => {
+        Msg::PermissionConfirm => {
             state.mode = TuiMode::Chat;
             state.permission_modal_tool = None;
+            cmds.push(Cmd::SendPermission { decision: PermissionDecision::Allow });
         }
-        Action::PermissionCancel => {
+        Msg::PermissionCancel => {
             state.mode = TuiMode::Chat;
             state.permission_modal_tool = None;
+            cmds.push(Cmd::SendPermission { decision: PermissionDecision::Deny });
         }
-        Action::PermissionAlways => {
+        Msg::PermissionAlways => {
             state.mode = TuiMode::Chat;
             state.permission_modal_tool = None;
+            cmds.push(Cmd::SendPermission { decision: PermissionDecision::AllowAlways });
         }
-        Action::PermissionSkip => {
+        Msg::PermissionSkip => {
             state.mode = TuiMode::Chat;
             state.permission_modal_tool = None;
+            cmds.push(Cmd::SendPermission { decision: PermissionDecision::Skip });
         }
-        Action::CommandPaletteFilter(c) => {
+        Msg::CommandPaletteFilter(c) => {
             state.command_palette_filter.push(c);
         }
-        Action::CommandPaletteBackspace => {
+        Msg::CommandPaletteBackspace => {
             state.command_palette_filter.pop();
         }
-        Action::CommandPaletteUp => {
+        Msg::CommandPaletteUp => {
             if state.command_palette_selected > 0 {
                 state.command_palette_selected -= 1;
             }
         }
-        Action::CommandPaletteDown => {
+        Msg::CommandPaletteDown => {
             state.command_palette_selected += 1;
         }
-        Action::CommandPaletteConfirm => {
+        Msg::CommandPaletteConfirm => {
             state.command_palette_open = false;
             state.mode = TuiMode::Chat;
         }
-        Action::ScrollUp => {
+        Msg::ScrollUp => {
             state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(1);
         }
-        Action::ScrollDown => {
+        Msg::ScrollDown => {
             state.feed_scroll_offset += 1;
         }
     }
 
-    // Return true if visual output changed
-    !old_visual.eq(&VisualState::snapshot(state))
+    cmds
+}
+
+// ─── event_to_msg ──────────────────────────────────────────────────────────────
+// Convert crossterm events to Msg
+
+pub fn event_to_msg(event: Event, state: &AppState) -> Option<Msg> {
+    match event {
+        Event::Key(key) => key_to_msg(key, state),
+        _ => None,
+    }
+}
+
+fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    match state.mode {
+        TuiMode::Chat => match key.code {
+            KeyCode::Char('c') | KeyCode::Char('q')
+                if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Quit),
+            KeyCode::Enter => {
+                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                    Some(Msg::InsertNewline)
+                } else {
+                    Some(Msg::Submit)
+                }
+            }
+            KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::InsertNewline),
+            KeyCode::Char('k') | KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::OpenCommandPalette),
+            KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorToStart),
+            KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorToEnd),
+            KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::DeleteWordBackward),
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::DeleteToStart),
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::DeleteForward),
+            KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::ToggleSidebar),
+            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorRight),
+            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::MoveCursorDown),
+            KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Backspace),
+            KeyCode::Char(c) => Some(Msg::InsertChar(c)),
+            KeyCode::Backspace => Some(Msg::Backspace),
+            KeyCode::Left => Some(Msg::MoveCursorLeft),
+            KeyCode::Right => Some(Msg::MoveCursorRight),
+            KeyCode::Up => Some(Msg::MoveCursorUp),
+            KeyCode::Down => Some(Msg::MoveCursorDown),
+            KeyCode::PageUp => Some(Msg::ScrollUp),
+            KeyCode::PageDown => Some(Msg::ScrollDown),
+            _ => None,
+        },
+        TuiMode::Permission => match key.code {
+            KeyCode::Enter => Some(Msg::PermissionConfirm),
+            KeyCode::Esc => Some(Msg::PermissionCancel),
+            KeyCode::Char('y') => Some(Msg::PermissionConfirm),
+            KeyCode::Char('n') => Some(Msg::PermissionCancel),
+            KeyCode::Char('a') => Some(Msg::PermissionAlways),
+            KeyCode::Char('s') => Some(Msg::PermissionSkip),
+            _ => None,
+        },
+        TuiMode::CommandPalette => match key.code {
+            KeyCode::Esc => Some(Msg::CloseModal),
+            KeyCode::Enter => Some(Msg::CommandPaletteConfirm),
+            KeyCode::Up => Some(Msg::CommandPaletteUp),
+            KeyCode::Down => Some(Msg::CommandPaletteDown),
+            KeyCode::Backspace => Some(Msg::CommandPaletteBackspace),
+            KeyCode::Char(c) => Some(Msg::CommandPaletteFilter(c)),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+// ─── to_agent_messages ─────────────────────────────────────────────────────────
+// Convert MessageItem list to AgentMessage list for spawning agent
+
+fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
+    items.iter().filter_map(|item| match item {
+        MessageItem::User { text, .. } => Some(AgentMessage {
+            role: "user".to_string(),
+            content: vec![ContentPart::Text { text: text.clone() }],
+            timestamp: 0,
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+        }),
+        MessageItem::Assistant { text, .. } => Some(AgentMessage {
+            role: "assistant".to_string(),
+            content: vec![ContentPart::Text { text: text.clone() }],
+            timestamp: 0,
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+        }),
+        _ => None,
+    }).collect()
 }
 
 // ─── Tui ─────────────────────────────────────────────────────────────────────
@@ -891,10 +965,10 @@ impl Tui {
         Ok(())
     }
 
-    /// Dispatch an action to update state (unidirectional data flow)
-    /// Returns true if visual output changed and render is needed
-    pub fn update(&mut self, action: Action) -> bool {
-        update(&mut self.state, action)
+    /// Dispatch a msg to update state (unidirectional data flow)
+    /// Returns Vec<Cmd> to be executed by the runtime
+    pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
+        update(&mut self.state, msg)
     }
 
     /// Calculate the height needed for the input bar based on its content
@@ -1081,210 +1155,44 @@ impl Tui {
     }
 
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        match self.state.mode {
-            TuiMode::Chat => self.handle_chat_key(key),
-            TuiMode::Overlay => self.handle_overlay_key(key),
-            TuiMode::Select => self.handle_select_key(key),
-            TuiMode::Permission => self.handle_permission_key(key),
-            TuiMode::CommandPalette => self.handle_command_palette_key(key),
-        }
-    }
-
-    fn handle_chat_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        match key.code {
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::Quit);
-                Some(TuiAction::Quit)
-            }
-            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::Quit);
-                Some(TuiAction::Quit)
-            }
-            KeyCode::Enter => {
-                if key.modifiers.contains(KeyModifiers::SHIFT) {
-                    self.update(Action::InsertNewline);
-                    None
-                } else {
-                    let text = self.state.input_lines.join("\n");
-                    if !text.is_empty() {
-                        self.update(Action::Submit);
-                        Some(TuiAction::Submit(text))
-                    } else {
-                        None
+        // Convert key event to Msg and apply update
+        if let Some(msg) = key_to_msg(key, &self.state) {
+            let cmds = self.update(msg);
+            // Process cmds to determine TuiAction
+            for cmd in cmds {
+                match cmd {
+                    Cmd::SpawnAgent { .. } => {
+                        // Would return Submit action - but text already captured
+                    }
+                    Cmd::SendPermission { decision } => {
+                        let permission_action = match decision {
+                            PermissionDecision::Allow => PermissionAction::Confirm,
+                            PermissionDecision::Deny => PermissionAction::Cancel,
+                            PermissionDecision::AllowAlways => PermissionAction::Always,
+                            PermissionDecision::Skip => PermissionAction::Skip,
+                        };
+                        return Some(TuiAction::ToolPermission {
+                            tool: self.state.permission_modal_tool.clone().unwrap_or_default(),
+                            action: permission_action,
+                        });
                     }
                 }
             }
-            KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::InsertNewline);
-                None
+            // Check if we should quit
+            if !self.state.running {
+                return Some(TuiAction::Quit);
             }
-            KeyCode::Char('k') | KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::OpenCommandPalette);
-                None
-            }
-            KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::MoveCursorToStart);
-                None
-            }
-            KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::MoveCursorToEnd);
-                None
-            }
-            KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::DeleteWordBackward);
-                None
-            }
-            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::DeleteToStart);
-                None
-            }
-
-            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::DeleteForward);
-                None
-            }
-            KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::ToggleSidebar);
-                None
-            }
-            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::MoveCursorRight);
-                None
-            }
-            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::MoveCursorDown);
-                None
-            }
-
-            KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.update(Action::Backspace);
-                None
-            }
-            KeyCode::Char(c) => {
-                self.update(Action::InsertChar(c));
-                None
-            }
-            KeyCode::Backspace => {
-                self.update(Action::Backspace);
-                None
-            }
-            KeyCode::Left => {
-                self.update(Action::MoveCursorLeft);
-                None
-            }
-            KeyCode::Right => {
-                self.update(Action::MoveCursorRight);
-                None
-            }
-            KeyCode::Up => {
-                self.update(Action::MoveCursorUp);
-                None
-            }
-            KeyCode::Down => {
-                self.update(Action::MoveCursorDown);
-                None
-            }
-            KeyCode::PageUp => {
-                self.update(Action::ScrollUp);
-                None
-            }
-            KeyCode::PageDown => {
-                self.update(Action::ScrollDown);
-                None
-            }
-            _ => None,
         }
-    }
-
-    fn handle_overlay_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        match key.code {
-            KeyCode::Esc => {
-                self.update(Action::OverlayClosed);
-                None
-            }
-            _ => None,
-        }
-    }
-
-    fn handle_select_key(&mut self, _key: crossterm::event::KeyEvent) -> Option<TuiAction> {
         None
-    }
-
-    fn handle_permission_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        // Permission modal is active when state has permission_modal_tool set
-        if self.state.permission_modal_tool.is_none() {
-            return None;
-        }
-
-        let tool_name = self.state.permission_modal_tool.clone().unwrap_or_default();
-
-        match key.code {
-            KeyCode::Enter => {
-                self.update(Action::PermissionConfirm);
-                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Confirm })
-            }
-            KeyCode::Esc => {
-                self.update(Action::PermissionCancel);
-                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Cancel })
-            }
-            KeyCode::Char('y') => {
-                self.update(Action::PermissionConfirm);
-                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Confirm })
-            }
-            KeyCode::Char('n') => {
-                self.update(Action::PermissionCancel);
-                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Cancel })
-            }
-            KeyCode::Char('a') => {
-                self.update(Action::PermissionAlways);
-                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Always })
-            }
-            KeyCode::Char('s') => {
-                self.update(Action::PermissionSkip);
-                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Skip })
-            }
-            _ => None,
-        }
-    }
-
-    fn handle_command_palette_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        match key.code {
-            KeyCode::Esc => {
-                self.update(Action::CloseModal);
-                None
-            }
-            KeyCode::Enter => {
-                self.update(Action::CommandPaletteConfirm);
-                // TODO: return the selected command
-                None
-            }
-            KeyCode::Up => {
-                self.update(Action::CommandPaletteUp);
-                None
-            }
-            KeyCode::Down => {
-                self.update(Action::CommandPaletteDown);
-                None
-            }
-            KeyCode::Char(c) => {
-                self.update(Action::CommandPaletteFilter(c));
-                None
-            }
-            KeyCode::Backspace => {
-                self.update(Action::CommandPaletteBackspace);
-                None
-            }
-            _ => None,
-        }
     }
 
     pub fn add_message(&mut self, item: MessageItem) {
         self.state.messages.push(item);
     }
 
-    pub fn on_agent_event(&mut self, event: AgentEvent) -> bool {
+    pub fn on_agent_event(&mut self, event: AgentEvent) -> Vec<Cmd> {
         // Use the update() reducer for all agent events
-        self.update(Action::AgentEvent(event.clone()))
+        self.update(Msg::AgentEvent(event.clone()))
     }
 
     pub fn show_overlay(&mut self, _overlay: Overlay) {
@@ -1307,7 +1215,7 @@ impl Tui {
     }
 
     pub fn toggle_sidebar(&mut self) {
-        self.update(Action::ToggleSidebar);
+        self.update(Msg::ToggleSidebar);
     }
 
     /// Draw a subtle shadow around a modal area (1 cell right, 1 cell down)
@@ -1485,8 +1393,8 @@ mod tests {
     #[test]
     fn test_insert_char() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('i'));
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('i'));
         assert_eq!(state.input_lines, vec!["hi"]);
         assert_eq!(state.cursor_col, 2);
     }
@@ -1494,9 +1402,9 @@ mod tests {
     #[test]
     fn test_backspace() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('i'));
-        update(&mut state, Action::Backspace);
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('i'));
+        update(&mut state, Msg::Backspace);
         assert_eq!(state.input_lines, vec!["h"]);
         assert_eq!(state.cursor_col, 1);
     }
@@ -1504,11 +1412,18 @@ mod tests {
     #[test]
     fn test_submit_clears_input() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('i'));
-        update(&mut state, Action::Submit);
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('i'));
+        let cmds = update(&mut state, Msg::Submit);
         assert_eq!(state.input_lines, vec![""]);
         assert_eq!(state.messages.len(), 1);
+        // Should return a SpawnAgent cmd
+        assert_eq!(cmds.len(), 1);
+        if let Cmd::SpawnAgent { .. } = &cmds[0] {
+            // Expected
+        } else {
+            panic!("Expected SpawnAgent cmd");
+        }
         if let MessageItem::User { text, .. } = &state.messages[0] {
             assert_eq!(text, "hi");
         } else {
@@ -1519,40 +1434,41 @@ mod tests {
     #[test]
     fn test_submit_empty_does_nothing() {
         let mut state = make_state();
-        update(&mut state, Action::Submit);
+        let cmds = update(&mut state, Msg::Submit);
         assert_eq!(state.messages.len(), 0);
+        assert!(cmds.is_empty());
     }
 
     #[test]
     fn test_move_cursor() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('a'));
-        update(&mut state, Action::InsertChar('b'));
-        update(&mut state, Action::InsertChar('c'));
+        update(&mut state, Msg::InsertChar('a'));
+        update(&mut state, Msg::InsertChar('b'));
+        update(&mut state, Msg::InsertChar('c'));
         assert_eq!(state.cursor_col, 3);
 
-        update(&mut state, Action::MoveCursorLeft);
+        update(&mut state, Msg::MoveCursorLeft);
         assert_eq!(state.cursor_col, 2);
 
-        update(&mut state, Action::MoveCursorLeft);
+        update(&mut state, Msg::MoveCursorLeft);
         assert_eq!(state.cursor_col, 1);
 
-        update(&mut state, Action::MoveCursorRight);
+        update(&mut state, Msg::MoveCursorRight);
         assert_eq!(state.cursor_col, 2);
 
-        update(&mut state, Action::MoveCursorToStart);
+        update(&mut state, Msg::MoveCursorToStart);
         assert_eq!(state.cursor_col, 0);
 
-        update(&mut state, Action::MoveCursorToEnd);
+        update(&mut state, Msg::MoveCursorToEnd);
         assert_eq!(state.cursor_col, 3);
     }
 
     #[test]
     fn test_newline() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('i'));
-        update(&mut state, Action::InsertNewline);
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('i'));
+        update(&mut state, Msg::InsertNewline);
         assert_eq!(state.input_lines, vec!["hi", ""]);
         assert_eq!(state.cursor_row, 1);
         assert_eq!(state.cursor_col, 0);
@@ -1562,13 +1478,13 @@ mod tests {
     fn test_multi_line_submit() {
         let mut state = make_state();
         for c in "line1".chars() {
-            update(&mut state, Action::InsertChar(c));
+            update(&mut state, Msg::InsertChar(c));
         }
-        update(&mut state, Action::InsertNewline);
+        update(&mut state, Msg::InsertNewline);
         for c in "line2".chars() {
-            update(&mut state, Action::InsertChar(c));
+            update(&mut state, Msg::InsertChar(c));
         }
-        update(&mut state, Action::Submit);
+        update(&mut state, Msg::Submit);
 
         assert_eq!(state.input_lines, vec![""]);
         assert_eq!(state.messages.len(), 1);
@@ -1582,7 +1498,7 @@ mod tests {
     #[test]
     fn test_quit() {
         let mut state = make_state();
-        update(&mut state, Action::Quit);
+        update(&mut state, Msg::Quit);
         assert!(!state.running);
     }
 
@@ -1590,9 +1506,9 @@ mod tests {
     fn test_toggle_sidebar() {
         let mut state = make_state();
         assert!(!state.show_sidebar);
-        update(&mut state, Action::ToggleSidebar);
+        update(&mut state, Msg::ToggleSidebar);
         assert!(state.show_sidebar);
-        update(&mut state, Action::ToggleSidebar);
+        update(&mut state, Msg::ToggleSidebar);
         assert!(!state.show_sidebar);
     }
 
@@ -1601,17 +1517,17 @@ mod tests {
         let mut state = make_state();
         // Type "hello world"
         for c in "hello world".chars() {
-            update(&mut state, Action::InsertChar(c));
+            update(&mut state, Msg::InsertChar(c));
         }
         assert_eq!(state.cursor_col, 11);
 
         // Delete word backward → "hello" (removes " world" including space, bash-like)
-        update(&mut state, Action::DeleteWordBackward);
+        update(&mut state, Msg::DeleteWordBackward);
         assert_eq!(state.input_lines[0], "hello");
         assert_eq!(state.cursor_col, 5);
 
         // Delete word backward → "" (no more words, clears line)
-        update(&mut state, Action::DeleteWordBackward);
+        update(&mut state, Msg::DeleteWordBackward);
         assert_eq!(state.input_lines[0], "");
         assert_eq!(state.cursor_col, 0);
     }
@@ -1620,10 +1536,10 @@ mod tests {
     fn test_delete_to_start() {
         let mut state = make_state();
         for c in "hello".chars() {
-            update(&mut state, Action::InsertChar(c));
+            update(&mut state, Msg::InsertChar(c));
         }
-        update(&mut state, Action::MoveCursorToEnd);
-        update(&mut state, Action::DeleteToStart);
+        update(&mut state, Msg::MoveCursorToEnd);
+        update(&mut state, Msg::DeleteToStart);
         assert_eq!(state.input_lines[0], "");
         assert_eq!(state.cursor_col, 0);
     }
@@ -1631,11 +1547,11 @@ mod tests {
     #[test]
     fn test_delete_forward() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('a'));
-        update(&mut state, Action::InsertChar('b'));
-        update(&mut state, Action::InsertChar('c'));
-        update(&mut state, Action::MoveCursorToStart);
-        update(&mut state, Action::DeleteForward);
+        update(&mut state, Msg::InsertChar('a'));
+        update(&mut state, Msg::InsertChar('b'));
+        update(&mut state, Msg::InsertChar('c'));
+        update(&mut state, Msg::MoveCursorToStart);
+        update(&mut state, Msg::DeleteForward);
         assert_eq!(state.input_lines[0], "bc");
     }
 
@@ -1644,8 +1560,8 @@ mod tests {
         let mut state = make_state();
         update(
             &mut state,
-            Action::AgentEvent(tidy_agent::events::AgentEvent::MessageStart {
-                message: tidy_agent::events::AgentMessage {
+            Msg::AgentEvent(AgentEvent::MessageStart {
+                message: AgentMessage {
                     role: "assistant".to_string(),
                     content: vec![],
                     timestamp: 0,
@@ -1665,8 +1581,8 @@ mod tests {
         // Start message
         update(
             &mut state,
-            Action::AgentEvent(tidy_agent::events::AgentEvent::MessageStart {
-                message: tidy_agent::events::AgentMessage {
+            Msg::AgentEvent(AgentEvent::MessageStart {
+                message: AgentMessage {
                     role: "assistant".to_string(),
                     content: vec![],
                     timestamp: 0,
@@ -1680,10 +1596,10 @@ mod tests {
         // Update with text
         update(
             &mut state,
-            Action::AgentEvent(tidy_agent::events::AgentEvent::MessageUpdate {
-                message: tidy_agent::events::AgentMessage {
+            Msg::AgentEvent(AgentEvent::MessageUpdate {
+                message: AgentMessage {
                     role: "assistant".to_string(),
-                    content: vec![tidy_agent::events::ContentPart::Text {
+                    content: vec![ContentPart::Text {
                         text: "Hello".to_string(),
                     }],
                     timestamp: 0,
@@ -1705,16 +1621,16 @@ mod tests {
     // ─── Time-Travel Tests ─────────────────────────────────────────────────────
 
     #[test]
-    fn test_action_log_records_actions() {
+    fn test_action_log_records_msgs() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('i'));
-        update(&mut state, Action::Submit);
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('i'));
+        update(&mut state, Msg::Submit);
 
         assert_eq!(state.action_log.len(), 3);
-        assert!(matches!(state.action_log[0], Action::InsertChar('h')));
-        assert!(matches!(state.action_log[1], Action::InsertChar('i')));
-        assert!(matches!(state.action_log[2], Action::Submit));
+        assert!(matches!(state.action_log[0], Msg::InsertChar('h')));
+        assert!(matches!(state.action_log[1], Msg::InsertChar('i')));
+        assert!(matches!(state.action_log[2], Msg::Submit));
     }
 
     #[test]
@@ -1723,7 +1639,7 @@ mod tests {
         state.action_log_capacity = 5;
 
         for i in 0..10 {
-            update(&mut state, Action::InsertChar('a'));
+            update(&mut state, Msg::InsertChar('a'));
         }
 
         assert_eq!(state.action_log.len(), 5); // Only keeps last 5
@@ -1732,11 +1648,11 @@ mod tests {
     #[test]
     fn test_replay_actions() {
         let mut state = make_state();
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('i'));
-        update(&mut state, Action::Submit);
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('i'));
+        update(&mut state, Msg::Submit);
 
-        let replayed = state.replay_to(2); // Replay first 2 actions
+        let replayed = state.replay_to(2); // Replay first 2 msgs
         assert_eq!(replayed.input_lines, vec!["hi"]);
         assert_eq!(replayed.messages.len(), 0); // Submit not replayed
 
@@ -1748,22 +1664,54 @@ mod tests {
     fn test_replay_produces_same_state() {
         let mut state = make_state();
         // Complex sequence
-        update(&mut state, Action::InsertChar('h'));
-        update(&mut state, Action::InsertChar('e'));
-        update(&mut state, Action::InsertChar('l'));
-        update(&mut state, Action::InsertChar('l'));
-        update(&mut state, Action::InsertChar('o'));
-        update(&mut state, Action::Submit);
-        update(&mut state, Action::ToggleSidebar);
-        update(&mut state, Action::InsertChar('w'));
-        update(&mut state, Action::InsertChar('o'));
-        update(&mut state, Action::InsertChar('r'));
-        update(&mut state, Action::InsertChar('l'));
-        update(&mut state, Action::InsertChar('d'));
+        update(&mut state, Msg::InsertChar('h'));
+        update(&mut state, Msg::InsertChar('e'));
+        update(&mut state, Msg::InsertChar('l'));
+        update(&mut state, Msg::InsertChar('l'));
+        update(&mut state, Msg::InsertChar('o'));
+        update(&mut state, Msg::Submit);
+        update(&mut state, Msg::ToggleSidebar);
+        update(&mut state, Msg::InsertChar('w'));
+        update(&mut state, Msg::InsertChar('o'));
+        update(&mut state, Msg::InsertChar('r'));
+        update(&mut state, Msg::InsertChar('l'));
+        update(&mut state, Msg::InsertChar('d'));
 
         let replayed = state.replay_to(state.action_log.len());
         assert_eq!(replayed.input_lines, state.input_lines);
         assert_eq!(replayed.messages, state.messages);
         assert_eq!(replayed.show_sidebar, state.show_sidebar);
+    }
+
+    #[test]
+    fn test_permission_cmds() {
+        let mut state = make_state();
+
+        // PermissionConfirm should return Allow decision
+        let cmds = update(&mut state, Msg::PermissionConfirm);
+        assert_eq!(cmds.len(), 1);
+        if let Cmd::SendPermission { decision } = &cmds[0] {
+            assert_eq!(*decision, PermissionDecision::Allow);
+        } else {
+            panic!("Expected SendPermission cmd");
+        }
+
+        // PermissionCancel should return Deny decision
+        let cmds = update(&mut state, Msg::PermissionCancel);
+        if let Cmd::SendPermission { decision } = &cmds[0] {
+            assert_eq!(*decision, PermissionDecision::Deny);
+        }
+
+        // PermissionAlways should return AllowAlways decision
+        let cmds = update(&mut state, Msg::PermissionAlways);
+        if let Cmd::SendPermission { decision } = &cmds[0] {
+            assert_eq!(*decision, PermissionDecision::AllowAlways);
+        }
+
+        // PermissionSkip should return Skip decision
+        let cmds = update(&mut state, Msg::PermissionSkip);
+        if let Cmd::SendPermission { decision } = &cmds[0] {
+            assert_eq!(*decision, PermissionDecision::Skip);
+        }
     }
 }
