@@ -109,8 +109,7 @@ async fn run_cli_one_shot(
 #[cfg(not(windows))]
 async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::error::Error>> {
     use tidy_tui::{Tui, TuiConfig, TuiAction};
-    use crossterm::event::{self, Event as CEvent};
-    use std::time::Duration;
+    use crossterm::event::{Event as CEvent};
 
     let config = TuiConfig::default();
     let mut tui = Tui::new(config)?;
@@ -145,88 +144,95 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     let permission_rx = Arc::new(tokio::sync::Mutex::new(Some(permission_rx)));
     let permission_tx = Arc::new(tokio::sync::Mutex::new(permission_tx));
 
+    // Create channel for terminal events and spawn blocking reader
+    let (term_event_tx, mut term_event_rx) = mpsc::unbounded_channel::<CEvent>();
+    let term_handle = tokio::task::spawn_blocking(move || {
+        let tx = term_event_tx; // Move once into this scope
+        loop {
+            // event::read() blocks until a key is pressed
+            if let Ok(event) = crossterm::event::read() {
+                if tx.send(event).is_err() {
+                    break; // Receiver dropped — shutting down
+                }
+            }
+        }
+    });
+
     // Track conversation history and agent task
     let mut conversation_history: Vec<AgentMessage> = vec![];
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
     while tui.running {
         tokio::select! {
-            // Poll for crossterm events (non-blocking via sleep)
-            _ = tokio::time::sleep(Duration::from_millis(50)) => {
-                if event::poll(Duration::from_millis(0))? {
-                    if let CEvent::Key(key) = event::read()? {
-                        if let Some(action) = tui.handle_event(CEvent::Key(key)) {
-                            match action {
-                                TuiAction::Quit => break,
-                                TuiAction::Submit(text) => {
-                                    // Add user message to history
-                                    let user_msg = AgentMessage {
-                                        role: "user".to_string(),
-                                        content: vec![ContentPart::Text { text: text.clone() }],
-                                        timestamp: chrono::Utc::now().timestamp_millis(),
-                                        usage: None,
-                                        stop_reason: None,
-                                        error_message: None,
+            // Handle terminal events immediately (no 50ms polling delay)
+            Some(event) = term_event_rx.recv() => {
+                if let CEvent::Key(key) = event {
+                    if let Some(action) = tui.handle_event(CEvent::Key(key)) {
+                        match action {
+                            TuiAction::Quit => break,
+                            TuiAction::Submit(text) => {
+                                // Add user message to history
+                                let user_msg = AgentMessage {
+                                    role: "user".to_string(),
+                                    content: vec![ContentPart::Text { text: text.clone() }],
+                                    timestamp: chrono::Utc::now().timestamp_millis(),
+                                    usage: None,
+                                    stop_reason: None,
+                                    error_message: None,
+                                };
+                                conversation_history.push(user_msg);
+
+                                // User message already added to UI in handle_chat_key
+
+                                // Spawn agent if not running
+                                if agent_task.is_none() {
+                                    let event_tx = agent_event_tx.clone();
+                                    let messages = conversation_history.clone();
+                                    let config = AgentLoopConfig {
+                                        system_prompt: "You are a helpful coding assistant.".to_string(),
+                                        model: "gpt-4".to_string(),
+                                        thinking_level: "low".to_string(),
                                     };
-                                    conversation_history.push(user_msg);
 
-                                    // Add user message to UI
-                                    tui.add_message(tidy_tui::components::message_list::MessageItem::User {
-                                        text: text.clone(),
-                                        model: Some("You".to_string()),
-                                        timestamp: None,
-                                    });
-
-                                    // Spawn agent if not running
-                                    if agent_task.is_none() {
+                                    agent_task = Some(tokio::spawn({
                                         let event_tx = agent_event_tx.clone();
-                                        let messages = conversation_history.clone();
-                                        let config = AgentLoopConfig {
-                                            system_prompt: "You are a helpful coding assistant.".to_string(),
-                                            model: "gpt-4".to_string(),
-                                            thinking_level: "low".to_string(),
-                                        };
+                                        let permission_rx = permission_rx.clone();
+                                        let permission_tx = permission_tx.clone();
 
-                                        agent_task = Some(tokio::spawn({
-                                            let event_tx = agent_event_tx.clone();
-                                            let permission_rx = permission_rx.clone();
-                                            let permission_tx = permission_tx.clone();
+                                        async move {
+                                            let provider = MockProvider::new();
+                                            let tools: Vec<AgentTool> = vec![];
+                                            let rx = permission_rx.lock().await.take().unwrap();
 
-                                            async move {
-                                                let provider = MockProvider::new();
-                                                let tools: Vec<AgentTool> = vec![];
-                                                let rx = permission_rx.lock().await.take().unwrap();
-
-                                                match run_agent_loop(
-                                                    messages,
-                                                    config,
-                                                    &provider,
-                                                    &tools,
-                                                    event_tx,
-                                                    rx,
-                                                ).await {
-                                                    Ok(_) => {},
-                                                    Err(e) => eprintln!("Agent error: {}", e),
-                                                }
+                                            match run_agent_loop(
+                                                messages,
+                                                config,
+                                                &provider,
+                                                &tools,
+                                                event_tx,
+                                                rx,
+                                            ).await {
+                                                Ok(_) => {},
+                                                Err(e) => eprintln!("Agent error: {}", e),
                                             }
-                                        }));
-                                    }
+                                        }
+                                    }));
                                 }
-                                TuiAction::Command(cmd) => {
-                                    println!("Command: {}", cmd);
-                                }
-                                TuiAction::ToolPermission { tool: _, action } => {
-                                    let decision = match action {
-                                        tidy_tui::components::PermissionAction::Confirm => PermissionDecision::Allow,
-                                        tidy_tui::components::PermissionAction::Cancel => PermissionDecision::Deny,
-                                        tidy_tui::components::PermissionAction::Always => PermissionDecision::AllowAlways,
-                                        tidy_tui::components::PermissionAction::Skip => PermissionDecision::Skip,
-                                    };
-                                    let tx = permission_tx.lock().await;
-                                    tx.send(decision).ok();
-                                }
-                                _ => {}
                             }
+                            TuiAction::Command(cmd) => {
+                                println!("Command: {}", cmd);
+                            }
+                            TuiAction::ToolPermission { tool: _, action } => {
+                                let decision = match action {
+                                    tidy_tui::components::PermissionAction::Confirm => PermissionDecision::Allow,
+                                    tidy_tui::components::PermissionAction::Cancel => PermissionDecision::Deny,
+                                    tidy_tui::components::PermissionAction::Always => PermissionDecision::AllowAlways,
+                                    tidy_tui::components::PermissionAction::Skip => PermissionDecision::Skip,
+                                };
+                                let tx = permission_tx.lock().await;
+                                tx.send(decision).ok();
+                            }
+                            _ => {}
                         }
                     }
                 }

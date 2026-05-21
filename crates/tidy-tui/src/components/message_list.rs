@@ -120,45 +120,60 @@ impl MessageList {
             match msg {
                 MessageItem::User { text, .. } => {
                     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+                    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
 
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(6));
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
                     let msg_height = wrapped.len() as u16;
+                    // Total height: padding top (1) + text + padding bottom (1)
+                    let total_height = msg_height + 2;
 
-                    // Draw ❯ glyph
-                    buf.get_mut(margin_x, area.y + row)
+                    // Draw background panel with 1 char horizontal padding
+                    let panel_start_y = area.y + row;
+                    let panel_start_x = margin_x - 1; // 1 char left padding
+                    let panel_width = area.width - 2;   // 1 char right padding
+                    for r in 0..total_height {
+                        if panel_start_y + r >= area.y + area.height {
+                            break;
+                        }
+                        for x in 0..panel_width {
+                            if panel_start_x + x < area.x + area.width {
+                                buf.get_mut(panel_start_x + x, panel_start_y + r)
+                                    .set_style(Style::default().bg(bg_panel));
+                            }
+                        }
+                    }
+
+                    // Draw ❯ glyph inside panel (1 line padding top)
+                    buf.get_mut(margin_x, area.y + row + 1)
                         .set_char('❯')
-                        .set_style(Style::default().fg(accent_primary));
+                        .set_style(Style::default().fg(accent_primary).bg(bg_panel));
 
-                    // Draw text lines
+                    // Draw text lines inside panel (1 line padding top, 1 char left padding from margin_x)
                     for (i, line_text) in wrapped.iter().enumerate() {
-                        if row + i as u16 >= max_rows {
+                        if row + 1 + i as u16 >= max_rows {
                             break;
                         }
                         let line = Line::raw(line_text.as_str())
-                            .style(Style::default().fg(text_primary));
-                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 4);
+                            .style(Style::default().fg(text_primary).bg(bg_panel));
+                        buf.set_line(text_x, area.y + row + 1 + i as u16, &line, area.width - 6);
                     }
 
-                    row += msg_height;
+                    row += total_height;
                 }
 
                 MessageItem::Assistant { text, .. } => {
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(6));
+                    // Plain text response — no glyph, just gray text
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
                     let msg_height = wrapped.len() as u16;
 
-                    // Draw ◆ glyph
-                    buf.get_mut(margin_x, area.y + row)
-                        .set_char('◆')
-                        .set_style(Style::default().fg(text_muted));
-
-                    // Draw text lines
+                    // Draw text lines starting at margin (no glyph)
                     for (i, line_text) in wrapped.iter().enumerate() {
                         if row + i as u16 >= max_rows {
                             break;
                         }
                         let line = Line::raw(line_text.as_str())
                             .style(Style::default().fg(text_secondary));
-                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 4);
+                        buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
                     }
 
                     row += msg_height;
