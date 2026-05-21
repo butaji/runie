@@ -1,9 +1,7 @@
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    style::Style,
-    text::{Line, Span},
-};
+pub mod cursor;
+pub mod render;
+
+use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 use crate::theme::ThemeWrapper;
 
 #[derive(Clone)]
@@ -35,7 +33,7 @@ impl Default for InputBar {
     }
 }
 
-struct StyleHelpers {
+pub struct StyleHelpers {
     text_primary: Style,
     text_tertiary: Style,
     text_body: Style,
@@ -72,146 +70,11 @@ impl InputBar {
     }
 
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        let sp = StyleHelpers::new(theme);
-        let border_color: ratatui::style::Color = theme.color("border.unfocused").into();
-        let blue_color: ratatui::style::Color = theme.color("accent.primary").into();
-
-        // ──── Top border with tags ────
-        // Left corner
-        buf.get_mut(area.x, area.y).set_char('╭');
-        buf.get_mut(area.x, area.y).set_style(Style::default().fg(border_color));
-
-        // Top border line
-        for x in 1..area.width.saturating_sub(1) {
-            buf.get_mut(area.x + x, area.y).set_char('─');
-            buf.get_mut(area.x + x, area.y).set_style(Style::default().fg(border_color));
-        }
-
-        // Right corner
-        buf.get_mut(area.x + area.width - 1, area.y).set_char('╮');
-        buf.get_mut(area.x + area.width - 1, area.y).set_style(Style::default().fg(border_color));
-
-        // ──── Content lines ────
-        let content_width = area.width.saturating_sub(4) as usize; // borders + indent
-
-        for (line_idx, line_text) in self.lines.iter().enumerate() {
-            let y = area.y + 1 + line_idx as u16;
-
-            // Left border
-            buf.get_mut(area.x, y).set_style(Style::default().fg(border_color));
-            buf.get_mut(area.x, y).set_char('│');
-
-            let x = area.x + 1;
-
-            if line_idx == 0 {
-                // First line: chevron prompt
-                let chevron = "❯";
-                let prompt_style = Style::default().fg(blue_color);
-                let prompt_line = Line::from(vec![
-                    Span::styled(chevron, prompt_style),
-                    Span::styled(" ", Style::default()),
-                ]);
-                buf.set_line(x, y, &prompt_line, 2);
-
-                // Text (truncate if too long)
-                let text_x = x + 2;
-                let available = content_width.saturating_sub(2);
-                let display_text = if line_text.len() > available {
-                    format!("{}...", &line_text[..available.saturating_sub(3)])
-                } else {
-                    line_text.clone()
-                };
-                let text_line = Line::from(vec![Span::styled(display_text, sp.primary())]);
-                buf.set_line(text_x, y, &text_line, available as u16);
-            } else {
-                // Subsequent lines: indent
-                let indent = "  ";
-                let indent_line = Line::from(vec![Span::styled(indent, sp.dim())]);
-                buf.set_line(x, y, &indent_line, 2);
-
-                // Text
-                let text_x = x + 2;
-                let available = content_width.saturating_sub(2);
-                let display_text = if line_text.len() > available {
-                    format!("{}...", &line_text[..available.saturating_sub(3)])
-                } else {
-                    line_text.clone()
-                };
-                let text_line = Line::from(vec![Span::styled(display_text, sp.primary())]);
-                buf.set_line(text_x, y, &text_line, available as u16);
-            }
-
-            // Right border
-            buf.get_mut(area.x + area.width - 1, y)
-                .set_style(Style::default().fg(border_color));
-            buf.get_mut(area.x + area.width - 1, y).set_char('│');
-        }
-
-        // ──── Bottom border ────
-        let bottom_y = area.y + 1 + self.lines.len() as u16;
-        let info_text = if self.right_info.is_empty() {
-            "model: claude-4"
-        } else {
-            &self.right_info
-        };
-        let info_len = info_text.len() as u16;
-        let inner_width = area.width.saturating_sub(2); // space between corners
-
-        // Layout: ╰ + ─...─ + " " + info + " " + ─ + ╯
-        // Total fixed width: 1 (╰) + 1 (space) + info_len + 1 (space) + 1 (─) + 1 (╯) = info_len + 5
-        let fixed_width = info_len + 5;
-        let dashes = if inner_width >= fixed_width {
-            inner_width - fixed_width
-        } else {
-            0
-        };
-
-        // Left corner
-        buf.get_mut(area.x, bottom_y).set_char('╰');
-        buf.get_mut(area.x, bottom_y).set_style(Style::default().fg(border_color));
-
-        // Horizontal line before info
-        for i in 0..dashes {
-            let x = area.x + 1 + i;
-            buf.get_mut(x, bottom_y).set_char('─');
-            buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
-        }
-
-        // Space + info + space + ─ before corner
-        let mut x = area.x + 1 + dashes;
-        // Space
-        buf.get_mut(x, bottom_y).set_char(' ');
-        buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
-        x += 1;
-        // Info text
-        for ch in info_text.chars() {
-            buf.get_mut(x, bottom_y).set_char(ch);
-            buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
-            x += 1;
-        }
-        // Space
-        buf.get_mut(x, bottom_y).set_char(' ');
-        buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
-        x += 1;
-        // ─ before corner
-        buf.get_mut(x, bottom_y).set_char('─');
-        buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
-        x += 1;
-
-        // Right corner
-        buf.get_mut(area.x + area.width - 1, bottom_y).set_char('╯');
-        buf.get_mut(area.x + area.width - 1, bottom_y).set_style(Style::default().fg(border_color));
+        render::render_ref(self, area, buf, theme);
     }
 
     pub fn cursor_screen_pos(&self, area: Rect) -> ratatui::layout::Position {
-        let x = area.x + 1;
-        let y = area.y + 1 + self.cursor_line as u16;
-        let cursor_x = if self.cursor_line == 0 {
-            x + 2 + self.cursor_col as u16
-        } else {
-            x + 2 + self.cursor_col as u16
-        };
-        ratatui::layout::Position::new(cursor_x, y)
+        cursor::cursor_screen_pos(self, area)
     }
 
     pub fn insert_char(&mut self, ch: char) {
@@ -294,7 +157,9 @@ impl InputBar {
     }
 
     pub fn delete_word_backward(&mut self) {
-        if self.cursor_line >= self.lines.len() { return; }
+        if self.cursor_line >= self.lines.len() {
+            return;
+        }
         let line = &mut self.lines[self.cursor_line];
         if self.cursor_col == 0 {
             if self.cursor_line > 0 {
@@ -313,7 +178,9 @@ impl InputBar {
         }
         while pos > 0 {
             let ch = text.chars().nth(pos - 1).unwrap_or(' ');
-            if ch.is_whitespace() { break; }
+            if ch.is_whitespace() {
+                break;
+            }
             pos -= 1;
         }
         line.drain(pos..self.cursor_col);
@@ -321,20 +188,26 @@ impl InputBar {
     }
 
     pub fn delete_to_start(&mut self) {
-        if self.cursor_line >= self.lines.len() { return; }
+        if self.cursor_line >= self.lines.len() {
+            return;
+        }
         let line = &mut self.lines[self.cursor_line];
         line.drain(0..self.cursor_col);
         self.cursor_col = 0;
     }
 
     pub fn delete_to_end(&mut self) {
-        if self.cursor_line >= self.lines.len() { return; }
+        if self.cursor_line >= self.lines.len() {
+            return;
+        }
         let line = &mut self.lines[self.cursor_line];
         line.truncate(self.cursor_col);
     }
 
     pub fn delete_forward(&mut self) {
-        if self.cursor_line >= self.lines.len() { return; }
+        if self.cursor_line >= self.lines.len() {
+            return;
+        }
         let line = &mut self.lines[self.cursor_line];
         if self.cursor_col < line.len() {
             line.remove(self.cursor_col);
@@ -381,7 +254,6 @@ mod tests {
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Prompt "❯ " at x=1,2
         assert_eq!(buf.cell((1, 1)).unwrap().symbol(), "❯");
         assert_eq!(buf.cell((2, 1)).unwrap().symbol(), " ");
     }
@@ -392,12 +264,10 @@ mod tests {
         let mut input = InputBar::default();
         input.insert_char('h');
         input.insert_char('i');
-        // cursor_col = 2
         let area = Rect::new(0, 0, 40, 5);
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Verify text is rendered: "❯ hi" at x=1,2,3,4
         assert_eq!(buf.cell((3, 1)).unwrap().symbol(), "h");
         assert_eq!(buf.cell((4, 1)).unwrap().symbol(), "i");
     }
@@ -408,12 +278,11 @@ mod tests {
         let mut input = InputBar::default();
         input.insert_char('h');
         input.insert_char('i');
-        input.move_cursor_left(); // cursor_col = 1
+        input.move_cursor_left();
         let area = Rect::new(0, 0, 40, 5);
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Verify text is rendered: "❯ hi" with cursor between h and i
         assert_eq!(buf.cell((3, 1)).unwrap().symbol(), "h");
         assert_eq!(buf.cell((4, 1)).unwrap().symbol(), "i");
     }
@@ -426,7 +295,6 @@ mod tests {
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Chevron at x=1
         let chevron_cell = buf.cell((1, 1)).unwrap();
         assert_eq!(chevron_cell.symbol(), "❯");
     }
@@ -435,13 +303,12 @@ mod tests {
     fn test_cursor_on_second_line() {
         let theme = setup_theme();
         let mut input = InputBar::default();
-        input.insert_newline(); // cursor_line=1, cursor_col=0
-        input.insert_char('x'); // cursor_col=1
+        input.insert_newline();
+        input.insert_char('x');
         let area = Rect::new(0, 0, 40, 5);
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Second line: "  x" at x=1,2,3
         assert_eq!(buf.cell((1, 2)).unwrap().symbol(), " ");
         assert_eq!(buf.cell((2, 2)).unwrap().symbol(), " ");
         assert_eq!(buf.cell((3, 2)).unwrap().symbol(), "x");
@@ -454,12 +321,10 @@ mod tests {
         for _ in 0..10 {
             input.insert_char('a');
         }
-        // cursor_col = 10
         let area = Rect::new(0, 0, 40, 5);
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Verify text is rendered after prompt "❯ "
         assert_eq!(buf.cell((4, 1)).unwrap().symbol(), "a");
     }
 
@@ -504,7 +369,7 @@ mod tests {
         input.insert_char('h');
         input.insert_char('i');
         input.insert_newline();
-        input.backspace(); // merge with previous line
+        input.backspace();
         assert_eq!(input.lines.len(), 1);
         assert_eq!(input.lines[0], "hi");
         assert_eq!(input.cursor_line, 0);
@@ -514,17 +379,9 @@ mod tests {
     #[test]
     fn test_delete_word_backward() {
         let mut input = InputBar::default();
-        input.insert_char('h');
-        input.insert_char('e');
-        input.insert_char('l');
-        input.insert_char('l');
-        input.insert_char('o');
-        input.insert_char(' ');
-        input.insert_char('w');
-        input.insert_char('o');
-        input.insert_char('r');
-        input.insert_char('l');
-        input.insert_char('d');
+        for ch in "hello world".chars() {
+            input.insert_char(ch);
+        }
         input.delete_word_backward();
         assert_eq!(input.lines[0], "hello ");
         assert_eq!(input.cursor_col, 6);
@@ -610,7 +467,7 @@ mod tests {
         input.insert_char('i');
         input.move_cursor_up();
         assert_eq!(input.cursor_line, 0);
-        assert_eq!(input.cursor_col, 1); // clamped to line length
+        assert_eq!(input.cursor_col, 1);
     }
 
     #[test]
@@ -693,12 +550,10 @@ mod tests {
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Line 1: "❯ line1" at y=1
         assert_eq!(buf.cell((1, 1)).unwrap().symbol(), "❯");
         assert_eq!(buf.cell((2, 1)).unwrap().symbol(), " ");
         assert_eq!(buf.cell((3, 1)).unwrap().symbol(), "l");
 
-        // Line 2: "  line2" at y=2
         assert_eq!(buf.cell((1, 2)).unwrap().symbol(), " ");
         assert_eq!(buf.cell((2, 2)).unwrap().symbol(), " ");
         assert_eq!(buf.cell((3, 2)).unwrap().symbol(), "l");
@@ -710,17 +565,15 @@ mod tests {
         let mut input = InputBar::default();
         input.insert_newline();
         input.insert_newline();
-        // Now 3 lines, cursor on line 2
 
         let area = Rect::new(0, 0, 40, 7);
         let mut buf = Buffer::empty(area);
         input.render_ref(area, &mut buf, &theme);
 
-        // Should have 3 content lines + 2 borders = height 5
-        assert_eq!(buf.cell((0, 1)).unwrap().symbol(), "│"); // line 0
-        assert_eq!(buf.cell((0, 2)).unwrap().symbol(), "│"); // line 1
-        assert_eq!(buf.cell((0, 3)).unwrap().symbol(), "│"); // line 2
-        assert_eq!(buf.cell((0, 4)).unwrap().symbol(), "╰"); // bottom border
+        assert_eq!(buf.cell((0, 1)).unwrap().symbol(), "│");
+        assert_eq!(buf.cell((0, 2)).unwrap().symbol(), "│");
+        assert_eq!(buf.cell((0, 3)).unwrap().symbol(), "│");
+        assert_eq!(buf.cell((0, 4)).unwrap().symbol(), "╰");
     }
 
     // ──── Cursor Screen Position Tests ────
@@ -730,8 +583,8 @@ mod tests {
         let input = InputBar::default();
         let area = Rect::new(0, 0, 40, 5);
         let pos = input.cursor_screen_pos(area);
-        assert_eq!(pos.x, 3); // area.x + 1 + 2 (prompt)
-        assert_eq!(pos.y, 1); // area.y + 1
+        assert_eq!(pos.x, 3);
+        assert_eq!(pos.y, 1);
     }
 
     #[test]
@@ -741,7 +594,7 @@ mod tests {
         input.insert_char('i');
         let area = Rect::new(0, 0, 40, 5);
         let pos = input.cursor_screen_pos(area);
-        assert_eq!(pos.x, 5); // 3 + 2 chars
+        assert_eq!(pos.x, 5);
         assert_eq!(pos.y, 1);
     }
 
@@ -752,8 +605,8 @@ mod tests {
         input.insert_char('x');
         let area = Rect::new(0, 0, 40, 5);
         let pos = input.cursor_screen_pos(area);
-        assert_eq!(pos.x, 4); // area.x + 1 + 2 (indent) + 1 (cursor_col)
-        assert_eq!(pos.y, 2); // area.y + 1 + 1
+        assert_eq!(pos.x, 4);
+        assert_eq!(pos.y, 2);
     }
 
     // ──── delete_word_backward edge cases ────
@@ -761,12 +614,10 @@ mod tests {
     #[test]
     fn test_delete_word_backward_with_punctuation() {
         let mut input = InputBar::default();
-        // Type "hello world!"
         for ch in "hello world!".chars() {
             input.insert_char(ch);
         }
         input.delete_word_backward();
-        // Should delete "world!" back to the space
         assert_eq!(input.lines[0], "hello ");
         assert_eq!(input.cursor_col, 6);
     }
@@ -778,7 +629,6 @@ mod tests {
             input.insert_char(ch);
         }
         input.delete_word_backward();
-        // Should delete all "!!!"
         assert_eq!(input.lines[0], "");
         assert_eq!(input.cursor_col, 0);
     }
@@ -790,7 +640,6 @@ mod tests {
             input.insert_char(ch);
         }
         input.delete_word_backward();
-        // Should delete "baz" (back to space)
         assert_eq!(input.lines[0], "foo-bar ");
         assert_eq!(input.cursor_col, 8);
     }
@@ -806,10 +655,8 @@ mod tests {
         input.insert_char('e');
         input.insert_char('r');
         input.insert_char('e');
-        // cursor at start of line 1
         input.move_cursor_to_start();
         input.delete_word_backward();
-        // Should join with previous line: "hi" + "there" = "hithere"
         assert_eq!(input.lines.len(), 1);
         assert_eq!(input.lines[0], "hithere");
         assert_eq!(input.cursor_line, 0);
@@ -823,7 +670,6 @@ mod tests {
             input.insert_char(ch);
         }
         input.delete_word_backward();
-        // Should delete back through whitespace to "hello"
         assert_eq!(input.lines[0], "");
         assert_eq!(input.cursor_col, 0);
     }
@@ -856,7 +702,7 @@ mod tests {
             input.insert_char(ch);
         }
         input.move_cursor_left();
-        input.move_cursor_left(); // cursor at 'l' (pos 3)
+        input.move_cursor_left();
         input.delete_to_start();
         assert_eq!(input.lines[0], "lo");
         assert_eq!(input.cursor_col, 0);
@@ -909,11 +755,9 @@ mod tests {
         input.insert_char('e');
         input.insert_char('r');
         input.insert_char('e');
-        // Move to end of first line
         input.move_cursor_up();
         input.move_cursor_to_end();
         input.delete_to_end();
-        // Current behavior: just truncates first line, doesn't join
         assert_eq!(input.lines.len(), 2);
         assert_eq!(input.lines[0], "hi");
         assert_eq!(input.lines[1], "there");
@@ -932,11 +776,9 @@ mod tests {
         input.insert_char('e');
         input.insert_char('r');
         input.insert_char('e');
-        // Move to end of first line
         input.move_cursor_up();
         input.move_cursor_to_end();
         input.delete_forward();
-        // Should join with next line
         assert_eq!(input.lines.len(), 1);
         assert_eq!(input.lines[0], "hithere");
         assert_eq!(input.cursor_line, 0);
@@ -1013,10 +855,9 @@ mod tests {
         input.insert_newline();
         input.insert_char('h');
         input.insert_char('i');
-        // cursor at (1, 2), move up to line 0 which has length 5
         input.move_cursor_up();
         assert_eq!(input.cursor_line, 0);
-        assert_eq!(input.cursor_col, 2); // clamped to line 0 length
+        assert_eq!(input.cursor_col, 2);
     }
 
     #[test]
@@ -1028,11 +869,10 @@ mod tests {
         for ch in "hello".chars() {
             input.insert_char(ch);
         }
-        // cursor at (1, 5), move up then down
         input.move_cursor_up();
         input.move_cursor_down();
         assert_eq!(input.cursor_line, 1);
-        assert_eq!(input.cursor_col, 2); // clamped to line 1 length
+        assert_eq!(input.cursor_col, 2);
     }
 
     // ──── Multi-line backspace tests ────
@@ -1045,16 +885,13 @@ mod tests {
         input.insert_char('b');
         input.insert_newline();
         input.insert_char('c');
-        // cursor at (2, 1), backspace removes char since cursor_col > 0
         input.backspace();
-        // Actual behavior: removes 'c', no line join since cursor_col was > 0
         assert_eq!(input.lines.len(), 3);
         assert_eq!(input.lines[0], "a");
         assert_eq!(input.lines[1], "b");
-        assert_eq!(input.lines[2], ""); // 'c' was removed
+        assert_eq!(input.lines[2], "");
         assert_eq!(input.cursor_line, 2);
         assert_eq!(input.cursor_col, 0);
-        // TODO: When cursor_col == 0, backspace joins lines (tested below)
     }
 
     #[test]
@@ -1063,7 +900,6 @@ mod tests {
         input.insert_char('a');
         input.insert_newline();
         input.insert_char('b');
-        // Move cursor to start of line 1 (col 0), then backspace joins with previous line
         input.move_cursor_to_start();
         input.backspace();
         assert_eq!(input.lines.len(), 1);
