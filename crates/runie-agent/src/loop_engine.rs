@@ -254,50 +254,46 @@ pub async fn run_agent_loop(
 }
 
 fn build_llm_messages(system_prompt: &str, messages: &[AgentMessage]) -> Vec<Message> {
-    let mut llm_msgs = vec![
-        Message::System { content: system_prompt.to_string() },
-    ];
-
+    let mut llm_msgs = vec![Message::System { content: system_prompt.to_string() }];
     for msg in messages {
-        let content = msg.content.iter().map(|part| match part {
-            ContentPart::Text { text } => text.clone(),
-            ContentPart::ToolUse { name, input, .. } => format!("{}({})", name, input),
-            ContentPart::ToolResult { content, .. } => content.iter().map(|c| match c {
-                ContentPart::Text { text } => text.clone(),
-                _ => String::new(),
-            }).collect::<Vec<_>>().join(" "),
-            _ => String::new(),
-        }).collect::<Vec<_>>().join("\n");
-
-        let role = match msg.role.as_str() {
-            "user" => Some(Message::User { content, attachments: Vec::new() }),
-            "assistant" => Some(Message::Assistant {
-                content,
-                tool_calls: Vec::new(),
-                thinking: None,
-            }),
-            "tool" => {
-                // Extract tool_call_id from ToolResult if present
-                let tool_call_id = msg.content.iter().find_map(|part| {
-                    if let ContentPart::ToolResult { tool_use_id, .. } = part {
-                        Some(tool_use_id.clone())
-                    } else {
-                        None
-                    }
-                }).unwrap_or_else(|| "unknown".to_string());
-                Some(Message::ToolResult {
-                    tool_call_id,
-                    content,
-                    is_error: false,
-                })
-            }
-            _ => None,
-        };
-
-        if let Some(msg) = role {
-            llm_msgs.push(msg);
+        let content = format_message_content(&msg.content);
+        if let Some(m) = agent_msg_to_llm(&msg.role, content, &msg.content) {
+            llm_msgs.push(m);
         }
     }
-
     llm_msgs
+}
+
+fn format_message_content(parts: &[ContentPart]) -> String {
+    parts.iter().map(|part| match part {
+        ContentPart::Text { text } => text.clone(),
+        ContentPart::ToolUse { name, input, .. } => format!("{}({})", name, input),
+        ContentPart::ToolResult { content, .. } => content.iter().map(|c| match c {
+            ContentPart::Text { text } => text.clone(),
+            _ => String::new(),
+        }).collect::<Vec<_>>().join(" "),
+        _ => String::new(),
+    }).collect::<Vec<_>>().join("\n")
+}
+
+fn agent_msg_to_llm(role: &str, content: String, parts: &[ContentPart]) -> Option<Message> {
+    match role {
+        "user" => Some(Message::User { content, attachments: Vec::new() }),
+        "assistant" => Some(Message::Assistant {
+            content,
+            tool_calls: Vec::new(),
+            thinking: None,
+        }),
+        "tool" => {
+            let tool_call_id = parts.iter().find_map(|part| {
+                if let ContentPart::ToolResult { tool_use_id, .. } = part {
+                    Some(tool_use_id.clone())
+                } else {
+                    None
+                }
+            }).unwrap_or_else(|| "unknown".to_string());
+            Some(Message::ToolResult { tool_call_id, content, is_error: false })
+        }
+        _ => None,
+    }
 }

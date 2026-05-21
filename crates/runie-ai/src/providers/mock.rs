@@ -25,40 +25,41 @@ impl MockProvider {
     }
 
     fn generate_response(&self, messages: &[Message]) -> Vec<Event> {
-        let last_message = messages.iter().rev().find(|m| matches!(m, Message::User { .. }));
-
-        let content = match last_message {
-            Some(Message::User { content, .. }) => {
-                if content.contains("hello") || content.contains("hi") {
-                    "Hello! I'm a mock coding agent. How can I help you today?".to_string()
-                } else if content.contains("edit") || content.contains("fix") {
-                    "I'll help you edit that file. Let me first read it to understand the current state.".to_string()
-                } else if content.contains("test") {
-                    "I'll run the tests for you. Let me check what test framework you're using.".to_string()
-                } else {
-                    format!("I received your message: \"{}\". This is a mock response for testing.", &content[..content.len().min(50)])
-                }
-            }
-            _ => "I'm ready to help! What would you like to work on?".to_string(),
-        };
-
+        let content = Self::build_content(messages);
         vec![
-            Event::AgentStart {
-                session_id: "mock-session".to_string(),
-                timestamp: Utc::now(),
-            },
-            Event::MessageStart {
-                role: "assistant".to_string(),
-                timestamp: Utc::now(),
-            },
-            Event::MessageDelta {
-                content: content.clone(),
-            },
+            Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
+            Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
+            Event::MessageDelta { content: content.clone() },
             Event::MessageEnd,
-            Event::AgentEnd {
-                timestamp: Utc::now(),
-            },
+            Event::AgentEnd { timestamp: Utc::now() },
         ]
+    }
+
+    fn build_content(messages: &[Message]) -> String {
+        let last = messages.iter().rev().find(|m| matches!(m, Message::User { .. }));
+        let text = match last {
+            Some(Message::User { content, .. }) => content.as_str(),
+            _ => return Self::default_response(),
+        };
+        Self::response_for_text(text)
+    }
+
+    fn default_response() -> String {
+        "I'm ready to help! What would you like to work on?".to_string()
+    }
+
+    fn response_for_text(text: &str) -> String {
+        if text.contains("hello") || text.contains("hi") {
+            return "Hello! I'm a mock coding agent. How can I help you today?".to_string();
+        }
+        if text.contains("edit") || text.contains("fix") {
+            return "I'll help you edit that file. Let me first read it to understand the current state.".to_string();
+        }
+        if text.contains("test") {
+            return "I'll run the tests for you. Let me check what test framework you're using.".to_string();
+        }
+        let preview = &text[..text.len().min(50)];
+        format!("I received your message: \"{}\". This is a mock response for testing.", preview)
     }
 }
 

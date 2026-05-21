@@ -112,18 +112,12 @@ impl Tui {
     pub fn render(&mut self) -> io::Result<()> {
         let size = self.terminal.size()?;
         let area = Rect::new(0, 0, size.width, size.height);
-
         let padded_area = Rect {
-            x: area.x + 2,
-            y: area.y + 1,
+            x: area.x + 2, y: area.y + 1,
             width: area.width.saturating_sub(4),
             height: area.height.saturating_sub(2),
         };
-
-        // Calculate dynamic input bar height
         let input_height = self.input_bar_height();
-
-        // Extract values needed in closure to avoid borrow conflicts
         let show_sidebar = self.state.show_sidebar;
         let show_top_bar = self.config.show_top_bar;
         let show_status_bar = self.config.show_status_bar;
@@ -132,148 +126,138 @@ impl Tui {
 
         self.terminal.draw(|frame| {
             let theme = &self.config.theme;
+            Self::clear_background(frame, area, theme);
+            let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
 
-            // Clear entire frame with bg.base
-            let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-            for y in 0..area.height {
-                for x in 0..area.width {
-                    frame.buffer_mut().get_mut(x, y).set_style(Style::default().bg(bg_base));
-                }
-            }
-
-            // Main vertical layout: TopBar | ContentArea | InputBar | StatusBar
-            let main_constraints = [
-                if show_top_bar { Constraint::Length(1) } else { Constraint::Length(0) },
-                Constraint::Min(1),  // Content area (will be split horizontally)
-                Constraint::Length(input_height),
-                if show_status_bar { Constraint::Length(1) } else { Constraint::Length(0) },
-            ];
-            let main_areas: [Rect; 4] = Layout::vertical(main_constraints).areas(padded_area);
-
-            // Render top bar using standalone function
             if show_top_bar {
                 render_top_bar(&state_clone, main_areas[0], frame.buffer_mut(), theme);
             }
-
-            // Split content area horizontally
-            let content_area = main_areas[1];
-            let mut h_constraints = vec![];
-            h_constraints.push(Constraint::Min(20));
-            if show_sidebar && content_area.width >= SIDEBAR_WIDTH + 20 {
-                h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
-            }
-            let h_areas = Layout::horizontal(h_constraints.as_slice()).split(content_area);
-
-            // Render message list directly from state (no widget instance needed)
-            if show_sidebar && content_area.width >= SIDEBAR_WIDTH + 20 {
-                MessageList::render_ref(&state_clone.messages, state_clone.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme);
-                render_agent_list(h_areas[1], frame.buffer_mut(), theme);
-            } else {
-                MessageList::render_ref(&state_clone.messages, state_clone.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme);
-            }
-
-            // Render input bar using standalone function
-            let input_bar = InputBar {
-                prompt: "\u{276F} ".to_string(),
-                lines: state_clone.input_lines.clone(),
-                cursor_line: state_clone.cursor_row.min(state_clone.input_lines.len().saturating_sub(1)),
-                cursor_col: state_clone.cursor_col,
-                mode: crate::components::InputMode::Normal,
-                right_info: state_clone.input_right_info.clone(),
-            };
-            input_bar.render_ref(main_areas[2], frame.buffer_mut(), theme);
-            let cursor_pos = input_bar.cursor_screen_pos(main_areas[2]);
-            frame.set_cursor_position(cursor_pos);
-
-            // Render status bar using standalone function
+            Self::render_content(frame, &state_clone, show_sidebar, main_areas[1], theme);
+            Self::render_input(frame, &state_clone, main_areas[2], theme);
             if show_status_bar {
                 render_status_bar(&state_clone, main_areas[3], frame.buffer_mut(), theme);
             }
-
-            // Permission modal (render from state if active)
-            if mode == TuiMode::Permission && state_clone.permission_modal_tool.is_some() {
-                let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-                // Dim background
-                for y in 0..area.height {
-                    for x in 0..area.width {
-                        if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                            cell.set_style(Style::default().bg(bg_base));
-                        }
-                    }
-                }
-                // Center modal
-                let modal_w = 50u16;
-                let modal_h = 12u16;
-                let modal_x = padded_area.x + (padded_area.width.saturating_sub(modal_w)) / 2;
-                let modal_y = padded_area.y + (padded_area.height.saturating_sub(modal_h)) / 2;
-                let modal_area = Rect::new(modal_x, modal_y, modal_w, modal_h);
-
-                // Draw shadow
-                Self::render_shadow(modal_area, frame.buffer_mut(), theme);
-
-                // Render permission modal from state
-                let modal = PermissionModal::new(
-                    state_clone.permission_modal_tool.as_deref().unwrap_or(""),
-                    state_clone.permission_modal_args.as_deref().unwrap_or(""),
-                    state_clone.permission_modal_desc.as_deref().unwrap_or(""),
-                );
-                modal.render_ref(modal_area, frame.buffer_mut(), theme);
-            }
-
-            // Command palette (simplified - just show a placeholder)
-            if mode == TuiMode::CommandPalette {
-                let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-                // Dim background
-                for y in 0..area.height {
-                    for x in 0..area.width {
-                        if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                            cell.set_style(Style::default().bg(bg_base));
-                        }
-                    }
-                }
-                // Center palette
-                let palette_w = 70u16;
-                let palette_h = 20u16;
-                let palette_x = padded_area.x + (padded_area.width.saturating_sub(palette_w)) / 2;
-                let palette_y = padded_area.y + (padded_area.height.saturating_sub(palette_h)) / 2;
-                let palette_area = Rect::new(palette_x, palette_y, palette_w, palette_h);
-
-                // Draw shadow
-                Self::render_shadow(palette_area, frame.buffer_mut(), theme);
-
-                // Render command palette widget
-                let palette = CommandPalette::new();
-                palette.render_ref(palette_area, frame.buffer_mut(), theme);
-            }
-
-            // Overlay mode (simplified - just show a centered box)
-            if mode == TuiMode::Overlay {
-                let overlay_area = Overlay::centered((60, 20), frame.area());
-
-                // Draw shadow first
-                Self::render_shadow(overlay_area, frame.buffer_mut(), theme);
-
-                let mut overlay_buf = Buffer::empty(overlay_area);
-                let overlay = Overlay::default();
-                overlay.render_ref(overlay_area, &mut overlay_buf, theme);
-                for y in 0..overlay_buf.area.height {
-                    for x in 0..overlay_buf.area.width {
-                        let cell = overlay_buf.get(x, y);
-                        let tx = overlay_area.x + x;
-                        let ty = overlay_area.y + y;
-                        if tx < area.width && ty < area.height {
-                            if let Some(target) = frame.buffer_mut().cell_mut((tx, ty)) {
-                                target.set_style(cell.style());
-                                if let Some(ch) = cell.symbol().chars().next() {
-                                    target.set_char(ch);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            Self::render_overlays(frame, &state_clone, mode, padded_area, area, theme);
         })?;
         Ok(())
+    }
+
+    fn clear_background(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
+        let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+        for y in 0..area.height {
+            for x in 0..area.width {
+                frame.buffer_mut().get_mut(x, y).set_style(Style::default().bg(bg_base));
+            }
+        }
+    }
+
+    fn layout_main(padded: Rect, show_top: bool, show_status: bool, input_h: u16) -> [Rect; 4] {
+        let constraints = [
+            if show_top { Constraint::Length(1) } else { Constraint::Length(0) },
+            Constraint::Min(1),
+            Constraint::Length(input_h),
+            if show_status { Constraint::Length(1) } else { Constraint::Length(0) },
+        ];
+        Layout::vertical(constraints).areas(padded)
+    }
+
+    fn render_content(frame: &mut ratatui::Frame, state: &AppState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper) {
+        let mut h_constraints = vec![Constraint::Min(20)];
+        if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
+            h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
+        }
+        let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
+        MessageList::render_ref(&state.messages, state.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme);
+        if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
+            render_agent_list(h_areas[1], frame.buffer_mut(), theme);
+        }
+    }
+
+    fn render_input(frame: &mut ratatui::Frame, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+        let input_bar = InputBar {
+            prompt: "\u{276F} ".to_string(),
+            lines: state.input_lines.clone(),
+            cursor_line: state.cursor_row.min(state.input_lines.len().saturating_sub(1)),
+            cursor_col: state.cursor_col,
+            mode: crate::components::InputMode::Normal,
+            right_info: state.input_right_info.clone(),
+        };
+        input_bar.render_ref(area, frame.buffer_mut(), theme);
+        frame.set_cursor_position(input_bar.cursor_screen_pos(area));
+    }
+
+    fn render_overlays(frame: &mut ratatui::Frame, state: &AppState, mode: TuiMode, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+        if mode == TuiMode::Permission && state.permission_modal_tool.is_some() {
+            Self::render_permission_modal(frame, state, padded, area, theme);
+        }
+        if mode == TuiMode::CommandPalette {
+            Self::render_command_palette(frame, padded, area, theme);
+        }
+        if mode == TuiMode::Overlay {
+            Self::render_overlay_mode(frame, area, theme);
+        }
+    }
+
+    fn render_permission_modal(frame: &mut ratatui::Frame, state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+        Self::dim_background(frame, area, theme);
+        let modal_area = Self::centered_rect(padded, 50, 12);
+        Self::render_shadow(modal_area, frame.buffer_mut(), theme);
+        let modal = PermissionModal::new(
+            state.permission_modal_tool.as_deref().unwrap_or(""),
+            state.permission_modal_args.as_deref().unwrap_or(""),
+            state.permission_modal_desc.as_deref().unwrap_or(""),
+        );
+        modal.render_ref(modal_area, frame.buffer_mut(), theme);
+    }
+
+    fn render_command_palette(frame: &mut ratatui::Frame, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+        Self::dim_background(frame, area, theme);
+        let palette_area = Self::centered_rect(padded, 70, 20);
+        Self::render_shadow(palette_area, frame.buffer_mut(), theme);
+        CommandPalette::new().render_ref(palette_area, frame.buffer_mut(), theme);
+    }
+
+    fn render_overlay_mode(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
+        let overlay_area = Overlay::centered((60, 20), frame.area());
+        Self::render_shadow(overlay_area, frame.buffer_mut(), theme);
+        let mut overlay_buf = Buffer::empty(overlay_area);
+        Overlay::default().render_ref(overlay_area, &mut overlay_buf, theme);
+        Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
+    }
+
+    fn dim_background(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
+        let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+        for y in 0..area.height {
+            for x in 0..area.width {
+                if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
+                    cell.set_style(Style::default().bg(bg_base));
+                }
+            }
+        }
+    }
+
+    fn centered_rect(padded: Rect, w: u16, h: u16) -> Rect {
+        let x = padded.x + (padded.width.saturating_sub(w)) / 2;
+        let y = padded.y + (padded.height.saturating_sub(h)) / 2;
+        Rect::new(x, y, w, h)
+    }
+
+    fn blit_buffer(frame: &mut ratatui::Frame, area: Rect, src_area: Rect, src: &Buffer) {
+        for y in 0..src.area.height {
+            for x in 0..src.area.width {
+                let cell = src.get(x, y);
+                let tx = src_area.x + x;
+                let ty = src_area.y + y;
+                if tx < area.width && ty < area.height {
+                    if let Some(target) = frame.buffer_mut().cell_mut((tx, ty)) {
+                        target.set_style(cell.style());
+                        if let Some(ch) = cell.symbol().chars().next() {
+                            target.set_char(ch);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     pub fn handle_event(&mut self, event: Event) -> Option<TuiAction> {
@@ -348,44 +332,47 @@ impl Tui {
         self.update(Msg::ToggleSidebar);
     }
 
-    /// Draw a subtle shadow around a modal area (1 cell right, 1 cell down)
-    fn render_shadow(modal_area: Rect, buf: &mut ratatui::buffer::Buffer, theme: &ThemeWrapper) {
-        let shadow_bg: ratatui::style::Color = theme.color("bg.base").into();
-        let shadow_fg: ratatui::style::Color = theme.color("text.dim").into();
+    fn render_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, theme: &ThemeWrapper) {
+        let bg: ratatui::style::Color = theme.color("bg.base").into();
+        let fg: ratatui::style::Color = theme.color("text.dim").into();
+        Self::draw_v_shadow(area, buf, fg, bg);
+        Self::draw_h_shadow(area, buf, fg, bg);
+        Self::draw_corner_shadow(area, buf, fg, bg);
+    }
 
-        // Shadow on the right side (1 column to the right of modal)
-        let shadow_x = modal_area.x + modal_area.width;
-        if shadow_x < buf.area.width {
-            for y in modal_area.y + 1..modal_area.y + modal_area.height + 1 {
-                if y < buf.area.height {
-                    if let Some(cell) = buf.cell_mut((shadow_x, y)) {
-                        cell.set_char('░');
-                        cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
-                    }
+    fn draw_v_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, fg: ratatui::style::Color, bg: ratatui::style::Color) {
+        let x = area.x + area.width;
+        if x >= buf.area.width { return; }
+        for y in area.y + 1..area.y + area.height + 1 {
+            if y < buf.area.height {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char('░');
+                    cell.set_style(Style::default().fg(fg).bg(bg));
                 }
             }
         }
+    }
 
-        // Shadow on the bottom (1 row below modal)
-        let shadow_y = modal_area.y + modal_area.height;
-        if shadow_y < buf.area.height {
-            for x in modal_area.x + 1..modal_area.x + modal_area.width + 1 {
-                if x < buf.area.width {
-                    if let Some(cell) = buf.cell_mut((x, shadow_y)) {
-                        cell.set_char('░');
-                        cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
-                    }
+    fn draw_h_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, fg: ratatui::style::Color, bg: ratatui::style::Color) {
+        let y = area.y + area.height;
+        if y >= buf.area.height { return; }
+        for x in area.x + 1..area.x + area.width + 1 {
+            if x < buf.area.width {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char('░');
+                    cell.set_style(Style::default().fg(fg).bg(bg));
                 }
             }
         }
+    }
 
-        // Corner shadow (diagonal)
-        let corner_x = modal_area.x + modal_area.width;
-        let corner_y = modal_area.y + modal_area.height;
-        if corner_x < buf.area.width && corner_y < buf.area.height {
-            if let Some(cell) = buf.cell_mut((corner_x, corner_y)) {
+    fn draw_corner_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, fg: ratatui::style::Color, bg: ratatui::style::Color) {
+        let x = area.x + area.width;
+        let y = area.y + area.height;
+        if x < buf.area.width && y < buf.area.height {
+            if let Some(cell) = buf.cell_mut((x, y)) {
                 cell.set_char('▒');
-                cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+                cell.set_style(Style::default().fg(fg).bg(bg));
             }
         }
     }
