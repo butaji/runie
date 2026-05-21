@@ -1,0 +1,407 @@
+use ratatui::{
+    layout::{Constraint, Layout, Rect},
+    buffer::Buffer,
+    style::Style,
+    text::{Line, Span},
+};
+use crate::theme::ThemeWrapper;
+use crate::tui::state::{AppState, TuiMode};
+use crate::components::{
+    AgentStatus, AgentList, AgentItem, ContextPanel,
+    GitChange, GitStatus,
+};
+
+pub fn render_top_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::text::{Line, Span};
+
+    let x = area.x + 1;
+    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
+
+    // ── Left side: repo/branch  path ──
+    let mut left_parts: Vec<Span> = Vec::new();
+    
+    if !state.top_bar_repo.is_empty() {
+        left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_primary)));
+    }
+    if !state.top_bar_branch.is_empty() {
+        left_parts.push(Span::styled("/", Style::default().fg(text_muted)));
+        left_parts.push(Span::styled(&state.top_bar_branch, Style::default().fg(text_muted)));
+    }
+    if !state.top_bar_path.is_empty() {
+        // Two spaces between branch and path, path in medium gray
+        left_parts.push(Span::styled(format!("  {}", state.top_bar_path),
+            Style::default().fg(text_muted)));
+    }
+
+    if !left_parts.is_empty() {
+        let line = Line::from(left_parts);
+        buf.set_line(x, area.y, &line, area.width - 2);
+    }
+
+    // ── Right side: checks ✓ percentage% │ progress ──
+    let mut right_parts: Vec<Span> = Vec::new();
+
+    if let (Some(passed), Some(total)) = (state.top_bar_checks_passed, state.top_bar_checks_total) {
+        right_parts.push(Span::styled(format!("{} ", passed), Style::default().fg(text_secondary)));
+        right_parts.push(Span::styled("✓ ", Style::default().fg(text_muted)));
+
+        // Mini progress bar: ████░░░░░░ │
+        let pct = passed as f32 / total.max(1) as f32;
+        let filled = (pct * 10.0).round() as usize;
+        let empty = 10 - filled;
+        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
+        right_parts.push(Span::styled(bar, Style::default().fg(text_secondary)));
+        right_parts.push(Span::styled(" │", Style::default().fg(text_muted)));
+    } else if let Some(pct) = state.top_bar_percentage {
+        right_parts.push(Span::styled(format!("{:.2}%", pct), Style::default().fg(text_secondary)));
+
+        let filled = (pct / 100.0 * 10.0).round() as usize;
+        let empty = 10 - filled;
+        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
+        right_parts.push(Span::styled(format!(" {}", bar), Style::default().fg(text_secondary)));
+        right_parts.push(Span::styled(" │", Style::default().fg(text_muted)));
+    }
+
+    if !right_parts.is_empty() {
+        let right_line = Line::from(right_parts);
+        let right_width: usize = right_line.spans.iter().map(|s| s.width()).sum();
+        let right_x = area.x + area.width.saturating_sub(right_width as u16 + 1);
+        if right_x > x {
+            buf.set_line(right_x, area.y, &right_line, area.width);
+        }
+    }
+}
+
+/// Render status bar from state (mode-based shortcuts)
+pub fn render_status_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
+    let mut x = area.x + 1;
+    let mut first = true;
+
+    // Get items based on mode
+    let items: Vec<(&str, &str)> = match state.mode {
+        TuiMode::Chat => vec![
+            ("Enter", "send"),
+            ("^b", "sidebar"),
+            ("^k", "cmd"),
+            ("^q", "quit"),
+        ],
+        TuiMode::Overlay => vec![
+            ("Esc", "close"),
+            ("j/k", "navigate"),
+            ("Enter", "select"),
+        ],
+        TuiMode::Select => vec![
+            ("Esc", "close"),
+            ("j/k", "navigate"),
+            ("Enter", "select"),
+        ],
+        TuiMode::Permission => vec![
+            ("y", "confirm"),
+            ("n", "cancel"),
+            ("a", "always"),
+            ("s", "skip"),
+        ],
+        TuiMode::CommandPalette => vec![
+            ("Esc", "close"),
+            ("Enter", "select"),
+            ("↑↓", "navigate"),
+        ],
+    };
+
+    for (key, desc) in items {
+        if !first {
+            let sep = Span::styled(" | ", Style::default().fg(text_tertiary));
+            let line = Line::from(sep);
+            buf.set_line(x, area.y, &line, 3);
+            x += 3;
+        }
+        first = false;
+
+        let parts = vec![
+            Span::styled(key, Style::default().fg(text_tertiary)),
+            Span::styled(format!(" {}", desc), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
+        ];
+        let line = Line::from(parts);
+        let width = (key.len() + 1 + desc.len()) as u16;
+        buf.set_line(x, area.y, &line, width);
+        x += width;
+    }
+}
+
+/// Render agent list sidebar from demo data
+pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
+    let border_color: ratatui::style::Color = theme.color("border.unfocused").into();
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_dim: ratatui::style::Color = theme.color("text.dim").into();
+    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+    let success: ratatui::style::Color = theme.color("success").into();
+    let error: ratatui::style::Color = theme.color("error").into();
+
+    if area.width < 4 || area.height < 3 {
+        return;
+    }
+
+    let inner_width = area.width.saturating_sub(2);
+
+    // Top border
+    buf.get_mut(area.x, area.y).set_char('╭');
+    buf.get_mut(area.x, area.y).set_style(Style::default().fg(border_color));
+
+    let header = " AGENTS ";
+    let header_style = Style::default().fg(accent_primary).add_modifier(Modifier::BOLD);
+    let header_len = header.len() as u16;
+    let dashes = inner_width.saturating_sub(header_len);
+
+    let mut x = area.x + 1;
+    for ch in header.chars() {
+        buf.get_mut(x, area.y).set_char(ch);
+        buf.get_mut(x, area.y).set_style(header_style);
+        x += 1;
+    }
+    for _ in 0..dashes {
+        buf.get_mut(x, area.y).set_char('─');
+        buf.get_mut(x, area.y).set_style(Style::default().fg(border_color));
+        x += 1;
+    }
+
+    buf.get_mut(area.x + area.width - 1, area.y).set_char('╮');
+    buf.get_mut(area.x + area.width - 1, area.y).set_style(Style::default().fg(border_color));
+
+    // Interior fill
+    for y in (area.y + 1)..(area.y + area.height - 1) {
+        for x in (area.x + 1)..(area.x + area.width - 1) {
+            buf.get_mut(x, y).set_style(Style::default().bg(bg_panel));
+        }
+    }
+
+    // Left and right borders
+    for y in (area.y + 1)..(area.y + area.height - 1) {
+        buf.get_mut(area.x, y).set_char('│');
+        buf.get_mut(area.x, y).set_style(Style::default().fg(border_color));
+        buf.get_mut(area.x + area.width - 1, y).set_char('│');
+        buf.get_mut(area.x + area.width - 1, y).set_style(Style::default().fg(border_color));
+    }
+
+    // Demo agents
+    let demo_agents = vec![
+        ("coder", "coder", "assistant", "editing files", "claude-4", 45, AgentStatus::Running),
+        ("test", "test", "system", "running tests", "gpt-4", 12, AgentStatus::Completed),
+    ];
+
+    let mut current_y = area.y + 1;
+    let max_y = area.y + area.height - 1;
+
+    for agent in demo_agents {
+        if current_y + 3 >= max_y {
+            break;
+        }
+
+        let (status_char, status_fg) = match agent.6 {
+            AgentStatus::Running => ('●', accent_primary),
+            AgentStatus::Completed => ('✓', success),
+            AgentStatus::Failed => ('✗', error),
+            AgentStatus::Waiting => ('○', text_dim),
+        };
+
+        let tag_color = match agent.2 {
+            "user" | "assistant" => accent_primary,
+            "system" => accent_primary,
+            _ => text_dim,
+        };
+
+        // Line 1: icon + tag
+        let y1 = current_y;
+        buf.get_mut(area.x + 2, y1).set_char(' ');
+        buf.get_mut(area.x + 2, y1).set_style(Style::default().bg(bg_panel));
+        buf.get_mut(area.x + 3, y1).set_char(status_char);
+        buf.get_mut(area.x + 3, y1).set_style(Style::default().fg(status_fg).bg(bg_panel));
+        buf.get_mut(area.x + 4, y1).set_char(' ');
+        buf.get_mut(area.x + 4, y1).set_style(Style::default().bg(bg_panel));
+
+        let tag_span = Span::styled(
+            agent.1.to_string(),
+            Style::default().fg(tag_color).add_modifier(Modifier::BOLD).bg(bg_panel),
+        );
+        let tag_line = Line::from(vec![tag_span]);
+        buf.set_line(area.x + 5, y1, &tag_line, inner_width.saturating_sub(5));
+
+        // Line 2: description
+        let y2 = current_y + 1;
+        let desc_span = Span::styled(
+            format!("  {}", agent.3),
+            Style::default().fg(text_secondary).bg(bg_panel),
+        );
+        let desc_line = Line::from(vec![desc_span]);
+        buf.set_line(area.x + 2, y2, &desc_line, inner_width.saturating_sub(2));
+
+        // Line 3: model + duration
+        let y3 = current_y + 2;
+        let duration_secs = agent.5;
+        let duration_str = if duration_secs >= 60 {
+            format!("{}m", duration_secs / 60)
+        } else {
+            format!("{}s", duration_secs)
+        };
+        let meta_span = Span::styled(
+            format!("  {} · {}", agent.4, duration_str),
+            Style::default().fg(text_dim).bg(bg_panel),
+        );
+        let meta_line = Line::from(vec![meta_span]);
+        buf.set_line(area.x + 2, y3, &meta_line, inner_width.saturating_sub(2));
+
+        // Separator
+        current_y += 4;
+        if current_y < max_y - 1 {
+            let sep_y = current_y - 1;
+            for sx in (area.x + 2)..(area.x + area.width - 2) {
+                buf.get_mut(sx, sep_y).set_char('·');
+                buf.get_mut(sx, sep_y).set_style(Style::default().fg(text_dim).bg(bg_panel));
+            }
+        }
+    }
+
+    // Bottom border
+    let bottom_y = area.y + area.height - 1;
+    buf.get_mut(area.x, bottom_y).set_char('╰');
+    buf.get_mut(area.x, bottom_y).set_style(Style::default().fg(border_color));
+
+    for x in (area.x + 1)..(area.x + area.width - 1) {
+        buf.get_mut(x, bottom_y).set_char('─');
+        buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
+    }
+
+    buf.get_mut(area.x + area.width - 1, bottom_y).set_char('╯');
+    buf.get_mut(area.x + area.width - 1, bottom_y).set_style(Style::default().fg(border_color));
+}
+
+/// Render context panel sidebar from state
+fn render_context_panel(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
+    for y in area.y..(area.y + area.height) {
+        for x in area.x..(area.x + area.width) {
+            if let Some(cell) = buf.cell_mut((x as u16, y as u16)) {
+                cell.set_style(Style::default().bg(bg_panel));
+            }
+        }
+    }
+
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
+    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+    let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
+    let _warning: ratatui::style::Color = theme.color("warning").into();
+    let _success: ratatui::style::Color = theme.color("success").into();
+    let _error: ratatui::style::Color = theme.color("error").into();
+    let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
+
+    let left_margin = 1u16;
+    let max_width = area.width.saturating_sub(left_margin + 1);
+    let mut y = area.y;
+
+    // Model
+    if y < area.y + area.height {
+        let model_label = Span::styled("Model: ", Style::default().fg(text_muted));
+        let model_name = Span::styled("claude-4".to_string(), Style::default().fg(accent_secondary));
+        let line = Line::from(vec![model_label, model_name]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // Session
+    if y < area.y + area.height {
+        let session_label = Span::styled("Session: ", Style::default().fg(text_muted));
+        let session_info = Span::styled("new session".to_string(), Style::default().fg(text_secondary));
+        let line = Line::from(vec![session_label, session_info]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // Separator
+    if y < area.y + area.height {
+        let sep = Span::styled(
+            "─".repeat(max_width as usize),
+            Style::default().fg(border_unfocused),
+        );
+        let line = Line::from(vec![sep]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // RECENT section header
+    if y < area.y + area.height {
+        let header = Span::styled(
+            "RECENT",
+            Style::default().fg(accent_primary).add_modifier(Modifier::BOLD),
+        );
+        let line = Line::from(vec![header]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+
+        // Demo files
+        for file in &["src/main.rs", "Cargo.toml", "README.md"] {
+            if y >= area.y + area.height {
+                break;
+            }
+            let file_span = Span::styled(
+                format!("▸ {}", file),
+                Style::default().fg(text_secondary),
+            );
+            let line = Line::from(vec![file_span]);
+            buf.set_line(area.x + left_margin, y, &line, max_width);
+            y += 1;
+        }
+    }
+}
+
+// ─── Msg ────────────────────────────────────────────────────────────────────────
+
+pub fn render_shadow(modal_area: Rect, buf: &mut ratatui::buffer::Buffer, theme: &ThemeWrapper) {
+    let shadow_bg: ratatui::style::Color = theme.color("bg.base").into();
+    let shadow_fg: ratatui::style::Color = theme.color("text.dim").into();
+
+    let shadow_x = modal_area.x + modal_area.width;
+    if shadow_x < buf.area.width {
+        for y in modal_area.y + 1..modal_area.y + modal_area.height + 1 {
+            if y < buf.area.height {
+                if let Some(cell) = buf.cell_mut((shadow_x, y)) {
+                    cell.set_char('░');
+                    cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+                }
+            }
+        }
+    }
+
+    let shadow_y = modal_area.y + modal_area.height;
+    if shadow_y < buf.area.height {
+        for x in modal_area.x + 1..modal_area.x + modal_area.width + 1 {
+            if x < buf.area.width {
+                if let Some(cell) = buf.cell_mut((x, shadow_y)) {
+                    cell.set_char('░');
+                    cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+                }
+            }
+        }
+    }
+
+    let corner_x = modal_area.x + modal_area.width;
+    let corner_y = modal_area.y + modal_area.height;
+    if corner_x < buf.area.width && corner_y < buf.area.height {
+        if let Some(cell) = buf.cell_mut((corner_x, corner_y)) {
+            cell.set_char('▒');
+            cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+        }
+    }
+}
