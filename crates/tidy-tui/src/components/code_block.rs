@@ -122,48 +122,83 @@ impl Widget for CodeBlock {
 impl CodeBlock {
     fn highlight_line(&self, text: &str, theme: &ThemeWrapper) -> Vec<Span<'static>> {
         let sp = StyleHelpers::new(theme);
-        let mut parts = Vec::new();
+        let tokens = Self::tokenize(text);
+        Self::build_spans(tokens, &sp)
+    }
 
+    fn tokenize(text: &str) -> Vec<Token> {
+        let mut tokens = Vec::new();
         let mut current = String::new();
         let mut in_string = false;
 
         for ch in text.chars() {
-            if ch == '"' || ch == '\'' {
-                if !current.is_empty() {
-                    parts.push(Span::styled(current.clone(), sp.primary()));
-                    current.clear();
-                }
-                in_string = !in_string;
-                current.push(ch);
-                if !in_string {
-                    parts.push(Span::styled(current.clone(), sp.syntax_string()));
-                    current.clear();
-                }
-            } else if in_string {
-                current.push(ch);
-            } else if ch.is_numeric() && (current.is_empty() || current.chars().all(|c| c.is_numeric())) {
-                current.push(ch);
-            } else {
-                if !current.is_empty() && current.chars().all(|c| c.is_numeric()) {
-                    parts.push(Span::styled(current.clone(), sp.syntax_attr()));
-                    current.clear();
-                }
-                current.push(ch);
-            }
+            Self::process_char(ch, &mut current, &mut in_string, &mut tokens);
         }
 
         if !current.is_empty() {
             if current.chars().all(|c| c.is_numeric()) {
-                parts.push(Span::styled(current.clone(), sp.syntax_attr()));
+                tokens.push(Token::Number(current));
             } else {
-                parts.push(Span::styled(current.clone(), sp.primary()));
+                tokens.push(Token::Text(current));
+            }
+        }
+
+        tokens
+    }
+
+    fn process_char(ch: char, current: &mut String, in_string: &mut bool, tokens: &mut Vec<Token>) {
+        let is_quote = ch == '"' || ch == '\'';
+
+        if is_quote {
+            Self::handle_quote(current, in_string, tokens);
+        } else if *in_string {
+            current.push(ch);
+        } else if ch.is_numeric() && current.chars().all(|c| c.is_numeric()) {
+            current.push(ch);
+        } else {
+            Self::flush_numeric_and_push(current, tokens, ch);
+        }
+    }
+
+    fn handle_quote(current: &mut String, in_string: &mut bool, tokens: &mut Vec<Token>) {
+        if !current.is_empty() {
+            tokens.push(Token::Text(std::mem::take(current)));
+        }
+        *in_string = !*in_string;
+        current.push('\'');
+        if !*in_string {
+            tokens.push(Token::String(std::mem::take(current)));
+        }
+    }
+
+    fn flush_numeric_and_push(current: &mut String, tokens: &mut Vec<Token>, ch: char) {
+        if !current.is_empty() && current.chars().all(|c| c.is_numeric()) {
+            tokens.push(Token::Number(std::mem::take(current)));
+        }
+        current.push(ch);
+    }
+
+    fn build_spans(tokens: Vec<Token>, sp: &StyleHelpers) -> Vec<Span<'static>> {
+        let mut parts = Vec::new();
+
+        for token in tokens {
+            match token {
+                Token::Text(s) => parts.push(Span::styled(s, sp.primary())),
+                Token::String(s) => parts.push(Span::styled(s, sp.syntax_string())),
+                Token::Number(s) => parts.push(Span::styled(s, sp.syntax_attr())),
             }
         }
 
         if parts.is_empty() {
-            parts.push(Span::styled(text.to_string(), sp.primary()));
+            parts.push(Span::styled(String::new(), sp.primary()));
         }
 
         parts
     }
+}
+
+enum Token {
+    Text(String),
+    String(String),
+    Number(String),
 }

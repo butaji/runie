@@ -67,58 +67,66 @@ impl Widget for Overlay {
             return;
         }
 
-        let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
+        render_title_bar(&self, area, buf, &sp);
+        render_tabs(&self, area, buf, &sp);
+        fill_content_area(&self, area, buf, &sp);
+    }
+}
 
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(text_tertiary))
-            .title(self.title.as_str())
-            .title_style(sp.phase());
+fn render_title_bar(overlay: &Overlay, area: Rect, buf: &mut Buffer, sp: &StyleHelpers) {
+    let text_tertiary: ratatui::style::Color = ThemeWrapper::default().color("text.dim").into();
 
-        block.render(area, buf);
+    let block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(text_tertiary))
+        .title(overlay.title.as_str())
+        .title_style(sp.phase());
 
-        if !self.title.is_empty() {
-            let title_line = Line::from(vec![Span::styled(&self.title, sp.phase())]);
-            buf.set_line(area.x + 2, area.y, &title_line, area.width - 4);
+    block.render(area, buf);
+
+    if !overlay.title.is_empty() {
+        let title_line = Line::from(vec![Span::styled(&overlay.title, sp.phase())]);
+        buf.set_line(area.x + 2, area.y, &title_line, area.width - 4);
+    }
+
+    if overlay.show_close {
+        let close_line = Line::from(vec![Span::styled("[x]", sp.tertiary())]);
+        let close_x = area.x + area.width.saturating_sub(5);
+        buf.set_line(close_x, area.y, &close_line, 4);
+    }
+}
+
+fn render_tabs(overlay: &Overlay, area: Rect, buf: &mut Buffer, sp: &StyleHelpers) {
+    if overlay.tabs.is_empty() {
+        return;
+    }
+
+    let mut tab_x = area.x + 2;
+    for (i, tab) in overlay.tabs.iter().enumerate() {
+        let tab_style = if i == overlay.active_tab { sp.primary() } else { sp.tertiary() };
+        let tab_text = format!(" {} ", tab);
+        let tab_line = Line::from(vec![Span::styled(&tab_text, tab_style)]);
+        buf.set_line(tab_x, area.y + 1, &tab_line, tab_text.len() as u16);
+        tab_x += tab_text.len() as u16 + 1;
+    }
+}
+
+fn fill_content_area(overlay: &Overlay, area: Rect, buf: &mut Buffer, sp: &StyleHelpers) {
+    let content_start_y = if overlay.tabs.is_empty() { 1 } else { 2 };
+    for y in (area.y + content_start_y)..(area.y + area.height - 1) {
+        for x in (area.x + 1)..(area.x + area.width - 1) {
+            buf.get_mut(x, y).set_style(sp.bg_panel());
         }
+    }
 
-        if self.show_close {
-            let close_line = Line::from(vec![Span::styled("[x]", sp.tertiary())]);
-            let close_x = area.x + area.width.saturating_sub(5);
-            buf.set_line(close_x, area.y, &close_line, 4);
+    let content_y_offset = if overlay.tabs.is_empty() { 2 } else { 3 };
+    for (i, line_spans) in overlay.content.iter().enumerate() {
+        let y = area.y + content_y_offset + i as u16;
+        if y >= area.y + area.height - 1 {
+            break;
         }
-
-        if !self.tabs.is_empty() {
-            let mut tab_x = area.x + 2;
-            for (i, tab) in self.tabs.iter().enumerate() {
-                let tab_style = if i == self.active_tab {
-                    sp.primary()
-                } else {
-                    sp.tertiary()
-                };
-                let tab_text = format!(" {} ", tab);
-                let tab_line = Line::from(vec![Span::styled(&tab_text, tab_style)]);
-                buf.set_line(tab_x, area.y + 1, &tab_line, tab_text.len() as u16);
-                tab_x += tab_text.len() as u16 + 1;
-            }
-        }
-
-        let content_start_y = if self.tabs.is_empty() { 1 } else { 2 };
-        for y in (area.y + content_start_y)..(area.y + area.height - 1) {
-            for x in (area.x + 1)..(area.x + area.width - 1) {
-                buf.get_mut(x, y).set_style(sp.bg_panel());
-            }
-        }
-
-        let content_y_offset = if self.tabs.is_empty() { 2 } else { 3 };
-        for (i, line_spans) in self.content.iter().enumerate() {
-            let y = area.y + content_y_offset + i as u16;
-            if y >= area.y + area.height - 1 {
-                break;
-            }
-            let line = Line::from(line_spans.clone());
-            buf.set_line(area.x + 2, y, &line, area.width - 4);
-        }
+        let line = Line::from(line_spans.clone());
+        buf.set_line(area.x + 2, y, &line, area.width - 4);
     }
 }
 
@@ -134,35 +142,41 @@ impl Overlay {
         let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
         let syntax_phase: ratatui::style::Color = theme.color("accent.secondary").into();
 
-        // Clear the area
         for y in area.y..area.y + area.height {
             for x in area.x..area.x + area.width {
                 buf[(x, y)].set_style(Style::default().bg(bg_panel));
             }
         }
 
-        // Draw border
-        for x in area.x..area.x + area.width {
-            buf[(x, area.y)].set_symbol("─");
-            buf[(x, area.y + area.height - 1)].set_symbol("─");
-        }
-        for y in area.y..area.y + area.height {
-            buf[(area.x, y)].set_symbol("│");
-            buf[(area.x + area.width - 1, y)].set_symbol("│");
-        }
-        buf[(area.x, area.y)].set_symbol("┌");
-        buf[(area.x + area.width - 1, area.y)].set_symbol("┐");
-        buf[(area.x, area.y + area.height - 1)].set_symbol("└");
-        buf[(area.x + area.width - 1, area.y + area.height - 1)].set_symbol("┘");
+        draw_border(area, buf);
+        draw_title(area, buf, self, syntax_phase);
+        draw_close_button(area, buf, self, text_tertiary);
+    }
+}
 
-        // Title
-        if !self.title.is_empty() {
-            buf.set_string(area.x + 2, area.y, &self.title, Style::default().fg(syntax_phase));
-        }
+fn draw_border(area: Rect, buf: &mut Buffer) {
+    for x in area.x..area.x + area.width {
+        buf[(x, area.y)].set_symbol("─");
+        buf[(x, area.y + area.height - 1)].set_symbol("─");
+    }
+    for y in area.y..area.y + area.height {
+        buf[(area.x, y)].set_symbol("│");
+        buf[(area.x + area.width - 1, y)].set_symbol("│");
+    }
+    buf[(area.x, area.y)].set_symbol("┌");
+    buf[(area.x + area.width - 1, area.y)].set_symbol("┐");
+    buf[(area.x, area.y + area.height - 1)].set_symbol("└");
+    buf[(area.x + area.width - 1, area.y + area.height - 1)].set_symbol("┘");
+}
 
-        // Close button
-        if self.show_close {
-            buf.set_string(area.x + area.width - 4, area.y, "[×]", Style::default().fg(text_tertiary));
-        }
+fn draw_title(area: Rect, buf: &mut Buffer, overlay: &Overlay, syntax_phase: ratatui::style::Color) {
+    if !overlay.title.is_empty() {
+        buf.set_string(area.x + 2, area.y, &overlay.title, Style::default().fg(syntax_phase));
+    }
+}
+
+fn draw_close_button(area: Rect, buf: &mut Buffer, overlay: &Overlay, text_tertiary: ratatui::style::Color) {
+    if overlay.show_close {
+        buf.set_string(area.x + area.width - 4, area.y, "[×]", Style::default().fg(text_tertiary));
     }
 }
