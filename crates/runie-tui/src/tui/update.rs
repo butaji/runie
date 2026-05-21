@@ -35,6 +35,8 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         }
         Msg::ScrollUp => { state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(1); }
         Msg::ScrollDown => state.feed_scroll_offset += 1,
+        Msg::Tick => { state.animation.braille_frame = (state.animation.braille_frame + 1) % 8; state.animation.last_tick = std::time::Instant::now(); }
+        Msg::CursorBlink => { state.animation.streaming_cursor_visible = !state.animation.streaming_cursor_visible; state.animation.last_cursor_blink = std::time::Instant::now(); }
     }
 
     cmds

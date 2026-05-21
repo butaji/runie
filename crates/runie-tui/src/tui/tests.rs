@@ -1,4 +1,4 @@
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd};
+use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState};
 use crate::components::{
     AgentList, AgentItem, AgentStatus, MessageItem,
     ContextPanel, GitChange, GitStatus,
@@ -124,6 +124,7 @@ mod tests {
             command_palette_filter: String::new(),
             command_palette_selected: 0,
             feed_scroll_offset: 0,
+            animation: AnimationState::default(),
         }
     }
 

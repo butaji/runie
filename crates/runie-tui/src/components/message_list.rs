@@ -5,6 +5,18 @@ use ratatui::{
     text::Line,
 };
 use crate::theme::ThemeWrapper;
+use crate::tui::state::AnimationState;
+
+/// Braille spinner frames (10 frames)
+pub const BRAILLE_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+/// Plan step status
+#[derive(Debug, Clone, PartialEq)]
+pub enum PlanStatus {
+    Pending,
+    Active,
+    Complete,
+}
 
 /// Wrap text into lines respecting word boundaries
 fn wrap_text(text: &str, width: usize) -> Vec<String> {
@@ -52,6 +64,11 @@ pub enum MessageItem {
     ToolCall { name: String, args: String, result: Option<String>, is_error: bool },
     Edit { filename: String, diff: Option<String> },
     System { text: String },
+    ToolRunning { name: String, args: String, duration_ms: u64 },
+    ToolComplete { name: String, result: String, lines: Option<usize> },
+    PlanStep { step: usize, text: String, status: PlanStatus },
+    Interrupt,
+    Rewind { steps: usize },
 }
 
 impl Default for MessageList {
@@ -64,7 +81,7 @@ impl Default for MessageList {
 }
 
 impl MessageList {
-    pub fn render_ref(messages: &[MessageItem], scroll_offset: usize, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    pub fn render_ref(messages: &[MessageItem], scroll_offset: usize, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, animation: &AnimationState) {
         fill_background(area, buf, theme);
 
         let messages_iter: Vec<&MessageItem> = messages.iter().skip(scroll_offset).collect();
@@ -77,9 +94,12 @@ impl MessageList {
         let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
         let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let text_muted: ratatui::style::Color = theme.color("text.muted").into();
+        let text_dim: ratatui::style::Color = theme.color("text.dim").into();
         let success: ratatui::style::Color = theme.color("success").into();
         let error: ratatui::style::Color = theme.color("error").into();
         let code_path: ratatui::style::Color = theme.color("code.path").into();
+
+        let spinner = BRAILLE_FRAMES[animation.braille_frame % 10];
 
         let mut prev_msg_type: Option<&str> = None;
 
@@ -97,7 +117,11 @@ impl MessageList {
             }
             prev_msg_type = Some(msg_type);
 
-            let rendered = render_single_msg(msg, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary, text_secondary, text_muted, success, error, code_path);
+            let rendered = render_single_msg(
+                msg, area, row, margin_x, text_x, max_rows, buf, theme,
+                accent_primary, text_secondary, text_muted, text_dim,
+                success, error, code_path, spinner, animation.streaming_cursor_visible,
+            );
             row += rendered;
         }
     }
@@ -158,6 +182,11 @@ fn get_msg_type(msg: &MessageItem) -> &'static str {
         MessageItem::ToolCall { .. } => "tool",
         MessageItem::Edit { .. } => "edit",
         MessageItem::System { .. } => "system",
+        MessageItem::ToolRunning { .. } => "tool_running",
+        MessageItem::ToolComplete { .. } => "tool_complete",
+        MessageItem::PlanStep { .. } => "plan_step",
+        MessageItem::Interrupt { .. } => "interrupt",
+        MessageItem::Rewind { .. } => "rewind",
     }
 }
 
@@ -173,19 +202,22 @@ fn render_single_msg(
     accent_primary: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_muted: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
     success: ratatui::style::Color,
     error: ratatui::style::Color,
     code_path: ratatui::style::Color,
+    spinner: char,
+    cursor_visible: bool,
 ) -> u16 {
     match msg {
         MessageItem::User { text, .. } => {
             render_user_msg(text, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary)
         }
         MessageItem::Assistant { text, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible)
         }
         MessageItem::Thought { duration_secs } => {
-            render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted)
+            render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner)
         }
         MessageItem::ToolCall { name, args, result, is_error } => {
             render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
@@ -195,6 +227,21 @@ fn render_single_msg(
         }
         MessageItem::System { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted)
+        }
+        MessageItem::ToolRunning { name, args, duration_ms } => {
+            render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner)
+        }
+        MessageItem::ToolComplete { name, result, lines } => {
+            render_tool_complete_msg(name, result, lines.as_ref(), area, row, margin_x, text_x, buf, success, text_muted)
+        }
+        MessageItem::PlanStep { step, text, status } => {
+            render_plan_step_msg(*step, text, status, area, row, margin_x, text_x, buf, text_dim, text_secondary, spinner)
+        }
+        MessageItem::Interrupt => {
+            render_interrupt_msg(area, row, margin_x, text_x, buf, error, text_dim)
+        }
+        MessageItem::Rewind { steps } => {
+            render_rewind_msg(*steps, area, row, margin_x, text_x, buf, text_muted, spinner)
         }
     }
 }
@@ -248,7 +295,7 @@ fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16
     }
 }
 
-fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color) -> u16 {
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool) -> u16 {
     if text.is_empty() {
         let dot = Line::raw("·").style(Style::default().fg(text_muted));
         buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
@@ -261,12 +308,19 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x:
         let line = Line::raw(line_text).style(Style::default().fg(text_secondary));
         buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
     }
+    if cursor_visible && !wrapped.is_empty() {
+        let last_line_len = wrapped.last().map(|l| l.len()).unwrap_or(0) as u16;
+        let cursor_x = margin_x + last_line_len;
+        if cursor_x < area.x + area.width - 1 {
+            buf.get_mut(cursor_x, area.y + row + msg_height - 1).set_char('▊').set_style(Style::default().fg(text_secondary));
+        }
+    }
     msg_height
 }
 
-fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color) -> u16 {
+fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char) -> u16 {
     buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
-    let thought_text = format!("Thought for {:.1}s", duration_secs);
+    let thought_text = format!("Thought for {:.1}s {}", duration_secs, spinner);
     let line = Line::raw(thought_text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
@@ -340,6 +394,54 @@ fn render_edit_msg(filename: &str, area: Rect, row: u16, margin_x: u16, text_x: 
     1
 }
 
+fn render_tool_running_msg(name: &str, args: &str, duration_ms: u64, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, spinner: char) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('●').set_style(Style::default().fg(text_secondary));
+    let header = format!("{} {} {}", name, args, spinner);
+    let line = Line::raw(header).style(Style::default().fg(text_secondary));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    if duration_ms > 1000 {
+        let bar_y = row + 1;
+        let bar_x = text_x;
+        buf.get_mut(bar_x, area.y + bar_y).set_char('[').set_style(Style::default().fg(text_secondary));
+        let progress = ((duration_ms.min(10000) as f32 / 10000.0) * 10.0) as usize;
+        for i in 0..10 { let ch = if i < progress { '▓' } else { '░' }; buf.get_mut(bar_x + 1 + i as u16, area.y + bar_y).set_char(ch).set_style(Style::default().fg(text_secondary)); }
+        buf.get_mut(bar_x + 11, area.y + bar_y).set_char(']').set_style(Style::default().fg(text_secondary));
+        return 2;
+    }
+    1
+}
+
+fn render_tool_complete_msg(name: &str, result: &str, lines: Option<&usize>, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, success: ratatui::style::Color, text_muted: ratatui::style::Color) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('✓').set_style(Style::default().fg(success));
+    let suffix = lines.map(|l| format!(" ({} lines)", l)).unwrap_or_default();
+    let line = Line::raw(format!("{} {}{}", name, result, suffix)).style(Style::default().fg(text_muted));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    1
+}
+
+fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_dim: ratatui::style::Color, text_secondary: ratatui::style::Color, spinner: char) -> u16 {
+    match status {
+        PlanStatus::Pending => { buf.get_mut(margin_x, area.y + row).set_char('▸').set_style(Style::default().fg(text_dim)); let line = Line::raw(format!("{}. {} (pending)", step, text)).style(Style::default().fg(text_dim)); buf.set_line(text_x, area.y + row, &line, area.width - 4); }
+        PlanStatus::Active => { buf.get_mut(margin_x, area.y + row).set_char('│').set_style(Style::default().fg(text_secondary)); buf.get_mut(margin_x + 1, area.y + row).set_char('●').set_style(Style::default().fg(text_secondary)); let line = Line::raw(format!("{}. {} {}", step, text, spinner)).style(Style::default().fg(text_secondary)); buf.set_line(text_x + 1, area.y + row, &line, area.width - 5); }
+        PlanStatus::Complete => { buf.get_mut(margin_x, area.y + row).set_char('✓').set_style(Style::default().fg(text_secondary)); let line = Line::raw(format!("{}. {}", step, text)).style(Style::default().fg(text_secondary)); buf.set_line(text_x, area.y + row, &line, area.width - 4); }
+    }
+    1
+}
+
+fn render_interrupt_msg(area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, text_dim: ratatui::style::Color) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('✗').set_style(Style::default().fg(error));
+    let line = Line::raw("Interrupted").style(Style::default().fg(text_dim));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    1
+}
+
+fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('↺').set_style(Style::default().fg(text_muted));
+    let line = Line::raw(format!("Rewinding... {} ({} steps)", spinner, steps)).style(Style::default().fg(text_muted));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -347,108 +449,44 @@ mod tests {
     #[test]
     fn test_update_last_assistant() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::User {
-            text: "Hello".to_string(),
-            model: None,
-            timestamp: None,
-        });
-        list.messages.push(MessageItem::Assistant {
-            text: "Hi".to_string(),
-            model: Some("gpt-4".to_string()),
-            timestamp: None,
-        });
-
+        list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
+        list.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
         list.update_last_assistant("Hi there");
-        assert_eq!(
-            list.messages.last(),
-            Some(&MessageItem::Assistant {
-                text: "Hi there".to_string(),
-                model: Some("gpt-4".to_string()),
-                timestamp: None,
-            })
-        );
+        assert_eq!(list.messages.last(), Some(&MessageItem::Assistant { text: "Hi there".to_string(), model: Some("gpt-4".to_string()), timestamp: None }));
     }
 
     #[test]
     fn test_add_or_update_assistant_updates_existing() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::Assistant {
-            text: "Partial".to_string(),
-            model: Some("gpt-4".to_string()),
-            timestamp: None,
-        });
-
+        list.messages.push(MessageItem::Assistant { text: "Partial".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
         list.add_or_update_assistant("Complete response", Some("gpt-4".to_string()));
         assert_eq!(list.messages.len(), 1);
-        assert_eq!(
-            list.messages[0],
-            MessageItem::Assistant {
-                text: "Complete response".to_string(),
-                model: Some("gpt-4".to_string()),
-                timestamp: None,
-            }
-        );
+        assert_eq!(list.messages[0], MessageItem::Assistant { text: "Complete response".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
     }
 
     #[test]
     fn test_add_or_update_assistant_adds_new() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::User {
-            text: "Hello".to_string(),
-            model: None,
-            timestamp: None,
-        });
-
+        list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
         list.add_or_update_assistant("Response", Some("gpt-4".to_string()));
         assert_eq!(list.messages.len(), 2);
-        assert_eq!(
-            list.messages[1],
-            MessageItem::Assistant {
-                text: "Response".to_string(),
-                model: Some("gpt-4".to_string()),
-                timestamp: None,
-            }
-        );
+        assert_eq!(list.messages[1], MessageItem::Assistant { text: "Response".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
     }
 
     #[test]
-    fn test_has_assistant_in_progress_true() {
+    fn test_has_assistant_in_progress() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::Assistant {
-            text: "Thinking...".to_string(),
-            model: None,
-            timestamp: None,
-        });
+        list.messages.push(MessageItem::Assistant { text: "Thinking...".to_string(), model: None, timestamp: None });
         assert!(list.has_assistant_in_progress());
-    }
-
-    #[test]
-    fn test_has_assistant_in_progress_false() {
-        let mut list = MessageList::default();
-        list.messages.push(MessageItem::User {
-            text: "Hello".to_string(),
-            model: None,
-            timestamp: None,
-        });
+        list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
         assert!(!list.has_assistant_in_progress());
     }
 
     #[test]
     fn test_update_last_assistant_no_op_when_no_assistant() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::User {
-            text: "Hello".to_string(),
-            model: None,
-            timestamp: None,
-        });
+        list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
         list.update_last_assistant("This should not change anything");
-        assert_eq!(
-            list.messages[0],
-            MessageItem::User {
-                text: "Hello".to_string(),
-                model: None,
-                timestamp: None,
-            }
-        );
+        assert_eq!(list.messages[0], MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
     }
 }

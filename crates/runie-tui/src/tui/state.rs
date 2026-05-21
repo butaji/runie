@@ -4,6 +4,25 @@ use crate::components::PermissionAction;
 use crate::tui::update::update;
 
 #[derive(Clone)]
+pub struct AnimationState {
+    pub braille_frame: usize,
+    pub streaming_cursor_visible: bool,
+    pub last_tick: std::time::Instant,
+    pub last_cursor_blink: std::time::Instant,
+}
+
+impl Default for AnimationState {
+    fn default() -> Self {
+        Self {
+            braille_frame: 0,
+            streaming_cursor_visible: true,
+            last_tick: std::time::Instant::now(),
+            last_cursor_blink: std::time::Instant::now(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct AppState {
     pub messages: Vec<MessageItem>,
     pub input_lines: Vec<String>,
@@ -31,6 +50,7 @@ pub struct AppState {
     pub command_palette_filter: String,
     pub command_palette_selected: usize,
     pub feed_scroll_offset: usize,
+    pub animation: AnimationState,
 }
 
 impl Default for AppState {
@@ -62,6 +82,7 @@ impl Default for AppState {
             command_palette_filter: String::new(),
             command_palette_selected: 0,
             feed_scroll_offset: 0,
+            animation: AnimationState::default(),
         }
     }
 }
@@ -140,6 +161,10 @@ pub enum Msg {
 
     // Events from outside
     AgentEvent(AgentEvent),
+
+    // Animation
+    Tick,
+    CursorBlink,
 }
 
 // ─── Cmd ────────────────────────────────────────────────────────────────────────
