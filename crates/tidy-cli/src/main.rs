@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tidy_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
+use tidy_agent::events::{AgentEvent, PermissionDecision};
 use tidy_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
 use tidy_agent::pi::AgentTool;
 use tidy_ai::providers::MockProvider;
@@ -105,11 +105,10 @@ async fn run_cli_one_shot(
     Ok(())
 }
 
-/// TUI: Interactive terminal interface.
+/// TUI: Interactive terminal interface using TEA architecture.
 #[cfg(not(windows))]
 async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::error::Error>> {
-    use tidy_tui::{Tui, TuiConfig, TuiAction};
-    use crossterm::event::{Event as CEvent};
+    use tidy_tui::{Tui, TuiConfig, Msg, Cmd, event_to_msg};
 
     let config = TuiConfig::default();
     let mut tui = Tui::new(config)?;
@@ -138,111 +137,106 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
 
     tui.render()?;
 
-    // Create async channels for agent communication
-    let (agent_event_tx, mut agent_event_rx) = mpsc::unbounded_channel::<AgentEvent>();
-    let (permission_tx, permission_rx) = mpsc::unbounded_channel::<PermissionDecision>();
-    let permission_rx = Arc::new(tokio::sync::Mutex::new(Some(permission_rx)));
-    let permission_tx = Arc::new(tokio::sync::Mutex::new(permission_tx));
+    // Channel for raw terminal events
+    let (raw_tx, mut raw_rx) = mpsc::unbounded_channel::<crossterm::event::Event>();
 
-    // Create channel for terminal events and spawn blocking reader
-    let (term_event_tx, mut term_event_rx) = mpsc::unbounded_channel::<CEvent>();
-    let term_handle = tokio::task::spawn_blocking(move || {
-        let tx = term_event_tx; // Move once into this scope
+    // Terminal reader - sends raw events
+    let raw_tx2 = raw_tx.clone();
+    std::thread::spawn(move || {
         loop {
-            // event::read() blocks until a key is pressed
             if let Ok(event) = crossterm::event::read() {
-                if tx.send(event).is_err() {
-                    break; // Receiver dropped — shutting down
+                if raw_tx2.send(event).is_err() {
+                    break;
                 }
             }
         }
     });
 
-    // Track conversation history and agent task
-    let mut conversation_history: Vec<AgentMessage> = vec![];
+    // Agent event channel (from agent task to main loop)
+    let (agent_tx, mut agent_rx) = mpsc::unbounded_channel::<AgentEvent>();
+
+    // Permission channel (for permission decisions)
+    let (perm_tx, perm_rx) = mpsc::unbounded_channel::<PermissionDecision>();
+    let perm_rx = Arc::new(tokio::sync::Mutex::new(Some(perm_rx)));
+    let perm_tx = Arc::new(tokio::sync::Mutex::new(perm_tx));
+
+    // Agent task handle
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
+    // TEA main loop
     while tui.state.running {
         tokio::select! {
-            // Handle terminal events immediately (no 50ms polling delay)
-            Some(event) = term_event_rx.recv() => {
-                if let CEvent::Key(key) = event {
-                    if let Some(action) = tui.handle_event(CEvent::Key(key)) {
-                        match action {
-                            TuiAction::Quit => break,
-                            TuiAction::Submit(text) => {
-                                // Add user message to history for agent
-                                let user_msg = AgentMessage {
-                                    role: "user".to_string(),
-                                    content: vec![ContentPart::Text { text: text.clone() }],
-                                    timestamp: chrono::Utc::now().timestamp_millis(),
-                                    usage: None,
-                                    stop_reason: None,
-                                    error_message: None,
-                                };
-                                conversation_history.push(user_msg);
+            // Raw terminal events
+            Some(event) = raw_rx.recv() => {
+                if let Some(msg) = event_to_msg(event, &tui.state) {
+                    let cmds = tidy_tui::update(&mut tui.state, msg);
 
-                                // Spawn agent if not running
+                    // Execute commands
+                    for cmd in cmds {
+                        match cmd {
+                            Cmd::SpawnAgent { messages } => {
                                 if agent_task.is_none() {
-                                    let event_tx = agent_event_tx.clone();
-                                    let messages = conversation_history.clone();
-                                    let config = AgentLoopConfig {
-                                        system_prompt: "You are a helpful coding assistant.".to_string(),
-                                        model: "gpt-4".to_string(),
-                                        thinking_level: "low".to_string(),
-                                    };
+                                    let event_tx = agent_tx.clone();
+                                    let permission_rx = perm_rx.clone();
 
-                                    agent_task = Some(tokio::spawn({
-                                        let event_tx = agent_event_tx.clone();
-                                        let permission_rx = permission_rx.clone();
+                                    agent_task = Some(tokio::spawn(async move {
+                                        let provider = MockProvider::new();
+                                        let tools: Vec<AgentTool> = vec![];
+                                        let rx = permission_rx.lock().await.take().unwrap();
 
-                                        async move {
-                                            let provider = MockProvider::new();
-                                            let tools: Vec<AgentTool> = vec![];
-                                            let rx = permission_rx.lock().await.take().unwrap();
+                                        let config = AgentLoopConfig {
+                                            system_prompt: "You are a helpful coding assistant.".to_string(),
+                                            model: "gpt-4".to_string(),
+                                            thinking_level: "low".to_string(),
+                                        };
 
-                                            match run_agent_loop(
-                                                messages,
-                                                config,
-                                                &provider,
-                                                &tools,
-                                                event_tx,
-                                                rx,
-                                            ).await {
-                                                Ok(_) => {},
-                                                Err(e) => eprintln!("Agent error: {}", e),
-                                            }
+                                        match run_agent_loop(
+                                            messages,
+                                            config,
+                                            &provider,
+                                            &tools,
+                                            event_tx,
+                                            rx,
+                                        ).await {
+                                            Ok(_) => {},
+                                            Err(e) => eprintln!("Agent error: {}", e),
                                         }
                                     }));
                                 }
                             }
-                            TuiAction::Command(cmd) => {
-                                println!("Command: {}", cmd);
+                            Cmd::SendPermission { decision } => {
+                                perm_tx.lock().await.send(decision).ok();
                             }
-                            TuiAction::ToolPermission { tool: _, action } => {
-                                let decision = match action {
-                                    tidy_tui::components::PermissionAction::Confirm => PermissionDecision::Allow,
-                                    tidy_tui::components::PermissionAction::Cancel => PermissionDecision::Deny,
-                                    tidy_tui::components::PermissionAction::Always => PermissionDecision::AllowAlways,
-                                    tidy_tui::components::PermissionAction::Skip => PermissionDecision::Skip,
-                                };
-                                permission_tx.lock().await.send(decision).ok();
-                            }
-                            _ => {}
                         }
                     }
+
+                    // Render after EVERY message
+                    tui.render()?;
                 }
             }
 
-            // Handle agent events
-            Some(event) = agent_event_rx.recv() => {
+            // Agent events
+            Some(event) = agent_rx.recv() => {
                 if let AgentEvent::AgentEnd { .. } = &event {
                     agent_task = None;
                 }
-                let needs_render = tui.on_agent_event(event);
-                if needs_render {
-                    tui.render()?;
+
+                let cmds = tidy_tui::update(&mut tui.state, Msg::AgentEvent(event));
+
+                // Execute commands
+                for cmd in cmds {
+                    match cmd {
+                        Cmd::SpawnAgent { messages: _ } => {
+                            // Agent already running, ignore
+                        }
+                        Cmd::SendPermission { decision } => {
+                            perm_tx.lock().await.send(decision).ok();
+                        }
+                    }
                 }
+
+                // Render after EVERY message
+                tui.render()?;
             }
         }
     }
