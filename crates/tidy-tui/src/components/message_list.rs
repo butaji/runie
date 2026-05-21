@@ -65,28 +65,15 @@ impl Default for MessageList {
 
 impl MessageList {
     pub fn render_ref(messages: &[MessageItem], scroll_offset: usize, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        // Fill background with bg.base
-        let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-        for y in area.y..area.y + area.height {
-            for x in area.x..area.x + area.width {
-                buf.get_mut(x, y).set_style(Style::default().bg(bg_base));
-            }
-        }
+        fill_background(area, buf, theme);
 
-        // Iterate messages in normal order (oldest first, newest at bottom)
-        let messages_iter: Vec<&MessageItem> = messages.iter()
-            .skip(scroll_offset)
-            .collect();
+        let messages_iter: Vec<&MessageItem> = messages.iter().skip(scroll_offset).collect();
         let mut row = 0u16;
         let max_rows = area.height;
 
-        // Layout:
-        // margin_x = area.x + 2 (2-char left margin)
-        // text_x = area.x + 4 (after margin + glyph + space)
         let margin_x = area.x + 2;
         let text_x = area.x + 4;
 
-        // Theme colors
         let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
         let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let text_muted: ratatui::style::Color = theme.color("text.muted").into();
@@ -101,202 +88,17 @@ impl MessageList {
                 break;
             }
 
-            // Add blank line between different message types
-            let msg_type = match msg {
-                MessageItem::User { .. } => "user",
-                MessageItem::Assistant { .. } => "assistant",
-                MessageItem::Thought { .. } => "thought",
-                MessageItem::ToolCall { .. } => "tool",
-                MessageItem::Edit { .. } => "edit",
-                MessageItem::System { .. } => "system",
-            };
+            let msg_type = get_msg_type(msg);
 
             if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) {
-                // Don't add blank line before first item
                 if row < max_rows {
                     row += 1;
                 }
             }
             prev_msg_type = Some(msg_type);
 
-            match msg {
-                MessageItem::User { text, .. } => {
-                    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-                    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
-
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
-                    let msg_height = wrapped.len() as u16;
-                    // Total height: padding top (1) + text + padding bottom (1)
-                    let total_height = msg_height + 2;
-
-                    // Draw background panel with 1 char horizontal padding
-                    let panel_start_y = area.y + row;
-                    let panel_start_x = margin_x - 1; // 1 char left padding
-                    let panel_width = area.width - 2;   // 1 char right padding
-                    for r in 0..total_height {
-                        if panel_start_y + r >= area.y + area.height {
-                            break;
-                        }
-                        for x in 0..panel_width {
-                            if panel_start_x + x < area.x + area.width {
-                                buf.get_mut(panel_start_x + x, panel_start_y + r)
-                                    .set_style(Style::default().bg(bg_panel));
-                            }
-                        }
-                    }
-
-                    // Draw ❯ glyph inside panel (1 line padding top)
-                    buf.get_mut(margin_x, area.y + row + 1)
-                        .set_char('❯')
-                        .set_style(Style::default().fg(accent_primary).bg(bg_panel));
-
-                    // Draw text lines inside panel (1 line padding top, 1 char left padding from margin_x)
-                    for (i, line_text) in wrapped.iter().enumerate() {
-                        if row + 1 + i as u16 >= max_rows {
-                            break;
-                        }
-                        let line = Line::raw(line_text.as_str())
-                            .style(Style::default().fg(text_primary).bg(bg_panel));
-                        buf.set_line(text_x, area.y + row + 1 + i as u16, &line, area.width - 6);
-                    }
-
-                    row += total_height;
-                }
-
-                MessageItem::Assistant { text, .. } => {
-                    if text.is_empty() {
-                        // Streaming indicator — subtle placeholder
-                        let dot = Line::raw("·")
-                            .style(Style::default().fg(text_muted));
-                        buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
-                        row += 1;
-                    } else {
-                        // Plain text response — no glyph, just gray text
-                        let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
-                        let msg_height = wrapped.len() as u16;
-
-                        // Draw text lines starting at margin (no glyph)
-                        for (i, line_text) in wrapped.iter().enumerate() {
-                            if row + i as u16 >= max_rows {
-                                break;
-                            }
-                            let line = Line::raw(line_text.as_str())
-                                .style(Style::default().fg(text_secondary));
-                            buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
-                        }
-
-                        row += msg_height;
-                    }
-                }
-
-                MessageItem::Thought { duration_secs } => {
-                    // Draw ◆ glyph
-                    buf.get_mut(margin_x, area.y + row)
-                        .set_char('◆')
-                        .set_style(Style::default().fg(text_muted));
-
-                    // Draw "Thought for Xs" (italic, muted)
-                    let thought_text = format!("Thought for {:.1}s", duration_secs);
-                    let line = Line::raw(thought_text.as_str())
-                        .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 4);
-
-                    row += 1;
-                }
-
-                MessageItem::ToolCall { name, args, result, is_error } => {
-                    // Draw ◆ glyph
-                    buf.get_mut(margin_x, area.y + row)
-                        .set_char('◆')
-                        .set_style(Style::default().fg(text_muted));
-
-                    // Draw "name(args)" in text.secondary
-                    let header = format!("{}({})", name, args);
-                    let line = Line::raw(header.as_str())
-                        .style(Style::default().fg(text_secondary));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 4);
-
-                    row += 1;
-
-                    // Draw result line if present (no blank line - related item)
-                    if let Some(result_text) = result {
-                        if row >= max_rows {
-                            break;
-                        }
-
-                        // Draw continuation line with leading spaces
-                        let continuation_prefix = "  ";
-                        for (i, ch) in continuation_prefix.chars().enumerate() {
-                            buf.get_mut(text_x - 2 + i as u16, area.y + row).set_char(ch);
-                            buf.get_mut(text_x - 2 + i as u16, area.y + row)
-                                .set_style(Style::default().fg(text_muted));
-                        }
-
-                        // Draw → and status icon
-                        buf.get_mut(text_x, area.y + row)
-                            .set_char('→')
-                            .set_style(Style::default().fg(text_muted));
-                        buf.get_mut(text_x + 1, area.y + row)
-                            .set_char(if *is_error { '×' } else { '✓' })
-                            .set_style(Style::default().fg(if *is_error { error } else { success }));
-
-                        // Draw result text
-                        let result_line = Line::raw(result_text.as_str())
-                            .style(Style::default().fg(text_muted));
-                        buf.set_line(text_x + 3, area.y + row, &result_line, area.width - 7);
-
-                        row += 1;
-                    }
-                }
-
-                MessageItem::Edit { filename, diff: _ } => {
-                    // Draw ◆ glyph
-                    buf.get_mut(margin_x, area.y + row)
-                        .set_char('◆')
-                        .set_style(Style::default().fg(text_muted));
-
-                    // Draw "Edit filename" - Edit in secondary, filename in code.path
-                    let edit_label = "Edit ";
-                    let filename_only = std::path::Path::new(filename)
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or(filename);
-
-                    // Draw "Edit " in text.secondary first
-                    let edit_len = edit_label.len() as u16;
-                    for (i, ch) in edit_label.chars().enumerate() {
-                        buf.get_mut(text_x + i as u16, area.y + row)
-                            .set_char(ch)
-                            .set_style(Style::default().fg(text_secondary));
-                    }
-
-                    // Draw filename in code.path color
-                    for (i, ch) in filename_only.chars().enumerate() {
-                        let x_pos = text_x + edit_len + i as u16;
-                        if x_pos < area.x + area.width {
-                            buf.get_mut(x_pos, area.y + row)
-                                .set_char(ch)
-                                .set_style(Style::default().fg(code_path));
-                        }
-                    }
-
-                    row += 1;
-                }
-
-                MessageItem::System { text } => {
-                    // Draw ◆ glyph
-                    buf.get_mut(margin_x, area.y + row)
-                        .set_char('◆')
-                        .set_style(Style::default().fg(text_muted));
-
-                    // Draw system text
-                    let line = Line::raw(text.as_str())
-                        .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 4);
-
-                    row += 1;
-                }
-            }
+            let rendered = render_single_msg(msg, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary, text_secondary, text_muted, success, error, code_path);
+            row += rendered;
         }
     }
 
@@ -336,6 +138,197 @@ impl MessageList {
             model,
             timestamp: None,
         });
+    }
+}
+
+fn fill_background(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+    for y in area.y..area.y + area.height {
+        for x in area.x..area.x + area.width {
+            buf.get_mut(x, y).set_style(Style::default().bg(bg_base));
+        }
+    }
+}
+
+fn get_msg_type(msg: &MessageItem) -> &'static str {
+    match msg {
+        MessageItem::User { .. } => "user",
+        MessageItem::Assistant { .. } => "assistant",
+        MessageItem::Thought { .. } => "thought",
+        MessageItem::ToolCall { .. } => "tool",
+        MessageItem::Edit { .. } => "edit",
+        MessageItem::System { .. } => "system",
+    }
+}
+
+fn render_single_msg(
+    msg: &MessageItem,
+    area: Rect,
+    row: u16,
+    margin_x: u16,
+    text_x: u16,
+    max_rows: u16,
+    buf: &mut Buffer,
+    theme: &ThemeWrapper,
+    accent_primary: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+    success: ratatui::style::Color,
+    error: ratatui::style::Color,
+    code_path: ratatui::style::Color,
+) -> u16 {
+    match msg {
+        MessageItem::User { text, .. } => {
+            let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+            let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
+
+            let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
+            let msg_height = wrapped.len() as u16;
+            let total_height = msg_height + 2;
+
+            let panel_start_y = area.y + row;
+            let panel_start_x = margin_x - 1;
+            let panel_width = area.width - 2;
+
+            for r in 0..total_height {
+                if panel_start_y + r >= area.y + area.height {
+                    break;
+                }
+                for x in 0..panel_width {
+                    if panel_start_x + x < area.x + area.width {
+                        buf.get_mut(panel_start_x + x, panel_start_y + r)
+                            .set_style(Style::default().bg(bg_panel));
+                    }
+                }
+            }
+
+            buf.get_mut(margin_x, area.y + row + 1)
+                .set_char('❯')
+                .set_style(Style::default().fg(accent_primary).bg(bg_panel));
+
+            for (i, line_text) in wrapped.iter().enumerate() {
+                if row + 1 + i as u16 >= max_rows {
+                    break;
+                }
+                let line = Line::raw(line_text.as_str())
+                    .style(Style::default().fg(text_primary).bg(bg_panel));
+                buf.set_line(text_x, area.y + row + 1 + i as u16, &line, area.width - 6);
+            }
+
+            total_height
+        }
+        MessageItem::Assistant { text, .. } => {
+            if text.is_empty() {
+                let dot = Line::raw("·").style(Style::default().fg(text_muted));
+                buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
+                1
+            } else {
+                let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
+                let msg_height = wrapped.len() as u16;
+
+                for (i, line_text) in wrapped.iter().enumerate() {
+                    if row + i as u16 >= max_rows {
+                        break;
+                    }
+                    let line = Line::raw(line_text.as_str())
+                        .style(Style::default().fg(text_secondary));
+                    buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
+                }
+
+                msg_height
+            }
+        }
+        MessageItem::Thought { duration_secs } => {
+            buf.get_mut(margin_x, area.y + row)
+                .set_char('◆')
+                .set_style(Style::default().fg(text_muted));
+
+            let thought_text = format!("Thought for {:.1}s", duration_secs);
+            let line = Line::raw(thought_text.as_str())
+                .style(Style::default().fg(text_muted));
+            buf.set_line(text_x, area.y + row, &line, area.width - 4);
+
+            1
+        }
+        MessageItem::ToolCall { name, args, result, is_error } => {
+            buf.get_mut(margin_x, area.y + row)
+                .set_char('◆')
+                .set_style(Style::default().fg(text_muted));
+
+            let header = format!("{}({})", name, args);
+            let line = Line::raw(header.as_str())
+                .style(Style::default().fg(text_secondary));
+            buf.set_line(text_x, area.y + row, &line, area.width - 4);
+
+            let mut rendered = 1;
+
+            if let Some(result_text) = result {
+                if row + rendered >= max_rows {
+                    return rendered;
+                }
+
+                for (i, ch) in "  ".chars().enumerate() {
+                    buf.get_mut(text_x - 2 + i as u16, area.y + row + rendered).set_char(ch);
+                    buf.get_mut(text_x - 2 + i as u16, area.y + row + rendered)
+                        .set_style(Style::default().fg(text_muted));
+                }
+
+                buf.get_mut(text_x, area.y + row + rendered)
+                    .set_char('→')
+                    .set_style(Style::default().fg(text_muted));
+                buf.get_mut(text_x + 1, area.y + row + rendered)
+                    .set_char(if *is_error { '×' } else { '✓' })
+                    .set_style(Style::default().fg(if *is_error { error } else { success }));
+
+                let result_line = Line::raw(result_text.as_str())
+                    .style(Style::default().fg(text_muted));
+                buf.set_line(text_x + 3, area.y + row + rendered, &result_line, area.width - 7);
+
+                rendered += 1;
+            }
+
+            rendered
+        }
+        MessageItem::Edit { filename, diff: _ } => {
+            buf.get_mut(margin_x, area.y + row)
+                .set_char('◆')
+                .set_style(Style::default().fg(text_muted));
+
+            let edit_label = "Edit ";
+            let filename_only = std::path::Path::new(filename)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(filename);
+
+            let edit_len = edit_label.len() as u16;
+            for (i, ch) in edit_label.chars().enumerate() {
+                buf.get_mut(text_x + i as u16, area.y + row)
+                    .set_char(ch)
+                    .set_style(Style::default().fg(text_secondary));
+            }
+
+            for (i, ch) in filename_only.chars().enumerate() {
+                let x_pos = text_x + edit_len + i as u16;
+                if x_pos < area.x + area.width {
+                    buf.get_mut(x_pos, area.y + row)
+                        .set_char(ch)
+                        .set_style(Style::default().fg(code_path));
+                }
+            }
+
+            1
+        }
+        MessageItem::System { text } => {
+            buf.get_mut(margin_x, area.y + row)
+                .set_char('◆')
+                .set_style(Style::default().fg(text_muted));
+
+            let line = Line::raw(text.as_str())
+                .style(Style::default().fg(text_muted));
+            buf.set_line(text_x, area.y + row, &line, area.width - 4);
+
+            1
+        }
     }
 }
 

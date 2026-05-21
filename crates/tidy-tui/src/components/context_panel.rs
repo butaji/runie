@@ -43,18 +43,8 @@ impl Default for ContextPanel {
 }
 
 impl ContextPanel {
-    /// Render the context panel to a buffer
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        // Fill background with panel color
         let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
-        for y in area.y..(area.y + area.height) {
-            for x in area.x..(area.x + area.width) {
-                if let Some(cell) = buf.cell_mut((x as u16, y as u16)) {
-                    cell.set_style(Style::default().bg(bg_panel));
-                }
-            }
-        }
-
         let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let text_muted: ratatui::style::Color = theme.color("text.muted").into();
         let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
@@ -66,136 +56,165 @@ impl ContextPanel {
 
         let left_margin = 1u16;
         let max_width = area.width.saturating_sub(left_margin + 1);
+
+        fill_background(area, buf, bg_panel);
+
         let mut y = area.y;
+        y = render_header_section(self, area, buf, y, left_margin, max_width, text_muted, text_secondary, accent_secondary, warning);
 
-        // Section 1: Model
         if y < area.y + area.height {
-            let model_label = Span::styled("Model: ", Style::default().fg(text_muted));
-            let model_name = Span::styled(&self.model_name, Style::default().fg(accent_secondary));
-            let line = Line::from(vec![model_label, model_name]);
-            buf.set_line(area.x + left_margin, y, &line, max_width);
-            y += 1;
+            y = render_separator(y, area, buf, left_margin, max_width, border_unfocused);
         }
 
-        // Section 2: Session
-        if y < area.y + area.height {
-            let session_label = Span::styled("Session: ", Style::default().fg(text_muted));
-            let session_info = Span::styled(&self.session_info, Style::default().fg(text_secondary));
-            let line = Line::from(vec![session_label, session_info]);
-            buf.set_line(area.x + left_margin, y, &line, max_width);
-            y += 1;
-        }
+        y = render_recent_files(self, area, buf, y, left_margin, max_width, accent_primary, text_secondary);
 
-        // Section 3: Active Tool (if any)
-        if let Some(ref tool) = self.active_tool {
-            if y < area.y + area.height {
-                let tool_span = Span::styled(
-                    format!("● {}", tool),
-                    Style::default().fg(warning),
-                );
-                let line = Line::from(vec![tool_span]);
-                buf.set_line(area.x + left_margin, y, &line, max_width);
-                y += 1;
-            }
-        }
-
-        // Separator line
-        if y < area.y + area.height {
-            let sep = Span::styled(
-                "─".repeat(max_width as usize),
-                Style::default().fg(border_unfocused),
-            );
-            let line = Line::from(vec![sep]);
-            buf.set_line(area.x + left_margin, y, &line, max_width);
-            y += 1;
-        }
-
-        // Section 4: Recent Files
-        if !self.recent_files.is_empty() && y < area.y + area.height {
-            // Header
-            let header = Span::styled(
-                "RECENT",
-                Style::default().fg(accent_primary).add_modifier(Modifier::BOLD),
-            );
-            let line = Line::from(vec![header]);
-            buf.set_line(area.x + left_margin, y, &line, max_width);
-            y += 1;
-
-            // File list
-            for file in &self.recent_files {
-                if y >= area.y + area.height {
-                    break;
-                }
-                let display_name = if file.len() > (max_width as usize - 2) {
-                    let mut truncated = file.clone();
-                    truncated.truncate(max_width as usize - 5);
-                    truncated.push_str("...");
-                    truncated
-                } else {
-                    file.clone()
-                };
-                let file_span = Span::styled(
-                    format!("▸ {}", display_name),
-                    Style::default().fg(text_secondary),
-                );
-                let line = Line::from(vec![file_span]);
-                buf.set_line(area.x + left_margin, y, &line, max_width);
-                y += 1;
-            }
-        }
-
-        // Section 5: Git Changes
         if !self.git_changes.is_empty() {
-            // Separator line before section
             if y < area.y + area.height {
-                let sep = Span::styled(
-                    "─".repeat(max_width as usize),
-                    Style::default().fg(border_unfocused),
-                );
-                let line = Line::from(vec![sep]);
-                buf.set_line(area.x + left_margin, y, &line, max_width);
-                y += 1;
+                y = render_separator(y, area, buf, left_margin, max_width, border_unfocused);
             }
+            render_git_changes(self, area, buf, y, left_margin, max_width, accent_primary, warning, success, error, text_muted);
+        }
+    }
+}
 
-            if y < area.y + area.height {
-                // Header
-                let header = Span::styled(
-                    "CHANGES",
-                    Style::default().fg(accent_primary).add_modifier(Modifier::BOLD),
-                );
-                let line = Line::from(vec![header]);
-                buf.set_line(area.x + left_margin, y, &line, max_width);
-                y += 1;
-
-                // Change list
-                for change in &self.git_changes {
-                    if y >= area.y + area.height {
-                        break;
-                    }
-                    let (symbol, color) = match change.status {
-                        GitStatus::Modified => ("~", warning),
-                        GitStatus::Added => ("+", success),
-                        GitStatus::Deleted => ("-", error),
-                        GitStatus::Untracked => ("?", text_muted),
-                    };
-                    let display_path = if change.path.len() > (max_width as usize - 3) {
-                        let mut truncated = change.path.clone();
-                        truncated.truncate(max_width as usize - 6);
-                        truncated.push_str("...");
-                        truncated
-                    } else {
-                        change.path.clone()
-                    };
-                    let change_span = Span::styled(
-                        format!("{} {}", symbol, display_path),
-                        Style::default().fg(color),
-                    );
-                    let line = Line::from(vec![change_span]);
-                    buf.set_line(area.x + left_margin, y, &line, max_width);
-                    y += 1;
-                }
+fn fill_background(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
+    for y in area.y..(area.y + area.height) {
+        for x in area.x..(area.x + area.width) {
+            if let Some(cell) = buf.cell_mut((x as u16, y as u16)) {
+                cell.set_style(Style::default().bg(bg_panel));
             }
         }
+    }
+}
+
+fn render_header_section(
+    panel: &ContextPanel,
+    area: Rect,
+    buf: &mut Buffer,
+    mut y: u16,
+    left_margin: u16,
+    max_width: u16,
+    text_muted: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+    accent_secondary: ratatui::style::Color,
+    warning: ratatui::style::Color,
+) -> u16 {
+    // Model
+    if y < area.y + area.height {
+        let model_label = Span::styled("Model: ", Style::default().fg(text_muted));
+        let model_name = Span::styled(&panel.model_name, Style::default().fg(accent_secondary));
+        let line = Line::from(vec![model_label, model_name]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // Session
+    if y < area.y + area.height {
+        let session_label = Span::styled("Session: ", Style::default().fg(text_muted));
+        let session_info = Span::styled(&panel.session_info, Style::default().fg(text_secondary));
+        let line = Line::from(vec![session_label, session_info]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // Active Tool
+    if let Some(ref tool) = panel.active_tool {
+        if y < area.y + area.height {
+            let tool_span = Span::styled(format!("● {}", tool), Style::default().fg(warning));
+            let line = Line::from(vec![tool_span]);
+            buf.set_line(area.x + left_margin, y, &line, max_width);
+            y += 1;
+        }
+    }
+
+    y
+}
+
+fn render_separator(y: u16, area: Rect, buf: &mut Buffer, left_margin: u16, max_width: u16, border_unfocused: ratatui::style::Color) -> u16 {
+    let sep = Span::styled("─".repeat(max_width as usize), Style::default().fg(border_unfocused));
+    let line = Line::from(vec![sep]);
+    buf.set_line(area.x + left_margin, y, &line, max_width);
+    y + 1
+}
+
+fn render_recent_files(
+    panel: &ContextPanel,
+    area: Rect,
+    buf: &mut Buffer,
+    mut y: u16,
+    left_margin: u16,
+    max_width: u16,
+    accent_primary: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+) -> u16 {
+    if panel.recent_files.is_empty() || y >= area.y + area.height {
+        return y;
+    }
+
+    let header = Span::styled("RECENT", Style::default().fg(accent_primary).add_modifier(Modifier::BOLD));
+    buf.set_line(area.x + left_margin, y, &Line::from(vec![header]), max_width);
+    y += 1;
+
+    for file in &panel.recent_files {
+        if y >= area.y + area.height {
+            break;
+        }
+        let display_name = truncate_file_name(file, max_width);
+        let file_span = Span::styled(format!("▸ {}", display_name), Style::default().fg(text_secondary));
+        buf.set_line(area.x + left_margin, y, &Line::from(vec![file_span]), max_width);
+        y += 1;
+    }
+
+    y
+}
+
+fn render_git_changes(
+    panel: &ContextPanel,
+    area: Rect,
+    buf: &mut Buffer,
+    mut y: u16,
+    left_margin: u16,
+    max_width: u16,
+    accent_primary: ratatui::style::Color,
+    warning: ratatui::style::Color,
+    success: ratatui::style::Color,
+    error: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+) {
+    if y >= area.y + area.height {
+        return;
+    }
+
+    let header = Span::styled("CHANGES", Style::default().fg(accent_primary).add_modifier(Modifier::BOLD));
+    buf.set_line(area.x + left_margin, y, &Line::from(vec![header]), max_width);
+    y += 1;
+
+    for change in &panel.git_changes {
+        if y >= area.y + area.height {
+            break;
+        }
+        let (symbol, color) = match change.status {
+            GitStatus::Modified => ("~", warning),
+            GitStatus::Added => ("+", success),
+            GitStatus::Deleted => ("-", error),
+            GitStatus::Untracked => ("?", text_muted),
+        };
+        let display_path = truncate_file_name(&change.path, max_width - 2);
+        let change_span = Span::styled(format!("{} {}", symbol, display_path), Style::default().fg(color));
+        buf.set_line(area.x + left_margin, y, &Line::from(vec![change_span]), max_width);
+        y += 1;
+    }
+}
+
+fn truncate_file_name(file: &str, max_width: u16) -> String {
+    let limit = (max_width as usize).saturating_sub(2);
+    if file.len() > limit {
+        let mut truncated = file.to_string();
+        truncated.truncate(limit.saturating_sub(3));
+        truncated.push_str("...");
+        truncated
+    } else {
+        file.to_string()
     }
 }
 
@@ -228,8 +247,6 @@ mod tests {
 
         panel.render_ref(area, &mut buf, &theme);
 
-        // Check that "Model: " label is present at position (1, 0)
-        // The model name follows immediately after
         assert_eq!(buf.cell((1, 0)).unwrap().symbol(), "M");
         assert_eq!(buf.cell((2, 0)).unwrap().symbol(), "o");
         assert_eq!(buf.cell((3, 0)).unwrap().symbol(), "d");
@@ -256,7 +273,6 @@ mod tests {
 
         panel.render_ref(area, &mut buf, &theme);
 
-        // Collect all cell symbols to verify content
         let mut content = String::new();
         for y in 0..area.height {
             for x in 0..area.width {
@@ -267,7 +283,6 @@ mod tests {
             content.push('\n');
         }
 
-        // Check for change symbols
         assert!(content.contains("~"), "Modified files should show ~");
         assert!(content.contains("+"), "Added files should show +");
         assert!(content.contains("-"), "Deleted files should show -");
@@ -289,7 +304,6 @@ mod tests {
 
         panel.render_ref(area, &mut buf, &theme);
 
-        // Collect cell symbols to verify content
         let mut content = String::new();
         for y in 0..area.height {
             for x in 0..area.width {
@@ -300,7 +314,6 @@ mod tests {
             content.push('\n');
         }
 
-        // Check for RECENT header and file entries
         assert!(content.contains("RECENT"), "RECENT header should appear");
         assert!(content.contains("▸"), "File indicator should appear");
         assert!(content.contains("lib.rs"), "lib.rs should appear");
