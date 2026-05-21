@@ -145,14 +145,15 @@ fn render_top_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeW
     use ratatui::text::{Line, Span};
 
     let x = area.x + 1;
+    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
     let text_muted: ratatui::style::Color = theme.color("text.muted").into();
 
     // ── Left side: repo/branch  path ──
     let mut left_parts: Vec<Span> = Vec::new();
-
+    
     if !state.top_bar_repo.is_empty() {
-        left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_secondary)));
+        left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_primary)));
     }
     if !state.top_bar_branch.is_empty() {
         left_parts.push(Span::styled("/", Style::default().fg(text_muted)));
