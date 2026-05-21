@@ -74,7 +74,14 @@ impl MessageList {
         }
 
         // Iterate messages in REVERSE order (newest first)
-        let messages: Vec<&MessageItem> = self.messages.iter().rev().skip(self.scroll_offset).collect();
+        // Skip empty assistant messages (still streaming, prevents blinking)
+        let messages: Vec<&MessageItem> = self.messages.iter()
+            .filter(|msg| {
+                !matches!(msg, MessageItem::Assistant { text, .. } if text.is_empty())
+            })
+            .rev()
+            .skip(self.scroll_offset)
+            .collect();
         let mut row = 0u16;
         let max_rows = area.height;
 

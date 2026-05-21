@@ -55,6 +55,329 @@ impl Default for TuiConfig {
 
 const SIDEBAR_WIDTH: u16 = 28;
 
+// ─── AppState ─────────────────────────────────────────────────────────────────
+// All application state, extracted from Tui. No terminal I/O, no widgets.
+
+#[derive(Clone)]
+pub struct AppState {
+    pub messages: Vec<MessageItem>,
+    pub input_lines: Vec<String>,
+    pub cursor_col: usize,
+    pub cursor_row: usize,
+    pub mode: TuiMode,
+    pub running: bool,
+    pub show_sidebar: bool,
+    pub agent_running: bool,
+    pub current_model: Option<String>,
+    pub top_bar_repo: String,
+    pub top_bar_branch: String,
+    pub top_bar_path: String,
+    pub permission_modal_tool: Option<String>,
+    pub permission_modal_args: Option<String>,
+    pub permission_modal_desc: Option<String>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            messages: Vec::new(),
+            input_lines: vec![String::new()],
+            cursor_col: 0,
+            cursor_row: 0,
+            mode: TuiMode::Chat,
+            running: true,
+            show_sidebar: false,
+            agent_running: false,
+            current_model: None,
+            top_bar_repo: String::new(),
+            top_bar_branch: String::new(),
+            top_bar_path: String::new(),
+            permission_modal_tool: None,
+            permission_modal_args: None,
+            permission_modal_desc: None,
+        }
+    }
+}
+
+// ─── Action ────────────────────────────────────────────────────────────────────
+// All state changes described as actions (unidirectional data flow)
+
+#[derive(Debug, Clone)]
+pub enum Action {
+    Quit,
+    Submit(String),
+    InsertChar(char),
+    Backspace,
+    DeleteForward,
+    MoveCursorLeft,
+    MoveCursorRight,
+    MoveCursorUp,
+    MoveCursorDown,
+    MoveCursorToStart,
+    MoveCursorToEnd,
+    InsertNewline,
+    DeleteWordBackward,
+    DeleteToStart,
+    ToggleSidebar,
+    OpenCommandPalette,
+    CloseModal,
+    ConfirmModal,
+    AgentEvent(tidy_agent::events::AgentEvent),
+    PermissionConfirm,
+    PermissionCancel,
+    PermissionAlways,
+    PermissionSkip,
+    OverlayClosed,
+}
+
+// ─── update() ─────────────────────────────────────────────────────────────────
+// Pure reducer: takes state + action, returns new state (no side effects)
+
+pub fn update(state: &mut AppState, action: Action) {
+    match action {
+        Action::Quit => state.running = false,
+
+        Action::Submit(text) => {
+            state.messages.push(MessageItem::User {
+                text: text.clone(),
+                model: Some("You".to_string()),
+                timestamp: None,
+            });
+            state.input_lines = vec![String::new()];
+            state.cursor_col = 0;
+            state.cursor_row = 0;
+        }
+
+        Action::InsertChar(c) => {
+            if state.cursor_row < state.input_lines.len() {
+                state.input_lines[state.cursor_row].insert(state.cursor_col, c);
+                state.cursor_col += 1;
+            }
+        }
+
+        Action::Backspace => {
+            if state.cursor_col > 0 {
+                state.input_lines[state.cursor_row].remove(state.cursor_col - 1);
+                state.cursor_col -= 1;
+            } else if state.cursor_row > 0 {
+                let line = state.input_lines.remove(state.cursor_row);
+                state.cursor_row -= 1;
+                state.cursor_col = state.input_lines[state.cursor_row].len();
+                state.input_lines[state.cursor_row].push_str(&line);
+            }
+        }
+
+        Action::InsertNewline => {
+            if state.cursor_row < state.input_lines.len() {
+                let remainder = state.input_lines[state.cursor_row].split_off(state.cursor_col);
+                state.cursor_row += 1;
+                state.cursor_col = 0;
+                state.input_lines.insert(state.cursor_row, remainder);
+            }
+        }
+
+        Action::MoveCursorLeft => {
+            if state.cursor_col > 0 {
+                state.cursor_col -= 1;
+            } else if state.cursor_row > 0 {
+                state.cursor_row -= 1;
+                state.cursor_col = state.input_lines[state.cursor_row].len();
+            }
+        }
+
+        Action::MoveCursorRight => {
+            if state.cursor_col < state.input_lines[state.cursor_row].len() {
+                state.cursor_col += 1;
+            } else if state.cursor_row + 1 < state.input_lines.len() {
+                state.cursor_row += 1;
+                state.cursor_col = 0;
+            }
+        }
+
+        Action::MoveCursorUp => {
+            if state.cursor_row > 0 {
+                state.cursor_row -= 1;
+                state.cursor_col = state.cursor_col.min(state.input_lines[state.cursor_row].len());
+            }
+        }
+
+        Action::MoveCursorDown => {
+            if state.cursor_row + 1 < state.input_lines.len() {
+                state.cursor_row += 1;
+                state.cursor_col = state.cursor_col.min(state.input_lines[state.cursor_row].len());
+            }
+        }
+
+        Action::MoveCursorToStart => state.cursor_col = 0,
+
+        Action::MoveCursorToEnd => {
+            state.cursor_col = state.input_lines[state.cursor_row].len();
+        }
+
+        Action::DeleteForward => {
+            if state.cursor_col < state.input_lines[state.cursor_row].len() {
+                state.input_lines[state.cursor_row].remove(state.cursor_col);
+            }
+        }
+
+        Action::DeleteWordBackward => {
+            let line = &state.input_lines[state.cursor_row];
+            let before = &line[..state.cursor_col];
+            if let Some(pos) = before.rfind(|c: char| c.is_whitespace()) {
+                state.input_lines[state.cursor_row].drain(pos..state.cursor_col);
+                state.cursor_col = pos;
+            } else {
+                state.input_lines[state.cursor_row].clear();
+                state.cursor_col = 0;
+            }
+        }
+
+        Action::DeleteToStart => {
+            state.input_lines[state.cursor_row].drain(..state.cursor_col);
+            state.cursor_col = 0;
+        }
+
+        Action::ToggleSidebar => state.show_sidebar = !state.show_sidebar,
+
+        Action::OpenCommandPalette => {
+            state.mode = TuiMode::CommandPalette;
+        }
+
+        Action::CloseModal => {
+            state.mode = TuiMode::Chat;
+            state.permission_modal_tool = None;
+        }
+
+        Action::ConfirmModal => {
+            state.mode = TuiMode::Chat;
+            state.permission_modal_tool = None;
+        }
+
+        Action::OverlayClosed => {
+            state.mode = TuiMode::Chat;
+        }
+
+        Action::AgentEvent(event) => {
+use tidy_agent::events::AgentEvent;
+            match event {
+                AgentEvent::MessageStart { message } => {
+                    state.agent_running = true;
+                    state.current_model = Some(message.role.clone());
+                    state.messages.push(MessageItem::Assistant {
+                        text: String::new(),
+                        model: state.current_model.clone(),
+                        timestamp: None,
+                    });
+                }
+                AgentEvent::MessageUpdate { message } => {
+                    if let Some(last) = state.messages.last_mut() {
+                        if let MessageItem::Assistant { ref mut text, .. } = last {
+                            let new_text = message
+                                .content
+                                .iter()
+                                .filter_map(|part| {
+                                    if let ContentPart::Text { text } = part {
+                                        Some(text.as_str())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                                .join("");
+                            *text = new_text;
+                        }
+                    }
+                }
+                AgentEvent::MessageEnd { message } => {
+                    if let Some(last) = state.messages.last_mut() {
+                        if let MessageItem::Assistant { ref mut text, .. } = last {
+                            let final_text = message
+                                .content
+                                .iter()
+                                .filter_map(|part| {
+                                    if let ContentPart::Text { text } = part {
+                                        Some(text.as_str())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                                .join("");
+                            *text = final_text;
+                        }
+                    }
+                }
+                AgentEvent::ToolExecutionStart { tool_call_id } => {
+                    state.messages.push(MessageItem::ToolCall {
+                        name: tool_call_id,
+                        args: String::new(),
+                        result: None,
+                        is_error: false,
+                    });
+                }
+                AgentEvent::ToolExecutionEnd { result, .. } => {
+                    let result_text = result
+                        .content
+                        .iter()
+                        .filter_map(|part| {
+                            if let ContentPart::Text { text } = part {
+                                Some(text.as_str())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    let is_err = result.is_error;
+                    if let Some(last) = state.messages.last_mut() {
+                        if let MessageItem::ToolCall { ref mut result, ref mut is_error, .. } = last {
+                            *result = Some(result_text);
+                            *is_error = is_err;
+                        }
+                    }
+                }
+                AgentEvent::AgentEnd { .. } => {
+                    state.agent_running = false;
+                    state.current_model = None;
+                }
+                AgentEvent::Error { message } => {
+                    state
+                        .messages
+                        .push(MessageItem::System { text: format!("Error: {}", message) });
+                    state.agent_running = false;
+                }
+                AgentEvent::PermissionRequest { tool_name, tool_args, .. } => {
+                    state.permission_modal_tool = Some(tool_name.clone());
+                    state.permission_modal_args = Some(tool_args.clone());
+                    state.permission_modal_desc =
+                        Some(format!("Agent wants to execute '{}'", tool_name));
+                    state.mode = TuiMode::Permission;
+                }
+                _ => {}
+            }
+        }
+
+        Action::PermissionConfirm => {
+            state.mode = TuiMode::Chat;
+            state.permission_modal_tool = None;
+        }
+        Action::PermissionCancel => {
+            state.mode = TuiMode::Chat;
+            state.permission_modal_tool = None;
+        }
+        Action::PermissionAlways => {
+            state.mode = TuiMode::Chat;
+            state.permission_modal_tool = None;
+        }
+        Action::PermissionSkip => {
+            state.mode = TuiMode::Chat;
+            state.permission_modal_tool = None;
+        }
+    }
+}
+
+// ─── Tui ─────────────────────────────────────────────────────────────────────
+
 pub struct Tui {
     pub config: TuiConfig,
     pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
@@ -65,13 +388,9 @@ pub struct Tui {
     pub overlay: Option<Overlay>,
     pub permission_modal: Option<PermissionModal>,
     pub command_palette: Option<CommandPalette>,
-    pub running: bool,
-    pub mode: TuiMode,
-    pub show_sidebar: bool,
     pub agent_list: AgentList,
     pub context_panel: ContextPanel,
-    pub agent_running: bool,
-    pub current_model: Option<String>,
+    pub state: AppState,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -104,9 +423,6 @@ impl Tui {
             overlay: None,
             permission_modal: None,
             command_palette: None,
-            running: true,
-            mode: TuiMode::Chat,
-            show_sidebar: false,
             agent_list: AgentList {
                 agents: vec![
                     AgentItem {
@@ -143,8 +459,7 @@ impl Tui {
                 model_name: "claude-4".to_string(),
                 session_info: "demo-session-001".to_string(),
             },
-            agent_running: false,
-            current_model: None,
+            state: AppState::default(),
         })
     }
 
@@ -155,12 +470,37 @@ impl Tui {
         Ok(())
     }
 
+    /// Dispatch an action to update state (unidirectional data flow)
+    pub fn update(&mut self, action: Action) {
+        update(&mut self.state, action);
+    }
+
     /// Calculate the height needed for the input bar based on its content
     fn input_bar_height(&self, _area_width: u16) -> u16 {
         // Each logical line = 1 visual line (no wrapping)
         let visual_lines = self.input_bar.visual_height();
         // 2 for borders + visual lines for content
         (visual_lines as u16) + 2
+    }
+
+    /// Sync widget state from AppState (state → widgets, unidirectional)
+    fn sync_widgets_from_state(&mut self) {
+        // MessageList
+        self.message_list.messages = self.state.messages.clone();
+
+        // InputBar
+        self.input_bar.lines = self.state.input_lines.clone();
+        self.input_bar.cursor_col = self.state.cursor_col;
+        // Note: InputBar uses cursor_line, state uses cursor_row
+        // We need to map carefully to avoid out-of-bounds
+        self.input_bar.cursor_line = self.state.cursor_row.min(self.input_bar.lines.len().saturating_sub(1));
+
+        // Sync mode to widgets that need it
+        match self.state.mode {
+            TuiMode::Chat => self.status_bar.set_chat_mode(),
+            TuiMode::Overlay => self.status_bar.set_overlay_mode(),
+            _ => {}
+        }
     }
 
     pub fn render(&mut self) -> io::Result<()> {
@@ -174,14 +514,18 @@ impl Tui {
             height: area.height.saturating_sub(2),
         };
 
+        // Sync widgets from state (unidirectional: state → widgets)
+        self.sync_widgets_from_state();
+
         // Calculate dynamic input bar height
         let input_height = self.input_bar_height(padded_area.width);
 
         // Extract values needed in closure to avoid borrow conflicts
-        let show_sidebar = self.show_sidebar;
+        let show_sidebar = self.state.show_sidebar;
         let agent_list = self.agent_list.clone();
         let show_top_bar = self.config.show_top_bar;
         let show_status_bar = self.config.show_status_bar;
+        let mode = self.state.mode.clone();
 
         self.terminal.draw(|frame| {
             let theme = &self.config.theme;
@@ -235,7 +579,7 @@ impl Tui {
             }
 
             if let Some(overlay) = &self.overlay {
-                if self.mode == TuiMode::Overlay {
+                if mode == TuiMode::Overlay {
                     let overlay_area = Overlay::centered((60, 20), frame.area());
 
                     // Draw shadow first
@@ -261,7 +605,7 @@ impl Tui {
                 }
             }
 
-            if self.mode == TuiMode::Permission {
+            if mode == TuiMode::Permission {
                 if let Some(ref modal) = self.permission_modal {
                     let bg_base: ratatui::style::Color = theme.color("bg.base").into();
                     // Dim background
@@ -286,7 +630,7 @@ impl Tui {
                 }
             }
 
-            if self.mode == TuiMode::CommandPalette {
+            if mode == TuiMode::CommandPalette {
                 if let Some(ref palette) = self.command_palette {
                     let bg_base: ratatui::style::Color = theme.color("bg.base").into();
                     // Dim background
@@ -323,7 +667,7 @@ impl Tui {
     }
 
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        match self.mode {
+        match self.state.mode {
             TuiMode::Chat => self.handle_chat_key(key),
             TuiMode::Overlay => self.handle_overlay_key(key),
             TuiMode::Select => self.handle_select_key(key),
@@ -335,22 +679,21 @@ impl Tui {
     fn handle_chat_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
         match key.code {
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.running = false;
+                self.update(Action::Quit);
                 Some(TuiAction::Quit)
             }
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.running = false;
+                self.update(Action::Quit);
                 Some(TuiAction::Quit)
             }
             KeyCode::Enter => {
                 if key.modifiers.contains(KeyModifiers::SHIFT) {
-                    // Shift+Enter: insert newline
-                    self.input_bar.insert_newline();
+                    self.update(Action::InsertNewline);
                     None
                 } else {
                     let text = self.input_bar.submit();
                     if !text.is_empty() {
-                        self.message_list.messages.push(MessageItem::User { text: text.clone(), model: Some("You".to_string()), timestamp: None });
+                        self.update(Action::Submit(text.clone()));
                         Some(TuiAction::Submit(text))
                     } else {
                         None
@@ -358,91 +701,79 @@ impl Tui {
                 }
             }
             KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+J: insert newline (like Shift+Enter)
-                self.input_bar.insert_newline();
+                self.update(Action::InsertNewline);
                 None
             }
             KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+K: open command palette
                 self.command_palette = Some(CommandPalette::new());
-                self.mode = TuiMode::CommandPalette;
+                self.update(Action::OpenCommandPalette);
                 None
             }
             KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+P: open command palette
                 self.command_palette = Some(CommandPalette::new());
-                self.mode = TuiMode::CommandPalette;
+                self.update(Action::OpenCommandPalette);
                 None
             }
             KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+A: start of line
-                self.input_bar.move_cursor_to_start();
+                self.update(Action::MoveCursorToStart);
                 None
             }
             KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+E: end of line
-                self.input_bar.move_cursor_to_end();
+                self.update(Action::MoveCursorToEnd);
                 None
             }
             KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+W: delete word backward
-                self.input_bar.delete_word_backward();
+                self.update(Action::DeleteWordBackward);
                 None
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+U: delete from cursor to start of line
-                self.input_bar.delete_to_start();
+                self.update(Action::DeleteToStart);
                 None
             }
 
             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+D: delete character under cursor (forward delete)
-                self.input_bar.delete_forward();
+                self.update(Action::DeleteForward);
                 None
             }
             KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+B: toggle right sidebar
-                self.toggle_sidebar();
+                self.update(Action::ToggleSidebar);
                 None
             }
             KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+F: move cursor forward (like Right arrow)
-                self.input_bar.move_cursor_right();
+                self.update(Action::MoveCursorRight);
                 None
             }
             KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+N: move cursor down (like Down arrow)
-                self.input_bar.move_cursor_down();
+                self.update(Action::MoveCursorDown);
                 None
             }
 
             KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl+H: backspace
-                self.input_bar.backspace();
+                self.update(Action::Backspace);
                 None
             }
             KeyCode::Char(c) => {
-                self.input_bar.insert_char(c);
+                self.update(Action::InsertChar(c));
                 None
             }
             KeyCode::Backspace => {
-                self.input_bar.backspace();
+                self.update(Action::Backspace);
                 None
             }
             KeyCode::Left => {
-                self.input_bar.move_cursor_left();
+                self.update(Action::MoveCursorLeft);
                 None
             }
             KeyCode::Right => {
-                self.input_bar.move_cursor_right();
+                self.update(Action::MoveCursorRight);
                 None
             }
             KeyCode::Up => {
-                self.input_bar.move_cursor_up();
+                self.update(Action::MoveCursorUp);
                 None
             }
             KeyCode::Down => {
-                self.input_bar.move_cursor_down();
+                self.update(Action::MoveCursorDown);
                 None
             }
             _ => None,
@@ -453,8 +784,7 @@ impl Tui {
         match key.code {
             KeyCode::Esc => {
                 self.overlay = None;
-                self.mode = TuiMode::Chat;
-                self.status_bar.set_chat_mode();
+                self.update(Action::OverlayClosed);
                 None
             }
             _ => None,
@@ -515,7 +845,7 @@ impl Tui {
         };
 
         self.permission_modal = None;
-        self.mode = TuiMode::Chat;
+        self.state.mode = TuiMode::Chat;
         action_opt.map(|action| TuiAction::ToolPermission { tool: tool_name, action })
     }
 
@@ -524,7 +854,7 @@ impl Tui {
             match key.code {
                 KeyCode::Esc => {
                     self.command_palette = None;
-                    self.mode = TuiMode::Chat;
+                    self.state.mode = TuiMode::Chat;
                     None
                 }
                 KeyCode::Enter => {
@@ -551,7 +881,7 @@ impl Tui {
                             PaletteCommand::Cancel => None,
                         };
                         self.command_palette = None;
-                        self.mode = TuiMode::Chat;
+                        self.state.mode = TuiMode::Chat;
                         return action;
                     }
                     None
@@ -580,129 +910,47 @@ impl Tui {
     }
 
     pub fn add_message(&mut self, item: MessageItem) {
-        self.message_list.messages.push(item);
+        self.message_list.messages.push(item.clone());
+        self.state.messages.push(item);
     }
 
     pub fn on_agent_event(&mut self, event: AgentEvent) {
-        match event {
-            AgentEvent::MessageStart { message } => {
-                self.agent_running = true;
-                self.current_model = Some(message.role.clone());
-                // Add empty assistant message that will be updated
-                self.message_list.messages.push(MessageItem::Assistant {
-                    text: String::new(),
-                    model: self.current_model.clone(),
-                    timestamp: None,
-                });
-            }
-            AgentEvent::MessageUpdate { message } => {
-                // Update the last assistant message with new text
-                if let Some(last) = self.message_list.messages.last_mut() {
-                    if let MessageItem::Assistant { ref mut text, .. } = last {
-                        // Extract text from content parts
-                        let new_text = message.content.iter()
-                            .filter_map(|part| {
-                                if let ContentPart::Text { text } = part { Some(text.as_str()) } else { None }
-                            })
-                            .collect::<Vec<_>>()
-                            .join("");
-                        *text = new_text;
-                    }
-                }
-            }
-            AgentEvent::MessageEnd { message } => {
-                // Finalize the assistant message
-                if let Some(last) = self.message_list.messages.last_mut() {
-                    if let MessageItem::Assistant { ref mut text, .. } = last {
-                        let final_text = message.content.iter()
-                            .filter_map(|part| {
-                                if let ContentPart::Text { text } = part { Some(text.as_str()) } else { None }
-                            })
-                            .collect::<Vec<_>>()
-                            .join("");
-                        *text = final_text;
-                    }
-                }
-            }
-            AgentEvent::ToolExecutionStart { tool_call_id } => {
-                self.message_list.messages.push(MessageItem::ToolCall {
-                    name: tool_call_id,  // We'll improve this later with actual tool names
-                    args: String::new(),
-                    result: None,
-                    is_error: false,
-                });
-            }
-            AgentEvent::ToolExecutionEnd { tool_call_id: _, result } => {
-                let result_text = result.content.iter()
-                    .filter_map(|part| {
-                        if let ContentPart::Text { text } = part { Some(text.as_str()) } else { None }
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                let is_err = result.is_error;
-                // Update the last ToolCall with the result
-                if let Some(last) = self.message_list.messages.last_mut() {
-                    if let MessageItem::ToolCall { ref mut result, ref mut is_error, .. } = last {
-                        *result = Some(result_text);
-                        *is_error = is_err;
-                    }
-                }
-            }
-            AgentEvent::TurnEnd { .. } => {
-                // Turn complete, could update status
-            }
-            AgentEvent::AgentEnd { .. } => {
-                self.agent_running = false;
-                self.current_model = None;
-            }
-            AgentEvent::Error { message } => {
-                self.message_list.messages.push(MessageItem::System {
-                    text: format!("Error: {}", message),
-                });
-                self.agent_running = false;
-            }
-            AgentEvent::PermissionRequest { tool_call_id: _, tool_name, tool_args } => {
-                // Show permission modal — this pauses the UI
-                self.request_permission(
-                    tool_name.as_str(),
-                    tool_args.as_str(),
-                    &format!("Agent wants to execute '{}'", tool_name)
-                );
-            }
-            AgentEvent::PermissionGranted { tool_call_id: _ } => {
-                // Could show a brief "approved" indicator in status bar
-                // For now, just log or ignore
-            }
-            AgentEvent::PermissionDenied { tool_call_id: _ } => {
-                // Could show a brief "denied" indicator
-                // For now, just log or ignore
-            }
+        // Use the update() reducer for all agent events
+        self.update(Action::AgentEvent(event.clone()));
+
+        // For PermissionRequest, also show the modal
+        if let AgentEvent::PermissionRequest { tool_name, tool_args, .. } = event {
+            self.permission_modal = Some(PermissionModal::new(
+                tool_name.as_str(),
+                tool_args.as_str(),
+                &format!("Agent wants to execute '{}'", tool_name),
+            ));
         }
     }
 
     pub fn show_overlay(&mut self, overlay: Overlay) {
         self.overlay = Some(overlay);
-        self.mode = TuiMode::Overlay;
+        self.state.mode = TuiMode::Overlay;
         self.status_bar.set_overlay_mode();
     }
 
     pub fn hide_overlay(&mut self) {
         self.overlay = None;
-        self.mode = TuiMode::Chat;
+        self.state.mode = TuiMode::Chat;
         self.status_bar.set_chat_mode();
     }
 
     pub fn request_permission(&mut self, tool_name: &str, tool_args: &str, description: &str) {
         self.permission_modal = Some(PermissionModal::new(tool_name, tool_args, description));
-        self.mode = TuiMode::Permission;
+        self.state.mode = TuiMode::Permission;
     }
 
     pub fn is_permission_modal_active(&self) -> bool {
-        self.permission_modal.is_some() && self.mode == TuiMode::Permission
+        self.permission_modal.is_some() && self.state.mode == TuiMode::Permission
     }
 
     pub fn toggle_sidebar(&mut self) {
-        self.show_sidebar = !self.show_sidebar;
+        self.update(Action::ToggleSidebar);
     }
 
     /// Draw a subtle shadow around a modal area (1 cell right, 1 cell down)
