@@ -350,7 +350,7 @@ impl Tui {
                 } else {
                     let text = self.input_bar.submit();
                     if !text.is_empty() {
-                        self.message_list.messages.push(MessageItem::User { text: text.clone(), model: Some("You".to_string()) });
+                        self.message_list.messages.push(MessageItem::User { text: text.clone(), model: Some("You".to_string()), timestamp: None });
                         Some(TuiAction::Submit(text))
                     } else {
                         None
@@ -592,6 +592,7 @@ impl Tui {
                 self.message_list.messages.push(MessageItem::Assistant {
                     text: String::new(),
                     model: self.current_model.clone(),
+                    timestamp: None,
                 });
             }
             AgentEvent::MessageUpdate { message } => {
@@ -627,6 +628,8 @@ impl Tui {
                 self.message_list.messages.push(MessageItem::ToolCall {
                     name: tool_call_id,  // We'll improve this later with actual tool names
                     args: String::new(),
+                    result: None,
+                    is_error: false,
                 });
             }
             AgentEvent::ToolExecutionEnd { tool_call_id: _, result } => {
@@ -636,11 +639,14 @@ impl Tui {
                     })
                     .collect::<Vec<_>>()
                     .join(" ");
-                self.message_list.messages.push(MessageItem::ToolResult {
-                    name: result.tool_name,
-                    result: result_text,
-                    is_error: result.is_error,
-                });
+                let is_err = result.is_error;
+                // Update the last ToolCall with the result
+                if let Some(last) = self.message_list.messages.last_mut() {
+                    if let MessageItem::ToolCall { ref mut result, ref mut is_error, .. } = last {
+                        *result = Some(result_text);
+                        *is_error = is_err;
+                    }
+                }
             }
             AgentEvent::TurnEnd { .. } => {
                 // Turn complete, could update status
@@ -654,6 +660,22 @@ impl Tui {
                     text: format!("Error: {}", message),
                 });
                 self.agent_running = false;
+            }
+            AgentEvent::PermissionRequest { tool_call_id: _, tool_name, tool_args } => {
+                // Show permission modal — this pauses the UI
+                self.request_permission(
+                    tool_name.as_str(),
+                    tool_args.as_str(),
+                    &format!("Agent wants to execute '{}'", tool_name)
+                );
+            }
+            AgentEvent::PermissionGranted { tool_call_id: _ } => {
+                // Could show a brief "approved" indicator in status bar
+                // For now, just log or ignore
+            }
+            AgentEvent::PermissionDenied { tool_call_id: _ } => {
+                // Could show a brief "denied" indicator
+                // For now, just log or ignore
             }
         }
     }
@@ -673,6 +695,10 @@ impl Tui {
     pub fn request_permission(&mut self, tool_name: &str, tool_args: &str, description: &str) {
         self.permission_modal = Some(PermissionModal::new(tool_name, tool_args, description));
         self.mode = TuiMode::Permission;
+    }
+
+    pub fn is_permission_modal_active(&self) -> bool {
+        self.permission_modal.is_some() && self.mode == TuiMode::Permission
     }
 
     pub fn toggle_sidebar(&mut self) {

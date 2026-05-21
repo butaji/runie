@@ -11,6 +11,17 @@ pub enum AgentEvent {
     TurnEnd { message: AgentMessage, tool_results: Vec<ToolResult> },
     AgentEnd { messages: Vec<AgentMessage> },
     Error { message: String },
+    PermissionRequest { tool_call_id: String, tool_name: String, tool_args: String },
+    PermissionGranted { tool_call_id: String },
+    PermissionDenied { tool_call_id: String },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PermissionDecision {
+    Allow,
+    Deny,
+    AllowAlways,
+    Skip,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

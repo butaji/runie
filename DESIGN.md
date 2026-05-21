@@ -1,8 +1,10 @@
-# Tidy TUI Design System v2.0 — "GrokCrush" Hybrid
+# Tidy TUI Design System v3.0 — "Crush+Grok" Hybrid
 
 ## Philosophy
 
-Tidy is the love child of Grok Build (precise, ratatui-engineered, multi-layer professional control center) and Crush (vibrant Charm glam, personality-forward, energetic). The result is a premium terminal-native agentic IDE that feels like a cyberpunk command deck: surgically precise yet delightfully alive.
+Tidy is the love child of Crush (Charm's glam Lip Gloss base — vibrant, personality-forward, electric) and GrokBuild (cosmic truth-seeking, terminal-native, high-signal-density). The result is a premium terminal-native agentic IDE that feels like a cyberpunk command deck: surgically precise yet delightfully alive.
+
+**Tagline vibe:** "Cosmic. Precise. Electric."
 
 **Tagline vibe:** "Precise. Electric. Yours."
 
@@ -25,73 +27,78 @@ Tidy is the love child of Grok Build (precise, ratatui-engineered, multi-layer p
 
 ## Color Palette
 
-### Base (Deep Space)
+### Base (Cosmic Deep Space)
 
 | Token | Hex | Usage | WCAG Ratio |
 |-------|-----|-------|------------|
-| `bg.base` | `#0a0a0f` | Main background — deepest black with cool undertone | — |
-| `bg.panel` | `#111118` | Panel/card backgrounds — barely lifted from base | — |
-| `bg.code` | `#16161f` | Code block backgrounds | — |
-| `bg.overlay` | `#0d0d14` | Modal backdrop — 70% opacity dark tint | — |
-| `bg.highlight` | `#1e1e2e` | Hover/selection states | — |
-| `bg.selection` | `#2a2a3c` | Active selection | — |
+| `bg.base` | `#0F0C14` | Main background — Cosmic deep space black-purple | — |
+| `bg.panel` | `#201F26` | Panel/card backgrounds — Pepper charcoal purple | — |
+| `bg.code` | `#1A1920` | Code block backgrounds — subtle gray panel | — |
+| `bg.overlay` | `#0F0C14` | Modal backdrop — 70% opacity Cosmic tint | — |
+| `bg.highlight` | `#2A2833` | Hover/selection states | — |
+| `bg.selection` | `#3A3943` | Active selection | — |
 
-### Text (Cool White Hierarchy)
+### Text (Opaline Hierarchy)
 
-| Token | Hex | Usage | Ratio on `#0a0a0f` |
+| Token | Hex | Usage | Ratio on `#0F0C14` |
 |-------|-----|-------|-------------------|
-| `text.primary` | `#e0e0ff` | Primary text — soft cool white | ~14:1 |
-| `text.secondary` | `#a0a0cc` | Body text, comfortable for long reading | ~8:1 |
-| `text.muted` | `#6e6e99` | Labels, hints, disabled state | ~4.8:1 |
-| `text.dim` | `#444466` | Subtle borders, separators, inactive | ~2.5:1 |
+| `text.primary` | `#FFFAF1` | Primary text — Butter bright warm white | ~15:1 |
+| `text.secondary` | `#DFDBDD` | Body text — Ash comfortable for long reading | ~9:1 |
+| `text.muted` | `#BFBCC8` | Labels, hints, disabled — Smoke gray-purple | ~5:1 |
+| `text.dim` | `#6B6878` | Subtle borders, separators, inactive | ~3:1 |
 
-### Accents (Electric + Glam)
+### Accents (Grok Electric)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `accent.primary` | `#00f0ff` | **Electric Cyan** — primary brand, active states, chevrons, focus rings, running indicators |
-| `accent.secondary` | `#ff2aff` | **Hot Magenta** — secondary highlights, user input pills, brand moments (sparingly) |
-| `accent.tertiary` | `#b14cff` | **Purple** — gradients, agent identity, model badges |
+| `accent.primary` | `#FF6B00` | **Grok Orange** — action, user messages, primary brand moments |
+| `accent.secondary` | `#00F5D4` | **Neon Teal** — insight, assistant responses, success states |
+| `accent.tertiary` | `#FF60FF` | **Dolly Pink** — agent identity, special highlights |
 
 ### Semantic (Clear State Communication)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `success` | `#39ff8c` | Success, approved plans, completed agents, passing tests |
-| `warning` | `#ff9d3a` | Warnings, pending approvals, attention needed |
-| `error` | `#ff4d6d` | Errors, failures, destructive actions, rejected plans |
-| `info` | `#00f0ff` | Same as accent.primary — running processes, active tools, thinking state |
+| `success` | `#00F5D4` | Neon Teal — success, approved plans, completed agents |
+| `warning` | `#FF6B00` | Grok Orange — warnings, pending approvals, attention |
+| `error` | `#EB4268` | Sriracha red — errors, failures, destructive actions |
+| `info` | `#00F5D4` | Same as accent.secondary — running processes, tools |
+
+### Feed-Specific (Message Timeline)
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `feed.user.bar` | `#FF6B00` | Grok Orange — user message left bar |
+| `feed.user.bg` | `#1A1920` | Subtle gray — user message background |
+| `feed.assistant.bar` | `#00F5D4` | Neon Teal — assistant message left bar |
+| `feed.tool.bar` | `#6B50FF` | Charple purple — tool call left bar |
+| `feed.agent.bar` | `#FF60FF` | Dolly Pink — agent/thinking left bar |
+| `feed.system.bar` | `#3A3943` | Charcoal — system/event left bar |
+| `feed.separator` | `#BFBCC8` | Smoke — between message entries |
 
 ### Diffs
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `diff.added` | `#39ff8c` | Added lines in diff view |
-| `diff.removed` | `#ff4d6d` | Removed lines in diff view |
-| `diff.hunk` | `#00f0ff` | Diff hunk headers |
-| `diff.context` | `#6e6e99` | Unchanged context lines |
+| `diff.added` | `#00F5D4` | Added lines in diff view (Neon Teal) |
+| `diff.removed` | `#EB4268` | Removed lines in diff view (Sriracha) |
+| `diff.hunk` | `#FF6B00` | Diff hunk headers (Grok Orange) |
+| `diff.context` | `#BFBCC8` | Unchanged context lines (Smoke) |
 
 ### Borders
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `border.focused` | `#00f0ff` | Active/focused borders — bright cyan glow |
-| `border.unfocused` | `#444466` | Inactive borders — dim gray |
-| `border.accent` | `#ff2aff` | Special accent borders — magenta for user content |
-
-### Gradients (Simulated via Color Blocks)
-
-| Name | Start | End | Usage |
-|------|-------|-----|-------|
-| `gradient.cyan-magenta` | `#00f0ff` | `#ff2aff` | User message pills, progress bars |
-| `gradient.purple-cyan` | `#b14cff` | `#00f0ff` | Agent identity, model badges |
-| `gradient.status` | `#b14cff` | `#00f0ff` | Thinking/thought indicators |
+| `border.focused` | `#FF6B00` | Active/focused borders — Grok Orange glow |
+| `border.unfocused` | `#3A3943` | Inactive borders — Charcoal |
+| `border.accent` | `#FF6B00` | Special accent borders — Grok Orange for user content |
 
 ### Contrast Rules
 
-- **Body text**: `text.secondary` on `bg.base` — ratio ~8:1, comfortable for 8+ hour sessions
-- **Critical/headers**: `text.primary` — ratio ~14:1, maximum readability
-- **Accents for recognition**: `accent.primary` (cyan) creates immediate landmarks for active elements
+- **Body text**: `text.secondary` (Ash) on `bg.base` (Cosmic) — ratio ~9:1, comfortable for 8+ hour sessions
+- **Critical/headers**: `text.primary` (Butter) — ratio ~15:1, maximum readability
+- **Orange for action**: `accent.primary` (Grok Orange) creates immediate landmarks for user input, active states
+- **Teal for insight**: `accent.secondary` (Neon Teal) marks assistant responses, success states
 - **Muted for background**: `text.dim` for borders, separators, inactive elements only
 - **Semantic for state**: Success/error/warning convey status without reading text
 - **Never use low contrast for body text** — only for decorative/inactive elements
@@ -116,19 +123,23 @@ Tidy is the love child of Grok Build (precise, ratatui-engineered, multi-layer p
 | Symbol | Name | Color Token | Usage |
 |--------|------|-------------|-------|
 | `❯` | Chevron | `accent.primary` | Input prompt, active navigation |
-| `▌` | Bookmark bar | `accent.primary` | Left-edge attention marker on active lines |
-| `▸` | Triangle right | `text.muted` → `accent.primary` | List items, collapsible headers (muted when closed, cyan when open) |
+| `▌` | Left bar | `feed.*.bar` | Message timeline left edge marker (2 chars wide) |
+| `▸` | Triangle right | `text.muted` → `accent.primary` | List items, collapsible headers |
 | `▼` | Triangle down | `accent.primary` | Expanded sections |
-| `●` | Filled circle | `accent.primary` (pulsing) | Running/active state |
+| `●` | Filled circle | `feed.user.bar` | User message glyph |
+| `◆` | Diamond | `feed.assistant.bar` | Assistant message glyph |
+| `⟳` | Circled arrow | `feed.tool.bar` | Tool call glyph |
+| `▶` | Triangle right fill | `feed.agent.bar` | Agent/thinking glyph |
+| `⋯` | Mid horizontal dots | `feed.system.bar` | System/event glyph |
 | `○` | Empty circle | `text.muted` | Waiting/idle state |
 | `◐` | Half circle left | `accent.primary` | Animation frame 1 |
 | `◑` | Half circle right | `accent.primary` | Animation frame 2 |
 | `✓` | Check | `success` | Completed, approved, success |
-| `✗` | Cross | `error` | Failed, rejected, error |
-| `✎` | Pencil | `accent.secondary` | Edit in progress |
-| `◆` | Diamond | `accent.tertiary` | Important marker, system events |
-| `⟐` | Circled dot | `accent.primary` | Thinking/processing state (alternative to ●) |
-| `◌` | Dotted circle | `text.muted` | Subagent traces, background tasks |
+| `×` | Cross | `error` | Failed, rejected, error |
+| `→` | Arrow right | `text.secondary` | Tool result continuation |
+| `│` | Vertical line | `feed.tool.bar` | Tool result continuation bar |
+| `✎` | Pencil | `accent.tertiary` | Edit in progress |
+| `◌` | Dotted circle | `text.muted` | Background tasks |
 | `▒` | Medium shade | `text.dim` | Modal backdrop dimming |
 | `░` | Light shade | `text.dim` | Shadow edges |
 
@@ -200,16 +211,17 @@ Modals cast a terminal-native shadow:
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┫
 ┃                             ┃ AGENTS    ┃
 ┃   Center Feed               ┃━━━━━▶━━━━━┃
-┃                             ┃ ● coder   ┃
-┃   User message        ←──── ┃   editing ┃
-┃                             ┃   cl· 45s ┃
-┃   Assistant reply           ┃ ········· ┃
-┃                             ┃ ○ test    ┃
-┃   thinking... 2.3s          ┃   running ┃
-┃                             ┃   gp· 12s ┃
-┃   ▼ Tool: read_file()       ┃           ┃
-┃   ✓ read_file: done         ┃           ┃
-┃                             ┃           ┃
+┃   (reverse chronological)   ┃ ● coder   ┃
+┃                             ┃   editing ┃
+┃   ▌ ● user message          ┃   cl· 45s ┃
+┃   ───                       ┃ ········· ┃
+┃   ▌ ◆ assistant reply      ┃ ○ test    ┃
+┃   ───                       ┃   running ┃
+┃   ▌ ▶ thinking... 2.3s     ┃   gp· 12s ┃
+┃   ───                       ┃           ┃
+┃   ▌ ⟳ tool_call(args)       ┃           ┃
+┃   │ → ✓ result              ┃           ┃
+┃   ───                       ┃           ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━┫
 ┃╭───────────────────────────────────────╮ ┃
 ┃❯ user input here                        ┃  InputBar (dynamic)
@@ -227,7 +239,7 @@ Modals cast a terminal-native shadow:
    - Heavy bottom border (`━`)
 
 2. **Main Content Area** (60-70% width):
-   - **Center Feed**: Message history, tool calls, thoughts
+   - **Center Feed**: Reverse-chronological message timeline with color-coded left bars (`▌`)
    - **Overlays**: Plan reviewer, diff viewer, subagent traces (floating, centered)
    - Background: `bg.base`
 
@@ -290,82 +302,125 @@ Modals cast a terminal-native shadow:
 
 **Design:**
 - Rounded corners (`╭╮╰╯`) in `border.unfocused`
-- Focused: border changes to `border.focused` (cyan)
-- `❯` prompt in `accent.primary` (cyan)
+- Focused: border changes to `border.focused` (Grok Orange)
+- `❯` prompt in `accent.primary` (Grok Orange)
 - Hardware cursor: `SteadyBar` (thin line)
 - Bottom-right info: model name, token count (e.g., "model: claude-4 · 4.2k tokens")
 - Info format: `─ text ─` with single spaces
 - Multi-line: `Shift+Enter` or `Ctrl+J`
 - Each logical line = 1 visual line (no wrapping)
 
-### User Messages (Gradient Pills)
+### Message Feed (Vertical Timeline)
+
+The center feed displays a reverse-chronological timeline of messages with color-coded left bars.
+
+**Layout Rules:**
+- Newest messages at TOP (reverse chronological order)
+- Left margin: 2 characters before left bar
+- Left bar: thick `▌` glyph (2 chars wide), color-coded per message type
+- Separator: `───` in `feed.separator` between entries
+- No emoji — only Unicode glyphs
+
+#### User Message
 
 ```
-                    ╭────── message ──────╮
-                    │◗  user text here   ◖│
-                    ╰─────────────────────╯
-```
-
-**Design:**
-- Right-aligned within feed
-- Rounded pill shape (`╭╮╰╯` or `◗`/`◖` caps)
-- Gradient background: `accent.tertiary` (purple) → `accent.secondary` (magenta)
-- Text: `text.primary` (cool white)
-- Simulated gradient via per-cell color interpolation
-- No `❯` prompt inside pill — clean text only
-
-### Assistant Messages
-
-```
-  Assistant text here in primary color
-  spanning multiple lines if needed
-  
-  ```rust
-  1 │ code block with syntax highlighting
-  2 │ using bg.code background
-  ```
+▌ ● Hello, can you help me with this code?
+───
 ```
 
 **Design:**
-- Left-aligned, full width (minus padding)
-- Text: `text.primary`
-- No background (uses `bg.base`)
-- Code blocks: `bg.code` background, line numbers in `text.muted`
-- Syntax highlighting via Opaline `code.*` tokens
+- Left bar: `▌` in `feed.user.bar` (Grok Orange)
+- Glyph: `●` in `feed.user.bar` (orange)
+- Text: `text.primary` (Butter bright warm white)
+- Background: `feed.user.bg` (subtle gray panel)
+- Timestamp: right-aligned in `text.muted` (optional)
 
-### Tool Calls
+#### Assistant Response
 
 ```
-  ▼ Tool: read_file (collapsed)
-  ▶ Tool: write_file (collapsed)
-  
-  ▼ Tool: bash
-  │ $ cargo test
-  │    Compiling tidy-core v0.1.0
-  │    Finished test [unoptimized]
-  │     Running unittests
-  │ 
-  │ test result: ok. 78 passed
-  │
+▌ ◆ I'll help you with that. Let me read the file first.
+───
+```
+
+**Design:**
+- Left bar: `▌` in `feed.assistant.bar` (Neon Teal)
+- Glyph: `◆` in `feed.assistant.bar` (teal)
+- Text: `text.secondary` (Ash body text)
+- Background: transparent (`bg.base`)
+
+#### Tool Call
+
+```
+▌ ⟳ read_file({"path": "src/main.rs"})
+│ → ✓ File contents loaded successfully
+───
+```
+
+**Design:**
+- Left bar: `▌` in `feed.tool.bar` (Charple purple)
+- Glyph: `⟳` in `feed.tool.bar` (purple)
+- Header: `toolname(args)` in `text.secondary`
+- Result line: `│` continuation bar + `→` + `✓`/`×` + result text
+- Success: `✓` in `success` (Neon Teal)
+- Fail: `×` in `error` (Sriracha red)
+
+#### Agent/Thinking
+
+```
+▌ ▶ Step 1: analyzing codebase structure...
+───
+```
+
+**Design:**
+- Left bar: `▌` in `feed.agent.bar` (Dolly Pink)
+- Glyph: `▶` in `feed.agent.bar` (pink)
+- Text: italic in `text.muted`
+
+#### System/Event
+
+```
+▌ ⋯ Mock mode active — no API key needed
+───
+```
+
+**Design:**
+- Left bar: `▌` in `feed.system.bar` (Charcoal)
+- Glyph: `⋯` in `feed.system.bar` (charcoal)
+- Text: `text.muted`
+
+### Tool Calls (Collapsed View)
+
+```
+▼ Tool: read_file
+▶ Tool: write_file
+
+▼ Tool: bash
+│ $ cargo test
+│    Compiling tidy-core v0.1.0
+│    Finished test [unoptimized]
+│     Running unittests
+│ 
+│ test result: ok. 78 passed
+│
 ```
 
 **Design:**
 - Collapsible header: `▼`/`▶` + "Tool: name" in `text.muted`
 - Expanded: command/output in `bg.code` with left border
-- Success: `✓` icon in `success` color
-- Error: `✗` icon in `error` color
+- Success: `✓` icon in `success` color (Neon Teal)
+- Error: `×` icon in `error` color (Sriracha red)
 
-### Thought Bubbles
+### Thought/Thinking State
 
 ```
-  ⟐ thinking... 2.3s
+  ▶ thinking... 2.3s
 ```
 
 **Design:**
 - Italic text in `text.muted`
-- Pulsing `⟐` or `●` indicator (cycles `○◐◑●`)
+- Pulsing `▶` or `●` indicator
 - Duration updates every 100ms
-- Gradient accent bar on left: `accent.tertiary` → `accent.primary`
+- Left bar in `feed.agent.bar` (Dolly Pink)
 
 ### Agent Cards (Sidebar)
 
@@ -387,7 +442,7 @@ Modals cast a terminal-native shadow:
 - Status icon on left:
   - Running: `●` pulsing in `accent.primary`
   - Completed: `✓` in `success`
-  - Failed: `✗` in `error`
+  - Failed: `×` in `error`
   - Waiting: `○` in `text.muted`
 - Agent name: `text.primary` bold
 - Description: `text.secondary`
@@ -501,7 +556,7 @@ Modals cast a terminal-native shadow:
 | Animation | Frames | Timing | Implementation |
 |-----------|--------|--------|----------------|
 | **Running pulse** | `●` → `◐` → `◑` → `●` | 500ms cycle | Cycle through chars on timer |
-| **Thinking indicator** | `⟐` → `◉` → `⟐` | 800ms cycle | Subtle pulse |
+| **Thinking indicator** | `▶` → `▌` → `▶` | 800ms cycle | Subtle pulse in `feed.agent.bar` |
 | **Typing dots** | `·` → `··` → `···` | 400ms cycle | Append dots cyclically |
 | **Progress fill** | `░` → `▒` → `█` | Per segment | Fill blocks left to right |
 | **Modal appear** | Shadow → Content | 2 frames | Draw shadow first, then content |
@@ -510,8 +565,8 @@ Modals cast a terminal-native shadow:
 
 ### Specific Behaviors
 
-- **Agent running**: `●` pulses with gradient `accent.tertiary` → `accent.primary`
-- **Progress bars**: `███████░░░` with gradient from `accent.tertiary` to `accent.primary`
+- **Agent running**: `●` pulses with gradient `feed.agent.bar` (Dolly Pink) → `accent.primary` (Grok Orange)
+- **Progress bars**: `███████░░░` with gradient from `accent.tertiary` (Dolly Pink) to `accent.primary` (Grok Orange)
 - **Indeterminate**: `◐◑◒◓` spins in `accent.primary`
 - **Thinking**: Duration counter updates every 100ms ("thinking... 1.2s")
 - **Sidebar toggle**: Instant show/hide (no animation — terminal constraint)
