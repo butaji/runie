@@ -55,6 +55,15 @@ fn wrap_text(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
+/// Render a 6-char left-padded label
+fn render_label(buf: &mut Buffer, x: u16, y: u16, label: &str, color: ratatui::style::Color) {
+    let padded = format!("{:<6}", label); // left-pad to 6 chars
+    for (i, ch) in padded.chars().enumerate() {
+        buf.get_mut(x + i as u16, y).set_char(ch);
+        buf.get_mut(x + i as u16, y).set_style(Style::default().fg(color));
+    }
+}
+
 #[derive(Clone)]
 pub struct MessageList {
     pub messages: Vec<MessageItem>,
@@ -95,10 +104,19 @@ impl MessageList {
         let mut row = 0u16;
         let max_rows = area.height;
 
-        // Left margin is 2 chars (space + bar). Text starts at x+3
+        // Layout:
+        // margin_x = area.x
+        // bar_x = area.x + 1 (after margin space)
+        // label_x = area.x + 3 (after bar + space)
+        // text_x = area.x + 11 (after label + space + 6-char label width)
         let margin_x = area.x;
         let bar_x = area.x + 1;
-        let text_x = area.x + 3;
+        let label_x = area.x + 3;
+        let text_x = area.x + 11;
+
+        // Common colors
+        let text_dim: ratatui::style::Color = theme.color("text.dim").into();
+        let text_muted: ratatui::style::Color = theme.color("text.muted").into();
 
         for msg in messages {
             if row >= max_rows {
@@ -106,33 +124,21 @@ impl MessageList {
             }
 
             match msg {
-                MessageItem::User { text, model: _, timestamp } => {
+                MessageItem::User { text, model: _, timestamp: _ } => {
                     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-                    let user_bar: ratatui::style::Color = theme.color("feed.user.bar").into();
-                    let user_bg: ratatui::style::Color = theme.color("feed.user.bg").into();
-                    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
 
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(12));
                     let msg_height = wrapped.len() as u16;
 
-                    // Draw background panel
-                    for r in 0..msg_height {
-                        for x in area.x..area.x + area.width {
-                            buf.get_mut(x, area.y + row + r).set_style(Style::default().bg(user_bg));
-                        }
-                    }
-
-                    // Draw left bar
+                    // Draw left bar (text.dim for all types)
                     for r in 0..msg_height {
                         buf.get_mut(bar_x, area.y + row + r)
                             .set_char('▌')
-                            .set_style(Style::default().fg(user_bar).bg(user_bg));
+                            .set_style(Style::default().fg(text_dim));
                     }
 
-                    // Draw bullet glyph
-                    buf.get_mut(text_x - 1, area.y + row)
-                        .set_char('●')
-                        .set_style(Style::default().fg(user_bar).bg(user_bg));
+                    // Draw label
+                    render_label(buf, label_x, area.y + row, "user", text_muted);
 
                     // Draw text lines
                     for (i, line_text) in wrapped.iter().enumerate() {
@@ -140,19 +146,8 @@ impl MessageList {
                             break;
                         }
                         let line = Line::raw(line_text.as_str())
-                            .style(Style::default().fg(text_primary).bg(user_bg));
-                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 3);
-
-                        // Draw timestamp on first line (right-aligned)
-                        if i == 0 {
-                            if let Some(ts) = timestamp {
-                                let ts_len = ts.len() as u16;
-                                let ts_x = area.x + area.width - ts_len - 1;
-                                let ts_line = Line::raw(ts.as_str())
-                                    .style(Style::default().fg(text_muted).bg(user_bg));
-                                buf.set_line(ts_x, area.y + row, &ts_line, ts_len);
-                            }
-                        }
+                            .style(Style::default().fg(text_primary));
+                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 11);
                     }
 
                     row += msg_height;
@@ -165,25 +160,21 @@ impl MessageList {
                     }
                 }
 
-                MessageItem::Assistant { text, model: _, timestamp } => {
+                MessageItem::Assistant { text, model: _, timestamp: _ } => {
                     let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-                    let assistant_bar: ratatui::style::Color = theme.color("feed.assistant.bar").into();
-                    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
 
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(12));
                     let msg_height = wrapped.len() as u16;
 
-                    // Draw left bar (transparent background)
+                    // Draw left bar
                     for r in 0..msg_height {
                         buf.get_mut(bar_x, area.y + row + r)
                             .set_char('▌')
-                            .set_style(Style::default().fg(assistant_bar));
+                            .set_style(Style::default().fg(text_dim));
                     }
 
-                    // Draw diamond glyph
-                    buf.get_mut(text_x - 1, area.y + row)
-                        .set_char('◆')
-                        .set_style(Style::default().fg(assistant_bar));
+                    // Draw label
+                    render_label(buf, label_x, area.y + row, "agent", text_muted);
 
                     // Draw text lines
                     for (i, line_text) in wrapped.iter().enumerate() {
@@ -192,18 +183,7 @@ impl MessageList {
                         }
                         let line = Line::raw(line_text.as_str())
                             .style(Style::default().fg(text_secondary));
-                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 3);
-
-                        // Draw timestamp on first line (right-aligned)
-                        if i == 0 {
-                            if let Some(ts) = timestamp {
-                                let ts_len = ts.len() as u16;
-                                let ts_x = area.x + area.width - ts_len - 1;
-                                let ts_line = Line::raw(ts.as_str())
-                                    .style(Style::default().fg(text_muted));
-                                buf.set_line(ts_x, area.y + row, &ts_line, ts_len);
-                            }
-                        }
+                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 11);
                     }
 
                     row += msg_height;
@@ -217,24 +197,19 @@ impl MessageList {
                 }
 
                 MessageItem::Thought { duration_secs } => {
-                    let agent_bar: ratatui::style::Color = theme.color("feed.agent.bar").into();
-                    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
-
                     // Draw left bar
                     buf.get_mut(bar_x, area.y + row)
                         .set_char('▌')
-                        .set_style(Style::default().fg(agent_bar));
+                        .set_style(Style::default().fg(text_dim));
 
-                    // Draw triangle glyph
-                    buf.get_mut(text_x - 1, area.y + row)
-                        .set_char('▶')
-                        .set_style(Style::default().fg(agent_bar));
+                    // Draw label
+                    render_label(buf, label_x, area.y + row, "think", text_muted);
 
-                    // Draw "Step X: thinking..." text (italic)
-                    let thought_text = format!("Step {:.0}: thinking...", duration_secs);
+                    // Draw "Step X: analyzing..." text (italic, muted)
+                    let thought_text = format!("Step {:.0}: analyzing...", duration_secs);
                     let line = Line::raw(thought_text.as_str())
                         .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 3);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
 
                     row += 1;
 
@@ -247,27 +222,23 @@ impl MessageList {
                 }
 
                 MessageItem::ToolCall { name, args, result, is_error } => {
-                    let tool_bar: ratatui::style::Color = theme.color("feed.tool.bar").into();
                     let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-                    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
                     let success_color: ratatui::style::Color = theme.color("success").into();
                     let error_color: ratatui::style::Color = theme.color("error").into();
 
                     // Draw left bar
                     buf.get_mut(bar_x, area.y + row)
                         .set_char('▌')
-                        .set_style(Style::default().fg(tool_bar));
+                        .set_style(Style::default().fg(text_dim));
 
-                    // Draw rotating arrow glyph
-                    buf.get_mut(text_x - 1, area.y + row)
-                        .set_char('⟳')
-                        .set_style(Style::default().fg(tool_bar));
+                    // Draw label
+                    render_label(buf, label_x, area.y + row, "tool", text_muted);
 
                     // Draw "toolname(args)" in text.secondary
                     let header = format!("{}({})", name, args);
                     let line = Line::raw(header.as_str())
                         .style(Style::default().fg(text_secondary));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 3);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
 
                     row += 1;
 
@@ -279,9 +250,17 @@ impl MessageList {
                         // Draw left bar continuation
                         buf.get_mut(bar_x, area.y + row)
                             .set_char('│')
-                            .set_style(Style::default().fg(tool_bar));
+                            .set_style(Style::default().fg(text_dim));
 
-                        // Draw status icon with its color
+                        // Draw continuation line starting with space (8 chars for alignment)
+                        let continuation_prefix = "        ";
+                        for (i, ch) in continuation_prefix.chars().enumerate() {
+                            buf.get_mut(label_x + i as u16, area.y + row).set_char(ch);
+                            buf.get_mut(label_x + i as u16, area.y + row)
+                                .set_style(Style::default().fg(text_dim));
+                        }
+
+                        // Draw status icon
                         buf.get_mut(text_x, area.y + row)
                             .set_char('→')
                             .set_style(Style::default().fg(text_muted));
@@ -292,7 +271,7 @@ impl MessageList {
                         // Draw result text
                         let result_line = Line::raw(result_text.as_str())
                             .style(Style::default().fg(text_muted));
-                        buf.set_line(text_x + 3, area.y + row, &result_line, area.width - 6);
+                        buf.set_line(text_x + 3, area.y + row, &result_line, area.width - 14);
 
                         row += 1;
                     }
@@ -306,24 +285,19 @@ impl MessageList {
                 }
 
                 MessageItem::Edit { filename } => {
-                    let agent_bar: ratatui::style::Color = theme.color("feed.agent.bar").into();
-                    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
-
                     // Draw left bar
                     buf.get_mut(bar_x, area.y + row)
                         .set_char('▌')
-                        .set_style(Style::default().fg(agent_bar));
+                        .set_style(Style::default().fg(text_dim));
 
-                    // Draw triangle glyph
-                    buf.get_mut(text_x - 1, area.y + row)
-                        .set_char('▶')
-                        .set_style(Style::default().fg(agent_bar));
+                    // Draw label
+                    render_label(buf, label_x, area.y + row, "edit", text_muted);
 
                     // Draw edit text
                     let edit_text = format!("Edit: {}", filename);
                     let line = Line::raw(edit_text.as_str())
                         .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 3);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
 
                     row += 1;
 
@@ -336,23 +310,18 @@ impl MessageList {
                 }
 
                 MessageItem::System { text } => {
-                    let system_bar: ratatui::style::Color = theme.color("feed.system.bar").into();
-                    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
-
                     // Draw left bar
                     buf.get_mut(bar_x, area.y + row)
                         .set_char('▌')
-                        .set_style(Style::default().fg(system_bar));
+                        .set_style(Style::default().fg(text_dim));
 
-                    // Draw midline ellipsis glyph
-                    buf.get_mut(text_x - 1, area.y + row)
-                        .set_char('⋯')
-                        .set_style(Style::default().fg(system_bar));
+                    // Draw label
+                    render_label(buf, label_x, area.y + row, "sys", text_muted);
 
                     // Draw system text
                     let line = Line::raw(text.as_str())
                         .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 3);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
 
                     row += 1;
 
