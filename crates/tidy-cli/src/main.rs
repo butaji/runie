@@ -155,13 +155,11 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     // Agent event channel (from agent task to main loop)
     let (agent_tx, mut agent_rx) = mpsc::unbounded_channel::<AgentEvent>();
 
-    // Permission channel (for permission decisions)
-    let (perm_tx, perm_rx) = mpsc::unbounded_channel::<PermissionDecision>();
-    let perm_rx = Arc::new(tokio::sync::Mutex::new(Some(perm_rx)));
-    let perm_tx = Arc::new(tokio::sync::Mutex::new(perm_tx));
-
     // Agent task handle
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
+    
+    // Permission sender (replaced on each agent spawn)
+    let mut perm_tx: Option<mpsc::UnboundedSender<PermissionDecision>> = None;
 
     // TEA main loop
     while tui.state.running {
@@ -177,12 +175,14 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                             Cmd::SpawnAgent { messages } => {
                                 if agent_task.is_none() {
                                     let event_tx = agent_tx.clone();
-                                    let permission_rx = perm_rx.clone();
+                                    
+                                    // Create fresh permission channel for this agent
+                                    let (fresh_perm_tx, fresh_perm_rx) = mpsc::unbounded_channel::<PermissionDecision>();
+                                    perm_tx = Some(fresh_perm_tx);
 
                                     agent_task = Some(tokio::spawn(async move {
                                         let provider = MockProvider::new();
                                         let tools: Vec<AgentTool> = vec![];
-                                        let rx = permission_rx.lock().await.take().unwrap();
 
                                         let config = AgentLoopConfig {
                                             system_prompt: "You are a helpful coding assistant.".to_string(),
@@ -196,7 +196,7 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                             &provider,
                                             &tools,
                                             event_tx,
-                                            rx,
+                                            fresh_perm_rx,
                                         ).await {
                                             Ok(_) => {},
                                             Err(e) => eprintln!("Agent error: {}", e),
@@ -205,7 +205,9 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                 }
                             }
                             Cmd::SendPermission { decision } => {
-                                perm_tx.lock().await.send(decision).ok();
+                                if let Some(ref tx) = perm_tx {
+                                    tx.send(decision).ok();
+                                }
                             }
                         }
                     }
@@ -230,7 +232,9 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                             // Agent already running, ignore
                         }
                         Cmd::SendPermission { decision } => {
-                            perm_tx.lock().await.send(decision).ok();
+                            if let Some(ref tx) = perm_tx {
+                                tx.send(decision).ok();
+                            }
                         }
                     }
                 }
