@@ -2,7 +2,9 @@ mod git;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio::time::interval;
 use runie_agent::events::{AgentEvent, PermissionDecision};
 use runie_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
 use runie_agent::pi::AgentTool;
@@ -164,9 +166,45 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     // Permission sender (replaced on each agent spawn)
     let mut perm_tx: Option<mpsc::UnboundedSender<PermissionDecision>> = None;
 
+    // Animation timers
+    let mut tick_interval = interval(Duration::from_millis(80));
+    let mut cursor_interval = interval(Duration::from_millis(500));
+
     // TEA main loop
     while tui.state.running {
         tokio::select! {
+            // Animation tick (80ms)
+            _ = tick_interval.tick() => {
+                let cmds = runie_tui::update(&mut tui.state, Msg::Tick);
+                for cmd in cmds {
+                    match cmd {
+                        Cmd::SpawnAgent { messages: _ } => {}
+                        Cmd::SendPermission { decision } => {
+                            if let Some(ref tx) = perm_tx {
+                                tx.send(decision).ok();
+                            }
+                        }
+                    }
+                }
+                tui.render()?;
+            }
+
+            // Cursor blink (500ms)
+            _ = cursor_interval.tick() => {
+                let cmds = runie_tui::update(&mut tui.state, Msg::CursorBlink);
+                for cmd in cmds {
+                    match cmd {
+                        Cmd::SpawnAgent { messages: _ } => {}
+                        Cmd::SendPermission { decision } => {
+                            if let Some(ref tx) = perm_tx {
+                                tx.send(decision).ok();
+                            }
+                        }
+                    }
+                }
+                tui.render()?;
+            }
+
             // Raw terminal events
             Some(event) = raw_rx.recv() => {
                 if let Some(msg) = event_to_msg(event, &tui.state) {

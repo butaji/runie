@@ -167,7 +167,7 @@ impl Tui {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
         }
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
-        MessageList::render_ref(&state.messages, state.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme);
+        MessageList::render_ref(&state.messages, state.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme, &state.animation);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             render_agent_list(h_areas[1], frame.buffer_mut(), theme);
         }
