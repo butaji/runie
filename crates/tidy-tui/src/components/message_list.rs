@@ -6,23 +6,6 @@ use ratatui::{
 };
 use crate::theme::ThemeWrapper;
 
-/// Draw the left colored bar (2 chars wide: margin space + ▌)
-fn render_bar(buf: &mut Buffer, x: u16, y: u16, height: u16, color: ratatui::style::Color) {
-    for dy in 0..height {
-        buf.get_mut(x, y + dy).set_char('▌');
-        buf.get_mut(x, y + dy).set_style(Style::default().fg(color));
-    }
-}
-
-/// Draw separator line ───
-fn render_separator(buf: &mut Buffer, x_start: u16, y: u16, color: ratatui::style::Color) {
-    let sep_text = "───";
-    for (i, ch) in sep_text.chars().enumerate() {
-        buf.get_mut(x_start + i as u16, y).set_char(ch);
-        buf.get_mut(x_start + i as u16, y).set_style(Style::default().fg(color));
-    }
-}
-
 /// Wrap text into lines respecting word boundaries
 fn wrap_text(text: &str, width: usize) -> Vec<String> {
     if width == 0 {
@@ -55,15 +38,6 @@ fn wrap_text(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
-/// Render a 6-char left-padded label
-fn render_label(buf: &mut Buffer, x: u16, y: u16, label: &str, color: ratatui::style::Color) {
-    let padded = format!("{:<6}", label); // left-pad to 6 chars
-    for (i, ch) in padded.chars().enumerate() {
-        buf.get_mut(x + i as u16, y).set_char(ch);
-        buf.get_mut(x + i as u16, y).set_style(Style::default().fg(color));
-    }
-}
-
 #[derive(Clone)]
 pub struct MessageList {
     pub messages: Vec<MessageItem>,
@@ -76,7 +50,7 @@ pub enum MessageItem {
     Assistant { text: String, model: Option<String>, timestamp: Option<String> },
     Thought { duration_secs: f32 },
     ToolCall { name: String, args: String, result: Option<String>, is_error: bool },
-    Edit { filename: String },
+    Edit { filename: String, diff: Option<String> },
     System { text: String },
 }
 
@@ -91,7 +65,7 @@ impl Default for MessageList {
 
 impl MessageList {
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        // 1. Fill background with bg.base
+        // Fill background with bg.base
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
         for y in area.y..area.y + area.height {
             for x in area.x..area.x + area.width {
@@ -99,46 +73,61 @@ impl MessageList {
             }
         }
 
-        // 2. Iterate messages in REVERSE order (newest first)
+        // Iterate messages in REVERSE order (newest first)
         let messages: Vec<&MessageItem> = self.messages.iter().rev().skip(self.scroll_offset).collect();
         let mut row = 0u16;
         let max_rows = area.height;
 
         // Layout:
-        // margin_x = area.x
-        // bar_x = area.x + 1 (after margin space)
-        // label_x = area.x + 3 (after bar + space)
-        // text_x = area.x + 11 (after label + space + 6-char label width)
-        let margin_x = area.x;
-        let bar_x = area.x + 1;
-        let label_x = area.x + 3;
-        let text_x = area.x + 11;
+        // margin_x = area.x + 2 (2-char left margin)
+        // text_x = area.x + 4 (after margin + glyph + space)
+        let margin_x = area.x + 2;
+        let text_x = area.x + 4;
 
-        // Common colors
-        let text_dim: ratatui::style::Color = theme.color("text.dim").into();
+        // Theme colors
+        let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+        let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let text_muted: ratatui::style::Color = theme.color("text.muted").into();
+        let success: ratatui::style::Color = theme.color("success").into();
+        let error: ratatui::style::Color = theme.color("error").into();
+        let code_path: ratatui::style::Color = theme.color("code.path").into();
+
+        let mut prev_msg_type: Option<&str> = None;
 
         for msg in messages {
             if row >= max_rows {
                 break;
             }
 
+            // Add blank line between different message types
+            let msg_type = match msg {
+                MessageItem::User { .. } => "user",
+                MessageItem::Assistant { .. } => "assistant",
+                MessageItem::Thought { .. } => "thought",
+                MessageItem::ToolCall { .. } => "tool",
+                MessageItem::Edit { .. } => "edit",
+                MessageItem::System { .. } => "system",
+            };
+
+            if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) {
+                // Don't add blank line before first item
+                if row < max_rows {
+                    row += 1;
+                }
+            }
+            prev_msg_type = Some(msg_type);
+
             match msg {
-                MessageItem::User { text, model: _, timestamp: _ } => {
+                MessageItem::User { text, .. } => {
                     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
 
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(12));
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(6));
                     let msg_height = wrapped.len() as u16;
 
-                    // Draw left bar (text.dim for all types)
-                    for r in 0..msg_height {
-                        buf.get_mut(bar_x, area.y + row + r)
-                            .set_char('▌')
-                            .set_style(Style::default().fg(text_dim));
-                    }
-
-                    // Draw label
-                    render_label(buf, label_x, area.y + row, "user", text_muted);
+                    // Draw ❯ glyph
+                    buf.get_mut(margin_x, area.y + row)
+                        .set_char('❯')
+                        .set_style(Style::default().fg(accent_primary));
 
                     // Draw text lines
                     for (i, line_text) in wrapped.iter().enumerate() {
@@ -147,34 +136,20 @@ impl MessageList {
                         }
                         let line = Line::raw(line_text.as_str())
                             .style(Style::default().fg(text_primary));
-                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 11);
+                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 4);
                     }
 
                     row += msg_height;
-
-                    // Draw separator
-                    if row < max_rows {
-                        let sep_color: ratatui::style::Color = theme.color("feed.separator").into();
-                        render_separator(buf, margin_x, area.y + row, sep_color);
-                        row += 1;
-                    }
                 }
 
-                MessageItem::Assistant { text, model: _, timestamp: _ } => {
-                    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(12));
+                MessageItem::Assistant { text, .. } => {
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(6));
                     let msg_height = wrapped.len() as u16;
 
-                    // Draw left bar
-                    for r in 0..msg_height {
-                        buf.get_mut(bar_x, area.y + row + r)
-                            .set_char('▌')
-                            .set_style(Style::default().fg(text_dim));
-                    }
-
-                    // Draw label
-                    render_label(buf, label_x, area.y + row, "agent", text_muted);
+                    // Draw ◆ glyph
+                    buf.get_mut(margin_x, area.y + row)
+                        .set_char('◆')
+                        .set_style(Style::default().fg(text_muted));
 
                     // Draw text lines
                     for (i, line_text) in wrapped.iter().enumerate() {
@@ -183,154 +158,118 @@ impl MessageList {
                         }
                         let line = Line::raw(line_text.as_str())
                             .style(Style::default().fg(text_secondary));
-                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 11);
+                        buf.set_line(text_x, area.y + row + i as u16, &line, area.width - 4);
                     }
 
                     row += msg_height;
-
-                    // Draw separator
-                    if row < max_rows {
-                        let sep_color: ratatui::style::Color = theme.color("feed.separator").into();
-                        render_separator(buf, margin_x, area.y + row, sep_color);
-                        row += 1;
-                    }
                 }
 
                 MessageItem::Thought { duration_secs } => {
-                    // Draw left bar
-                    buf.get_mut(bar_x, area.y + row)
-                        .set_char('▌')
-                        .set_style(Style::default().fg(text_dim));
+                    // Draw ◆ glyph
+                    buf.get_mut(margin_x, area.y + row)
+                        .set_char('◆')
+                        .set_style(Style::default().fg(text_muted));
 
-                    // Draw label
-                    render_label(buf, label_x, area.y + row, "think", text_muted);
-
-                    // Draw "Step X: analyzing..." text (italic, muted)
-                    let thought_text = format!("Step {:.0}: analyzing...", duration_secs);
+                    // Draw "Thought for Xs" (italic, muted)
+                    let thought_text = format!("Thought for {:.1}s", duration_secs);
                     let line = Line::raw(thought_text.as_str())
                         .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 4);
 
                     row += 1;
-
-                    // Draw separator
-                    if row < max_rows {
-                        let sep_color: ratatui::style::Color = theme.color("feed.separator").into();
-                        render_separator(buf, margin_x, area.y + row, sep_color);
-                        row += 1;
-                    }
                 }
 
                 MessageItem::ToolCall { name, args, result, is_error } => {
-                    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-                    let success_color: ratatui::style::Color = theme.color("success").into();
-                    let error_color: ratatui::style::Color = theme.color("error").into();
+                    // Draw ◆ glyph
+                    buf.get_mut(margin_x, area.y + row)
+                        .set_char('◆')
+                        .set_style(Style::default().fg(text_muted));
 
-                    // Draw left bar
-                    buf.get_mut(bar_x, area.y + row)
-                        .set_char('▌')
-                        .set_style(Style::default().fg(text_dim));
-
-                    // Draw label
-                    render_label(buf, label_x, area.y + row, "tool", text_muted);
-
-                    // Draw "toolname(args)" in text.secondary
+                    // Draw "name(args)" in text.secondary
                     let header = format!("{}({})", name, args);
                     let line = Line::raw(header.as_str())
                         .style(Style::default().fg(text_secondary));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 4);
 
                     row += 1;
 
-                    // Draw result line if present
+                    // Draw result line if present (no blank line - related item)
                     if let Some(result_text) = result {
                         if row >= max_rows {
                             break;
                         }
-                        // Draw left bar continuation
-                        buf.get_mut(bar_x, area.y + row)
-                            .set_char('│')
-                            .set_style(Style::default().fg(text_dim));
 
-                        // Draw continuation line starting with space (8 chars for alignment)
-                        let continuation_prefix = "        ";
+                        // Draw continuation line with leading spaces
+                        let continuation_prefix = "  ";
                         for (i, ch) in continuation_prefix.chars().enumerate() {
-                            buf.get_mut(label_x + i as u16, area.y + row).set_char(ch);
-                            buf.get_mut(label_x + i as u16, area.y + row)
-                                .set_style(Style::default().fg(text_dim));
+                            buf.get_mut(text_x - 2 + i as u16, area.y + row).set_char(ch);
+                            buf.get_mut(text_x - 2 + i as u16, area.y + row)
+                                .set_style(Style::default().fg(text_muted));
                         }
 
-                        // Draw status icon
+                        // Draw → and status icon
                         buf.get_mut(text_x, area.y + row)
                             .set_char('→')
                             .set_style(Style::default().fg(text_muted));
                         buf.get_mut(text_x + 1, area.y + row)
                             .set_char(if *is_error { '×' } else { '✓' })
-                            .set_style(Style::default().fg(status_color(&success_color, &error_color, *is_error)));
+                            .set_style(Style::default().fg(if *is_error { error } else { success }));
 
                         // Draw result text
                         let result_line = Line::raw(result_text.as_str())
                             .style(Style::default().fg(text_muted));
-                        buf.set_line(text_x + 3, area.y + row, &result_line, area.width - 14);
+                        buf.set_line(text_x + 3, area.y + row, &result_line, area.width - 7);
 
-                        row += 1;
-                    }
-
-                    // Draw separator
-                    if row < max_rows {
-                        let sep_color: ratatui::style::Color = theme.color("feed.separator").into();
-                        render_separator(buf, margin_x, area.y + row, sep_color);
                         row += 1;
                     }
                 }
 
-                MessageItem::Edit { filename } => {
-                    // Draw left bar
-                    buf.get_mut(bar_x, area.y + row)
-                        .set_char('▌')
-                        .set_style(Style::default().fg(text_dim));
+                MessageItem::Edit { filename, diff: _ } => {
+                    // Draw ◆ glyph
+                    buf.get_mut(margin_x, area.y + row)
+                        .set_char('◆')
+                        .set_style(Style::default().fg(text_muted));
 
-                    // Draw label
-                    render_label(buf, label_x, area.y + row, "edit", text_muted);
+                    // Draw "Edit filename" - Edit in secondary, filename in code.path
+                    let edit_label = "Edit ";
+                    let filename_only = std::path::Path::new(filename)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or(filename);
 
-                    // Draw edit text
-                    let edit_text = format!("Edit: {}", filename);
-                    let line = Line::raw(edit_text.as_str())
-                        .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
+                    // Draw "Edit " in text.secondary first
+                    let edit_len = edit_label.len() as u16;
+                    for (i, ch) in edit_label.chars().enumerate() {
+                        buf.get_mut(text_x + i as u16, area.y + row)
+                            .set_char(ch)
+                            .set_style(Style::default().fg(text_secondary));
+                    }
+
+                    // Draw filename in code.path color
+                    for (i, ch) in filename_only.chars().enumerate() {
+                        let x_pos = text_x + edit_len + i as u16;
+                        if x_pos < area.x + area.width {
+                            buf.get_mut(x_pos, area.y + row)
+                                .set_char(ch)
+                                .set_style(Style::default().fg(code_path));
+                        }
+                    }
 
                     row += 1;
-
-                    // Draw separator
-                    if row < max_rows {
-                        let sep_color: ratatui::style::Color = theme.color("feed.separator").into();
-                        render_separator(buf, margin_x, area.y + row, sep_color);
-                        row += 1;
-                    }
                 }
 
                 MessageItem::System { text } => {
-                    // Draw left bar
-                    buf.get_mut(bar_x, area.y + row)
-                        .set_char('▌')
-                        .set_style(Style::default().fg(text_dim));
-
-                    // Draw label
-                    render_label(buf, label_x, area.y + row, "sys", text_muted);
+                    // Draw ◆ glyph
+                    buf.get_mut(margin_x, area.y + row)
+                        .set_char('◆')
+                        .set_style(Style::default().fg(text_muted));
 
                     // Draw system text
                     let line = Line::raw(text.as_str())
                         .style(Style::default().fg(text_muted));
-                    buf.set_line(text_x, area.y + row, &line, area.width - 11);
+                    buf.set_line(text_x, area.y + row, &line, area.width - 4);
 
                     row += 1;
-
-                    // Draw separator
-                    if row < max_rows {
-                        let sep_color: ratatui::style::Color = theme.color("feed.separator").into();
-                        render_separator(buf, margin_x, area.y + row, sep_color);
-                        row += 1;
-                    }
                 }
             }
         }
@@ -373,11 +312,6 @@ impl MessageList {
             timestamp: None,
         });
     }
-}
-
-/// Helper to select color based on is_error
-fn status_color(success: &ratatui::style::Color, error: &ratatui::style::Color, is_error: bool) -> ratatui::style::Color {
-    if is_error { *error } else { *success }
 }
 
 #[cfg(test)]

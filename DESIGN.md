@@ -6,8 +6,6 @@ Tidy is the love child of Crush (Charm's glam Lip Gloss base — vibrant, person
 
 **Tagline vibe:** "Cosmic. Precise. Electric."
 
-**Tagline vibe:** "Precise. Electric. Yours."
-
 ### Core Rules (Non-Negotiable)
 
 1. **Terminal as Canvas** — Respect grid constraints. No fake shadows unless via Unicode/ANSI. All updates buttery-smooth (ratatui double-buffering).
@@ -63,18 +61,6 @@ Tidy is the love child of Crush (Charm's glam Lip Gloss base — vibrant, person
 | `warning` | `#FF6B00` | Grok Orange — warnings, pending approvals, attention |
 | `error` | `#EB4268` | Sriracha red — errors, failures, destructive actions |
 | `info` | `#00F5D4` | Same as accent.secondary — running processes, tools |
-
-### Feed-Specific (Message Timeline)
-
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `feed.user.bar` | `#FF6B00` | Grok Orange — user message left bar |
-| `feed.user.bg` | `#1A1920` | Subtle gray — user message background |
-| `feed.assistant.bar` | `#00F5D4` | Neon Teal — assistant message left bar |
-| `feed.tool.bar` | `#6B50FF` | Charple purple — tool call left bar |
-| `feed.agent.bar` | `#FF60FF` | Dolly Pink — agent/thinking left bar |
-| `feed.system.bar` | `#3A3943` | Charcoal — system/event left bar |
-| `feed.separator` | `#BFBCC8` | Smoke — between message entries |
 
 ### Diffs
 
