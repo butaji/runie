@@ -382,7 +382,7 @@ The center feed displays a reverse-chronological timeline of messages with color
 
 ▼ Tool: bash
 │ $ cargo test
-│    Compiling tidy-core v0.1.0
+│    Compiling runie-core v0.1.0
 │    Finished test [unoptimized]
 │     Running unittests
 │ 

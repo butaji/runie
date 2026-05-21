@@ -1,12 +1,12 @@
 [package]
-name = "tidy-pantry"
+name = "runie-pantry"
 version = "0.1.0"
 edition = "2021"
-default-run = "tidy-pantry"
+default-run = "runie-pantry"
 
 [dependencies]
-tidy-tui = { path = "../crates/tidy-tui" }
-tidy-core = { path = "../crates/tidy-core" }
+runie-tui = { path = "../crates/runie-tui" }
+runie-core = { path = "../crates/runie-core" }
 ratatui = { workspace = true }
 tui-pantry = { workspace = true }
 crossterm = { workspace = true }
