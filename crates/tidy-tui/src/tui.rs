@@ -143,48 +143,54 @@ impl AppState {
 /// Render top bar from state (repo/branch/path info)
 fn render_top_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     use ratatui::text::{Line, Span};
-    use ratatui::style::Modifier;
 
     let x = area.x + 1;
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
 
-    let text_secondary: ratatui::style::Color = theme.color("text.muted").into();
-    let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
-    let syntax_success: ratatui::style::Color = theme.color("success").into();
+    // ── Left side: repo/branch  path ──
+    let mut left_parts: Vec<Span> = Vec::new();
 
-    // Left side: repo_name/branch current_path
-    if !state.top_bar_repo.is_empty() || !state.top_bar_branch.is_empty() {
-        let mut left_parts: Vec<Span> = Vec::new();
+    if !state.top_bar_repo.is_empty() {
+        left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_secondary)));
+    }
+    if !state.top_bar_branch.is_empty() {
+        left_parts.push(Span::styled("/", Style::default().fg(text_muted)));
+        left_parts.push(Span::styled(&state.top_bar_branch, Style::default().fg(text_muted)));
+    }
+    if !state.top_bar_path.is_empty() {
+        // Two spaces between branch and path, path in medium gray
+        left_parts.push(Span::styled(format!("  {}", state.top_bar_path),
+            Style::default().fg(text_muted)));
+    }
 
-        if !state.top_bar_repo.is_empty() {
-            left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_secondary)));
-        }
-        if !state.top_bar_branch.is_empty() {
-            left_parts.push(Span::styled("/", Style::default().fg(text_secondary)));
-            left_parts.push(Span::styled(&state.top_bar_branch, Style::default().fg(text_secondary)));
-        }
-        if !state.top_bar_path.is_empty() {
-            left_parts.push(Span::styled(format!(" {}", state.top_bar_path), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)));
-        }
-
+    if !left_parts.is_empty() {
         let line = Line::from(left_parts);
         buf.set_line(x, area.y, &line, area.width - 2);
     }
 
-    // Right side: checks_passed ✓ percentage% with mini progress bar
+    // ── Right side: checks ✓ percentage% │ progress ──
     let mut right_parts: Vec<Span> = Vec::new();
 
-    if let (Some(passed), Some(_total)) = (state.top_bar_checks_passed, state.top_bar_checks_total) {
-        right_parts.push(Span::styled(format!("{} ", passed), Style::default().fg(syntax_success)));
-        right_parts.push(Span::styled("✓ ", Style::default().fg(syntax_success)));
-    }
-    if let Some(pct) = state.top_bar_percentage {
+    if let (Some(passed), Some(total)) = (state.top_bar_checks_passed, state.top_bar_checks_total) {
+        right_parts.push(Span::styled(format!("{} ", passed), Style::default().fg(text_secondary)));
+        right_parts.push(Span::styled("✓ ", Style::default().fg(text_muted)));
+
+        // Mini progress bar: ████░░░░░░ │
+        let pct = passed as f32 / total.max(1) as f32;
+        let filled = (pct * 10.0).round() as usize;
+        let empty = 10 - filled;
+        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
+        right_parts.push(Span::styled(bar, Style::default().fg(text_secondary)));
+        right_parts.push(Span::styled(" │", Style::default().fg(text_muted)));
+    } else if let Some(pct) = state.top_bar_percentage {
         right_parts.push(Span::styled(format!("{:.2}%", pct), Style::default().fg(text_secondary)));
 
-        // Mini progress bar using unicode blocks
         let filled = (pct / 100.0 * 10.0).round() as usize;
         let empty = 10 - filled;
-        let progress_bar = format!("{}{}", "\u{2588}".repeat(filled), "\u{2591}".repeat(empty));
-        right_parts.push(Span::styled(format!(" {}", progress_bar), Style::default().fg(text_tertiary)));
+        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
+        right_parts.push(Span::styled(format!(" {}", bar), Style::default().fg(text_secondary)));
+        right_parts.push(Span::styled(" │", Style::default().fg(text_muted)));
     }
 
     if !right_parts.is_empty() {
