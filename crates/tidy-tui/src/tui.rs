@@ -82,6 +82,7 @@ pub struct AppState {
     pub command_palette_open: bool,
     pub command_palette_filter: String,
     pub command_palette_selected: usize,
+    pub feed_scroll_offset: usize,
 }
 
 impl Default for AppState {
@@ -112,6 +113,7 @@ impl Default for AppState {
             command_palette_open: false,
             command_palette_filter: String::new(),
             command_palette_selected: 0,
+            feed_scroll_offset: 0,
         }
     }
 }
@@ -521,17 +523,55 @@ pub enum Action {
     CommandPaletteUp,
     CommandPaletteDown,
     CommandPaletteConfirm,
+    ScrollUp,
+    ScrollDown,
 }
 
 // ─── update() ─────────────────────────────────────────────────────────────────
 // Pure reducer: takes state + action, returns new state (no side effects)
 
-pub fn update(state: &mut AppState, action: Action) {
+/// Helper struct for fast visual state comparison (render batching)
+#[derive(PartialEq)]
+struct VisualState {
+    messages_len: usize,
+    last_message_text: String,
+    input_lines: Vec<String>,
+    mode: TuiMode,
+    show_sidebar: bool,
+    agent_running: bool,
+    permission_modal_open: bool,
+    command_palette_open: bool,
+}
+
+impl VisualState {
+    fn snapshot(state: &AppState) -> Self {
+        Self {
+            messages_len: state.messages.len(),
+            last_message_text: state.messages.last()
+                .map(|m| match m {
+                    MessageItem::Assistant { text, .. } => text.clone(),
+                    _ => String::new(),
+                })
+                .unwrap_or_default(),
+            input_lines: state.input_lines.clone(),
+            mode: state.mode.clone(),
+            show_sidebar: state.show_sidebar,
+            agent_running: state.agent_running,
+            permission_modal_open: state.permission_modal_tool.is_some(),
+            command_palette_open: state.command_palette_open,
+        }
+    }
+}
+
+pub fn update(state: &mut AppState, action: Action) -> bool {
     // Log action before applying (for time-travel debugging)
     if state.action_log.len() >= state.action_log_capacity {
         state.action_log.remove(0); // Remove oldest when at capacity
     }
     state.action_log.push(action.clone());
+
+    // Snapshot visual state before changes
+    let old_visual = VisualState::snapshot(state);
 
     match action {
         Action::Quit => state.running = false,
@@ -797,7 +837,16 @@ use tidy_agent::events::AgentEvent;
             state.command_palette_open = false;
             state.mode = TuiMode::Chat;
         }
+        Action::ScrollUp => {
+            state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(1);
+        }
+        Action::ScrollDown => {
+            state.feed_scroll_offset += 1;
+        }
     }
+
+    // Return true if visual output changed
+    !old_visual.eq(&VisualState::snapshot(state))
 }
 
 // ─── Tui ─────────────────────────────────────────────────────────────────────
@@ -843,8 +892,9 @@ impl Tui {
     }
 
     /// Dispatch an action to update state (unidirectional data flow)
-    pub fn update(&mut self, action: Action) {
-        update(&mut self.state, action);
+    /// Returns true if visual output changed and render is needed
+    pub fn update(&mut self, action: Action) -> bool {
+        update(&mut self.state, action)
     }
 
     /// Calculate the height needed for the input bar based on its content
@@ -910,17 +960,12 @@ impl Tui {
             }
             let h_areas = Layout::horizontal(h_constraints.as_slice()).split(content_area);
 
-            // Create MessageList locally and render from state
-            let message_list = MessageList {
-                messages: state_clone.messages.clone(),
-                scroll_offset: 0,
-            };
-
+            // Render message list directly from state (no widget instance needed)
             if show_sidebar && content_area.width >= SIDEBAR_WIDTH + 20 {
-                message_list.render_ref(h_areas[0], frame.buffer_mut(), theme);
+                MessageList::render_ref(&state_clone.messages, state_clone.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme);
                 render_agent_list(h_areas[1], frame.buffer_mut(), theme);
             } else {
-                message_list.render_ref(h_areas[0], frame.buffer_mut(), theme);
+                MessageList::render_ref(&state_clone.messages, state_clone.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme);
             }
 
             // Render input bar using standalone function
@@ -1139,6 +1184,14 @@ impl Tui {
                 self.update(Action::MoveCursorDown);
                 None
             }
+            KeyCode::PageUp => {
+                self.update(Action::ScrollUp);
+                None
+            }
+            KeyCode::PageDown => {
+                self.update(Action::ScrollDown);
+                None
+            }
             _ => None,
         }
     }
@@ -1229,9 +1282,9 @@ impl Tui {
         self.state.messages.push(item);
     }
 
-    pub fn on_agent_event(&mut self, event: AgentEvent) {
+    pub fn on_agent_event(&mut self, event: AgentEvent) -> bool {
         // Use the update() reducer for all agent events
-        self.update(Action::AgentEvent(event.clone()));
+        self.update(Action::AgentEvent(event.clone()))
     }
 
     pub fn show_overlay(&mut self, _overlay: Overlay) {
@@ -1425,6 +1478,7 @@ mod tests {
             command_palette_open: false,
             command_palette_filter: String::new(),
             command_palette_selected: 0,
+            feed_scroll_offset: 0,
         }
     }
 

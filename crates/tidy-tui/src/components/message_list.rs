@@ -64,7 +64,7 @@ impl Default for MessageList {
 }
 
 impl MessageList {
-    pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    pub fn render_ref(messages: &[MessageItem], scroll_offset: usize, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         // Fill background with bg.base
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
         for y in area.y..area.y + area.height {
@@ -75,12 +75,12 @@ impl MessageList {
 
         // Iterate messages in REVERSE order (newest first)
         // Skip empty assistant messages (still streaming, prevents blinking)
-        let messages: Vec<&MessageItem> = self.messages.iter()
+        let messages_iter: Vec<&MessageItem> = messages.iter()
             .filter(|msg| {
                 !matches!(msg, MessageItem::Assistant { text, .. } if text.is_empty())
             })
             .rev()
-            .skip(self.scroll_offset)
+            .skip(scroll_offset)
             .collect();
         let mut row = 0u16;
         let max_rows = area.height;
@@ -101,7 +101,7 @@ impl MessageList {
 
         let mut prev_msg_type: Option<&str> = None;
 
-        for msg in messages {
+        for msg in messages_iter {
             if row >= max_rows {
                 break;
             }

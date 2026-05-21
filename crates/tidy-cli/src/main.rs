@@ -239,11 +239,12 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                 if let AgentEvent::AgentEnd { .. } = &event {
                     agent_task = None;
                 }
-                tui.on_agent_event(event);
+                let needs_render = tui.on_agent_event(event);
+                if needs_render {
+                    tui.render()?;
+                }
             }
         }
-
-        tui.render()?;
     }
 
     // Abort any running agent task before cleanup
