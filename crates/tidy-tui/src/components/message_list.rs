@@ -73,9 +73,8 @@ impl MessageList {
             }
         }
 
-        // Iterate messages in REVERSE order (newest first)
+        // Iterate messages in normal order (oldest first, newest at bottom)
         let messages_iter: Vec<&MessageItem> = messages.iter()
-            .rev()
             .skip(scroll_offset)
             .collect();
         let mut row = 0u16;
