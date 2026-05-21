@@ -6,6 +6,78 @@ use ratatui::{
 };
 use crate::theme::ThemeWrapper;
 
+fn lerp_color(c1: ratatui::style::Color, c2: ratatui::style::Color, t: f32) -> ratatui::style::Color {
+    match (c1, c2) {
+        (ratatui::style::Color::Rgb(r1, g1, b1), ratatui::style::Color::Rgb(r2, g2, b2)) => {
+            ratatui::style::Color::Rgb(
+                (r1 as f32 + (r2 as f32 - r1 as f32) * t) as u8,
+                (g1 as f32 + (g2 as f32 - g1 as f32) * t) as u8,
+                (b1 as f32 + (b2 as f32 - b1 as f32) * t) as u8,
+            )
+        }
+        _ => c1,
+    }
+}
+
+fn render_pill(
+    buf: &mut ratatui::buffer::Buffer,
+    area: ratatui::layout::Rect,
+    start_color: ratatui::style::Color,
+    end_color: ratatui::style::Color,
+    text: &str,
+    text_color: ratatui::style::Color,
+) {
+    let width = area.width as usize;
+    if width == 0 {
+        return;
+    }
+
+    // Generate gradient colors
+    let mut colors = Vec::with_capacity(width);
+    for i in 0..width {
+        let t = if width > 1 { i as f32 / (width - 1) as f32 } else { 0.0 };
+        colors.push(lerp_color(start_color, end_color, t));
+    }
+
+    // Left cap
+    buf.get_mut(area.x, area.y).set_char('◗');
+    buf.get_mut(area.x, area.y).set_style(ratatui::style::Style::default().fg(colors[0]).bg(ratatui::style::Color::Reset));
+
+    // Text with gradient background
+    let text_len = text.len().min(width - 2);
+    let start_x = area.x + 1 + (width.saturating_sub(text_len + 2) as u16) / 2;
+
+    for (i, ch) in text.chars().enumerate() {
+        if i >= text_len {
+            break;
+        }
+        let col = (start_x + i as u16 - area.x) as usize;
+        if col < width {
+            buf.get_mut(start_x + i as u16, area.y).set_char(ch);
+            buf.get_mut(start_x + i as u16, area.y).set_style(
+                ratatui::style::Style::default().fg(text_color).bg(colors[col])
+            );
+        }
+    }
+
+    // Fill gaps with gradient background
+    for col in 1..width-1 {
+        let x = area.x + col as u16;
+        let cell = buf.cell((x, area.y));
+        // Only fill if cell is empty (no text char set)
+        if cell.map(|c| c.symbol() == " ").unwrap_or(true) {
+            buf.get_mut(x, area.y).set_char(' ');
+            buf.get_mut(x, area.y).set_style(ratatui::style::Style::default().bg(colors[col]));
+        }
+    }
+
+    // Right cap
+    buf.get_mut(area.x + area.width - 1, area.y).set_char('◖');
+    buf.get_mut(area.x + area.width - 1, area.y).set_style(
+        ratatui::style::Style::default().fg(colors[width - 1]).bg(ratatui::style::Color::Reset)
+    );
+}
+
 #[derive(Clone)]
 pub struct MessageList {
     pub messages: Vec<MessageItem>,
@@ -52,26 +124,22 @@ impl MessageList {
 
             match msg {
                 MessageItem::User { text } => {
-                    // Right-aligned, accent.tertiary (coral), subtle bg.panel background
                     let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
-                    let user_bg: ratatui::style::Color = theme.color("bg.panel").into();
-                    let user_fg: ratatui::style::Color = theme.color("accent.tertiary").into();
+                    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+                    let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
+                    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
 
                     for line_text in wrapped {
                         if y >= max_y { break; }
-                        // Draw background for user message row
-                        for x in area.x..area.x + area.width {
-                            buf.get_mut(x, area.y + y as u16).set_style(Style::default().bg(user_bg));
-                        }
 
-                        let line = Line::from(vec![Span::styled(line_text.as_str(), Style::default().fg(user_fg))]);
-                        // Right-align: calculate start x
-                        let line_width = line_text.len() as u16;
+                        let line_width = (line_text.len() as u16 + 4).min(area.width.saturating_sub(4));
                         let start_x = area.x + area.width.saturating_sub(line_width + 2);
-                        buf.set_line(start_x, area.y + y as u16, &line, line_width);
+                        let pill_area = Rect::new(start_x, area.y + y as u16, line_width, 1);
+
+                        render_pill(buf, pill_area, accent_primary, accent_secondary, &line_text, text_primary);
                         y += 1;
                     }
-                    y += 1; // spacing after user message
+                    y += 1; // spacing
                 }
                 MessageItem::Assistant { text } => {
                     // Left-aligned, text.primary, full width
