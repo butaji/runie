@@ -64,6 +64,7 @@ pub struct AppState {
     pub input_lines: Vec<String>,
     pub cursor_col: usize,
     pub cursor_row: usize,
+    pub input_right_info: String,
     pub mode: TuiMode,
     pub running: bool,
     pub show_sidebar: bool,
@@ -84,6 +85,7 @@ impl Default for AppState {
             input_lines: vec![String::new()],
             cursor_col: 0,
             cursor_row: 0,
+            input_right_info: String::new(),
             mode: TuiMode::Chat,
             running: true,
             show_sidebar: false,
@@ -105,7 +107,7 @@ impl Default for AppState {
 #[derive(Debug, Clone)]
 pub enum Action {
     Quit,
-    Submit(String),
+    Submit,
     InsertChar(char),
     Backspace,
     DeleteForward,
@@ -137,15 +139,18 @@ pub fn update(state: &mut AppState, action: Action) {
     match action {
         Action::Quit => state.running = false,
 
-        Action::Submit(text) => {
-            state.messages.push(MessageItem::User {
-                text: text.clone(),
-                model: Some("You".to_string()),
-                timestamp: None,
-            });
-            state.input_lines = vec![String::new()];
-            state.cursor_col = 0;
-            state.cursor_row = 0;
+        Action::Submit => {
+            let text = state.input_lines.join("\n");
+            if !text.is_empty() {
+                state.messages.push(MessageItem::User {
+                    text,
+                    model: Some("You".to_string()),
+                    timestamp: None,
+                });
+                state.input_lines = vec![String::new()];
+                state.cursor_col = 0;
+                state.cursor_row = 0;
+            }
         }
 
         Action::InsertChar(c) => {
@@ -691,9 +696,9 @@ impl Tui {
                     self.update(Action::InsertNewline);
                     None
                 } else {
-                    let text = self.input_bar.submit();
+                    let text = self.state.input_lines.join("\n");
                     if !text.is_empty() {
-                        self.update(Action::Submit(text.clone()));
+                        self.update(Action::Submit);
                         Some(TuiAction::Submit(text))
                     } else {
                         None
@@ -1090,5 +1095,248 @@ mod tests {
         assert_eq!(GitStatus::Added, GitStatus::Added);
         assert_eq!(GitStatus::Deleted, GitStatus::Deleted);
         assert_eq!(GitStatus::Untracked, GitStatus::Untracked);
+    }
+
+    // ─── Reducer Tests ─────────────────────────────────────────────────────────
+
+    fn make_state() -> AppState {
+        AppState {
+            messages: vec![],
+            input_lines: vec![String::new()],
+            cursor_col: 0,
+            cursor_row: 0,
+            input_right_info: String::new(),
+            mode: TuiMode::Chat,
+            running: true,
+            show_sidebar: false,
+            agent_running: false,
+            current_model: None,
+            top_bar_repo: String::new(),
+            top_bar_branch: String::new(),
+            top_bar_path: String::new(),
+            permission_modal_tool: None,
+            permission_modal_args: None,
+            permission_modal_desc: None,
+        }
+    }
+
+    #[test]
+    fn test_insert_char() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('i'));
+        assert_eq!(state.input_lines, vec!["hi"]);
+        assert_eq!(state.cursor_col, 2);
+    }
+
+    #[test]
+    fn test_backspace() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('i'));
+        update(&mut state, Action::Backspace);
+        assert_eq!(state.input_lines, vec!["h"]);
+        assert_eq!(state.cursor_col, 1);
+    }
+
+    #[test]
+    fn test_submit_clears_input() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('i'));
+        update(&mut state, Action::Submit);
+        assert_eq!(state.input_lines, vec![""]);
+        assert_eq!(state.messages.len(), 1);
+        if let MessageItem::User { text, .. } = &state.messages[0] {
+            assert_eq!(text, "hi");
+        } else {
+            panic!("Expected User message");
+        }
+    }
+
+    #[test]
+    fn test_submit_empty_does_nothing() {
+        let mut state = make_state();
+        update(&mut state, Action::Submit);
+        assert_eq!(state.messages.len(), 0);
+    }
+
+    #[test]
+    fn test_move_cursor() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('a'));
+        update(&mut state, Action::InsertChar('b'));
+        update(&mut state, Action::InsertChar('c'));
+        assert_eq!(state.cursor_col, 3);
+
+        update(&mut state, Action::MoveCursorLeft);
+        assert_eq!(state.cursor_col, 2);
+
+        update(&mut state, Action::MoveCursorLeft);
+        assert_eq!(state.cursor_col, 1);
+
+        update(&mut state, Action::MoveCursorRight);
+        assert_eq!(state.cursor_col, 2);
+
+        update(&mut state, Action::MoveCursorToStart);
+        assert_eq!(state.cursor_col, 0);
+
+        update(&mut state, Action::MoveCursorToEnd);
+        assert_eq!(state.cursor_col, 3);
+    }
+
+    #[test]
+    fn test_newline() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('i'));
+        update(&mut state, Action::InsertNewline);
+        assert_eq!(state.input_lines, vec!["hi", ""]);
+        assert_eq!(state.cursor_row, 1);
+        assert_eq!(state.cursor_col, 0);
+    }
+
+    #[test]
+    fn test_multi_line_submit() {
+        let mut state = make_state();
+        for c in "line1".chars() {
+            update(&mut state, Action::InsertChar(c));
+        }
+        update(&mut state, Action::InsertNewline);
+        for c in "line2".chars() {
+            update(&mut state, Action::InsertChar(c));
+        }
+        update(&mut state, Action::Submit);
+
+        assert_eq!(state.input_lines, vec![""]);
+        assert_eq!(state.messages.len(), 1);
+        if let MessageItem::User { text, .. } = &state.messages[0] {
+            assert_eq!(text, "line1\nline2");
+        } else {
+            panic!("Expected User message");
+        }
+    }
+
+    #[test]
+    fn test_quit() {
+        let mut state = make_state();
+        update(&mut state, Action::Quit);
+        assert!(!state.running);
+    }
+
+    #[test]
+    fn test_toggle_sidebar() {
+        let mut state = make_state();
+        assert!(!state.show_sidebar);
+        update(&mut state, Action::ToggleSidebar);
+        assert!(state.show_sidebar);
+        update(&mut state, Action::ToggleSidebar);
+        assert!(!state.show_sidebar);
+    }
+
+    #[test]
+    fn test_delete_word_backward() {
+        let mut state = make_state();
+        // Type "hello world"
+        for c in "hello world".chars() {
+            update(&mut state, Action::InsertChar(c));
+        }
+        assert_eq!(state.cursor_col, 11);
+
+        // Delete word backward → "hello" (removes " world" including space, bash-like)
+        update(&mut state, Action::DeleteWordBackward);
+        assert_eq!(state.input_lines[0], "hello");
+        assert_eq!(state.cursor_col, 5);
+
+        // Delete word backward → "" (no more words, clears line)
+        update(&mut state, Action::DeleteWordBackward);
+        assert_eq!(state.input_lines[0], "");
+        assert_eq!(state.cursor_col, 0);
+    }
+
+    #[test]
+    fn test_delete_to_start() {
+        let mut state = make_state();
+        for c in "hello".chars() {
+            update(&mut state, Action::InsertChar(c));
+        }
+        update(&mut state, Action::MoveCursorToEnd);
+        update(&mut state, Action::DeleteToStart);
+        assert_eq!(state.input_lines[0], "");
+        assert_eq!(state.cursor_col, 0);
+    }
+
+    #[test]
+    fn test_delete_forward() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('a'));
+        update(&mut state, Action::InsertChar('b'));
+        update(&mut state, Action::InsertChar('c'));
+        update(&mut state, Action::MoveCursorToStart);
+        update(&mut state, Action::DeleteForward);
+        assert_eq!(state.input_lines[0], "bc");
+    }
+
+    #[test]
+    fn test_agent_event_message_start() {
+        let mut state = make_state();
+        update(
+            &mut state,
+            Action::AgentEvent(tidy_agent::events::AgentEvent::MessageStart {
+                message: tidy_agent::events::AgentMessage {
+                    role: "assistant".to_string(),
+                    content: vec![],
+                    timestamp: 0,
+                    usage: None,
+                    stop_reason: None,
+                    error_message: None,
+                },
+            }),
+        );
+        assert!(state.agent_running);
+        assert_eq!(state.messages.len(), 1);
+    }
+
+    #[test]
+    fn test_agent_event_message_update() {
+        let mut state = make_state();
+        // Start message
+        update(
+            &mut state,
+            Action::AgentEvent(tidy_agent::events::AgentEvent::MessageStart {
+                message: tidy_agent::events::AgentMessage {
+                    role: "assistant".to_string(),
+                    content: vec![],
+                    timestamp: 0,
+                    usage: None,
+                    stop_reason: None,
+                    error_message: None,
+                },
+            }),
+        );
+
+        // Update with text
+        update(
+            &mut state,
+            Action::AgentEvent(tidy_agent::events::AgentEvent::MessageUpdate {
+                message: tidy_agent::events::AgentMessage {
+                    role: "assistant".to_string(),
+                    content: vec![tidy_agent::events::ContentPart::Text {
+                        text: "Hello".to_string(),
+                    }],
+                    timestamp: 0,
+                    usage: None,
+                    stop_reason: None,
+                    error_message: None,
+                },
+            }),
+        );
+
+        assert_eq!(state.messages.len(), 1);
+        if let MessageItem::Assistant { text, .. } = &state.messages[0] {
+            assert_eq!(text, "Hello");
+        } else {
+            panic!("Expected Assistant message");
+        }
     }
 }
