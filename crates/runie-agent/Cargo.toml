@@ -1,0 +1,21 @@
+[package]
+name = "runie-agent"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+runie-core = { path = "../runie-core" }
+runie-ai = { path = "../runie-ai" }
+runie-tools = { path = "../runie-tools" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }

@@ -1,13 +1,13 @@
 [workspace]
 members = [
-    "crates/tidy-core",
-    "crates/tidy-ai",
-    "crates/tidy-agent",
-    "crates/tidy-tools",
-    "crates/tidy-tui",
-    "crates/tidy-router",
-    "crates/tidy-orchestrator",
-    "crates/tidy-cli",
+    "crates/runie-core",
+    "crates/runie-ai",
+    "crates/runie-agent",
+    "crates/runie-tools",
+    "crates/runie-tui",
+    "crates/runie-router",
+    "crates/runie-orchestrator",
+    "crates/runie-cli",
     "pantry",
 ]
 resolver = "2"

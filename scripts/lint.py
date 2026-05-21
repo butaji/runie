@@ -145,11 +145,11 @@ def main():
     """Run linter on all Rust files in the project."""
     project_root = Path(__file__).parent.parent
     src_dirs = [
-        project_root / "crates" / "tidy-tui" / "src",
-        project_root / "crates" / "tidy-cli" / "src",
-        project_root / "crates" / "tidy-agent" / "src",
-        project_root / "crates" / "tidy-ai" / "src",
-        project_root / "crates" / "tidy-core" / "src",
+        project_root / "crates" / "runie-tui" / "src",
+        project_root / "crates" / "runie-cli" / "src",
+        project_root / "crates" / "runie-agent" / "src",
+        project_root / "crates" / "runie-ai" / "src",
+        project_root / "crates" / "runie-core" / "src",
     ]
     
     all_violations = []

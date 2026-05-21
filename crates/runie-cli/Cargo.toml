@@ -1,0 +1,35 @@
+[package]
+name = "runie-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+default-run = "runie"
+
+[[bin]]
+name = "runie"
+path = "src/main.rs"
+
+[[bin]]
+name = "cargo-pantry"
+path = "src/bin/cargo-pantry.rs"
+
+[dependencies]
+runie-core = { path = "../runie-core" }
+runie-ai = { path = "../runie-ai" }
+runie-agent = { path = "../runie-agent" }
+runie-tools = { path = "../runie-tools" }
+runie-router = { path = "../runie-router" }
+runie-orchestrator = { path = "../runie-orchestrator" }
+runie-tui = { path = "../runie-tui" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+crossterm = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+dirs = "5.0"
+uuid = { workspace = true }
