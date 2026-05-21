@@ -17,22 +17,19 @@ use std::io::{self, stdout};
 use crate::{
     theme::ThemeWrapper,
     components::{
-        TopBar,
         MessageList,
         MessageItem,
         InputBar,
-        StatusBar,
         Overlay,
         PermissionModal,
         PermissionAction,
+        AgentStatus,
         AgentList,
         AgentItem,
-        AgentStatus,
         ContextPanel,
         GitChange,
         GitStatus,
         CommandPalette,
-        PaletteCommand,
     },
 };
 use tidy_agent::events::{AgentEvent, ContentPart};
@@ -73,9 +70,18 @@ pub struct AppState {
     pub top_bar_repo: String,
     pub top_bar_branch: String,
     pub top_bar_path: String,
+    pub top_bar_checks_passed: Option<usize>,
+    pub top_bar_checks_total: Option<usize>,
+    pub top_bar_percentage: Option<f32>,
+    pub top_bar_agent_count: Option<usize>,
     pub permission_modal_tool: Option<String>,
     pub permission_modal_args: Option<String>,
     pub permission_modal_desc: Option<String>,
+    pub action_log: Vec<Action>,         // NEW: history of all actions for time-travel debugging
+    pub action_log_capacity: usize,       // NEW: max actions to keep (default 1000)
+    pub command_palette_open: bool,
+    pub command_palette_filter: String,
+    pub command_palette_selected: usize,
 }
 
 impl Default for AppState {
@@ -94,9 +100,389 @@ impl Default for AppState {
             top_bar_repo: String::new(),
             top_bar_branch: String::new(),
             top_bar_path: String::new(),
+            top_bar_checks_passed: None,
+            top_bar_checks_total: None,
+            top_bar_percentage: None,
+            top_bar_agent_count: None,
             permission_modal_tool: None,
             permission_modal_args: None,
             permission_modal_desc: None,
+            action_log: Vec::new(),
+            action_log_capacity: 1000,
+            command_palette_open: false,
+            command_palette_filter: String::new(),
+            command_palette_selected: 0,
+        }
+    }
+}
+
+impl AppState {
+    /// Replay actions from scratch up to index n (time-travel debugging)
+    pub fn replay_to(&self, n: usize) -> AppState {
+        let mut new_state = AppState::default();
+        for i in 0..n.min(self.action_log.len()) {
+            update(&mut new_state, self.action_log[i].clone());
+        }
+        new_state
+    }
+
+    /// Get action log as readable strings for debugging
+    pub fn action_log_summary(&self) -> Vec<String> {
+        self.action_log.iter()
+            .enumerate()
+            .map(|(i, action)| format!("{:4}: {:?}", i, action))
+            .collect()
+    }
+}
+
+// ─── Standalone Widget Render Functions ────────────────────────────────────────
+// These render directly from AppState (no widget instances stored in Tui)
+
+/// Render top bar from state (repo/branch/path info)
+fn render_top_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::text::{Line, Span};
+    use ratatui::style::Modifier;
+
+    let x = area.x + 1;
+
+    let text_secondary: ratatui::style::Color = theme.color("text.muted").into();
+    let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
+    let syntax_success: ratatui::style::Color = theme.color("success").into();
+
+    // Left side: repo_name/branch current_path
+    if !state.top_bar_repo.is_empty() || !state.top_bar_branch.is_empty() {
+        let mut left_parts: Vec<Span> = Vec::new();
+
+        if !state.top_bar_repo.is_empty() {
+            left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_secondary)));
+        }
+        if !state.top_bar_branch.is_empty() {
+            left_parts.push(Span::styled("/", Style::default().fg(text_secondary)));
+            left_parts.push(Span::styled(&state.top_bar_branch, Style::default().fg(text_secondary)));
+        }
+        if !state.top_bar_path.is_empty() {
+            left_parts.push(Span::styled(format!(" {}", state.top_bar_path), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)));
+        }
+
+        let line = Line::from(left_parts);
+        buf.set_line(x, area.y, &line, area.width - 2);
+    }
+
+    // Right side: checks_passed ✓ percentage% with mini progress bar
+    let mut right_parts: Vec<Span> = Vec::new();
+
+    if let (Some(passed), Some(_total)) = (state.top_bar_checks_passed, state.top_bar_checks_total) {
+        right_parts.push(Span::styled(format!("{} ", passed), Style::default().fg(syntax_success)));
+        right_parts.push(Span::styled("✓ ", Style::default().fg(syntax_success)));
+    }
+    if let Some(pct) = state.top_bar_percentage {
+        right_parts.push(Span::styled(format!("{:.2}%", pct), Style::default().fg(text_secondary)));
+
+        // Mini progress bar using unicode blocks
+        let filled = (pct / 100.0 * 10.0).round() as usize;
+        let empty = 10 - filled;
+        let progress_bar = format!("{}{}", "\u{2588}".repeat(filled), "\u{2591}".repeat(empty));
+        right_parts.push(Span::styled(format!(" {}", progress_bar), Style::default().fg(text_tertiary)));
+    }
+
+    if !right_parts.is_empty() {
+        let right_line = Line::from(right_parts);
+        let right_width: usize = right_line.spans.iter().map(|s| s.width()).sum();
+        let right_x = area.x + area.width.saturating_sub(right_width as u16 + 1);
+        if right_x > x {
+            buf.set_line(right_x, area.y, &right_line, area.width);
+        }
+    }
+}
+
+/// Render status bar from state (mode-based shortcuts)
+fn render_status_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
+    let mut x = area.x + 1;
+    let mut first = true;
+
+    // Get items based on mode
+    let items: Vec<(&str, &str)> = match state.mode {
+        TuiMode::Chat => vec![
+            ("Enter", "send"),
+            ("^b", "sidebar"),
+            ("^k", "cmd"),
+            ("^q", "quit"),
+        ],
+        TuiMode::Overlay => vec![
+            ("Esc", "close"),
+            ("j/k", "navigate"),
+            ("Enter", "select"),
+        ],
+        TuiMode::Select => vec![
+            ("Esc", "close"),
+            ("j/k", "navigate"),
+            ("Enter", "select"),
+        ],
+        TuiMode::Permission => vec![
+            ("y", "confirm"),
+            ("n", "cancel"),
+            ("a", "always"),
+            ("s", "skip"),
+        ],
+        TuiMode::CommandPalette => vec![
+            ("Esc", "close"),
+            ("Enter", "select"),
+            ("↑↓", "navigate"),
+        ],
+    };
+
+    for (key, desc) in items {
+        if !first {
+            let sep = Span::styled(" | ", Style::default().fg(text_tertiary));
+            let line = Line::from(sep);
+            buf.set_line(x, area.y, &line, 3);
+            x += 3;
+        }
+        first = false;
+
+        let parts = vec![
+            Span::styled(key, Style::default().fg(text_tertiary)),
+            Span::styled(format!(" {}", desc), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
+        ];
+        let line = Line::from(parts);
+        let width = (key.len() + 1 + desc.len()) as u16;
+        buf.set_line(x, area.y, &line, width);
+        x += width;
+    }
+}
+
+/// Render agent list sidebar from demo data
+fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
+    let border_color: ratatui::style::Color = theme.color("border.unfocused").into();
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_dim: ratatui::style::Color = theme.color("text.dim").into();
+    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+    let success: ratatui::style::Color = theme.color("success").into();
+    let error: ratatui::style::Color = theme.color("error").into();
+
+    if area.width < 4 || area.height < 3 {
+        return;
+    }
+
+    let inner_width = area.width.saturating_sub(2);
+
+    // Top border
+    buf.get_mut(area.x, area.y).set_char('╭');
+    buf.get_mut(area.x, area.y).set_style(Style::default().fg(border_color));
+
+    let header = " AGENTS ";
+    let header_style = Style::default().fg(accent_primary).add_modifier(Modifier::BOLD);
+    let header_len = header.len() as u16;
+    let dashes = inner_width.saturating_sub(header_len);
+
+    let mut x = area.x + 1;
+    for ch in header.chars() {
+        buf.get_mut(x, area.y).set_char(ch);
+        buf.get_mut(x, area.y).set_style(header_style);
+        x += 1;
+    }
+    for _ in 0..dashes {
+        buf.get_mut(x, area.y).set_char('─');
+        buf.get_mut(x, area.y).set_style(Style::default().fg(border_color));
+        x += 1;
+    }
+
+    buf.get_mut(area.x + area.width - 1, area.y).set_char('╮');
+    buf.get_mut(area.x + area.width - 1, area.y).set_style(Style::default().fg(border_color));
+
+    // Interior fill
+    for y in (area.y + 1)..(area.y + area.height - 1) {
+        for x in (area.x + 1)..(area.x + area.width - 1) {
+            buf.get_mut(x, y).set_style(Style::default().bg(bg_panel));
+        }
+    }
+
+    // Left and right borders
+    for y in (area.y + 1)..(area.y + area.height - 1) {
+        buf.get_mut(area.x, y).set_char('│');
+        buf.get_mut(area.x, y).set_style(Style::default().fg(border_color));
+        buf.get_mut(area.x + area.width - 1, y).set_char('│');
+        buf.get_mut(area.x + area.width - 1, y).set_style(Style::default().fg(border_color));
+    }
+
+    // Demo agents
+    let demo_agents = vec![
+        ("coder", "coder", "assistant", "editing files", "claude-4", 45, AgentStatus::Running),
+        ("test", "test", "system", "running tests", "gpt-4", 12, AgentStatus::Completed),
+    ];
+
+    let mut current_y = area.y + 1;
+    let max_y = area.y + area.height - 1;
+
+    for agent in demo_agents {
+        if current_y + 3 >= max_y {
+            break;
+        }
+
+        let (status_char, status_fg) = match agent.6 {
+            AgentStatus::Running => ('●', accent_primary),
+            AgentStatus::Completed => ('✓', success),
+            AgentStatus::Failed => ('✗', error),
+            AgentStatus::Waiting => ('○', text_dim),
+        };
+
+        let tag_color = match agent.2 {
+            "user" | "assistant" => accent_primary,
+            "system" => accent_primary,
+            _ => text_dim,
+        };
+
+        // Line 1: icon + tag
+        let y1 = current_y;
+        buf.get_mut(area.x + 2, y1).set_char(' ');
+        buf.get_mut(area.x + 2, y1).set_style(Style::default().bg(bg_panel));
+        buf.get_mut(area.x + 3, y1).set_char(status_char);
+        buf.get_mut(area.x + 3, y1).set_style(Style::default().fg(status_fg).bg(bg_panel));
+        buf.get_mut(area.x + 4, y1).set_char(' ');
+        buf.get_mut(area.x + 4, y1).set_style(Style::default().bg(bg_panel));
+
+        let tag_span = Span::styled(
+            agent.1.to_string(),
+            Style::default().fg(tag_color).add_modifier(Modifier::BOLD).bg(bg_panel),
+        );
+        let tag_line = Line::from(vec![tag_span]);
+        buf.set_line(area.x + 5, y1, &tag_line, inner_width.saturating_sub(5));
+
+        // Line 2: description
+        let y2 = current_y + 1;
+        let desc_span = Span::styled(
+            format!("  {}", agent.3),
+            Style::default().fg(text_secondary).bg(bg_panel),
+        );
+        let desc_line = Line::from(vec![desc_span]);
+        buf.set_line(area.x + 2, y2, &desc_line, inner_width.saturating_sub(2));
+
+        // Line 3: model + duration
+        let y3 = current_y + 2;
+        let duration_secs = agent.5;
+        let duration_str = if duration_secs >= 60 {
+            format!("{}m", duration_secs / 60)
+        } else {
+            format!("{}s", duration_secs)
+        };
+        let meta_span = Span::styled(
+            format!("  {} · {}", agent.4, duration_str),
+            Style::default().fg(text_dim).bg(bg_panel),
+        );
+        let meta_line = Line::from(vec![meta_span]);
+        buf.set_line(area.x + 2, y3, &meta_line, inner_width.saturating_sub(2));
+
+        // Separator
+        current_y += 4;
+        if current_y < max_y - 1 {
+            let sep_y = current_y - 1;
+            for sx in (area.x + 2)..(area.x + area.width - 2) {
+                buf.get_mut(sx, sep_y).set_char('·');
+                buf.get_mut(sx, sep_y).set_style(Style::default().fg(text_dim).bg(bg_panel));
+            }
+        }
+    }
+
+    // Bottom border
+    let bottom_y = area.y + area.height - 1;
+    buf.get_mut(area.x, bottom_y).set_char('╰');
+    buf.get_mut(area.x, bottom_y).set_style(Style::default().fg(border_color));
+
+    for x in (area.x + 1)..(area.x + area.width - 1) {
+        buf.get_mut(x, bottom_y).set_char('─');
+        buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
+    }
+
+    buf.get_mut(area.x + area.width - 1, bottom_y).set_char('╯');
+    buf.get_mut(area.x + area.width - 1, bottom_y).set_style(Style::default().fg(border_color));
+}
+
+/// Render context panel sidebar from state
+fn render_context_panel(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use ratatui::style::Modifier;
+    use ratatui::text::{Line, Span};
+
+    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
+    for y in area.y..(area.y + area.height) {
+        for x in area.x..(area.x + area.width) {
+            if let Some(cell) = buf.cell_mut((x as u16, y as u16)) {
+                cell.set_style(Style::default().bg(bg_panel));
+            }
+        }
+    }
+
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
+    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+    let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
+    let _warning: ratatui::style::Color = theme.color("warning").into();
+    let _success: ratatui::style::Color = theme.color("success").into();
+    let _error: ratatui::style::Color = theme.color("error").into();
+    let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
+
+    let left_margin = 1u16;
+    let max_width = area.width.saturating_sub(left_margin + 1);
+    let mut y = area.y;
+
+    // Model
+    if y < area.y + area.height {
+        let model_label = Span::styled("Model: ", Style::default().fg(text_muted));
+        let model_name = Span::styled("claude-4".to_string(), Style::default().fg(accent_secondary));
+        let line = Line::from(vec![model_label, model_name]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // Session
+    if y < area.y + area.height {
+        let session_label = Span::styled("Session: ", Style::default().fg(text_muted));
+        let session_info = Span::styled("new session".to_string(), Style::default().fg(text_secondary));
+        let line = Line::from(vec![session_label, session_info]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // Separator
+    if y < area.y + area.height {
+        let sep = Span::styled(
+            "─".repeat(max_width as usize),
+            Style::default().fg(border_unfocused),
+        );
+        let line = Line::from(vec![sep]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+    }
+
+    // RECENT section header
+    if y < area.y + area.height {
+        let header = Span::styled(
+            "RECENT",
+            Style::default().fg(accent_primary).add_modifier(Modifier::BOLD),
+        );
+        let line = Line::from(vec![header]);
+        buf.set_line(area.x + left_margin, y, &line, max_width);
+        y += 1;
+
+        // Demo files
+        for file in &["src/main.rs", "Cargo.toml", "README.md"] {
+            if y >= area.y + area.height {
+                break;
+            }
+            let file_span = Span::styled(
+                format!("▸ {}", file),
+                Style::default().fg(text_secondary),
+            );
+            let line = Line::from(vec![file_span]);
+            buf.set_line(area.x + left_margin, y, &line, max_width);
+            y += 1;
         }
     }
 }
@@ -130,12 +516,23 @@ pub enum Action {
     PermissionAlways,
     PermissionSkip,
     OverlayClosed,
+    CommandPaletteFilter(char),
+    CommandPaletteBackspace,
+    CommandPaletteUp,
+    CommandPaletteDown,
+    CommandPaletteConfirm,
 }
 
 // ─── update() ─────────────────────────────────────────────────────────────────
 // Pure reducer: takes state + action, returns new state (no side effects)
 
 pub fn update(state: &mut AppState, action: Action) {
+    // Log action before applying (for time-travel debugging)
+    if state.action_log.len() >= state.action_log_capacity {
+        state.action_log.remove(0); // Remove oldest when at capacity
+    }
+    state.action_log.push(action.clone());
+
     match action {
         Action::Quit => state.running = false,
 
@@ -245,11 +642,15 @@ pub fn update(state: &mut AppState, action: Action) {
         Action::ToggleSidebar => state.show_sidebar = !state.show_sidebar,
 
         Action::OpenCommandPalette => {
+            state.command_palette_open = true;
             state.mode = TuiMode::CommandPalette;
+            state.command_palette_filter.clear();
+            state.command_palette_selected = 0;
         }
 
         Action::CloseModal => {
             state.mode = TuiMode::Chat;
+            state.command_palette_open = false;
             state.permission_modal_tool = None;
         }
 
@@ -378,6 +779,24 @@ use tidy_agent::events::AgentEvent;
             state.mode = TuiMode::Chat;
             state.permission_modal_tool = None;
         }
+        Action::CommandPaletteFilter(c) => {
+            state.command_palette_filter.push(c);
+        }
+        Action::CommandPaletteBackspace => {
+            state.command_palette_filter.pop();
+        }
+        Action::CommandPaletteUp => {
+            if state.command_palette_selected > 0 {
+                state.command_palette_selected -= 1;
+            }
+        }
+        Action::CommandPaletteDown => {
+            state.command_palette_selected += 1;
+        }
+        Action::CommandPaletteConfirm => {
+            state.command_palette_open = false;
+            state.mode = TuiMode::Chat;
+        }
     }
 }
 
@@ -386,15 +805,6 @@ use tidy_agent::events::AgentEvent;
 pub struct Tui {
     pub config: TuiConfig,
     pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
-    pub top_bar: TopBar,
-    pub message_list: MessageList,
-    pub input_bar: InputBar,
-    pub status_bar: StatusBar,
-    pub overlay: Option<Overlay>,
-    pub permission_modal: Option<PermissionModal>,
-    pub command_palette: Option<CommandPalette>,
-    pub agent_list: AgentList,
-    pub context_panel: ContextPanel,
     pub state: AppState,
 }
 
@@ -421,49 +831,6 @@ impl Tui {
         Ok(Self {
             config,
             terminal,
-            top_bar: TopBar::default(),
-            message_list: MessageList::default(),
-            input_bar: InputBar::default(),
-            status_bar: StatusBar::default(),
-            overlay: None,
-            permission_modal: None,
-            command_palette: None,
-            agent_list: AgentList {
-                agents: vec![
-                    AgentItem {
-                        id: "coder".to_string(),
-                        tag: "coder".to_string(),
-                        tag_type: "assistant".to_string(),
-                        description: "editing files".to_string(),
-                        model: "claude-4".to_string(),
-                        duration_secs: 45,
-                        status: AgentStatus::Running,
-                    },
-                    AgentItem {
-                        id: "test".to_string(),
-                        tag: "test".to_string(),
-                        tag_type: "system".to_string(),
-                        description: "running tests".to_string(),
-                        model: "gpt-4".to_string(),
-                        duration_secs: 12,
-                        status: AgentStatus::Completed,
-                    },
-                ],
-            },
-            context_panel: ContextPanel {
-                recent_files: vec![
-                    "src/main.rs".to_string(),
-                    "Cargo.toml".to_string(),
-                    "README.md".to_string(),
-                ],
-                git_changes: vec![
-                    GitChange { path: "src/tui.rs".to_string(), status: GitStatus::Modified },
-                    GitChange { path: "src/components/context_panel.rs".to_string(), status: GitStatus::Added },
-                ],
-                active_tool: Some("read_file".to_string()),
-                model_name: "claude-4".to_string(),
-                session_info: "demo-session-001".to_string(),
-            },
             state: AppState::default(),
         })
     }
@@ -481,31 +848,11 @@ impl Tui {
     }
 
     /// Calculate the height needed for the input bar based on its content
-    fn input_bar_height(&self, _area_width: u16) -> u16 {
+    fn input_bar_height(&self) -> u16 {
         // Each logical line = 1 visual line (no wrapping)
-        let visual_lines = self.input_bar.visual_height();
+        let visual_lines = self.state.input_lines.len().max(1);
         // 2 for borders + visual lines for content
         (visual_lines as u16) + 2
-    }
-
-    /// Sync widget state from AppState (state → widgets, unidirectional)
-    fn sync_widgets_from_state(&mut self) {
-        // MessageList
-        self.message_list.messages = self.state.messages.clone();
-
-        // InputBar
-        self.input_bar.lines = self.state.input_lines.clone();
-        self.input_bar.cursor_col = self.state.cursor_col;
-        // Note: InputBar uses cursor_line, state uses cursor_row
-        // We need to map carefully to avoid out-of-bounds
-        self.input_bar.cursor_line = self.state.cursor_row.min(self.input_bar.lines.len().saturating_sub(1));
-
-        // Sync mode to widgets that need it
-        match self.state.mode {
-            TuiMode::Chat => self.status_bar.set_chat_mode(),
-            TuiMode::Overlay => self.status_bar.set_overlay_mode(),
-            _ => {}
-        }
     }
 
     pub fn render(&mut self) -> io::Result<()> {
@@ -519,18 +866,15 @@ impl Tui {
             height: area.height.saturating_sub(2),
         };
 
-        // Sync widgets from state (unidirectional: state → widgets)
-        self.sync_widgets_from_state();
-
         // Calculate dynamic input bar height
-        let input_height = self.input_bar_height(padded_area.width);
+        let input_height = self.input_bar_height();
 
         // Extract values needed in closure to avoid borrow conflicts
         let show_sidebar = self.state.show_sidebar;
-        let agent_list = self.agent_list.clone();
         let show_top_bar = self.config.show_top_bar;
         let show_status_bar = self.config.show_status_bar;
         let mode = self.state.mode.clone();
+        let state_clone = self.state.clone();
 
         self.terminal.draw(|frame| {
             let theme = &self.config.theme;
@@ -552,9 +896,9 @@ impl Tui {
             ];
             let main_areas: [Rect; 4] = Layout::vertical(main_constraints).areas(padded_area);
 
-            // Render top bar
+            // Render top bar using standalone function
             if show_top_bar {
-                self.top_bar.render_ref(main_areas[0], frame.buffer_mut(), theme);
+                render_top_bar(&state_clone, main_areas[0], frame.buffer_mut(), theme);
             }
 
             // Split content area horizontally
@@ -566,97 +910,117 @@ impl Tui {
             }
             let h_areas = Layout::horizontal(h_constraints.as_slice()).split(content_area);
 
+            // Create MessageList locally and render from state
+            let message_list = MessageList {
+                messages: state_clone.messages.clone(),
+                scroll_offset: 0,
+            };
+
             if show_sidebar && content_area.width >= SIDEBAR_WIDTH + 20 {
-                self.message_list.render_ref(h_areas[0], frame.buffer_mut(), theme);
-                agent_list.render(h_areas[1], frame.buffer_mut());
+                message_list.render_ref(h_areas[0], frame.buffer_mut(), theme);
+                render_agent_list(h_areas[1], frame.buffer_mut(), theme);
             } else {
-                self.message_list.render_ref(h_areas[0], frame.buffer_mut(), theme);
+                message_list.render_ref(h_areas[0], frame.buffer_mut(), theme);
             }
 
-            // Render input bar
-            self.input_bar.render_ref(main_areas[2], frame.buffer_mut(), theme);
-            let cursor_pos = self.input_bar.cursor_screen_pos(main_areas[2]);
+            // Render input bar using standalone function
+            let input_bar = InputBar {
+                prompt: "\u{276F} ".to_string(),
+                lines: state_clone.input_lines.clone(),
+                cursor_line: state_clone.cursor_row.min(state_clone.input_lines.len().saturating_sub(1)),
+                cursor_col: state_clone.cursor_col,
+                mode: crate::components::InputMode::Normal,
+                right_info: state_clone.input_right_info.clone(),
+            };
+            input_bar.render_ref(main_areas[2], frame.buffer_mut(), theme);
+            let cursor_pos = input_bar.cursor_screen_pos(main_areas[2]);
             frame.set_cursor_position(cursor_pos);
 
-            // Render status bar
+            // Render status bar using standalone function
             if show_status_bar {
-                self.status_bar.render_ref(main_areas[3], frame.buffer_mut(), theme);
+                render_status_bar(&state_clone, main_areas[3], frame.buffer_mut(), theme);
             }
 
-            if let Some(overlay) = &self.overlay {
-                if mode == TuiMode::Overlay {
-                    let overlay_area = Overlay::centered((60, 20), frame.area());
+            // Permission modal (render from state if active)
+            if mode == TuiMode::Permission && state_clone.permission_modal_tool.is_some() {
+                let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+                // Dim background
+                for y in 0..area.height {
+                    for x in 0..area.width {
+                        if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
+                            cell.set_style(Style::default().bg(bg_base));
+                        }
+                    }
+                }
+                // Center modal
+                let modal_w = 50u16;
+                let modal_h = 12u16;
+                let modal_x = padded_area.x + (padded_area.width.saturating_sub(modal_w)) / 2;
+                let modal_y = padded_area.y + (padded_area.height.saturating_sub(modal_h)) / 2;
+                let modal_area = Rect::new(modal_x, modal_y, modal_w, modal_h);
 
-                    // Draw shadow first
-                    Self::render_shadow(overlay_area, frame.buffer_mut(), theme);
+                // Draw shadow
+                Self::render_shadow(modal_area, frame.buffer_mut(), theme);
 
-                    let mut overlay_buf = Buffer::empty(overlay_area);
-                    overlay.render_ref(overlay_area, &mut overlay_buf, theme);
-                    for y in 0..overlay_buf.area.height {
-                        for x in 0..overlay_buf.area.width {
-                            let cell = overlay_buf.get(x, y);
-                            let tx = overlay_area.x + x;
-                            let ty = overlay_area.y + y;
-                            if tx < area.width && ty < area.height {
-                                if let Some(target) = frame.buffer_mut().cell_mut((tx, ty)) {
-                                    target.set_style(cell.style());
-                                    if let Some(ch) = cell.symbol().chars().next() {
-                                        target.set_char(ch);
-                                    }
+                // Render permission modal from state
+                let modal = PermissionModal::new(
+                    state_clone.permission_modal_tool.as_deref().unwrap_or(""),
+                    state_clone.permission_modal_args.as_deref().unwrap_or(""),
+                    state_clone.permission_modal_desc.as_deref().unwrap_or(""),
+                );
+                modal.render_ref(modal_area, frame.buffer_mut(), theme);
+            }
+
+            // Command palette (simplified - just show a placeholder)
+            if mode == TuiMode::CommandPalette {
+                let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+                // Dim background
+                for y in 0..area.height {
+                    for x in 0..area.width {
+                        if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
+                            cell.set_style(Style::default().bg(bg_base));
+                        }
+                    }
+                }
+                // Center palette
+                let palette_w = 70u16;
+                let palette_h = 20u16;
+                let palette_x = padded_area.x + (padded_area.width.saturating_sub(palette_w)) / 2;
+                let palette_y = padded_area.y + (padded_area.height.saturating_sub(palette_h)) / 2;
+                let palette_area = Rect::new(palette_x, palette_y, palette_w, palette_h);
+
+                // Draw shadow
+                Self::render_shadow(palette_area, frame.buffer_mut(), theme);
+
+                // Render command palette widget
+                let palette = CommandPalette::new();
+                palette.render_ref(palette_area, frame.buffer_mut(), theme);
+            }
+
+            // Overlay mode (simplified - just show a centered box)
+            if mode == TuiMode::Overlay {
+                let overlay_area = Overlay::centered((60, 20), frame.area());
+
+                // Draw shadow first
+                Self::render_shadow(overlay_area, frame.buffer_mut(), theme);
+
+                let mut overlay_buf = Buffer::empty(overlay_area);
+                let overlay = Overlay::default();
+                overlay.render_ref(overlay_area, &mut overlay_buf, theme);
+                for y in 0..overlay_buf.area.height {
+                    for x in 0..overlay_buf.area.width {
+                        let cell = overlay_buf.get(x, y);
+                        let tx = overlay_area.x + x;
+                        let ty = overlay_area.y + y;
+                        if tx < area.width && ty < area.height {
+                            if let Some(target) = frame.buffer_mut().cell_mut((tx, ty)) {
+                                target.set_style(cell.style());
+                                if let Some(ch) = cell.symbol().chars().next() {
+                                    target.set_char(ch);
                                 }
                             }
                         }
                     }
-                }
-            }
-
-            if mode == TuiMode::Permission {
-                if let Some(ref modal) = self.permission_modal {
-                    let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-                    // Dim background
-                    for y in 0..area.height {
-                        for x in 0..area.width {
-                            if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                                cell.set_style(Style::default().bg(bg_base));
-                            }
-                        }
-                    }
-                    // Center modal
-                    let modal_w = 50u16;
-                    let modal_h = 12u16;
-                    let modal_x = padded_area.x + (padded_area.width.saturating_sub(modal_w)) / 2;
-                    let modal_y = padded_area.y + (padded_area.height.saturating_sub(modal_h)) / 2;
-                    let modal_area = Rect::new(modal_x, modal_y, modal_w, modal_h);
-
-                    // Draw shadow
-                    Self::render_shadow(modal_area, frame.buffer_mut(), theme);
-
-                    modal.render_ref(modal_area, frame.buffer_mut(), theme);
-                }
-            }
-
-            if mode == TuiMode::CommandPalette {
-                if let Some(ref palette) = self.command_palette {
-                    let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-                    // Dim background
-                    for y in 0..area.height {
-                        for x in 0..area.width {
-                            if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                                cell.set_style(Style::default().bg(bg_base));
-                            }
-                        }
-                    }
-                    // Center palette
-                    let palette_w = 70u16;
-                    let palette_h = 20u16;
-                    let palette_x = padded_area.x + (padded_area.width.saturating_sub(palette_w)) / 2;
-                    let palette_y = padded_area.y + (padded_area.height.saturating_sub(palette_h)) / 2;
-                    let palette_area = Rect::new(palette_x, palette_y, palette_w, palette_h);
-
-                    // Draw shadow
-                    Self::render_shadow(palette_area, frame.buffer_mut(), theme);
-
-                    palette.render_ref(palette_area, frame.buffer_mut(), theme);
                 }
             }
         })?;
@@ -709,13 +1073,7 @@ impl Tui {
                 self.update(Action::InsertNewline);
                 None
             }
-            KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.command_palette = Some(CommandPalette::new());
-                self.update(Action::OpenCommandPalette);
-                None
-            }
-            KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.command_palette = Some(CommandPalette::new());
+            KeyCode::Char('k') | KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.update(Action::OpenCommandPalette);
                 None
             }
@@ -788,7 +1146,6 @@ impl Tui {
     fn handle_overlay_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
         match key.code {
             KeyCode::Esc => {
-                self.overlay = None;
                 self.update(Action::OverlayClosed);
                 None
             }
@@ -801,157 +1158,99 @@ impl Tui {
     }
 
     fn handle_permission_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        if self.permission_modal.is_none() {
+        // Permission modal is active when state has permission_modal_tool set
+        if self.state.permission_modal_tool.is_none() {
             return None;
         }
 
-        // We need to extract data before we can mutably borrow to set None
-        let (tool_name, action_opt) = match key.code {
-            KeyCode::Left => {
-                self.permission_modal.as_mut().unwrap().prev_option();
-                return None;
-            }
-            KeyCode::Right => {
-                self.permission_modal.as_mut().unwrap().next_option();
-                return None;
-            }
+        let tool_name = self.state.permission_modal_tool.clone().unwrap_or_default();
+
+        match key.code {
             KeyCode::Enter => {
-                let modal = self.permission_modal.as_mut().unwrap();
-                let action = modal.confirm();
-                let tool = modal.tool_name.clone();
-                (tool, Some(action))
+                self.update(Action::PermissionConfirm);
+                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Confirm })
             }
             KeyCode::Esc => {
-                let modal = self.permission_modal.as_mut().unwrap();
-                let tool = modal.tool_name.clone();
-                (tool, Some(PermissionAction::Cancel))
+                self.update(Action::PermissionCancel);
+                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Cancel })
             }
             KeyCode::Char('y') => {
-                let modal = self.permission_modal.as_mut().unwrap();
-                let tool = modal.tool_name.clone();
-                (tool, Some(PermissionAction::Confirm))
+                self.update(Action::PermissionConfirm);
+                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Confirm })
             }
             KeyCode::Char('n') => {
-                let modal = self.permission_modal.as_mut().unwrap();
-                let tool = modal.tool_name.clone();
-                (tool, Some(PermissionAction::Cancel))
+                self.update(Action::PermissionCancel);
+                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Cancel })
             }
             KeyCode::Char('a') => {
-                let modal = self.permission_modal.as_mut().unwrap();
-                let tool = modal.tool_name.clone();
-                (tool, Some(PermissionAction::Always))
+                self.update(Action::PermissionAlways);
+                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Always })
             }
             KeyCode::Char('s') => {
-                let modal = self.permission_modal.as_mut().unwrap();
-                let tool = modal.tool_name.clone();
-                (tool, Some(PermissionAction::Skip))
+                self.update(Action::PermissionSkip);
+                Some(TuiAction::ToolPermission { tool: tool_name, action: PermissionAction::Skip })
             }
-            _ => return None,
-        };
-
-        self.permission_modal = None;
-        self.state.mode = TuiMode::Chat;
-        action_opt.map(|action| TuiAction::ToolPermission { tool: tool_name, action })
+            _ => None,
+        }
     }
 
     fn handle_command_palette_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        if let Some(ref mut palette) = self.command_palette {
-            match key.code {
-                KeyCode::Esc => {
-                    self.command_palette = None;
-                    self.state.mode = TuiMode::Chat;
-                    None
-                }
-                KeyCode::Enter => {
-                    if let Some(cmd) = palette.confirm() {
-                        let action = match cmd {
-                            PaletteCommand::ReadFile { path } => {
-                                Some(TuiAction::Command(format!("read {}", path)))
-                            }
-                            PaletteCommand::EditFile { path, prompt } => {
-                                Some(TuiAction::Command(format!("edit {} {}", path, prompt)))
-                            }
-                            PaletteCommand::RunAgent { name } => {
-                                Some(TuiAction::Command(format!("run {}", name)))
-                            }
-                            PaletteCommand::SwitchModel { model } => {
-                                Some(TuiAction::Command(format!("model {}", model)))
-                            }
-                            PaletteCommand::LoadSession { id } => {
-                                Some(TuiAction::Command(format!("load {}", id)))
-                            }
-                            PaletteCommand::SaveSession { name } => {
-                                Some(TuiAction::Command(format!("save {}", name)))
-                            }
-                            PaletteCommand::Cancel => None,
-                        };
-                        self.command_palette = None;
-                        self.state.mode = TuiMode::Chat;
-                        return action;
-                    }
-                    None
-                }
-                KeyCode::Up => {
-                    palette.prev_item();
-                    None
-                }
-                KeyCode::Down => {
-                    palette.next_item();
-                    None
-                }
-                KeyCode::Char(c) => {
-                    palette.insert_char(c);
-                    None
-                }
-                KeyCode::Backspace => {
-                    palette.backspace();
-                    None
-                }
-                _ => None,
+        match key.code {
+            KeyCode::Esc => {
+                self.update(Action::CloseModal);
+                None
             }
-        } else {
-            None
+            KeyCode::Enter => {
+                self.update(Action::CommandPaletteConfirm);
+                // TODO: return the selected command
+                None
+            }
+            KeyCode::Up => {
+                self.update(Action::CommandPaletteUp);
+                None
+            }
+            KeyCode::Down => {
+                self.update(Action::CommandPaletteDown);
+                None
+            }
+            KeyCode::Char(c) => {
+                self.update(Action::CommandPaletteFilter(c));
+                None
+            }
+            KeyCode::Backspace => {
+                self.update(Action::CommandPaletteBackspace);
+                None
+            }
+            _ => None,
         }
     }
 
     pub fn add_message(&mut self, item: MessageItem) {
-        self.message_list.messages.push(item.clone());
         self.state.messages.push(item);
     }
 
     pub fn on_agent_event(&mut self, event: AgentEvent) {
         // Use the update() reducer for all agent events
         self.update(Action::AgentEvent(event.clone()));
-
-        // For PermissionRequest, also show the modal
-        if let AgentEvent::PermissionRequest { tool_name, tool_args, .. } = event {
-            self.permission_modal = Some(PermissionModal::new(
-                tool_name.as_str(),
-                tool_args.as_str(),
-                &format!("Agent wants to execute '{}'", tool_name),
-            ));
-        }
     }
 
-    pub fn show_overlay(&mut self, overlay: Overlay) {
-        self.overlay = Some(overlay);
+    pub fn show_overlay(&mut self, _overlay: Overlay) {
         self.state.mode = TuiMode::Overlay;
-        self.status_bar.set_overlay_mode();
     }
 
     pub fn hide_overlay(&mut self) {
-        self.overlay = None;
         self.state.mode = TuiMode::Chat;
-        self.status_bar.set_chat_mode();
     }
 
     pub fn request_permission(&mut self, tool_name: &str, tool_args: &str, description: &str) {
-        self.permission_modal = Some(PermissionModal::new(tool_name, tool_args, description));
+        self.state.permission_modal_tool = Some(tool_name.to_string());
+        self.state.permission_modal_args = Some(tool_args.to_string());
+        self.state.permission_modal_desc = Some(description.to_string());
         self.state.mode = TuiMode::Permission;
     }
 
     pub fn is_permission_modal_active(&self) -> bool {
-        self.permission_modal.is_some() && self.state.mode == TuiMode::Permission
+        self.state.permission_modal_tool.is_some() && self.state.mode == TuiMode::Permission
     }
 
     pub fn toggle_sidebar(&mut self) {
@@ -1114,9 +1413,18 @@ mod tests {
             top_bar_repo: String::new(),
             top_bar_branch: String::new(),
             top_bar_path: String::new(),
+            top_bar_checks_passed: None,
+            top_bar_checks_total: None,
+            top_bar_percentage: None,
+            top_bar_agent_count: None,
             permission_modal_tool: None,
             permission_modal_args: None,
             permission_modal_desc: None,
+            action_log: Vec::new(),
+            action_log_capacity: 1000,
+            command_palette_open: false,
+            command_palette_filter: String::new(),
+            command_palette_selected: 0,
         }
     }
 
@@ -1338,5 +1646,70 @@ mod tests {
         } else {
             panic!("Expected Assistant message");
         }
+    }
+
+    // ─── Time-Travel Tests ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_action_log_records_actions() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('i'));
+        update(&mut state, Action::Submit);
+
+        assert_eq!(state.action_log.len(), 3);
+        assert!(matches!(state.action_log[0], Action::InsertChar('h')));
+        assert!(matches!(state.action_log[1], Action::InsertChar('i')));
+        assert!(matches!(state.action_log[2], Action::Submit));
+    }
+
+    #[test]
+    fn test_action_log_capacity() {
+        let mut state = make_state();
+        state.action_log_capacity = 5;
+
+        for i in 0..10 {
+            update(&mut state, Action::InsertChar('a'));
+        }
+
+        assert_eq!(state.action_log.len(), 5); // Only keeps last 5
+    }
+
+    #[test]
+    fn test_replay_actions() {
+        let mut state = make_state();
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('i'));
+        update(&mut state, Action::Submit);
+
+        let replayed = state.replay_to(2); // Replay first 2 actions
+        assert_eq!(replayed.input_lines, vec!["hi"]);
+        assert_eq!(replayed.messages.len(), 0); // Submit not replayed
+
+        let replayed_full = state.replay_to(3); // Replay all 3
+        assert_eq!(replayed_full.messages.len(), 1);
+    }
+
+    #[test]
+    fn test_replay_produces_same_state() {
+        let mut state = make_state();
+        // Complex sequence
+        update(&mut state, Action::InsertChar('h'));
+        update(&mut state, Action::InsertChar('e'));
+        update(&mut state, Action::InsertChar('l'));
+        update(&mut state, Action::InsertChar('l'));
+        update(&mut state, Action::InsertChar('o'));
+        update(&mut state, Action::Submit);
+        update(&mut state, Action::ToggleSidebar);
+        update(&mut state, Action::InsertChar('w'));
+        update(&mut state, Action::InsertChar('o'));
+        update(&mut state, Action::InsertChar('r'));
+        update(&mut state, Action::InsertChar('l'));
+        update(&mut state, Action::InsertChar('d'));
+
+        let replayed = state.replay_to(state.action_log.len());
+        assert_eq!(replayed.input_lines, state.input_lines);
+        assert_eq!(replayed.messages, state.messages);
+        assert_eq!(replayed.show_sidebar, state.show_sidebar);
     }
 }
