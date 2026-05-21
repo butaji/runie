@@ -1,0 +1,12 @@
+[package]
+name = "tidy-tui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tidy-core = { path = "../tidy-core" }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+opaline = "0.1"

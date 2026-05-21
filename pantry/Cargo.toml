@@ -1,0 +1,13 @@
+[package]
+name = "tidy-pantry"
+version = "0.1.0"
+edition = "2021"
+default-run = "tidy-pantry"
+
+[dependencies]
+tidy-tui = { path = "../crates/tidy-tui" }
+tidy-core = { path = "../crates/tidy-core" }
+ratatui = { workspace = true }
+tui-pantry = { workspace = true }
+crossterm = { workspace = true }
+tokio = { workspace = true }

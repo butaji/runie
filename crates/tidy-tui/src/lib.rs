@@ -1,0 +1,39 @@
+pub mod theme;
+pub mod components;
+pub mod tui;
+
+pub use theme::{ThemeWrapper, ColorPalette, OpalineColor};
+pub use tui::{Tui, TuiConfig, TuiMode, TuiAction};
+pub use components::{
+    TopBar,
+    MessageList,
+    MessageItem,
+    InputBar,
+    InputMode,
+    StatusBar,
+    Overlay,
+    CodeBlock,
+    CodeLine,
+    LineStatus,
+    Collapsible,
+    AgentList,
+    AgentItem,
+    AgentStatus,
+    PermissionModal,
+    PermissionAction,
+    CommandPalette,
+    PaletteItem,
+    PaletteStep,
+    PaletteCommand,
+    ContextPanel,
+    GitChange,
+    GitStatus,
+};
+
+// Re-export ratatui types we use
+pub use ratatui::{
+    layout::{Rect, Constraint, Layout, Direction},
+    style::{Style, Color, Modifier},
+    buffer::Buffer,
+    text::{Line, Span, Text},
+};
