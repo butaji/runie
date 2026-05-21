@@ -179,157 +179,165 @@ fn render_single_msg(
 ) -> u16 {
     match msg {
         MessageItem::User { text, .. } => {
-            let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-            let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
-
-            let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
-            let msg_height = wrapped.len() as u16;
-            let total_height = msg_height + 2;
-
-            let panel_start_y = area.y + row;
-            let panel_start_x = margin_x - 1;
-            let panel_width = area.width - 2;
-
-            for r in 0..total_height {
-                if panel_start_y + r >= area.y + area.height {
-                    break;
-                }
-                for x in 0..panel_width {
-                    if panel_start_x + x < area.x + area.width {
-                        buf.get_mut(panel_start_x + x, panel_start_y + r)
-                            .set_style(Style::default().bg(bg_panel));
-                    }
-                }
-            }
-
-            buf.get_mut(margin_x, area.y + row + 1)
-                .set_char('❯')
-                .set_style(Style::default().fg(accent_primary).bg(bg_panel));
-
-            for (i, line_text) in wrapped.iter().enumerate() {
-                if row + 1 + i as u16 >= max_rows {
-                    break;
-                }
-                let line = Line::raw(line_text.as_str())
-                    .style(Style::default().fg(text_primary).bg(bg_panel));
-                buf.set_line(text_x, area.y + row + 1 + i as u16, &line, area.width - 6);
-            }
-
-            total_height
+            render_user_msg(text, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary)
         }
         MessageItem::Assistant { text, .. } => {
-            if text.is_empty() {
-                let dot = Line::raw("·").style(Style::default().fg(text_muted));
-                buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
-                1
-            } else {
-                let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
-                let msg_height = wrapped.len() as u16;
-
-                for (i, line_text) in wrapped.iter().enumerate() {
-                    if row + i as u16 >= max_rows {
-                        break;
-                    }
-                    let line = Line::raw(line_text.as_str())
-                        .style(Style::default().fg(text_secondary));
-                    buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
-                }
-
-                msg_height
-            }
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted)
         }
         MessageItem::Thought { duration_secs } => {
-            buf.get_mut(margin_x, area.y + row)
-                .set_char('◆')
-                .set_style(Style::default().fg(text_muted));
-
-            let thought_text = format!("Thought for {:.1}s", duration_secs);
-            let line = Line::raw(thought_text.as_str())
-                .style(Style::default().fg(text_muted));
-            buf.set_line(text_x, area.y + row, &line, area.width - 4);
-
-            1
+            render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted)
         }
         MessageItem::ToolCall { name, args, result, is_error } => {
-            buf.get_mut(margin_x, area.y + row)
-                .set_char('◆')
-                .set_style(Style::default().fg(text_muted));
-
-            let header = format!("{}({})", name, args);
-            let line = Line::raw(header.as_str())
-                .style(Style::default().fg(text_secondary));
-            buf.set_line(text_x, area.y + row, &line, area.width - 4);
-
-            let mut rendered = 1;
-
-            if let Some(result_text) = result {
-                if row + rendered >= max_rows {
-                    return rendered;
-                }
-
-                for (i, ch) in "  ".chars().enumerate() {
-                    buf.get_mut(text_x - 2 + i as u16, area.y + row + rendered).set_char(ch);
-                    buf.get_mut(text_x - 2 + i as u16, area.y + row + rendered)
-                        .set_style(Style::default().fg(text_muted));
-                }
-
-                buf.get_mut(text_x, area.y + row + rendered)
-                    .set_char('→')
-                    .set_style(Style::default().fg(text_muted));
-                buf.get_mut(text_x + 1, area.y + row + rendered)
-                    .set_char(if *is_error { '×' } else { '✓' })
-                    .set_style(Style::default().fg(if *is_error { error } else { success }));
-
-                let result_line = Line::raw(result_text.as_str())
-                    .style(Style::default().fg(text_muted));
-                buf.set_line(text_x + 3, area.y + row + rendered, &result_line, area.width - 7);
-
-                rendered += 1;
-            }
-
-            rendered
+            render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
         }
         MessageItem::Edit { filename, diff: _ } => {
-            buf.get_mut(margin_x, area.y + row)
-                .set_char('◆')
-                .set_style(Style::default().fg(text_muted));
-
-            let edit_label = "Edit ";
-            let filename_only = std::path::Path::new(filename)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(filename);
-
-            let edit_len = edit_label.len() as u16;
-            for (i, ch) in edit_label.chars().enumerate() {
-                buf.get_mut(text_x + i as u16, area.y + row)
-                    .set_char(ch)
-                    .set_style(Style::default().fg(text_secondary));
-            }
-
-            for (i, ch) in filename_only.chars().enumerate() {
-                let x_pos = text_x + edit_len + i as u16;
-                if x_pos < area.x + area.width {
-                    buf.get_mut(x_pos, area.y + row)
-                        .set_char(ch)
-                        .set_style(Style::default().fg(code_path));
-                }
-            }
-
-            1
+            render_edit_msg(filename, area, row, margin_x, text_x, buf, text_secondary, code_path)
         }
         MessageItem::System { text } => {
-            buf.get_mut(margin_x, area.y + row)
-                .set_char('◆')
-                .set_style(Style::default().fg(text_muted));
-
-            let line = Line::raw(text.as_str())
-                .style(Style::default().fg(text_muted));
-            buf.set_line(text_x, area.y + row, &line, area.width - 4);
-
-            1
+            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted)
         }
     }
+}
+
+fn render_user_msg(
+    text: &str,
+    area: Rect,
+    row: u16,
+    margin_x: u16,
+    text_x: u16,
+    max_rows: u16,
+    buf: &mut Buffer,
+    theme: &ThemeWrapper,
+    accent_primary: ratatui::style::Color,
+) -> u16 {
+    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
+
+    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
+    let msg_height = wrapped.len() as u16;
+    let total_height = msg_height + 2;
+
+    draw_user_panel_bg(area, row, margin_x, total_height, buf, bg_panel);
+    buf.get_mut(margin_x, area.y + row + 1)
+        .set_char('❯')
+        .set_style(Style::default().fg(accent_primary).bg(bg_panel));
+    draw_user_text_lines(&wrapped, row, text_x, max_rows, area, buf, text_primary, bg_panel);
+
+    total_height
+}
+
+fn draw_user_panel_bg(area: Rect, row: u16, margin_x: u16, total_height: u16, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
+    let panel_start_y = area.y + row;
+    let panel_start_x = margin_x - 1;
+    let panel_width = area.width - 2;
+    for r in 0..total_height {
+        if panel_start_y + r >= area.y + area.height { break; }
+        for x in 0..panel_width {
+            if panel_start_x + x < area.x + area.width {
+                buf.get_mut(panel_start_x + x, panel_start_y + r).set_style(Style::default().bg(bg_panel));
+            }
+        }
+    }
+}
+
+fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16, area: Rect, buf: &mut Buffer, text_primary: ratatui::style::Color, bg_panel: ratatui::style::Color) {
+    for (i, line_text) in wrapped.iter().enumerate() {
+        if row + 1 + i as u16 >= max_rows { break; }
+        let line = Line::raw(line_text).style(Style::default().fg(text_primary).bg(bg_panel));
+        buf.set_line(text_x, area.y + row + 1 + i as u16, &line, area.width - 6);
+    }
+}
+
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color) -> u16 {
+    if text.is_empty() {
+        let dot = Line::raw("·").style(Style::default().fg(text_muted));
+        buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
+        return 1;
+    }
+    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
+    let msg_height = wrapped.len() as u16;
+    for (i, line_text) in wrapped.iter().enumerate() {
+        if row + i as u16 >= max_rows { break; }
+        let line = Line::raw(line_text).style(Style::default().fg(text_secondary));
+        buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
+    }
+    msg_height
+}
+
+fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
+    let thought_text = format!("Thought for {:.1}s", duration_secs);
+    let line = Line::raw(thought_text).style(Style::default().fg(text_muted));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    1
+}
+
+fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
+    let line = Line::raw(text).style(Style::default().fg(text_muted));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    1
+}
+
+fn render_tool_call_msg(
+    name: &str,
+    args: &str,
+    result: Option<&str>,
+    is_error: bool,
+    area: Rect,
+    row: u16,
+    margin_x: u16,
+    text_x: u16,
+    max_rows: u16,
+    buf: &mut Buffer,
+    text_secondary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+    success: ratatui::style::Color,
+    error: ratatui::style::Color,
+) -> u16 {
+    draw_tool_header(margin_x, text_x, area, row, buf, text_muted, text_secondary, name, args);
+    let mut rendered = 1;
+    if let Some(result_text) = result {
+        rendered = draw_tool_result(result_text, is_error, area, row, text_x, max_rows, buf, text_muted, success, error);
+    }
+    rendered
+}
+
+fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, text_secondary: ratatui::style::Color, name: &str, args: &str) {
+    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
+    let header = format!("{}({})", name, args);
+    let line = Line::raw(header).style(Style::default().fg(text_secondary));
+    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+}
+
+fn draw_tool_result(result_text: &str, is_error: bool, area: Rect, row: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, success: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
+    let result_y = row + 1;
+    if result_y >= max_rows { return 1; }
+    for (i, ch) in "  ".chars().enumerate() {
+        buf.get_mut(text_x - 2 + i as u16, area.y + result_y).set_char(ch).set_style(Style::default().fg(text_muted));
+    }
+    buf.get_mut(text_x, area.y + result_y).set_char('→').set_style(Style::default().fg(text_muted));
+    buf.get_mut(text_x + 1, area.y + result_y).set_char(if is_error { '×' } else { '✓' }).set_style(Style::default().fg(if is_error { error } else { success }));
+    let line = Line::raw(result_text).style(Style::default().fg(text_muted));
+    buf.set_line(text_x + 3, area.y + result_y, &line, area.width - 7);
+    2
+}
+
+fn render_edit_msg(filename: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, code_path: ratatui::style::Color) -> u16 {
+    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_secondary));
+    let edit_label = "Edit ";
+    let filename_only = std::path::Path::new(filename).file_name().and_then(|n| n.to_str()).unwrap_or(filename);
+    let edit_len = edit_label.len() as u16;
+    for (i, ch) in edit_label.chars().enumerate() {
+        buf.get_mut(text_x + i as u16, area.y + row).set_char(ch).set_style(Style::default().fg(text_secondary));
+    }
+    for (i, ch) in filename_only.chars().enumerate() {
+        let x_pos = text_x + edit_len + i as u16;
+        if x_pos < area.x + area.width {
+            buf.get_mut(x_pos, area.y + row).set_char(ch).set_style(Style::default().fg(code_path));
+        }
+    }
+    1
 }
 
 #[cfg(test)]
