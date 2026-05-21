@@ -174,6 +174,7 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
                                     tui.add_message(tidy_tui::components::message_list::MessageItem::User {
                                         text: text.clone(),
                                         model: Some("You".to_string()),
+                                        timestamp: None,
                                     });
 
                                     // Spawn agent if not running
