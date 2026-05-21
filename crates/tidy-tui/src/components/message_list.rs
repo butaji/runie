@@ -78,16 +78,100 @@ fn render_pill(
     );
 }
 
+fn render_bookmark(
+    buf: &mut ratatui::buffer::Buffer,
+    area: ratatui::layout::Rect,
+    theme: &ThemeWrapper,
+    text: &str,
+) {
+    let height = area.height as usize;
+    let width = area.width as usize;
+
+    if height == 0 || width == 0 {
+        return;
+    }
+
+    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
+    let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
+
+    // Generate vertical gradient colors (top to bottom)
+    let mut colors = Vec::with_capacity(height);
+    for i in 0..height {
+        let t = if height > 1 { i as f32 / (height - 1) as f32 } else { 0.0 };
+        colors.push(lerp_color(accent_primary, accent_secondary, t));
+    }
+
+    // Top border: ╭ followed by ─────
+    buf.get_mut(area.x, area.y)
+        .set_char('╭')
+        .set_style(Style::default().fg(colors[0]).bg(colors[0]));
+    for col in 1..width - 1 {
+        buf.get_mut(area.x + col as u16, area.y)
+            .set_char('─')
+            .set_style(Style::default().fg(colors[0]).bg(colors[0]));
+    }
+    buf.get_mut(area.x + width as u16 - 1, area.y)
+        .set_char('╮')
+        .set_style(Style::default().fg(colors[0]).bg(colors[0]));
+
+    // Middle rows with text (if height > 2)
+    let text_len = text.len();
+    let text_start_col = (width.saturating_sub(text_len + 2)) / 2;
+
+    for row in 1..height - 1 {
+        let color = colors[row.min(colors.len() - 1)];
+        // Left border
+        buf.get_mut(area.x, area.y + row as u16)
+            .set_char('│')
+            .set_style(Style::default().fg(color).bg(color));
+
+        // Text area
+        for col in 1..width - 1 {
+            let local_col = col - text_start_col;
+            if local_col >= 0 && (local_col as usize) < text_len {
+                let ch = text.chars().nth(local_col as usize).unwrap_or(' ');
+                buf.get_mut(area.x + col as u16, area.y + row as u16)
+                    .set_char(ch)
+                    .set_style(Style::default().fg(ratatui::style::Color::Black).bg(color));
+            } else {
+                buf.get_mut(area.x + col as u16, area.y + row as u16)
+                    .set_char(' ')
+                    .set_style(Style::default().bg(color));
+            }
+        }
+
+        // Right border
+        buf.get_mut(area.x + width as u16 - 1, area.y + row as u16)
+            .set_char('│')
+            .set_style(Style::default().fg(color).bg(color));
+    }
+
+    // Bottom border: ╰ followed by ─────
+    let bottom_row = height - 1;
+    let bottom_color = colors[colors.len().saturating_sub(1)];
+    buf.get_mut(area.x, area.y + bottom_row as u16)
+        .set_char('╰')
+        .set_style(Style::default().fg(bottom_color).bg(bottom_color));
+    for col in 1..width - 1 {
+        buf.get_mut(area.x + col as u16, area.y + bottom_row as u16)
+            .set_char('─')
+            .set_style(Style::default().fg(bottom_color).bg(bottom_color));
+    }
+    buf.get_mut(area.x + width as u16 - 1, area.y + bottom_row as u16)
+        .set_char('╯')
+        .set_style(Style::default().fg(bottom_color).bg(bottom_color));
+}
+
 #[derive(Clone)]
 pub struct MessageList {
     pub messages: Vec<MessageItem>,
     pub scroll_offset: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MessageItem {
-    User { text: String },
-    Assistant { text: String },
+    User { text: String, model: Option<String> },
+    Assistant { text: String, model: Option<String> },
     Thought { duration_secs: f32 },
     ToolCall { name: String, args: String },
     ToolResult { name: String, result: String, is_error: bool },
@@ -108,6 +192,7 @@ impl MessageList {
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         // Fill background with bg.base
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+        let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
         for y in area.y..area.y + area.height {
             for x in area.x..area.x + area.width {
                 buf.get_mut(x, y).set_style(Style::default().bg(bg_base));
@@ -123,35 +208,66 @@ impl MessageList {
             }
 
             match msg {
-                MessageItem::User { text } => {
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
-                    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
-                    let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
+                MessageItem::User { text, model: _ } => {
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(10));
                     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+                    let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
 
+                    let msg_height = wrapped.len() as i32;
+                    let msg_area_height = msg_height.max(1);
+
+                    // Draw gray background panel for user message
+                    let bg_area = Rect::new(area.x + 1, area.y + y as u16, area.width - 3, msg_area_height as u16);
+                    for row in 0..msg_area_height {
+                        for x in bg_area.x..bg_area.x + bg_area.width {
+                            buf.get_mut(x, bg_area.y + row as u16).set_style(Style::default().bg(bg_panel));
+                        }
+                    }
+
+                    // Draw left border indicator (│ in accent.primary)
+                    for row in 0..msg_area_height {
+                        buf.get_mut(area.x + 1, area.y + y as u16 + row as u16)
+                            .set_char('│')
+                            .set_style(Style::default().fg(accent_primary).bg(bg_panel));
+                    }
+
+                    // Draw message text left-aligned
                     for line_text in wrapped {
                         if y >= max_y { break; }
-
-                        let line_width = (line_text.len() as u16 + 4).min(area.width.saturating_sub(4));
-                        let start_x = area.x + area.width.saturating_sub(line_width + 2);
-                        let pill_area = Rect::new(start_x, area.y + y as u16, line_width, 1);
-
-                        render_pill(buf, pill_area, accent_primary, accent_secondary, &line_text, text_primary);
+                        let line = Line::from(vec![Span::styled(line_text.as_str(), Style::default().fg(text_primary))]);
+                        buf.set_line(area.x + 3, area.y + y as u16, &line, area.width - 10);
                         y += 1;
                     }
+
+                    // Draw bookmark on right edge
+                    let bookmark_text = "You";
+                    let bookmark_width = 6u16; // enough for " You " with box chars
+                    let bookmark_x = area.x + area.width - 1 - bookmark_width;
+                    let bookmark_area = Rect::new(bookmark_x, area.y + y as u16 - msg_height as u16, bookmark_width, msg_area_height as u16);
+                    render_bookmark(buf, bookmark_area, theme, bookmark_text);
                     y += 1; // spacing
                 }
-                MessageItem::Assistant { text } => {
-                    // Left-aligned, text.primary, full width
-                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
+                MessageItem::Assistant { text, model } => {
+                    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(10));
                     let assistant_fg: ratatui::style::Color = theme.color("text.primary").into();
 
+                    let msg_height = wrapped.len() as i32;
+                    let msg_area_height = msg_height.max(1);
+
+                    // Draw message text left-aligned (no background for assistant)
                     for line_text in wrapped {
                         if y >= max_y { break; }
                         let line = Line::from(vec![Span::styled(line_text.as_str(), Style::default().fg(assistant_fg))]);
-                        buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 4);
+                        buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 10);
                         y += 1;
                     }
+
+                    // Draw bookmark on right edge
+                    let bookmark_text = model.as_deref().unwrap_or("Assistant");
+                    let bookmark_width = (bookmark_text.len() as u16 + 4).max(6);
+                    let bookmark_x = area.x + area.width - 1 - bookmark_width;
+                    let bookmark_area = Rect::new(bookmark_x, area.y + y as u16 - msg_height as u16, bookmark_width, msg_area_height as u16);
+                    render_bookmark(buf, bookmark_area, theme, bookmark_text);
                     y += 1; // spacing after assistant message
                 }
                 MessageItem::Thought { duration_secs } => {
@@ -161,7 +277,7 @@ impl MessageList {
                     let line = Line::from(vec![
                         Span::styled(&thought_text, Style::default().fg(thought_fg).add_modifier(Modifier::ITALIC)),
                     ]);
-                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 4);
+                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 6);
                     y += 1;
                     y += 1; // spacing
                 }
@@ -170,7 +286,7 @@ impl MessageList {
                     let tool_fg: ratatui::style::Color = theme.color("text.muted").into();
                     let header = format!("▼ Tool: {}({})", name, args);
                     let line = Line::from(vec![Span::styled(&header, Style::default().fg(tool_fg))]);
-                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 4);
+                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 6);
                     y += 1;
                     y += 1; // spacing
                 }
@@ -187,7 +303,7 @@ impl MessageList {
                         Span::styled(format!("{} {}: ", icon, name), style),
                         Span::styled(&result_truncated, Style::default().fg(result_fg)),
                     ]);
-                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 4);
+                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 6);
                     y += 1;
                     y += 1; // spacing
                 }
@@ -197,7 +313,7 @@ impl MessageList {
                         Span::styled("✎ ", Style::default().fg(edit_fg)),
                         Span::styled(filename.as_str(), Style::default().fg(edit_fg)),
                     ]);
-                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 4);
+                    buf.set_line(area.x + 2, area.y + y as u16, &line, area.width - 6);
                     y += 1;
                     y += 1; // spacing
                 }
@@ -221,6 +337,35 @@ impl MessageList {
 
     pub fn scroll_down(&mut self) {
         self.scroll_offset += 1;
+    }
+
+    /// Update the last assistant message with new text (for streaming)
+    pub fn update_last_assistant(&mut self, new_text: &str) {
+        if let Some(last) = self.messages.last_mut() {
+            if let MessageItem::Assistant { ref mut text, .. } = last {
+                *text = new_text.to_string();
+            }
+        }
+    }
+
+    /// Check if the last message is an Assistant message
+    pub fn has_assistant_in_progress(&self) -> bool {
+        matches!(self.messages.last(), Some(MessageItem::Assistant { .. }))
+    }
+
+    /// Add or update assistant message. If last message is assistant, updates it.
+    /// Otherwise, adds a new assistant message.
+    pub fn add_or_update_assistant(&mut self, text: &str, model: Option<String>) {
+        if let Some(last) = self.messages.last_mut() {
+            if let MessageItem::Assistant { text: ref mut existing_text, .. } = last {
+                *existing_text = text.to_string();
+                return;
+            }
+        }
+        self.messages.push(MessageItem::Assistant {
+            text: text.to_string(),
+            model,
+        });
     }
 }
 
@@ -253,5 +398,107 @@ fn truncate(text: &str, max_len: usize) -> String {
         format!("{}...", &text[..max_len])
     } else {
         text.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_last_assistant() {
+        let mut list = MessageList::default();
+        list.messages.push(MessageItem::User {
+            text: "Hello".to_string(),
+            model: None,
+        });
+        list.messages.push(MessageItem::Assistant {
+            text: "Hi".to_string(),
+            model: Some("gpt-4".to_string()),
+        });
+
+        list.update_last_assistant("Hi there");
+        assert_eq!(
+            list.messages.last(),
+            Some(&MessageItem::Assistant {
+                text: "Hi there".to_string(),
+                model: Some("gpt-4".to_string())
+            })
+        );
+    }
+
+    #[test]
+    fn test_add_or_update_assistant_updates_existing() {
+        let mut list = MessageList::default();
+        list.messages.push(MessageItem::Assistant {
+            text: "Partial".to_string(),
+            model: Some("gpt-4".to_string()),
+        });
+
+        list.add_or_update_assistant("Complete response", Some("gpt-4".to_string()));
+        assert_eq!(list.messages.len(), 1);
+        assert_eq!(
+            list.messages[0],
+            MessageItem::Assistant {
+                text: "Complete response".to_string(),
+                model: Some("gpt-4".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn test_add_or_update_assistant_adds_new() {
+        let mut list = MessageList::default();
+        list.messages.push(MessageItem::User {
+            text: "Hello".to_string(),
+            model: None,
+        });
+
+        list.add_or_update_assistant("Response", Some("gpt-4".to_string()));
+        assert_eq!(list.messages.len(), 2);
+        assert_eq!(
+            list.messages[1],
+            MessageItem::Assistant {
+                text: "Response".to_string(),
+                model: Some("gpt-4".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn test_has_assistant_in_progress_true() {
+        let mut list = MessageList::default();
+        list.messages.push(MessageItem::Assistant {
+            text: "Thinking...".to_string(),
+            model: None,
+        });
+        assert!(list.has_assistant_in_progress());
+    }
+
+    #[test]
+    fn test_has_assistant_in_progress_false() {
+        let mut list = MessageList::default();
+        list.messages.push(MessageItem::User {
+            text: "Hello".to_string(),
+            model: None,
+        });
+        assert!(!list.has_assistant_in_progress());
+    }
+
+    #[test]
+    fn test_update_last_assistant_no_op_when_no_assistant() {
+        let mut list = MessageList::default();
+        list.messages.push(MessageItem::User {
+            text: "Hello".to_string(),
+            model: None,
+        });
+        list.update_last_assistant("This should not change anything");
+        assert_eq!(
+            list.messages[0],
+            MessageItem::User {
+                text: "Hello".to_string(),
+                model: None
+            }
+        );
     }
 }

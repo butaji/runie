@@ -1,5 +1,10 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use tokio::sync::mpsc;
+use tidy_agent::events::{AgentEvent, AgentMessage, ContentPart};
+use tidy_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
+use tidy_agent::pi::AgentTool;
+use tidy_ai::providers::MockProvider;
 
 /// Tidy coding harness — AI agent toolkit for the terminal.
 ///
@@ -133,44 +138,93 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
 
     tui.render()?;
 
-    while tui.running {
-        if event::poll(Duration::from_millis(50))? {
-            if let CEvent::Key(key) = event::read()? {
-                if let Some(action) = tui.handle_event(CEvent::Key(key)) {
-                    match action {
-                        TuiAction::Quit => break,
-                        TuiAction::Submit(text) => {
-                            tui.add_message(tidy_tui::components::message_list::MessageItem::User {
-                                text: text.clone()
-                            });
+    // Create async channels for agent communication
+    let (agent_event_tx, mut agent_event_rx) = mpsc::unbounded_channel::<AgentEvent>();
 
-                            if mock {
-                                tui.add_message(tidy_tui::components::message_list::MessageItem::Thought {
-                                    duration_secs: 1.2
-                                });
-                                let response = generate_mock_response(&text);
-                                tui.add_message(tidy_tui::components::message_list::MessageItem::Assistant {
-                                    text: response
-                                });
-                            } else {
-                                tui.add_message(tidy_tui::components::message_list::MessageItem::Assistant {
-                                    text: format!("Processing: {}", text)
-                                });
-                                tui.add_message(tidy_tui::components::message_list::MessageItem::Thought {
-                                    duration_secs: 1.5
-                                });
+    // Track conversation history and agent task
+    let mut conversation_history: Vec<AgentMessage> = vec![];
+    let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
+
+    while tui.running {
+        tokio::select! {
+            // Poll for crossterm events (non-blocking via sleep)
+            _ = tokio::time::sleep(Duration::from_millis(50)) => {
+                if event::poll(Duration::from_millis(0))? {
+                    if let CEvent::Key(key) = event::read()? {
+                        if let Some(action) = tui.handle_event(CEvent::Key(key)) {
+                            match action {
+                                TuiAction::Quit => break,
+                                TuiAction::Submit(text) => {
+                                    // Add user message to history
+                                    let user_msg = AgentMessage {
+                                        role: "user".to_string(),
+                                        content: vec![ContentPart::Text { text: text.clone() }],
+                                        timestamp: chrono::Utc::now().timestamp_millis(),
+                                        usage: None,
+                                        stop_reason: None,
+                                        error_message: None,
+                                    };
+                                    conversation_history.push(user_msg);
+
+                                    // Add user message to UI
+                                    tui.add_message(tidy_tui::components::message_list::MessageItem::User {
+                                        text: text.clone(),
+                                        model: Some("You".to_string()),
+                                    });
+
+                                    // Spawn agent if not running
+                                    if agent_task.is_none() {
+                                        let event_tx = agent_event_tx.clone();
+                                        let messages = conversation_history.clone();
+                                        let config = AgentLoopConfig {
+                                            system_prompt: "You are a helpful coding assistant.".to_string(),
+                                            model: "gpt-4".to_string(),
+                                            thinking_level: "low".to_string(),
+                                        };
+
+                                        agent_task = Some(tokio::spawn(async move {
+                                            let provider = MockProvider::new();
+                                            let tools: Vec<AgentTool> = vec![];
+
+                                            match run_agent_loop(
+                                                messages,
+                                                config,
+                                                &provider,
+                                                &tools,
+                                                event_tx,
+                                            ).await {
+                                                Ok(_) => {},
+                                                Err(e) => eprintln!("Agent error: {}", e),
+                                            }
+                                        }));
+                                    }
+                                }
+                                TuiAction::Command(cmd) => {
+                                    println!("Command: {}", cmd);
+                                }
+                                _ => {}
                             }
                         }
-                        TuiAction::Command(cmd) => {
-                            println!("Command: {}", cmd);
-                        }
-                        _ => {}
                     }
                 }
+            }
+
+            // Handle agent events
+            Some(event) = agent_event_rx.recv() => {
+                // Check if agent ended to clear the task
+                if let AgentEvent::AgentEnd { .. } = &event {
+                    agent_task = None;
+                }
+                tui.on_agent_event(event);
             }
         }
 
         tui.render()?;
+    }
+
+    // Abort any running agent task before cleanup
+    if let Some(task) = agent_task {
+        task.abort();
     }
 
     tui.cleanup()?;
