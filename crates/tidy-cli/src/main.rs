@@ -1,3 +1,5 @@
+mod git;
+
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -113,12 +115,14 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     let config = TuiConfig::default();
     let mut tui = Tui::new(config)?;
 
-    tui.state.top_bar_repo = "tidy".to_string();
-    tui.state.top_bar_branch = if mock { "mock/main".to_string() } else { "main".to_string() };
-    tui.state.top_bar_path = workspace.display().to_string();
-    tui.state.top_bar_checks_passed = Some(4);
-    tui.state.top_bar_checks_total = Some(4);
-    tui.state.top_bar_percentage = Some(4.56);
+    // Detect real git info (even in mock mode, for now)
+    let git_info = git::detect_git_info(&workspace);
+    tui.state.top_bar_repo = git_info.repo;
+    tui.state.top_bar_branch = git_info.branch;
+    tui.state.top_bar_path = git_info.relative_path;
+    tui.state.top_bar_checks_passed = None;
+    tui.state.top_bar_checks_total = None;
+    tui.state.top_bar_percentage = None;
 
     tui.state.input_right_info = if mock {
         "mock-provider · no-api-key".to_string()
@@ -253,7 +257,6 @@ async fn run_tui(workspace: PathBuf, mock: bool) -> Result<(), Box<dyn std::erro
     tui.cleanup()?;
     Ok(())
 }
-
 fn generate_mock_response(input: &str) -> String {
     let input_lower = input.to_lowercase();
 
