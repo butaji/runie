@@ -9,6 +9,7 @@ pub mod agent;
 pub mod events;
 pub mod pi;
 pub mod loop_engine;
+pub mod harness;
 
 pub use config::{AgentConfig, ToolExecutionMode};
 pub use hook::{Hook, HookDecision, HookError, SafetyHook};
