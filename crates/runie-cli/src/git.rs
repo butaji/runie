@@ -18,8 +18,14 @@ impl Default for GitInfo {
 }
 
 pub fn detect_git_info(workspace: &PathBuf) -> GitInfo {
-    // Try to get repo name from git remote
-    let repo = std::process::Command::new("git")
+    let repo = detect_remote_repo(workspace);
+    let branch = detect_branch(workspace);
+    let relative_path = detect_relative_path(workspace);
+    GitInfo { repo, branch, relative_path }
+}
+
+fn detect_remote_repo(workspace: &PathBuf) -> String {
+    std::process::Command::new("git")
         .args(["remote", "get-url", "origin"])
         .current_dir(workspace)
         .output()
@@ -27,9 +33,6 @@ pub fn detect_git_info(workspace: &PathBuf) -> GitInfo {
         .and_then(|output| {
             if output.status.success() {
                 let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                // Extract repo name from URL
-                // e.g., git@github.com:user/repo.git → repo
-                // e.g., https://github.com/user/repo.git → repo
                 url.split('/').last()
                     .map(|s| s.trim_end_matches(".git").to_string())
                     .filter(|s| !s.is_empty())
@@ -38,14 +41,14 @@ pub fn detect_git_info(workspace: &PathBuf) -> GitInfo {
             }
         })
         .unwrap_or_else(|| {
-            // Fallback: use directory name
             workspace.file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| "runie".to_string())
-        });
+        })
+}
 
-    // Try to get current branch
-    let branch = std::process::Command::new("git")
+fn detect_branch(workspace: &PathBuf) -> String {
+    std::process::Command::new("git")
         .args(["branch", "--show-current"])
         .current_dir(workspace)
         .output()
@@ -58,10 +61,11 @@ pub fn detect_git_info(workspace: &PathBuf) -> GitInfo {
                 None
             }
         })
-        .unwrap_or_else(|| "main".to_string());
+        .unwrap_or_else(|| "main".to_string())
+}
 
-    // Try to get path relative to git root
-    let relative_path = std::process::Command::new("git")
+fn detect_relative_path(workspace: &PathBuf) -> String {
+    std::process::Command::new("git")
         .args(["rev-parse", "--show-prefix"])
         .current_dir(workspace)
         .output()
@@ -78,7 +82,5 @@ pub fn detect_git_info(workspace: &PathBuf) -> GitInfo {
                 None
             }
         })
-        .unwrap_or_default();
-
-    GitInfo { repo, branch, relative_path }
+        .unwrap_or_default()
 }
