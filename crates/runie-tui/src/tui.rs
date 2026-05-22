@@ -71,6 +71,9 @@ pub struct Tui {
     pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
     pub state: AppState,
     command_palette: CommandPalette,
+    dirty: bool,
+    action_log: Vec<Msg>,
+    action_log_capacity: usize,
 }
 
 impl Tui {
@@ -89,6 +92,9 @@ impl Tui {
             terminal,
             state: AppState::default(),
             command_palette: CommandPalette::new(),
+            dirty: true,
+            action_log: Vec::new(),
+            action_log_capacity: 1000,
         })
     }
 
@@ -102,7 +108,15 @@ impl Tui {
     /// Dispatch a msg to update state (unidirectional data flow)
     /// Returns Vec<Cmd> to be executed by the runtime
     pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
+        self.log_action(&msg);
         update(&mut self.state, msg)
+    }
+
+    fn log_action(&mut self, msg: &Msg) {
+        if self.action_log.len() >= self.action_log_capacity {
+            self.action_log.remove(0);
+        }
+        self.action_log.push(msg.clone());
     }
 
     /// Calculate the height needed for the input bar based on its content
@@ -114,10 +128,10 @@ impl Tui {
     }
 
     pub fn render(&mut self) -> io::Result<()> {
-        if !self.state.dirty {
+        if !self.dirty {
             return Ok(());
         }
-        self.state.dirty = false;
+        self.dirty = false;
 
         let size = self.terminal.size()?;
         let area = Rect::new(0, 0, size.width, size.height);
@@ -341,28 +355,9 @@ impl Tui {
         None
     }
 
-    pub fn add_message(&mut self, item: MessageItem) {
-        self.state.messages.push(item);
-    }
-
     pub fn on_agent_event(&mut self, event: AgentEvent) -> Vec<Cmd> {
         // Use the update() reducer for all agent events
-        self.update(Msg::AgentEvent(event.clone()))
-    }
-
-    pub fn show_overlay(&mut self, _overlay: Overlay) {
-        self.state.mode = TuiMode::Overlay;
-    }
-
-    pub fn hide_overlay(&mut self) {
-        self.state.mode = TuiMode::Chat;
-    }
-
-    pub fn request_permission(&mut self, tool_name: &str, tool_args: &str, description: &str) {
-        self.state.permission_modal.tool = Some(tool_name.to_string());
-        self.state.permission_modal.args = Some(tool_args.to_string());
-        self.state.permission_modal.desc = Some(description.to_string());
-        self.state.mode = TuiMode::Permission;
+        self.update(Msg::AgentEvent(event))
     }
 
     pub fn is_permission_modal_active(&self) -> bool {

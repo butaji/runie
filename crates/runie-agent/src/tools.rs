@@ -1,7 +1,8 @@
 use std::sync::Arc;
+use std::pin::Pin;
 
-/// Handler for executing a tool with JSON arguments, returning a result string or error.
-pub type ToolHandler = Arc<dyn Fn(serde_json::Value) -> Result<String, String> + Send + Sync>;
+/// Handler for executing a tool with JSON arguments, returning a future that resolves to a result string or error.
+pub type ToolHandler = Arc<dyn Fn(serde_json::Value) -> Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>> + Send + Sync>;
 
 #[derive(Clone)]
 pub struct AgentTool {

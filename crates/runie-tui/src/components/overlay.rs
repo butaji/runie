@@ -14,6 +14,7 @@ pub struct Overlay {
     pub tabs: Vec<String>,
     pub active_tab: usize,
     pub show_close: bool,
+    pub theme: ThemeWrapper,
 }
 
 impl Default for Overlay {
@@ -24,6 +25,7 @@ impl Default for Overlay {
             tabs: Vec::new(),
             active_tab: 0,
             show_close: true,
+            theme: ThemeWrapper::default(),
         }
     }
 }
@@ -60,8 +62,7 @@ impl StyleHelpers {
 
 impl Widget for Overlay {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let theme = ThemeWrapper::default();
-        let sp = StyleHelpers::new(&theme);
+        let sp = StyleHelpers::new(&self.theme);
 
         if area.width < 10 || area.height < 5 {
             return;
@@ -74,7 +75,7 @@ impl Widget for Overlay {
 }
 
 fn render_title_bar(overlay: &Overlay, area: Rect, buf: &mut Buffer, sp: &StyleHelpers) {
-    let text_tertiary: ratatui::style::Color = ThemeWrapper::default().color("text.dim").into();
+    let text_tertiary: ratatui::style::Color = overlay.theme.color("text.dim").into();
 
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
@@ -83,11 +84,6 @@ fn render_title_bar(overlay: &Overlay, area: Rect, buf: &mut Buffer, sp: &StyleH
         .title_style(sp.phase());
 
     block.render(area, buf);
-
-    if !overlay.title.is_empty() {
-        let title_line = Line::from(vec![Span::styled(&overlay.title, sp.phase())]);
-        buf.set_line(area.x + 2, area.y, &title_line, area.width - 4);
-    }
 
     if overlay.show_close {
         let close_line = Line::from(vec![Span::styled("[x]", sp.tertiary())]);

@@ -49,13 +49,28 @@ impl Tool for BashTool {
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'command' argument".to_string()))?;
         let timeout_secs = args["timeout"].as_u64().unwrap_or(60);
 
-        // Block dangerous commands
-        let dangerous = ["rm -rf /", "rm -rf /*", ":(){ :|:& };:", "> /dev/sda"];
-        for pattern in &dangerous {
+        // Block shell metacharacters that enable command injection
+        let forbidden_chars = ['|', ';', '&', '>', '<', '(', ')', '`', '$'];
+        for ch in forbidden_chars {
+            if command.contains(ch) {
+                return Err(ToolError::ExecutionFailed(format!(
+                    "Shell metacharacter '{}' detected. Use simple commands only.", ch
+                )));
+            }
+        }
+
+        // Block dangerous command patterns
+        let dangerous_patterns = [
+            "rm -rf /", "rm -rf /*", "rm -rf ~/",
+            ":(){ :|:& };:", ": () { : | : & } ; :",
+            "> /dev/sda", "> /dev/null", "> /dev/zero",
+            "/proc/", "/sys/", "--no-preserve-root",
+        ];
+        for pattern in &dangerous_patterns {
             if command.contains(pattern) {
-                return Err(ToolError::ExecutionFailed(
-                    format!("Blocked dangerous command: {}", pattern)
-                ));
+                return Err(ToolError::ExecutionFailed(format!(
+                    "Dangerous command pattern '{}' blocked", pattern
+                )));
             }
         }
 

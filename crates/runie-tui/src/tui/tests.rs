@@ -3,6 +3,7 @@ use crate::components::{
     AgentList, AgentItem, AgentStatus, MessageItem,
     ContextPanel, GitChange, GitStatus, SessionTreeNavigator, CommandPalette,
 };
+use crate::theme::ThemeWrapper;
 use crate::tui::update::update;
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
 use runie_ai::TokenUsage;
@@ -36,6 +37,7 @@ mod tests {
                     status: AgentStatus::Completed,
                 },
             ],
+            theme: ThemeWrapper::default(),
         };
         assert_eq!(agent_list.agents.len(), 2);
         assert_eq!(agent_list.agents[0].id, "coder");
@@ -111,8 +113,6 @@ mod tests {
             current_model: None,
             top_bar: TopBarState::default(),
             permission_modal: PermissionModalState::default(),
-            action_log: Vec::new(),
-            action_log_capacity: 1000,
             command_palette: CommandPaletteState::default(),
             scroll: ScrollState::default(),
             animation: AnimationState::default(),
@@ -120,7 +120,6 @@ mod tests {
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
-            dirty: true,
         }
     }
 
@@ -350,71 +349,6 @@ mod tests {
         } else {
             panic!("Expected Assistant message");
         }
-    }
-
-    // ─── Time-Travel Tests ─────────────────────────────────────────────────────
-
-    #[test]
-    fn test_action_log_records_msgs() {
-        let mut state = make_state();
-        update(&mut state, Msg::InsertChar('h'));
-        update(&mut state, Msg::InsertChar('i'));
-        update(&mut state, Msg::Submit);
-
-        assert_eq!(state.action_log.len(), 3);
-        assert!(matches!(state.action_log[0], Msg::InsertChar('h')));
-        assert!(matches!(state.action_log[1], Msg::InsertChar('i')));
-        assert!(matches!(state.action_log[2], Msg::Submit));
-    }
-
-    #[test]
-    fn test_action_log_capacity() {
-        let mut state = make_state();
-        state.action_log_capacity = 5;
-
-        for i in 0..10 {
-            update(&mut state, Msg::InsertChar('a'));
-        }
-
-        assert_eq!(state.action_log.len(), 5); // Only keeps last 5
-    }
-
-    #[test]
-    fn test_replay_actions() {
-        let mut state = make_state();
-        update(&mut state, Msg::InsertChar('h'));
-        update(&mut state, Msg::InsertChar('i'));
-        update(&mut state, Msg::Submit);
-
-        let replayed = state.replay_to(2); // Replay first 2 msgs
-        assert_eq!(replayed.input_lines, vec!["hi"]);
-        assert_eq!(replayed.messages.len(), 0); // Submit not replayed
-
-        let replayed_full = state.replay_to(3); // Replay all 3
-        assert_eq!(replayed_full.messages.len(), 1);
-    }
-
-    #[test]
-    fn test_replay_produces_same_state() {
-        let mut state = make_state();
-        // Complex sequence
-        update(&mut state, Msg::InsertChar('h'));
-        update(&mut state, Msg::InsertChar('e'));
-        update(&mut state, Msg::InsertChar('l'));
-        update(&mut state, Msg::InsertChar('l'));
-        update(&mut state, Msg::InsertChar('o'));
-        update(&mut state, Msg::Submit);
-        update(&mut state, Msg::ToggleSidebar);
-        update(&mut state, Msg::InsertChar('w'));
-        update(&mut state, Msg::InsertChar('o'));
-        update(&mut state, Msg::InsertChar('r'));
-        update(&mut state, Msg::InsertChar('l'));
-        update(&mut state, Msg::InsertChar('d'));
-
-        let replayed = state.replay_to(state.action_log.len());
-        assert_eq!(replayed.input_lines, state.input_lines);
-        assert_eq!(replayed.messages, state.messages);
-        assert_eq!(replayed.show_sidebar, state.show_sidebar);
     }
 
     #[test]

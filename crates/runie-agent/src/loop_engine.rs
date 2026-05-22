@@ -32,8 +32,8 @@ pub async fn run_agent_loop(
     config: AgentLoopConfig,
     provider: &dyn Provider,
     tools: &[AgentTool],
-    event_tx: mpsc::UnboundedSender<AgentEvent>,
-    mut permission_rx: mpsc::UnboundedReceiver<PermissionDecision>,
+    event_tx: mpsc::Sender<AgentEvent>,
+    mut permission_rx: mpsc::Receiver<PermissionDecision>,
     registry: Option<Arc<ToolRegistry>>,
     hooks: Vec<Arc<dyn Hook>>,
 ) -> Result<(), String> {
@@ -51,9 +51,11 @@ pub async fn run_agent_loop(
     loop {
         turn_count += 1;
         if turn_count > config.max_turns {
-            event_tx.send(AgentEvent::Error {
+            if let Err(e) = event_tx.send(AgentEvent::Error {
                 message: format!("Max turns ({}) exceeded", config.max_turns)
-            }).ok();
+            }).await {
+                tracing::error!("Failed to send event: {}", e);
+            }
             break;
         }
 
@@ -74,9 +76,11 @@ pub async fn run_agent_loop(
             error_message: None,
         };
 
-        event_tx.send(AgentEvent::MessageStart {
+        if let Err(e) = event_tx.send(AgentEvent::MessageStart {
             message: assistant_message.clone(),
-        }).ok();
+        }).await {
+            tracing::error!("Failed to send event: {}", e);
+        }
 
         // Process stream
         let mut pending_tool_calls: Vec<(ContentPart, String, String)> = vec![];
@@ -88,9 +92,11 @@ pub async fn run_agent_loop(
                 LlmEvent::MessageDelta { content } => {
                     text_content.push_str(&content);
                     assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
-                    event_tx.send(AgentEvent::MessageUpdate {
+                    if let Err(e) = event_tx.send(AgentEvent::MessageUpdate {
                         message: assistant_message.clone(),
-                    }).ok();
+                    }).await {
+                        tracing::error!("Failed to send event: {}", e);
+                    }
                 }
                 LlmEvent::ToolCallDelta { name, arguments } => {
                     pending_tool_calls.push((
@@ -112,47 +118,59 @@ pub async fn run_agent_loop(
                     break;
                 }
                 LlmEvent::Usage { prompt_tokens, completion_tokens, total_tokens } => {
-                    event_tx.send(AgentEvent::TokenUsage {
+                    if let Err(e) = event_tx.send(AgentEvent::TokenUsage {
                         prompt_tokens,
                         completion_tokens,
                         total_tokens,
-                    }).ok();
+                    }).await {
+                        tracing::error!("Failed to send event: {}", e);
+                    }
                 }
-                _ => {}
+                _ => {
+                    tracing::warn!("Unhandled LLM event variant in agent loop");
+                }
             }
         }
 
         // Send message_end
         assistant_message.content = vec![ContentPart::Text { text: text_content }];
-        event_tx.send(AgentEvent::MessageEnd {
+        if let Err(e) = event_tx.send(AgentEvent::MessageEnd {
             message: assistant_message.clone(),
-        }).ok();
+        }).await {
+            tracing::error!("Failed to send event: {}", e);
+        }
 
         messages.push(assistant_message.clone());
 
         // Execute tool calls
         if pending_tool_calls.is_empty() {
             // No tools, turn is done
-            event_tx.send(AgentEvent::TurnEnd {
+            if let Err(e) = event_tx.send(AgentEvent::TurnEnd {
                 message: assistant_message.clone(),
                 tool_results: vec![],
-            }).ok();
+            }).await {
+                tracing::error!("Failed to send event: {}", e);
+            }
             break;
         }
 
         let mut tool_results = vec![];
         for (tool_use, _tool_name, _args_str) in pending_tool_calls {
             if let ContentPart::ToolUse { id, name, input } = &tool_use {
-                event_tx.send(AgentEvent::ToolExecutionStart {
+                if let Err(e) = event_tx.send(AgentEvent::ToolExecutionStart {
                     tool_call_id: id.clone(),
-                }).ok();
+                }).await {
+                    tracing::error!("Failed to send event: {}", e);
+                }
 
                 // Send permission request
-                event_tx.send(AgentEvent::PermissionRequest {
+                if let Err(e) = event_tx.send(AgentEvent::PermissionRequest {
                     tool_call_id: id.clone(),
                     tool_name: name.clone(),
                     tool_args: serde_json::to_string(input).unwrap_or_default(),
-                }).ok();
+                }).await {
+                    tracing::error!("Failed to send event: {}", e);
+                }
 
                 // Wait for permission decision (correlated by tool_call_id)
                 let decision = tokio::time::timeout(
@@ -164,28 +182,36 @@ pub async fn run_agent_loop(
                     Ok(Some(PermissionDecision::Allow { tool_call_id: ref tid }))
                         | Ok(Some(PermissionDecision::AllowAlways { tool_call_id: ref tid }))
                         if tid == id => {
-                        event_tx.send(AgentEvent::PermissionGranted {
+                        if let Err(e) = event_tx.send(AgentEvent::PermissionGranted {
                             tool_call_id: id.clone(),
-                        }).ok();
+                        }).await {
+                            tracing::error!("Failed to send event: {}", e);
+                        }
                         true
                     }
                     Ok(Some(PermissionDecision::Skip { tool_call_id: ref tid })) if tid == id => {
-                        event_tx.send(AgentEvent::PermissionDenied {
+                        if let Err(e) = event_tx.send(AgentEvent::PermissionDenied {
                             tool_call_id: id.clone(),
-                        }).ok();
+                        }).await {
+                            tracing::error!("Failed to send event: {}", e);
+                        }
                         false // Skip this tool but continue with others
                     }
                     Ok(Some(PermissionDecision::Deny { .. })) => {
-                        event_tx.send(AgentEvent::PermissionDenied {
+                        if let Err(e) = event_tx.send(AgentEvent::PermissionDenied {
                             tool_call_id: id.clone(),
-                        }).ok();
+                        }).await {
+                            tracing::error!("Failed to send event: {}", e);
+                        }
                         false
                     }
                     _ => {
                         // Timeout, mismatch, or deny
-                        event_tx.send(AgentEvent::PermissionDenied {
+                        if let Err(e) = event_tx.send(AgentEvent::PermissionDenied {
                             tool_call_id: id.clone(),
-                        }).ok();
+                        }).await {
+                            tracing::error!("Failed to send event: {}", e);
+                        }
                         false
                     }
                 };
@@ -200,10 +226,12 @@ pub async fn run_agent_loop(
                         is_error: true,
                     };
 
-                    event_tx.send(AgentEvent::ToolExecutionEnd {
+                    if let Err(e) = event_tx.send(AgentEvent::ToolExecutionEnd {
                         tool_call_id: id.clone(),
                         result: result.clone(),
-                    }).ok();
+                    }).await {
+                        tracing::error!("Failed to send event: {}", e);
+                    }
 
                     messages.push(AgentMessage {
                         role: "tool".to_string(),
@@ -262,10 +290,12 @@ pub async fn run_agent_loop(
                         content: vec![ContentPart::Text { text: format!("Blocked by safety hook: {}", block_reason) }],
                         is_error: true,
                     };
-                    event_tx.send(AgentEvent::ToolExecutionEnd {
+                    if let Err(e) = event_tx.send(AgentEvent::ToolExecutionEnd {
                         tool_call_id: id.clone(),
                         result: blocked_result.clone(),
-                    }).ok();
+                    }).await {
+                        tracing::error!("Failed to send event: {}", e);
+                    }
                     tool_results.push(blocked_result);
                     continue;
                 }
@@ -318,7 +348,7 @@ pub async fn run_agent_loop(
                     }
                 } else if let Some(tool) = tools.iter().find(|t| t.name == *name) {
                     if let Some(ref handler) = tool.handler {
-                        match handler(final_input.clone()) {
+                        match handler(final_input.clone()).await {
                             Ok(output) => ToolResult {
                                 tool_call_id: id.clone(),
                                 tool_name: name.clone(),
@@ -353,10 +383,12 @@ pub async fn run_agent_loop(
                     }
                 };
 
-                event_tx.send(AgentEvent::ToolExecutionEnd {
+                if let Err(e) = event_tx.send(AgentEvent::ToolExecutionEnd {
                     tool_call_id: id.clone(),
                     result: result.clone(),
-                }).ok();
+                }).await {
+                    tracing::error!("Failed to send event: {}", e);
+                }
 
                 // Add tool result to messages
                 messages.push(AgentMessage {
@@ -376,15 +408,19 @@ pub async fn run_agent_loop(
             }
         }
 
-        event_tx.send(AgentEvent::TurnEnd {
+        if let Err(e) = event_tx.send(AgentEvent::TurnEnd {
             message: assistant_message.clone(),
             tool_results,
-        }).ok();
+        }).await {
+            tracing::error!("Failed to send event: {}", e);
+        }
 
         // Continue loop - send updated messages back to LLM
     }
 
-    event_tx.send(AgentEvent::AgentEnd { messages: messages.clone() }).ok();
+    if let Err(e) = event_tx.send(AgentEvent::AgentEnd { messages: messages.clone() }).await {
+        tracing::error!("Failed to send event: {}", e);
+    }
     Ok(())
 }
 
@@ -426,7 +462,10 @@ fn agent_msg_to_llm(role: &str, content: String, parts: &[ContentPart]) -> Optio
                 } else {
                     None
                 }
-            }).unwrap_or_else(|| "unknown".to_string());
+            }).unwrap_or_else(|| {
+                tracing::warn!("Tool result missing tool_use_id, using 'unknown'");
+                "unknown".to_string()
+            });
             Some(Message::ToolResult { tool_call_id, content, is_error: false })
         }
         _ => None,
