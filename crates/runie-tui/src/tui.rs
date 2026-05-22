@@ -32,8 +32,10 @@ use crate::{
         CommandPalette,
         DiffViewer,
         SessionTreeNavigator,
+        onboarding,
     },
 };
+use crate::components::onboarding::render::render_onboarding;
 use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 
 pub struct TuiConfig {
@@ -60,6 +62,7 @@ pub mod update;
 pub mod render;
 pub mod events;
 pub mod tests;
+pub mod tests_hotkeys;
 
 pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
@@ -157,19 +160,15 @@ impl Tui {
 
         self.terminal.draw(|frame| {
             let theme = &theme;
-            Self::clear_background(frame, area, theme);
             let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
             let state = &render_state;
+            let is_onboarding = matches!(state.mode, TuiMode::Onboarding);
 
-            if show_top_bar {
-                render_top_bar(state, main_areas[0], frame.buffer_mut(), theme);
+            if is_onboarding {
+                Self::render_onboarding_mode(frame, area, state, main_areas, show_status_bar, theme);
+            } else {
+                Self::render_normal_mode(frame, area, state, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme);
             }
-            Self::render_content(frame, state, show_sidebar, main_areas[1], theme);
-            Self::render_input(frame, state, main_areas[2], theme);
-            if show_status_bar {
-                render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
-            }
-            Self::render_overlays(frame, state, &palette, padded_area, area, theme);
         })?;
         Ok(())
     }
@@ -183,6 +182,29 @@ impl Tui {
                 }
             }
         }
+    }
+
+    fn render_onboarding_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper) {
+        Self::clear_background(frame, area, theme);
+        if show_status_bar {
+            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
+        }
+        if let Some(ref onboarding) = state.onboarding {
+            render_onboarding(onboarding, area, frame.buffer_mut(), theme);
+        }
+    }
+
+    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper) {
+        Self::clear_background(frame, area, theme);
+        if show_top_bar {
+            render_top_bar(state, main_areas[0], frame.buffer_mut(), theme);
+        }
+        Self::render_content(frame, state, show_sidebar, main_areas[1], theme);
+        Self::render_input(frame, state, main_areas[2], theme);
+        if show_status_bar {
+            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
+        }
+        Self::render_overlays(frame, state, palette, padded, area, theme);
     }
 
     fn layout_main(padded: Rect, show_top: bool, show_status: bool, input_h: u16) -> [Rect; 4] {

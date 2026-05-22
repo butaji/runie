@@ -241,6 +241,62 @@ pub enum Msg {
     OnboardingSkip,
 }
 
+impl PartialEq for Msg {
+    fn eq(&self, other: &Self) -> bool {
+        use Msg::*;
+        match (self, other) {
+            (InsertChar(a), InsertChar(b)) => a == b,
+            (Backspace, Backspace) => true,
+            (DeleteForward, DeleteForward) => true,
+            (MoveCursorLeft, MoveCursorLeft) => true,
+            (MoveCursorRight, MoveCursorRight) => true,
+            (MoveCursorUp, MoveCursorUp) => true,
+            (MoveCursorDown, MoveCursorDown) => true,
+            (MoveCursorToStart, MoveCursorToStart) => true,
+            (MoveCursorToEnd, MoveCursorToEnd) => true,
+            (InsertNewline, InsertNewline) => true,
+            (DeleteWordBackward, DeleteWordBackward) => true,
+            (DeleteToStart, DeleteToStart) => true,
+            (Submit, Submit) => true,
+            (Quit, Quit) => true,
+            (ToggleSidebar, ToggleSidebar) => true,
+            (OpenCommandPalette, OpenCommandPalette) => true,
+            (CloseModal, CloseModal) => true,
+            (ConfirmModal, ConfirmModal) => true,
+            (ScrollUp, ScrollUp) => true,
+            (ScrollDown, ScrollDown) => true,
+            (ScrollPageUp, ScrollPageUp) => true,
+            (ScrollPageDown, ScrollPageDown) => true,
+            (PermissionConfirm, PermissionConfirm) => true,
+            (PermissionCancel, PermissionCancel) => true,
+            (PermissionAlways, PermissionAlways) => true,
+            (PermissionSkip, PermissionSkip) => true,
+            (CommandPaletteFilter(a), CommandPaletteFilter(b)) => a == b,
+            (CommandPaletteBackspace, CommandPaletteBackspace) => true,
+            (CommandPaletteUp, CommandPaletteUp) => true,
+            (CommandPaletteDown, CommandPaletteDown) => true,
+            (CommandPaletteConfirm, CommandPaletteConfirm) => true,
+            (AgentEvent(_), AgentEvent(_)) => true, // Compare by variant only
+            (Tick, Tick) => true,
+            (CursorBlink, CursorBlink) => true,
+            (SlashCommand(_), SlashCommand(_)) => true, // Compare by variant only
+            (ToggleSessionTree, ToggleSessionTree) => true,
+            (SessionTreeUp, SessionTreeUp) => true,
+            (SessionTreeDown, SessionTreeDown) => true,
+            (SessionTreeConfirm, SessionTreeConfirm) => true,
+            (OnboardingNext, OnboardingNext) => true,
+            (OnboardingBack, OnboardingBack) => true,
+            (OnboardingSelectProvider(a), OnboardingSelectProvider(b)) => a == b,
+            (OnboardingSelectModel(a), OnboardingSelectModel(b)) => a == b,
+            (OnboardingKeyInput(a), OnboardingKeyInput(b)) => a == b,
+            (OnboardingKeyBackspace, OnboardingKeyBackspace) => true,
+            (OnboardingSubmit, OnboardingSubmit) => true,
+            (OnboardingSkip, OnboardingSkip) => true,
+            _ => false,
+        }
+    }
+}
+
 // ─── Cmd ────────────────────────────────────────────────────────────────────────
 // Effects returned by update() to be executed by the runtime
 
