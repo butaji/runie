@@ -12,7 +12,8 @@ use runie_agent::events::{AgentEvent, PermissionDecision};
 use runie_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
 use runie_agent::pi::AgentTool;
 use runie_agent::{SafetyHook, Hook};
-use runie_ai::providers::MockProvider;
+use runie_ai::providers::{MockProvider, OpenAiProvider, AnthropicProvider};
+use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
 use settings::{CliSettings, Keybindings, Settings};
 
@@ -221,18 +222,58 @@ async fn run_cli_one_shot(
     mock: bool,
     settings: &Settings,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    println!("❯ {}", prompt);
+    println!();
+
     if mock {
-        println!("❯ {}", prompt);
-        println!();
         println!("{}", generate_mock_response(prompt));
     } else {
-        println!("❯ {}", prompt);
-        println!();
+        let provider = create_provider(mock, settings);
         println!("Model: {} ({})", settings.model, settings.provider);
-        println!("Processing... (real provider mode)");
-        // TODO: wire up real provider
+        println!("Processing...");
+
+        let messages = vec![runie_core::Message::User {
+            content: prompt.to_string(),
+            attachments: vec![],
+        }];
+
+        match provider.chat_simple(messages).await {
+            Ok(response) => println!("{}", response),
+            Err(e) => eprintln!("Error: {}", e),
+        }
     }
     Ok(())
+}
+
+/// Create provider based on mock flag and settings
+fn create_provider(mock: bool, settings: &Settings) -> Box<dyn Provider> {
+    if mock {
+        return Box::new(MockProvider::new());
+    }
+
+    match settings.provider.as_str() {
+        "openai" => {
+            let api_key = settings.api_key.clone()
+                .or_else(|| std::env::var("OPENAI_API_KEY").ok())
+                .expect("OpenAI API key required. Set OPENAI_API_KEY env var or use --api-key");
+            let mut provider = OpenAiProvider::new(api_key, settings.model.clone());
+            if let Some(ref base_url) = settings.base_url {
+                provider = provider.with_base_url(base_url.clone());
+            }
+            Box::new(provider)
+        }
+        "anthropic" => {
+            let api_key = settings.api_key.clone()
+                .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
+                .expect("Anthropic API key required. Set ANTHROPIC_API_KEY env var or use --api-key");
+            let mut provider = AnthropicProvider::new(api_key, settings.model.clone());
+            if let Some(ref base_url) = settings.base_url {
+                provider = provider.with_base_url(base_url.clone());
+            }
+            Box::new(provider)
+        }
+        _ => panic!("Unknown provider: {}. Use 'openai' or 'anthropic'", settings.provider),
+    }
 }
 
 /// TUI: Interactive terminal interface using TEA architecture.
@@ -264,9 +305,9 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
     tui.state.top_bar_percentage = None;
 
     tui.state.input_right_info = if mock {
-        "mock-provider · no-api-key".to_string()
+        format!("mock · {}", settings.model)
     } else {
-        "runie-main · always-approve".to_string()
+        format!("{} · {}", settings.provider, settings.model)
     };
 
     // Build startup message with context info
@@ -279,9 +320,9 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
     // Welcome message
     tui.add_message(runie_tui::components::message_list::MessageItem::System {
         text: if mock {
-            format!("Mock mode active — no API key needed. Type a message to test!{}", context_info)
+            format!("Mock mode — no API calls. Model: {}{}", settings.model, context_info)
         } else {
-            format!("Welcome to Tidy! Type a message to start.{}", context_info)
+            format!("Connected to {} ({}){}", settings.provider, settings.model, context_info)
         },
     });
 
@@ -328,6 +369,9 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
         perm_tx: &mut Option<mpsc::UnboundedSender<PermissionDecision>>,
         agent_tx: &mpsc::UnboundedSender<AgentEvent>,
         workspace: &PathBuf,
+        mock: bool,
+        settings: &Settings,
+        base_system_prompt: &str,
     ) -> Vec<Cmd> {
         match cmd {
             Cmd::SpawnAgent { messages } => {
@@ -349,19 +393,23 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
                     let safety_hook: Arc<dyn Hook> = Arc::new(SafetyHook);
                     let hooks: Vec<Arc<dyn Hook>> = vec![safety_hook];
 
+                    let mock_flag = mock;
+                    let settings_clone = settings.clone();
+                    let system_prompt = base_system_prompt.to_string();
+
                     *agent_task = Some(tokio::spawn(async move {
-                        let provider = MockProvider::new();
+                        let provider = create_provider(mock_flag, &settings_clone);
 
                         let config = AgentLoopConfig {
-                            system_prompt: "You are a helpful coding assistant.".to_string(),
-                            model: "gpt-4".to_string(),
+                            system_prompt,
+                            model: settings_clone.model.clone(),
                             thinking_level: "low".to_string(),
                         };
 
                         match run_agent_loop(
                             messages,
                             config,
-                            &provider,
+                            &*provider,
                             &tools,
                             event_tx,
                             fresh_perm_rx,
@@ -408,7 +456,7 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace));
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
                     }
                     pending_cmds = next_cmds;
                 }
@@ -422,7 +470,7 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace));
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
                     }
                     pending_cmds = next_cmds;
                 }
@@ -439,7 +487,7 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
                     while !pending_cmds.is_empty() {
                         let mut next_cmds = vec![];
                         for cmd in pending_cmds {
-                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace));
+                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
                         }
                         pending_cmds = next_cmds;
                     }
@@ -462,7 +510,7 @@ async fn run_tui(workspace: PathBuf, mock: bool, settings: &Settings) -> Result<
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace));
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
                     }
                     pending_cmds = next_cmds;
                 }
