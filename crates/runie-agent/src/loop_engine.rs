@@ -2,7 +2,7 @@ use crate::events::*;
 use crate::pi::AgentTool;
 use crate::{Hook, HookDecision};
 use runie_ai::Provider;
-use runie_core::{Message, ToolSchema, Event as LlmEvent, Context};
+use runie_core::{Message, ToolSchema, Event as LlmEvent, Context, ToolCall as CoreToolCall};
 use runie_tools::ToolRegistry;
 use tokio::sync::mpsc;
 use futures::StreamExt;
@@ -13,6 +13,18 @@ pub struct AgentLoopConfig {
     pub system_prompt: String,
     pub model: String,
     pub thinking_level: String,
+    pub max_turns: usize,
+}
+
+impl Default for AgentLoopConfig {
+    fn default() -> Self {
+        Self {
+            system_prompt: String::new(),
+            model: String::new(),
+            thinking_level: String::new(),
+            max_turns: 10,
+        }
+    }
 }
 
 pub async fn run_agent_loop(
@@ -34,7 +46,17 @@ pub async fn run_agent_loop(
         parameters: t.parameters.clone(),
     }).collect();
 
+    let mut turn_count = 0;
+
     loop {
+        turn_count += 1;
+        if turn_count > config.max_turns {
+            event_tx.send(AgentEvent::Error {
+                message: format!("Max turns ({}) exceeded", config.max_turns)
+            }).ok();
+            break;
+        }
+
         // Build LLM messages
         let llm_messages = build_llm_messages(&config.system_prompt, &messages);
 
@@ -132,27 +154,35 @@ pub async fn run_agent_loop(
                     tool_args: serde_json::to_string(input).unwrap_or_default(),
                 }).ok();
 
-                // Wait for permission decision
+                // Wait for permission decision (correlated by tool_call_id)
                 let decision = tokio::time::timeout(
                     std::time::Duration::from_secs(300), // 5 minute timeout
                     permission_rx.recv()
                 ).await;
 
                 let should_execute = match decision {
-                    Ok(Some(PermissionDecision::Allow)) | Ok(Some(PermissionDecision::AllowAlways)) => {
+                    Ok(Some(PermissionDecision::Allow { tool_call_id: ref tid }))
+                        | Ok(Some(PermissionDecision::AllowAlways { tool_call_id: ref tid }))
+                        if tid == id => {
                         event_tx.send(AgentEvent::PermissionGranted {
                             tool_call_id: id.clone(),
                         }).ok();
                         true
                     }
-                    Ok(Some(PermissionDecision::Skip)) => {
+                    Ok(Some(PermissionDecision::Skip { tool_call_id: ref tid })) if tid == id => {
                         event_tx.send(AgentEvent::PermissionDenied {
                             tool_call_id: id.clone(),
                         }).ok();
                         false // Skip this tool but continue with others
                     }
+                    Ok(Some(PermissionDecision::Deny { .. })) => {
+                        event_tx.send(AgentEvent::PermissionDenied {
+                            tool_call_id: id.clone(),
+                        }).ok();
+                        false
+                    }
                     _ => {
-                        // Timeout or deny
+                        // Timeout, mismatch, or deny
                         event_tx.send(AgentEvent::PermissionDenied {
                             tool_call_id: id.clone(),
                         }).ok();
@@ -201,53 +231,72 @@ pub async fn run_agent_loop(
                 let ctx = Context::default();
                 
                 // Run before hooks
-                let args_to_use = 'hook_block: {
-                    for hook in &hooks {
-                        match hook.before_tool_call(&tool_call, &ctx).await {
-                            Ok(HookDecision::Allow) => break 'hook_block input.clone(),
-                            Ok(HookDecision::Block { reason }) => {
-                                let blocked_result = ToolResult {
-                                    tool_call_id: id.clone(),
-                                    tool_name: name.clone(),
-                                    input: input.clone(),
-                                    content: vec![ContentPart::Text { text: format!("Blocked by safety hook: {}", reason) }],
-                                    is_error: true,
-                                };
-                                event_tx.send(AgentEvent::ToolExecutionEnd {
-                                    tool_call_id: id.clone(),
-                                    result: blocked_result.clone(),
-                                }).ok();
-                                tool_results.push(blocked_result);
-                                continue;
-                            }
-                            Ok(HookDecision::Modify { args }) => break 'hook_block args,
-                            Err(_) => {}
+                let mut current_args = input.clone();
+                let mut blocked = false;
+                let mut block_reason = String::new();
+                for hook in &hooks {
+                    match hook.before_tool_call(&CoreToolCall { arguments: current_args.clone(), ..tool_call.clone() }, &ctx).await {
+                        Ok(HookDecision::Allow) => {},
+                        Ok(HookDecision::Block { reason }) => {
+                            blocked = true;
+                            block_reason = reason;
+                            break;
+                        }
+                        Ok(HookDecision::Modify { args }) => {
+                            current_args = args;
+                        }
+                        Err(e) => {
+                            eprintln!("Hook error: {}", e);
+                            blocked = true;
+                            block_reason = format!("Hook error: {}", e);
+                            break;
                         }
                     }
-                    input.clone()
-                };
-                
-                let final_input = args_to_use.clone();
+                }
+
+                if blocked {
+                    let blocked_result = ToolResult {
+                        tool_call_id: id.clone(),
+                        tool_name: name.clone(),
+                        input: input.clone(),
+                        content: vec![ContentPart::Text { text: format!("Blocked by safety hook: {}", block_reason) }],
+                        is_error: true,
+                    };
+                    event_tx.send(AgentEvent::ToolExecutionEnd {
+                        tool_call_id: id.clone(),
+                        result: blocked_result.clone(),
+                    }).ok();
+                    tool_results.push(blocked_result);
+                    continue;
+                }
+
+                let final_input = current_args.clone();
                 let result = if let Some(ref reg) = registry {
                     if let Some(tool) = reg.get(name) {
                         match tool.execute(final_input.clone()).await {
                             Ok(output) => {
                                 // Run after hooks
-                                let final_output = if let Some(hook) = hooks.first() {
-                                    match hook.after_tool_call(&tool_call, &output, &ctx).await {
-                                        Ok(processed) => processed,
-                                        Err(_) => output,
+                                let mut final_output = output;
+                                for hook in &hooks {
+                                    match hook.after_tool_call(&tool_call, &final_output, &ctx).await {
+                                        Ok(processed) => final_output = processed,
+                                        Err(e) => {
+                                            eprintln!("After-hook error: {}", e);
+                                            final_output = runie_core::ToolOutput {
+                                                content: format!("After-hook error: {}", e),
+                                                metadata: serde_json::Value::Null,
+                                                terminate: true,
+                                            };
+                                        }
                                     }
-                                } else {
-                                    output
-                                };
-                                
+                                }
+
                                 ToolResult {
                                     tool_call_id: id.clone(),
                                     tool_name: name.clone(),
                                     input: final_input,
                                     content: vec![ContentPart::Text { text: final_output.content }],
-                                    is_error: false,
+                                    is_error: final_output.terminate,
                                 }
                             }
                             Err(e) => ToolResult {

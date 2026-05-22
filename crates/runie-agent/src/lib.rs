@@ -21,3 +21,6 @@ pub use agent::{Agent, AgentError, CodingAgent};
 // Pi types re-exports
 pub use events::{AgentEvent, AgentMessage, ContentPart, ImageSource, PermissionDecision, TokenUsage, ToolResult};
 pub use pi::{AgentState as PiAgentState, AgentTool, Agent as PiAgent, EventListener};
+
+#[cfg(test)]
+mod tests;

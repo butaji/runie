@@ -11,6 +11,7 @@ pub mod permission_modal;
 pub mod command_palette;
 pub mod context_panel;
 pub mod session_tree;
+pub mod modal;
 
 pub use overlay::Overlay;
 pub use code_block::{CodeBlock, CodeLine, LineStatus};
@@ -25,3 +26,4 @@ pub use permission_modal::{PermissionModal, PermissionAction};
 pub use command_palette::{CommandPalette, PaletteItem, PaletteStep, PaletteCommand};
 pub use context_panel::{ContextPanel, GitChange, GitStatus};
 pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
+pub use modal::Modal;

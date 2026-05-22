@@ -15,6 +15,7 @@ pub struct AnthropicProvider {
     model: String,
     base_url: String,
     client: Client,
+    max_tokens: usize,
 }
 
 impl AnthropicProvider {
@@ -24,12 +25,23 @@ impl AnthropicProvider {
         } else {
             api_key
         };
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(300))
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .build()
+            .unwrap_or_else(|_| Client::new());
         Self {
             api_key,
             model,
             base_url: "https://api.anthropic.com/v1".to_string(),
-            client: Client::new(),
+            client,
+            max_tokens: 4096,
         }
+    }
+
+    pub fn with_max_tokens(mut self, tokens: usize) -> Self {
+        self.max_tokens = tokens;
+        self
     }
 
     pub fn with_base_url(mut self, url: String) -> Self {
@@ -107,7 +119,7 @@ impl AnthropicProvider {
         let mut body = serde_json::json!({
             "model": self.model,
             "messages": anthropic_messages,
-            "max_tokens": 4096,
+            "max_tokens": self.max_tokens,
             "stream": true
         });
 
@@ -260,7 +272,7 @@ impl AnthropicProvider {
         let mut body = serde_json::json!({
             "model": self.model,
             "messages": anthropic_messages,
-            "max_tokens": 4096,
+            "max_tokens": self.max_tokens,
             "stream": false
         });
 

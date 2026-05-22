@@ -14,6 +14,9 @@ pub use search::SearchTool;
 pub use workspace::Workspace;
 pub use write_file::WriteFileTool;
 
+#[cfg(test)]
+mod tests;
+
 /// Create a registry pre-populated with the default toolkit tools.
 pub fn create_default_toolkit(workspace: Workspace) -> ToolRegistry {
     let mut registry = ToolRegistry::new();

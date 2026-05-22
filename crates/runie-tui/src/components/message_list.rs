@@ -53,7 +53,6 @@ fn wrap_text(text: &str, width: usize) -> Vec<String> {
 #[derive(Clone)]
 pub struct MessageList {
     pub messages: Vec<MessageItem>,
-    pub scroll_offset: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,7 +74,6 @@ impl Default for MessageList {
     fn default() -> Self {
         Self {
             messages: Vec::new(),
-            scroll_offset: 0,
         }
     }
 }
@@ -120,14 +118,6 @@ impl MessageList {
             );
             row += rendered;
         }
-    }
-
-    pub fn scroll_up(&mut self) {
-        self.scroll_offset = self.scroll_offset.saturating_sub(1);
-    }
-
-    pub fn scroll_down(&mut self) {
-        self.scroll_offset += 1;
     }
 
     /// Update the last assistant message with new text (for streaming)

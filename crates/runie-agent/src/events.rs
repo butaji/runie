@@ -17,12 +17,12 @@ pub enum AgentEvent {
     PermissionDenied { tool_call_id: String },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PermissionDecision {
-    Allow,
-    Deny,
-    AllowAlways,
-    Skip,
+    Allow { tool_call_id: String },
+    Deny { tool_call_id: String },
+    AllowAlways { tool_call_id: String },
+    Skip { tool_call_id: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,4 +1,4 @@
-use runie_core::{ToolCall, ToolOutput};
+use runie_core::{ToolCall, ToolOutput, ToolError};
 use runie_tools::ToolRegistry;
 use crate::{Hook, config::ToolExecutionMode};
 use std::sync::Arc;
@@ -28,37 +28,29 @@ impl ToolExecutor {
     async fn execute_sequential(&self, tool_calls: Vec<ToolCall>) -> Vec<(String, Result<ToolOutput, String>)> {
         let mut results = Vec::new();
         for call in tool_calls {
-            let result = self.execute_single(call).await;
-            results.push(result);
-        }
-        results
-    }
-
-    async fn execute_parallel(&self, tool_calls: Vec<ToolCall>) -> Vec<(String, Result<ToolOutput, String>)> {
-        let mut results = Vec::new();
-        for call in tool_calls {
             results.push(self.execute_single(call).await);
         }
         results
     }
 
+    async fn execute_parallel(&self, tool_calls: Vec<ToolCall>) -> Vec<(String, Result<ToolOutput, String>)> {
+        let futures: Vec<_> = tool_calls.into_iter()
+            .map(|call| self.execute_single(call))
+            .collect();
+        futures::future::join_all(futures).await
+    }
+
     async fn execute_single(&self, tool_call: ToolCall) -> (String, Result<ToolOutput, String>) {
         let id = tool_call.id.clone();
-        
-        // Find tool
-        let tool = match self.registry.get(&tool_call.name) {
-            Some(t) => t,
-            None => return (id, Err(format!("Tool '{}' not found", tool_call.name))),
+
+        let result = match self.registry.get(&tool_call.name) {
+            Some(tool) => tool.execute(tool_call.arguments.clone()).await,
+            None => Err(ToolError::NotFound(tool_call.name)),
         };
 
-        // Execute
-        let result = tool.execute(tool_call.arguments.clone()).await;
-        
-        let output = match result {
-            Ok(output) => output,
-            Err(e) => return (id, Err(e.to_string())),
-        };
-
-        (id, Ok(output))
+        match result {
+            Ok(output) => (id, Ok(output)),
+            Err(e) => (id, Err(e.to_string())),
+        }
     }
 }
