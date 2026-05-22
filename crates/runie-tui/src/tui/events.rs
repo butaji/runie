@@ -31,8 +31,8 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Right => Some(Msg::MoveCursorRight),
         KeyCode::Up => Some(Msg::MoveCursorUp),
         KeyCode::Down => Some(Msg::MoveCursorDown),
-        KeyCode::PageUp => Some(Msg::ScrollUp),
-        KeyCode::PageDown => Some(Msg::ScrollDown),
+        KeyCode::PageUp => Some(Msg::ScrollPageUp),
+        KeyCode::PageDown => Some(Msg::ScrollPageDown),
         _ => None,
     }
 }

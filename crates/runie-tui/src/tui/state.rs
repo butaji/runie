@@ -1,4 +1,4 @@
-use crate::components::{MessageItem, DiffViewer};
+use crate::components::{MessageItem, DiffViewer, CommandPalette};
 use runie_agent::events::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::tui::update::update;
@@ -10,8 +10,6 @@ use runie_core::SlashCommand;
 pub struct AnimationState {
     pub braille_frame: usize,
     pub streaming_cursor_visible: bool,
-    pub last_tick: std::time::Instant,
-    pub last_cursor_blink: std::time::Instant,
 }
 
 impl Default for AnimationState {
@@ -19,8 +17,6 @@ impl Default for AnimationState {
         Self {
             braille_frame: 0,
             streaming_cursor_visible: true,
-            last_tick: std::time::Instant::now(),
-            last_cursor_blink: std::time::Instant::now(),
         }
     }
 }
@@ -45,6 +41,7 @@ pub struct AppState {
     pub top_bar_percentage: Option<f32>,
     pub top_bar_agent_count: Option<usize>,
     pub permission_modal_tool: Option<String>,
+    pub permission_modal_tool_call_id: Option<String>,
     pub permission_modal_args: Option<String>,
     pub permission_modal_desc: Option<String>,
     pub action_log: Vec<Msg>,         // NEW: history of all actions for time-travel debugging
@@ -53,6 +50,8 @@ pub struct AppState {
     pub command_palette_filter: String,
     pub command_palette_selected: usize,
     pub feed_scroll_offset: usize,
+    pub diff_scroll_offset: usize,
+    pub tree_scroll_offset: usize,
     pub animation: AnimationState,
     pub diff_viewer: Option<DiffViewer>,
     pub token_usage: TokenUsage,
@@ -81,6 +80,7 @@ impl Default for AppState {
             top_bar_percentage: None,
             top_bar_agent_count: None,
             permission_modal_tool: None,
+            permission_modal_tool_call_id: None,
             permission_modal_args: None,
             permission_modal_desc: None,
             action_log: Vec::new(),
@@ -89,6 +89,8 @@ impl Default for AppState {
             command_palette_filter: String::new(),
             command_palette_selected: 0,
             feed_scroll_offset: 0,
+            diff_scroll_offset: 0,
+            tree_scroll_offset: 0,
             animation: AnimationState::default(),
             diff_viewer: None,
             token_usage: TokenUsage::default(),
@@ -158,6 +160,8 @@ pub enum Msg {
     ConfirmModal,
     ScrollUp,
     ScrollDown,
+    ScrollPageUp,
+    ScrollPageDown,
 
     // Permission
     PermissionConfirm,

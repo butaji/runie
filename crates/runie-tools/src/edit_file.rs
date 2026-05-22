@@ -49,29 +49,35 @@ impl Tool for EditFileTool {
     }
 
     async fn execute(&self, args: serde_json::Value) -> Result<ToolOutput, ToolError> {
-        let path = args["path"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'path' argument".to_string()))?;
         let old_string = args["old_string"].as_str()
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'old_string' argument".to_string()))?;
         let new_string = args["new_string"].as_str()
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'new_string' argument".to_string()))?;
-        
+        let path = args["path"].as_str()
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'path' argument".to_string()))?;
+
         let resolved = self.workspace.resolve(path)?;
         let content = tokio::fs::read_to_string(&resolved).await
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to read file: {}", e)))?;
-        
-        if !content.contains(old_string) {
-            return Err(ToolError::InvalidArguments(
-                format!("old_string not found in file: {}", path)
+
+        let occurrences = content.matches(old_string).count();
+        if occurrences == 0 {
+            return Err(ToolError::ExecutionFailed(
+                format!("String not found in file: {}", old_string)
             ));
         }
-        
+        if occurrences > 1 {
+            return Err(ToolError::ExecutionFailed(
+                format!("String appears {} times. Use a more specific replacement.", occurrences)
+            ));
+        }
+
         let new_content = content.replacen(old_string, new_string, 1);
         tokio::fs::write(&resolved, new_content).await
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to write file: {}", e)))?;
-        
+
         Ok(ToolOutput {
-            content: format!("File edited: {}", path),
+            content: format!("Edited {} (1 replacement)", path),
             metadata: json!({
                 "path": path,
                 "old_content": old_string,

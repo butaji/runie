@@ -24,11 +24,16 @@ impl OpenAiProvider {
         } else {
             api_key
         };
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(300))
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .build()
+            .unwrap_or_else(|_| Client::new());
         Self {
             api_key,
             model,
             base_url: "https://api.openai.com/v1".to_string(),
-            client: Client::new(),
+            client,
         }
     }
 

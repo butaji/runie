@@ -1,7 +1,7 @@
 use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState};
 use crate::components::{
     AgentList, AgentItem, AgentStatus, MessageItem,
-    ContextPanel, GitChange, GitStatus, SessionTreeNavigator,
+    ContextPanel, GitChange, GitStatus, SessionTreeNavigator, CommandPalette,
 };
 use crate::tui::update::update;
 use runie_agent::events::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
@@ -117,6 +117,7 @@ mod tests {
             top_bar_percentage: None,
             top_bar_agent_count: None,
             permission_modal_tool: None,
+            permission_modal_tool_call_id: None,
             permission_modal_args: None,
             permission_modal_desc: None,
             action_log: Vec::new(),
@@ -125,6 +126,8 @@ mod tests {
             command_palette_filter: String::new(),
             command_palette_selected: 0,
             feed_scroll_offset: 0,
+            diff_scroll_offset: 0,
+            tree_scroll_offset: 0,
             animation: AnimationState::default(),
             diff_viewer: None,
             token_usage: TokenUsage::default(),
@@ -434,7 +437,7 @@ mod tests {
         let cmds = update(&mut state, Msg::PermissionConfirm);
         assert_eq!(cmds.len(), 1);
         if let Cmd::SendPermission { decision } = &cmds[0] {
-            assert_eq!(*decision, PermissionDecision::Allow);
+            assert!(matches!(*decision, PermissionDecision::Allow { .. }));
         } else {
             panic!("Expected SendPermission cmd");
         }
@@ -442,19 +445,19 @@ mod tests {
         // PermissionCancel should return Deny decision
         let cmds = update(&mut state, Msg::PermissionCancel);
         if let Cmd::SendPermission { decision } = &cmds[0] {
-            assert_eq!(*decision, PermissionDecision::Deny);
+            assert!(matches!(*decision, PermissionDecision::Deny { .. }));
         }
 
         // PermissionAlways should return AllowAlways decision
         let cmds = update(&mut state, Msg::PermissionAlways);
         if let Cmd::SendPermission { decision } = &cmds[0] {
-            assert_eq!(*decision, PermissionDecision::AllowAlways);
+            assert!(matches!(*decision, PermissionDecision::AllowAlways { .. }));
         }
 
         // PermissionSkip should return Skip decision
         let cmds = update(&mut state, Msg::PermissionSkip);
         if let Cmd::SendPermission { decision } = &cmds[0] {
-            assert_eq!(*decision, PermissionDecision::Skip);
+            assert!(matches!(*decision, PermissionDecision::Skip { .. }));
         }
     }
 }

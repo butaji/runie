@@ -22,7 +22,7 @@ pub struct PaletteItem {
     pub category: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PaletteCommand {
     ReadFile { path: String },
     EditFile { path: String, prompt: String },
@@ -33,6 +33,7 @@ pub enum PaletteCommand {
     Cancel,
 }
 
+#[derive(Clone)]
 pub struct CommandPalette {
     pub step: PaletteStep,
     pub query: String,

@@ -15,8 +15,7 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::MoveCursorLeft | Msg::MoveCursorRight | Msg::MoveCursorUp | Msg::MoveCursorDown => {
             handle_cursor_move(state, &msg);
         }
-        Msg::MoveCursorToStart => state.cursor_col = 0,
-        Msg::MoveCursorToEnd => state.cursor_col = state.input_lines[state.cursor_row].len(),
+        Msg::MoveCursorToStart | Msg::MoveCursorToEnd => handle_cursor_edge(state, &msg),
         Msg::DeleteForward => handle_delete_forward(state),
         Msg::DeleteWordBackward => handle_delete_word_backward(state),
         Msg::DeleteToStart => handle_delete_to_start(state),
@@ -32,8 +31,8 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => {
             handle_palette_msg(state, msg);
         }
-        Msg::ScrollUp => { state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(1); }
-        Msg::ScrollDown => state.feed_scroll_offset += 1,
+        Msg::ScrollUp | Msg::ScrollPageUp => state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }),
+        Msg::ScrollDown | Msg::ScrollPageDown => handle_scroll(state, if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }),
         Msg::Tick | Msg::CursorBlink => handle_anim(state, &msg),
         Msg::SlashCommand(cmd) => cmds.extend(handle_slash(state, cmd)),
         Msg::ToggleSessionTree => handle_tree(state),
@@ -42,6 +41,11 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     }
 
     cmds
+}
+
+fn handle_scroll(state: &mut AppState, amount: usize) {
+    let max_scroll = state.messages.len().saturating_sub(1);
+    state.feed_scroll_offset = (state.feed_scroll_offset + amount).min(max_scroll);
 }
 
 fn log_action(state: &mut AppState, msg: &Msg) {
@@ -134,6 +138,14 @@ fn handle_move_down(state: &mut AppState) {
     }
 }
 
+fn handle_cursor_edge(state: &mut AppState, msg: &Msg) {
+    match msg {
+        Msg::MoveCursorToStart => state.cursor_col = 0,
+        Msg::MoveCursorToEnd => state.cursor_col = state.input_lines[state.cursor_row].len(),
+        _ => {}
+    }
+}
+
 fn handle_delete_forward(state: &mut AppState) {
     if state.cursor_col < state.input_lines[state.cursor_row].len() {
         state.input_lines[state.cursor_row].remove(state.cursor_col);
@@ -161,6 +173,7 @@ fn handle_close_modal(state: &mut AppState) {
     state.mode = TuiMode::Chat;
     state.command_palette_open = false;
     state.permission_modal_tool = None;
+    state.permission_modal_tool_call_id = None;
     state.diff_viewer = None;
     state.session_tree.hide();
 }
@@ -180,7 +193,7 @@ fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
         AgentEvent::ToolExecutionEnd { result, .. } => on_tool_end(state, result),
         AgentEvent::AgentEnd { .. } => on_agent_end(state),
         AgentEvent::Error { message } => on_agent_error(state, message),
-        AgentEvent::PermissionRequest { tool_name, tool_args, .. } => on_permission_request(state, tool_name, tool_args),
+        AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args } => on_permission_request(state, tool_call_id, tool_name, tool_args),
         _ => {}
     }
 }
@@ -236,8 +249,9 @@ fn on_agent_error(state: &mut AppState, message: String) {
     state.agent_running = false;
 }
 
-fn on_permission_request(state: &mut AppState, tool_name: String, tool_args: String) {
+fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
     state.permission_modal_tool = Some(tool_name.clone());
+    state.permission_modal_tool_call_id = Some(tool_call_id);
     state.permission_modal_args = Some(tool_args.clone());
     state.permission_modal_desc = Some(format!("Agent wants to execute '{}'", tool_name));
     state.mode = TuiMode::Permission;
@@ -279,12 +293,13 @@ fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
 }
 
 fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Cmd {
+    let tool_call_id = state.permission_modal_tool_call_id.clone().unwrap_or_default();
     let decision = match msg {
-        Msg::PermissionConfirm => PermissionDecision::Allow,
-        Msg::PermissionCancel => PermissionDecision::Deny,
-        Msg::PermissionAlways => PermissionDecision::AllowAlways,
-        Msg::PermissionSkip => PermissionDecision::Skip,
-        _ => PermissionDecision::Allow,
+        Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id },
+        Msg::PermissionCancel => PermissionDecision::Deny { tool_call_id },
+        Msg::PermissionAlways => PermissionDecision::AllowAlways { tool_call_id },
+        Msg::PermissionSkip => PermissionDecision::Skip { tool_call_id },
+        _ => PermissionDecision::Allow { tool_call_id },
     };
     handle_permission(state, decision)
 }
@@ -293,11 +308,9 @@ fn handle_anim(state: &mut AppState, msg: &Msg) {
     match msg {
         Msg::Tick => {
             state.animation.braille_frame = (state.animation.braille_frame + 1) % 8;
-            state.animation.last_tick = std::time::Instant::now();
         }
         Msg::CursorBlink => {
             state.animation.streaming_cursor_visible = !state.animation.streaming_cursor_visible;
-            state.animation.last_cursor_blink = std::time::Instant::now();
         }
         _ => {}
     }

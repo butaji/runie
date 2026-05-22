@@ -70,6 +70,7 @@ pub struct Tui {
     pub config: TuiConfig,
     pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
     pub state: AppState,
+    command_palette: CommandPalette,
 }
 
 impl Tui {
@@ -87,6 +88,7 @@ impl Tui {
             config,
             terminal,
             state: AppState::default(),
+            command_palette: CommandPalette::new(),
         })
     }
 
@@ -123,23 +125,27 @@ impl Tui {
         let show_sidebar = self.state.show_sidebar;
         let show_top_bar = self.config.show_top_bar;
         let show_status_bar = self.config.show_status_bar;
-        let mode = self.state.mode.clone();
-        let state_clone = self.state.clone();
+
+        // Extract data needed for render pass
+        let theme = self.config.theme.clone();
+        let state = self.state.clone();
+        let palette = self.command_palette.clone();
 
         self.terminal.draw(|frame| {
-            let theme = &self.config.theme;
+            let theme = &theme;
             Self::clear_background(frame, area, theme);
             let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
+            let state = &state;
 
             if show_top_bar {
-                render_top_bar(&state_clone, main_areas[0], frame.buffer_mut(), theme);
+                render_top_bar(state, main_areas[0], frame.buffer_mut(), theme);
             }
-            Self::render_content(frame, &state_clone, show_sidebar, main_areas[1], theme);
-            Self::render_input(frame, &state_clone, main_areas[2], theme);
+            Self::render_content(frame, state, show_sidebar, main_areas[1], theme);
+            Self::render_input(frame, state, main_areas[2], theme);
             if show_status_bar {
-                render_status_bar(&state_clone, main_areas[3], frame.buffer_mut(), theme);
+                render_status_bar(state, main_areas[3], frame.buffer_mut(), theme);
             }
-            Self::render_overlays(frame, &state_clone, mode, padded_area, area, theme);
+            Self::render_overlays(frame, state, &palette, padded_area, area, theme);
         })?;
         Ok(())
     }
@@ -188,12 +194,13 @@ impl Tui {
         frame.set_cursor_position(input_bar.cursor_screen_pos(area));
     }
 
-    fn render_overlays(frame: &mut ratatui::Frame, state: &AppState, mode: TuiMode, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+    fn render_overlays(frame: &mut ratatui::Frame, state: &AppState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+        let mode = state.mode.clone();
         if mode == TuiMode::Permission && state.permission_modal_tool.is_some() {
             Self::render_permission_modal(frame, state, padded, area, theme);
         }
         if mode == TuiMode::CommandPalette {
-            Self::render_command_palette(frame, padded, area, theme);
+            Self::render_command_palette(frame, state, padded, area, theme, palette);
         }
         if mode == TuiMode::Overlay {
             Self::render_overlay_mode(frame, area, theme);
@@ -218,11 +225,11 @@ impl Tui {
         modal.render_ref(modal_area, frame.buffer_mut(), theme);
     }
 
-    fn render_command_palette(frame: &mut ratatui::Frame, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+    fn render_command_palette(frame: &mut ratatui::Frame, state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
         Self::dim_background(frame, area, theme);
         let palette_area = Self::centered_rect(padded, 70, 20);
         Self::render_shadow(palette_area, frame.buffer_mut(), theme);
-        CommandPalette::new().render_ref(palette_area, frame.buffer_mut(), theme);
+        palette.render_ref(palette_area, frame.buffer_mut(), theme);
     }
 
     fn render_overlay_mode(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
@@ -304,10 +311,10 @@ impl Tui {
                     }
                     Cmd::SendPermission { decision } => {
                         let permission_action = match decision {
-                            PermissionDecision::Allow => PermissionAction::Confirm,
-                            PermissionDecision::Deny => PermissionAction::Cancel,
-                            PermissionDecision::AllowAlways => PermissionAction::Always,
-                            PermissionDecision::Skip => PermissionAction::Skip,
+                            PermissionDecision::Allow { .. } => PermissionAction::Confirm,
+                            PermissionDecision::Deny { .. } => PermissionAction::Cancel,
+                            PermissionDecision::AllowAlways { .. } => PermissionAction::Always,
+                            PermissionDecision::Skip { .. } => PermissionAction::Skip,
                         };
                         return Some(TuiAction::ToolPermission {
                             tool: self.state.permission_modal_tool.clone().unwrap_or_default(),

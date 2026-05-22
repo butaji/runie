@@ -1,10 +1,8 @@
-pub mod app;
 pub mod commands;
 pub mod context_loader;
 pub mod session_manager;
 pub mod settings;
 
-pub use app::{App, AppError};
 pub use commands::{Command, CommandParser};
 pub use context_loader::{build_system_prompt, ContextFile, ContextLoader};
 pub use session_manager::{SessionManager, SessionManagerError};

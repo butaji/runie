@@ -15,3 +15,6 @@ pub use context::{Context, WorkingMemory};
 pub use compactor::{Compactor, CompactorError, SimpleCompactor};
 pub use provider::ProviderError;
 pub use slash_command::{SlashCommand, parse_slash_command, format_help};
+
+#[cfg(test)]
+mod tests;
