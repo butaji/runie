@@ -26,7 +26,7 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { handle_palette_msg(state, msg); }
         Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); }
         Msg::ScrollDown | Msg::ScrollPageDown => { handle_scroll(state, if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }); }
-        Msg::Tick | Msg::CursorBlink => { state.animation.braille_frame = (state.animation.braille_frame + 1) % 8; handle_anim(state, &msg); }
+        Msg::Tick | Msg::CursorBlink => { handle_anim(state, &msg); }
         Msg::SlashCommand(cmd) => { cmds.extend(handle_slash(state, cmd)); }
         Msg::ToggleSessionTree => { handle_tree(state); }
         Msg::SessionTreeUp | Msg::SessionTreeDown => { handle_tree_nav(state, &msg); }
@@ -311,7 +311,8 @@ fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Cmd {
 fn handle_anim(state: &mut AppState, msg: &Msg) {
     match msg {
         Msg::Tick => {
-            state.animation.braille_frame = (state.animation.braille_frame + 1) % 8;
+            state.animation.braille_frame = (state.animation.braille_frame + 1) % 10;
+            state.animation.rewind_braille_frame = (state.animation.rewind_braille_frame + 1) % 10;
         }
         Msg::CursorBlink => {
             state.animation.streaming_cursor_visible = !state.animation.streaming_cursor_visible;

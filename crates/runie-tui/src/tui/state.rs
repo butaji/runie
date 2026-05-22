@@ -8,14 +8,18 @@ use runie_core::SlashCommand;
 #[derive(Clone)]
 pub struct AnimationState {
     pub braille_frame: usize,
+    pub rewind_braille_frame: usize,
     pub streaming_cursor_visible: bool,
+    pub interrupt_fade_start: Option<std::time::Instant>,
 }
 
 impl Default for AnimationState {
     fn default() -> Self {
         Self {
             braille_frame: 0,
+            rewind_braille_frame: 0,
             streaming_cursor_visible: true,
+            interrupt_fade_start: None,
         }
     }
 }
@@ -119,6 +123,7 @@ pub struct AppState {
     pub token_usage: TokenUsage,
     pub session_token_usage: TokenUsage,
     pub session_tree: SessionTreeNavigator,
+    pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
 }
 
 impl Default for AppState {
@@ -143,6 +148,7 @@ impl Default for AppState {
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
+            background_jobs: Vec::new(),
         }
     }
 }
@@ -264,6 +270,7 @@ pub struct RenderState {
     pub diff_viewer: Option<DiffViewer>,
     pub session_token_usage: TokenUsage,
     pub session_tree: SessionTreeNavigator,
+    pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
 }
 
 impl RenderState {
@@ -287,6 +294,7 @@ impl RenderState {
             diff_viewer: state.diff_viewer.clone(),
             session_token_usage: state.session_token_usage.clone(),
             session_tree: state.session_tree.clone(),
+            background_jobs: state.background_jobs.clone(),
         }
     }
 }
