@@ -155,7 +155,9 @@ fn fill_background(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let bg_base: ratatui::style::Color = theme.color("bg.base").into();
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
-            buf.get_mut(x, y).set_style(Style::default().bg(bg_base));
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_style(Style::default().bg(bg_base));
+            }
         }
     }
 }
@@ -258,9 +260,10 @@ fn render_user_msg(
     let total_height = msg_height + 2;
 
     draw_user_panel_bg(area, row, margin_x, total_height, buf, bg_panel);
-    buf.get_mut(margin_x, area.y + row + 1)
-        .set_char('❯')
-        .set_style(Style::default().fg(accent_primary).bg(bg_panel));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row + 1)) {
+        cell.set_char('❯');
+        cell.set_style(Style::default().fg(accent_primary).bg(bg_panel));
+    }
     draw_user_text_lines(&wrapped, row, text_x, max_rows, area, buf, text_primary, bg_panel);
 
     total_height
@@ -274,7 +277,9 @@ fn draw_user_panel_bg(area: Rect, row: u16, margin_x: u16, total_height: u16, bu
         if panel_start_y + r >= area.y + area.height { break; }
         for x in 0..panel_width {
             if panel_start_x + x < area.x + area.width {
-                buf.get_mut(panel_start_x + x, panel_start_y + r).set_style(Style::default().bg(bg_panel));
+                if let Some(cell) = buf.cell_mut((panel_start_x + x, panel_start_y + r)) {
+                    cell.set_style(Style::default().bg(bg_panel));
+                }
             }
         }
     }
@@ -305,14 +310,20 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x:
         let last_line_len = wrapped.last().map(|l| l.len()).unwrap_or(0) as u16;
         let cursor_x = margin_x + last_line_len;
         if cursor_x < area.x + area.width - 1 {
-            buf.get_mut(cursor_x, area.y + row + msg_height - 1).set_char('▊').set_style(Style::default().fg(text_secondary));
+            if let Some(cell) = buf.cell_mut((cursor_x, area.y + row + msg_height - 1)) {
+                cell.set_char('▊');
+                cell.set_style(Style::default().fg(text_secondary));
+            }
         }
     }
     msg_height
 }
 
 fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('◆');
+        cell.set_style(Style::default().fg(text_muted));
+    }
     let thought_text = format!("Thought for {:.1}s {}", duration_secs, spinner);
     let line = Line::raw(thought_text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
@@ -320,7 +331,10 @@ fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, t
 }
 
 fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('◆');
+        cell.set_style(Style::default().fg(text_muted));
+    }
     let line = Line::raw(text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
@@ -351,7 +365,10 @@ fn render_tool_call_msg(
 }
 
 fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, text_secondary: ratatui::style::Color, name: &str, args: &str) {
-    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_muted));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('◆');
+        cell.set_style(Style::default().fg(text_muted));
+    }
     let header = format!("{}({})", name, args);
     let line = Line::raw(header).style(Style::default().fg(text_secondary));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
@@ -361,51 +378,87 @@ fn draw_tool_result(result_text: &str, is_error: bool, area: Rect, row: u16, tex
     let result_y = row + 1;
     if result_y >= max_rows { return 1; }
     for (i, ch) in "  ".chars().enumerate() {
-        buf.get_mut(text_x - 2 + i as u16, area.y + result_y).set_char(ch).set_style(Style::default().fg(text_muted));
+        if let Some(cell) = buf.cell_mut((text_x - 2 + i as u16, area.y + result_y)) {
+            cell.set_char(ch);
+            cell.set_style(Style::default().fg(text_muted));
+        }
     }
-    buf.get_mut(text_x, area.y + result_y).set_char('→').set_style(Style::default().fg(text_muted));
-    buf.get_mut(text_x + 1, area.y + result_y).set_char(if is_error { '×' } else { '✓' }).set_style(Style::default().fg(if is_error { error } else { success }));
+    if let Some(cell) = buf.cell_mut((text_x, area.y + result_y)) {
+        cell.set_char('→');
+        cell.set_style(Style::default().fg(text_muted));
+    }
+    if let Some(cell) = buf.cell_mut((text_x + 1, area.y + result_y)) {
+        cell.set_char(if is_error { '×' } else { '✓' });
+        cell.set_style(Style::default().fg(if is_error { error } else { success }));
+    }
     let line = Line::raw(result_text).style(Style::default().fg(text_muted));
     buf.set_line(text_x + 3, area.y + result_y, &line, area.width - 7);
     2
 }
 
 fn render_edit_msg(filename: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, code_path: ratatui::style::Color) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('◆').set_style(Style::default().fg(text_secondary));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('◆');
+        cell.set_style(Style::default().fg(text_secondary));
+    }
     let edit_label = "Edit ";
     let filename_only = std::path::Path::new(filename).file_name().and_then(|n| n.to_str()).unwrap_or(filename);
     let edit_len = edit_label.len() as u16;
     for (i, ch) in edit_label.chars().enumerate() {
-        buf.get_mut(text_x + i as u16, area.y + row).set_char(ch).set_style(Style::default().fg(text_secondary));
+        if let Some(cell) = buf.cell_mut((text_x + i as u16, area.y + row)) {
+            cell.set_char(ch);
+            cell.set_style(Style::default().fg(text_secondary));
+        }
     }
     for (i, ch) in filename_only.chars().enumerate() {
         let x_pos = text_x + edit_len + i as u16;
         if x_pos < area.x + area.width {
-            buf.get_mut(x_pos, area.y + row).set_char(ch).set_style(Style::default().fg(code_path));
+            if let Some(cell) = buf.cell_mut((x_pos, area.y + row)) {
+                cell.set_char(ch);
+                cell.set_style(Style::default().fg(code_path));
+            }
         }
     }
     1
 }
 
 fn render_tool_running_msg(name: &str, args: &str, duration_ms: u64, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, spinner: char) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('●').set_style(Style::default().fg(text_secondary));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('●');
+        cell.set_style(Style::default().fg(text_secondary));
+    }
     let header = format!("{} {} {}", name, args, spinner);
     let line = Line::raw(header).style(Style::default().fg(text_secondary));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     if duration_ms > 1000 {
         let bar_y = row + 1;
         let bar_x = text_x;
-        buf.get_mut(bar_x, area.y + bar_y).set_char('[').set_style(Style::default().fg(text_secondary));
+        if let Some(cell) = buf.cell_mut((bar_x, area.y + bar_y)) {
+            cell.set_char('[');
+            cell.set_style(Style::default().fg(text_secondary));
+        }
         let progress = ((duration_ms.min(10000) as f32 / 10000.0) * 10.0) as usize;
-        for i in 0..10 { let ch = if i < progress { '▓' } else { '░' }; buf.get_mut(bar_x + 1 + i as u16, area.y + bar_y).set_char(ch).set_style(Style::default().fg(text_secondary)); }
-        buf.get_mut(bar_x + 11, area.y + bar_y).set_char(']').set_style(Style::default().fg(text_secondary));
+        for i in 0..10 {
+            let ch = if i < progress { '▓' } else { '░' };
+            if let Some(cell) = buf.cell_mut((bar_x + 1 + i as u16, area.y + bar_y)) {
+                cell.set_char(ch);
+                cell.set_style(Style::default().fg(text_secondary));
+            }
+        }
+        if let Some(cell) = buf.cell_mut((bar_x + 11, area.y + bar_y)) {
+            cell.set_char(']');
+            cell.set_style(Style::default().fg(text_secondary));
+        }
         return 2;
     }
     1
 }
 
 fn render_tool_complete_msg(name: &str, result: &str, lines: Option<&usize>, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, success: ratatui::style::Color, text_muted: ratatui::style::Color) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('✓').set_style(Style::default().fg(success));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('✓');
+        cell.set_style(Style::default().fg(success));
+    }
     let suffix = lines.map(|l| format!(" ({} lines)", l)).unwrap_or_default();
     let line = Line::raw(format!("{} {}{}", name, result, suffix)).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
@@ -414,22 +467,53 @@ fn render_tool_complete_msg(name: &str, result: &str, lines: Option<&usize>, are
 
 fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_dim: ratatui::style::Color, text_secondary: ratatui::style::Color, spinner: char) -> u16 {
     match status {
-        PlanStatus::Pending => { buf.get_mut(margin_x, area.y + row).set_char('▸').set_style(Style::default().fg(text_dim)); let line = Line::raw(format!("{}. {} (pending)", step, text)).style(Style::default().fg(text_dim)); buf.set_line(text_x, area.y + row, &line, area.width - 4); }
-        PlanStatus::Active => { buf.get_mut(margin_x, area.y + row).set_char('│').set_style(Style::default().fg(text_secondary)); buf.get_mut(margin_x + 1, area.y + row).set_char('●').set_style(Style::default().fg(text_secondary)); let line = Line::raw(format!("{}. {} {}", step, text, spinner)).style(Style::default().fg(text_secondary)); buf.set_line(text_x + 1, area.y + row, &line, area.width - 5); }
-        PlanStatus::Complete => { buf.get_mut(margin_x, area.y + row).set_char('✓').set_style(Style::default().fg(text_secondary)); let line = Line::raw(format!("{}. {}", step, text)).style(Style::default().fg(text_secondary)); buf.set_line(text_x, area.y + row, &line, area.width - 4); }
+        PlanStatus::Pending => {
+            if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+                cell.set_char('▸');
+                cell.set_style(Style::default().fg(text_dim));
+            }
+            let line = Line::raw(format!("{}. {} (pending)", step, text)).style(Style::default().fg(text_dim));
+            buf.set_line(text_x, area.y + row, &line, area.width - 4);
+        }
+        PlanStatus::Active => {
+            if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+                cell.set_char('│');
+                cell.set_style(Style::default().fg(text_secondary));
+            }
+            if let Some(cell) = buf.cell_mut((margin_x + 1, area.y + row)) {
+                cell.set_char('●');
+                cell.set_style(Style::default().fg(text_secondary));
+            }
+            let line = Line::raw(format!("{}. {} {}", step, text, spinner)).style(Style::default().fg(text_secondary));
+            buf.set_line(text_x + 1, area.y + row, &line, area.width - 5);
+        }
+        PlanStatus::Complete => {
+            if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+                cell.set_char('✓');
+                cell.set_style(Style::default().fg(text_secondary));
+            }
+            let line = Line::raw(format!("{}. {}", step, text)).style(Style::default().fg(text_secondary));
+            buf.set_line(text_x, area.y + row, &line, area.width - 4);
+        }
     }
     1
 }
 
 fn render_interrupt_msg(area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, text_dim: ratatui::style::Color) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('✗').set_style(Style::default().fg(error));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('✗');
+        cell.set_style(Style::default().fg(error));
+    }
     let line = Line::raw("Interrupted").style(Style::default().fg(text_dim));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }
 
 fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char) -> u16 {
-    buf.get_mut(margin_x, area.y + row).set_char('↺').set_style(Style::default().fg(text_muted));
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('↺');
+        cell.set_style(Style::default().fg(text_muted));
+    }
     let line = Line::raw(format!("Rewinding... {} ({} steps)", spinner, steps)).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1

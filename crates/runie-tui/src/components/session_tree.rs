@@ -87,7 +87,7 @@ impl SessionTreeNavigator {
     }
 
     pub fn move_down(&mut self) {
-        if self.selected + 1 < self.entries.len() {
+        if self.selected < self.entries.len().saturating_sub(1) {
             self.selected += 1;
             if self.selected >= self.scroll_offset + 20 {
                 self.scroll_offset = self.selected - 19;
@@ -148,9 +148,10 @@ impl SessionTreeNavigator {
             let color = if row == self.selected { accent } else { text_secondary };
 
             for x in 0..inner.width {
-                let cell = buf.get_mut(inner.x + x, y);
-                cell.set_char(' ');
-                cell.set_style(Style::default().bg(bg_panel).fg(color));
+                if let Some(cell) = buf.cell_mut((inner.x + x, y)) {
+                    cell.set_char(' ');
+                    cell.set_style(Style::default().bg(bg_panel).fg(color));
+                }
             }
 
             let line = Line::raw(text).style(Style::default().fg(color));

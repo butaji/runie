@@ -36,8 +36,6 @@ impl Default for InputBar {
 pub struct StyleHelpers {
     text_primary: Style,
     text_tertiary: Style,
-    text_body: Style,
-    accent_chevron: Style,
 }
 
 impl StyleHelpers {
@@ -45,8 +43,6 @@ impl StyleHelpers {
         Self {
             text_primary: Style::default().fg(theme.color("text.primary").into()),
             text_tertiary: Style::default().fg(theme.color("text.dim").into()),
-            text_body: Style::default().fg(theme.color("text.secondary").into()),
-            accent_chevron: Style::default().fg(theme.color("accent.secondary").into()),
         }
     }
     fn primary(&self) -> Style {
@@ -54,12 +50,6 @@ impl StyleHelpers {
     }
     fn dim(&self) -> Style {
         self.text_tertiary
-    }
-    fn body(&self) -> Style {
-        self.text_body
-    }
-    fn chevron(&self) -> Style {
-        self.accent_chevron
     }
 }
 

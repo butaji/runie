@@ -63,8 +63,10 @@ impl Widget for AgentList {
 }
 
 fn render_border_top(area: Rect, buf: &mut Buffer, border_color: ratatui::style::Color, accent_primary: ratatui::style::Color, inner_width: u16) {
-    buf.get_mut(area.x, area.y).set_char('╭');
-    buf.get_mut(area.x, area.y).set_style(Style::default().fg(border_color));
+    if let Some(cell) = buf.cell_mut((area.x, area.y)) {
+        cell.set_char('╭');
+        cell.set_style(Style::default().fg(border_color));
+    }
 
     let header = " AGENTS ";
     let header_style = Style::default().fg(accent_primary).add_modifier(Modifier::BOLD);
@@ -73,32 +75,44 @@ fn render_border_top(area: Rect, buf: &mut Buffer, border_color: ratatui::style:
 
     let mut x = area.x + 1;
     for ch in header.chars() {
-        buf.get_mut(x, area.y).set_char(ch);
-        buf.get_mut(x, area.y).set_style(header_style);
+        if let Some(cell) = buf.cell_mut((x, area.y)) {
+            cell.set_char(ch);
+            cell.set_style(header_style);
+        }
         x += 1;
     }
     for _ in 0..dashes {
-        buf.get_mut(x, area.y).set_char('─');
-        buf.get_mut(x, area.y).set_style(Style::default().fg(border_color));
+        if let Some(cell) = buf.cell_mut((x, area.y)) {
+            cell.set_char('─');
+            cell.set_style(Style::default().fg(border_color));
+        }
         x += 1;
     }
 
-    buf.get_mut(area.x + area.width - 1, area.y).set_char('╮');
-    buf.get_mut(area.x + area.width - 1, area.y).set_style(Style::default().fg(border_color));
+    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y)) {
+        cell.set_char('╮');
+        cell.set_style(Style::default().fg(border_color));
+    }
 }
 
 fn fill_interior(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color, border_color: ratatui::style::Color) {
     for y in (area.y + 1)..(area.y + area.height - 1) {
         for x in (area.x + 1)..(area.x + area.width - 1) {
-            buf.get_mut(x, y).set_style(Style::default().bg(bg_panel));
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_style(Style::default().bg(bg_panel));
+            }
         }
     }
 
     for y in (area.y + 1)..(area.y + area.height - 1) {
-        buf.get_mut(area.x, y).set_char('│');
-        buf.get_mut(area.x, y).set_style(Style::default().fg(border_color));
-        buf.get_mut(area.x + area.width - 1, y).set_char('│');
-        buf.get_mut(area.x + area.width - 1, y).set_style(Style::default().fg(border_color));
+        if let Some(cell) = buf.cell_mut((area.x, y)) {
+            cell.set_char('│');
+            cell.set_style(Style::default().fg(border_color));
+        }
+        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, y)) {
+            cell.set_char('│');
+            cell.set_style(Style::default().fg(border_color));
+        }
     }
 }
 
@@ -153,12 +167,18 @@ fn get_tag_color(tag_type: &str, accent_primary: ratatui::style::Color, text_dim
 
 fn render_agent_status(area: Rect, buf: &mut Buffer, y: u16, status: (char, ratatui::style::Color), bg_panel: ratatui::style::Color) {
     let (status_char, status_fg) = status;
-    buf.get_mut(area.x + 2, y).set_char(' ');
-    buf.get_mut(area.x + 2, y).set_style(Style::default().bg(bg_panel));
-    buf.get_mut(area.x + 3, y).set_char(status_char);
-    buf.get_mut(area.x + 3, y).set_style(Style::default().fg(status_fg).bg(bg_panel));
-    buf.get_mut(area.x + 4, y).set_char(' ');
-    buf.get_mut(area.x + 4, y).set_style(Style::default().bg(bg_panel));
+    if let Some(cell) = buf.cell_mut((area.x + 2, y)) {
+        cell.set_char(' ');
+        cell.set_style(Style::default().bg(bg_panel));
+    }
+    if let Some(cell) = buf.cell_mut((area.x + 3, y)) {
+        cell.set_char(status_char);
+        cell.set_style(Style::default().fg(status_fg).bg(bg_panel));
+    }
+    if let Some(cell) = buf.cell_mut((area.x + 4, y)) {
+        cell.set_char(' ');
+        cell.set_style(Style::default().bg(bg_panel));
+    }
 }
 
 fn render_agent_tag(area: Rect, buf: &mut Buffer, y: u16, tag: &str, tag_color: ratatui::style::Color, bg_panel: ratatui::style::Color) {
@@ -197,21 +217,29 @@ fn render_agent_info(
 
 fn render_separator(area: Rect, buf: &mut Buffer, y: u16, text_dim: ratatui::style::Color, bg_panel: ratatui::style::Color) {
     for sx in (area.x + 2)..(area.x + area.width - 2) {
-        buf.get_mut(sx, y).set_char('·');
-        buf.get_mut(sx, y).set_style(Style::default().fg(text_dim).bg(bg_panel));
+        if let Some(cell) = buf.cell_mut((sx, y)) {
+            cell.set_char('·');
+            cell.set_style(Style::default().fg(text_dim).bg(bg_panel));
+        }
     }
 }
 
 fn render_border_bottom(area: Rect, buf: &mut Buffer, border_color: ratatui::style::Color) {
     let bottom_y = area.y + area.height - 1;
-    buf.get_mut(area.x, bottom_y).set_char('╰');
-    buf.get_mut(area.x, bottom_y).set_style(Style::default().fg(border_color));
-
-    for x in (area.x + 1)..(area.x + area.width - 1) {
-        buf.get_mut(x, bottom_y).set_char('─');
-        buf.get_mut(x, bottom_y).set_style(Style::default().fg(border_color));
+    if let Some(cell) = buf.cell_mut((area.x, bottom_y)) {
+        cell.set_char('╰');
+        cell.set_style(Style::default().fg(border_color));
     }
 
-    buf.get_mut(area.x + area.width - 1, bottom_y).set_char('╯');
-    buf.get_mut(area.x + area.width - 1, bottom_y).set_style(Style::default().fg(border_color));
+    for x in (area.x + 1)..(area.x + area.width - 1) {
+        if let Some(cell) = buf.cell_mut((x, bottom_y)) {
+            cell.set_char('─');
+            cell.set_style(Style::default().fg(border_color));
+        }
+    }
+
+    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, bottom_y)) {
+        cell.set_char('╯');
+        cell.set_style(Style::default().fg(border_color));
+    }
 }

@@ -7,10 +7,8 @@ mod tui_run;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use runie_ai::Provider;
 use settings::{CliSettings, Keybindings, Settings};
 
-use crate::context_loader::{build_system_prompt, ContextLoader};
 use crate::provider_factory::create_provider;
 
 /// Tidy coding harness — AI agent toolkit for the terminal.
@@ -173,6 +171,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load settings with layered resolution, then apply CLI overrides
     let mut settings = Settings::load();
     settings.merge_cli(&CliSettings::from(&cli));
+
+    // Part 4: Validate model after loading settings
+    if !settings.validate_model() {
+        eprintln!("Warning: model '{}' not found in model registry. Using default.", settings.model);
+    }
 
     match cli.command {
         // CLI: One-shot commands

@@ -5,6 +5,8 @@ use ratatui::{
     text::{Line, Span},
 };
 use crate::theme::ThemeWrapper;
+use crate::tui::state::Msg;
+use crate::components::modal::Modal;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PermissionAction {
@@ -83,22 +85,79 @@ impl PermissionModal {
     }
 }
 
+impl Modal for PermissionModal {
+    fn is_open(&self) -> bool {
+        !self.tool_name.is_empty()
+    }
+
+    fn open(&mut self) {
+        // PermissionModal is created fresh with data, so open is a no-op
+    }
+
+    fn close(&mut self) {
+        self.tool_name.clear();
+        self.tool_args.clear();
+        self.description.clear();
+        self.selected = 0;
+    }
+
+    fn toggle(&mut self) {
+        if self.is_open() {
+            self.close();
+        }
+    }
+
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+        PermissionModal::render_ref(self, area, buf, theme);
+    }
+
+    fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Option<Msg> {
+        use crossterm::event::KeyCode;
+        match key.code {
+            KeyCode::Char('y') | KeyCode::Enter => Some(Msg::PermissionConfirm),
+            KeyCode::Char('n') | KeyCode::Esc => Some(Msg::PermissionCancel),
+            KeyCode::Char('a') => Some(Msg::PermissionAlways),
+            KeyCode::Char('s') => Some(Msg::PermissionSkip),
+            KeyCode::Up | KeyCode::Left => {
+                self.prev_option();
+                None
+            }
+            KeyCode::Down | KeyCode::Right => {
+                self.next_option();
+                None
+            }
+            _ => None,
+        }
+    }
+}
+
 fn fill_background(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
-            buf.get_mut(x, y).set_style(Style::default().bg(bg_panel));
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_style(Style::default().bg(bg_panel));
+            }
         }
     }
 }
 
 fn draw_border(area: Rect, buf: &mut Buffer, border_unfocused: ratatui::style::Color, error: ratatui::style::Color) {
     for x in area.x..area.x + area.width {
-        buf[(x, area.y)].set_symbol("─").set_style(Style::default().fg(border_unfocused));
-        buf[(x, area.y + area.height - 1)].set_symbol("─").set_style(Style::default().fg(border_unfocused));
+        if let Some(cell) = buf.cell_mut((x, area.y)) {
+            cell.set_symbol("─");
+            cell.set_style(Style::default().fg(border_unfocused));
+        }
+        if let Some(cell) = buf.cell_mut((x, area.y + area.height - 1)) {
+            cell.set_symbol("─");
+            cell.set_style(Style::default().fg(border_unfocused));
+        }
     }
     let content_start_y = area.y + 1;
     for y in content_start_y..area.y + area.height - 1 {
-        buf[(area.x, y)].set_symbol("▌").set_style(Style::default().fg(error));
+        if let Some(cell) = buf.cell_mut((area.x, y)) {
+            cell.set_symbol("▌");
+            cell.set_style(Style::default().fg(error));
+        }
     }
 }
 

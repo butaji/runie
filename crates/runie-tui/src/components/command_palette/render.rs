@@ -25,36 +25,54 @@ pub fn render(palette: &CommandPalette, area: Rect, buf: &mut Buffer, theme: &Th
 fn clear_background(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
-            buf.get_mut(x, y).set_style(Style::default().bg(bg_panel));
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_style(Style::default().bg(bg_panel));
+            }
         }
     }
 }
 
 fn draw_border(area: Rect, buf: &mut Buffer, border_unfocused: ratatui::style::Color) {
     for x in area.x..area.x + area.width {
-        buf.get_mut(x, area.y).set_char('─');
-        buf.get_mut(x, area.y).set_style(Style::default().fg(border_unfocused));
+        if let Some(cell) = buf.cell_mut((x, area.y)) {
+            cell.set_char('─');
+            cell.set_style(Style::default().fg(border_unfocused));
+        }
     }
     for x in area.x..area.x + area.width {
-        buf.get_mut(x, area.y + area.height - 1).set_char('─');
-        buf.get_mut(x, area.y + area.height - 1).set_style(Style::default().fg(border_unfocused));
+        if let Some(cell) = buf.cell_mut((x, area.y + area.height - 1)) {
+            cell.set_char('─');
+            cell.set_style(Style::default().fg(border_unfocused));
+        }
     }
     for y in area.y..area.y + area.height {
-        buf.get_mut(area.x, y).set_char('│');
-        buf.get_mut(area.x, y).set_style(Style::default().fg(border_unfocused));
+        if let Some(cell) = buf.cell_mut((area.x, y)) {
+            cell.set_char('│');
+            cell.set_style(Style::default().fg(border_unfocused));
+        }
     }
     for y in area.y..area.y + area.height {
-        buf.get_mut(area.x + area.width - 1, y).set_char('│');
-        buf.get_mut(area.x + area.width - 1, y).set_style(Style::default().fg(border_unfocused));
+        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, y)) {
+            cell.set_char('│');
+            cell.set_style(Style::default().fg(border_unfocused));
+        }
     }
-    buf.get_mut(area.x, area.y).set_char('╭');
-    buf.get_mut(area.x, area.y).set_style(Style::default().fg(border_unfocused));
-    buf.get_mut(area.x + area.width - 1, area.y).set_char('╮');
-    buf.get_mut(area.x + area.width - 1, area.y).set_style(Style::default().fg(border_unfocused));
-    buf.get_mut(area.x, area.y + area.height - 1).set_char('╰');
-    buf.get_mut(area.x, area.y + area.height - 1).set_style(Style::default().fg(border_unfocused));
-    buf.get_mut(area.x + area.width - 1, area.y + area.height - 1).set_char('╯');
-    buf.get_mut(area.x + area.width - 1, area.y + area.height - 1).set_style(Style::default().fg(border_unfocused));
+    if let Some(cell) = buf.cell_mut((area.x, area.y)) {
+        cell.set_char('╭');
+        cell.set_style(Style::default().fg(border_unfocused));
+    }
+    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y)) {
+        cell.set_char('╮');
+        cell.set_style(Style::default().fg(border_unfocused));
+    }
+    if let Some(cell) = buf.cell_mut((area.x, area.y + area.height - 1)) {
+        cell.set_char('╰');
+        cell.set_style(Style::default().fg(border_unfocused));
+    }
+    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + area.height - 1)) {
+        cell.set_char('╯');
+        cell.set_style(Style::default().fg(border_unfocused));
+    }
 }
 
 fn draw_title(area: Rect, buf: &mut Buffer, accent_primary: ratatui::style::Color, text_muted: ratatui::style::Color) {
@@ -63,8 +81,10 @@ fn draw_title(area: Rect, buf: &mut Buffer, accent_primary: ratatui::style::Colo
     for (i, ch) in title.chars().enumerate() {
         let x = area.x + 1 + i as u16;
         if x < area.x + area.width - 1 {
-            buf.get_mut(x, area.y).set_char(ch);
-            buf.get_mut(x, area.y).set_style(title_style);
+            if let Some(cell) = buf.cell_mut((x, area.y)) {
+                cell.set_char(ch);
+                cell.set_style(title_style);
+            }
         }
     }
 
@@ -73,8 +93,10 @@ fn draw_title(area: Rect, buf: &mut Buffer, accent_primary: ratatui::style::Colo
     for (i, ch) in close_hint.chars().enumerate() {
         let x = close_start + i as u16;
         if x > area.x && x < area.x + area.width - 1 {
-            buf.get_mut(x, area.y).set_char(ch);
-            buf.get_mut(x, area.y).set_style(Style::default().fg(text_muted));
+            if let Some(cell) = buf.cell_mut((x, area.y)) {
+                cell.set_char(ch);
+                cell.set_style(Style::default().fg(text_muted));
+            }
         }
     }
 }
@@ -188,13 +210,17 @@ fn draw_vertical_separators(
     for y in pane_y..pane_y + pane_h {
         let sep1_x = action_x - 1;
         if sep1_x > area.x && sep1_x < area.x + area.width - 1 {
-            buf.get_mut(sep1_x, y).set_char('│');
-            buf.get_mut(sep1_x, y).set_style(Style::default().fg(text_secondary));
+            if let Some(cell) = buf.cell_mut((sep1_x, y)) {
+                cell.set_char('│');
+                cell.set_style(Style::default().fg(text_secondary));
+            }
         }
         let sep2_x = arg_x - 1;
         if sep2_x > area.x && sep2_x < area.x + area.width - 1 {
-            buf.get_mut(sep2_x, y).set_char('│');
-            buf.get_mut(sep2_x, y).set_style(Style::default().fg(text_secondary));
+            if let Some(cell) = buf.cell_mut((sep2_x, y)) {
+                cell.set_char('│');
+                cell.set_style(Style::default().fg(text_secondary));
+            }
         }
     }
 }
