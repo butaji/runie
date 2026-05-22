@@ -30,6 +30,8 @@ use crate::{
         GitChange,
         GitStatus,
         CommandPalette,
+        DiffViewer,
+        SessionTreeNavigator,
     },
 };
 use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
@@ -196,6 +198,12 @@ impl Tui {
         if mode == TuiMode::Overlay {
             Self::render_overlay_mode(frame, area, theme);
         }
+        if mode == TuiMode::DiffViewer {
+            Self::render_diff_viewer(frame, state, area, theme);
+        }
+        if mode == TuiMode::SessionTree {
+            Self::render_session_tree(frame, state, area, theme);
+        }
     }
 
     fn render_permission_modal(frame: &mut ratatui::Frame, state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper) {
@@ -223,6 +231,22 @@ impl Tui {
         let mut overlay_buf = Buffer::empty(overlay_area);
         Overlay::default().render_ref(overlay_area, &mut overlay_buf, theme);
         Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
+    }
+
+    fn render_diff_viewer(frame: &mut ratatui::Frame, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+        Self::dim_background(frame, area, theme);
+        let diff_area = Self::centered_rect(area, 80, 25);
+        Self::render_shadow(diff_area, frame.buffer_mut(), theme);
+        if let Some(ref diff) = state.diff_viewer {
+            diff.render_ref(diff_area, frame.buffer_mut(), theme);
+        }
+    }
+
+    fn render_session_tree(frame: &mut ratatui::Frame, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+        Self::dim_background(frame, area, theme);
+        let tree_area = Self::centered_rect(area, 70, 25);
+        Self::render_shadow(tree_area, frame.buffer_mut(), theme);
+        state.session_tree.render_ref(tree_area, frame.buffer_mut(), theme);
     }
 
     fn dim_background(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
@@ -289,6 +313,9 @@ impl Tui {
                             tool: self.state.permission_modal_tool.clone().unwrap_or_default(),
                             action: permission_action,
                         });
+                    }
+                    Cmd::SaveSession { .. } | Cmd::LoadSession { .. } | Cmd::SlashCommand(_) => {
+                        // These are handled by the CLI runtime, not the TUI
                     }
                 }
             }

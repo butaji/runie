@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 runie-core = { path = "../runie-core" }
 runie-agent = { path = "../runie-agent" }
+runie-ai = { path = "../runie-ai" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 opaline = "0.1"

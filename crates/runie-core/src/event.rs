@@ -17,4 +17,5 @@ pub enum Event {
     Compaction { summary: String, original_turns: usize, compacted_turns: usize },
     Error { message: String },
     AgentEnd { timestamp: DateTime<Utc> },
+    Usage { prompt_tokens: usize, completion_tokens: usize, total_tokens: usize },
 }

@@ -28,6 +28,8 @@ pub use components::{
     ContextPanel,
     GitChange,
     GitStatus,
+    SessionTreeNavigator,
+    SessionTreeEntry,
 };
 
 // Re-export ratatui types we use

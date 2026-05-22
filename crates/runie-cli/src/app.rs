@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::path::PathBuf;
 
 use crate::session_manager::SessionManager;
+use crate::settings::{Settings, sessions_dir};
 
 pub struct App {
     pub agent: Option<Box<dyn Agent>>,
@@ -15,41 +16,52 @@ pub struct App {
     pub router: Option<Box<dyn Router>>,
     pub orchestrator: Option<Box<dyn Orchestrator>>,
     pub workspace: Workspace,
+    pub settings: Settings,
 }
 
 impl App {
-    pub fn new(workspace_path: PathBuf) -> Self {
+    pub fn new(workspace_path: PathBuf, settings: Settings) -> Self {
         let workspace = Workspace::new(workspace_path);
-        let session_manager = SessionManager::new(
-            dirs::home_dir().unwrap_or_default().join(".tidy/sessions")
-        );
-        
+        let sessions_path = sessions_dir()
+            .unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join(".tidy/sessions"));
+        let session_manager = SessionManager::new(sessions_path);
+
         Self {
             agent: None,
             session_manager,
             router: None,
             orchestrator: None,
             workspace,
+            settings,
         }
     }
 
     pub async fn initialize(&mut self) -> Result<(), AppError> {
         // Create default tool registry
         let registry = Arc::new(create_default_toolkit(self.workspace.clone()));
-        
-        // Create default provider
+
+        // Create provider using settings
+        let api_key = self.settings.api_key.clone()
+            .or_else(|| std::env::var("OPENAI_API_KEY").ok());
         let provider = Arc::new(OpenAiProvider::new(
-            std::env::var("OPENAI_API_KEY").unwrap_or_default(),
-            "gpt-4".to_string(),
+            api_key.unwrap_or_default(),
+            self.settings.model.clone(),
         ));
-        
+
         // Create agent
         let session = Session::new(uuid::Uuid::new_v4().to_string());
         let state = AgentState::new(session);
-        let config = AgentConfig::default();
+        let mut config = AgentConfig::default();
+        config.max_turns = self.settings.max_turns;
+        config.temperature = self.settings.temperature;
+        config.compaction_threshold = self.settings.compact_threshold;
+        config.tool_execution_mode = match self.settings.tool_mode.as_str() {
+            "sequential" => runie_agent::config::ToolExecutionMode::Sequential,
+            _ => runie_agent::config::ToolExecutionMode::Parallel,
+        };
         let loop_inner = AgentLoop::new(provider, registry, vec![], state, config);
         self.agent = Some(Box::new(CodingAgent::new(loop_inner)));
-        
+
         Ok(())
     }
 

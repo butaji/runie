@@ -1,7 +1,10 @@
-use crate::components::MessageItem;
+use crate::components::{MessageItem, DiffViewer};
 use runie_agent::events::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::tui::update::update;
+use crate::components::SessionTreeNavigator;
+use runie_ai::TokenUsage;
+use runie_core::SlashCommand;
 
 #[derive(Clone)]
 pub struct AnimationState {
@@ -51,6 +54,10 @@ pub struct AppState {
     pub command_palette_selected: usize,
     pub feed_scroll_offset: usize,
     pub animation: AnimationState,
+    pub diff_viewer: Option<DiffViewer>,
+    pub token_usage: TokenUsage,
+    pub session_token_usage: TokenUsage,
+    pub session_tree: SessionTreeNavigator,
 }
 
 impl Default for AppState {
@@ -83,6 +90,10 @@ impl Default for AppState {
             command_palette_selected: 0,
             feed_scroll_offset: 0,
             animation: AnimationState::default(),
+            diff_viewer: None,
+            token_usage: TokenUsage::default(),
+            session_token_usage: TokenUsage::default(),
+            session_tree: SessionTreeNavigator::new(),
         }
     }
 }
@@ -118,6 +129,8 @@ pub enum TuiMode {
     Select,
     Permission,
     CommandPalette,
+    DiffViewer,
+    SessionTree,
 }
 
 #[derive(Debug, Clone)]
@@ -165,22 +178,28 @@ pub enum Msg {
     // Animation
     Tick,
     CursorBlink,
+
+    // Slash commands
+    SlashCommand(runie_core::slash_command::SlashCommand),
+
+    // Session tree
+    ToggleSessionTree,
+    SessionTreeUp,
+    SessionTreeDown,
+    SessionTreeConfirm,
 }
 
 // ─── Cmd ────────────────────────────────────────────────────────────────────────
 // Effects returned by update() to be executed by the runtime
 
 #[derive(Debug, Clone)]
-
 pub enum Cmd {
     SpawnAgent { messages: Vec<AgentMessage> },
     SendPermission { decision: PermissionDecision },
+    SaveSession { name: Option<String> },
+    LoadSession { name: String },
+    SlashCommand(SlashCommand),
 }
-
-// ─── update() ─────────────────────────────────────────────────────────────────
-// Pure reducer: takes state + msg, returns Vec<Cmd> (no side effects)
-
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TuiAction {

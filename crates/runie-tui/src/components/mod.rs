@@ -1,6 +1,7 @@
 pub mod overlay;
 pub mod code_block;
 pub mod collapsible;
+pub mod diff_viewer;
 pub mod agent_list;
 pub mod top_bar;
 pub mod message_list;
@@ -9,10 +10,12 @@ pub mod status_bar;
 pub mod permission_modal;
 pub mod command_palette;
 pub mod context_panel;
+pub mod session_tree;
 
 pub use overlay::Overlay;
 pub use code_block::{CodeBlock, CodeLine, LineStatus};
 pub use collapsible::Collapsible;
+pub use diff_viewer::DiffViewer;
 pub use agent_list::{AgentList, AgentItem, AgentStatus};
 pub use top_bar::TopBar;
 pub use message_list::{MessageList, MessageItem};
@@ -21,3 +24,4 @@ pub use status_bar::StatusBar;
 pub use permission_modal::{PermissionModal, PermissionAction};
 pub use command_palette::{CommandPalette, PaletteItem, PaletteStep, PaletteCommand};
 pub use context_panel::{ContextPanel, GitChange, GitStatus};
+pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
