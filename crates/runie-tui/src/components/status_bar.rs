@@ -11,12 +11,26 @@ use crate::theme::ThemeWrapper;
 pub struct StatusBar {
     pub items: Vec<StatusItem>,
     pub theme: ThemeWrapper,
+    pub background_jobs: Vec<BackgroundJob>,
 }
 
 #[derive(Debug, Clone)]
 pub struct StatusItem {
     pub key: String,
     pub description: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct BackgroundJob {
+    pub name: String,
+    pub status: JobStatus,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum JobStatus {
+    Running,
+    Complete,
+    Failed,
 }
 
 impl Default for StatusBar {
@@ -29,6 +43,7 @@ impl Default for StatusBar {
                 StatusItem { key: "^q".to_string(), description: "quit".to_string() },
             ],
             theme: ThemeWrapper::default(),
+            background_jobs: Vec::new(),
         }
     }
 }
@@ -94,8 +109,26 @@ impl StatusBar {
         ];
     }
 
-    pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    pub fn add_job(&mut self, name: &str) {
+        self.background_jobs.push(BackgroundJob {
+            name: name.to_string(),
+            status: JobStatus::Running,
+        });
+    }
+
+    pub fn complete_job(&mut self, name: &str) {
+        if let Some(job) = self.background_jobs.iter_mut().find(|j| j.name == name) {
+            job.status = JobStatus::Complete;
+        }
+    }
+
+    pub fn clear_completed_jobs(&mut self) {
+        self.background_jobs.retain(|j| j.status == JobStatus::Running);
+    }
+
+    pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, braille_frame: usize) {
         let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
+        let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let mut x = area.x + 1;
         let mut first = true;
 
@@ -116,6 +149,24 @@ impl StatusBar {
             let width = (item.key.len() + 1 + item.description.len()) as u16;
             buf.set_line(x, area.y, &line, width);
             x += width;
+        }
+
+        // Background jobs indicator on the right: ⬡ N jobs │ ⠦ job_name
+        let running_jobs: Vec<_> = self.background_jobs.iter().filter(|j| j.status == JobStatus::Running).collect();
+        if !running_jobs.is_empty() {
+            let job_count = running_jobs.len();
+            let latest_job = running_jobs.last().unwrap();
+            let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+            let spinner = braille[braille_frame % 10];
+            let jobs_text = if job_count == 1 {
+                format!("⬡ {} │ {} {}", latest_job.name, spinner, latest_job.name)
+            } else {
+                format!("⬡ {} jobs │ {} {}", job_count, spinner, latest_job.name)
+            };
+            let jobs_width = jobs_text.len() as u16;
+            let jobs_x = area.x + area.width - jobs_width - 1;
+            let line = Line::raw(jobs_text).style(Style::default().fg(text_secondary));
+            buf.set_line(jobs_x, area.y, &line, jobs_width);
         }
     }
 }

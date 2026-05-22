@@ -125,28 +125,51 @@ fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
     }
 }
 
-pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+fn build_center_line(state: &RenderState, text_tertiary: ratatui::style::Color) -> (Line<'_>, usize) {
+    use ratatui::text::Span;
+    let mut parts = vec![];
+    if let Some(ref model) = state.current_model {
+        parts.push(Span::styled(model.clone(), Style::default().fg(text_tertiary)));
+        parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
+    }
+    if state.session_token_usage.total_tokens > 0 {
+        parts.push(Span::styled(format!("{} tokens", state.session_token_usage.total_tokens), Style::default().fg(text_tertiary)));
+        if state.session_token_usage.estimated_cost > 0.0 {
+            parts.push(Span::styled(format!(" · ${:.4}", state.session_token_usage.estimated_cost), Style::default().fg(text_tertiary)));
+        }
+    }
+    let line = Line::from(parts.clone());
+    let width = line.spans.iter().map(|s| s.width()).sum();
+    (line, width)
+}
+
+fn render_bg_jobs(area: Rect, buf: &mut Buffer, text_secondary: ratatui::style::Color, jobs: &[crate::components::status_bar::BackgroundJob], braille_frame: usize) {
+    use ratatui::text::Line;
+    let running: Vec<_> = jobs.iter().filter(|j| j.status == crate::components::status_bar::JobStatus::Running).collect();
+    if running.is_empty() { return; }
+    let count = running.len();
+    let latest = running.last().unwrap();
+    let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    let spinner = braille[braille_frame % 10];
+    let text = if count == 1 {
+        format!("⬡ {} │ {} {}", latest.name, spinner, latest.name)
+    } else {
+        format!("⬡ {} jobs │ {} {}", count, spinner, latest.name)
+    };
+    let width = text.len() as u16;
+    let x = area.x + area.width - width - 1;
+    buf.set_line(x, area.y, &Line::raw(text).style(Style::default().fg(text_secondary)), width);
+}
+
+pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, braille_frame: usize) {
     use ratatui::style::Modifier;
     use ratatui::text::{Line, Span};
 
     let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
+    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
     let items = get_status_items(&state.mode);
 
-    // Build center parts
-    let mut center_parts = vec![];
-    if let Some(ref model) = state.current_model {
-        center_parts.push(Span::styled(model.clone(), Style::default().fg(text_tertiary)));
-        center_parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
-    }
-    if state.session_token_usage.total_tokens > 0 {
-        center_parts.push(Span::styled(format!("{} tokens", state.session_token_usage.total_tokens), Style::default().fg(text_tertiary)));
-        if state.session_token_usage.estimated_cost > 0.0 {
-            center_parts.push(Span::styled(format!(" · ${:.4}", state.session_token_usage.estimated_cost), Style::default().fg(text_tertiary)));
-        }
-    }
-    let center_line = Line::from(center_parts.clone());
-    let center_width: usize = center_line.spans.iter().map(|s| s.width()).sum();
-
+    let (center_line, center_width) = build_center_line(state, text_tertiary);
     let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
     let remaining = (area.width.saturating_sub(2) as usize).saturating_sub(left_width + center_width);
 
@@ -165,9 +188,11 @@ pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, them
         x += width as usize;
     }
 
-    if !center_parts.is_empty() && remaining >= center_width {
+    if !center_line.spans.is_empty() && remaining >= center_width {
         buf.set_line((area.x as usize + 1 + (remaining / 2)) as u16, area.y, &center_line, center_width as u16);
     }
+
+    render_bg_jobs(area, buf, text_secondary, &state.background_jobs, braille_frame);
 }
 
 // ─── Agent List ───────────────────────────────────────────────────────────────

@@ -10,6 +10,9 @@ use crate::tui::state::AnimationState;
 /// Braille spinner frames (10 frames)
 pub const BRAILLE_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
+/// Braille spinner frames (10 frames) - counter-clockwise (rewind)
+pub const REVERSE_BRAILLE_FRAMES: [char; 10] = ['⠏', '⠇', '⠧', '⠦', '⠴', '⠼', '⠸', '⠹', '⠙', '⠋'];
+
 /// Plan step status
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlanStatus {
@@ -98,23 +101,30 @@ impl MessageList {
         let code_path: ratatui::style::Color = theme.color("code.path").into();
 
         let spinner = BRAILLE_FRAMES[animation.braille_frame % 10];
+        let rewind_spinner = REVERSE_BRAILLE_FRAMES[animation.braille_frame % 10];
         let total_messages = messages.len();
         let mut prev_msg_type: Option<&str> = None;
+
+        // Find the most recent message that needs a spinner
+        let most_recent_spinner = find_most_recent_spinner_index(messages);
 
         for (idx, msg) in messages_iter.iter().enumerate() {
             if row >= max_rows { break; }
 
+            let absolute_idx = scroll_offset + idx;
             let msg_type = get_msg_type(msg);
             if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) && row < max_rows {
                 row += 1;
             }
             prev_msg_type = Some(msg_type);
 
-            let show_cursor = should_show_cursor(animation, agent_running, scroll_offset + idx, total_messages, msg);
+            let show_cursor = should_show_cursor(animation, agent_running, absolute_idx, total_messages, msg);
+            let show_spinner = most_recent_spinner == Some(absolute_idx);
             let rendered = render_single_msg(
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
-                success, error, code_path, spinner, show_cursor,
+                success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
+                animation,
             );
             row += rendered;
         }
@@ -169,6 +179,20 @@ fn should_show_cursor(animation: &AnimationState, agent_running: bool, absolute_
         && matches!(msg, MessageItem::Assistant { .. })
 }
 
+/// Find the index of the most recent message that needs a spinner.
+/// Returns the index (from the start of the full messages list) of the most recent
+/// active spinner message, or None if no active spinners exist.
+fn find_most_recent_spinner_index(messages: &[MessageItem]) -> Option<usize> {
+    messages.iter().enumerate().rev().find(|(_, msg)| {
+        matches!(msg,
+            MessageItem::Thought { .. }
+            | MessageItem::ToolRunning { .. }
+            | MessageItem::PlanStep { status: PlanStatus::Active, .. }
+            | MessageItem::Rewind { .. }
+        )
+    }).map(|(i, _)| i)
+}
+
 fn get_msg_type(msg: &MessageItem) -> &'static str {
     match msg {
         MessageItem::User { .. } => "user",
@@ -203,6 +227,9 @@ fn render_single_msg(
     code_path: ratatui::style::Color,
     spinner: char,
     cursor_visible: bool,
+    show_spinner: bool,
+    rewind_spinner: char,
+    animation: &AnimationState,
 ) -> u16 {
     match msg {
         MessageItem::User { text, .. } => {
@@ -212,7 +239,7 @@ fn render_single_msg(
             render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible)
         }
         MessageItem::Thought { duration_secs } => {
-            render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner)
+            render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
         }
         MessageItem::ToolCall { name, args, result, is_error } => {
             render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
@@ -224,19 +251,19 @@ fn render_single_msg(
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted)
         }
         MessageItem::ToolRunning { name, args, duration_ms } => {
-            render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner)
+            render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
         }
         MessageItem::ToolComplete { name, result, lines } => {
             render_tool_complete_msg(name, result, lines.as_ref(), area, row, margin_x, text_x, buf, success, text_muted)
         }
         MessageItem::PlanStep { step, text, status } => {
-            render_plan_step_msg(*step, text, status, area, row, margin_x, text_x, buf, text_dim, text_secondary, spinner)
+            render_plan_step_msg(*step, text, status, area, row, margin_x, text_x, buf, text_dim, text_secondary, spinner, show_spinner)
         }
         MessageItem::Interrupt => {
-            render_interrupt_msg(area, row, margin_x, text_x, buf, error, text_dim)
+            render_interrupt_msg(area, row, margin_x, text_x, buf, error, text_dim, animation)
         }
         MessageItem::Rewind { steps } => {
-            render_rewind_msg(*steps, area, row, margin_x, text_x, buf, text_muted, spinner)
+            render_rewind_msg(*steps, area, row, margin_x, text_x, buf, text_muted, rewind_spinner, show_spinner)
         }
     }
 }
@@ -319,12 +346,13 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x:
     msg_height
 }
 
-fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char) -> u16 {
+fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
         cell.set_char('◆');
         cell.set_style(Style::default().fg(text_muted));
     }
-    let thought_text = format!("Thought for {:.1}s {}", duration_secs, spinner);
+    let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
+    let thought_text = format!("Thought for {:.1}s{}", duration_secs, spinner_str);
     let line = Line::raw(thought_text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
@@ -422,12 +450,13 @@ fn render_edit_msg(filename: &str, area: Rect, row: u16, margin_x: u16, text_x: 
     1
 }
 
-fn render_tool_running_msg(name: &str, args: &str, duration_ms: u64, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, spinner: char) -> u16 {
+fn render_tool_running_msg(name: &str, args: &str, duration_ms: u64, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
         cell.set_char('●');
         cell.set_style(Style::default().fg(text_secondary));
     }
-    let header = format!("{} {} {}", name, args, spinner);
+    let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
+    let header = format!("{} {}{}", name, args, spinner_str);
     let line = Line::raw(header).style(Style::default().fg(text_secondary));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     if duration_ms > 1000 {
@@ -465,7 +494,7 @@ fn render_tool_complete_msg(name: &str, result: &str, lines: Option<&usize>, are
     1
 }
 
-fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_dim: ratatui::style::Color, text_secondary: ratatui::style::Color, spinner: char) -> u16 {
+fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_dim: ratatui::style::Color, text_secondary: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
     match status {
         PlanStatus::Pending => {
             if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
@@ -484,7 +513,16 @@ fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect
                 cell.set_char('●');
                 cell.set_style(Style::default().fg(text_secondary));
             }
-            let line = Line::raw(format!("{}. {} {}", step, text, spinner)).style(Style::default().fg(text_secondary));
+            // Pulse border: ▐ on right side of active step
+            let pulse_char = if spinner == '⠋' || spinner == '⠹' || spinner == '⠴' || spinner == '⠧' || spinner == '⠏' { '▐' } else { ' ' };
+            if pulse_char == '▐' {
+                if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + row)) {
+                    cell.set_char('▐');
+                    cell.set_style(Style::default().fg(text_secondary));
+                }
+            }
+            let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
+            let line = Line::raw(format!("{}. {}{}", step, text, spinner_str)).style(Style::default().fg(text_secondary));
             buf.set_line(text_x + 1, area.y + row, &line, area.width - 5);
         }
         PlanStatus::Complete => {
@@ -499,22 +537,36 @@ fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect
     1
 }
 
-fn render_interrupt_msg(area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, text_dim: ratatui::style::Color) -> u16 {
+fn render_interrupt_msg(area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, text_dim: ratatui::style::Color, animation: &AnimationState) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
         cell.set_char('✗');
         cell.set_style(Style::default().fg(error));
     }
-    let line = Line::raw("Interrupted").style(Style::default().fg(text_dim));
+    // Fade from error color to dim over 500ms
+    let style = if let Some(start) = animation.interrupt_fade_start {
+        let elapsed = start.elapsed().as_millis() as f32;
+        let fade_ms = 500.0;
+        if elapsed >= fade_ms {
+            Style::default().fg(text_dim)
+        } else {
+            // Keep error color during fade
+            Style::default().fg(error)
+        }
+    } else {
+        Style::default().fg(error)
+    };
+    let line = Line::raw("Interrupted").style(style);
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }
 
-fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char) -> u16 {
+fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
         cell.set_char('↺');
         cell.set_style(Style::default().fg(text_muted));
     }
-    let line = Line::raw(format!("Rewinding... {} ({} steps)", spinner, steps)).style(Style::default().fg(text_muted));
+    let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
+    let line = Line::raw(format!("Rewinding...{} ({} steps)", spinner_str, steps)).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }

@@ -162,7 +162,7 @@ impl Tui {
             Self::render_content(frame, state, show_sidebar, main_areas[1], theme);
             Self::render_input(frame, state, main_areas[2], theme);
             if show_status_bar {
-                render_status_bar(state, main_areas[3], frame.buffer_mut(), theme);
+                render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
             }
             Self::render_overlays(frame, state, &palette, padded_area, area, theme);
         })?;

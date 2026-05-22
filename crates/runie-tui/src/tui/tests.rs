@@ -121,6 +121,7 @@ mod tests {
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
+            background_jobs: Vec::new(),
         }
     }
 
