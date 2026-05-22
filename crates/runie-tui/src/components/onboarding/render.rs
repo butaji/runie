@@ -137,11 +137,7 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
         buf.set_string(hotkey_x, row_y, hotkey, hotkey_style);
     }
 
-    // Navigation hint at bottom
-    let nav = "↑↓ navigate  ·  enter select  ·  esc back";
-    let nav_style = Style::default().fg(text_muted);
-    let nav_x = center_x.saturating_sub(nav.len() as u16 / 2);
-    buf.set_string(nav_x, area.y + area.height - 3, nav, nav_style);
+    // Navigation hints are shown in the status bar only
 }
 
 fn render_small_logo(cx: u16, y: u16, buf: &mut Buffer, color: ratatui::style::Color) {
@@ -231,11 +227,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
     let hint_x = center_x.saturating_sub(hint.len() as u16 / 2);
     buf.set_string(hint_x, status_y + 2, hint, hint_style);
 
-    // Navigation hint
-    let nav = "enter continue  ·  esc back";
-    let nav_style = Style::default().fg(text_muted);
-    let nav_x = center_x.saturating_sub(nav.len() as u16 / 2);
-    buf.set_string(nav_x, area.y + area.height - 3, nav, nav_style);
+
 }
 
 // ─── Model Select Step ────────────────────────────────────────────────────────
@@ -294,11 +286,7 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
         buf.set_string(hotkey_x, row_y, hotkey, hotkey_style);
     }
 
-    // Navigation hint
-    let nav = "↑↓ navigate  ·  enter select  ·  esc back";
-    let nav_style = Style::default().fg(text_muted);
-    let nav_x = center_x.saturating_sub(nav.len() as u16 / 2);
-    buf.set_string(nav_x, area.y + area.height - 3, nav, nav_style);
+
 }
 
 // ─── Complete Step ───────────────────────────────────────────────────────────
