@@ -13,6 +13,8 @@ pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<M
         TuiMode::Chat => key_to_chat_msg(key),
         TuiMode::Permission => key_to_permission_msg(key),
         TuiMode::CommandPalette => key_to_palette_msg(key),
+        TuiMode::DiffViewer => key_to_diff_msg(key),
+        TuiMode::SessionTree => key_to_tree_msg(key),
         _ => None,
     }
 }
@@ -72,6 +74,27 @@ fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Down => Some(Msg::CommandPaletteDown),
         KeyCode::Backspace => Some(Msg::CommandPaletteBackspace),
         KeyCode::Char(c) => Some(Msg::CommandPaletteFilter(c)),
+        _ => None,
+    }
+}
+
+fn key_to_diff_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::CloseModal),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::ScrollDown),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::ScrollUp),
+        KeyCode::PageDown => Some(Msg::ScrollDown),
+        KeyCode::PageUp => Some(Msg::ScrollUp),
+        _ => None,
+    }
+}
+
+fn key_to_tree_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseModal),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::SessionTreeUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::SessionTreeDown),
+        KeyCode::Enter => Some(Msg::SessionTreeConfirm),
         _ => None,
     }
 }

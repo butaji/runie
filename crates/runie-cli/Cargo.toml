@@ -32,4 +32,5 @@ crossterm = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 dirs = "5.0"
+toml = "0.8"
 uuid = { workspace = true }

@@ -1,0 +1,224 @@
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Widget},
+};
+use runie_core::session::{MessageNode, Session};
+use crate::theme::ThemeWrapper;
+
+#[derive(Debug, Clone)]
+pub struct SessionTreeEntry {
+    pub id: String,
+    pub parent_id: Option<String>,
+    pub preview: String,
+    pub timestamp: String,
+    pub depth: usize,
+}
+
+#[derive(Clone)]
+pub struct SessionTreeNavigator {
+    pub visible: bool,
+    pub entries: Vec<SessionTreeEntry>,
+    pub selected: usize,
+    pub scroll_offset: usize,
+}
+
+impl Default for SessionTreeNavigator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SessionTreeNavigator {
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            entries: Vec::new(),
+            selected: 0,
+            scroll_offset: 0,
+        }
+    }
+
+    pub fn load_session(&mut self, session: &Session) {
+        self.entries = session.messages.iter().map(|node| {
+            let preview = match &node.message {
+                runie_core::Message::User { content, .. } => {
+                    let cut = content.len().min(40);
+                    format!("User: {}", &content[..cut])
+                }
+                runie_core::Message::Assistant { content, .. } => {
+                    let cut = content.len().min(40);
+                    format!("Assistant: {}", &content[..cut])
+                }
+                _ => "System".to_string(),
+            };
+            SessionTreeEntry {
+                id: node.id.clone(),
+                parent_id: node.parent_id.clone(),
+                preview,
+                timestamp: node.timestamp.format("%H:%M").to_string(),
+                depth: 0,
+            }
+        }).collect();
+        self.compute_depths();
+    }
+
+    fn compute_depths(&mut self) {
+        for i in 0..self.entries.len() {
+            let mut depth = 0;
+            let mut current = self.entries[i].parent_id.clone();
+            while let Some(parent_id) = current {
+                depth += 1;
+                current = self.entries.iter()
+                    .find(|e| e.id == parent_id)
+                    .and_then(|e| e.parent_id.clone());
+            }
+            self.entries[i].depth = depth;
+        }
+    }
+
+    pub fn move_up(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+            self.scroll_offset = self.scroll_offset.min(self.selected);
+        }
+    }
+
+    pub fn move_down(&mut self) {
+        if self.selected + 1 < self.entries.len() {
+            self.selected += 1;
+            if self.selected >= self.scroll_offset + 20 {
+                self.scroll_offset = self.selected - 19;
+            }
+        }
+    }
+
+    pub fn toggle(&mut self) {
+        self.visible = !self.visible;
+        if self.visible {
+            self.selected = 0;
+            self.scroll_offset = 0;
+        }
+    }
+
+    pub fn show(&mut self) {
+        self.visible = true;
+        self.selected = 0;
+        self.scroll_offset = 0;
+    }
+
+    pub fn hide(&mut self) {
+        self.visible = false;
+    }
+
+    pub fn get_selected_id(&self) -> Option<String> {
+        self.entries.get(self.selected).map(|e| e.id.clone())
+    }
+
+    pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+        if !self.visible {
+            return;
+        }
+
+        let block = Block::default()
+            .title(" Session Tree ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.color("border").into()));
+        let inner = block.inner(area);
+        block.render(area, buf);
+
+        let text_secondary: Color = theme.color("text.secondary").into();
+        let accent: Color = theme.color("accent.primary").into();
+        let bg_panel: Color = theme.color("bg.panel").into();
+
+        let max_rows = inner.height as usize;
+        for (i, entry) in self.entries.iter()
+            .skip(self.scroll_offset)
+            .take(max_rows)
+            .enumerate()
+        {
+            let row = i + self.scroll_offset;
+            let y = inner.y + i as u16;
+
+            let indent = "  ".repeat(entry.depth.min(5));
+            let marker = if row == self.selected { "▸ " } else { "  " };
+            let text = format!("{}{}{} {}", marker, indent, entry.timestamp, entry.preview);
+            let color = if row == self.selected { accent } else { text_secondary };
+
+            for x in 0..inner.width {
+                let cell = buf.get_mut(inner.x + x, y);
+                cell.set_char(' ');
+                cell.set_style(Style::default().bg(bg_panel).fg(color));
+            }
+
+            let line = Line::raw(text).style(Style::default().fg(color));
+            buf.set_line(inner.x, y, &line, inner.width);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use runie_core::Message;
+
+    fn make_test_session() -> Session {
+        let mut session = Session::new("test".to_string());
+        let id1 = session.add_message(None, Message::User { content: "Hello".to_string(), attachments: vec![] });
+        let _id2 = session.add_message(Some(id1.clone()), Message::Assistant { content: "Hi there".to_string(), tool_calls: vec![], thinking: None });
+        session
+    }
+
+    #[test]
+    fn test_load_session() {
+        let mut nav = SessionTreeNavigator::new();
+        let session = make_test_session();
+        nav.load_session(&session);
+        assert_eq!(nav.entries.len(), 2);
+        assert_eq!(nav.entries[0].preview, "User: Hello");
+        assert_eq!(nav.entries[1].preview, "Assistant: Hi there");
+    }
+
+    #[test]
+    fn test_depth_computation() {
+        let mut nav = SessionTreeNavigator::new();
+        let session = make_test_session();
+        nav.load_session(&session);
+        assert_eq!(nav.entries[0].depth, 0);
+        assert_eq!(nav.entries[1].depth, 1);
+    }
+
+    #[test]
+    fn test_move_selection() {
+        let mut nav = SessionTreeNavigator::new();
+        let session = make_test_session();
+        nav.load_session(&session);
+        assert_eq!(nav.selected, 0);
+        nav.move_down();
+        assert_eq!(nav.selected, 1);
+        nav.move_up();
+        assert_eq!(nav.selected, 0);
+    }
+
+    #[test]
+    fn test_toggle() {
+        let mut nav = SessionTreeNavigator::new();
+        assert!(!nav.visible);
+        nav.toggle();
+        assert!(nav.visible);
+        nav.toggle();
+        assert!(!nav.visible);
+    }
+
+    #[test]
+    fn test_get_selected_id() {
+        let mut nav = SessionTreeNavigator::new();
+        let session = make_test_session();
+        nav.load_session(&session);
+        assert_eq!(nav.get_selected_id(), Some(session.messages[0].id.clone()));
+        nav.move_down();
+        assert_eq!(nav.get_selected_id(), Some(session.messages[1].id.clone()));
+    }
+}

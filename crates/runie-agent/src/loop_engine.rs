@@ -1,10 +1,13 @@
 use crate::events::*;
 use crate::pi::AgentTool;
+use crate::{Hook, HookDecision};
 use runie_ai::Provider;
-use runie_core::{Message, ToolSchema, Event as LlmEvent};
+use runie_core::{Message, ToolSchema, Event as LlmEvent, Context};
+use runie_tools::ToolRegistry;
 use tokio::sync::mpsc;
 use futures::StreamExt;
 use chrono::Utc;
+use std::sync::Arc;
 
 pub struct AgentLoopConfig {
     pub system_prompt: String,
@@ -19,6 +22,8 @@ pub async fn run_agent_loop(
     tools: &[AgentTool],
     event_tx: mpsc::UnboundedSender<AgentEvent>,
     mut permission_rx: mpsc::UnboundedReceiver<PermissionDecision>,
+    registry: Option<Arc<ToolRegistry>>,
+    hooks: Vec<Arc<dyn Hook>>,
 ) -> Result<(), String> {
     let mut messages = initial_messages;
 
@@ -83,6 +88,13 @@ pub async fn run_agent_loop(
                 LlmEvent::Error { message } => {
                     assistant_message.error_message = Some(message);
                     break;
+                }
+                LlmEvent::Usage { prompt_tokens, completion_tokens, total_tokens } => {
+                    event_tx.send(AgentEvent::TokenUsage {
+                        prompt_tokens,
+                        completion_tokens,
+                        total_tokens,
+                    }).ok();
                 }
                 _ => {}
             }
@@ -181,20 +193,94 @@ pub async fn run_agent_loop(
                 }
 
                 // Find and execute tool
-                let result = if let Some(tool) = tools.iter().find(|t| t.name == *name) {
+                let tool_call = runie_core::ToolCall {
+                    id: id.clone(),
+                    name: name.clone(),
+                    arguments: input.clone(),
+                };
+                let ctx = Context::default();
+                
+                // Run before hooks
+                let args_to_use = 'hook_block: {
+                    for hook in &hooks {
+                        match hook.before_tool_call(&tool_call, &ctx).await {
+                            Ok(HookDecision::Allow) => break 'hook_block input.clone(),
+                            Ok(HookDecision::Block { reason }) => {
+                                let blocked_result = ToolResult {
+                                    tool_call_id: id.clone(),
+                                    tool_name: name.clone(),
+                                    input: input.clone(),
+                                    content: vec![ContentPart::Text { text: format!("Blocked by safety hook: {}", reason) }],
+                                    is_error: true,
+                                };
+                                event_tx.send(AgentEvent::ToolExecutionEnd {
+                                    tool_call_id: id.clone(),
+                                    result: blocked_result.clone(),
+                                }).ok();
+                                tool_results.push(blocked_result);
+                                continue;
+                            }
+                            Ok(HookDecision::Modify { args }) => break 'hook_block args,
+                            Err(_) => {}
+                        }
+                    }
+                    input.clone()
+                };
+                
+                let final_input = args_to_use.clone();
+                let result = if let Some(ref reg) = registry {
+                    if let Some(tool) = reg.get(name) {
+                        match tool.execute(final_input.clone()).await {
+                            Ok(output) => {
+                                // Run after hooks
+                                let final_output = if let Some(hook) = hooks.first() {
+                                    match hook.after_tool_call(&tool_call, &output, &ctx).await {
+                                        Ok(processed) => processed,
+                                        Err(_) => output,
+                                    }
+                                } else {
+                                    output
+                                };
+                                
+                                ToolResult {
+                                    tool_call_id: id.clone(),
+                                    tool_name: name.clone(),
+                                    input: final_input,
+                                    content: vec![ContentPart::Text { text: final_output.content }],
+                                    is_error: false,
+                                }
+                            }
+                            Err(e) => ToolResult {
+                                tool_call_id: id.clone(),
+                                tool_name: name.clone(),
+                                input: final_input,
+                                content: vec![ContentPart::Text { text: e.to_string() }],
+                                is_error: true,
+                            },
+                        }
+                    } else {
+                        ToolResult {
+                            tool_call_id: id.clone(),
+                            tool_name: name.clone(),
+                            input: final_input,
+                            content: vec![ContentPart::Text { text: format!("Tool '{}' not found", name) }],
+                            is_error: true,
+                        }
+                    }
+                } else if let Some(tool) = tools.iter().find(|t| t.name == *name) {
                     if let Some(ref handler) = tool.handler {
-                        match handler(input.clone()) {
+                        match handler(final_input.clone()) {
                             Ok(output) => ToolResult {
                                 tool_call_id: id.clone(),
                                 tool_name: name.clone(),
-                                input: input.clone(),
+                                input: final_input,
                                 content: vec![ContentPart::Text { text: output }],
                                 is_error: false,
                             },
                             Err(err) => ToolResult {
                                 tool_call_id: id.clone(),
                                 tool_name: name.clone(),
-                                input: input.clone(),
+                                input: final_input,
                                 content: vec![ContentPart::Text { text: err }],
                                 is_error: true,
                             },
@@ -203,7 +289,7 @@ pub async fn run_agent_loop(
                         ToolResult {
                             tool_call_id: id.clone(),
                             tool_name: name.clone(),
-                            input: input.clone(),
+                            input: final_input,
                             content: vec![ContentPart::Text { text: "Tool has no handler".to_string() }],
                             is_error: true,
                         }
@@ -212,7 +298,7 @@ pub async fn run_agent_loop(
                     ToolResult {
                         tool_call_id: id.clone(),
                         tool_name: name.clone(),
-                        input: input.clone(),
+                        input: final_input,
                         content: vec![ContentPart::Text { text: format!("Tool '{}' not found", name) }],
                         is_error: true,
                     }

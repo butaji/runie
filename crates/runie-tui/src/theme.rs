@@ -24,6 +24,7 @@ impl ThemeWrapper {
         b = add_semantic_tokens(b);
         b = add_feed_tokens(b);
         b = add_code_tokens(b);
+        b = add_diff_tokens(b);
         Self { inner: b.build() }
     }
 }
@@ -79,6 +80,12 @@ fn add_code_tokens(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
         .token("code.string", OpalineColor::new(0xFF, 0x60, 0xFF))
         .token("code.comment", OpalineColor::new(0x8A, 0x87, 0x94))
         .token("code.type", OpalineColor::new(0x39, 0xFF, 0x8C))
+}
+
+fn add_diff_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
+    use opaline::OpalineColor;
+    b.token("diff.removed", OpalineColor::new(0xFF, 0x6B, 0x6B))
+        .token("diff.added", OpalineColor::new(0x51, 0xCF, 0x66))
 }
 
 impl Default for ThemeWrapper {

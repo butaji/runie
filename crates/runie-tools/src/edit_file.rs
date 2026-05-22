@@ -72,7 +72,11 @@ impl Tool for EditFileTool {
         
         Ok(ToolOutput {
             content: format!("File edited: {}", path),
-            metadata: json!({"path": path}),
+            metadata: json!({
+                "path": path,
+                "old_content": old_string,
+                "new_content": new_string
+            }),
             terminate: false,
         })
     }

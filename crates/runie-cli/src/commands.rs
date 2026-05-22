@@ -1,5 +1,7 @@
 /// CLI command handlers.
 
+pub use runie_core::{SlashCommand, parse_slash_command, format_help};
+
 pub enum Command {
     Chat(String),
     Compact,

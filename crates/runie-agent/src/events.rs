@@ -10,6 +10,7 @@ pub enum AgentEvent {
     ToolExecutionEnd { tool_call_id: String, result: ToolResult },
     TurnEnd { message: AgentMessage, tool_results: Vec<ToolResult> },
     AgentEnd { messages: Vec<AgentMessage> },
+    TokenUsage { prompt_tokens: usize, completion_tokens: usize, total_tokens: usize },
     Error { message: String },
     PermissionRequest { tool_call_id: String, tool_name: String, tool_args: String },
     PermissionGranted { tool_call_id: String },

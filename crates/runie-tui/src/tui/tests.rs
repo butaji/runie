@@ -1,10 +1,11 @@
 use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState};
 use crate::components::{
     AgentList, AgentItem, AgentStatus, MessageItem,
-    ContextPanel, GitChange, GitStatus,
+    ContextPanel, GitChange, GitStatus, SessionTreeNavigator,
 };
 use crate::tui::update::update;
 use runie_agent::events::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
+use runie_ai::TokenUsage;
 
 
 #[cfg(test)]
@@ -125,6 +126,10 @@ mod tests {
             command_palette_selected: 0,
             feed_scroll_offset: 0,
             animation: AnimationState::default(),
+            diff_viewer: None,
+            token_usage: TokenUsage::default(),
+            session_token_usage: TokenUsage::default(),
+            session_tree: SessionTreeNavigator::new(),
         }
     }
 

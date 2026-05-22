@@ -113,6 +113,15 @@ fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
             ("Enter", "select"),
             ("↑↓", "navigate"),
         ],
+        TuiMode::DiffViewer => vec![
+            ("q", "close"),
+            ("j/k", "scroll"),
+        ],
+        TuiMode::SessionTree => vec![
+            ("Esc", "close"),
+            ("↑↓", "navigate"),
+            ("Enter", "jump"),
+        ],
     }
 }
 
@@ -121,28 +130,43 @@ pub fn render_status_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: 
     use ratatui::text::{Line, Span};
 
     let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
-    let mut x = area.x + 1;
-    let mut first = true;
-
     let items = get_status_items(&state.mode);
 
-    for (key, desc) in items {
-        if !first {
-            let sep = Span::styled(" | ", Style::default().fg(text_tertiary));
-            let line = Line::from(sep);
-            buf.set_line(x, area.y, &line, 3);
+    // Build center parts
+    let mut center_parts = vec![];
+    if let Some(ref model) = state.current_model {
+        center_parts.push(Span::styled(model.clone(), Style::default().fg(text_tertiary)));
+        center_parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
+    }
+    if state.session_token_usage.total_tokens > 0 {
+        center_parts.push(Span::styled(format!("{} tokens", state.session_token_usage.total_tokens), Style::default().fg(text_tertiary)));
+        if state.session_token_usage.estimated_cost > 0.0 {
+            center_parts.push(Span::styled(format!(" · ${:.4}", state.session_token_usage.estimated_cost), Style::default().fg(text_tertiary)));
+        }
+    }
+    let center_line = Line::from(center_parts.clone());
+    let center_width: usize = center_line.spans.iter().map(|s| s.width()).sum();
+
+    let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
+    let remaining = (area.width.saturating_sub(2) as usize).saturating_sub(left_width + center_width);
+
+    let mut x = area.x as usize + 1;
+    for (i, (key, desc)) in items.iter().enumerate() {
+        if i > 0 {
+            buf.set_line(x as u16, area.y, &Line::from(Span::styled(" | ", Style::default().fg(text_tertiary))), 3);
             x += 3;
         }
-        first = false;
-
         let parts = vec![
-            Span::styled(key, Style::default().fg(text_tertiary)),
+            Span::styled(*key, Style::default().fg(text_tertiary)),
             Span::styled(format!(" {}", desc), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
         ];
-        let line = Line::from(parts);
         let width = (key.len() + 1 + desc.len()) as u16;
-        buf.set_line(x, area.y, &line, width);
-        x += width;
+        buf.set_line(x as u16, area.y, &Line::from(parts), width);
+        x += width as usize;
+    }
+
+    if !center_parts.is_empty() && remaining >= center_width {
+        buf.set_line((area.x as usize + 1 + (remaining / 2)) as u16, area.y, &center_line, center_width as u16);
     }
 }
 

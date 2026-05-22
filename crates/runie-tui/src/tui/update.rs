@@ -12,10 +12,9 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::InsertChar(c) => handle_insert_char(state, c),
         Msg::Backspace => handle_backspace(state),
         Msg::InsertNewline => handle_insert_newline(state),
-        Msg::MoveCursorLeft => handle_move_left(state),
-        Msg::MoveCursorRight => handle_move_right(state),
-        Msg::MoveCursorUp => handle_move_up(state),
-        Msg::MoveCursorDown => handle_move_down(state),
+        Msg::MoveCursorLeft | Msg::MoveCursorRight | Msg::MoveCursorUp | Msg::MoveCursorDown => {
+            handle_cursor_move(state, &msg);
+        }
         Msg::MoveCursorToStart => state.cursor_col = 0,
         Msg::MoveCursorToEnd => state.cursor_col = state.input_lines[state.cursor_row].len(),
         Msg::DeleteForward => handle_delete_forward(state),
@@ -35,8 +34,11 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         }
         Msg::ScrollUp => { state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(1); }
         Msg::ScrollDown => state.feed_scroll_offset += 1,
-        Msg::Tick => { state.animation.braille_frame = (state.animation.braille_frame + 1) % 8; state.animation.last_tick = std::time::Instant::now(); }
-        Msg::CursorBlink => { state.animation.streaming_cursor_visible = !state.animation.streaming_cursor_visible; state.animation.last_cursor_blink = std::time::Instant::now(); }
+        Msg::Tick | Msg::CursorBlink => handle_anim(state, &msg),
+        Msg::SlashCommand(cmd) => cmds.extend(handle_slash(state, cmd)),
+        Msg::ToggleSessionTree => handle_tree(state),
+        Msg::SessionTreeUp | Msg::SessionTreeDown => handle_tree_nav(state, &msg),
+        Msg::SessionTreeConfirm => handle_tree_confirm(state),
     }
 
     cmds
@@ -159,6 +161,8 @@ fn handle_close_modal(state: &mut AppState) {
     state.mode = TuiMode::Chat;
     state.command_palette_open = false;
     state.permission_modal_tool = None;
+    state.diff_viewer = None;
+    state.session_tree.hide();
 }
 
 fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Cmd {
@@ -283,6 +287,85 @@ fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Cmd {
         _ => PermissionDecision::Allow,
     };
     handle_permission(state, decision)
+}
+
+fn handle_anim(state: &mut AppState, msg: &Msg) {
+    match msg {
+        Msg::Tick => {
+            state.animation.braille_frame = (state.animation.braille_frame + 1) % 8;
+            state.animation.last_tick = std::time::Instant::now();
+        }
+        Msg::CursorBlink => {
+            state.animation.streaming_cursor_visible = !state.animation.streaming_cursor_visible;
+            state.animation.last_cursor_blink = std::time::Instant::now();
+        }
+        _ => {}
+    }
+}
+
+fn handle_cursor_move(state: &mut AppState, msg: &Msg) {
+    match msg {
+        Msg::MoveCursorLeft => handle_move_left(state),
+        Msg::MoveCursorRight => handle_move_right(state),
+        Msg::MoveCursorUp => handle_move_up(state),
+        Msg::MoveCursorDown => handle_move_down(state),
+        _ => {}
+    }
+}
+
+fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<Cmd> {
+    let mut cmds = vec![];
+    match cmd {
+        runie_core::slash_command::SlashCommand::New => {
+            state.messages.clear();
+            state.feed_scroll_offset = 0;
+            state.messages.push(MessageItem::System { text: "New session started".to_string() });
+        }
+        runie_core::slash_command::SlashCommand::Clear => {
+            state.messages.clear();
+            state.feed_scroll_offset = 0;
+        }
+        runie_core::slash_command::SlashCommand::Model(model) => {
+            state.current_model = Some(model.clone());
+            state.messages.push(MessageItem::System { text: format!("Model switched to {}", model) });
+        }
+        runie_core::slash_command::SlashCommand::Compact => {
+            state.messages.push(MessageItem::System { text: "Session compaction not yet implemented".to_string() });
+        }
+        runie_core::slash_command::SlashCommand::Save(name) => cmds.push(Cmd::SaveSession { name }),
+        runie_core::slash_command::SlashCommand::Load(name) => cmds.push(Cmd::LoadSession { name }),
+        runie_core::slash_command::SlashCommand::Tree => handle_tree(state),
+        runie_core::slash_command::SlashCommand::Fork => state.messages.push(MessageItem::System { text: "Fork created at current position".to_string() }),
+        runie_core::slash_command::SlashCommand::Quit => state.running = false,
+        runie_core::slash_command::SlashCommand::Help => {
+            state.messages.push(MessageItem::System { text: runie_core::slash_command::format_help() });
+        }
+        runie_core::slash_command::SlashCommand::Unknown(cmd) => {
+            state.messages.push(MessageItem::System { text: format!("Unknown command: {}. Type /help for available commands.", cmd) });
+        }
+    }
+    cmds
+}
+
+fn handle_tree(state: &mut AppState) {
+    state.session_tree.toggle();
+    state.mode = if state.session_tree.visible { TuiMode::SessionTree } else { TuiMode::Chat };
+}
+
+fn handle_tree_nav(state: &mut AppState, msg: &Msg) {
+    match msg {
+        Msg::SessionTreeUp => state.session_tree.move_up(),
+        Msg::SessionTreeDown => state.session_tree.move_down(),
+        _ => {}
+    }
+}
+
+fn handle_tree_confirm(state: &mut AppState) {
+    if let Some(id) = state.session_tree.get_selected_id() {
+        state.messages.push(MessageItem::System { text: format!("Jumped to message: {}", &id[..8]) });
+    }
+    state.session_tree.hide();
+    state.mode = TuiMode::Chat;
 }
 
 fn handle_palette_msg(state: &mut AppState, msg: Msg) {
