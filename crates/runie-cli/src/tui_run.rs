@@ -75,13 +75,23 @@ pub async fn run_tui(
     // Channel for raw terminal events
     let (raw_tx, mut raw_rx) = mpsc::channel::<crossterm::event::Event>(100);
 
-    // Terminal reader - sends raw events
+    // Terminal reader - sends raw events (blocking thread, uses try_send with retry)
     let raw_tx2 = raw_tx.clone();
     std::thread::spawn(move || {
         loop {
             if let Ok(event) = crossterm::event::read() {
-                if raw_tx2.try_send(event).is_err() {
-                    break;
+                // Retry send up to 10 times with 1ms sleep to avoid dropping events
+                let mut sent = false;
+                for _ in 0..10 {
+                    if raw_tx2.try_send(event.clone()).is_ok() {
+                        sent = true;
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+                if !sent {
+                    // Channel full for >10ms — drop event but keep thread alive
+                    continue;
                 }
             }
         }
@@ -195,35 +205,11 @@ pub async fn run_tui(
     // TEA main loop
     while tui.state.running {
         tokio::select! {
-            // Animation tick (80ms)
-            _ = tick_interval.tick() => {
-                let cmds = runie_tui::update(&mut tui.state, Msg::Tick);
-                let mut pending_cmds = cmds;
-                while !pending_cmds.is_empty() {
-                    let mut next_cmds = vec![];
-                    for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
-                    }
-                    pending_cmds = next_cmds;
-                }
-                tui.render()?;
-            }
+            // Bias: check keyboard and agent events before ticks
+            // This prevents tick starvation — keyboard gets priority
+            biased;
 
-            // Cursor blink (500ms)
-            _ = cursor_interval.tick() => {
-                let cmds = runie_tui::update(&mut tui.state, Msg::CursorBlink);
-                let mut pending_cmds = cmds;
-                while !pending_cmds.is_empty() {
-                    let mut next_cmds = vec![];
-                    for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
-                    }
-                    pending_cmds = next_cmds;
-                }
-                tui.render()?;
-            }
-
-            // Raw terminal events
+            // Raw terminal events — HIGHEST PRIORITY
             Some(event) = raw_rx.recv() => {
                 if let Some(msg) = event_to_msg(event, &tui.state) {
                     let cmds = runie_tui::update(&mut tui.state, msg);
@@ -243,7 +229,7 @@ pub async fn run_tui(
                 }
             }
 
-            // Agent events
+            // Agent events — SECOND PRIORITY
             Some(event) = agent_rx.recv() => {
                 if let AgentEvent::AgentEnd { .. } = &event {
                     agent_task = None;
@@ -262,6 +248,34 @@ pub async fn run_tui(
                 }
 
                 // Render after EVERY message
+                tui.render()?;
+            }
+
+            // Cursor blink (500ms) — THIRD PRIORITY
+            _ = cursor_interval.tick() => {
+                let cmds = runie_tui::update(&mut tui.state, Msg::CursorBlink);
+                let mut pending_cmds = cmds;
+                while !pending_cmds.is_empty() {
+                    let mut next_cmds = vec![];
+                    for cmd in pending_cmds {
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
+                    }
+                    pending_cmds = next_cmds;
+                }
+                tui.render()?;
+            }
+
+            // Animation tick (80ms) — LOWEST PRIORITY
+            _ = tick_interval.tick() => {
+                let cmds = runie_tui::update(&mut tui.state, Msg::Tick);
+                let mut pending_cmds = cmds;
+                while !pending_cmds.is_empty() {
+                    let mut next_cmds = vec![];
+                    for cmd in pending_cmds {
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
+                    }
+                    pending_cmds = next_cmds;
+                }
                 tui.render()?;
             }
         }
