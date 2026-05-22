@@ -1,43 +1,37 @@
 use crate::components::MessageItem;
 use crate::tui::state::{AppState, TuiMode, Msg, Cmd};
-use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
+use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 
 pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     let mut cmds = vec![];
     log_action(state, &msg);
 
     match msg {
-        Msg::Quit => state.running = false,
-        Msg::Submit => cmds.extend(handle_submit(state)),
-        Msg::InsertChar(c) => handle_insert_char(state, c),
-        Msg::Backspace => handle_backspace(state),
-        Msg::InsertNewline => handle_insert_newline(state),
-        Msg::MoveCursorLeft | Msg::MoveCursorRight | Msg::MoveCursorUp | Msg::MoveCursorDown => {
-            handle_cursor_move(state, &msg);
-        }
-        Msg::MoveCursorToStart | Msg::MoveCursorToEnd => handle_cursor_edge(state, &msg),
-        Msg::DeleteForward => handle_delete_forward(state),
-        Msg::DeleteWordBackward => handle_delete_word_backward(state),
-        Msg::DeleteToStart => handle_delete_to_start(state),
-        Msg::ToggleSidebar => state.show_sidebar = !state.show_sidebar,
-        Msg::OpenCommandPalette => open_palette(state),
-        Msg::CloseModal | Msg::ConfirmModal => handle_close_modal(state),
-        Msg::AgentEvent(event) => handle_agent_event(state, event),
-        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => {
-            cmds.push(handle_permission_msg(state, msg));
-        }
-        Msg::CommandPaletteFilter(c) => state.command_palette_filter.push(c),
-        Msg::CommandPaletteBackspace => { state.command_palette_filter.pop(); }
-        Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => {
-            handle_palette_msg(state, msg);
-        }
-        Msg::ScrollUp | Msg::ScrollPageUp => state.feed_scroll_offset = state.feed_scroll_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }),
-        Msg::ScrollDown | Msg::ScrollPageDown => handle_scroll(state, if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }),
-        Msg::Tick | Msg::CursorBlink => handle_anim(state, &msg),
-        Msg::SlashCommand(cmd) => cmds.extend(handle_slash(state, cmd)),
-        Msg::ToggleSessionTree => handle_tree(state),
-        Msg::SessionTreeUp | Msg::SessionTreeDown => handle_tree_nav(state, &msg),
-        Msg::SessionTreeConfirm => handle_tree_confirm(state),
+        Msg::Quit => { state.running = false; state.dirty = true; }
+        Msg::Submit => { state.dirty = true; cmds.extend(handle_submit(state)); }
+        Msg::InsertChar(c) => { state.dirty = true; handle_insert_char(state, c); }
+        Msg::Backspace => { state.dirty = true; handle_backspace(state); }
+        Msg::InsertNewline => { state.dirty = true; handle_insert_newline(state); }
+        Msg::MoveCursorLeft | Msg::MoveCursorRight | Msg::MoveCursorUp | Msg::MoveCursorDown => { state.dirty = true; handle_cursor_move(state, &msg); }
+        Msg::MoveCursorToStart | Msg::MoveCursorToEnd => { state.dirty = true; handle_cursor_edge(state, &msg); }
+        Msg::DeleteForward => { state.dirty = true; handle_delete_forward(state); }
+        Msg::DeleteWordBackward => { state.dirty = true; handle_delete_word_backward(state); }
+        Msg::DeleteToStart => { state.dirty = true; handle_delete_to_start(state); }
+        Msg::ToggleSidebar => { state.show_sidebar = !state.show_sidebar; state.dirty = true; }
+        Msg::OpenCommandPalette => { state.dirty = true; open_palette(state); }
+        Msg::CloseModal | Msg::ConfirmModal => { state.dirty = true; handle_close_modal(state); }
+        Msg::AgentEvent(event) => { state.dirty = true; handle_agent_event(state, event); }
+        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { state.dirty = true; cmds.push(handle_permission_msg(state, msg)); }
+        Msg::CommandPaletteFilter(c) => { state.dirty = true; state.command_palette.filter.push(c); }
+        Msg::CommandPaletteBackspace => { state.dirty = true; state.command_palette.filter.pop(); }
+        Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { state.dirty = true; handle_palette_msg(state, msg); }
+        Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); state.dirty = true; }
+        Msg::ScrollDown | Msg::ScrollPageDown => { state.dirty = true; handle_scroll(state, if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }); }
+        Msg::Tick | Msg::CursorBlink => { state.animation.braille_frame = (state.animation.braille_frame + 1) % 8; state.dirty = true; handle_anim(state, &msg); }
+        Msg::SlashCommand(cmd) => { state.dirty = true; cmds.extend(handle_slash(state, cmd)); }
+        Msg::ToggleSessionTree => { state.dirty = true; handle_tree(state); }
+        Msg::SessionTreeUp | Msg::SessionTreeDown => { state.dirty = true; handle_tree_nav(state, &msg); }
+        Msg::SessionTreeConfirm => { state.dirty = true; handle_tree_confirm(state); }
     }
 
     cmds
@@ -45,7 +39,7 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
 
 fn handle_scroll(state: &mut AppState, amount: usize) {
     let max_scroll = state.messages.len().saturating_sub(1);
-    state.feed_scroll_offset = (state.feed_scroll_offset + amount).min(max_scroll);
+    state.scroll.feed_offset = (state.scroll.feed_offset + amount).min(max_scroll);
 }
 
 fn log_action(state: &mut AppState, msg: &Msg) {
@@ -56,10 +50,10 @@ fn log_action(state: &mut AppState, msg: &Msg) {
 }
 
 fn open_palette(state: &mut AppState) {
-    state.command_palette_open = true;
+    state.command_palette.open = true;
     state.mode = TuiMode::CommandPalette;
-    state.command_palette_filter.clear();
-    state.command_palette_selected = 0;
+    state.command_palette.filter.clear();
+    state.command_palette.selected = 0;
 }
 
 fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
@@ -171,16 +165,16 @@ fn handle_delete_to_start(state: &mut AppState) {
 
 fn handle_close_modal(state: &mut AppState) {
     state.mode = TuiMode::Chat;
-    state.command_palette_open = false;
-    state.permission_modal_tool = None;
-    state.permission_modal_tool_call_id = None;
+    state.command_palette.open = false;
+    state.permission_modal.tool = None;
+    state.permission_modal.tool_call_id = None;
     state.diff_viewer = None;
     state.session_tree.hide();
 }
 
 fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Cmd {
     state.mode = TuiMode::Chat;
-    state.permission_modal_tool = None;
+    state.permission_modal.tool = None;
     Cmd::SendPermission { decision }
 }
 
@@ -250,10 +244,10 @@ fn on_agent_error(state: &mut AppState, message: String) {
 }
 
 fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
-    state.permission_modal_tool = Some(tool_name.clone());
-    state.permission_modal_tool_call_id = Some(tool_call_id);
-    state.permission_modal_args = Some(tool_args.clone());
-    state.permission_modal_desc = Some(format!("Agent wants to execute '{}'", tool_name));
+    state.permission_modal.tool = Some(tool_name.clone());
+    state.permission_modal.tool_call_id = Some(tool_call_id);
+    state.permission_modal.args = Some(tool_args.clone());
+    state.permission_modal.desc = Some(format!("Agent wants to execute '{}'", tool_name));
     state.mode = TuiMode::Permission;
 }
 
@@ -293,7 +287,7 @@ fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
 }
 
 fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Cmd {
-    let tool_call_id = state.permission_modal_tool_call_id.clone().unwrap_or_default();
+    let tool_call_id = state.permission_modal.tool_call_id.clone().unwrap_or_default();
     let decision = match msg {
         Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id },
         Msg::PermissionCancel => PermissionDecision::Deny { tool_call_id },
@@ -331,12 +325,12 @@ fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashComma
     match cmd {
         runie_core::slash_command::SlashCommand::New => {
             state.messages.clear();
-            state.feed_scroll_offset = 0;
+            state.scroll.feed_offset = 0;
             state.messages.push(MessageItem::System { text: "New session started".to_string() });
         }
         runie_core::slash_command::SlashCommand::Clear => {
             state.messages.clear();
-            state.feed_scroll_offset = 0;
+            state.scroll.feed_offset = 0;
         }
         runie_core::slash_command::SlashCommand::Model(model) => {
             state.current_model = Some(model.clone());
@@ -384,11 +378,11 @@ fn handle_tree_confirm(state: &mut AppState) {
 fn handle_palette_msg(state: &mut AppState, msg: Msg) {
     match msg {
         Msg::CommandPaletteUp => {
-            if state.command_palette_selected > 0 {
-                state.command_palette_selected -= 1;
+            if state.command_palette.selected > 0 {
+                state.command_palette.selected -= 1;
             }
         }
-        Msg::CommandPaletteDown => state.command_palette_selected += 1,
+        Msg::CommandPaletteDown => state.command_palette.selected += 1,
         Msg::CommandPaletteConfirm => handle_close_modal(state),
         _ => {}
     }

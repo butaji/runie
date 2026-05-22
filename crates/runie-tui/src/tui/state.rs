@@ -1,5 +1,5 @@
 use crate::components::{MessageItem, DiffViewer, CommandPalette};
-use runie_agent::events::{AgentEvent, AgentMessage, PermissionDecision};
+use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::tui::update::update;
 use crate::components::SessionTreeNavigator;
@@ -22,6 +22,84 @@ impl Default for AnimationState {
 }
 
 #[derive(Clone)]
+pub struct TopBarState {
+    pub repo: String,
+    pub branch: String,
+    pub path: String,
+    pub checks_passed: Option<usize>,
+    pub checks_total: Option<usize>,
+    pub percentage: Option<f32>,
+    pub agent_count: Option<usize>,
+}
+
+impl Default for TopBarState {
+    fn default() -> Self {
+        Self {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            checks_passed: None,
+            checks_total: None,
+            percentage: None,
+            agent_count: None,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct PermissionModalState {
+    pub tool: Option<String>,
+    pub args: Option<String>,
+    pub desc: Option<String>,
+    pub tool_call_id: Option<String>,
+}
+
+impl Default for PermissionModalState {
+    fn default() -> Self {
+        Self {
+            tool: None,
+            args: None,
+            desc: None,
+            tool_call_id: None,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct CommandPaletteState {
+    pub open: bool,
+    pub filter: String,
+    pub selected: usize,
+}
+
+impl Default for CommandPaletteState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            filter: String::new(),
+            selected: 0,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ScrollState {
+    pub feed_offset: usize,
+    pub diff_offset: usize,
+    pub tree_offset: usize,
+}
+
+impl Default for ScrollState {
+    fn default() -> Self {
+        Self {
+            feed_offset: 0,
+            diff_offset: 0,
+            tree_offset: 0,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct AppState {
     pub messages: Vec<MessageItem>,
     pub input_lines: Vec<String>,
@@ -33,30 +111,18 @@ pub struct AppState {
     pub show_sidebar: bool,
     pub agent_running: bool,
     pub current_model: Option<String>,
-    pub top_bar_repo: String,
-    pub top_bar_branch: String,
-    pub top_bar_path: String,
-    pub top_bar_checks_passed: Option<usize>,
-    pub top_bar_checks_total: Option<usize>,
-    pub top_bar_percentage: Option<f32>,
-    pub top_bar_agent_count: Option<usize>,
-    pub permission_modal_tool: Option<String>,
-    pub permission_modal_tool_call_id: Option<String>,
-    pub permission_modal_args: Option<String>,
-    pub permission_modal_desc: Option<String>,
-    pub action_log: Vec<Msg>,         // NEW: history of all actions for time-travel debugging
-    pub action_log_capacity: usize,    // NEW: max actions to keep (default 1000)
-    pub command_palette_open: bool,
-    pub command_palette_filter: String,
-    pub command_palette_selected: usize,
-    pub feed_scroll_offset: usize,
-    pub diff_scroll_offset: usize,
-    pub tree_scroll_offset: usize,
+    pub top_bar: TopBarState,
+    pub permission_modal: PermissionModalState,
+    pub action_log: Vec<Msg>,
+    pub action_log_capacity: usize,
+    pub command_palette: CommandPaletteState,
+    pub scroll: ScrollState,
     pub animation: AnimationState,
     pub diff_viewer: Option<DiffViewer>,
     pub token_usage: TokenUsage,
     pub session_token_usage: TokenUsage,
     pub session_tree: SessionTreeNavigator,
+    pub dirty: bool,
 }
 
 impl Default for AppState {
@@ -72,30 +138,18 @@ impl Default for AppState {
             show_sidebar: false,
             agent_running: false,
             current_model: None,
-            top_bar_repo: String::new(),
-            top_bar_branch: String::new(),
-            top_bar_path: String::new(),
-            top_bar_checks_passed: None,
-            top_bar_checks_total: None,
-            top_bar_percentage: None,
-            top_bar_agent_count: None,
-            permission_modal_tool: None,
-            permission_modal_tool_call_id: None,
-            permission_modal_args: None,
-            permission_modal_desc: None,
+            top_bar: TopBarState::default(),
+            permission_modal: PermissionModalState::default(),
             action_log: Vec::new(),
             action_log_capacity: 1000,
-            command_palette_open: false,
-            command_palette_filter: String::new(),
-            command_palette_selected: 0,
-            feed_scroll_offset: 0,
-            diff_scroll_offset: 0,
-            tree_scroll_offset: 0,
+            command_palette: CommandPaletteState::default(),
+            scroll: ScrollState::default(),
             animation: AnimationState::default(),
             diff_viewer: None,
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
+            dirty: true,
         }
     }
 }

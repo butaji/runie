@@ -333,6 +333,18 @@ impl Provider for AnthropicProvider {
         &self.model
     }
 
+    fn supports_tools(&self) -> bool {
+        true
+    }
+
+    fn supports_vision(&self) -> bool {
+        self.model.contains("claude-3")
+    }
+
+    fn max_context_tokens(&self) -> usize {
+        200_000
+    }
+
     async fn chat(
         &self,
         messages: Vec<Message>,

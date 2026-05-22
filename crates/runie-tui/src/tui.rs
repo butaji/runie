@@ -114,6 +114,11 @@ impl Tui {
     }
 
     pub fn render(&mut self) -> io::Result<()> {
+        if !self.state.dirty {
+            return Ok(());
+        }
+        self.state.dirty = false;
+
         let size = self.terminal.size()?;
         let area = Rect::new(0, 0, size.width, size.height);
         let padded_area = Rect {
@@ -175,7 +180,7 @@ impl Tui {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
         }
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
-        MessageList::render_ref(&state.messages, state.feed_scroll_offset, h_areas[0], frame.buffer_mut(), theme, &state.animation, state.agent_running);
+        MessageList::render_ref(&state.messages, state.scroll.feed_offset, h_areas[0], frame.buffer_mut(), theme, &state.animation, state.agent_running);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             render_agent_list(h_areas[1], frame.buffer_mut(), theme);
         }
@@ -196,7 +201,7 @@ impl Tui {
 
     fn render_overlays(frame: &mut ratatui::Frame, state: &AppState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper) {
         let mode = state.mode.clone();
-        if mode == TuiMode::Permission && state.permission_modal_tool.is_some() {
+        if mode == TuiMode::Permission && state.permission_modal.tool.is_some() {
             Self::render_permission_modal(frame, state, padded, area, theme);
         }
         if mode == TuiMode::CommandPalette {
@@ -218,9 +223,9 @@ impl Tui {
         let modal_area = Self::centered_rect(padded, 50, 12);
         Self::render_shadow(modal_area, frame.buffer_mut(), theme);
         let modal = PermissionModal::new(
-            state.permission_modal_tool.as_deref().unwrap_or(""),
-            state.permission_modal_args.as_deref().unwrap_or(""),
-            state.permission_modal_desc.as_deref().unwrap_or(""),
+            state.permission_modal.tool.as_deref().unwrap_or(""),
+            state.permission_modal.args.as_deref().unwrap_or(""),
+            state.permission_modal.desc.as_deref().unwrap_or(""),
         );
         modal.render_ref(modal_area, frame.buffer_mut(), theme);
     }
@@ -317,7 +322,7 @@ impl Tui {
                             PermissionDecision::Skip { .. } => PermissionAction::Skip,
                         };
                         return Some(TuiAction::ToolPermission {
-                            tool: self.state.permission_modal_tool.clone().unwrap_or_default(),
+                            tool: self.state.permission_modal.tool.clone().unwrap_or_default(),
                             action: permission_action,
                         });
                     }
@@ -352,14 +357,14 @@ impl Tui {
     }
 
     pub fn request_permission(&mut self, tool_name: &str, tool_args: &str, description: &str) {
-        self.state.permission_modal_tool = Some(tool_name.to_string());
-        self.state.permission_modal_args = Some(tool_args.to_string());
-        self.state.permission_modal_desc = Some(description.to_string());
+        self.state.permission_modal.tool = Some(tool_name.to_string());
+        self.state.permission_modal.args = Some(tool_args.to_string());
+        self.state.permission_modal.desc = Some(description.to_string());
         self.state.mode = TuiMode::Permission;
     }
 
     pub fn is_permission_modal_active(&self) -> bool {
-        self.state.permission_modal_tool.is_some() && self.state.mode == TuiMode::Permission
+        self.state.permission_modal.tool.is_some() && self.state.mode == TuiMode::Permission
     }
 
     pub fn toggle_sidebar(&mut self) {

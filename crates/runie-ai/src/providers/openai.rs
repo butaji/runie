@@ -289,6 +289,24 @@ impl Provider for OpenAiProvider {
         &self.model
     }
 
+    fn supports_tools(&self) -> bool {
+        true
+    }
+
+    fn supports_vision(&self) -> bool {
+        self.model.starts_with("gpt-4o")
+    }
+
+    fn max_context_tokens(&self) -> usize {
+        if self.model.starts_with("gpt-4o") {
+            128_000
+        } else if self.model.starts_with("gpt-4") {
+            8_192
+        } else {
+            4_096
+        }
+    }
+
     async fn chat(
         &self,
         messages: Vec<Message>,

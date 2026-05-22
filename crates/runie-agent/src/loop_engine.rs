@@ -1,5 +1,5 @@
 use crate::events::*;
-use crate::pi::AgentTool;
+use crate::tools::AgentTool;
 use crate::{Hook, HookDecision};
 use runie_ai::Provider;
 use runie_core::{Message, ToolSchema, Event as LlmEvent, Context, ToolCall as CoreToolCall};
