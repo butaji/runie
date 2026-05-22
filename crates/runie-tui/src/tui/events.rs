@@ -9,6 +9,14 @@ pub fn event_to_msg(event: Event, state: &AppState) -> Option<Msg> {
 }
 
 pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    // Global hotkeys: always active regardless of mode
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        match key.code {
+            KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::Quit),
+            _ => {}
+        }
+    }
+
     match state.mode {
         TuiMode::Chat => key_to_chat_msg(key),
         TuiMode::Permission => key_to_permission_msg(key),
@@ -40,7 +48,6 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Char('c') | KeyCode::Char('q') => Some(Msg::Quit),
         KeyCode::Char('j') => Some(Msg::InsertNewline),
         KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('a') => Some(Msg::MoveCursorToStart),

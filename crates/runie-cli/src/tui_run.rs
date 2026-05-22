@@ -80,7 +80,8 @@ pub async fn run_tui(
     };
 
     // Check if onboarding is needed
-    let needs_setup = force_setup || needs_onboarding(settings);
+    // --mock skips onboarding unless --mock-setup is explicitly used
+    let needs_setup = force_setup || (!mock && needs_onboarding(settings));
     if needs_setup {
         tui.state.mode = TuiMode::Onboarding;
         tui.state.onboarding = Some(Onboarding::new());
