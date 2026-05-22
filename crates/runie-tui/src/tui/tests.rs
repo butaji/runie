@@ -678,7 +678,8 @@ mod tests {
         //
         // If you mistakenly do:
         //   runie_tui::update(&mut tui.state, msg);
-        // The state updates but tui.dirty stays false!
-        // Then tui.render() returns early and nothing is displayed.
+        // The state WOULD update, but dirty would NOT be set!
+        // This is why calling it directly on a Tui's state causes the bug:
+        // Tui.dirty remains false, so render() returns early!
     }
 }

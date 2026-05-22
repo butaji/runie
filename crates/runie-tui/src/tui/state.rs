@@ -233,6 +233,8 @@ pub enum Msg {
     // Onboarding
     OnboardingNext,
     OnboardingBack,
+    OnboardingNavigateUp,
+    OnboardingNavigateDown,
     OnboardingSelectProvider(usize),
     OnboardingSelectModel(usize),
     OnboardingKeyInput(char),
@@ -286,6 +288,8 @@ impl PartialEq for Msg {
             (SessionTreeConfirm, SessionTreeConfirm) => true,
             (OnboardingNext, OnboardingNext) => true,
             (OnboardingBack, OnboardingBack) => true,
+            (OnboardingNavigateUp, OnboardingNavigateUp) => true,
+            (OnboardingNavigateDown, OnboardingNavigateDown) => true,
             (OnboardingSelectProvider(a), OnboardingSelectProvider(b)) => a == b,
             (OnboardingSelectModel(a), OnboardingSelectModel(b)) => a == b,
             (OnboardingKeyInput(a), OnboardingKeyInput(b)) => a == b,
