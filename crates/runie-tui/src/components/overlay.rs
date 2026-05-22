@@ -115,7 +115,9 @@ fn fill_content_area(overlay: &Overlay, area: Rect, buf: &mut Buffer, sp: &Style
     let content_start_y = if overlay.tabs.is_empty() { 1 } else { 2 };
     for y in (area.y + content_start_y)..(area.y + area.height - 1) {
         for x in (area.x + 1)..(area.x + area.width - 1) {
-            buf.get_mut(x, y).set_style(sp.bg_panel());
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_style(sp.bg_panel());
+            }
         }
     }
 

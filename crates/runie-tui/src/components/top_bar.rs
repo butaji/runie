@@ -49,7 +49,7 @@ impl TopBar {
         }
     }
 
-    fn build_left_parts(&self, text_secondary: ratatui::style::Color, text_tertiary: ratatui::style::Color) -> Vec<Span> {
+    fn build_left_parts(&self, text_secondary: ratatui::style::Color, text_tertiary: ratatui::style::Color) -> Vec<Span<'_>> {
         let mut parts = Vec::new();
 
         if !self.repo_name.is_empty() {
@@ -73,7 +73,7 @@ impl TopBar {
         syntax_success: ratatui::style::Color,
         text_secondary: ratatui::style::Color,
         text_tertiary: ratatui::style::Color,
-    ) -> Vec<Span> {
+    ) -> Vec<Span<'_>> {
         let mut parts = Vec::new();
 
         if let (Some(passed), Some(_total)) = (self.checks_passed, self.checks_total) {

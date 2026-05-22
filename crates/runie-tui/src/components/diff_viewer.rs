@@ -80,7 +80,7 @@ fn clear_area(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let bg_panel: Color = theme.color("bg.panel").into();
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
-            buf.get_mut(x, y).set_style(Style::default().bg(bg_panel));
+            if let Some(cell) = buf.cell_mut((x, y)) { cell.set_style(Style::default().bg(bg_panel)); }
         }
     }
 }
@@ -146,9 +146,10 @@ fn render_diff_line(
         DiffLine::Added(text) => ("+", text.as_str(), added_color),
         DiffLine::Context(text) => (" ", text.as_str(), context_color),
     };
-    buf.get_mut(area.x + 1, y)
-        .set_char(prefix.chars().next().unwrap_or(' '))
-        .set_style(Style::default().fg(color));
+    if let Some(cell) = buf.cell_mut((area.x + 1, y)) {
+        cell.set_char(prefix.chars().next().unwrap_or(' '));
+        cell.set_style(Style::default().fg(color));
+    }
     let max_text_width = (area.width - 4) as usize;
     let display_text = if text.len() > max_text_width {
         &text[..max_text_width]

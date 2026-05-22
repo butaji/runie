@@ -15,10 +15,19 @@ pub fn render_ref(input: &InputBar, area: Rect, buf: &mut Buffer, theme: &ThemeW
 
 fn render_top_border(area: Rect, buf: &mut Buffer, border_color: ratatui::style::Color) {
     let style = Style::default().fg(border_color);
-    buf.get_mut(area.x, area.y).set_char('╭').set_style(style);
-    buf.get_mut(area.x + area.width - 1, area.y).set_char('╮').set_style(style);
+    if let Some(cell) = buf.cell_mut((area.x, area.y)) {
+        cell.set_char('╭');
+        cell.set_style(style);
+    }
+    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y)) {
+        cell.set_char('╮');
+        cell.set_style(style);
+    }
     for x in 1..area.width.saturating_sub(1) {
-        buf.get_mut(area.x + x, area.y).set_char('─').set_style(style);
+        if let Some(cell) = buf.cell_mut((area.x + x, area.y)) {
+            cell.set_char('─');
+            cell.set_style(style);
+        }
     }
 }
 
@@ -35,8 +44,14 @@ fn render_content_lines(
 
     for (line_idx, line_text) in input.lines.iter().enumerate() {
         let y = area.y + 1 + line_idx as u16;
-        buf.get_mut(area.x, y).set_style(border_style).set_char('│');
-        buf.get_mut(area.x + area.width - 1, y).set_style(border_style).set_char('│');
+        if let Some(cell) = buf.cell_mut((area.x, y)) {
+            cell.set_style(border_style);
+            cell.set_char('│');
+        }
+        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, y)) {
+            cell.set_style(border_style);
+            cell.set_char('│');
+        }
 
         let x = area.x + 1;
         if line_idx == 0 {
@@ -103,22 +118,43 @@ fn render_bottom_border(
     let fixed_width = info_len + 5;
     let dashes = inner_width.saturating_sub(fixed_width).max(0);
 
-    buf.get_mut(area.x, bottom_y).set_char('╰').set_style(style);
+    if let Some(cell) = buf.cell_mut((area.x, bottom_y)) {
+        cell.set_char('╰');
+        cell.set_style(style);
+    }
     for i in 0..dashes {
         let x = area.x + 1 + i;
-        buf.get_mut(x, bottom_y).set_char('─').set_style(style);
+        if let Some(cell) = buf.cell_mut((x, bottom_y)) {
+            cell.set_char('─');
+            cell.set_style(style);
+        }
     }
 
     let mut x = area.x + 1 + dashes;
-    buf.get_mut(x, bottom_y).set_char(' ').set_style(style);
+    if let Some(cell) = buf.cell_mut((x, bottom_y)) {
+        cell.set_char(' ');
+        cell.set_style(style);
+    }
     x += 1;
     for ch in info_text.chars() {
-        buf.get_mut(x, bottom_y).set_char(ch).set_style(style);
+        if let Some(cell) = buf.cell_mut((x, bottom_y)) {
+            cell.set_char(ch);
+            cell.set_style(style);
+        }
         x += 1;
     }
-    buf.get_mut(x, bottom_y).set_char(' ').set_style(style);
+    if let Some(cell) = buf.cell_mut((x, bottom_y)) {
+        cell.set_char(' ');
+        cell.set_style(style);
+    }
     x += 1;
-    buf.get_mut(x, bottom_y).set_char('─').set_style(style);
+    if let Some(cell) = buf.cell_mut((x, bottom_y)) {
+        cell.set_char('─');
+        cell.set_style(style);
+    }
     x += 1;
-    buf.get_mut(area.x + area.width - 1, bottom_y).set_char('╯').set_style(style);
+    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, bottom_y)) {
+        cell.set_char('╯');
+        cell.set_style(style);
+    }
 }

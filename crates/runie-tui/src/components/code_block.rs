@@ -105,7 +105,9 @@ impl Widget for CodeBlock {
             };
 
             for x in area.x..area.x + area.width {
-                buf.get_mut(x, y).set_style(bg_style);
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_style(bg_style);
+                }
             }
 
             let num_str = format!("{:>3} ", line.number);

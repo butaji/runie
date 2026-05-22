@@ -159,7 +159,9 @@ impl Tui {
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
         for y in 0..area.height {
             for x in 0..area.width {
-                frame.buffer_mut().get_mut(x, y).set_style(Style::default().bg(bg_base));
+                if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
+                    cell.set_style(Style::default().bg(bg_base));
+                }
             }
         }
     }
@@ -281,13 +283,13 @@ impl Tui {
     fn blit_buffer(frame: &mut ratatui::Frame, area: Rect, src_area: Rect, src: &Buffer) {
         for y in 0..src.area.height {
             for x in 0..src.area.width {
-                let cell = src.get(x, y);
+                let cell = src.cell((x, y));
                 let tx = src_area.x + x;
                 let ty = src_area.y + y;
                 if tx < area.width && ty < area.height {
-                    if let Some(target) = frame.buffer_mut().cell_mut((tx, ty)) {
-                        target.set_style(cell.style());
-                        if let Some(ch) = cell.symbol().chars().next() {
+                    if let (Some(src_cell), Some(target)) = (cell, frame.buffer_mut().cell_mut((tx, ty))) {
+                        target.set_style(src_cell.style());
+                        if let Some(ch) = src_cell.symbol().chars().next() {
                             target.set_char(ch);
                         }
                     }

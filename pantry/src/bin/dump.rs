@@ -2,7 +2,7 @@ use ratatui::{
     backend::TestBackend,
     layout::Rect,
     Terminal,
-    widgets::{Widget, Block, Borders, Paragraph, Clear},
+    widgets::{Widget, Block, Borders, Paragraph},
     style::{Style, Color},
     text::{Line, Span},
 };
