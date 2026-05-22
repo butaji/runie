@@ -109,6 +109,7 @@ impl Tui {
     /// Returns Vec<Cmd> to be executed by the runtime
     pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
         self.log_action(&msg);
+        self.dirty = true;
         update(&mut self.state, msg)
     }
 
