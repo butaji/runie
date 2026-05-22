@@ -79,11 +79,9 @@ impl Provider for MockProvider {
         _tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
         let events = self.generate_response(&messages);
-        let delay = tokio::time::Duration::from_millis(self.response_delay_ms);
 
         let s = stream! {
             for event in events {
-                tokio::time::sleep(delay).await;
                 yield event;
             }
         };
