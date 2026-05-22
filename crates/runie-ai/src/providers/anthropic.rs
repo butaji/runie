@@ -7,6 +7,7 @@ use reqwest::Client;
 use runie_core::{Event, Message, ProviderError, ToolSchema};
 use serde::Deserialize;
 use std::env;
+use tokio::time::{sleep, Duration};
 
 use crate::Provider;
 
@@ -107,7 +108,32 @@ impl AnthropicProvider {
             .collect()
     }
 
-    async fn chat_streaming(
+    async fn chat_with_retry(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<ToolSchema>,
+    ) -> Result<BoxStream<'static, Event>, ProviderError> {
+        let mut last_error = None;
+
+        for attempt in 0..3 {
+            match self.chat_once(messages.clone(), tools.clone()).await {
+                Ok(stream) => return Ok(stream),
+                Err(ProviderError::RateLimited) => {
+                    let delay = Duration::from_secs(2u64.pow(attempt));
+                    tracing::warn!("Rate limited, retrying in {}s...", delay.as_secs());
+                    sleep(delay).await;
+                }
+                Err(e) => {
+                    last_error = Some(e);
+                    break;
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or(ProviderError::ApiError("Max retries exceeded".to_string())))
+    }
+
+    async fn chat_once(
         &self,
         messages: Vec<Message>,
         tools: Vec<ToolSchema>,
@@ -350,7 +376,7 @@ impl Provider for AnthropicProvider {
         messages: Vec<Message>,
         tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
-        self.chat_streaming(messages, tools).await
+        self.chat_with_retry(messages, tools).await
     }
 
     async fn chat_simple(

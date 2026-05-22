@@ -6,9 +6,13 @@ use reqwest::Client;
 use runie_core::{Event, Message, ProviderError, ToolSchema};
 use serde::Deserialize;
 use std::env;
+use tokio::time::{sleep, Duration};
 
 use crate::Provider;
 use crate::token_usage::TokenUsage;
+
+const HTTP_TIMEOUT_SECS: u64 = 120;
+const HTTP_CONNECT_TIMEOUT_SECS: u64 = 30;
 
 pub struct OpenAiProvider {
     api_key: String,
@@ -25,8 +29,8 @@ impl OpenAiProvider {
             api_key
         };
         let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(300))
-            .connect_timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(HTTP_TIMEOUT_SECS))
+            .connect_timeout(std::time::Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| Client::new());
         Self {
@@ -99,7 +103,32 @@ impl OpenAiProvider {
             .collect()
     }
 
-    async fn chat_streaming(
+    async fn chat_with_retry(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<ToolSchema>,
+    ) -> Result<BoxStream<'static, Event>, ProviderError> {
+        let mut last_error = None;
+
+        for attempt in 0..3 {
+            match self.chat_once(messages.clone(), tools.clone()).await {
+                Ok(stream) => return Ok(stream),
+                Err(ProviderError::RateLimited) => {
+                    let delay = Duration::from_secs(2u64.pow(attempt));
+                    tracing::warn!("Rate limited, retrying in {}s...", delay.as_secs());
+                    sleep(delay).await;
+                }
+                Err(e) => {
+                    last_error = Some(e);
+                    break;
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or(ProviderError::ApiError("Max retries exceeded".to_string())))
+    }
+
+    async fn chat_once(
         &self,
         messages: Vec<Message>,
         tools: Vec<ToolSchema>,
@@ -139,7 +168,6 @@ impl OpenAiProvider {
         }
 
         let session_id = format!("openai-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
-        let model = self.model.clone();
 
         let stream = stream! {
             yield Event::AgentStart { session_id: session_id.clone(), timestamp: Utc::now() };
@@ -312,7 +340,7 @@ impl Provider for OpenAiProvider {
         messages: Vec<Message>,
         tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
-        self.chat_streaming(messages, tools).await
+        self.chat_with_retry(messages, tools).await
     }
 
     async fn chat_simple(

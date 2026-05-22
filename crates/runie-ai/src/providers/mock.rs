@@ -9,6 +9,9 @@ use chrono::Utc;
 pub struct MockProvider {
     model: String,
     response_delay_ms: u64,
+    simulate_errors: bool,
+    error_rate: f32,
+    simulate_rate_limit: bool,
 }
 
 impl MockProvider {
@@ -16,11 +19,25 @@ impl MockProvider {
         Self {
             model: "mock-gpt-4".to_string(),
             response_delay_ms: 100,
+            simulate_errors: false,
+            error_rate: 0.0,
+            simulate_rate_limit: false,
         }
     }
 
     pub fn with_delay(mut self, ms: u64) -> Self {
         self.response_delay_ms = ms;
+        self
+    }
+
+    pub fn with_errors(mut self, rate: f32) -> Self {
+        self.simulate_errors = true;
+        self.error_rate = rate.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn with_rate_limit_simulation(mut self) -> Self {
+        self.simulate_rate_limit = true;
         self
     }
 
@@ -120,6 +137,13 @@ impl Provider for MockProvider {
         messages: Vec<Message>,
         tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
+        if self.simulate_errors && rand::random::<f32>() < self.error_rate {
+            return Err(ProviderError::ApiError("Simulated error".to_string()));
+        }
+        if self.simulate_rate_limit && rand::random::<f32>() < 0.3 {
+            return Err(ProviderError::RateLimited);
+        }
+
         let events = self.generate_response(&messages, &tools);
 
         let s = stream! {

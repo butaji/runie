@@ -5,7 +5,7 @@ use ratatui::{
     text::{Line, Span},
 };
 use crate::theme::ThemeWrapper;
-use crate::tui::state::{AppState, TuiMode};
+use crate::tui::state::{TuiMode, TopBarState, RenderState};
 use crate::components::{
     AgentStatus, AgentList, AgentItem, ContextPanel,
     GitChange, GitStatus,
@@ -13,28 +13,28 @@ use crate::components::{
 
 // ─── Top Bar ─────────────────────────────────────────────────────────────────
 
-fn build_left_parts(state: &AppState, text_primary: ratatui::style::Color, text_muted: ratatui::style::Color) -> Vec<Span> {
+fn build_left_parts(top_bar: &TopBarState, text_primary: ratatui::style::Color, text_muted: ratatui::style::Color) -> Vec<Span> {
     let mut left_parts: Vec<Span> = Vec::new();
 
-    if !state.top_bar.repo.is_empty() {
-        left_parts.push(Span::styled(&state.top_bar.repo, Style::default().fg(text_primary)));
+    if !top_bar.repo.is_empty() {
+        left_parts.push(Span::styled(&top_bar.repo, Style::default().fg(text_primary)));
     }
-    if !state.top_bar.branch.is_empty() {
+    if !top_bar.branch.is_empty() {
         left_parts.push(Span::styled("/", Style::default().fg(text_muted)));
-        left_parts.push(Span::styled(&state.top_bar.branch, Style::default().fg(text_muted)));
+        left_parts.push(Span::styled(&top_bar.branch, Style::default().fg(text_muted)));
     }
-    if !state.top_bar.path.is_empty() {
-        left_parts.push(Span::styled(format!("  {}", state.top_bar.path),
+    if !top_bar.path.is_empty() {
+        left_parts.push(Span::styled(format!("  {}", top_bar.path),
             Style::default().fg(text_muted)));
     }
 
     left_parts
 }
 
-fn build_right_parts(state: &AppState, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color) -> Vec<Span> {
+fn build_right_parts(top_bar: &TopBarState, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color) -> Vec<Span> {
     let mut right_parts: Vec<Span> = Vec::new();
 
-    if let (Some(passed), Some(total)) = (state.top_bar.checks_passed, state.top_bar.checks_total) {
+    if let (Some(passed), Some(total)) = (top_bar.checks_passed, top_bar.checks_total) {
         right_parts.push(Span::styled(format!("{} ", passed), Style::default().fg(text_secondary)));
         right_parts.push(Span::styled("✓ ", Style::default().fg(text_muted)));
 
@@ -44,7 +44,7 @@ fn build_right_parts(state: &AppState, text_secondary: ratatui::style::Color, te
         let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
         right_parts.push(Span::styled(bar, Style::default().fg(text_secondary)));
         right_parts.push(Span::styled(" │", Style::default().fg(text_muted)));
-    } else if let Some(pct) = state.top_bar.percentage {
+    } else if let Some(pct) = top_bar.percentage {
         right_parts.push(Span::styled(format!("{:.2}%", pct), Style::default().fg(text_secondary)));
 
         let filled = (pct / 100.0 * 10.0).round() as usize;
@@ -57,7 +57,7 @@ fn build_right_parts(state: &AppState, text_secondary: ratatui::style::Color, te
     right_parts
 }
 
-pub fn render_top_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_top_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     use ratatui::text::{Line, Span};
 
     let x = area.x + 1;
@@ -65,13 +65,13 @@ pub fn render_top_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &Th
     let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
     let text_muted: ratatui::style::Color = theme.color("text.muted").into();
 
-    let left_parts = build_left_parts(state, text_primary, text_muted);
+    let left_parts = build_left_parts(&state.top_bar, text_primary, text_muted);
     if !left_parts.is_empty() {
         let line = Line::from(left_parts);
         buf.set_line(x, area.y, &line, area.width - 2);
     }
 
-    let right_parts = build_right_parts(state, text_secondary, text_muted);
+    let right_parts = build_right_parts(&state.top_bar, text_secondary, text_muted);
     if !right_parts.is_empty() {
         let right_line = Line::from(right_parts);
         let right_width: usize = right_line.spans.iter().map(|s| s.width()).sum();
@@ -125,7 +125,7 @@ fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
     }
 }
 
-pub fn render_status_bar(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     use ratatui::style::Modifier;
     use ratatui::text::{Line, Span};
 
@@ -403,7 +403,7 @@ fn render_context_model_session(
     }
 }
 
-fn render_context_panel(state: &AppState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+fn render_context_panel(_state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     use ratatui::style::Modifier;
     use ratatui::text::{Line, Span};
 

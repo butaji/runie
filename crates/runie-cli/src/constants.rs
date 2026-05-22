@@ -1,0 +1,13 @@
+pub const TICK_INTERVAL_MS: u64 = 80;
+pub const CURSOR_BLINK_INTERVAL_MS: u64 = 500;
+pub const AGENT_MAX_TURNS_DEFAULT: usize = 10;
+pub const HTTP_TIMEOUT_SECS: u64 = 120;
+pub const HTTP_CONNECT_TIMEOUT_SECS: u64 = 30;
+pub const PERMISSION_TIMEOUT_SECS: u64 = 300;
+pub const BASH_TIMEOUT_SECS: u64 = 60;
+pub const COMPACT_THRESHOLD_DEFAULT: usize = 100;
+pub const PAGE_SCROLL_LINES: usize = 10;
+pub const MOCK_RESPONSE_DELAY_MS: u64 = 100;
+pub const MAX_ACTION_LOG_CAPACITY: usize = 1000;
+pub const MAX_TURNS_DEFAULT: usize = 10;
+pub const TEMPERATURE_DEFAULT: f32 = 0.7;

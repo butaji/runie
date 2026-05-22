@@ -61,7 +61,7 @@ pub mod render;
 pub mod events;
 pub mod tests;
 
-pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction};
+pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState};
 pub use update::update;
 pub use events::event_to_msg;
 use render::{render_top_bar, render_status_bar, render_agent_list};
@@ -131,16 +131,16 @@ impl Tui {
         let show_top_bar = self.config.show_top_bar;
         let show_status_bar = self.config.show_status_bar;
 
-        // Extract data needed for render pass
+        // Extract render state - only clone what we need
         let theme = self.config.theme.clone();
-        let state = self.state.clone();
+        let render_state = RenderState::from(&self.state);
         let palette = self.command_palette.clone();
 
         self.terminal.draw(|frame| {
             let theme = &theme;
             Self::clear_background(frame, area, theme);
             let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
-            let state = &state;
+            let state = &render_state;
 
             if show_top_bar {
                 render_top_bar(state, main_areas[0], frame.buffer_mut(), theme);
@@ -174,7 +174,7 @@ impl Tui {
         Layout::vertical(constraints).areas(padded)
     }
 
-    fn render_content(frame: &mut ratatui::Frame, state: &AppState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper) {
+    fn render_content(frame: &mut ratatui::Frame, state: &RenderState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper) {
         let mut h_constraints = vec![Constraint::Min(20)];
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
@@ -186,7 +186,7 @@ impl Tui {
         }
     }
 
-    fn render_input(frame: &mut ratatui::Frame, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+    fn render_input(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         let input_bar = InputBar {
             prompt: "\u{276F} ".to_string(),
             lines: state.input_lines.clone(),
@@ -199,7 +199,7 @@ impl Tui {
         frame.set_cursor_position(input_bar.cursor_screen_pos(area));
     }
 
-    fn render_overlays(frame: &mut ratatui::Frame, state: &AppState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+    fn render_overlays(frame: &mut ratatui::Frame, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper) {
         let mode = state.mode.clone();
         if mode == TuiMode::Permission && state.permission_modal.tool.is_some() {
             Self::render_permission_modal(frame, state, padded, area, theme);
@@ -218,7 +218,7 @@ impl Tui {
         }
     }
 
-    fn render_permission_modal(frame: &mut ratatui::Frame, state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+    fn render_permission_modal(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper) {
         Self::dim_background(frame, area, theme);
         let modal_area = Self::centered_rect(padded, 50, 12);
         Self::render_shadow(modal_area, frame.buffer_mut(), theme);
@@ -230,7 +230,7 @@ impl Tui {
         modal.render_ref(modal_area, frame.buffer_mut(), theme);
     }
 
-    fn render_command_palette(frame: &mut ratatui::Frame, state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
+    fn render_command_palette(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
         Self::dim_background(frame, area, theme);
         let palette_area = Self::centered_rect(padded, 70, 20);
         Self::render_shadow(palette_area, frame.buffer_mut(), theme);
@@ -245,7 +245,7 @@ impl Tui {
         Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
     }
 
-    fn render_diff_viewer(frame: &mut ratatui::Frame, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+    fn render_diff_viewer(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         Self::dim_background(frame, area, theme);
         let diff_area = Self::centered_rect(area, 80, 25);
         Self::render_shadow(diff_area, frame.buffer_mut(), theme);
@@ -254,7 +254,7 @@ impl Tui {
         }
     }
 
-    fn render_session_tree(frame: &mut ratatui::Frame, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+    fn render_session_tree(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         Self::dim_background(frame, area, theme);
         let tree_area = Self::centered_rect(area, 70, 25);
         Self::render_shadow(tree_area, frame.buffer_mut(), theme);
