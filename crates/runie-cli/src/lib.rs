@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used)]
+
 pub mod commands;
 pub mod context_loader;
 pub mod session_manager;

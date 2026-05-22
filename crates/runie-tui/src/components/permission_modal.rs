@@ -245,6 +245,7 @@ fn button_style(selected: usize, idx: usize, accent_secondary: ratatui::style::C
     }
 }
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

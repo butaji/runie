@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used)]
+
 pub mod theme;
 pub mod components;
 pub mod tui;

@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used)]
+
 pub mod provider;
 pub mod unified_api;
 pub mod token_usage;

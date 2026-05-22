@@ -9,6 +9,7 @@ use runie_agent::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
 use runie_ai::TokenUsage;
 
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

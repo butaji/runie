@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used)]
+
 pub mod message;
 pub mod tool;
 pub mod event;
@@ -16,5 +19,6 @@ pub use compactor::{Compactor, CompactorError, SimpleCompactor};
 pub use provider::ProviderError;
 pub use slash_command::{SlashCommand, parse_slash_command, format_help};
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests;

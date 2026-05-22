@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used)]
+
 pub mod bash;
 pub mod edit_file;
 pub mod read_file;
@@ -14,6 +17,7 @@ pub use search::SearchTool;
 pub use workspace::Workspace;
 pub use write_file::WriteFileTool;
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests;
 
