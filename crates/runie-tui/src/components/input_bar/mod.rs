@@ -220,7 +220,9 @@ impl InputBar {
     }
 }
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests;
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests_extra;

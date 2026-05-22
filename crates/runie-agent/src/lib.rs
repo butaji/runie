@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used)]
+
 pub mod config;
 pub mod hook;
 pub mod state;
@@ -19,5 +22,6 @@ pub use tools::{AgentTool, ToolHandler};
 // Events re-exports
 pub use events::{AgentEvent, AgentMessage, ContentPart, ImageSource, PermissionDecision, TokenUsage, ToolResult};
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests;

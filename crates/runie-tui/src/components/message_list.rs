@@ -519,6 +519,7 @@ fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: 
     1
 }
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

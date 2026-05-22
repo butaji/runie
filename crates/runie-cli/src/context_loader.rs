@@ -122,6 +122,7 @@ pub fn build_system_prompt(context_files: &[ContextFile]) -> String {
     prompt
 }
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
     use super::*;

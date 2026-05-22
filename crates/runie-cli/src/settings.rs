@@ -337,6 +337,7 @@ pub fn ensure_dirs() {
     }
 }
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
     use super::*;
