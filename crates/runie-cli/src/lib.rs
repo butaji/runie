@@ -9,4 +9,4 @@ pub mod settings;
 pub use commands::{Command, CommandParser};
 pub use context_loader::{build_system_prompt, ContextFile, ContextLoader};
 pub use session_manager::{SessionManager, SessionManagerError};
-pub use settings::{Settings, CliSettings, Keybindings};
+pub use settings::{Settings, CliSettings};

@@ -84,49 +84,18 @@ pub fn render_top_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: 
 
 // ─── Status Bar ───────────────────────────────────────────────────────────────
 
-fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
+const NAV_KEYS: &[(&str, &str)] = &[("Esc", "close"), ("j/k", "navigate"), ("Enter", "select")];
+const ARROW_KEYS: &[(&str, &str)] = &[("Esc", "close"), ("↑↓", "navigate"), ("Enter", "jump")];
+
+pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
     match *mode {
-        TuiMode::Chat => vec![
-            ("Enter", "send"),
-            ("^b", "sidebar"),
-            ("^k", "cmd"),
-            ("^q", "quit"),
-        ],
-        TuiMode::Overlay => vec![
-            ("Esc", "close"),
-            ("j/k", "navigate"),
-            ("Enter", "select"),
-        ],
-        TuiMode::Select => vec![
-            ("Esc", "close"),
-            ("j/k", "navigate"),
-            ("Enter", "select"),
-        ],
-        TuiMode::Permission => vec![
-            ("y", "confirm"),
-            ("n", "cancel"),
-            ("a", "always"),
-            ("s", "skip"),
-        ],
-        TuiMode::CommandPalette => vec![
-            ("Esc", "close"),
-            ("Enter", "select"),
-            ("↑↓", "navigate"),
-        ],
-        TuiMode::DiffViewer => vec![
-            ("q", "close"),
-            ("j/k", "scroll"),
-        ],
-        TuiMode::SessionTree => vec![
-            ("Esc", "close"),
-            ("↑↓", "navigate"),
-            ("Enter", "jump"),
-        ],
-        TuiMode::Onboarding => vec![
-            ("Esc", "back"),
-            ("↑↓", "navigate"),
-            ("Enter", "next"),
-        ],
+        TuiMode::Chat => vec![("Enter", "send"), ("^b", "sidebar"), ("^k", "cmd"), ("^q", "quit")],
+        TuiMode::Overlay | TuiMode::Select => NAV_KEYS.to_vec(),
+        TuiMode::Permission => vec![("y", "confirm"), ("n", "cancel"), ("a", "always"), ("s", "skip")],
+        TuiMode::CommandPalette => vec![("Esc", "close"), ("Enter", "select"), ("↑↓", "navigate")],
+        TuiMode::DiffViewer => vec![("q", "close"), ("j/k", "scroll")],
+        TuiMode::SessionTree => ARROW_KEYS.to_vec(),
+        TuiMode::Onboarding => vec![("Esc", "back"), ("↑↓", "navigate"), ("Enter", "next")],
     }
 }
 

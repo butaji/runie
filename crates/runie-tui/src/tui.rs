@@ -49,7 +49,7 @@ impl Default for TuiConfig {
         Self {
             theme: ThemeWrapper::default(),
             show_top_bar: true,
-            show_status_bar: true,
+            show_status_bar: true, // Always visible - hotkeys are context-aware and essential
         }
     }
 }
@@ -63,6 +63,7 @@ pub mod render;
 pub mod events;
 pub mod tests;
 pub mod tests_hotkeys;
+pub mod tests_statusbar;
 
 pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
@@ -151,7 +152,7 @@ impl Tui {
         let input_height = self.input_bar_height();
         let show_sidebar = self.state.show_sidebar;
         let show_top_bar = self.config.show_top_bar;
-        let show_status_bar = self.config.show_status_bar;
+        let show_status_bar = true; // Always show hotkeys bar per UX requirement
 
         // Extract render state - only clone what we need
         let theme = self.config.theme.clone();
