@@ -10,6 +10,7 @@ use crate::theme::ThemeWrapper;
 #[derive(Clone)]
 pub struct StatusBar {
     pub items: Vec<StatusItem>,
+    pub theme: ThemeWrapper,
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,7 @@ impl Default for StatusBar {
                 StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
                 StatusItem { key: "^q".to_string(), description: "quit".to_string() },
             ],
+            theme: ThemeWrapper::default(),
         }
     }
 }
@@ -48,8 +50,7 @@ impl StyleHelpers {
 
 impl Widget for StatusBar {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let theme = ThemeWrapper::default();
-        let sp = StyleHelpers::new(&theme);
+        let sp = StyleHelpers::new(&self.theme);
         let x = area.x + 1;
         let mut current_x = x;
         let mut first = true;

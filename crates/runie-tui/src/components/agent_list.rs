@@ -10,6 +10,7 @@ use crate::theme::ThemeWrapper;
 #[derive(Clone)]
 pub struct AgentList {
     pub agents: Vec<AgentItem>,
+    pub theme: ThemeWrapper,
 }
 
 #[derive(Debug, Clone)]
@@ -33,13 +34,16 @@ pub enum AgentStatus {
 
 impl Default for AgentList {
     fn default() -> Self {
-        Self { agents: Vec::new() }
+        Self {
+            agents: Vec::new(),
+            theme: ThemeWrapper::default(),
+        }
     }
 }
 
 impl Widget for AgentList {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let theme = ThemeWrapper::default();
+        let theme = &self.theme;
 
         let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
         let border_color: ratatui::style::Color = theme.color("border.unfocused").into();

@@ -12,6 +12,7 @@ pub struct CodeBlock {
     pub lines: Vec<CodeLine>,
     pub start_line: usize,
     pub language: Option<String>,
+    pub theme: ThemeWrapper,
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +36,7 @@ impl Default for CodeBlock {
             lines: Vec::new(),
             start_line: 1,
             language: None,
+            theme: ThemeWrapper::default(),
         }
     }
 }
@@ -87,8 +89,8 @@ impl StyleHelpers {
 
 impl Widget for CodeBlock {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let theme = ThemeWrapper::default();
-        let sp = StyleHelpers::new(&theme);
+        let sp = StyleHelpers::new(&self.theme);
+        let theme = &self.theme;
         let line_num_width = 4;
 
         for (i, line) in self.lines.iter().enumerate() {

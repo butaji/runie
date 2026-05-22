@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AgentEvent {
+    Message { role: String, content: String },
     MessageStart { message: AgentMessage },
     MessageUpdate { message: AgentMessage },
     MessageEnd { message: AgentMessage },

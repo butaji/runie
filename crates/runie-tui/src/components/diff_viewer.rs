@@ -95,13 +95,8 @@ fn render_border(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, filename: &
 }
 
 fn render_title(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, filename: &str) {
-    let title_color: Color = theme.color("accent.primary").into();
-    let inner_width = area.width.saturating_sub(4);
-    let title_line = Line::from(vec![Span::styled(
-        format!(" Diff: {} ", filename),
-        Style::default().fg(title_color),
-    )]);
-    buf.set_line(area.x + 2, area.y, &title_line, inner_width);
+    // Title is rendered by Block in render_border, no manual rendering needed
+    let _ = (area, buf, theme, filename);
 }
 
 fn render_diff_lines(

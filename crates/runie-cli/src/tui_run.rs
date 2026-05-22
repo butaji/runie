@@ -56,13 +56,14 @@ pub async fn run_tui(
     };
 
     // Welcome message
-    tui.add_message(runie_tui::components::message_list::MessageItem::System {
-        text: if mock {
+    tui.update(Msg::AgentEvent(AgentEvent::Message {
+        role: "system".to_string(),
+        content: if mock {
             format!("Mock mode — no API calls. Model: {}{}", settings.model, context_info)
         } else {
             format!("Connected to {} ({}){}", settings.provider, settings.model, context_info)
         },
-    });
+    }));
 
     // Log loaded context files for debugging
     if !loaded_paths.is_empty() {
@@ -72,14 +73,14 @@ pub async fn run_tui(
     tui.render()?;
 
     // Channel for raw terminal events
-    let (raw_tx, mut raw_rx) = mpsc::unbounded_channel::<crossterm::event::Event>();
+    let (raw_tx, mut raw_rx) = mpsc::channel::<crossterm::event::Event>(100);
 
     // Terminal reader - sends raw events
     let raw_tx2 = raw_tx.clone();
     std::thread::spawn(move || {
         loop {
             if let Ok(event) = crossterm::event::read() {
-                if raw_tx2.send(event).is_err() {
+                if raw_tx2.try_send(event).is_err() {
                     break;
                 }
             }
@@ -87,25 +88,25 @@ pub async fn run_tui(
     });
 
     // Agent event channel (from agent task to main loop)
-    let (agent_tx, mut agent_rx) = mpsc::unbounded_channel::<AgentEvent>();
+    let (agent_tx, mut agent_rx) = mpsc::channel::<AgentEvent>(100);
 
     // Agent task handle
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
     // Permission sender (replaced on each agent spawn)
-    let mut perm_tx: Option<mpsc::UnboundedSender<PermissionDecision>> = None;
+    let mut perm_tx: Option<mpsc::Sender<PermissionDecision>> = None;
 
     // Animation timers
     let mut tick_interval = interval(Duration::from_millis(80));
     let mut cursor_interval = interval(Duration::from_millis(500));
 
     // Process Cmds that need recursive handling (SlashCommand -> more Cmds)
-    fn process_cmd(
+    async fn process_cmd(
         cmd: Cmd,
         tui: &mut Tui,
         agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-        perm_tx: &mut Option<mpsc::UnboundedSender<PermissionDecision>>,
-        agent_tx: &mpsc::UnboundedSender<AgentEvent>,
+        perm_tx: &mut Option<mpsc::Sender<PermissionDecision>>,
+        agent_tx: &mpsc::Sender<AgentEvent>,
         workspace: &PathBuf,
         mock: bool,
         settings: &Settings,
@@ -117,7 +118,7 @@ pub async fn run_tui(
                     let event_tx = agent_tx.clone();
 
                     // Create fresh permission channel for this agent
-                    let (fresh_perm_tx, fresh_perm_rx) = mpsc::unbounded_channel::<PermissionDecision>();
+                    let (fresh_perm_tx, fresh_perm_rx) = mpsc::channel::<PermissionDecision>(100);
                     *perm_tx = Some(fresh_perm_tx);
 
                     // Create workspace and tool registry
@@ -139,7 +140,7 @@ pub async fn run_tui(
                         let provider = match create_provider(mock_flag, &settings_clone) {
                             Ok(p) => p,
                             Err(e) => {
-                                event_tx.send(AgentEvent::Error { message: e }).ok();
+                                let _ = event_tx.send(AgentEvent::Error { message: e }).await;
                                 return;
                             }
                         };
@@ -170,7 +171,7 @@ pub async fn run_tui(
             }
             Cmd::SendPermission { decision } => {
                 if let Some(ref tx) = *perm_tx {
-                    tx.send(decision).ok();
+                    let _ = tx.send(decision).await;
                 }
                 vec![]
             }
@@ -201,7 +202,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -215,7 +216,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -232,7 +233,7 @@ pub async fn run_tui(
                     while !pending_cmds.is_empty() {
                         let mut next_cmds = vec![];
                         for cmd in pending_cmds {
-                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
+                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
                         }
                         pending_cmds = next_cmds;
                     }
@@ -255,7 +256,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt));
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -267,8 +268,9 @@ pub async fn run_tui(
     }
 
     // Abort any running agent task before cleanup
-    if let Some(task) = agent_task {
+    if let Some(task) = agent_task.take() {
         task.abort();
+        let _ = task.await;
     }
 
     tui.cleanup()?;

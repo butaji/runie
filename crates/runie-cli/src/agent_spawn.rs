@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::pin::Pin;
 use tokio::sync::mpsc;
 use runie_agent::events::{AgentEvent, PermissionDecision};
 use runie_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
@@ -9,8 +10,8 @@ use runie_ai::providers::{OpenAiProvider, AnthropicProvider};
 
 pub fn spawn_agent_task(
     messages: Vec<runie_agent::events::AgentMessage>,
-    event_tx: mpsc::UnboundedSender<AgentEvent>,
-    perm_rx: mpsc::UnboundedReceiver<PermissionDecision>,
+    event_tx: mpsc::Sender<AgentEvent>,
+    perm_rx: mpsc::Receiver<PermissionDecision>,
     workspace: &std::path::PathBuf,
     model: &str,
     provider_name: &str,
@@ -35,7 +36,7 @@ pub fn spawn_agent_task(
         let provider = match create_provider_internal(&model_str, &provider_str, &api_key_clone, &base_url_clone) {
             Ok(p) => p,
             Err(e) => {
-                event_tx.send(AgentEvent::Error { message: e }).ok();
+                let _ = event_tx.send(AgentEvent::Error { message: e }).await;
                 return;
             }
         };
@@ -95,28 +96,24 @@ fn create_provider_internal(
 }
 
 pub fn create_agent_tools(registry: Arc<runie_tools::ToolRegistry>) -> Vec<AgentTool> {
-    let handle = tokio::runtime::Handle::current();
-
     registry.list().into_iter().map(|tool| {
         let name = tool.name().to_string();
         let description = tool.description().to_string();
         let parameters = tool.schema().parameters;
         let registry_clone = registry.clone();
-        let handle_clone = handle.clone();
 
         AgentTool::new(name.clone(), description, parameters).with_handler(
             Arc::new(move |args| {
                 let registry = registry_clone.clone();
-                let handle = handle_clone.clone();
                 let name = name.clone();
-                handle.block_on(async move {
+                Box::pin(async move {
                     match registry.get(&name) {
                         Some(t) => t.execute(args).await
                             .map(|o| o.content)
                             .map_err(|e| e.to_string()),
                         None => Err(format!("Tool not found: {}", name)),
                     }
-                })
+                }) as Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>
             }),
         )
     }).collect()

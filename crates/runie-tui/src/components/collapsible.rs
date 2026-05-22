@@ -12,6 +12,7 @@ pub struct Collapsible {
     pub title: String,
     pub expanded: bool,
     pub content_lines: Vec<String>,
+    pub theme: ThemeWrapper,
 }
 
 impl Default for Collapsible {
@@ -20,6 +21,7 @@ impl Default for Collapsible {
             title: String::new(),
             expanded: false,
             content_lines: Vec::new(),
+            theme: ThemeWrapper::default(),
         }
     }
 }
@@ -46,8 +48,7 @@ impl StyleHelpers {
 
 impl Widget for Collapsible {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let theme = ThemeWrapper::default();
-        let sp = StyleHelpers::new(&theme);
+        let sp = StyleHelpers::new(&self.theme);
         let mut y = area.y;
 
         let symbol = if self.expanded { "\u{25BC}" } else { "\u{25B6}" };

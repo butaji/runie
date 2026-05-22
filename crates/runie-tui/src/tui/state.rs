@@ -1,7 +1,6 @@
 use crate::components::{MessageItem, DiffViewer, CommandPalette};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
-use crate::tui::update::update;
 use crate::components::SessionTreeNavigator;
 use runie_ai::TokenUsage;
 use runie_core::SlashCommand;
@@ -113,8 +112,6 @@ pub struct AppState {
     pub current_model: Option<String>,
     pub top_bar: TopBarState,
     pub permission_modal: PermissionModalState,
-    pub action_log: Vec<Msg>,
-    pub action_log_capacity: usize,
     pub command_palette: CommandPaletteState,
     pub scroll: ScrollState,
     pub animation: AnimationState,
@@ -122,7 +119,6 @@ pub struct AppState {
     pub token_usage: TokenUsage,
     pub session_token_usage: TokenUsage,
     pub session_tree: SessionTreeNavigator,
-    pub dirty: bool,
 }
 
 impl Default for AppState {
@@ -140,8 +136,6 @@ impl Default for AppState {
             current_model: None,
             top_bar: TopBarState::default(),
             permission_modal: PermissionModalState::default(),
-            action_log: Vec::new(),
-            action_log_capacity: 1000,
             command_palette: CommandPaletteState::default(),
             scroll: ScrollState::default(),
             animation: AnimationState::default(),
@@ -149,27 +143,7 @@ impl Default for AppState {
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
-            dirty: true,
         }
-    }
-}
-
-impl AppState {
-    /// Replay actions from scratch up to index n (time-travel debugging)
-    pub fn replay_to(&self, n: usize) -> AppState {
-        let mut new_state = AppState::default();
-        for i in 0..n.min(self.action_log.len()) {
-            update(&mut new_state, self.action_log[i].clone());
-        }
-        new_state
-    }
-
-    /// Get action log as readable strings for debugging
-    pub fn action_log_summary(&self) -> Vec<String> {
-        self.action_log.iter()
-            .enumerate()
-            .map(|(i, msg)| format!("{:4}: {:?}", i, msg))
-            .collect()
     }
 }
 

@@ -4,34 +4,33 @@ use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 
 pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     let mut cmds = vec![];
-    log_action(state, &msg);
 
     match msg {
-        Msg::Quit => { state.running = false; state.dirty = true; }
-        Msg::Submit => { state.dirty = true; cmds.extend(handle_submit(state)); }
-        Msg::InsertChar(c) => { state.dirty = true; handle_insert_char(state, c); }
-        Msg::Backspace => { state.dirty = true; handle_backspace(state); }
-        Msg::InsertNewline => { state.dirty = true; handle_insert_newline(state); }
-        Msg::MoveCursorLeft | Msg::MoveCursorRight | Msg::MoveCursorUp | Msg::MoveCursorDown => { state.dirty = true; handle_cursor_move(state, &msg); }
-        Msg::MoveCursorToStart | Msg::MoveCursorToEnd => { state.dirty = true; handle_cursor_edge(state, &msg); }
-        Msg::DeleteForward => { state.dirty = true; handle_delete_forward(state); }
-        Msg::DeleteWordBackward => { state.dirty = true; handle_delete_word_backward(state); }
-        Msg::DeleteToStart => { state.dirty = true; handle_delete_to_start(state); }
-        Msg::ToggleSidebar => { state.show_sidebar = !state.show_sidebar; state.dirty = true; }
-        Msg::OpenCommandPalette => { state.dirty = true; open_palette(state); }
-        Msg::CloseModal | Msg::ConfirmModal => { state.dirty = true; handle_close_modal(state); }
-        Msg::AgentEvent(event) => { state.dirty = true; handle_agent_event(state, event); }
-        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { state.dirty = true; cmds.push(handle_permission_msg(state, msg)); }
-        Msg::CommandPaletteFilter(c) => { state.dirty = true; state.command_palette.filter.push(c); }
-        Msg::CommandPaletteBackspace => { state.dirty = true; state.command_palette.filter.pop(); }
-        Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { state.dirty = true; handle_palette_msg(state, msg); }
-        Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); state.dirty = true; }
-        Msg::ScrollDown | Msg::ScrollPageDown => { state.dirty = true; handle_scroll(state, if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }); }
-        Msg::Tick | Msg::CursorBlink => { state.animation.braille_frame = (state.animation.braille_frame + 1) % 8; state.dirty = true; handle_anim(state, &msg); }
-        Msg::SlashCommand(cmd) => { state.dirty = true; cmds.extend(handle_slash(state, cmd)); }
-        Msg::ToggleSessionTree => { state.dirty = true; handle_tree(state); }
-        Msg::SessionTreeUp | Msg::SessionTreeDown => { state.dirty = true; handle_tree_nav(state, &msg); }
-        Msg::SessionTreeConfirm => { state.dirty = true; handle_tree_confirm(state); }
+        Msg::Quit => { state.running = false; }
+        Msg::Submit => { cmds.extend(handle_submit(state)); }
+        Msg::InsertChar(c) => { handle_insert_char(state, c); }
+        Msg::Backspace => { handle_backspace(state); }
+        Msg::InsertNewline => { handle_insert_newline(state); }
+        Msg::MoveCursorLeft | Msg::MoveCursorRight | Msg::MoveCursorUp | Msg::MoveCursorDown => { handle_cursor_move(state, &msg); }
+        Msg::MoveCursorToStart | Msg::MoveCursorToEnd => { handle_cursor_edge(state, &msg); }
+        Msg::DeleteForward => { handle_delete_forward(state); }
+        Msg::DeleteWordBackward => { handle_delete_word_backward(state); }
+        Msg::DeleteToStart => { handle_delete_to_start(state); }
+        Msg::ToggleSidebar => { state.show_sidebar = !state.show_sidebar; }
+        Msg::OpenCommandPalette => { open_palette(state); }
+        Msg::CloseModal | Msg::ConfirmModal => { handle_close_modal(state); }
+        Msg::AgentEvent(event) => { handle_agent_event(state, event); }
+        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { cmds.push(handle_permission_msg(state, msg)); }
+        Msg::CommandPaletteFilter(c) => { state.command_palette.filter.push(c); }
+        Msg::CommandPaletteBackspace => { state.command_palette.filter.pop(); }
+        Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { handle_palette_msg(state, msg); }
+        Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); }
+        Msg::ScrollDown | Msg::ScrollPageDown => { handle_scroll(state, if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }); }
+        Msg::Tick | Msg::CursorBlink => { state.animation.braille_frame = (state.animation.braille_frame + 1) % 8; handle_anim(state, &msg); }
+        Msg::SlashCommand(cmd) => { cmds.extend(handle_slash(state, cmd)); }
+        Msg::ToggleSessionTree => { handle_tree(state); }
+        Msg::SessionTreeUp | Msg::SessionTreeDown => { handle_tree_nav(state, &msg); }
+        Msg::SessionTreeConfirm => { handle_tree_confirm(state); }
     }
 
     cmds
@@ -40,13 +39,6 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
 fn handle_scroll(state: &mut AppState, amount: usize) {
     let max_scroll = state.messages.len().saturating_sub(1);
     state.scroll.feed_offset = (state.scroll.feed_offset + amount).min(max_scroll);
-}
-
-fn log_action(state: &mut AppState, msg: &Msg) {
-    if state.action_log.len() >= state.action_log_capacity {
-        state.action_log.remove(0);
-    }
-    state.action_log.push(msg.clone());
 }
 
 fn open_palette(state: &mut AppState) {
@@ -180,6 +172,7 @@ fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Cmd 
 
 fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
     match event {
+        AgentEvent::Message { role, content } => on_message(state, &role, &content),
         AgentEvent::MessageStart { message } => on_message_start(state, message),
         AgentEvent::MessageUpdate { message } => on_message_update(state, message),
         AgentEvent::MessageEnd { message } => on_message_end(state, message),
@@ -200,6 +193,23 @@ fn on_message_start(state: &mut AppState, message: runie_agent::events::AgentMes
         model: state.current_model.clone(),
         timestamp: None,
     });
+}
+
+fn on_message(state: &mut AppState, role: &str, content: &str) {
+    match role {
+        "user" => state.messages.push(MessageItem::User {
+            text: content.to_string(),
+            model: Some("You".to_string()),
+            timestamp: None,
+        }),
+        "assistant" => state.messages.push(MessageItem::Assistant {
+            text: content.to_string(),
+            model: state.current_model.clone(),
+            timestamp: None,
+        }),
+        "system" => state.messages.push(MessageItem::System { text: content.to_string() }),
+        _ => state.messages.push(MessageItem::System { text: content.to_string() }),
+    }
 }
 
 fn on_message_update(state: &mut AppState, message: runie_agent::events::AgentMessage) {
