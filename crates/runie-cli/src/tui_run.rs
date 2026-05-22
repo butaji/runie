@@ -212,7 +212,7 @@ pub async fn run_tui(
             // Raw terminal events — HIGHEST PRIORITY
             Some(event) = raw_rx.recv() => {
                 if let Some(msg) = event_to_msg(event, &tui.state) {
-                    let cmds = runie_tui::update(&mut tui.state, msg);
+                    let cmds = tui.update(msg);
 
                     // Execute commands (may produce more commands recursively)
                     let mut pending_cmds = cmds;
@@ -235,7 +235,7 @@ pub async fn run_tui(
                     agent_task = None;
                 }
 
-                let cmds = runie_tui::update(&mut tui.state, Msg::AgentEvent(event));
+                let cmds = tui.update(Msg::AgentEvent(event));
 
                 // Execute commands (may produce more commands recursively)
                 let mut pending_cmds = cmds;
@@ -253,7 +253,7 @@ pub async fn run_tui(
 
             // Cursor blink (500ms) — THIRD PRIORITY
             _ = cursor_interval.tick() => {
-                let cmds = runie_tui::update(&mut tui.state, Msg::CursorBlink);
+                let cmds = tui.update(Msg::CursorBlink);
                 let mut pending_cmds = cmds;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
