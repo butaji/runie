@@ -111,8 +111,9 @@ fn key_to_onboarding_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
         KeyCode::Enter => Some(Msg::OnboardingNext),
         KeyCode::Esc => Some(Msg::OnboardingBack),
-        KeyCode::Up => Some(Msg::OnboardingBack),
-        KeyCode::Down => Some(Msg::OnboardingNext),
+        // Up/Down navigate items within current step, not steps
+        KeyCode::Up => Some(Msg::OnboardingNavigateUp),
+        KeyCode::Down => Some(Msg::OnboardingNavigateDown),
         KeyCode::Char(c) => Some(Msg::OnboardingKeyInput(c)),
         KeyCode::Backspace => Some(Msg::OnboardingKeyBackspace),
         _ => None,

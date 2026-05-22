@@ -64,6 +64,7 @@ pub mod events;
 pub mod tests;
 pub mod tests_hotkeys;
 pub mod tests_statusbar;
+pub mod tests_onboarding;
 
 pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
@@ -191,7 +192,13 @@ impl Tui {
             render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
         }
         if let Some(ref onboarding) = state.onboarding {
-            render_onboarding(onboarding, area, frame.buffer_mut(), theme);
+            let onboarding_area = Rect {
+                x: area.x,
+                y: area.y,
+                width: area.width,
+                height: area.height - if show_status_bar { 1 } else { 0 },
+            };
+            render_onboarding(onboarding, onboarding_area, frame.buffer_mut(), theme);
         }
     }
 

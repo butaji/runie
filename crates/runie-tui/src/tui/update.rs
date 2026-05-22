@@ -1,5 +1,5 @@
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd};
+use crate::tui::state::{AppState, TuiMode, Msg, Cmd, OnboardingStep};
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 
 pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
@@ -31,7 +31,8 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::ToggleSessionTree => { handle_tree(state); }
         Msg::SessionTreeUp | Msg::SessionTreeDown => { handle_tree_nav(state, &msg); }
         Msg::SessionTreeConfirm => { handle_tree_confirm(state); }
-        Msg::OnboardingNext | Msg::OnboardingBack | Msg::OnboardingSelectProvider(_) |
+        Msg::OnboardingNext | Msg::OnboardingBack | Msg::OnboardingNavigateUp |
+        Msg::OnboardingNavigateDown | Msg::OnboardingSelectProvider(_) |
         Msg::OnboardingSelectModel(_) | Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace |
         Msg::OnboardingSubmit | Msg::OnboardingSkip => { cmds.extend(handle_onboarding_msg(state, msg)); }
     }
@@ -403,14 +404,25 @@ fn handle_palette_msg(state: &mut AppState, msg: Msg) {
 }
 
 fn handle_onboarding_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
-    let onboarding = match &state.onboarding {
-        Some(o) => o.clone(),
-        None => return vec![],
-    };
+    if state.onboarding.is_none() {
+        return vec![];
+    }
 
     match msg {
         Msg::OnboardingNext => {
             if let Some(o) = state.onboarding.as_mut() {
+                // Use selected_item to select current item before advancing
+                match &o.step {
+                    OnboardingStep::ProviderSelect => {
+                        let idx = o.get_selected_item();
+                        o.select_provider(idx);
+                    }
+                    OnboardingStep::ModelSelect => {
+                        let idx = o.get_selected_item();
+                        o.select_model(idx);
+                    }
+                    _ => {}
+                }
                 o.next_step();
             }
         }
@@ -419,14 +431,26 @@ fn handle_onboarding_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
                 o.prev_step();
             }
         }
+        Msg::OnboardingNavigateUp => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.navigate_up();
+            }
+        }
+        Msg::OnboardingNavigateDown => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.navigate_down();
+            }
+        }
         Msg::OnboardingSelectProvider(idx) => {
             if let Some(o) = state.onboarding.as_mut() {
                 o.select_provider(idx);
+                o.selected_item = idx;
             }
         }
         Msg::OnboardingSelectModel(idx) => {
             if let Some(o) = state.onboarding.as_mut() {
                 o.select_model(idx);
+                o.selected_item = idx;
             }
         }
         Msg::OnboardingKeyInput(c) => {
