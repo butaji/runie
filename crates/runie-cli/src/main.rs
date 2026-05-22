@@ -7,7 +7,7 @@ mod tui_run;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use settings::{CliSettings, Keybindings, Settings};
+use settings::{CliSettings, Settings};
 
 use crate::provider_factory::create_provider;
 
@@ -16,7 +16,8 @@ use crate::provider_factory::create_provider;
 /// USAGE:
 ///   runie                  Start interactive TUI (default)
 ///   runie --mock           TUI with mock provider (no API key)
-///   runie --run "prompt"   CLI one-shot mode
+///   runie --mock-setup     Run onboarding wizard with mock provider
+///   runie run "prompt"     CLI one-shot mode
 ///   runie sessions         List sessions
 ///   runie tree <id>        Show session tree
 #[derive(Parser)]
@@ -38,125 +39,14 @@ struct Cli {
     #[arg(long)]
     mock: bool,
 
-    /// Model to use (e.g., gpt-4o, claude-3-opus)
+    /// Run onboarding wizard with mock provider
     #[arg(long)]
-    model: Option<String>,
-
-    /// Provider to use (e.g., openai, anthropic)
-    #[arg(long)]
-    provider: Option<String>,
-
-    /// API key for the provider
-    #[arg(long)]
-    api_key: Option<String>,
-
-    /// Custom base URL for the provider
-    #[arg(long)]
-    base_url: Option<String>,
-
-    /// Maximum number of conversation turns
-    #[arg(long)]
-    max_turns: Option<usize>,
-
-    /// Temperature for generation (0.0-2.0)
-    #[arg(long)]
-    temperature: Option<f32>,
-
-    /// Theme name
-    #[arg(long)]
-    theme: Option<String>,
-
-    /// Auto-save sessions
-    #[arg(long, default_value_t = true)]
-    auto_save: bool,
-
-    /// Token threshold for compaction
-    #[arg(long)]
-    compact_threshold: Option<usize>,
-
-    /// Tool mode: parallel or sequential
-    #[arg(long)]
-    tool_mode: Option<String>,
-
-    /// Enable thinking blocks
-    #[arg(long)]
-    enable_thinking: Option<bool>,
-
-    /// Default shell for bash tool
-    #[arg(long)]
-    shell: Option<String>,
-
-    /// Keybinding: submit
-    #[arg(long)]
-    kb_submit: Option<String>,
-
-    /// Keybinding: new line
-    #[arg(long)]
-    kb_new_line: Option<String>,
-
-    /// Keybinding: exit
-    #[arg(long)]
-    kb_exit: Option<String>,
-
-    /// Keybinding: sidebar toggle
-    #[arg(long)]
-    kb_sidebar: Option<String>,
-
-    /// Keybinding: command palette
-    #[arg(long)]
-    kb_command_palette: Option<String>,
-
-    /// Force onboarding/setup wizard (even if already configured)
-    #[arg(long)]
-    setup: bool,
-
-    /// Test rendering pipeline without API
-    #[arg(long)]
-    test_render: bool,
-
-    /// Test event handling pipeline
-    #[arg(long)]
-    test_events: bool,
-
-    /// Test full TUI pipeline (render + input + events)
-    #[arg(long)]
-    test_pipeline: bool,
+    mock_setup: bool,
 }
 
 impl From<&Cli> for CliSettings {
-    fn from(cli: &Cli) -> Self {
-        let keybindings = if cli.kb_submit.is_some()
-            || cli.kb_new_line.is_some()
-            || cli.kb_exit.is_some()
-            || cli.kb_sidebar.is_some()
-            || cli.kb_command_palette.is_some()
-        {
-            Some(Keybindings {
-                submit: cli.kb_submit.clone(),
-                new_line: cli.kb_new_line.clone(),
-                exit: cli.kb_exit.clone(),
-                sidebar: cli.kb_sidebar.clone(),
-                command_palette: cli.kb_command_palette.clone(),
-            })
-        } else {
-            None
-        };
-
-        Self {
-            model: cli.model.clone(),
-            provider: cli.provider.clone(),
-            api_key: cli.api_key.clone(),
-            base_url: cli.base_url.clone(),
-            max_turns: cli.max_turns,
-            temperature: cli.temperature,
-            theme: cli.theme.clone(),
-            keybindings,
-            auto_save: Some(cli.auto_save),
-            compact_threshold: cli.compact_threshold,
-            tool_mode: cli.tool_mode.clone(),
-            enable_thinking: cli.enable_thinking,
-            shell: cli.shell.clone(),
-        }
+    fn from(_cli: &Cli) -> Self {
+        Self::default()
     }
 }
 
@@ -185,13 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Load settings with layered resolution, then apply CLI overrides
-    let mut settings = Settings::load();
-    settings.merge_cli(&CliSettings::from(&cli));
-
-    // Part 4: Validate model after loading settings
-    if !settings.validate_model() {
-        eprintln!("Warning: model '{}' not found in model registry. Using default.", settings.model);
-    }
+    let settings = Settings::load();
 
     match cli.command {
         // CLI: One-shot commands
@@ -214,17 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             #[cfg(not(windows))]
             {
-                // Run test modes if requested
-                if cli.test_pipeline {
-                    return tui_run::test_pipeline().await;
-                }
-                if cli.test_render {
-                    return tui_run::test_render().await;
-                }
-                if cli.test_events {
-                    return tui_run::test_events().await;
-                }
-                tui_run::run_tui(cli.workspace, cli.mock, &settings, cli.setup).await?;
+                tui_run::run_tui(cli.workspace, cli.mock, &settings, cli.mock_setup).await?;
             }
             #[cfg(windows)]
             {

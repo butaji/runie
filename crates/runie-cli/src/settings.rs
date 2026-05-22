@@ -10,25 +10,9 @@ pub struct Settings {
     pub model: String,
     pub provider: String,
     pub api_key: Option<String>,
-    pub base_url: Option<String>,
     pub max_turns: usize,
-    pub temperature: f32,
-    pub theme: String,
-    pub keybindings: Option<Keybindings>,
-    pub auto_save: bool,
-    pub compact_threshold: usize,
-    pub tool_mode: String,
     pub enable_thinking: bool,
     pub shell: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Keybindings {
-    pub submit: Option<String>,
-    pub new_line: Option<String>,
-    pub exit: Option<String>,
-    pub sidebar: Option<String>,
-    pub command_palette: Option<String>,
 }
 
 impl Default for Settings {
@@ -37,14 +21,7 @@ impl Default for Settings {
             model: "gpt-4o".to_string(),
             provider: "openai".to_string(),
             api_key: None,
-            base_url: None,
             max_turns: 10,
-            temperature: 0.7,
-            theme: "crush_grok".to_string(),
-            keybindings: None,
-            auto_save: true,
-            compact_threshold: 8000,
-            tool_mode: "parallel".to_string(),
             enable_thinking: true,
             shell: std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string()),
         }
@@ -98,32 +75,10 @@ impl Settings {
         if let Ok(val) = std::env::var("RUNIE_API_KEY") {
             self.api_key = Some(val);
         }
-        if let Ok(val) = std::env::var("RUNIE_BASE_URL") {
-            self.base_url = Some(val);
-        }
         if let Ok(val) = std::env::var("RUNIE_MAX_TURNS") {
             if let Ok(v) = val.parse() {
                 self.max_turns = v;
             }
-        }
-        if let Ok(val) = std::env::var("RUNIE_TEMPERATURE") {
-            if let Ok(v) = val.parse() {
-                self.temperature = v;
-            }
-        }
-        if let Ok(val) = std::env::var("RUNIE_THEME") {
-            self.theme = val;
-        }
-        if let Ok(val) = std::env::var("RUNIE_AUTO_SAVE") {
-            self.auto_save = val.to_lowercase() != "false";
-        }
-        if let Ok(val) = std::env::var("RUNIE_COMPACT_THRESHOLD") {
-            if let Ok(v) = val.parse() {
-                self.compact_threshold = v;
-            }
-        }
-        if let Ok(val) = std::env::var("RUNIE_TOOL_MODE") {
-            self.tool_mode = val;
         }
         if let Ok(val) = std::env::var("RUNIE_ENABLE_THINKING") {
             self.enable_thinking = val.to_lowercase() != "false";
@@ -150,29 +105,8 @@ impl Settings {
         if let Some(ref k) = cli.api_key {
             self.api_key = Some(k.clone());
         }
-        if let Some(ref u) = cli.base_url {
-            self.base_url = Some(u.clone());
-        }
         if let Some(v) = cli.max_turns {
             self.max_turns = v;
-        }
-        if let Some(v) = cli.temperature {
-            self.temperature = v;
-        }
-        if let Some(ref t) = cli.theme {
-            self.theme = t.clone();
-        }
-        if let Some(ref kb) = cli.keybindings {
-            self.keybindings = Some(kb.clone());
-        }
-        if let Some(v) = cli.auto_save {
-            self.auto_save = v;
-        }
-        if let Some(v) = cli.compact_threshold {
-            self.compact_threshold = v;
-        }
-        if let Some(ref m) = cli.tool_mode {
-            self.tool_mode = m.clone();
         }
         if let Some(v) = cli.enable_thinking {
             self.enable_thinking = v;
@@ -195,14 +129,7 @@ pub struct CliSettings {
     pub model: Option<String>,
     pub provider: Option<String>,
     pub api_key: Option<String>,
-    pub base_url: Option<String>,
     pub max_turns: Option<usize>,
-    pub temperature: Option<f32>,
-    pub theme: Option<String>,
-    pub keybindings: Option<Keybindings>,
-    pub auto_save: Option<bool>,
-    pub compact_threshold: Option<usize>,
-    pub tool_mode: Option<String>,
     pub enable_thinking: Option<bool>,
     pub shell: Option<String>,
 }
@@ -213,14 +140,7 @@ struct FileSettings {
     model: Option<String>,
     provider: Option<String>,
     api_key: Option<String>,
-    base_url: Option<String>,
     max_turns: Option<usize>,
-    temperature: Option<f32>,
-    theme: Option<String>,
-    keybindings: Option<Keybindings>,
-    auto_save: Option<bool>,
-    compact_threshold: Option<usize>,
-    tool_mode: Option<String>,
     enable_thinking: Option<bool>,
     shell: Option<String>,
 }
@@ -236,29 +156,8 @@ impl FileSettings {
         if let Some(ref v) = self.api_key {
             settings.api_key = Some(v.clone());
         }
-        if let Some(ref v) = self.base_url {
-            settings.base_url = Some(v.clone());
-        }
         if let Some(v) = self.max_turns {
             settings.max_turns = v;
-        }
-        if let Some(v) = self.temperature {
-            settings.temperature = v;
-        }
-        if let Some(ref v) = self.theme {
-            settings.theme = v.clone();
-        }
-        if let Some(ref kb) = self.keybindings {
-            settings.keybindings = Some(kb.clone());
-        }
-        if let Some(v) = self.auto_save {
-            settings.auto_save = v;
-        }
-        if let Some(v) = self.compact_threshold {
-            settings.compact_threshold = v;
-        }
-        if let Some(ref v) = self.tool_mode {
-            settings.tool_mode = v.clone();
         }
         if let Some(v) = self.enable_thinking {
             settings.enable_thinking = v;
@@ -308,11 +207,6 @@ pub fn create_default_config(path: &Path) {
 model = "gpt-4o"
 provider = "openai"
 max_turns = 10
-temperature = 0.7
-theme = "crush_grok"
-auto_save = true
-compact_threshold = 8000
-tool_mode = "parallel"
 enable_thinking = true
 "#;
     std::fs::write(path, default).ok();
@@ -348,7 +242,7 @@ mod tests {
         assert_eq!(settings.model, "gpt-4o");
         assert_eq!(settings.provider, "openai");
         assert_eq!(settings.max_turns, 10);
-        assert_eq!(settings.temperature, 0.7);
+        assert_eq!(settings.enable_thinking, true);
     }
 
     #[test]

@@ -12,20 +12,14 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
             let api_key = settings.api_key.clone()
                 .or_else(|| std::env::var("OPENAI_API_KEY").ok())
                 .ok_or("OpenAI API key required. Set OPENAI_API_KEY env var or use --api-key")?;
-            let mut provider = OpenAiProvider::new(api_key, settings.model.clone());
-            if let Some(ref base_url) = settings.base_url {
-                provider = provider.with_base_url(base_url.clone());
-            }
+            let provider = OpenAiProvider::new(api_key, settings.model.clone());
             Ok(Box::new(provider))
         }
         "anthropic" => {
             let api_key = settings.api_key.clone()
                 .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
                 .ok_or("Anthropic API key required. Set ANTHROPIC_API_KEY env var or use --api-key")?;
-            let mut provider = AnthropicProvider::new(api_key, settings.model.clone());
-            if let Some(ref base_url) = settings.base_url {
-                provider = provider.with_base_url(base_url.clone());
-            }
+            let provider = AnthropicProvider::new(api_key, settings.model.clone());
             Ok(Box::new(provider))
         }
         other => Err(format!("Unknown provider: {}. Use 'openai' or 'anthropic'", other)),
