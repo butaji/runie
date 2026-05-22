@@ -120,6 +120,11 @@ impl Tui {
         self.action_log.push(msg.clone());
     }
 
+    #[cfg(test)]
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
     /// Calculate the height needed for the input bar based on its content
     fn input_bar_height(&self) -> u16 {
         // Each logical line = 1 visual line (no wrapping)
