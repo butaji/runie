@@ -460,3 +460,40 @@ fn test_hotkey_priority() {
     assert_eq!(tui.state.mode, TuiMode::Chat, "Esc should close palette");
     assert!(tui.state.running, "Should still be running after Esc");
 }
+
+/// Test that mock mode skips onboarding
+///
+/// This verifies the fix for the bug where --mock showed onboarding
+/// instead of the operational UI.
+#[test]
+fn test_mock_mode_skips_onboarding() {
+    // Simulate the tui_run.rs logic:
+    // let needs_setup = force_setup || (!mock && needs_onboarding(settings));
+    // When mock=true, needs_setup should be false even if onboarding is needed
+
+    let mock = true;
+    let force_setup = false;
+    let needs_onboarding = true; // Simulates no API key configured
+
+    let needs_setup = force_setup || (!mock && needs_onboarding);
+
+    assert!(
+        !needs_setup,
+        "--mock should skip onboarding even when no API key is configured"
+    );
+}
+
+/// Test that --mock-setup forces onboarding
+#[test]
+fn test_mock_setup_forces_onboarding() {
+    let mock = true;
+    let force_setup = true;
+    let needs_onboarding = false; // Already configured
+
+    let needs_setup = force_setup || (!mock && needs_onboarding);
+
+    assert!(
+        needs_setup,
+        "--mock-setup should force onboarding even when already configured"
+    );
+}

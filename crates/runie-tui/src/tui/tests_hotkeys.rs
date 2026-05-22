@@ -501,9 +501,9 @@ mod tests_hotkeys {
     // ═══════════════════════════════════════════════════════════════════════════
 
     #[test]
-    fn test_ctrl_keys_dont_work_in_permission_mode() {
-        // Ctrl+C, Ctrl+Q are NOT handled in Permission mode (returns None)
-        // Permission mode only handles Enter, Esc, y, n, a, s
+    fn test_ctrl_keys_always_quit_in_permission_mode() {
+        // Ctrl+C and Ctrl+Q are GLOBAL hotkeys that always produce Quit
+        // regardless of the current mode (including Permission)
         let state = AppState {
             mode: TuiMode::Permission,
             ..Default::default()
@@ -517,7 +517,7 @@ mod tests_hotkeys {
         });
 
         let msg = event_to_msg(event, &state);
-        assert_eq!(msg, None, "Ctrl+C in Permission is not handled (returns None)");
+        assert_eq!(msg, Some(Msg::Quit), "Ctrl+C in Permission mode should always produce Quit");
     }
 
     #[test]
@@ -583,5 +583,51 @@ mod tests_hotkeys {
 
         let msg = event_to_msg(event, &state);
         assert_eq!(msg, None, "Left in CommandPalette should be ignored");
+    }
+
+    #[test]
+    fn test_ctrl_q_always_quits_all_modes() {
+        // Ctrl+Q must produce Quit in EVERY mode
+        let modes = vec![
+            TuiMode::Chat,
+            TuiMode::Permission,
+            TuiMode::CommandPalette,
+            TuiMode::DiffViewer,
+            TuiMode::SessionTree,
+            TuiMode::Onboarding,
+            TuiMode::Overlay,
+            TuiMode::Select,
+        ];
+
+        for mode in modes {
+            let msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, mode.clone());
+            assert_eq!(
+                msg,
+                Some(Msg::Quit),
+                "Ctrl+Q in {:?} mode should always produce Msg::Quit",
+                mode
+            );
+        }
+    }
+
+    #[test]
+    fn test_ctrl_c_always_quits_all_modes() {
+        // Ctrl+C must also produce Quit in EVERY mode (same as Ctrl+Q)
+        let modes = vec![
+            TuiMode::Chat,
+            TuiMode::Permission,
+            TuiMode::CommandPalette,
+            TuiMode::Onboarding,
+        ];
+
+        for mode in modes {
+            let msg = simulate_key(KeyCode::Char('c'), KeyModifiers::CONTROL, mode.clone());
+            assert_eq!(
+                msg,
+                Some(Msg::Quit),
+                "Ctrl+C in {:?} mode should always produce Msg::Quit",
+                mode
+            );
+        }
     }
 }
