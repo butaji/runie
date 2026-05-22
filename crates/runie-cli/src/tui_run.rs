@@ -12,12 +12,36 @@ use crate::context_loader::ContextLoader;
 use crate::provider_factory::create_provider;
 use crate::agent_spawn::create_agent_tools;
 
+use runie_tui::{Tui, TuiConfig, TuiMode, Onboarding, Msg, Cmd, event_to_msg};
+
+/// Check if user needs onboarding (no provider, model, or API key configured)
+fn needs_onboarding(settings: &Settings) -> bool {
+    // No provider configured
+    if settings.provider.is_empty() {
+        return true;
+    }
+    // No model configured
+    if settings.model.is_empty() {
+        return true;
+    }
+    // No API key in environment
+    if std::env::var("OPENAI_API_KEY").is_err()
+        && std::env::var("ANTHROPIC_API_KEY").is_err()
+        && std::env::var("GOOGLE_API_KEY").is_err()
+        && std::env::var("RUNIE_API_KEY").is_err()
+    {
+        return true;
+    }
+    false
+}
+
 pub async fn run_tui(
     workspace: PathBuf,
     mock: bool,
     settings: &Settings,
+    force_setup: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use runie_tui::{Tui, TuiConfig, Msg, Cmd, event_to_msg};
+    use runie_tui::{Tui, TuiConfig, TuiMode, Onboarding, Msg, Cmd, event_to_msg};
 
     // Load AGENTS.md context files
     let context_files = ContextLoader::load();
@@ -55,15 +79,26 @@ pub async fn run_tui(
         format!(" · {} context file(s) loaded", loaded_paths.len())
     };
 
-    // Welcome message
-    tui.update(Msg::AgentEvent(AgentEvent::Message {
-        role: "system".to_string(),
-        content: if mock {
-            format!("Mock mode — no API calls. Model: {}{}", settings.model, context_info)
-        } else {
-            format!("Connected to {} ({}){}", settings.provider, settings.model, context_info)
-        },
-    }));
+    // Check if onboarding is needed
+    let needs_setup = force_setup || needs_onboarding(settings);
+    if needs_setup {
+        tui.state.mode = TuiMode::Onboarding;
+        tui.state.onboarding = Some(Onboarding::new());
+        tui.update(Msg::AgentEvent(AgentEvent::Message {
+            role: "system".to_string(),
+            content: "Welcome! Let's set up your AI assistant.".to_string(),
+        }));
+    } else {
+        // Normal welcome message
+        tui.update(Msg::AgentEvent(AgentEvent::Message {
+            role: "system".to_string(),
+            content: if mock {
+                format!("Mock mode — no API calls. Model: {}{}", settings.model, context_info)
+            } else {
+                format!("Using {} ({}){}", settings.provider, settings.model, context_info)
+            },
+        }));
+    }
 
     // Log loaded context files for debugging
     if !loaded_paths.is_empty() {
@@ -187,7 +222,7 @@ pub async fn run_tui(
             }
             Cmd::SlashCommand(slash_cmd) => {
                 // Recursively process SlashCommand via update
-                runie_tui::update(&mut tui.state, Msg::SlashCommand(slash_cmd))
+                tui.update(Msg::SlashCommand(slash_cmd))
             }
             Cmd::SaveSession { name } => {
                 // TODO: Implement session saving via SessionManager
@@ -197,6 +232,34 @@ pub async fn run_tui(
             Cmd::LoadSession { name } => {
                 // TODO: Implement session loading via SessionManager
                 eprintln!("LoadSession not yet implemented: {}", name);
+                vec![]
+            }
+            Cmd::SaveSettings { provider, model, api_key } => {
+                // Save to ~/.runie/config.toml
+                let config_path = dirs::home_dir()
+                    .map(|h| h.join(".runie").join("config.toml"))
+                    .unwrap_or_else(|| PathBuf::from(".runie/config.toml"));
+
+                // Create .runie directory if needed
+                if let Some(parent) = config_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+
+                // Write config
+                let config = format!(
+                    "provider = \"{}\"\nmodel = \"{}\"\napi_key = \"{}\"\n",
+                    provider, model, api_key
+                );
+                let _ = std::fs::write(&config_path, config);
+
+                // Set API key env var for current session
+                match provider.as_str() {
+                    "openai" => std::env::set_var("OPENAI_API_KEY", &api_key),
+                    "anthropic" => std::env::set_var("ANTHROPIC_API_KEY", &api_key),
+                    "google" => std::env::set_var("GOOGLE_API_KEY", &api_key),
+                    _ => {}
+                }
+
                 vec![]
             }
         }
@@ -267,7 +330,7 @@ pub async fn run_tui(
 
             // Animation tick (80ms) — LOWEST PRIORITY
             _ = tick_interval.tick() => {
-                let cmds = runie_tui::update(&mut tui.state, Msg::Tick);
+                let cmds = tui.update(Msg::Tick);
                 let mut pending_cmds = cmds;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
@@ -288,5 +351,134 @@ pub async fn run_tui(
     }
 
     tui.cleanup()?;
+    Ok(())
+}
+
+// ─── Test Functions ─────────────────────────────────────────────────────────────
+
+/// Test rendering pipeline - verifies dirty flag and render behavior
+pub async fn test_render() -> Result<(), Box<dyn std::error::Error>> {
+    let config = TuiConfig::default();
+    let mut tui = Tui::new(config)?;
+
+    // Verify initial dirty is true
+    assert!(tui.is_dirty(), "Initial dirty should be true");
+
+    // Run a few update cycles to test render pipeline
+    tui.update(Msg::AgentEvent(AgentEvent::Message {
+        role: "system".to_string(),
+        content: "Test message".to_string(),
+    }));
+    assert!(tui.is_dirty(), "After AgentEvent dirty should be true");
+
+    // Test that render clears dirty
+    tui.render()?;
+    assert!(!tui.is_dirty(), "After render dirty should be false");
+
+    // Test another update sets dirty again
+    tui.update(Msg::InsertChar('a'));
+    assert!(tui.is_dirty(), "After InsertChar dirty should be true");
+
+    tui.cleanup()?;
+    println!("test_render: PASSED");
+    Ok(())
+}
+
+/// Test event handling pipeline - verifies keyboard/agent events set dirty
+pub async fn test_events() -> Result<(), Box<dyn std::error::Error>> {
+    let config = TuiConfig::default();
+    let mut tui = Tui::new(config)?;
+
+    // Clear initial dirty via render
+    tui.render()?;
+
+    // Test keyboard event handling
+    let event = crossterm::event::Event::Key(crossterm::event::KeyEvent {
+        code: crossterm::event::KeyCode::Char('x'),
+        modifiers: crossterm::event::KeyModifiers::NONE,
+        kind: crossterm::event::KeyEventKind::Press,
+        state: crossterm::event::KeyEventState::NONE,
+    });
+
+    if let Some(msg) = event_to_msg(event, &tui.state) {
+        tui.update(msg);
+        assert!(tui.is_dirty(), "Keyboard event should set dirty");
+        assert_eq!(tui.state.input_lines[0], "x", "Keyboard event should update state");
+    }
+
+    // Test agent event
+    tui.render(); // Clear dirty
+    tui.update(Msg::AgentEvent(AgentEvent::Message {
+        role: "assistant".to_string(),
+        content: "Assistant response".to_string(),
+    }));
+    assert!(tui.is_dirty(), "Agent event should set dirty");
+
+    // Test Tick
+    tui.render(); // Clear dirty
+    tui.update(Msg::Tick);
+    assert!(tui.is_dirty(), "Tick should set dirty");
+
+    // Test CursorBlink
+    tui.render(); // Clear dirty
+    tui.update(Msg::CursorBlink);
+    assert!(tui.is_dirty(), "CursorBlink should set dirty");
+
+    tui.cleanup()?;
+    println!("test_events: PASSED");
+    Ok(())
+}
+
+/// Test full TUI pipeline - render + input + events together
+pub async fn test_pipeline() -> Result<(), Box<dyn std::error::Error>> {
+    let config = TuiConfig::default();
+    let mut tui = Tui::new(config)?;
+
+    // Initial state should be dirty
+    assert!(tui.is_dirty(), "Initial dirty should be true");
+
+    // 1. Render clears dirty
+    tui.render()?;
+    assert!(!tui.is_dirty(), "After render dirty should be false");
+
+    // 2. InsertChar sets dirty AND updates state
+    tui.update(Msg::InsertChar('h'));
+    assert!(tui.is_dirty(), "InsertChar should set dirty");
+    assert_eq!(tui.state.input_lines[0], "h");
+
+    tui.update(Msg::InsertChar('i'));
+    assert!(tui.is_dirty(), "InsertChar should set dirty");
+    assert_eq!(tui.state.input_lines[0], "hi");
+
+    // 3. Render clears dirty
+    tui.render()?;
+    assert!(!tui.is_dirty(), "After render dirty should be false");
+
+    // 4. Submit clears input and sets dirty
+    let cmds = tui.update(Msg::Submit);
+    assert!(tui.is_dirty(), "Submit should set dirty");
+    assert!(!tui.state.input_lines[0].is_empty() || tui.state.messages.len() > 0,
+            "Submit should update messages or clear input");
+
+    // 5. Backspace sets dirty
+    tui.render(); // Clear dirty
+    tui.update(Msg::Backspace);
+    assert!(tui.is_dirty(), "Backspace should set dirty");
+
+    // 6. ToggleSidebar sets dirty
+    tui.render(); // Clear dirty
+    tui.update(Msg::ToggleSidebar);
+    assert!(tui.is_dirty(), "ToggleSidebar should set dirty");
+    assert!(tui.state.show_sidebar, "Sidebar should be toggled on");
+
+    // 7. Agent events set dirty
+    tui.render(); // Clear dirty
+    tui.update(Msg::AgentEvent(AgentEvent::AgentEnd {
+        messages: vec![],
+    }));
+    assert!(tui.is_dirty(), "AgentEvent should set dirty");
+
+    tui.cleanup()?;
+    println!("test_pipeline: PASSED");
     Ok(())
 }

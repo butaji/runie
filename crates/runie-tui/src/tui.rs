@@ -61,7 +61,7 @@ pub mod render;
 pub mod events;
 pub mod tests;
 
-pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState};
+pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
 pub use events::event_to_msg;
 use render::{render_top_bar, render_status_bar, render_agent_list};
@@ -120,7 +120,6 @@ impl Tui {
         self.action_log.push(msg.clone());
     }
 
-    #[cfg(test)]
     pub fn is_dirty(&self) -> bool {
         self.dirty
     }
@@ -348,7 +347,7 @@ impl Tui {
                             action: permission_action,
                         });
                     }
-                    Cmd::SaveSession { .. } | Cmd::LoadSession { .. } | Cmd::SlashCommand(_) => {
+                    Cmd::SaveSession { .. } | Cmd::LoadSession { .. } | Cmd::SlashCommand(_) | Cmd::SaveSettings { .. } => {
                         // These are handled by the CLI runtime, not the TUI
                     }
                 }

@@ -1,4 +1,5 @@
 pub mod overlay;
+pub mod onboarding;
 pub mod code_block;
 pub mod collapsible;
 pub mod diff_viewer;

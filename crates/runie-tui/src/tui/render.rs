@@ -122,6 +122,11 @@ fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
             ("↑↓", "navigate"),
             ("Enter", "jump"),
         ],
+        TuiMode::Onboarding => vec![
+            ("Esc", "back"),
+            ("↑↓", "navigate"),
+            ("Enter", "next"),
+        ],
     }
 }
 

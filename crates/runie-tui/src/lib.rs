@@ -6,7 +6,7 @@ pub mod components;
 pub mod tui;
 
 pub use theme::{ThemeWrapper, ColorPalette, OpalineColor};
-pub use tui::{Tui, TuiConfig, TuiMode, TuiAction, Msg, Cmd, update, event_to_msg};
+pub use tui::{Tui, TuiConfig, TuiMode, TuiAction, Msg, Cmd, update, event_to_msg, Onboarding, AppState};
 pub use components::{
     TopBar,
     MessageList,

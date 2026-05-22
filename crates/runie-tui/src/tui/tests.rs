@@ -122,6 +122,7 @@ mod tests {
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
             background_jobs: Vec::new(),
+            onboarding: None,
         }
     }
 
@@ -555,5 +556,129 @@ mod tests {
 
         // Verify clean state after correct usage
         assert_eq!(tui.state.input_lines[0], "a");
+    }
+
+    // ─── Forbidden pattern test ─────────────────────────────────────────────────
+    // This test reads tui_run.rs source and fails if it finds the forbidden
+    // pattern: runie_tui::update(&mut tui.state
+    // This prevents the regression where calling the free function directly
+    // on tui.state bypasses the dirty flag mechanism.
+
+    #[test]
+    fn test_no_direct_update_call_on_tui_state() {
+        // This test reads the tui_run.rs source file and checks for the forbidden
+        // pattern that causes the "typing but nothing displayed" bug.
+        //
+        // The forbidden pattern is:
+        //   runie_tui::update(&mut tui.state, ...)
+        //
+        // The correct pattern is:
+        //   tui.update(...)  // which sets dirty=true BEFORE calling reducer
+
+        let tui_run_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("runie-cli")
+            .join("src")
+            .join("tui_run.rs");
+
+        let source = std::fs::read_to_string(&tui_run_path)
+            .expect("Failed to read tui_run.rs - may have moved");
+
+        // Check for the forbidden pattern: runie_tui::update(&mut tui.state
+        // This pattern bypasses the dirty flag mechanism in Tui.update()
+        let forbidden_pattern = "runie_tui::update(&mut tui.state";
+
+        assert!(
+            !source.contains(forbidden_pattern),
+            "FORBIDDEN PATTERN DETECTED: '{}' found in tui_run.rs\n\
+             This bypasses Tui.update() which sets dirty=true before calling reducer.\n\
+             Use tui.update(msg) instead of runie_tui::update(&mut tui.state, msg)",
+            forbidden_pattern
+        );
+
+        // Also check for the re-exported update: use runie_tui::update
+        // followed by direct update(&mut tui.state, ...) call
+        let direct_update_patterns = [
+            "update(&mut tui.state,",
+            "update(&mut self.state,",
+        ];
+
+        for pattern in direct_update_patterns {
+            assert!(
+                !source.contains(pattern),
+                "FORBIDDEN PATTERN DETECTED: '{}' found in tui_run.rs\n\
+                 This bypasses the dirty flag mechanism.\n\
+                 Use self.update(msg) or tui.update(msg) instead.",
+                pattern
+            );
+        }
+    }
+
+    // ─── All update paths set dirty ─────────────────────────────────────────────
+    // Verifies that ALL Msg variants result in dirty=true
+
+    #[test]
+    fn test_all_update_paths_set_dirty() {
+        let mut tui = MockTui::new(false);
+
+        // List of Msg variants that should ALL set dirty=true
+        let test_cases: Vec<(Msg, &str)> = vec![
+            (Msg::InsertChar('x'), "InsertChar"),
+            (Msg::Backspace, "Backspace"),
+            (Msg::InsertNewline, "InsertNewline"),
+            (Msg::MoveCursorLeft, "MoveCursorLeft"),
+            (Msg::MoveCursorRight, "MoveCursorRight"),
+            (Msg::MoveCursorToStart, "MoveCursorToStart"),
+            (Msg::MoveCursorToEnd, "MoveCursorToEnd"),
+            (Msg::DeleteForward, "DeleteForward"),
+            (Msg::DeleteWordBackward, "DeleteWordBackward"),
+            (Msg::DeleteToStart, "DeleteToStart"),
+            (Msg::ToggleSidebar, "ToggleSidebar"),
+            (Msg::OpenCommandPalette, "OpenCommandPalette"),
+            (Msg::CloseModal, "CloseModal"),
+            (Msg::Submit, "Submit"),
+            (Msg::Tick, "Tick"),
+            (Msg::CursorBlink, "CursorBlink"),
+        ];
+
+        for (msg, name) in test_cases {
+            tui.dirty = false; // Reset dirty flag
+            tui.update(msg.clone());
+            assert!(
+                tui.is_dirty(),
+                "{} should set dirty=true but didn't",
+                name
+            );
+        }
+    }
+
+    // ─── Critical difference: free function vs method ───────────────────────────
+    // This test documents the CRITICAL difference between:
+    //   - tui.update(msg)  → sets dirty=true, then updates state (CORRECT)
+    //   - update(&mut tui.state, msg)  → updates state but NOT dirty (BUG!)
+
+    #[test]
+    fn test_free_function_vs_method_difference() {
+        // Demonstrate the bug: calling free function directly on state
+        // does NOT set dirty, so render() skips!
+
+        // Using the method (CORRECT)
+        let mut tui = MockTui::new(false);
+        tui.update(Msg::InsertChar('x'));
+        assert!(tui.is_dirty(), "Method tui.update() sets dirty");
+        assert_eq!(tui.state.input_lines[0], "x", "State is updated");
+
+        // Using the free function directly on state (BUG!)
+        let mut state = AppState::default();
+        update(&mut state, Msg::InsertChar('y'));
+        assert_eq!(state.input_lines[0], "y", "Free function updates state");
+
+        // But there's NO dirty flag on the free function!
+        // This is why you MUST use tui.update() not runie_tui::update()
+        //
+        // If you mistakenly do:
+        //   runie_tui::update(&mut tui.state, msg);
+        // The state updates but tui.dirty stays false!
+        // Then tui.render() returns early and nothing is displayed.
     }
 }
