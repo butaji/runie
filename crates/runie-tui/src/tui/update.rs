@@ -31,6 +31,9 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::ToggleSessionTree => { handle_tree(state); }
         Msg::SessionTreeUp | Msg::SessionTreeDown => { handle_tree_nav(state, &msg); }
         Msg::SessionTreeConfirm => { handle_tree_confirm(state); }
+        Msg::OnboardingNext | Msg::OnboardingBack | Msg::OnboardingSelectProvider(_) |
+        Msg::OnboardingSelectModel(_) | Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace |
+        Msg::OnboardingSubmit | Msg::OnboardingSkip => { cmds.extend(handle_onboarding_msg(state, msg)); }
     }
 
     cmds
@@ -397,4 +400,64 @@ fn handle_palette_msg(state: &mut AppState, msg: Msg) {
         Msg::CommandPaletteConfirm => handle_close_modal(state),
         _ => {}
     }
+}
+
+fn handle_onboarding_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
+    let onboarding = match &state.onboarding {
+        Some(o) => o.clone(),
+        None => return vec![],
+    };
+
+    match msg {
+        Msg::OnboardingNext => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.next_step();
+            }
+        }
+        Msg::OnboardingBack => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.prev_step();
+            }
+        }
+        Msg::OnboardingSelectProvider(idx) => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.select_provider(idx);
+            }
+        }
+        Msg::OnboardingSelectModel(idx) => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.select_model(idx);
+            }
+        }
+        Msg::OnboardingKeyInput(c) => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.api_key_input.push(c);
+            }
+        }
+        Msg::OnboardingKeyBackspace => {
+            if let Some(o) = state.onboarding.as_mut() {
+                o.api_key_input.pop();
+            }
+        }
+        Msg::OnboardingSubmit => {
+            if let Some(o) = state.onboarding.clone() {
+                if let Some(settings) = o.to_settings() {
+                    state.onboarding = None;
+                    state.mode = TuiMode::Chat;
+                    return vec![Cmd::SaveSettings {
+                        provider: settings.provider_id,
+                        model: settings.model_id,
+                        api_key: settings.api_key,
+                    }];
+                }
+            }
+        }
+        Msg::OnboardingSkip => {
+            state.onboarding = None;
+            state.mode = TuiMode::Chat;
+        }
+        _ => {}
+    }
+
+    vec![]
 }

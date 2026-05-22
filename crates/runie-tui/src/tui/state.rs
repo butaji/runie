@@ -2,6 +2,7 @@ use crate::components::{MessageItem, DiffViewer, CommandPalette};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::components::SessionTreeNavigator;
+pub use crate::components::onboarding::{Onboarding, OnboardingStep};
 use runie_ai::TokenUsage;
 use runie_core::SlashCommand;
 
@@ -124,6 +125,7 @@ pub struct AppState {
     pub session_token_usage: TokenUsage,
     pub session_tree: SessionTreeNavigator,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
+    pub onboarding: Option<Onboarding>,
 }
 
 impl Default for AppState {
@@ -149,6 +151,7 @@ impl Default for AppState {
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
             background_jobs: Vec::new(),
+            onboarding: None,
         }
     }
 }
@@ -167,6 +170,7 @@ pub enum TuiMode {
     CommandPalette,
     DiffViewer,
     SessionTree,
+    Onboarding,
 }
 
 #[derive(Debug, Clone)]
@@ -225,6 +229,16 @@ pub enum Msg {
     SessionTreeUp,
     SessionTreeDown,
     SessionTreeConfirm,
+
+    // Onboarding
+    OnboardingNext,
+    OnboardingBack,
+    OnboardingSelectProvider(usize),
+    OnboardingSelectModel(usize),
+    OnboardingKeyInput(char),
+    OnboardingKeyBackspace,
+    OnboardingSubmit,
+    OnboardingSkip,
 }
 
 // ─── Cmd ────────────────────────────────────────────────────────────────────────
@@ -237,6 +251,7 @@ pub enum Cmd {
     SaveSession { name: Option<String> },
     LoadSession { name: String },
     SlashCommand(SlashCommand),
+    SaveSettings { provider: String, model: String, api_key: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -271,6 +286,7 @@ pub struct RenderState {
     pub session_token_usage: TokenUsage,
     pub session_tree: SessionTreeNavigator,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
+    pub onboarding: Option<Onboarding>,
 }
 
 impl RenderState {
@@ -295,6 +311,7 @@ impl RenderState {
             session_token_usage: state.session_token_usage.clone(),
             session_tree: state.session_tree.clone(),
             background_jobs: state.background_jobs.clone(),
+            onboarding: state.onboarding.clone(),
         }
     }
 }

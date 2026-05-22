@@ -105,6 +105,22 @@ struct Cli {
     /// Keybinding: command palette
     #[arg(long)]
     kb_command_palette: Option<String>,
+
+    /// Force onboarding/setup wizard (even if already configured)
+    #[arg(long)]
+    setup: bool,
+
+    /// Test rendering pipeline without API
+    #[arg(long)]
+    test_render: bool,
+
+    /// Test event handling pipeline
+    #[arg(long)]
+    test_events: bool,
+
+    /// Test full TUI pipeline (render + input + events)
+    #[arg(long)]
+    test_pipeline: bool,
 }
 
 impl From<&Cli> for CliSettings {
@@ -198,7 +214,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             #[cfg(not(windows))]
             {
-                tui_run::run_tui(cli.workspace, cli.mock, &settings).await?;
+                // Run test modes if requested
+                if cli.test_pipeline {
+                    return tui_run::test_pipeline().await;
+                }
+                if cli.test_render {
+                    return tui_run::test_render().await;
+                }
+                if cli.test_events {
+                    return tui_run::test_events().await;
+                }
+                tui_run::run_tui(cli.workspace, cli.mock, &settings, cli.setup).await?;
             }
             #[cfg(windows)]
             {

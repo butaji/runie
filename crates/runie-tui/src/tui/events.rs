@@ -15,6 +15,7 @@ pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<M
         TuiMode::CommandPalette => key_to_palette_msg(key),
         TuiMode::DiffViewer => key_to_diff_msg(key),
         TuiMode::SessionTree => key_to_tree_msg(key),
+        TuiMode::Onboarding => key_to_onboarding_msg(key),
         _ => None,
     }
 }
@@ -95,6 +96,18 @@ fn key_to_tree_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Up | KeyCode::Char('k') => Some(Msg::SessionTreeUp),
         KeyCode::Down | KeyCode::Char('j') => Some(Msg::SessionTreeDown),
         KeyCode::Enter => Some(Msg::SessionTreeConfirm),
+        _ => None,
+    }
+}
+
+fn key_to_onboarding_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Enter => Some(Msg::OnboardingNext),
+        KeyCode::Esc => Some(Msg::OnboardingBack),
+        KeyCode::Up => Some(Msg::OnboardingBack),
+        KeyCode::Down => Some(Msg::OnboardingNext),
+        KeyCode::Char(c) => Some(Msg::OnboardingKeyInput(c)),
+        KeyCode::Backspace => Some(Msg::OnboardingKeyBackspace),
         _ => None,
     }
 }
