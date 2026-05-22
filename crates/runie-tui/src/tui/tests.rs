@@ -1,10 +1,10 @@
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState};
+use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
 use crate::components::{
     AgentList, AgentItem, AgentStatus, MessageItem,
     ContextPanel, GitChange, GitStatus, SessionTreeNavigator, CommandPalette,
 };
 use crate::tui::update::update;
-use runie_agent::events::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
+use runie_agent::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
 use runie_ai::TokenUsage;
 
 
@@ -109,30 +109,18 @@ mod tests {
             show_sidebar: false,
             agent_running: false,
             current_model: None,
-            top_bar_repo: String::new(),
-            top_bar_branch: String::new(),
-            top_bar_path: String::new(),
-            top_bar_checks_passed: None,
-            top_bar_checks_total: None,
-            top_bar_percentage: None,
-            top_bar_agent_count: None,
-            permission_modal_tool: None,
-            permission_modal_tool_call_id: None,
-            permission_modal_args: None,
-            permission_modal_desc: None,
+            top_bar: TopBarState::default(),
+            permission_modal: PermissionModalState::default(),
             action_log: Vec::new(),
             action_log_capacity: 1000,
-            command_palette_open: false,
-            command_palette_filter: String::new(),
-            command_palette_selected: 0,
-            feed_scroll_offset: 0,
-            diff_scroll_offset: 0,
-            tree_scroll_offset: 0,
+            command_palette: CommandPaletteState::default(),
+            scroll: ScrollState::default(),
             animation: AnimationState::default(),
             diff_viewer: None,
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
+            dirty: true,
         }
     }
 

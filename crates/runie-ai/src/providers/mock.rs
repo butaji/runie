@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use runie_core::{Message, ToolSchema, Event, ProviderError};
+use runie_core::{Message, ToolSchema, Event, ProviderError, ToolOutput};
 use futures::stream::BoxStream;
 use crate::Provider;
 use async_stream::stream;
@@ -24,15 +24,44 @@ impl MockProvider {
         self
     }
 
-    fn generate_response(&self, messages: &[Message]) -> Vec<Event> {
+    fn generate_response(&self, messages: &[Message], tools: &[ToolSchema]) -> Vec<Event> {
         let content = Self::build_content(messages);
-        vec![
-            Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
-            Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
-            Event::MessageDelta { content: content.clone() },
-            Event::MessageEnd,
-            Event::AgentEnd { timestamp: Utc::now() },
-        ]
+
+        // If user asks about editing and tools are available, simulate tool call
+        if !tools.is_empty() && content.to_lowercase().contains("edit") {
+            let tool = &tools[0];
+            vec![
+                Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
+                Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
+                Event::MessageDelta { content: "I'll help you with that.".to_string() },
+                Event::ToolCallDelta {
+                    name: tool.name.clone(),
+                    arguments: "{}".to_string()
+                },
+                Event::MessageEnd,
+                Event::ToolExecutionStart {
+                    tool_call_id: "mock-1".to_string(),
+                    tool_name: tool.name.clone(),
+                    args: serde_json::json!({}),
+                    timestamp: Utc::now(),
+                },
+                Event::ToolExecutionEnd {
+                    tool_call_id: "mock-1".to_string(),
+                    result: ToolOutput { content: "Done".to_string(), metadata: serde_json::json!({}), terminate: false },
+                    timestamp: Utc::now(),
+                },
+                Event::AgentEnd { timestamp: Utc::now() },
+            ]
+        } else {
+            // Normal text response
+            vec![
+                Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
+                Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
+                Event::MessageDelta { content },
+                Event::MessageEnd,
+                Event::AgentEnd { timestamp: Utc::now() },
+            ]
+        }
     }
 
     fn build_content(messages: &[Message]) -> String {
@@ -49,13 +78,14 @@ impl MockProvider {
     }
 
     fn response_for_text(text: &str) -> String {
-        if text.contains("hello") || text.contains("hi") {
+        let lower = text.to_lowercase();
+        if lower.split_whitespace().any(|w| w == "hello" || w == "hi") {
             return "Hello! I'm a mock coding agent. How can I help you today?".to_string();
         }
-        if text.contains("edit") || text.contains("fix") {
+        if lower.contains("edit") || lower.contains("fix") {
             return "I'll help you edit that file. Let me first read it to understand the current state.".to_string();
         }
-        if text.contains("test") {
+        if lower.contains("test") {
             return "I'll run the tests for you. Let me check what test framework you're using.".to_string();
         }
         let preview = &text[..text.len().min(50)];
@@ -73,12 +103,24 @@ impl Provider for MockProvider {
         &self.model
     }
 
+    fn supports_tools(&self) -> bool {
+        true
+    }
+
+    fn supports_vision(&self) -> bool {
+        true
+    }
+
+    fn max_context_tokens(&self) -> usize {
+        128_000
+    }
+
     async fn chat(
         &self,
         messages: Vec<Message>,
-        _tools: Vec<ToolSchema>,
+        tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
-        let events = self.generate_response(&messages);
+        let events = self.generate_response(&messages, &tools);
 
         let s = stream! {
             for event in events {
@@ -93,7 +135,7 @@ impl Provider for MockProvider {
         &self,
         messages: Vec<Message>,
     ) -> Result<String, ProviderError> {
-        let events = self.generate_response(&messages);
+        let events = self.generate_response(&messages, &[]);
         let mut content = String::new();
 
         for event in events {

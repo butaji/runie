@@ -35,12 +35,12 @@ pub async fn run_tui(
 
     // Detect real git info (even in mock mode, for now)
     let git_info = crate::git::detect_git_info(&workspace);
-    tui.state.top_bar_repo = git_info.repo;
-    tui.state.top_bar_branch = git_info.branch;
-    tui.state.top_bar_path = git_info.relative_path;
-    tui.state.top_bar_checks_passed = None;
-    tui.state.top_bar_checks_total = None;
-    tui.state.top_bar_percentage = None;
+    tui.state.top_bar.repo = git_info.repo;
+    tui.state.top_bar.branch = git_info.branch;
+    tui.state.top_bar.path = git_info.relative_path;
+    tui.state.top_bar.checks_passed = None;
+    tui.state.top_bar.checks_total = None;
+    tui.state.top_bar.percentage = None;
 
     tui.state.input_right_info = if mock {
         format!("mock · {}", settings.model)

@@ -16,15 +16,15 @@ use crate::components::{
 fn build_left_parts(state: &AppState, text_primary: ratatui::style::Color, text_muted: ratatui::style::Color) -> Vec<Span> {
     let mut left_parts: Vec<Span> = Vec::new();
 
-    if !state.top_bar_repo.is_empty() {
-        left_parts.push(Span::styled(&state.top_bar_repo, Style::default().fg(text_primary)));
+    if !state.top_bar.repo.is_empty() {
+        left_parts.push(Span::styled(&state.top_bar.repo, Style::default().fg(text_primary)));
     }
-    if !state.top_bar_branch.is_empty() {
+    if !state.top_bar.branch.is_empty() {
         left_parts.push(Span::styled("/", Style::default().fg(text_muted)));
-        left_parts.push(Span::styled(&state.top_bar_branch, Style::default().fg(text_muted)));
+        left_parts.push(Span::styled(&state.top_bar.branch, Style::default().fg(text_muted)));
     }
-    if !state.top_bar_path.is_empty() {
-        left_parts.push(Span::styled(format!("  {}", state.top_bar_path),
+    if !state.top_bar.path.is_empty() {
+        left_parts.push(Span::styled(format!("  {}", state.top_bar.path),
             Style::default().fg(text_muted)));
     }
 
@@ -34,7 +34,7 @@ fn build_left_parts(state: &AppState, text_primary: ratatui::style::Color, text_
 fn build_right_parts(state: &AppState, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color) -> Vec<Span> {
     let mut right_parts: Vec<Span> = Vec::new();
 
-    if let (Some(passed), Some(total)) = (state.top_bar_checks_passed, state.top_bar_checks_total) {
+    if let (Some(passed), Some(total)) = (state.top_bar.checks_passed, state.top_bar.checks_total) {
         right_parts.push(Span::styled(format!("{} ", passed), Style::default().fg(text_secondary)));
         right_parts.push(Span::styled("✓ ", Style::default().fg(text_muted)));
 
@@ -44,7 +44,7 @@ fn build_right_parts(state: &AppState, text_secondary: ratatui::style::Color, te
         let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
         right_parts.push(Span::styled(bar, Style::default().fg(text_secondary)));
         right_parts.push(Span::styled(" │", Style::default().fg(text_muted)));
-    } else if let Some(pct) = state.top_bar_percentage {
+    } else if let Some(pct) = state.top_bar.percentage {
         right_parts.push(Span::styled(format!("{:.2}%", pct), Style::default().fg(text_secondary)));
 
         let filled = (pct / 100.0 * 10.0).round() as usize;
