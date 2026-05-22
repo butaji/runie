@@ -268,3 +268,52 @@ pub enum TuiAction {
     ToolPermission { tool: String, action: PermissionAction },
 }
 
+/// Render state containing only the fields needed for rendering.
+/// This avoids cloning the entire AppState each frame.
+#[derive(Clone)]
+pub struct RenderState {
+    pub messages: Vec<MessageItem>,
+    pub input_lines: Vec<String>,
+    pub cursor_col: usize,
+    pub cursor_row: usize,
+    pub input_right_info: String,
+    pub mode: TuiMode,
+    pub running: bool,
+    pub show_sidebar: bool,
+    pub agent_running: bool,
+    pub current_model: Option<String>,
+    pub top_bar: TopBarState,
+    pub permission_modal: PermissionModalState,
+    pub command_palette: CommandPaletteState,
+    pub scroll: ScrollState,
+    pub animation: AnimationState,
+    pub diff_viewer: Option<DiffViewer>,
+    pub session_token_usage: TokenUsage,
+    pub session_tree: SessionTreeNavigator,
+}
+
+impl RenderState {
+    pub fn from(state: &AppState) -> Self {
+        Self {
+            messages: state.messages.clone(),
+            input_lines: state.input_lines.clone(),
+            cursor_col: state.cursor_col,
+            cursor_row: state.cursor_row,
+            input_right_info: state.input_right_info.clone(),
+            mode: state.mode.clone(),
+            running: state.running,
+            show_sidebar: state.show_sidebar,
+            agent_running: state.agent_running,
+            current_model: state.current_model.clone(),
+            top_bar: state.top_bar.clone(),
+            permission_modal: state.permission_modal.clone(),
+            command_palette: state.command_palette.clone(),
+            scroll: state.scroll.clone(),
+            animation: state.animation.clone(),
+            diff_viewer: state.diff_viewer.clone(),
+            session_token_usage: state.session_token_usage.clone(),
+            session_tree: state.session_tree.clone(),
+        }
+    }
+}
+

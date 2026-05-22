@@ -17,4 +17,5 @@ reqwest = { workspace = true }
 async-stream = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
+rand = { workspace = true }
 genai = "0.5"
