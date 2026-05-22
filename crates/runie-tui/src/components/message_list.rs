@@ -81,7 +81,7 @@ impl Default for MessageList {
 }
 
 impl MessageList {
-    pub fn render_ref(messages: &[MessageItem], scroll_offset: usize, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, animation: &AnimationState) {
+    pub fn render_ref(messages: &[MessageItem], scroll_offset: usize, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, animation: &AnimationState, agent_running: bool) {
         fill_background(area, buf, theme);
 
         let messages_iter: Vec<&MessageItem> = messages.iter().skip(scroll_offset).collect();
@@ -100,27 +100,23 @@ impl MessageList {
         let code_path: ratatui::style::Color = theme.color("code.path").into();
 
         let spinner = BRAILLE_FRAMES[animation.braille_frame % 10];
-
+        let total_messages = messages.len();
         let mut prev_msg_type: Option<&str> = None;
 
-        for msg in messages_iter {
-            if row >= max_rows {
-                break;
-            }
+        for (idx, msg) in messages_iter.iter().enumerate() {
+            if row >= max_rows { break; }
 
             let msg_type = get_msg_type(msg);
-
-            if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) {
-                if row < max_rows {
-                    row += 1;
-                }
+            if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) && row < max_rows {
+                row += 1;
             }
             prev_msg_type = Some(msg_type);
 
+            let show_cursor = should_show_cursor(animation, agent_running, scroll_offset + idx, total_messages, msg);
             let rendered = render_single_msg(
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
-                success, error, code_path, spinner, animation.streaming_cursor_visible,
+                success, error, code_path, spinner, show_cursor,
             );
             row += rendered;
         }
@@ -172,6 +168,13 @@ fn fill_background(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
             buf.get_mut(x, y).set_style(Style::default().bg(bg_base));
         }
     }
+}
+
+fn should_show_cursor(animation: &AnimationState, agent_running: bool, absolute_idx: usize, total_messages: usize, msg: &MessageItem) -> bool {
+    animation.streaming_cursor_visible
+        && agent_running
+        && absolute_idx == total_messages.saturating_sub(1)
+        && matches!(msg, MessageItem::Assistant { .. })
 }
 
 fn get_msg_type(msg: &MessageItem) -> &'static str {
