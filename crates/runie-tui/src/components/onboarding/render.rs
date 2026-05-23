@@ -11,9 +11,6 @@ use super::{Onboarding, OnboardingStep};
 // ─── Main Render Entry ─────────────────────────────────────────────────────────
 
 pub fn render_onboarding(onboarding: &Onboarding, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    // Note: Background clearing is NOT done here — the caller (render_onboarding_mode)
-    // handles it before rendering the status bar, to avoid wiping it
-
     match &onboarding.step {
         OnboardingStep::Welcome => render_welcome(area, buf, theme),
         OnboardingStep::ProviderSelect => render_provider_select(area, buf, theme, onboarding),
@@ -23,61 +20,185 @@ pub fn render_onboarding(onboarding: &Onboarding, area: Rect, buf: &mut Buffer, 
     }
 }
 
+// ─── Dialog Frame ─────────────────────────────────────────────────────────────
+
+fn render_dialog_frame<F>(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, inner_h: u16, render_inner: F)
+where
+    F: Fn(Rect, &mut Buffer),
+{
+    let accent = theme_color("accent.primary", theme);
+    let (dialog_area, _) = centered_area(area, 56, inner_h + 4); // +4 for padding
+    Block::bordered()
+        .border_style(Style::default().fg(accent))
+        .render(dialog_area, buf);
+
+    let inner = Rect::new(dialog_area.x + 2, dialog_area.y + 2, dialog_area.width - 4, dialog_area.height - 4);
+    render_inner(inner, buf);
+}
+
+fn centered_area(area: Rect, w: u16, h: u16) -> (Rect, u16) {
+    let x = area.x.saturating_add(area.width.saturating_sub(w) / 2);
+    let y = area.y.saturating_add(area.height.saturating_sub(h) / 2);
+    (Rect::new(x, y, w, h), y)
+}
+
+fn theme_color(key: &str, theme: &ThemeWrapper) -> Color {
+    theme.color(key).into()
+}
+
 // ─── Welcome Step ─────────────────────────────────────────────────────────────
 
 fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    let accent: Color = theme.color("accent.primary").into();
-    let text_muted: Color = theme.color("text.muted").into();
-    let bg_base: Color = theme.color("bg.base").into();
-    let button_bg = accent;
-    let button_fg = bg_base;
+    let inner_h = 12; // logo(7) + gap(1) + title(1) + sub(1) + gap(1) + button(1) + gap(1) + hint(1)
+    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+        let accent = theme_color("accent.primary", theme);
+        let _text_muted = theme_color("text.muted", theme);
+        let _bg_base = theme_color("bg.base", theme);
+        let center_x = inner.x + inner.width / 2;
+        let start_y = inner.y;
 
-    let center_x = area.x + area.width / 2;
-    let center_y = area.y + area.height / 2;
+        let logo_y = start_y;
+        render_logo(Rect::new(center_x - 3, logo_y, 7, 7), buf, accent);
 
-    // Vertically center: logo(7) + gap(1) + title(1) + sub(1) + gap(2) + button(1) + gap(1) + hint(1)
-    // Total content height: 7 + 1 + 1 + 1 + 2 + 1 + 1 + 1 = 15
-    let content_h: u16 = 15;
-    let start_y = center_y.saturating_sub(content_h / 2);
+        let title_y = logo_y + 7 + 1;
+        render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, "runie", theme);
 
-    // 1. Logo (Braille dots forming circle) – centered
-    let logo_y = start_y;
-    render_dotted_logo(center_x, logo_y, buf, accent);
+        let sub_y = title_y + 1;
+        render_subtitle(Rect::new(inner.x, sub_y, inner.width, 1), buf, "AI coding assistant", theme);
 
-    // 2. Title "runie" — accent color, bold, centered
-    let title_y = logo_y + 7 + 1; // logo(7) + blank(1)
-    let title = Paragraph::new("runie")
-        .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
-        .alignment(Alignment::Center);
-    title.render(Rect::new(area.x, title_y, area.width, 1), buf);
+        let btn_y = sub_y + 2;
+        let btn_w = 14;
+        let btn_x = center_x.saturating_sub(btn_w / 2);
+        render_button(Rect::new(btn_x, btn_y, btn_w, 1), buf, "Get started", 'g', theme);
 
-    // 3. Subtitle "AI coding assistant" — muted color, centered
-    let subtitle_y = title_y + 1;
-    let subtitle = Paragraph::new("AI coding assistant")
-        .style(Style::default().fg(text_muted))
-        .alignment(Alignment::Center);
-    subtitle.render(Rect::new(area.x, subtitle_y, area.width, 1), buf);
-
-    // 4. Primary CTA: [Get started] — orange bg, dark text, underlined shortcut
-    let button_y = subtitle_y + 2 + 1; // gap(2) + 1 blank
-    let button_text = "Get started";
-    let button_width = button_text.len() as u16 + 2; // +2 for borders
-    let button_x = center_x.saturating_sub(button_width / 2);
-    render_button_widget(buf, button_x, button_y, button_text, 'g', button_bg, button_fg);
-
-    // 5. Secondary: "Press Enter to start" — muted color
-    let hint_y = button_y + 1 + 1; // button(1) + blank(1)
-    let hint = Paragraph::new("Press Enter to start")
-        .style(Style::default().fg(text_muted))
-        .alignment(Alignment::Center);
-    hint.render(Rect::new(area.x, hint_y, area.width, 1), buf);
-
+        let hint_y = btn_y + 2;
+        render_hint(Rect::new(inner.x, hint_y, inner.width, 1), buf, "Press Enter to start", theme);
+    });
 }
 
-fn render_dotted_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
+// ─── Provider Select Step ────────────────────────────────────────────────────
+
+fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
+    let list_h = onboarding.providers.len() as u16;
+    let inner_h = 5 + 2 + 1 + 2 + list_h; // logo(5) + gap(2) + title(1) + gap(2) + list(n)
+    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+        let accent = theme_color("accent.primary", theme);
+        let center_x = inner.x + inner.width / 2;
+        let start_y = inner.y;
+
+        render_small_logo(Rect::new(center_x - 2, start_y, 5, 5), buf, accent);
+
+        let title_y = start_y + 5 + 2;
+        render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose provider", theme);
+
+        let list_y = title_y + 1 + 2;
+        let items: Vec<&str> = onboarding.providers.iter().map(|p| p.name.as_str()).collect();
+        render_list(Rect::new(inner.x, list_y, inner.width, list_h), buf, &items, onboarding.selected_item, theme);
+    });
+}
+
+// ─── Key Input Step ───────────────────────────────────────────────────────────
+
+fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
+    let inner_h = 1 + 1 + 1 + 1 + 3 + 1; // title(1) + gap(1) + input(1) + underline(1) + gap(3) + hint(1)
+    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+        let text_primary = theme_color("text.primary", theme);
+        let _text_secondary = theme_color("text.secondary", theme);
+        let text_muted = theme_color("text.muted", theme);
+        let success = theme_color("success", theme);
+        let error_color = theme_color("error", theme);
+        let center_x = inner.x + inner.width / 2;
+        let start_y = inner.y;
+
+        let provider_name = onboarding.get_current_provider().map(|p| p.name.as_str()).unwrap_or("AI");
+        let title_y = start_y;
+        render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, &format!("Enter {} API key", provider_name), theme);
+
+        let input_y = title_y + 2;
+        let masked = "•".repeat(onboarding.api_key_input.len().min(35));
+        let display = if masked.is_empty() { String::from(" ") } else { masked };
+        let input_x = center_x.saturating_sub(20);
+        let input_area = Rect::new(input_x, input_y, 40, 1);
+        Paragraph::new(display.as_str())
+            .style(Style::default().fg(text_primary))
+            .render(input_area, buf);
+
+        let ul_y = input_y + 1;
+        Paragraph::new("─".repeat(40))
+            .style(Style::default().fg(text_muted))
+            .render(Rect::new(input_x, ul_y, 40, 1), buf);
+
+        let status_y = input_y + 3;
+        if !onboarding.api_key_input.is_empty() {
+            let (icon, status_text, status_color) = if onboarding.validate_key() {
+                ("✓", "Valid", success)
+            } else {
+                ("✗", "Invalid", error_color)
+            };
+            Paragraph::new(format!("{} {}", icon, status_text))
+                .style(Style::default().fg(status_color))
+                .render(Rect::new(input_x, status_y, 20, 1), buf);
+        }
+
+        let hint_y = status_y + 2;
+        render_hint(Rect::new(inner.x, hint_y, inner.width, 1), buf, "Your key stays local", theme);
+    });
+}
+
+// ─── Model Select Step ────────────────────────────────────────────────────────
+
+fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
+    let list_h = onboarding.models.len() as u16;
+    let inner_h = 1 + 2 + list_h; // title(1) + gap(2) + list(n)
+    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+        let start_y = inner.y;
+        let title_y = start_y;
+        render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose model", theme);
+
+        let list_y = title_y + 1 + 2;
+        let items: Vec<String> = onboarding.models.iter().map(|m| m.name.clone()).collect();
+        let descriptions: Vec<String> = onboarding.models.iter().map(|m| m.description.clone()).collect();
+        render_list_with_desc(Rect::new(inner.x, list_y, inner.width, list_h), buf, &items, &descriptions, onboarding.selected_item, theme);
+    });
+}
+
+// ─── Complete Step ───────────────────────────────────────────────────────────
+
+fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
+    let inner_h = 1 + 1 + 1 + 1; // title(1) + check(1) + summary(1) + hint(1) + gaps
+    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+        let accent = theme_color("accent.primary", theme);
+        let _text_muted = theme_color("text.muted", theme);
+        let success = theme_color("success", theme);
+        let _center_x = inner.x + inner.width / 2;
+        let start_y = inner.y;
+
+        render_title(Rect::new(inner.x, start_y, inner.width, 1), buf, "Ready to code", theme);
+
+        let check_y = start_y + 2;
+        Paragraph::new("✓")
+            .style(Style::default().fg(success).add_modifier(Modifier::BOLD))
+            .alignment(Alignment::Center)
+            .render(Rect::new(inner.x, check_y, inner.width, 1), buf);
+
+        if let (Some(provider), Some(model)) = (onboarding.get_current_provider(), onboarding.get_current_model()) {
+            let summary_y = check_y + 2;
+            render_subtitle(Rect::new(inner.x, summary_y, inner.width, 1), buf, &format!("Using {} · {}", provider.name, model.name), theme);
+        }
+
+        let hint_y = start_y + 6;
+        Paragraph::new("Enter to start")
+            .style(Style::default().fg(accent))
+            .alignment(Alignment::Center)
+            .render(Rect::new(inner.x, hint_y, inner.width, 1), buf);
+    });
+}
+
+// ─── Reusable Element Renderers ───────────────────────────────────────────────
+
+fn render_logo(area: Rect, buf: &mut Buffer, color: Color) {
     let style = Style::default().fg(color);
     let dot = "⠿";
-
     let pattern: [[u8; 7]; 7] = [
         [0, 1, 1, 1, 1, 1, 0],
         [1, 0, 0, 0, 0, 0, 1],
@@ -87,12 +208,11 @@ fn render_dotted_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
         [1, 0, 0, 0, 0, 0, 1],
         [0, 1, 1, 1, 1, 1, 0],
     ];
-
     for (row, row_data) in pattern.iter().enumerate() {
-        let row_y = y + row as u16;
+        let row_y = area.y + row as u16;
         for (col, &val) in row_data.iter().enumerate() {
             if val == 1 {
-                let col_x = cx.saturating_sub(3) + col as u16;
+                let col_x = area.x + col as u16;
                 if col_x < buf.area.width && row_y < buf.area.height {
                     buf.cell_mut((col_x, row_y)).unwrap().set_char(dot.chars().next().unwrap());
                     buf.cell_mut((col_x, row_y)).unwrap().set_style(style);
@@ -102,100 +222,9 @@ fn render_dotted_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
     }
 }
 
-/// Render a button as a native ratatui Paragraph widget
-fn render_button_widget(
-    buf: &mut Buffer,
-    x: u16,
-    y: u16,
-    text: &str,
-    shortcut: char,
-    bg: Color,
-    fg: Color,
-) {
-    let spans: Vec<Span> = text
-        .chars()
-        .map(|ch| {
-            if ch.to_lowercase().next() == Some(shortcut) {
-                Span::styled(ch.to_string(), Style::default().fg(fg).bg(bg).add_modifier(Modifier::UNDERLINED))
-            } else {
-                Span::styled(ch.to_string(), Style::default().fg(fg).bg(bg))
-            }
-        })
-        .collect();
-
-    let line = Line::from(spans);
-    let text_widget = Text::from(vec![line]);
-    let para = Paragraph::new(text_widget)
-        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(bg).bg(bg)))
-        .style(Style::default().bg(bg));
-
-    let button_area = Rect::new(x, y, text.len() as u16 + 2, 1);
-    para.render(button_area, buf);
-}
-
-// ─── Provider Select Step ────────────────────────────────────────────────────
-
-fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
-    let accent: Color = theme.color("accent.primary").into();
-    let text_primary: Color = theme.color("text.primary").into();
-    let text_muted: Color = theme.color("text.muted").into();
-
-    let center_x = area.x + area.width / 2;
-    let inner_x = center_x.saturating_sub(14);
-
-    // Vertically center all content
-    let logo_h = 5;
-    let gap_after_logo = 2;
-    let title_h = 1;
-    let gap_after_title = 2;
-    let list_h = onboarding.providers.len() as u16;
-    let total_h = logo_h + gap_after_logo + title_h + gap_after_title + list_h;
-    let start_y = area.y + (area.height.saturating_sub(total_h)) / 2;
-
-    // Small logo (centered)
-    let logo_y = start_y;
-    render_small_logo(center_x, logo_y, buf, accent);
-
-    // Title
-    let title_y = logo_y + logo_h + gap_after_logo;
-    let title = Paragraph::new("Choose provider")
-        .style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD))
-        .alignment(Alignment::Left);
-    title.render(Rect::new(inner_x, title_y, 30, 1), buf);
-
-    // Provider list
-    let list_y = title_y + title_h + gap_after_title;
-    for (i, provider) in onboarding.providers.iter().enumerate() {
-        let row_y = list_y + i as u16;
-        let is_selected = i == onboarding.selected_item;
-
-        // Selection indicator
-        let indicator = if is_selected { "▸ " } else { "  " };
-        let indicator_style = if is_selected {
-            Style::default().fg(accent)
-        } else {
-            Style::default().fg(text_muted)
-        };
-        let indicator_span = Span::styled(indicator, indicator_style);
-
-        // Provider name
-        let name_style = if is_selected {
-            Style::default().fg(accent).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(text_primary)
-        };
-        let name_span = Span::styled(&provider.name, name_style);
-
-        let line = Line::from(vec![indicator_span, name_span]);
-        let para = Paragraph::new(line);
-        para.render(Rect::new(inner_x, row_y, area.width.saturating_sub(inner_x), 1), buf);
-    }
-}
-
-fn render_small_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
+fn render_small_logo(area: Rect, buf: &mut Buffer, color: Color) {
     let style = Style::default().fg(color);
     let dot = "⠿";
-
     let pattern: [[u8; 5]; 5] = [
         [0, 1, 1, 1, 0],
         [1, 0, 0, 0, 1],
@@ -203,12 +232,11 @@ fn render_small_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
         [1, 0, 0, 0, 1],
         [0, 1, 1, 1, 0],
     ];
-
     for (row, row_data) in pattern.iter().enumerate() {
-        let row_y = y + row as u16;
+        let row_y = area.y + row as u16;
         for (col, &val) in row_data.iter().enumerate() {
             if val == 1 {
-                let col_x = cx.saturating_sub(2) + col as u16;
+                let col_x = area.x + col as u16;
                 if col_x < buf.area.width && row_y < buf.area.height {
                     buf.cell_mut((col_x, row_y)).unwrap().set_char(dot.chars().next().unwrap());
                     buf.cell_mut((col_x, row_y)).unwrap().set_style(style);
@@ -218,159 +246,87 @@ fn render_small_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
     }
 }
 
-// ─── Key Input Step ───────────────────────────────────────────────────────────
-
-fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
-    let text_primary: Color = theme.color("text.primary").into();
-    let text_muted: Color = theme.color("text.muted").into();
-    let text_secondary: Color = theme.color("text.secondary").into();
-    let success: Color = theme.color("success").into();
-    let error_color: Color = theme.color("error").into();
-
-    let center_x = area.x + area.width / 2;
-
-    // Provider name
-    let provider_name = onboarding
-        .get_current_provider()
-        .map(|p| p.name.as_str())
-        .unwrap_or("AI");
-    let title_text = format!("Enter {} API key", provider_name);
-    let title = Paragraph::new(title_text)
-        .style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD))
-        .alignment(Alignment::Center);
-    title.render(Rect::new(area.x, area.y + 4, area.width, 1), buf);
-
-    // Input line (minimal: just an underline)
-    let input_y = area.y + 7;
-    let masked = "•".repeat(onboarding.api_key_input.len().min(35));
-    let display = if masked.is_empty() { String::from(" ") } else { masked };
-    let input_x = center_x.saturating_sub(20);
-    let input = Paragraph::new(display)
-        .style(Style::default().fg(text_primary));
-    input.render(Rect::new(input_x, input_y, 40, 1), buf);
-
-    // Underline using native widget
-    let underline = Paragraph::new("─".repeat(40))
-        .style(Style::default().fg(text_muted));
-    underline.render(Rect::new(input_x, input_y + 1, 40, 1), buf);
-
-    // Validation indicator
-    let is_valid = onboarding.validate_key();
-    let status_y = input_y + 3;
-    if !onboarding.api_key_input.is_empty() {
-        let (icon, status_text, status_color) = if is_valid {
-            ("✓", "Valid", success)
-        } else {
-            ("✗", "Invalid", error_color)
-        };
-        let status = Paragraph::new(format!("{} {}", icon, status_text))
-            .style(Style::default().fg(status_color));
-        status.render(Rect::new(input_x, status_y, 20, 1), buf);
-    }
-
-    // Privacy hint
-    let hint = Paragraph::new("Your key stays local")
-        .style(Style::default().fg(text_secondary))
-        .alignment(Alignment::Center);
-    hint.render(Rect::new(area.x, status_y + 2, area.width, 1), buf);
+fn render_title(area: Rect, buf: &mut Buffer, text: &str, theme: &ThemeWrapper) {
+    let accent = theme_color("accent.primary", theme);
+    Paragraph::new(text)
+        .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Center)
+        .render(area, buf);
 }
 
-// ─── Model Select Step ────────────────────────────────────────────────────────
-
-fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
-    let accent: Color = theme.color("accent.primary").into();
-    let text_primary: Color = theme.color("text.primary").into();
-    let text_muted: Color = theme.color("text.muted").into();
-    let text_secondary: Color = theme.color("text.secondary").into();
-
-    let center_x = area.x + area.width / 2;
-    let inner_x = center_x.saturating_sub(14);
-
-    // Title
-    let title = Paragraph::new("Choose model")
+fn render_title_left(area: Rect, buf: &mut Buffer, text: &str, theme: &ThemeWrapper) {
+    let text_primary = theme_color("text.primary", theme);
+    Paragraph::new(text)
         .style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD))
-        .alignment(Alignment::Left);
-    title.render(Rect::new(inner_x, area.y + 3, 30, 1), buf);
+        .alignment(Alignment::Left)
+        .render(area, buf);
+}
 
-    // Model list
-    let list_y = area.y + 5;
-    for (i, model) in onboarding.models.iter().enumerate() {
-        let row_y = list_y + i as u16;
-        let is_selected = i == onboarding.selected_item;
+fn render_subtitle(area: Rect, buf: &mut Buffer, text: &str, theme: &ThemeWrapper) {
+    let text_muted = theme_color("text.muted", theme);
+    Paragraph::new(text)
+        .style(Style::default().fg(text_muted))
+        .alignment(Alignment::Center)
+        .render(area, buf);
+}
 
-        // Selection indicator
+fn render_button(area: Rect, buf: &mut Buffer, text: &str, shortcut: char, theme: &ThemeWrapper) {
+    let accent = theme_color("accent.primary", theme);
+    let bg_base = theme_color("bg.base", theme);
+    let spans: Vec<Span> = text.chars().map(|ch| {
+        if ch.to_lowercase().next() == Some(shortcut) {
+            Span::styled(ch.to_string(), Style::default().fg(bg_base).bg(accent).add_modifier(Modifier::UNDERLINED))
+        } else {
+            Span::styled(ch.to_string(), Style::default().fg(bg_base).bg(accent))
+        }
+    }).collect();
+    let line = Line::from(spans);
+    Paragraph::new(Text::from(vec![line]))
+        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(accent).bg(accent)))
+        .style(Style::default().bg(accent))
+        .render(area, buf);
+}
+
+fn render_hint(area: Rect, buf: &mut Buffer, text: &str, theme: &ThemeWrapper) {
+    let text_muted = theme_color("text.muted", theme);
+    Paragraph::new(text)
+        .style(Style::default().fg(text_muted))
+        .alignment(Alignment::Center)
+        .render(area, buf);
+}
+
+fn render_list(area: Rect, buf: &mut Buffer, items: &[&str], selected_idx: usize, theme: &ThemeWrapper) {
+    let accent = theme_color("accent.primary", theme);
+    let text_primary = theme_color("text.primary", theme);
+    let text_muted = theme_color("text.muted", theme);
+    for (i, &item) in items.iter().enumerate() {
+        let row_y = area.y + i as u16;
+        let is_selected = i == selected_idx;
         let indicator = if is_selected { "▸ " } else { "  " };
-        let indicator_style = if is_selected {
-            Style::default().fg(accent)
-        } else {
-            Style::default().fg(text_muted)
-        };
-        let indicator_span = Span::styled(indicator, indicator_style);
-
-        // Model name
-        let name_style = if is_selected {
-            Style::default().fg(accent).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(text_primary)
-        };
-        let name_span = Span::styled(&model.name, name_style);
-
-        // Description (truncated if needed)
-        let max_desc_len = 25;
-        let desc = if model.description.len() > max_desc_len {
-            format!("{}...", &model.description[..max_desc_len - 3])
-        } else {
-            model.description.clone()
-        };
-        let desc_style = if is_selected {
-            Style::default().fg(accent)
-        } else {
-            Style::default().fg(text_secondary)
-        };
-        let desc_span = Span::styled(desc, desc_style);
-
-        let line = Line::from(vec![indicator_span, name_span, Span::raw(" "), desc_span]);
-        let para = Paragraph::new(line);
-        para.render(Rect::new(inner_x, row_y, area.width.saturating_sub(inner_x), 1), buf);
+        let indicator_style = if is_selected { Style::default().fg(accent) } else { Style::default().fg(text_muted) };
+        let name_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
+        let line = Line::from(vec![Span::styled(indicator, indicator_style), Span::styled(item, name_style)]);
+        Paragraph::new(line).render(Rect::new(area.x, row_y, area.width, 1), buf);
     }
 }
 
-// ─── Complete Step ───────────────────────────────────────────────────────────
-
-fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
-    let accent: Color = theme.color("accent.primary").into();
-    let text_primary: Color = theme.color("text.primary").into();
-    let text_muted: Color = theme.color("text.muted").into();
-    let success: Color = theme.color("success").into();
-
-    let center_y = area.y + area.height / 2;
-
-    // Title
-    let title = Paragraph::new("Ready to code")
-        .style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD))
-        .alignment(Alignment::Center);
-    title.render(Rect::new(area.x, center_y - 4, area.width, 1), buf);
-
-    // Checkmark
-    let checkmark = Paragraph::new("✓")
-        .style(Style::default().fg(success).add_modifier(Modifier::BOLD))
-        .alignment(Alignment::Center);
-    checkmark.render(Rect::new(area.x, center_y - 2, area.width, 1), buf);
-
-    // Summary line
-    if let (Some(provider), Some(model)) = (onboarding.get_current_provider(), onboarding.get_current_model()) {
-        let summary = format!("Using {} · {}", provider.name, model.name);
-        let summary_widget = Paragraph::new(summary)
-            .style(Style::default().fg(text_muted))
-            .alignment(Alignment::Center);
-        summary_widget.render(Rect::new(area.x, center_y, area.width, 1), buf);
+fn render_list_with_desc(area: Rect, buf: &mut Buffer, items: &[String], descriptions: &[String], selected_idx: usize, theme: &ThemeWrapper) {
+    let accent = theme_color("accent.primary", theme);
+    let text_primary = theme_color("text.primary", theme);
+    let text_muted = theme_color("text.muted", theme);
+    let text_secondary = theme_color("text.secondary", theme);
+    let max_desc_len = 25;
+    for (i, (item, desc)) in items.iter().zip(descriptions.iter()).enumerate() {
+        let row_y = area.y + i as u16;
+        let is_selected = i == selected_idx;
+        let indicator = if is_selected { "▸ " } else { "  " };
+        let indicator_style = if is_selected { Style::default().fg(accent) } else { Style::default().fg(text_muted) };
+        let name_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
+        let desc_truncated = if desc.len() > max_desc_len { format!("{}...", &desc[..max_desc_len - 3]) } else { desc.clone() };
+        let desc_style = if is_selected { Style::default().fg(accent) } else { Style::default().fg(text_secondary) };
+        let line = Line::from(vec![Span::styled(indicator, indicator_style), Span::styled(item.as_str(), name_style), Span::raw(" "), Span::styled(&desc_truncated, desc_style)]);
+        Paragraph::new(line).render(Rect::new(area.x, row_y, area.width, 1), buf);
     }
-
-    // Start hint
-    let hint = Paragraph::new("Enter to start")
-        .style(Style::default().fg(accent))
-        .alignment(Alignment::Center);
-    hint.render(Rect::new(area.x, center_y + 4, area.width, 1), buf);
 }
 
 // Alias for render_ref pattern compatibility

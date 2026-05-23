@@ -91,6 +91,17 @@ impl InputBar {
     }
 
     pub fn backspace(&mut self) {
+        if self.cursor_line >= self.lines.len() {
+            self.cursor_line = self.lines.len().saturating_sub(1);
+        }
+        if self.lines.is_empty() {
+            self.lines.push(String::new());
+            self.cursor_col = 0;
+            return;
+        }
+        if self.cursor_col > self.lines[self.cursor_line].len() {
+            self.cursor_col = self.lines[self.cursor_line].len();
+        }
         if self.cursor_col > 0 {
             let line = &mut self.lines[self.cursor_line];
             line.remove(self.cursor_col - 1);

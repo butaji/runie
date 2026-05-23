@@ -69,13 +69,31 @@ fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
 }
 
 fn handle_insert_char(state: &mut AppState, c: char) {
-    if state.cursor_row < state.input_lines.len() {
-        state.input_lines[state.cursor_row].insert(state.cursor_col, c);
-        state.cursor_col += 1;
+    if state.cursor_row >= state.input_lines.len() {
+        state.cursor_row = state.input_lines.len().saturating_sub(1);
     }
+    if state.input_lines.is_empty() {
+        state.input_lines.push(String::new());
+    }
+    if state.cursor_col > state.input_lines[state.cursor_row].len() {
+        state.cursor_col = state.input_lines[state.cursor_row].len();
+    }
+    state.input_lines[state.cursor_row].insert(state.cursor_col, c);
+    state.cursor_col += 1;
 }
 
 fn handle_backspace(state: &mut AppState) {
+    if state.cursor_row >= state.input_lines.len() {
+        state.cursor_row = state.input_lines.len().saturating_sub(1);
+    }
+    if state.input_lines.is_empty() {
+        state.input_lines.push(String::new());
+        state.cursor_col = 0;
+        return;
+    }
+    if state.cursor_col > state.input_lines[state.cursor_row].len() {
+        state.cursor_col = state.input_lines[state.cursor_row].len();
+    }
     if state.cursor_col > 0 {
         state.input_lines[state.cursor_row].remove(state.cursor_col - 1);
         state.cursor_col -= 1;
@@ -137,12 +155,33 @@ fn handle_cursor_edge(state: &mut AppState, msg: &Msg) {
 }
 
 fn handle_delete_forward(state: &mut AppState) {
+    if state.cursor_row >= state.input_lines.len() {
+        state.cursor_row = state.input_lines.len().saturating_sub(1);
+    }
+    if state.input_lines.is_empty() {
+        state.input_lines.push(String::new());
+        return;
+    }
+    if state.cursor_col > state.input_lines[state.cursor_row].len() {
+        state.cursor_col = state.input_lines[state.cursor_row].len();
+    }
     if state.cursor_col < state.input_lines[state.cursor_row].len() {
         state.input_lines[state.cursor_row].remove(state.cursor_col);
     }
 }
 
 fn handle_delete_word_backward(state: &mut AppState) {
+    if state.cursor_row >= state.input_lines.len() {
+        state.cursor_row = state.input_lines.len().saturating_sub(1);
+    }
+    if state.input_lines.is_empty() {
+        state.input_lines.push(String::new());
+        state.cursor_col = 0;
+        return;
+    }
+    if state.cursor_col > state.input_lines[state.cursor_row].len() {
+        state.cursor_col = state.input_lines[state.cursor_row].len();
+    }
     let line = &state.input_lines[state.cursor_row];
     let before = &line[..state.cursor_col];
     if let Some(pos) = before.rfind(|c: char| c.is_whitespace()) {
@@ -155,6 +194,17 @@ fn handle_delete_word_backward(state: &mut AppState) {
 }
 
 fn handle_delete_to_start(state: &mut AppState) {
+    if state.cursor_row >= state.input_lines.len() {
+        state.cursor_row = state.input_lines.len().saturating_sub(1);
+    }
+    if state.input_lines.is_empty() {
+        state.input_lines.push(String::new());
+        state.cursor_col = 0;
+        return;
+    }
+    if state.cursor_col > state.input_lines[state.cursor_row].len() {
+        state.cursor_col = state.input_lines[state.cursor_row].len();
+    }
     state.input_lines[state.cursor_row].drain(..state.cursor_col);
     state.cursor_col = 0;
 }
