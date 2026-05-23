@@ -1,9 +1,9 @@
 use crossterm::event::{Event, KeyCode, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg};
 
-pub fn event_to_msg(event: Event, state: &AppState) -> Option<Msg> {
+pub fn event_to_msg(event: Event, _state: &AppState) -> Option<Msg> {
     match event {
-        Event::Key(key) => key_to_msg(key, state),
+        Event::Key(key) => key_to_msg(key, _state),
         _ => None,
     }
 }
@@ -34,33 +34,19 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
     match key.code {
         KeyCode::Enter => Some(Msg::Submit),
-        KeyCode::Char(c) => Some(Msg::InsertChar(c)),
-        KeyCode::Backspace => Some(Msg::Backspace),
-        KeyCode::Left => Some(Msg::MoveCursorLeft),
-        KeyCode::Right => Some(Msg::MoveCursorRight),
-        KeyCode::Up => Some(Msg::MoveCursorUp),
-        KeyCode::Down => Some(Msg::MoveCursorDown),
         KeyCode::PageUp => Some(Msg::ScrollPageUp),
         KeyCode::PageDown => Some(Msg::ScrollPageDown),
-        _ => None,
+        _ => Some(Msg::TextareaKey(key)),
     }
 }
 
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Char('j') => Some(Msg::InsertNewline),
+        KeyCode::Char('j') => Some(Msg::TextareaKey(key)), // Pass to textarea for newline
         KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
-        KeyCode::Char('a') => Some(Msg::MoveCursorToStart),
-        KeyCode::Char('e') => Some(Msg::MoveCursorToEnd),
-        KeyCode::Char('w') => Some(Msg::DeleteWordBackward),
-        KeyCode::Char('u') => Some(Msg::DeleteToStart),
-        KeyCode::Char('d') => Some(Msg::DeleteForward),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
-        KeyCode::Char('f') => Some(Msg::MoveCursorRight),
-        KeyCode::Char('n') => Some(Msg::MoveCursorDown),
-        KeyCode::Char('h') => Some(Msg::Backspace),
-        KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Msg::InsertNewline),
-        _ => None,
+        KeyCode::Enter => Some(Msg::TextareaKey(key)),
+        _ => Some(Msg::TextareaKey(key)), // Let textarea handle Ctrl+A/E/D/W/U/etc.
     }
 }
 
@@ -111,7 +97,6 @@ fn key_to_onboarding_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
         KeyCode::Enter => Some(Msg::OnboardingNext),
         KeyCode::Esc => Some(Msg::OnboardingBack),
-        // Up/Down navigate items within current step, not steps
         KeyCode::Up => Some(Msg::OnboardingNavigateUp),
         KeyCode::Down => Some(Msg::OnboardingNavigateDown),
         KeyCode::Char(c) => Some(Msg::OnboardingKeyInput(c)),

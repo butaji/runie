@@ -13,11 +13,9 @@ use runie_ai::TokenUsage;
 
 // ─── InputBarViewModel ──────────────────────────────────────────────────────
 pub struct InputBarViewModel {
-    pub lines: Vec<String>,
+    pub textarea: ratatui_textarea::TextArea<'static>,
     pub prompt: String,
     pub right_info: String,
-    pub cursor_line: usize,
-    pub cursor_col: usize,
 }
 
 // ─── StatusBarViewModel ─────────────────────────────────────────────────────
@@ -180,11 +178,9 @@ fn build_message_list_vm(state: &crate::tui::state::RenderState) -> MessageListV
 
 fn build_input_bar_vm(state: &crate::tui::state::RenderState) -> InputBarViewModel {
     InputBarViewModel {
-        lines: state.input_lines.clone(),
+        textarea: state.textarea.clone(),
         prompt: "❯ ".to_string(),
         right_info: state.input_right_info.clone(),
-        cursor_line: state.cursor_row,
-        cursor_col: state.cursor_col,
     }
 }
 

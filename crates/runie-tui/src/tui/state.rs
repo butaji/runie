@@ -5,6 +5,7 @@ use crate::components::SessionTreeNavigator;
 pub use crate::components::onboarding::{Onboarding, OnboardingStep};
 use runie_ai::TokenUsage;
 use runie_core::SlashCommand;
+use crossterm::event::KeyEvent;
 
 #[derive(Clone)]
 pub struct AnimationState {
@@ -112,9 +113,7 @@ impl Default for ScrollState {
 #[derive(Clone)]
 pub struct AppState {
     pub messages: Vec<MessageItem>,
-    pub input_lines: Vec<String>,
-    pub cursor_col: usize,
-    pub cursor_row: usize,
+    pub textarea: ratatui_textarea::TextArea<'static>,
     pub input_right_info: String,
     pub mode: TuiMode,
     pub running: bool,
@@ -138,9 +137,7 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             messages: Vec::new(),
-            input_lines: vec![String::new()],
-            cursor_col: 0,
-            cursor_row: 0,
+            textarea: ratatui_textarea::TextArea::default(),
             input_right_info: String::new(),
             mode: TuiMode::Chat,
             running: true,
@@ -181,22 +178,13 @@ pub enum TuiMode {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
-    // Input (user typing)
-    InsertChar(char),
-    Backspace,
-    DeleteForward,
-    MoveCursorLeft,
-    MoveCursorRight,
-    MoveCursorUp,
-    MoveCursorDown,
-    MoveCursorToStart,
-    MoveCursorToEnd,
-    InsertNewline,
-    DeleteWordBackward,
-    DeleteToStart,
+    // Input (TextArea handles most keys internally)
+    // These variants are no longer used since textarea.input() is called directly
+    // Kept for compatibility but they do nothing
+    Submit,
+    TextareaKey(KeyEvent),
 
     // App
-    Submit,
     Quit,
     ToggleSidebar,
     OpenCommandPalette,
@@ -253,19 +241,8 @@ impl PartialEq for Msg {
     fn eq(&self, other: &Self) -> bool {
         use Msg::*;
         match (self, other) {
-            (InsertChar(a), InsertChar(b)) => a == b,
-            (Backspace, Backspace) => true,
-            (DeleteForward, DeleteForward) => true,
-            (MoveCursorLeft, MoveCursorLeft) => true,
-            (MoveCursorRight, MoveCursorRight) => true,
-            (MoveCursorUp, MoveCursorUp) => true,
-            (MoveCursorDown, MoveCursorDown) => true,
-            (MoveCursorToStart, MoveCursorToStart) => true,
-            (MoveCursorToEnd, MoveCursorToEnd) => true,
-            (InsertNewline, InsertNewline) => true,
-            (DeleteWordBackward, DeleteWordBackward) => true,
-            (DeleteToStart, DeleteToStart) => true,
             (Submit, Submit) => true,
+            (TextareaKey(a), TextareaKey(b)) => a == b,
             (Quit, Quit) => true,
             (ToggleSidebar, ToggleSidebar) => true,
             (OpenCommandPalette, OpenCommandPalette) => true,
@@ -284,10 +261,10 @@ impl PartialEq for Msg {
             (CommandPaletteUp, CommandPaletteUp) => true,
             (CommandPaletteDown, CommandPaletteDown) => true,
             (CommandPaletteConfirm, CommandPaletteConfirm) => true,
-            (AgentEvent(_), AgentEvent(_)) => true, // Compare by variant only
+            (AgentEvent(_), AgentEvent(_)) => true,
             (Tick, Tick) => true,
             (CursorBlink, CursorBlink) => true,
-            (SlashCommand(_), SlashCommand(_)) => true, // Compare by variant only
+            (SlashCommand(_), SlashCommand(_)) => true,
             (ToggleSessionTree, ToggleSessionTree) => true,
             (SessionTreeUp, SessionTreeUp) => true,
             (SessionTreeDown, SessionTreeDown) => true,
@@ -334,9 +311,7 @@ pub enum TuiAction {
 #[derive(Clone)]
 pub struct RenderState {
     pub messages: Vec<MessageItem>,
-    pub input_lines: Vec<String>,
-    pub cursor_col: usize,
-    pub cursor_row: usize,
+    pub textarea: ratatui_textarea::TextArea<'static>,
     pub input_right_info: String,
     pub mode: TuiMode,
     pub running: bool,
@@ -359,9 +334,7 @@ impl RenderState {
     pub fn from(state: &AppState) -> Self {
         Self {
             messages: state.messages.clone(),
-            input_lines: state.input_lines.clone(),
-            cursor_col: state.cursor_col,
-            cursor_row: state.cursor_row,
+            textarea: state.textarea.clone(),
             input_right_info: state.input_right_info.clone(),
             mode: state.mode.clone(),
             running: state.running,
