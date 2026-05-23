@@ -105,7 +105,7 @@ impl MockProvider {
         if lower.contains("test") {
             return "I'll run the tests for you. Let me check what test framework you're using.".to_string();
         }
-        let preview = &text[..text.len().min(50)];
+        let preview: String = text.chars().take(50).collect();
         format!("I received your message: \"{}\". This is a mock response for testing.", preview)
     }
 }
