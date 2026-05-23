@@ -26,11 +26,7 @@ impl WrapCache {
     /// Get wrapped text from cache or compute and store it.
     pub fn get_wrapped(&mut self, text: &str, width: usize) -> Vec<String> {
         let key = (text.to_string(), width);
-        if !self.cache.contains_key(&key) {
-            let result = wrap_text(text, width);
-            self.cache.insert(key.clone(), result);
-        }
-        self.cache.get(&key).unwrap().clone()
+        self.cache.entry(key).or_insert_with(|| wrap_text(text, width)).clone()
     }
 
     /// Clear the cache (call when messages change).

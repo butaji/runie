@@ -38,7 +38,7 @@ impl DiffViewer {
         if cached.is_none() {
             *cached = Some(compute_diff_lines(&self.old_content, &self.new_content));
         }
-        cached.clone().unwrap()
+        cached.as_ref().expect("just populated").clone()
     }
 
     pub fn scroll_up(&mut self) {
