@@ -17,7 +17,6 @@ use crate::{
     theme::ThemeWrapper,
     components::{
         MessageList,
-        InputBar,
         Overlay,
         PermissionModal,
         PermissionAction,
@@ -244,16 +243,22 @@ impl Tui {
     }
 
     fn render_input(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
-        let input_bar = InputBar {
-            prompt: "\u{276F} ".to_string(),
-            lines: state.input_lines.clone(),
-            cursor_line: state.cursor_row.min(state.input_lines.len().saturating_sub(1)),
-            cursor_col: state.cursor_col,
-            mode: crate::components::InputMode::Normal,
-            right_info: state.input_right_info.clone(),
-        };
-        input_bar.render_ref(area, frame.buffer_mut(), theme);
-        frame.set_cursor_position(input_bar.cursor_screen_pos(area));
+        crate::components::input_bar::render::render_input_bar(
+            &state.input_lines,
+            "\u{276F} ",
+            &state.input_right_info,
+            area,
+            frame.buffer_mut(),
+            theme,
+        );
+        let cursor_line = state.cursor_row.min(state.input_lines.len().saturating_sub(1));
+        frame.set_cursor_position(
+            crate::components::input_bar::cursor::cursor_screen_pos_from_fields(
+                cursor_line,
+                state.cursor_col,
+                area,
+            )
+        );
     }
 
     fn render_overlays(frame: &mut ratatui::Frame, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper) {

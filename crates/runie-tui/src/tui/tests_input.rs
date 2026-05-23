@@ -195,34 +195,34 @@ mod tests_input {
     #[test]
     fn test_truncate_ascii() {
         let text = "hello world";
-        assert_eq!(truncate_or_clone(text, 20), "hello world");
-        assert_eq!(truncate_or_clone(text, 8), "hello...");
+        assert_eq!(truncate_or_clone(text, 20).as_ref(), "hello world");
+        assert_eq!(truncate_or_clone(text, 8).as_ref(), "hello...");
     }
 
     #[test]
     fn test_truncate_multibyte() {
         let text = "фдлыовдфлоывдлфоывдл";
         // 20 chars, each 2 bytes. Should not panic.
-        assert_eq!(truncate_or_clone(text, 25), text);
+        assert_eq!(truncate_or_clone(text, 25).as_ref(), text);
         // available=10, take 7 chars + "..." = 10 total
-        assert_eq!(truncate_or_clone(text, 10), "фдлыовд...");
+        assert_eq!(truncate_or_clone(text, 10).as_ref(), "фдлыовд...");
     }
 
     #[test]
     fn test_truncate_emoji() {
         let text = "😀😁😂🤣😃😄😅😆";
         // 8 emoji chars. Should not panic.
-        assert_eq!(truncate_or_clone(text, 10), text);
+        assert_eq!(truncate_or_clone(text, 10).as_ref(), text);
         // available=5, take 2 chars + "..." = 5 total
-        assert_eq!(truncate_or_clone(text, 5), "😀😁...");
+        assert_eq!(truncate_or_clone(text, 5).as_ref(), "😀😁...");
     }
 
     #[test]
     fn test_truncate_mixed() {
         let text = "a❯b😀c";
         // 5 chars. Should not panic.
-        assert_eq!(truncate_or_clone(text, 10), text);
+        assert_eq!(truncate_or_clone(text, 10).as_ref(), text);
         // available=4, take 1 char + "..." = 4 total (saturating_sub)
-        assert_eq!(truncate_or_clone(text, 4), "a...");
+        assert_eq!(truncate_or_clone(text, 4).as_ref(), "a...");
     }
 }
