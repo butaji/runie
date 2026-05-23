@@ -1,4 +1,4 @@
-use crate::tui::state::{AppState, Msg};
+use crate::tui::state::AppState;
 
 /// Convert character index to byte index for String operations.
 pub fn byte_idx(line: &str, char_idx: usize) -> usize {
