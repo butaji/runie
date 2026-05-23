@@ -52,8 +52,8 @@ impl DialogFrame {
         // Draw panel with gradient border and base background
         let mut panel = Panel::new()
             .border_gradient(border_unfocused, accent)
-            .title_color(border_unfocused)
-            .title_center()
+            .title_color(accent)
+            .title_right()
             .bg(bg_base);
 
         if let Some(ref title) = self.title {

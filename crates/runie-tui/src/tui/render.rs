@@ -207,7 +207,6 @@ fn collect_sidebar_data(state: &RenderState) -> (Vec<(usize, String, crate::comp
 }
 
 struct SidebarColors {
-    bg_panel: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_dim: ratatui::style::Color,
     accent_primary: ratatui::style::Color,
@@ -216,7 +215,6 @@ struct SidebarColors {
 
 fn get_sidebar_colors(colors: &ThemeColors) -> SidebarColors {
     SidebarColors {
-        bg_panel: colors.bg_panel,
         text_secondary: colors.text_secondary,
         text_dim: colors.text_dim,
         accent_primary: colors.accent_primary,
@@ -245,15 +243,13 @@ fn calculate_panel_layout(area: Rect) -> PanelLayout {
 }
 
 fn render_agent_list_full(buf: &mut Buffer, colors: &SidebarColors, state: &RenderState, layout: &PanelLayout, plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)], running_jobs: &[&crate::components::status_bar::BackgroundJob], active_count: usize, _tokens: u64, cost: f64) {
-    let bg_panel = colors.bg_panel;
-
     Panel::new()
         .title("Plan")
         .border_gradient(colors.border_unfocused, colors.accent_primary)
         .title_color(colors.accent_primary)
         .title_right()
         .render(layout.plan_rect, buf, |inner, buf| {
-            render_plan_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, colors.accent_primary, plan_steps, state.animation.braille_frame);
+            render_plan_content(inner, buf, colors.text_secondary, colors.text_dim, colors.accent_primary, plan_steps, state.animation.braille_frame);
         });
 
     Panel::new()
@@ -262,7 +258,7 @@ fn render_agent_list_full(buf: &mut Buffer, colors: &SidebarColors, state: &Rend
         .title_color(colors.accent_primary)
         .title_right()
         .render(layout.agents_rect, buf, |inner, buf| {
-            render_agents_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, state.agent_running, running_jobs, active_count, cost);
+            render_agents_content(inner, buf, colors.text_secondary, colors.text_dim, state.agent_running, running_jobs, active_count, cost);
         });
 }
 
@@ -283,7 +279,6 @@ pub fn render_agent_list(area: Rect, buf: &mut Buffer, colors: &ThemeColors, sta
 
 fn render_plan_content(
     inner: Rect, buf: &mut Buffer,
-    bg_panel: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_dim: ratatui::style::Color,
     accent_primary: ratatui::style::Color,
@@ -297,8 +292,8 @@ fn render_plan_content(
 
     if plan_steps.is_empty() {
         let no_plan_line = Line::from(vec![
-            Span::styled(" ", Style::default().bg(bg_panel)),
-            Span::styled("No plan steps", Style::default().fg(text_dim).bg(bg_panel)),
+            Span::styled(" ", Style::default()),
+            Span::styled("No plan steps", Style::default().fg(text_dim)),
         ]);
         buf.set_line(content_x, y, &no_plan_line, inner_width);
         return;
@@ -330,13 +325,13 @@ fn render_plan_content(
         };
 
         let plan_line = Line::from(vec![
-            Span::styled(" ", Style::default().bg(bg_panel)),
-            Span::styled(format!("{}", glyph), Style::default().fg(color).bg(bg_panel)),
+            Span::styled(" ", Style::default()),
+            Span::styled(format!("{}", glyph), Style::default().fg(color)),
             Span::styled(
                 format!(" {}. {}", step, text_truncated),
-                Style::default().fg(color).bg(bg_panel),
+                Style::default().fg(color),
             ),
-            Span::styled(&suffix, Style::default().fg(text_dim).bg(bg_panel)),
+            Span::styled(&suffix, Style::default().fg(text_dim)),
         ]);
         buf.set_line(content_x, y, &plan_line, inner_width);
         y += 1;
@@ -345,7 +340,6 @@ fn render_plan_content(
 
 fn render_agents_content(
     inner: Rect, buf: &mut Buffer,
-    bg_panel: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_dim: ratatui::style::Color,
     agent_running: bool,
@@ -360,8 +354,8 @@ fn render_agents_content(
 
     let agent_status = if agent_running { "● running" } else { "○ idle" };
     let agent_line = Line::from(vec![
-        Span::styled(" ", Style::default().bg(bg_panel)),
-        Span::styled(agent_status, Style::default().fg(text_dim).bg(bg_panel)),
+        Span::styled(" ", Style::default()),
+        Span::styled(agent_status, Style::default().fg(text_dim)),
     ]);
     buf.set_line(content_x, y, &agent_line, inner_width);
     y += 1;
@@ -371,9 +365,9 @@ fn render_agents_content(
             break;
         }
         let job_line = Line::from(vec![
-            Span::styled(" ", Style::default().bg(bg_panel)),
-            Span::styled("⬡ ", Style::default().fg(text_dim).bg(bg_panel)),
-            Span::styled(&job.name, Style::default().fg(text_secondary).bg(bg_panel)),
+            Span::styled(" ", Style::default()),
+            Span::styled("⬡ ", Style::default().fg(text_dim)),
+            Span::styled(&job.name, Style::default().fg(text_secondary)),
         ]);
         buf.set_line(content_x, y, &job_line, inner_width);
         y += 1;
@@ -383,8 +377,8 @@ fn render_agents_content(
         let footer_text = format!("{} active · {}", active_count, format_cost(cost));
         let footer_y = max_y - 1;
         let footer_line = Line::from(vec![
-            Span::styled(" ", Style::default().bg(bg_panel)),
-            Span::styled(&footer_text, Style::default().fg(text_dim).bg(bg_panel)),
+            Span::styled(" ", Style::default()),
+            Span::styled(&footer_text, Style::default().fg(text_dim)),
         ]);
         buf.set_line(content_x, footer_y, &footer_line, inner_width);
     }
