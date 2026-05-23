@@ -1,12 +1,11 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Margin, Rect},
+    layout::Rect,
     prelude::Widget,
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
+    style::Color,
     widgets::Clear,
 };
-use crate::components::gradient_border::render_gradient_border;
+use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
 
 pub struct DialogFrame {
@@ -42,41 +41,30 @@ impl DialogFrame {
     {
         let accent: Color = theme.color("accent.primary").into();
         let text_muted: Color = theme.color("text.muted").into();
+        let border_unfocused: Color = theme.color("border.unfocused").into();
 
         let dialog_area = centered_rect(area, self.width, self.height);
 
         // Clear dialog area
         Clear.render(dialog_area, buf);
 
-        // Draw gradient border
-        render_gradient_border(dialog_area, buf);
+        // Draw panel with gradient border
+        let mut panel = Panel::new()
+            .border_gradient(border_unfocused, accent)
+            .title_color(border_unfocused)
+            .title_center();
 
-        // Draw title centered on top border row
-        if let Some(title) = &self.title {
-            let title_len = title.len() as u16;
-            let title_x = dialog_area.x + (dialog_area.width.saturating_sub(title_len)) / 2;
-            let title_line = Line::from(vec![Span::styled(
-                title.as_str(),
-                Style::default().fg(accent).add_modifier(Modifier::BOLD),
-            )]);
-            buf.set_line(title_x, dialog_area.y, &title_line, title_len);
+        if let Some(ref title) = self.title {
+            panel = panel.title(title.as_str());
         }
 
-        // Draw close hint at bottom right
         if self.show_close_hint {
-            let close_text = "[Esc] close";
-            let close_len = close_text.len() as u16;
-            let close_x = dialog_area.x + dialog_area.width.saturating_sub(close_len) - 1;
-            let close_line = Line::from(vec![Span::styled(
-                close_text,
-                Style::default().fg(text_muted),
-            )]);
-            buf.set_line(close_x, dialog_area.y + dialog_area.height - 1, &close_line, close_len);
+            panel = panel.show_close_hint(text_muted);
         }
 
-        // Inner content area (accounting for 1-char border on each side)
-        let inner = dialog_area.inner(Margin::new(1, 1));
-        render_content(inner, buf);
+        panel.render(dialog_area, buf, |inner, buf| {
+            render_content(inner, buf);
+        });
     }
 }
 

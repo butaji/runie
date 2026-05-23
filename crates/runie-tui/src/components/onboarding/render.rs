@@ -6,7 +6,7 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph},
 };
-use crate::components::DialogFrame;
+use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
 use super::{Onboarding, OnboardingStep};
 
@@ -26,32 +26,49 @@ fn theme_color(key: &str, theme: &ThemeWrapper) -> Color {
     theme.color(key).into()
 }
 
+fn centered_rect(area: Rect, width: u16, height: u16) -> Rect {
+    let x = area.x.saturating_add(area.width.saturating_sub(width) / 2);
+    let y = area.y.saturating_add(area.height.saturating_sub(height) / 2);
+    Rect::new(x, y, width.min(area.width), height.min(area.height))
+}
+
 // ─── Welcome Step ─────────────────────────────────────────────────────────────
 
 fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let inner_h = 12; // logo(7) + gap(1) + title(1) + sub(1) + gap(1) + button(1) + gap(1) + hint(1)
-    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
-        let accent = theme_color("accent.primary", theme);
-        let center_x = inner.x + inner.width / 2;
-        let start_y = inner.y;
+    let dialog_h = inner_h + 4;
+    let dialog_w = 56;
+    let accent = theme_color("accent.primary", theme);
+    let border_unfocused = theme_color("border.unfocused", theme);
 
-        let logo_y = start_y;
-        render_logo(Rect::new(center_x - 3, logo_y, 7, 7), buf, accent);
+    let dialog_area = centered_rect(area, dialog_w, dialog_h);
 
-        let title_y = logo_y + 7 + 1;
-        render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, "runie", theme);
+    Panel::new()
+        .border_gradient(border_unfocused, accent)
+        .title_color(border_unfocused)
+        .title_center()
+        .render(dialog_area, buf, |inner, buf| {
+            let accent = theme_color("accent.primary", theme);
+            let center_x = inner.x + inner.width / 2;
+            let start_y = inner.y;
 
-        let sub_y = title_y + 1;
-        render_subtitle(Rect::new(inner.x, sub_y, inner.width, 1), buf, "AI coding assistant", theme);
+            let logo_y = start_y;
+            render_logo(Rect::new(center_x - 3, logo_y, 7, 7), buf, accent);
 
-        let btn_y = sub_y + 2;
-        let btn_w = 14;
-        let btn_x = center_x.saturating_sub(btn_w / 2);
-        render_button(Rect::new(btn_x, btn_y, btn_w, 1), buf, "Get started", 'g', theme);
+            let title_y = logo_y + 7 + 1;
+            render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, "runie", theme);
 
-        let hint_y = btn_y + 2;
-        render_hint(Rect::new(inner.x, hint_y, inner.width, 1), buf, "Press Enter to start", theme);
-    });
+            let sub_y = title_y + 1;
+            render_subtitle(Rect::new(inner.x, sub_y, inner.width, 1), buf, "AI coding assistant", theme);
+
+            let btn_y = sub_y + 2;
+            let btn_w = 14;
+            let btn_x = center_x.saturating_sub(btn_w / 2);
+            render_button(Rect::new(btn_x, btn_y, btn_w, 1), buf, "Get started", 'g', theme);
+
+            let hint_y = btn_y + 2;
+            render_hint(Rect::new(inner.x, hint_y, inner.width, 1), buf, "Press Enter to start", theme);
+        });
 }
 
 // ─── Provider Select Step ────────────────────────────────────────────────────
@@ -59,67 +76,89 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
 fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let list_h = onboarding.providers.len() as u16;
     let inner_h = 5 + 2 + 1 + 2 + list_h; // logo(5) + gap(2) + title(1) + gap(2) + list(n)
-    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
-        let accent = theme_color("accent.primary", theme);
-        let center_x = inner.x + inner.width / 2;
-        let start_y = inner.y;
+    let dialog_h = inner_h + 4;
+    let dialog_w = 56;
+    let accent = theme_color("accent.primary", theme);
+    let border_unfocused = theme_color("border.unfocused", theme);
 
-        render_small_logo(Rect::new(center_x - 2, start_y, 5, 5), buf, accent);
+    let dialog_area = centered_rect(area, dialog_w, dialog_h);
 
-        let title_y = start_y + 5 + 2;
-        render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose provider", theme);
+    Panel::new()
+        .border_gradient(border_unfocused, accent)
+        .title_color(border_unfocused)
+        .title_center()
+        .render(dialog_area, buf, |inner, buf| {
+            let accent = theme_color("accent.primary", theme);
+            let center_x = inner.x + inner.width / 2;
+            let start_y = inner.y;
 
-        let list_y = title_y + 1 + 2;
-        let items: Vec<&str> = onboarding.providers.iter().map(|p| p.name.as_str()).collect();
-        render_list(Rect::new(inner.x, list_y, inner.width, list_h), buf, &items, onboarding.selected_item, theme);
-    });
+            render_small_logo(Rect::new(center_x - 2, start_y, 5, 5), buf, accent);
+
+            let title_y = start_y + 5 + 2;
+            render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose provider", theme);
+
+            let list_y = title_y + 1 + 2;
+            let items: Vec<&str> = onboarding.providers.iter().map(|p| p.name.as_str()).collect();
+            render_list(Rect::new(inner.x, list_y, inner.width, list_h), buf, &items, onboarding.selected_item, theme);
+        });
 }
 
 // ─── Key Input Step ───────────────────────────────────────────────────────────
 
 fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let inner_h = 1 + 1 + 1 + 1 + 3 + 1; // title(1) + gap(1) + input(1) + underline(1) + gap(3) + hint(1)
-    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
-        let text_primary = theme_color("text.primary", theme);
-        let text_muted = theme_color("text.muted", theme);
-        let success = theme_color("success", theme);
-        let error_color = theme_color("error", theme);
-        let center_x = inner.x + inner.width / 2;
-        let start_y = inner.y;
+    let dialog_h = inner_h + 4;
+    let dialog_w = 56;
+    let accent = theme_color("accent.primary", theme);
+    let border_unfocused = theme_color("border.unfocused", theme);
 
-        let provider_name = onboarding.get_current_provider().map(|p| p.name.as_str()).unwrap_or("AI");
-        let title_y = start_y;
-        render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, &format!("Enter {} API key", provider_name), theme);
+    let dialog_area = centered_rect(area, dialog_w, dialog_h);
 
-        let input_y = title_y + 2;
-        let masked = "•".repeat(onboarding.api_key_input.chars().count().min(35));
-        let display = if masked.is_empty() { String::from(" ") } else { masked };
-        let input_x = center_x.saturating_sub(20);
-        let input_area = Rect::new(input_x, input_y, 40, 1);
-        Paragraph::new(display.as_str())
-            .style(Style::default().fg(text_primary))
-            .render(input_area, buf);
+    Panel::new()
+        .border_gradient(border_unfocused, accent)
+        .title_color(border_unfocused)
+        .title_center()
+        .render(dialog_area, buf, |inner, buf| {
+            let text_primary = theme_color("text.primary", theme);
+            let text_muted = theme_color("text.muted", theme);
+            let success = theme_color("success", theme);
+            let error_color = theme_color("error", theme);
+            let center_x = inner.x + inner.width / 2;
+            let start_y = inner.y;
 
-        let ul_y = input_y + 1;
-        Paragraph::new("─".repeat(40))
-            .style(Style::default().fg(text_muted))
-            .render(Rect::new(input_x, ul_y, 40, 1), buf);
+            let provider_name = onboarding.get_current_provider().map(|p| p.name.as_str()).unwrap_or("AI");
+            let title_y = start_y;
+            render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, &format!("Enter {} API key", provider_name), theme);
 
-        let status_y = input_y + 3;
-        if !onboarding.api_key_input.is_empty() {
-            let (icon, status_text, status_color) = if onboarding.validate_key() {
-                ("✓", "Valid", success)
-            } else {
-                ("✗", "Invalid", error_color)
-            };
-            Paragraph::new(format!("{} {}", icon, status_text))
-                .style(Style::default().fg(status_color))
-                .render(Rect::new(input_x, status_y, 20, 1), buf);
-        }
+            let input_y = title_y + 2;
+            let masked = "•".repeat(onboarding.api_key_input.chars().count().min(35));
+            let display = if masked.is_empty() { String::from(" ") } else { masked };
+            let input_x = center_x.saturating_sub(20);
+            let input_area = Rect::new(input_x, input_y, 40, 1);
+            Paragraph::new(display.as_str())
+                .style(Style::default().fg(text_primary))
+                .render(input_area, buf);
 
-        let hint_y = status_y + 2;
-        render_hint(Rect::new(inner.x, hint_y, inner.width, 1), buf, "Your key stays local", theme);
-    });
+            let ul_y = input_y + 1;
+            Paragraph::new("─".repeat(40))
+                .style(Style::default().fg(text_muted))
+                .render(Rect::new(input_x, ul_y, 40, 1), buf);
+
+            let status_y = input_y + 3;
+            if !onboarding.api_key_input.is_empty() {
+                let (icon, status_text, status_color) = if onboarding.validate_key() {
+                    ("✓", "Valid", success)
+                } else {
+                    ("✗", "Invalid", error_color)
+                };
+                Paragraph::new(format!("{} {}", icon, status_text))
+                    .style(Style::default().fg(status_color))
+                    .render(Rect::new(input_x, status_y, 20, 1), buf);
+            }
+
+            let hint_y = status_y + 2;
+            render_hint(Rect::new(inner.x, hint_y, inner.width, 1), buf, "Your key stays local", theme);
+        });
 }
 
 // ─── Model Select Step ────────────────────────────────────────────────────────
@@ -127,46 +166,68 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
 fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let list_h = onboarding.models.len() as u16;
     let inner_h = 1 + 2 + list_h; // title(1) + gap(2) + list(n)
-    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
-        let start_y = inner.y;
-        let title_y = start_y;
-        render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose model", theme);
+    let dialog_h = inner_h + 4;
+    let dialog_w = 56;
+    let accent = theme_color("accent.primary", theme);
+    let border_unfocused = theme_color("border.unfocused", theme);
 
-        let list_y = title_y + 1 + 2;
-        let items: Vec<String> = onboarding.models.iter().map(|m| m.name.clone()).collect();
-        let descriptions: Vec<String> = onboarding.models.iter().map(|m| m.description.clone()).collect();
-        render_list_with_desc(Rect::new(inner.x, list_y, inner.width, list_h), buf, &items, &descriptions, onboarding.selected_item, theme);
-    });
+    let dialog_area = centered_rect(area, dialog_w, dialog_h);
+
+    Panel::new()
+        .border_gradient(border_unfocused, accent)
+        .title_color(border_unfocused)
+        .title_center()
+        .render(dialog_area, buf, |inner, buf| {
+            let start_y = inner.y;
+            let title_y = start_y;
+            render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose model", theme);
+
+            let list_y = title_y + 1 + 2;
+            let items: Vec<String> = onboarding.models.iter().map(|m| m.name.clone()).collect();
+            let descriptions: Vec<String> = onboarding.models.iter().map(|m| m.description.clone()).collect();
+            render_list_with_desc(Rect::new(inner.x, list_y, inner.width, list_h), buf, &items, &descriptions, onboarding.selected_item, theme);
+        });
 }
 
 // ─── Complete Step ───────────────────────────────────────────────────────────
 
 fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let inner_h = 1 + 1 + 1 + 1; // title(1) + check(1) + summary(1) + hint(1) + gaps
-    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
-        let accent = theme_color("accent.primary", theme);
-        let success = theme_color("success", theme);
-        let start_y = inner.y;
+    let dialog_h = inner_h + 4;
+    let dialog_w = 56;
+    let accent = theme_color("accent.primary", theme);
+    let border_unfocused = theme_color("border.unfocused", theme);
 
-        render_title(Rect::new(inner.x, start_y, inner.width, 1), buf, "Ready to code", theme);
+    let dialog_area = centered_rect(area, dialog_w, dialog_h);
 
-        let check_y = start_y + 2;
-        Paragraph::new("✓")
-            .style(Style::default().fg(success).add_modifier(Modifier::BOLD))
-            .alignment(Alignment::Center)
-            .render(Rect::new(inner.x, check_y, inner.width, 1), buf);
+    Panel::new()
+        .border_gradient(border_unfocused, accent)
+        .title_color(border_unfocused)
+        .title_center()
+        .render(dialog_area, buf, |inner, buf| {
+            let accent = theme_color("accent.primary", theme);
+            let success = theme_color("success", theme);
+            let start_y = inner.y;
 
-        if let (Some(provider), Some(model)) = (onboarding.get_current_provider(), onboarding.get_current_model()) {
-            let summary_y = check_y + 2;
-            render_subtitle(Rect::new(inner.x, summary_y, inner.width, 1), buf, &format!("Using {} · {}", provider.name, model.name), theme);
-        }
+            render_title(Rect::new(inner.x, start_y, inner.width, 1), buf, "Ready to code", theme);
 
-        let hint_y = start_y + 6;
-        Paragraph::new("Enter to start")
-            .style(Style::default().fg(accent))
-            .alignment(Alignment::Center)
-            .render(Rect::new(inner.x, hint_y, inner.width, 1), buf);
-    });
+            let check_y = start_y + 2;
+            Paragraph::new("✓")
+                .style(Style::default().fg(success).add_modifier(Modifier::BOLD))
+                .alignment(Alignment::Center)
+                .render(Rect::new(inner.x, check_y, inner.width, 1), buf);
+
+            if let (Some(provider), Some(model)) = (onboarding.get_current_provider(), onboarding.get_current_model()) {
+                let summary_y = check_y + 2;
+                render_subtitle(Rect::new(inner.x, summary_y, inner.width, 1), buf, &format!("Using {} · {}", provider.name, model.name), theme);
+            }
+
+            let hint_y = start_y + 6;
+            Paragraph::new("Enter to start")
+                .style(Style::default().fg(accent))
+                .alignment(Alignment::Center)
+                .render(Rect::new(inner.x, hint_y, inner.width, 1), buf);
+        });
 }
 
 // ─── Reusable Element Renderers ───────────────────────────────────────────────
@@ -189,8 +250,10 @@ fn render_logo(area: Rect, buf: &mut Buffer, color: Color) {
             if val == 1 {
                 let col_x = area.x + col as u16;
                 if col_x < buf.area.width && row_y < buf.area.height {
-                    buf.cell_mut((col_x, row_y)).unwrap().set_char(dot.chars().next().unwrap());
-                    buf.cell_mut((col_x, row_y)).unwrap().set_style(style);
+                    if let Some(cell) = buf.cell_mut((col_x, row_y)) {
+                        cell.set_char(dot.chars().next().unwrap());
+                        cell.set_style(style);
+                    }
                 }
             }
         }

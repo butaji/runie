@@ -51,11 +51,19 @@ impl Tool for BashTool {
 
         // Block shell metacharacters that enable command injection
         let forbidden_chars = ['|', ';', '&', '>', '<', '(', ')', '`', '$'];
-        for ch in forbidden_chars {
-            if command.contains(ch) {
-                return Err(ToolError::ExecutionFailed(format!(
-                    "Shell metacharacter '{}' detected. Use simple commands only.", ch
-                )));
+        for ch in &forbidden_chars {
+            if command.contains(*ch) {
+                // Allow && (conditional execution) and >&N (stderr/stdout redirects)
+                let is_allowed = match ch {
+                    '&' => command.contains("&&") || command.contains(">&"),
+                    '>' => command.contains(">&"),
+                    _ => false,
+                };
+                if !is_allowed {
+                    return Err(ToolError::ExecutionFailed(format!(
+                        "Shell metacharacter '{}' detected. Use simple commands only.", ch
+                    )));
+                }
             }
         }
 
