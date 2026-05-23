@@ -1,0 +1,14 @@
+[package]
+name = "tui_poc"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "tui_poc"
+path = "src/main.rs"
+
+[dependencies]
+renderer = { path = "../../crates/renderer" }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+taffy = { workspace = true }

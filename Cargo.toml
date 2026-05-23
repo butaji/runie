@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/protocol",
+    "crates/renderer",
+    "crates/host",
+    "crates/app",
+    "crates/tea",
+    "examples/tui_poc",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+ratatui = "0.26"
+taffy = { version = "0.5", features = ["taffy_tree"] }
+crossterm = "0.27"
+tokio = { version = "1", features = ["sync", "rt"] }
+serde = { version = "1", features = ["derive"] }
