@@ -10,8 +10,6 @@ pub use tui::{Tui, TuiConfig, TuiMode, TuiAction, Msg, Cmd, update, event_to_msg
 pub use components::{
     MessageList,
     MessageItem,
-    InputBar,
-    InputMode,
     StatusBar,
     Overlay,
     CodeBlock,

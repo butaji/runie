@@ -5,55 +5,85 @@ use crate::tui::state::{TuiMode, Msg};
 use super::helpers::simulate_key;
 
 #[test]
-fn test_all_ctrl_keys_in_chat_mode() {
-    let test_cases = vec![
-        (KeyCode::Char('c'), KeyModifiers::CONTROL, Msg::Quit, "Ctrl+C"),
-        (KeyCode::Char('q'), KeyModifiers::CONTROL, Msg::Quit, "Ctrl+Q"),
-        (KeyCode::Char('j'), KeyModifiers::CONTROL, Msg::InsertNewline, "Ctrl+J"),
-        (KeyCode::Char('k'), KeyModifiers::CONTROL, Msg::OpenCommandPalette, "Ctrl+K"),
-        (KeyCode::Char('p'), KeyModifiers::CONTROL, Msg::OpenCommandPalette, "Ctrl+P"),
-        (KeyCode::Char('a'), KeyModifiers::CONTROL, Msg::MoveCursorToStart, "Ctrl+A"),
-        (KeyCode::Char('e'), KeyModifiers::CONTROL, Msg::MoveCursorToEnd, "Ctrl+E"),
-        (KeyCode::Char('w'), KeyModifiers::CONTROL, Msg::DeleteWordBackward, "Ctrl+W"),
-        (KeyCode::Char('u'), KeyModifiers::CONTROL, Msg::DeleteToStart, "Ctrl+U"),
-        (KeyCode::Char('d'), KeyModifiers::CONTROL, Msg::DeleteForward, "Ctrl+D"),
-        (KeyCode::Char('b'), KeyModifiers::CONTROL, Msg::ToggleSidebar, "Ctrl+B"),
-        (KeyCode::Char('f'), KeyModifiers::CONTROL, Msg::MoveCursorRight, "Ctrl+F"),
-        (KeyCode::Char('n'), KeyModifiers::CONTROL, Msg::MoveCursorDown, "Ctrl+N"),
-        (KeyCode::Char('h'), KeyModifiers::CONTROL, Msg::Backspace, "Ctrl+H"),
-    ];
-
-    for (code, modifiers, expected_msg, name) in test_cases {
-        let msg = simulate_key(code, modifiers, TuiMode::Chat);
-        assert_eq!(msg, Some(expected_msg), "{} should produce correct Msg", name);
-    }
+fn test_ctrl_c_quits_in_chat_mode() {
+    let msg = simulate_key(KeyCode::Char('c'), KeyModifiers::CONTROL, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::Quit), "Ctrl+C should produce Msg::Quit");
 }
 
 #[test]
-fn test_nav_keys_in_chat_mode() {
-    let test_cases = vec![
-        (KeyCode::Left, Msg::MoveCursorLeft),
-        (KeyCode::Right, Msg::MoveCursorRight),
-        (KeyCode::Up, Msg::MoveCursorUp),
-        (KeyCode::Down, Msg::MoveCursorDown),
-        (KeyCode::PageUp, Msg::ScrollPageUp),
-        (KeyCode::PageDown, Msg::ScrollPageDown),
-        (KeyCode::Backspace, Msg::Backspace),
-        (KeyCode::Enter, Msg::Submit),
-    ];
-
-    for (code, expected_msg) in test_cases {
-        let msg = simulate_key(code, KeyModifiers::NONE, TuiMode::Chat);
-        assert_eq!(msg, Some(expected_msg), "{:?} should produce correct Msg", code);
-    }
+fn test_ctrl_q_quits_in_chat_mode() {
+    let msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::Quit), "Ctrl+Q should produce Msg::Quit");
 }
 
 #[test]
-fn test_character_input_in_chat_mode() {
+fn test_ctrl_j_passes_to_textarea_in_chat_mode() {
+    // Ctrl+J passes to textarea (for newline)
+    let msg = simulate_key(KeyCode::Char('j'), KeyModifiers::CONTROL, TuiMode::Chat);
+    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Ctrl+J should produce TextareaKey");
+}
+
+#[test]
+fn test_ctrl_k_opens_command_palette() {
+    let msg = simulate_key(KeyCode::Char('k'), KeyModifiers::CONTROL, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::OpenCommandPalette), "Ctrl+K should produce Msg::OpenCommandPalette");
+}
+
+#[test]
+fn test_ctrl_p_opens_command_palette() {
+    let msg = simulate_key(KeyCode::Char('p'), KeyModifiers::CONTROL, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::OpenCommandPalette), "Ctrl+P should produce Msg::OpenCommandPalette");
+}
+
+#[test]
+fn test_ctrl_b_toggles_sidebar() {
+    let msg = simulate_key(KeyCode::Char('b'), KeyModifiers::CONTROL, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::ToggleSidebar), "Ctrl+B should produce Msg::ToggleSidebar");
+}
+
+#[test]
+fn test_enter_submits_in_chat_mode() {
+    let msg = simulate_key(KeyCode::Enter, KeyModifiers::NONE, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::Submit), "Enter should produce Msg::Submit");
+}
+
+#[test]
+fn test_page_up_scrolls_in_chat_mode() {
+    let msg = simulate_key(KeyCode::PageUp, KeyModifiers::NONE, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::ScrollPageUp), "PageUp should produce Msg::ScrollPageUp");
+}
+
+#[test]
+fn test_page_down_scrolls_in_chat_mode() {
+    let msg = simulate_key(KeyCode::PageDown, KeyModifiers::NONE, TuiMode::Chat);
+    assert_eq!(msg, Some(Msg::ScrollPageDown), "PageDown should produce Msg::ScrollPageDown");
+}
+
+#[test]
+fn test_character_keys_pass_to_textarea() {
+    // Character input now goes to textarea
     for c in ['a', 'b', 'c', 'x', 'y', 'z', ' ', '1', '@'] {
         let msg = simulate_key(KeyCode::Char(c), KeyModifiers::NONE, TuiMode::Chat);
-        assert_eq!(msg, Some(Msg::InsertChar(c)), "Char '{}' should produce InsertChar", c);
+        assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Char '{}' should produce TextareaKey", c);
     }
+}
+
+#[test]
+fn test_backspace_pass_to_textarea() {
+    let msg = simulate_key(KeyCode::Backspace, KeyModifiers::NONE, TuiMode::Chat);
+    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Backspace should produce TextareaKey");
+}
+
+#[test]
+fn test_arrow_keys_pass_to_textarea() {
+    let msg = simulate_key(KeyCode::Left, KeyModifiers::NONE, TuiMode::Chat);
+    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Left should produce TextareaKey");
+    let msg = simulate_key(KeyCode::Right, KeyModifiers::NONE, TuiMode::Chat);
+    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Right should produce TextareaKey");
+    let msg = simulate_key(KeyCode::Up, KeyModifiers::NONE, TuiMode::Chat);
+    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Up should produce TextareaKey");
+    let msg = simulate_key(KeyCode::Down, KeyModifiers::NONE, TuiMode::Chat);
+    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Down should produce TextareaKey");
 }
 
 #[test]

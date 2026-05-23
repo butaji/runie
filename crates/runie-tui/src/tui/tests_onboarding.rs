@@ -12,9 +12,7 @@ mod tests {
     fn make_onboarding_state() -> AppState {
         AppState {
             messages: vec![],
-            input_lines: vec![String::new()],
-            cursor_col: 0,
-            cursor_row: 0,
+            textarea: ratatui_textarea::TextArea::default(),
             input_right_info: String::new(),
             mode: TuiMode::Onboarding,
             running: true,

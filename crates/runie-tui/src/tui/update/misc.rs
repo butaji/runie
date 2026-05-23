@@ -21,7 +21,7 @@ pub fn handle_anim(state: &mut AppState, msg: &Msg) {
 }
 
 pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
-    let text = state.input_lines.join("\n");
+    let text = state.textarea.lines().join("\n");
     if text.is_empty() {
         return vec![];
     }
@@ -30,8 +30,8 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
         model: Some("You".to_string()),
         timestamp: None,
     });
-    state.input_lines = vec![String::new()];
-    state.cursor_col = 0;
-    state.cursor_row = 0;
+    // Clear textarea
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
     vec![Cmd::SpawnAgent { messages: to_agent_messages(&state.messages) }]
 }

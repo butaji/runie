@@ -24,7 +24,7 @@ pub use diff_viewer::DiffViewer;
 pub use agent_list::{AgentList, AgentItem, AgentStatus};
 pub use top_bar::{TopBarViewModel, TopBarRightItem, render_top_bar};
 pub use message_list::{MessageList, MessageItem};
-pub use input_bar::{InputBar, InputMode};
+pub use input_bar::{INPUT_PROMPT, input_bar_height};
 pub use status_bar::StatusBar;
 pub use permission_modal::{PermissionModal, PermissionAction};
 pub use command_palette::{CommandPalette, PaletteItem, PaletteStep, PaletteCommand};

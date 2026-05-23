@@ -10,5 +10,6 @@ runie-core = { path = "../runie-core" }
 runie-agent = { path = "../runie-agent" }
 runie-ai = { path = "../runie-ai" }
 ratatui = { workspace = true }
+ratatui-textarea = "0.9"
 crossterm = { workspace = true }
 opaline = "0.1"

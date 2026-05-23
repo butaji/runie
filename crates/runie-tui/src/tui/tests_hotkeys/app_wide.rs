@@ -46,7 +46,7 @@ fn test_enter_submits_in_chat() {
     let cmds = update(&mut state, Msg::Submit);
     assert!(!cmds.is_empty(), "Submit with input should produce commands");
     assert_eq!(state.messages.len(), 1, "One message should be added");
-    assert_eq!(state.input_lines, vec![""], "Input should be cleared");
+    assert!(state.textarea.is_empty(), "Input should be cleared");
 }
 
 #[test]

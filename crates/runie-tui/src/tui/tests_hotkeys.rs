@@ -8,7 +8,6 @@
 #![cfg(test)]
 
 mod helpers;
-mod input_box;
 mod app_wide;
 mod regression;
 mod dirty_flag;
@@ -16,7 +15,6 @@ mod mode_specific;
 
 // Re-export all test modules for convenience
 pub use helpers::*;
-pub use input_box::*;
 pub use app_wide::*;
 pub use regression::*;
 pub use dirty_flag::*;

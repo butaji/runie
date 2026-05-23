@@ -20,16 +20,14 @@ pub fn simulate_key(code: crossterm::event::KeyCode, modifiers: crossterm::event
 pub fn make_chat_state_with_input(text: &str) -> crate::tui::state::AppState {
     use crate::tui::state::AppState;
     use crate::tui::state::TuiMode;
-    use crate::tui::update::update;
-    use crate::tui::state::Msg;
+    use ratatui_textarea::TextArea;
 
     let mut state = AppState {
         mode: TuiMode::Chat,
         ..Default::default()
     };
-    for c in text.chars() {
-        update(&mut state, Msg::InsertChar(c));
-    }
+    // Use TextArea::new for simple input
+    state.textarea = TextArea::new(vec![text.to_string()]);
     state
 }
 

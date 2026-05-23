@@ -61,8 +61,11 @@ pub mod tests_hotkeys;
 pub mod tests_statusbar;
 #[cfg(test)]
 pub mod tests_onboarding;
-#[cfg(test)]
-pub mod tests_input;
+// tests_input module was deleted - intentionally commented out
+// #[cfg(test)]
+// pub mod tests_input; // intentionally commented out - module was deleted
+// #[cfg(test)]
+// pub mod tests_input;
 
 pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
@@ -150,10 +153,7 @@ impl Tui {
 
     /// Calculate the height needed for the input bar based on its content
     fn input_bar_height(&self) -> u16 {
-        // Each logical line = 1 visual line (no wrapping)
-        let visual_lines = self.state.input_lines.len().max(1);
-        // 2 for borders + visual lines for content
-        (visual_lines as u16) + 2
+        crate::components::input_bar::input_bar_height(&self.state.textarea)
     }
 
     pub fn render(&mut self) -> io::Result<()> {
@@ -258,22 +258,16 @@ impl Tui {
     }
 
     fn render_input(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
-        crate::components::input_bar::render::render_input_bar(
-            &state.input_lines,
+        let mut textarea = state.textarea.clone();
+        crate::components::input_bar::render_input_bar(
+            &mut textarea,
             "\u{276F} ",
             &state.input_right_info,
             area,
             frame.buffer_mut(),
             theme,
         );
-        let cursor_line = state.cursor_row.min(state.input_lines.len().saturating_sub(1));
-        frame.set_cursor_position(
-            crate::components::input_bar::cursor::cursor_screen_pos_from_fields(
-                cursor_line,
-                state.cursor_col,
-                area,
-            )
-        );
+        // No cursor positioning needed - TextArea widget renders its own styled cursor
     }
 
     fn render_overlays(frame: &mut ratatui::Frame, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
@@ -387,8 +381,17 @@ impl Tui {
     }
 
     fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Option<TuiAction> {
-        // Convert key event to Msg and apply update
+        // Check if key should go to textarea (most keys)
         if let Some(msg) = events::key_to_msg(key, &self.state) {
+            if matches!(msg, Msg::TextareaKey(_)) {
+                // Map crossterm KeyEvent to ratatui-textarea Input
+                let input = key_to_textarea_input(key);
+                self.state.textarea.input(input);
+                self.dirty = true;
+                return None;
+            }
+
+            // For non-textarea keys, go through update
             let cmds = self.update(msg);
             // Process cmds to determine TuiAction
             for cmd in cmds {
@@ -433,5 +436,37 @@ impl Tui {
     pub fn toggle_sidebar(&mut self) {
         self.update(Msg::ToggleSidebar);
     }
+}
+
+/// Convert crossterm KeyEvent to ratatui-textarea Input
+fn key_to_textarea_input(key: crossterm::event::KeyEvent) -> ratatui_textarea::Input {
+    use crossterm::event::KeyCode;
+    use ratatui_textarea::{Input, Key};
+
+    let key_code = match key.code {
+        KeyCode::Char(c) => Key::Char(c),
+        KeyCode::Backspace => Key::Backspace,
+        KeyCode::Enter => Key::Enter,
+        KeyCode::Left => Key::Left,
+        KeyCode::Right => Key::Right,
+        KeyCode::Up => Key::Up,
+        KeyCode::Down => Key::Down,
+        KeyCode::Home => Key::Home,
+        KeyCode::End => Key::End,
+        KeyCode::Delete => Key::Delete,
+        KeyCode::Tab => Key::Tab,
+        KeyCode::Esc => Key::Esc,
+        KeyCode::PageUp => Key::PageUp,
+        KeyCode::PageDown => Key::PageDown,
+        KeyCode::F(n) => Key::F(n),
+        KeyCode::Null => Key::Null,
+        _ => Key::Null,
+    };
+
+    let ctrl = key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
+    let alt = key.modifiers.contains(crossterm::event::KeyModifiers::ALT);
+    let shift = key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT);
+
+    Input { key: key_code, ctrl, alt, shift }
 }
 
