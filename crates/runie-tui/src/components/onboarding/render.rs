@@ -251,7 +251,7 @@ fn render_logo(area: Rect, buf: &mut Buffer, color: Color) {
                 let col_x = area.x + col as u16;
                 if col_x < buf.area.width && row_y < buf.area.height {
                     if let Some(cell) = buf.cell_mut((col_x, row_y)) {
-                        cell.set_char(dot.chars().next().unwrap());
+                        cell.set_char(dot.chars().next().unwrap_or('⠿'));
                         cell.set_style(style);
                     }
                 }
@@ -276,8 +276,10 @@ fn render_small_logo(area: Rect, buf: &mut Buffer, color: Color) {
             if val == 1 {
                 let col_x = area.x + col as u16;
                 if col_x < buf.area.width && row_y < buf.area.height {
-                    buf.cell_mut((col_x, row_y)).unwrap().set_char(dot.chars().next().unwrap());
-                    buf.cell_mut((col_x, row_y)).unwrap().set_style(style);
+                    if let Some(cell) = buf.cell_mut((col_x, row_y)) {
+                        cell.set_char(dot.chars().next().unwrap_or('⠿'));
+                        cell.set_style(style);
+                    }
                 }
             }
         }

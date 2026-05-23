@@ -7,8 +7,7 @@ pub mod palette;
 pub mod slash;
 pub mod tree;
 
-use crate::components::MessageItem;
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd, OnboardingStep};
+use crate::tui::state::{AppState, Msg, Cmd};
 
 pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     let mut cmds = vec![];

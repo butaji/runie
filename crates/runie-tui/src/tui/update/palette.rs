@@ -1,5 +1,4 @@
-use crate::components::MessageItem;
-use crate::tui::state::{AppState, TuiMode, Cmd};
+use crate::tui::state::{AppState, TuiMode};
 
 pub fn open_palette(state: &mut AppState) {
     state.command_palette.open = true;

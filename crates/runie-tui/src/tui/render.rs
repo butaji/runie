@@ -119,7 +119,7 @@ fn render_bg_jobs(area: Rect, buf: &mut Buffer, text_secondary: ratatui::style::
     let running: Vec<_> = jobs.iter().filter(|j| j.status == crate::components::status_bar::JobStatus::Running).collect();
     if running.is_empty() { return; }
     let count = running.len();
-    let latest = running.last().expect("checked non-empty above");
+    let Some(latest) = running.last() else { return; };
     let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let spinner = braille[braille_frame % 10];
     let text = if count == 1 {
