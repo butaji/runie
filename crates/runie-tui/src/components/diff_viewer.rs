@@ -1,10 +1,10 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Widget},
 };
+use crate::components::gradient_border::render_gradient_border;
 use crate::theme::ThemeWrapper;
 
 const MAX_FILE_LINES: usize = 500;
@@ -86,12 +86,20 @@ fn clear_area(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
 }
 
 fn render_border(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, filename: &str) {
-    let border_color: Color = theme.color("border.unfocused").into();
-    let block = Block::default()
-        .title(format!(" Diff: {} ", filename))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(border_color));
-    block.render(area, buf);
+    let accent: Color = theme.color("accent.primary").into();
+
+    // Draw gradient border
+    render_gradient_border(area, buf);
+
+    // Draw title centered on top border row
+    let title = format!(" Diff: {} ", filename);
+    let title_len = title.len() as u16;
+    let title_x = area.x + (area.width.saturating_sub(title_len)) / 2;
+    let title_line = Line::from(vec![Span::styled(
+        title.as_str(),
+        Style::default().fg(accent).add_modifier(Modifier::BOLD),
+    )]);
+    buf.set_line(title_x, area.y, &title_line, title_len);
 }
 
 fn render_title(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, filename: &str) {

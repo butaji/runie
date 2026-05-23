@@ -239,7 +239,7 @@ impl Tui {
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
         MessageList::render_ref(&state.messages, state.scroll.feed_offset, h_areas[0], frame.buffer_mut(), theme, &state.animation, state.agent_running);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
-            render_agent_list(h_areas[1], frame.buffer_mut(), theme);
+            render_agent_list(h_areas[1], frame.buffer_mut(), theme, state);
         }
     }
 
@@ -278,7 +278,6 @@ impl Tui {
     fn render_permission_modal(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper) {
         Self::dim_background(frame, area, theme);
         let modal_area = Self::centered_rect(padded, 50, 12);
-        Self::render_shadow(modal_area, frame.buffer_mut(), theme);
         let modal = PermissionModal::new(
             state.permission_modal.tool.as_deref().unwrap_or(""),
             state.permission_modal.args.as_deref().unwrap_or(""),
@@ -290,13 +289,11 @@ impl Tui {
     fn render_command_palette(frame: &mut ratatui::Frame, _state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
         Self::dim_background(frame, area, theme);
         let palette_area = Self::centered_rect(padded, 70, 20);
-        Self::render_shadow(palette_area, frame.buffer_mut(), theme);
         palette.render_ref(palette_area, frame.buffer_mut(), theme);
     }
 
     fn render_overlay_mode(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
         let overlay_area = Overlay::centered((60, 20), frame.area());
-        Self::render_shadow(overlay_area, frame.buffer_mut(), theme);
         let mut overlay_buf = Buffer::empty(overlay_area);
         Overlay::default().render_ref(overlay_area, &mut overlay_buf, theme);
         Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
@@ -305,7 +302,6 @@ impl Tui {
     fn render_diff_viewer(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         Self::dim_background(frame, area, theme);
         let diff_area = Self::centered_rect(area, 80, 25);
-        Self::render_shadow(diff_area, frame.buffer_mut(), theme);
         if let Some(ref diff) = state.diff_viewer {
             diff.render_ref(diff_area, frame.buffer_mut(), theme);
         }
@@ -314,7 +310,6 @@ impl Tui {
     fn render_session_tree(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         Self::dim_background(frame, area, theme);
         let tree_area = Self::centered_rect(area, 70, 25);
-        Self::render_shadow(tree_area, frame.buffer_mut(), theme);
         state.session_tree.render_ref(tree_area, frame.buffer_mut(), theme);
     }
 
@@ -407,51 +402,6 @@ impl Tui {
 
     pub fn toggle_sidebar(&mut self) {
         self.update(Msg::ToggleSidebar);
-    }
-
-    fn render_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, theme: &ThemeWrapper) {
-        let bg: ratatui::style::Color = theme.color("bg.base").into();
-        let fg: ratatui::style::Color = theme.color("text.dim").into();
-        Self::draw_v_shadow(area, buf, fg, bg);
-        Self::draw_h_shadow(area, buf, fg, bg);
-        Self::draw_corner_shadow(area, buf, fg, bg);
-    }
-
-    fn draw_v_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, fg: ratatui::style::Color, bg: ratatui::style::Color) {
-        let x = area.x + area.width;
-        if x >= buf.area.width { return; }
-        for y in area.y + 1..area.y + area.height + 1 {
-            if y < buf.area.height {
-                if let Some(cell) = buf.cell_mut((x, y)) {
-                    cell.set_char('░');
-                    cell.set_style(Style::default().fg(fg).bg(bg));
-                }
-            }
-        }
-    }
-
-    fn draw_h_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, fg: ratatui::style::Color, bg: ratatui::style::Color) {
-        let y = area.y + area.height;
-        if y >= buf.area.height { return; }
-        for x in area.x + 1..area.x + area.width + 1 {
-            if x < buf.area.width {
-                if let Some(cell) = buf.cell_mut((x, y)) {
-                    cell.set_char('░');
-                    cell.set_style(Style::default().fg(fg).bg(bg));
-                }
-            }
-        }
-    }
-
-    fn draw_corner_shadow(area: Rect, buf: &mut ratatui::buffer::Buffer, fg: ratatui::style::Color, bg: ratatui::style::Color) {
-        let x = area.x + area.width;
-        let y = area.y + area.height;
-        if x < buf.area.width && y < buf.area.height {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_char('▒');
-                cell.set_style(Style::default().fg(fg).bg(bg));
-            }
-        }
     }
 }
 

@@ -14,6 +14,7 @@ pub mod context_panel;
 pub mod session_tree;
 pub mod modal;
 pub mod dialog_frame;
+pub mod gradient_border;
 
 pub use overlay::Overlay;
 pub use code_block::{CodeBlock, CodeLine, LineStatus};
