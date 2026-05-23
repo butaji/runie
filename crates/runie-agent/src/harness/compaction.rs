@@ -2,7 +2,7 @@ use super::types::*;
 use crate::events::*;
 
 pub fn should_compact(
-    messages: &[AgentMessage],
+    _messages: &[AgentMessage],
     settings: &CompactionSettings,
     estimated_tokens: u32,
 ) -> bool {

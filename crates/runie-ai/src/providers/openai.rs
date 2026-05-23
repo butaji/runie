@@ -361,12 +361,14 @@ struct OpenAIStreamChunk {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct StreamChoice {
     delta: Option<Delta>,
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct Delta {
     content: Option<String>,
     role: Option<String>,
@@ -374,6 +376,7 @@ struct Delta {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct ToolCallDelta {
     index: usize,
     id: Option<String>,
@@ -399,6 +402,7 @@ struct Choice {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct MessageResponse {
     role: String,
     content: Option<String>,

@@ -3,7 +3,6 @@ mod render;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Style, Modifier},
 };
 use crate::theme::ThemeWrapper;
 

@@ -140,7 +140,7 @@ fn compute_pane_layout(area: Rect) -> (u16, u16, u16, u16, u16, u16) {
 
 fn render_panes_by_step(
     palette: &CommandPalette,
-    area: Rect,
+    _area: Rect,
     buf: &mut Buffer,
     theme: &ThemeWrapper,
     object_area: Rect,

@@ -40,6 +40,7 @@ mod tests_hotkeys {
     }
 
     /// Helper: create AppState in CommandPalette mode
+    #[allow(dead_code)]
     fn make_palette_state() -> AppState {
         let mut state = AppState::default();
         state.mode = TuiMode::CommandPalette;

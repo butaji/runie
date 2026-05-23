@@ -29,7 +29,7 @@ impl ThemeWrapper {
     }
 }
 
-fn add_core_palettes(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
+fn add_core_palettes(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
     use opaline::OpalineColor;
     b.palette("pepper", OpalineColor::new(0x20, 0x1F, 0x26))
         .palette("cosmic", OpalineColor::new(0x0F, 0x0C, 0x14))
@@ -44,7 +44,7 @@ fn add_core_palettes(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
         .palette("charcoal", OpalineColor::new(0x3A, 0x39, 0x43))
 }
 
-fn add_semantic_tokens(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
+fn add_semantic_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
     use opaline::OpalineColor;
     b.token("bg.base", OpalineColor::new(0x0F, 0x0C, 0x14))
         .token("bg.panel", OpalineColor::new(0x20, 0x1F, 0x26))
@@ -62,7 +62,7 @@ fn add_semantic_tokens(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
         .token("border.focused", OpalineColor::new(0xFF, 0x6B, 0x00))
 }
 
-fn add_feed_tokens(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
+fn add_feed_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
     use opaline::OpalineColor;
     b.token("feed.user.bar", OpalineColor::new(0xFF, 0x6B, 0x00))
         .token("feed.assistant.bar", OpalineColor::new(0x00, 0xF5, 0xD4))
@@ -73,7 +73,7 @@ fn add_feed_tokens(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
         .token("feed.separator", OpalineColor::new(0xBF, 0xBC, 0xC8))
 }
 
-fn add_code_tokens(mut b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
+fn add_code_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
     use opaline::OpalineColor;
     b.token("code.path", OpalineColor::new(0x6B, 0x50, 0xFF))
         .token("code.keyword", OpalineColor::new(0x00, 0xF5, 0xD4))

@@ -1,4 +1,4 @@
-use crate::components::{MessageItem, DiffViewer, CommandPalette};
+use crate::components::{MessageItem, DiffViewer};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::components::SessionTreeNavigator;

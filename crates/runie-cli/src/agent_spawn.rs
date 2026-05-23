@@ -8,6 +8,7 @@ use runie_tools::{create_default_toolkit, Workspace};
 use runie_ai::Provider;
 use runie_ai::providers::{OpenAiProvider, AnthropicProvider};
 
+#[allow(dead_code)]
 pub fn spawn_agent_task(
     messages: Vec<runie_agent::events::AgentMessage>,
     event_tx: mpsc::Sender<AgentEvent>,
@@ -64,6 +65,7 @@ pub fn spawn_agent_task(
     })
 }
 
+#[allow(dead_code)]
 fn create_provider_internal(
     model: &str,
     provider_name: &str,

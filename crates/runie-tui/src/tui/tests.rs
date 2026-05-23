@@ -1,18 +1,15 @@
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
-use crate::components::{
-    AgentList, AgentItem, AgentStatus, MessageItem,
-    ContextPanel, GitChange, GitStatus, SessionTreeNavigator, CommandPalette,
-};
-use crate::theme::ThemeWrapper;
-use crate::tui::update::update;
-use runie_agent::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
-use runie_ai::TokenUsage;
-
-
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tui::state::{AppState, TuiMode, Msg, Cmd, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
+    use crate::components::{
+        AgentList, AgentItem, AgentStatus, MessageItem,
+        ContextPanel, GitChange, GitStatus, SessionTreeNavigator,
+    };
+    use crate::theme::ThemeWrapper;
+    use crate::tui::update::update;
+    use runie_agent::{AgentEvent, AgentMessage, PermissionDecision, ContentPart};
+    use runie_ai::TokenUsage;
 
     #[test]
     fn test_agent_list_has_demo_data() {
