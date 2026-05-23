@@ -314,11 +314,26 @@ impl Tui {
     }
 
     fn dim_background(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
+        // Dim by darkening the base background color
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+        let dim_color = match bg_base {
+            ratatui::style::Color::Rgb(r, g, b) => {
+                ratatui::style::Color::Rgb(
+                    (r as f32 * 0.5).round() as u8,
+                    (g as f32 * 0.5).round() as u8,
+                    (b as f32 * 0.5).round() as u8,
+                )
+            }
+            ratatui::style::Color::Indexed(idx) => {
+                // For indexed colors, darken by using a darker shade
+                ratatui::style::Color::Indexed(idx.saturating_sub(8))
+            }
+            _ => ratatui::style::Color::Black,
+        };
         for y in 0..area.height {
             for x in 0..area.width {
                 if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                    cell.set_style(Style::default().bg(bg_base));
+                    cell.set_style(Style::default().bg(dim_color));
                 }
             }
         }

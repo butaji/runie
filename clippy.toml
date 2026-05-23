@@ -1,8 +1,0 @@
-# Clippy configuration for runie
-# Note: Clippy does NOT support file/function line count limits.
-# Those are enforced by scripts/lint.py (structural linter).
-#
-# This config enables pedantic lints for code quality.
-
-avoid-breaking-exported-api = false
-msrv = "1.80"
