@@ -3,6 +3,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
     text::Line,
+    widgets::{Gauge, Widget},
 };
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
@@ -462,22 +463,14 @@ fn render_tool_running_msg(name: &str, args: &str, duration_ms: u64, area: Rect,
     if duration_ms > 1000 {
         let bar_y = row + 1;
         let bar_x = text_x;
-        if let Some(cell) = buf.cell_mut((bar_x, area.y + bar_y)) {
-            cell.set_char('[');
-            cell.set_style(Style::default().fg(text_secondary));
-        }
-        let progress = ((duration_ms.min(10000) as f32 / 10000.0) * 10.0) as usize;
-        for i in 0..10 {
-            let ch = if i < progress { '▓' } else { '░' };
-            if let Some(cell) = buf.cell_mut((bar_x + 1 + i as u16, area.y + bar_y)) {
-                cell.set_char(ch);
-                cell.set_style(Style::default().fg(text_secondary));
-            }
-        }
-        if let Some(cell) = buf.cell_mut((bar_x + 11, area.y + bar_y)) {
-            cell.set_char(']');
-            cell.set_style(Style::default().fg(text_secondary));
-        }
+        let bar_width = 10u16;
+        let ratio = duration_ms.min(10000) as f64 / 10000.0;
+        let gauge_area = Rect::new(bar_x + 1, area.y + bar_y, bar_width, 1);
+        Gauge::default()
+            .ratio(ratio)
+            .label("")
+            .style(Style::default().fg(text_secondary))
+            .render(gauge_area, buf);
         return 2;
     }
     1

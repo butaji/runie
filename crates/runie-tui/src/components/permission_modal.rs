@@ -3,7 +3,9 @@ use ratatui::{
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
+    widgets::{Block, Clear},
 };
+use ratatui::prelude::Widget;
 use crate::theme::ThemeWrapper;
 use crate::tui::state::Msg;
 use crate::components::modal::Modal;
@@ -73,11 +75,13 @@ impl PermissionModal {
         let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let text_muted: ratatui::style::Color = theme.color("text.muted").into();
         let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
-        let error: ratatui::style::Color = theme.color("error").into();
         let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
 
-        fill_background(area, buf, bg_panel);
-        draw_border(area, buf, border_unfocused, error);
+        Clear.render(area, buf);
+        Block::bordered()
+            .style(Style::default().bg(bg_panel).fg(border_unfocused))
+            .render(area, buf);
+
         render_title(area, buf, &self.title, warning);
         render_tool_info(area, buf, &self.tool_name, &self.tool_args, accent_primary, code_path, text_secondary);
         render_description(area, buf, &self.description, text_secondary);
@@ -127,36 +131,6 @@ impl Modal for PermissionModal {
                 None
             }
             _ => None,
-        }
-    }
-}
-
-fn fill_background(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
-    for y in area.y..area.y + area.height {
-        for x in area.x..area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_style(Style::default().bg(bg_panel));
-            }
-        }
-    }
-}
-
-fn draw_border(area: Rect, buf: &mut Buffer, border_unfocused: ratatui::style::Color, error: ratatui::style::Color) {
-    for x in area.x..area.x + area.width {
-        if let Some(cell) = buf.cell_mut((x, area.y)) {
-            cell.set_symbol("─");
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-        if let Some(cell) = buf.cell_mut((x, area.y + area.height - 1)) {
-            cell.set_symbol("─");
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-    let content_start_y = area.y + 1;
-    for y in content_start_y..area.y + area.height - 1 {
-        if let Some(cell) = buf.cell_mut((area.x, y)) {
-            cell.set_symbol("▌");
-            cell.set_style(Style::default().fg(error));
         }
     }
 }

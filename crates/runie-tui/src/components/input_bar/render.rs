@@ -1,34 +1,28 @@
-use ratatui::{buffer::Buffer, layout::Rect, style::Style, text::{Line, Span}};
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    style::{Style, Color},
+    text::{Line, Span},
+    widgets::{Block, Widget},
+};
 
 use super::{InputBar, StyleHelpers};
 use crate::theme::ThemeWrapper;
 
 pub fn render_ref(input: &InputBar, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let sp = StyleHelpers::new(theme);
-    let border_color: ratatui::style::Color = theme.color("border.unfocused").into();
-    let blue_color: ratatui::style::Color = theme.color("accent.primary").into();
+    let border_color: Color = theme.color("border.unfocused").into();
+    let bg: Color = theme.color("bg.primary").into();
+    let blue_color: Color = theme.color("accent.primary").into();
 
-    render_top_border(area, buf, border_color);
-    render_content_lines(input, area, buf, &sp, border_color, blue_color);
+    let block = Block::bordered()
+        .border_style(Style::default().fg(border_color))
+        .style(Style::default().bg(bg));
+    let inner = block.inner(area);
+    block.render(area, buf);
+
+    render_content_lines(input, inner, buf, &sp, blue_color);
     render_bottom_border(input, area, buf, border_color);
-}
-
-fn render_top_border(area: Rect, buf: &mut Buffer, border_color: ratatui::style::Color) {
-    let style = Style::default().fg(border_color);
-    if let Some(cell) = buf.cell_mut((area.x, area.y)) {
-        cell.set_char('╭');
-        cell.set_style(style);
-    }
-    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y)) {
-        cell.set_char('╮');
-        cell.set_style(style);
-    }
-    for x in 1..area.width.saturating_sub(1) {
-        if let Some(cell) = buf.cell_mut((area.x + x, area.y)) {
-            cell.set_char('─');
-            cell.set_style(style);
-        }
-    }
 }
 
 fn render_content_lines(
@@ -36,24 +30,14 @@ fn render_content_lines(
     area: Rect,
     buf: &mut Buffer,
     sp: &StyleHelpers,
-    border_color: ratatui::style::Color,
-    blue_color: ratatui::style::Color,
+    blue_color: Color,
 ) {
-    let border_style = Style::default().fg(border_color);
     let content_width = area.width.saturating_sub(4) as usize;
 
     for (line_idx, line_text) in input.lines.iter().enumerate() {
-        let y = area.y + 1 + line_idx as u16;
-        if let Some(cell) = buf.cell_mut((area.x, y)) {
-            cell.set_style(border_style);
-            cell.set_char('│');
-        }
-        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, y)) {
-            cell.set_style(border_style);
-            cell.set_char('│');
-        }
+        let y = area.y + line_idx as u16;
+        let x = area.x;
 
-        let x = area.x + 1;
         if line_idx == 0 {
             render_first_content_line(x, y, line_text, buf, sp, content_width, blue_color);
         } else {
@@ -64,11 +48,10 @@ fn render_content_lines(
 
 fn render_first_content_line(
     x: u16, y: u16, line_text: &str, buf: &mut Buffer,
-    sp: &StyleHelpers, content_width: usize, blue_color: ratatui::style::Color,
+    sp: &StyleHelpers, content_width: usize, blue_color: Color,
 ) {
-    let prompt_style = Style::default().fg(blue_color);
     let prompt_line = Line::from(vec![
-        Span::styled("❯", prompt_style),
+        Span::styled("❯", Style::default().fg(blue_color)),
         Span::styled(" ", Style::default()),
     ]);
     buf.set_line(x, y, &prompt_line, 2);
@@ -104,9 +87,8 @@ fn render_bottom_border(
     input: &InputBar,
     area: Rect,
     buf: &mut Buffer,
-    border_color: ratatui::style::Color,
+    border_color: Color,
 ) {
-    let style = Style::default().fg(border_color);
     let bottom_y = area.y + 1 + input.lines.len() as u16;
     let info_text = if input.right_info.is_empty() {
         "model: claude-4"
@@ -118,43 +100,16 @@ fn render_bottom_border(
     let fixed_width = info_len + 5;
     let dashes = inner_width.saturating_sub(fixed_width).max(0);
 
-    if let Some(cell) = buf.cell_mut((area.x, bottom_y)) {
-        cell.set_char('╰');
-        cell.set_style(style);
-    }
-    for i in 0..dashes {
-        let x = area.x + 1 + i;
-        if let Some(cell) = buf.cell_mut((x, bottom_y)) {
-            cell.set_char('─');
-            cell.set_style(style);
-        }
-    }
+    let dash_str = "─".repeat(dashes as usize);
+    let bottom_line = Line::from(vec![
+        Span::styled("╰", Style::default().fg(border_color)),
+        Span::styled(&dash_str, Style::default().fg(border_color)),
+        Span::styled(" ", Style::default().fg(border_color)),
+        Span::styled(info_text, Style::default().fg(border_color)),
+        Span::styled(" ", Style::default().fg(border_color)),
+        Span::styled("─", Style::default().fg(border_color)),
+        Span::styled("╯", Style::default().fg(border_color)),
+    ]);
 
-    let mut x = area.x + 1 + dashes;
-    if let Some(cell) = buf.cell_mut((x, bottom_y)) {
-        cell.set_char(' ');
-        cell.set_style(style);
-    }
-    x += 1;
-    for ch in info_text.chars() {
-        if let Some(cell) = buf.cell_mut((x, bottom_y)) {
-            cell.set_char(ch);
-            cell.set_style(style);
-        }
-        x += 1;
-    }
-    if let Some(cell) = buf.cell_mut((x, bottom_y)) {
-        cell.set_char(' ');
-        cell.set_style(style);
-    }
-    x += 1;
-    if let Some(cell) = buf.cell_mut((x, bottom_y)) {
-        cell.set_char('─');
-        cell.set_style(style);
-    }
-    x += 1;
-    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, bottom_y)) {
-        cell.set_char('╯');
-        cell.set_style(style);
-    }
+    buf.set_line(area.x, bottom_y, &bottom_line, area.width);
 }
