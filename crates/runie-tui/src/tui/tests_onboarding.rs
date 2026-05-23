@@ -1,14 +1,11 @@
-use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
-use crate::tui::update::update;
-use crate::components::onboarding::Onboarding;
-use runie_ai::TokenUsage;
-use crate::components::SessionTreeNavigator;
-
-
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
+    use crate::tui::update::update;
+    use crate::components::onboarding::Onboarding;
+    use runie_ai::TokenUsage;
+    use crate::components::SessionTreeNavigator;
 
     // ─── Onboarding Integration Tests ──────────────────────────────────────────────
 

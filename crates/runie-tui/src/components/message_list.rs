@@ -321,7 +321,7 @@ fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16
     }
 }
 
-fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool) -> u16 {
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool) -> u16 {
     if text.is_empty() {
         let dot = Line::raw("·").style(Style::default().fg(text_muted));
         buf.set_line(margin_x, area.y + row, &dot, area.width - 2);

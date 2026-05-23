@@ -4,11 +4,10 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     buffer::Buffer,
     style::Style,
-    widgets::Widget,
 };
 use crossterm::{
     cursor::{SetCursorStyle, Show},
-    event::{Event, KeyCode, KeyModifiers},
+    event::Event,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -18,25 +17,15 @@ use crate::{
     theme::ThemeWrapper,
     components::{
         MessageList,
-        MessageItem,
         InputBar,
         Overlay,
         PermissionModal,
         PermissionAction,
-        AgentStatus,
-        AgentList,
-        AgentItem,
-        ContextPanel,
-        GitChange,
-        GitStatus,
         CommandPalette,
-        DiffViewer,
-        SessionTreeNavigator,
-        onboarding,
     },
 };
 use crate::components::onboarding::render::render_onboarding;
-use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
+use runie_agent::events::{AgentEvent, PermissionDecision};
 
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
@@ -281,7 +270,7 @@ impl Tui {
         modal.render_ref(modal_area, frame.buffer_mut(), theme);
     }
 
-    fn render_command_palette(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
+    fn render_command_palette(frame: &mut ratatui::Frame, _state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
         Self::dim_background(frame, area, theme);
         let palette_area = Self::centered_rect(padded, 70, 20);
         Self::render_shadow(palette_area, frame.buffer_mut(), theme);

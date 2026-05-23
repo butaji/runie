@@ -391,6 +391,7 @@ impl Provider for AnthropicProvider {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type")]
+#[allow(dead_code)]
 enum AnthropicStreamChunk {
     #[serde(rename = "message_start")]
     MessageStart(MessageStartBlock),
@@ -407,11 +408,13 @@ enum AnthropicStreamChunk {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct MessageStartBlock {
     message: MessageStart,
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct MessageStart {
     id: String,
     #[serde(rename = "type")]
@@ -424,6 +427,7 @@ struct MessageStart {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct ContentBlockStart {
     index: usize,
     #[serde(rename = "type")]
@@ -432,6 +436,7 @@ struct ContentBlockStart {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct ContentBlockDelta {
     index: usize,
     #[serde(rename = "type")]
@@ -442,6 +447,7 @@ struct ContentBlockDelta {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct MessageDelta {
     #[serde(rename = "type")]
     type_: String,
@@ -457,6 +463,7 @@ struct DeltaUsage {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 struct ContentBlock {
     #[serde(rename = "type")]
     type_: String,
@@ -464,6 +471,7 @@ struct ContentBlock {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct AnthropicResponse {
     id: String,
     #[serde(rename = "type")]
@@ -484,6 +492,7 @@ struct ResponseContent {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct ResponseUsage {
     #[serde(rename = "input_tokens")]
     input_tokens: usize,

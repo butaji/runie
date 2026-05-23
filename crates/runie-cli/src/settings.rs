@@ -95,6 +95,7 @@ impl Settings {
     }
 
     /// Merge settings from CLI arguments
+    #[allow(dead_code)]
     pub fn merge_cli(&mut self, cli: &CliSettings) {
         if let Some(ref m) = cli.model {
             self.model = m.clone();
@@ -117,6 +118,7 @@ impl Settings {
     }
 
     /// Validate model against registry
+    #[allow(dead_code)]
     pub fn validate_model(&self) -> bool {
         let registry = ModelRegistry::new();
         registry.get(&self.model).is_some()
@@ -124,6 +126,7 @@ impl Settings {
 }
 
 /// CLI-level settings (only fields that can be set via CLI)
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct CliSettings {
     pub model: Option<String>,

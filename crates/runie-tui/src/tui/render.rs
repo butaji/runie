@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Layout, Rect},
+    layout::Rect,
     buffer::Buffer,
     style::Style,
     text::{Line, Span},
@@ -7,10 +7,7 @@ use ratatui::{
 };
 use crate::theme::ThemeWrapper;
 use crate::tui::state::{TuiMode, TopBarState, RenderState};
-use crate::components::{
-    AgentStatus, AgentList, AgentItem, ContextPanel,
-    GitChange, GitStatus,
-};
+use crate::components::AgentStatus;
 
 // ─── Top Bar ─────────────────────────────────────────────────────────────────
 
@@ -59,7 +56,7 @@ fn build_right_parts(top_bar: &TopBarState, text_secondary: ratatui::style::Colo
 }
 
 pub fn render_top_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    use ratatui::text::{Line, Span};
+    use ratatui::text::Line;
 
     let x = area.x + 1;
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
@@ -172,6 +169,7 @@ pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, them
 
 // ─── Agent List ───────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 fn get_agent_status_style(
     status: &AgentStatus,
     accent_primary: ratatui::style::Color,
@@ -187,6 +185,7 @@ fn get_agent_status_style(
     }
 }
 
+#[allow(dead_code)]
 fn render_agent_item_row(
     area: Rect, buf: &mut Buffer,
     bg_panel: ratatui::style::Color,
@@ -267,11 +266,11 @@ fn render_agent_item_row(
 pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
     let border_color: ratatui::style::Color = theme.color("border.unfocused").into();
-    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let _text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
     let text_dim: ratatui::style::Color = theme.color("text.dim").into();
     let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
-    let success: ratatui::style::Color = theme.color("success").into();
-    let error: ratatui::style::Color = theme.color("error").into();
+    let _success: ratatui::style::Color = theme.color("success").into();
+    let _error: ratatui::style::Color = theme.color("error").into();
 
     if area.width < 4 || area.height < 3 {
         return;

@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Clear, Paragraph, Widget},
+    widgets::{Block, Borders, Paragraph, Widget},
 };
 use crate::theme::ThemeWrapper;
 use super::{Onboarding, OnboardingStep};
@@ -29,35 +29,55 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let accent: Color = theme.color("accent.primary").into();
     let text_muted: Color = theme.color("text.muted").into();
     let bg_base: Color = theme.color("bg.base").into();
-    let fg_dark = bg_base;
     let button_bg = accent;
-    let button_fg = fg_dark;
+    let button_fg = bg_base;
 
     let center_x = area.x + area.width / 2;
     let center_y = area.y + area.height / 2;
 
-    // Logo (Braille dots forming circle) – left side
-    let logo_y = center_y - 3;
-    render_dotted_logo(center_x.saturating_sub(8), logo_y, buf, accent);
+    // Vertically center: logo(7) + gap(1) + title(1) + sub(1) + gap(2) + button(1) + gap(1) + hint(1) + gap(2)
+    // Total content height: 7 + 1 + 1 + 1 + 2 + 1 + 1 + 1 + 2 = 17
+    let content_h: u16 = 17;
+    let start_y = center_y.saturating_sub(content_h / 2);
 
-    // Buttons to the right of logo – stacked vertically
-    let button_x = center_x + 4;
-    let button_y = logo_y;
-    render_button_widget(buf, button_x, button_y, "Get started", 'g', button_bg, button_fg);
-    render_button_widget(buf, button_x, button_y + 2, "Enter", 'e', button_bg, button_fg);
+    // 1. Logo (Braille dots forming circle) – centered
+    let logo_y = start_y;
+    render_dotted_logo(center_x, logo_y, buf, accent);
 
-    // Title and subtitle below logo
-    let title_y = logo_y + 7;
+    // 2. Title "runie" — accent color, bold, centered
+    let title_y = logo_y + 7 + 1; // logo(7) + blank(1)
     let title = Paragraph::new("runie")
         .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center);
     title.render(Rect::new(area.x, title_y, area.width, 1), buf);
 
+    // 3. Subtitle "AI coding assistant" — muted color, centered
     let subtitle_y = title_y + 1;
     let subtitle = Paragraph::new("AI coding assistant")
         .style(Style::default().fg(text_muted))
         .alignment(Alignment::Center);
     subtitle.render(Rect::new(area.x, subtitle_y, area.width, 1), buf);
+
+    // 4. Primary CTA: [Get started] — orange bg, dark text, underlined shortcut
+    let button_y = subtitle_y + 2 + 1; // gap(2) + 1 blank
+    let button_text = "Get started";
+    let button_width = button_text.len() as u16 + 2; // +2 for borders
+    let button_x = center_x.saturating_sub(button_width / 2);
+    render_button_widget(buf, button_x, button_y, button_text, 'g', button_bg, button_fg);
+
+    // 5. Secondary: "Press Enter to start" — muted color
+    let hint_y = button_y + 1 + 1; // button(1) + blank(1)
+    let hint = Paragraph::new("Press Enter to start")
+        .style(Style::default().fg(text_muted))
+        .alignment(Alignment::Center);
+    hint.render(Rect::new(area.x, hint_y, area.width, 1), buf);
+
+    // 6. Keyboard hint at bottom — muted color
+    let keyboard_hint_y = hint_y + 2 + 1; // hint(1) + blank(2) + 1
+    let keyboard_hint = Paragraph::new("↑↓ navigate · Enter select · Esc back")
+        .style(Style::default().fg(text_muted))
+        .alignment(Alignment::Center);
+    keyboard_hint.render(Rect::new(area.x, keyboard_hint_y, area.width, 1), buf);
 }
 
 fn render_dotted_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
@@ -266,7 +286,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
 fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let accent: Color = theme.color("accent.primary").into();
     let text_primary: Color = theme.color("text.primary").into();
-    let text_muted: Color = theme.color("text.muted").into();
+    let _text_muted: Color = theme.color("text.muted").into();
     let text_secondary: Color = theme.color("text.secondary").into();
 
     let center_x = area.x + area.width / 2;

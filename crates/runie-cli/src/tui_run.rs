@@ -12,8 +12,6 @@ use crate::context_loader::ContextLoader;
 use crate::provider_factory::create_provider;
 use crate::agent_spawn::create_agent_tools;
 
-use runie_tui::{Tui, TuiConfig, TuiMode, Onboarding, Msg, Cmd, event_to_msg};
-
 /// Check if user needs onboarding (no provider, model, or API key configured)
 fn needs_onboarding(settings: &Settings) -> bool {
     // No provider configured

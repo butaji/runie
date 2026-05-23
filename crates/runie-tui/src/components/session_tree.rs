@@ -2,10 +2,10 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
-    text::{Line, Span},
+    text::Line,
     widgets::{Block, Borders, Widget},
 };
-use runie_core::session::{MessageNode, Session};
+use runie_core::session::Session;
 use crate::theme::ThemeWrapper;
 
 #[derive(Debug, Clone)]
