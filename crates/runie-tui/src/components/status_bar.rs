@@ -155,7 +155,7 @@ impl StatusBar {
         let running_jobs: Vec<_> = self.background_jobs.iter().filter(|j| j.status == JobStatus::Running).collect();
         if !running_jobs.is_empty() {
             let job_count = running_jobs.len();
-            let latest_job = running_jobs.last().unwrap();
+            let latest_job = running_jobs.last().expect("checked non-empty above");
             let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
             let spinner = braille[braille_frame % 10];
             let jobs_text = if job_count == 1 {

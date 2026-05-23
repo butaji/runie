@@ -5,7 +5,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Clear, Widget},
 };
-use crate::components::gradient_border::render_gradient_border;
+use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
 
 #[derive(Clone)]
@@ -45,11 +45,17 @@ impl Overlay {
 
         let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
         let syntax_phase: ratatui::style::Color = theme.color("accent.secondary").into();
+        let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
 
+        // Clear area first
         Clear.render(area, buf);
 
-        // Draw gradient border
-        render_gradient_border(area, buf);
+        // Draw panel border (without title since we render tabs in that space)
+        Panel::new()
+            .border_gradient(border_unfocused, syntax_phase)
+            .render(area, buf, |_inner, _buf| {
+                // Inner content is rendered separately below
+            });
 
         // Draw title centered on top border row
         let title_len = self.title.len() as u16;

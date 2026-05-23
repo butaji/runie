@@ -1,12 +1,12 @@
 use ratatui::{
     layout::Rect,
     buffer::Buffer,
-    style::{Color, Modifier, Style},
+    style::Style,
     text::{Line, Span},
 };
 use crate::theme::ThemeWrapper;
 use crate::tui::state::{TuiMode, TopBarState, RenderState};
-use crate::components::gradient_border::render_gradient_border;
+use crate::components::panel::Panel;
 
 // ─── Top Bar ─────────────────────────────────────────────────────────────────
 
@@ -119,7 +119,7 @@ fn render_bg_jobs(area: Rect, buf: &mut Buffer, text_secondary: ratatui::style::
     let running: Vec<_> = jobs.iter().filter(|j| j.status == crate::components::status_bar::JobStatus::Running).collect();
     if running.is_empty() { return; }
     let count = running.len();
-    let latest = running.last().unwrap();
+    let latest = running.last().expect("checked non-empty above");
     let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let spinner = braille[braille_frame % 10];
     let text = if count == 1 {
@@ -171,24 +171,6 @@ pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, them
 /// Braille spinner frames
 const BRAILLE_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
-fn render_gradient_panel<F>(area: Rect, buf: &mut Buffer, title: &str, title_color: Color, content_renderer: F)
-where F: FnOnce(Rect, &mut Buffer)
-{
-    if area.width < 4 || area.height < 2 { return; }
-
-    // Draw gradient border
-    render_gradient_border(area, buf);
-
-    // Title centered in top border
-    let title_text = format!(" {} ", title);
-    let title_x = area.x + (area.width.saturating_sub(title_text.len() as u16)) / 2;
-    buf.set_string(title_x, area.y, &title_text, Style::default().fg(title_color).add_modifier(Modifier::BOLD));
-
-    // Content with 1-cell margin
-    let inner = Rect::new(area.x + 1, area.y + 1, area.width - 2, area.height - 2);
-    content_renderer(inner, buf);
-}
-
 /// Format cost as $X.XX (or $X.XX for larger)
 fn format_cost(cost: f64) -> String {
     if cost >= 100.0 {
@@ -229,6 +211,7 @@ struct SidebarColors {
     text_secondary: ratatui::style::Color,
     text_dim: ratatui::style::Color,
     accent_primary: ratatui::style::Color,
+    border_unfocused: ratatui::style::Color,
 }
 
 fn get_sidebar_colors(theme: &ThemeWrapper) -> SidebarColors {
@@ -237,6 +220,7 @@ fn get_sidebar_colors(theme: &ThemeWrapper) -> SidebarColors {
         text_secondary: theme.color("text.secondary").into(),
         text_dim: theme.color("text.dim").into(),
         accent_primary: theme.color("accent.primary").into(),
+        border_unfocused: theme.color("border.unfocused").into(),
     }
 }
 
@@ -260,15 +244,28 @@ fn calculate_panel_layout(area: Rect) -> PanelLayout {
     PanelLayout { plan_rect, agents_rect }
 }
 
-fn render_agent_list_full(_area: Rect, buf: &mut Buffer, colors: &SidebarColors, state: &RenderState, layout: &PanelLayout, plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)], running_jobs: &[&crate::components::status_bar::BackgroundJob], active_count: usize, _tokens: u64, cost: f64) {
+fn render_agent_list_full(buf: &mut Buffer, colors: &SidebarColors, state: &RenderState, layout: &PanelLayout, plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)], running_jobs: &[&crate::components::status_bar::BackgroundJob], active_count: usize, _tokens: u64, cost: f64) {
     let bg_panel = colors.bg_panel;
 
-    render_gradient_panel(layout.plan_rect, buf, "Plan", colors.accent_primary, |inner, buf| {
-        render_plan_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, colors.accent_primary, plan_steps, state.animation.braille_frame);
-    });
-    render_gradient_panel(layout.agents_rect, buf, "Agents", colors.accent_primary, |inner, buf| {
-        render_agents_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, state.agent_running, running_jobs, active_count, cost);
-    });
+    Panel::new()
+        .title("Plan")
+        .border_gradient(colors.border_unfocused, colors.accent_primary)
+        .title_color(colors.accent_primary)
+        .title_right()
+        .bg(bg_panel)
+        .render(layout.plan_rect, buf, |inner, buf| {
+            render_plan_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, colors.accent_primary, plan_steps, state.animation.braille_frame);
+        });
+
+    Panel::new()
+        .title("Agents")
+        .border_gradient(colors.border_unfocused, colors.accent_primary)
+        .title_color(colors.accent_primary)
+        .title_right()
+        .bg(bg_panel)
+        .render(layout.agents_rect, buf, |inner, buf| {
+            render_agents_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, state.agent_running, running_jobs, active_count, cost);
+        });
 }
 
 pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, state: &RenderState) {
@@ -277,22 +274,13 @@ pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, sta
     let colors = get_sidebar_colors(theme);
     let min_height = 9; // minimum for 2 panels with gap
 
-    let bg_panel = colors.bg_panel;
-    for y in area.y..area.y + area.height {
-        for x in area.x..area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_style(Style::default().bg(bg_panel));
-            }
-        }
-    }
-
     if area.height < min_height {
         return;
     }
 
     let (plan_steps, running_jobs, active_count, _tokens, cost) = collect_sidebar_data(state);
     let layout = calculate_panel_layout(area);
-    render_agent_list_full(area, buf, &colors, state, &layout, &plan_steps, &running_jobs, active_count, 0, cost);
+    render_agent_list_full(buf, &colors, state, &layout, &plan_steps, &running_jobs, active_count, 0, cost);
 }
 
 fn render_plan_content(

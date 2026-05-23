@@ -18,8 +18,8 @@ async fn test_agent_end_to_end() {
         max_turns: 3,
     };
 
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let (perm_tx, mut perm_rx) = mpsc::unbounded_channel();
+    let (event_tx, mut event_rx) = mpsc::channel(100);
+    let (perm_tx, mut perm_rx) = mpsc::channel(100);
 
     let messages = vec![AgentMessage {
         role: "user".to_string(),
@@ -94,8 +94,8 @@ async fn test_agent_with_mock_error_simulation() {
         max_turns: 2,
     };
 
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let (_perm_tx, perm_rx) = mpsc::unbounded_channel();
+    let (event_tx, mut event_rx) = mpsc::channel(100);
+    let (_perm_tx, perm_rx) = mpsc::channel(100);
 
     let messages = vec![AgentMessage {
         role: "user".to_string(),
