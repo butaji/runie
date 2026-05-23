@@ -73,9 +73,11 @@ fn render_subsequent_content_line(
     buf.set_line(text_x, y, &text_line, available as u16);
 }
 
-fn truncate_or_clone(text: &str, available: usize) -> String {
-    if text.len() > available {
-        format!("{}...", &text[..available.saturating_sub(3)])
+pub fn truncate_or_clone(text: &str, available: usize) -> String {
+    let char_count = text.chars().count();
+    if char_count > available {
+        let truncated: String = text.chars().take(available.saturating_sub(3)).collect();
+        format!("{}...", truncated)
     } else {
         text.to_string()
     }
@@ -93,7 +95,7 @@ fn render_bottom_border(
     } else {
         &input.right_info
     };
-    let info_len = info_text.len() as u16;
+    let info_len = info_text.chars().count() as u16;
     let inner_width = area.width.saturating_sub(2);
     let fixed_width = info_len + 5;
     let dashes = inner_width.saturating_sub(fixed_width).max(0);

@@ -187,4 +187,42 @@ mod tests_input {
         assert_eq!(state.input_lines[0], "");
         assert_eq!(state.cursor_col, 0);
     }
+
+    // ─── Render-side truncation tests ───────────────────────────────────────────
+
+    use crate::components::input_bar::render::truncate_or_clone;
+
+    #[test]
+    fn test_truncate_ascii() {
+        let text = "hello world";
+        assert_eq!(truncate_or_clone(text, 20), "hello world");
+        assert_eq!(truncate_or_clone(text, 8), "hello...");
+    }
+
+    #[test]
+    fn test_truncate_multibyte() {
+        let text = "фдлыовдфлоывдлфоывдл";
+        // 20 chars, each 2 bytes. Should not panic.
+        assert_eq!(truncate_or_clone(text, 25), text);
+        // available=10, take 7 chars + "..." = 10 total
+        assert_eq!(truncate_or_clone(text, 10), "фдлыовд...");
+    }
+
+    #[test]
+    fn test_truncate_emoji() {
+        let text = "😀😁😂🤣😃😄😅😆";
+        // 8 emoji chars. Should not panic.
+        assert_eq!(truncate_or_clone(text, 10), text);
+        // available=5, take 2 chars + "..." = 5 total
+        assert_eq!(truncate_or_clone(text, 5), "😀😁...");
+    }
+
+    #[test]
+    fn test_truncate_mixed() {
+        let text = "a❯b😀c";
+        // 5 chars. Should not panic.
+        assert_eq!(truncate_or_clone(text, 10), text);
+        // available=4, take 1 char + "..." = 4 total (saturating_sub)
+        assert_eq!(truncate_or_clone(text, 4), "a...");
+    }
 }

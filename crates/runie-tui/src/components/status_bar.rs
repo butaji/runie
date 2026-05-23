@@ -163,7 +163,7 @@ impl StatusBar {
             } else {
                 format!("⬡ {} jobs │ {} {}", job_count, spinner, latest_job.name)
             };
-            let jobs_width = jobs_text.len() as u16;
+            let jobs_width = jobs_text.chars().count() as u16;
             let jobs_x = area.x + area.width - jobs_width - 1;
             let line = Line::raw(jobs_text).style(Style::default().fg(text_secondary));
             buf.set_line(jobs_x, area.y, &line, jobs_width);

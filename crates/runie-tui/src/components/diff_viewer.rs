@@ -146,10 +146,11 @@ fn render_diff_line(
         cell.set_style(Style::default().fg(color));
     }
     let max_text_width = (area.width - 4) as usize;
-    let display_text = if text.len() > max_text_width {
-        &text[..max_text_width]
+    let display_text = if text.chars().count() > max_text_width {
+        let truncated: String = text.chars().take(max_text_width).collect();
+        truncated
     } else {
-        text
+        text.to_string()
     };
     let content_span = Span::styled(format!(" {}", display_text), Style::default().fg(color));
     let line = Line::from(vec![content_span]);

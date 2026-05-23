@@ -92,7 +92,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
         render_title(Rect::new(inner.x, title_y, inner.width, 1), buf, &format!("Enter {} API key", provider_name), theme);
 
         let input_y = title_y + 2;
-        let masked = "•".repeat(onboarding.api_key_input.len().min(35));
+        let masked = "•".repeat(onboarding.api_key_input.chars().count().min(35));
         let display = if masked.is_empty() { String::from(" ") } else { masked };
         let input_x = center_x.saturating_sub(20);
         let input_area = Rect::new(input_x, input_y, 40, 1);
@@ -297,7 +297,12 @@ fn render_list_with_desc(area: Rect, buf: &mut Buffer, items: &[String], descrip
         let indicator = if is_selected { "▸ " } else { "  " };
         let indicator_style = if is_selected { Style::default().fg(accent) } else { Style::default().fg(text_muted) };
         let name_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
-        let desc_truncated = if desc.len() > max_desc_len { format!("{}...", &desc[..max_desc_len - 3]) } else { desc.clone() };
+        let desc_truncated = if desc.chars().count() > max_desc_len {
+            let truncated: String = desc.chars().take(max_desc_len - 3).collect();
+            format!("{}...", truncated)
+        } else {
+            desc.clone()
+        };
         let desc_style = if is_selected { Style::default().fg(accent) } else { Style::default().fg(text_secondary) };
         let line = Line::from(vec![Span::styled(indicator, indicator_style), Span::styled(item.as_str(), name_style), Span::raw(" "), Span::styled(&desc_truncated, desc_style)]);
         Paragraph::new(line).render(Rect::new(area.x, row_y, area.width, 1), buf);
