@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -17,6 +18,7 @@ pub struct DiffViewer {
     pub new_content: String,
     pub visible: bool,
     pub scroll_offset: usize,
+    cached_diff: RefCell<Option<Vec<DiffLine>>>,
 }
 
 impl DiffViewer {
@@ -27,34 +29,16 @@ impl DiffViewer {
             new_content: new,
             visible: true,
             scroll_offset: 0,
+            cached_diff: RefCell::new(None),
         }
     }
 
     pub fn compute_diff(&self) -> Vec<DiffLine> {
-        let old_lines: Vec<&str> = self.old_content.lines().collect();
-        let new_lines: Vec<&str> = self.new_content.lines().collect();
-        let max_lines = old_lines.len().max(new_lines.len()).min(MAX_FILE_LINES);
-        let mut diff = Vec::new();
-
-        for i in 0..max_lines {
-            match (old_lines.get(i), new_lines.get(i)) {
-                (Some(old), Some(new)) if old == new => {
-                    diff.push(DiffLine::Context(old.to_string()));
-                }
-                (Some(old), Some(new)) => {
-                    diff.push(DiffLine::Removed(old.to_string()));
-                    diff.push(DiffLine::Added(new.to_string()));
-                }
-                (Some(old), None) => {
-                    diff.push(DiffLine::Removed(old.to_string()));
-                }
-                (None, Some(new)) => {
-                    diff.push(DiffLine::Added(new.to_string()));
-                }
-                (None, None) => break,
-            }
+        let mut cached = self.cached_diff.borrow_mut();
+        if cached.is_none() {
+            *cached = Some(compute_diff_lines(&self.old_content, &self.new_content));
         }
-        diff
+        cached.clone().unwrap()
     }
 
     pub fn scroll_up(&mut self) {
@@ -63,6 +47,16 @@ impl DiffViewer {
 
     pub fn scroll_down(&mut self) {
         self.scroll_offset += 1;
+    }
+
+    pub fn set_old_content(&mut self, content: String) {
+        self.old_content = content;
+        self.cached_diff = RefCell::new(None);
+    }
+
+    pub fn set_new_content(&mut self, content: String) {
+        self.new_content = content;
+        self.cached_diff = RefCell::new(None);
     }
 
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
@@ -76,6 +70,33 @@ impl DiffViewer {
         render_diff_lines(area, buf, theme, &self.compute_diff(), self.scroll_offset);
         render_footer(area, buf, theme);
     }
+}
+
+fn compute_diff_lines(old_content: &str, new_content: &str) -> Vec<DiffLine> {
+    let old_lines: Vec<&str> = old_content.lines().collect();
+    let new_lines: Vec<&str> = new_content.lines().collect();
+    let max_lines = old_lines.len().max(new_lines.len()).min(MAX_FILE_LINES);
+    let mut diff = Vec::new();
+
+    for i in 0..max_lines {
+        match (old_lines.get(i), new_lines.get(i)) {
+            (Some(old), Some(new)) if old == new => {
+                diff.push(DiffLine::Context(old.to_string()));
+            }
+            (Some(old), Some(new)) => {
+                diff.push(DiffLine::Removed(old.to_string()));
+                diff.push(DiffLine::Added(new.to_string()));
+            }
+            (Some(old), None) => {
+                diff.push(DiffLine::Removed(old.to_string()));
+            }
+            (None, Some(new)) => {
+                diff.push(DiffLine::Added(new.to_string()));
+            }
+            (None, None) => break,
+        }
+    }
+    diff
 }
 
 fn clear_area(area: Rect, buf: &mut Buffer, bg_panel: Color) {

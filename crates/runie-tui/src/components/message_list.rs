@@ -37,6 +37,7 @@ impl MessageList {
         let mut prev_msg_type: Option<&str> = None;
 
         let most_recent_spinner = render::find_most_recent_spinner_index(messages);
+        let mut wrap_cache = render::WrapCache::new();
 
         for (idx, msg) in messages.iter().skip(scroll_offset).enumerate() {
             if row >= max_rows { break; }
@@ -54,7 +55,7 @@ impl MessageList {
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
                 success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-                animation,
+                animation, &mut wrap_cache,
             );
             row += rendered;
         }
