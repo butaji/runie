@@ -8,7 +8,6 @@ pub mod tui;
 pub use theme::{ThemeWrapper, ColorPalette, OpalineColor};
 pub use tui::{Tui, TuiConfig, TuiMode, TuiAction, Msg, Cmd, update, event_to_msg, Onboarding, AppState};
 pub use components::{
-    TopBar,
     MessageList,
     MessageItem,
     InputBar,

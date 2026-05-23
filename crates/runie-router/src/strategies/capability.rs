@@ -33,7 +33,7 @@ impl Router for CapabilityRouter {
         candidates.sort_by(|a, b| {
             let score_a = a.capabilities.len() as f32 * a.reliability_score;
             let score_b = b.capabilities.len() as f32 * b.reliability_score;
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b.total_cmp(&score_a)
         });
 
         Ok(candidates[0].name.clone())

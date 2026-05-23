@@ -25,6 +25,8 @@ use crate::{
     },
 };
 use crate::components::onboarding::render::render_onboarding;
+use crate::components::render_top_bar;
+use crate::tui::view_models::ViewModels;
 use runie_agent::events::{AgentEvent, PermissionDecision};
 
 pub struct TuiConfig {
@@ -50,16 +52,23 @@ pub mod state;
 pub mod update;
 pub mod render;
 pub mod events;
+pub mod view_models;
+#[cfg(test)]
 pub mod tests;
+#[cfg(test)]
 pub mod tests_hotkeys;
+#[cfg(test)]
 pub mod tests_statusbar;
+#[cfg(test)]
 pub mod tests_onboarding;
+#[cfg(test)]
 pub mod tests_input;
 
 pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
 pub use events::event_to_msg;
-use render::{render_top_bar, render_status_bar, render_agent_list};
+use render::{render_status_bar, render_agent_list};
+
 
 pub struct Tui {
     pub config: TuiConfig,
@@ -73,18 +82,22 @@ pub struct Tui {
 
 impl Tui {
     /// Install a panic hook that restores the terminal before printing the panic.
-    /// This ensures panic messages are visible even when the terminal is in raw mode.
+    /// Uses std::sync::Once to ensure it only runs once even if Tui::new is called multiple times.
     pub fn install_panic_hook() {
-        let original_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |info| {
-            // Best-effort terminal cleanup — ignore errors since we're already panicking
-            let _ = disable_raw_mode();
-            let _ = stdout().execute(LeaveAlternateScreen);
-            let _ = stdout().execute(Show);
-            let _ = stdout().execute(SetCursorStyle::DefaultUserShape);
-            // Now run the default hook which prints the panic + backtrace
-            original_hook(info);
-        }));
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        INIT.call_once(|| {
+            let original_hook = std::panic::take_hook();
+            std::panic::set_hook(Box::new(move |info| {
+                // Best-effort terminal cleanup — ignore errors since we're already panicking
+                let _ = disable_raw_mode();
+                let _ = stdout().execute(LeaveAlternateScreen);
+                let _ = stdout().execute(Show);
+                let _ = stdout().execute(SetCursorStyle::DefaultUserShape);
+                // Now run the default hook which prints the panic + backtrace
+                original_hook(info);
+            }));
+        });
     }
 
     pub fn new(config: TuiConfig) -> io::Result<Self> {
@@ -166,18 +179,22 @@ impl Tui {
         let theme_colors = ThemeColors::from(&self.config.theme);
         let render_state = RenderState::from(&self.state);
         let palette = self.command_palette.clone();
+        
+        // Build all ViewModels from render state (Elm/TEA: Model -> ViewModel)
+        let view_models = ViewModels::from_render_state(&render_state, &palette);
 
         self.terminal.draw(|frame| {
             let theme = &theme;
             let theme_colors = &theme_colors;
             let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
             let state = &render_state;
+            let vms = &view_models;
             let is_onboarding = matches!(state.mode, TuiMode::Onboarding);
 
             if is_onboarding {
-                Self::render_onboarding_mode(frame, area, state, main_areas, show_status_bar, theme, theme_colors);
+                Self::render_onboarding_mode(frame, area, state, vms, main_areas, show_status_bar, theme, theme_colors);
             } else {
-                Self::render_normal_mode(frame, area, state, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme, theme_colors);
+                Self::render_normal_mode(frame, area, state, vms, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme, theme_colors);
             }
         })?;
         Ok(())
@@ -189,12 +206,12 @@ impl Tui {
             .render(area, frame.buffer_mut());
     }
 
-    fn render_onboarding_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_onboarding_mode(frame: &mut ratatui::Frame, area: Rect, _state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::clear_background(frame, area, theme_colors.bg_base);
         if show_status_bar {
-            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme_colors, state.animation.braille_frame);
+            render_status_bar(&vms.status_bar, main_areas[3], frame.buffer_mut(), theme_colors);
         }
-        if let Some(ref onboarding) = state.onboarding {
+        if let Some(ref onboarding) = _state.onboarding {
             let onboarding_area = Rect {
                 x: area.x,
                 y: area.y,
@@ -205,22 +222,22 @@ impl Tui {
         }
     }
 
-    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::clear_background(frame, area, theme_colors.bg_base);
         if show_top_bar {
-            render_top_bar(state, main_areas[0], frame.buffer_mut(), theme_colors);
+            render_top_bar(&vms.top_bar, main_areas[0], frame.buffer_mut(), theme_colors);
         }
-        Self::render_content(frame, state, show_sidebar, main_areas[1], theme, theme_colors);
+        Self::render_content(frame, state, vms, show_sidebar, main_areas[1], theme, theme_colors);
         Self::render_input(frame, state, main_areas[2], theme);
         if show_status_bar {
-            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme_colors, state.animation.braille_frame);
+            render_status_bar(&vms.status_bar, main_areas[3], frame.buffer_mut(), theme_colors);
         }
         Self::render_overlays(frame, state, palette, padded, area, theme, theme_colors);
     }
 
     fn layout_main(padded: Rect, show_top: bool, show_status: bool, input_h: u16) -> [Rect; 4] {
         let constraints = [
-            if show_top { Constraint::Length(1) } else { Constraint::Length(0) },
+            if show_top { Constraint::Length(2) } else { Constraint::Length(0) },
             Constraint::Min(1),
             Constraint::Length(input_h),
             if show_status { Constraint::Length(1) } else { Constraint::Length(0) },
@@ -228,15 +245,15 @@ impl Tui {
         Layout::vertical(constraints).areas(padded)
     }
 
-    fn render_content(frame: &mut ratatui::Frame, state: &RenderState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_content(frame: &mut ratatui::Frame, _state: &RenderState, vms: &ViewModels, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         let mut h_constraints = vec![Constraint::Min(20)];
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
         }
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
-        MessageList::render_ref(&state.messages, state.scroll.feed_offset, h_areas[0], frame.buffer_mut(), theme, &state.animation, state.agent_running);
+        MessageList::render_ref(&vms.message_list, h_areas[0], frame.buffer_mut(), theme);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
-            render_agent_list(h_areas[1], frame.buffer_mut(), theme_colors, state);
+            render_agent_list(&vms.agent_list, h_areas[1], frame.buffer_mut(), theme_colors);
         }
     }
 

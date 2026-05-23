@@ -107,9 +107,10 @@ fn clear_area(area: Rect, buf: &mut Buffer, bg_panel: Color) {
 
 fn render_border(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, filename: &str) {
     let accent: Color = theme.color("accent.primary").into();
+    let border: Color = theme.color("border.unfocused").into();
 
     // Draw gradient border
-    render_gradient_border(area, buf);
+    render_gradient_border(area, buf, border, accent);
 
     // Draw title centered on top border row
     let title = format!(" Diff: {} ", filename);

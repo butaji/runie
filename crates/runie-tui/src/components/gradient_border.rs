@@ -4,30 +4,25 @@ use ratatui::{
     style::{Color, Style},
 };
 
-/// Colors for gradient: left gray, right orange
-const GRAY: (u8, u8, u8) = (128, 128, 128);
-const ORANGE: (u8, u8, u8) = (255, 140, 0);
-
 /// Draw a horizontal gradient border around an area.
-/// Left side = gray, right side = orange, gradient in between.
 /// Uses rounded corner chars: ╭─╮│╰─╯
-pub fn render_gradient_border(area: Rect, buf: &mut Buffer) {
+pub fn render_gradient_border(area: Rect, buf: &mut Buffer, start_color: Color, end_color: Color) {
     if area.width < 2 || area.height < 2 {
         return;
     }
-    render_top_border(area, buf);
-    render_bottom_border(area, buf);
-    render_side_borders(area, buf);
+    render_top_border(area, buf, start_color, end_color);
+    render_bottom_border(area, buf, start_color, end_color);
+    render_side_borders(area, buf, start_color, end_color);
 }
 
-fn render_top_border(area: Rect, buf: &mut Buffer) {
+fn render_top_border(area: Rect, buf: &mut Buffer, start_color: Color, end_color: Color) {
     let left = area.x;
     let right = area.x + area.width - 1;
     let top = area.y;
 
     for x in left..=right {
         let t = (x - left) as f32 / (area.width.saturating_sub(1)).max(1) as f32;
-        let color = interpolate_color(GRAY, ORANGE, t);
+        let color = interpolate_color(start_color, end_color, t);
         let ch = match x {
             _ if x == left => '╭',
             _ if x == right => '╮',
@@ -40,14 +35,14 @@ fn render_top_border(area: Rect, buf: &mut Buffer) {
     }
 }
 
-fn render_bottom_border(area: Rect, buf: &mut Buffer) {
+fn render_bottom_border(area: Rect, buf: &mut Buffer, start_color: Color, end_color: Color) {
     let left = area.x;
     let right = area.x + area.width - 1;
     let bottom = area.y + area.height - 1;
 
     for x in left..=right {
         let t = (x - left) as f32 / (area.width.saturating_sub(1)).max(1) as f32;
-        let color = interpolate_color(GRAY, ORANGE, t);
+        let color = interpolate_color(start_color, end_color, t);
         let ch = match x {
             _ if x == left => '╰',
             _ if x == right => '╯',
@@ -60,30 +55,39 @@ fn render_bottom_border(area: Rect, buf: &mut Buffer) {
     }
 }
 
-fn render_side_borders(area: Rect, buf: &mut Buffer) {
+fn render_side_borders(area: Rect, buf: &mut Buffer, start_color: Color, end_color: Color) {
     let left = area.x;
     let right = area.x + area.width - 1;
     let top = area.y;
     let bottom = area.y + area.height - 1;
 
     for y in (top + 1)..bottom {
-        // Left border - gray
+        // Left border - start color
         if let Some(cell) = buf.cell_mut((left, y)) {
             cell.set_char('│');
-            cell.set_style(Style::default().fg(Color::Rgb(GRAY.0, GRAY.1, GRAY.2)));
+            cell.set_style(Style::default().fg(start_color));
         }
-        // Right border - orange
+        // Right border - end color
         if let Some(cell) = buf.cell_mut((right, y)) {
             cell.set_char('│');
-            cell.set_style(Style::default().fg(Color::Rgb(ORANGE.0, ORANGE.1, ORANGE.2)));
+            cell.set_style(Style::default().fg(end_color));
         }
     }
 }
 
-fn interpolate_color(from: (u8, u8, u8), to: (u8, u8, u8), t: f32) -> Color {
+fn interpolate_color(from: Color, to: Color, t: f32) -> Color {
     let t = t.clamp(0.0, 1.0);
-    let r = (from.0 as f32 + (to.0 as f32 - from.0 as f32) * t) as u8;
-    let g = (from.1 as f32 + (to.1 as f32 - from.1 as f32) * t) as u8;
-    let b = (from.2 as f32 + (to.2 as f32 - from.2 as f32) * t) as u8;
-    Color::Rgb(r, g, b)
+    let (fr, fg, fb) = match from {
+        Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
+        _ => (0.0, 0.0, 0.0),
+    };
+    let (tr, tg, tb) = match to {
+        Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
+        _ => (255.0, 255.0, 255.0),
+    };
+    Color::Rgb(
+        (fr + (tr - fr) * t) as u8,
+        (fg + (tg - fg) * t) as u8,
+        (fb + (tb - fb) * t) as u8,
+    )
 }

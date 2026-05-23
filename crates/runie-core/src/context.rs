@@ -11,10 +11,23 @@ pub struct Context {
     pub temperature: f32,
 }
 
+impl Context {
+    pub fn new() -> Self {
+        Self {
+            session: Session::new(uuid::Uuid::new_v4().to_string()),
+            working_memory: WorkingMemory::default(),
+            system_prompt: String::new(),
+            tool_schemas: Vec::new(),
+            max_tokens: 8192,
+            temperature: 0.7,
+        }
+    }
+}
+
 impl Default for Context {
     fn default() -> Self {
         Self {
-            session: Session::new(uuid::Uuid::new_v4().to_string()),
+            session: Session::new(String::new()),
             working_memory: WorkingMemory::default(),
             system_prompt: String::new(),
             tool_schemas: Vec::new(),

@@ -34,6 +34,9 @@ pub struct TopBarState {
     pub checks_total: Option<usize>,
     pub percentage: Option<f32>,
     pub agent_count: Option<usize>,
+    pub context_badges: Vec<String>,
+    pub context_pct: Option<f32>,
+    pub context_bar_pct: Option<f32>,
 }
 
 impl Default for TopBarState {
@@ -46,6 +49,9 @@ impl Default for TopBarState {
             checks_total: None,
             percentage: None,
             agent_count: None,
+            context_badges: Vec::new(),
+            context_pct: None,
+            context_bar_pct: None,
         }
     }
 }

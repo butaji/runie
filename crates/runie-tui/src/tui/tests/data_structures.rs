@@ -5,6 +5,7 @@ use crate::components::{
     GitChange, GitStatus,
 };
 use crate::theme::ThemeWrapper;
+use crate::tui::state::TopBarState;
 
 #[test]
 fn test_agent_list_has_demo_data() {
@@ -88,4 +89,27 @@ fn test_git_status_variants() {
     assert_eq!(GitStatus::Added, GitStatus::Added);
     assert_eq!(GitStatus::Deleted, GitStatus::Deleted);
     assert_eq!(GitStatus::Untracked, GitStatus::Untracked);
+}
+
+#[test]
+fn test_top_bar_with_context_fields() {
+    let top_bar = TopBarState {
+        repo: "runie".to_string(),
+        branch: "master".to_string(),
+        path: "path/to/the/folder".to_string(),
+        checks_passed: Some(4),
+        checks_total: Some(4),
+        percentage: Some(4.5),
+        agent_count: Some(1),
+        context_badges: Vec::new(),
+        context_pct: None,
+        context_bar_pct: None,
+    };
+
+    assert_eq!(top_bar.repo, "runie");
+    assert_eq!(top_bar.branch, "master");
+    assert_eq!(top_bar.path, "path/to/the/folder");
+    assert_eq!(top_bar.checks_passed, Some(4));
+    assert_eq!(top_bar.checks_total, Some(4));
+    assert_eq!(top_bar.percentage, Some(4.5));
 }

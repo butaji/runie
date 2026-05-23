@@ -45,20 +45,6 @@ impl UnifiedApi {
         self.providers.keys().cloned().collect()
     }
 
-    /// Handoff: serialize context and continue with different provider.
-    pub async fn handoff(
-        &self,
-        _from: &str,
-        to: &str,
-        messages: Vec<Message>,
-    ) -> Result<BoxStream<'static, Event>, ProviderError> {
-        let target = self.providers.get(to)
-            .ok_or_else(|| ProviderError::ApiError(format!("Provider '{}' not found", to)))?;
-        let messages_clone = messages.clone();
-        target.chat_simple(messages).await?;
-        // In real impl, we'd convert message formats between providers
-        target.chat(messages_clone, vec![]).await
-    }
 }
 
 impl Default for UnifiedApi {

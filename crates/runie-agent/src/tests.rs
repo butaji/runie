@@ -9,7 +9,7 @@ use runie_core::{Message, Session, Context};
 #[test]
 fn test_agent_loop_config_default() {
     let config = AgentLoopConfig::default();
-    assert_eq!(config.max_turns, 10);
+    assert_eq!(config.max_turns, 50);
     assert!(config.system_prompt.is_empty());
     assert!(config.model.is_empty());
     assert!(config.thinking_level.is_empty());
@@ -76,9 +76,6 @@ fn test_agent_state_default() {
     let session = Session::new("test".to_string());
     let state = AgentState::new(session.clone());
     assert_eq!(state.turn_count, 0);
-    assert!(!state.is_running);
-    assert!(state.steering_queue.is_empty());
-    assert!(state.follow_up_queue.is_empty());
 }
 
 #[test]
@@ -87,22 +84,6 @@ fn test_agent_state_new_with_session() {
     let state = AgentState::new(session.clone());
     assert_eq!(state.session.id, "my-session");
     assert_eq!(state.turn_count, 0);
-}
-
-#[test]
-fn test_agent_state_queue_steering() {
-    let session = Session::new("test".to_string());
-    let mut state = AgentState::new(session);
-    state.queue_steering("Be more concise".to_string());
-    assert_eq!(state.steering_queue.len(), 1);
-}
-
-#[test]
-fn test_agent_state_queue_follow_up() {
-    let session = Session::new("test".to_string());
-    let mut state = AgentState::new(session);
-    state.queue_follow_up("What about error handling?".to_string());
-    assert_eq!(state.follow_up_queue.len(), 1);
 }
 
 #[test]

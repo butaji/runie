@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Style},
+    style::Style,
     text::{Line, Span},
     widgets::Widget,
 };
@@ -48,6 +48,8 @@ struct StyleHelpers {
     syntax_string: Style,
     syntax_attr: Style,
     bg_panel: Style,
+    diff_added_bg: Style,
+    diff_removed_bg: Style,
 }
 
 impl StyleHelpers {
@@ -59,6 +61,8 @@ impl StyleHelpers {
             syntax_string: Style::default().fg(theme.color("success").into()),
             syntax_attr: Style::default().fg(theme.color("code.path").into()),
             bg_panel: Style::default().bg(theme.color("bg.panel").into()),
+            diff_added_bg: Style::default().bg(theme.color("diff.added_bg").into()),
+            diff_removed_bg: Style::default().bg(theme.color("diff.removed_bg").into()),
         }
     }
     fn primary(&self) -> Style {
@@ -68,10 +72,10 @@ impl StyleHelpers {
         self.text_tertiary
     }
     fn code_added(&self) -> Style {
-        Style::default().bg(Color::Rgb(26, 60, 26))
+        self.diff_added_bg
     }
     fn code_removed(&self) -> Style {
-        Style::default().bg(Color::Rgb(60, 26, 26))
+        self.diff_removed_bg
     }
     fn bg_highlight(&self) -> Style {
         self.bg_item
