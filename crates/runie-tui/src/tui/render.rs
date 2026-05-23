@@ -99,8 +99,8 @@ pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static st
 fn build_center_line(state: &RenderState, text_tertiary: ratatui::style::Color) -> (Line<'_>, usize) {
     use ratatui::text::Span;
     let mut parts = vec![];
-    if let Some(ref model) = state.current_model {
-        parts.push(Span::styled(model.clone(), Style::default().fg(text_tertiary)));
+    if let Some(model) = state.current_model.as_deref() {
+        parts.push(Span::styled(model, Style::default().fg(text_tertiary)));
         parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
     }
     if state.session_token_usage.total_tokens > 0 {
@@ -109,7 +109,7 @@ fn build_center_line(state: &RenderState, text_tertiary: ratatui::style::Color) 
             parts.push(Span::styled(format!(" · ${:.4}", state.session_token_usage.estimated_cost), Style::default().fg(text_tertiary)));
         }
     }
-    let line = Line::from(parts.clone());
+    let line = Line::from(parts);
     let width = line.spans.iter().map(|s| s.width()).sum();
     (line, width)
 }

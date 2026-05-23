@@ -19,7 +19,6 @@ impl MessageList {
     ) {
         render::fill_background(area, buf, theme);
 
-        let messages_iter: Vec<&MessageItem> = messages.iter().skip(scroll_offset).collect();
         let mut row = 0u16;
         let max_rows = area.height;
 
@@ -41,7 +40,7 @@ impl MessageList {
 
         let most_recent_spinner = render::find_most_recent_spinner_index(messages);
 
-        for (idx, msg) in messages_iter.iter().enumerate() {
+        for (idx, msg) in messages.iter().skip(scroll_offset).enumerate() {
             if row >= max_rows { break; }
 
             let absolute_idx = scroll_offset + idx;
