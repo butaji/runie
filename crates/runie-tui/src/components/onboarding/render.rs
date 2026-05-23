@@ -48,6 +48,8 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         .title_color(border_unfocused)
         .title_center()
         .render(dialog_area, buf, |inner, buf| {
+            // Additional padding: 2 cells horizontal, 1 cell vertical
+            let inner = Rect::new(inner.x + 1, inner.y, inner.width - 2, inner.height - 1);
             let accent = theme_color("accent.primary", theme);
             let center_x = inner.x + inner.width / 2;
             let start_y = inner.y;
@@ -88,6 +90,8 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
         .title_color(border_unfocused)
         .title_center()
         .render(dialog_area, buf, |inner, buf| {
+            // Additional padding: 2 cells horizontal, 1 cell vertical
+            let inner = Rect::new(inner.x + 1, inner.y, inner.width - 2, inner.height - 1);
             let accent = theme_color("accent.primary", theme);
             let center_x = inner.x + inner.width / 2;
             let start_y = inner.y;
@@ -119,6 +123,8 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
         .title_color(border_unfocused)
         .title_center()
         .render(dialog_area, buf, |inner, buf| {
+            // Additional padding: 2 cells horizontal, 1 cell vertical
+            let inner = Rect::new(inner.x + 1, inner.y, inner.width - 2, inner.height - 1);
             let text_primary = theme_color("text.primary", theme);
             let text_muted = theme_color("text.muted", theme);
             let success = theme_color("success", theme);
@@ -178,6 +184,8 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
         .title_color(border_unfocused)
         .title_center()
         .render(dialog_area, buf, |inner, buf| {
+            // Additional padding: 2 cells horizontal, 1 cell vertical
+            let inner = Rect::new(inner.x + 1, inner.y, inner.width - 2, inner.height - 1);
             let start_y = inner.y;
             let title_y = start_y;
             render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose model", theme);
@@ -205,6 +213,8 @@ fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardin
         .title_color(border_unfocused)
         .title_center()
         .render(dialog_area, buf, |inner, buf| {
+            // Additional padding: 2 cells horizontal, 1 cell vertical
+            let inner = Rect::new(inner.x + 1, inner.y, inner.width - 2, inner.height - 1);
             let accent = theme_color("accent.primary", theme);
             let success = theme_color("success", theme);
             let start_y = inner.y;
