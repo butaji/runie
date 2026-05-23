@@ -4,6 +4,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     buffer::Buffer,
     style::Style,
+    widgets::Widget,
 };
 use crossterm::{
     cursor::{SetCursorStyle, Show},
@@ -14,7 +15,7 @@ use crossterm::{
 use std::io::{self, stdout};
 
 use crate::{
-    theme::ThemeWrapper,
+    theme::{ThemeWrapper, ThemeColors},
     components::{
         MessageList,
         Overlay,
@@ -162,39 +163,36 @@ impl Tui {
 
         // Extract render state - only clone what we need
         let theme = self.config.theme.clone();
+        let theme_colors = ThemeColors::from(&self.config.theme);
         let render_state = RenderState::from(&self.state);
         let palette = self.command_palette.clone();
 
         self.terminal.draw(|frame| {
             let theme = &theme;
+            let theme_colors = &theme_colors;
             let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
             let state = &render_state;
             let is_onboarding = matches!(state.mode, TuiMode::Onboarding);
 
             if is_onboarding {
-                Self::render_onboarding_mode(frame, area, state, main_areas, show_status_bar, theme);
+                Self::render_onboarding_mode(frame, area, state, main_areas, show_status_bar, theme, theme_colors);
             } else {
-                Self::render_normal_mode(frame, area, state, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme);
+                Self::render_normal_mode(frame, area, state, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme, theme_colors);
             }
         })?;
         Ok(())
     }
 
-    fn clear_background(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
-        let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-        for y in 0..area.height {
-            for x in 0..area.width {
-                if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                    cell.set_style(Style::default().bg(bg_base));
-                }
-            }
-        }
+    fn clear_background(frame: &mut ratatui::Frame, area: Rect, bg_color: ratatui::style::Color) {
+        ratatui::widgets::Paragraph::new("")
+            .style(Style::default().bg(bg_color))
+            .render(area, frame.buffer_mut());
     }
 
-    fn render_onboarding_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper) {
-        Self::clear_background(frame, area, theme);
+    fn render_onboarding_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        Self::clear_background(frame, area, theme_colors.bg_base);
         if show_status_bar {
-            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
+            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme_colors, state.animation.braille_frame);
         }
         if let Some(ref onboarding) = state.onboarding {
             let onboarding_area = Rect {
@@ -207,17 +205,17 @@ impl Tui {
         }
     }
 
-    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper) {
-        Self::clear_background(frame, area, theme);
+    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        Self::clear_background(frame, area, theme_colors.bg_base);
         if show_top_bar {
-            render_top_bar(state, main_areas[0], frame.buffer_mut(), theme);
+            render_top_bar(state, main_areas[0], frame.buffer_mut(), theme_colors);
         }
-        Self::render_content(frame, state, show_sidebar, main_areas[1], theme);
+        Self::render_content(frame, state, show_sidebar, main_areas[1], theme, theme_colors);
         Self::render_input(frame, state, main_areas[2], theme);
         if show_status_bar {
-            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme, state.animation.braille_frame);
+            render_status_bar(state, main_areas[3], frame.buffer_mut(), theme_colors, state.animation.braille_frame);
         }
-        Self::render_overlays(frame, state, palette, padded, area, theme);
+        Self::render_overlays(frame, state, palette, padded, area, theme, theme_colors);
     }
 
     fn layout_main(padded: Rect, show_top: bool, show_status: bool, input_h: u16) -> [Rect; 4] {
@@ -230,7 +228,7 @@ impl Tui {
         Layout::vertical(constraints).areas(padded)
     }
 
-    fn render_content(frame: &mut ratatui::Frame, state: &RenderState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper) {
+    fn render_content(frame: &mut ratatui::Frame, state: &RenderState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         let mut h_constraints = vec![Constraint::Min(20)];
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
@@ -238,7 +236,7 @@ impl Tui {
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
         MessageList::render_ref(&state.messages, state.scroll.feed_offset, h_areas[0], frame.buffer_mut(), theme, &state.animation, state.agent_running);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
-            render_agent_list(h_areas[1], frame.buffer_mut(), theme, state);
+            render_agent_list(h_areas[1], frame.buffer_mut(), theme_colors, state);
         }
     }
 
@@ -261,27 +259,27 @@ impl Tui {
         );
     }
 
-    fn render_overlays(frame: &mut ratatui::Frame, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper) {
+    fn render_overlays(frame: &mut ratatui::Frame, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         let mode = state.mode.clone();
         if mode == TuiMode::Permission && state.permission_modal.tool.is_some() {
-            Self::render_permission_modal(frame, state, padded, area, theme);
+            Self::render_permission_modal(frame, state, padded, area, theme, theme_colors);
         }
         if mode == TuiMode::CommandPalette {
-            Self::render_command_palette(frame, state, padded, area, theme, palette);
+            Self::render_command_palette(frame, state, padded, area, theme, palette, theme_colors);
         }
         if mode == TuiMode::Overlay {
             Self::render_overlay_mode(frame, area, theme);
         }
         if mode == TuiMode::DiffViewer {
-            Self::render_diff_viewer(frame, state, area, theme);
+            Self::render_diff_viewer(frame, state, area, theme, theme_colors);
         }
         if mode == TuiMode::SessionTree {
-            Self::render_session_tree(frame, state, area, theme);
+            Self::render_session_tree(frame, state, area, theme, theme_colors);
         }
     }
 
-    fn render_permission_modal(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper) {
-        Self::dim_background(frame, area, theme);
+    fn render_permission_modal(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        Self::dim_background(frame, area, theme_colors);
         let modal_area = Self::centered_rect(padded, 50, 12);
         let modal = PermissionModal::new(
             state.permission_modal.tool.as_deref().unwrap_or(""),
@@ -291,8 +289,8 @@ impl Tui {
         modal.render_ref(modal_area, frame.buffer_mut(), theme);
     }
 
-    fn render_command_palette(frame: &mut ratatui::Frame, _state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette) {
-        Self::dim_background(frame, area, theme);
+    fn render_command_palette(frame: &mut ratatui::Frame, _state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette, theme_colors: &ThemeColors) {
+        Self::dim_background(frame, area, theme_colors);
         let palette_area = Self::centered_rect(padded, 70, 20);
         palette.render_ref(palette_area, frame.buffer_mut(), theme);
     }
@@ -304,24 +302,23 @@ impl Tui {
         Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
     }
 
-    fn render_diff_viewer(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
-        Self::dim_background(frame, area, theme);
+    fn render_diff_viewer(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        Self::dim_background(frame, area, theme_colors);
         let diff_area = Self::centered_rect(area, 80, 25);
         if let Some(ref diff) = state.diff_viewer {
             diff.render_ref(diff_area, frame.buffer_mut(), theme);
         }
     }
 
-    fn render_session_tree(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
-        Self::dim_background(frame, area, theme);
+    fn render_session_tree(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        Self::dim_background(frame, area, theme_colors);
         let tree_area = Self::centered_rect(area, 70, 25);
         state.session_tree.render_ref(tree_area, frame.buffer_mut(), theme);
     }
 
-    fn dim_background(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
+    fn dim_background(frame: &mut ratatui::Frame, area: Rect, theme_colors: &ThemeColors) {
         // Dim by darkening the base background color
-        let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-        let dim_color = match bg_base {
+        let dim_color = match theme_colors.bg_base {
             ratatui::style::Color::Rgb(r, g, b) => {
                 ratatui::style::Color::Rgb(
                     (r as f32 * 0.5).round() as u8,
@@ -335,13 +332,9 @@ impl Tui {
             }
             _ => ratatui::style::Color::Black,
         };
-        for y in 0..area.height {
-            for x in 0..area.width {
-                if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
-                    cell.set_style(Style::default().bg(dim_color));
-                }
-            }
-        }
+        ratatui::widgets::Paragraph::new("")
+            .style(Style::default().bg(dim_color))
+            .render(area, frame.buffer_mut());
     }
 
     fn centered_rect(padded: Rect, w: u16, h: u16) -> Rect {

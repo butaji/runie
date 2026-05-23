@@ -3,6 +3,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
+    widgets::Widget,
 };
 use crate::components::gradient_border::render_gradient_border;
 use crate::theme::ThemeWrapper;
@@ -68,7 +69,8 @@ impl DiffViewer {
         if !self.visible {
             return;
         }
-        clear_area(area, buf, theme);
+        let bg_panel: Color = theme.color("bg.panel").into();
+        clear_area(area, buf, bg_panel);
         render_border(area, buf, theme, &self.filename);
         render_title(area, buf, theme, &self.filename);
         render_diff_lines(area, buf, theme, &self.compute_diff(), self.scroll_offset);
@@ -76,13 +78,10 @@ impl DiffViewer {
     }
 }
 
-fn clear_area(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    let bg_panel: Color = theme.color("bg.panel").into();
-    for y in area.y..area.y + area.height {
-        for x in area.x..area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x, y)) { cell.set_style(Style::default().bg(bg_panel)); }
-        }
-    }
+fn clear_area(area: Rect, buf: &mut Buffer, bg_panel: Color) {
+    ratatui::widgets::Paragraph::new("")
+        .style(Style::default().bg(bg_panel))
+        .render(area, buf);
 }
 
 fn render_border(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, filename: &str) {

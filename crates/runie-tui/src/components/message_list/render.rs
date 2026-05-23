@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -39,17 +40,6 @@ pub fn wrap_text(text: &str, width: usize) -> Vec<String> {
     }
 
     lines
-}
-
-pub fn fill_background(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    let bg_base: ratatui::style::Color = theme.color("bg.base").into();
-    for y in area.y..area.y + area.height {
-        for x in area.x..area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_style(Style::default().bg(bg_base));
-            }
-        }
-    }
 }
 
 pub fn should_show_cursor(
@@ -235,8 +225,11 @@ fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, t
         cell.set_char('◆');
         cell.set_style(Style::default().fg(text_muted));
     }
-    let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
-    let thought_text = format!("Thought for {:.1}s{}", duration_secs, spinner_str);
+    let mut thought_text = String::with_capacity(32);
+    write!(thought_text, "Thought for {:.1}s", duration_secs).ok();
+    if show_spinner {
+        write!(thought_text, " {}", spinner).ok();
+    }
     let line = Line::raw(thought_text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
@@ -281,7 +274,8 @@ fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut 
         cell.set_char('◆');
         cell.set_style(Style::default().fg(text_muted));
     }
-    let header = format!("{}({})", name, args);
+    let mut header = String::with_capacity(name.len() + args.len() + 4);
+    write!(header, "{}({})", name, args).ok();
     let line = Line::raw(header).style(Style::default().fg(text_secondary));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
 }
@@ -339,8 +333,11 @@ fn render_tool_running_msg(name: &str, args: &str, duration_ms: u64, area: Rect,
         cell.set_char('●');
         cell.set_style(Style::default().fg(text_secondary));
     }
-    let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
-    let header = format!("{} {}{}", name, args, spinner_str);
+    let mut header = String::with_capacity(64);
+    write!(header, "{} {}", name, args).ok();
+    if show_spinner {
+        write!(header, " {}", spinner).ok();
+    }
     let line = Line::raw(header).style(Style::default().fg(text_secondary));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     if duration_ms > 1000 {
@@ -364,8 +361,12 @@ fn render_tool_complete_msg(name: &str, result: &str, lines: Option<&usize>, are
         cell.set_char('✓');
         cell.set_style(Style::default().fg(success));
     }
-    let suffix = lines.map(|l| format!(" ({} lines)", l)).unwrap_or_default();
-    let line = Line::raw(format!("{} {}{}", name, result, suffix)).style(Style::default().fg(text_muted));
+    let mut text = String::with_capacity(64);
+    write!(text, "{} {}", name, result).ok();
+    if let Some(l) = lines {
+        write!(text, " ({} lines)", l).ok();
+    }
+    let line = Line::raw(text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }
@@ -377,7 +378,9 @@ fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect
                 cell.set_char('▸');
                 cell.set_style(Style::default().fg(text_dim));
             }
-            let line = Line::raw(format!("{}. {} (pending)", step, text)).style(Style::default().fg(text_dim));
+            let mut line_text = String::with_capacity(32);
+            write!(line_text, "{}. {} (pending)", step, text).ok();
+            let line = Line::raw(line_text).style(Style::default().fg(text_dim));
             buf.set_line(text_x, area.y + row, &line, area.width - 4);
         }
         PlanStatus::Active => {
@@ -396,8 +399,12 @@ fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect
                     cell.set_style(Style::default().fg(text_secondary));
                 }
             }
-            let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
-            let line = Line::raw(format!("{}. {}{}", step, text, spinner_str)).style(Style::default().fg(text_secondary));
+            let mut line_text = String::with_capacity(32);
+            write!(line_text, "{}. {}", step, text).ok();
+            if show_spinner {
+                write!(line_text, " {}", spinner).ok();
+            }
+            let line = Line::raw(line_text).style(Style::default().fg(text_secondary));
             buf.set_line(text_x + 1, area.y + row, &line, area.width - 5);
         }
         PlanStatus::Complete => {
@@ -405,7 +412,9 @@ fn render_plan_step_msg(step: usize, text: &str, status: &PlanStatus, area: Rect
                 cell.set_char('✓');
                 cell.set_style(Style::default().fg(text_secondary));
             }
-            let line = Line::raw(format!("{}. {}", step, text)).style(Style::default().fg(text_secondary));
+            let mut line_text = String::with_capacity(32);
+            write!(line_text, "{}. {}", step, text).ok();
+            let line = Line::raw(line_text).style(Style::default().fg(text_secondary));
             buf.set_line(text_x, area.y + row, &line, area.width - 4);
         }
     }
@@ -438,8 +447,13 @@ fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: 
         cell.set_char('↺');
         cell.set_style(Style::default().fg(text_muted));
     }
-    let spinner_str = if show_spinner { format!(" {}", spinner) } else { String::new() };
-    let line = Line::raw(format!("Rewinding...{} ({} steps)", spinner_str, steps)).style(Style::default().fg(text_muted));
+    let mut text = String::with_capacity(32);
+    write!(text, "Rewinding...").ok();
+    if show_spinner {
+        write!(text, " {}", spinner).ok();
+    }
+    write!(text, " ({} steps)", steps).ok();
+    let line = Line::raw(text).style(Style::default().fg(text_muted));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }

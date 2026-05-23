@@ -100,6 +100,41 @@ impl From<Theme> for ThemeWrapper {
     }
 }
 
+/// Pre-extracted theme colors for hot-path rendering.
+/// Avoids repeated ThemeWrapper lookups per frame.
+#[derive(Debug, Clone)]
+pub struct ThemeColors {
+    pub bg_base: ratatui::style::Color,
+    pub bg_panel: ratatui::style::Color,
+    pub accent_primary: ratatui::style::Color,
+    pub text_primary: ratatui::style::Color,
+    pub text_secondary: ratatui::style::Color,
+    pub text_dim: ratatui::style::Color,
+    pub text_muted: ratatui::style::Color,
+    pub border_unfocused: ratatui::style::Color,
+    pub success: ratatui::style::Color,
+    pub error: ratatui::style::Color,
+    pub syntax_phase: ratatui::style::Color,
+}
+
+impl From<&ThemeWrapper> for ThemeColors {
+    fn from(theme: &ThemeWrapper) -> Self {
+        Self {
+            bg_base: theme.color("bg.base").into(),
+            bg_panel: theme.color("bg.panel").into(),
+            accent_primary: theme.color("accent.primary").into(),
+            text_primary: theme.color("text.primary").into(),
+            text_secondary: theme.color("text.secondary").into(),
+            text_dim: theme.color("text.dim").into(),
+            text_muted: theme.color("text.muted").into(),
+            border_unfocused: theme.color("border.unfocused").into(),
+            success: theme.color("success").into(),
+            error: theme.color("error").into(),
+            syntax_phase: theme.color("syntax.phase").into(),
+        }
+    }
+}
+
 // Alias for backwards compatibility
 pub type ColorPalette = ThemeWrapper;
 
