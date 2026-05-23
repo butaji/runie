@@ -54,6 +54,7 @@ pub mod tests;
 pub mod tests_hotkeys;
 pub mod tests_statusbar;
 pub mod tests_onboarding;
+pub mod tests_input;
 
 pub use state::{AppState, TuiMode, Msg, Cmd, TuiAction, RenderState, Onboarding};
 pub use update::update;
