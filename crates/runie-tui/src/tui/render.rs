@@ -1,12 +1,12 @@
 use ratatui::{
     layout::Rect,
     buffer::Buffer,
-    style::Style,
+    style::{Color, Modifier, Style},
     text::{Line, Span},
 };
-use crate::components::gradient_border::render_gradient_border;
 use crate::theme::ThemeWrapper;
 use crate::tui::state::{TuiMode, TopBarState, RenderState};
+use crate::components::gradient_border::render_gradient_border;
 
 // ─── Top Bar ─────────────────────────────────────────────────────────────────
 
@@ -171,58 +171,22 @@ pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, them
 /// Braille spinner frames
 const BRAILLE_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
-/// Draw a section header: title + underline
-fn draw_section_header(
-    area: Rect, buf: &mut Buffer,
-    title: &str,
-    y: u16,
-    accent_primary: ratatui::style::Color,
-    border_unfocused: ratatui::style::Color,
-) {
-    let inner_width = area.width.saturating_sub(2);
+fn render_gradient_panel<F>(area: Rect, buf: &mut Buffer, title: &str, title_color: Color, content_renderer: F)
+where F: FnOnce(Rect, &mut Buffer)
+{
+    if area.width < 4 || area.height < 2 { return; }
 
-    // Title in accent color
-    let title_line = Line::from(Span::styled(
-        format!(" {} ", title),
-        Style::default().fg(accent_primary).add_modifier(ratatui::style::Modifier::BOLD),
-    ));
-    buf.set_line(area.x + 1, y, &title_line, inner_width);
+    // Draw gradient border
+    render_gradient_border(area, buf);
 
-    // Underline with ─
-    let underline_y = y + 1;
-    for x in area.x..(area.x + area.width) {
-        if let Some(cell) = buf.cell_mut((x, underline_y)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-}
+    // Title centered in top border
+    let title_text = format!(" {} ", title);
+    let title_x = area.x + (area.width.saturating_sub(title_text.len() as u16)) / 2;
+    buf.set_string(title_x, area.y, &title_text, Style::default().fg(title_color).add_modifier(Modifier::BOLD));
 
-/// Draw a horizontal separator line
-fn draw_separator(
-    area: Rect, buf: &mut Buffer,
-    y: u16,
-    border_unfocused: ratatui::style::Color,
-) {
-    for x in (area.x + 1)..(area.x + area.width - 1) {
-        if let Some(cell) = buf.cell_mut((x, y)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-}
-
-/// Format token count with commas
-fn format_tokens(n: u64) -> String {
-    let s = n.to_string();
-    let mut result = String::new();
-    for (i, ch) in s.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            result.insert(0, ',');
-        }
-        result.insert(0, ch);
-    }
-    result
+    // Content with 1-cell margin
+    let inner = Rect::new(area.x + 1, area.y + 1, area.width - 2, area.height - 2);
+    content_renderer(inner, buf);
 }
 
 /// Format cost as $X.XX (or $X.XX for larger)
@@ -235,220 +199,6 @@ fn format_cost(cost: f64) -> String {
         format!("${:.2}", cost)
     } else {
         format!("${:.4}", cost)
-    }
-}
-
-fn render_sidebar_minimal(
-    area: Rect, buf: &mut Buffer,
-    bg_panel: ratatui::style::Color,
-    accent_primary: ratatui::style::Color,
-    text_dim: ratatui::style::Color,
-    model: &Option<String>,
-    agent_running: bool,
-) {
-    let inner_width = area.width.saturating_sub(2);
-    let content_x = area.x + 1;
-    let content_y = area.y + 1;
-
-    let model_text = model.clone().unwrap_or_else(|| "No model".to_string());
-    let status_text = if agent_running { "● running" } else { "○ idle" };
-
-    let model_line = Line::from(vec![
-        Span::styled("  ", Style::default().bg(bg_panel)),
-        Span::styled(&model_text, Style::default().fg(accent_primary).bg(bg_panel)),
-    ]);
-    buf.set_line(content_x, content_y, &model_line, inner_width);
-
-    let status_line = Line::from(vec![
-        Span::styled("  ", Style::default().bg(bg_panel)),
-        Span::styled(status_text, Style::default().fg(text_dim).bg(bg_panel)),
-    ]);
-    buf.set_line(content_x, content_y + 1, &status_line, inner_width);
-}
-
-fn render_sidebar_section_header(
-    area: Rect, buf: &mut Buffer,
-    title: &str,
-    y: u16,
-    accent_primary: ratatui::style::Color,
-    border_color: ratatui::style::Color,
-) {
-    draw_section_header(area, buf, title, y, accent_primary, border_color);
-}
-
-fn render_sidebar_model_section(
-    area: Rect, buf: &mut Buffer,
-    content_x: u16,
-    y: &mut u16,
-    bg_panel: ratatui::style::Color,
-    text_secondary: ratatui::style::Color,
-    model: &Option<String>,
-    accent_primary: ratatui::style::Color,
-    border_color: ratatui::style::Color,
-) {
-    render_sidebar_section_header(area, buf, "Model", *y, accent_primary, border_color);
-    *y += 2;
-
-    let model_text = model.clone().unwrap_or_else(|| "No model".to_string());
-    let model_line = Line::from(vec![
-        Span::styled("  ", Style::default().bg(bg_panel)),
-        Span::styled(&model_text, Style::default().fg(text_secondary).bg(bg_panel)),
-    ]);
-    buf.set_line(content_x, *y, &model_line, area.width.saturating_sub(2));
-    *y += 1;
-}
-
-fn render_sidebar_context_section(
-    area: Rect, buf: &mut Buffer,
-    content_x: u16,
-    y: &mut u16,
-    bg_panel: ratatui::style::Color,
-    text_secondary: ratatui::style::Color,
-    tokens: u64,
-    cost: f64,
-    accent_primary: ratatui::style::Color,
-    border_color: ratatui::style::Color,
-) {
-    render_sidebar_section_header(area, buf, "Context", *y, accent_primary, border_color);
-    *y += 2;
-
-    let context_text = if tokens > 0 {
-        format!("{} tokens · {}", format_tokens(tokens), format_cost(cost))
-    } else {
-        "0 tokens".to_string()
-    };
-    let context_line = Line::from(vec![
-        Span::styled("  ", Style::default().bg(bg_panel)),
-        Span::styled(&context_text, Style::default().fg(text_secondary).bg(bg_panel)),
-    ]);
-    buf.set_line(content_x, *y, &context_line, area.width.saturating_sub(2));
-    *y += 1;
-}
-
-fn render_sidebar_plan_section(
-    area: Rect, buf: &mut Buffer,
-    content_x: u16,
-    y: &mut u16,
-    max_y: u16,
-    bg_panel: ratatui::style::Color,
-    text_secondary: ratatui::style::Color,
-    text_dim: ratatui::style::Color,
-    accent_primary: ratatui::style::Color,
-    border_color: ratatui::style::Color,
-    plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)],
-    braille_frame: usize,
-) {
-    draw_separator(area, buf, *y, border_color);
-    *y += 1;
-    render_sidebar_section_header(area, buf, "Plan", *y, accent_primary, border_color);
-    *y += 2;
-
-    if plan_steps.is_empty() {
-        let no_plan_line = Line::from(vec![
-            Span::styled("  ", Style::default().bg(bg_panel)),
-            Span::styled("No plan steps", Style::default().fg(text_dim).bg(bg_panel)),
-        ]);
-        buf.set_line(content_x, *y, &no_plan_line, area.width.saturating_sub(2));
-        *y += 1;
-        return;
-    }
-
-    let spinner = BRAILLE_FRAMES[braille_frame % 10];
-    for (step, text, status) in plan_steps {
-        if *y >= max_y - 1 {
-            break;
-        }
-
-        let (glyph, color) = match status {
-            crate::components::message_list::PlanStatus::Pending => ('○', text_dim),
-            crate::components::message_list::PlanStatus::Active => ('●', accent_primary),
-            crate::components::message_list::PlanStatus::Complete => ('✓', text_secondary),
-        };
-
-        let suffix = if matches!(status, crate::components::message_list::PlanStatus::Active) {
-            format!(" {}", spinner)
-        } else {
-            String::new()
-        };
-
-        let inner_width = area.width.saturating_sub(2);
-        let max_text_len = (inner_width as usize).saturating_sub(8);
-        let text_truncated = if text.len() > max_text_len {
-            format!("{}…", &text[..max_text_len.saturating_sub(1)])
-        } else {
-            text.clone()
-        };
-
-        let plan_line = Line::from(vec![
-            Span::styled("  ", Style::default().bg(bg_panel)),
-            Span::styled(format!("{}", glyph), Style::default().fg(color).bg(bg_panel)),
-            Span::styled(
-                format!(" {}. {}", step, text_truncated),
-                Style::default().fg(color).bg(bg_panel),
-            ),
-            Span::styled(&suffix, Style::default().fg(text_dim).bg(bg_panel)),
-        ]);
-        buf.set_line(content_x, *y, &plan_line, inner_width);
-        *y += 1;
-    }
-}
-
-fn render_sidebar_agents_section(
-    area: Rect, buf: &mut Buffer,
-    content_x: u16,
-    y: &mut u16,
-    max_y: u16,
-    bg_panel: ratatui::style::Color,
-    text_secondary: ratatui::style::Color,
-    text_dim: ratatui::style::Color,
-    accent_primary: ratatui::style::Color,
-    border_color: ratatui::style::Color,
-    agent_running: bool,
-    running_jobs: &[&crate::components::status_bar::BackgroundJob],
-) {
-    draw_separator(area, buf, *y, border_color);
-    *y += 1;
-    render_sidebar_section_header(area, buf, "Agents", *y, accent_primary, border_color);
-    *y += 2;
-
-    let agent_status = if agent_running { "● running" } else { "○ idle" };
-    let agent_line = Line::from(vec![
-        Span::styled("  ", Style::default().bg(bg_panel)),
-        Span::styled(agent_status, Style::default().fg(text_dim).bg(bg_panel)),
-    ]);
-    buf.set_line(content_x, *y, &agent_line, area.width.saturating_sub(2));
-    *y += 1;
-
-    for job in running_jobs {
-        if *y >= max_y - 1 {
-            break;
-        }
-        let job_line = Line::from(vec![
-            Span::styled("  ", Style::default().bg(bg_panel)),
-            Span::styled("⬡ ", Style::default().fg(text_dim).bg(bg_panel)),
-            Span::styled(&job.name, Style::default().fg(text_secondary).bg(bg_panel)),
-        ]);
-        buf.set_line(content_x, *y, &job_line, area.width.saturating_sub(2));
-        *y += 1;
-    }
-}
-
-fn render_sidebar_footer(
-    area: Rect, buf: &mut Buffer,
-    content_x: u16,
-    max_y: u16,
-    bg_panel: ratatui::style::Color,
-    text_dim: ratatui::style::Color,
-    cost: f64,
-    active_count: usize,
-) {
-    if active_count > 0 {
-        let footer_text = format!("{} active · {}", active_count, format_cost(cost));
-        let footer_line = Line::from(vec![
-            Span::styled("  ", Style::default().bg(bg_panel)),
-            Span::styled(&footer_text, Style::default().fg(text_dim).bg(bg_panel)),
-        ]);
-        buf.set_line(content_x, max_y - 1, &footer_line, area.width.saturating_sub(2));
     }
 }
 
@@ -476,7 +226,6 @@ fn collect_sidebar_data(state: &RenderState) -> (Vec<(usize, String, crate::comp
 
 struct SidebarColors {
     bg_panel: ratatui::style::Color,
-    border_color: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_dim: ratatui::style::Color,
     accent_primary: ratatui::style::Color,
@@ -485,65 +234,50 @@ struct SidebarColors {
 fn get_sidebar_colors(theme: &ThemeWrapper) -> SidebarColors {
     SidebarColors {
         bg_panel: theme.color("bg.panel").into(),
-        border_color: theme.color("border.unfocused").into(),
         text_secondary: theme.color("text.secondary").into(),
         text_dim: theme.color("text.dim").into(),
         accent_primary: theme.color("accent.primary").into(),
     }
 }
 
-fn render_sidebar_full(
-    area: Rect, buf: &mut Buffer,
-    colors: &SidebarColors,
-    content_x: u16,
-    content_y: u16,
-    max_y: u16,
-    state: &RenderState,
-    plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)],
-    running_jobs: &[&crate::components::status_bar::BackgroundJob],
-    active_count: usize,
-    tokens: u64,
-    cost: f64,
-) {
-    let mut y = content_y;
+struct PanelLayout {
+    plan_rect: Rect,
+    agents_rect: Rect,
+}
 
-    render_sidebar_model_section(
-        area, buf, content_x, &mut y, colors.bg_panel, colors.text_secondary,
-        &state.current_model, colors.accent_primary, colors.border_color,
-    );
+fn calculate_panel_layout(area: Rect) -> PanelLayout {
+    let total_height = area.height;
+    let min_each = 4u16;
+    let gap = 1u16;
 
-    render_sidebar_context_section(
-        area, buf, content_x, &mut y, colors.bg_panel, colors.text_secondary,
-        tokens, cost, colors.accent_primary, colors.border_color,
-    );
+    // Plan gets ~40%, Agents gets ~60%
+    let plan_height = ((total_height as f32 * 0.4).round() as u16).max(min_each);
+    let agents_height = (total_height.saturating_sub(plan_height + gap)).max(min_each);
 
-    render_sidebar_plan_section(
-        area, buf, content_x, &mut y, max_y, colors.bg_panel,
-        colors.text_secondary, colors.text_dim, colors.accent_primary, colors.border_color,
-        plan_steps, state.animation.braille_frame,
-    );
+    let plan_rect = Rect::new(area.x, area.y, area.width, plan_height);
+    let agents_rect = Rect::new(area.x, area.y + plan_height + gap, area.width, agents_height);
 
-    render_sidebar_agents_section(
-        area, buf, content_x, &mut y, max_y, colors.bg_panel,
-        colors.text_secondary, colors.text_dim, colors.accent_primary, colors.border_color,
-        state.agent_running, running_jobs,
-    );
+    PanelLayout { plan_rect, agents_rect }
+}
 
-    render_sidebar_footer(
-        area, buf, content_x, max_y, colors.bg_panel, colors.text_dim, cost, active_count,
-    );
+fn render_agent_list_full(_area: Rect, buf: &mut Buffer, colors: &SidebarColors, state: &RenderState, layout: &PanelLayout, plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)], running_jobs: &[&crate::components::status_bar::BackgroundJob], active_count: usize, _tokens: u64, cost: f64) {
+    let bg_panel = colors.bg_panel;
+
+    render_gradient_panel(layout.plan_rect, buf, "Plan", colors.accent_primary, |inner, buf| {
+        render_plan_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, colors.accent_primary, plan_steps, state.animation.braille_frame);
+    });
+    render_gradient_panel(layout.agents_rect, buf, "Agents", colors.accent_primary, |inner, buf| {
+        render_agents_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, state.agent_running, running_jobs, active_count, cost);
+    });
 }
 
 pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, state: &RenderState) {
-    if area.width < 4 || area.height < 3 {
-        return;
-    }
+    if area.width < 4 || area.height < 3 { return; }
 
     let colors = get_sidebar_colors(theme);
-    let is_minimal = area.height < 10;
+    let min_height = 9; // minimum for 2 panels with gap
 
-    // Clear interior with bg_panel color
-    let bg_panel: ratatui::style::Color = colors.bg_panel;
+    let bg_panel = colors.bg_panel;
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
             if let Some(cell) = buf.cell_mut((x, y)) {
@@ -552,24 +286,121 @@ pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, sta
         }
     }
 
-    // Draw gradient border
-    render_gradient_border(area, buf);
-
-    let content_x = area.x + 1;
-    let content_y = area.y + 1;
-    let max_y = area.y + area.height - 1;
-
-    if is_minimal {
-        render_sidebar_minimal(
-            area, buf, colors.bg_panel, colors.accent_primary, colors.text_dim,
-            &state.current_model, state.agent_running,
-        );
+    if area.height < min_height {
         return;
     }
 
-    let (plan_steps, running_jobs, active_count, tokens, cost) = collect_sidebar_data(state);
-    render_sidebar_full(
-        area, buf, &colors, content_x, content_y, max_y, state,
-        &plan_steps, &running_jobs, active_count, tokens, cost,
-    );
+    let (plan_steps, running_jobs, active_count, _tokens, cost) = collect_sidebar_data(state);
+    let layout = calculate_panel_layout(area);
+    render_agent_list_full(area, buf, &colors, state, &layout, &plan_steps, &running_jobs, active_count, 0, cost);
 }
+
+fn render_plan_content(
+    inner: Rect, buf: &mut Buffer,
+    bg_panel: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
+    accent_primary: ratatui::style::Color,
+    plan_steps: &[(usize, String, crate::components::message_list::PlanStatus)],
+    braille_frame: usize,
+) {
+    let inner_width = inner.width;
+    let content_x = inner.x;
+    let mut y = inner.y;
+    let max_y = inner.y + inner.height - 1;
+
+    if plan_steps.is_empty() {
+        let no_plan_line = Line::from(vec![
+            Span::styled(" ", Style::default().bg(bg_panel)),
+            Span::styled("No plan steps", Style::default().fg(text_dim).bg(bg_panel)),
+        ]);
+        buf.set_line(content_x, y, &no_plan_line, inner_width);
+        return;
+    }
+
+    let spinner = BRAILLE_FRAMES[braille_frame % 10];
+    for (step, text, status) in plan_steps {
+        if y >= max_y - 1 {
+            break;
+        }
+
+        let (glyph, color) = match status {
+            crate::components::message_list::PlanStatus::Pending => ('○', text_dim),
+            crate::components::message_list::PlanStatus::Active => ('●', accent_primary),
+            crate::components::message_list::PlanStatus::Complete => ('✓', text_secondary),
+        };
+
+        let suffix = if matches!(status, crate::components::message_list::PlanStatus::Active) {
+            format!(" {}", spinner)
+        } else {
+            String::new()
+        };
+
+        let max_text_len = (inner_width as usize).saturating_sub(8);
+        let text_truncated = if text.len() > max_text_len {
+            format!("{}…", &text[..max_text_len.saturating_sub(1)])
+        } else {
+            text.clone()
+        };
+
+        let plan_line = Line::from(vec![
+            Span::styled(" ", Style::default().bg(bg_panel)),
+            Span::styled(format!("{}", glyph), Style::default().fg(color).bg(bg_panel)),
+            Span::styled(
+                format!(" {}. {}", step, text_truncated),
+                Style::default().fg(color).bg(bg_panel),
+            ),
+            Span::styled(&suffix, Style::default().fg(text_dim).bg(bg_panel)),
+        ]);
+        buf.set_line(content_x, y, &plan_line, inner_width);
+        y += 1;
+    }
+}
+
+fn render_agents_content(
+    inner: Rect, buf: &mut Buffer,
+    bg_panel: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
+    agent_running: bool,
+    running_jobs: &[&crate::components::status_bar::BackgroundJob],
+    active_count: usize,
+    cost: f64,
+) {
+    let inner_width = inner.width;
+    let content_x = inner.x;
+    let mut y = inner.y;
+    let max_y = inner.y + inner.height - 1;
+
+    let agent_status = if agent_running { "● running" } else { "○ idle" };
+    let agent_line = Line::from(vec![
+        Span::styled(" ", Style::default().bg(bg_panel)),
+        Span::styled(agent_status, Style::default().fg(text_dim).bg(bg_panel)),
+    ]);
+    buf.set_line(content_x, y, &agent_line, inner_width);
+    y += 1;
+
+    for job in running_jobs {
+        if y >= max_y - 1 {
+            break;
+        }
+        let job_line = Line::from(vec![
+            Span::styled(" ", Style::default().bg(bg_panel)),
+            Span::styled("⬡ ", Style::default().fg(text_dim).bg(bg_panel)),
+            Span::styled(&job.name, Style::default().fg(text_secondary).bg(bg_panel)),
+        ]);
+        buf.set_line(content_x, y, &job_line, inner_width);
+        y += 1;
+    }
+
+    if active_count > 0 {
+        let footer_text = format!("{} active · {}", active_count, format_cost(cost));
+        let footer_y = max_y - 1;
+        let footer_line = Line::from(vec![
+            Span::styled(" ", Style::default().bg(bg_panel)),
+            Span::styled(&footer_text, Style::default().fg(text_dim).bg(bg_panel)),
+        ]);
+        buf.set_line(content_x, footer_y, &footer_line, inner_width);
+    }
+}
+
