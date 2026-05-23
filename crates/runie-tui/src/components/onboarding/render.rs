@@ -1,10 +1,12 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
+    prelude::Widget,
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Widget},
+    widgets::{Block, Borders, Paragraph},
 };
+use crate::components::DialogFrame;
 use crate::theme::ThemeWrapper;
 use super::{Onboarding, OnboardingStep};
 
@@ -20,28 +22,6 @@ pub fn render_onboarding(onboarding: &Onboarding, area: Rect, buf: &mut Buffer, 
     }
 }
 
-// ─── Dialog Frame ─────────────────────────────────────────────────────────────
-
-fn render_dialog_frame<F>(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, inner_h: u16, render_inner: F)
-where
-    F: Fn(Rect, &mut Buffer),
-{
-    let accent = theme_color("accent.primary", theme);
-    let (dialog_area, _) = centered_area(area, 56, inner_h + 4); // +4 for padding
-    Block::bordered()
-        .border_style(Style::default().fg(accent))
-        .render(dialog_area, buf);
-
-    let inner = Rect::new(dialog_area.x + 2, dialog_area.y + 2, dialog_area.width - 4, dialog_area.height - 4);
-    render_inner(inner, buf);
-}
-
-fn centered_area(area: Rect, w: u16, h: u16) -> (Rect, u16) {
-    let x = area.x.saturating_add(area.width.saturating_sub(w) / 2);
-    let y = area.y.saturating_add(area.height.saturating_sub(h) / 2);
-    (Rect::new(x, y, w, h), y)
-}
-
 fn theme_color(key: &str, theme: &ThemeWrapper) -> Color {
     theme.color(key).into()
 }
@@ -50,10 +30,8 @@ fn theme_color(key: &str, theme: &ThemeWrapper) -> Color {
 
 fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let inner_h = 12; // logo(7) + gap(1) + title(1) + sub(1) + gap(1) + button(1) + gap(1) + hint(1)
-    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
         let accent = theme_color("accent.primary", theme);
-        let _text_muted = theme_color("text.muted", theme);
-        let _bg_base = theme_color("bg.base", theme);
         let center_x = inner.x + inner.width / 2;
         let start_y = inner.y;
 
@@ -81,7 +59,7 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
 fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let list_h = onboarding.providers.len() as u16;
     let inner_h = 5 + 2 + 1 + 2 + list_h; // logo(5) + gap(2) + title(1) + gap(2) + list(n)
-    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
         let accent = theme_color("accent.primary", theme);
         let center_x = inner.x + inner.width / 2;
         let start_y = inner.y;
@@ -101,9 +79,8 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
 
 fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let inner_h = 1 + 1 + 1 + 1 + 3 + 1; // title(1) + gap(1) + input(1) + underline(1) + gap(3) + hint(1)
-    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
         let text_primary = theme_color("text.primary", theme);
-        let _text_secondary = theme_color("text.secondary", theme);
         let text_muted = theme_color("text.muted", theme);
         let success = theme_color("success", theme);
         let error_color = theme_color("error", theme);
@@ -150,7 +127,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
 fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let list_h = onboarding.models.len() as u16;
     let inner_h = 1 + 2 + list_h; // title(1) + gap(2) + list(n)
-    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
         let start_y = inner.y;
         let title_y = start_y;
         render_title_left(Rect::new(inner.x, title_y, inner.width, 1), buf, "Choose model", theme);
@@ -166,11 +143,9 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
 
 fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let inner_h = 1 + 1 + 1 + 1; // title(1) + check(1) + summary(1) + hint(1) + gaps
-    render_dialog_frame(area, buf, theme, inner_h, |inner, buf| {
+    DialogFrame::new(56, inner_h + 4).render(area, buf, theme, |inner, buf| {
         let accent = theme_color("accent.primary", theme);
-        let _text_muted = theme_color("text.muted", theme);
         let success = theme_color("success", theme);
-        let _center_x = inner.x + inner.width / 2;
         let start_y = inner.y;
 
         render_title(Rect::new(inner.x, start_y, inner.width, 1), buf, "Ready to code", theme);

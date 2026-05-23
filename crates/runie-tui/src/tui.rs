@@ -71,7 +71,23 @@ pub struct Tui {
 }
 
 impl Tui {
+    /// Install a panic hook that restores the terminal before printing the panic.
+    /// This ensures panic messages are visible even when the terminal is in raw mode.
+    pub fn install_panic_hook() {
+        let original_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            // Best-effort terminal cleanup — ignore errors since we're already panicking
+            let _ = disable_raw_mode();
+            let _ = stdout().execute(LeaveAlternateScreen);
+            let _ = stdout().execute(Show);
+            let _ = stdout().execute(SetCursorStyle::DefaultUserShape);
+            // Now run the default hook which prints the panic + backtrace
+            original_hook(info);
+        }));
+    }
+
     pub fn new(config: TuiConfig) -> io::Result<Self> {
+        Self::install_panic_hook();
         enable_raw_mode()?;
         let mut stdout = stdout();
         stdout.execute(EnterAlternateScreen)?;
