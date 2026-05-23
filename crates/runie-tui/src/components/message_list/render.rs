@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Write;
 use ratatui::{
     buffer::Buffer,
@@ -9,6 +10,34 @@ use ratatui::{
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
 use super::types::{MessageItem, PlanStatus};
+
+/// Cache for wrap_text results to avoid recomputing every frame.
+/// Key is (text, width) -> value is Vec<String> of wrapped lines.
+#[derive(Default)]
+pub struct WrapCache {
+    cache: HashMap<(String, usize), Vec<String>>,
+}
+
+impl WrapCache {
+    pub fn new() -> Self {
+        Self { cache: HashMap::new() }
+    }
+
+    /// Get wrapped text from cache or compute and store it.
+    pub fn get_wrapped(&mut self, text: &str, width: usize) -> Vec<String> {
+        let key = (text.to_string(), width);
+        if !self.cache.contains_key(&key) {
+            let result = wrap_text(text, width);
+            self.cache.insert(key.clone(), result);
+        }
+        self.cache.get(&key).unwrap().clone()
+    }
+
+    /// Clear the cache (call when messages change).
+    pub fn clear(&mut self) {
+        self.cache.clear();
+    }
+}
 
 /// Wrap text into lines respecting word boundaries
 pub fn wrap_text(text: &str, width: usize) -> Vec<String> {
@@ -104,13 +133,14 @@ pub fn render_single_msg(
     show_spinner: bool,
     rewind_spinner: char,
     animation: &AnimationState,
+    wrap_cache: &mut WrapCache,
 ) -> u16 {
     match msg {
         MessageItem::User { text, .. } => {
-            render_user_msg(text, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary)
+            render_user_msg(text, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary, wrap_cache)
         }
         MessageItem::Assistant { text, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache)
         }
         MessageItem::Thought { duration_secs } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -152,11 +182,12 @@ fn render_user_msg(
     buf: &mut Buffer,
     theme: &ThemeWrapper,
     accent_primary: ratatui::style::Color,
+    wrap_cache: &mut WrapCache,
 ) -> u16 {
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
 
-    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(8));
+    let wrapped = wrap_cache.get_wrapped(text, (area.width as usize).saturating_sub(8));
     let msg_height = wrapped.len() as u16;
     let total_height = msg_height + 2;
 
@@ -194,13 +225,13 @@ fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16
     }
 }
 
-fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool) -> u16 {
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, wrap_cache: &mut WrapCache) -> u16 {
     if text.is_empty() {
         let dot = Line::raw("·").style(Style::default().fg(text_muted));
         buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
         return 1;
     }
-    let wrapped = wrap_text(text, (area.width as usize).saturating_sub(4));
+    let wrapped = wrap_cache.get_wrapped(text, (area.width as usize).saturating_sub(4));
     let msg_height = wrapped.len() as u16;
     for (i, line_text) in wrapped.iter().enumerate() {
         if row + i as u16 >= max_rows { break; }
