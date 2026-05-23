@@ -3,102 +3,27 @@ use ratatui::{
     layout::Rect,
     style::{Style, Modifier},
 };
+use crate::components::DialogFrame;
 use crate::theme::ThemeWrapper;
 use super::{CommandPalette, PaletteItem, PaletteStep};
 
 pub fn render(palette: &CommandPalette, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
     let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
     let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     let text_muted: ratatui::style::Color = theme.color("text.muted").into();
     let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-    let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
 
-    clear_background(area, buf, bg_panel);
-    draw_border(area, buf, border_unfocused);
-    draw_title(area, buf, accent_primary, text_muted);
-    draw_panes(palette, area, buf, theme, accent_secondary, text_secondary);
-    draw_input_area(palette, area, buf, accent_primary, text_primary, text_muted, text_secondary);
-}
+    let dialog_w = area.width.saturating_sub(2);
+    let dialog_h = area.height.saturating_sub(2);
 
-fn clear_background(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
-    for y in area.y..area.y + area.height {
-        for x in area.x..area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_style(Style::default().bg(bg_panel));
-            }
-        }
-    }
-}
-
-fn draw_border(area: Rect, buf: &mut Buffer, border_unfocused: ratatui::style::Color) {
-    for x in area.x..area.x + area.width {
-        if let Some(cell) = buf.cell_mut((x, area.y)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-    for x in area.x..area.x + area.width {
-        if let Some(cell) = buf.cell_mut((x, area.y + area.height - 1)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-    for y in area.y..area.y + area.height {
-        if let Some(cell) = buf.cell_mut((area.x, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-    for y in area.y..area.y + area.height {
-        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(border_unfocused));
-        }
-    }
-    if let Some(cell) = buf.cell_mut((area.x, area.y)) {
-        cell.set_char('╭');
-        cell.set_style(Style::default().fg(border_unfocused));
-    }
-    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y)) {
-        cell.set_char('╮');
-        cell.set_style(Style::default().fg(border_unfocused));
-    }
-    if let Some(cell) = buf.cell_mut((area.x, area.y + area.height - 1)) {
-        cell.set_char('╰');
-        cell.set_style(Style::default().fg(border_unfocused));
-    }
-    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + area.height - 1)) {
-        cell.set_char('╯');
-        cell.set_style(Style::default().fg(border_unfocused));
-    }
-}
-
-fn draw_title(area: Rect, buf: &mut Buffer, accent_primary: ratatui::style::Color, text_muted: ratatui::style::Color) {
-    let title = " Command Palette ";
-    let title_style = Style::default().fg(accent_primary).add_modifier(Modifier::BOLD);
-    for (i, ch) in title.chars().enumerate() {
-        let x = area.x + 1 + i as u16;
-        if x < area.x + area.width - 1 {
-            if let Some(cell) = buf.cell_mut((x, area.y)) {
-                cell.set_char(ch);
-                cell.set_style(title_style);
-            }
-        }
-    }
-
-    let close_hint = " [Esc] ";
-    let close_start = area.x + area.width - 1 - close_hint.len() as u16;
-    for (i, ch) in close_hint.chars().enumerate() {
-        let x = close_start + i as u16;
-        if x > area.x && x < area.x + area.width - 1 {
-            if let Some(cell) = buf.cell_mut((x, area.y)) {
-                cell.set_char(ch);
-                cell.set_style(Style::default().fg(text_muted));
-            }
-        }
-    }
+    DialogFrame::new(dialog_w, dialog_h)
+        .title("Command Palette")
+        .show_close_hint()
+        .render(area, buf, theme, |inner, buf| {
+            draw_panes(palette, inner, buf, theme, accent_secondary, text_secondary);
+            draw_input_area(palette, inner, buf, accent_primary, text_primary, text_muted, text_secondary);
+        });
 }
 
 fn draw_panes(

@@ -3,9 +3,8 @@ use ratatui::{
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Clear},
 };
-use ratatui::prelude::Widget;
+use crate::components::DialogFrame;
 use crate::theme::ThemeWrapper;
 use crate::tui::state::Msg;
 use crate::components::modal::Modal;
@@ -68,24 +67,21 @@ impl PermissionModal {
     }
 
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
         let warning: ratatui::style::Color = theme.color("warning").into();
         let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
         let code_path: ratatui::style::Color = theme.color("code.path").into();
         let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
         let text_muted: ratatui::style::Color = theme.color("text.muted").into();
         let accent_secondary: ratatui::style::Color = theme.color("accent.secondary").into();
-        let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
 
-        Clear.render(area, buf);
-        Block::bordered()
-            .style(Style::default().bg(bg_panel).fg(border_unfocused))
-            .render(area, buf);
-
-        render_title(area, buf, &self.title, warning);
-        render_tool_info(area, buf, &self.tool_name, &self.tool_args, accent_primary, code_path, text_secondary);
-        render_description(area, buf, &self.description, text_secondary);
-        render_buttons(area, buf, self.selected, accent_secondary, text_muted);
+        DialogFrame::new(area.width, area.height)
+            .title("Permission Required")
+            .render(area, buf, theme, |inner, buf| {
+                render_title(inner, buf, &self.title, warning);
+                render_tool_info(inner, buf, &self.tool_name, &self.tool_args, accent_primary, code_path, text_secondary);
+                render_description(inner, buf, &self.description, text_secondary);
+                render_buttons(inner, buf, self.selected, accent_secondary, text_muted);
+            });
     }
 }
 

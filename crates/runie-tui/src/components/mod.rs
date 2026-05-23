@@ -13,6 +13,7 @@ pub mod command_palette;
 pub mod context_panel;
 pub mod session_tree;
 pub mod modal;
+pub mod dialog_frame;
 
 pub use overlay::Overlay;
 pub use code_block::{CodeBlock, CodeLine, LineStatus};
@@ -28,3 +29,4 @@ pub use command_palette::{CommandPalette, PaletteItem, PaletteStep, PaletteComma
 pub use context_panel::{ContextPanel, GitChange, GitStatus};
 pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
 pub use modal::Modal;
+pub use dialog_frame::DialogFrame;

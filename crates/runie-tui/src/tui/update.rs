@@ -461,19 +461,33 @@ fn handle_onboarding_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     match msg {
         Msg::OnboardingNext => {
             if let Some(o) = state.onboarding.as_mut() {
-                // Use selected_item to select current item before advancing
                 match &o.step {
                     OnboardingStep::ProviderSelect => {
                         let idx = o.get_selected_item();
                         o.select_provider(idx);
+                        o.next_step();
                     }
                     OnboardingStep::ModelSelect => {
                         let idx = o.get_selected_item();
                         o.select_model(idx);
+                        o.next_step();
                     }
-                    _ => {}
+                    OnboardingStep::Complete => {
+                        // Finish onboarding and switch to chat
+                        if let Some(settings) = o.to_settings() {
+                            state.onboarding = None;
+                            state.mode = TuiMode::Chat;
+                            return vec![Cmd::SaveSettings {
+                                provider: settings.provider_id,
+                                model: settings.model_id,
+                                api_key: settings.api_key,
+                            }];
+                        }
+                    }
+                    _ => {
+                        o.next_step();
+                    }
                 }
-                o.next_step();
             }
         }
         Msg::OnboardingBack => {
