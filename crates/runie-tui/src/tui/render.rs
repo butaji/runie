@@ -3,6 +3,7 @@ use ratatui::{
     buffer::Buffer,
     style::Style,
     text::{Line, Span},
+    widgets::{Block, Borders, Widget},
 };
 use crate::theme::ThemeWrapper;
 use crate::tui::state::{TuiMode, TopBarState, RenderState};
@@ -171,31 +172,13 @@ pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, them
 
 // ─── Agent List ───────────────────────────────────────────────────────────────
 
-fn render_agent_header(area: Rect, buf: &mut Buffer, border_color: ratatui::style::Color, accent_primary: ratatui::style::Color) {
-    let header = " AGENTS ";
-    let header_style = Style::default().fg(accent_primary).add_modifier(ratatui::style::Modifier::BOLD);
-    let inner_width = area.width.saturating_sub(2);
-    let header_len = header.len() as u16;
-    let dashes = inner_width.saturating_sub(header_len);
-
-    let mut x = area.x + 1;
-    for ch in header.chars() {
-        if let Some(cell) = buf.cell_mut((x, area.y)) {
-            cell.set_char(ch);
-            cell.set_style(header_style);
-        }
-        x += 1;
-    }
-    for _ in 0..dashes {
-        if let Some(cell) = buf.cell_mut((x, area.y)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(border_color));
-        }
-        x += 1;
-    }
-}
-
-fn get_agent_status_style(status: &AgentStatus, accent_primary: ratatui::style::Color, success: ratatui::style::Color, error: ratatui::style::Color, text_dim: ratatui::style::Color) -> (char, ratatui::style::Color) {
+fn get_agent_status_style(
+    status: &AgentStatus,
+    accent_primary: ratatui::style::Color,
+    success: ratatui::style::Color,
+    error: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
+) -> (char, ratatui::style::Color) {
     match *status {
         AgentStatus::Running => ('●', accent_primary),
         AgentStatus::Completed => ('✓', success),
@@ -262,7 +245,10 @@ fn render_agent_item_row(
     } else {
         format!("{}s", duration_secs)
     };
-    let meta_span = Span::styled(format!("  {} · {}", agent.4, duration_str), Style::default().fg(text_dim).bg(bg_panel));
+    let meta_span = Span::styled(
+        format!("  {} · {}", agent.4, duration_str),
+        Style::default().fg(text_dim).bg(bg_panel),
+    );
     let meta_line = Line::from(vec![meta_span]);
     buf.set_line(area.x + 2, y3, &meta_line, inner_width.saturating_sub(2));
 
@@ -275,49 +261,6 @@ fn render_agent_item_row(
                 cell.set_style(Style::default().fg(text_dim).bg(bg_panel));
             }
         }
-    }
-}
-
-fn fill_agent_list_interior(area: Rect, buf: &mut Buffer, bg_panel: ratatui::style::Color, border_color: ratatui::style::Color) {
-    // Interior fill
-    for y in (area.y + 1)..(area.y + area.height - 1) {
-        for x in (area.x + 1)..(area.x + area.width - 1) {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_style(Style::default().bg(bg_panel));
-            }
-        }
-    }
-
-    // Left and right borders
-    for y in (area.y + 1)..(area.y + area.height - 1) {
-        if let Some(cell) = buf.cell_mut((area.x, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(border_color));
-        }
-        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(border_color));
-        }
-    }
-}
-
-fn render_agent_list_bottom_border(area: Rect, buf: &mut Buffer, border_color: ratatui::style::Color) {
-    let bottom_y = area.y + area.height - 1;
-    if let Some(cell) = buf.cell_mut((area.x, bottom_y)) {
-        cell.set_char('╰');
-        cell.set_style(Style::default().fg(border_color));
-    }
-
-    for x in (area.x + 1)..(area.x + area.width - 1) {
-        if let Some(cell) = buf.cell_mut((x, bottom_y)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(border_color));
-        }
-    }
-
-    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, bottom_y)) {
-        cell.set_char('╯');
-        cell.set_style(Style::default().fg(border_color));
     }
 }
 
@@ -334,71 +277,52 @@ pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         return;
     }
 
-    // Top border
-    if let Some(cell) = buf.cell_mut((area.x, area.y)) {
-        cell.set_char('╭');
-        cell.set_style(Style::default().fg(border_color));
-    }
-    if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y)) {
-        cell.set_char('╮');
-        cell.set_style(Style::default().fg(border_color));
-    }
+    // Render block with border and background using native widget
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .style(Style::default().bg(bg_panel).fg(border_color));
+    block.render(area, buf);
 
-    render_agent_header(area, buf, border_color, accent_primary);
-    fill_agent_list_interior(area, buf, bg_panel, border_color);
+    // Header content area (inside the border)
+    let header_area = Rect::new(area.x + 1, area.y, area.width - 2, 1);
+    let header = " AGENTS ";
+    let header_style = Style::default().fg(accent_primary).add_modifier(ratatui::style::Modifier::BOLD);
+    let header_line = Line::from(Span::styled(header, header_style));
+    buf.set_line(header_area.x, header_area.y, &header_line, header_area.width);
 
-    // Show empty state - no demo agents
-    let mut current_y = area.y + 1;
+    // Content area (inside border, below header)
+    let content_y = area.y + 1;
     let max_y = area.y + area.height - 1;
 
-    if current_y + 3 >= max_y {
-        render_agent_list_bottom_border(area, buf, border_color);
+    if content_y + 3 >= max_y {
         return;
     }
 
     let empty_msg = Line::from("No agents running").style(Style::default().fg(text_dim));
-    buf.set_line(area.x + 2, current_y + 1, &empty_msg, area.width - 4);
-
-    render_agent_list_bottom_border(area, buf, border_color);
+    buf.set_line(area.x + 2, content_y + 1, &empty_msg, area.width - 4);
 }
 
 // ─── Shadow ───────────────────────────────────────────────────────────────────
 
-fn draw_vertical_shadow(modal_area: Rect, buf: &mut Buffer, shadow_bg: ratatui::style::Color, shadow_fg: ratatui::style::Color) {
-    let shadow_x = modal_area.x + modal_area.width;
-    if shadow_x < buf.area.width {
-        for y in modal_area.y + 1..modal_area.y + modal_area.height + 1 {
-            if y < buf.area.height {
-                if let Some(cell) = buf.cell_mut((shadow_x, y)) {
-                    cell.set_char('░');
-                    cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
-                }
-            }
-        }
-    }
-}
+fn draw_shadow_line(
+    x_start: u16, x_end: u16, y: u16,
+    buf: &mut Buffer,
+    shadow_bg: ratatui::style::Color,
+    shadow_fg: ratatui::style::Color,
+    ch: char,
+) {
+    let max_x = buf.area.width;
+    let max_y = buf.area.height;
 
-fn draw_horizontal_shadow(modal_area: Rect, buf: &mut Buffer, shadow_bg: ratatui::style::Color, shadow_fg: ratatui::style::Color) {
-    let shadow_y = modal_area.y + modal_area.height;
-    if shadow_y < buf.area.height {
-        for x in modal_area.x + 1..modal_area.x + modal_area.width + 1 {
-            if x < buf.area.width {
-                if let Some(cell) = buf.cell_mut((x, shadow_y)) {
-                    cell.set_char('░');
-                    cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
-                }
-            }
-        }
-    }
-}
+    let actual_x_end = x_end.min(max_x);
+    let actual_y = y.min(max_y);
 
-fn draw_corner_shadow(modal_area: Rect, buf: &mut Buffer, shadow_bg: ratatui::style::Color, shadow_fg: ratatui::style::Color) {
-    let corner_x = modal_area.x + modal_area.width;
-    let corner_y = modal_area.y + modal_area.height;
-    if corner_x < buf.area.width && corner_y < buf.area.height {
-        if let Some(cell) = buf.cell_mut((corner_x, corner_y)) {
-            cell.set_char('▒');
-            cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+    for x in x_start..actual_x_end {
+        if x < max_x && actual_y < max_y {
+            if let Some(cell) = buf.cell_mut((x, actual_y)) {
+                cell.set_char(ch);
+                cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+            }
         }
     }
 }
@@ -407,7 +331,25 @@ pub fn render_shadow(modal_area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let shadow_bg: ratatui::style::Color = theme.color("bg.base").into();
     let shadow_fg: ratatui::style::Color = theme.color("text.dim").into();
 
-    draw_vertical_shadow(modal_area, buf, shadow_bg, shadow_fg);
-    draw_horizontal_shadow(modal_area, buf, shadow_bg, shadow_fg);
-    draw_corner_shadow(modal_area, buf, shadow_bg, shadow_fg);
+    let shadow_x = modal_area.x + modal_area.width;
+    let shadow_y = modal_area.y + modal_area.height;
+
+    // Vertical shadow (right side)
+    if shadow_x < buf.area.width {
+        draw_shadow_line(shadow_x, shadow_x + 1, modal_area.y + 1, buf, shadow_bg, shadow_fg, '░');
+        draw_shadow_line(shadow_x, shadow_x + 1, modal_area.y + modal_area.height, buf, shadow_bg, shadow_fg, '░');
+    }
+
+    // Horizontal shadow (bottom)
+    if shadow_y < buf.area.height {
+        draw_shadow_line(modal_area.x + 1, shadow_x + 1, shadow_y, buf, shadow_bg, shadow_fg, '░');
+    }
+
+    // Corner shadow
+    if shadow_x < buf.area.width && shadow_y < buf.area.height {
+        if let Some(cell) = buf.cell_mut((shadow_x, shadow_y)) {
+            cell.set_char('▒');
+            cell.set_style(Style::default().fg(shadow_fg).bg(shadow_bg));
+        }
+    }
 }
