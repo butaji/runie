@@ -252,7 +252,6 @@ fn render_agent_list_full(buf: &mut Buffer, colors: &SidebarColors, state: &Rend
         .border_gradient(colors.border_unfocused, colors.accent_primary)
         .title_color(colors.accent_primary)
         .title_right()
-        .bg(bg_panel)
         .render(layout.plan_rect, buf, |inner, buf| {
             render_plan_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, colors.accent_primary, plan_steps, state.animation.braille_frame);
         });
@@ -262,7 +261,6 @@ fn render_agent_list_full(buf: &mut Buffer, colors: &SidebarColors, state: &Rend
         .border_gradient(colors.border_unfocused, colors.accent_primary)
         .title_color(colors.accent_primary)
         .title_right()
-        .bg(bg_panel)
         .render(layout.agents_rect, buf, |inner, buf| {
             render_agents_content(inner, buf, bg_panel, colors.text_secondary, colors.text_dim, state.agent_running, running_jobs, active_count, cost);
         });

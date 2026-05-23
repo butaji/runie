@@ -42,17 +42,19 @@ impl DialogFrame {
         let accent: Color = theme.color("accent.primary").into();
         let text_muted: Color = theme.color("text.muted").into();
         let border_unfocused: Color = theme.color("border.unfocused").into();
+        let bg_base: Color = theme.color("bg.base").into();
 
         let dialog_area = centered_rect(area, self.width, self.height);
 
         // Clear dialog area
         Clear.render(dialog_area, buf);
 
-        // Draw panel with gradient border
+        // Draw panel with gradient border and base background
         let mut panel = Panel::new()
             .border_gradient(border_unfocused, accent)
             .title_color(border_unfocused)
-            .title_center();
+            .title_center()
+            .bg(bg_base);
 
         if let Some(ref title) = self.title {
             panel = panel.title(title.as_str());
