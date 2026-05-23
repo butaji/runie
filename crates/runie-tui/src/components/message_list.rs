@@ -17,8 +17,6 @@ impl MessageList {
         animation: &AnimationState,
         agent_running: bool,
     ) {
-        render::fill_background(area, buf, theme);
-
         let mut row = 0u16;
         let max_rows = area.height;
 

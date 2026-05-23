@@ -4,7 +4,7 @@ use ratatui::{
     style::Style,
     text::{Line, Span},
 };
-use crate::theme::ThemeWrapper;
+use crate::theme::ThemeColors;
 use crate::tui::state::{TuiMode, TopBarState, RenderState};
 use crate::components::panel::Panel;
 
@@ -54,13 +54,13 @@ fn build_right_parts(top_bar: &TopBarState, text_secondary: ratatui::style::Colo
     right_parts
 }
 
-pub fn render_top_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_top_bar(state: &RenderState, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
     use ratatui::text::Line;
 
     let x = area.x + 1;
-    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
+    let text_primary = colors.text_primary;
+    let text_secondary = colors.text_secondary;
+    let text_muted = colors.text_muted;
 
     let left_parts = build_left_parts(&state.top_bar, text_primary, text_muted);
     if !left_parts.is_empty() {
@@ -132,12 +132,12 @@ fn render_bg_jobs(area: Rect, buf: &mut Buffer, text_secondary: ratatui::style::
     buf.set_line(x, area.y, &Line::raw(text).style(Style::default().fg(text_secondary)), width);
 }
 
-pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, braille_frame: usize) {
+pub fn render_status_bar(state: &RenderState, area: Rect, buf: &mut Buffer, colors: &ThemeColors, braille_frame: usize) {
     use ratatui::style::Modifier;
     use ratatui::text::{Line, Span};
 
-    let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
-    let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
+    let text_tertiary = colors.text_dim;
+    let text_secondary = colors.text_secondary;
     let items = get_status_items(&state.mode);
 
     let (center_line, center_width) = build_center_line(state, text_tertiary);
@@ -214,13 +214,13 @@ struct SidebarColors {
     border_unfocused: ratatui::style::Color,
 }
 
-fn get_sidebar_colors(theme: &ThemeWrapper) -> SidebarColors {
+fn get_sidebar_colors(colors: &ThemeColors) -> SidebarColors {
     SidebarColors {
-        bg_panel: theme.color("bg.panel").into(),
-        text_secondary: theme.color("text.secondary").into(),
-        text_dim: theme.color("text.dim").into(),
-        accent_primary: theme.color("accent.primary").into(),
-        border_unfocused: theme.color("border.unfocused").into(),
+        bg_panel: colors.bg_panel,
+        text_secondary: colors.text_secondary,
+        text_dim: colors.text_dim,
+        accent_primary: colors.accent_primary,
+        border_unfocused: colors.border_unfocused,
     }
 }
 
@@ -266,10 +266,10 @@ fn render_agent_list_full(buf: &mut Buffer, colors: &SidebarColors, state: &Rend
         });
 }
 
-pub fn render_agent_list(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, state: &RenderState) {
+pub fn render_agent_list(area: Rect, buf: &mut Buffer, colors: &ThemeColors, state: &RenderState) {
     if area.width < 4 || area.height < 3 { return; }
 
-    let colors = get_sidebar_colors(theme);
+    let colors = get_sidebar_colors(colors);
     let min_height = 9; // minimum for 2 panels with gap
 
     if area.height < min_height {

@@ -2,6 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Margin, Rect},
     style::{Color, Style},
+    widgets::Widget,
 };
 
 pub enum PanelBorder {
@@ -86,15 +87,11 @@ impl<'a> Panel<'a> {
             return;
         }
 
-        // Optional background fill
+        // Optional background fill using Paragraph widget
         if let Some(bg) = self.bg_color {
-            for y in area.y..area.y + area.height {
-                for x in area.x..area.x + area.width {
-                    if let Some(cell) = buf.cell_mut((x, y)) {
-                        cell.set_style(Style::default().bg(bg));
-                    }
-                }
-            }
+            ratatui::widgets::Paragraph::new("")
+                .style(Style::default().bg(bg))
+                .render(area, buf);
         }
 
         // Draw border
