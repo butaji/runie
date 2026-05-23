@@ -35,9 +35,9 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let center_x = area.x + area.width / 2;
     let center_y = area.y + area.height / 2;
 
-    // Vertically center: logo(7) + gap(1) + title(1) + sub(1) + gap(2) + button(1) + gap(1) + hint(1) + gap(2)
-    // Total content height: 7 + 1 + 1 + 1 + 2 + 1 + 1 + 1 + 2 = 17
-    let content_h: u16 = 17;
+    // Vertically center: logo(7) + gap(1) + title(1) + sub(1) + gap(2) + button(1) + gap(1) + hint(1)
+    // Total content height: 7 + 1 + 1 + 1 + 2 + 1 + 1 + 1 = 15
+    let content_h: u16 = 15;
     let start_y = center_y.saturating_sub(content_h / 2);
 
     // 1. Logo (Braille dots forming circle) – centered
@@ -72,12 +72,6 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         .alignment(Alignment::Center);
     hint.render(Rect::new(area.x, hint_y, area.width, 1), buf);
 
-    // 6. Keyboard hint at bottom — muted color
-    let keyboard_hint_y = hint_y + 2 + 1; // hint(1) + blank(2) + 1
-    let keyboard_hint = Paragraph::new("↑↓ navigate · Enter select · Esc back")
-        .style(Style::default().fg(text_muted))
-        .alignment(Alignment::Center);
-    keyboard_hint.render(Rect::new(area.x, keyboard_hint_y, area.width, 1), buf);
 }
 
 fn render_dotted_logo(cx: u16, y: u16, buf: &mut Buffer, color: Color) {
@@ -173,7 +167,7 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
     let list_y = title_y + title_h + gap_after_title;
     for (i, provider) in onboarding.providers.iter().enumerate() {
         let row_y = list_y + i as u16;
-        let is_selected = Some(i) == onboarding.selected_provider;
+        let is_selected = i == onboarding.selected_item;
 
         // Selection indicator
         let indicator = if is_selected { "▸ " } else { "  " };
@@ -286,7 +280,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
 fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let accent: Color = theme.color("accent.primary").into();
     let text_primary: Color = theme.color("text.primary").into();
-    let _text_muted: Color = theme.color("text.muted").into();
+    let text_muted: Color = theme.color("text.muted").into();
     let text_secondary: Color = theme.color("text.secondary").into();
 
     let center_x = area.x + area.width / 2;
@@ -302,7 +296,16 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
     let list_y = area.y + 5;
     for (i, model) in onboarding.models.iter().enumerate() {
         let row_y = list_y + i as u16;
-        let is_selected = Some(i) == onboarding.selected_model;
+        let is_selected = i == onboarding.selected_item;
+
+        // Selection indicator
+        let indicator = if is_selected { "▸ " } else { "  " };
+        let indicator_style = if is_selected {
+            Style::default().fg(accent)
+        } else {
+            Style::default().fg(text_muted)
+        };
+        let indicator_span = Span::styled(indicator, indicator_style);
 
         // Model name
         let name_style = if is_selected {
@@ -326,7 +329,7 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
         };
         let desc_span = Span::styled(desc, desc_style);
 
-        let line = Line::from(vec![name_span, Span::raw(" "), desc_span]);
+        let line = Line::from(vec![indicator_span, name_span, Span::raw(" "), desc_span]);
         let para = Paragraph::new(line);
         para.render(Rect::new(inner_x, row_y, area.width.saturating_sub(inner_x), 1), buf);
     }
