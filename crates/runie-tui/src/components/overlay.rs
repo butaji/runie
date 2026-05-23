@@ -3,8 +3,9 @@ use ratatui::{
     layout::Rect,
     style::Style,
     text::{Line, Span},
-    widgets::{Block, BorderType, Clear, Widget},
+    widgets::{Clear, Widget},
 };
+use crate::components::gradient_border::render_gradient_border;
 use crate::theme::ThemeWrapper;
 
 #[derive(Clone)]
@@ -42,19 +43,22 @@ impl Overlay {
             return;
         }
 
-        let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
         let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
         let syntax_phase: ratatui::style::Color = theme.color("accent.secondary").into();
 
         Clear.render(area, buf);
 
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(text_tertiary))
-            .style(Style::default().bg(bg_panel))
-            .title(self.title.as_str())
-            .title_style(Style::default().fg(syntax_phase));
-        block.render(area, buf);
+        // Draw gradient border
+        render_gradient_border(area, buf);
+
+        // Draw title centered on top border row
+        let title_len = self.title.len() as u16;
+        let title_x = area.x + (area.width.saturating_sub(title_len)) / 2;
+        let title_line = Line::from(vec![Span::styled(
+            self.title.as_str(),
+            Style::default().fg(syntax_phase),
+        )]);
+        buf.set_line(title_x, area.y, &title_line, title_len);
 
         if self.show_close {
             let close_line = Line::from(vec![Span::styled("[x]", Style::default().fg(text_tertiary))]);

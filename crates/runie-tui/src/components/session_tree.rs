@@ -3,10 +3,10 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Widget},
 };
 use runie_core::session::Session;
 use crate::theme::ThemeWrapper;
+use crate::components::gradient_border::render_gradient_border;
 
 #[derive(Debug, Clone)]
 pub struct SessionTreeEntry {
@@ -122,13 +122,34 @@ impl SessionTreeNavigator {
             return;
         }
 
-        let block = Block::default()
-            .title(" Session Tree ")
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.color("border").into()));
-        let inner = block.inner(area);
-        block.render(area, buf);
+        render_gradient_border(area, buf);
+        self.render_title(area, buf, theme);
 
+        let inner = Rect::new(
+            area.x + 1,
+            area.y + 1,
+            area.width.saturating_sub(2),
+            area.height.saturating_sub(2),
+        );
+        self.render_content(inner, buf, theme);
+    }
+
+    fn render_title(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+        let title = " Session Tree ";
+        let title_len = title.len() as u16;
+        let title_x = area.x + (area.width.saturating_sub(title_len)) / 2;
+        let title_y = area.y;
+        let title_color: Color = theme.color("syntax.phase").into();
+
+        for (i, ch) in title.chars().enumerate() {
+            if let Some(cell) = buf.cell_mut((title_x + i as u16, title_y)) {
+                cell.set_char(ch);
+                cell.set_style(Style::default().fg(title_color));
+            }
+        }
+    }
+
+    fn render_content(&self, inner: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         let text_secondary: Color = theme.color("text.secondary").into();
         let accent: Color = theme.color("accent.primary").into();
         let bg_panel: Color = theme.color("bg.panel").into();
