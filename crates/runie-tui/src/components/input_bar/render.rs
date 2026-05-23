@@ -96,15 +96,19 @@ fn render_bottom_border(
         &input.right_info
     };
     let info_len = info_text.chars().count() as u16;
-    let inner_width = area.width.saturating_sub(2);
-    let fixed_width = info_len + 5;
-    let dashes = inner_width.saturating_sub(fixed_width).max(0);
+    // Right-aligned: dashes fill between ╰ and info, with 1 space before "─╯"
+    // Layout: ╰ + dashes + " " + info_text + " " + "─╯"
+    // Total fixed: 1 + 1 + info_len + 1 + 2 = info_len + 5
+    // dashes = area.width - (info_len + 5)
+    let dash_count = area.width.saturating_sub(info_len + 5).max(0);
+    let dash_str = "─".repeat(dash_count as usize);
+    let left_padding = area.width - info_len - dash_count - 5;
+    let pad_str = " ".repeat(left_padding as usize);
 
-    let dash_str = "─".repeat(dashes as usize);
     let bottom_line = Line::from(vec![
         Span::styled("╰", Style::default().fg(border_color)),
         Span::styled(&dash_str, Style::default().fg(border_color)),
-        Span::styled(" ", Style::default().fg(border_color)),
+        Span::styled(&pad_str, Style::default().fg(border_color)),
         Span::styled(info_text, Style::default().fg(border_color)),
         Span::styled(" ", Style::default().fg(border_color)),
         Span::styled("─", Style::default().fg(border_color)),
