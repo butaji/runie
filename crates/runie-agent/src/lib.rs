@@ -17,7 +17,7 @@ pub use hook::{Hook, HookDecision, HookError, SafetyHook};
 pub use state::AgentState;
 pub use executor::ToolExecutor;
 pub use loop_engine::AgentLoopConfig;
-pub use tools::{AgentTool, ToolHandler};
+pub use tools::AgentTool;
 
 // Events re-exports
 pub use events::{AgentEvent, AgentMessage, ContentPart, ImageSource, PermissionDecision, TokenUsage, ToolResult};

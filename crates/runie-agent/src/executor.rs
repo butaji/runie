@@ -3,6 +3,11 @@ use runie_tools::ToolRegistry;
 use crate::{Hook, config::ToolExecutionMode};
 use std::sync::Arc;
 
+/// Tool executor with parallel/sequential support.
+/// Currently unused — loop engine executes tools inline with hooks integrated.
+/// Reserved for future use when parallel tool execution with proper hook
+/// propagation is needed.
+#[allow(dead_code)]
 pub struct ToolExecutor {
     pub registry: Arc<ToolRegistry>,
     pub hooks: Vec<Arc<dyn Hook>>,

@@ -41,6 +41,10 @@ impl Tool for EditFileTool {
                     "new_string": {
                         "type": "string",
                         "description": "Replacement string"
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "If true, replace all occurrences. If false (default), fail when multiple matches exist."
                     }
                 },
                 "required": ["path", "old_string", "new_string"]
@@ -55,6 +59,7 @@ impl Tool for EditFileTool {
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'new_string' argument".to_string()))?;
         let path = args["path"].as_str()
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'path' argument".to_string()))?;
+        let force = args["force"].as_bool().unwrap_or(false);
 
         let resolved = self.workspace.resolve(path)?;
         let content = tokio::fs::read_to_string(&resolved).await
@@ -66,22 +71,28 @@ impl Tool for EditFileTool {
                 format!("String not found in file: {}", old_string)
             ));
         }
-        if occurrences > 1 {
+        if occurrences > 1 && !force {
             return Err(ToolError::ExecutionFailed(
                 format!("String appears {} times. Use a more specific replacement.", occurrences)
             ));
         }
 
-        let new_content = content.replacen(old_string, new_string, 1);
+        let new_content = if force {
+            content.replace(old_string, new_string)
+        } else {
+            content.replacen(old_string, new_string, 1)
+        };
+        let replacement_count = if force { occurrences } else { 1 };
         tokio::fs::write(&resolved, new_content).await
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to write file: {}", e)))?;
 
         Ok(ToolOutput {
-            content: format!("Edited {} (1 replacement)", path),
+            content: format!("Edited {} ({} replacement{})", path, replacement_count, if replacement_count == 1 { "" } else { "s" }),
             metadata: json!({
                 "path": path,
                 "old_content": old_string,
-                "new_content": new_string
+                "new_content": new_string,
+                "replacement_count": replacement_count
             }),
             terminate: false,
         })

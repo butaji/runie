@@ -41,7 +41,7 @@ async fn test_agent_end_to_end() {
             &[],
             event_tx,
             perm_rx,
-            Some(registry),
+            registry,
             vec![],
         )
         .await
@@ -116,7 +116,7 @@ async fn test_agent_with_mock_error_simulation() {
             &[],
             event_tx,
             perm_rx,
-            Some(registry),
+            registry,
             vec![],
         )
         .await

@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AgentEvent {
+    /// Simple, non-streaming message for pre-agent UI messages (e.g., onboarding/welcome).
+    /// Unlike MessageStart/Update/End, this is NOT produced by the loop engine — it's
+    /// constructed directly by the CLI for messages that exist outside the streaming loop.
     Message { role: String, content: String },
     MessageStart { message: AgentMessage },
     MessageUpdate { message: AgentMessage },

@@ -33,7 +33,7 @@ impl Tool for SearchTool {
                 "properties": {
                     "pattern": {
                         "type": "string",
-                        "description": "Search pattern (glob for files, regex for content)"
+                        "description": "Search pattern (glob for files, substring for content)"
                     },
                     "type": {
                         "type": "string",

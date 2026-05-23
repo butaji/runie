@@ -23,10 +23,18 @@ impl Workspace {
     }
 
     pub fn contains(&self, path: &Path) -> bool {
-        path.canonicalize()
-            .and_then(|canonical| {
-                self.root.canonicalize().map(|root| canonical.starts_with(&root))
-            })
-            .unwrap_or(false)
+        let canonical_root = match self.root.canonicalize() {
+            Ok(root) => root,
+            Err(_) => return false,
+        };
+
+        let absolute_path = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+        let normalized = if absolute_path.is_relative() {
+            canonical_root.join(absolute_path)
+        } else {
+            absolute_path
+        };
+
+        normalized.starts_with(&canonical_root)
     }
 }

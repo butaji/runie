@@ -10,6 +10,8 @@ use std::path::PathBuf;
 use settings::{CliSettings, Settings};
 
 use crate::provider_factory::create_provider;
+use runie_ai::providers::MockProvider;
+use runie_ai::Provider;
 
 /// Tidy coding harness — AI agent toolkit for the terminal.
 ///
@@ -123,7 +125,15 @@ async fn run_cli_one_shot(
     println!();
 
     if mock {
-        println!("{}", generate_mock_response(prompt));
+        let mock_provider = MockProvider::new();
+        let messages = vec![runie_core::Message::User {
+            content: prompt.to_string(),
+            attachments: vec![],
+        }];
+        match mock_provider.chat_simple(messages).await {
+            Ok(response) => println!("{}", response),
+            Err(e) => eprintln!("Mock error: {}", e),
+        }
     } else {
         let provider = match create_provider(mock, settings) {
             Ok(p) => p,
@@ -146,20 +156,4 @@ async fn run_cli_one_shot(
         }
     }
     Ok(())
-}
-
-fn generate_mock_response(input: &str) -> String {
-    let input_lower = input.to_lowercase();
-
-    if input_lower.contains("hello") || input_lower.contains("hi") {
-        "Hello! I'm your mock coding assistant. I can help you with:\n\n• Reading and editing files\n• Running commands\n• Searching code\n• Analyzing projects\n\nWhat would you like to work on?".to_string()
-    } else if input_lower.contains("edit") || input_lower.contains("fix") {
-        "I'll help you edit that. First, let me read the file to understand its current state.\n\n[Tool: read_file]\nReading file contents...\n\nGot it. I can see the structure. What specific changes would you like to make?".to_string()
-    } else if input_lower.contains("test") || input_lower.contains("run") {
-        "Running tests...\n\n```\n$ cargo test\n   Compiling runie-core v0.1.0\n   Compiling runie-agent v0.1.0\n    Finished test [unoptimized + debuginfo]\n     Running unittests\n\ntest result: ok. 15 passed; 0 failed;\n```\n\nAll tests pass! ✅".to_string()
-    } else if input_lower.contains("help") || input_lower.contains("?") {
-        "Available commands:\n\n• File operations: read, write, edit files\n• Shell: run bash commands\n• Search: find files and content\n• Code: analyze, refactor, generate\n\nJust describe what you want to do!".to_string()
-    } else {
-        format!("Interesting! You said: \"{}\"\n\nIn mock mode, I simulate responses without calling real LLMs. Try asking me to:\n- Edit a file\n- Run tests\n- Search for something\n- Or just say hello!", input)
-    }
 }

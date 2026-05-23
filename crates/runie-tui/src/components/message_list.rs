@@ -1,21 +1,36 @@
 use ratatui::{buffer::Buffer, layout::Rect};
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
-
 pub mod types;
 pub mod render;
 
-pub use types::{MessageList, MessageItem, PlanStatus, BRAILLE_FRAMES, REVERSE_BRAILLE_FRAMES};
+pub use types::{MessageItem, MessageList, PlanStatus, BRAILLE_FRAMES, REVERSE_BRAILLE_FRAMES};
+
+/// ViewModel for rendering MessageList
+pub struct MessageListViewModel {
+    pub messages: Vec<MessageItem>,
+    pub scroll_offset: usize,
+    pub agent_running: bool,
+    pub animation: AnimationState,
+}
+
+impl MessageListViewModel {
+    pub fn new(messages: Vec<MessageItem>, scroll_offset: usize, agent_running: bool, animation: AnimationState) -> Self {
+        Self {
+            messages,
+            scroll_offset,
+            agent_running,
+            animation,
+        }
+    }
+}
 
 impl MessageList {
     pub fn render_ref(
-        messages: &[MessageItem],
-        scroll_offset: usize,
+        vm: &MessageListViewModel,
         area: Rect,
         buf: &mut Buffer,
         theme: &ThemeWrapper,
-        animation: &AnimationState,
-        agent_running: bool,
     ) {
         let mut row = 0u16;
         let max_rows = area.height;
@@ -31,31 +46,31 @@ impl MessageList {
         let error: ratatui::style::Color = theme.color("error").into();
         let code_path: ratatui::style::Color = theme.color("code.path").into();
 
-        let spinner = BRAILLE_FRAMES[animation.braille_frame % 10];
-        let rewind_spinner = REVERSE_BRAILLE_FRAMES[animation.braille_frame % 10];
-        let total_messages = messages.len();
+        let spinner = BRAILLE_FRAMES[vm.animation.braille_frame % 10];
+        let rewind_spinner = REVERSE_BRAILLE_FRAMES[vm.animation.braille_frame % 10];
+        let total_messages = vm.messages.len();
         let mut prev_msg_type: Option<&str> = None;
 
-        let most_recent_spinner = render::find_most_recent_spinner_index(messages);
+        let most_recent_spinner = render::find_most_recent_spinner_index(&vm.messages);
         let mut wrap_cache = render::WrapCache::new();
 
-        for (idx, msg) in messages.iter().skip(scroll_offset).enumerate() {
+        for (idx, msg) in vm.messages.iter().skip(vm.scroll_offset).enumerate() {
             if row >= max_rows { break; }
 
-            let absolute_idx = scroll_offset + idx;
+            let absolute_idx = vm.scroll_offset + idx;
             let msg_type = render::get_msg_type(msg);
             if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) && row < max_rows {
                 row += 1;
             }
             prev_msg_type = Some(msg_type);
 
-            let show_cursor = render::should_show_cursor(animation, agent_running, absolute_idx, total_messages, msg);
+            let show_cursor = render::should_show_cursor(&vm.animation, vm.agent_running, absolute_idx, total_messages, msg);
             let show_spinner = most_recent_spinner == Some(absolute_idx);
             let rendered = render::render_single_msg(
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
                 success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-                animation, &mut wrap_cache,
+                &vm.animation, &mut wrap_cache,
             );
             row += rendered;
         }

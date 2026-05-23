@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::pin::Pin;
 use tokio::sync::mpsc;
 use runie_agent::events::{AgentEvent, PermissionDecision};
 use runie_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
@@ -56,7 +55,7 @@ pub fn spawn_agent_task(
             &tools,
             event_tx,
             perm_rx,
-            Some(registry),
+            registry,
             hooks,
         ).await {
             Ok(_) => {},
@@ -102,21 +101,6 @@ pub fn create_agent_tools(registry: Arc<runie_tools::ToolRegistry>) -> Vec<Agent
         let name = tool.name().to_string();
         let description = tool.description().to_string();
         let parameters = tool.schema().parameters;
-        let registry_clone = registry.clone();
-
-        AgentTool::new(name.clone(), description, parameters).with_handler(
-            Arc::new(move |args| {
-                let registry = registry_clone.clone();
-                let name = name.clone();
-                Box::pin(async move {
-                    match registry.get(&name) {
-                        Some(t) => t.execute(args).await
-                            .map(|o| o.content)
-                            .map_err(|e| e.to_string()),
-                        None => Err(format!("Tool not found: {}", name)),
-                    }
-                }) as Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>
-            }),
-        )
+        AgentTool::new(name, description, parameters)
     }).collect()
 }

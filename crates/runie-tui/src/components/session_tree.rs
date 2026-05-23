@@ -122,7 +122,9 @@ impl SessionTreeNavigator {
             return;
         }
 
-        render_gradient_border(area, buf);
+        let border: Color = theme.color("border.unfocused").into();
+        let accent: Color = theme.color("syntax.phase").into();
+        render_gradient_border(area, buf, border, accent);
         self.render_title(area, buf, theme);
 
         let inner = Rect::new(

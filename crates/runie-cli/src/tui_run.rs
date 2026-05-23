@@ -59,10 +59,31 @@ pub async fn run_tui(
     let git_info = crate::git::detect_git_info(&workspace);
     tui.state.top_bar.repo = git_info.repo;
     tui.state.top_bar.branch = git_info.branch;
-    tui.state.top_bar.path = git_info.relative_path;
-    tui.state.top_bar.checks_passed = None;
-    tui.state.top_bar.checks_total = None;
-    tui.state.top_bar.percentage = None;
+    tui.state.top_bar.path = if mock {
+        "src/components".to_string()
+    } else {
+        git_info.relative_path
+    };
+    if mock {
+        // Show demo fallback content: 4 ✓ 4.5% ████░░░░░░
+        tui.state.top_bar.checks_passed = Some(4);
+        tui.state.top_bar.checks_total = Some(4);
+        tui.state.top_bar.percentage = Some(4.5);
+        tui.state.top_bar.context_badges = Vec::new();
+        tui.state.top_bar.context_pct = None;
+        tui.state.top_bar.context_bar_pct = None;
+    } else {
+        tui.state.top_bar.checks_passed = None;
+        tui.state.top_bar.checks_total = None;
+        tui.state.top_bar.percentage = None;
+
+        // Populate context badges from loaded context files
+        let mut badges = Vec::new();
+        if !loaded_paths.is_empty() {
+            badges.push(format!("{} context", loaded_paths.len()));
+        }
+        tui.state.top_bar.context_badges = badges;
+    }
 
     tui.state.input_right_info = if mock {
         format!("mock · {}", settings.model)
@@ -144,6 +165,44 @@ pub async fn run_tui(
     let mut tick_interval = interval(Duration::from_millis(80));
     let mut cursor_interval = interval(Duration::from_millis(500));
 
+    // Helper to update top bar context percentages from current state
+    fn update_top_bar_context(tui: &mut Tui, settings: &Settings) {
+        use runie_ai::ModelRegistry;
+
+        // Calculate estimated tokens from message history (rough: ~4 chars/token)
+        let total_chars: usize = tui.state.messages.iter().map(|msg| match msg {
+            runie_tui::MessageItem::User { text, .. } => text.len(),
+            runie_tui::MessageItem::Assistant { text, .. } => text.len(),
+            runie_tui::MessageItem::System { text } => text.len(),
+            runie_tui::MessageItem::ToolCall { name, args, result, .. } => {
+                name.len() + args.len() + result.as_ref().map(|s| s.len()).unwrap_or(0)
+            }
+            _ => 0,
+        }).sum();
+
+        let estimated_tokens = total_chars / 4;
+
+        // Look up context window for current model
+        let registry = ModelRegistry::new();
+        let context_window = registry.get(&settings.model)
+            .map(|m| m.context_window)
+            .unwrap_or(128_000); // default fallback
+
+        let pct = if context_window > 0 {
+            ((estimated_tokens as f32 / context_window as f32) * 100.0).min(100.0)
+        } else {
+            0.0
+        };
+
+        tui.state.top_bar.context_pct = Some(pct);
+        tui.state.top_bar.context_bar_pct = Some(pct);
+
+        // Ensure badges always show something meaningful
+        if tui.state.top_bar.context_badges.is_empty() {
+            tui.state.top_bar.context_badges = vec![settings.model.clone()];
+        }
+    }
+
     // Process Cmds that need recursive handling (SlashCommand -> more Cmds)
     async fn process_cmd(
         cmd: Cmd,
@@ -203,7 +262,7 @@ pub async fn run_tui(
                             &tools,
                             event_tx,
                             fresh_perm_rx,
-                            Some(registry),
+                            registry,
                             hooks,
                         ).await {
                             Ok(_) => {},
@@ -309,6 +368,11 @@ pub async fn run_tui(
                     pending_cmds = next_cmds;
                 }
 
+                // Update context info after agent events (skip in mock mode)
+                if !mock {
+                    update_top_bar_context(&mut tui, &settings);
+                }
+
                 // Render after EVERY message
                 tui.render()?;
             }
@@ -329,6 +393,9 @@ pub async fn run_tui(
 
             // Animation tick (80ms) — LOWEST PRIORITY
             _ = tick_interval.tick() => {
+                if !mock {
+                    update_top_bar_context(&mut tui, &settings);
+                }
                 let cmds = tui.update(Msg::Tick);
                 let mut pending_cmds = cmds;
                 while !pending_cmds.is_empty() {

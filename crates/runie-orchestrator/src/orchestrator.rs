@@ -47,6 +47,10 @@ pub trait Orchestrator: Send + Sync {
 }
 
 /// Simple orchestrator that manages subagents in memory.
+///
+/// **NOTE:** This is a future-feature stub. The `spawn`, `handoff`, and `collect`
+/// methods are intentionally scaffolding — they do not actually execute tasks or
+/// transfer context. See individual method comments marked `// TODO: Unimplemented stub`.
 pub struct SimpleOrchestrator {
     subagents: Arc<RwLock<HashMap<String, SubagentHandle>>>,
     handoff_protocol: Arc<dyn HandoffProtocol>,
@@ -70,6 +74,7 @@ impl Orchestrator for SimpleOrchestrator {
         task: Task,
         _parent_context: &Context,
     ) -> Result<SubagentHandle, OrchestratorError> {
+        // TODO: Unimplemented stub — only creates SubagentHandle, does not actually spawn a task or agent.
         let subagents = self.subagents.read().await;
         if subagents.len() >= self.max_subagents {
             return Err(OrchestratorError::MaxSubagentsExceeded);
@@ -95,11 +100,10 @@ impl Orchestrator for SimpleOrchestrator {
         to: &str,
         context: &Context,
     ) -> Result<(), OrchestratorError> {
+        // TODO: Unimplemented stub — exports context but does not actually transfer it to the target agent.
         let payload = self.handoff_protocol.export(context).await
             .map_err(|e| OrchestratorError::HandoffError(e.to_string()))?;
 
-        // In real impl, we'd find the target agent and import context
-        // For now, just log the handoff
         tracing::info!("Handoff from {} to {} with {} messages", from, to, payload.session_snapshot.messages.len());
         Ok(())
     }
@@ -108,6 +112,7 @@ impl Orchestrator for SimpleOrchestrator {
         &self,
         handles: Vec<SubagentHandle>,
     ) -> Result<Vec<SubagentResult>, OrchestratorError> {
+        // TODO: Unimplemented stub — returns empty events and final_output for each handle.
         let mut results = Vec::new();
 
         for handle in handles {

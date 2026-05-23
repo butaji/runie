@@ -86,6 +86,8 @@ fn add_diff_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
     use opaline::OpalineColor;
     b.token("diff.removed", OpalineColor::new(0xFF, 0x6B, 0x6B))
         .token("diff.added", OpalineColor::new(0x51, 0xCF, 0x66))
+        .token("diff.removed_bg", OpalineColor::new(0x3A, 0x1A, 0x1A))
+        .token("diff.added_bg", OpalineColor::new(0x1A, 0x3A, 0x1A))
 }
 
 impl Default for ThemeWrapper {
