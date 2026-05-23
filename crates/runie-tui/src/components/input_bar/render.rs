@@ -16,10 +16,18 @@ pub fn render_ref(input: &InputBar, area: Rect, buf: &mut Buffer, theme: &ThemeW
     let blue_color: Color = theme.color("accent.primary").into();
 
     let block = Block::bordered()
-        .border_style(Style::default().fg(border_color))
-        .style(Style::default().bg(bg));
+        .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
     block.render(area, buf);
+
+    // Fill inner area with bg color (not the borders)
+    for y in inner.y..inner.y + inner.height {
+        for x in inner.x..inner.x + inner.width {
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_bg(bg);
+            }
+        }
+    }
 
     render_content_lines(input, inner, buf, &sp, blue_color);
     render_bottom_border(input, area, buf, border_color);
