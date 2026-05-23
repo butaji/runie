@@ -87,8 +87,9 @@ fn render_tabs(
         };
         let tab_text = format!(" {} ", tab);
         let tab_line = Line::from(vec![Span::styled(&tab_text, tab_style)]);
-        buf.set_line(tab_x, area.y + 1, &tab_line, tab_text.len() as u16);
-        tab_x += tab_text.len() as u16 + 1;
+        let tab_width = tab_text.chars().count() as u16;
+        buf.set_line(tab_x, area.y + 1, &tab_line, tab_width);
+        tab_x += tab_width + 1;
     }
 }
 
