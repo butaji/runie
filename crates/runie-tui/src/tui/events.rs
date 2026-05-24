@@ -42,7 +42,14 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         return ctrl_chat_key(key);
     }
     match key.code {
-        KeyCode::Enter => Some(Msg::Submit),
+        KeyCode::Enter => {
+            // Shift+Enter or Ctrl+Shift+Enter → newline
+            if key.modifiers.contains(KeyModifiers::SHIFT) {
+                Some(Msg::TextareaKey(key))
+            } else {
+                Some(Msg::Submit)
+            }
+        }
         KeyCode::PageUp => Some(Msg::ScrollPageUp),
         KeyCode::PageDown => Some(Msg::ScrollPageDown),
         _ => Some(Msg::TextareaKey(key)),
