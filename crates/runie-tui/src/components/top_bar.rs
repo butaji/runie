@@ -162,9 +162,10 @@ pub fn render_top_bar(vm: &TopBarViewModel, area: Rect, buf: &mut Buffer, colors
     let bright = colors.text_secondary;
     let dim = colors.text_dim;
 
-    // Line 1: left parts
-    let left_parts = build_left_spans(vm, bright, dim);
-    if !left_parts.is_empty() {
+    // Line 1: left parts (with 1 space padding)
+    let mut left_parts = vec![Span::styled(" ", Style::default())];
+    left_parts.extend(build_left_spans(vm, bright, dim));
+    if left_parts.len() > 1 {
         buf.set_line(x, area.y, &Line::from(left_parts), area.width - 2);
     }
 
