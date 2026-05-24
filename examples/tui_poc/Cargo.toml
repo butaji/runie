@@ -5,7 +5,10 @@ edition = "2021"
 
 [[bin]]
 name = "tui_poc"
-path = "src/main.rs"
+path = "src/generated_main.rs"
+
+[build-dependencies]
+runie = { path = "../../crates/runie" }
 
 [dependencies]
 renderer = { path = "../../crates/renderer" }
