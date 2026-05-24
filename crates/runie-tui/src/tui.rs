@@ -264,7 +264,7 @@ impl Tui {
         let text_primary = theme.color("text.primary").into();
         textarea.set_style(Style::default().fg(text_primary));
         textarea.set_cursor_style(Style::default().fg(accent_color).bg(accent_color));
-        textarea.set_cursor_line_style(Style::default()); // Remove underline
+        textarea.set_cursor_line_style(Style::default().remove_modifier(ratatui::style::Modifier::UNDERLINED));
         crate::components::input_bar::render_input_bar(
             &textarea,
             "\u{276F} ",
