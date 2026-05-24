@@ -43,9 +43,9 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
     match key.code {
         KeyCode::Enter => {
-            // Shift+Enter or Ctrl+Shift+Enter → newline
+            // Shift+Enter → newline, plain Enter → submit
             if key.modifiers.contains(KeyModifiers::SHIFT) {
-                Some(Msg::TextareaKey(key))
+                Some(Msg::InsertNewline)
             } else {
                 Some(Msg::Submit)
             }
@@ -58,10 +58,10 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Char('j') => Some(Msg::TextareaKey(key)), // Pass to textarea for newline
+        KeyCode::Char('j') => Some(Msg::InsertNewline), // Ctrl+J = insert newline
         KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
-        KeyCode::Enter => Some(Msg::TextareaKey(key)),
+        KeyCode::Enter => Some(Msg::InsertNewline), // Ctrl+Enter = insert newline
         _ => Some(Msg::TextareaKey(key)), // Let textarea handle Ctrl+A/E/D/W/U/etc.
     }
 }
