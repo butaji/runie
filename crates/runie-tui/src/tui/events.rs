@@ -61,6 +61,11 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Char('j') => Some(Msg::InsertNewline), // Ctrl+J = insert newline
         KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
+        KeyCode::Char('n') => Some(Msg::OpenCommandPalette), // Ctrl+N = new session via palette
+        KeyCode::Char('o') => Some(Msg::OpenCommandPalette), // Ctrl+O = load session via palette
+        KeyCode::Char('s') => Some(Msg::OpenCommandPalette), // Ctrl+S = save session via palette
+        KeyCode::Char('l') => Some(Msg::ClearChat),
+        KeyCode::Char('q') => Some(Msg::Quit),
         KeyCode::Enter => Some(Msg::InsertNewline), // Ctrl+Enter = insert newline
         _ => Some(Msg::TextareaKey(key)), // Let textarea handle Ctrl+A/E/D/W/U/etc.
     }

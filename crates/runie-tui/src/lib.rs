@@ -22,8 +22,6 @@ pub use components::{
     PermissionModal,
     PermissionAction,
     CommandPalette,
-    PaletteItem,
-    PaletteStep,
     PaletteCommand,
     ContextPanel,
     GitChange,

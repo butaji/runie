@@ -1,4 +1,4 @@
-use crate::components::{MessageItem, DiffViewer};
+use crate::components::{MessageItem, DiffViewer, PaletteCommand};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::components::SessionTreeNavigator;
@@ -239,6 +239,8 @@ pub enum Msg {
 
     // Input
     ClearInput,
+    ClearChat,
+    DirectCommand(PaletteCommand),
 }
 
 impl PartialEq for Msg {
@@ -285,6 +287,8 @@ impl PartialEq for Msg {
             (OnboardingSubmit, OnboardingSubmit) => true,
             (OnboardingSkip, OnboardingSkip) => true,
             (ClearInput, ClearInput) => true,
+            (ClearChat, ClearChat) => true,
+            (DirectCommand(a), DirectCommand(b)) => a == b,
             _ => false,
         }
     }

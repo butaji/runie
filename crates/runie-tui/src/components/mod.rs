@@ -27,7 +27,7 @@ pub use message_list::{MessageList, MessageItem};
 pub use input_bar::{INPUT_PROMPT, input_bar_height};
 pub use status_bar::StatusBar;
 pub use permission_modal::{PermissionModal, PermissionAction};
-pub use command_palette::{CommandPalette, PaletteItem, PaletteStep, PaletteCommand};
+pub use command_palette::{CommandPalette, PaletteCommand};
 pub use context_panel::{ContextPanel, GitChange, GitStatus};
 pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
 pub use modal::Modal;
