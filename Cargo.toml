@@ -6,6 +6,7 @@ members = [
     "crates/host",
     "crates/app",
     "crates/tea",
+    "crates/runie",
     "examples/tui_poc",
 ]
 

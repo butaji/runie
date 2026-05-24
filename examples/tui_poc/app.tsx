@@ -3,7 +3,7 @@ export function App() {
   return (
     <View style={{ flexDirection: "column", padding: 2 }}>
       <Text style={{ color: "#FF5733" }}>Count: {count}</Text>
-      <Button onPress={() => setCount((c) => c + 1)}>Increment</Button>
+      <Button onPress={() => setCount((c) => c + 2)}>Increment</Button>
     </View>
   );
 }
