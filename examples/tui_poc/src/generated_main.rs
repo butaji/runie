@@ -52,7 +52,7 @@ impl App {
                 
                 ..Default::default()
             },
-            children: vec![VNode::Text(VText { content: "Hi there!".to_string(), style: VStyle::default() })],
+            children: vec![VNode::Text(VText { content: "Hello world!".to_string(), style: VStyle::default() })],
         }), VNode::Element(VElement {
             tag: "Text".to_string(),
             props: VProps {
@@ -89,7 +89,7 @@ impl App {
 
     /// Dispatches onPress handlers
     fn dispatch_on_press(&mut self) {
-        self.state.count += 1;
+        self.state.count += 2;
     }
 }
 
