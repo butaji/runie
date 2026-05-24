@@ -17,10 +17,10 @@ fn test_ctrl_q_quits_in_chat_mode() {
 }
 
 #[test]
-fn test_ctrl_j_passes_to_textarea_in_chat_mode() {
-    // Ctrl+J passes to textarea (for newline)
+fn test_ctrl_j_inserts_newline_in_chat_mode() {
+    // Ctrl+J inserts newline
     let msg = simulate_key(KeyCode::Char('j'), KeyModifiers::CONTROL, TuiMode::Chat);
-    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Ctrl+J should produce TextareaKey");
+    assert_eq!(msg, Some(Msg::InsertNewline), "Ctrl+J should produce Msg::InsertNewline");
 }
 
 #[test]

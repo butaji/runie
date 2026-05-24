@@ -39,6 +39,7 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::OnboardingNavigateDown | Msg::OnboardingSelectProvider(_) |
         Msg::OnboardingSelectModel(_) | Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace |
         Msg::OnboardingSubmit | Msg::OnboardingSkip => { cmds.extend(onboarding::handle_onboarding_msg(state, msg)); }
+        Msg::InsertNewline => { state.textarea.insert_newline(); }
         Msg::ClearInput => { state.textarea.select_all(); state.textarea.delete_line_by_end(); }
     }
 

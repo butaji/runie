@@ -183,6 +183,7 @@ pub enum Msg {
     // Kept for compatibility but they do nothing
     Submit,
     TextareaKey(KeyEvent),
+    InsertNewline,
 
     // App
     Quit,
@@ -246,6 +247,7 @@ impl PartialEq for Msg {
         match (self, other) {
             (Submit, Submit) => true,
             (TextareaKey(a), TextareaKey(b)) => a == b,
+            (InsertNewline, InsertNewline) => true,
             (Quit, Quit) => true,
             (ToggleSidebar, ToggleSidebar) => true,
             (OpenCommandPalette, OpenCommandPalette) => true,
