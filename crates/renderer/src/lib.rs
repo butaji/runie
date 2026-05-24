@@ -5,7 +5,6 @@ use ratatui::{
     layout::Rect,
     style::Style,
 };
-use std::collections::HashMap;
 use taffy::prelude::*;
 use taffy::{NodeId, TaffyTree};
 
@@ -83,7 +82,6 @@ pub struct VText {
 }
 
 /// Virtual props (style + event handlers).
-/// Cannot derive Debug/Clone due to Fn fields.
 pub struct VProps {
     pub style: VStyle,
     pub on_press: Option<Box<dyn Fn() + Send>>,
@@ -104,7 +102,7 @@ impl Clone for VProps {
     fn clone(&self) -> Self {
         Self {
             style: self.style.clone(),
-            on_press: None, // Can't clone closures
+            on_press: None,
             on_change: None,
         }
     }
@@ -140,8 +138,7 @@ impl std::fmt::Debug for VText {
 pub struct RatatuiRenderer {
     taffy: TaffyTree,
     root: Option<VNode>,
-    root_node_id: Option<NodeId>,
-    node_ids: HashMap<String, NodeId>,
+    root_id: Option<NodeId>,
 }
 
 impl RatatuiRenderer {
@@ -149,12 +146,13 @@ impl RatatuiRenderer {
         Self {
             taffy: TaffyTree::new(),
             root: None,
-            root_node_id: None,
-            node_ids: HashMap::new(),
+            root_id: None,
         }
     }
 
-    fn build_taffy_tree(&mut self, node: &VNode, parent_id: NodeId) {
+    /// Build taffy tree from VNode recursively.
+    /// Returns the NodeId for this subtree.
+    fn build_taffy_tree(&mut self, node: &VNode) -> Option<NodeId> {
         match node {
             VNode::Element(elem) => {
                 let flex_direction = match elem.props.style.flex_direction {
@@ -165,7 +163,6 @@ impl RatatuiRenderer {
                 let padding = elem.props.style.padding as f32;
                 let margin = elem.props.style.margin as f32;
 
-                // Convert optional width/height to Dimension
                 let width = elem.props.style.width
                     .map(|w| taffy::Dimension::Length(w as f32))
                     .unwrap_or(taffy::Dimension::Auto);
@@ -173,30 +170,11 @@ impl RatatuiRenderer {
                     .map(|h| taffy::Dimension::Length(h as f32))
                     .unwrap_or(taffy::Dimension::Auto);
 
-                // Create child nodes first
+                // Recursively build children
                 let child_ids: Vec<NodeId> = elem
                     .children
                     .iter()
-                    .map(|child| match child {
-                        VNode::Text(text) => {
-                            let text_len = text.content.len() as f32;
-                            let text_style = taffy::Style {
-                                size: taffy::Size {
-                                    width: taffy::Dimension::Length(text_len),
-                                    height: taffy::Dimension::Length(1.0),
-                                },
-                                ..Default::default()
-                            };
-                            self.taffy.new_leaf(text_style).expect("Failed to create text node")
-                        }
-                        VNode::Element(_) => {
-                            // Create placeholder; we'll build it recursively
-                            self.taffy.new_leaf(taffy::Style::default()).expect("Failed to create element node")
-                        }
-                        VNode::Fragment(_) => {
-                            self.taffy.new_leaf(taffy::Style::default()).expect("Failed to create fragment node")
-                        }
-                    })
+                    .filter_map(|child| self.build_taffy_tree(child))
                     .collect();
 
                 let style = taffy::Style {
@@ -217,21 +195,13 @@ impl RatatuiRenderer {
                     ..Default::default()
                 };
 
-                let node_id = self
-                    .taffy
-                    .new_with_children(style, &child_ids)
-                    .expect("Failed to create element node");
+                let node_id = if child_ids.is_empty() {
+                    self.taffy.new_leaf(style).ok()?
+                } else {
+                    self.taffy.new_with_children(style, &child_ids).ok()?
+                };
 
-                self.node_ids.insert(elem.tag.clone(), node_id);
-                let _ = self.taffy.add_child(parent_id, node_id);
-
-                // Now recursively build children for element nodes
-                for (i, child) in elem.children.iter().enumerate() {
-                    if matches!(child, VNode::Element(_)) {
-                        let child_node_id = child_ids[i];
-                        self.build_taffy_tree(child, child_node_id);
-                    }
-                }
+                Some(node_id)
             }
             VNode::Text(text) => {
                 let text_len = text.content.len() as f32;
@@ -242,76 +212,164 @@ impl RatatuiRenderer {
                     },
                     ..Default::default()
                 };
-                let node_id = self.taffy.new_leaf(style).expect("Failed to create text node");
-                let _ = self.taffy.add_child(parent_id, node_id);
+                self.taffy.new_leaf(style).ok()
             }
             VNode::Fragment(children) => {
-                for child in children {
-                    self.build_taffy_tree(child, parent_id);
-                }
+                // Fragments inline their children; return first child's id
+                // (simplified: fragments are transparent in layout)
+                children.iter().filter_map(|c| self.build_taffy_tree(c)).next()
             }
         }
     }
 
-    fn render_node_to_buffer(
+    /// Render a node and its children recursively.
+    /// `node_id` is the taffy node corresponding to this VNode.
+    /// `area` is the screen rect allocated to this node.
+    fn render_node(
         &self,
         node: &VNode,
         buffer: &mut Buffer,
         area: Rect,
-        node_id: Option<NodeId>,
+        node_id: NodeId,
     ) {
         match node {
             VNode::Element(elem) => {
-                // Draw background if set
-                if let Some(bg) = &elem.props.style.background_color {
-                    let color = parse_color(bg);
-                    for y in area.y..area.y.saturating_add(area.height) {
-                        for x in area.x..area.x.saturating_add(area.width) {
-                            let cell = buffer.get_mut(x, y);
-                            cell.set_style(Style::default().bg(color));
-                        }
-                    }
+                // Draw View border
+                if elem.tag == "View" {
+                    self.draw_box(buffer, area);
                 }
 
-                // Render children with their layouts from taffy
-                if let Some(nid) = node_id {
-                    let child_ids = self.taffy.children(nid).expect("Failed to get children");
+                // Button renders itself specially
+                if elem.tag == "Button" {
+                    self.render_button(elem, buffer, area);
+                    return;
+                }
 
-                    for (i, child_id) in child_ids.iter().enumerate() {
-                        if i < elem.children.len() {
-                            if let Ok(layout) = self.taffy.layout(*child_id) {
-                                // Use taffy layout location + parent area offset for correct positioning
+                // For other elements, render children using taffy layouts
+                if let Ok(child_ids) = self.taffy.children(node_id) {
+                    for (i, child) in elem.children.iter().enumerate() {
+                        if i < child_ids.len() {
+                            if let Ok(layout) = self.taffy.layout(child_ids[i]) {
                                 let child_rect = Rect::new(
                                     area.x + layout.location.x as u16,
                                     area.y + layout.location.y as u16,
                                     layout.size.width as u16,
                                     layout.size.height as u16,
                                 );
-                                self.render_node_to_buffer(&elem.children[i], buffer, child_rect, Some(*child_id));
+                                self.render_node(child, buffer, child_rect, child_ids[i]);
                             }
                         }
                     }
                 }
             }
             VNode::Text(text) => {
-                // Render text content
                 let color = text
                     .style
                     .color
                     .as_ref()
                     .map(|c| parse_color(c))
-                    .unwrap_or_default();
+                    .unwrap_or(ratatui::style::Color::Reset);
 
                 let y = area.y;
-                for (j, ch) in text.content.chars().enumerate() {
+                let content = if text.content.chars().count() > area.width as usize {
+                    text.content.chars().take(area.width as usize - 1).collect::<String>() + "…"
+                } else {
+                    text.content.clone()
+                };
+
+                for (j, ch) in content.chars().enumerate() {
                     if j < area.width as usize {
                         let cell = buffer.get_mut(area.x + j as u16, y);
                         cell.set_char(ch).set_fg(color);
                     }
                 }
             }
-            VNode::Fragment(_children) => {
-                // Fragments don't render themselves, children handle it
+            VNode::Fragment(children) => {
+                // Fragments render children at same position
+                if let Ok(child_ids) = self.taffy.children(node_id) {
+                    for (i, child) in children.iter().enumerate() {
+                        if i < child_ids.len() {
+                            if let Ok(layout) = self.taffy.layout(child_ids[i]) {
+                                let child_rect = Rect::new(
+                                    area.x + layout.location.x as u16,
+                                    area.y + layout.location.y as u16,
+                                    layout.size.width as u16,
+                                    layout.size.height as u16,
+                                );
+                                self.render_node(child, buffer, child_rect, child_ids[i]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Draw a border box using box-drawing characters.
+    fn draw_box(&self, buffer: &mut Buffer, area: Rect) {
+        if area.width < 2 || area.height < 2 {
+            return;
+        }
+
+        let style = Style::default();
+        let w = area.width as usize;
+        let h = area.height as usize;
+        let x0 = area.x as usize;
+        let y0 = area.y as usize;
+        let x1 = x0 + w - 1;
+        let y1 = y0 + h - 1;
+
+        // Corners
+        buffer.get_mut(x0 as u16, y0 as u16).set_char('┌').set_style(style);
+        buffer.get_mut(x1 as u16, y0 as u16).set_char('┐').set_style(style);
+        buffer.get_mut(x0 as u16, y1 as u16).set_char('└').set_style(style);
+        buffer.get_mut(x1 as u16, y1 as u16).set_char('┘').set_style(style);
+
+        // Horizontal lines
+        for x in (x0 + 1)..x1 {
+            buffer.get_mut(x as u16, y0 as u16).set_char('─').set_style(style);
+            buffer.get_mut(x as u16, y1 as u16).set_char('─').set_style(style);
+        }
+
+        // Vertical lines
+        for y in (y0 + 1)..y1 {
+            buffer.get_mut(x0 as u16, y as u16).set_char('│').set_style(style);
+            buffer.get_mut(x1 as u16, y as u16).set_char('│').set_style(style);
+        }
+    }
+
+    /// Draw button with brackets.
+    fn render_button(&self, elem: &VElement, buffer: &mut Buffer, area: Rect) {
+        let label: String = elem
+            .children
+            .iter()
+            .filter_map(|c| {
+                if let VNode::Text(t) = c {
+                    Some(t.content.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let color = ratatui::style::Color::Yellow;
+        let label_len = label.len() as u16;
+        let total_width = label_len + 4; // [ + space + label + space + ]
+        let start_x = if area.width > total_width {
+            area.x + (area.width - total_width) / 2
+        } else {
+            area.x
+        };
+        let y = area.y + area.height / 2;
+
+        // Draw brackets
+        buffer.get_mut(start_x, y).set_char('[').set_fg(color);
+        buffer.get_mut(start_x + label_len + 3, y).set_char(']').set_fg(color);
+
+        // Draw label
+        for (i, ch) in label.chars().enumerate() {
+            if (start_x + 2 + i as u16) < area.x + area.width {
+                buffer.get_mut(start_x + 2 + i as u16, y).set_char(ch).set_fg(color);
             }
         }
     }
@@ -326,43 +384,36 @@ impl Default for RatatuiRenderer {
 impl Renderer for RatatuiRenderer {
     fn mount(&mut self, node: VNode, area: Rect) {
         self.root = Some(node.clone());
-        self.node_ids.clear();
 
-        // Build new taffy tree
-        let root_style = taffy::Style {
-            size: taffy::Size {
-                width: taffy::Dimension::Length(area.width as f32),
-                height: taffy::Dimension::Length(area.height as f32),
-            },
-            ..Default::default()
-        };
+        // Build taffy tree
+        let root_id = self.build_taffy_tree(&node);
 
-        let root_id = self.taffy.new_leaf(root_style).expect("Failed to create root");
-        self.root_node_id = Some(root_id);
+        if let Some(root_id) = root_id {
+            // Set root size to fill the area
+            let _ = self.taffy.set_style(
+                root_id,
+                taffy::Style {
+                    size: taffy::Size {
+                        width: taffy::Dimension::Length(area.width as f32),
+                        height: taffy::Dimension::Length(area.height as f32),
+                    },
+                    ..Default::default()
+                },
+            );
 
-        // Build the VNode tree
-        self.build_taffy_tree(&node, root_id);
-
-        // Compute layout
-        let available_space = taffy::Size {
-            width: AvailableSpace::Definite(area.width as f32),
-            height: AvailableSpace::Definite(area.height as f32),
-        };
-        self.taffy.compute_layout(root_id, available_space).ok();
+            let available_space = taffy::Size {
+                width: AvailableSpace::Definite(area.width as f32),
+                height: AvailableSpace::Definite(area.height as f32),
+            };
+            self.taffy.compute_layout(root_id, available_space).ok();
+            self.root_id = Some(root_id);
+        }
     }
 
     fn render(&mut self, buffer: &mut ratatui::buffer::Buffer) {
-        if let (Some(root), Some(root_id)) = (&self.root, self.root_node_id) {
-            // Get root layout for full area
-            if let Ok(layout) = self.taffy.layout(root_id) {
-                let area = Rect::new(
-                    0,
-                    0,
-                    layout.size.width as u16,
-                    layout.size.height as u16,
-                );
-                self.render_node_to_buffer(root, buffer, area, Some(root_id));
-            }
+        if let (Some(root), Some(root_id)) = (&self.root, self.root_id) {
+            let area = *buffer.area();
+            self.render_node(root, buffer, area, root_id);
         }
     }
 
@@ -381,14 +432,13 @@ impl Renderer for RatatuiRenderer {
             ..Default::default()
         };
 
-        let node_id = self.taffy.new_leaf(style).ok();
-        if let Some(id) = node_id {
+        if let Some(node_id) = self.taffy.new_leaf(style).ok() {
             let available_space = taffy::Size {
                 width: AvailableSpace::Definite(constraints.max_width as f32),
                 height: AvailableSpace::Definite(constraints.max_height as f32),
             };
-            self.taffy.compute_layout(id, available_space).ok();
-            if let Ok(layout) = self.taffy.layout(id) {
+            self.taffy.compute_layout(node_id, available_space).ok();
+            if let Ok(layout) = self.taffy.layout(node_id) {
                 return Size {
                     width: layout.size.width as u16,
                     height: layout.size.height as u16,

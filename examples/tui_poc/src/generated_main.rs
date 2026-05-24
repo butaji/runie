@@ -48,6 +48,14 @@ impl App {
             children: vec![VNode::Element(VElement {
             tag: "Text".to_string(),
             props: VProps {
+                style: VStyle::default(),
+                
+                ..Default::default()
+            },
+            children: vec![VNode::Text(VText { content: "Hi there!".to_string(), style: VStyle::default() })],
+        }), VNode::Element(VElement {
+            tag: "Text".to_string(),
+            props: VProps {
                 style: VStyle { color: Some("#FF5733".to_string()), ..Default::default() },
                 
                 ..Default::default()
@@ -81,7 +89,7 @@ impl App {
 
     /// Dispatches onPress handlers
     fn dispatch_on_press(&mut self) {
-        self.state.count += 2;
+        self.state.count += 1;
     }
 }
 
