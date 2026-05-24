@@ -92,29 +92,29 @@ fn build_context_bar(pct: f32) -> String {
     format!("{}{}", "█".repeat(filled), "░".repeat(empty))
 }
 
-fn build_left_spans(vm: &TopBarViewModel, bright: Color, dim: Color) -> Vec<Span<'_>> {
+fn build_left_spans<'a>(vm: &'a TopBarViewModel, bright: Color, _dim: Color, dim_style: &'a Style) -> Vec<Span<'a>> {
     let mut parts = Vec::new();
 
     if !vm.repo.is_empty() {
         parts.push(Span::styled(&vm.repo, Style::default().fg(bright)));
     }
     if !vm.branch.is_empty() {
-        parts.push(Span::styled("/", Style::default().fg(dim)));
-        parts.push(Span::styled(&vm.branch, Style::default().fg(dim)));
+        parts.push(Span::styled("/", *dim_style));
+        parts.push(Span::styled(&vm.branch, *dim_style));
     }
     if !vm.path.is_empty() {
-        parts.push(Span::styled(format!("  {}", vm.path), Style::default().fg(dim)));
+        parts.push(Span::styled(format!("  {}", vm.path), *dim_style));
     }
 
     parts
 }
 
-fn build_right_spans(vm: &TopBarViewModel, bright: Color, dim: Color) -> Vec<Span<'_>> {
+fn build_right_spans<'a>(vm: &'a TopBarViewModel, bright: Color, _dim: Color, dim_style: &'a Style) -> Vec<Span<'a>> {
     let mut parts = Vec::new();
 
     for (i, item) in vm.right_items.iter().enumerate() {
         if i > 0 {
-            parts.push(Span::styled(" ", Style::default().fg(dim)));
+            parts.push(Span::styled(" ", *dim_style));
         }
 
         match item {
@@ -134,22 +134,22 @@ fn build_right_spans(vm: &TopBarViewModel, bright: Color, dim: Color) -> Vec<Spa
                 parts.push(Span::styled(format!("{} ", passed), Style::default().fg(bright)));
                 parts.push(Span::styled("✓ ", Style::default().fg(bright)));
                 parts.push(Span::styled(bar, Style::default().fg(bright)));
-                parts.push(Span::styled(" │", Style::default().fg(dim)));
+                parts.push(Span::styled(" │", *dim_style));
             }
             TopBarRightItem::PercentageValue(pct) => {
                 let bar = build_context_bar(*pct);
                 parts.push(Span::styled(format!("{:.2}%", pct), Style::default().fg(bright)));
                 parts.push(Span::styled(format!(" {}", bar), Style::default().fg(bright)));
-                parts.push(Span::styled(" │", Style::default().fg(dim)));
+                parts.push(Span::styled(" │", *dim_style));
             }
             TopBarRightItem::ProgressBar { passed, pct, .. } => {
                 let (filled, empty) = build_context_bar_counts(*pct);
                 parts.push(Span::styled(format!("{} ", passed), Style::default().fg(bright)));
                 parts.push(Span::styled("✓ ", Style::default().fg(bright)));
-                parts.push(Span::styled(format!("{:.1}%", pct), Style::default().fg(dim)));
-                parts.push(Span::styled(" ", Style::default().fg(dim)));
+                parts.push(Span::styled(format!("{:.1}%", pct), *dim_style));
+                parts.push(Span::styled(" ", *dim_style));
                 parts.push(Span::styled("█".repeat(filled), Style::default().fg(bright)));
-                parts.push(Span::styled("░".repeat(empty), Style::default().fg(dim)));
+                parts.push(Span::styled("░".repeat(empty), *dim_style));
             }
         }
     }
@@ -159,18 +159,22 @@ fn build_right_spans(vm: &TopBarViewModel, bright: Color, dim: Color) -> Vec<Spa
 
 pub fn render_top_bar(vm: &TopBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
     let x = area.x + 1;
-    let bright = colors.text_secondary;
+    // Match status bar exactly:
+    // - bright = text.dim (no modifier) — like hotkey keys
+    // - dim = text.dim + DIM modifier — like hotkey descriptions
+    let bright = colors.text_dim;
     let dim = colors.text_dim;
+    let dim_style = Style::default().fg(dim).add_modifier(ratatui::style::Modifier::DIM);
 
     // Line 1: left parts (with 1 space padding)
     let mut left_parts = vec![Span::styled(" ", Style::default())];
-    left_parts.extend(build_left_spans(vm, bright, dim));
+    left_parts.extend(build_left_spans(vm, bright, dim, &dim_style));
     if left_parts.len() > 1 {
         buf.set_line(x, area.y, &Line::from(left_parts), area.width - 2);
     }
 
     // Line 1: right parts
-    let right_parts = build_right_spans(vm, bright, dim);
+    let right_parts = build_right_spans(vm, bright, dim, &dim_style);
     if !right_parts.is_empty() {
         let right_line = Line::from(right_parts);
         let right_width: usize = right_line.spans.iter().map(|s| s.width()).sum();
