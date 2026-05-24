@@ -12,7 +12,16 @@ pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<M
     // Global hotkeys: always active regardless of mode
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         match key.code {
-            KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::Quit),
+            KeyCode::Char('c') => {
+                // If textarea is empty (only has one empty line), quit; otherwise clear input
+                let is_empty = state.textarea.lines() == [""];
+                if is_empty {
+                    return Some(Msg::Quit);
+                } else {
+                    return Some(Msg::ClearInput);
+                }
+            }
+            KeyCode::Char('q') => return Some(Msg::Quit),
             _ => {}
         }
     }

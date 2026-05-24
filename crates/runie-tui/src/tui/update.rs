@@ -6,6 +6,7 @@ pub mod slash;
 pub mod tree;
 
 use crate::tui::state::{AppState, Msg, Cmd};
+use crate::tui::key_to_textarea_input;
 
 pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     let mut cmds = vec![];
@@ -13,8 +14,12 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     match msg {
         Msg::Quit => { state.running = false; }
         Msg::Submit => { cmds.extend(misc::handle_submit(state)); }
-        // TextareaKey is handled directly in handle_key - no-op here
-        Msg::TextareaKey(_) => {}
+        // TextareaKey is handled here AND in handle_key (for handle_event path)
+        // This ensures tui_run.rs which calls update() directly still gets textarea input
+        Msg::TextareaKey(key) => {
+            let input = key_to_textarea_input(key);
+            state.textarea.input(input);
+        }
         Msg::ToggleSidebar => { state.show_sidebar = !state.show_sidebar; }
         Msg::OpenCommandPalette => { palette::open_palette(state); }
         Msg::CloseModal | Msg::ConfirmModal => { palette::handle_close_modal(state); }
@@ -34,6 +39,7 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::OnboardingNavigateDown | Msg::OnboardingSelectProvider(_) |
         Msg::OnboardingSelectModel(_) | Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace |
         Msg::OnboardingSubmit | Msg::OnboardingSkip => { cmds.extend(onboarding::handle_onboarding_msg(state, msg)); }
+        Msg::ClearInput => { state.textarea.select_all(); state.textarea.delete_line_by_end(); }
     }
 
     cmds

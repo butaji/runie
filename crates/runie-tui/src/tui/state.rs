@@ -235,6 +235,9 @@ pub enum Msg {
     OnboardingKeyBackspace,
     OnboardingSubmit,
     OnboardingSkip,
+
+    // Input
+    ClearInput,
 }
 
 impl PartialEq for Msg {
@@ -279,6 +282,7 @@ impl PartialEq for Msg {
             (OnboardingKeyBackspace, OnboardingKeyBackspace) => true,
             (OnboardingSubmit, OnboardingSubmit) => true,
             (OnboardingSkip, OnboardingSkip) => true,
+            (ClearInput, ClearInput) => true,
             _ => false,
         }
     }
