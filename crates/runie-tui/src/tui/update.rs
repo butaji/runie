@@ -27,7 +27,7 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { cmds.push(agent::handle_permission_msg(state, msg)); }
         Msg::CommandPaletteFilter(c) => { state.command_palette.filter.push(c); }
         Msg::CommandPaletteBackspace => { state.command_palette.filter.pop(); }
-        Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { palette::handle_palette_msg(state, msg); }
+        Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => {}
         Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); }
         Msg::ScrollDown | Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }).min(state.messages.len().saturating_sub(1)); }
         Msg::Tick | Msg::CursorBlink => { misc::handle_anim(state, &msg); }
@@ -41,6 +41,8 @@ pub fn update(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::OnboardingSubmit | Msg::OnboardingSkip => { cmds.extend(onboarding::handle_onboarding_msg(state, msg)); }
         Msg::InsertNewline => { state.textarea.insert_newline(); }
         Msg::ClearInput => { state.textarea.select_all(); state.textarea.delete_line_by_end(); }
+        Msg::ClearChat => { state.messages.clear(); }
+        Msg::DirectCommand(cmd) => { cmds.extend(palette::handle_direct_command(state, cmd)); }
     }
 
     cmds

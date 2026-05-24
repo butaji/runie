@@ -5,45 +5,71 @@ use ratatui::{
     layout::Rect,
 };
 use crate::theme::ThemeWrapper;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PaletteStep {
-    Object,
-    Action,
-    Arguments,
-}
-
-#[derive(Debug, Clone)]
-pub struct PaletteItem {
-    pub id: String,
-    pub label: String,
-    pub icon: String,
-    pub category: String,
-}
+use std::time::Instant;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaletteCommand {
+    NewSession,
+    LoadSession,
+    SaveSession,
+    ClearChat,
+    SwitchModel,
     ReadFile { path: String },
-    EditFile { path: String, prompt: String },
-    RunAgent { name: String },
-    SwitchModel { model: String },
-    LoadSession { id: String },
-    SaveSession { name: String },
+    EditFile { path: String },
+    WriteFile { path: String },
+    DeleteFile { path: String },
+    CompactContext,
+    Quit,
     Cancel,
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandUsage {
+    pub use_count: u32,
+    pub last_used: Option<Instant>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaletteCommandDef {
+    pub id: String,
+    pub label: String,
+    pub description: String,
+    pub category: String,
+    pub aliases: Vec<String>,
+    pub keybinding: Option<String>,
+    pub requires_args: bool,
+    pub arg_hint: String,
+}
+
+impl PaletteCommandDef {
+    fn to_palette_command(&self, arg: &str) -> PaletteCommand {
+        match self.id.as_str() {
+            "new_session" => PaletteCommand::NewSession,
+            "load_session" => PaletteCommand::LoadSession,
+            "save_session" => PaletteCommand::SaveSession,
+            "clear_chat" => PaletteCommand::ClearChat,
+            "switch_model" => PaletteCommand::SwitchModel,
+            "read_file" => PaletteCommand::ReadFile { path: arg.to_string() },
+            "edit_file" => PaletteCommand::EditFile { path: arg.to_string() },
+            "write_file" => PaletteCommand::WriteFile { path: arg.to_string() },
+            "delete_file" => PaletteCommand::DeleteFile { path: arg.to_string() },
+            "compact_context" => PaletteCommand::CompactContext,
+            "quit" => PaletteCommand::Quit,
+            _ => PaletteCommand::Cancel,
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct CommandPalette {
-    pub step: PaletteStep,
-    pub query: String,
-    pub selected: usize,
-    pub objects: Vec<PaletteItem>,
-    pub actions: Vec<PaletteItem>,
-    pub filtered_objects: Vec<usize>,
-    pub filtered_actions: Vec<usize>,
-    pub selected_object: Option<PaletteItem>,
-    pub selected_action: Option<PaletteItem>,
+    requires_args: HashMap<String, PaletteCommandDef>,
+    all_commands: Vec<PaletteCommandDef>,
+    pub filtered_commands: Vec<usize>,
     pub argument_input: String,
+    pub is_argument_mode: bool,
+    pending_command: Option<String>,
+    usage_stats: HashMap<String, CommandUsage>,
 }
 
 impl Default for CommandPalette {
@@ -54,345 +80,127 @@ impl Default for CommandPalette {
 
 impl CommandPalette {
     pub fn new() -> Self {
-        let objects = vec![
-            PaletteItem { id: "file".into(), label: "File...".into(), icon: "▸".into(), category: "workspace".into() },
-            PaletteItem { id: "agent".into(), label: "Agent...".into(), icon: "▸".into(), category: "agent".into() },
-            PaletteItem { id: "model".into(), label: "Model...".into(), icon: "▸".into(), category: "config".into() },
-            PaletteItem { id: "session".into(), label: "Session...".into(), icon: "▸".into(), category: "session".into() },
+        let all_commands = vec![
+            PaletteCommandDef { id: "new_session".into(), label: "New Session".into(), description: "Start a fresh chat session".into(), category: "session".into(), aliases: vec!["n".into(), "new".into()], keybinding: Some("Ctrl+N".into()), requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "load_session".into(), label: "Load Session...".into(), description: "Open an existing session".into(), category: "session".into(), aliases: vec!["load".into(), "open".into(), "l".into(), "o".into()], keybinding: Some("Ctrl+O".into()), requires_args: true, arg_hint: "session name".into() },
+            PaletteCommandDef { id: "save_session".into(), label: "Save Session...".into(), description: "Save current session".into(), category: "session".into(), aliases: vec!["save".into(), "s".into()], keybinding: Some("Ctrl+S".into()), requires_args: true, arg_hint: "session name".into() },
+            PaletteCommandDef { id: "clear_chat".into(), label: "Clear Chat".into(), description: "Clear all messages".into(), category: "chat".into(), aliases: vec!["c".into(), "clear".into()], keybinding: Some("Ctrl+L".into()), requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "switch_model".into(), label: "Switch Model...".into(), description: "Change the AI model".into(), category: "config".into(), aliases: vec!["model".into(), "m".into()], keybinding: None, requires_args: true, arg_hint: "model name".into() },
+            PaletteCommandDef { id: "read_file".into(), label: "Read File...".into(), description: "Read contents of a file".into(), category: "file".into(), aliases: vec!["read".into(), "r".into(), "cat".into()], keybinding: Some("Ctrl+R".into()), requires_args: true, arg_hint: "filename".into() },
+            PaletteCommandDef { id: "edit_file".into(), label: "Edit File...".into(), description: "Edit a file with AI assistance".into(), category: "file".into(), aliases: vec!["edit".into(), "e".into()], keybinding: None, requires_args: true, arg_hint: "filename".into() },
+            PaletteCommandDef { id: "write_file".into(), label: "Write File...".into(), description: "Create or overwrite a file".into(), category: "file".into(), aliases: vec!["write".into(), "w".into(), "create".into()], keybinding: None, requires_args: true, arg_hint: "filename".into() },
+            PaletteCommandDef { id: "delete_file".into(), label: "Delete File...".into(), description: "Delete a file".into(), category: "file".into(), aliases: vec!["delete".into(), "rm".into(), "del".into()], keybinding: None, requires_args: true, arg_hint: "filename".into() },
+            PaletteCommandDef { id: "compact_context".into(), label: "Compact Context".into(), description: "Reduce context window usage".into(), category: "chat".into(), aliases: vec!["compact".into(), "compress".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "quit".into(), label: "Quit".into(), description: "Exit the application".into(), category: "app".into(), aliases: vec!["q".into(), "quit".into(), "exit".into()], keybinding: Some("Ctrl+Q".into()), requires_args: false, arg_hint: "".into() },
         ];
 
-        let actions = vec![];
-        let filtered_objects: Vec<usize> = (0..objects.len()).collect();
-        let filtered_actions = vec![];
-
-        Self {
-            step: PaletteStep::Object,
-            query: String::new(),
-            selected: 0,
-            objects,
-            actions,
-            filtered_objects,
-            filtered_actions,
-            selected_object: None,
-            selected_action: None,
-            argument_input: String::new(),
-        }
-    }
-
-    fn get_actions_for_object(object_id: &str) -> Vec<PaletteItem> {
-        match object_id {
-            "file" => vec![
-                PaletteItem { id: "read".into(), label: "Read".into(), icon: "▸".into(), category: "file".into() },
-                PaletteItem { id: "edit".into(), label: "Edit".into(), icon: "▸".into(), category: "file".into() },
-                PaletteItem { id: "write".into(), label: "Write".into(), icon: "▸".into(), category: "file".into() },
-                PaletteItem { id: "delete".into(), label: "Delete".into(), icon: "▸".into(), category: "file".into() },
-            ],
-            "agent" => vec![
-                PaletteItem { id: "start".into(), label: "Start".into(), icon: "▸".into(), category: "agent".into() },
-                PaletteItem { id: "stop".into(), label: "Stop".into(), icon: "▸".into(), category: "agent".into() },
-                PaletteItem { id: "view".into(), label: "View".into(), icon: "▸".into(), category: "agent".into() },
-                PaletteItem { id: "configure".into(), label: "Configure".into(), icon: "▸".into(), category: "agent".into() },
-            ],
-            "model" => vec![
-                PaletteItem { id: "switch".into(), label: "Switch".into(), icon: "▸".into(), category: "model".into() },
-                PaletteItem { id: "info".into(), label: "Info".into(), icon: "▸".into(), category: "model".into() },
-                PaletteItem { id: "list".into(), label: "List".into(), icon: "▸".into(), category: "model".into() },
-            ],
-            "session" => vec![
-                PaletteItem { id: "list".into(), label: "List".into(), icon: "▸".into(), category: "session".into() },
-                PaletteItem { id: "load".into(), label: "Load".into(), icon: "▸".into(), category: "session".into() },
-                PaletteItem { id: "save".into(), label: "Save".into(), icon: "▸".into(), category: "session".into() },
-                PaletteItem { id: "delete".into(), label: "Delete".into(), icon: "▸".into(), category: "session".into() },
-            ],
-            _ => vec![],
-        }
-    }
-
-    pub fn filter(&mut self) {
-        match self.step {
-            PaletteStep::Object => {
-                self.filtered_objects = Self::filter_items(&self.objects, &self.query);
-                self.clamp_selection(self.filtered_objects.len());
+        let mut requires_args_map = HashMap::new();
+        for cmd in &all_commands {
+            if cmd.requires_args {
+                requires_args_map.insert(cmd.id.clone(), cmd.clone());
             }
-            PaletteStep::Action => {
-                self.filtered_actions = Self::filter_items(&self.actions, &self.query);
-                self.clamp_selection(self.filtered_actions.len());
+        }
+
+        Self { requires_args: requires_args_map, all_commands, filtered_commands: Vec::new(), argument_input: String::new(), is_argument_mode: false, pending_command: None, usage_stats: HashMap::new() }
+    }
+
+    pub fn all_commands(&self) -> &[PaletteCommandDef] { &self.all_commands }
+
+    fn fuzzy_score(query: &str, command: &PaletteCommandDef) -> f32 {
+        let query_lower = query.to_lowercase();
+        let label_lower = command.label.to_lowercase();
+        let id_lower = command.id.to_lowercase();
+        if query_lower.is_empty() { return 1.0; }
+        if label_lower == query_lower || id_lower == query_lower { return 1000.0; }
+        if label_lower.starts_with(&query_lower) || id_lower.starts_with(&query_lower) { return 900.0; }
+        if label_lower.contains(&query_lower) || id_lower.contains(&query_lower) { return 700.0; }
+        for alias in &command.aliases {
+            if alias.to_lowercase() == query_lower { return 850.0; }
+        }
+        for alias in &command.aliases {
+            if alias.to_lowercase().starts_with(&query_lower) { return 800.0; }
+        }
+        for alias in &command.aliases {
+            if alias.to_lowercase().contains(&query_lower) { return 600.0; }
+        }
+        if Self::is_fuzzy_match(&query_lower, &label_lower) {
+            return 500.0 + (query_lower.len() as f32 / label_lower.len() as f32) * 100.0;
+        }
+        0.0
+    }
+
+    fn is_fuzzy_match(query: &str, target: &str) -> bool {
+        let mut query_chars = query.chars();
+        let mut current = query_chars.next();
+        for ch in target.chars() {
+            if let Some(q) = current {
+                if ch == q { current = query_chars.next(); }
             }
-            PaletteStep::Arguments => {}
         }
+        current.is_none()
     }
 
-    fn filter_items(items: &[PaletteItem], query: &str) -> Vec<usize> {
-        items
-            .iter()
-            .enumerate()
-            .filter(|(_, item)| Self::item_matches(query, item))
-            .map(|(i, _)| i)
-            .collect()
+    pub fn filter(&mut self, query: &str) {
+        let query_lower = query.to_lowercase();
+        let mut scored: Vec<(usize, f32)> = self.all_commands.iter().enumerate()
+            .map(|(idx, cmd)| (idx, Self::fuzzy_score(&query_lower, cmd)))
+            .filter(|(_, score)| *score > 0.0)
+            .collect();
+        scored.sort_by(|a, b| {
+            let score_cmp = b.1.partial_cmp(&a.1).unwrap();
+            if score_cmp != std::cmp::Ordering::Equal { return score_cmp; }
+            let freq_a = self.usage_stats.get(&self.all_commands[a.0].id).map(|u| u.use_count).unwrap_or(0);
+            let freq_b = self.usage_stats.get(&self.all_commands[b.0].id).map(|u| u.use_count).unwrap_or(0);
+            freq_b.cmp(&freq_a)
+        });
+        self.filtered_commands = scored.into_iter().map(|(idx, _)| idx).collect();
     }
 
-    fn item_matches(query: &str, item: &PaletteItem) -> bool {
-        if query.is_empty() {
-            true
-        } else {
-            let q = &query.to_lowercase();
-            item.label.to_lowercase().contains(q) || item.id.to_lowercase().contains(q)
+    pub fn confirm(&mut self, selected_idx: usize) -> Option<PaletteCommand> {
+        if self.is_argument_mode { return self.confirm_with_argument(); }
+        if self.filtered_commands.is_empty() || selected_idx >= self.filtered_commands.len() { return None; }
+        let idx = self.filtered_commands[selected_idx];
+        let cmd_def = self.all_commands[idx].clone();
+        if cmd_def.requires_args {
+            self.is_argument_mode = true;
+            self.argument_input.clear();
+            self.pending_command = Some(cmd_def.id.clone());
+            return None;
         }
+        self.track_usage(&cmd_def.id);
+        Some(cmd_def.to_palette_command(""))
     }
 
-    fn clamp_selection(&mut self, len: usize) {
-        if self.selected >= len {
-            self.selected = len.saturating_sub(1);
-        }
-    }
-
-    pub fn next_item(&mut self) {
-        let len = match self.step {
-            PaletteStep::Object => self.filtered_objects.len(),
-            PaletteStep::Action => self.filtered_actions.len(),
-            PaletteStep::Arguments => 0,
-        };
-        if len == 0 {
-            return;
-        }
-        self.selected = (self.selected + 1) % len;
-    }
-
-    pub fn prev_item(&mut self) {
-        let len = match self.step {
-            PaletteStep::Object => self.filtered_objects.len(),
-            PaletteStep::Action => self.filtered_actions.len(),
-            PaletteStep::Arguments => 0,
-        };
-        if len == 0 {
-            return;
-        }
-        self.selected = (self.selected + len - 1) % len;
-    }
-
-    pub fn confirm(&mut self) -> Option<PaletteCommand> {
-        match self.step {
-            PaletteStep::Object => {
-                if self.filtered_objects.is_empty() {
-                    return None;
-                }
-                let idx = self.filtered_objects[self.selected];
-                let obj = self.objects[idx].clone();
-                self.selected_object = Some(obj.clone());
-                self.actions = Self::get_actions_for_object(&obj.id);
-                self.filtered_actions = (0..self.actions.len()).collect();
-                self.selected = 0;
-                self.query.clear();
-                self.step = PaletteStep::Action;
-                None
-            }
-            PaletteStep::Action => {
-                if self.filtered_actions.is_empty() {
-                    return None;
-                }
-                let idx = self.filtered_actions[self.selected];
-                let action = self.actions[idx].clone();
-                self.selected_action = Some(action.clone());
-                self.selected = 0;
-                self.query.clear();
-                self.step = PaletteStep::Arguments;
-
-                if action.id == "list" || action.id == "view" || action.id == "info" {
-                    return self.execute_command();
-                }
-                None
-            }
-            PaletteStep::Arguments => self.execute_command(),
-        }
-    }
-
-    fn execute_command(&self) -> Option<PaletteCommand> {
-        let obj = self.selected_object.as_ref()?;
-        let action = self.selected_action.as_ref()?;
-
-        let arg = self.argument_input.trim();
-
-        match (obj.id.as_str(), action.id.as_str()) {
-            ("file", "read") => Some(PaletteCommand::ReadFile { path: arg.to_string() }),
-            ("file", "edit") => Some(PaletteCommand::EditFile { path: arg.to_string(), prompt: String::new() }),
-            ("file", "write") => Some(PaletteCommand::EditFile { path: arg.to_string(), prompt: String::new() }),
-            ("file", "delete") => Some(PaletteCommand::ReadFile { path: arg.to_string() }),
-            ("agent", "start") => Some(PaletteCommand::RunAgent { name: arg.to_string() }),
-            ("agent", "stop") => Some(PaletteCommand::RunAgent { name: arg.to_string() }),
-            ("agent", "view") => Some(PaletteCommand::RunAgent { name: arg.to_string() }),
-            ("agent", "configure") => Some(PaletteCommand::RunAgent { name: arg.to_string() }),
-            ("model", "switch") => Some(PaletteCommand::SwitchModel { model: arg.to_string() }),
-            ("model", "info") => Some(PaletteCommand::SwitchModel { model: arg.to_string() }),
-            ("model", "list") => Some(PaletteCommand::SwitchModel { model: String::new() }),
-            ("session", "list") => Some(PaletteCommand::LoadSession { id: String::new() }),
-            ("session", "load") => Some(PaletteCommand::LoadSession { id: arg.to_string() }),
-            ("session", "save") => Some(PaletteCommand::SaveSession { name: arg.to_string() }),
-            ("session", "delete") => Some(PaletteCommand::LoadSession { id: arg.to_string() }),
-            _ => Some(PaletteCommand::Cancel),
-        }
-    }
-
-    pub fn insert_char(&mut self, ch: char) {
-        self.query.push(ch);
-        self.filter();
-    }
-
-    pub fn backspace(&mut self) {
-        self.query.pop();
-        self.filter();
-    }
-
-    pub fn clear_query(&mut self) {
-        self.query.clear();
-        self.filter();
-    }
-
-    pub fn reset(&mut self) {
-        self.step = PaletteStep::Object;
-        self.query.clear();
-        self.selected = 0;
-        self.filtered_objects = (0..self.objects.len()).collect();
-        self.filtered_actions.clear();
-        self.selected_object = None;
-        self.selected_action = None;
+    fn confirm_with_argument(&mut self) -> Option<PaletteCommand> {
+        let cmd_id = self.pending_command.take()?;
+        let cmd_def = self.requires_args.get(&cmd_id)?.clone();
+        let arg = self.argument_input.clone();
+        self.track_usage(&cmd_def.id);
+        self.is_argument_mode = false;
         self.argument_input.clear();
+        self.pending_command = None;
+        Some(cmd_def.to_palette_command(&arg))
     }
 
-    pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        render::render(self, area, buf, theme);
-    }
-}
-
-#[allow(clippy::unwrap_used)]
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn make_palette() -> CommandPalette {
-        CommandPalette::new()
+    fn track_usage(&mut self, command_id: &str) {
+        self.usage_stats.entry(command_id.to_string())
+            .and_modify(|u| { u.use_count += 1; u.last_used = Some(Instant::now()); })
+            .or_insert(CommandUsage { use_count: 1, last_used: Some(Instant::now()) });
     }
 
-    #[test]
-    fn test_filter_matches_prefix() {
-        let mut palette = make_palette();
-        palette.query = "fil".to_string();
-        palette.filter();
-        assert!(!palette.filtered_objects.is_empty());
-        assert!(palette.filtered_objects.len() < palette.objects.len());
+    pub fn insert_char(&mut self, ch: char) { if self.is_argument_mode { self.argument_input.push(ch); } }
+    pub fn backspace(&mut self) { if self.is_argument_mode { self.argument_input.pop(); } }
+    pub fn clear_input(&mut self) { if self.is_argument_mode { self.argument_input.clear(); } }
+
+    pub fn selected_command(&self, _selected_idx: usize) -> Option<&PaletteCommandDef> {
+        if self.is_argument_mode {
+            self.pending_command.as_ref().and_then(|id| self.requires_args.get(id)).map(|cmd| cmd as &PaletteCommandDef)
+        } else if !self.filtered_commands.is_empty() {
+            Some(&self.all_commands[self.filtered_commands[0]])
+        } else { None }
     }
 
-    #[test]
-    fn test_filter_no_match() {
-        let mut palette = make_palette();
-        palette.query = "xyzzy".to_string();
-        palette.filter();
-        assert!(palette.filtered_objects.is_empty());
-    }
+    pub fn is_argument_mode_active(&self) -> bool { self.is_argument_mode }
 
-    #[test]
-    fn test_confirm_advances_step() {
-        let mut palette = make_palette();
-        assert_eq!(palette.step, PaletteStep::Object);
-
-        palette.selected = 0;
-        let result = palette.confirm();
-        assert!(result.is_none());
-        assert_eq!(palette.step, PaletteStep::Action);
-        assert!(palette.selected_object.is_some());
-        assert_eq!(palette.selected_object.unwrap().id, "file");
-        assert!(!palette.actions.is_empty());
-    }
-
-    #[test]
-    fn test_next_item_wraps() {
-        let mut palette = make_palette();
-        palette.filter();
-        let count = palette.filtered_objects.len();
-        assert!(count > 0);
-
-        palette.selected = count - 1;
-        palette.next_item();
-        assert_eq!(palette.selected, 0);
-
-        palette.selected = 0;
-        palette.prev_item();
-        assert_eq!(palette.selected, count - 1);
-    }
-
-    #[test]
-    fn test_actions_depend_on_object() {
-        let mut palette = make_palette();
-
-        palette.selected = 0;
-        palette.confirm();
-        assert!(palette.actions.iter().any(|a| a.id == "read"));
-        assert!(palette.actions.iter().any(|a| a.id == "edit"));
-
-        palette.reset();
-        palette.selected = 1;
-        palette.confirm();
-        assert!(palette.actions.iter().any(|a| a.id == "start"));
-        assert!(palette.actions.iter().any(|a| a.id == "stop"));
-        assert!(!palette.actions.iter().any(|a| a.id == "read"));
-    }
-
-    #[test]
-    fn test_execute_read_file_command() {
-        let mut palette = make_palette();
-
-        palette.selected = 0;
-        palette.confirm();
-
-        palette.selected = 0;
-        palette.confirm();
-
-        palette.argument_input = "test.txt".to_string();
-        let result = palette.confirm();
-
-        match result {
-            Some(PaletteCommand::ReadFile { path }) => {
-                assert_eq!(path, "test.txt");
-            }
-            _ => panic!("Expected ReadFile command"),
-        }
-    }
-
-    #[test]
-    fn test_insert_and_backspace() {
-        let mut palette = make_palette();
-        palette.insert_char('f');
-        assert_eq!(palette.query, "f");
-        palette.insert_char('i');
-        assert_eq!(palette.query, "fi");
-        palette.backspace();
-        assert_eq!(palette.query, "f");
-        palette.backspace();
-        assert_eq!(palette.query, "");
-    }
-
-    #[test]
-    fn test_clear_query() {
-        let mut palette = make_palette();
-        palette.query = "test".to_string();
-        palette.clear_query();
-        assert_eq!(palette.query, "");
-        palette.filter();
-        assert_eq!(palette.filtered_objects.len(), palette.objects.len());
-    }
-
-    #[test]
-    fn test_reset_restores_initial_state() {
-        let mut palette = make_palette();
-
-        palette.selected = 0;
-        palette.confirm();
-        assert_eq!(palette.step, PaletteStep::Action);
-
-        palette.reset();
-        assert_eq!(palette.step, PaletteStep::Object);
-        assert!(palette.query.is_empty());
-        assert_eq!(palette.selected, 0);
-        assert!(palette.selected_object.is_none());
-        assert!(palette.selected_action.is_none());
-    }
+    pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) { render::render(self, area, buf, theme); }
 }

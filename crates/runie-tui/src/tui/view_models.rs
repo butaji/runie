@@ -1,6 +1,6 @@
 use crate::components::{
     MessageItem, GitChange,
-    PaletteItem, PaletteStep, SessionTreeEntry, LineStatus,
+    SessionTreeEntry, LineStatus,
 };
 use crate::components::status_bar::BackgroundJob;
 use crate::components::diff_viewer::DiffLine;
@@ -40,12 +40,6 @@ pub struct AgentListViewModel {
 
 // ─── CommandPaletteViewModel ────────────────────────────────────────────────
 pub struct CommandPaletteViewModel {
-    pub step: PaletteStep,
-    pub query: String,
-    pub selected: usize,
-    pub objects: Vec<PaletteItem>,
-    pub actions: Vec<PaletteItem>,
-    pub arguments: Vec<String>,
     pub show: bool,
 }
 
@@ -213,18 +207,12 @@ fn build_agent_list_vm(state: &crate::tui::state::RenderState) -> AgentListViewM
 
 fn build_command_palette_vm(
     state: &crate::tui::state::RenderState,
-    palette: &CommandPalette,
+    _palette: &CommandPalette,
 ) -> Option<CommandPaletteViewModel> {
     if state.mode != TuiMode::CommandPalette && !state.command_palette.open {
         return None;
     }
     Some(CommandPaletteViewModel {
-        step: palette.step.clone(),
-        query: palette.query.clone(),
-        selected: palette.selected,
-        objects: palette.objects.clone(),
-        actions: palette.actions.clone(),
-        arguments: vec![],
         show: state.command_palette.open,
     })
 }
