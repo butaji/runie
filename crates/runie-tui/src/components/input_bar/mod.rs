@@ -20,7 +20,7 @@ pub fn input_bar_height(textarea: &ratatui_textarea::TextArea) -> u16 {
 /// The textarea is rendered as a widget with cursor styled in accent color.
 /// The prompt is overlaid on the first line of the textarea content.
 pub fn render_input_bar(
-    textarea: &mut ratatui_textarea::TextArea,
+    textarea: &ratatui_textarea::TextArea,
     prompt: &str,
     right_info: &str,
     area: Rect,
@@ -33,9 +33,6 @@ pub fn render_input_bar(
 
     let border_color: Color = theme.color("border.unfocused").into();
     let accent_color: Color = theme.color("accent.primary").into();
-
-    // Set cursor style to solid block in accent color
-    textarea.set_cursor_style(Style::default().fg(accent_color).bg(accent_color));
 
     // Build border block with bottom title
     let info_text = if right_info.is_empty() { "model: claude-4" } else { right_info };
@@ -63,8 +60,8 @@ pub fn render_input_bar(
         width: inner.width.saturating_sub(prompt_width),
         height: inner.height,
     };
-    #[allow(deprecated)]
-    textarea.widget().render(text_area, buf);
+    // TextArea implements Widget trait directly — render via trait method
+    ratatui::widgets::Widget::render(textarea, text_area, buf);
 
     // Render prompt at start of first line
     let prompt_span = Span::styled(prompt, Style::default().fg(accent_color));

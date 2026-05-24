@@ -7,7 +7,7 @@ use ratatui::{
     widgets::Widget,
 };
 use crossterm::{
-    cursor::{SetCursorStyle, Show},
+    cursor::{SetCursorStyle, Show, Hide},
     event::Event,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
@@ -95,7 +95,7 @@ impl Tui {
                 // Best-effort terminal cleanup — ignore errors since we're already panicking
                 let _ = disable_raw_mode();
                 let _ = stdout().execute(LeaveAlternateScreen);
-                let _ = stdout().execute(Show);
+                let _ = stdout().execute(Hide);
                 let _ = stdout().execute(SetCursorStyle::DefaultUserShape);
                 // Now run the default hook which prints the panic + backtrace
                 original_hook(info);
@@ -108,7 +108,7 @@ impl Tui {
         enable_raw_mode()?;
         let mut stdout = stdout();
         stdout.execute(EnterAlternateScreen)?;
-        stdout.execute(Show)?;
+        stdout.execute(Hide)?;
         stdout.execute(SetCursorStyle::SteadyBar)?;
 
         let backend = CrosstermBackend::new(stdout);
@@ -127,6 +127,7 @@ impl Tui {
 
     pub fn cleanup(&mut self) -> io::Result<()> {
         disable_raw_mode()?;
+        self.terminal.backend_mut().execute(Show)?;
         self.terminal.backend_mut().execute(SetCursorStyle::DefaultUserShape)?;
         self.terminal.backend_mut().execute(LeaveAlternateScreen)?;
         Ok(())
@@ -259,15 +260,19 @@ impl Tui {
 
     fn render_input(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         let mut textarea = state.textarea.clone();
+        let accent_color = theme.color("accent.primary").into();
+        let text_primary = theme.color("text.primary").into();
+        textarea.set_style(Style::default().fg(text_primary));
+        textarea.set_cursor_style(Style::default().fg(accent_color).bg(accent_color));
         crate::components::input_bar::render_input_bar(
-            &mut textarea,
+            &textarea,
             "\u{276F} ",
             &state.input_right_info,
             area,
             frame.buffer_mut(),
             theme,
         );
-        // No cursor positioning needed - TextArea widget renders its own styled cursor
+        // Note: TextArea widget renders its own cursor; no need for frame.set_cursor_position()
     }
 
     fn render_overlays(frame: &mut ratatui::Frame, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
@@ -351,7 +356,7 @@ impl Tui {
     fn centered_rect(padded: Rect, w: u16, h: u16) -> Rect {
         let x = padded.x + (padded.width.saturating_sub(w)) / 2;
         let y = padded.y + (padded.height.saturating_sub(h)) / 2;
-        Rect::new(x, y, w, h)
+        Rect::new(x, y, w.min(padded.width), h.min(padded.height))
     }
 
     fn blit_buffer(frame: &mut ratatui::Frame, area: Rect, src_area: Rect, src: &Buffer) {
@@ -372,6 +377,11 @@ impl Tui {
         }
     }
 
+    /// Handle an event.
+    /// Returns TuiAction to be processed by caller, or None for no action.
+    /// Note: handle_event handles TextareaKey internally via handle_key.
+    /// For the tui_run.rs event loop which calls update() directly, TextareaKey
+    /// is handled in update() itself.
     pub fn handle_event(&mut self, event: Event) -> Option<TuiAction> {
         match event {
             Event::Key(key) => self.handle_key(key),
@@ -384,7 +394,9 @@ impl Tui {
         // Check if key should go to textarea (most keys)
         if let Some(msg) = events::key_to_msg(key, &self.state) {
             if matches!(msg, Msg::TextareaKey(_)) {
-                // Map crossterm KeyEvent to ratatui-textarea Input
+                // Convert crossterm KeyEvent to ratatui-textarea Input.
+                // Manual conversion needed because project crossterm (0.28)
+                // differs from ratatui-textarea's crossterm (0.29).
                 let input = key_to_textarea_input(key);
                 self.state.textarea.input(input);
                 self.dirty = true;
@@ -438,8 +450,10 @@ impl Tui {
     }
 }
 
-/// Convert crossterm KeyEvent to ratatui-textarea Input
-fn key_to_textarea_input(key: crossterm::event::KeyEvent) -> ratatui_textarea::Input {
+/// Convert crossterm KeyEvent to ratatui-textarea Input.
+/// Manual conversion needed because project crossterm (0.28) differs
+/// from ratatui-textarea's internal crossterm (0.29) via ratatui-crossterm.
+pub fn key_to_textarea_input(key: crossterm::event::KeyEvent) -> ratatui_textarea::Input {
     use crossterm::event::KeyCode;
     use ratatui_textarea::{Input, Key};
 
