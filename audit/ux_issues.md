@@ -1,306 +1,354 @@
-# UX Audit Report — Runie TUI
+# UX Audit Report - Runie TUI Coding Agent
 
-**Auditor:** ralph/overnight-audit
-**Date:** 2026-05-24
-**Scope:** `crates/runie-tui/` + `crates/runie-agent/` state machine
-
----
-
-## P0 — CRITICAL (Dead-ends, Crash Paths)
-
-### P0-1: No Ctrl+C / SIGINT handler for agent execution
-**File:** `crates/runie-tui/src/tui.rs`
-**Severity:** Users cannot interrupt a running agent without killing the process.
-
-When the agent is streaming tokens or executing tools, there is no signal handler for `SIGINT`. The only `running = false` path is via `Msg::Quit` from `^q`. If the agent hangs (e.g., model timeout, infinite loop in a tool), the user must `kill` the process.
-
-**Evidence:** `crates/runie-tui/src/tui.rs` has `install_panic_hook()` but no `install_signal_handler()`. The `events.rs` handles keyboard events but `crossterm::event::poll()` does not intercept terminal signals.
-
-**Fix:** Add `tokio::signal::ctrl_c()` listener in the event loop that fires `Msg::Stop` / `TuiAction::Interrupt`, setting `agent_running = false` and sending a cancellation signal to the agent task.
+**Audit Date:** 2024-05-24  
+**Auditor:** Ralph (Overnight Audit)  
+**Status:** In Progress
 
 ---
 
-### P0-2: Onboarding Welcome step is a dead-end
-**File:** `crates/runie-tui/src/components/onboarding/render.rs:29–51`
-**Severity:** User is trapped on the Welcome screen with no escape path.
+## P0 Issues (Critical - Dead-ends)
 
-The Welcome step shows a centered panel but has no interactive elements. `key_to_onboarding_msg` returns `None` for all keys except `Enter`, which does nothing (there's no handler for it). Pressing `^q` (quit) only works if `Esc` is handled by the onboarding handler.
+These issues prevent users from making progress or force them to kill the process.
 
-**Evidence:**
+### P0-1: Permission Modal 5-Minute Timeout Has No UI Feedback
+
+**File:** `crates/runie-agent/src/loop_engine.rs`  
+**Lines:** ~300-330
+
+**Problem:** When the agent requests permission, it waits up to 5 minutes for user response. If the user doesn't respond within this window:
+- The permission silently times out
+- The tool is marked as denied with no user notification
+- The agent continues with a "denied" result
+
+**Current Behavior:**
 ```rust
-// crates/runie-tui/src/tui/events.rs:124–135
-fn key_to_onboarding_msg(key: KeyEvent, state: &AppState) -> Option<Msg> {
-    // Only handles Tab, Shift+Tab, Enter, Arrows
-    // No Esc / ^q handler
+let decision = tokio::time::timeout(
+    std::time::Duration::from_secs(300), // 5 minute timeout
+    permission_rx.recv()
+).await;
 ```
 
-**Fix:** Add `Esc` and `^q` as aliases for `OnboardingSkip` on the Welcome step, or show an explicit "Press Enter to start →" CTA. Make the Welcome panel clickable/selectable.
+**Expected:** Visual countdown or "waiting for response" indicator, with clear timeout message.
+
+**Fix Required:**
+1. Add `permission_timeout` field to `PermissionModalState`
+2. Send `PermissionTimeout` event to TUI after 5 minutes
+3. Display timeout message in modal
+
+**Severity:** High - Users may wait indefinitely thinking their response was captured.
 
 ---
 
-### P0-3: Permission modal — Escape doesn't return to Chat
-**File:** `crates/runie-tui/src/tui/events.rs:76–90`
-**Severity:** Permission modal has no dedicated Esc handler; Escape falls through.
+### P0-2: Submit Blocked During Model Fetch Without Retry Path
 
-In `key_to_permission_msg`, only `y`/`Enter`/`n`/`Esc` are handled as `PermissionCancel`. However, if the user is in `TuiMode::Permission` and presses `^q` (global quit), the key maps to the permission handler first. The bigger issue: when `PermissionCancel` fires, `handle_permission` sets `mode = TuiMode::Chat`, but if the user presses `Esc` outside the modal's area, the event is not consumed.
+**File:** `crates/runie-tui/src/tui/update/misc.rs`  
+**Lines:** 45-52
 
-**Evidence:**
+**Problem:** If user hits Enter while models are being fetched in onboarding:
 ```rust
-// events.rs:76-90 - Esc maps to PermissionCancel
-KeyCode::Char('n') | KeyCode::Esc => Some(Msg::PermissionCancel),
+if let Some(ref onboarding) = state.onboarding {
+    if onboarding.is_fetching_models {
+        state.messages.push(MessageItem::System {
+            text: "Still loading models... Please wait.".to_string(),
+        });
+        return vec![];  // Blocks submit, no retry mechanism
+    }
+}
 ```
 
-**Fix:** Add explicit `^q` handling in `TuiMode::Permission` that calls `PermissionCancel` and also sets `running = false` (quit). Ensure the permission modal fully intercepts all key events.
+**Current Behavior:** Shows "Still loading models..." but doesn't:
+1. Indicate progress (spinner/percentage)
+2. Provide a way to cancel and retry
+3. Show estimated wait time
+
+**Fix Required:**
+1. Add progress indicator to onboarding state
+2. Provide "Cancel and retry" action
+3. Show model count being loaded
+
+**Severity:** High - Blocks user input with no resolution path.
 
 ---
 
-### P0-4: Overlay mode has no key handler
-**File:** `crates/runie-tui/src/tui/events.rs`
-**Severity:** `TuiMode::Overlay` is set but no keys are handled in this mode.
+### P0-3: Onboarding API Key Validation Provides No Diagnostic
 
-`key_to_msg` matches on `state.mode` but does not include `TuiMode::Overlay`. If the app enters overlay mode, all key presses are silently dropped.
+**File:** `crates/runie-tui/src/components/modal.rs`  
+**Lines:** ~280-295
 
-**Evidence:**
+**Problem:** When API key validation fails:
 ```rust
-// events.rs:31-40
-match state.mode {
-    TuiMode::Chat => ...,
-    TuiMode::Overlay => {
-        // MISSING - returns None for all keys!
-    },
-    TuiMode::Select => ...,
+OnboardingStep::KeyInput => {
+    if self.validate_key() { OnboardingStep::ModelSelect }
+    else { self.error_message = Some("Invalid API key format".to_string()); OnboardingStep::KeyInput }
+}
+```
+
+**Current Behavior:** Shows "Invalid API key format" without explaining:
+- What format was expected
+- What was actually entered
+- How to find/obtain the key
+
+**Fix Required:**
+1. Provide specific validation messages based on failure reason
+2. Show expected prefix clearly
+3. Link to provider documentation
+
+**Severity:** High - New users cannot complete setup.
+
+---
+
+### P0-4: DiffViewer Has No Escape Path If 'q' Key Doesn't Work
+
+**File:** `crates/runie-tui/src/tui/events.rs`  
+**Lines:** ~140-150
+
+**Problem:** DiffViewer only responds to 'q' or Escape:
+```rust
+fn key_to_diff_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::CloseModal),
+        ...
+    }
+}
+```
+
+**If the terminal doesn't send 'q' correctly** (some terminals have issues), users are stuck.
+
+**Fix Required:**
+Add alternative close triggers:
+- Ctrl+C → CloseModal
+- Ctrl+Q → CloseModal (consistent with Chat mode)
+
+**Severity:** Medium - Uncommon but blocking when it occurs.
+
+---
+
+## P1 Issues (Important - Invalid States)
+
+These cause unexpected behavior but have recovery paths.
+
+### P1-1: Error Messages May Contain Raw Stack Traces
+
+**File:** `crates/runie-tui/src/tui/update/agent.rs`  
+**Lines:** ~90-105
+
+**Problem:** `on_agent_error()` accepts raw error strings:
+```rust
+pub fn on_agent_error(state: &mut AppState, message: String) {
+    let recoverable = is_recoverable_error(&message);
+    state.messages.push(MessageItem::Error { message, recoverable });
     ...
 }
 ```
 
-**Fix:** Add `TuiMode::Overlay` match arm with `Esc` → `CloseModal` / `^q` → `Quit`.
+**Current Behavior:** If provider returns a JSON error with stack trace, it appears directly in chat.
+
+**Fix Required:**
+1. Truncate error messages > 500 chars
+2. Detect and sanitize stack traces
+3. Provide "Show details" expansion
+
+**Severity:** Medium - Degrades UX, potential info leak.
 
 ---
 
-### P0-5: Empty chat has no placeholder
-**File:** `crates/runie-tui/src/components/message_list/render.rs`
-**Severity:** When `state.messages` is empty, the content area is blank — no CTA, no guidance.
+### P1-2: Inconsistent Keybindings Between Modes
 
-**Evidence:** `MessageList::render_ref` iterates over `items`, but if empty, renders nothing. The `MessageItem` enum has no `Empty` variant.
+**File:** `crates/runie-tui/src/tui/events.rs`
 
-**Fix:** Add an empty-state check at the top of `MessageList::render_ref` that shows:
-```
-No messages yet. Start typing to chat with the agent.
-  ↑/↓  scroll  |  ^k  commands  |  ^b  sidebar
-```
+| Mode | Quit/Close | Conflict |
+|------|------------|----------|
+| Chat | Ctrl+Q | Also mapped |
+| Permission | None (blocks) | Blocks everything |
+| DiffViewer | q, Esc | Different from Chat |
+| CommandPalette | Esc | Consistent |
+| SessionTree | Esc | Consistent |
+
+**Problem:** Users must remember different keys per mode.
+
+**Fix Required:**
+- Standardize: Esc always closes modals
+- Ctrl+Q only in Chat mode (quit)
+- Add "Press ? for help" hint in status bar
+
+**Severity:** Medium - Cognitive load, learnability issue.
 
 ---
 
-## P1 — IMPORTANT (Invalid States, Recovery Gaps)
+### P1-3: Agent Panic During Tool Execution Leaves Workspace Inconsistent
 
-### P1-1: Model fetch failure during onboarding leaves user stuck
-**File:** `crates/runie-tui/src/components/onboarding/render.rs:182–199`
-**Severity:** If the model fetch fails (network error, invalid key), the UI shows "loading models..." indefinitely.
+**File:** `crates/runie-agent/src/loop_engine.rs`  
+**Lines:** ~350-400
 
-The `is_fetching_models` flag is set to `true` when fetching starts, but there's no error state that transitions to `KeyInput` with an error message.
-
-**Evidence:**
+**Problem:** If tool execution panics (e.g., file deleted mid-edit):
 ```rust
-// onboarding/mod.rs - no error handler for failed fetch
-pub fn set_models(&mut self, models: Vec<ModelOption>) { ... }
-pub fn set_fetch_error(&mut self, err: String) { /* MISSING */ }
+let result = if let Some(tool) = registry.get(name) {
+    match tool.execute(final_input.clone()).await {
+        Ok(output) => ...
+        Err(e) => ToolResult { is_error: true, ... }
+    }
+} else {
+    ToolResult { is_error: true, ... }
+};
 ```
 
-**Fix:** Add `fetch_error: Option<String>` field to `Onboarding`, set it on fetch failure, and render the error in the KeyInput step alongside the "loading..." text.
+**Current Behavior:** Tool errors are caught but partial state changes persist.
+
+**Fix Required:**
+1. Wrap tool execution in catch_unwind
+2. Track tool state changes
+3. Implement rollback on panic
+
+**Severity:** Medium - Can corrupt workspace.
 
 ---
 
-### P1-2: Agent error doesn't distinguish recoverable vs fatal
-**File:** `crates/runie-tui/src/tui/update/agent.rs:85–97`
-**Severity:** All agent errors are shown the same way, even though transient errors (timeout, rate limit) could be retried.
+### P1-4: Double-Submit Prevention Silently Blocks
 
-The `is_recoverable_error()` function exists but its result is stored in `MessageItem::Error { recoverable, .. }` and rendered identically.
+**File:** `crates/runie-tui/src/tui/update/misc.rs`  
+**Lines:** 40-44
 
-**Evidence:**
+**Problem:**
 ```rust
-// on_agent_error stores recoverable flag but render doesn't use it
-MessageItem::Error { message, recoverable }  // recoverable is never checked in render
+if state.agent_running {
+    return vec![];  // Silent block
+}
 ```
 
-**Fix:** In `message_list/render.rs`, check `recoverable` and show a "Retry" button / key hint for recoverable errors. For fatal errors, show "Report issue" hint.
+**Current Behavior:** No feedback to user that submission was blocked.
+
+**Fix Required:**
+1. Push informational message explaining why
+2. Suggest stopping current task first
+3. Visual indicator that agent is running
+
+**Severity:** Low - Confusing but recoverable.
 
 ---
 
-### P1-3: DiffViewer mode has no Escape exit
-**File:** `crates/runie-tui/src/tui/events.rs:103–113`
-**Severity:** `key_to_diff_msg` handles `j/k/↑/↓/y/n` but NOT `Esc`. Only `q` closes the DiffViewer.
+### P1-5: Network Drops Mid-Stream Leave Partial Responses
 
-**Evidence:**
+**File:** `crates/runie-agent/src/loop_engine.rs`  
+**Lines:** ~200-240
+
+**Problem:** If network drops during streaming:
 ```rust
-fn key_to_diff_msg(key: KeyEvent) -> Option<Msg> {
-    match key.code {
-        KeyCode::Char('j') | KeyCode::Down => ...,
-        KeyCode::Char('k') | KeyCode::Up => ...,
-        KeyCode::Char('q') | KeyCode::Esc => Some(Msg::CloseModal),  // Esc IS handled
-        _ => None,
+let mut stream = stream;
+while let Some(event) = stream.next().await {
+    match event {
+        LlmEvent::MessageDelta { content } => {
+            text_content.push_str(&content);
+            // Partial content saved
+        }
+        ...
     }
 }
 ```
-**Actually OK** — `Esc` IS handled. But the status bar for DiffViewer shows `Esc = close` — this is inconsistent with the onboarding status bar which doesn't show Esc.
 
-**Fix:** N/A (already handled), but mark as verified.
+**Current Behavior:** Partial response remains in chat, user must manually delete.
 
----
+**Fix Required:**
+1. Detect stream interruption
+2. Show "Connection lost" message
+3. Offer "Retry" action
+4. Clear partial content on retry
 
-### P1-4: No rollback on PermissionCancel during partial edit
-**File:** `crates/runie-tui/src/tui/update/agent.rs:143–151`
-**Severity:** If the agent started editing a file and the user cancels, the partial edit remains.
-
-**Evidence:** `handle_permission_msg` sends `PermissionDecision::Deny` but the agent loop doesn't have a rollback mechanism for partially executed tool calls.
-
-**Fix:** Add `Cmd::RollbackTool` variant and implement rollback in the agent executor. On `PermissionCancel`, send rollback command before returning to Chat mode.
+**Severity:** Low - Annoying but recoverable.
 
 ---
 
-### P1-5: SessionTree mode has no dedicated hotkey in status bar
-**File:** `crates/runie-tui/src/components/status_bar.rs`
-**Severity:** `TuiMode::SessionTree` status bar shows navigation keys but not how to switch between SessionTree and Chat (no `Esc` shown).
+### P1-6: Empty State - No Workspace Shows Blank Screen
 
-**Evidence:** The status bar for SessionTree:
-```
-Esc close | ↑/↓ navigate | Enter expand
-```
-But `ToggleSessionTree` is triggered by `^b` (sidebar toggle), which is NOT shown in SessionTree mode status bar.
+**File:** `crates/runie-tui/src/components/message_list/render.rs`
 
-**Fix:** Add `^b` as an alternative exit from SessionTree mode in the status bar hint, or make `Esc` consistently the way out.
-
----
-
-### P1-6: No API key validation before agent spawn
-**File:** `crates/runie-tui/src/tui/update/misc.rs:29–48`
-**Severity:** User can press Enter on an empty textarea or with invalid input. The submit handler blocks empty submits but not "run with invalid config".
-
-**Evidence:** `handle_submit` checks `text.is_empty()` but doesn't validate that `current_model` is set. If onboarding was skipped without configuration, the agent spawns with `None` model.
-
-**Fix:** Add a pre-spawn validation check:
+**Problem:** When `messages.is_empty()` and `!agent_running`:
 ```rust
-if state.current_model.is_none() {
-    state.messages.push(MessageItem::System {
-        text: "No model configured. Run /setup to configure a provider.".to_string(),
-    });
-    return vec![];
+if vm.messages.is_empty() && !vm.agent_running {
+    render::render_empty_state(area, buf, text_muted, text_dim, text_x);
 }
 ```
 
+**Current Behavior:** Shows placeholder but no primary CTA to:
+- Create/open a workspace
+- Load a previous session
+
+**Fix Required:**
+Add contextual empty states:
+- "No workspace selected" → button to select
+- "No messages" → "Start a conversation"
+- "No tools available" → "Configure tools"
+
+**Severity:** Low - Missing discoverability.
+
 ---
 
-## P2 — MINOR (Cognitive Load, Consistency)
+## P2 Issues (Improvements - Cognitive Load)
 
-### P2-1: Inconsistent status bar format across modes
-**File:** `crates/runie-tui/src/components/status_bar.rs`
-**Severity:** Some modes show `Esc = close` (Overlay, CommandPalette, DiffViewer, SessionTree) but Onboarding doesn't. This violates Hick's Law — users must learn different escape conventions.
+### P2-1: Status Bar Token Count Format Inconsistent
 
-**Evidence:**
+**File:** `crates/runie-tui/src/tui/render.rs`  
+**Lines:** ~40-55
+
+**Problem:** Mixed number formats:
 ```rust
-// Onboarding status bar:
-TuiMode::Onboarding => vec![
-    StatusItem { key: "Enter", description: "next" },
-    StatusItem { key: "^q", description: "quit" },
-    // NO Esc shown!
-]
+if vm.session_token_usage.total_tokens > 0 {
+    parts.push(Span::styled(format!("{} tokens", vm.session_token_usage.total_tokens), ...));
+    if vm.session_token_usage.estimated_cost > 0.0 {
+        parts.push(Span::styled(format!(" · ${:.4}", vm.session_token_usage.estimated_cost), ...));
+    }
+}
 ```
 
-**Fix:** Add `Esc` with `back` / `skip` description to the Onboarding status bar, consistent with other modes.
+**Fix:** Use consistent formatting (commas for thousands, 2 decimals for cost).
 
 ---
 
-### P2-2: Permission modal — "Skip" option is discoverable but not discoverable enough
-**File:** `crates/runie-tui/src/components/permission_modal.rs:157–164`
-**Severity:** The `[s] skip this step` option is shown in dim text as a secondary row. Users who don't read carefully won't find it.
+### P2-2: Onboarding Provider List Has 20+ Items Without Grouping
 
-**Evidence:** Progressive disclosure is partially implemented (2 primary + 2 dimmed), but "Skip" is useful for iterating quickly.
+**File:** `crates/runie-tui/src/components/modal.rs`  
+**Lines:** ~210-250
 
-**Fix:** Show all 4 options on equal footing (4-column layout), with primary colors. The current 2+2 layout is good but the dimmed options are too easy to miss. Consider showing a legend at the bottom: `[a] always · [s] skip`.
+**Problem:** Alphabetical list of 20+ providers is overwhelming.
 
----
-
-### P2-3: Welcome step has no call-to-action text
-**File:** `crates/runie-tui/src/components/onboarding/render.rs:29–51`
-**Severity:** The Welcome panel shows title + subtitle but no "press Enter to begin" text.
-
-**Evidence:**
-```
-welcome
-multi-model coding agent
-configure providers, models, keys
-(END - no CTA)
-```
-
-**Fix:** Add a footer line: `Press Enter or click to begin →`
+**Fix Required:**
+1. Group by category (OpenAI-compatible, Anthropic, Local, etc.)
+2. Show "Popular" section at top
+3. Search/filter with fuzzy matching
 
 ---
 
-### P2-4: Hotkey `^q` quits app but onboarding uses it for "quit setup"
-**File:** `crates/runie-tui/src/tui/events.rs`
-**Severity:** `^q` in Onboarding mode sends `OnboardingSkip` (which completes setup), but `^q` in Chat mode sends `Quit` (which exits the app). This is confusing — same key, different action.
+### P2-3: Permission Modal 4 Options Creates Hick's Law Overload
 
-**Evidence:**
-```rust
-// Onboarding:
-KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::OnboardingSkip),
-// Chat:
-KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Quit),
-```
+**File:** `crates/runie-tui/src/components/permission_modal.rs`  
+**Lines:** ~130-145
 
-**Fix:** Rename `OnboardingSkip` to something clearer, or use a different key for "skip setup" (e.g., `^c` for cancel setup). Document the keybinding difference in the onboarding status bar.
+**Problem:** 4 options presented simultaneously:
+- Confirm (Y/Enter)
+- Cancel (N/Esc)
+- Always (A)
+- Skip (S)
 
----
-
-### P2-5: Error banner in message list doesn't distinguish recoverable vs fatal
-**File:** `crates/runie-tui/src/components/message_list/render.rs`
-**Severity:** Both recoverable and fatal errors render identically as red `ERROR` badges.
-
-**Evidence:** `render_error_item` doesn't check the `recoverable` field of `MessageItem::Error`.
-
-**Fix:** Add a `⟳` retry icon for recoverable errors:
-```
-[ERROR] Network timeout [⟳ retry]
-```
-vs.
-```
-[ERROR] Invalid API key [report]
-```
+**Fix Required:**
+Use progressive disclosure:
+- Primary row: Confirm | Cancel
+- Secondary row: "Advanced: [a] always allow, [s] skip"
 
 ---
 
-## Summary Table
+## Summary Matrix
 
-| ID | Severity | Issue | File |
-|----|----------|-------|------|
-| P0-1 | CRITICAL | No Ctrl+C handler | `tui.rs` |
-| P0-2 | CRITICAL | Welcome step dead-end | `onboarding/render.rs` |
-| P0-3 | CRITICAL | Permission modal Esc gap | `events.rs` |
-| P0-4 | CRITICAL | Overlay mode has no handler | `events.rs` |
-| P0-5 | CRITICAL | Empty chat no placeholder | `message_list/render.rs` |
-| P1-1 | HIGH | Model fetch failure stuck | `onboarding/mod.rs` |
-| P1-2 | HIGH | Error not distinguished by severity | `update/agent.rs` |
-| P1-3 | MEDIUM | DiffViewer Escape — VERIFIED OK | — |
-| P1-4 | HIGH | No rollback on permission cancel | `update/agent.rs` |
-| P1-5 | MEDIUM | SessionTree missing ^b in status | `status_bar.rs` |
-| P1-6 | HIGH | No pre-spawn config validation | `update/misc.rs` |
-| P2-1 | LOW | Onboarding missing Esc in status | `status_bar.rs` |
-| P2-2 | LOW | Skip option not discoverable | `permission_modal.rs` |
-| P2-3 | LOW | Welcome has no CTA | `onboarding/render.rs` |
-| P2-4 | LOW | ^q means different things | `events.rs` |
-| P2-5 | LOW | Error not styled by severity | `message_list/render.rs` |
-
----
-
-## Hotkey Consistency Map
-
-| Mode | Esc | Enter | ^q | j/k | Other |
-|------|-----|-------|----|-----|-------|
-| Chat | ✓ (scroll) | ✓ send | ✓ quit | ✓ scroll | ^b sidebar, ^k cmd |
-| Onboarding | ✗ missing | ✓ next | ✓ skip | ✓ nav | Tab nav |
-| Permission | ✓ cancel | ✓ allow | ✗ missing | ✓ cycle | y/n/a/s |
-| CommandPalette | ✓ close | ✓ run | — | ✓ nav | ↑/↓ nav |
-| DiffViewer | ✓ close | — | — | ✓ nav | y/n accept/reject |
-| SessionTree | ✓ close | ✓ expand | — | ✓ nav | — |
-| Overlay | ✓ close | ✓ select | ✗ missing | ✓ nav | — |
-
-**Legend:** ✓ = handled, ✗ = should exist but missing, — = N/A
+| ID | Category | Severity | File | Lines | Status |
+|----|----------|----------|------|-------|--------|
+| P0-1 | Dead-end | Critical | loop_engine.rs | 300-330 | Open |
+| P0-2 | Dead-end | Critical | misc.rs | 45-52 | Open |
+| P0-3 | Dead-end | Critical | modal.rs | 280-295 | Open |
+| P0-4 | Dead-end | Medium | events.rs | 140-150 | Open |
+| P1-1 | Invalid state | Medium | agent.rs | 90-105 | Open |
+| P1-2 | Keybinding | Medium | events.rs | (various) | Open |
+| P1-3 | Invalid state | Medium | loop_engine.rs | 350-400 | Open |
+| P1-4 | UX | Low | misc.rs | 40-44 | Open |
+| P1-5 | Invalid state | Low | loop_engine.rs | 200-240 | Open |
+| P1-6 | Empty state | Low | message_list | (render) | Open |
+| P2-1 | Format | Low | render.rs | 40-55 | Open |
+| P2-2 | Cognitive | Low | modal.rs | 210-250 | Open |
+| P2-3 | Cognitive | Low | permission_modal.rs | 130-145 | Open |

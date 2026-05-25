@@ -1,0 +1,18 @@
+{
+  "id": "double_submit_dedup",
+  "name": "Double Submit Deduplication",
+  "description": "Test that when a user rapidly presses Enter twice with the same message, the system: 1) only submits once, 2) shows only one message in chat, 3) doesn't spawn duplicate agents, 4) provides feedback if submission is blocked.",
+  "setup": {
+    "files": {
+      "src/input_handler.rs": "/// Simulates input handling with submit deduplication.\npub struct InputHandler {\n    last_submitted_text: Option<String>,\n    agent_running: bool,\n}\n\nimpl InputHandler {\n    pub fn new() -> Self {\n        Self {\n            last_submitted_text: None,\n            agent_running: false,\n        }\n    }\n    \n    /// Handle submit with deduplication.\n    /// Returns true if message was submitted, false if blocked.\n    pub fn handle_submit(&mut self, text: &str) -> SubmitResult {\n        // Block if agent already running\n        if self.agent_running {\n            return SubmitResult::Blocked {\n                reason: \"Agent already running\".to_string(),\n            };\n        }\n        \n        // Block duplicate submission\n        if self.last_submitted_text.as_ref() == Some(&text.to_string()) {\n            return SubmitResult::Blocked {\n                reason: \"Duplicate submission\".to_string(),\n            };\n        }\n        \n        // Submit\n        self.last_submitted_text = Some(text.to_string());\n        self.agent_running = true;\n        SubmitResult::Submitted\n    }\n    \n    pub fn agent_complete(&mut self) {\n        self.agent_running = false;\n    }\n}\n\npub enum SubmitResult {\n    Submitted,\n    Blocked { reason: String },\n}\n"
+    }
+  },
+  "expected": {
+    "only_one_submission": true,
+    "one_message_in_chat": true,
+    "no_duplicate_agents": true,
+    "feedback_provided": true,
+    "different_message_works": true
+  },
+  "grader": "grader.py"
+}
