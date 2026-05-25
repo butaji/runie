@@ -220,12 +220,12 @@ if raw_tx.try_send(event.clone()).is_err() {
 |----------|-------|-----------|-------|
 | State Transitions | 3 | 1 | 4 |
 | Idempotency | 3 | 0 | 3 |
-| Cancellation | 2 | 1 | 3 |
+| Cancellation | 3 | 0 | 3 |
 | Concurrency | 3 | 1 | 4 |
-| Recovery | 4 | 2 | 6 |
-| **Total** | **15** | **5** | **20** |
+| Recovery | 5 | 1 | 6 |
+| **Total** | **17** | **3** | **20** |
 
 Key remaining items:
-1. **Rollback implementation** - Currently placeholder
-2. **Event channel overflow handling** - Events silently dropped
-3. **Cycle detection** - Not applicable without tool dependencies
+1. **BG-4: Interrupt fade animation** - No explicit transition after fade completes
+2. **CONC-4: Event channel overflow** - Events silently dropped when channel full
+3. **RECOVERY-1: Streaming garbage** - UTF-8 validation partial (see harness task)

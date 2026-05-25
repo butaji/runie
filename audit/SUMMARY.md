@@ -12,7 +12,7 @@
 |-------------|--------|----------|
 | UX Audit Report | ✅ Complete | `audit/ux_issues.md` |
 | Behavior Gaps Report | ✅ Complete | `audit/behavior_gaps.md` |
-| Test Harness | ✅ Working | `harness/` (17 tasks) |
+| Test Harness | ✅ Working | `harness/` (20 tasks) |
 | Fixes Documentation | ✅ Complete | `audit/SUMMARY.md` |
 | Fix Commits | ✅ Complete | Branch commits |
 
@@ -105,7 +105,7 @@ Pass rate: 100%
 ## Test Results
 
 ```
-cargo test (all packages) ✅ 298 tests pass, 0 failed
+cargo test (all packages) ✅ 303 tests pass, 0 failed
 cargo test -p runie-tui   ✅ 149 tests pass
 cargo test -p runie-agent ✅ 21 tests pass
 ```
@@ -131,8 +131,10 @@ cargo test -p runie-agent ✅ 21 tests pass
 
 ```
 cargo check --all-targets ✅ Passes (with warnings)
-cargo test (all packages) ✅ 298 tests pass, 0 failed
+cargo test (all packages) ✅ 303 tests pass, 0 failed
 ```
+
+**Build Fix (e272bd0):** `tokio` workspace dependency was missing `io-util` feature, causing `runie-tools` build failure. `atomic_write()` uses `AsyncWriteExt::write_all()` which requires `io-util`. Added feature to `Cargo.toml` workspace deps.
 
 ---
 
@@ -202,15 +204,17 @@ pub async fn atomic_write(&self, path: &Path, content: &str) -> Result<(), ToolE
 
 ---
 
-## Remaining Known Gaps (Minor)
+## Remaining Known Gaps
 
-| Gap | Description | Impact |
-|-----|-------------|--------|
-| `streaming_garbage` | UTF-8 validation partial (2/4) | Low - streams rarely have issues |
-| `double_submit_dedup` | Some dedup checks (3/4) | Low - core protection works |
-| `idempotency_test` | Operation tracking partial (3/4) | Low - dedup works |
+| Gap | Severity | Description | Impact |
+|-----|---------|-------------|--------|
+| P1-REMAINING-1 | High | Ctrl+C with text triggers ClearInput (accidental text loss) | Medium - rare but destructive |
+| P1-REMAINING-2 | Medium | Network errors show hint but no auto-retry | Low - user can re-submit |
+| `streaming_garbage` | Low | UTF-8 validation partial (2/4) | Low - streams rarely have issues |
+| `double_submit_dedup` | Low | Some dedup checks (3/4) | Low - core protection works |
+| `idempotency_test` | Low | Operation tracking partial (3/4) | Low - dedup works |
 
-These are minor test coverage gaps, not functional issues.
+See `audit/ux_issues.md` for full details and recommendations.
 
 ---
 

@@ -2,11 +2,9 @@
 
 ## P0 - Critical (Must Fix)
 
-### P0-1: Permission Timeout Not Implemented
-**File:** `crates/runie-tui/src/tui/state.rs:55-58`  
-**Issue:** `PermissionModalState` has `timeout_start` and `timed_out` fields, but timeout detection is not wired to actually fire.
-**Fix:** `check_permission_timeout()` in `misc.rs` returns `Some(Msg::PermissionTimeout)`, but the timeout dispatch is not connected in the main loop.
-**Status:** PARTIAL - Fields exist, check exists, but dispatch may be missing in `tui_run.rs`.
+### P0-1: Permission Timeout (Already Fixed)
+**File:** `crates/runie-tui/src/tui/state.rs:55-58`, `crates/runie-tui/src/tui/update.rs:32`, `crates/runie-tui/src/tui/update/misc.rs:10-27`
+**Status:** ✅ FIXED - `check_permission_timeout()` is called in the main `update()` loop (update.rs:32), returns `Some(Msg::PermissionTimeout)` after 300s, which is dispatched to `agent::handle_permission_timeout()` (update.rs:97).
 
 ### P0-2: No Model Warning (Already Fixed)
 **File:** `crates/runie-tui/src/tui/state.rs:330-332`  
@@ -89,24 +87,22 @@
 ## Remaining Issues (Not Yet Fixed)
 
 ### P1-REMAINING-1: Ctrl+C Behavior Inconsistency
-**File:** `crates/runie-tui/src/tui/events.rs:37-40`  
-**Issue:** In Chat mode, `Ctrl+C` with empty textarea triggers `Quit`, but with text triggers `ClearInput`. User may lose typed text accidentally.
-**Recommendation:** Require double-tap `Ctrl+C` or show confirmation before clearing.
+**File:** `crates/runie-tui/src/tui/events.rs:37-46`  
+**Issue:** In Chat mode, `Ctrl+C` with empty textarea triggers `Msg::Quit`, but with text triggers `Msg::ClearInput`. User may lose typed text accidentally.
+**Recommendation:** Require double-tap `Ctrl+C` or show confirmation before clearing text. Alternatively, change `Ctrl+C` always to `Msg::Quit` and move `ClearInput` to a less destructive binding like `Ctrl+U`.
 
-### P1-REMAINING-2: Network Error Recovery
-**File:** `crates/runie-tui/src/tui/update/agent.rs:112-120`  
-**Issue:** `is_recoverable_error()` identifies recoverable errors but there's no automatic retry mechanism.
-**Recommendation:** Add retry button or automatic retry with backoff.
+### P1-REMAINING-2: Network Error Recovery (Partial)
+**File:** `crates/runie-tui/src/tui/update/agent.rs:158-170`  
+**Issue:** `is_recoverable_error()` identifies recoverable errors and shows a hint in the error banner. But there is no automatic retry mechanism — user must manually re-submit.
+**Recommendation:** Add automatic retry with exponential backoff for transient errors (timeout, connection refused, rate limit). Show "Retrying in Xs..." banner.
 
-### P2-REMAINING-1: Empty Command Palette
-**File:** `crates/runie-tui/src/tui/update/palette.rs`  
-**Issue:** When filter returns no matches, the palette shows empty list with no feedback.
-**Recommendation:** Show "No matching commands" message with hint to clear filter.
+### P2-REMAINING-1: Empty Command Palette (Already Fixed)
+**File:** `crates/runie-tui/src/components/command_palette/render.rs:30-36`  
+**Status:** ✅ FIXED - Palette shows "no matches — clear filter to see all" when filtered list is empty.
 
-### P2-REMAINING-2: Onboarding Fetch Failure Fallback
-**File:** `crates/runie-tui/src/tui/update/onboarding.rs:180-195`  
-**Issue:** On model fetch failure, hardcoded models are used as fallback, but user isn't clearly informed the list may be outdated.
-**Recommendation:** Show banner: "Using cached model list. Some models may be missing."
+### P2-REMAINING-2: Onboarding Fetch Failure (Already Fixed)
+**File:** `crates/runie-tui/src/components/onboarding/render.rs:260-277`, `crates/runie-tui/src/tui/update/onboarding.rs:184-211`  
+**Status:** ✅ FIXED - Dedicated `fetch_error` field is set and rendered with retry hint. User stays on KeyInput step to retry.
 
 ---
 
@@ -145,9 +141,9 @@
 
 | Priority | Fixed | Remaining | Total |
 |----------|-------|----------|-------|
-| P0 | 4 | 1 | 5 |
+| P0 | 5 | 0 | 5 |
 | P1 | 7 | 2 | 9 |
-| P2 | 8 | 2 | 10 |
-| **Total** | **19** | **5** | **24** |
+| P2 | 10 | 0 | 10 |
+| **Total** | **22** | **2** | **24** |
 
-Most issues have been addressed. Remaining items are P1/P2 priority.
+All P0 and P2 issues resolved. Two P1 issues remain (Ctrl+C behavior, network retry).
