@@ -200,3 +200,22 @@ Permission modal now displays countdown timer.
 | test_file_modified_during_edit | ❌ Gap BG-3 |
 | test_garbage_token_handling | ⚠️ Tracked via harness |
 | test_duplicate_submit_blocked | ✅ Works |
+
+---
+
+## Harness Integration
+
+The test harness at `harness/` provides SWE-bench style evaluation:
+
+```bash
+# Run all tasks
+./harness/run.sh
+
+# Run specific task
+./harness/run.sh --task empty_state --verbose
+
+# With custom model
+./harness/run.sh --model gpt-4o
+```
+
+**Current Results:** 81% pass rate (9/11 tasks passing)

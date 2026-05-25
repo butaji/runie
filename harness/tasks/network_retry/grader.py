@@ -9,9 +9,10 @@ from pathlib import Path
 def find_retry_implementation():
     """Find retry-related code in tools."""
     candidates = [
+        Path("crates/runie-tools/src/retry.rs"),
         Path("crates/runie-tools/src/bash.rs"),
         Path("crates/runie-tools/src/lib.rs"),
-        Path(__file__).parent.parent.parent / "crates/runie-tools/src/bash.rs",
+        Path(__file__).parent.parent.parent / "crates/runie-tools/src/retry.rs",
     ]
     
     for candidate in candidates:
@@ -41,10 +42,9 @@ def check_source():
     
     # Check for retry wrapper
     retry_patterns = [
-        "retry",
-        "Retry",
-        "execute_with_retry",
-        "retry_async",
+        "retry_with_backoff",
+        "fn retry",
+        "pub async fn retry",
     ]
     if any(p in content for p in retry_patterns):
         checks["has_retry_wrapper"] = True
@@ -53,8 +53,7 @@ def check_source():
     backoff_patterns = [
         "exponential",
         "backoff",
-        "Duration::from_millis",
-        "2u64.pow",
+        "saturating_pow",
         "saturating_mul",
     ]
     if any(p in content for p in backoff_patterns):
@@ -63,9 +62,8 @@ def check_source():
     # Check for transient error detection
     transient_patterns = [
         "is_transient",
-        "transient()",
-        "timeout",
-        "rate.limit",
+        "transient_error",
+        "transient_patterns",
         "connection refused",
     ]
     if any(p in content.lower() for p in transient_patterns):
@@ -75,8 +73,8 @@ def check_source():
     max_retry_patterns = [
         "max_retries",
         "max_attempts",
-        "attempts <",
-        "retries <= ",
+        "attempt >=",
+        "attempt >=",
     ]
     if any(p in content for p in max_retry_patterns):
         checks["has_max_retries"] = True

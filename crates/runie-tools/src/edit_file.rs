@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use runie_core::{Tool, ToolSchema, ToolOutput, ToolError};
 use serde_json::json;
+use std::time::UNIX_EPOCH;
+use tokio::fs;
 use crate::Workspace;
 
 pub struct EditFileTool {
@@ -10,6 +12,18 @@ pub struct EditFileTool {
 impl EditFileTool {
     pub fn new(workspace: Workspace) -> Self {
         Self { workspace }
+    }
+
+    /// Get the modification time of a file (async).
+    async fn get_mtime(path: &std::path::Path) -> Result<u64, ToolError> {
+        let metadata = fs::metadata(path)
+            .await
+            .map_err(|e| ToolError::ExecutionFailed(format!("Failed to get file metadata: {}", e)))?;
+        let modified = metadata.modified()
+            .map_err(|e| ToolError::ExecutionFailed(format!("Failed to get modification time: {}", e)))?;
+        let duration = modified.duration_since(UNIX_EPOCH)
+            .map_err(|e| ToolError::ExecutionFailed(format!("Failed to compute duration: {}", e)))?;
+        Ok(duration.as_secs())
     }
 }
 
@@ -62,6 +76,10 @@ impl Tool for EditFileTool {
         let force = args["force"].as_bool().unwrap_or(false);
 
         let resolved = self.workspace.resolve(path)?;
+        
+        // Get mtime before reading (for stale detection)
+        let read_mtime = Self::get_mtime(&resolved).await?;
+        
         let content = tokio::fs::read_to_string(&resolved).await
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to read file: {}", e)))?;
 
@@ -83,6 +101,15 @@ impl Tool for EditFileTool {
             content.replacen(old_string, new_string, 1)
         };
         let replacement_count = if force { occurrences } else { 1 };
+        
+        // Check if file was modified since we read it
+        let current_mtime = Self::get_mtime(&resolved).await?;
+        if current_mtime != read_mtime {
+            return Err(ToolError::ExecutionFailed(
+                format!("File '{}' was modified since it was read. Please re-read the file and try again.", path)
+            ));
+        }
+        
         tokio::fs::write(&resolved, new_content).await
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to write file: {}", e)))?;
 
@@ -96,5 +123,23 @@ impl Tool for EditFileTool {
             }),
             terminate: false,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_get_mtime_returns_u64() {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let _ws = Workspace::new(std::path::PathBuf::from("."));
+            // Just verify the method exists and works
+            let mtime = EditFileTool::get_mtime(std::path::Path::new("Cargo.toml")).await;
+            assert!(mtime.is_ok());
+            assert!(mtime.unwrap() > 0);
+        });
     }
 }

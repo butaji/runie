@@ -37,6 +37,11 @@ const SAFE_COMMANDS: &[&str] = &[
     "node",
     "python",
     "python3",
+    "sleep",
+    "date",
+    "seq",
+    "printf",
+    "exit",
 ];
 
 /// Commands that are allowed but with additional restrictions.
