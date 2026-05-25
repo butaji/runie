@@ -1,0 +1,15 @@
+{
+  "id": "ctrl_c_test",
+  "name": "Ctrl+C interrupts agent without crash",
+  "description": "Implement a Ctrl+C / SIGINT handler for the TUI event loop. When Ctrl+C is pressed during agent execution, the TUI must: (1) set agent_running = false, (2) send a cancellation signal to the agent task, (3) transition to Chat mode, (4) leave the workspace in a consistent state. The app must NOT panic or leave the terminal in a broken state. Use tokio::signal::ctrl_c() or a signal handler that fires Msg::Stop.",
+  "setup": {
+    "files": {}
+  },
+  "expected": {
+    "has_signal_handler": true,
+    "agent_running_cleared": true,
+    "mode_reset": true,
+    "no_panic_hook_conflict": true
+  },
+  "grader": "grader.py"
+}
