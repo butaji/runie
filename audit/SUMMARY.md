@@ -70,16 +70,17 @@
 ```
 === Runie Agent Harness ===
 Model: mock
-Tasks: 17 pass / 0 fail / 0 error (17 total)
-Checks: 65 / 70 passed
+Tasks: 20 pass / 0 fail / 0 error (20 total)
+Checks: 79 / 84 passed
 Pass rate: 100%
 ```
 
-### Tasks (17 total)
+### Tasks (20 total)
 
 | Task | Description | Status |
 |------|-------------|--------|
 | `cancellation_clean_state` | Spawn agent, interrupt, verify clean state | 4/5 ✅ |
+| `channel_backpressure_test` | Event channel overflow handling | 4/4 ✅ |
 | `ctrl_c_test` | Ctrl+C interrupts agent | 4/4 ✅ |
 | `double_submit_dedup` | Double submit protection | 3/4 ✅ |
 | `empty_state` | Empty chat placeholder | 4/4 ✅ |
@@ -90,9 +91,11 @@ Pass rate: 100%
 | `idle_submit_feedback` | Empty submit feedback | 4/4 ✅ |
 | `network_retry` | Network retry logic | 4/4 ✅ |
 | `no_model_warning` | No model warning | 4/4 ✅ |
+| `panic_recovery_test` | Panic recovery in agent loop | 4/4 ✅ |
 | `permission_rollback` | Permission rollback | 4/4 ✅ |
 | `permission_timeout` | Permission timeout | 4/4 ✅ |
 | `progressive_disclosure` | Advanced options hidden | 4/4 ✅ |
+| `state_transition_test` | State transition validation | 6/6 ✅ |
 | `stream_error_partial_response` | Stream error handling | 4/4 ✅ |
 | `streaming_garbage` | UTF-8 validation | 2/4 ⚠️ |
 | `workspace_concurrent_edits` | File locking | 4/4 ✅ |
@@ -102,6 +105,7 @@ Pass rate: 100%
 ## Test Results
 
 ```
+cargo test (all packages) ✅ 298 tests pass, 0 failed
 cargo test -p runie-tui   ✅ 149 tests pass
 cargo test -p runie-agent ✅ 21 tests pass
 ```
@@ -126,9 +130,8 @@ cargo test -p runie-agent ✅ 21 tests pass
 ## Build Status
 
 ```
-cargo check --all-targets ✅ Passes
-cargo test -p runie-tui   ✅ 149 tests pass
-cargo test -p runie-agent  ✅ 21 tests pass
+cargo check --all-targets ✅ Passes (with warnings)
+cargo test (all packages) ✅ 298 tests pass, 0 failed
 ```
 
 ---
