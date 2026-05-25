@@ -8,6 +8,53 @@ use runie_ai::TokenUsage;
 use runie_core::SlashCommand;
 use crossterm::event::KeyEvent;
 
+/// P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
+#[derive(Clone)]
+pub struct ClearInputConfirm {
+    pub pending: bool,
+    pub last_press: Option<std::time::Instant>,
+}
+
+impl Default for ClearInputConfirm {
+    fn default() -> Self {
+        Self {
+            pending: false,
+            last_press: None,
+        }
+    }
+}
+
+impl ClearInputConfirm {
+    /// Check if the user wants to clear input (requires double-tap within 2 seconds)
+    pub fn wants_clear(&mut self) -> bool {
+        let now = std::time::Instant::now();
+        const CLEAR_CONFIRM_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+        
+        if self.pending {
+            // Second tap - clear confirmed
+            if let Some(last) = self.last_press {
+                if now.duration_since(last) < CLEAR_CONFIRM_TIMEOUT {
+                    self.pending = false;
+                    self.last_press = None;
+                    return true;
+                }
+            }
+            // Timeout expired, reset
+            self.pending = false;
+        }
+        
+        // First tap - request confirmation
+        self.pending = true;
+        self.last_press = Some(now);
+        false
+    }
+    
+    /// Check if there's a pending clear request (for showing hint)
+    pub fn is_pending(&self) -> bool {
+        self.pending
+    }
+}
+
 #[derive(Clone)]
 pub struct AnimationState {
     pub braille_frame: usize,
@@ -152,6 +199,8 @@ pub struct AppState {
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
     pub onboarding: Option<Onboarding>,
     pub terminal_size: (u16, u16),
+    // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
+    pub clear_input_confirm: ClearInputConfirm,
 }
 
 impl Default for AppState {
@@ -177,6 +226,8 @@ impl Default for AppState {
             background_jobs: Vec::new(),
             onboarding: None,
             terminal_size: (0, 0),
+            // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
+            clear_input_confirm: ClearInputConfirm::default(),
         }
     }
 }
@@ -268,6 +319,8 @@ pub enum Msg {
 
     // Input
     ClearInput,
+    // P1-REMAINING-1 FIX: ClearInputConfirm - requires double-tap to clear text
+    ClearInputConfirm,
     ClearChat,
     DirectCommand(PaletteCommand),
     Paste(String),
@@ -330,6 +383,7 @@ impl PartialEq for Msg {
             (OnboardingSubmit, OnboardingSubmit) => true,
             (OnboardingSkip, OnboardingSkip) => true,
             (ClearInput, ClearInput) => true,
+            (ClearInputConfirm, ClearInputConfirm) => true,
             (ClearChat, ClearChat) => true,
             (DirectCommand(a), DirectCommand(b)) => a == b,
             (Paste(a), Paste(b)) => a == b,
@@ -391,6 +445,8 @@ pub struct RenderState {
     pub session_tree: SessionTreeNavigator,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
     pub onboarding: Option<Onboarding>,
+    // P1-REMAINING-1 FIX: Track pending clear input confirmation
+    pub clear_input_confirm: ClearInputConfirm,
 }
 
 impl RenderState {
@@ -414,6 +470,7 @@ impl RenderState {
             session_tree: state.session_tree.clone(),
             background_jobs: state.background_jobs.clone(),
             onboarding: state.onboarding.clone(),
+            clear_input_confirm: state.clear_input_confirm.clone(),
         }
     }
 }

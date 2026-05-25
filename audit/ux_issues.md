@@ -86,10 +86,16 @@
 
 ## Remaining Issues (Not Yet Fixed)
 
-### P1-REMAINING-1: Ctrl+C Behavior Inconsistency
-**File:** `crates/runie-tui/src/tui/events.rs:37-46`  
-**Issue:** In Chat mode, `Ctrl+C` with empty textarea triggers `Msg::Quit`, but with text triggers `Msg::ClearInput`. User may lose typed text accidentally.
-**Recommendation:** Require double-tap `Ctrl+C` or show confirmation before clearing text. Alternatively, change `Ctrl+C` always to `Msg::Quit` and move `ClearInput` to a less destructive binding like `Ctrl+U`.
+### P1-REMAINING-1: Ctrl+C Behavior Inconsistency (FIXED)
+**File:** `crates/runie-tui/src/tui/events.rs:37-46`, `crates/runie-tui/src/tui/state.rs:13-47`, `crates/runie-tui/src/tui/update.rs:33-45`
+**Status:** ✅ FIXED - Implemented double-tap `Ctrl+C` confirmation. First tap shows "Ctrl+C again to clear text" hint, second tap clears text. 2-second timeout resets the confirmation state. Added `ClearInputConfirm` message and `ClearInputConfirm` state struct.
+
+**Implementation:**
+- Added `ClearInputConfirm` struct tracking `pending` flag and `last_press` timestamp
+- Added `ClearInputConfirm` message variant
+- Modified `global_hotkey_handler()` to send `ClearInputConfirm` instead of `ClearInput`
+- `update()` calls `clear_input_confirm.wants_clear()` which returns true only on second tap within 2 seconds
+- Tests added: `test_clear_input_confirm_first_tap_shows_hint`, `test_clear_input_confirm_second_tap_clears_text`, `test_clear_input_confirm_timeout_resets`
 
 ### P1-REMAINING-2: Network Error Recovery (Partial)
 **File:** `crates/runie-tui/src/tui/update/agent.rs:158-170`  
@@ -142,8 +148,8 @@
 | Priority | Fixed | Remaining | Total |
 |----------|-------|----------|-------|
 | P0 | 5 | 0 | 5 |
-| P1 | 7 | 2 | 9 |
+| P1 | 8 | 1 | 9 |
 | P2 | 10 | 0 | 10 |
-| **Total** | **22** | **2** | **24** |
+| **Total** | **23** | **1** | **24** |
 
-All P0 and P2 issues resolved. Two P1 issues remain (Ctrl+C behavior, network retry).
+All P0 and P2 issues resolved. One P1 issue remains (network retry).

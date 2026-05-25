@@ -1,7 +1,7 @@
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
-    use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
+    use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState, ClearInputConfirm};
     use crate::tui::update::update;
     use crate::components::onboarding::Onboarding;
     use crate::components::CommandPalette;
@@ -32,6 +32,8 @@ mod tests {
             background_jobs: Vec::new(),
             onboarding: Some(Onboarding::new()),
             terminal_size: (0, 0),
+            // P1-REMAINING-1 FIX: Clear input double-tap confirmation
+            clear_input_confirm: ClearInputConfirm::default(),
         }
     }
 

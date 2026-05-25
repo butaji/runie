@@ -1,6 +1,6 @@
 //! Reducer tests for state updates.
 
-use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, TopBarState, PermissionModalState, TuiMode};
+use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, TopBarState, PermissionModalState, TuiMode, ClearInputConfirm};
 use crate::components::{MessageItem, SessionTreeNavigator};
 use crate::components::CommandPalette;
 use crate::tui::update::update;
@@ -30,6 +30,8 @@ fn make_state() -> AppState {
         background_jobs: Vec::new(),
         onboarding: None,
         terminal_size: (0, 0),
+        // P1-REMAINING-1 FIX: Clear input double-tap confirmation
+        clear_input_confirm: ClearInputConfirm::default(),
     }
 }
 
@@ -55,6 +57,8 @@ fn make_state_with_text(text: &str) -> AppState {
         background_jobs: Vec::new(),
         onboarding: None,
         terminal_size: (0, 0),
+        // P1-REMAINING-1 FIX: Clear input double-tap confirmation
+        clear_input_confirm: ClearInputConfirm::default(),
     };
     state
 }
@@ -458,4 +462,55 @@ fn test_duplicate_submit_is_deduplicated() {
     // P1-4 FIX: Should show feedback via input_right_info (not system message)
     assert!(state.input_right_info.contains("running") || state.input_right_info.contains("stop"),
         "Blocked submit should show feedback via input_right_info");
+}
+
+// P1-REMAINING-1 FIX: Double-tap Ctrl+C to clear text
+#[test]
+fn test_clear_input_confirm_first_tap_shows_hint() {
+    let mut state = make_state_with_text("Hello world");
+    let mut palette = CommandPalette::new();
+    
+    // First tap should show hint, not clear
+    update(&mut state, &mut palette, Msg::ClearInputConfirm);
+    
+    assert!(!state.textarea.is_empty(), "First tap should NOT clear text");
+    assert!(state.input_right_info.contains("Ctrl+C again"),
+        "First tap should show hint: {}", state.input_right_info);
+}
+
+#[test]
+fn test_clear_input_confirm_second_tap_clears_text() {
+    let mut state = make_state_with_text("Hello world");
+    let mut palette = CommandPalette::new();
+    
+    // First tap shows hint
+    update(&mut state, &mut palette, Msg::ClearInputConfirm);
+    assert!(!state.textarea.is_empty(), "Text should not be cleared yet");
+    
+    // Second tap clears text
+    update(&mut state, &mut palette, Msg::ClearInputConfirm);
+    assert!(state.textarea.is_empty(), "Second tap should clear text");
+    assert!(state.input_right_info.is_empty(), "Info should be cleared after clear");
+}
+
+#[test]
+fn test_clear_input_confirm_timeout_resets() {
+    use std::thread;
+    use std::time::Duration;
+    let mut state = make_state_with_text("Hello world");
+    let mut palette = CommandPalette::new();
+    
+    // First tap shows hint
+    update(&mut state, &mut palette, Msg::ClearInputConfirm);
+    
+    // Simulate timeout by setting last_press to 3 seconds ago
+    state.clear_input_confirm.last_press = Some(
+        std::time::Instant::now() - std::time::Duration::from_secs(3)
+    );
+    
+    // Next tap should be treated as first tap (timeout reset)
+    update(&mut state, &mut palette, Msg::ClearInputConfirm);
+    assert!(!state.textarea.is_empty(), "After timeout, next tap is first tap");
+    assert!(state.input_right_info.contains("Ctrl+C again"),
+        "After timeout, hint should show again");
 }

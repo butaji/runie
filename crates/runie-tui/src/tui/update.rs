@@ -35,6 +35,18 @@ fn handle_tick_permission_check(state: &mut AppState, palette: &mut CommandPalet
     cmds
 }
 
+// P1-REMAINING-1 FIX: Extracted from update() for clear input double-tap confirmation
+fn handle_clear_input_confirm(state: &mut AppState) {
+    if state.clear_input_confirm.wants_clear() {
+        // Second tap within 2 seconds - clear the input
+        state.textarea.select_all();
+        state.textarea.delete_line_by_end();
+        state.input_right_info = String::new();
+    } else {
+        // First tap - show hint
+        state.input_right_info = "Ctrl+C again to clear text".to_string();
+    }
+}
 
 fn route_onboarding(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     match msg {
@@ -111,12 +123,12 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         Msg::SessionTreeConfirm => { tree::handle_tree_confirm(state); }
         Msg::OnboardingNext | Msg::OnboardingBack | Msg::OnboardingNavigateUp | Msg::OnboardingNavigateDown | Msg::OnboardingSelectProvider(_) | Msg::OnboardingSelectModel(_) | Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace | Msg::OnboardingSearchInput(_) | Msg::OnboardingSearchBackspace | Msg::OnboardingSubmit | Msg::OnboardingSkip | Msg::ModelsFetched(_) | Msg::ModelsFetchFailed(_) | Msg::Paste(_) => cmds.extend(route_onboarding(state, msg)),
         Msg::InsertNewline => { state.textarea.insert_newline(); }
+        // P1-REMAINING-1 FIX: Double-tap Ctrl+C to clear text (prevents accidental loss)
+        Msg::ClearInputConfirm => { handle_clear_input_confirm(state); }
         Msg::ClearInput => { state.textarea.select_all(); state.textarea.delete_line_by_end(); }
         Msg::ClearChat => { state.messages.clear(); }
         Msg::DirectCommand(cmd) => { cmds.extend(palette::handle_direct_command(state, cmd)); }
-        Msg::Resize(w, h) => {
-            state.terminal_size = (w, h);
-        }
+        Msg::Resize(w, h) => { state.terminal_size = (w, h); }
     }
 
     cmds
