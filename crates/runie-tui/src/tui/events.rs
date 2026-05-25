@@ -43,7 +43,14 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
     match key.code {
         KeyCode::Char('c') => {
             let is_empty = state.textarea.lines() == [""];
-            Some(Some(if is_empty { Msg::Quit } else { Msg::ClearInput }))
+            if is_empty {
+                // Empty textarea: quit immediately
+                Some(Some(Msg::Quit))
+            } else {
+                // Has text: require double-tap Ctrl+C to clear (P1-REMAINING-1 FIX)
+                // The actual check happens in update() via clear_input_confirm
+                Some(Some(Msg::ClearInputConfirm)) // Signal that user wants to clear
+            }
         }
         KeyCode::Char('q') => Some(Some(Msg::Quit)),
         _ => None,
