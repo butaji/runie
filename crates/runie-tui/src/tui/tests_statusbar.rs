@@ -18,11 +18,13 @@ mod tests_statusbar {
 
     #[test]
     fn test_permission_mode_hotkeys() {
+        // P1-2: Updated to reflect new key labels with progressive disclosure
         let items = get_status_items(&TuiMode::Permission);
-        assert!(items.iter().any(|(k, _)| k == &"y"));
-        assert!(items.iter().any(|(k, _)| k == &"n"));
+        assert!(items.iter().any(|(k, _)| k == &"y/Enter"));
+        assert!(items.iter().any(|(k, _)| k == &"Esc/n"));
         assert!(items.iter().any(|(k, _)| k == &"a"));
-        assert!(items.iter().any(|(k, _)| k == &"s"));
+        // "s" (skip) is now a discoverable hint, not in primary status bar
+        assert!(!items.iter().any(|(k, _)| k == &"s"));
     }
 
     #[test]

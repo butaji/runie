@@ -25,6 +25,22 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     if text.is_empty() {
         return vec![];
     }
+    
+    // BG-7: Block double-submit - don't start new turn if agent is already running
+    if state.agent_running {
+        return vec![];
+    }
+    
+    // BG-5: Block submit while models are still being fetched in onboarding
+    if let Some(ref onboarding) = state.onboarding {
+        if onboarding.is_fetching_models {
+            state.messages.push(MessageItem::System {
+                text: "Still loading models... Please wait.".to_string(),
+            });
+            return vec![];
+        }
+    }
+    
     state.messages.push(MessageItem::User {
         text: text.clone(),
         model: Some("You".to_string()),

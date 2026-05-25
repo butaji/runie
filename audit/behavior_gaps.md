@@ -44,14 +44,23 @@ When DiffViewer is open and user presses Esc/q, `Msg::CloseModal` is sent. The `
 
 ---
 
-### BG-5: `Msg::ModelsFetched` / `Msg::ModelsFetchFailed` — no transition enforcement
-**File:** `crates/runie-tui/src/tui/update.rs`
+### BG-5: `Msg::ModelsFetched` / `Msg::ModelsFetchFailed` — no transition enforcement ✓ FIXED
+**File:** `crates/runie-tui/src/tui/update/misc.rs` → `handle_submit()`
 
-These messages arrive asynchronously from the main thread. If a `Submit` is sent while models are still being fetched, the agent starts without knowing what model is configured.
+**Before:** If a `Submit` was sent while models were still being fetched, the agent started without knowing what model was configured.
 
-**Gap:** The onboarding sets `is_fetching_models = true`. While this is true, `Submit` should be blocked. Currently, the user can submit while model fetch is in progress.
-
-**Fix:** In `handle_submit()`, check `onboarding.is_fetching_models`. If true, show a banner `"Still loading models..."` and return early.
+**Fix Applied:** Added check in `handle_submit()`:
+```rust
+if let Some(ref onboarding) = state.onboarding {
+    if onboarding.is_fetching_models {
+        state.messages.push(MessageItem::System {
+            text: "Still loading models... Please wait.".to_string(),
+        });
+        return vec![];
+    }
+}
+```
+This blocks submit while model fetch is in progress and shows a helpful banner.
 
 ---
 
@@ -66,12 +75,18 @@ If the provider sends `MessageUpdate` with empty content repeatedly (e.g., strea
 
 ## 2. Idempotency Violations
 
-### BG-7: Double-submit is not blocked
+### BG-7: Double-submit is not blocked ✓ FIXED
 **File:** `crates/runie-tui/src/tui/update/misc.rs` → `handle_submit()`
 
-If the user double-presses Enter quickly (within the same event loop tick), two `Submit` messages can be queued. The second submit checks `textarea.lines()` which may still be non-empty.
+**Before:** If the user double-pressed Enter quickly, two `Submit` messages could be queued. The second submit would start a new agent turn while one was already running.
 
-**Fix:** In `handle_submit()`, check `state.agent_running`. If `agent_running = true`, return early with no-op. This prevents starting a new agent turn while one is running.
+**Fix Applied:** Added check at the start of `handle_submit()`:
+```rust
+if state.agent_running {
+    return vec![];
+}
+```
+This prevents starting a new agent turn while one is already running.
 
 ---
 
@@ -86,12 +101,18 @@ When `Ctrl+C` is pressed with non-empty textarea, it calls `Msg::ClearInput`. Bu
 
 ## 3. Cancellation Safety
 
-### BG-9: `Ctrl+C` during permission request — agent not cancelled
+### BG-9: `Ctrl+C` during permission request — agent not cancelled ✓ FIXED
 **File:** `crates/runie-tui/src/tui/events.rs` → `key_to_permission_msg()`
 
-When `TuiMode::Permission`, pressing `Ctrl+C` is NOT handled (goes to `None`). The permission modal stays open. The agent is blocked waiting for a decision. If the user presses Ctrl+C in the terminal, it sends SIGINT, which kills the process.
+**Before:** When `TuiMode::Permission`, pressing `Ctrl+C` was NOT handled (went to `None`). The permission modal stayed open. The agent was blocked waiting for a decision.
 
-**Fix:** Add `Ctrl+C` → `PermissionCancel` in `key_to_permission_msg()`. This gives an escape path from the permission modal.
+**Fix Applied:** Added Ctrl+C handling at the start of `key_to_permission_msg()`:
+```rust
+if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('c')) {
+    return Some(Msg::PermissionCancel);
+}
+```
+This gives an explicit escape path from the permission modal via Ctrl+C.
 
 ---
 

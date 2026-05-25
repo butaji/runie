@@ -25,6 +25,8 @@ pub enum MessageItem {
     ToolCall { name: String, args: String, result: Option<String>, is_error: bool },
     Edit { filename: String, diff: Option<String> },
     System { text: String },
+    // P2-1: Structured error with recoverable flag for better error presentation
+    Error { message: String, recoverable: bool },
     ToolRunning { name: String, args: String, duration_ms: u64 },
     ToolComplete { name: String, result: String, lines: Option<usize> },
     PlanStep { step: usize, text: String, status: PlanStatus },

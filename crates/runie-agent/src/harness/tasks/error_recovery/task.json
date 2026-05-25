@@ -1,0 +1,18 @@
+{
+  "id": "error_recovery",
+  "name": "Implement retry logic for API calls",
+  "description": "The `fetch_data` function in src/api.rs makes a single API call. If the call fails with a transient error (timeout, 5xx, network), it should retry up to 3 times with exponential backoff (1s, 2s, 4s). If all retries fail, return an appropriate error. The function should use the Result<T, Error> pattern.",
+  "setup": {
+    "files": {
+      "src/api.rs": "use std::time::Duration;\n\npub struct ApiError {\n    pub message: String,\n    pub transient: bool,\n}\n\nimpl std::fmt::Display for ApiError {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        write!(f, \"{}\", self.message)\n    }\n}\n\n/// Fetches data from the API.\n/// Currently has no retry logic - it fails immediately on any error.\npub async fn fetch_data(url: &str) -> Result<String, ApiError> {\n    // Simulated call that always succeeds in tests\n    // In real usage, this could fail\n    if url.contains(\"error\") {\n        return Err(ApiError {\n            message: \"Network error\".to_string(),\n            transient: true,\n        });\n    }\n    Ok(format!(\"Data from {}\", url))\n}\n",
+      "src/lib.rs": "pub mod api;\n\npub use api::{fetch_data, ApiError};\n"
+    }
+  },
+  "expected": {
+    "has_retry_loop": true,
+    "has_backoff": true,
+    "max_retries_3": true,
+    "returns_result": true
+  },
+  "grader": "grader.py"
+}

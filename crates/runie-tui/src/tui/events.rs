@@ -74,6 +74,11 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    // BG-9: Add Ctrl+C as escape path from permission modal
+    if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('c')) {
+        return Some(Msg::PermissionCancel);
+    }
+    
     match key.code {
         KeyCode::Enter | KeyCode::Char('y') => Some(Msg::PermissionConfirm),
         KeyCode::Esc | KeyCode::Char('n') => Some(Msg::PermissionCancel),
