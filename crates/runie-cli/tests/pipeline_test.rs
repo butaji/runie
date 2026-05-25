@@ -421,17 +421,22 @@ fn test_hotkey_priority() {
     assert!(tui.state.running, "Should still be running after Esc");
 
     // Ctrl+C when textarea has content: clears input instead of quitting
+    // P1-REMAINING-1 FIX: Double-tap required to clear text
     tui.state.running = true;
     tui.update(Msg::TextareaKey(char_key('h')));
     tui.update(Msg::TextareaKey(char_key('i')));
+    // First tap: shows hint
     if let Some(msg) = tui.simulate_key(KeyCode::Char('c'), true) {
         tui.update(msg);
     }
-    assert!(
-        tui.state.running,
-        "Ctrl+C should NOT quit when textarea has content"
-    );
-    assert_eq!(tui.content(), "", "Ctrl+C with content should clear input");
+    assert!(tui.state.running, "Ctrl+C should NOT quit when textarea has content");
+    assert!(!tui.content().is_empty(), "First tap should not clear input, just show hint");
+    assert!(tui.state.input_right_info.contains("Ctrl+C"), "First tap should show hint");
+    // Second tap: clears text
+    if let Some(msg) = tui.simulate_key(KeyCode::Char('c'), true) {
+        tui.update(msg);
+    }
+    assert_eq!(tui.content(), "", "Second Ctrl+C with content should clear input");
 }
 
 /// Test that mock mode skips onboarding
