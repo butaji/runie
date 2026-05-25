@@ -1,0 +1,17 @@
+{
+  "id": "graceful_degradation",
+  "name": "Graceful Degradation on Component Failure",
+  "description": "Test that when components fail, the system degrades gracefully. If the sidebar fails to load, the main content still works. If a non-critical feature errors, the app continues. Critical paths must be resilient to peripheral failures.",
+  "setup": {
+    "files": {
+      "src/resilience.rs": "/// Module for graceful degradation patterns.\npub struct GracefulDegradation {\n    pub sidebar_available: bool,\n    pub agent_list_available: bool,\n    pub diff_viewer_available: bool,\n}\n\nimpl GracefulDegradation {\n    pub fn new() -> Self {\n        Self {\n            sidebar_available: true,\n            agent_list_available: true,\n            diff_viewer_available: true,\n        }\n    }\n    \n    /// Simulate failure of a non-critical component\n    pub fn fail_sidebar(&mut self) {\n        self.sidebar_available = false;\n        // Main content should still work\n    }\n    \n    /// Check if main content should render\n    pub fn should_render_main_content(&self) -> bool {\n        // Core functionality always available\n        true\n    }\n    \n    /// Get sidebar state with fallback\n    pub fn get_sidebar_content(&self) -> Option<String> {\n        if self.sidebar_available {\n            Some(\"Sidebar content\".to_string())\n        } else {\n            None  // Main content takes full width\n        }\n    }\n}\n"
+    }
+  },
+  "expected": {
+    "main_content_works_without_sidebar": true,
+    "error_recovery_allows_continue": true,
+    "no_panic_on_component_failure": true,
+    "fallback_rendering_exists": true
+  },
+  "grader": "grader.py"
+}

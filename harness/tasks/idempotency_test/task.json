@@ -1,0 +1,17 @@
+{
+  "id": "idempotency_test",
+  "name": "Idempotency - Same Command Twice",
+  "description": "Test that running the same command twice produces the same result without side effects. This is critical for agent reliability: if the agent encounters an error and retries, it should not cause duplicate operations like double file writes or double tool executions.",
+  "setup": {
+    "files": {
+      "src/idempotency_checker.rs": "/// Module for checking idempotency of operations.\npub struct IdempotencyChecker {\n    executed_operations: std::collections::HashSet<String>,\n}\n\nimpl IdempotencyChecker {\n    pub fn new() -> Self {\n        Self {\n            executed_operations: std::collections::HashSet::new(),\n        }\n    }\n    \n    /// Execute an operation only once. Returns true if executed, false if already done.\n    pub fn execute_once(&mut self, operation: &str, args: &str) -> bool {\n        let key = format!(\"{}:{}\", operation, args);\n        if self.executed_operations.contains(&key) {\n            return false;  // Already executed - skip\n        }\n        self.executed_operations.insert(key);\n        true\n    }\n    \n    /// Get count of unique operations executed.\n    pub fn operation_count(&self) -> usize {\n        self.executed_operations.len()\n    }\n}\n"
+    }
+  },
+  "expected": {
+    "dedup_on_retry": true,
+    "same_result_twice": true,
+    "different_args_work": true,
+    "operation_count_correct": true
+  },
+  "grader": "grader.py"
+}
