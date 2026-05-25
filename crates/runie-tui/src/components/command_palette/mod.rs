@@ -24,6 +24,12 @@ pub enum PaletteCommand {
     CompactContext,
     Quit,
     Cancel,
+    ManageProviders,
+    AddProvider,
+    RemoveProvider,
+    EditApiKey,
+    SetProviderPriority,
+    BrowseModels,
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +64,12 @@ impl PaletteCommandDef {
             "delete_file" => PaletteCommand::DeleteFile { path: arg.to_string() },
             "compact_context" => PaletteCommand::CompactContext,
             "quit" => PaletteCommand::Quit,
+            "manage_providers" => PaletteCommand::ManageProviders,
+            "add_provider" => PaletteCommand::AddProvider,
+            "remove_provider" => PaletteCommand::RemoveProvider,
+            "edit_api_key" => PaletteCommand::EditApiKey,
+            "set_provider_priority" => PaletteCommand::SetProviderPriority,
+            "browse_models" => PaletteCommand::BrowseModels,
             _ => PaletteCommand::Cancel,
         }
     }
@@ -88,13 +100,19 @@ impl CommandPalette {
             PaletteCommandDef { id: "load_session".into(), label: "Load Session...".into(), description: "Open an existing session".into(), category: "session".into(), aliases: vec!["load".into(), "open".into(), "l".into(), "o".into()], keybinding: Some("Ctrl+O".into()), requires_args: true, arg_hint: "session name".into() },
             PaletteCommandDef { id: "save_session".into(), label: "Save Session...".into(), description: "Save current session".into(), category: "session".into(), aliases: vec!["save".into(), "s".into()], keybinding: Some("Ctrl+S".into()), requires_args: true, arg_hint: "session name".into() },
             PaletteCommandDef { id: "clear_chat".into(), label: "Clear Chat".into(), description: "Clear all messages".into(), category: "chat".into(), aliases: vec!["c".into(), "clear".into()], keybinding: Some("Ctrl+L".into()), requires_args: false, arg_hint: "".into() },
-            PaletteCommandDef { id: "switch_model".into(), label: "Switch Model...".into(), description: "Change the AI model".into(), category: "config".into(), aliases: vec!["model".into(), "m".into()], keybinding: None, requires_args: true, arg_hint: "model name".into() },
+            PaletteCommandDef { id: "switch_model".into(), label: "Switch Model...".into(), description: "Change the AI model".into(), category: "config".into(), aliases: vec!["model".into(), "m".into()], keybinding: None, requires_args: false, arg_hint: "model name".into() },
             PaletteCommandDef { id: "read_file".into(), label: "Read File...".into(), description: "Read contents of a file".into(), category: "file".into(), aliases: vec!["read".into(), "r".into(), "cat".into()], keybinding: Some("Ctrl+R".into()), requires_args: true, arg_hint: "filename".into() },
             PaletteCommandDef { id: "edit_file".into(), label: "Edit File...".into(), description: "Edit a file with AI assistance".into(), category: "file".into(), aliases: vec!["edit".into(), "e".into()], keybinding: None, requires_args: true, arg_hint: "filename".into() },
             PaletteCommandDef { id: "write_file".into(), label: "Write File...".into(), description: "Create or overwrite a file".into(), category: "file".into(), aliases: vec!["write".into(), "w".into(), "create".into()], keybinding: None, requires_args: true, arg_hint: "filename".into() },
             PaletteCommandDef { id: "delete_file".into(), label: "Delete File...".into(), description: "Delete a file".into(), category: "file".into(), aliases: vec!["delete".into(), "rm".into(), "del".into()], keybinding: None, requires_args: true, arg_hint: "filename".into() },
             PaletteCommandDef { id: "compact_context".into(), label: "Compact Context".into(), description: "Reduce context window usage".into(), category: "chat".into(), aliases: vec!["compact".into(), "compress".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
             PaletteCommandDef { id: "quit".into(), label: "Quit".into(), description: "Exit the application".into(), category: "app".into(), aliases: vec!["q".into(), "quit".into(), "exit".into()], keybinding: Some("Ctrl+Q".into()), requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "manage_providers".into(), label: "Manage Providers...".into(), description: "Manage AI providers".into(), category: "config".into(), aliases: vec!["providers".into(), "mp".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "add_provider".into(), label: "Add Provider...".into(), description: "Add a new AI provider".into(), category: "config".into(), aliases: vec!["add".into(), "ap".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "remove_provider".into(), label: "Remove Provider...".into(), description: "Remove an AI provider".into(), category: "config".into(), aliases: vec!["remove".into(), "rp".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "edit_api_key".into(), label: "Edit API Key...".into(), description: "Edit provider API key".into(), category: "config".into(), aliases: vec!["apikey".into(), "key".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "set_provider_priority".into(), label: "Set Provider Priority...".into(), description: "Set provider priority order".into(), category: "config".into(), aliases: vec!["priority".into(), "spp".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "browse_models".into(), label: "Browse Models...".into(), description: "Browse available models".into(), category: "config".into(), aliases: vec!["models".into(), "bm".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
         ];
 
         let mut requires_args_map = HashMap::new();

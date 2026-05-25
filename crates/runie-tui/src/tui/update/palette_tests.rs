@@ -95,10 +95,15 @@ mod handle_direct_command_tests {
         assert!(cmds.is_empty());
         // Should switch to Overlay mode for model picker
         assert_eq!(state.mode, TuiMode::Overlay);
-        // Model picker should be populated
-        assert!(!state.model_picker_items.is_empty());
-        assert_eq!(state.model_picker_title, "Select Model");
-        assert_eq!(state.model_picker_selected, 0);
+        // Model picker should be populated with grouped models
+        assert!(state.model_picker.is_some());
+        let picker = state.model_picker.as_ref().unwrap();
+        // Should have 3 providers: Anthropic, OpenAI, Google
+        assert_eq!(picker.providers.len(), 3);
+        // First provider should be Anthropic
+        assert_eq!(picker.providers[0].provider_name, "Anthropic");
+        // Selected should be first model
+        assert_eq!(picker.selected, (0, 0));
     }
 
     #[test]

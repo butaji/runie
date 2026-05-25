@@ -33,9 +33,7 @@ fn make_state() -> AppState {
         // P1-REMAINING-1 FIX: Clear input double-tap confirmation
         clear_input_confirm: ClearInputConfirm::default(),
         // Model picker state
-        model_picker_title: String::new(),
-        model_picker_items: Vec::new(),
-        model_picker_selected: 0,
+        model_picker: None,
     }
 }
 
@@ -64,9 +62,7 @@ fn make_state_with_text(text: &str) -> AppState {
         // P1-REMAINING-1 FIX: Clear input double-tap confirmation
         clear_input_confirm: ClearInputConfirm::default(),
         // Model picker state
-        model_picker_title: String::new(),
-        model_picker_items: Vec::new(),
-        model_picker_selected: 0,
+        model_picker: None,
     };
     state
 }

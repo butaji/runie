@@ -324,25 +324,14 @@ impl Tui {
     }
 
     fn render_overlay_mode(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
-        let overlay_area = Overlay::centered((60, 20), frame.area());
+        let overlay_area = Overlay::centered((70, 25), frame.area());
         let mut overlay_buf = Buffer::empty(overlay_area);
-        
-        // Build overlay with model picker content
-        let mut overlay = Overlay::default();
-        overlay.title = state.model_picker_title.clone();
-        overlay.content = state.model_picker_items.iter()
-            .enumerate()
-            .map(|(i, name)| {
-                if i == state.model_picker_selected {
-                    vec![ratatui::text::Span::raw(format!("▸ {}", name))]
-                } else {
-                    vec![ratatui::text::Span::raw(format!("  {}", name))]
-                }
-            })
-            .collect();
-        overlay.theme = theme.clone();
-        
-        overlay.render_ref(overlay_area, &mut overlay_buf, theme);
+
+        // Use ModelPicker's render method
+        if let Some(ref picker) = state.model_picker {
+            picker.render_ref(overlay_area, &mut overlay_buf, theme);
+        }
+
         Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
     }
 

@@ -1,4 +1,4 @@
-use crate::components::{MessageItem, DiffViewer, PaletteCommand};
+use crate::components::{MessageItem, DiffViewer, PaletteCommand, ModelPicker};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::components::SessionTreeNavigator;
@@ -201,10 +201,8 @@ pub struct AppState {
     pub terminal_size: (u16, u16),
     // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
     pub clear_input_confirm: ClearInputConfirm,
-    // Model picker state (used when TuiMode::Overlay with model picker active)
-    pub model_picker_title: String,
-    pub model_picker_items: Vec<String>,
-    pub model_picker_selected: usize,
+    // Model picker state
+    pub model_picker: Option<ModelPicker>,
 }
 
 impl Default for AppState {
@@ -233,9 +231,7 @@ impl Default for AppState {
             // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
             clear_input_confirm: ClearInputConfirm::default(),
             // Model picker state
-            model_picker_title: String::new(),
-            model_picker_items: Vec::new(),
-            model_picker_selected: 0,
+            model_picker: None,
         }
     }
 }
@@ -329,6 +325,7 @@ pub enum Msg {
     SelectUp,
     SelectDown,
     SelectConfirm,
+    SelectToggleDetails,
 
     // Input
     ClearInput,
@@ -347,6 +344,9 @@ pub enum Msg {
 
     // P0-1 FIX: Stop — fired by Ctrl+C signal handler to interrupt agent
     Stop,
+
+    // Model picker shortcut
+    SwitchModel,
 }
 
 impl PartialEq for Msg {
@@ -404,9 +404,11 @@ impl PartialEq for Msg {
             (ModelsFetchFailed(a), ModelsFetchFailed(b)) => a == b,
             (Resize(a_w, a_h), Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
             (Stop, Stop) => true,
+            (PermissionTimeout, PermissionTimeout) => true,
             (SelectUp, SelectUp) => true,
             (SelectDown, SelectDown) => true,
             (SelectConfirm, SelectConfirm) => true,
+            (SelectToggleDetails, SelectToggleDetails) => true,
             _ => false,
         }
     }
@@ -493,9 +495,7 @@ pub struct RenderState {
     // P1-REMAINING-1 FIX: Track pending clear input confirmation
     pub clear_input_confirm: ClearInputConfirm,
     // Model picker state
-    pub model_picker_title: String,
-    pub model_picker_items: Vec<String>,
-    pub model_picker_selected: usize,
+    pub model_picker: Option<ModelPicker>,
 }
 
 impl RenderState {
@@ -520,9 +520,7 @@ impl RenderState {
             background_jobs: state.background_jobs.clone(),
             onboarding: state.onboarding.clone(),
             clear_input_confirm: state.clear_input_confirm.clone(),
-            model_picker_title: state.model_picker_title.clone(),
-            model_picker_items: state.model_picker_items.clone(),
-            model_picker_selected: state.model_picker_selected,
+            model_picker: state.model_picker.clone(),
         }
     }
 }

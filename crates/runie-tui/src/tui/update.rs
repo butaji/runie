@@ -108,27 +108,26 @@ fn handle_palette_confirm(state: &mut AppState, palette: &mut CommandPalette) ->
 
 // P1-2 FIX: Extracted from update() for Select navigation handling
 fn handle_select_nav(state: &mut AppState, msg: &Msg) {
+    let picker = match &mut state.model_picker {
+        Some(p) => p,
+        None => return,
+    };
     match msg {
         Msg::SelectUp => {
-            if state.model_picker_selected > 0 {
-                state.model_picker_selected -= 1;
-            }
+            picker.prev();
         }
         Msg::SelectDown => {
-            if state.model_picker_selected < state.model_picker_items.len().saturating_sub(1) {
-                state.model_picker_selected += 1;
-            }
+            picker.next();
         }
         Msg::SelectConfirm => {
-            if !state.model_picker_items.is_empty() {
-                if let Some(model) = state.model_picker_items.get(state.model_picker_selected) {
-                    state.current_model = Some(model.clone());
-                }
+            if let Some((_provider_id, model_id)) = picker.selected_model() {
+                state.current_model = Some(model_id.to_string());
                 state.mode = TuiMode::Chat;
-                state.model_picker_title.clear();
-                state.model_picker_items.clear();
-                state.model_picker_selected = 0;
+                state.model_picker = None;
             }
+        }
+        Msg::SelectToggleDetails => {
+            picker.toggle_details();
         }
         _ => {}
     }
@@ -175,7 +174,8 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         Msg::DirectCommand(cmd) => { cmds.extend(palette::handle_direct_command(state, cmd)); }
         Msg::Resize(w, h) => { state.terminal_size = (w, h); }
         // P1-2 FIX: Select/Overlay navigation (model picker)
-        Msg::SelectUp | Msg::SelectDown | Msg::SelectConfirm => { handle_select_nav(state, &msg); }
+        Msg::SelectUp | Msg::SelectDown | Msg::SelectConfirm | Msg::SelectToggleDetails => { handle_select_nav(state, &msg); }
+        Msg::SwitchModel => { palette::handle_switch_model(state); }
     }
 
     cmds

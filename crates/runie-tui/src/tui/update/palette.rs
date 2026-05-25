@@ -1,7 +1,7 @@
 use crate::tui::state::{AppState, TuiMode, Cmd};
 use crate::components::{MessageItem, CommandPalette};
 use crate::components::command_palette::PaletteCommand;
-use crate::components::onboarding;
+use crate::components::model_picker::ModelPicker;
 
 pub fn open_palette(state: &mut AppState, palette: &mut CommandPalette) {
     state.command_palette.open = true;
@@ -25,6 +25,7 @@ pub fn handle_close_modal(state: &mut AppState) {
     state.permission_modal.tool_call_id = None;
     state.diff_viewer = None;
     state.session_tree.hide();
+    state.model_picker = None;
 }
 
 /// P1-1 FIX: Handle Esc in command palette
@@ -50,12 +51,34 @@ fn push_file_cmd(cmds: &mut Vec<Cmd>, state: &mut AppState, path: &str, file_cmd
     state.messages.push(MessageItem::System { text: format!("{}: {}", action, path) });
 }
 
-fn handle_switch_model(state: &mut AppState) {
-    let models = onboarding::get_all_model_names();
-    state.model_picker_title = "Select Model".to_string();
-    state.model_picker_items = models;
-    state.model_picker_selected = 0;
+pub fn handle_switch_model(state: &mut AppState) {
+    let picker = ModelPicker::with_default_models();
+    state.model_picker = Some(picker);
     state.mode = TuiMode::Overlay;
+}
+
+fn handle_provider_command(state: &mut AppState, cmd: PaletteCommand) {
+    match cmd {
+        PaletteCommand::ManageProviders => {
+            state.messages.push(MessageItem::System { text: "Provider management: use config file".to_string() });
+        }
+        PaletteCommand::AddProvider => {
+            state.messages.push(MessageItem::System { text: "Add provider: not yet implemented".to_string() });
+        }
+        PaletteCommand::RemoveProvider => {
+            state.messages.push(MessageItem::System { text: "Remove provider: not yet implemented".to_string() });
+        }
+        PaletteCommand::EditApiKey => {
+            state.messages.push(MessageItem::System { text: "Edit API key: not yet implemented".to_string() });
+        }
+        PaletteCommand::SetProviderPriority => {
+            state.messages.push(MessageItem::System { text: "Provider priority: not yet implemented".to_string() });
+        }
+        PaletteCommand::BrowseModels => {
+            state.messages.push(MessageItem::System { text: "Browse models: not yet implemented".to_string() });
+        }
+        _ => {}
+    }
 }
 
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<Cmd> {
@@ -90,6 +113,9 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<C
         PaletteCommand::Quit => {
             state.running = false;
             state.messages.push(MessageItem::System { text: "Goodbye!".to_string() });
+        }
+        PaletteCommand::ManageProviders | PaletteCommand::AddProvider | PaletteCommand::RemoveProvider | PaletteCommand::EditApiKey | PaletteCommand::SetProviderPriority | PaletteCommand::BrowseModels => {
+            handle_provider_command(state, cmd);
         }
         PaletteCommand::Cancel => {}
     }
