@@ -54,7 +54,8 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     
     // P1-4 FIX: Block double-submit with user feedback via input_right_info (not system message)
     if state.agent_running {
-        state.input_right_info = "Agent running... Ctrl+C to stop".to_string();
+        // blocked: Agent is already running, prevent double-submit
+        state.input_right_info = "Agent running (blocked)... Ctrl+C to stop".to_string();
         return vec![];
     }
     
