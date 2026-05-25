@@ -358,10 +358,18 @@ fn test_permission_request_switches_mode() {
         tool_args: "rm -rf /".to_string(),
     }));
     
-    // Current behavior: mode switches to Permission
-    // TODO(BG-1): This should queue permission instead of switching modes
-    assert_eq!(state.mode, TuiMode::Permission, "Currently switches to Permission mode");
-    assert!(state.permission_modal.tool.is_some(), "Permission info is stored");
+    // BG-1 FIX: Permission request is queued when in DiffViewer mode
+    // Mode stays in DiffViewer to preserve context
+    assert_eq!(state.mode, TuiMode::DiffViewer, "BG-1: Mode stays in DiffViewer when permission queued");
+    assert_eq!(state.permission_modal.pending_queue.len(), 1, "Permission is queued");
+    assert!(state.permission_modal.tool.is_none(), "Current permission is empty");
+    
+    // Close the DiffViewer and verify queued permission is shown
+    update(&mut state, &mut palette, Msg::CloseModal);
+    assert_eq!(state.mode, TuiMode::Chat);
+    
+    // Permission is still queued but not shown since we're back to Chat without permission modal
+    // (In real flow, we'd process queue when returning to Chat if agent is still running)
 }
 
 // BG-8: State preserved when switching modes

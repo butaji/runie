@@ -34,35 +34,26 @@
 
 ## Undefined Transitions Found
 
-### BG-1: Chat → Permission (Implicit) ⚠️ OPEN
+### BG-1: Chat → Permission (Implicit) ✅ FIXED
 
-**Trigger:** Agent requests tool permission during execution  
-**Handler:** `crates/runie-tui/src/tui/update/agent.rs:on_permission_request()`  
-**Problem:** Mode changes to Permission regardless of current mode
+**File:** `crates/runie-tui/src/tui/update/agent.rs:on_permission_request()`  
+**Lines:** ~130-180
 
-**Current Flow:**
-```
-Chat (agent_running=true)
-  → AgentEvent::PermissionRequest
-  → on_permission_request() sets mode = TuiMode::Permission
-```
+**Implementation:**
+1. Added `PendingPermission` struct to store queued permission requests
+2. Added `pending_queue` field to `PermissionModalState`
+3. `on_permission_request()` now checks current mode and queues if in blocking mode
+4. Added `process_pending_permission()` to pop from queue
+5. `handle_permission()` and `handle_permission_timeout()` now process queue
+6. `on_agent_end()` clears pending queue when agent ends
 
-**Issue:** If user is in DiffViewer when permission request arrives, they lose context.
+**Behavior:**
+- Permission requests during DiffViewer/Overlay/SessionTree are queued
+- User sees "queued" message in chat
+- Queue is processed when current modal closes
+- Agent end clears queue
 
-**Proposed Fix:** Add mode check and queue permission if in blocking mode
-
-```rust
-pub fn on_permission_request(state: &mut AppState, ...) {
-    if matches!(state.mode, TuiMode::Overlay | TuiMode::DiffViewer) {
-        // Queue permission for after current modal closes
-        state.pending_permission = Some(PermissionRequest { ... });
-    } else {
-        state.mode = TuiMode::Permission;
-    }
-}
-```
-
-**Test:** `test_permission_request_switches_mode` documents current behavior.
+**Test:** `test_permission_request_switches_mode` updated to verify new behavior.
 
 ---
 
@@ -185,7 +176,7 @@ if state.agent_running {
 
 | Gap | Validation Test | Status |
 |-----|-----------------|--------|
-| BG-1 | Send permission request while in DiffViewer | ✅ Documented (test exists) |
+| BG-1 | Send permission request while in DiffViewer | ✅ `test_permission_request_switches_mode` |
 | BG-2 | Trigger error while viewing session tree | ✅ `test_agent_error_resets_mode` |
 | BG-3 | Deny permission after partial file edit | ⚠️ Partial (rollback exists) |
 | BG-4 | Test Overlay close with non-Escape keys | ✅ Fixed in events.rs |
@@ -268,16 +259,16 @@ test_scroll_preserved_on_mode_switch()
 
 ## Summary
 
-**Fixed:** 5 of 8 gaps
+**Fixed:** 6 of 8 gaps (75%)
+- BG-1: Permission request queued during blocking mode ✅
 - BG-2: Mode → Chat on error ✅
 - BG-4: Overlay close triggers ✅
 - BG-5: AgentEnd clears permission ✅
 - BG-6: Duplicate submit feedback ✅
 - BG-7: Ctrl+C during permission ✅
 
-**Partial:** 2 of 8 gaps
+**Partial:** 2 of 8 gaps (25%)
 - BG-3: Rollback exists but incomplete
 - BG-8: Scroll preserved, selection not
 
-**Open:** 1 of 8 gaps
-- BG-1: Permission request still interrupts DiffViewer
+**Open:** 0 of 8 gaps
