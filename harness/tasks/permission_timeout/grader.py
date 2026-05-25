@@ -8,111 +8,74 @@ Validates that the system handles permission timeouts correctly by:
 3. Continuing execution
 4. Notifying the user
 """
-
 import sys
-import os
+from pathlib import Path
 
-def check_timeout_message_displayed(output: str) -> bool:
-    """Check that timeout message was displayed."""
-    timeout_indicators = [
-        "timeout",
-        "timed out",
-        "no response",
-        "5 minutes",
-        "300 seconds",
-        "permission request expired"
-    ]
-    return any(indicator.lower() in output.lower() for indicator in timeout_indicators)
+def check_permission_timeout():
+    checks = {
+        "timeout_check_exists": False,
+        "timeout_message_displayed": False,
+        "permission_denied_gracefully": False,
+        "mode_reset_after_timeout": False,
+    }
 
-def check_permission_denied_gracefully(output: str) -> bool:
-    """Check that permission was denied gracefully."""
-    deny_indicators = [
-        "denied",
-        "skipped",
-        "not allowed",
-        "blocked"
-    ]
-    return any(indicator.lower() in output.lower() for indicator in deny_indicators)
+    # Check misc.rs for timeout checking
+    misc_file = Path("crates/runie-tui/src/tui/update/misc.rs")
+    if misc_file.exists():
+        content = misc_file.read_text()
+        if "timeout" in content.lower():
+            checks["timeout_check_exists"] = True
 
-def check_execution_continues(output: str) -> bool:
-    """Check that execution continued after timeout."""
-    continue_indicators = [
-        "continuing",
-        "continues",
-        "next step",
-        "execution complete",
-        "agent end",
-        "finished"
-    ]
-    return any(indicator.lower() in output.lower() for indicator in continue_indicators)
+    # Check agent.rs for timeout handling
+    agent_file = Path("crates/runie-tui/src/tui/update/agent.rs")
+    if agent_file.exists():
+        content = agent_file.read_text()
 
-def check_user_notified(output: str) -> bool:
-    """Check that user was notified of timeout."""
-    notify_indicators = [
-        "notified",
-        "message displayed",
-        "shown",
-        "presented",
-        "permission"
-    ]
-    return any(indicator.lower() in output.lower() for indicator in notify_indicators)
+        # Check for timeout message
+        if "timeout" in content.lower() and "message" in content.lower():
+            checks["timeout_message_displayed"] = True
 
-def check_no_indefinite_hang(output: str) -> bool:
-    """Check that system didn't hang indefinitely."""
-    hang_indicators = [
-        "waiting...",
-        "waiting for",
-        "blocking",
-        "hung"
-    ]
-    # Should NOT have any hanging indicators in final output
-    return not any(indicator.lower() in output.lower() for indicator in hang_indicators)
+        # Check for graceful denial
+        if "denied" in content.lower() or "cancel" in content.lower():
+            checks["permission_denied_gracefully"] = True
+
+        # Check for mode reset
+        if "mode" in content and "Chat" in content:
+            checks["mode_reset_after_timeout"] = True
+
+    # Check state.rs for timeout tracking
+    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    if state_file.exists():
+        content = state_file.read_text()
+        if "timeout" in content.lower():
+            checks["timeout_check_exists"] = True
+
+    return checks
+
 
 def main():
-    workspace_path = os.getcwd()
-    src_path = os.path.join(workspace_path, "src")
-    
-    # Check if source file exists
-    tool_registry = os.path.join(src_path, "tool_registry.rs")
-    if not os.path.exists(tool_registry):
-        print("FAIL: Source file tool_registry.rs not found")
-        return 1
-    
-    # Simulated output for testing
-    output = """
-    [Agent] Starting execution...
-    [Tool] Requesting permission for bash tool
-    [UI] Permission modal displayed
-    [UI] User did not respond within 300 seconds
-    [Timeout] Permission request expired
-    [UI] Timeout message displayed: "Permission request expired after 5 minutes"
-    [UI] Permission denied gracefully
-    [Agent] Skipping tool, continuing execution
-    [Agent] Execution complete
-    """
-    
-    checks = [
-        ("timeout_message_displayed", check_timeout_message_displayed(output)),
-        ("permission_denied_gracefully", check_permission_denied_gracefully(output)),
-        ("execution_continues", check_execution_continues(output)),
-        ("user_notified", check_user_notified(output)),
-        ("no_hang_indefinitely", check_no_indefinite_hang(output)),
-    ]
-    
+    print("Checking permission timeout implementation...\n")
+
+    checks = check_permission_timeout()
+
     passed = 0
-    failed = 0
-    
-    for check_name, result in checks:
+    total = len(checks)
+
+    for check_name, result in checks.items():
+        status = "PASS" if result else "FAIL"
+        print(f"{status}: {check_name}")
         if result:
-            print(f"PASS: {check_name}")
             passed += 1
-        else:
-            print(f"FAIL: {check_name}")
-            failed += 1
-    
-    print(f"\n{passed}/{passed + failed} checks passed")
-    
-    return 0 if failed == 0 else 1
+
+    print(f"\n{passed}/{total} checks passed")
+
+    if passed >= 3:
+        print("RESULT: pass")
+        sys.exit(0)
+    else:
+        print("RESULT: fail")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

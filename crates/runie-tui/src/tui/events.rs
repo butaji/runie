@@ -129,8 +129,13 @@ fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    // P1-1 FIX: Esc cancels argument mode if active, otherwise closes palette
+    if matches!(key.code, KeyCode::Esc) {
+        // The actual check for is_argument_mode happens in the command_palette module
+        // Here we send CancelArgument which will be handled appropriately
+        return Some(Msg::CommandPaletteCancelArgument);
+    }
     match key.code {
-        KeyCode::Esc => Some(Msg::CloseModal),
         KeyCode::Enter => Some(Msg::CommandPaletteConfirm),
         KeyCode::Up => Some(Msg::CommandPaletteUp),
         KeyCode::Down => Some(Msg::CommandPaletteDown),

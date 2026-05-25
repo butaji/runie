@@ -90,84 +90,61 @@ fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
 
 ## P1 Issues (User Experience Degradation)
 
-### P1-1: **Command Palette in Argument Mode Has No Escape**
+### P1-1: **Command Palette in Argument Mode Has No Escape** ✓ FIXED
 | Property | Value |
 |---|---|
 | **File** | `crates/runie-tui/src/components/command_palette/mod.rs` |
 | **Severity** | P1 |
 | **Category** | Dead-End |
+| **Status** | ✅ FIXED
 
 **Problem:** When user is typing arguments for a palette command (e.g., file path), pressing Esc does not cancel argument input and return to command selection.
 
-**Current Code (missing escape handling):**
-```rust
-// In key_to_palette_msg - no handling for Esc when is_argument_mode
-fn key_to_palette_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
-    // Missing: if state.command_palette.is_argument_mode && key.code == KeyCode::Esc
-}
-```
-
-**Fix:** Add escape handling when in argument mode:
-```rust
-if state.command_palette.is_argument_mode {
-    if key.code == KeyCode::Esc {
-        state.command_palette.is_argument_mode = false;
-        state.command_palette.argument_input.clear();
-        state.command_palette.pending_command = None;
-        return Some(Msg::CloseModal);
-    }
-}
-```
+**Fix Applied:**
+1. Added `Msg::CommandPaletteCancelArgument` message in `state.rs`
+2. Modified `key_to_palette_msg` in `events.rs` to send `CommandPaletteCancelArgument` on Esc
+3. Added `handle_palette_escape` in `update/palette.rs` that:
+   - If in argument mode: cancels argument mode, clears input, returns to command selection
+   - If not in argument mode: closes the palette
+4. Made `pending_command` field public for access from update module
 
 ---
 
-### P1-2: **Permission Modal Has No Timeout Auto-Dismiss**
+### P1-2: **Permission Modal Has No Timeout Auto-Dismiss** ✓ FIXED
 | Property | Value |
 |---|---|
-| **File** | `crates/runie-tui/src/components/permission_modal.rs` |
+| **File** | `crates/runie-tui/src/tui/update/agent.rs` |
 | **Severity** | P1 |
 | **Category** | Invalid State |
+| **Status** | ✅ FIXED
 
 **Problem:** Permission modal stays open indefinitely. If user walks away, agent hangs forever.
 
-**Current:** Permission timeout check exists in `update.rs` but doesn't auto-dismiss:
-```rust
-fn handle_tick_permission_check(state: &mut AppState, palette: &mut CommandPalette) -> Vec<Cmd> {
-    let mut cmds = vec![];
-    if let Some(timeout_msg) = misc::check_permission_timeout(state) {
-        cmds.extend(update(state, palette, timeout_msg));
-    }
-    cmds
-}
-```
-
-**Missing:** The `check_permission_timeout` returns `Some(Msg)` but the handler doesn't dismiss the modal.
-
-**Fix:** `handle_permission_msg` should check timeout and auto-cancel:
-```rust
-// In handle_permission_msg:
-if misc::is_permission_timed_out(state) {
-    return vec![Cmd::SendPermission { decision: PermissionDecision::Deny { tool_call_id: ... } }];
-}
-```
+**Fix Applied:**
+1. `check_permission_timeout` in `misc.rs` returns `Some(Msg::PermissionTimeout)` after 5 minutes
+2. `handle_permission_timeout` in `agent.rs` handles the timeout by:
+   - Showing "Permission request timed out after 5 minutes. Request denied." message
+   - Clearing the permission modal
+   - Returning to Chat mode (or showing next pending permission)
+3. `handle_tick_permission_check` calls `check_permission_timeout` on every tick
 
 ---
 
-### P1-3: **Onboarding KeyInput Step Has No Back/Escape**
+### P1-3: **Onboarding KeyInput Step Has No Back/Escape** ✓ VERIFIED WORKING
 | Property | Value |
 |---|---|
 | **File** | `crates/runie-tui/src/components/onboarding/mod.rs` |
 | **Severity** | P1 |
 | **Category** | Dead-End |
+| **Status** | ✅ ALREADY FIXED
 
-**Problem:** During API key input in onboarding, there's no documented way to go back and select a different provider.
+**Problem:** During API key input in onboarding, there's no way to go back and select a different provider.
 
-**Current:** `OnboardingStep::KeyInput` step has `max = 0`, meaning only one option.
-
-**Fix:** Add a "Back" option in KeyInput step:
-```rust
-OnboardingStep::KeyInput => 1, // back + continue = 2 options, max index = 1
-```
+**Verified Working:**
+- `key_to_onboarding_msg` sends `OnboardingBack` on Esc key
+- `handle_onboarding_back` calls `prev_step()`
+- `prev_step()` transitions from `KeyInput` → `ProviderSelect`
+- User can press Esc to go back and select a different provider
 
 ---
 
@@ -252,9 +229,9 @@ let error_style = Style::default()
 | P0-1 | Empty State | message_list/render.rs | Critical | ✅ FIXED |
 | P0-2 | Invalid State | render.rs | Critical | ✅ FIXED |
 | P0-3 | Cognitive Load | update/misc.rs | Critical | ✅ FIXED |
-| P1-1 | Dead-End | command_palette/mod.rs | High | Pending |
-| P1-2 | Invalid State | permission_modal.rs | High | Pending |
-| P1-3 | Dead-End | onboarding/mod.rs | High | Pending |
+| P1-1 | Dead-End | command_palette/mod.rs | High | ✅ FIXED |
+| P1-2 | Invalid State | permission_modal.rs | High | ✅ FIXED |
+| P1-3 | Dead-End | onboarding/mod.rs | High | ✅ VERIFIED |
 | P2-1 | Error Presentation | message_helpers.rs | Medium | Nice to have |
 | P2-2 | Cognitive Load | message_list/render.rs | Medium | Nice to have |
 | P2-3 | Cognitive Load | session_tree.rs | Medium | Nice to have |

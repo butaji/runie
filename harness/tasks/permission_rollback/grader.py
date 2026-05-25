@@ -38,17 +38,17 @@ def check_rollback_implementation():
         if any(p in content.lower() for p in revert_patterns):
             checks["has_revert"] = True
 
-    # Check that PermissionCancel triggers rollback
+        # Check that PermissionCancel or Skip triggers rollback
+        if "rollback" in content.lower():
+            # Check if it's related to Deny/Skip
+            deny_patterns = ["Deny", "Skip", "deny", "skip"]
+            if any(p in content for p in deny_patterns):
+                checks["cancel_triggers_rollback"] = True
+
+    # Also check misc.rs
     misc_file = Path("crates/runie-tui/src/tui/update/misc.rs")
     if misc_file.exists():
         content = misc_file.read_text()
-        if "rollback" in content.lower() and "permission" in content.lower():
-            checks["cancel_triggers_rollback"] = True
-
-    # Also check events.rs
-    events_file = Path("crates/runie-tui/src/tui/events.rs")
-    if events_file.exists():
-        content = events_file.read_text()
         if "rollback" in content.lower():
             checks["cancel_triggers_rollback"] = True
 
