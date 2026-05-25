@@ -50,8 +50,11 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
         return vec![];
     }
     
-    // BG-7 FIX: Block double-submit - don't start new turn if agent is already running
+    // BG-7 & P1-4 FIX: Block double-submit with user feedback
     if state.agent_running {
+        state.messages.push(MessageItem::System {
+            text: "Agent is still running. Please wait or press Ctrl+C to stop the current task.".to_string(),
+        });
         return vec![];
     }
     
