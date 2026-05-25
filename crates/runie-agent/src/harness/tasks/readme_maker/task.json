@@ -1,0 +1,19 @@
+{
+  "id": "readme_maker",
+  "name": "Write a README for a new project",
+  "description": "Create a README.md file for a Rust library project. The README should: (1) have a project title and one-line description, (2) include an Installation section with cargo add instructions, (3) include a Basic Usage code example showing how to call a public function from the library, (4) have a License section (MIT). Keep it concise — under 30 lines total.",
+  "setup": {
+    "files": {
+      "src/lib.rs": "/// A tiny string-trimming utility.\npub fn trim_spaces(s: &str) -> String {\n    s.trim().to_string()\n}\n",
+      "Cargo.toml": "[package]\nname = \"trim-lib\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n"
+    }
+  },
+  "expected": {
+    "has_title": true,
+    "has_installation": true,
+    "has_usage": true,
+    "has_license": true,
+    "under_30_lines": true
+  },
+  "grader": "grader.py"
+}
