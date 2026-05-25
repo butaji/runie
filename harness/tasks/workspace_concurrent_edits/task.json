@@ -1,0 +1,17 @@
+{
+  "id": "workspace_concurrent_edits",
+  "name": "Workspace Concurrent Edit Safety",
+  "description": "Test that when multiple tools attempt to edit the same file simultaneously, the system: 1) uses file locking or serialization, 2) prevents lost updates, 3) provides consistent read-after-write semantics, and 4) handles the race condition gracefully.",
+  "setup": {
+    "files": {
+      "src/shared.rs": "// Shared resource that multiple tools might edit.\npub const SHARED_CONFIG: &str = \"default_value\";\n"
+    }
+  },
+  "expected": {
+    "file_locking_present": true,
+    "no_lost_updates": true,
+    "consistent_reads": true,
+    "race_handled": true
+  },
+  "grader": "grader.py"
+}
