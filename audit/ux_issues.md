@@ -8,86 +8,83 @@
 
 ## P0 Issues (Critical - Breaks Flow or Leaves User Stuck)
 
-### P0-1: **Message List Has No Empty State Placeholder**
+### P0-1: **Message List Has No Empty State Placeholder** ✓ FIXED
 | Property | Value |
 |---|---|
 | **File** | `crates/runie-tui/src/components/message_list/render.rs` |
 | **Severity** | P0 |
 | **Category** | Empty State |
+| **Status** | ✅ FIXED - commit 2d9866a |
 
 **Problem:** When `messages` is empty, the `MessageList` renders nothing. Users see a blank screen with no guidance on what to do.
 
-**Current Code (missing):**
+**Fix Applied:** Empty state rendering added at line 55-57 of `message_list.rs`:
 ```rust
-// No empty check exists in render_ref
-for item in &self.items {
-    // render item
-}
-// If items is empty, nothing renders
-```
-
-**Expected:** Empty state should show:
-- A greeting ("Welcome to Runie!")
-- Keyboard shortcut hints
-- A CTA to start the conversation
-
-**Fix:** Add empty state rendering in `render_ref`:
-```rust
-if self.items.is_empty() {
-    render_empty_state(area, buf, theme);
-    return;
+// Empty state: no messages and no active agent
+if vm.messages.is_empty() && !vm.agent_running {
+    render::render_empty_state(area, buf, text_muted, text_dim, text_x);
 }
 ```
 
-**Test Reference:** `harness/tasks/empty_state/` (exists, validates this behavior)
+The `render_empty_state` function shows:
+- Title: "runie"
+- Tagline: "Your coding companion"
+- CTA: "Type a message and press Enter to start"
+- Hints: "Press ^k for commands · ^b for sidebar · ^q to quit"
+
+**Test Reference:** `harness/tasks/empty_state/` - PASSES (4/4 checks)
 
 ---
 
-### P0-2: **No Warning When Model Not Configured**
+### P0-2: **No Warning When Model Not Configured** ✓ FIXED
 | Property | Value |
 |---|---|
 | **File** | `crates/runie-tui/src/tui/render.rs` |
 | **Severity** | P0 |
 | **Category** | Invalid State |
+| **Status** | ✅ FIXED - commit 2d9866a |
 
 **Problem:** Status bar shows `current_model: None` silently. User can press Enter to submit, but the agent won't run without a model.
 
-**Current Behavior:** Status bar just doesn't show the model line if `current_model` is None.
-
-**Expected:** Status bar should show a warning when no model is configured, before user tries to submit.
-
-**Fix:** Add warning indicator in `build_center_line`:
+**Fix Applied:** Added warning in `build_center_line`:
 ```rust
+// P0-2 FIX: Show warning when no model is configured
 if vm.current_model.is_none() {
-    parts.push(Span::styled("⚠ No model configured", Style::default().fg(colors.warning)));
+    parts.push(Span::styled("⚠ No model configured", Style::default().fg(warning)));
+} else if let Some(model) = vm.current_model.as_deref() {
+    parts.push(Span::styled(model, Style::default().fg(text_tertiary)));
     parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
 }
 ```
 
+**Test Reference:** `harness/tasks/no_model_warning/` - PASSES (4/4 checks)
+
 ---
 
-### P0-3: **Submit with Empty Input Shows No Feedback**
+### P0-3: **Submit with Empty Input Shows No Feedback** ✓ FIXED
 | Property | Value |
 |---|---|
 | **File** | `crates/runie-tui/src/tui/update/misc.rs` |
 | **Severity** | P0 |
 | **Category** | Cognitive Load |
+| **Status** | ✅ FIXED - commit 2d9866a |
 
 **Problem:** Pressing Enter with empty input produces no visible feedback. User might think their message was sent.
 
-**Current Code:**
+**Fix Applied:** Added feedback message:
 ```rust
 fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
-    if state.textarea.is_empty() {
-        return vec![]; // Silent no-op
+    let text = state.textarea.lines().join("\n");
+    if text.is_empty() {
+        // P0-3 FIX: Show feedback when submitting empty input
+        state.input_right_info = "Type a message first".to_string();
+        return vec![];
     }
     // ...
 }
 ```
 
-**Expected:** Visual feedback (brief flash, status bar message, or shake animation)
-
-**Fix:** Add `state.input_right_info = "Type a message first".to_string()` for empty submit.
+**Test Reference:** `harness/tasks/idle_submit_feedback/` - PASSES (4/4 checks)
 
 ---
 
@@ -252,12 +249,12 @@ let error_style = Style::default()
 
 | ID | Category | File | Severity | Status |
 |---|---|---|---|---|
-| P0-1 | Empty State | message_list/render.rs | Critical | **NEEDS FIX** |
-| P0-2 | Invalid State | render.rs | Critical | **NEEDS FIX** |
-| P0-3 | Cognitive Load | update/misc.rs | Critical | **NEEDS FIX** |
-| P1-1 | Dead-End | command_palette/mod.rs | High | **NEEDS FIX** |
-| P1-2 | Invalid State | permission_modal.rs | High | **NEEDS FIX** |
-| P1-3 | Dead-End | onboarding/mod.rs | High | **NEEDS FIX** |
+| P0-1 | Empty State | message_list/render.rs | Critical | ✅ FIXED |
+| P0-2 | Invalid State | render.rs | Critical | ✅ FIXED |
+| P0-3 | Cognitive Load | update/misc.rs | Critical | ✅ FIXED |
+| P1-1 | Dead-End | command_palette/mod.rs | High | Pending |
+| P1-2 | Invalid State | permission_modal.rs | High | Pending |
+| P1-3 | Dead-End | onboarding/mod.rs | High | Pending |
 | P2-1 | Error Presentation | message_helpers.rs | Medium | Nice to have |
 | P2-2 | Cognitive Load | message_list/render.rs | Medium | Nice to have |
 | P2-3 | Cognitive Load | session_tree.rs | Medium | Nice to have |
