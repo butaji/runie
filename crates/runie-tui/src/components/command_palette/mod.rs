@@ -1,4 +1,6 @@
 mod render;
+#[cfg(test)]
+mod tests;
 
 use ratatui::{
     buffer::Buffer,
@@ -11,8 +13,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaletteCommand {
     NewSession,
-    LoadSession,
-    SaveSession,
+    LoadSession { name: String },
+    SaveSession { name: String },
     ClearChat,
     SwitchModel,
     ReadFile { path: String },
@@ -46,8 +48,8 @@ impl PaletteCommandDef {
     fn to_palette_command(&self, arg: &str) -> PaletteCommand {
         match self.id.as_str() {
             "new_session" => PaletteCommand::NewSession,
-            "load_session" => PaletteCommand::LoadSession,
-            "save_session" => PaletteCommand::SaveSession,
+            "load_session" => PaletteCommand::LoadSession { name: arg.to_string() },
+            "save_session" => PaletteCommand::SaveSession { name: arg.to_string() },
             "clear_chat" => PaletteCommand::ClearChat,
             "switch_model" => PaletteCommand::SwitchModel,
             "read_file" => PaletteCommand::ReadFile { path: arg.to_string() },
@@ -142,6 +144,18 @@ impl CommandPalette {
     }
 
     pub fn filter(&mut self, query: &str) {
+        // P1 FIX: When query is empty, show all commands sorted by usage frequency
+        if query.is_empty() {
+            let mut indices: Vec<usize> = (0..self.all_commands.len()).collect();
+            indices.sort_by(|&a, &b| {
+                let freq_a = self.usage_stats.get(&self.all_commands[a].id).map(|u| u.use_count).unwrap_or(0);
+                let freq_b = self.usage_stats.get(&self.all_commands[b].id).map(|u| u.use_count).unwrap_or(0);
+                freq_b.cmp(&freq_a)
+            });
+            self.filtered_commands = indices;
+            return;
+        }
+
         let query_lower = query.to_lowercase();
         let mut scored: Vec<(usize, f32)> = self.all_commands.iter().enumerate()
             .map(|(idx, cmd)| (idx, Self::fuzzy_score(&query_lower, cmd)))
@@ -172,7 +186,7 @@ impl CommandPalette {
         Some(cmd_def.to_palette_command(""))
     }
 
-    fn confirm_with_argument(&mut self) -> Option<PaletteCommand> {
+    pub fn confirm_with_argument(&mut self) -> Option<PaletteCommand> {
         let cmd_id = self.pending_command.take()?;
         let cmd_def = self.requires_args.get(&cmd_id)?.clone();
         let arg = self.argument_input.clone();

@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -18,7 +17,6 @@ pub struct DiffViewer {
     pub new_content: String,
     pub visible: bool,
     pub scroll_offset: usize,
-    cached_diff: RefCell<Option<Vec<DiffLine>>>,
 }
 
 impl DiffViewer {
@@ -29,16 +27,11 @@ impl DiffViewer {
             new_content: new,
             visible: true,
             scroll_offset: 0,
-            cached_diff: RefCell::new(None),
         }
     }
 
     pub fn compute_diff(&self) -> Vec<DiffLine> {
-        let mut cached = self.cached_diff.borrow_mut();
-        if cached.is_none() {
-            *cached = Some(compute_diff_lines(&self.old_content, &self.new_content));
-        }
-        cached.as_ref().expect("just populated").clone()
+        compute_diff_lines(&self.old_content, &self.new_content)
     }
 
     pub fn scroll_up(&mut self) {
@@ -51,12 +44,10 @@ impl DiffViewer {
 
     pub fn set_old_content(&mut self, content: String) {
         self.old_content = content;
-        self.cached_diff = RefCell::new(None);
     }
 
     pub fn set_new_content(&mut self, content: String) {
         self.new_content = content;
-        self.cached_diff = RefCell::new(None);
     }
 
     pub fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
@@ -67,7 +58,8 @@ impl DiffViewer {
         clear_area(area, buf, bg_panel);
         render_border(area, buf, theme, &self.filename);
         render_title(area, buf, theme, &self.filename);
-        render_diff_lines(area, buf, theme, &self.compute_diff(), self.scroll_offset);
+        let diff = compute_diff_lines(&self.old_content, &self.new_content);
+        render_diff_lines(area, buf, theme, &diff, self.scroll_offset);
         render_footer(area, buf, theme);
     }
 }

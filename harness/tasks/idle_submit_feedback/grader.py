@@ -6,6 +6,13 @@ Verifies that pressing Enter with empty input produces visible feedback.
 import sys
 from pathlib import Path
 
+# Resolve repo root: grader.py is at harness/tasks/<task>/grader.py
+# Go up 3 levels to harness/, then 1 more to repo root
+_harness_dir = Path(__file__).resolve().parent.parent.parent.parent
+# Repo root is one level above harness/
+repo_dir = _harness_dir.parent
+
+
 def check_submit_feedback():
     checks = {
         "has_empty_check": False,
@@ -14,10 +21,8 @@ def check_submit_feedback():
         "mode_not_changed": False,
     }
 
-    # Find the misc.rs file
-    misc_file = Path(__file__).parent.parent.parent / "crates/runie-tui/src/tui/update/misc.rs"
-    if not misc_file.exists():
-        misc_file = Path("crates/runie-tui/src/tui/update/misc.rs")
+    # Use repo_dir directly for all paths
+    misc_file = repo_dir / "crates/runie-tui/src/tui/update/misc.rs"
 
     if misc_file.exists():
         content = misc_file.read_text()
@@ -41,9 +46,7 @@ def check_submit_feedback():
             checks["input_right_info_updated"] = True
 
     # Check that mode stays the same (no transition)
-    update_file = Path(__file__).parent.parent.parent / "crates/runie-tui/src/tui/update.rs"
-    if not update_file.exists():
-        update_file = Path("crates/runie-tui/src/tui/update.rs")
+    update_file = repo_dir / "crates/runie-tui/src/tui/update.rs"
 
     if update_file.exists():
         content = update_file.read_text()
@@ -52,9 +55,7 @@ def check_submit_feedback():
             checks["mode_not_changed"] = True
 
     # Check test files for empty submit tests
-    test_file = Path(__file__).parent.parent.parent / "crates/runie-tui/src/tui/tests/reducer.rs"
-    if not test_file.exists():
-        test_file = Path("crates/runie-tui/src/tui/tests/reducer.rs")
+    test_file = repo_dir / "crates/runie-tui/src/tui/tests/reducer.rs"
 
     if test_file.exists():
         content = test_file.read_text()

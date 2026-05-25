@@ -140,17 +140,33 @@ fn test_session_tree_hotkeys() {
 }
 
 // P0-4 FIX: Overlay mode hotkeys
+// P1-2 FIX: Updated to support model picker navigation
 #[test]
 fn test_overlay_mode_hotkeys() {
     // Esc should close the overlay
     let msg = simulate_key(KeyCode::Esc, KeyModifiers::NONE, TuiMode::Overlay);
     assert_eq!(msg, Some(Msg::CloseModal), "Esc in Overlay mode should produce Msg::CloseModal");
     
+    // Navigation keys should work (model picker support)
+    let msg = simulate_key(KeyCode::Up, KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, Some(Msg::SelectUp), "Up in Overlay mode should produce Msg::SelectUp");
+    
+    let msg = simulate_key(KeyCode::Down, KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, Some(Msg::SelectDown), "Down in Overlay mode should produce Msg::SelectDown");
+    
+    let msg = simulate_key(KeyCode::Enter, KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, Some(Msg::SelectConfirm), "Enter in Overlay mode should produce Msg::SelectConfirm");
+    
+    // j/k navigation
+    let msg = simulate_key(KeyCode::Char('j'), KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, Some(Msg::SelectDown), "j in Overlay mode should produce Msg::SelectDown");
+    
+    let msg = simulate_key(KeyCode::Char('k'), KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, Some(Msg::SelectUp), "k in Overlay mode should produce Msg::SelectUp");
+    
     // Other keys should produce None (not crash)
-    for code in [KeyCode::Enter, KeyCode::Char('a'), KeyCode::Up, KeyCode::Down] {
-        let msg = simulate_key(code, KeyModifiers::NONE, TuiMode::Overlay);
-        assert_eq!(msg, None, "{:?} in Overlay mode should produce None", code);
-    }
+    let msg = simulate_key(KeyCode::Char('a'), KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, None, "Char('a') in Overlay mode should produce None");
 }
 
 // P0-1 FIX: Ctrl+C and Ctrl+Q in Permission mode cancel permission

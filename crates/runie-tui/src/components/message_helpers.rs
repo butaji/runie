@@ -1,11 +1,8 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 use crate::theme::ThemeWrapper;
 
-/// Braille spinner frames (10 frames)
-pub const BRAILLE_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-
-/// Braille spinner frames (10 frames) - counter-clockwise (rewind)
-pub const REVERSE_BRAILLE_FRAMES: [char; 10] = ['⠏', '⠇', '⠧', '⠦', '⠴', '⠼', '⠸', '⠹', '⠙', '⠋'];
+// BRAILLE_FRAMES and REVERSE_BRAILLE_FRAMES are defined in types.rs
+// and re-exported by message_list.rs
 
 /// Wrap text into lines respecting word boundaries
 pub fn wrap_text(text: &str, width: usize) -> Vec<String> {

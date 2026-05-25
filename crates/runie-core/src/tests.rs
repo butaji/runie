@@ -52,7 +52,7 @@ fn test_event_agent_start() {
         session_id: "test-session".to_string(),
         timestamp: chrono::Utc::now(),
     };
-    assert!(matches!(event, Event::AgentStart { ref session_id, .. }));
+    assert!(matches!(event, Event::AgentStart { .. }));
     if let Event::AgentStart { session_id, .. } = &event {
         assert_eq!(session_id, "test-session");
     }
@@ -75,7 +75,7 @@ fn test_event_tool_execution() {
         args: serde_json::json!({}),
         timestamp: chrono::Utc::now(),
     };
-    assert!(matches!(event, Event::ToolExecutionStart { ref tool_name, .. }));
+    assert!(matches!(event, Event::ToolExecutionStart { .. }));
     if let Event::ToolExecutionStart { tool_name, .. } = &event {
         assert_eq!(tool_name, "bash");
     }

@@ -109,6 +109,12 @@ impl Workspace {
             Err(_) => return false,
         };
 
+        // NOTE: TOCTOU race - between this check and actual file operations,
+        // a symlink could be swapped. The resolved path is canonicalized
+        // to prevent symlink traversal, but there's still a window where
+        // a symlink could be created/modified. Mitigation: always resolve
+        // paths via resolve() which uses contains(), and ensure operations
+        // use the canonicalized form.
         let absolute_path = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
         let normalized = if absolute_path.is_relative() {
             canonical_root.join(absolute_path)
@@ -116,6 +122,12 @@ impl Workspace {
             absolute_path
         };
 
-        normalized.starts_with(&canonical_root)
+        // Canonicalize the target path to resolve any symlinks
+        let canonical_path = match normalized.canonicalize() {
+            Ok(p) => p,
+            Err(_) => return false, // Path doesn't exist or can't be resolved
+        };
+
+        canonical_path.starts_with(&canonical_root)
     }
 }

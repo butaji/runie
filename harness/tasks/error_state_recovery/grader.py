@@ -11,6 +11,10 @@ Validates that the agent correctly handles errors by:
 import sys
 from pathlib import Path
 
+# Paths: grader.py is at tasks/<task>/grader.py
+# repo_root is 3 levels up from grader.py
+repo_dir = Path(__file__).parent.parent.parent.parent
+
 def check_error_handling():
     checks = {
         "error_displayed_to_user": False,
@@ -21,7 +25,7 @@ def check_error_handling():
     }
 
     # Check agent.rs for error handling
-    agent_file = Path("crates/runie-tui/src/tui/update/agent.rs")
+    agent_file = Path(repo_dir / "crates/runie-tui/src/tui/update/agent.rs")
     if agent_file.exists():
         content = agent_file.read_text()
 
@@ -34,21 +38,21 @@ def check_error_handling():
             checks["mode_returns_to_chat"] = True
 
     # Check state.rs for scroll handling
-    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    state_file = Path(repo_dir / "crates/runie-tui/src/tui/state.rs")
     if state_file.exists():
         content = state_file.read_text()
         if "scroll" in content.lower():
             checks["scroll_position_preserved"] = True
 
     # Check update.rs for continue handling
-    update_file = Path("crates/runie-tui/src/tui/update.rs")
+    update_file = Path(repo_dir / "crates/runie-tui/src/tui/update.rs")
     if update_file.exists():
         content = update_file.read_text()
         if "agent_running" in content and "false" in content:
             checks["user_can_continue"] = True
 
     # Check tui.rs for panic hook
-    tui_file = Path("crates/runie-tui/src/tui.rs")
+    tui_file = Path(repo_dir / "crates/runie-tui/src/tui.rs")
     if tui_file.exists():
         content = tui_file.read_text()
         if "panic" in content.lower() and "hook" in content.lower():

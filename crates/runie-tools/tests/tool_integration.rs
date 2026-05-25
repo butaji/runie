@@ -15,8 +15,9 @@ async fn test_bash_tool_echo() {
 async fn test_bash_tool_with_timeout() {
     let ws = Workspace::new(PathBuf::from("."));
     let tool = BashTool::new(ws);
+    // Test timeout mechanism with a simple whitelisted command
     let args = serde_json::json!({
-        "command": "sleep 0.1 && echo done",
+        "command": "echo done",
         "timeout": 5
     });
     let result = tool.execute(args).await.unwrap();
@@ -27,13 +28,19 @@ async fn test_bash_tool_with_timeout() {
 async fn test_bash_tool_multi_command() {
     let ws = Workspace::new(PathBuf::from("."));
     let tool = BashTool::new(ws);
-    let args = serde_json::json!({
-        "command": "echo line1 && echo line2 && echo line3"
-    });
-    let result = tool.execute(args).await.unwrap();
-    assert!(result.content.contains("line1"));
-    assert!(result.content.contains("line2"));
-    assert!(result.content.contains("line3"));
+    // Test multiple commands by calling execute multiple times
+    // (&& and ; are blocked to prevent subshell attacks)
+    let args1 = serde_json::json!({"command": "echo line1"});
+    let result1 = tool.execute(args1).await.unwrap();
+    assert!(result1.content.contains("line1"));
+
+    let args2 = serde_json::json!({"command": "echo line2"});
+    let result2 = tool.execute(args2).await.unwrap();
+    assert!(result2.content.contains("line2"));
+
+    let args3 = serde_json::json!({"command": "echo line3"});
+    let result3 = tool.execute(args3).await.unwrap();
+    assert!(result3.content.contains("line3"));
 }
 
 #[tokio::test]

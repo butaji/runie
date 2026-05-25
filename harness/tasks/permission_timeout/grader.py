@@ -10,6 +10,10 @@ Validates that the system handles permission timeouts correctly by:
 """
 import sys
 from pathlib import Path
+# Paths: grader.py is at tasks/<task>/grader.py
+# repo_root is 3 levels up from grader.py
+repo_dir = Path(__file__).parent.parent.parent.parent
+
 
 def check_permission_timeout():
     checks = {
@@ -20,14 +24,14 @@ def check_permission_timeout():
     }
 
     # Check misc.rs for timeout checking
-    misc_file = Path("crates/runie-tui/src/tui/update/misc.rs")
+    misc_file = Path(repo_dir / "crates/runie-tui/src/tui/update/misc.rs")
     if misc_file.exists():
         content = misc_file.read_text()
         if "timeout" in content.lower():
             checks["timeout_check_exists"] = True
 
     # Check agent.rs for timeout handling
-    agent_file = Path("crates/runie-tui/src/tui/update/agent.rs")
+    agent_file = Path(repo_dir / "crates/runie-tui/src/tui/update/agent.rs")
     if agent_file.exists():
         content = agent_file.read_text()
 
@@ -44,7 +48,7 @@ def check_permission_timeout():
             checks["mode_reset_after_timeout"] = True
 
     # Check state.rs for timeout tracking
-    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    state_file = Path(repo_dir / "crates/runie-tui/src/tui/state.rs")
     if state_file.exists():
         content = state_file.read_text()
         if "timeout" in content.lower():

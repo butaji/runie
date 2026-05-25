@@ -55,8 +55,10 @@ impl StatusBarViewModel {
         match self.mode {
             TuiMode::Chat => vec![
                 StatusItem { key: "Enter".to_string(), description: "send".to_string() },
+                StatusItem { key: "Shift+Enter".to_string(), description: "newline".to_string() },
                 StatusItem { key: "^b".to_string(), description: "sidebar".to_string() },
                 StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
+                StatusItem { key: "?".to_string(), description: "help".to_string() },
                 StatusItem { key: "^q".to_string(), description: "quit".to_string() },
             ],
             TuiMode::Overlay => vec![
@@ -110,9 +112,17 @@ impl StatusBarViewModel {
             .iter()
             .filter(|j| j.status == JobStatus::Running)
             .collect();
+
+        // P2-5 FIX: Show "Thinking..." when agent is running but no background jobs
         if running_jobs.is_empty() {
+            if self.agent_running {
+                let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+                let spinner = braille[self.braille_frame % 10];
+                return Some(format!("{} Thinking...", spinner));
+            }
             return None;
         }
+
         let job_count = running_jobs.len();
         let latest_job = running_jobs.last()?;
         let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];

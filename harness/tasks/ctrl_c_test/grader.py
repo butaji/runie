@@ -12,11 +12,14 @@ from pathlib import Path
 
 def find_tui_file():
     """Find the tui.rs or related files."""
+    # Paths: grader.py is at tasks/<task>/grader.py
+    # repo_root is 3 levels up from grader.py
+    repo_dir = Path(__file__).parent.parent.parent.parent.parent
     candidates = [
-        Path("crates/runie-tui/src/tui.rs"),
-        Path("crates/runie-tui/src/tui/events.rs"),
-        Path("crates/runie-tui/src/tui/state.rs"),
-        Path("crates/runie-tui/src/tui/update.rs"),
+        repo_dir / "crates/runie-tui/src/tui.rs",
+        repo_dir / "crates/runie-tui/src/tui/events.rs",
+        repo_dir / "crates/runie-tui/src/tui/state.rs",
+        repo_dir / "crates/runie-tui/src/tui/update.rs",
     ]
     for c in candidates:
         if c.exists():
@@ -32,8 +35,11 @@ def check_ctrl_c_implementation():
         "has_panic_hook": False,
     }
 
+    # Paths relative to repo root
+    repo_dir = Path(__file__).parent.parent.parent.parent.parent
+    
     # Check events.rs for Ctrl+C handling
-    events_file = Path("crates/runie-tui/src/tui/events.rs")
+    events_file = repo_dir / "crates/runie-tui/src/tui/events.rs"
     if events_file.exists():
         content = events_file.read_text()
         # Check for Ctrl+C / Ctrl+Q handling
@@ -42,7 +48,7 @@ def check_ctrl_c_implementation():
             checks["has_event_handler"] = True
 
     # Check state.rs for agent_running and mode handling
-    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    state_file = repo_dir / "crates/runie-tui/src/tui/state.rs"
     if state_file.exists():
         content = state_file.read_text()
         # Check for agent_running = false pattern
@@ -50,14 +56,14 @@ def check_ctrl_c_implementation():
             checks["agent_running_cleared"] = True
 
     # Check update.rs for mode reset
-    update_file = Path("crates/runie-tui/src/tui/update.rs")
+    update_file = repo_dir / "crates/runie-tui/src/tui/update.rs"
     if update_file.exists():
         content = update_file.read_text()
         if "mode" in content and "Chat" in content and ("Quit" in content or "Stop" in content):
             checks["mode_reset"] = True
 
     # Check tui.rs for panic hook
-    tui_file = Path("crates/runie-tui/src/tui.rs")
+    tui_file = repo_dir / "crates/runie-tui/src/tui.rs"
     if tui_file.exists():
         content = tui_file.read_text()
         if "panic" in content.lower() and ("hook" in content.lower() or "take_hook" in content or "set_hook" in content):

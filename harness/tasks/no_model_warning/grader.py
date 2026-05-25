@@ -6,6 +6,10 @@ the status bar displays a visible warning to prevent user confusion.
 """
 import sys
 from pathlib import Path
+# Paths: grader.py is at tasks/<task>/grader.py
+# repo_root is 3 levels up from grader.py
+repo_dir = Path(__file__).parent.parent.parent.parent
+
 
 def find_file(name, subdirs=None):
     """Find a file in various potential locations."""
@@ -15,10 +19,10 @@ def find_file(name, subdirs=None):
     ]
     candidates.extend([
         Path(name),
-        Path("crates/runie-tui/src/tui/render.rs"),
-        Path("crates/runie-tui/src/tui/view_models.rs"),
-        Path("crates/runie-tui/src/tui/state.rs"),
-        Path("crates/runie-tui/src/tui/update/misc.rs"),
+        Path(repo_dir / "crates/runie-tui/src/tui/render.rs"),
+        Path(repo_dir / "crates/runie-tui/src/tui/view_models.rs"),
+        Path(repo_dir / "crates/runie-tui/src/tui/state.rs"),
+        Path(repo_dir / "crates/runie-tui/src/tui/update/misc.rs"),
     ])
 
     for candidate in candidates:
@@ -38,7 +42,7 @@ def check_status_bar_warning():
     # Check render.rs for no-model handling
     render_file = Path(__file__).parent.parent.parent / "crates/runie-tui/src/tui/render.rs"
     if not render_file.exists():
-        render_file = Path("crates/runie-tui/src/tui/render.rs")
+        render_file = Path(repo_dir / "crates/runie-tui/src/tui/render.rs")
 
     if render_file.exists():
         content = render_file.read_text()
@@ -64,8 +68,8 @@ def check_status_bar_warning():
             checks["warning_is_visible"] = True
 
     # Check state.rs or view_models for current_model definition
-    for f in [Path("crates/runie-tui/src/tui/state.rs"),
-              Path("crates/runie-tui/src/tui/view_models.rs")]:
+    for f in [Path(repo_dir / "crates/runie-tui/src/tui/state.rs"),
+              Path(repo_dir / "crates/runie-tui/src/tui/view_models.rs")]:
         if f.exists():
             content = f.read_text()
             if "current_model" in content:

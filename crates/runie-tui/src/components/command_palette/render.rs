@@ -38,26 +38,23 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
     let sep_y = inner_y + 1;
     draw_separator(inner_x, sep_y, inner_w, buf, text_muted);
     let list_y = sep_y + 1;
-    let footer_height = 2u16;
-    let list_h = area.height.saturating_sub(4 + footer_height);
+    // No footer hint - status bar already shows hotkeys
+    let list_h = area.height.saturating_sub(4);
     let visible_items = list_h as usize;
     let commands = &palette.filtered_commands;
     let all_commands = palette.all_commands();
     let mut rendered = 0;
+    let max_y = area.y + area.height - 1;
     for i in 0..visible_items {
         if i >= commands.len() { break; }
         let global_idx = commands[i];
         let cmd = &all_commands[global_idx];
-        if list_y + rendered as u16 >= area.y + area.height - footer_height - 1 { break; }
-        let is_selected = i == palette.selected;
         let y = list_y + rendered as u16;
+        if y >= max_y { break; }
+        let is_selected = i == palette.selected;
         render_command_row(cmd, y, inner_x, inner_w, is_selected, text_primary, text_muted, text_secondary, buf);
         rendered += 1;
     }
-    let footer_sep_y = area.y + area.height - footer_height - 1;
-    draw_separator(inner_x, footer_sep_y, inner_w, buf, text_muted);
-    let hint_y = area.y + area.height - 1;
-    buf.set_string(inner_x, hint_y, "[↑↓] navigate  [Enter] run  [Esc] close", Style::default().fg(text_muted));
 }
 
 fn render_command_row(cmd: &PaletteCommandDef, y: u16, x: u16, max_w: u16, is_selected: bool, text_primary: Color, text_muted: Color, text_secondary: Color, buf: &mut Buffer) {
@@ -92,12 +89,10 @@ fn render_argument_mode(palette: &CommandPalette, area: Rect, buf: &mut Buffer, 
     let input_y = inner_y + 3;
     buf.set_string(inner_x, input_y, "❯", Style::default().fg(accent_primary));
     let arg_value = &palette.argument_input;
-    let display_value = if arg_value.is_empty() { "█" } else { arg_value };
+    let display_value = if arg_value.is_empty() { "type value..." } else { arg_value };
     buf.set_string(inner_x + 2, input_y, display_value, Style::default().fg(text_primary));
     let sep2_y = input_y + 2;
     draw_separator(inner_x, sep2_y, inner_w, buf, text_muted);
-    let hint_y = area.y + area.height - 1;
-    buf.set_string(inner_x, hint_y, "[Enter] run  [Esc] cancel", Style::default().fg(text_muted));
 }
 
 fn draw_separator(x: u16, y: u16, max_w: u16, buf: &mut Buffer, color: Color) {

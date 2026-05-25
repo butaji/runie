@@ -20,7 +20,7 @@ fn check_source_files(dir: &str) {
         let path = entry.path();
         if path.is_dir() {
             check_source_files(&path.to_string_lossy());
-        } else if path.extension().map_or(false, |e| e == "rs") {
+        } else if path.extension().is_some_and(|e| e == "rs") {
             check_file(&path);
         }
     }

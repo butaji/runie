@@ -13,25 +13,57 @@ use super::types::{MessageItem, PlanStatus};
 
 /// Cache for wrap_text results to avoid recomputing every frame.
 /// Key is (text, width) -> value is Vec<String> of wrapped lines.
-#[derive(Default)]
 pub struct WrapCache {
     cache: HashMap<(String, usize), Vec<String>>,
+    access_order: Vec<(String, usize)>,
+    max_size: usize,
+}
+
+impl Default for WrapCache {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WrapCache {
     pub fn new() -> Self {
-        Self { cache: HashMap::new() }
+        Self {
+            cache: HashMap::new(),
+            access_order: Vec::new(),
+            max_size: 100,
+        }
     }
 
     /// Get wrapped text from cache or compute and store it.
     pub fn get_wrapped(&mut self, text: &str, width: usize) -> Vec<String> {
         let key = (text.to_string(), width);
-        self.cache.entry(key).or_insert_with(|| wrap_text(text, width)).clone()
+        if let Some(cached) = self.cache.get(&key) {
+            // Move to end (most recently used)
+            if let Some(pos) = self.access_order.iter().position(|k| *k == key) {
+                self.access_order.remove(pos);
+                self.access_order.push(key);
+            }
+            return cached.clone();
+        }
+
+        // Evict if at capacity
+        if self.cache.len() >= self.max_size {
+            if let Some(oldest) = self.access_order.first().cloned() {
+                self.cache.remove(&oldest);
+                self.access_order.remove(0);
+            }
+        }
+
+        let wrapped = wrap_text(text, width);
+        self.cache.insert(key.clone(), wrapped.clone());
+        self.access_order.push(key);
+        wrapped
     }
 
     /// Clear the cache (call when messages change).
     pub fn clear(&mut self) {
         self.cache.clear();
+        self.access_order.clear();
     }
 }
 
@@ -293,14 +325,8 @@ fn render_error_msg(message: &str, recoverable: bool, area: Rect, row: u16, marg
     let msg_line = Line::raw(message).style(Style::default().fg(error));
     buf.set_line(text_x, area.y + row, &msg_line, area.width - 4);
     
-    // Draw recovery hint if recoverable
-    if recoverable {
-        let hint_line = Line::raw("(press Enter to retry)").style(Style::default().fg(text_muted).add_modifier(ratatui::style::Modifier::DIM));
-        buf.set_line(text_x, area.y + row + 1, &hint_line, area.width - 4);
-        2 // Return 2 lines for message + hint
-    } else {
-        1
-    }
+    // P0 FIX: Removed misleading "(press Enter to retry)" hint - Enter submits new message, doesn't retry
+    1
 }
 
 fn render_tool_call_msg(

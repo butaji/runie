@@ -9,6 +9,10 @@ Verifies:
 """
 import sys
 from pathlib import Path
+# Paths: grader.py is at tasks/<task>/grader.py
+# repo_root is 3 levels up from grader.py
+repo_dir = Path(__file__).parent.parent.parent.parent
+
 
 def check_rollback_implementation():
     checks = {
@@ -19,14 +23,14 @@ def check_rollback_implementation():
     }
 
     # Check state.rs for Cmd::Rollback
-    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    state_file = Path(repo_dir / "crates/runie-tui/src/tui/state.rs")
     if state_file.exists():
         content = state_file.read_text()
         if "Rollback" in content:
             checks["has_rollback_cmd"] = True
 
     # Check agent.rs for snapshot logic
-    agent_file = Path("crates/runie-tui/src/tui/update/agent.rs")
+    agent_file = Path(repo_dir / "crates/runie-tui/src/tui/update/agent.rs")
     if agent_file.exists():
         content = agent_file.read_text()
         snapshot_patterns = ["snapshot", "backup", "copy", "clone", "before"]
@@ -46,7 +50,7 @@ def check_rollback_implementation():
                 checks["cancel_triggers_rollback"] = True
 
     # Also check misc.rs
-    misc_file = Path("crates/runie-tui/src/tui/update/misc.rs")
+    misc_file = Path(repo_dir / "crates/runie-tui/src/tui/update/misc.rs")
     if misc_file.exists():
         content = misc_file.read_text()
         if "rollback" in content.lower():

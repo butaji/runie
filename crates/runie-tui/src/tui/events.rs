@@ -78,6 +78,9 @@ fn key_to_overlay_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
     match key.code {
         KeyCode::Esc => Some(Msg::CloseModal),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::SelectUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::SelectDown),
+        KeyCode::Enter => Some(Msg::SelectConfirm),
         _ => None,
     }
 }
@@ -97,6 +100,8 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         }
         KeyCode::PageUp => Some(Msg::ScrollPageUp),
         KeyCode::PageDown => Some(Msg::ScrollPageDown),
+        // P1-3 FIX: ? key for help (opens help overlay if available)
+        KeyCode::Char('?') => Some(Msg::OpenCommandPalette), // Temporary: open palette which lists commands
         _ => Some(Msg::TextareaKey(key)),
     }
 }
