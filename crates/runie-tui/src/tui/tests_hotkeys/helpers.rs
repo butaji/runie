@@ -24,6 +24,7 @@ pub fn make_chat_state_with_input(text: &str) -> crate::tui::state::AppState {
 
     let mut state = AppState {
         mode: TuiMode::Chat,
+        current_model: Some("gpt-4".to_string()), // P0-2 FIX: Set model for submit tests
         ..Default::default()
     };
     // Use TextArea::new for simple input
