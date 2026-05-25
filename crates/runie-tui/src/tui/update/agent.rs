@@ -295,13 +295,15 @@ pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     handle_permission(state, decision)
 }
 
-/// P0-1 FIX: Handle permission request timeout
+/// P2-5 FIX: Handle permission request timeout - send denial to agent
 pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
     state.permission_modal.timed_out = true;
-    // Automatically cancel and inform user
+    // P2-5 FIX: Show timeout message before denial
     state.messages.push(MessageItem::System {
-        text: "Permission request timed out after 5 minutes. Request denied.".to_string(),
+        text: "Permission request timed out after 5 minutes.".to_string(),
     });
+    
+    let tool_call_id = state.permission_modal.tool_call_id.clone().unwrap_or_default();
     state.permission_modal.tool = None;
     state.permission_modal.tool_call_id = None;
     
@@ -319,5 +321,6 @@ pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
         state.mode = TuiMode::Chat;
     }
     
-    vec![]
+    // P2-5 FIX: Send denial decision to agent loop so it doesn't wait indefinitely
+    vec![Cmd::SendPermission { decision: PermissionDecision::Deny { tool_call_id } }]
 }

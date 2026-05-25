@@ -52,20 +52,16 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
         return vec![];
     }
     
-    // BG-7 & P1-4 FIX: Block double-submit with user feedback
+    // P1-4 FIX: Block double-submit with user feedback via input_right_info (not system message)
     if state.agent_running {
-        state.messages.push(MessageItem::System {
-            text: "Agent is still running. Please wait or press Ctrl+C to stop the current task.".to_string(),
-        });
+        state.input_right_info = "Agent running... Ctrl+C to stop".to_string();
         return vec![];
     }
     
-    // BG-5 FIX: Block submit while models are still being fetched in onboarding
+    // P1-4 FIX: Block submit while models are still being fetched in onboarding
     if let Some(ref onboarding) = state.onboarding {
         if onboarding.is_fetching_models {
-            state.messages.push(MessageItem::System {
-                text: "Still loading models... Please wait.".to_string(),
-            });
+            state.input_right_info = "Loading models...".to_string();
             return vec![];
         }
     }
