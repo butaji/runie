@@ -128,14 +128,14 @@ where
     Fut: Future<Output = Result<T, E>>,
     E: std::fmt::Debug,
 {
-    let mut last_error: Option<E> = None;
+    let mut _last_error: Option<E> = None;
     let mut attempt = 0u32;
 
     loop {
         match op().await {
             Ok(result) => return Ok(result),
             Err(e) => {
-                last_error = Some(e);
+                _last_error = Some(e);
 
                 if attempt >= config.max_retries {
                     break;
@@ -157,7 +157,7 @@ where
 
     // Return the last error if all retries failed
     #[allow(clippy::unwrap_used)]
-    Err(last_error.unwrap())
+    Err(_last_error.unwrap())
 }
 
 #[cfg(test)]

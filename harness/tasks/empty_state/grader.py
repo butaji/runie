@@ -9,12 +9,16 @@ Verifies that MessageList::render_ref handles empty state with:
 """
 import sys
 from pathlib import Path
+# Paths: grader.py is at tasks/<task>/grader.py
+# repo_root is 3 levels up from grader.py
+repo_dir = Path(__file__).parent.parent.parent.parent
+
 
 def find_message_list():
     """Find the message_list render file in various locations."""
     candidates = [
         # From workspace root (when running in repo)
-        Path("crates/runie-tui/src/components/message_list/render.rs"),
+        Path(repo_dir / "crates/runie-tui/src/components/message_list/render.rs"),
         Path("message_list.rs"),
         # In sandbox
         Path("message_list.rs"),

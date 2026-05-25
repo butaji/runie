@@ -237,9 +237,9 @@ struct OpenAICompatibleResponse {
 struct OpenAIModelData {
     id: String,
     #[serde(default)]
-    object: Option<String>,
+    _object: Option<String>,
     #[serde(default)]
-    created: Option<u64>,
+    _created: Option<u64>,
     #[serde(default)]
     owned_by: Option<String>,
 }

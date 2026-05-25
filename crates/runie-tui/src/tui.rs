@@ -12,6 +12,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use std::collections::VecDeque;
 use std::io::{self, stdout};
 
 use crate::{
@@ -79,7 +80,7 @@ pub struct Tui {
     pub state: AppState,
     command_palette: CommandPalette,
     dirty: bool,
-    action_log: Vec<Msg>,
+    action_log: VecDeque<Msg>,
     action_log_capacity: usize,
 }
 
@@ -120,7 +121,7 @@ impl Tui {
             state: AppState::default(),
             command_palette: CommandPalette::new(),
             dirty: true,
-            action_log: Vec::new(),
+            action_log: VecDeque::new(),
             action_log_capacity: 1000,
         })
     }
@@ -143,9 +144,9 @@ impl Tui {
 
     fn log_action(&mut self, msg: &Msg) {
         if self.action_log.len() >= self.action_log_capacity {
-            self.action_log.remove(0);
+            self.action_log.pop_front();
         }
-        self.action_log.push(msg.clone());
+        self.action_log.push_back(msg.clone());
     }
 
     pub fn is_dirty(&self) -> bool {
@@ -285,7 +286,7 @@ impl Tui {
             Self::render_command_palette(frame, state, padded, area, theme, palette, theme_colors);
         }
         if mode == TuiMode::Overlay {
-            Self::render_overlay_mode(frame, area, theme);
+            Self::render_overlay_mode(frame, state, area, theme);
         }
         if mode == TuiMode::DiffViewer {
             Self::render_diff_viewer(frame, state, area, theme, theme_colors);
@@ -318,10 +319,26 @@ impl Tui {
         palette.render_ref(palette_area, frame.buffer_mut(), theme);
     }
 
-    fn render_overlay_mode(frame: &mut ratatui::Frame, area: Rect, theme: &ThemeWrapper) {
+    fn render_overlay_mode(frame: &mut ratatui::Frame, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
         let overlay_area = Overlay::centered((60, 20), frame.area());
         let mut overlay_buf = Buffer::empty(overlay_area);
-        Overlay::default().render_ref(overlay_area, &mut overlay_buf, theme);
+        
+        // Build overlay with model picker content
+        let mut overlay = Overlay::default();
+        overlay.title = state.model_picker_title.clone();
+        overlay.content = state.model_picker_items.iter()
+            .enumerate()
+            .map(|(i, name)| {
+                if i == state.model_picker_selected {
+                    vec![ratatui::text::Span::raw(format!("▸ {}", name))]
+                } else {
+                    vec![ratatui::text::Span::raw(format!("  {}", name))]
+                }
+            })
+            .collect();
+        overlay.theme = theme.clone();
+        
+        overlay.render_ref(overlay_area, &mut overlay_buf, theme);
         Self::blit_buffer(frame, area, overlay_area, &overlay_buf);
     }
 
@@ -438,6 +455,8 @@ impl Tui {
                     Cmd::Interrupt => {
                         return Some(TuiAction::Cancel);
                     }
+                    // Command palette file operations (not handled by TUI)
+                    Cmd::ReadFile { .. } | Cmd::EditFile { .. } | Cmd::WriteFile { .. } | Cmd::DeleteFile { .. } | Cmd::CompactContext => {}
                 }
             }
             // Check if we should quit

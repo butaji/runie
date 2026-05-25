@@ -219,6 +219,40 @@ pub fn get_zai_models() -> Vec<ModelOption> {
     models
 }
 
+/// Returns all model names from all providers, sorted alphabetically
+pub fn get_all_model_names() -> Vec<String> {
+    let all_models: Vec<String> = [
+        get_openai_models(),
+        get_anthropic_models(),
+        get_google_models(),
+        get_cohere_models(),
+        get_mistral_models(),
+        get_deepseek_models(),
+        get_groq_models(),
+        get_openrouter_models(),
+        get_huggingface_models(),
+        get_xai_models(),
+        get_azure_models(),
+        get_moonshot_models(),
+        get_perplexity_models(),
+        get_ollama_models(),
+        get_hyperbolic_models(),
+        get_together_models(),
+        get_zai_models(),
+        get_minimax_models(),
+        get_mira_models(),
+        get_galadriel_models(),
+        get_llamafile_models(),
+    ].iter()
+    .flat_map(|models| models.iter().map(|m| m.name.clone()))
+    .collect();
+    
+    let mut sorted = all_models;
+    sorted.sort();
+    sorted.dedup();
+    sorted
+}
+
 pub fn get_minimax_models() -> Vec<ModelOption> {
     let mut models = vec![
         ModelOption { name: "ABAB 6.5".to_string(), id: "abab6.5-chat".to_string(), description: "MiniMax chat model".to_string() },

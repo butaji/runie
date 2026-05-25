@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -66,16 +67,22 @@ impl SessionTreeNavigator {
     }
 
     fn compute_depths(&mut self) {
-        for i in 0..self.entries.len() {
-            let mut depth = 0;
-            let mut current = self.entries[i].parent_id.clone();
-            while let Some(parent_id) = current {
-                depth += 1;
-                current = self.entries.iter()
-                    .find(|e| e.id == parent_id)
-                    .and_then(|e| e.parent_id.clone());
+        // Build id -> depth map for O(1) parent lookups
+        let mut id_to_depth: HashMap<String, usize> = HashMap::new();
+        
+        for entry in self.entries.iter() {
+            let depth = if let Some(ref parent_id) = entry.parent_id {
+                *id_to_depth.get(parent_id).unwrap_or(&0) + 1
+            } else {
+                0
+            };
+            id_to_depth.insert(entry.id.clone(), depth);
+        }
+        
+        for entry in self.entries.iter_mut() {
+            if let Some(depth) = id_to_depth.get(&entry.id) {
+                entry.depth = *depth;
             }
-            self.entries[i].depth = depth;
         }
     }
 

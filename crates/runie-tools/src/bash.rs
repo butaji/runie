@@ -63,6 +63,19 @@ const DANGEROUS_PATTERNS: &[&str] = &[
 /// Secondary blacklist of shell metacharacters that enable injection.
 const FORBIDDEN_CHARS: &[char] = &['|', ';', '&', '>', '<', '(', ')', '`', '$'];
 
+/// Patterns that spawn subshells - blocked even for whitelisted commands.
+const SUBSHELL_PATTERNS: &[&str] = &[
+    "$(",  // Command substitution
+    "|",    // Pipe
+    "&&",   // And chain
+    "||",   // Or chain
+    ";",    // Sequential
+    "bash -c",  // Explicit bash subshell
+    "sh -c",    // Explicit sh subshell
+    "zsh -c",   // Explicit zsh subshell
+    "ksh -c",   // Explicit ksh subshell
+];
+
 impl BashTool {
     /// Extracts the base command (first whitespace-delimited token) from a command string.
     fn extract_base_command(command: &str) -> &str {
@@ -153,6 +166,19 @@ impl BashTool {
         }
         Ok(())
     }
+
+    /// Check for subshell spawning patterns - blocks even whitelisted commands from
+    /// spawning subshells to prevent allowlist bypass (e.g., "echo $(malicious)").
+    fn check_subshell_patterns(command: &str) -> Result<(), ToolError> {
+        for pattern in SUBSHELL_PATTERNS {
+            if command.contains(pattern) {
+                return Err(ToolError::ExecutionFailed(format!(
+                    "Subshell pattern '{}' blocked. Even whitelisted commands cannot spawn subshells.", pattern
+                )));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -199,6 +225,9 @@ impl Tool for BashTool {
 
         // Secondary defense: check for shell metacharacters
         BashTool::check_forbidden_chars(command)?;
+
+        // Tertiary defense: prevent subshell spawning even for whitelisted commands
+        BashTool::check_subshell_patterns(command)?;
 
         let output = tokio::time::timeout(
             std::time::Duration::from_secs(timeout_secs),

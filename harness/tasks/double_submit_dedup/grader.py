@@ -9,6 +9,10 @@ Validates that the system prevents duplicate submissions by:
 """
 import sys
 from pathlib import Path
+# Paths: grader.py is at tasks/<task>/grader.py
+# repo_root is 3 levels up from grader.py
+repo_dir = Path(__file__).parent.parent.parent.parent
+
 
 def check_double_submit_protection():
     checks = {
@@ -19,7 +23,7 @@ def check_double_submit_protection():
     }
 
     # Check misc.rs for submit handling
-    misc_file = Path("crates/runie-tui/src/tui/update/misc.rs")
+    misc_file = Path(repo_dir / "crates/runie-tui/src/tui/update/misc.rs")
     if misc_file.exists():
         content = misc_file.read_text()
 
@@ -37,7 +41,7 @@ def check_double_submit_protection():
             checks["submit_returns_early"] = True
 
     # Check state.rs for agent_running definition
-    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    state_file = Path(repo_dir / "crates/runie-tui/src/tui/state.rs")
     if state_file.exists():
         content = state_file.read_text()
         if "agent_running" in content:

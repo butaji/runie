@@ -5,6 +5,9 @@ pub mod palette;
 pub mod slash;
 pub mod tree;
 
+#[cfg(test)]
+mod palette_tests;
+
 use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use crate::tui::key_to_textarea_input;
 use crate::components::CommandPalette;
@@ -87,6 +90,50 @@ fn handle_palette_msg(state: &mut AppState, palette: &mut CommandPalette, msg: &
     }
 }
 
+// P1-3 FIX: Extracted from update() for TextareaKey handling
+fn handle_textarea_key(state: &mut AppState, key: crossterm::event::KeyEvent) {
+    let input = key_to_textarea_input(key);
+    state.textarea.input(input);
+}
+
+// P1-3 FIX: Extracted from update() for CommandPaletteConfirm handling
+fn handle_palette_confirm(state: &mut AppState, palette: &mut CommandPalette) -> Vec<Cmd> {
+    let mut cmds = vec![];
+    if let Some(cmd) = palette.confirm(palette.selected) {
+        cmds.extend(palette::handle_direct_command(state, cmd));
+    }
+    palette::handle_close_modal(state);
+    cmds
+}
+
+// P1-2 FIX: Extracted from update() for Select navigation handling
+fn handle_select_nav(state: &mut AppState, msg: &Msg) {
+    match msg {
+        Msg::SelectUp => {
+            if state.model_picker_selected > 0 {
+                state.model_picker_selected -= 1;
+            }
+        }
+        Msg::SelectDown => {
+            if state.model_picker_selected < state.model_picker_items.len().saturating_sub(1) {
+                state.model_picker_selected += 1;
+            }
+        }
+        Msg::SelectConfirm => {
+            if !state.model_picker_items.is_empty() {
+                if let Some(model) = state.model_picker_items.get(state.model_picker_selected) {
+                    state.current_model = Some(model.clone());
+                }
+                state.mode = TuiMode::Chat;
+                state.model_picker_title.clear();
+                state.model_picker_items.clear();
+                state.model_picker_selected = 0;
+            }
+        }
+        _ => {}
+    }
+}
+
 pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> Vec<Cmd> {
     let mut cmds = vec![];
 
@@ -94,12 +141,8 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         // P0-1 FIX: Handle Ctrl+C / Stop — interrupt agent and return to Chat mode
         Msg::Quit | Msg::Stop => { cmds.extend(handle_quit_or_stop(state, &msg)); }
         Msg::Submit => { cmds.extend(misc::handle_submit(state)); }
-        // TextareaKey is handled here AND in handle_key (for handle_event path)
-        // This ensures tui_run.rs which calls update() directly still gets textarea input
-        Msg::TextareaKey(key) => {
-            let input = key_to_textarea_input(key);
-            state.textarea.input(input);
-        }
+        // P1-3 FIX: TextareaKey extracted to handle_textarea_key
+        Msg::TextareaKey(key) => { handle_textarea_key(state, key); }
         Msg::ToggleSidebar => { state.show_sidebar = !state.show_sidebar; }
         Msg::OpenCommandPalette => { palette::open_palette(state, palette); }
         Msg::CloseModal | Msg::ConfirmModal => { palette::handle_close_modal(state); }
@@ -109,9 +152,11 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         Msg::PermissionTimeout => { cmds.extend(agent::handle_permission_timeout(state)); }
         // P1-1 FIX: Handle Esc in command palette (cancel argument mode or close)
         Msg::CommandPaletteCancelArgument => { palette::handle_palette_escape(state, palette); }
-        Msg::CommandPaletteFilter(_) | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { handle_palette_msg(state, palette, &msg); }
-        Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); },
-        Msg::ScrollDown | Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }).min(state.messages.len().saturating_sub(1)); },
+        Msg::CommandPaletteFilter(_) | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp | Msg::CommandPaletteDown => { handle_palette_msg(state, palette, &msg); }
+        // P1-3 FIX: CommandPaletteConfirm extracted to handle_palette_confirm
+        Msg::CommandPaletteConfirm => { cmds.extend(handle_palette_confirm(state, palette)); }
+        Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); }
+        Msg::ScrollDown | Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }).min(state.messages.len().saturating_sub(1)); }
         Msg::Tick | Msg::CursorBlink => { 
             misc::handle_anim(state, &msg);
             // P0-1 FIX: Check for permission timeout
@@ -129,6 +174,8 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         Msg::ClearChat => { state.messages.clear(); }
         Msg::DirectCommand(cmd) => { cmds.extend(palette::handle_direct_command(state, cmd)); }
         Msg::Resize(w, h) => { state.terminal_size = (w, h); }
+        // P1-2 FIX: Select/Overlay navigation (model picker)
+        Msg::SelectUp | Msg::SelectDown | Msg::SelectConfirm => { handle_select_nav(state, &msg); }
     }
 
     cmds

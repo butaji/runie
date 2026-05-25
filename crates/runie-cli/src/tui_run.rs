@@ -352,6 +352,27 @@ pub async fn run_tui(
                 }
                 vec![]
             }
+            // Command palette file operations (stubs)
+            Cmd::ReadFile { path } => {
+                eprintln!("[ReadFile] Not yet implemented: {}", path);
+                vec![]
+            }
+            Cmd::EditFile { path } => {
+                eprintln!("[EditFile] Not yet implemented: {}", path);
+                vec![]
+            }
+            Cmd::WriteFile { path } => {
+                eprintln!("[WriteFile] Not yet implemented: {}", path);
+                vec![]
+            }
+            Cmd::DeleteFile { path } => {
+                eprintln!("[DeleteFile] Not yet implemented: {}", path);
+                vec![]
+            }
+            Cmd::CompactContext => {
+                eprintln!("[CompactContext] Not yet implemented");
+                vec![]
+            }
         }
     }
 

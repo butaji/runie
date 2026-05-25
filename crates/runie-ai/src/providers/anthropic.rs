@@ -179,7 +179,10 @@ impl AnthropicProvider {
             return Err(ProviderError::ApiError("Anthropic service overloaded".to_string()));
         }
         if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
+            let body = match response.text().await {
+                Ok(text) => text,
+                Err(e) => format!("(failed to read response body: {})", e),
+            };
             return Err(ProviderError::ApiError(format!("{}: {}", status, body)));
         }
 
@@ -329,7 +332,10 @@ impl AnthropicProvider {
             return Err(ProviderError::RateLimited);
         }
         if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
+            let body = match response.text().await {
+                Ok(text) => text,
+                Err(e) => format!("(failed to read response body: {})", e),
+            };
             return Err(ProviderError::ApiError(format!("{}: {}", status, body)));
         }
 

@@ -52,7 +52,17 @@ impl Tool for ReadFileTool {
         let path = args["path"].as_str()
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'path' argument".to_string()))?;
         let resolved = self.workspace.resolve(path)?;
-        
+
+        // Check file size before reading to prevent OOM
+        const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+        let metadata = tokio::fs::metadata(&resolved).await
+            .map_err(|e| ToolError::ExecutionFailed(format!("Failed to get file metadata: {}", e)))?;
+        if metadata.len() > MAX_FILE_SIZE {
+            return Err(ToolError::ExecutionFailed(format!(
+                "File too large ({} bytes). Maximum size is {} bytes.", metadata.len(), MAX_FILE_SIZE
+            )));
+        }
+
         let content = tokio::fs::read_to_string(&resolved).await
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to read file: {}", e)))?;
         

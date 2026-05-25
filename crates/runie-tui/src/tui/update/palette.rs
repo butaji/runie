@@ -1,6 +1,7 @@
 use crate::tui::state::{AppState, TuiMode, Cmd};
+use crate::components::{MessageItem, CommandPalette};
 use crate::components::command_palette::PaletteCommand;
-use crate::components::CommandPalette;
+use crate::components::onboarding;
 
 pub fn open_palette(state: &mut AppState, palette: &mut CommandPalette) {
     state.command_palette.open = true;
@@ -44,16 +45,52 @@ pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette)
     }
 }
 
+fn push_file_cmd(cmds: &mut Vec<Cmd>, state: &mut AppState, path: &str, file_cmd: Cmd, action: &str) {
+    cmds.push(file_cmd);
+    state.messages.push(MessageItem::System { text: format!("{}: {}", action, path) });
+}
+
+fn handle_switch_model(state: &mut AppState) {
+    let models = onboarding::get_all_model_names();
+    state.model_picker_title = "Select Model".to_string();
+    state.model_picker_items = models;
+    state.model_picker_selected = 0;
+    state.mode = TuiMode::Overlay;
+}
+
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<Cmd> {
     let mut cmds = vec![];
     match cmd {
-        PaletteCommand::NewSession => { state.messages.clear(); state.mode = TuiMode::Chat; }
-        PaletteCommand::LoadSession => { cmds.push(Cmd::LoadSession { name: String::new() }); }
-        PaletteCommand::SaveSession => { cmds.push(Cmd::SaveSession { name: None }); }
-        PaletteCommand::ClearChat => { state.messages.clear(); }
-        PaletteCommand::SwitchModel | PaletteCommand::ReadFile { .. } | PaletteCommand::EditFile { .. } |
-        PaletteCommand::WriteFile { .. } | PaletteCommand::DeleteFile { .. } | PaletteCommand::CompactContext => {}
-        PaletteCommand::Quit => { state.running = false; }
+        PaletteCommand::NewSession => {
+            state.messages.clear();
+            state.mode = TuiMode::Chat;
+            state.messages.push(MessageItem::System { text: "New session started".to_string() });
+        }
+        PaletteCommand::LoadSession { name } => {
+            cmds.push(Cmd::LoadSession { name: name.clone() });
+            state.messages.push(MessageItem::System { text: format!("Loading session: {}", name) });
+        }
+        PaletteCommand::SaveSession { name } => {
+            cmds.push(Cmd::SaveSession { name: Some(name.clone()) });
+            state.messages.push(MessageItem::System { text: format!("Saving session: {}", name) });
+        }
+        PaletteCommand::ClearChat => {
+            state.messages.clear();
+            state.messages.push(MessageItem::System { text: "Chat cleared".to_string() });
+        }
+        PaletteCommand::SwitchModel => handle_switch_model(state),
+        PaletteCommand::ReadFile { path } => push_file_cmd(&mut cmds, state, &path, Cmd::ReadFile { path: path.clone() }, "Reading file"),
+        PaletteCommand::EditFile { path } => push_file_cmd(&mut cmds, state, &path, Cmd::EditFile { path: path.clone() }, "Editing file"),
+        PaletteCommand::WriteFile { path } => push_file_cmd(&mut cmds, state, &path, Cmd::WriteFile { path: path.clone() }, "Writing file"),
+        PaletteCommand::DeleteFile { path } => push_file_cmd(&mut cmds, state, &path, Cmd::DeleteFile { path: path.clone() }, "Deleting file"),
+        PaletteCommand::CompactContext => {
+            cmds.push(Cmd::CompactContext);
+            state.messages.push(MessageItem::System { text: "Compacting context...".to_string() });
+        }
+        PaletteCommand::Quit => {
+            state.running = false;
+            state.messages.push(MessageItem::System { text: "Goodbye!".to_string() });
+        }
         PaletteCommand::Cancel => {}
     }
     cmds

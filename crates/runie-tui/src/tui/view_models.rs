@@ -25,6 +25,7 @@ pub struct StatusBarViewModel {
     pub session_token_usage: TokenUsage,
     pub background_jobs: Vec<BackgroundJob>,
     pub braille_frame: usize,
+    pub agent_running: bool, // P2-5 FIX: Show "Thinking..." when agent is running but no background jobs
 }
 
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
@@ -187,6 +188,7 @@ fn build_status_bar_vm(state: &crate::tui::state::RenderState) -> StatusBarViewM
         session_token_usage: state.session_token_usage.clone(),
         background_jobs: state.background_jobs.clone(),
         braille_frame: state.animation.braille_frame,
+        agent_running: state.agent_running, // P2-5 FIX: Track agent running state
     }
 }
 

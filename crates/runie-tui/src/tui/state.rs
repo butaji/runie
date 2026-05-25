@@ -201,6 +201,10 @@ pub struct AppState {
     pub terminal_size: (u16, u16),
     // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
     pub clear_input_confirm: ClearInputConfirm,
+    // Model picker state (used when TuiMode::Overlay with model picker active)
+    pub model_picker_title: String,
+    pub model_picker_items: Vec<String>,
+    pub model_picker_selected: usize,
 }
 
 impl Default for AppState {
@@ -228,6 +232,10 @@ impl Default for AppState {
             terminal_size: (0, 0),
             // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
             clear_input_confirm: ClearInputConfirm::default(),
+            // Model picker state
+            model_picker_title: String::new(),
+            model_picker_items: Vec::new(),
+            model_picker_selected: 0,
         }
     }
 }
@@ -317,6 +325,11 @@ pub enum Msg {
     // P0-1 FIX: Permission timeout
     PermissionTimeout,
 
+    // Select/Overlay navigation (model picker)
+    SelectUp,
+    SelectDown,
+    SelectConfirm,
+
     // Input
     ClearInput,
     // P1-REMAINING-1 FIX: ClearInputConfirm - requires double-tap to clear text
@@ -391,6 +404,9 @@ impl PartialEq for Msg {
             (ModelsFetchFailed(a), ModelsFetchFailed(b)) => a == b,
             (Resize(a_w, a_h), Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
             (Stop, Stop) => true,
+            (SelectUp, SelectUp) => true,
+            (SelectDown, SelectDown) => true,
+            (SelectConfirm, SelectConfirm) => true,
             _ => false,
         }
     }
@@ -412,6 +428,35 @@ pub enum Cmd {
     Rollback { tool_call_id: String },
     // P0-1 FIX: Interrupt — cancels the running agent task
     Interrupt,
+    // Command palette file operations
+    ReadFile { path: String },
+    EditFile { path: String },
+    WriteFile { path: String },
+    DeleteFile { path: String },
+    CompactContext,
+}
+
+impl PartialEq for Cmd {
+    fn eq(&self, other: &Self) -> bool {
+        use Cmd::*;
+        match (self, other) {
+            (SpawnAgent { .. }, SpawnAgent { .. }) => true, // Can't compare messages
+            (SendPermission { decision: a }, SendPermission { decision: b }) => a == b,
+            (SaveSession { name: a }, SaveSession { name: b }) => a == b,
+            (LoadSession { name: a }, LoadSession { name: b }) => a == b,
+            (SlashCommand(_), SlashCommand(_)) => true, // Can't compare commands
+            (SaveSettings { provider: a, model: b, api_key: c }, SaveSettings { provider: d, model: e, api_key: f }) => a == d && b == e && c == f,
+            (FetchModels { provider_id: a, api_key: b }, FetchModels { provider_id: c, api_key: d }) => a == c && b == d,
+            (Rollback { tool_call_id: a }, Rollback { tool_call_id: b }) => a == b,
+            (Interrupt, Interrupt) => true,
+            (ReadFile { path: a }, ReadFile { path: b }) => a == b,
+            (EditFile { path: a }, EditFile { path: b }) => a == b,
+            (WriteFile { path: a }, WriteFile { path: b }) => a == b,
+            (DeleteFile { path: a }, DeleteFile { path: b }) => a == b,
+            (CompactContext, CompactContext) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -447,6 +492,10 @@ pub struct RenderState {
     pub onboarding: Option<Onboarding>,
     // P1-REMAINING-1 FIX: Track pending clear input confirmation
     pub clear_input_confirm: ClearInputConfirm,
+    // Model picker state
+    pub model_picker_title: String,
+    pub model_picker_items: Vec<String>,
+    pub model_picker_selected: usize,
 }
 
 impl RenderState {
@@ -471,6 +520,9 @@ impl RenderState {
             background_jobs: state.background_jobs.clone(),
             onboarding: state.onboarding.clone(),
             clear_input_confirm: state.clear_input_confirm.clone(),
+            model_picker_title: state.model_picker_title.clone(),
+            model_picker_items: state.model_picker_items.clone(),
+            model_picker_selected: state.model_picker_selected,
         }
     }
 }

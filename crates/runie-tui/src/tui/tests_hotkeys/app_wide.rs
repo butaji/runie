@@ -60,15 +60,13 @@ fn test_enter_selects_in_palette() {
     let msg = simulate_key(KeyCode::Enter, KeyModifiers::NONE, TuiMode::CommandPalette);
     assert_eq!(msg, Some(Msg::CommandPaletteConfirm), "Enter in CommandPalette should produce Msg::CommandPaletteConfirm");
 
-    // Verify state update - CommandPaletteConfirm is a no-op in update()
-    // The palette component handles confirmation internally
+    // Verify state update - CommandPaletteConfirm closes the palette after confirming
     let mut state = make_state_with_modal(TuiMode::CommandPalette);
     let mut palette = CommandPalette::new();
     state.command_palette.open = true;
     update(&mut state, &mut palette, Msg::CommandPaletteConfirm);
-    // CommandPaletteConfirm does NOT close the palette directly
-    // The caller must handle the returned command and close the palette if needed
-    assert!(state.command_palette.open, "CommandPaletteConfirm should not close palette directly");
+    // CommandPaletteConfirm closes the palette directly
+    assert!(!state.command_palette.open, "CommandPaletteConfirm should close palette");
 }
 
 #[test]
@@ -141,4 +139,162 @@ fn test_page_up_down_scrolls() {
     state.scroll.feed_offset = 0;
     update(&mut state, &mut palette, Msg::ScrollPageUp);
     assert_eq!(state.scroll.feed_offset, 0, "Scroll should not go below 0");
+}
+
+// ─── Command Palette Execution Tests ─────────────────────────────────────────
+
+#[test]
+fn test_command_palette_confirm_executes_command() {
+    // Test that CommandPaletteConfirm with a selected command executes it
+    use crate::tui::update::palette::handle_direct_command;
+    use crate::components::command_palette::PaletteCommand;
+
+    let mut state = make_state_with_modal(TuiMode::CommandPalette);
+    let mut palette = CommandPalette::new();
+    state.command_palette.open = true;
+
+    // Filter to "quit" command and select it
+    palette.filter("quit");
+    assert!(!palette.filtered_commands.is_empty());
+
+    // Get the selected command and confirm it
+    let selected_idx = palette.selected;
+    if let Some(cmd) = palette.confirm(selected_idx) {
+        let cmds = handle_direct_command(&mut state, cmd);
+        assert!(!state.running, "Quit command should set running=false");
+        assert!(cmds.is_empty()); // Quit doesn't return Cmds
+    } else {
+        panic!("Expected command to be confirmed");
+    }
+}
+
+#[test]
+fn test_command_palette_confirm_load_session_returns_cmd() {
+    use crate::tui::update::palette::handle_direct_command;
+    use crate::components::command_palette::PaletteCommand;
+
+    let mut state = make_state_with_modal(TuiMode::CommandPalette);
+    let mut palette = CommandPalette::new();
+    state.command_palette.open = true;
+
+    // Filter to "load" which requires arguments
+    palette.filter("load");
+    let selected_idx = palette.selected;
+
+    // Confirm should enter argument mode (not return a command)
+    if let Some(cmd) = palette.confirm(selected_idx) {
+        panic!("Load session should require arguments, not return {:?}", cmd);
+    }
+    assert!(palette.is_argument_mode, "Should enter argument mode for load session");
+
+    // Type argument
+    for c in "my_session".chars() {
+        palette.insert_char(c);
+    }
+
+    // Now confirm with argument
+    if let Some(cmd) = palette.confirm_with_argument() {
+        let cmds = handle_direct_command(&mut state, cmd);
+        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds[0], crate::tui::state::Cmd::LoadSession { name: "my_session".to_string() });
+    } else {
+        panic!("Expected command with argument");
+    }
+}
+
+#[test]
+fn test_palette_closes_after_command_execution() {
+    use crate::tui::update::update;
+    use crate::tui::state::Msg;
+
+    let mut state = make_state_with_modal(TuiMode::CommandPalette);
+    let mut palette = CommandPalette::new();
+    state.command_palette.open = true;
+
+    // Select quit command
+    palette.filter("quit");
+    palette.selected = 0;
+
+    // Simulate Enter key
+    update(&mut state, &mut palette, Msg::CommandPaletteConfirm);
+
+    // Palette should be closed
+    assert!(!state.command_palette.open, "Palette should close after command execution");
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should return to Chat");
+}
+
+#[test]
+fn test_argument_mode_type_argument_confirm_executes() {
+    use crate::tui::update::update;
+    use crate::tui::state::Msg;
+
+    let mut state = make_state_with_modal(TuiMode::CommandPalette);
+    let mut palette = CommandPalette::new();
+    state.command_palette.open = true;
+
+    // Select "read" which requires args
+    palette.filter("read");
+    palette.selected = 0;
+
+    // First confirm enters argument mode
+    update(&mut state, &mut palette, Msg::CommandPaletteConfirm);
+    assert!(palette.is_argument_mode, "Should be in argument mode");
+
+    // Type the file path directly into argument input
+    for c in "/tmp/test.txt".chars() {
+        palette.insert_char(c);
+    }
+
+    // Second confirm should execute with argument
+    let cmds = update(&mut state, &mut palette, Msg::CommandPaletteConfirm);
+
+    assert!(!palette.is_argument_mode, "Should exit argument mode");
+    assert_eq!(cmds.len(), 1);
+    assert_eq!(cmds[0], crate::tui::state::Cmd::ReadFile { path: "/tmp/test.txt".to_string() });
+}
+
+#[test]
+fn test_palette_escape_in_argument_mode_cancels_argument() {
+    use crate::tui::update::update;
+    use crate::tui::state::Msg;
+
+    let mut state = make_state_with_modal(TuiMode::CommandPalette);
+    let mut palette = CommandPalette::new();
+    state.command_palette.open = true;
+
+    // Enter argument mode
+    palette.filter("load");
+    palette.confirm(0);
+    assert!(palette.is_argument_mode);
+
+    // Type some argument
+    for c in "session_name".chars() {
+        palette.insert_char(c);
+    }
+    assert_eq!(palette.argument_input, "session_name");
+
+    // Press Escape to cancel argument mode
+    update(&mut state, &mut palette, Msg::CommandPaletteCancelArgument);
+
+    // Should exit argument mode and reset
+    assert!(!palette.is_argument_mode, "Should exit argument mode");
+    assert!(palette.argument_input.is_empty(), "Argument should be cleared");
+    assert!(palette.pending_command.is_none(), "Pending command should be cleared");
+}
+
+#[test]
+fn test_palette_escape_not_in_argument_mode_closes_palette() {
+    use crate::tui::update::update;
+    use crate::tui::state::Msg;
+
+    let mut state = make_state_with_modal(TuiMode::CommandPalette);
+    let mut palette = CommandPalette::new();
+    state.command_palette.open = true;
+
+    // Press Escape without being in argument mode
+    update(&mut state, &mut palette, Msg::CommandPaletteCancelArgument);
+
+    // Palette should close
+    assert!(!state.command_palette.open, "Palette should close on Escape");
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should return to Chat");
 }

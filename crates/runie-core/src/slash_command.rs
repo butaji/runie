@@ -20,7 +20,7 @@ pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
         return None;
     }
     
-    let parts: Vec<&str> = input.trim().split_whitespace().collect();
+    let parts: Vec<&str> = input.split_whitespace().collect();
     let cmd = parts[0];
     let args = &parts[1..];
     
