@@ -1,0 +1,18 @@
+{
+  "id": "param_struct",
+  "name": "Extract function parameters into a config struct",
+  "description": "The function `init_service` in src/lib.rs takes 5 parameters: host, port, timeout_ms, max_connections, debug_mode. Refactor it to accept a single `ServiceConfig` struct instead. The struct should be public, have named fields, and derive Debug and Clone. The function signature should become `pub fn init_service(config: ServiceConfig) -> Result<(), String>`.",
+  "setup": {
+    "files": {
+      "src/lib.rs": "/// Initializes the service with the given parameters.\npub fn init_service(\n    host: &str,\n    port: u16,\n    timeout_ms: u64,\n    max_connections: usize,\n    debug_mode: bool,\n) -> Result<(), String> {\n    if port == 0 {\n        return Err(\"port cannot be 0\".to_string());\n    }\n    if max_connections == 0 {\n        return Err(\"max_connections must be > 0\".to_string());\n    }\n    println!(\"Starting service on {}:{}\", host, port);\n    Ok(())\n}\n"
+    }
+  },
+  "expected": {
+    "has_config_struct": true,
+    "struct_has_required_fields": true,
+    "struct_derives_debug_clone": true,
+    "function_takes_single_param": true,
+    "function_returns_result": true
+  },
+  "grader": "grader.py"
+}
