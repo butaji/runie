@@ -1,0 +1,17 @@
+{
+  "id": "progressive_disclosure",
+  "name": "Progressive Disclosure - Advanced Options Hidden",
+  "description": "Test that advanced options are hidden behind discoverable affordances. Per Hick's Law, users should not be overwhelmed by options. Primary actions are prominent; advanced options are discoverable but not in the way.",
+  "setup": {
+    "files": {
+      "src/progressive_disclosure.rs": "/// Module demonstrating progressive disclosure pattern.\npub struct ProgressiveDisclosure {\n    pub primary_options: Vec<String>,\n    pub advanced_options: Vec<String>,\n    pub show_advanced: bool,\n}\n\nimpl ProgressiveDisclosure {\n    pub fn new() -> Self {\n        Self {\n            // Primary: Always visible\n            primary_options: vec![\n                \"Confirm\".to_string(),\n                \"Cancel\".to_string(),\n            ],\n            // Advanced: Hidden by default\n            advanced_options: vec![\n                \"Always Allow\".to_string(),\n                \"Skip This Step\".to_string(),\n            ],\n            show_advanced: false,\n        }\n    }\n    \n    /// Get visible options based on disclosure state\n    pub fn visible_options(&self) -> Vec<String> {\n        let mut opts = self.primary_options.clone();\n        if self.show_advanced {\n            opts.extend(self.advanced_options.clone());\n        }\n        opts\n    }\n    \n    /// Show advanced options\n    pub fn reveal_advanced(&mut self) {\n        self.show_advanced = true;\n    }\n    \n    /// Hide advanced options\n    pub fn hide_advanced(&mut self) {\n        self.show_advanced = false;\n    }\n}\n"
+    }
+  },
+  "expected": {
+    "primary_options_visible": true,
+    "advanced_options_hidden_by_default": true,
+    "advanced_revealed_on_interaction": true,
+    "show_advanced_toggle_exists": true
+  },
+  "grader": "grader.py"
+}
