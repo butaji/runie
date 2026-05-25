@@ -1,0 +1,15 @@
+{
+  "id": "permission_rollback_test",
+  "name": "Permission cancel rolls back partial file changes",
+  "description": "When the agent starts a file edit and the user cancels the permission, any partial changes to files must be rolled back. Implement a Cmd::Rollback variant that takes a tool_call_id, stores pre-execution snapshots, and reverts changes on cancel. The workspace must be in a consistent state after cancellation.",
+  "setup": {
+    "files": {}
+  },
+  "expected": {
+    "has_rollback_cmd": true,
+    "has_snapshot": true,
+    "has_revert": true,
+    "cancel_triggers_rollback": true
+  },
+  "grader": "grader.py"
+}
