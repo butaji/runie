@@ -1,221 +1,386 @@
-# Behavior Gaps — Undefined State Transitions
+# Behavior Audit - Undefined State Transitions
 
-**Date:** 2024-05-24  
-**Auditor:** ralph/overnight-audit  
+## Overview
 
----
-
-## State Machine Overview
-
-The Runie agent TUI can be modeled as a finite state machine with these primary states:
-
-```
-                    ┌─────────────────────────────────────────┐
-                    │                                         │
-                    ▼                                         │
-┌─────────┐    ┌─────────────┐    ┌──────────────────────────▼┐
-│ Onboard │───▶│    Chat     │◀───│ Permission (blocking)    │
-│   ing   │    │             │    │                          │
-└─────────┘    └──────┬──────┘    └──────────────────────────┘
-       ▲              │                     │
-       │              │                     │
-       │              ▼                     │
-       │         ┌─────────┐                │
-       │         │ Running │◀───────────────┘
-       │         │ (Agent) │   (Tool permission)
-       │         └────┬────┘
-       │              │
-       │              ▼
-       │    ┌─────────────────┐
-       └─── │     Error        │
-            │  (Recoverable)   │
-            └─────────────────┘
-```
-
-**Secondary Modes (overlays):**
-- `TuiMode::CommandPalette`
-- `TuiMode::DiffViewer`
-- `TuiMode::SessionTree`
-- `TuiMode::Overlay`
-- `TuiMode::Select`
+This document identifies undefined or implicit state transitions in the agent loop and TUI state machine. Each undefined transition is a potential bug.
 
 ---
 
-## Gap 1: Interrupted → Error (Undefined Transition)
+## Agent Loop State Machine
 
-**Status:** Partially Defined  
-**File:** `crates/runie-agent/src/loop_engine.rs`  
-**Location:** `run_agent_loop()` function
-
-**Issue:** When `Msg::Stop` is received mid-turn, the agent loop has no clean exit path. The `Interrupt` command is sent from TUI, but the loop doesn't check for interruption between tool executions.
-
-**Current Behavior:** The TUI correctly handles interrupt by setting `agent_running = false` and returning to Chat mode. However, the agent task may still be running.
-
-**Missing Transition:** `Running` + `Interrupt` → `Error(Interrupted)` — needs agent loop to check for interruption.
-
----
-
-## Gap 2: Permission Denied → Partial Rollback (Incomplete)
-
-**Status:** Defined  
-**File:** `crates/runie-agent/src/loop_engine.rs`, `crates/runie-tui/src/tui/update/agent.rs`  
-**Location:** `handle_permission()` and `handle_permission_msg()`
-
-**Issue:** When permission is denied, the TUI sends a `Rollback` command. The command exists and is processed, but actual file system rollback logic needs verification.
-
-**Current Behavior:**
+### States
 ```rust
-// TUI update/agent.rs
-let should_rollback = tool_call_id.is_some()
-    && (matches!(decision, PermissionDecision::Deny { .. })
-        || matches!(decision, PermissionDecision::Skip { .. }));
-
-let mut cmds = vec![Cmd::SendPermission { decision }];
-if should_rollback {
-    cmds.push(Cmd::Rollback { tool_call_id: tool_call_id.unwrap() });
+enum AgentState {
+    Idle,           // No active agent
+    Running,        // Agent streaming
+    WaitingPermission, // Blocked on permission
+    ToolExecuting,  // Tool running
+    Error,          // Terminal error
+    Completed,      // Turn done
 }
 ```
 
-**Status:** `Cmd::Rollback` is defined and sent. Actual rollback implementation needs verification.
+### Current Transition Map
 
----
+| From | Event | To | Defined? |
+|------|-------|-----|----------|
+| Idle | SpawnAgent | Running | ✅ |
+| Running | MessageChunk | Running | ✅ |
+| Running | ToolCall | WaitingPermission | ✅ |
+| WaitingPermission | Allow | ToolExecuting | ✅ |
+| WaitingPermission | Deny | Completed | ✅ |
+| WaitingPermission | Timeout | Completed | ✅ |
+| ToolExecuting | ToolResult | Running | ✅ |
+| Running | Error | Error | ✅ |
+| Running | MessageEnd | Completed | ✅ |
+| **Any** | **Ctrl+C** | **Idle** | ❌ Undefined |
 
-## Gap 3: Network Drop During Tool Call → No Retry
+### Gap 1: Cancellation Not Explicit
 
-**Status:** Identified (Gap BG-3)  
-**File:** `crates/runie-tools/src/bash.rs`, `edit_file.rs`, `write_file.rs`  
-**Location:** `Tool::execute()` implementations
+**Location:** `crates/runie-agent/src/loop_engine.rs`
 
-**Issue:** Tool execution can fail due to network issues. There's no retry logic.
+**Issue:** `Cmd::Interrupt` aborts the task but doesn't define what state the agent should be in afterward:
 
-**Harness Task:** Added `harness/tasks/network_retry/` to track this gap.
-
-**Proposed Fix:** Add retry wrapper with exponential backoff for transient errors.
-
----
-
-## Gap 4: File Deleted During Edit → No Detection
-
-**Status:** Identified (Gap BG-3)  
-**File:** `crates/runie-tools/src/edit_file.rs`  
-**Location:** `EditFileTool::execute()`
-
-**Issue:** If a file is deleted or modified between read and write, the tool will fail or overwrite changes.
-
-**Harness Task:** Added `harness/tasks/file_stale_edit/` to track this gap.
-
-**Proposed Fix:** Store file mtime on read, verify on write, return StaleEdit error if mismatch.
-
----
-
-## Gap 5: Model Streams Garbage → No Validation
-
-**Status:** Tracked via Harness  
-**File:** `crates/runie-ai/src/` (provider implementations)  
-**Location:** Streaming implementations
-
-**Issue:** If the model returns malformed tokens, the agent may crash.
-
-**Harness Task:** `harness/tasks/streaming_garbage/` exists to track this.
-
----
-
-## Gap 6: DAG Cycle Detection (Future Consideration)
-
-**Status:** Not Yet Applicable  
-**File:** Not yet implemented  
-**Location:** Tool dependency tracking
-
-**Issue:** If tools could call other tools (agent-in-agent), cycles could cause infinite loops.
-
-**Current Status:** Currently tools don't call other tools, so this isn't an issue.
-
----
-
-## Gap 7: Idempotency — Re-running Same Command
-
-**Status:** Partially Addressed  
-**File:** `crates/runie-tui/src/tui/update/misc.rs`  
-**Location:** `handle_submit()`
-
-**Issue:** User can submit the same message twice in quick succession.
-
-**Current Behavior:** 
 ```rust
-// BG-7 & P1-4 FIX: Block double-submit with user feedback
-if state.agent_running {
+Cmd::Interrupt => {
+    if let Some(handle) = agent_task.take() {
+        handle.abort();  // ← Task killed, state undefined
+    }
+    vec![]
+}
+```
+
+**Problem:** 
+- `agent_running` in TUI is set to false
+- But agent loop may have been mid-stream
+- No cleanup of partial tool executions
+- Workspace may have partial edits
+
+**Proposed Fix:**
+```rust
+Cmd::Interrupt => {
+    // Signal graceful stop
+    stop_token.cancel();
+    
+    // Wait briefly for cleanup
+    if let Some(handle) = agent_task.take() {
+        match tokio::time::timeout(Duration::from_secs(2), handle).await {
+            Ok(_) => {} // Clean shutdown
+            Err(_) => handle.abort(), // Force kill if slow
+        }
+    }
+    
+    // Reset state
+    state.agent_running = false;
+    state.mode = TuiMode::Chat;
+    
+    vec![]
+}
+```
+
+---
+
+### Gap 2: Panic Recovery Not Defined
+
+**Location:** `crates/runie-agent/src/loop_engine.rs:195-215`
+
+**Issue:** When a tool panics, rollback happens but state transitions are unclear:
+
+```rust
+if let Err(panic_info) = result {
+    // Rollback partial changes
+    workspace.rollback()?;
+    
+    return ToolResult {
+        // ... error result
+        is_error: true,
+    };
+}
+```
+
+**Problem:**
+- No `Panic` event to TUI
+- No transition to `Error` state
+- Agent continues waiting for result
+
+**Proposed Fix:**
+```rust
+if let Err(panic_info) = result {
+    let panic_msg = panic_info.to_string();
+    
+    // Send panic event to TUI
+    event_tx.send(AgentEvent::Panic { 
+        tool_name: name.clone(),
+        message: panic_msg.clone(),
+    }).await?;
+    
+    // Rollback workspace
+    workspace.rollback()?;
+    
+    // Return error result - agent loop will continue
+    return ToolResult {
+        is_error: true,
+        // ...
+    };
+}
+```
+
+---
+
+### Gap 3: Network Error Mid-Stream
+
+**Location:** `crates/runie-agent/src/rig_loop.rs:75-85`
+
+**Issue:** Stream errors are logged but not explicitly handled:
+
+```rust
+while let Some(chunk) = stream.next().await {
+    match chunk {
+        Ok(StreamedAssistantContent::Text(text)) => {
+            // Process
+        }
+        Err(e) => {
+            tracing::error!("Stream error: {}", e);
+            // ← Falls through, continues loop
+        }
+    }
+}
+```
+
+**Problem:**
+- Loop continues with empty/incomplete message
+- No error event sent to TUI
+- User sees partial response
+
+**Proposed Fix:**
+```rust
+Err(e) => {
+    tracing::error!("Stream error: {}", e);
+    
+    event_tx.send(AgentEvent::Error { 
+        message: format!("Stream interrupted: {}", e),
+    }).await?;
+    
+    // Send partial message if any
+    if !text_content.is_empty() {
+        assistant_message.content = vec![ContentPart::Text { text: text_content }];
+        event_tx.send(AgentEvent::MessageEnd { 
+            message: assistant_message.clone(),
+        }).await?;
+    }
+    
+    break;  // Exit stream loop
+}
+```
+
+---
+
+## TUI State Machine
+
+### Modes (TuiMode)
+```rust
+enum TuiMode {
+    Chat,           // Main input mode
+    Overlay,        // Modal overlay
+    Select,         // Text selection
+    Permission,     // Permission dialog
+    CommandPalette, // Command search
+    DiffViewer,     // Git diff view
+    SessionTree,    // Session browser
+    Onboarding,     // First-run setup
+}
+```
+
+### Current Transition Map
+
+| From | Event | To | Defined? |
+|------|-------|-----|----------|
+| Onboarding | Complete | Chat | ✅ |
+| Onboarding | Skip | Chat | ✅ |
+| Chat | PermissionRequest | Permission | ✅ |
+| Permission | Allow/Deny | Chat | ✅ |
+| Permission | Timeout | Chat | ✅ |
+| Chat | Ctrl+K | CommandPalette | ✅ |
+| CommandPalette | Esc/Enter | Chat | ✅ |
+| Chat | ^Q | (quit) | ✅ |
+| **Chat** | **Error event** | **???** | ❌ Undefined |
+
+### Gap 4: Error State in TUI Not Defined
+
+**Location:** `crates/runie-tui/src/tui/update/agent.rs`
+
+**Issue:** `AgentEvent::Error` is handled but doesn't change mode:
+
+```rust
+pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
+    match event {
+        // ...
+        AgentEvent::Error { message } => on_agent_error(state, message),
+        // ...
+    }
+}
+
+pub fn on_agent_error(state: &mut AppState, message: String) {
+    state.agent_running = false;
     state.messages.push(MessageItem::System {
-        text: "Agent is still running...".to_string(),
+        text: format!("Error: {}", message),
+        // No mode change, no recovery action
     });
+}
+```
+
+**Problem:**
+- Error message added to chat but no visual emphasis
+- No "recover" action offered
+- User may not notice error
+
+**Proposed Fix:**
+```rust
+pub fn on_agent_error(state: &mut AppState, message: String) {
+    state.agent_running = false;
+    
+    // Show error prominently
+    state.messages.push(MessageItem::Error {
+        text: message.clone(),
+        recoverable: true,  // Can retry
+    });
+    
+    // Update status bar
+    state.top_bar.status = Some("Error".to_string());
+    
+    // Offer recovery
+    state.messages.push(MessageItem::System {
+        text: "Press Enter to retry or type a new message".to_string(),
+    });
+}
+```
+
+---
+
+### Gap 5: Idempotency of Submit
+
+**Location:** `crates/runie-tui/src/tui/update/misc.rs:18-50`
+
+**Issue:** Submit can be called multiple times in quick succession:
+
+```rust
+if state.agent_running {
+    // Blocked, but message added
+}
+```
+
+**Problem:**
+- Multiple "Agent is still running" messages if clicked fast
+- Race condition between `agent_running` check and state update
+
+**Proposed Fix:**
+```rust
+// Atomic check-and-set
+let expected = false;
+if state.agent_running.compare_exchange(expected, true, ...).is_err() {
+    // Already running, show feedback
+    state.input_right_info = "Agent running...".to_string();
     return vec![];
 }
 ```
 
-**Gap:** There's still a potential race window between `agent_running` check and setting it.
-
 ---
 
-## Undefined Transition Matrix
+### Gap 6: Workspace Concurrency Not Handled
 
-| From State | Event | To State | Status |
-|------------|-------|----------|--------|
-| Running | ToolPanic | Error | ✅ Caught by panic catch |
-| Running | Interrupt | Error | ⚠️ Partial (TUI handles, agent loop needs) |
-| Permission | Deny | Chat | ✅ Rollback command sent |
-| Chat | NetworkDrop | Error | ❌ Gap BG-3 |
-| Running | FileDeleted | Error | ❌ Gap BG-3 |
-| Thinking | GarbageToken | Error | ⚠️ Tracked via harness |
-| Chat | DuplicateSubmit | Chat | ⚠️ Partial (race window) |
-| Onboarding | InvalidAPIKey | Onboarding | ❌ Gap BG-4 |
-| Any | Panic | Crash | ✅ Only caught by outer handler |
+**Location:** `crates/runie-tools/src/workspace.rs`
 
----
+**Issue:** Multiple tools may edit same file simultaneously:
 
-## Implemented Fixes
-
-### ✅ Gap BG-1: Permission Queue Visibility
-Permission requests are now queued when in blocking mode (DiffViewer, SessionTree, etc.). Queue processing is handled when the modal is closed.
-
-### ✅ Gap BG-2: Agent Error Resets Mode
-When agent errors out, mode always resets to Chat (unless in Onboarding). This prevents getting stuck in Permission mode.
-
-### ✅ Gap BG-5: Agent End Clears Permission Modal
-When agent ends, any pending permission modal is cleared.
-
-### ✅ Gap BG-6: Submit Blocked with Feedback
-Double submit is blocked while agent is running, with user feedback.
-
-### ✅ Gap BG-7: Permission Timeout Countdown
-Permission modal now displays countdown timer.
-
----
-
-## Recommended Test Coverage
-
-| Test | Status |
-|------|--------|
-| test_interrupted_agent_cleanup | ⚠️ Partial - TUI works, agent loop needs |
-| test_permission_rollback | ✅ Command sent |
-| test_network_retry | ❌ Gap BG-3 |
-| test_file_modified_during_edit | ❌ Gap BG-3 |
-| test_garbage_token_handling | ⚠️ Tracked via harness |
-| test_duplicate_submit_blocked | ✅ Works |
-
----
-
-## Harness Integration
-
-The test harness at `harness/` provides SWE-bench style evaluation:
-
-```bash
-# Run all tasks
-./harness/run.sh
-
-# Run specific task
-./harness/run.sh --task empty_state --verbose
-
-# With custom model
-./harness/run.sh --model gpt-4o
+```rust
+pub struct Workspace {
+    root: PathBuf,
+    // No file locking
+}
 ```
 
-**Current Results:** 81% pass rate (9/11 tasks passing)
+**Problem:**
+- Tool A reads file, Tool B writes file
+- Tool A writes based on stale data
+- Lost update
+
+**Proposed Fix:**
+```rust
+pub struct Workspace {
+    root: PathBuf,
+    file_locks: Arc<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>>,
+}
+
+impl Workspace {
+    pub async fn with_lock<F, R>(&self, path: &Path, f: F) -> Result<R, ToolError>
+    where F: FnOnce() -> R {
+        let lock = self.file_locks.entry(path.to_path_buf())
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone();
+        let _guard = lock.lock().await;
+        f().await
+    }
+}
+```
+
+---
+
+## Tool Execution Idempotency
+
+### Gap 7: Same Tool Called Twice
+
+**Location:** `crates/runie-agent/src/loop_engine.rs`
+
+**Issue:** If agent sends same tool call twice (e.g., after error recovery), it's executed twice:
+
+```rust
+for (tool_use, _tool_name, _args_str) in pending_tool_calls {
+    // Each call executed independently
+    execute_tool(tool_use, ...).await;
+}
+```
+
+**Problem:**
+- `grep` run twice with same args
+- `write_file` creates duplicate content
+
+**Proposed Fix:**
+```rust
+let mut seen: HashSet<String> = HashSet::new();
+
+for (tool_use, ...) in pending_tool_calls {
+    let call_key = format!("{}_{}", name, args_str);
+    
+    if seen.contains(&call_key) {
+        tracing::warn!("Duplicate tool call skipped: {}", name);
+        continue;
+    }
+    seen.insert(call_key);
+    
+    execute_tool(tool_use, ...).await;
+}
+```
+
+---
+
+## Summary of Proposed Fixes
+
+| Gap | Description | Proposed Fix | Priority |
+|-----|-------------|--------------|----------|
+| 1 | Cancellation undefined | Explicit shutdown sequence | P0 |
+| 2 | Panic not explicit | Add Panic event | P0 |
+| 3 | Stream error handling | Error event + partial send | P1 |
+| 4 | TUI error state | Recovery actions | P1 |
+| 5 | Submit idempotency | Atomic check | P2 |
+| 6 | Workspace concurrency | File locking | P1 |
+| 7 | Tool call deduplication | HashSet dedup | P2 |
+
+---
+
+## Test Coverage Needed
+
+1. **Cancellation test:** Spawn agent, interrupt mid-turn, verify clean state
+2. **Panic test:** Tool panics, verify error handling
+3. **Stream error test:** Simulate network drop, verify partial + error
+4. **Idempotency test:** Submit twice, verify single execution
+5. **Concurrency test:** Two agents edit same file, verify lock
