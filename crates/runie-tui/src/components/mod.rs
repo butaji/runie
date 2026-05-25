@@ -1,4 +1,5 @@
 pub mod overlay;
+pub mod model_picker;
 pub mod onboarding;
 pub mod code_block;
 pub mod collapsible;
@@ -30,5 +31,6 @@ pub use permission_modal::{PermissionModal, PermissionAction};
 pub use command_palette::{CommandPalette, PaletteCommand};
 pub use context_panel::{ContextPanel, GitChange, GitStatus};
 pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
+pub use model_picker::{ModelPicker, ModelInfo, ProviderGroup};
 pub use modal::Modal;
 pub use dialog_frame::DialogFrame;

@@ -12,7 +12,7 @@ pub fn event_to_msg(event: Event, _state: &AppState) -> Vec<Msg> {
 
 pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     // P0-3/P0-4 FIX: Blocking modes intercept ALL keys (no global hotkeys)
-    if let Some(msg) = blocking_mode_handler(&key, &state.mode) {
+    if let Some(msg) = blocking_mode_handler(&key, &state.mode, state) {
         return msg;
     }
     
@@ -27,10 +27,10 @@ pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<M
 
 /// Handles keys in blocking modes (Permission, Overlay).
 /// These intercept ALL keys, preventing accidental Ctrl+ shortcuts from quitting the app.
-fn blocking_mode_handler(key: &crossterm::event::KeyEvent, mode: &TuiMode) -> Option<Option<Msg>> {
+fn blocking_mode_handler(key: &crossterm::event::KeyEvent, mode: &TuiMode, state: &AppState) -> Option<Option<Msg>> {
     match mode {
         TuiMode::Permission => Some(key_to_permission_msg(*key)),
-        TuiMode::Overlay => Some(key_to_overlay_msg(*key)),
+        TuiMode::Overlay => Some(key_to_overlay_msg(*key, state)),
         _ => None,
     }
 }
@@ -53,6 +53,7 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
             }
         }
         KeyCode::Char('q') => Some(Some(Msg::Quit)),
+        KeyCode::Char('m') => Some(Some(Msg::SwitchModel)),
         _ => None,
     }
 }
@@ -71,16 +72,31 @@ fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -
     }
 }
 
-fn key_to_overlay_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+fn key_to_overlay_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     // P0-4 FIX: Esc closes overlay; Ctrl+Q also closes
     if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('q')) {
         return Some(Msg::CloseModal);
+    }
+    // Route to model picker specific messages when model_picker is active
+    if state.model_picker.is_some() {
+        return key_to_model_picker_msg(key);
     }
     match key.code {
         KeyCode::Esc => Some(Msg::CloseModal),
         KeyCode::Up | KeyCode::Char('k') => Some(Msg::SelectUp),
         KeyCode::Down | KeyCode::Char('j') => Some(Msg::SelectDown),
         KeyCode::Enter => Some(Msg::SelectConfirm),
+        _ => None,
+    }
+}
+
+fn key_to_model_picker_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseModal),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::SelectUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::SelectDown),
+        KeyCode::Enter => Some(Msg::SelectConfirm),
+        KeyCode::Char('d') => Some(Msg::SelectToggleDetails),
         _ => None,
     }
 }
