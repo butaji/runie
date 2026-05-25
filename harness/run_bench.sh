@@ -18,15 +18,23 @@
 
 set -e
 
+# Debug: uncomment to see verbose output
+# set -x
+
 # Defaults
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HARNESS_DIR="$(dirname "$SCRIPT_DIR")"
-TASKS_DIR="$SCRIPT_DIR/tasks"
 VERBOSE=0
 OUTPUT_CSV=0
 SINGLE_TASK=""
 MODEL=""
 PYTHON="${PYTHON:-python3}"
+
+# Change to harness directory so tasks path is correct
+cd "$SCRIPT_DIR"
+
+# TASKS_DIR must be relative to current directory after cd
+TASKS_DIR="tasks"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -74,7 +82,7 @@ print_csv_header() {
 run_task() {
     local task_id="$1"
     local task_dir="$TASKS_DIR/$task_id"
-    local start_time=$(date +%s%3N)
+    local start_time=$(date +%s)
     
     # Check task exists
     if [[ ! -d "$task_dir" ]]; then
@@ -113,8 +121,8 @@ run_task() {
     grader_output=$("$PYTHON" "$task_dir/grader.py" 2>&1) || true
     local grader_exit=$?
     
-    local end_time=$(date +%s%3N)
-    local elapsed=$((end_time - start_time))
+    local end_time=$(date +%s)
+    local elapsed=$(((end_time - start_time) * 1000))
     
     # Parse grader output
     local status="error"
@@ -173,7 +181,7 @@ main() {
         echo "───────────────────────────────────────────────────────────────"
     fi
     
-    local total_start=$(date +%s%3N)
+    local total_start=$(date +%s)
     local pass_count=0
     local fail_count=0
     local total_checks_passed=0
@@ -201,8 +209,8 @@ main() {
         fi
     done
     
-    local total_end=$(date +%s%3N)
-    local total_elapsed=$((total_end - total_start))
+    local total_end=$(date +%s)
+    local total_elapsed=$(((total_end - total_start) * 1000))
     
     # Summary
     if [[ $OUTPUT_CSV -eq 0 ]]; then
