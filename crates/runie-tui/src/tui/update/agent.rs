@@ -90,9 +90,27 @@ pub fn on_agent_end(state: &mut AppState) {
     state.current_model = None;
 }
 
+// P2-1: Use structured error with recoverable flag for better error presentation
 pub fn on_agent_error(state: &mut AppState, message: String) {
-    state.messages.push(MessageItem::System { text: format!("Error: {}", message) });
+    // Determine if error is recoverable based on error patterns
+    let recoverable = is_recoverable_error(&message);
+    state.messages.push(MessageItem::Error { message, recoverable });
     state.agent_running = false;
+}
+
+/// Classify errors as recoverable or fatal
+fn is_recoverable_error(message: &str) -> bool {
+    // Transient/network errors are typically recoverable
+    let recoverable_patterns = [
+        "timeout",
+        "connection refused",
+        "network",
+        "temporary",
+        "rate limit",
+        "too many requests",
+    ];
+    let message_lower = message.to_lowercase();
+    recoverable_patterns.iter().any(|p| message_lower.contains(p))
 }
 
 pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
@@ -134,6 +152,8 @@ pub fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
             stop_reason: None,
             error_message: None,
         }),
+        // P2-1: Don't include Error messages in agent context
+        MessageItem::Error { .. } => None,
         _ => None,
     }).collect()
 }

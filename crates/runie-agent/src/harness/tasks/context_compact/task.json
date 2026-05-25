@@ -1,0 +1,19 @@
+{
+  "id": "context_compact",
+  "name": "Implement context window compaction",
+  "description": "The `compact_context` function in src/compactor.rs takes a vector of messages and reduces context usage by: (1) removing duplicate system prompts, (2) collapsing consecutive user messages into summaries, (3) removing very old messages beyond a configurable window (default: keep last 20 messages). Return the compacted message list.",
+  "setup": {
+    "files": {
+      "src/compactor.rs": "use serde::{Deserialize, Serialize};\n\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct Message {\n    pub role: String,\n    pub content: String,\n}\n\n/// Compacts a list of messages to reduce context usage.\n/// Currently returns the input unchanged - needs implementation.\npub fn compact_context(messages: Vec<Message>, max_messages: usize) -> Vec<Message> {\n    // TODO: Implement compaction logic\n    messages\n}\n\n/// Counts the approximate 'tokens' used by a message (rough estimate).\nfn count_tokens(msg: &Message) -> usize {\n    msg.content.split_whitespace().count() + 10 // rough estimate\n}\n",
+      "src/lib.rs": "pub mod compactor;\n\npub use compactor::{compact_context, Message};\n",
+      "tests/test_compactor.rs": "use mylib::{compact_context, Message};\n\n#[test]\nfn test_keeps_recent_messages() {\n    let msgs: Vec<Message> = (0..30)\n        .map(|i| Message {\n            role: \"user\".to_string(),\n            content: format!(\"message {}\", i),\n        })\n        .collect();\n    \n    let result = compact_context(msgs, 20);\n    assert!(result.len() <= 20, \"Should keep at most 20 messages\");\n    // Last messages should be preserved\n    assert!(result.last().map(|m| m.content.contains(\"29\")).unwrap_or(false));\n}\n\n#[test]\nfn test_removes_duplicates() {\n    let msgs = vec![\n        Message { role: \"system\".to_string(), content: \"You are a helpful assistant.\".to_string() },\n        Message { role: \"system\".to_string(), content: \"You are a helpful assistant.\".to_string() },\n        Message { role: \"user\".to_string(), content: \"Hello\".to_string() },\n    ];\n    \n    let result = compact_context(msgs, 10);\n    let system_count = result.iter().filter(|m| m.role == \"system\").count();\n    assert_eq!(system_count, 1, \"Should have at most 1 system message\");\n}\n"
+    }
+  },
+  "expected": {
+    "respects_max_messages": true,
+    "keeps_recent": true,
+    "removes_duplicates": true,
+    "is_idempotent": true
+  },
+  "grader": "grader.py"
+}

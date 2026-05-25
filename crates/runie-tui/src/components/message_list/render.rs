@@ -100,6 +100,7 @@ pub fn get_msg_type(msg: &MessageItem) -> &'static str {
         MessageItem::ToolCall { .. } => "tool",
         MessageItem::Edit { .. } => "edit",
         MessageItem::System { .. } => "system",
+        MessageItem::Error { .. } => "error", // P2-1: Structured error type
         MessageItem::ToolRunning { .. } => "tool_running",
         MessageItem::ToolComplete { .. } => "tool_complete",
         MessageItem::PlanStep { .. } => "plan_step",
@@ -149,6 +150,10 @@ pub fn render_single_msg(
         }
         MessageItem::System { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
+        }
+        // P2-1: Render structured error messages with [!] icon and recovery hint
+        MessageItem::Error { message, recoverable } => {
+            render_error_msg(message, *recoverable, area, row, margin_x, text_x, buf, error, text_muted)
         }
         MessageItem::ToolRunning { name, args, duration_ms } => {
             render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
@@ -272,6 +277,30 @@ fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u1
     let line = Line::raw(text).style(Style::default().fg(color));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
+}
+
+// P2-1: Render structured error messages with [!] icon and recovery hint
+fn render_error_msg(message: &str, recoverable: bool, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, text_muted: ratatui::style::Color) -> u16 {
+    let inner_x = margin_x + 1;
+    
+    // Draw [!] icon
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('!');
+        cell.set_style(Style::default().fg(error).add_modifier(ratatui::style::Modifier::BOLD));
+    }
+    
+    // Draw error message
+    let msg_line = Line::raw(message).style(Style::default().fg(error));
+    buf.set_line(text_x, area.y + row, &msg_line, area.width - 4);
+    
+    // Draw recovery hint if recoverable
+    if recoverable {
+        let hint_line = Line::raw("(press Enter to retry)").style(Style::default().fg(text_muted).add_modifier(ratatui::style::Modifier::DIM));
+        buf.set_line(text_x, area.y + row + 1, &hint_line, area.width - 4);
+        2 // Return 2 lines for message + hint
+    } else {
+        1
+    }
 }
 
 fn render_tool_call_msg(

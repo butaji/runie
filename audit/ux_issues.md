@@ -63,12 +63,16 @@ In `key_to_msg`, DiffViewer mode calls `key_to_diff_msg`. That function maps `Es
 
 ## P1 — Cognitive Load and Inconsistent Keybindings
 
-### P1-1: Permission modal — four options on one screen (Hick's Law violation)
-**File:** `crates/runie-tui/src/components/permission_modal.rs` → `render_buttons()`
+### P1-1: Permission modal — four options on one screen (Hick's Law violation) ✓ FIXED
+**File:** `crates/runie-tui/src/components/permission_modal.rs` → `render_buttons()` + `crates/runie-tui/src/tui/render.rs`
 
-The permission modal shows four options simultaneously: `[Y] Confirm`, `[N] Cancel`, `[A] Always`, `[S] Skip`. This is 4 active choices with no progressive disclosure.
+**Before:** The permission modal showed four options simultaneously: `[Y] Confirm`, `[N] Cancel`, `[A] Always`, `[S] Skip`. This is 4 active choices with no progressive disclosure.
 
-**Fix:** Show only two options by default: `[Y] Confirm (once)`, `[N] Cancel`. Move `[A] Always` and `[S] Skip` to a secondary row labeled `"[a] always allow"` and `"[s] skip this step"`. This reduces visible options from 4 to 2 primary + 2 discoverable.
+**Fix Applied:**
+- Reduced to 2 primary options: `[Y/Enter] Confirm` and `[N/Esc] Cancel`
+- Secondary options `[a] always allow` and `[s] skip this step` shown as dimmed/hint text
+- Updated status bar to show `("y/Enter", "confirm"), ("Esc/n", "cancel"), ("a", "always")`
+- All keyboard shortcuts still work but are discoverable rather than all visible
 
 ---
 
@@ -121,19 +125,17 @@ The `Ctrl+C → empty input → quit` behavior is not reflected in the status ba
 
 ## P2 — Invalid State Degradation
 
-### P2-1: Agent error event shows raw `format!("Error: {}", message)` — no structured presentation
-**File:** `crates/runie-tui/src/tui/update/agent.rs` → `on_agent_error()`
+### P2-1: Agent error event shows raw `format!("Error: {}", message)` — no structured presentation ✓ FIXED
+**File:** `crates/runie-tui/src/tui/update/agent.rs` + `components/message_list/types.rs` + `components/message_list/render.rs`
 
-```rust
-pub fn on_agent_error(state: &mut AppState, message: String) {
-    state.messages.push(MessageItem::System { text: format!("Error: {}", message) });
-    state.agent_running = false;
-}
-```
+**Before:** Errors were dumped as plain text `System` messages. Users saw `"Error: connection refused"` without knowing if it's recoverable.
 
-The error is dumped as a plain text `System` message. Users see `"Error: connection refused"` without knowing if it's recoverable.
-
-**Fix:** Create a dedicated `MessageItem::Error { message: String, recoverable: bool }` variant. Render it with an `[!]` icon, error color, and if `recoverable`, show `"(press Enter to retry)"`.
+**Fix Applied:**
+1. Added new `MessageItem::Error { message: String, recoverable: bool }` variant in `types.rs`
+2. Updated `on_agent_error()` to classify errors as recoverable vs fatal based on error patterns (timeout, network, rate limit = recoverable)
+3. Added `render_error_msg()` function that shows `[!]` icon with error color and optional "(press Enter to retry)" hint
+4. Updated `to_agent_messages()` to exclude Error messages from agent context
+5. Updated `get_msg_type()` to handle the new Error variant
 
 ---
 

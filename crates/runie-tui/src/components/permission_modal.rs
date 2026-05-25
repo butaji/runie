@@ -183,26 +183,25 @@ fn render_buttons(area: Rect, buf: &mut Buffer, selected: usize, accent_secondar
     let inner_width = area.width.saturating_sub(2);
     let buttons_y = area.y + area.height - 3;
 
+    // P1-1: Progressive disclosure - show 2 primary options, 2 as discoverable hints
     let confirm_style = button_style(selected, 0, accent_secondary, text_muted);
     let cancel_style = button_style(selected, 1, accent_secondary, text_muted);
-    let always_style = button_style(selected, 2, accent_secondary, text_muted);
-    let skip_style = button_style(selected, 3, accent_secondary, text_muted);
 
+    // Primary row: Confirm and Cancel (the main actions)
     let row1 = Line::from(vec![
-        Span::styled("[Y] ", Style::default().fg(text_muted)),
+        Span::styled("[Y/Enter] ", Style::default().fg(text_muted)),
         Span::styled("Confirm", confirm_style),
-        Span::styled("  ", Style::default()),
-        Span::styled("[N] ", Style::default().fg(text_muted)),
+        Span::styled("    ", Style::default()),
+        Span::styled("[N/Esc] ", Style::default().fg(text_muted)),
         Span::styled("Cancel", cancel_style),
     ]);
     buf.set_line(inner_x, buttons_y, &row1, inner_width);
 
+    // Secondary row: hidden options as discoverable hints (dimmed)
     let row2 = Line::from(vec![
-        Span::styled("[A] ", Style::default().fg(text_muted)),
-        Span::styled("Always", always_style),
-        Span::styled("  ", Style::default()),
-        Span::styled("[S] ", Style::default().fg(text_muted)),
-        Span::styled("Skip", skip_style),
+        Span::styled("[a] always allow", Style::default().fg(text_muted).add_modifier(Modifier::DIM)),
+        Span::styled("        ", Style::default()),
+        Span::styled("[s] skip this step", Style::default().fg(text_muted).add_modifier(Modifier::DIM)),
     ]);
     buf.set_line(inner_x, buttons_y + 1, &row2, inner_width);
 }
