@@ -60,13 +60,18 @@ fn test_enter_selects_in_palette() {
     let msg = simulate_key(KeyCode::Enter, KeyModifiers::NONE, TuiMode::CommandPalette);
     assert_eq!(msg, Some(Msg::CommandPaletteConfirm), "Enter in CommandPalette should produce Msg::CommandPaletteConfirm");
 
-    // Verify state update - CommandPaletteConfirm closes the palette after confirming
+    // Verify state update - CommandPaletteConfirm closes the palette when selecting a no-arg command
     let mut state = make_state_with_modal(TuiMode::CommandPalette);
     let mut palette = CommandPalette::new();
+    palette.filter(""); // populate filtered_commands
+    // Select a command that does NOT require args (e.g., "new_session")
+    if let Some(idx) = palette.filtered_commands.iter().position(|&i| palette.all_commands()[i].id == "new_session") {
+        palette.selected = idx;
+    }
     state.command_palette.open = true;
     update(&mut state, &mut palette, Msg::CommandPaletteConfirm);
-    // CommandPaletteConfirm closes the palette directly
-    assert!(!state.command_palette.open, "CommandPaletteConfirm should close palette");
+    // CommandPaletteConfirm closes the palette when command executes immediately
+    assert!(!state.command_palette.open, "CommandPaletteConfirm should close palette for no-arg commands");
 }
 
 #[test]
