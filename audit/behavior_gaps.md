@@ -266,20 +266,21 @@ Msg::Stop | Msg::Quit => {
 | Transition | Test Name | Status |
 |---|---|---|
 | Running → Error (network) | `test_network_error_transitions_to_error_state` | **MISSING** |
-| WaitingForPermission → Timeout | `test_permission_timeout_auto_dismisses` | **MISSING** |
+| WaitingForPermission → Timeout | `test_permission_timeout_auto_dismisses` | ✅ FIXED (P1-2) |
 | Error → Idle (dismiss) | `test_error_dismiss_resets_state` | **MISSING** |
-| Chat → Submit (no model) | `test_submit_without_model_shows_warning` | **MISSING** |
-| DiffViewer + Permission | `test_permission_while_in_diffviewer` | Documented (BG-1) |
+| Chat → Submit (no model) | `test_submit_without_model_shows_warning` | ✅ FIXED (P0-2) |
+| DiffViewer + Permission | `test_permission_while_in_diffviewer` | ✅ FIXED (BG-1) |
 
 ---
 
 ## Proposed Fixes Summary
 
-| ID | Description | Priority | Files |
-|---|---|---|---|
-| BG-1 | Queue permission in DiffViewer | High | `update/agent.rs` |
-| BG-2 | Retry limit + transient error classification | High | `loop_engine.rs` |
-| BG-3 | Stream validation for UTF-8 | Medium | `runie-ai/` |
-| BG-4 | Atomic file writes | Medium | `edit_file.rs` |
-| BG-6 | Classify API errors with user-friendly messages | High | `executor.rs` |
-| BG-7 | Transaction log for rollback | Low | `loop_engine.rs`, `tools/` |
+| ID | Description | Priority | Files | Status |
+|---|---|---|---|---|
+| BG-1 | Queue permission in DiffViewer | High | `update/agent.rs` | ✅ FIXED |
+| BG-2 | Retry limit + transient error classification | High | `loop_engine.rs` | ✅ FIXED |
+| BG-3 | Stream validation for UTF-8 | Medium | `runie-ai/` | PARTIAL |
+| BG-4 | Atomic file writes | Medium | `edit_file.rs` | **MISSING** |
+| BG-6 | Classify API errors with user-friendly messages | High | `executor.rs` | PARTIAL |
+| BG-7 | Transaction log for rollback | Low | `loop_engine.rs`, `tools/` | **MISSING** |
+| BG-8 | Ctrl+C during permission wait | High | `events.rs`, `update.rs` | ✅ FIXED |
