@@ -349,6 +349,7 @@ pub async fn run_tui(
             Cmd::Interrupt => {
                 if let Some(handle) = agent_task.take() {
                     handle.abort();
+                    let _ = handle.await;
                 }
                 vec![]
             }

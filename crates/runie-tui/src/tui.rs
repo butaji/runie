@@ -27,6 +27,7 @@ use crate::{
 };
 use crate::components::onboarding::render::render_onboarding;
 use crate::components::render_top_bar;
+use crate::components::message_list::render::WrapCache;
 use crate::tui::view_models::ViewModels;
 use runie_agent::events::{AgentEvent, PermissionDecision};
 
@@ -82,6 +83,8 @@ pub struct Tui {
     dirty: bool,
     action_log: VecDeque<Msg>,
     action_log_capacity: usize,
+    /// Cache for text wrapping to avoid recomputing every frame
+    wrap_cache: WrapCache,
 }
 
 impl Tui {
@@ -123,6 +126,7 @@ impl Tui {
             dirty: true,
             action_log: VecDeque::new(),
             action_log_capacity: 1000,
+            wrap_cache: WrapCache::new(),
         })
     }
 
@@ -196,7 +200,7 @@ impl Tui {
             if is_onboarding {
                 Self::render_onboarding_mode(frame, area, state, vms, main_areas, show_status_bar, theme, theme_colors);
             } else {
-                Self::render_normal_mode(frame, area, state, vms, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme, theme_colors);
+                Self::render_normal_mode(frame, area, state, vms, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, theme, theme_colors, &mut self.wrap_cache);
             }
         })?;
         Ok(())
@@ -224,12 +228,12 @@ impl Tui {
         }
     }
 
-    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_normal_mode(frame: &mut ratatui::Frame, area: Rect, state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors, wrap_cache: &mut WrapCache) {
         Self::clear_background(frame, area, theme_colors.bg_base);
         if show_top_bar {
             render_top_bar(&vms.top_bar, main_areas[0], frame.buffer_mut(), theme_colors);
         }
-        Self::render_content(frame, state, vms, show_sidebar, main_areas[1], theme, theme_colors);
+        Self::render_content(frame, state, vms, show_sidebar, main_areas[1], theme, theme_colors, wrap_cache);
         Self::render_input(frame, state, main_areas[2], theme);
         if show_status_bar {
             render_status_bar(&vms.status_bar, main_areas[3], frame.buffer_mut(), theme_colors);
@@ -247,13 +251,13 @@ impl Tui {
         Layout::vertical(constraints).areas(padded)
     }
 
-    fn render_content(frame: &mut ratatui::Frame, _state: &RenderState, vms: &ViewModels, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_content(frame: &mut ratatui::Frame, _state: &RenderState, vms: &ViewModels, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors, wrap_cache: &mut WrapCache) {
         let mut h_constraints = vec![Constraint::Min(20)];
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
         }
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
-        MessageList::render_ref(&vms.message_list, h_areas[0], frame.buffer_mut(), theme);
+        MessageList::render_ref(&vms.message_list, h_areas[0], frame.buffer_mut(), theme, wrap_cache);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             render_agent_list(&vms.agent_list, h_areas[1], frame.buffer_mut(), theme_colors);
         }
