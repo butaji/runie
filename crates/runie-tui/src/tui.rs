@@ -297,12 +297,18 @@ impl Tui {
 
     fn render_permission_modal(frame: &mut ratatui::Frame, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::dim_background(frame, area, theme_colors);
-        let modal_area = Self::centered_rect(padded, 50, 12);
-        let modal = PermissionModal::new(
+        let modal_area = Self::centered_rect(padded, 50, 14); // Increased height for timeout display
+        let mut modal = PermissionModal::new(
             state.permission_modal.tool.as_deref().unwrap_or(""),
             state.permission_modal.args.as_deref().unwrap_or(""),
             state.permission_modal.desc.as_deref().unwrap_or(""),
         );
+        // P0-3 FIX: Pass timeout countdown
+        const TIMEOUT_SECS: u64 = 300; // 5 minutes
+        modal.timeout_secs = state.permission_modal.timeout_start.map(|start| {
+            let elapsed = start.elapsed().as_secs();
+            TIMEOUT_SECS.saturating_sub(elapsed)
+        });
         modal.render_ref(modal_area, frame.buffer_mut(), theme);
     }
 

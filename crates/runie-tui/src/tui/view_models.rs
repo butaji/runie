@@ -50,6 +50,8 @@ pub struct PermissionModalViewModel {
     pub desc: String,
     pub selected: usize,
     pub visible: bool,
+    // P0-3 FIX: Add timeout countdown display
+    pub timeout_secs: Option<u64>,
 }
 
 // ─── OverlayViewModel ───────────────────────────────────────────────────────
@@ -221,12 +223,21 @@ fn build_permission_modal_vm(state: &crate::tui::state::RenderState) -> Option<P
     if state.mode != TuiMode::Permission {
         return None;
     }
+    
+    // P0-3 FIX: Calculate remaining timeout seconds
+    const TIMEOUT_SECS: u64 = 300; // 5 minutes
+    let timeout_secs = state.permission_modal.timeout_start.map(|start| {
+        let elapsed = start.elapsed().as_secs();
+        TIMEOUT_SECS.saturating_sub(elapsed)
+    });
+    
     Some(PermissionModalViewModel {
         tool: state.permission_modal.tool.clone().unwrap_or_default(),
         args: state.permission_modal.args.clone().unwrap_or_default(),
         desc: state.permission_modal.desc.clone().unwrap_or_default(),
         selected: 0,
         visible: true,
+        timeout_secs,
     })
 }
 
