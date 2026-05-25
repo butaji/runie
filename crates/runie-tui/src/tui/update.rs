@@ -5,9 +5,28 @@ pub mod palette;
 pub mod slash;
 pub mod tree;
 
-use crate::tui::state::{AppState, Msg, Cmd};
+use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use crate::tui::key_to_textarea_input;
 use crate::components::CommandPalette;
+
+// P0-1 FIX: Extracted from update() to reduce function size below 40-line build limit
+fn handle_quit_or_stop(state: &mut AppState, msg: &Msg) -> Vec<Cmd> {
+    state.agent_running = false;
+    if matches!(msg, Msg::Quit) {
+        state.running = false;
+    }
+    // BG-2 FIX: Always reset mode to Chat on interrupt/stop
+    if state.mode != TuiMode::Onboarding {
+        state.mode = TuiMode::Chat;
+    }
+    if matches!(msg, Msg::Stop) {
+        vec![Cmd::Interrupt]
+    } else {
+        vec![]
+    }
+}
+
+
 
 fn route_onboarding(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     match msg {
@@ -52,7 +71,8 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
     let mut cmds = vec![];
 
     match msg {
-        Msg::Quit => { state.running = false; }
+        // P0-1 FIX: Handle Ctrl+C / Stop — interrupt agent and return to Chat mode
+        Msg::Quit | Msg::Stop => { cmds.extend(handle_quit_or_stop(state, &msg)); }
         Msg::Submit => { cmds.extend(misc::handle_submit(state)); }
         // TextareaKey is handled here AND in handle_key (for handle_event path)
         // This ensures tui_run.rs which calls update() directly still gets textarea input
@@ -64,7 +84,7 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         Msg::OpenCommandPalette => { palette::open_palette(state, palette); }
         Msg::CloseModal | Msg::ConfirmModal => { palette::handle_close_modal(state); }
         Msg::AgentEvent(event) => { agent::handle_agent_event(state, event); }
-        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { cmds.push(agent::handle_permission_msg(state, msg)); }
+        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { cmds.extend(agent::handle_permission_msg(state, msg)); }
         Msg::CommandPaletteFilter(_) | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { handle_palette_msg(state, palette, &msg); }
         Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); },
         Msg::ScrollDown | Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }).min(state.messages.len().saturating_sub(1)); },

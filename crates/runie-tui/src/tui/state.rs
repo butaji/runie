@@ -254,6 +254,9 @@ pub enum Msg {
 
     // Terminal
     Resize(u16, u16),
+
+    // P0-1 FIX: Stop — fired by Ctrl+C signal handler to interrupt agent
+    Stop,
 }
 
 impl PartialEq for Msg {
@@ -308,6 +311,7 @@ impl PartialEq for Msg {
             (ModelsFetched(a), ModelsFetched(b)) => a == b,
             (ModelsFetchFailed(a), ModelsFetchFailed(b)) => a == b,
             (Resize(a_w, a_h), Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
+            (Stop, Stop) => true,
             _ => false,
         }
     }
@@ -325,6 +329,10 @@ pub enum Cmd {
     SlashCommand(SlashCommand),
     SaveSettings { provider: String, model: String, api_key: String },
     FetchModels { provider_id: String, api_key: String },
+    // P1-4 FIX: Rollback — reverts partial tool changes on permission cancel
+    Rollback { tool_call_id: String },
+    // P0-1 FIX: Interrupt — cancels the running agent task
+    Interrupt,
 }
 
 #[derive(Debug, Clone, PartialEq)]

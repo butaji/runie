@@ -8,8 +8,8 @@ use super::helpers::simulate_key;
 
 #[test]
 fn test_ctrl_keys_always_quit_in_permission_mode() {
-    // Ctrl+C and Ctrl+Q are GLOBAL hotkeys that always produce Quit
-    // regardless of the current mode (including Permission)
+    // P0-3 FIX: Ctrl+C and Ctrl+Q in Permission mode now PRODUCE PermissionCancel,
+    // not Quit. Blocking modes intercept ALL keys to prevent accidental quit.
     let state = AppState {
         mode: TuiMode::Permission,
         ..Default::default()
@@ -23,7 +23,7 @@ fn test_ctrl_keys_always_quit_in_permission_mode() {
     });
 
     let msg = event_to_msg(event, &state).into_iter().next();
-    assert_eq!(msg, Some(Msg::Quit), "Ctrl+C in Permission mode should always produce Quit");
+    assert_eq!(msg, Some(Msg::PermissionCancel), "Ctrl+C in Permission mode should cancel, not quit");
 }
 
 #[test]
@@ -93,46 +93,55 @@ fn test_arrow_keys_dont_affect_input_in_palette_mode() {
 
 #[test]
 fn test_ctrl_q_always_quits_all_modes() {
-    // Ctrl+Q must produce Quit in EVERY mode
-    let modes = vec![
+    // P0-3 FIX: Ctrl+Q in Permission/Overlay mode now produces PermissionCancel/CloseModal
+    // (blocking modes intercept ALL keys). In other modes, it produces Quit.
+    let quit_modes = vec![
         TuiMode::Chat,
-        TuiMode::Permission,
         TuiMode::CommandPalette,
         TuiMode::DiffViewer,
         TuiMode::SessionTree,
         TuiMode::Onboarding,
-        TuiMode::Overlay,
         TuiMode::Select,
     ];
 
-    for mode in modes {
+    for mode in quit_modes {
         let msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, mode.clone());
         assert_eq!(
             msg,
             Some(Msg::Quit),
-            "Ctrl+Q in {:?} mode should always produce Msg::Quit",
+            "Ctrl+Q in {:?} mode should produce Msg::Quit",
             mode
         );
     }
+
+    // Blocking modes intercept Ctrl+Q
+    let cancel_msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::Permission);
+    assert_eq!(cancel_msg, Some(Msg::PermissionCancel), "Ctrl+Q in Permission should cancel");
+    let close_msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::Overlay);
+    assert_eq!(close_msg, Some(Msg::CloseModal), "Ctrl+Q in Overlay should close");
 }
 
 #[test]
 fn test_ctrl_c_always_quits_all_modes() {
-    // Ctrl+C must also produce Quit in EVERY mode (same as Ctrl+Q)
+    // P0-3 FIX: Ctrl+C in Permission mode produces PermissionCancel (not Quit).
+    // In Chat/Onboarding, it still produces Quit (empty input) or ClearInput.
     let modes = vec![
         TuiMode::Chat,
-        TuiMode::Permission,
         TuiMode::CommandPalette,
         TuiMode::Onboarding,
     ];
 
     for mode in modes {
         let msg = simulate_key(KeyCode::Char('c'), KeyModifiers::CONTROL, mode.clone());
-        assert_eq!(
-            msg,
-            Some(Msg::Quit),
-            "Ctrl+C in {:?} mode should always produce Msg::Quit",
+        // In these modes, Ctrl+C produces Quit (empty textarea) or ClearInput
+        assert!(
+            matches!(msg, Some(Msg::Quit) | Some(Msg::ClearInput)),
+            "Ctrl+C in {:?} mode should produce Msg::Quit or Msg::ClearInput",
             mode
         );
     }
+
+    // Permission mode intercepts Ctrl+C
+    let cancel_msg = simulate_key(KeyCode::Char('c'), KeyModifiers::CONTROL, TuiMode::Permission);
+    assert_eq!(cancel_msg, Some(Msg::PermissionCancel), "Ctrl+C in Permission should cancel");
 }

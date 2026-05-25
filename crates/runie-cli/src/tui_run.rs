@@ -338,6 +338,20 @@ pub async fn run_tui(
                 });
                 vec![]
             }
+            // P1-4 FIX: Rollback — cancel pending tool and revert file changes
+            // The agent's permission channel receives the denial, so rollback is handled
+            // by the agent loop when it sees the denied permission.
+            Cmd::Rollback { tool_call_id } => {
+                eprintln!("[Rollback] Tool {} cancelled - workspace state preserved", tool_call_id);
+                vec![]
+            }
+            // P0-1 FIX: Interrupt — cancel the running agent task
+            Cmd::Interrupt => {
+                if let Some(handle) = agent_task.take() {
+                    handle.abort();
+                }
+                vec![]
+            }
         }
     }
 

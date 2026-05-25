@@ -92,6 +92,7 @@ impl StatusBarViewModel {
             ],
             TuiMode::Onboarding => vec![
                 StatusItem { key: "Enter".to_string(), description: "next".to_string() },
+                StatusItem { key: "Esc".to_string(), description: "back/skip".to_string() },
                 StatusItem { key: "^q".to_string(), description: "quit".to_string() },
             ],
         }

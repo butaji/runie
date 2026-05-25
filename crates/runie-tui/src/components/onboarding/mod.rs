@@ -36,6 +36,8 @@ pub struct Onboarding {
     pub providers: Vec<ProviderOption>,
     pub models: Vec<ModelOption>,
     pub error_message: Option<String>,
+    // P1-1 FIX: Separate field for model fetch errors (network/API failures)
+    pub fetch_error: Option<String>,
     pub search_query: String,
     pub filtered_provider_indices: Vec<usize>,
     pub filtered_model_indices: Vec<usize>,
@@ -255,39 +257,16 @@ pub fn get_llamafile_models() -> Vec<ModelOption> {
 
 impl Onboarding {
     pub fn new() -> Self {
-        let mut providers = vec![
-            ProviderOption { name: "OpenAI".to_string(), id: "openai".to_string(), description: "GPT-4o family of models".to_string(), key_prefix: "sk-".to_string() },
-            ProviderOption { name: "Anthropic".to_string(), id: "anthropic".to_string(), description: "Claude family of models".to_string(), key_prefix: "sk-ant-".to_string() },
-            ProviderOption { name: "Google".to_string(), id: "google".to_string(), description: "Gemini family of models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Cohere".to_string(), id: "cohere".to_string(), description: "Command R family of models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Mistral".to_string(), id: "mistral".to_string(), description: "Mistral AI models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "DeepSeek".to_string(), id: "deepseek".to_string(), description: "DeepSeek models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Groq".to_string(), id: "groq".to_string(), description: "Fast inference with Llama".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "OpenRouter".to_string(), id: "openrouter".to_string(), description: "Access multiple models via OpenRouter".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "HuggingFace".to_string(), id: "huggingface".to_string(), description: "Open-source models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "xAI".to_string(), id: "xai".to_string(), description: "Grok models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Azure".to_string(), id: "azure".to_string(), description: "Microsoft Azure OpenAI".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Moonshot".to_string(), id: "moonshot".to_string(), description: "Moonshot AI models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Perplexity".to_string(), id: "perplexity".to_string(), description: "Online search-augmented models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Ollama".to_string(), id: "ollama".to_string(), description: "Local model inference".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Hyperbolic".to_string(), id: "hyperbolic".to_string(), description: "Open-source models at low cost".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Together".to_string(), id: "together".to_string(), description: "Together AI models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "ZAI".to_string(), id: "zai".to_string(), description: "ZAI models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "MiniMax".to_string(), id: "minimax".to_string(), description: "MiniMax AI models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Mira".to_string(), id: "mira".to_string(), description: "Mira models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Galadriel".to_string(), id: "galadriel".to_string(), description: "Galadriel models".to_string(), key_prefix: String::new() },
-            ProviderOption { name: "Llamafile".to_string(), id: "llamafile".to_string(), description: "Local llamafile models".to_string(), key_prefix: String::new() },
-        ];
-        providers.sort_by(|a, b| a.name.cmp(&b.name));
         Self {
             step: OnboardingStep::Welcome,
             selected_item: 0,
             selected_provider: None,
             api_key_input: String::new(),
             selected_model: None,
-            providers,
+            providers: get_default_providers(),
             models: Vec::new(),
             error_message: None,
+            fetch_error: None,
             search_query: String::new(),
             filtered_provider_indices: Vec::new(),
             filtered_model_indices: Vec::new(),
@@ -387,6 +366,17 @@ impl Onboarding {
         self.search_query.clear();
         self.filtered_provider_indices.clear();
         self.filtered_model_indices.clear();
+    }
+
+    // P1-1 FIX: Set fetch error when model listing fails
+    pub fn set_fetch_error(&mut self, err: String) {
+        self.fetch_error = Some(err);
+        self.is_fetching_models = false;
+    }
+
+    // P1-1 FIX: Clear fetch error
+    pub fn clear_fetch_error(&mut self) {
+        self.fetch_error = None;
     }
 
     pub fn select_provider(&mut self, index: usize) {
@@ -524,6 +514,35 @@ impl Onboarding {
 
 impl Default for Onboarding {
     fn default() -> Self { Self::new() }
+}
+
+/// Returns the default list of providers, sorted alphabetically by name.
+fn get_default_providers() -> Vec<ProviderOption> {
+    let mut providers = vec![
+        ProviderOption { name: "OpenAI".to_string(), id: "openai".to_string(), description: "GPT-4o family of models".to_string(), key_prefix: "sk-".to_string() },
+        ProviderOption { name: "Anthropic".to_string(), id: "anthropic".to_string(), description: "Claude family of models".to_string(), key_prefix: "sk-ant-".to_string() },
+        ProviderOption { name: "Google".to_string(), id: "google".to_string(), description: "Gemini family of models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Cohere".to_string(), id: "cohere".to_string(), description: "Command R family of models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Mistral".to_string(), id: "mistral".to_string(), description: "Mistral AI models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "DeepSeek".to_string(), id: "deepseek".to_string(), description: "DeepSeek models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Groq".to_string(), id: "groq".to_string(), description: "Fast inference with Llama".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "OpenRouter".to_string(), id: "openrouter".to_string(), description: "Access multiple models via OpenRouter".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "HuggingFace".to_string(), id: "huggingface".to_string(), description: "Open-source models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "xAI".to_string(), id: "xai".to_string(), description: "Grok models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Azure".to_string(), id: "azure".to_string(), description: "Microsoft Azure OpenAI".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Moonshot".to_string(), id: "moonshot".to_string(), description: "Moonshot AI models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Perplexity".to_string(), id: "perplexity".to_string(), description: "Online search-augmented models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Ollama".to_string(), id: "ollama".to_string(), description: "Local model inference".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Hyperbolic".to_string(), id: "hyperbolic".to_string(), description: "Open-source models at low cost".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Together".to_string(), id: "together".to_string(), description: "Together AI models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "ZAI".to_string(), id: "zai".to_string(), description: "ZAI models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "MiniMax".to_string(), id: "minimax".to_string(), description: "MiniMax AI models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Mira".to_string(), id: "mira".to_string(), description: "Mira models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Galadriel".to_string(), id: "galadriel".to_string(), description: "Galadriel models".to_string(), key_prefix: String::new() },
+        ProviderOption { name: "Llamafile".to_string(), id: "llamafile".to_string(), description: "Local llamafile models".to_string(), key_prefix: String::new() },
+    ];
+    providers.sort_by(|a, b| a.name.cmp(&b.name));
+    providers
 }
 
 pub mod render;

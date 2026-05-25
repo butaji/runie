@@ -426,6 +426,12 @@ impl Tui {
                     Cmd::SaveSession { .. } | Cmd::LoadSession { .. } | Cmd::SlashCommand(_) | Cmd::SaveSettings { .. } | Cmd::FetchModels { .. } => {
                         // These are handled by the CLI runtime, not the TUI
                     }
+                    // P1-4 FIX: Rollback is handled by the runtime/tool executor
+                    Cmd::Rollback { .. } => {}
+                    // P0-1 FIX: Interrupt cancels the agent task
+                    Cmd::Interrupt => {
+                        return Some(TuiAction::Cancel);
+                    }
                 }
             }
             // Check if we should quit

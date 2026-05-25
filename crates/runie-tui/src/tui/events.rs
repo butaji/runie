@@ -11,30 +11,66 @@ pub fn event_to_msg(event: Event, _state: &AppState) -> Vec<Msg> {
 }
 
 pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
-    // Global hotkeys: always active regardless of mode
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        match key.code {
-            KeyCode::Char('c') => {
-                // If textarea is empty (only has one empty line), quit; otherwise clear input
-                let is_empty = state.textarea.lines() == [""];
-                if is_empty {
-                    return Some(Msg::Quit);
-                } else {
-                    return Some(Msg::ClearInput);
-                }
-            }
-            KeyCode::Char('q') => return Some(Msg::Quit),
-            _ => {}
-        }
+    // P0-3/P0-4 FIX: Blocking modes intercept ALL keys (no global hotkeys)
+    if let Some(msg) = blocking_mode_handler(&key, &state.mode) {
+        return msg;
+    }
+    
+    // Global hotkeys: active in all non-blocking modes
+    if let Some(msg) = global_hotkey_handler(&key, state) {
+        return msg;
     }
 
+    // Route to mode-specific handler (non-blocking modes only)
+    route_non_blocking_mode(&key, state)
+}
+
+/// Handles keys in blocking modes (Permission, Overlay).
+/// These intercept ALL keys, preventing accidental Ctrl+ shortcuts from quitting the app.
+fn blocking_mode_handler(key: &crossterm::event::KeyEvent, mode: &TuiMode) -> Option<Option<Msg>> {
+    match mode {
+        TuiMode::Permission => Some(key_to_permission_msg(*key)),
+        TuiMode::Overlay => Some(key_to_overlay_msg(*key)),
+        _ => None,
+    }
+}
+
+/// Handles global hotkeys (Ctrl+C, Ctrl+Q) in non-blocking modes.
+fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> Option<Option<Msg>> {
+    if !key.modifiers.contains(KeyModifiers::CONTROL) {
+        return None;
+    }
+    match key.code {
+        KeyCode::Char('c') => {
+            let is_empty = state.textarea.lines() == [""];
+            Some(Some(if is_empty { Msg::Quit } else { Msg::ClearInput }))
+        }
+        KeyCode::Char('q') => Some(Some(Msg::Quit)),
+        _ => None,
+    }
+}
+
+/// Routes key to the appropriate mode-specific handler (non-blocking modes only).
+fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     match state.mode {
-        TuiMode::Chat => key_to_chat_msg(key),
-        TuiMode::Permission => key_to_permission_msg(key),
-        TuiMode::CommandPalette => key_to_palette_msg(key),
-        TuiMode::DiffViewer => key_to_diff_msg(key),
-        TuiMode::SessionTree => key_to_tree_msg(key),
-        TuiMode::Onboarding => key_to_onboarding_msg(key, state),
+        TuiMode::Chat | TuiMode::Select => key_to_chat_msg(*key),
+        TuiMode::CommandPalette => key_to_palette_msg(*key),
+        TuiMode::DiffViewer => key_to_diff_msg(*key),
+        TuiMode::SessionTree => key_to_tree_msg(*key),
+        TuiMode::Onboarding => key_to_onboarding_msg(*key, state),
+        // Permission and Overlay handled by blocking_mode_handler above
+        #[allow(unreachable_patterns)]
+        _ => unreachable!(),
+    }
+}
+
+fn key_to_overlay_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    // P0-4 FIX: Esc closes overlay; Ctrl+Q also closes
+    if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('q')) {
+        return Some(Msg::CloseModal);
+    }
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseModal),
         _ => None,
     }
 }
@@ -74,9 +110,13 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
-    // BG-9: Add Ctrl+C as escape path from permission modal
-    if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('c')) {
-        return Some(Msg::PermissionCancel);
+    // Permission modal intercepts ALL keys — blocking mode
+    // P0-3 FIX: Ctrl+C and ^q in Permission mode both cancel permission
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        match key.code {
+            KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::PermissionCancel),
+            _ => {}
+        }
     }
     
     match key.code {
