@@ -18,10 +18,11 @@ pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static st
     match *mode {
         TuiMode::Chat => vec![("Enter", "send"), ("^b", "sidebar"), ("^k", "cmd"), ("^q", "quit")],
         TuiMode::Overlay | TuiMode::Select => NAV_KEYS.to_vec(),
-        // P1-2: Updated to reflect actual key mappings (Enter also confirms, Esc also cancels)
+        // P0-4 FIX: Updated to reflect actual key mappings + timeout indicator
         TuiMode::Permission => vec![("y/Enter", "confirm"), ("Esc/n", "cancel"), ("a", "always")],
         TuiMode::CommandPalette => vec![("Esc", "close"), ("Enter", "select"), ("↑↓", "navigate")],
-        TuiMode::DiffViewer => vec![("q", "close"), ("j/k", "scroll")],
+        // P0-4 FIX: Added Ctrl+Q for consistent quit/close
+        TuiMode::DiffViewer => vec![("q/Esc", "close"), ("j/k", "scroll")],
         TuiMode::SessionTree => ARROW_KEYS.to_vec(),
         TuiMode::Onboarding => vec![("Esc", "back"), ("↑↓", "navigate"), ("Enter", "next")],
     }

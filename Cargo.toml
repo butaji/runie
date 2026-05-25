@@ -8,6 +8,7 @@ members = [
     "crates/runie-router",
     "crates/runie-orchestrator",
     "crates/runie-cli",
+    "harness",
     "pantry",
 ]
 resolver = "2"

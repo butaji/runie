@@ -129,6 +129,9 @@ pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_na
     state.permission_modal.tool_call_id = Some(tool_call_id);
     state.permission_modal.args = Some(tool_args.clone());
     state.permission_modal.desc = Some(format!("Agent wants to execute '{}'", tool_name));
+    // P0-1 FIX: Start timeout tracking
+    state.permission_modal.timeout_start = Some(std::time::Instant::now());
+    state.permission_modal.timed_out = false;
     state.mode = TuiMode::Permission;
 }
 
@@ -197,4 +200,17 @@ pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         _ => PermissionDecision::Allow { tool_call_id },
     };
     handle_permission(state, decision)
+}
+
+/// P0-1 FIX: Handle permission request timeout
+pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
+    state.permission_modal.timed_out = true;
+    // Automatically cancel and inform user
+    state.messages.push(MessageItem::System {
+        text: "Permission request timed out after 5 minutes. Request denied.".to_string(),
+    });
+    state.mode = TuiMode::Chat;
+    state.permission_modal.tool = None;
+    state.permission_modal.tool_call_id = None;
+    vec![]
 }

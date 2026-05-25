@@ -1,0 +1,18 @@
+{
+  "id": "permission_timeout",
+  "name": "Permission Timeout Handling",
+  "description": "Test that when a user does not respond to a permission prompt within the timeout period (5 minutes), the system: 1) shows a timeout message, 2) gracefully denies the permission, 3) continues execution, and 4) allows the user to provide feedback.",
+  "setup": {
+    "files": {
+      "src/tool_registry.rs": "/// Simulates a tool registry with permission-requiring tools.\npub struct ToolRegistry {\n    tools: Vec<ToolInfo>,\n}\n\npub struct ToolInfo {\n    pub name: String,\n    pub requires_permission: bool,\n    pub timeout_seconds: u64,\n}\n\nimpl ToolRegistry {\n    pub fn new() -> Self {\n        Self {\n            tools: vec![\n                ToolInfo {\n                    name: \"bash\".to_string(),\n                    requires_permission: true,\n                    timeout_seconds: 300,  // 5 minutes\n                },\n                ToolInfo {\n                    name: \"read_file\".to_string(),\n                    requires_permission: true,\n                    timeout_seconds: 300,\n                },\n                ToolInfo {\n                    name: \"write_file\".to_string(),\n                    requires_permission: true,\n                    timeout_seconds: 300,\n                },\n            ],\n        }\n    }\n    \n    pub fn get_timeout(&self, name: &str) -> Option<u64> {\n        self.tools.iter()\n            .find(|t| t.name == name)\n            .map(|t| t.timeout_seconds)\n    }\n}\n"
+    }
+  },
+  "expected": {
+    "timeout_message_displayed": true,
+    "permission_denied_gracefully": true,
+    "execution_continues": true,
+    "user_notified": true,
+    "no_hang_indefinitely": true
+  },
+  "grader": "grader.py"
+}

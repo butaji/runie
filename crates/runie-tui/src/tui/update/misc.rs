@@ -1,10 +1,34 @@
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, Msg, Cmd};
+use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use super::agent::to_agent_messages;
 
 pub fn handle_scroll(state: &mut AppState, amount: usize) {
     let max_scroll = state.messages.len().saturating_sub(1);
     state.scroll.feed_offset = (state.scroll.feed_offset + amount).min(max_scroll);
+}
+
+/// Returns Some(Msg::PermissionTimeout) if permission modal has timed out
+pub fn check_permission_timeout(state: &AppState) -> Option<Msg> {
+    // Only check if we're in permission mode with timeout tracking active
+    if state.mode != TuiMode::Permission {
+        return None;
+    }
+    
+    // Skip if already timed out
+    if state.permission_modal.timed_out {
+        return None;
+    }
+    
+    // Check if we have a timeout start time
+    if let Some(start) = state.permission_modal.timeout_start {
+        const TIMEOUT_SECS: u64 = 300; // 5 minutes
+        let elapsed = start.elapsed();
+        if elapsed.as_secs() >= TIMEOUT_SECS {
+            return Some(Msg::PermissionTimeout);
+        }
+    }
+    
+    None
 }
 
 pub fn handle_anim(state: &mut AppState, msg: &Msg) {

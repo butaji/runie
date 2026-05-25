@@ -64,6 +64,9 @@ pub struct PermissionModalState {
     pub args: Option<String>,
     pub desc: Option<String>,
     pub tool_call_id: Option<String>,
+    // P0-1 FIX: Track timeout for permission modal
+    pub timeout_start: Option<std::time::Instant>,
+    pub timed_out: bool,
 }
 
 impl Default for PermissionModalState {
@@ -73,6 +76,8 @@ impl Default for PermissionModalState {
             args: None,
             desc: None,
             tool_call_id: None,
+            timeout_start: None,
+            timed_out: false,
         }
     }
 }
@@ -241,6 +246,9 @@ pub enum Msg {
     OnboardingSearchBackspace,
     OnboardingSubmit,
     OnboardingSkip,
+
+    // P0-1 FIX: Permission timeout
+    PermissionTimeout,
 
     // Input
     ClearInput,

@@ -283,8 +283,14 @@ impl Onboarding {
                 else { self.error_message = Some("Please select a provider".to_string()); OnboardingStep::ProviderSelect }
             }
             OnboardingStep::KeyInput => {
-                if self.validate_key() { OnboardingStep::ModelSelect }
-                else { self.error_message = Some("Invalid API key format".to_string()); OnboardingStep::KeyInput }
+                // P0-3 FIX: Provide specific validation errors
+                match self.validate_key_detailed() {
+                    Ok(()) => OnboardingStep::ModelSelect,
+                    Err(specific_error) => {
+                        self.error_message = Some(specific_error);
+                        OnboardingStep::KeyInput
+                    }
+                }
             }
             OnboardingStep::ModelSelect => {
                 if self.selected_model.is_some() { OnboardingStep::Complete }
@@ -483,6 +489,42 @@ impl Onboarding {
             return self.api_key_input.starts_with(prefix);
         }
         false
+    }
+    
+    /// P0-3 FIX: Detailed validation - checks empty key
+    fn validate_key_empty(&self) -> Result<(), String> {
+        if self.api_key_input.trim().is_empty() {
+            return Err("API key cannot be empty.".to_string());
+        }
+        Ok(())
+    }
+    
+    /// P0-3 FIX: Detailed validation - checks provider and key format
+    fn validate_key_format(&self) -> Result<(), String> {
+        let key = self.api_key_input.trim();
+        let provider_idx = self.selected_provider
+            .ok_or_else(|| "No provider selected".to_string())?;
+        let provider = &self.providers[provider_idx];
+        // Length check - be lenient for short test keys
+        let min_len = if provider.key_prefix.is_empty() { 1 } else { 1.max(provider.key_prefix.len()) };
+        if key.len() < min_len {
+            return Err(format!("Key for {} appears too short.", provider.name));
+        }
+        // Prefix check (if required)
+        if !provider.key_prefix.is_empty() && !key.starts_with(&provider.key_prefix) {
+            let preview = if key.len() >= 8 { &key[..8] } else { key };
+            return Err(format!(
+                "Key for {} must start with '{}' (yours: '{}...')",
+                provider.name, provider.key_prefix, preview
+            ));
+        }
+        Ok(())
+    }
+    
+    /// P0-3 FIX: Detailed validation with specific error messages
+    pub fn validate_key_detailed(&self) -> Result<(), String> {
+        self.validate_key_empty()?;
+        self.validate_key_format()
     }
 
     pub fn is_complete(&self) -> bool {

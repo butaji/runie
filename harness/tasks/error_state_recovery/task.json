@@ -1,0 +1,18 @@
+{
+  "id": "error_state_recovery",
+  "name": "Agent Error Recovery and State Preservation",
+  "description": "Test that when an agent error occurs mid-execution, the UI correctly: 1) displays an error message, 2) returns to Chat mode, 3) preserves user scroll position, and 4) allows the user to continue without corruption.",
+  "setup": {
+    "files": {
+      "src/error_prone.rs": "/// This module simulates an agent that can produce various errors.\npub struct AgentSimulator;\n\nimpl AgentSimulator {\n    /// Simulates an error during tool execution.\n    /// Returns Err for network errors, Ok for successful execution.\n    pub fn simulate_tool(name: &str, args: &str) -> Result<String, &'static str> {\n        match name {\n            \"network_tool\" => Err(\"Connection refused: network unavailable\"),\n            \"timeout_tool\" => Err(\"Request timeout after 30 seconds\"),\n            \"invalid_tool\" => Err(\"Tool 'invalid_tool' not found in registry\"),\n            \"read_only\" => Ok(format!(\"Read {} bytes from input\", args.len())),\n            _ => Ok(format!(\"Executed {} with args {}\", name, args)),\n        }\n    }\n}\n"
+    }
+  },
+  "expected": {
+    "error_displayed_to_user": true,
+    "mode_returns_to_chat": true,
+    "scroll_position_preserved": true,
+    "user_can_continue": true,
+    "no_panic_on_error": true
+  },
+  "grader": "grader.py"
+}

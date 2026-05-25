@@ -26,6 +26,14 @@ fn handle_quit_or_stop(state: &mut AppState, msg: &Msg) -> Vec<Cmd> {
     }
 }
 
+// P0-1 FIX: Extracted from update() for permission timeout check
+fn handle_tick_permission_check(state: &mut AppState, palette: &mut CommandPalette) -> Vec<Cmd> {
+    let mut cmds = vec![];
+    if let Some(timeout_msg) = misc::check_permission_timeout(state) {
+        cmds.extend(update(state, palette, timeout_msg));
+    }
+    cmds
+}
 
 
 fn route_onboarding(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
@@ -84,11 +92,17 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         Msg::OpenCommandPalette => { palette::open_palette(state, palette); }
         Msg::CloseModal | Msg::ConfirmModal => { palette::handle_close_modal(state); }
         Msg::AgentEvent(event) => { agent::handle_agent_event(state, event); }
+        // P0-1 FIX: Handle permission timeout
         Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { cmds.extend(agent::handle_permission_msg(state, msg)); }
+        Msg::PermissionTimeout => { cmds.extend(agent::handle_permission_timeout(state)); }
         Msg::CommandPaletteFilter(_) | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { handle_palette_msg(state, palette, &msg); }
         Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); },
         Msg::ScrollDown | Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }).min(state.messages.len().saturating_sub(1)); },
-        Msg::Tick | Msg::CursorBlink => { misc::handle_anim(state, &msg); }
+        Msg::Tick | Msg::CursorBlink => { 
+            misc::handle_anim(state, &msg);
+            // P0-1 FIX: Check for permission timeout
+            cmds.extend(handle_tick_permission_check(state, palette));
+        }
         Msg::SlashCommand(cmd) => { cmds.extend(slash::handle_slash(state, cmd)); }
         Msg::ToggleSessionTree => { slash::handle_tree(state); }
         Msg::SessionTreeUp | Msg::SessionTreeDown => { tree::handle_tree_nav(state, &msg); }

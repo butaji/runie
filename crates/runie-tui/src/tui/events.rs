@@ -141,8 +141,15 @@ fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_diff_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    // P0-4 FIX: Accept more close triggers for accessibility
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        match key.code {
+            KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::CloseModal),
+            _ => {}
+        }
+    }
     match key.code {
-        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::CloseModal),
+        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('x') => Some(Msg::CloseModal),
         KeyCode::Down | KeyCode::Char('j') => Some(Msg::ScrollDown),
         KeyCode::Up | KeyCode::Char('k') => Some(Msg::ScrollUp),
         KeyCode::PageDown => Some(Msg::ScrollDown),
