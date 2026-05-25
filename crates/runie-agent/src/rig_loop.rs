@@ -14,6 +14,7 @@ use rig_core::client::CompletionClient;
 use rig_core::completion::CompletionModel;
 use rig_core::streaming::StreamedAssistantContent;
 use std::sync::Arc;
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -304,7 +305,17 @@ where
     
     // Execute tool calls
     let mut tool_results = vec![];
+    // P2-7 FIX: Idempotency - track seen tool calls to prevent duplicates
+    let mut seen_tool_calls: HashSet<String> = HashSet::new();
     for (tool_id, tool_name, args) in pending_tool_calls {
+        // P2-7 FIX: Check for duplicate tool call (same name + args in same turn)
+        let tool_key = format!("{}:{}", tool_name, serde_json::to_string(&args).unwrap_or_default());
+        if seen_tool_calls.contains(&tool_key) {
+            tracing::warn!("Duplicate tool call detected and skipped: {} with args {:?}", tool_name, args);
+            continue;
+        }
+        seen_tool_calls.insert(tool_key);
+        
         event_tx.send(AgentEvent::ToolExecutionStart { tool_call_id: tool_id.clone() }).await
             .map_err(|e| AgentLoopError::SendError(e.to_string()))?;
         

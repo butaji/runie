@@ -226,10 +226,12 @@ fn render_buttons(area: Rect, buf: &mut Buffer, selected: usize, accent_secondar
     buf.set_line(inner_x, buttons_y, &row1, inner_width);
 
     // Secondary row: hidden options as discoverable hints (dimmed)
+    // P2-6 FIX: Progressive disclosure - advanced options use DIM modifier
+    let dim_style = Style::default().fg(text_muted).add_modifier(Modifier::DIM);
     let row2 = Line::from(vec![
-        Span::styled("[a] always allow", Style::default().fg(text_muted).add_modifier(Modifier::DIM)),
+        Span::styled("[a] always allow", dim_style),
         Span::styled("        ", Style::default()),
-        Span::styled("[s] skip this step", Style::default().fg(text_muted).add_modifier(Modifier::DIM)),
+        Span::styled("[s] skip this step", dim_style),
     ]);
     buf.set_line(inner_x, buttons_y + 1, &row2, inner_width);
 }

@@ -177,8 +177,18 @@ pub async fn run_agent_loop(
         }
 
         let mut tool_results = vec![];
+        // P2-7 FIX: Idempotency - track seen tool calls to prevent duplicates
+        let mut seen_tool_calls: HashSet<String> = HashSet::new();
         for (tool_use, _tool_name, _args_str) in pending_tool_calls {
             if let ContentPart::ToolUse { id, name, input } = &tool_use {
+                // P2-7 FIX: Check for duplicate tool call (same name + args in same turn)
+                let tool_key = format!("{}:{}", name, serde_json::to_string(input).unwrap_or_default());
+                if seen_tool_calls.contains(&tool_key) {
+                    tracing::warn!("Duplicate tool call detected and skipped: {} with args {:?}", name, input);
+                    continue;
+                }
+                seen_tool_calls.insert(tool_key);
+                
                 if let Err(e) = event_tx.send(AgentEvent::ToolExecutionStart {
                     tool_call_id: id.clone(),
                 }).await {

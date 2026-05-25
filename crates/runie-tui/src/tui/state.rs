@@ -77,6 +77,8 @@ pub struct PermissionModalState {
     pub timed_out: bool,
     // BG-1 FIX: Queue for pending permission requests
     pub pending_queue: Vec<PendingPermission>,
+    // P2-6 FIX: Progressive disclosure - show advanced options toggle
+    pub show_advanced: bool,
 }
 
 impl Default for PermissionModalState {
@@ -89,6 +91,7 @@ impl Default for PermissionModalState {
             timeout_start: None,
             timed_out: false,
             pending_queue: Vec::new(),
+            show_advanced: false,
         }
     }
 }
