@@ -77,6 +77,9 @@ Pass rate: 100% tasks, 92% checks
 | `permission_rollback` | Permission rollback | 4/4 ✅ |
 | `permission_timeout` | Permission timeout | 4/4 ✅ |
 | `streaming_garbage` | UTF-8 validation | 2/4 ⚠️ |
+| `graceful_degradation` | Component failure resilience | 4/4 ✅ |
+| `idempotency_test` | Duplicate operation detection | 0/4 ⚠️ |
+| `progressive_disclosure` | Advanced options hidden | 2/4 ⚠️ |
 
 ---
 
@@ -104,6 +107,7 @@ cargo test -p runie-agent ✅ 21 tests pass
 ## Commits (Chronological)
 
 ```
+81b4dcd feat(harness): Add 3 new SWE-bench style test tasks
 68ae0eb docs: Update audit documents with fix status
 46b5573 fix(P1-1): Add escape handling for command palette argument mode
 ebac919 docs: Update audit documents with fixed issues
@@ -182,6 +186,9 @@ if elapsed.as_secs() >= TIMEOUT_SECS {
 2. **P2-2**: Agent running indicator in message list
 3. **P2-3**: Session tree breadcrumb navigation
 4. **streaming_garbage**: UTF-8 validation in streaming (2/4 checks)
+5. **idempotency_test**: HashSet dedup for tool calls (0/4 checks) - P1 priority
+6. **progressive_disclosure**: show_advanced toggle (2/4 checks) - P2 priority
+7. **workspace_concurrent_edits**: File locking (2/4 checks) - P1 priority
 
 ---
 
