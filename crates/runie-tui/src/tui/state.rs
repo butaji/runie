@@ -3,6 +3,7 @@ use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 use crate::components::SessionTreeNavigator;
 pub use crate::components::onboarding::{Onboarding, OnboardingStep};
+pub use runie_ai::model_fetcher::ModelInfo;
 use runie_ai::TokenUsage;
 use runie_core::SlashCommand;
 use crossterm::event::KeyEvent;
@@ -131,6 +132,7 @@ pub struct AppState {
     pub session_tree: SessionTreeNavigator,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
     pub onboarding: Option<Onboarding>,
+    pub terminal_size: (u16, u16),
 }
 
 impl Default for AppState {
@@ -155,6 +157,7 @@ impl Default for AppState {
             session_tree: SessionTreeNavigator::new(),
             background_jobs: Vec::new(),
             onboarding: None,
+            terminal_size: (0, 0),
         }
     }
 }
@@ -234,6 +237,8 @@ pub enum Msg {
     OnboardingSelectModel(usize),
     OnboardingKeyInput(char),
     OnboardingKeyBackspace,
+    OnboardingSearchInput(char),
+    OnboardingSearchBackspace,
     OnboardingSubmit,
     OnboardingSkip,
 
@@ -241,6 +246,14 @@ pub enum Msg {
     ClearInput,
     ClearChat,
     DirectCommand(PaletteCommand),
+    Paste(String),
+
+    // Model fetching
+    ModelsFetched(Vec<ModelInfo>),
+    ModelsFetchFailed(String),
+
+    // Terminal
+    Resize(u16, u16),
 }
 
 impl PartialEq for Msg {
@@ -284,11 +297,17 @@ impl PartialEq for Msg {
             (OnboardingSelectModel(a), OnboardingSelectModel(b)) => a == b,
             (OnboardingKeyInput(a), OnboardingKeyInput(b)) => a == b,
             (OnboardingKeyBackspace, OnboardingKeyBackspace) => true,
+            (OnboardingSearchInput(a), OnboardingSearchInput(b)) => a == b,
+            (OnboardingSearchBackspace, OnboardingSearchBackspace) => true,
             (OnboardingSubmit, OnboardingSubmit) => true,
             (OnboardingSkip, OnboardingSkip) => true,
             (ClearInput, ClearInput) => true,
             (ClearChat, ClearChat) => true,
             (DirectCommand(a), DirectCommand(b)) => a == b,
+            (Paste(a), Paste(b)) => a == b,
+            (ModelsFetched(a), ModelsFetched(b)) => a == b,
+            (ModelsFetchFailed(a), ModelsFetchFailed(b)) => a == b,
+            (Resize(a_w, a_h), Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
             _ => false,
         }
     }
@@ -305,6 +324,7 @@ pub enum Cmd {
     LoadSession { name: String },
     SlashCommand(SlashCommand),
     SaveSettings { provider: String, model: String, api_key: String },
+    FetchModels { provider_id: String, api_key: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]

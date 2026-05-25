@@ -42,7 +42,7 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
         let global_idx = commands[i];
         let cmd = &all_commands[global_idx];
         if list_y + rendered as u16 >= area.y + area.height - footer_height - 1 { break; }
-        let is_selected = i == 0;
+        let is_selected = i == palette.selected;
         let y = list_y + rendered as u16;
         render_command_row(cmd, y, inner_x, inner_w, is_selected, text_primary, text_muted, text_secondary, buf);
         rendered += 1;

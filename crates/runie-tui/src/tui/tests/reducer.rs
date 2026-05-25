@@ -2,6 +2,7 @@
 
 use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, ScrollState, TopBarState, PermissionModalState, TuiMode};
 use crate::components::{MessageItem, SessionTreeNavigator};
+use crate::components::CommandPalette;
 use crate::tui::update::update;
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use runie_ai::TokenUsage;
@@ -28,6 +29,7 @@ fn make_state() -> AppState {
         session_tree: SessionTreeNavigator::new(),
         background_jobs: Vec::new(),
         onboarding: None,
+        terminal_size: (0, 0),
     }
 }
 
@@ -52,6 +54,7 @@ fn make_state_with_text(text: &str) -> AppState {
         session_tree: SessionTreeNavigator::new(),
         background_jobs: Vec::new(),
         onboarding: None,
+        terminal_size: (0, 0),
     }
 }
 
@@ -74,7 +77,8 @@ fn test_textarea_input() {
 #[test]
 fn test_submit_clears_input() {
     let mut state = make_state_with_text("hi");
-    let cmds = update(&mut state, Msg::Submit);
+    let mut palette = CommandPalette::new();
+    let cmds = update(&mut state, &mut palette, Msg::Submit);
     assert!(state.textarea.is_empty());
     assert_eq!(state.messages.len(), 1);
     // Should return a SpawnAgent cmd
@@ -94,7 +98,8 @@ fn test_submit_clears_input() {
 #[test]
 fn test_submit_empty_does_nothing() {
     let mut state = make_state();
-    let cmds = update(&mut state, Msg::Submit);
+    let mut palette = CommandPalette::new();
+    let cmds = update(&mut state, &mut palette, Msg::Submit);
     assert_eq!(state.messages.len(), 0);
     assert!(cmds.is_empty());
 }
@@ -102,25 +107,29 @@ fn test_submit_empty_does_nothing() {
 #[test]
 fn test_quit() {
     let mut state = make_state();
-    update(&mut state, Msg::Quit);
+    let mut palette = CommandPalette::new();
+    update(&mut state, &mut palette, Msg::Quit);
     assert!(!state.running);
 }
 
 #[test]
 fn test_toggle_sidebar() {
     let mut state = make_state();
+    let mut palette = CommandPalette::new();
     assert!(!state.show_sidebar);
-    update(&mut state, Msg::ToggleSidebar);
+    update(&mut state, &mut palette, Msg::ToggleSidebar);
     assert!(state.show_sidebar);
-    update(&mut state, Msg::ToggleSidebar);
+    update(&mut state, &mut palette, Msg::ToggleSidebar);
     assert!(!state.show_sidebar);
 }
 
 #[test]
 fn test_agent_event_message_start() {
     let mut state = make_state();
+    let mut palette = CommandPalette::new();
     update(
         &mut state,
+        &mut palette,
         Msg::AgentEvent(AgentEvent::MessageStart {
             message: AgentMessage {
                 role: "assistant".to_string(),
@@ -140,9 +149,11 @@ fn test_agent_event_message_start() {
 fn test_agent_event_message_update() {
     use runie_agent::ContentPart;
     let mut state = make_state();
+    let mut palette = CommandPalette::new();
     // Start message
     update(
         &mut state,
+        &mut palette,
         Msg::AgentEvent(AgentEvent::MessageStart {
             message: AgentMessage {
                 role: "assistant".to_string(),
@@ -158,6 +169,7 @@ fn test_agent_event_message_update() {
     // Update with text
     update(
         &mut state,
+        &mut palette,
         Msg::AgentEvent(AgentEvent::MessageUpdate {
             message: AgentMessage {
                 role: "assistant".to_string(),
@@ -185,9 +197,10 @@ fn test_permission_cmds() {
     use crate::tui::state::Cmd;
 
     let mut state = make_state();
+    let mut palette = CommandPalette::new();
 
     // PermissionConfirm should return Allow decision
-    let cmds = update(&mut state, Msg::PermissionConfirm);
+    let cmds = update(&mut state, &mut palette, Msg::PermissionConfirm);
     assert_eq!(cmds.len(), 1);
     if let Cmd::SendPermission { decision } = &cmds[0] {
         assert!(matches!(*decision, PermissionDecision::Allow { .. }));
@@ -196,19 +209,19 @@ fn test_permission_cmds() {
     }
 
     // PermissionCancel should return Deny decision
-    let cmds = update(&mut state, Msg::PermissionCancel);
+    let cmds = update(&mut state, &mut palette, Msg::PermissionCancel);
     if let Cmd::SendPermission { decision } = &cmds[0] {
         assert!(matches!(*decision, PermissionDecision::Deny { .. }));
     }
 
     // PermissionAlways should return AllowAlways decision
-    let cmds = update(&mut state, Msg::PermissionAlways);
+    let cmds = update(&mut state, &mut palette, Msg::PermissionAlways);
     if let Cmd::SendPermission { decision } = &cmds[0] {
         assert!(matches!(*decision, PermissionDecision::AllowAlways { .. }));
     }
 
     // PermissionSkip should return Skip decision
-    let cmds = update(&mut state, Msg::PermissionSkip);
+    let cmds = update(&mut state, &mut palette, Msg::PermissionSkip);
     if let Cmd::SendPermission { decision } = &cmds[0] {
         assert!(matches!(*decision, PermissionDecision::Skip { .. }));
     }
@@ -217,6 +230,7 @@ fn test_permission_cmds() {
 #[test]
 fn test_multi_line_submit() {
     let mut state = make_state();
+    let mut palette = CommandPalette::new();
     for c in "line1".chars() {
         type_char(&mut state, c);
     }
@@ -225,7 +239,7 @@ fn test_multi_line_submit() {
     for c in "line2".chars() {
         type_char(&mut state, c);
     }
-    update(&mut state, Msg::Submit);
+    update(&mut state, &mut palette, Msg::Submit);
 
     assert!(state.textarea.is_empty());
     assert_eq!(state.messages.len(), 1);

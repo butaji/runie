@@ -1,10 +1,12 @@
 use crossterm::event::{Event, KeyCode, KeyModifiers};
-use crate::tui::state::{AppState, TuiMode, Msg};
+use crate::tui::state::{AppState, TuiMode, Msg, OnboardingStep};
 
-pub fn event_to_msg(event: Event, _state: &AppState) -> Option<Msg> {
+pub fn event_to_msg(event: Event, _state: &AppState) -> Vec<Msg> {
     match event {
-        Event::Key(key) => key_to_msg(key, _state),
-        _ => None,
+        Event::Key(key) => key_to_msg(key, _state).map_or_else(Vec::new, |m| vec![m]),
+        Event::Paste(text) => vec![Msg::Paste(text)],
+        Event::Resize(w, h) => vec![Msg::Resize(w, h)],
+        _ => Vec::new(),
     }
 }
 
@@ -32,7 +34,7 @@ pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<M
         TuiMode::CommandPalette => key_to_palette_msg(key),
         TuiMode::DiffViewer => key_to_diff_msg(key),
         TuiMode::SessionTree => key_to_tree_msg(key),
-        TuiMode::Onboarding => key_to_onboarding_msg(key),
+        TuiMode::Onboarding => key_to_onboarding_msg(key, state),
         _ => None,
     }
 }
@@ -114,14 +116,32 @@ fn key_to_tree_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
 }
 
-fn key_to_onboarding_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+fn key_to_onboarding_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    let is_picker_step = state
+        .onboarding
+        .as_ref()
+        .map(|o| matches!(o.step, OnboardingStep::ProviderSelect | OnboardingStep::ModelSelect))
+        .unwrap_or(false);
+
     match key.code {
         KeyCode::Enter => Some(Msg::OnboardingNext),
         KeyCode::Esc => Some(Msg::OnboardingBack),
         KeyCode::Up => Some(Msg::OnboardingNavigateUp),
         KeyCode::Down => Some(Msg::OnboardingNavigateDown),
-        KeyCode::Char(c) => Some(Msg::OnboardingKeyInput(c)),
-        KeyCode::Backspace => Some(Msg::OnboardingKeyBackspace),
+        KeyCode::Char(c) => {
+            if is_picker_step {
+                Some(Msg::OnboardingSearchInput(c))
+            } else {
+                Some(Msg::OnboardingKeyInput(c))
+            }
+        }
+        KeyCode::Backspace | KeyCode::Delete => {
+            if is_picker_step {
+                Some(Msg::OnboardingSearchBackspace)
+            } else {
+                Some(Msg::OnboardingKeyBackspace)
+            }
+        }
         _ => None,
     }
 }

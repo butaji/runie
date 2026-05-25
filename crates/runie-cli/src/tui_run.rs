@@ -22,6 +22,10 @@ fn needs_onboarding(settings: &Settings) -> bool {
     if settings.model.is_empty() {
         return true;
     }
+    // API key set in settings file
+    if settings.api_key.is_some() {
+        return false;
+    }
     // No API key in environment
     if std::env::var("OPENAI_API_KEY").is_err()
         && std::env::var("ANTHROPIC_API_KEY").is_err()
@@ -165,6 +169,9 @@ pub async fn run_tui(
     let mut tick_interval = interval(Duration::from_millis(80));
     let mut cursor_interval = interval(Duration::from_millis(500));
 
+    // Channel for model fetch results
+    let (model_fetch_tx, mut model_fetch_rx) = mpsc::channel::<Result<Vec<runie_ai::model_fetcher::ModelInfo>, String>>(1);
+
     // Helper to update top bar context percentages from current state
     fn update_top_bar_context(tui: &mut Tui, settings: &Settings) {
         use runie_ai::ModelRegistry;
@@ -214,6 +221,7 @@ pub async fn run_tui(
         mock: bool,
         settings: &Settings,
         base_system_prompt: &str,
+        model_fetch_tx: &mpsc::Sender<Result<Vec<runie_ai::model_fetcher::ModelInfo>, String>>,
     ) -> Vec<Cmd> {
         match cmd {
             Cmd::SpawnAgent { messages } => {
@@ -305,8 +313,8 @@ pub async fn run_tui(
 
                 // Write config
                 let config = format!(
-                    "provider = \"{}\"\nmodel = \"{}\"\napi_key = \"{}\"\n",
-                    provider, model, api_key
+                    "provider = \"{}\"\nmodel = \"{}\"\napi_key = \"{}\"\nmax_turns = {}\nenable_thinking = {}\nshell = \"{}\"\n",
+                    provider, model, api_key, settings.max_turns, settings.enable_thinking, settings.shell
                 );
                 let _ = std::fs::write(&config_path, config);
 
@@ -318,6 +326,16 @@ pub async fn run_tui(
                     _ => {}
                 }
 
+                vec![]
+            }
+            Cmd::FetchModels { provider_id, api_key } => {
+                let tx = model_fetch_tx.clone();
+                tokio::spawn(async move {
+                    let fetcher = runie_ai::model_fetcher::create_fetcher(&provider_id);
+                    let result = fetcher.fetch_models(&api_key).await
+                        .map_err(|e| e.to_string());
+                    let _ = tx.send(result).await;
+                });
                 vec![]
             }
         }
@@ -332,7 +350,7 @@ pub async fn run_tui(
 
             // Raw terminal events — HIGHEST PRIORITY
             Some(event) = raw_rx.recv() => {
-                if let Some(msg) = event_to_msg(event, &tui.state) {
+                for msg in event_to_msg(event, &tui.state) {
                     let cmds = tui.update(msg);
 
                     // Execute commands (may produce more commands recursively)
@@ -340,7 +358,7 @@ pub async fn run_tui(
                     while !pending_cmds.is_empty() {
                         let mut next_cmds = vec![];
                         for cmd in pending_cmds {
-                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
+                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
                         }
                         pending_cmds = next_cmds;
                     }
@@ -363,7 +381,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -384,9 +402,40 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
                     }
                     pending_cmds = next_cmds;
+                }
+                tui.render()?;
+            }
+
+            // Model fetch results
+            Some(result) = model_fetch_rx.recv() => {
+                match result {
+                    Ok(models) => {
+                        let cmds = tui.update(Msg::ModelsFetched(models));
+                        // Execute commands...
+                        let mut pending_cmds = cmds;
+                        while !pending_cmds.is_empty() {
+                            let mut next_cmds = vec![];
+                            for cmd in pending_cmds {
+                                next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
+                            }
+                            pending_cmds = next_cmds;
+                        }
+                    }
+                    Err(err) => {
+                        let cmds = tui.update(Msg::ModelsFetchFailed(err));
+                        // Execute commands...
+                        let mut pending_cmds = cmds;
+                        while !pending_cmds.is_empty() {
+                            let mut next_cmds = vec![];
+                            for cmd in pending_cmds {
+                                next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
+                            }
+                            pending_cmds = next_cmds;
+                        }
+                    }
                 }
                 tui.render()?;
             }
@@ -401,7 +450,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
                     }
                     pending_cmds = next_cmds;
                 }

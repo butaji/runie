@@ -5,7 +5,8 @@ use runie_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
 use runie_agent::{SafetyHook, Hook, AgentTool};
 use runie_tools::{create_default_toolkit, Workspace};
 use runie_ai::Provider;
-use runie_ai::providers::{OpenAiProvider, AnthropicProvider};
+use runie_ai::providers::{OpenAiProvider, AnthropicProvider, GenAiProvider};
+use runie_ai::RigProvider;
 
 #[allow(dead_code)]
 pub fn spawn_agent_task(
@@ -92,7 +93,17 @@ fn create_provider_internal(
             }
             Ok(Box::new(provider))
         }
-        other => Err(format!("Unknown provider: {}. Use 'openai' or 'anthropic'", other)),
+        "google" => {
+            let provider = GenAiProvider::new(model.to_string());
+            Ok(Box::new(provider))
+        }
+        other => {
+            let api_key = api_key.clone()
+                .ok_or(format!("API key required for provider: {}", other))?;
+            let provider = RigProvider::new(other, &api_key, model)
+                .map_err(|e| e.to_string())?;
+            Ok(Box::new(provider))
+        }
     }
 }
 

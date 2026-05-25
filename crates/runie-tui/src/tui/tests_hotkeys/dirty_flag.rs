@@ -3,12 +3,14 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg};
 use crate::tui::update::update;
+use crate::components::CommandPalette;
 use crate::tui::events::event_to_msg;
 use super::helpers::simulate_key;
 
 /// Mock Tui for dirty flag testing
 struct MockTui {
     state: AppState,
+    palette: CommandPalette,
     dirty: bool,
 }
 
@@ -16,13 +18,14 @@ impl MockTui {
     fn new() -> Self {
         Self {
             state: AppState::default(),
+            palette: CommandPalette::new(),
             dirty: false,
         }
     }
 
     fn update(&mut self, msg: Msg) {
         self.dirty = true;
-        update(&mut self.state, msg);
+        update(&mut self.state, &mut self.palette, msg);
     }
 
     fn is_dirty(&self) -> bool {
@@ -67,7 +70,7 @@ fn test_hotkey_updates_set_dirty() {
         });
         let state = AppState { mode: mode.clone(), ..Default::default() };
 
-        if let Some(msg) = event_to_msg(event, &state) {
+        for msg in event_to_msg(event, &state) {
             tui.update(msg);
             assert!(tui.is_dirty(), "Hotkey {:?}+{:?} in {:?} mode should set dirty", modifiers, code, mode);
         }

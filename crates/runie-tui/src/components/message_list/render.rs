@@ -148,7 +148,7 @@ pub fn render_single_msg(
             render_edit_msg(filename, area, row, margin_x, text_x, buf, text_secondary, code_path)
         }
         MessageItem::System { text } => {
-            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted)
+            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
         }
         MessageItem::ToolRunning { name, args, duration_ms } => {
             render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
@@ -262,12 +262,14 @@ fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, t
     1
 }
 
-fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color) -> u16 {
+fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
+    let is_error = text.starts_with("Error:");
+    let color = if is_error { error } else { text_muted };
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
         cell.set_char('◆');
-        cell.set_style(Style::default().fg(text_muted));
+        cell.set_style(Style::default().fg(color));
     }
-    let line = Line::raw(text).style(Style::default().fg(text_muted));
+    let line = Line::raw(text).style(Style::default().fg(color));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }

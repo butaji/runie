@@ -36,6 +36,10 @@ pub struct Onboarding {
     pub providers: Vec<ProviderOption>,
     pub models: Vec<ModelOption>,
     pub error_message: Option<String>,
+    pub search_query: String,
+    pub filtered_provider_indices: Vec<usize>,
+    pub filtered_model_indices: Vec<usize>,
+    pub is_fetching_models: bool,
 }
 
 // ============================================================================
@@ -51,31 +55,198 @@ pub struct Settings {
     pub api_key: String,
 }
 
+fn fuzzy_match(query: &str, target: &str) -> bool {
+    if query.is_empty() { return true; }
+    let target_lower = target.to_lowercase();
+    let mut target_chars = target_lower.chars();
+    for q in query.chars() {
+        loop {
+            match target_chars.next() {
+                Some(t) if t == q => break,
+                None => return false,
+                _ => {}
+            }
+        }
+    }
+    true
+}
+
 // ============================================================================
 // Model definitions per provider
 // ============================================================================
 
-fn get_openai_models() -> Vec<ModelOption> {
-    vec![
+pub fn get_openai_models() -> Vec<ModelOption> {
+    let mut models = vec![
         ModelOption { name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "Most capable, multimodal flagship model".to_string() },
         ModelOption { name: "GPT-4o Mini".to_string(), id: "gpt-4o-mini".to_string(), description: "Fast, affordable small model".to_string() },
         ModelOption { name: "O1 Mini".to_string(), id: "o1-mini".to_string(), description: "Reasoning model optimized for code".to_string() },
-    ]
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
 }
 
-fn get_anthropic_models() -> Vec<ModelOption> {
-    vec![
+pub fn get_anthropic_models() -> Vec<ModelOption> {
+    let mut models = vec![
         ModelOption { name: "Claude Sonnet 4".to_string(), id: "claude-sonnet-4".to_string(), description: "Balanced performance and intelligence".to_string() },
         ModelOption { name: "Claude Haiku".to_string(), id: "claude-haiku".to_string(), description: "Fast, lightweight for simple tasks".to_string() },
         ModelOption { name: "Claude Opus".to_string(), id: "claude-opus".to_string(), description: "Most capable model for complex tasks".to_string() },
-    ]
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
 }
 
-fn get_google_models() -> Vec<ModelOption> {
-    vec![
+pub fn get_google_models() -> Vec<ModelOption> {
+    let mut models = vec![
         ModelOption { name: "Gemini Pro".to_string(), id: "gemini-pro".to_string(), description: "Balanced multimodal model".to_string() },
         ModelOption { name: "Gemini Flash".to_string(), id: "gemini-flash".to_string(), description: "Fast, efficient for high-volume tasks".to_string() },
-    ]
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_cohere_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Command R".to_string(), id: "command-r".to_string(), description: "High quality RAG-optimized model".to_string() },
+        ModelOption { name: "Command R Plus".to_string(), id: "command-r-plus".to_string(), description: "Most capable model for complex tasks".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_mistral_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Mistral Large".to_string(), id: "mistral-large-latest".to_string(), description: "Flagship model for complex reasoning".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_deepseek_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "DeepSeek Chat".to_string(), id: "deepseek-chat".to_string(), description: "Efficient conversational model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_groq_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llama 3.1 8B Instant".to_string(), id: "llama-3.1-8b-instant".to_string(), description: "Ultra-fast inference at low cost".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_openrouter_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "GPT-4o".to_string(), id: "openai/gpt-4o".to_string(), description: "Most capable multimodal model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_huggingface_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llama 2 70B".to_string(), id: "meta-llama/Llama-2-70b-chat-hf".to_string(), description: "70B parameter open model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_xai_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Grok Beta".to_string(), id: "grok-beta".to_string(), description: "Real-time knowledge and reasoning".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_azure_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "Most capable multimodal model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_moonshot_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Moonshot V1 8K".to_string(), id: "moonshot-v1-8k".to_string(), description: "Long context conversational model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_perplexity_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llama 3.1 Sonar Large".to_string(), id: "llama-3.1-sonar-large-128k-online".to_string(), description: "Online search-augmented model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_ollama_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llama 3.2".to_string(), id: "llama3.2".to_string(), description: "Latest open-source model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_hyperbolic_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llama 3.1 70B".to_string(), id: "meta-llama/Meta-Llama-3.1-70B-Instruct".to_string(), description: "High-quality open-source model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_together_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llama 3.2 3B Turbo".to_string(), id: "meta-llama/Llama-3.2-3B-Instruct-Turbo".to_string(), description: "Fast, efficient instruction model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_zai_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Default".to_string(), id: "default-model".to_string(), description: "Default model for Zai".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_minimax_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "ABAB 6.5".to_string(), id: "abab6.5-chat".to_string(), description: "MiniMax chat model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_mira_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Default".to_string(), id: "default-model".to_string(), description: "Default model for Mira".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_galadriel_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Default".to_string(), id: "default-model".to_string(), description: "Default model for Galadriel".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
+}
+
+pub fn get_llamafile_models() -> Vec<ModelOption> {
+    let mut models = vec![
+        ModelOption { name: "Llamafile".to_string(), id: "llamafile".to_string(), description: "Local llamafile model".to_string() },
+    ];
+    models.sort_by(|a, b| a.name.cmp(&b.name));
+    models
 }
 
 // ============================================================================
@@ -84,11 +255,30 @@ fn get_google_models() -> Vec<ModelOption> {
 
 impl Onboarding {
     pub fn new() -> Self {
-        let providers = vec![
+        let mut providers = vec![
             ProviderOption { name: "OpenAI".to_string(), id: "openai".to_string(), description: "GPT-4o family of models".to_string(), key_prefix: "sk-".to_string() },
             ProviderOption { name: "Anthropic".to_string(), id: "anthropic".to_string(), description: "Claude family of models".to_string(), key_prefix: "sk-ant-".to_string() },
             ProviderOption { name: "Google".to_string(), id: "google".to_string(), description: "Gemini family of models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Cohere".to_string(), id: "cohere".to_string(), description: "Command R family of models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Mistral".to_string(), id: "mistral".to_string(), description: "Mistral AI models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "DeepSeek".to_string(), id: "deepseek".to_string(), description: "DeepSeek models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Groq".to_string(), id: "groq".to_string(), description: "Fast inference with Llama".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "OpenRouter".to_string(), id: "openrouter".to_string(), description: "Access multiple models via OpenRouter".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "HuggingFace".to_string(), id: "huggingface".to_string(), description: "Open-source models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "xAI".to_string(), id: "xai".to_string(), description: "Grok models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Azure".to_string(), id: "azure".to_string(), description: "Microsoft Azure OpenAI".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Moonshot".to_string(), id: "moonshot".to_string(), description: "Moonshot AI models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Perplexity".to_string(), id: "perplexity".to_string(), description: "Online search-augmented models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Ollama".to_string(), id: "ollama".to_string(), description: "Local model inference".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Hyperbolic".to_string(), id: "hyperbolic".to_string(), description: "Open-source models at low cost".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Together".to_string(), id: "together".to_string(), description: "Together AI models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "ZAI".to_string(), id: "zai".to_string(), description: "ZAI models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "MiniMax".to_string(), id: "minimax".to_string(), description: "MiniMax AI models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Mira".to_string(), id: "mira".to_string(), description: "Mira models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Galadriel".to_string(), id: "galadriel".to_string(), description: "Galadriel models".to_string(), key_prefix: String::new() },
+            ProviderOption { name: "Llamafile".to_string(), id: "llamafile".to_string(), description: "Local llamafile models".to_string(), key_prefix: String::new() },
         ];
+        providers.sort_by(|a, b| a.name.cmp(&b.name));
         Self {
             step: OnboardingStep::Welcome,
             selected_item: 0,
@@ -98,6 +288,10 @@ impl Onboarding {
             providers,
             models: Vec::new(),
             error_message: None,
+            search_query: String::new(),
+            filtered_provider_indices: Vec::new(),
+            filtered_model_indices: Vec::new(),
+            is_fetching_models: false,
         }
     }
 
@@ -119,6 +313,7 @@ impl Onboarding {
             }
             OnboardingStep::Complete => OnboardingStep::Complete,
         };
+        self.enter_step();
     }
 
     pub fn prev_step(&mut self) {
@@ -130,17 +325,97 @@ impl Onboarding {
             OnboardingStep::ModelSelect => OnboardingStep::KeyInput,
             OnboardingStep::Complete => OnboardingStep::ModelSelect,
         };
+        self.enter_step();
+    }
+
+    pub fn enter_step(&mut self) {
+        match self.step {
+            OnboardingStep::ProviderSelect => {
+                if self.search_query.is_empty() {
+                    if self.filtered_provider_indices.is_empty() {
+                        self.filtered_provider_indices = (0..self.providers.len()).collect();
+                    }
+                } else {
+                    // Restore filter when returning with an active search
+                    self.filtered_provider_indices = self.providers.iter().enumerate()
+                        .filter(|(_, p)| fuzzy_match(&self.search_query, &p.name))
+                        .map(|(i, _)| i)
+                        .collect();
+                }
+                self.selected_item = self.selected_item.min(self.filtered_provider_indices.len().saturating_sub(1));
+            }
+            OnboardingStep::ModelSelect => {
+                if self.search_query.is_empty() {
+                    if self.filtered_model_indices.is_empty() {
+                        self.filtered_model_indices = (0..self.models.len()).collect();
+                    }
+                } else {
+                    // Restore filter when returning with an active search
+                    self.filtered_model_indices = self.models.iter().enumerate()
+                        .filter(|(_, m)| fuzzy_match(&self.search_query, &m.name))
+                        .map(|(i, _)| i)
+                        .collect();
+                }
+                self.selected_item = self.selected_item.min(self.filtered_model_indices.len().saturating_sub(1));
+            }
+            _ => {}
+        }
+    }
+
+    pub fn update_search(&mut self, query: &str) {
+        self.search_query = query.to_lowercase();
+        match self.step {
+            OnboardingStep::ProviderSelect => {
+                self.filtered_provider_indices = self.providers.iter().enumerate()
+                    .filter(|(_, p)| fuzzy_match(&self.search_query, &p.name))
+                    .map(|(i, _)| i)
+                    .collect();
+                self.selected_item = 0;
+            }
+            OnboardingStep::ModelSelect => {
+                self.filtered_model_indices = self.models.iter().enumerate()
+                    .filter(|(_, m)| fuzzy_match(&self.search_query, &m.name))
+                    .map(|(i, _)| i)
+                    .collect();
+                self.selected_item = 0;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn clear_search(&mut self) {
+        self.search_query.clear();
+        self.filtered_provider_indices.clear();
+        self.filtered_model_indices.clear();
     }
 
     pub fn select_provider(&mut self, index: usize) {
-        if index < self.providers.len() {
-            self.selected_provider = Some(index);
+        if let Some(&real_index) = self.filtered_provider_indices.get(index) {
+            self.selected_provider = Some(real_index);
             self.selected_model = None;
-            let provider = &self.providers[index];
+            let provider = &self.providers[real_index];
             self.models = match provider.id.as_str() {
                 "openai" => get_openai_models(),
                 "anthropic" => get_anthropic_models(),
                 "google" => get_google_models(),
+                "cohere" => get_cohere_models(),
+                "mistral" => get_mistral_models(),
+                "deepseek" => get_deepseek_models(),
+                "groq" => get_groq_models(),
+                "openrouter" => get_openrouter_models(),
+                "huggingface" => get_huggingface_models(),
+                "xai" => get_xai_models(),
+                "azure" => get_azure_models(),
+                "moonshot" => get_moonshot_models(),
+                "perplexity" => get_perplexity_models(),
+                "ollama" => get_ollama_models(),
+                "hyperbolic" => get_hyperbolic_models(),
+                "together" => get_together_models(),
+                "zai" => get_zai_models(),
+                "minimax" => get_minimax_models(),
+                "mira" => get_mira_models(),
+                "galadriel" => get_galadriel_models(),
+                "llamafile" => get_llamafile_models(),
                 _ => Vec::new(),
             };
             self.error_message = None;
@@ -148,8 +423,8 @@ impl Onboarding {
     }
 
     pub fn select_model(&mut self, index: usize) {
-        if index < self.models.len() {
-            self.selected_model = Some(index);
+        if let Some(&real_index) = self.filtered_model_indices.get(index) {
+            self.selected_model = Some(real_index);
             self.error_message = None;
         }
     }
@@ -157,9 +432,10 @@ impl Onboarding {
     pub fn navigate_up(&mut self) {
         let max = match &self.step {
             OnboardingStep::Welcome => 0,
-            OnboardingStep::ProviderSelect => self.providers.len().saturating_sub(1),
-            OnboardingStep::ModelSelect => self.models.len().saturating_sub(1),
-            OnboardingStep::KeyInput | OnboardingStep::Complete => 0,
+            OnboardingStep::ProviderSelect => self.get_filtered_provider_count().saturating_sub(1),
+            OnboardingStep::ModelSelect => self.get_filtered_model_count().saturating_sub(1),
+            OnboardingStep::KeyInput => 0,
+            OnboardingStep::Complete => 1,  // yes/no = 2 options, max index = 1
         };
         if self.selected_item > 0 {
             self.selected_item -= 1;
@@ -170,13 +446,38 @@ impl Onboarding {
     pub fn navigate_down(&mut self) {
         let max = match &self.step {
             OnboardingStep::Welcome => 0,
-            OnboardingStep::ProviderSelect => self.providers.len().saturating_sub(1),
-            OnboardingStep::ModelSelect => self.models.len().saturating_sub(1),
-            OnboardingStep::KeyInput | OnboardingStep::Complete => 0,
+            OnboardingStep::ProviderSelect => self.get_filtered_provider_count().saturating_sub(1),
+            OnboardingStep::ModelSelect => self.get_filtered_model_count().saturating_sub(1),
+            OnboardingStep::KeyInput => 0,
+            OnboardingStep::Complete => 1,  // yes/no = 2 options, max index = 1
         };
         if self.selected_item < max {
             self.selected_item += 1;
         }
+    }
+
+    pub fn get_filtered_provider_count(&self) -> usize {
+        if self.filtered_provider_indices.is_empty() {
+            self.providers.len()
+        } else {
+            self.filtered_provider_indices.len()
+        }
+    }
+
+    pub fn get_filtered_model_count(&self) -> usize {
+        if self.filtered_model_indices.is_empty() {
+            self.models.len()
+        } else {
+            self.filtered_model_indices.len()
+        }
+    }
+
+    pub fn get_selected_provider_index(&self) -> Option<usize> {
+        self.selected_provider
+    }
+
+    pub fn get_selected_model_index(&self) -> Option<usize> {
+        self.selected_model
     }
 
     pub fn get_selected_item(&self) -> usize {
@@ -228,3 +529,5 @@ impl Default for Onboarding {
 pub mod render;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod comprehensive_tests;

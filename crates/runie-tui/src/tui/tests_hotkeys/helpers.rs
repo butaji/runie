@@ -13,7 +13,7 @@ pub fn simulate_key(code: crossterm::event::KeyCode, modifiers: crossterm::event
         mode,
         ..Default::default()
     };
-    crate::tui::events::event_to_msg(event, &state)
+    crate::tui::events::event_to_msg(event, &state).into_iter().next()
 }
 
 /// Helper: create AppState in Chat mode with some input typed
