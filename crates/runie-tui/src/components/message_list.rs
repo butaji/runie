@@ -1,6 +1,7 @@
 use ratatui::{buffer::Buffer, layout::Rect};
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
+use crate::components::message_list::render::WrapCache;
 pub mod types;
 pub mod render;
 
@@ -31,6 +32,7 @@ impl MessageList {
         area: Rect,
         buf: &mut Buffer,
         theme: &ThemeWrapper,
+        wrap_cache: &mut WrapCache,
     ) {
         let mut row = 0u16;
         let max_rows = area.height;
@@ -52,7 +54,6 @@ impl MessageList {
         let mut prev_msg_type: Option<&str> = None;
 
         let most_recent_spinner = render::find_most_recent_spinner_index(&vm.messages);
-        let mut wrap_cache = render::WrapCache::new();
 
         for (idx, msg) in vm.messages.iter().skip(vm.scroll_offset).enumerate() {
             if row >= max_rows { break; }
@@ -70,7 +71,7 @@ impl MessageList {
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
                 success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-                &vm.animation, &mut wrap_cache,
+                &vm.animation, wrap_cache,
             );
             row += rendered;
         }

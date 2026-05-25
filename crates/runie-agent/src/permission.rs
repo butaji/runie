@@ -13,7 +13,7 @@ pub struct PermissionGate {
 
 impl PermissionGate {
     pub fn new(timeout_secs: u64) -> Self {
-        let (tx, rx) = mpsc::channel(10);
+        let (tx, rx) = mpsc::channel(100);
         Self {
             tx,
             rx,
