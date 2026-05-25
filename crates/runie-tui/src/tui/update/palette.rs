@@ -1,11 +1,14 @@
 use crate::tui::state::{AppState, TuiMode, Cmd};
 use crate::components::command_palette::PaletteCommand;
+use crate::components::CommandPalette;
 
-pub fn open_palette(state: &mut AppState) {
+pub fn open_palette(state: &mut AppState, palette: &mut CommandPalette) {
     state.command_palette.open = true;
     state.mode = TuiMode::CommandPalette;
     state.command_palette.filter.clear();
     state.command_palette.selected = 0;
+    palette.selected = 0;
+    palette.filter("");
 }
 
 pub fn handle_close_modal(state: &mut AppState) {

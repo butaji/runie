@@ -11,8 +11,7 @@ use rig_core::completion::message::{
 use rig_core::completion::request::ToolDefinition;
 use rig_core::completion::{CompletionModel, CompletionRequest};
 use rig_core::OneOrMany;
-use runie_core::{Event, Message, ToolSchema};
-use crate::provider::ProviderError;
+use runie_core::{Event, Message, ProviderError, ToolSchema};
 use futures::stream::BoxStream;
 use futures::StreamExt;
 
@@ -396,5 +395,20 @@ impl crate::Provider for RigProvider {
         with_rig_provider!(self, client, model, {
             stream_from_client(client, model, rig_messages, rig_tools).await
         })
+    }
+
+    async fn chat_simple(
+        &self,
+        messages: Vec<Message>,
+    ) -> Result<String, ProviderError> {
+        let stream = self.chat(messages, vec![]).await?;
+        let mut result = String::new();
+        futures::pin_mut!(stream);
+        while let Some(event) = stream.next().await {
+            if let Event::MessageDelta { content } = event {
+                result.push_str(&content);
+            }
+        }
+        Ok(result)
     }
 }

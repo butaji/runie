@@ -1,4 +1,4 @@
-use runie_ai::providers::{MockProvider, OpenAiProvider, AnthropicProvider};
+use runie_ai::providers::{MockProvider, OpenAiProvider, AnthropicProvider, GenAiProvider, RigProvider};
 use runie_ai::Provider;
 use crate::settings::Settings;
 
@@ -22,6 +22,16 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
             let provider = AnthropicProvider::new(api_key, settings.model.clone());
             Ok(Box::new(provider))
         }
-        other => Err(format!("Unknown provider: {}. Use 'openai' or 'anthropic'", other)),
+        "google" => {
+            let provider = GenAiProvider::new(settings.model.clone());
+            Ok(Box::new(provider))
+        }
+        other => {
+            let api_key = settings.api_key.clone()
+                .ok_or(format!("API key required for provider: {}", other))?;
+            let provider = RigProvider::new(other, &api_key, &settings.model)
+                .map_err(|e| e.to_string())?;
+            Ok(Box::new(provider))
+        }
     }
 }

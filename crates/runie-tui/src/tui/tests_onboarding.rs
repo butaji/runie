@@ -4,6 +4,7 @@ mod tests {
     use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, TopBarState, PermissionModalState, CommandPaletteState, ScrollState};
     use crate::tui::update::update;
     use crate::components::onboarding::Onboarding;
+    use crate::components::CommandPalette;
     use runie_ai::TokenUsage;
     use crate::components::SessionTreeNavigator;
 
@@ -30,17 +31,19 @@ mod tests {
             session_tree: SessionTreeNavigator::new(),
             background_jobs: Vec::new(),
             onboarding: Some(Onboarding::new()),
+            terminal_size: (0, 0),
         }
     }
 
     #[test]
     fn test_onboarding_enter_advances() {
         let mut state = make_onboarding_state();
+        let mut palette = CommandPalette::new();
         assert_eq!(
             state.onboarding.as_ref().unwrap().step,
             crate::components::onboarding::OnboardingStep::Welcome
         );
-        update(&mut state, Msg::OnboardingNext);
+        update(&mut state, &mut palette, Msg::OnboardingNext);
         assert_eq!(
             state.onboarding.as_ref().unwrap().step,
             crate::components::onboarding::OnboardingStep::ProviderSelect
@@ -50,12 +53,13 @@ mod tests {
     #[test]
     fn test_onboarding_esc_goes_back() {
         let mut state = make_onboarding_state();
-        update(&mut state, Msg::OnboardingNext);
+        let mut palette = CommandPalette::new();
+        update(&mut state, &mut palette, Msg::OnboardingNext);
         assert_eq!(
             state.onboarding.as_ref().unwrap().step,
             crate::components::onboarding::OnboardingStep::ProviderSelect
         );
-        update(&mut state, Msg::OnboardingBack);
+        update(&mut state, &mut palette, Msg::OnboardingBack);
         assert_eq!(
             state.onboarding.as_ref().unwrap().step,
             crate::components::onboarding::OnboardingStep::Welcome
@@ -65,17 +69,19 @@ mod tests {
     #[test]
     fn test_onboarding_quit_global() {
         let mut state = make_onboarding_state();
+        let mut palette = CommandPalette::new();
         assert!(state.running);
-        update(&mut state, Msg::Quit);
+        update(&mut state, &mut palette, Msg::Quit);
         assert!(!state.running);
     }
 
     #[test]
     fn test_onboarding_skip() {
         let mut state = make_onboarding_state();
+        let mut palette = CommandPalette::new();
         assert_eq!(state.mode, TuiMode::Onboarding);
         assert!(state.onboarding.is_some());
-        update(&mut state, Msg::OnboardingSkip);
+        update(&mut state, &mut palette, Msg::OnboardingSkip);
         assert!(state.onboarding.is_none());
         assert_eq!(state.mode, TuiMode::Chat);
     }

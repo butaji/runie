@@ -66,6 +66,7 @@ pub struct CommandPalette {
     requires_args: HashMap<String, PaletteCommandDef>,
     all_commands: Vec<PaletteCommandDef>,
     pub filtered_commands: Vec<usize>,
+    pub selected: usize,
     pub argument_input: String,
     pub is_argument_mode: bool,
     pending_command: Option<String>,
@@ -101,7 +102,7 @@ impl CommandPalette {
             }
         }
 
-        Self { requires_args: requires_args_map, all_commands, filtered_commands: Vec::new(), argument_input: String::new(), is_argument_mode: false, pending_command: None, usage_stats: HashMap::new() }
+        Self { requires_args: requires_args_map, all_commands, filtered_commands: Vec::new(), selected: 0, argument_input: String::new(), is_argument_mode: false, pending_command: None, usage_stats: HashMap::new() }
     }
 
     pub fn all_commands(&self) -> &[PaletteCommandDef] { &self.all_commands }

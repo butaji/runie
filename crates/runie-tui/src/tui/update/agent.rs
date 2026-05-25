@@ -1,6 +1,7 @@
 use crate::components::MessageItem;
 use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
+use runie_ai::TokenUsage;
 
 pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
     match event {
@@ -13,7 +14,16 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
         AgentEvent::AgentEnd { .. } => on_agent_end(state),
         AgentEvent::Error { message } => on_agent_error(state, message),
         AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args } => on_permission_request(state, tool_call_id, tool_name, tool_args),
-        _ => {}
+        AgentEvent::TokenUsage { prompt_tokens, completion_tokens, .. } => {
+            state.session_token_usage.prompt_tokens += prompt_tokens;
+            state.session_token_usage.completion_tokens += completion_tokens;
+            state.session_token_usage.total_tokens += prompt_tokens + completion_tokens;
+            if let Some(ref model) = state.current_model {
+                let cost = TokenUsage::estimate_cost(prompt_tokens, completion_tokens, model);
+                state.session_token_usage.estimated_cost += cost;
+            }
+        }
+        AgentEvent::TurnEnd { .. } | AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } => {}
     }
 }
 

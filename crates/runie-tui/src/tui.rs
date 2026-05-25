@@ -138,7 +138,7 @@ impl Tui {
     pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
         self.log_action(&msg);
         self.dirty = true;
-        update(&mut self.state, msg)
+        update(&mut self.state, &mut self.command_palette, msg)
     }
 
     fn log_action(&mut self, msg: &Msg) {
@@ -386,7 +386,6 @@ impl Tui {
     pub fn handle_event(&mut self, event: Event) -> Option<TuiAction> {
         match event {
             Event::Key(key) => self.handle_key(key),
-            Event::Resize(_, _) => None,
             _ => None,
         }
     }
@@ -424,7 +423,7 @@ impl Tui {
                             action: permission_action,
                         });
                     }
-                    Cmd::SaveSession { .. } | Cmd::LoadSession { .. } | Cmd::SlashCommand(_) | Cmd::SaveSettings { .. } => {
+                    Cmd::SaveSession { .. } | Cmd::LoadSession { .. } | Cmd::SlashCommand(_) | Cmd::SaveSettings { .. } | Cmd::FetchModels { .. } => {
                         // These are handled by the CLI runtime, not the TUI
                     }
                 }

@@ -7,9 +7,14 @@ pub mod token_usage;
 pub mod providers;
 pub mod model_registry;
 pub mod tests;
+pub mod helpers;
+pub mod session_adapter;
+pub mod model_fetcher;
 
 pub use provider::Provider;
 pub use unified_api::UnifiedApi;
 pub use token_usage::TokenUsage;
 pub use providers::GenAiProvider;
+pub use providers::RigProvider;
+pub use model_fetcher::{ModelFetcher, FetchError, create_fetcher};
 pub use model_registry::{ModelInfo, ModelRegistry};

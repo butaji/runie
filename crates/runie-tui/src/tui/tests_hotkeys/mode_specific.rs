@@ -22,7 +22,7 @@ fn test_ctrl_keys_always_quit_in_permission_mode() {
         state: KeyEventState::NONE,
     });
 
-    let msg = event_to_msg(event, &state);
+    let msg = event_to_msg(event, &state).into_iter().next();
     assert_eq!(msg, Some(Msg::Quit), "Ctrl+C in Permission mode should always produce Quit");
 }
 
@@ -40,7 +40,7 @@ fn test_enter_doesnt_submit_in_permission_mode() {
         state: KeyEventState::NONE,
     });
 
-    let msg = event_to_msg(event, &state);
+    let msg = event_to_msg(event, &state).into_iter().next();
     assert_eq!(msg, Some(Msg::PermissionConfirm), "Enter in Permission should confirm, not submit");
 }
 
@@ -64,7 +64,7 @@ fn test_ctrl_keys_dont_work_in_palette_mode() {
         state: KeyEventState::NONE,
     });
 
-    let msg = event_to_msg(event, &state);
+    let msg = event_to_msg(event, &state).into_iter().next();
     assert_eq!(msg, Some(Msg::CommandPaletteFilter('b')), "Ctrl+B in CommandPalette treated as filter 'b'");
 }
 
@@ -87,7 +87,7 @@ fn test_arrow_keys_dont_affect_input_in_palette_mode() {
         state: KeyEventState::NONE,
     });
 
-    let msg = event_to_msg(event, &state);
+    let msg = event_to_msg(event, &state).into_iter().next();
     assert_eq!(msg, None, "Left in CommandPalette should be ignored");
 }
 

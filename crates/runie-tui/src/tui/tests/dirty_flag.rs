@@ -6,6 +6,7 @@
 
 use crate::tui::state::{AppState, Msg};
 use crate::tui::update::update;
+use crate::components::CommandPalette;
 use ratatui_textarea::TextArea;
 
 /// Mock Tui struct for testing the dirty flag pattern.
@@ -14,6 +15,7 @@ use ratatui_textarea::TextArea;
 /// - Then calls the free function to update state
 struct MockTui {
     state: AppState,
+    palette: CommandPalette,
     dirty: bool,
 }
 
@@ -21,6 +23,7 @@ impl MockTui {
     fn new(initial_dirty: bool) -> Self {
         Self {
             state: AppState::default(),
+            palette: CommandPalette::new(),
             dirty: initial_dirty,
         }
     }
@@ -30,7 +33,7 @@ impl MockTui {
     /// setting dirty, causing render() to skip since !dirty.
     fn update(&mut self, msg: Msg) -> Vec<crate::tui::state::Cmd> {
         self.dirty = true;  // <-- This is the critical line that was missing!
-        update(&mut self.state, msg)
+        update(&mut self.state, &mut self.palette, msg)
     }
 
     fn is_dirty(&self) -> bool {
@@ -122,7 +125,7 @@ fn test_keyboard_event_full_pipeline() {
     });
 
     // Convert event to msg via the event_to_msg function
-    if let Some(msg) = event_to_msg(event, &tui.state) {
+    for msg in event_to_msg(event, &tui.state) {
         // This is the CORRECT path: tui.update(msg) sets dirty first
         tui.update(msg);
     }
@@ -140,9 +143,10 @@ fn test_free_function_does_not_set_dirty() {
     // This demonstrates WHY you must use tui.update() not runie_tui::update()
     // The free function only updates state - it cannot set dirty on Tui
     let mut state = AppState::default();
+    let mut palette = CommandPalette::new();
 
     // Calling free function directly on state
-    update(&mut state, Msg::ToggleSidebar);
+    update(&mut state, &mut palette, Msg::ToggleSidebar);
 
     // State is updated correctly (toggled from false to true)...
     assert!(state.show_sidebar);
@@ -216,7 +220,8 @@ fn test_free_function_vs_method_difference() {
 
     // Using the free function directly on state (BUG!)
     let mut state = AppState::default();
-    update(&mut state, Msg::ToggleSidebar);
+    let mut palette = CommandPalette::new();
+    update(&mut state, &mut palette, Msg::ToggleSidebar);
     assert!(state.show_sidebar, "Free function updates state");
 
     // But there's NO dirty flag on the free function!
