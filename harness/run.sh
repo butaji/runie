@@ -6,10 +6,10 @@
 # outputs metrics as CSV.
 #
 # Usage:
-#   ./harness/run.sh              # Run all tasks
-#   ./harness/run.sh --task foo  # Run single task
-#   ./harness/run.sh --model gpt-4o  # Specify model
-#   ./harness/run.sh --verbose   # Verbose output
+#   ./run.sh              # Run all tasks
+#   ./run.sh --task foo   # Run single task
+#   ./run.sh --model gpt-4o  # Specify model
+#   ./run.sh --verbose    # Verbose output
 #
 # Output:
 #   CSV: task_id, status, elapsed_ms, checks_passed, checks_total, detail
@@ -18,7 +18,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HARNESS_DIR="$SCRIPT_DIR/tasks"
 
 # Defaults
@@ -59,30 +58,26 @@ done
 
 # Default to all tasks if none specified
 if [[ ${#TASKS[@]} -eq 0 ]]; then
-    TASKS=(empty_state ctrl_c permission_rollback)
+    # Find all task directories
+    for d in "$HARNESS_DIR"/*; do
+        if [[ -d "$d" ]]; then
+            TASKS+=("$(basename "$d")")
+        fi
+    done
 fi
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
 
 echo "=== Runie Agent Harness ==="
 echo "Model: $MODEL"
-echo "Tasks: ${TASKS[*]}"
+echo "Tasks: ${TASKS[*]:-none}"
 echo "Python: $PYTHON"
 echo ""
 
 # Output CSV header
 echo "task_id,status,elapsed_ms,checks_passed,checks_total,detail"
 
-# Track results
-declare -A RESULTS
-declare -A CHECKS_PASSED
-declare -A CHECKS_TOTAL
-declare -A ELAPSED_MS
-TOTAL_START=$(date +%s%N)
+# Temp file for results
+RESULTS_FILE=$(mktemp)
+TOTAL_START=$(date +%s)
 
 run_task() {
     local task_id="$1"
@@ -120,14 +115,16 @@ files = setup.get('files', {})
 for path, content in files.items():
     import os
     full_path = os.path.join('$sandbox/workspace', path)
-    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+    dir_path = os.path.dirname(full_path)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
     with open(full_path, 'w') as f:
         f.write(content)
 " 2>/dev/null || true
     fi
 
     # Run grader
-    local start_time=$(date +%s%3N)
+    local start_time=$(date +%s)
     local grader_output
     local grader_exit=0
 
@@ -138,8 +135,8 @@ for path, content in files.items():
     # Run grader from workspace directory
     grader_output=$(cd "$sandbox/workspace" && "$PYTHON" "$grader" 2>&1) || grader_exit=$?
 
-    local end_time=$(date +%s%3N)
-    local elapsed=$((end_time - start_time))
+    local end_time=$(date +%s)
+    local elapsed=$(((end_time - start_time) * 1000))
 
     # Parse grader output
     local status="fail"
@@ -150,11 +147,10 @@ for path, content in files.items():
     # Parse PASS/FAIL lines and RESULT line
     while IFS= read -r line; do
         if [[ "$line" == PASS:* ]]; then
-            ((checks_passed++)) || true
+            checks_passed=$((checks_passed + 1))
         fi
         if [[ "$line" == FAIL:* ]]; then
-            ((checks_total++)) || true
-            ((checks_passed++)) || true  # Count as both total and passed
+            checks_total=$((checks_total + 1))
         fi
         if [[ "$line" == RESULT:* ]]; then
             if [[ "$line" == *"pass"* ]]; then
@@ -169,25 +165,30 @@ for path, content in files.items():
     done <<< "$grader_output"
 
     # Count total checks from grader output (PASS + FAIL lines)
-    checks_total=$checks_passed
     local pass_count=0
     local fail_count=0
     while IFS= read -r line; do
         if [[ "$line" == PASS:* ]]; then
-            ((pass_count++)) || true
+            pass_count=$((pass_count + 1))
         fi
         if [[ "$line" == FAIL:* ]]; then
-            ((fail_count++)) || true
+            fail_count=$((fail_count + 1))
         fi
     done <<< "$grader_output"
 
     checks_passed=$pass_count
     checks_total=$((pass_count + fail_count))
 
-    if [[ $grader_exit -eq 0 ]] && [[ "$status" != "fail" ]]; then
-        status="pass"
-    elif [[ $grader_exit -ne 0 ]]; then
+    # Determine status based on results
+    if [[ $grader_exit -ne 0 ]]; then
         status="error"
+    elif [[ $fail_count -eq 0 ]] && [[ $pass_count -gt 0 ]]; then
+        # All checks passed
+        status="pass"
+    elif [[ $fail_count -gt 0 ]]; then
+        status="fail"
+    else
+        status="fail"
     fi
 
     # Escape CSV special chars in detail
@@ -202,11 +203,8 @@ for path, content in files.items():
         echo "---------------------"
     fi
 
-    # Store results
-    RESULTS["$task_id"]=$status
-    CHECKS_PASSED["$task_id"]=$checks_passed
-    CHECKS_TOTAL["$task_id"]=$checks_total
-    ELAPSED_MS["$task_id"]=$elapsed
+    # Store results in temp file (compatible with bash 3.2)
+    echo "$task_id:$status:$checks_passed:$checks_total" >> "$RESULTS_FILE"
 
     # Cleanup
     rm -rf "$sandbox"
@@ -220,30 +218,31 @@ for task_id in "${TASKS[@]}"; do
 done
 
 # Summary
-TOTAL_END=$(date +%s%N)
-TOTAL_MS=$(( (TOTAL_END - TOTAL_START) / 1000000 ))
+TOTAL_END=$(date +%s)
+TOTAL_MS=$(( (TOTAL_END - TOTAL_START) * 1000 ))
 
 echo ""
 echo "=== Summary ==="
 echo "Total time: ${TOTAL_MS}ms"
 
-# Count pass/fail
+# Count pass/fail from results file
 pass_count=0
 fail_count=0
 error_count=0
 total_checks=0
 passed_checks=0
 
-for task_id in "${TASKS[@]}"; do
-    status="${RESULTS[$task_id]:-error}"
-    case "$status" in
-        pass) ((pass_count++)) || true ;;
-        fail) ((fail_count++)) || true ;;
-        error) ((error_count++)) || true ;;
-    esac
-    ((total_checks += ${CHECKS_TOTAL[$task_id]:-0})) || true
-    ((passed_checks += ${CHECKS_PASSED[$task_id]:-0})) || true
-done
+if [[ -f "$RESULTS_FILE" ]]; then
+    while IFS=: read -r tid status cp ct; do
+        case "$status" in
+            pass) pass_count=$((pass_count + 1)) ;;
+            fail) fail_count=$((fail_count + 1)) ;;
+            error) error_count=$((error_count + 1)) ;;
+        esac
+        total_checks=$((total_checks + ct))
+        passed_checks=$((passed_checks + cp))
+    done < "$RESULTS_FILE"
+fi
 
 total_tasks=${#TASKS[@]}
 pass_rate=0
@@ -254,5 +253,8 @@ fi
 echo "Tasks: $pass_count pass / $fail_count fail / $error_count error ($total_tasks total)"
 echo "Checks: $passed_checks / $total_checks passed"
 echo "Pass rate: ${pass_rate}%"
+
+# Cleanup
+rm -f "$RESULTS_FILE"
 
 exit 0

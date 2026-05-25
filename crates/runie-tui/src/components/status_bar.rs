@@ -80,10 +80,9 @@ impl StatusBarViewModel {
                 StatusItem { key: "Enter".to_string(), description: "run".to_string() },
             ],
             TuiMode::DiffViewer => vec![
-                StatusItem { key: "Esc".to_string(), description: "close".to_string() },
-                StatusItem { key: "j/k".to_string(), description: "navigate".to_string() },
-                StatusItem { key: "y".to_string(), description: "accept".to_string() },
-                StatusItem { key: "n".to_string(), description: "reject".to_string() },
+                StatusItem { key: "Esc/q/x".to_string(), description: "close".to_string() },
+                StatusItem { key: "j/k/↑/↓".to_string(), description: "scroll".to_string() },
+                StatusItem { key: "PgUp/PgDn".to_string(), description: "page".to_string() },
             ],
             TuiMode::SessionTree => vec![
                 StatusItem { key: "Esc".to_string(), description: "close".to_string() },
