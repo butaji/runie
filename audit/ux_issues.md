@@ -6,8 +6,8 @@ Audited by walking every `draw()` and `handle_event()` path. Issues are ranked P
 
 ## P0 — Dead-Ends and Blocking Issues
 
-### P0-1: No empty-state placeholder in chat view
-**File:** `crates/runie-tui/src/components/message_list/render.rs`
+### P0-1: No empty-state placeholder in chat view ✓ FIXED
+**File:** `crates/runie-tui/src/components/message_list.rs` + `message_list/render.rs`
 
 When `messages` is empty, `render_ref()` loops over zero items and renders a completely blank feed. The user sees nothing and has no CTA.
 
@@ -92,7 +92,7 @@ But `key_to_permission_msg` maps `Char('y')` AND `Enter` both to `Msg::Permissio
 
 ---
 
-### P1-4: Command palette — no empty state message
+### P1-4: Command palette — no empty state message ✓ FIXED
 **File:** `crates/runie-tui/src/components/command_palette/render.rs`
 
 When `palette.filtered_commands` is empty (after filtering), the palette shows nothing. The user sees a blank box with no indication that their filter matched nothing.
@@ -169,14 +169,14 @@ The `EditFileTool` should use atomic write (write to temp, then rename) to avoid
 
 ## Summary Table
 
-| ID | Severity | Category | Screen | Issue |
-|----|----------|----------|--------|-------|
-| P0-1 | P0 | Empty State | Chat feed | Blank screen on first launch |
-| P0-3 | P0 | Invalid State | Onboarding model select | Error shown but no retry CTA |
-| P1-1 | P1 | Cognitive Load | Permission modal | 4 options shown at once |
-| P1-2 | P1 | Cognitive Load | Permission status bar | Label mismatch with actual keys |
-| P1-4 | P1 | Empty State | Command palette | Blank when no match |
-| P1-5 | P1 | Invalid State | Onboarding model select | No timeout on fetch |
-| P2-1 | P2 | Error Presentation | Agent error | Raw error string, no structured type |
-| P2-2 | P2 | Invalid State | Agent loop | Network drop = silent or cryptic |
-| P2-3 | P2 | Invalid State | Edit tools | File deletion not surfaced cleanly |
+| ID | Status | Category | Screen | Issue |
+|----|--------|----------|--------|-------|
+| P0-1 | ✓ FIXED | Empty State | Chat feed | Blank screen on first launch |
+| P0-3 | OPEN | Invalid State | Onboarding model select | Error shown but no retry CTA |
+| P1-1 | OPEN | Cognitive Load | Permission modal | 4 options shown at once |
+| P1-2 | OPEN | Cognitive Load | Permission status bar | Label mismatch with actual keys |
+| P1-4 | ✓ FIXED | Empty State | Command palette | Blank when no match |
+| P1-5 | OPEN | Invalid State | Onboarding model select | No timeout on fetch |
+| P2-1 | OPEN | Error Presentation | Agent error | Raw error string, no structured type |
+| P2-2 | OPEN | Invalid State | Agent loop | Network drop = silent or cryptic |
+| P2-3 | OPEN | Invalid State | Edit tools | File deletion not surfaced cleanly |
