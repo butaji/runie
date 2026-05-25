@@ -47,6 +47,8 @@ pub fn handle_anim(state: &mut AppState, msg: &Msg) {
 pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     let text = state.textarea.lines().join("\n");
     if text.is_empty() {
+        // P0-3 FIX: Show feedback when submitting empty input
+        state.input_right_info = "Type a message first".to_string();
         return vec![];
     }
     

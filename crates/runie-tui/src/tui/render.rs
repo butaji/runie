@@ -28,13 +28,18 @@ pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static st
     }
 }
 
-fn build_center_line(vm: &StatusBarViewModel, text_tertiary: ratatui::style::Color) -> (Line<'_>, usize) {
+fn build_center_line(vm: &StatusBarViewModel, text_tertiary: ratatui::style::Color, warning: ratatui::style::Color) -> (Line<'_>, usize) {
     use ratatui::text::Span;
     let mut parts = vec![];
-    if let Some(model) = vm.current_model.as_deref() {
+
+    // P0-2 FIX: Show warning when no model is configured
+    if vm.current_model.is_none() {
+        parts.push(Span::styled("⚠ No model configured", Style::default().fg(warning)));
+    } else if let Some(model) = vm.current_model.as_deref() {
         parts.push(Span::styled(model, Style::default().fg(text_tertiary)));
         parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
     }
+
     if vm.session_token_usage.total_tokens > 0 {
         parts.push(Span::styled(format!("{} tokens", vm.session_token_usage.total_tokens), Style::default().fg(text_tertiary)));
         if vm.session_token_usage.estimated_cost > 0.0 {
@@ -70,9 +75,10 @@ pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, 
 
     let text_tertiary = colors.text_dim;
     let text_secondary = colors.text_secondary;
+    let warning = colors.error; // P0-2 FIX: Use error color for warning
     let items = get_status_items(&vm.mode);
 
-    let (center_line, center_width) = build_center_line(vm, text_tertiary);
+    let (center_line, center_width) = build_center_line(vm, text_tertiary, warning);
     let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
     let remaining = (area.width.saturating_sub(2) as usize).saturating_sub(left_width + center_width);
 
