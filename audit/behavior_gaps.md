@@ -1,215 +1,231 @@
-# Behavior Audit - State Transitions
+# Behavior Gaps: State Machine Analysis
 
-## Overview
+## State Machine Overview
 
-This document tracks undefined or implicit state transitions in the agent loop and TUI state machine. All gaps have been addressed.
+### States (TuiMode)
+```
+Chat ─────────┬──> CommandPalette ──> Chat
+              ├──> Permission ──────> Chat
+              ├──> DiffViewer ─────> Chat
+              ├──> SessionTree ────> Chat
+              ├──> Overlay ────────> Chat
+              └──> Onboarding ─────> Chat (or Exit)
+```
+
+### Events (Msg)
+```
+Quit, Stop, Submit, TextareaKey, InsertNewline
+ToggleSidebar, OpenCommandPalette, CloseModal, ConfirmModal
+ScrollUp, ScrollDown, ScrollPageUp, ScrollPageDown
+PermissionConfirm, PermissionCancel, PermissionAlways, PermissionSkip
+PermissionTimeout
+CommandPaletteFilter, CommandPaletteBackspace, CommandPaletteUp
+CommandPaletteDown, CommandPaletteConfirm, CommandPaletteCancelArgument
+AgentEvent
+Tick, CursorBlink
+SlashCommand
+ToggleSessionTree, SessionTreeUp, SessionTreeDown, SessionTreeConfirm
+OnboardingNext, OnboardingBack, OnboardingNavigateUp, OnboardingNavigateDown
+OnboardingSelectProvider, OnboardingSelectModel
+OnboardingKeyInput, OnboardingKeyBackspace
+OnboardingSearchInput, OnboardingSearchBackspace
+OnboardingSubmit, OnboardingSkip
+ClearInput, ClearChat, DirectCommand, Paste
+ModelsFetched, ModelsFetchFailed
+Resize
+```
 
 ---
 
-## Agent Loop State Machine
+## Undefined or Implicit Transitions
 
-### States
+### BG-1: Permission Queue Processing
+**Current:** `on_permission_request()` queues requests when in blocking mode.  
+**Gap:** After processing a queued permission, state may not properly transition back.
+**File:** `crates/runie-tui/src/tui/update/agent.rs:122-144`  
+**Fix:** Already has FIX comment. Queue processing is implemented in `handle_permission()`.
+
+### BG-2: Error State Cleanup
+**Current:** `on_agent_error()` sets `mode = TuiMode::Chat` unless in Onboarding.  
+**Gap:** If agent errors while permission is pending, cleanup may be incomplete.
+**File:** `crates/runie-tui/src/tui/update/agent.rs:73-75`  
+**Fix:** Already has FIX comment noting "BG-2 FIX".
+
+### BG-3: AgentEnd Cleanup
+**Current:** `on_agent_end()` clears permission modal and pending queue.  
+**Gap:** If multiple AgentEnd events fire, state may become inconsistent.
+**File:** `crates/runie-tui/src/tui/update/agent.rs:60-68`  
+**Fix:** Already has FIX comment "BG-5 FIX".
+
+### BG-4: Interrupt Fade Animation
+**Current:** `AnimationState` has `interrupt_fade_start` for fade effect.  
+**Gap:** Animation is rendered but state cleanup after fade is not explicit.
+**File:** `crates/runie-tui/src/components/message_list/render.rs:290-310`  
+**Recommendation:** Add explicit transition from interrupt state to idle.
+
+### BG-5: Tick Message Side Effects
+**Current:** `Msg::Tick` triggers animation update AND permission timeout check.  
+**Gap:** Tick is always processed, but timeout check has side effects.
+**File:** `crates/runie-tui/src/tui/state.rs:408-414`  
+**Fix:** Already has FIX comment "P0-1 FIX: Check for permission timeout".
+
+---
+
+## Idempotency Issues
+
+### IDEM-1: Duplicate Tool Calls (Already Fixed)
+**File:** `crates/runie-agent/src/loop_engine.rs:140-150`  
+**Status:** ✅ FIXED - `seen_tool_calls` HashSet prevents duplicates.
+
+### IDEM-2: Double-Submit (Already Fixed)
+**File:** `crates/runie-tui/src/tui/update/misc.rs:38-42`  
+**Status:** ✅ FIXED - `agent_running` check blocks double-submit.
+
+### IDEM-3: File Concurrent Edits (Already Fixed)
+**File:** `crates/runie-tools/src/workspace.rs:10-35`  
+**Status:** ✅ FIXED - `FileLock` and `with_lock()` for exclusive access.
+
+---
+
+## Cancellation Behavior
+
+### CANCEL-1: Ctrl+C / Stop
+**File:** `crates/runie-tui/src/tui/events.rs:37-40`  
+**Current:** `Msg::Stop` triggers `Cmd::Interrupt` which aborts agent task.  
+**Behavior:** Agent task is aborted via `handle.abort()`.  
+**Gap:** Partial tool changes may not be rolled back.  
+**Fix:** Already has FIX comment "P1-4 FIX: Rollback". Rollback is sent via `Cmd::Rollback`.
+
+### CANCEL-2: Permission Deny/Cancel
+**File:** `crates/runie-tui/src/tui/update/agent.rs:150-168`  
+**Current:** On deny, `Cmd::Rollback` is sent to agent.  
+**Behavior:** Agent should revert any file changes made by denied tool.  
+**Gap:** Rollback implementation is a placeholder (`eprintln!`).  
+**Recommendation:** Implement actual file state rollback mechanism.
+
+### CANCEL-3: Task Abort on Exit
+**File:** `crates/runie-cli/src/tui_run.rs:280-285`  
+**Current:** On exit, `agent_task.abort()` is called.  
+**Behavior:** Task is aborted and we await completion.  
+**Status:** ✅ FIXED - Clean abort on exit.
+
+---
+
+## Concurrency Issues
+
+### CONC-1: File Locking (Already Fixed)
+**File:** `crates/runie-tools/src/workspace.rs:10-35`  
+**Status:** ✅ FIXED - `FileLock` prevents concurrent edits to same file.
+
+### CONC-2: Atomic Writes (Already Fixed)
+**File:** `crates/runie-tools/src/workspace.rs:40-75`  
+**Status:** ✅ FIXED - `atomic_write()` uses temp file + rename.
+
+### CONC-3: Permission Channel
+**File:** `crates/runie-cli/src/tui_run.rs:168-172`  
+**Current:** Fresh permission channel created on each agent spawn.  
+**Gap:** If old channel has pending messages, they may leak to new agent.  
+**Fix:** Channel is replaced on spawn, old one is dropped.
+
+### CONC-4: Event Channel Backpressure
+**File:** `crates/runie-cli/src/tui_run.rs:195-205`  
+**Current:** Terminal reader retries up to 10 times with 1ms sleep.  
+**Gap:** If channel stays full, events are dropped silently.  
+**Recommendation:** Consider bounded channel with overflow handling.
+
+---
+
+## Recovery Actions for Invalid States
+
+### RECOVERY-1: Model Streams Garbage
+**File:** `crates/runie-agent/src/loop_engine.rs:110-135`  
+**Behavior:** Text is accumulated incrementally. Garbage tokens would appear in UI.  
+**Recommendation:** Add UTF-8 validation before displaying. Already has error handling in provider.
+
+### RECOVERY-2: Network Drops During Tool Call
+**File:** `crates/runie-agent/src/loop_engine.rs:240-270`  
+**Behavior:** Tool execution error is returned as result.  
+**Status:** ✅ Has error handling - returns `ToolResult` with error message.
+
+### RECOVERY-3: File Deleted During Edit
+**File:** `crates/runie-tools/src/edit_file.rs`  
+**Behavior:** Write fails, error returned to agent.  
+**Recommendation:** Add retry mechanism or workspace state check.
+
+### RECOVERY-4: Invalid API Key
+**File:** `crates/runie-tui/src/tui/update/onboarding.rs:290-310`  
+**Behavior:** API key validation fails with specific error message.  
+**Status:** ✅ Fixed - `validate_key_detailed()` provides specific errors.
+
+### RECOVERY-5: DAG Cycle Detection
+**File:** N/A - Not implemented  
+**Behavior:** No cycle detection in tool execution order.  
+**Recommendation:** Add dependency graph tracking if tools can have dependencies.
+
+### RECOVERY-6: Actor Panic
+**File:** `crates/runie-agent/src/loop_engine.rs:290-350`  
+**Behavior:** Panic is caught, error result returned, workspace rolled back.  
+**Status:** ✅ Fixed - `execute_tool_with_panic_catch()` handles this.
+
+---
+
+## Recommended Fixes
+
+### Fix 1: Add State Transition Assertions
 ```rust
-enum AgentState {
-    Idle,           // No active agent
-    Running,        // Agent streaming
-    WaitingPermission, // Blocked on permission
-    ToolExecuting,  // Tool running
-    Error,          // Terminal error
-    Completed,      // Turn done
+// In update.rs, add assertions for valid state transitions
+fn assert_valid_transition(from: TuiMode, to: TuiMode, msg: &Msg) {
+    match (from, to) {
+        // Valid: any mode can go to Chat via CloseModal
+        (_, TuiMode::Chat) if matches!(msg, Msg::CloseModal | Msg::ConfirmModal) => {},
+        // Valid: Chat can go to Onboarding
+        (TuiMode::Chat, TuiMode::Onboarding) if matches!(msg, Msg::OnboardingNext) => {},
+        // Add more valid transitions...
+        _ => panic!("Invalid state transition: {:?} -> {:?} via {:?}", from, to, msg),
+    }
 }
 ```
 
-### Transition Map (All Defined ✅)
-
-| From | Event | To | Status |
-|------|-------|-----|--------|
-| Idle | SpawnAgent | Running | ✅ Defined |
-| Running | MessageChunk | Running | ✅ Defined |
-| Running | ToolCall | WaitingPermission | ✅ Defined |
-| WaitingPermission | Allow | ToolExecuting | ✅ Defined |
-| WaitingPermission | Deny | Completed | ✅ Defined |
-| WaitingPermission | Timeout | Completed | ✅ Defined |
-| ToolExecuting | ToolResult | Running | ✅ Defined |
-| Running | Error | Error | ✅ Defined |
-| Running | MessageEnd | Completed | ✅ Defined |
-| Any | Ctrl+C | Idle | ✅ Defined |
-
----
-
-## TUI State Machine
-
-### Modes (TuiMode)
+### Fix 2: Implement Rollback Mechanism
 ```rust
-enum TuiMode {
-    Chat,           // Main input mode
-    Overlay,        // Modal overlay
-    Select,         // Text selection
-    Permission,     // Permission dialog
-    CommandPalette, // Command search
-    DiffViewer,     // Git diff view
-    SessionTree,    // Session browser
-    Onboarding,     // First-run setup
+// In workspace.rs, add rollback stack
+pub struct Workspace {
+    // ... existing fields
+    rollback_stack: Vec<RollbackEntry>,
+}
+
+struct RollbackEntry {
+    path: PathBuf,
+    previous_content: String,
 }
 ```
 
-### Transition Map (All Defined ✅)
-
-| From | Event | To | Status |
-|------|-------|-----|--------|
-| Onboarding | Complete | Chat | ✅ Defined |
-| Onboarding | Skip | Chat | ✅ Defined |
-| Chat | PermissionRequest | Permission | ✅ Defined |
-| Permission | Allow/Deny | Chat | ✅ Defined |
-| Permission | Timeout | Chat | ✅ Defined |
-| Chat | Ctrl+K | CommandPalette | ✅ Defined |
-| CommandPalette | Esc/Enter | Chat | ✅ Defined |
-| Chat | ^Q | (quit) | ✅ Defined |
-| Chat | Error event | Chat | ✅ Defined |
-
----
-
-## Behavior Gaps Fixed
-
-### BG-1: Permission Request During Blocking Mode ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/update/agent.rs`
-
-**Issue:** Permission request during Overlay/DiffViewer/SessionTree had no escape.
-**Fix:** Permission queue added. User notified of queued request.
-
----
-
-### BG-2: Agent Error Returns to Chat ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/update/agent.rs:on_agent_error`
-
-**Issue:** Error event didn't change TuiMode.
-**Fix:** Mode resets to Chat on error (unless in Onboarding).
-
----
-
-### BG-3: Permission Deny Triggers Rollback ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/update/agent.rs:handle_permission`
-
-**Issue:** Denied tools left workspace in inconsistent state.
-**Fix:** Cmd::Rollback sent on Deny/Skip decisions.
-
----
-
-### BG-4: Overlay Close Triggers ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/events.rs:key_to_overlay_msg`
-
-**Issue:** Overlay close only via Esc, not Ctrl+Q.
-**Fix:** Both Esc and Ctrl+Q close overlay.
-
----
-
-### BG-5: Agent End While Permission Pending ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/update/agent.rs:on_agent_end`
-
-**Issue:** AgentEnd didn't clear pending permission modal.
-**Fix:** on_agent_end clears permission state and pending queue.
-
----
-
-### BG-6: Idempotency - Re-submit Blocked ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/update/misc.rs:handle_submit`
-
-**Issue:** Rapid double-submit could spawn duplicate agents.
-**Fix:** agent_running check blocks duplicate spawns with feedback.
-
----
-
-### BG-7: Ctrl+C During Permission Wait ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/events.rs:key_to_permission_msg`
-
-**Issue:** Ctrl+C during permission didn't cancel.
-**Fix:** Ctrl+C in Permission mode sends PermissionCancel.
-
----
-
-### BG-8: State Preserved on Mode Switch ✅ FIXED
-**Location:** `crates/runie-tui/src/tui/state.rs`
-
-**Issue:** Scroll position lost when switching modes.
-**Fix:** Scroll state preserved in AppState struct.
-
----
-
-### BG-9: Panic Recovery Defined ✅ FIXED
-**Location:** `crates/runie-agent/src/loop_engine.rs`
-
-**Issue:** Tool panic caused undefined state.
-**Fix:** Panic caught with catch_unwind, error result returned.
-
----
-
-### BG-10: Stream Error Handling ✅ FIXED
-**Location:** `crates/runie-agent/src/rig_loop.rs`
-
-**Issue:** Stream errors fell through silently.
-**Fix:** Error event sent, partial response preserved.
-
----
-
-### BG-11: Tool Call Deduplication ✅ FIXED
-**Location:** `crates/runie-agent/src/loop_engine.rs`, `rig_loop.rs`
-
-**Issue:** Same tool called twice executed twice.
-**Fix:** HashSet tracks seen tool calls per turn.
-
----
-
-### BG-12: File Locking for Concurrent Edits ✅ FIXED
-**Location:** `crates/runie-tools/src/workspace.rs`
-
-**Issue:** Concurrent file edits could cause lost updates.
-**Fix:** Mutex-based file locking and atomic writes added.
-
----
-
-## Test Coverage
-
-| Test | Description | Status |
-|------|-------------|--------|
-| cancellation_clean_state | Spawn agent, interrupt, verify clean state | ✅ 4/5 |
-| ctrl_c_test | Ctrl+C interrupts agent mid-turn | ✅ 4/4 |
-| double_submit_dedup | Double submit protection | ✅ 3/4 |
-| empty_state | Empty chat placeholder | ✅ 4/4 |
-| error_state_recovery | Error state recovery | ✅ 5/5 |
-| file_stale_edit | Stale file detection | ✅ 4/4 |
-| graceful_degradation | Component failure resilience | ✅ 4/4 |
-| idle_submit_feedback | Empty submit feedback | ✅ 4/4 |
-| network_retry | Network retry logic | ✅ 4/4 |
-| no_model_warning | No model warning | ✅ 4/4 |
-| permission_rollback | Permission rollback | ✅ 4/4 |
-| permission_timeout | Permission timeout | ✅ 4/4 |
-| progressive_disclosure | Advanced options hidden | ✅ 4/4 |
-| stream_error_partial_response | Stream error handling | ✅ 4/4 |
-| streaming_garbage | UTF-8 validation | ✅ 2/4 |
-| workspace_concurrent_edits | File locking | ✅ 4/4 |
-| idempotency_test | Tool call deduplication | ✅ 3/4 |
-
-**Total: 17/17 tasks pass (100%)**
+### Fix 3: Add Event Channel Overflow Handling
+```rust
+// In tui_run.rs, handle channel overflow
+let event = crossterm::event::read();
+if raw_tx.try_send(event.clone()).is_err() {
+    // Show "input dropped" indicator
+    tui.update(Msg::AgentEvent(AgentEvent::SystemMessage {
+        text: "Input dropped - terminal busy".to_string()
+    }));
+}
+```
 
 ---
 
 ## Summary
 
-All behavior gaps have been addressed:
+| Category | Fixed | Remaining | Total |
+|----------|-------|-----------|-------|
+| State Transitions | 3 | 1 | 4 |
+| Idempotency | 3 | 0 | 3 |
+| Cancellation | 2 | 1 | 3 |
+| Concurrency | 3 | 1 | 4 |
+| Recovery | 4 | 2 | 6 |
+| **Total** | **15** | **5** | **20** |
 
-| Gap | Description | Status |
-|-----|-------------|--------|
-| BG-1 | Permission during blocking mode | ✅ FIXED |
-| BG-2 | Error returns to Chat | ✅ FIXED |
-| BG-3 | Deny triggers rollback | ✅ FIXED |
-| BG-4 | Overlay close triggers | ✅ FIXED |
-| BG-5 | AgentEnd clears permission | ✅ FIXED |
-| BG-6 | Double-submit blocked | ✅ FIXED |
-| BG-7 | Ctrl+C in permission | ✅ FIXED |
-| BG-8 | State preserved on mode switch | ✅ FIXED |
-| BG-9 | Panic recovery | ✅ FIXED |
-| BG-10 | Stream error handling | ✅ FIXED |
-| BG-11 | Tool call deduplication | ✅ FIXED |
-| BG-12 | File locking | ✅ FIXED |
-
-**12/12 gaps fixed: 100%**
+Key remaining items:
+1. **Rollback implementation** - Currently placeholder
+2. **Event channel overflow handling** - Events silently dropped
+3. **Cycle detection** - Not applicable without tool dependencies
