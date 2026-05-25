@@ -34,7 +34,7 @@ fn make_state() -> AppState {
 }
 
 fn make_state_with_text(text: &str) -> AppState {
-    AppState {
+    let mut state = AppState {
         messages: vec![],
         textarea: TextArea::new(vec![text.to_string()]),
         input_right_info: String::new(),
@@ -42,7 +42,7 @@ fn make_state_with_text(text: &str) -> AppState {
         running: true,
         show_sidebar: false,
         agent_running: false,
-        current_model: None,
+        current_model: Some("gpt-4".to_string()), // P0-2 FIX: Set model for submit tests
         top_bar: TopBarState::default(),
         permission_modal: PermissionModalState::default(),
         command_palette: CommandPaletteState::default(),
@@ -55,7 +55,8 @@ fn make_state_with_text(text: &str) -> AppState {
         background_jobs: Vec::new(),
         onboarding: None,
         terminal_size: (0, 0),
-    }
+    };
+    state
 }
 
 fn type_char(state: &mut AppState, c: char) {
@@ -230,6 +231,7 @@ fn test_permission_cmds() {
 #[test]
 fn test_multi_line_submit() {
     let mut state = make_state();
+    state.current_model = Some("gpt-4".to_string()); // P0-2 FIX: Set model for submit test
     let mut palette = CommandPalette::new();
     for c in "line1".chars() {
         type_char(&mut state, c);

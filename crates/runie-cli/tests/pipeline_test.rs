@@ -36,8 +36,11 @@ struct MockTui {
 
 impl MockTui {
     fn new() -> Self {
+        let mut state = AppState::default();
+        // P0-2 FIX: Set model so submit tests work
+        state.current_model = Some("gpt-4".to_string());
         Self {
-            state: AppState::default(),
+            state,
             palette: CommandPalette::new(),
             dirty: true, // Initial render needed
         }
@@ -131,6 +134,7 @@ fn test_all_update_paths_update_state() {
     // Submit with content creates user message
     {
         let mut state = AppState::default();
+        state.current_model = Some("gpt-4".to_string()); // P0-2 FIX: Set model for submit tests
         run_update(&mut state, Msg::TextareaKey(char_key('h')));
         run_update(&mut state, Msg::TextareaKey(char_key('i')));
         let cmds = run_update(&mut state, Msg::Submit);
