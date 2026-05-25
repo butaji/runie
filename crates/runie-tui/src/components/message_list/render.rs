@@ -486,3 +486,35 @@ fn render_rewind_msg(steps: usize, area: Rect, row: u16, margin_x: u16, text_x: 
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
 }
+
+/// Render the empty-state welcome message in the chat feed.
+/// Called when `messages.is_empty()` and `!agent_running`.
+pub fn render_empty_state(
+    area: Rect,
+    buf: &mut Buffer,
+    text_muted: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
+    text_x: u16,
+) {
+    let center_y = area.height / 2;
+
+    // Title line
+    let title = Line::raw("runie")
+        .style(Style::default().fg(text_dim).add_modifier(ratatui::style::Modifier::BOLD));
+    buf.set_line(text_x, center_y.saturating_sub(3), &title, area.width - text_x);
+
+    // Tagline
+    let tagline = Line::raw("Your coding companion")
+        .style(Style::default().fg(text_muted));
+    buf.set_line(text_x, center_y.saturating_sub(2), &tagline, area.width - text_x);
+
+    // Primary CTA
+    let cta = Line::raw("Type a message and press Enter to start")
+        .style(Style::default().fg(text_muted));
+    buf.set_line(text_x, center_y, &cta, area.width - text_x);
+
+    // Secondary hints
+    let hint1 = Line::raw("Press ^k for commands · ^b for sidebar · ^q to quit")
+        .style(Style::default().fg(text_dim));
+    buf.set_line(text_x, center_y.saturating_add(1), &hint1, area.width - text_x);
+}

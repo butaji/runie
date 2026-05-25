@@ -26,8 +26,15 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
     let inner_y = area.y + 1;
     let inner_w = area.width.saturating_sub(2);
     buf.set_string(inner_x, inner_y, "❯ ", Style::default().fg(accent_secondary));
+
+    // Determine the prompt text: show hint, or "No matching commands" when filtered list is empty
+    let prompt = if palette.filtered_commands.is_empty() {
+        "no matches — clear filter to see all"
+    } else {
+        "type to search..."
+    };
     let query_style = if palette.filtered_commands.is_empty() { Style::default().fg(text_muted) } else { Style::default().fg(text_primary) };
-    buf.set_string(inner_x + 2, inner_y, "type to search...", query_style);
+    buf.set_string(inner_x + 2, inner_y, prompt, query_style);
     let sep_y = inner_y + 1;
     draw_separator(inner_x, sep_y, inner_w, buf, text_muted);
     let list_y = sep_y + 1;

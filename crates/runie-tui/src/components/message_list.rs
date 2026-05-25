@@ -74,6 +74,11 @@ impl MessageList {
             );
             row += rendered;
         }
+
+        // Empty state: no messages and no active agent
+        if vm.messages.is_empty() && !vm.agent_running {
+            render::render_empty_state(area, buf, text_muted, text_dim, text_x);
+        }
     }
 
     /// Update the last assistant message with new text (for streaming)
@@ -154,5 +159,28 @@ mod tests {
         list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
         list.update_last_assistant("This should not change anything");
         assert_eq!(list.messages[0], MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
+    }
+
+    #[test]
+    fn test_render_empty_state_does_not_panic() {
+        use ratatui::{
+            buffer::Buffer,
+            layout::Rect,
+        };
+        use crate::components::message_list::render::render_empty_state;
+
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        // Should not panic — just verify the function exists and can be called
+        render_empty_state(
+            area,
+            &mut buf,
+            ratatui::style::Color::DarkGray,
+            ratatui::style::Color::Gray,
+            area.x + 4,
+        );
+        // Verify that some characters were rendered
+        let non_empty = buf.content().iter().any(|c| c.symbol() != " ");
+        assert!(non_empty, "Empty state should render some visible characters");
     }
 }
