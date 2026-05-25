@@ -101,8 +101,8 @@ fn handle_palette_confirm(state: &mut AppState, palette: &mut CommandPalette) ->
     let mut cmds = vec![];
     if let Some(cmd) = palette.confirm(palette.selected) {
         cmds.extend(palette::handle_direct_command(state, cmd));
+        palette::handle_close_modal(state);
     }
-    palette::handle_close_modal(state);
     cmds
 }
 
