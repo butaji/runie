@@ -69,7 +69,7 @@ pub struct CommandPalette {
     pub selected: usize,
     pub argument_input: String,
     pub is_argument_mode: bool,
-    pending_command: Option<String>,
+    pub pending_command: Option<String>,
     usage_stats: HashMap<String, CommandUsage>,
 }
 

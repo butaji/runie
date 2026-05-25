@@ -95,6 +95,8 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
         // P0-1 FIX: Handle permission timeout
         Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => { cmds.extend(agent::handle_permission_msg(state, msg)); }
         Msg::PermissionTimeout => { cmds.extend(agent::handle_permission_timeout(state)); }
+        // P1-1 FIX: Handle Esc in command palette (cancel argument mode or close)
+        Msg::CommandPaletteCancelArgument => { palette::handle_palette_escape(state, palette); }
         Msg::CommandPaletteFilter(_) | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm => { handle_palette_msg(state, palette, &msg); }
         Msg::ScrollUp | Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(if matches!(msg, Msg::ScrollPageUp) { 10 } else { 1 }); },
         Msg::ScrollDown | Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + if matches!(msg, Msg::ScrollPageDown) { 10 } else { 1 }).min(state.messages.len().saturating_sub(1)); },

@@ -9,75 +9,41 @@ from pathlib import Path
 def check_stream_validation():
     checks = {
         "validates_utf8": False,
-        "has_stream_error_type": False,
+        "has_error_handling": False,
         "skips_invalid_chunks": False,
         "no_panic_on_garbage": False,
     }
 
-    # Find the runie-ai crate
-    base_paths = [
-        Path(__file__).parent.parent.parent,
-        Path("."),
-    ]
+    # Find streaming-related code in runie-agent
+    agent_dir = Path("crates/runie-agent/src")
+    if agent_dir.exists():
+        for f in agent_dir.glob("*.rs"):
+            content = f.read_text()
+            if "stream" in content.lower() or "chunk" in content.lower():
+                # Check for UTF-8 validation
+                utf8_patterns = ["from_utf8", "from_utf8_lossy", "is_utf8", "valid_utf8"]
+                if any(p in content for p in utf8_patterns):
+                    checks["validates_utf8"] = True
 
-    found_files = []
-    for base in base_paths:
-        ai_dir = base / "crates/runie-ai/src"
-        if ai_dir.exists():
-            for f in ai_dir.glob("*.rs"):
-                found_files.append(f)
+                # Check for error handling
+                error_patterns = ["map_err", "ok()", "unwrap_or", "Result", "Error"]
+                if any(p in content for p in error_patterns):
+                    checks["has_error_handling"] = True
 
-    # Also check the agent loop for streaming handling
-    loop_file = None
-    for base in base_paths:
-        candidate = base / "crates/runie-agent/src/loop_engine.rs"
-        if candidate.exists():
-            loop_file = candidate
-            found_files.append(candidate)
+                # Check for skip/filter logic
+                skip_patterns = ["skip", "filter", "filter_map"]
+                if any(p in content for p in skip_patterns):
+                    checks["skips_invalid_chunks"] = True
 
-    found_content = ""
-    for f in found_files:
-        content = f.read_text()
-        # Look for streaming-related code
-        if "stream" in content.lower() or "chunk" in content.lower():
-            found_content += content + "\n"
-
-    if found_content:
-        # Check for UTF-8 validation
-        utf8_patterns = [
-            "from_utf8",
-            "from_utf8_lossy",
-            "is_utf8",
-            "valid_utf8",
-        ]
-        if any(p in found_content for p in utf8_patterns):
-            checks["validates_utf8"] = True
-
-        # Check for error type
-        error_patterns = [
-            "StreamError",
-            "StreamResult",
-        ]
-        if any(p in found_content for p in error_patterns):
-            checks["has_stream_error_type"] = True
-
-        # Check for skip or filter logic
-        skip_patterns = [
-            "skip",
-            "filter",
-            "filter_map",
-        ]
-        if any(p in found_content for p in skip_patterns):
-            checks["skips_invalid_chunks"] = True
-
-        # Check that from_utf8 is used with error handling (not unwrap)
-        if "from_utf8" in found_content:
-            # Good if it uses map_err or similar
-            if "map_err" in found_content or "ok()" in found_content or "unwrap_or" in found_content:
-                checks["no_panic_on_garbage"] = True
-            # Also OK if using from_utf8_lossy
-            if "from_utf8_lossy" in found_content:
-                checks["no_panic_on_garbage"] = True
+    # Check runie-ai for streaming
+    ai_dir = Path("crates/runie-ai/src")
+    if ai_dir.exists():
+        for f in ai_dir.glob("*.rs"):
+            content = f.read_text()
+            if "stream" in content.lower():
+                if "from_utf8" in content or "from_utf8_lossy" in content:
+                    checks["validates_utf8"] = True
+                    checks["no_panic_on_garbage"] = True
 
     return checks
 

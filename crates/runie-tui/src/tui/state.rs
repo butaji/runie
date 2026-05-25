@@ -227,6 +227,8 @@ pub enum Msg {
     CommandPaletteUp,
     CommandPaletteDown,
     CommandPaletteConfirm,
+    // P1-1 FIX: Cancel argument mode in command palette
+    CommandPaletteCancelArgument,
 
     // Events from outside
     AgentEvent(AgentEvent),
@@ -303,6 +305,7 @@ impl PartialEq for Msg {
             (CommandPaletteUp, CommandPaletteUp) => true,
             (CommandPaletteDown, CommandPaletteDown) => true,
             (CommandPaletteConfirm, CommandPaletteConfirm) => true,
+            (CommandPaletteCancelArgument, CommandPaletteCancelArgument) => true,
             (AgentEvent(_), AgentEvent(_)) => true,
             (Tick, Tick) => true,
             (CursorBlink, CursorBlink) => true,

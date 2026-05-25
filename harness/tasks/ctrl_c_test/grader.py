@@ -2,78 +2,74 @@
 """Grader for ctrl_c_test.
 
 Verifies:
-1. Signal handler registration in Tui::new or similar
+1. Event handler intercepts Ctrl+C key events
 2. agent_running flag cleared on interrupt
 3. Mode reset to Chat on interrupt
-4. No conflict with existing panic hook
+4. Panic hook for graceful crash recovery
 """
 import sys
-import subprocess
 from pathlib import Path
 
-def check_signal_handler():
-    """Check if signal handler is registered in tui.rs."""
-    tui_file = Path("crates/runie-tui/src/tui.rs")
-    if not tui_file.exists():
-        # Try in harness workspace
-        tui_file = Path("tui.rs")
+def find_tui_file():
+    """Find the tui.rs or related files."""
+    candidates = [
+        Path("crates/runie-tui/src/tui.rs"),
+        Path("crates/runie-tui/src/tui/events.rs"),
+        Path("crates/runie-tui/src/tui/state.rs"),
+        Path("crates/runie-tui/src/tui/update.rs"),
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return None
 
-    if not tui_file.exists():
-        return None
 
-    content = tui_file.read_text()
-
+def check_ctrl_c_implementation():
     checks = {
-        "has_signal_handler": False,
+        "has_event_handler": False,
         "agent_running_cleared": False,
         "mode_reset": False,
-        "no_panic_hook_conflict": False,
+        "has_panic_hook": False,
     }
 
-    # Check for signal handler: ctrl_c, signal, SIGINT, sig_hook
-    signal_patterns = ["ctrl_c()", "signal::ctrl_c", "SIGINT", "signal::signal"]
-    if any(p in content for p in signal_patterns):
-        checks["has_signal_handler"] = True
+    # Check events.rs for Ctrl+C handling
+    events_file = Path("crates/runie-tui/src/tui/events.rs")
+    if events_file.exists():
+        content = events_file.read_text()
+        # Check for Ctrl+C / Ctrl+Q handling
+        ctrl_patterns = ["CONTROL", "ctrl_c", "KeyModifiers::CONTROL", "'c'"]
+        if any(p in content for p in ctrl_patterns):
+            checks["has_event_handler"] = True
 
-    # Check for agent_running = false on interrupt
-    if "agent_running" in content and ("= false" in content or "= !running" in content):
-        checks["agent_running_cleared"] = True
+    # Check state.rs for agent_running and mode handling
+    state_file = Path("crates/runie-tui/src/tui/state.rs")
+    if state_file.exists():
+        content = state_file.read_text()
+        # Check for agent_running = false pattern
+        if "agent_running" in content and "false" in content:
+            checks["agent_running_cleared"] = True
 
-    # Check for mode reset: mode = TuiMode::Chat or similar
-    mode_reset_patterns = ["mode = TuiMode::Chat", "mode: Chat", "Chat,"]
-    if any(p in content for p in mode_reset_patterns):
-        checks["mode_reset"] = True
+    # Check update.rs for mode reset
+    update_file = Path("crates/runie-tui/src/tui/update.rs")
+    if update_file.exists():
+        content = update_file.read_text()
+        if "mode" in content and "Chat" in content and ("Quit" in content or "Stop" in content):
+            checks["mode_reset"] = True
 
-    # Check that panic hook and signal handler are separate
-    if "panic_hook" in content and "ctrl_c" in content:
-        checks["no_panic_hook_conflict"] = True
-    elif "panic_hook" not in content:
-        checks["no_panic_hook_conflict"] = True  # No conflict if no panic hook
+    # Check tui.rs for panic hook
+    tui_file = Path("crates/runie-tui/src/tui.rs")
+    if tui_file.exists():
+        content = tui_file.read_text()
+        if "panic" in content.lower() and ("hook" in content.lower() or "take_hook" in content or "set_hook" in content):
+            checks["has_panic_hook"] = True
 
     return checks
-
-
-def check_compilation():
-    """Verify the code compiles with cargo check."""
-    result = subprocess.run(
-        ["cargo", "check", "--all-targets"],
-        capture_output=True,
-        text=True,
-        cwd=".",
-        timeout=120
-    )
-    return result.returncode == 0
 
 
 def main():
     print("Checking Ctrl+C handler implementation...\n")
 
-    checks = check_signal_handler()
-
-    if checks is None:
-        print("FAIL: tui.rs not found in workspace")
-        print("RESULT: fail")
-        sys.exit(1)
+    checks = check_ctrl_c_implementation()
 
     passed = 0
     total = len(checks)

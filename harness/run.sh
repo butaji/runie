@@ -129,11 +129,11 @@ for path, content in files.items():
     local grader_exit=0
 
     if [[ $VERBOSE -eq 1 ]]; then
-        echo "[$task_id] Running grader in $sandbox/workspace..."
+        echo "[$task_id] Running grader..."
     fi
 
-    # Run grader from workspace directory
-    grader_output=$(cd "$sandbox/workspace" && "$PYTHON" "$grader" 2>&1) || grader_exit=$?
+    # Run grader from project root (not sandbox) so it can find source files
+    grader_output=$(cd "$SCRIPT_DIR/.." && "$PYTHON" "$grader" 2>&1) || grader_exit=$?
 
     local end_time=$(date +%s)
     local elapsed=$(((end_time - start_time) * 1000))
@@ -145,6 +145,7 @@ for path, content in files.items():
     local detail=""
 
     # Parse PASS/FAIL lines and RESULT line
+    local grader_result=""
     while IFS= read -r line; do
         if [[ "$line" == PASS:* ]]; then
             checks_passed=$((checks_passed + 1))
@@ -153,6 +154,7 @@ for path, content in files.items():
             checks_total=$((checks_total + 1))
         fi
         if [[ "$line" == RESULT:* ]]; then
+            grader_result="$line"
             if [[ "$line" == *"pass"* ]]; then
                 status="pass"
             elif [[ "$line" == *"error"* ]]; then
@@ -180,10 +182,18 @@ for path, content in files.items():
     checks_total=$((pass_count + fail_count))
 
     # Determine status based on results
+    # Respect grader's explicit RESULT when it exits 0
     if [[ $grader_exit -ne 0 ]]; then
         status="error"
+    elif [[ -n "$grader_result" ]]; then
+        # Grader gave explicit RESULT - trust it
+        if [[ "$grader_result" == *"pass"* ]]; then
+            status="pass"
+        else
+            status="fail"
+        fi
     elif [[ $fail_count -eq 0 ]] && [[ $pass_count -gt 0 ]]; then
-        # All checks passed
+        # All checks passed (no explicit RESULT)
         status="pass"
     elif [[ $fail_count -gt 0 ]]; then
         status="fail"

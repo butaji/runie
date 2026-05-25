@@ -8,9 +8,10 @@ use super::helpers::{simulate_key, make_state_with_modal, make_chat_state_with_i
 
 #[test]
 fn test_esc_closes_modal() {
-    // Test in CommandPalette mode
+    // Test in CommandPalette mode - P1-1 FIX: Esc sends CancelArgument instead of CloseModal
+    // The actual close/argument-cancel behavior happens in update() via handle_palette_escape
     let msg = simulate_key(KeyCode::Esc, KeyModifiers::NONE, TuiMode::CommandPalette);
-    assert_eq!(msg, Some(Msg::CloseModal), "Esc in CommandPalette should produce Msg::CloseModal");
+    assert_eq!(msg, Some(Msg::CommandPaletteCancelArgument), "Esc in CommandPalette should produce Msg::CommandPaletteCancelArgument");
 
     // Test in DiffViewer mode
     let msg = simulate_key(KeyCode::Esc, KeyModifiers::NONE, TuiMode::DiffViewer);
@@ -20,12 +21,13 @@ fn test_esc_closes_modal() {
     let msg = simulate_key(KeyCode::Esc, KeyModifiers::NONE, TuiMode::SessionTree);
     assert_eq!(msg, Some(Msg::CloseModal), "Esc in SessionTree should produce Msg::CloseModal");
 
-    // Verify state update
+    // Verify state update - P1-1 FIX: CommandPaletteCancelArgument handles escape properly
     let mut state = make_state_with_modal(TuiMode::CommandPalette);
     let mut palette = CommandPalette::new();
     state.command_palette.open = true;
-    update(&mut state, &mut palette, Msg::CloseModal);
-    assert!(!state.command_palette.open, "CloseModal should close command palette");
+    update(&mut state, &mut palette, Msg::CommandPaletteCancelArgument);
+    // When not in argument mode, CancelArgument closes the palette
+    assert!(!state.command_palette.open, "CommandPaletteCancelArgument should close command palette when not in argument mode");
     assert_eq!(state.mode, TuiMode::Chat, "Mode should return to Chat");
 }
 
