@@ -1,0 +1,17 @@
+{
+  "id": "idle_submit_feedback",
+  "name": "Submit with Empty Input Shows Feedback",
+  "description": "Test that pressing Enter with empty input produces visible feedback instead of silent no-op. When user presses Enter with no text, they should see a brief notification or visual cue that they need to type something.",
+  "setup": {
+    "files": {
+      "update_misc.rs": "// Mock update misc handling\nfn handle_submit(state: &mut AppState) -> Vec<Cmd> {\n    if state.textarea.is_empty() {\n        // BUG: Silent no-op - user doesn't know their input was ignored!\n        return vec![];\n    }\n    // ... submit logic\n}\n"
+    }
+  },
+  "expected": {
+    "has_empty_check": true,
+    "has_feedback_on_empty": true,
+    "input_right_info_updated": true,
+    "mode_not_changed": true
+  },
+  "grader": "grader.py"
+}

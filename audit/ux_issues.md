@@ -1,245 +1,279 @@
-# UX Audit Report - Runie TUI Coding Agent
+# UX Audit: Dead-Ends, Invalid States, and Cognitive Load
 
-**Audit Date:** 2024-05-24  
-**Auditor:** Ralph (Overnight Audit)  
-**Status:** Complete - 5 P0/P1 issues fixed, P2 partially addressed
-
----
-
-## Summary Matrix
-
-| ID | Category | Severity | File | Lines | Status |
-|----|----------|----------|------|-------|--------|
-| P0-1 | Dead-end | Critical | misc.rs | timeout tracking | **FIXED ✓** |
-| P0-2 | Dead-end | Critical | misc.rs | 45-52 | Open (low priority) |
-| P0-3 | Dead-end | Critical | modal.rs | 280-295 | **FIXED ✓** |
-| P0-4 | Dead-end | Medium | events.rs | 140-150 | **FIXED ✓** |
-| P1-1 | Invalid state | Medium | agent.rs | 90-105 | **FIXED ✓** |
-| P1-2 | Keybinding | Medium | events.rs | (various) | **FIXED ✓** |
-| P1-3 | Invalid state | Medium | loop_engine.rs | 433-530 | **FIXED ✓** |
-| P1-4 | UX | Low | misc.rs | 40-44 | **FIXED ✓** |
-| P1-5 | Invalid state | Low | loop_engine.rs | 200-240 | Open (low priority) |
-| P1-6 | Empty state | Low | message_list | (render) | Open (low priority) |
-| P2-1 | Format | Low | render.rs | 40-55 | **FIXED ✓** |
-| P2-2 | Cognitive | Low | modal.rs | 210-250 | Open (cosmetic) |
-| P2-3 | Cognitive | Low | permission_modal.rs | 130-145 | **FIXED ✓** |
+**Audit Date:** 2026-05-24  
+**Auditor:** ralph/overnight-audit branch  
+**Scope:** runie-tui crate, runie-agent crate
 
 ---
 
-## P0 Issues (Critical - Dead-ends)
+## P0 Issues (Critical - Breaks Flow or Leaves User Stuck)
 
-These issues prevent users from making progress or force them to kill the process.
+### P0-1: **Message List Has No Empty State Placeholder**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/message_list/render.rs` |
+| **Severity** | P0 |
+| **Category** | Empty State |
 
-### P0-1: Permission Modal 5-Minute Timeout Has No UI Feedback ✅ FIXED
+**Problem:** When `messages` is empty, the `MessageList` renders nothing. Users see a blank screen with no guidance on what to do.
 
-**Files:** `state.rs`, `update/misc.rs`, `update/agent.rs`, `update.rs`
-
-**Implementation:**
-1. Added `timeout_start: Option<Instant>` and `timed_out: bool` to `PermissionModalState`
-2. Added `PermissionTimeout` message type
-3. `on_permission_request()` starts timeout tracking when permission is requested
-4. `check_permission_timeout()` called on each Tick event
-5. After 5-minute timeout, automatically denies permission and informs user
-
----
-
-### P0-2: Submit Blocked During Model Fetch Without Retry Path ⚠️ OPEN
-
-**File:** `crates/runie-tui/src/tui/update/misc.rs`  
-**Lines:** 45-52
-
-**Problem:** Shows "Still loading models..." but lacks progress indicator.
-
-**Mitigation:** The current message at least informs the user to wait.
-
-**Improvement Needed:**
-1. Add progress indicator (spinner/percentage)
-2. Show model count being loaded
-3. Allow cancel and retry
-
-**Severity:** Medium - Users are informed but not given full control.
-
----
-
-### P0-3: Onboarding API Key Validation Provides No Diagnostic ✅ FIXED
-
-**Files:** `components/onboarding/mod.rs`
-
-**Implementation:**
-1. Added `validate_key_detailed()` that returns `Result<(), String>` with specific errors
-2. Error messages now include:
-   - Expected key prefix (e.g., "must start with 'sk-'")
-   - Actual key prefix in error message
-   - Helpful suggestions for common mistakes
-
----
-
-### P0-4: DiffViewer Has No Escape Path If 'q' Key Doesn't Work ✅ FIXED
-
-**Files:** `tui/events.rs`, `tui/render.rs`
-
-**Implementation:**
-1. Added Ctrl+C, Ctrl+Q, and 'x' as additional close triggers
-2. Updated status bar to show "q/Esc" for consistency
-3. All common close methods now work
-
----
-
-## P1 Issues (Important - Invalid States)
-
-These cause unexpected behavior but have recovery paths.
-
-### P1-1: Error Messages May Contain Raw Stack Traces ✅ FIXED
-
-**Files:** `tui/update/agent.rs`
-
-**Implementation:**
-1. Added `sanitize_error_message()` function
-2. Truncates messages > 500 characters
-3. Detects stack trace patterns and shows only first 5 lines
-4. Adds "[Additional details hidden]" notice for stack traces
-5. Messages now have `recoverable` flag based on error type
-
----
-
-### P1-2: Inconsistent Keybindings Between Modes ✅ FIXED
-
-**Files:** `tui/render.rs`, `tui/events.rs`
-
-**Implementation:**
-1. Updated Permission mode status bar to show "y/Enter" for confirm
-2. Updated DiffViewer status bar to show "q/Esc" for close
-3. Keys now accurately reflect actual key mappings
-
----
-
-### P1-3: Agent Panic During Tool Execution Leaves Workspace Inconsistent ✅ FIXED
-
-**File:** `crates/runie-agent/src/loop_engine.rs`  
-**Lines:** ~433-530
-
-**Implementation:**
-1. Added `execute_tool_with_panic_catch()` helper function
-2. Tool execution wrapped in `spawn_blocking` with `catch_unwind`
-3. Panic messages extracted and returned as errors
-4. Panic results sent as error events to TUI
-5. Rollback is triggered for panicked tools
-
-**Note:** While full workspace rollback for panics isn't implemented, the agent no longer crashes on tool panic.
-
----
-
-### P1-4: Double-Submit Prevention Silently Blocks ✅ FIXED
-
-**Files:** `tui/update/misc.rs`
-
-**Implementation:**
+**Current Code (missing):**
 ```rust
-// P1-4 FIX: Block double-submit with user feedback
-if state.agent_running {
-    state.messages.push(MessageItem::System {
-        text: "Agent is still running. Please wait or press Ctrl+C to stop the current task.".to_string(),
-    });
-    return vec![];
+// No empty check exists in render_ref
+for item in &self.items {
+    // render item
+}
+// If items is empty, nothing renders
+```
+
+**Expected:** Empty state should show:
+- A greeting ("Welcome to Runie!")
+- Keyboard shortcut hints
+- A CTA to start the conversation
+
+**Fix:** Add empty state rendering in `render_ref`:
+```rust
+if self.items.is_empty() {
+    render_empty_state(area, buf, theme);
+    return;
+}
+```
+
+**Test Reference:** `harness/tasks/empty_state/` (exists, validates this behavior)
+
+---
+
+### P0-2: **No Warning When Model Not Configured**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/tui/render.rs` |
+| **Severity** | P0 |
+| **Category** | Invalid State |
+
+**Problem:** Status bar shows `current_model: None` silently. User can press Enter to submit, but the agent won't run without a model.
+
+**Current Behavior:** Status bar just doesn't show the model line if `current_model` is None.
+
+**Expected:** Status bar should show a warning when no model is configured, before user tries to submit.
+
+**Fix:** Add warning indicator in `build_center_line`:
+```rust
+if vm.current_model.is_none() {
+    parts.push(Span::styled("⚠ No model configured", Style::default().fg(colors.warning)));
+    parts.push(Span::styled(" · ", Style::default().fg(text_tertiary)));
 }
 ```
 
 ---
 
-### P1-5: Network Drops Mid-Stream Leave Partial Responses ⚠️ OPEN
+### P0-3: **Submit with Empty Input Shows No Feedback**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/tui/update/misc.rs` |
+| **Severity** | P0 |
+| **Category** | Cognitive Load |
 
-**File:** `crates/runie-agent/src/loop_engine.rs`  
-**Lines:** ~200-240
+**Problem:** Pressing Enter with empty input produces no visible feedback. User might think their message was sent.
 
-**Problem:** If network drops during streaming, partial response remains in chat.
+**Current Code:**
+```rust
+fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
+    if state.textarea.is_empty() {
+        return vec![]; // Silent no-op
+    }
+    // ...
+}
+```
 
-**Improvement Needed:**
-1. Detect stream interruption
-2. Show "Connection lost" message
-3. Offer "Retry" action
-4. Clear partial content on retry
+**Expected:** Visual feedback (brief flash, status bar message, or shake animation)
 
-**Severity:** Low - Annoying but recoverable.
-
----
-
-### P1-6: Empty State - No Workspace Shows Blank Screen ⚠️ OPEN
-
-**File:** `crates/runie-tui/src/components/message_list/render.rs`
-
-**Problem:** Empty chat shows placeholder but no primary CTA.
-
-**Improvement Needed:**
-1. "No messages" → "Start a conversation" CTA
-2. "No workspace selected" → button to select
-3. "No tools available" → "Configure tools" link
-
-**Severity:** Low - Missing discoverability.
+**Fix:** Add `state.input_right_info = "Type a message first".to_string()` for empty submit.
 
 ---
 
-## P2 Issues (Improvements - Cognitive Load)
+## P1 Issues (User Experience Degradation)
 
-### P2-1: Status Bar Token Count Format Inconsistent ✅ FIXED
+### P1-1: **Command Palette in Argument Mode Has No Escape**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/command_palette/mod.rs` |
+| **Severity** | P1 |
+| **Category** | Dead-End |
 
-**Files:** `tui/render.rs`
+**Problem:** When user is typing arguments for a palette command (e.g., file path), pressing Esc does not cancel argument input and return to command selection.
 
-**Implementation:**
-1. Status bar now uses consistent formatting
-2. Error messages include recoverable flag
-3. Token usage displays with consistent decimal places
+**Current Code (missing escape handling):**
+```rust
+// In key_to_palette_msg - no handling for Esc when is_argument_mode
+fn key_to_palette_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    // Missing: if state.command_palette.is_argument_mode && key.code == KeyCode::Esc
+}
+```
 
----
-
-### P2-2: Onboarding Provider List Has 20+ Items Without Grouping ⚠️ OPEN
-
-**File:** `crates/runie-tui/src/components/modal.rs`  
-**Lines:** ~210-250
-
-**Problem:** Alphabetical list of 20+ providers is overwhelming.
-
-**Improvement Needed:**
-1. Group by category (OpenAI-compatible, Anthropic, Local, etc.)
-2. Show "Popular" section at top
-3. Search/filter with fuzzy matching
-
-**Severity:** Low - Cosmetic improvement.
-
----
-
-### P2-3: Permission Modal 4 Options Creates Hick's Law Overload ✅ FIXED
-
-**Files:** `components/permission_modal.rs`
-
-**Implementation:**
-1. Primary row shows Confirm and Cancel prominently
-2. Secondary row shows "always allow" and "skip" as dimmed hints
-3. Progressive disclosure: advanced options available but not prominent
-4. All 4 options still accessible via keys for power users
+**Fix:** Add escape handling when in argument mode:
+```rust
+if state.command_palette.is_argument_mode {
+    if key.code == KeyCode::Esc {
+        state.command_palette.is_argument_mode = false;
+        state.command_palette.argument_input.clear();
+        state.command_palette.pending_command = None;
+        return Some(Msg::CloseModal);
+    }
+}
+```
 
 ---
 
-## Tests Added
+### P1-2: **Permission Modal Has No Timeout Auto-Dismiss**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/permission_modal.rs` |
+| **Severity** | P1 |
+| **Category** | Invalid State |
 
-Added state transition tests in `crates/runie-tui/src/tui/tests/reducer.rs`:
+**Problem:** Permission modal stays open indefinitely. If user walks away, agent hangs forever.
 
-- `test_msg_stop_clears_agent_running` - P0-1: Stop interrupts agent
-- `test_agent_error_resets_mode` - BG-2: Error returns to Chat
-- `test_permission_cancel_triggers_rollback` - P1-4: Deny triggers rollback
-- `test_permission_skip_triggers_rollback` - P1-4: Skip triggers rollback
-- `test_agent_end_clears_permission_modal` - BG-5: AgentEnd clears pending permission
-- `test_long_error_is_truncated` - P1-1: Error sanitization
-- `test_stack_trace_shows_summary` - P1-1: Stack trace detection
-- `test_submit_blocked_feedback_when_agent_running` - P1-4: Feedback on blocked submit
-- `test_scroll_preserved_on_mode_switch` - BG-8: State preservation
+**Current:** Permission timeout check exists in `update.rs` but doesn't auto-dismiss:
+```rust
+fn handle_tick_permission_check(state: &mut AppState, palette: &mut CommandPalette) -> Vec<Cmd> {
+    let mut cmds = vec![];
+    if let Some(timeout_msg) = misc::check_permission_timeout(state) {
+        cmds.extend(update(state, palette, timeout_msg));
+    }
+    cmds
+}
+```
+
+**Missing:** The `check_permission_timeout` returns `Some(Msg)` but the handler doesn't dismiss the modal.
+
+**Fix:** `handle_permission_msg` should check timeout and auto-cancel:
+```rust
+// In handle_permission_msg:
+if misc::is_permission_timed_out(state) {
+    return vec![Cmd::SendPermission { decision: PermissionDecision::Deny { tool_call_id: ... } }];
+}
+```
 
 ---
 
-## Remaining Known Gaps (Low Priority)
+### P1-3: **Onboarding KeyInput Step Has No Back/Escape**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/onboarding/mod.rs` |
+| **Severity** | P1 |
+| **Category** | Dead-End |
 
-1. **P0-2**: Model fetch progress indicator
-2. **P1-5**: Network drop handling with retry
-3. **P1-6**: Empty state CTA buttons (partially implemented)
-4. **P2-2**: Provider list grouping
+**Problem:** During API key input in onboarding, there's no documented way to go back and select a different provider.
 
-These are tracked as improvement opportunities rather than critical bugs.
+**Current:** `OnboardingStep::KeyInput` step has `max = 0`, meaning only one option.
+
+**Fix:** Add a "Back" option in KeyInput step:
+```rust
+OnboardingStep::KeyInput => 1, // back + continue = 2 options, max index = 1
+```
+
+---
+
+### P1-4: **DiffViewer Has No Keyboard Shortcut Hints in Status Bar**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/status_bar.rs` |
+| **Severity** | P1 |
+| **Category** | Cognitive Load |
+
+**Problem:** DiffViewer shows `j/k` for scroll but user might not know PgUp/PgDn are available.
+
+**Current:**
+```rust
+TuiMode::DiffViewer => vec![
+    StatusItem { key: "Esc/q/x".to_string(), description: "close".to_string() },
+    StatusItem { key: "j/k/↑/↓".to_string(), description: "scroll".to_string() },
+    StatusItem { key: "PgUp/PgDn".to_string(), description: "page".to_string() },
+],
+```
+
+**Status bar is correct** - this is actually fine. Marking as resolved.
+
+---
+
+## P2 Issues (Polish and Progressive Disclosure)
+
+### P2-1: **Error Messages Show as Raw Text, Not Banners**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/message_helpers.rs` |
+| **Severity** | P2 |
+| **Category** | Error Presentation |
+
+**Problem:** Agent errors are rendered as plain text in the message stream. No visual distinction from normal messages.
+
+**Current:** `AgentEvent::Error` creates a `MessageItem::Error` but renders like regular text.
+
+**Fix:** Add distinct styling for error messages:
+```rust
+// In render.rs error message handling
+let error_style = Style::default()
+    .fg(colors.error)
+    .bg(colors.error_bg)
+    .add_modifier(Modifier::CROSSED_OUT);
+```
+
+---
+
+### P2-2: **Agent Running Indicator Only in Status Bar**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/message_list/render.rs` |
+| **Severity** | P2 |
+| **Category** | Cognitive Load |
+
+**Problem:** When agent is running, user might not notice until they try to type.
+
+**Current:** `agent_running: true` only shows spinner in status bar.
+
+**Fix:** Add subtle pulsing indicator in message list when waiting for agent response.
+
+---
+
+### P2-3: **Session Tree Navigation Has No Breadcrumb**
+| Property | Value |
+|---|---|
+| **File** | `crates/runie-tui/src/components/session_tree.rs` |
+| **Severity** | P2 |
+| **Category** | Cognitive Load |
+
+**Problem:** In deep session trees, user loses context of where they are.
+
+**Fix:** Add breadcrumb trail in SessionTree navigator showing current path.
+
+---
+
+## Summary Table
+
+| ID | Category | File | Severity | Status |
+|---|---|---|---|---|
+| P0-1 | Empty State | message_list/render.rs | Critical | **NEEDS FIX** |
+| P0-2 | Invalid State | render.rs | Critical | **NEEDS FIX** |
+| P0-3 | Cognitive Load | update/misc.rs | Critical | **NEEDS FIX** |
+| P1-1 | Dead-End | command_palette/mod.rs | High | **NEEDS FIX** |
+| P1-2 | Invalid State | permission_modal.rs | High | **NEEDS FIX** |
+| P1-3 | Dead-End | onboarding/mod.rs | High | **NEEDS FIX** |
+| P2-1 | Error Presentation | message_helpers.rs | Medium | Nice to have |
+| P2-2 | Cognitive Load | message_list/render.rs | Medium | Nice to have |
+| P2-3 | Cognitive Load | session_tree.rs | Medium | Nice to have |
+
+---
+
+## Verified Working (No Action Needed)
+
+| Check | Status | Notes |
+|---|---|---|
+| Permission modal has Esc/Cancel | ✅ | `key_to_permission_msg` handles Esc, n, Ctrl+C |
+| Command palette has Esc close | ✅ | `key_to_palette_msg` handles Esc |
+| DiffViewer has q/Esc close | ✅ | `key_to_diff_msg` handles q and Esc |
+| SessionTree has Esc close | ✅ | `key_to_tree_msg` handles Esc |
+| Quit via Ctrl+Q works | ✅ | `key_to_chat_msg` handles Ctrl+Q |
+| Panic recovery exists | ✅ | `execute_tool_with_panic_catch` wraps tools |
+| Permission rollback on cancel | ✅ | `handle_permission_msg` sends Rollback cmd |
+| Agent error resets mode to Chat | ✅ | `handle_agent_event` sets mode = Chat on error |
+| Onboarding has Esc/skip | ✅ | `key_to_onboarding_msg` handles Esc |

@@ -1,0 +1,17 @@
+{
+  "id": "streaming_garbage",
+  "name": "Streaming Garbage Token Handling",
+  "description": "Test that the streaming implementation gracefully handles invalid UTF-8 or malformed tokens. If a model produces garbage mid-stream, the agent should either skip the invalid chunk or return a stream error without crashing.",
+  "setup": {
+    "files": {
+      "streaming_mock.rs": "// Mock streaming implementation\nfn process_chunk(chunk: &str) -> Result<&str, StreamError> {\n    // BUG: Assumes all chunks are valid UTF-8\n    // If chunk contains invalid bytes, this panics\n    Ok(std::str::from_utf8(chunk.as_bytes())?)\n}\n\nenum StreamError {\n    InvalidUtf8,\n    MalformedToken,\n}\n"
+    }
+  },
+  "expected": {
+    "validates_utf8": true,
+    "has_stream_error_type": true,
+    "skips_invalid_chunks": true,
+    "no_panic_on_garbage": true
+  },
+  "grader": "grader.py"
+}
