@@ -23,6 +23,8 @@ pub struct PermissionModal {
     pub tool_args: String,
     pub description: String,
     pub selected: usize,
+    // P0-3 FIX: Add timeout remaining display (in seconds)
+    pub timeout_secs: Option<u64>,
 }
 
 impl Default for PermissionModal {
@@ -33,6 +35,7 @@ impl Default for PermissionModal {
             tool_args: String::new(),
             description: String::new(),
             selected: 0,
+            timeout_secs: None,
         }
     }
 }
@@ -45,6 +48,7 @@ impl PermissionModal {
             tool_args: tool_args.to_string(),
             description: description.to_string(),
             selected: 0,
+            timeout_secs: None,
         }
     }
 
@@ -79,6 +83,8 @@ impl PermissionModal {
             .render(area, buf, theme, |inner, buf| {
                 render_title(inner, buf, &self.title, warning);
                 render_tool_info(inner, buf, &self.tool_name, &self.tool_args, accent_primary, code_path, text_secondary);
+                // P0-3 FIX: Render timeout countdown
+                render_timeout(inner, buf, self.timeout_secs, warning);
                 render_description(inner, buf, &self.description, text_secondary);
                 render_buttons(inner, buf, self.selected, accent_secondary, text_muted);
             });
@@ -160,6 +166,28 @@ fn render_tool_info(
 
     let args_line = Line::from(vec![Span::styled(tool_args, Style::default().fg(code_path))]);
     buf.set_line(inner_x, area.y + 6, &args_line, inner_width);
+}
+
+// P0-3 FIX: Render timeout countdown in permission modal
+fn render_timeout(area: Rect, buf: &mut Buffer, timeout_secs: Option<u64>, warning: ratatui::style::Color) {
+    let Some(secs) = timeout_secs else { return; };
+    
+    let inner_x = area.x + 1;
+    let inner_width = area.width.saturating_sub(2);
+    
+    // Format as MM:SS
+    let minutes = secs / 60;
+    let seconds = secs % 60;
+    let timeout_text = if minutes > 0 {
+        format!("⏱ Expires in {}:{}", minutes, format_args!("{:02}", seconds))
+    } else {
+        format!("⏱ Expires in {}s", seconds)
+    };
+    
+    // Use warning color when less than 60 seconds remain
+    let color = if secs < 60 { warning } else { ratatui::style::Color::DarkGray };
+    let timeout_line = Line::from(vec![Span::styled(timeout_text, Style::default().fg(color))]);
+    buf.set_line(inner_x, area.y + 7, &timeout_line, inner_width);
 }
 
 fn render_description(area: Rect, buf: &mut Buffer, description: &str, text_secondary: ratatui::style::Color) {

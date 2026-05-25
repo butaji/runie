@@ -70,6 +70,10 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
         }
     }
     
+    // P0-2 FIX: Block submit when no model is configured - guide user to onboarding
+    // But still clear textarea and add message for better UX
+    let model_missing = state.current_model.is_none() && state.onboarding.is_none();
+    
     state.messages.push(MessageItem::User {
         text: text.clone(),
         model: Some("You".to_string()),
@@ -78,6 +82,13 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     // Clear textarea
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
+    
+    if model_missing {
+        state.messages.push(MessageItem::System {
+            text: "No model configured. Press Ctrl+O or type /onboard to set up a model.".to_string(),
+        });
+        return vec![];
+    }
     
     // P1-6 FIX: Validate model is configured before spawning agent
     // Only block agent spawn if in a real running state (agent_running would be false anyway)
