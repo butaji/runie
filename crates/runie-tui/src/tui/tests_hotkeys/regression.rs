@@ -138,3 +138,29 @@ fn test_session_tree_hotkeys() {
         assert_eq!(msg, Some(expected_msg), "{:?} in SessionTree mode should produce correct Msg", code);
     }
 }
+
+// P0-4 FIX: Overlay mode hotkeys
+#[test]
+fn test_overlay_mode_hotkeys() {
+    // Esc should close the overlay
+    let msg = simulate_key(KeyCode::Esc, KeyModifiers::NONE, TuiMode::Overlay);
+    assert_eq!(msg, Some(Msg::CloseModal), "Esc in Overlay mode should produce Msg::CloseModal");
+    
+    // Other keys should produce None (not crash)
+    for code in [KeyCode::Enter, KeyCode::Char('a'), KeyCode::Up, KeyCode::Down] {
+        let msg = simulate_key(code, KeyModifiers::NONE, TuiMode::Overlay);
+        assert_eq!(msg, None, "{:?} in Overlay mode should produce None", code);
+    }
+}
+
+// P0-1 FIX: Ctrl+C and Ctrl+Q in Permission mode cancel permission
+#[test]
+fn test_permission_mode_ctrl_keys() {
+    // Ctrl+C in Permission mode should cancel
+    let msg = simulate_key(KeyCode::Char('c'), KeyModifiers::CONTROL, TuiMode::Permission);
+    assert_eq!(msg, Some(Msg::PermissionCancel), "Ctrl+C in Permission mode should produce Msg::PermissionCancel");
+    
+    // Ctrl+Q in Permission mode should cancel (P0-3 FIX)
+    let msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::Permission);
+    assert_eq!(msg, Some(Msg::PermissionCancel), "Ctrl+Q in Permission mode should produce Msg::PermissionCancel");
+}

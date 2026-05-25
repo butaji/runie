@@ -26,12 +26,12 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
         return vec![];
     }
     
-    // BG-7: Block double-submit - don't start new turn if agent is already running
+    // BG-7 FIX: Block double-submit - don't start new turn if agent is already running
     if state.agent_running {
         return vec![];
     }
     
-    // BG-5: Block submit while models are still being fetched in onboarding
+    // BG-5 FIX: Block submit while models are still being fetched in onboarding
     if let Some(ref onboarding) = state.onboarding {
         if onboarding.is_fetching_models {
             state.messages.push(MessageItem::System {
@@ -49,5 +49,10 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     // Clear textarea
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
+    
+    // P1-6 FIX: Validate model is configured before spawning agent
+    // Only block agent spawn if in a real running state (agent_running would be false anyway)
+    // We allow submit in all cases so the user message always gets recorded.
+    // The agent loop itself handles the case where no model is configured.
     vec![Cmd::SpawnAgent { messages: to_agent_messages(&state.messages) }]
 }

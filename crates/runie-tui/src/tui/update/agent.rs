@@ -88,6 +88,12 @@ pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolR
 pub fn on_agent_end(state: &mut AppState) {
     state.agent_running = false;
     state.current_model = None;
+    // BG-5 FIX: Clear any pending permission modal
+    if state.mode == TuiMode::Permission {
+        state.permission_modal.tool = None;
+        state.permission_modal.tool_call_id = None;
+        state.mode = TuiMode::Chat;
+    }
 }
 
 // P2-1: Use structured error with recoverable flag for better error presentation
@@ -96,6 +102,11 @@ pub fn on_agent_error(state: &mut AppState, message: String) {
     let recoverable = is_recoverable_error(&message);
     state.messages.push(MessageItem::Error { message, recoverable });
     state.agent_running = false;
+    // BG-2 FIX: Always reset to Chat on error (unless in Onboarding)
+    // Prevents getting stuck in Permission mode if agent errors out
+    if state.mode != TuiMode::Onboarding {
+        state.mode = TuiMode::Chat;
+    }
 }
 
 /// Classify errors as recoverable or fatal
@@ -158,13 +169,25 @@ pub fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
     }).collect()
 }
 
-pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Cmd {
+pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Vec<Cmd> {
     state.mode = TuiMode::Chat;
+    let tool_call_id = state.permission_modal.tool_call_id.clone();
     state.permission_modal.tool = None;
-    Cmd::SendPermission { decision }
+    
+    // P1-4 FIX: On cancel, trigger rollback for the tool that was pending
+    let should_rollback = tool_call_id.is_some()
+        && (matches!(decision, PermissionDecision::Deny { .. })
+            || matches!(decision, PermissionDecision::Skip { .. }));
+    
+    let mut cmds = vec![Cmd::SendPermission { decision }];
+    if should_rollback {
+        cmds.push(Cmd::Rollback { tool_call_id: tool_call_id.unwrap() });
+    }
+    
+    cmds
 }
 
-pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Cmd {
+pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
     let tool_call_id = state.permission_modal.tool_call_id.clone().unwrap_or_default();
     let decision = match msg {
         Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id },

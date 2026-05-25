@@ -90,6 +90,8 @@ fn handle_onboarding_next(state: &mut AppState) -> Vec<Cmd> {
 
 fn handle_onboarding_back(state: &mut AppState) -> Vec<Cmd> {
     if let Some(o) = state.onboarding.as_mut() {
+        // P0-2: Welcome has no previous step, so Esc on Welcome stays put.
+        // P2-3 FIX: The Welcome render now shows "Press Enter to begin →" CTA.
         o.prev_step();
     }
     vec![]
@@ -181,14 +183,16 @@ fn handle_models_fetched(state: &mut AppState, models: Vec<crate::tui::state::Mo
 
 fn handle_models_fetch_failed(state: &mut AppState, error: String) -> Vec<Cmd> {
     if let Some(o) = state.onboarding.as_mut() {
-        o.is_fetching_models = false;
+        // P1-1 FIX: Use dedicated fetch_error field, fall back to hardcoded models
+        o.set_fetch_error(error.clone());
         o.error_message = Some(format!("Failed to fetch models: {}", error));
         if let Some(provider_idx) = o.selected_provider {
             let provider = &o.providers[provider_idx];
             o.models = get_models_for_provider(&provider.id);
             o.filtered_model_indices = (0..o.models.len()).collect();
             o.selected_item = 0;
-            o.step = OnboardingStep::ModelSelect;
+            // P1-1 FIX: Stay on KeyInput step when fetch fails so user can retry
+            // o.step = OnboardingStep::ModelSelect;
             o.enter_step();
         }
     }
@@ -199,11 +203,15 @@ fn handle_onboarding_key_input(state: &mut AppState) -> Vec<Cmd> {
     if let Some(o) = state.onboarding.as_mut() {
         if o.validate_key() {
             if let Some(provider_idx) = o.selected_provider {
-                let provider = &o.providers[provider_idx];
+                // Clone IDs before mutating state to avoid borrow conflict
+                let provider_id = o.providers[provider_idx].id.clone();
+                let api_key = o.api_key_input.clone();
                 o.is_fetching_models = true;
+                // P1-1 FIX: Clear previous fetch error on retry
+                o.clear_fetch_error();
                 return vec![Cmd::FetchModels {
-                    provider_id: provider.id.clone(),
-                    api_key: o.api_key_input.clone(),
+                    provider_id,
+                    api_key,
                 }];
             }
         } else {

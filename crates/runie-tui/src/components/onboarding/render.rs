@@ -39,7 +39,7 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
 
-    let dialog_area = centered_rect(area, 40, 10);
+    let dialog_area = centered_rect(area, 40, 12);
 
     Panel::new()
         .border_gradient(accent, text_muted)
@@ -62,6 +62,19 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
                 .style(Style::default().fg(text_muted))
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, sub2_y, inner.width, 1), buf);
+
+            // P0-2/P2-3 FIX: Add CTA footer with Enter hint
+            let footer_y = inner.y + inner.height.saturating_sub(3);
+            Paragraph::new("Press Enter to begin →")
+                .style(Style::default().fg(accent))
+                .alignment(Alignment::Left)
+                .render(Rect::new(inner.x, footer_y, inner.width, 1), buf);
+
+            let skip_y = footer_y + 1;
+            Paragraph::new("Esc to skip setup")
+                .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
+                .alignment(Alignment::Left)
+                .render(Rect::new(inner.x, skip_y, inner.width, 1), buf);
         });
 }
 
@@ -244,6 +257,9 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
             let verify_y = key_y + 2;
             let (verify_text, verify_style) = if onboarding.is_fetching_models {
                 ("loading models...", Style::default().fg(text_muted))
+            } else if let Some(ref err) = onboarding.fetch_error {
+                // P1-1 FIX: Show fetch error instead of validation status
+                (err.as_str(), Style::default().fg(theme_color("error", theme)))
             } else {
                 let is_valid = onboarding.validate_key();
                 if is_valid {
@@ -256,6 +272,15 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
                 .style(verify_style)
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, verify_y, inner.width, 1), buf);
+            
+            // P1-1 FIX: Show retry hint if fetch failed
+            if onboarding.fetch_error.is_some() {
+                let retry_y = verify_y + 1;
+                Paragraph::new("press Enter to retry or Esc to go back")
+                    .style(Style::default().fg(text_muted))
+                    .alignment(Alignment::Left)
+                    .render(Rect::new(inner.x, retry_y, inner.width, 1), buf);
+            }
         });
 }
 

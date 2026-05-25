@@ -1,6 +1,6 @@
 //! Reducer tests for state updates.
 
-use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, ScrollState, TopBarState, PermissionModalState, TuiMode};
+use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, TopBarState, PermissionModalState, TuiMode};
 use crate::components::{MessageItem, SessionTreeNavigator};
 use crate::components::CommandPalette;
 use crate::tui::update::update;
@@ -248,4 +248,97 @@ fn test_multi_line_submit() {
     } else {
         panic!("Expected User message");
     }
+}
+
+// P0-1 FIX: Msg::Stop interrupts agent without quitting
+#[test]
+fn test_msg_stop_clears_agent_running() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.agent_running = true;
+    state.mode = TuiMode::Permission; // Simulate being in permission mode
+    
+    let cmds = update(&mut state, &mut palette, Msg::Stop);
+    
+    assert!(!state.agent_running, "agent_running should be cleared on Stop");
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat on Stop (not Onboarding)");
+    assert!(state.running, "running should remain true on Stop (Quit sets it false)");
+    
+    // Should return Interrupt cmd
+    assert!(!cmds.is_empty(), "Stop should produce at least one cmd");
+    if let Cmd::Interrupt = &cmds[0] {
+        // Expected
+    } else {
+        panic!("Expected Cmd::Interrupt");
+    }
+}
+
+// BG-2 FIX: Agent error resets mode to Chat
+#[test]
+fn test_agent_error_resets_mode() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.mode = TuiMode::Permission;
+    
+    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::Error {
+        message: "Connection reset".to_string(),
+    }));
+    
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat on agent error");
+}
+
+// P1-4 FIX: PermissionCancel triggers Rollback
+#[test]
+fn test_permission_cancel_triggers_rollback() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.permission_modal.tool_call_id = Some("tool_123".to_string());
+    state.mode = TuiMode::Permission;
+    
+    let cmds = update(&mut state, &mut palette, Msg::PermissionCancel);
+    
+    // Should have both SendPermission(Deny) and Rollback
+    assert_eq!(cmds.len(), 2, "PermissionCancel should produce SendPermission + Rollback");
+    if let Cmd::SendPermission { decision } = &cmds[0] {
+        assert!(matches!(*decision, PermissionDecision::Deny { .. }));
+    }
+    if let Cmd::Rollback { tool_call_id } = &cmds[1] {
+        assert_eq!(tool_call_id, "tool_123");
+    }
+    
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat after cancel");
+}
+
+// P1-4 FIX: PermissionSkip also triggers Rollback
+#[test]
+fn test_permission_skip_triggers_rollback() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.permission_modal.tool_call_id = Some("tool_456".to_string());
+    
+    let cmds = update(&mut state, &mut palette, Msg::PermissionSkip);
+    
+    assert_eq!(cmds.len(), 2, "PermissionSkip should produce SendPermission + Rollback");
+    if let Cmd::Rollback { tool_call_id } = &cmds[1] {
+        assert_eq!(tool_call_id, "tool_456");
+    }
+}
+
+// BG-5 FIX: AgentEnd clears pending permission modal
+#[test]
+fn test_agent_end_clears_permission_modal() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.mode = TuiMode::Permission;
+    state.permission_modal.tool = Some("bash".to_string());
+    state.permission_modal.tool_call_id = Some("tool_789".to_string());
+    state.agent_running = true;
+    
+    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::AgentEnd {
+        messages: vec![],
+    }));
+    
+    assert!(!state.agent_running, "agent_running should be cleared");
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat on AgentEnd");
+    assert!(state.permission_modal.tool.is_none(), "Permission modal should be cleared");
 }
