@@ -421,7 +421,7 @@ fn test_stack_trace_shows_summary() {
         "Should add hidden details note");
 }
 
-// P1-4 FIX: Submit blocked with feedback when agent running
+// P1-4 FIX: Submit blocked with feedback via input_right_info
 #[test]
 fn test_submit_blocked_feedback_when_agent_running() {
     let mut state = make_state_with_text("Hello");  // Add text so Submit is processed
@@ -431,15 +431,14 @@ fn test_submit_blocked_feedback_when_agent_running() {
     
     update(&mut state, &mut palette, Msg::Submit);
     
-    // Should have pushed a system message explaining the block
-    assert_eq!(state.messages.len(), 1, "Should show feedback message");
-    if let MessageItem::System { text } = &state.messages[0] {
-        assert!(text.contains("still running") || text.contains("Ctrl+C"), 
-            "Feedback should mention agent running or Ctrl+C");
-    }
+    // P1-4 FIX: Should show feedback via input_right_info (not system message)
+    assert!(state.input_right_info.contains("running") || state.input_right_info.contains("stop"),
+        "Feedback should mention agent running or Ctrl+C, got: {}", state.input_right_info);
+    // No system message should be added
+    assert_eq!(state.messages.len(), 0, "Should not add system message for blocked submit");
 }
 
-// BG-6: Duplicate submit deduplication
+// P1-4 FIX: Duplicate submit blocked via input_right_info
 #[test]
 fn test_duplicate_submit_is_deduplicated() {
     let mut state = make_state_with_text("Hello");
@@ -452,11 +451,11 @@ fn test_duplicate_submit_is_deduplicated() {
     // Clear textarea and type same message
     state.textarea = TextArea::new(vec!["Hello".to_string()]);
     
-    // The implementation doesn't currently deduplicate by content,
-    // but it does block while agent_running. Let's test the blocking.
+    // The implementation blocks while agent_running. Let's test the blocking.
     state.agent_running = true;
     update(&mut state, &mut palette, Msg::Submit);
     
-    // Should have added feedback message (duplicate prevention)
-    assert!(state.messages.len() >= 2, "Blocked submit should show feedback");
+    // P1-4 FIX: Should show feedback via input_right_info (not system message)
+    assert!(state.input_right_info.contains("running") || state.input_right_info.contains("stop"),
+        "Blocked submit should show feedback via input_right_info");
 }
