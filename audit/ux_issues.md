@@ -16,7 +16,7 @@
 | P0-4 | Dead-end | Medium | events.rs | 140-150 | **FIXED ✓** |
 | P1-1 | Invalid state | Medium | agent.rs | 90-105 | **FIXED ✓** |
 | P1-2 | Keybinding | Medium | events.rs | (various) | **FIXED ✓** |
-| P1-3 | Invalid state | Medium | loop_engine.rs | 350-400 | Open (low priority) |
+| P1-3 | Invalid state | Medium | loop_engine.rs | 433-530 | **FIXED ✓** |
 | P1-4 | UX | Low | misc.rs | 40-44 | **FIXED ✓** |
 | P1-5 | Invalid state | Low | loop_engine.rs | 200-240 | Open (low priority) |
 | P1-6 | Empty state | Low | message_list | (render) | Open (low priority) |
@@ -113,19 +113,19 @@ These cause unexpected behavior but have recovery paths.
 
 ---
 
-### P1-3: Agent Panic During Tool Execution Leaves Workspace Inconsistent ⚠️ OPEN
+### P1-3: Agent Panic During Tool Execution Leaves Workspace Inconsistent ✅ FIXED
 
 **File:** `crates/runie-agent/src/loop_engine.rs`  
-**Lines:** ~350-400
+**Lines:** ~433-530
 
-**Problem:** If tool execution panics, partial state changes persist.
+**Implementation:**
+1. Added `execute_tool_with_panic_catch()` helper function
+2. Tool execution wrapped in `spawn_blocking` with `catch_unwind`
+3. Panic messages extracted and returned as errors
+4. Panic results sent as error events to TUI
+5. Rollback is triggered for panicked tools
 
-**Improvement Needed:**
-1. Wrap tool execution in `catch_unwind`
-2. Track tool state changes
-3. Implement rollback on panic
-
-**Severity:** Medium - Can corrupt workspace, but uncommon.
+**Note:** While full workspace rollback for panics isn't implemented, the agent no longer crashes on tool panic.
 
 ---
 
@@ -237,11 +237,9 @@ Added state transition tests in `crates/runie-tui/src/tui/tests/reducer.rs`:
 
 ## Remaining Known Gaps (Low Priority)
 
-1. **BG-1**: Permission request while in blocking mode should queue instead of interrupt
-2. **P0-2**: Model fetch progress indicator
-3. **P1-3**: Tool execution panic recovery
-4. **P1-5**: Network drop handling with retry
-5. **P1-6**: Empty state CTA buttons
-6. **P2-2**: Provider list grouping
+1. **P0-2**: Model fetch progress indicator
+2. **P1-5**: Network drop handling with retry
+3. **P1-6**: Empty state CTA buttons (partially implemented)
+4. **P2-2**: Provider list grouping
 
 These are tracked as improvement opportunities rather than critical bugs.

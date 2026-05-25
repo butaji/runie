@@ -1,5 +1,5 @@
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
+use crate::tui::state::{AppState, Msg, Cmd, TuiMode, PendingPermission};
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 use runie_ai::TokenUsage;
 
@@ -92,8 +92,10 @@ pub fn on_agent_end(state: &mut AppState) {
     if state.mode == TuiMode::Permission {
         state.permission_modal.tool = None;
         state.permission_modal.tool_call_id = None;
-        state.mode = TuiMode::Chat;
     }
+    // BG-1 FIX: Clear pending permission queue when agent ends
+    state.permission_modal.pending_queue.clear();
+    state.mode = TuiMode::Chat;
 }
 
 // P1-1 FIX: Sanitize and truncate error messages to prevent raw stack traces
@@ -167,7 +169,36 @@ fn is_recoverable_error(message: &str) -> bool {
     recoverable_patterns.iter().any(|p| message_lower.contains(p))
 }
 
+/// Modes that block permission requests from interrupting
+fn is_blocking_mode(mode: &TuiMode) -> bool {
+    matches!(mode, TuiMode::Overlay | TuiMode::DiffViewer | TuiMode::SessionTree)
+}
+
 pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
+    // BG-1 FIX: Queue permission if already in a blocking mode
+    if is_blocking_mode(&state.mode) {
+        state.permission_modal.pending_queue.push(PendingPermission {
+            tool_call_id: tool_call_id.clone(),
+            tool_name: tool_name.clone(),
+            tool_args: tool_args.clone(),
+        });
+        // Notify user that request is queued
+        state.messages.push(MessageItem::System {
+            text: format!("Permission for '{}' queued (waiting for current modal)", tool_name),
+        });
+        return;
+    }
+    
+    // If permission modal is already open, queue the new request
+    if state.mode == TuiMode::Permission || state.permission_modal.tool.is_some() {
+        state.permission_modal.pending_queue.push(PendingPermission {
+            tool_call_id: tool_call_id.clone(),
+            tool_name: tool_name.clone(),
+            tool_args: tool_args.clone(),
+        });
+        return;
+    }
+    
     state.permission_modal.tool = Some(tool_name.clone());
     state.permission_modal.tool_call_id = Some(tool_call_id);
     state.permission_modal.args = Some(tool_args.clone());
@@ -176,6 +207,11 @@ pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_na
     state.permission_modal.timeout_start = Some(std::time::Instant::now());
     state.permission_modal.timed_out = false;
     state.mode = TuiMode::Permission;
+}
+
+/// Process the next pending permission request from the queue
+pub fn process_pending_permission(state: &mut AppState) -> Option<PendingPermission> {
+    state.permission_modal.pending_queue.pop()
 }
 
 pub fn extract_text_content(parts: &[ContentPart]) -> String {
@@ -216,9 +252,9 @@ pub fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
 }
 
 pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Vec<Cmd> {
-    state.mode = TuiMode::Chat;
     let tool_call_id = state.permission_modal.tool_call_id.clone();
     state.permission_modal.tool = None;
+    state.permission_modal.tool_call_id = None;
     
     // P1-4 FIX: On cancel, trigger rollback for the tool that was pending
     let should_rollback = tool_call_id.is_some()
@@ -228,6 +264,20 @@ pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> 
     let mut cmds = vec![Cmd::SendPermission { decision }];
     if should_rollback {
         cmds.push(Cmd::Rollback { tool_call_id: tool_call_id.unwrap() });
+    }
+    
+    // BG-1 FIX: Process next pending permission if any
+    if let Some(pending) = state.permission_modal.pending_queue.pop() {
+        // Show the queued permission immediately
+        state.permission_modal.tool = Some(pending.tool_name.clone());
+        state.permission_modal.tool_call_id = Some(pending.tool_call_id.clone());
+        state.permission_modal.args = Some(pending.tool_args.clone());
+        state.permission_modal.desc = Some(format!("Agent wants to execute '{}'", pending.tool_name));
+        state.permission_modal.timeout_start = Some(std::time::Instant::now());
+        state.permission_modal.timed_out = false;
+        state.mode = TuiMode::Permission;
+    } else {
+        state.mode = TuiMode::Chat;
     }
     
     cmds
@@ -252,8 +302,22 @@ pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
     state.messages.push(MessageItem::System {
         text: "Permission request timed out after 5 minutes. Request denied.".to_string(),
     });
-    state.mode = TuiMode::Chat;
     state.permission_modal.tool = None;
     state.permission_modal.tool_call_id = None;
+    
+    // BG-1 FIX: Process next pending permission if any
+    if let Some(pending) = state.permission_modal.pending_queue.pop() {
+        // Show the queued permission immediately
+        state.permission_modal.tool = Some(pending.tool_name.clone());
+        state.permission_modal.tool_call_id = Some(pending.tool_call_id.clone());
+        state.permission_modal.args = Some(pending.tool_args.clone());
+        state.permission_modal.desc = Some(format!("Agent wants to execute '{}'", pending.tool_name));
+        state.permission_modal.timeout_start = Some(std::time::Instant::now());
+        state.permission_modal.timed_out = false;
+        state.mode = TuiMode::Permission;
+    } else {
+        state.mode = TuiMode::Chat;
+    }
+    
     vec![]
 }

@@ -58,6 +58,14 @@ impl Default for TopBarState {
     }
 }
 
+/// Pending permission request (queued when in blocking mode)
+#[derive(Clone, Debug)]
+pub struct PendingPermission {
+    pub tool_call_id: String,
+    pub tool_name: String,
+    pub tool_args: String,
+}
+
 #[derive(Clone)]
 pub struct PermissionModalState {
     pub tool: Option<String>,
@@ -67,6 +75,8 @@ pub struct PermissionModalState {
     // P0-1 FIX: Track timeout for permission modal
     pub timeout_start: Option<std::time::Instant>,
     pub timed_out: bool,
+    // BG-1 FIX: Queue for pending permission requests
+    pub pending_queue: Vec<PendingPermission>,
 }
 
 impl Default for PermissionModalState {
@@ -78,6 +88,7 @@ impl Default for PermissionModalState {
             tool_call_id: None,
             timeout_start: None,
             timed_out: false,
+            pending_queue: Vec::new(),
         }
     }
 }

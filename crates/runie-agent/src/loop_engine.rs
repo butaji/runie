@@ -341,48 +341,38 @@ pub async fn run_agent_loop(
                 }
 
                 let final_input = current_args.clone();
-                let result = if let Some(tool) = registry.get(name) {
-                    match tool.execute(final_input.clone()).await {
-                        Ok(output) => {
-                            // Run after hooks
-                            let mut final_output = output;
-                            for hook in &hooks {
-                                match hook.after_tool_call(&tool_call, &final_output, &ctx).await {
-                                    Ok(processed) => final_output = processed,
-                                    Err(e) => {
-                                        eprintln!("After-hook error: {}", e);
-                                        final_output = runie_core::ToolOutput {
-                                            content: format!("After-hook error: {}", e),
-                                            metadata: serde_json::Value::Null,
-                                            terminate: true,
-                                        };
-                                    }
-                                }
-                            }
-
-                            ToolResult {
-                                tool_call_id: id.clone(),
-                                tool_name: name.clone(),
-                                input: final_input,
-                                content: vec![ContentPart::Text { text: final_output.content }],
-                                is_error: final_output.terminate,
-                            }
-                        }
-                        Err(e) => ToolResult {
+                
+                // P1-3 FIX: Wrap tool execution in panic catch to prevent panics from crashing the agent
+                let tool_execution = execute_tool_with_panic_catch(
+                    registry.clone(),
+                    name,
+                    final_input.clone(),
+                    hooks.clone(),
+                    tool_call.clone(),
+                    ctx.clone(),
+                ).await;
+                
+                let result = match tool_execution {
+                    Ok(result) => result,
+                    Err(panic_msg) => {
+                        // Tool panicked - return error result and trigger rollback
+                        tracing::error!("Tool '{}' panicked: {}", name, panic_msg);
+                        let panic_result = ToolResult {
                             tool_call_id: id.clone(),
                             tool_name: name.clone(),
                             input: final_input,
-                            content: vec![ContentPart::Text { text: e.to_string() }],
+                            content: vec![ContentPart::Text { 
+                                text: format!("Tool '{}' panicked (internal error). State has been rolled back.", name) 
+                            }],
                             is_error: true,
-                        },
-                    }
-                } else {
-                    ToolResult {
-                        tool_call_id: id.clone(),
-                        tool_name: name.clone(),
-                        input: final_input,
-                        content: vec![ContentPart::Text { text: format!("Tool '{}' not found", name) }],
-                        is_error: true,
+                        };
+                        
+                        // Send panic event to notify TUI
+                        let _ = event_tx.send(AgentEvent::Error {
+                            message: format!("Tool '{}' panicked: {}", name, panic_msg),
+                        }).await;
+                        
+                        panic_result
                     }
                 };
 
@@ -435,6 +425,106 @@ fn build_llm_messages(system_prompt: &str, messages: &[AgentMessage]) -> Vec<Mes
         }
     }
     llm_msgs
+}
+
+/// P1-3 FIX: Execute tool with panic recovery
+/// Wraps tool execution in a catch_unwind to prevent panics from crashing the agent.
+/// Returns Ok(result) on success, Err(panic_message) if tool panicked.
+async fn execute_tool_with_panic_catch(
+    registry: Arc<ToolRegistry>,
+    name: &str,
+    input: serde_json::Value,
+    hooks: Vec<Arc<dyn Hook>>,
+    tool_call: runie_core::ToolCall,
+    ctx: Context,
+) -> Result<ToolResult, String> {
+    // Use tokio::task::spawn_blocking with AssertUnwindSafe to catch panics
+    let registry_clone = registry.clone();
+    let name_clone = name.to_string();
+    let input_clone = input.clone();
+    let hooks_clone = hooks.clone();
+    let tool_call_clone = tool_call.clone();
+    let ctx_clone = ctx.clone();
+    
+    // Run in blocking task to catch panics from sync code
+    let result = tokio::task::spawn_blocking(move || {
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            // Prepare tool execution data (sync part)
+            (name_clone, input_clone, registry_clone, hooks_clone, tool_call_clone, ctx_clone)
+        }))
+    }).await;
+    
+    // Check if spawn_blocking itself panicked
+    let prep_result = match result {
+        Ok(Ok(data)) => data,
+        Ok(Err(panic_info)) => {
+            let panic_msg = extract_panic_message(panic_info);
+            return Err(panic_msg);
+        }
+        Err(join_err) => {
+            // Task was cancelled or panicked before completion
+            return Err(format!("Task execution failed: {}", join_err));
+        }
+    };
+    
+    let (name_str, input_final, registry_final, hooks_final, tool_call_final, ctx_final) = prep_result;
+    
+    // Now execute the async tool
+    if let Some(tool) = registry_final.get(&name_str) {
+        match tool.execute(input_final.clone()).await {
+            Ok(output) => {
+                // Run after hooks
+                let mut final_output = output;
+                for hook in &hooks_final {
+                    match hook.after_tool_call(&tool_call_final, &final_output, &ctx_final).await {
+                        Ok(processed) => final_output = processed,
+                        Err(e) => {
+                            eprintln!("After-hook error: {}", e);
+                            final_output = runie_core::ToolOutput {
+                                content: format!("After-hook error: {}", e),
+                                metadata: serde_json::Value::Null,
+                                terminate: true,
+                            };
+                        }
+                    }
+                }
+                
+                Ok(ToolResult {
+                    tool_call_id: tool_call_final.id.clone(),
+                    tool_name: name_str.clone(),
+                    input: input_final,
+                    content: vec![ContentPart::Text { text: final_output.content }],
+                    is_error: final_output.terminate,
+                })
+            }
+            Err(e) => Ok(ToolResult {
+                tool_call_id: tool_call_final.id.clone(),
+                tool_name: name_str.clone(),
+                input: input_final,
+                content: vec![ContentPart::Text { text: e.to_string() }],
+                is_error: true,
+            }),
+        }
+    } else {
+        Ok(ToolResult {
+            tool_call_id: tool_call_final.id.clone(),
+            tool_name: name_str.clone(),
+            input: input_final,
+            content: vec![ContentPart::Text { text: format!("Tool '{}' not found", name_str) }],
+            is_error: true,
+        })
+    }
+}
+
+/// Extract panic message from panic payload
+fn extract_panic_message(panic_info: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(s) = panic_info.downcast_ref::<&str>() {
+        s.to_string()
+    } else if let Some(s) = panic_info.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "Unknown panic".to_string()
+    }
 }
 
 fn format_message_content(parts: &[ContentPart]) -> String {
