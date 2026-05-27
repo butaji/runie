@@ -13,3 +13,4 @@ ratatui = { workspace = true }
 ratatui-textarea = "0.9"
 crossterm = { workspace = true }
 opaline = "0.1"
+tracing = { workspace = true }

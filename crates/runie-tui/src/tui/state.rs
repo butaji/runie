@@ -347,6 +347,18 @@ pub enum Msg {
 
     // Model picker shortcut
     SwitchModel,
+
+    // State initialization (fixes direct mutations in tui_run.rs)
+    SetGitInfo { repo: String, branch: String, path: String },
+    SetTopBarMockChecks {
+        checks_passed: Option<usize>,
+        checks_total: Option<usize>,
+        percentage: Option<f32>,
+        context_badges: Vec<String>,
+    },
+    SetTopBarRealChecks { context_badges: Vec<String> },
+    SetInputRightInfo(String),
+    EnterOnboarding,
 }
 
 impl PartialEq for Msg {
@@ -409,6 +421,12 @@ impl PartialEq for Msg {
             (SelectDown, SelectDown) => true,
             (SelectConfirm, SelectConfirm) => true,
             (SelectToggleDetails, SelectToggleDetails) => true,
+            (SwitchModel, SwitchModel) => true,
+            (SetGitInfo { .. }, SetGitInfo { .. }) => true,
+            (SetTopBarMockChecks { .. }, SetTopBarMockChecks { .. }) => true,
+            (SetTopBarRealChecks { .. }, SetTopBarRealChecks { .. }) => true,
+            (SetInputRightInfo(a), SetInputRightInfo(b)) => a == b,
+            (EnterOnboarding, EnterOnboarding) => true,
             _ => false,
         }
     }
@@ -522,6 +540,14 @@ impl RenderState {
             clear_input_confirm: state.clear_input_confirm.clone(),
             model_picker: state.model_picker.clone(),
         }
+    }
+}
+
+/// Convert AgentEvent to Msg::AgentEvent variant.
+impl TryFrom<AgentEvent> for Msg {
+    type Error = std::convert::Infallible;
+    fn try_from(event: AgentEvent) -> Result<Self, Self::Error> {
+        Ok(Msg::AgentEvent(event))
     }
 }
 

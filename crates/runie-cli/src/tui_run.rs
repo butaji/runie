@@ -3,14 +3,19 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::interval;
+use tokio_util::sync::CancellationToken;
+use tracing::{error, info};
 use runie_agent::events::{AgentEvent, PermissionDecision};
-use runie_agent::loop_engine::AgentLoopConfig;
+use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop};
 use runie_agent::{SafetyHook, Hook};
+use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
+use crate::event_stream::EventStreamLogger;
 use crate::settings::Settings;
 use crate::context_loader::ContextLoader;
 use crate::provider_factory::create_provider;
 use crate::agent_spawn::create_agent_tools;
+use runie_tui::Msg;
 
 /// Check if user needs onboarding (no provider, model, or API key configured)
 fn needs_onboarding(settings: &Settings) -> bool {
@@ -42,8 +47,9 @@ pub async fn run_tui(
     mock: bool,
     settings: &Settings,
     force_setup: bool,
+    event_logger: Option<&EventStreamLogger>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use runie_tui::{Tui, TuiConfig, TuiMode, Onboarding, Msg, Cmd, event_to_msg};
+    use runie_tui::{Tui, TuiConfig, TuiMode, Onboarding, Msg, Cmd};
 
     // Load AGENTS.md context files
     let context_files = ContextLoader::load();
@@ -61,39 +67,41 @@ pub async fn run_tui(
 
     // Detect real git info (even in mock mode, for now)
     let git_info = crate::git::detect_git_info(&workspace);
-    tui.state.top_bar.repo = git_info.repo;
-    tui.state.top_bar.branch = git_info.branch;
-    tui.state.top_bar.path = if mock {
+    let path = if mock {
         "src/components".to_string()
     } else {
-        git_info.relative_path
+        git_info.relative_path.clone()
     };
+    tui.update(Msg::SetGitInfo {
+        repo: git_info.repo,
+        branch: git_info.branch,
+        path,
+    });
     if mock {
         // Show demo fallback content: 4 ✓ 4.5% ████░░░░░░
-        tui.state.top_bar.checks_passed = Some(4);
-        tui.state.top_bar.checks_total = Some(4);
-        tui.state.top_bar.percentage = Some(4.5);
-        tui.state.top_bar.context_badges = Vec::new();
-        tui.state.top_bar.context_pct = None;
-        tui.state.top_bar.context_bar_pct = None;
+        tui.update(Msg::SetTopBarMockChecks {
+            checks_passed: Some(4),
+            checks_total: Some(4),
+            percentage: Some(4.5),
+            context_badges: Vec::new(),
+        });
     } else {
-        tui.state.top_bar.checks_passed = None;
-        tui.state.top_bar.checks_total = None;
-        tui.state.top_bar.percentage = None;
-
         // Populate context badges from loaded context files
         let mut badges = Vec::new();
         if !loaded_paths.is_empty() {
             badges.push(format!("{} context", loaded_paths.len()));
         }
-        tui.state.top_bar.context_badges = badges;
+        tui.update(Msg::SetTopBarRealChecks {
+            context_badges: badges,
+        });
     }
 
-    tui.state.input_right_info = if mock {
+    let input_right_info = if mock {
         format!("mock · {}", settings.model)
     } else {
         format!("{} · {}", settings.provider, settings.model)
     };
+    tui.update(Msg::SetInputRightInfo(input_right_info));
 
     // Build startup message with context info
     let context_info = if loaded_paths.is_empty() {
@@ -106,8 +114,7 @@ pub async fn run_tui(
     // --mock skips onboarding unless --mock-setup is explicitly used
     let needs_setup = force_setup || (!mock && needs_onboarding(settings));
     if needs_setup {
-        tui.state.mode = TuiMode::Onboarding;
-        tui.state.onboarding = Some(Onboarding::new());
+        tui.update(Msg::EnterOnboarding);
         tui.update(Msg::AgentEvent(AgentEvent::Message {
             role: "system".to_string(),
             content: "Welcome! Let's set up your AI assistant.".to_string(),
@@ -126,51 +133,65 @@ pub async fn run_tui(
 
     // Log loaded context files for debugging
     if !loaded_paths.is_empty() {
-        eprintln!("Loaded context: {}", loaded_paths.join(", "));
+        info!("Loaded context: {}", loaded_paths.join(", "));
+    }
+
+    // Log startup event
+    if let Some(logger) = event_logger {
+        logger.log_ui_event("startup");
     }
 
     tui.render()?;
 
-    // Channel for raw terminal events
-    let (raw_tx, mut raw_rx) = mpsc::channel::<crossterm::event::Event>(100);
+    // Unified message channel for ALL event sources
+    let (msg_tx, mut msg_rx) = mpsc::channel::<Msg>(100);
 
-    // Terminal reader - sends raw events (blocking thread, uses try_send with retry)
-    let raw_tx2 = raw_tx.clone();
-    std::thread::spawn(move || {
-        loop {
-            if let Ok(event) = crossterm::event::read() {
-                // Retry send up to 10 times with 1ms sleep to avoid dropping events
-                let mut sent = false;
-                for _ in 0..10 {
-                    if raw_tx2.try_send(event.clone()).is_ok() {
-                        sent = true;
-                        break;
+    // Cooperative cancellation token for graceful shutdown
+    let cancel = CancellationToken::new();
+
+    // Terminal reader - sends Msg directly (using spawn_blocking for cancellation support)
+    let task_cancel = cancel.child_token();
+    let msg_tx3 = msg_tx.clone();
+    tokio::task::spawn_blocking(move || {
+        while !task_cancel.is_cancelled() {
+            if crossterm::event::poll(Duration::from_millis(100)).unwrap_or(false) {
+                if let Ok(event) = crossterm::event::read() {
+                    // Convert event to Msg directly (Resize and Paste don't need state)
+                    let msgs = match event {
+                        crossterm::event::Event::Resize(w, h) => vec![Msg::Resize(w, h)],
+                        crossterm::event::Event::Paste(text) => vec![Msg::Paste(text)],
+                        crossterm::event::Event::Key(key) => vec![Msg::TextareaKey(key)],
+                        _ => vec![],
+                    };
+                    // Retry send up to 10 times with 1ms sleep to avoid dropping events
+                    for msg in msgs {
+                        let mut sent = false;
+                        for _ in 0..10 {
+                            if msg_tx3.try_send(msg.clone()).is_ok() {
+                                sent = true;
+                                break;
+                            }
+                            std::thread::sleep(Duration::from_millis(1));
+                        }
+                        if !sent {
+                            // Channel full for >10ms — drop event but keep thread alive
+                            break;
+                        }
                     }
-                    std::thread::sleep(Duration::from_millis(1));
-                }
-                if !sent {
-                    // Channel full for >10ms — drop event but keep thread alive
-                    continue;
                 }
             }
         }
     });
 
-    // Agent event channel (from agent task to main loop)
-    let (agent_tx, mut agent_rx) = mpsc::channel::<AgentEvent>(100);
-
-    // Agent task handle
+    // Agent task handle for the running agent loop
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
-    // Permission sender (replaced on each agent spawn)
-    let mut perm_tx: Option<mpsc::Sender<PermissionDecision>> = None;
+    // Shared permission state (replaces mpsc::channel<PermissionDecision>)
+    let permission_state: Arc<tokio::sync::Mutex<Option<PermissionDecision>>> = Arc::new(tokio::sync::Mutex::new(None));
 
     // Animation timers
     let mut tick_interval = interval(Duration::from_millis(80));
     let mut cursor_interval = interval(Duration::from_millis(500));
-
-    // Channel for model fetch results
-    let (model_fetch_tx, mut model_fetch_rx) = mpsc::channel::<Result<Vec<runie_ai::model_fetcher::ModelInfo>, String>>(1);
 
     // Helper to update top bar context percentages from current state
     fn update_top_bar_context(tui: &mut Tui, settings: &Settings) {
@@ -206,7 +227,7 @@ pub async fn run_tui(
 
         // Ensure badges always show something meaningful
         if tui.state.top_bar.context_badges.is_empty() {
-            tui.state.top_bar.context_badges = vec![settings.model.clone()];
+            tui.state.top_bar.context_badges.push(settings.model.clone());
         }
     }
 
@@ -215,75 +236,67 @@ pub async fn run_tui(
         cmd: Cmd,
         tui: &mut Tui,
         agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-        perm_tx: &mut Option<mpsc::Sender<PermissionDecision>>,
-        agent_tx: &mpsc::Sender<AgentEvent>,
+        permission_state: &Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
+        msg_tx: &mpsc::Sender<Msg>,
         workspace: &PathBuf,
         mock: bool,
         settings: &Settings,
         base_system_prompt: &str,
-        model_fetch_tx: &mpsc::Sender<Result<Vec<runie_ai::model_fetcher::ModelInfo>, String>>,
+        cancel: &CancellationToken,
     ) -> Vec<Cmd> {
         match cmd {
             Cmd::SpawnAgent { messages } => {
                 if agent_task.is_none() {
-                    let event_tx = agent_tx.clone();
+                    let provider = match create_provider(mock, settings) {
+                        Ok(p) => p,
+                        Err(e) => {
+                            error!("Failed to create provider: {}", e);
+                            return vec![];
+                        }
+                    };
 
-                    // Create fresh permission channel for this agent
-                    let (fresh_perm_tx, fresh_perm_rx) = mpsc::channel::<PermissionDecision>(100);
-                    *perm_tx = Some(fresh_perm_tx);
-
-                    // Create workspace and tool registry
                     let ws = Workspace::new(workspace.clone());
                     let registry = Arc::new(create_default_toolkit(ws));
-
-                    // Convert registry tools to AgentTool format with async handlers
                     let tools = create_agent_tools(registry.clone());
-
-                    // Create safety hook
                     let safety_hook: Arc<dyn Hook> = Arc::new(SafetyHook);
                     let hooks: Vec<Arc<dyn Hook>> = vec![safety_hook];
 
-                    let mock_flag = mock;
-                    let settings_clone = settings.clone();
-                    let system_prompt = base_system_prompt.to_string();
+                    let config = AgentLoopConfig {
+                        system_prompt: base_system_prompt.to_string(),
+                        model: settings.model.clone(),
+                        thinking_level: if settings.enable_thinking { "high" } else { "low" }.to_string(),
+                        max_turns: settings.max_turns,
+                    };
 
-                    *agent_task = Some(tokio::spawn(async move {
-                        let provider = match create_provider(mock_flag, &settings_clone) {
-                            Ok(p) => p,
-                            Err(e) => {
-                                let _ = event_tx.send(AgentEvent::Error { message: e }).await;
-                                return;
-                            }
-                        };
+                    let permission_state_clone = permission_state.clone();
+                    let msg_tx_clone = msg_tx.clone();
 
-                        let config = AgentLoopConfig {
-                            system_prompt,
-                            model: settings_clone.model.clone(),
-                            thinking_level: if settings_clone.enable_thinking { "high" } else { "low" }.to_string(),
-                            max_turns: settings_clone.max_turns,
-                        };
-
-                        match runie_agent::loop_engine::run_agent_loop(
+                    let task = tokio::spawn(async move {
+                        let provider_arc: Arc<dyn Provider> = provider.into();
+                        let result = run_agent_loop(
                             messages,
                             config,
-                            &*provider,
-                            &tools,
-                            event_tx,
-                            fresh_perm_rx,
+                            provider_arc,
+                            tools,
+                            msg_tx_clone,
+                            permission_state_clone,
                             registry,
                             hooks,
-                        ).await {
-                            Ok(_) => {},
-                            Err(e) => eprintln!("Agent error: {}", e),
+                        ).await;
+
+                        if let Err(e) = result {
+                            tracing::error!("Agent loop error: {}", e);
                         }
-                    }));
+                    });
+
+                    *agent_task = Some(task);
                 }
                 vec![]
             }
             Cmd::SendPermission { decision } => {
-                if let Some(ref tx) = *perm_tx {
-                    let _ = tx.send(decision).await;
-                }
+                // Write permission decision to shared state for agent to poll
+                let mut guard = permission_state.lock().await;
+                *guard = Some(decision);
                 vec![]
             }
             Cmd::SlashCommand(slash_cmd) => {
@@ -291,34 +304,28 @@ pub async fn run_tui(
                 tui.update(Msg::SlashCommand(slash_cmd))
             }
             Cmd::SaveSession { name } => {
-                // TODO: Implement session saving via SessionManager
-                eprintln!("SaveSession not yet implemented: {:?}", name);
+                info!("SaveSession not yet implemented: {:?}", name);
                 vec![]
             }
             Cmd::LoadSession { name } => {
-                // TODO: Implement session loading via SessionManager
-                eprintln!("LoadSession not yet implemented: {}", name);
+                info!("LoadSession not yet implemented: {}", name);
                 vec![]
             }
             Cmd::SaveSettings { provider, model, api_key } => {
-                // Save to ~/.runie/config.toml
                 let config_path = dirs::home_dir()
                     .map(|h| h.join(".runie").join("config.toml"))
                     .unwrap_or_else(|| PathBuf::from(".runie/config.toml"));
 
-                // Create .runie directory if needed
                 if let Some(parent) = config_path.parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
 
-                // Write config
                 let config = format!(
                     "provider = \"{}\"\nmodel = \"{}\"\napi_key = \"{}\"\nmax_turns = {}\nenable_thinking = {}\nshell = \"{}\"\n",
                     provider, model, api_key, settings.max_turns, settings.enable_thinking, settings.shell
                 );
                 let _ = std::fs::write(&config_path, config);
 
-                // Set API key env var for current session
                 match provider.as_str() {
                     "openai" => std::env::set_var("OPENAI_API_KEY", &api_key),
                     "anthropic" => std::env::set_var("ANTHROPIC_API_KEY", &api_key),
@@ -329,49 +336,60 @@ pub async fn run_tui(
                 vec![]
             }
             Cmd::FetchModels { provider_id, api_key } => {
-                let tx = model_fetch_tx.clone();
+                tracing::info!("[FetchModels] Starting fetch for provider: {}", provider_id);
+                let tx = msg_tx.clone();
                 tokio::spawn(async move {
+                    tracing::debug!("[FetchModels] Fetch task started");
                     let fetcher = runie_ai::model_fetcher::create_fetcher(&provider_id);
-                    let result = fetcher.fetch_models(&api_key).await
-                        .map_err(|e| e.to_string());
-                    let _ = tx.send(result).await;
+                    match fetcher.fetch_models(&api_key).await {
+                        Ok(models) => {
+                            tracing::info!("[FetchModels] Fetched {} models for {}", models.len(), provider_id);
+                            let result = tx.send(Msg::ModelsFetched(models)).await;
+                            if let Err(e) = result {
+                                tracing::error!("[FetchModels] Failed to send ModelsFetched: {}", e);
+                            } else {
+                                tracing::debug!("[FetchModels] ModelsFetched sent successfully");
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("[FetchModels] Fetch failed for {}: {}", provider_id, e);
+                            let _ = tx.send(Msg::ModelsFetchFailed(e.to_string())).await;
+                        }
+                    }
                 });
                 vec![]
             }
-            // P1-4 FIX: Rollback — cancel pending tool and revert file changes
-            // The agent's permission channel receives the denial, so rollback is handled
-            // by the agent loop when it sees the denied permission.
             Cmd::Rollback { tool_call_id } => {
-                eprintln!("[Rollback] Tool {} cancelled - workspace state preserved", tool_call_id);
+                info!("[Rollback] Tool {} cancelled - workspace state preserved", tool_call_id);
                 vec![]
             }
-            // P0-1 FIX: Interrupt — cancel the running agent task
             Cmd::Interrupt => {
-                if let Some(handle) = agent_task.take() {
-                    handle.abort();
-                    let _ = handle.await;
+                if let Some(task) = agent_task.take() {
+                    task.abort();
                 }
+                // Clear permission state
+                let mut guard = permission_state.lock().await;
+                *guard = None;
                 vec![]
             }
-            // Command palette file operations (stubs)
             Cmd::ReadFile { path } => {
-                eprintln!("[ReadFile] Not yet implemented: {}", path);
+                info!("[ReadFile] Not yet implemented: {}", path);
                 vec![]
             }
             Cmd::EditFile { path } => {
-                eprintln!("[EditFile] Not yet implemented: {}", path);
+                info!("[EditFile] Not yet implemented: {}", path);
                 vec![]
             }
             Cmd::WriteFile { path } => {
-                eprintln!("[WriteFile] Not yet implemented: {}", path);
+                info!("[WriteFile] Not yet implemented: {}", path);
                 vec![]
             }
             Cmd::DeleteFile { path } => {
-                eprintln!("[DeleteFile] Not yet implemented: {}", path);
+                info!("[DeleteFile] Not yet implemented: {}", path);
                 vec![]
             }
             Cmd::CompactContext => {
-                eprintln!("[CompactContext] Not yet implemented");
+                info!("[CompactContext] Not yet implemented");
                 vec![]
             }
         }
@@ -380,44 +398,69 @@ pub async fn run_tui(
     // TEA main loop
     while tui.state.running {
         tokio::select! {
-            // Bias: check keyboard and agent events before ticks
-            // This prevents tick starvation — keyboard gets priority
+            // Bias: check messages before ticks to prevent starvation
             biased;
 
-            // Raw terminal events — HIGHEST PRIORITY
-            Some(event) = raw_rx.recv() => {
-                for msg in event_to_msg(event, &tui.state) {
-                    let cmds = tui.update(msg);
+            // Unified message channel — handles terminal events, agent events, model fetch
+            Some(msg) = msg_rx.recv() => {
+                // Convert raw key events to proper routed messages
+                let msgs = match msg {
+                    Msg::TextareaKey(key) => runie_tui::event_to_msg(crossterm::event::Event::Key(key), &tui.state),
+                    other => vec![other],
+                };
 
-                    // Execute commands (may produce more commands recursively)
-                    let mut pending_cmds = cmds;
-                    while !pending_cmds.is_empty() {
-                        let mut next_cmds = vec![];
-                        for cmd in pending_cmds {
-                            next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
-                        }
-                        pending_cmds = next_cmds;
+                for msg in msgs {
+                // Log agent events to event stream
+                if let Msg::AgentEvent(ref agent_event) = msg {
+                    if let Some(logger) = event_logger {
+                        logger.log_agent_event(agent_event);
                     }
-
-                    // Render after EVERY message
-                    tui.render()?;
                 }
-            }
 
-            // Agent events — SECOND PRIORITY
-            Some(event) = agent_rx.recv() => {
-                if let AgentEvent::AgentEnd { .. } = &event {
+                // Handle AgentEnd to clear agent task
+                if let Msg::AgentEvent(AgentEvent::AgentEnd { .. }) = &msg {
                     agent_task = None;
+                    let mut guard = permission_state.lock().await;
+                    *guard = None;
                 }
 
-                let cmds = tui.update(Msg::AgentEvent(event));
+                // Log model fetch events
+                match &msg {
+                    Msg::ModelsFetched(models) => {
+                        tracing::info!("[MainLoop] Received ModelsFetched with {} models", models.len());
+                    }
+                    Msg::ModelsFetchFailed(err) => {
+                        tracing::warn!("[MainLoop] Received ModelsFetchFailed: {}", err);
+                    }
+                    _ => {}
+                }
+
+                let cmds = tui.update(msg.clone());
+
+                // Batch all pending messages before rendering
+                let mut pending_cmds = cmds;
+                while let Ok(msg) = msg_rx.try_recv() {
+                    if let Msg::AgentEvent(AgentEvent::AgentEnd { .. }) = &msg {
+                        agent_task = None;
+                        let mut guard = permission_state.lock().await;
+                        *guard = None;
+                    }
+                    // Convert raw key events in batched messages too
+                    let msgs = match msg {
+                        Msg::TextareaKey(key) => runie_tui::event_to_msg(crossterm::event::Event::Key(key), &tui.state),
+                        other => vec![other],
+                    };
+                    for msg in msgs {
+                        let more_cmds = tui.update(msg);
+                        pending_cmds.extend(more_cmds);
+                    }
+                }
 
                 // Execute commands (may produce more commands recursively)
-                let mut pending_cmds = cmds;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &settings, &base_system_prompt, &cancel).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -427,56 +470,40 @@ pub async fn run_tui(
                     update_top_bar_context(&mut tui, &settings);
                 }
 
-                // Render after EVERY message
+                // Log key UI events
+                if let Some(logger) = event_logger {
+                    match &msg {
+                        Msg::Submit => logger.log_ui_event("submit"),
+                        Msg::Quit => logger.log_ui_event("quit"),
+                        Msg::ToggleSidebar => logger.log_ui_event("toggle_sidebar"),
+                        Msg::ClearChat => logger.log_ui_event("clear_chat"),
+                        Msg::AgentEvent(AgentEvent::PermissionRequest { .. }) => {
+                            logger.log_ui_event("permission_request")
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Render after every message batch — state changed, screen must reflect it
                 tui.render()?;
+                } // end for msg in msgs
             }
 
-            // Cursor blink (500ms) — THIRD PRIORITY
+            // Cursor blink (500ms)
             _ = cursor_interval.tick() => {
                 let cmds = tui.update(Msg::CursorBlink);
                 let mut pending_cmds = cmds;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &settings, &base_system_prompt, &cancel).await);
                     }
                     pending_cmds = next_cmds;
                 }
                 tui.render()?;
             }
 
-            // Model fetch results
-            Some(result) = model_fetch_rx.recv() => {
-                match result {
-                    Ok(models) => {
-                        let cmds = tui.update(Msg::ModelsFetched(models));
-                        // Execute commands...
-                        let mut pending_cmds = cmds;
-                        while !pending_cmds.is_empty() {
-                            let mut next_cmds = vec![];
-                            for cmd in pending_cmds {
-                                next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
-                            }
-                            pending_cmds = next_cmds;
-                        }
-                    }
-                    Err(err) => {
-                        let cmds = tui.update(Msg::ModelsFetchFailed(err));
-                        // Execute commands...
-                        let mut pending_cmds = cmds;
-                        while !pending_cmds.is_empty() {
-                            let mut next_cmds = vec![];
-                            for cmd in pending_cmds {
-                                next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
-                            }
-                            pending_cmds = next_cmds;
-                        }
-                    }
-                }
-                tui.render()?;
-            }
-
-            // Animation tick (80ms) — LOWEST PRIORITY
+            // Animation tick (80ms)
             _ = tick_interval.tick() => {
                 if !mock {
                     update_top_bar_context(&mut tui, &settings);
@@ -486,7 +513,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &mut perm_tx, &agent_tx, &workspace, mock, &settings, &base_system_prompt, &model_fetch_tx).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &settings, &base_system_prompt, &cancel).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -495,12 +522,18 @@ pub async fn run_tui(
         }
     }
 
-    // Abort any running agent task before cleanup
+    // Graceful shutdown: signal cancellation, wait up to 2s, then force if needed
+    cancel.cancel();
     if let Some(task) = agent_task.take() {
         task.abort();
-        let _ = task.await;
+        let _ = tokio::time::timeout(Duration::from_secs(2), task).await;
     }
 
     tui.cleanup()?;
+
+    if let Some(logger) = event_logger {
+        logger.log_ui_event("shutdown");
+    }
+
     Ok(())
 }

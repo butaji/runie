@@ -13,10 +13,10 @@ pub mod permission_modal;
 pub mod command_palette;
 pub mod context_panel;
 pub mod session_tree;
-pub mod modal;
 pub mod dialog_frame;
 pub mod panel;
 pub mod gradient_border;
+pub mod component;
 
 pub use overlay::Overlay;
 pub use code_block::{CodeBlock, CodeLine, LineStatus};
@@ -32,5 +32,5 @@ pub use command_palette::{CommandPalette, PaletteCommand};
 pub use context_panel::{ContextPanel, GitChange, GitStatus};
 pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
 pub use model_picker::{ModelPicker, ModelInfo, ProviderGroup};
-pub use modal::Modal;
 pub use dialog_frame::DialogFrame;
+pub use component::{Component, InputBar};

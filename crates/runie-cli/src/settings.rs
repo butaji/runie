@@ -33,9 +33,8 @@ impl Settings {
     pub fn load() -> Self {
         let mut settings = Self::default();
 
-        // Layer 2: Global config ~/.runie/config.toml
-        if let Some(home) = dirs::home_dir() {
-            let global = home.join(".runie/config.toml");
+        // Layer 2: Global config (RUNIE_HOME/config.toml or ~/.runie/config.toml)
+        if let Some(global) = runie_dir().map(|p| p.join("config.toml")) {
             if global.exists() {
                 settings.merge_file(&global);
             }
@@ -172,7 +171,11 @@ impl FileSettings {
 }
 
 /// Runie config directory paths
+/// Checks RUNIE_HOME env var first, then falls back to ~/.runie
 pub fn runie_dir() -> Option<PathBuf> {
+    if let Ok(home) = std::env::var("RUNIE_HOME") {
+        return Some(PathBuf::from(home));
+    }
     dirs::home_dir().map(|h| h.join(".runie"))
 }
 

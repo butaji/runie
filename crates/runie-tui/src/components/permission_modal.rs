@@ -6,8 +6,6 @@ use ratatui::{
 };
 use crate::components::DialogFrame;
 use crate::theme::ThemeWrapper;
-use crate::tui::state::Msg;
-use crate::components::modal::Modal;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PermissionAction {
@@ -88,52 +86,6 @@ impl PermissionModal {
                 render_description(inner, buf, &self.description, text_secondary);
                 render_buttons(inner, buf, self.selected, accent_secondary, text_muted);
             });
-    }
-}
-
-impl Modal for PermissionModal {
-    fn is_open(&self) -> bool {
-        !self.tool_name.is_empty()
-    }
-
-    fn open(&mut self) {
-        // PermissionModal is created fresh with data, so open is a no-op
-    }
-
-    fn close(&mut self) {
-        self.tool_name.clear();
-        self.tool_args.clear();
-        self.description.clear();
-        self.selected = 0;
-    }
-
-    fn toggle(&mut self) {
-        if self.is_open() {
-            self.close();
-        }
-    }
-
-    fn render_ref(&self, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-        PermissionModal::render_ref(self, area, buf, theme);
-    }
-
-    fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Option<Msg> {
-        use crossterm::event::KeyCode;
-        match key.code {
-            KeyCode::Char('y') | KeyCode::Enter => Some(Msg::PermissionConfirm),
-            KeyCode::Char('n') | KeyCode::Esc => Some(Msg::PermissionCancel),
-            KeyCode::Char('a') => Some(Msg::PermissionAlways),
-            KeyCode::Char('s') => Some(Msg::PermissionSkip),
-            KeyCode::Up | KeyCode::Left => {
-                self.prev_option();
-                None
-            }
-            KeyCode::Down | KeyCode::Right => {
-                self.next_option();
-                None
-            }
-            _ => None,
-        }
     }
 }
 

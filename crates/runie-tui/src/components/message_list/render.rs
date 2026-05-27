@@ -13,6 +13,7 @@ use super::types::{MessageItem, PlanStatus};
 
 /// Cache for wrap_text results to avoid recomputing every frame.
 /// Key is (text, width) -> value is Vec<String> of wrapped lines.
+#[derive(Clone)]
 pub struct WrapCache {
     cache: HashMap<(String, usize), Vec<String>>,
     access_order: Vec<(String, usize)>,

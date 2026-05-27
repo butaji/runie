@@ -2,7 +2,12 @@ use crate::tui::state::{AppState, Msg, Cmd, TuiMode, OnboardingStep};
 use crate::components::onboarding::ModelOption;
 
 pub fn handle_onboarding_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
+    // Only log non-tick messages to avoid log spam
+    if !matches!(msg, Msg::Tick | Msg::CursorBlink) {
+        tracing::debug!("[Onboarding] Received message: {:?}", msg);
+    }
     if state.onboarding.is_none() {
+        tracing::debug!("[Onboarding] No onboarding active, ignoring message");
         return vec![];
     }
 
@@ -15,26 +20,13 @@ pub fn handle_onboarding_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
         Msg::OnboardingSelectModel(idx) => handle_onboarding_select_model(state, idx),
         Msg::OnboardingKeyInput(c) => handle_keypress(state, c),
         Msg::OnboardingKeyBackspace => handle_onboarding_key_backspace(state),
-        Msg::OnboardingSearchInput(c) => {
-            if let Some(o) = state.onboarding.as_mut() {
-                o.search_query.push(c);
-                let query = o.search_query.clone();
-                o.update_search(&query);
-            }
-            vec![]
-        }
-        Msg::OnboardingSearchBackspace => {
-            if let Some(o) = state.onboarding.as_mut() {
-                o.search_query.pop();
-                let query = o.search_query.clone();
-                o.update_search(&query);
-            }
-            vec![]
-        }
+        Msg::OnboardingSearchInput(c) => handle_search_input(state, c),
+        Msg::OnboardingSearchBackspace => handle_search_backspace(state),
         Msg::OnboardingSubmit => handle_onboarding_submit(state),
         Msg::OnboardingSkip => handle_onboarding_skip(state),
         Msg::ModelsFetched(models) => handle_models_fetched(state, models),
         Msg::ModelsFetchFailed(error) => handle_models_fetch_failed(state, error),
+        Msg::Paste(text) => handle_paste(state, text),
         _ => vec![],
     }
 }
@@ -165,7 +157,9 @@ fn handle_onboarding_skip(state: &mut AppState) -> Vec<Cmd> {
 }
 
 fn handle_models_fetched(state: &mut AppState, models: Vec<crate::tui::state::ModelInfo>) -> Vec<Cmd> {
+    tracing::info!("[Onboarding] handle_models_fetched called with {} models", models.len());
     if let Some(o) = state.onboarding.as_mut() {
+        tracing::debug!("[Onboarding] Setting is_fetching_models = false, step = ModelSelect");
         o.is_fetching_models = false;
         o.models = models.into_iter().map(|m| ModelOption {
             name: m.name,
@@ -200,8 +194,11 @@ fn handle_models_fetch_failed(state: &mut AppState, error: String) -> Vec<Cmd> {
 }
 
 fn handle_onboarding_key_input(state: &mut AppState) -> Vec<Cmd> {
+    tracing::debug!("[Onboarding] handle_onboarding_key_input called");
     if let Some(o) = state.onboarding.as_mut() {
-        if o.validate_key() {
+        let is_valid = o.validate_key();
+        tracing::debug!("[Onboarding] Key validation result: {}", is_valid);
+        if is_valid {
             if let Some(provider_idx) = o.selected_provider {
                 // Clone IDs before mutating state to avoid borrow conflict
                 let provider_id = o.providers[provider_idx].id.clone();
@@ -215,8 +212,46 @@ fn handle_onboarding_key_input(state: &mut AppState) -> Vec<Cmd> {
                 }];
             }
         } else {
+            tracing::warn!("[Onboarding] Key validation failed");
             o.error_message = Some("Invalid API key format".to_string());
         }
+    }
+    vec![]
+}
+
+fn handle_paste(state: &mut AppState, text: String) -> Vec<Cmd> {
+    if let Some(o) = state.onboarding.as_mut() {
+        match o.step {
+            OnboardingStep::KeyInput => {
+                o.api_key_input.push_str(&text);
+            }
+            OnboardingStep::ProviderSelect | OnboardingStep::ModelSelect => {
+                for c in text.chars() {
+                    o.search_query.push(c);
+                }
+                let query = o.search_query.clone();
+                o.update_search(&query);
+            }
+            _ => {}
+        }
+    }
+    vec![]
+}
+
+fn handle_search_input(state: &mut AppState, c: char) -> Vec<Cmd> {
+    if let Some(o) = state.onboarding.as_mut() {
+        o.search_query.push(c);
+        let query = o.search_query.clone();
+        o.update_search(&query);
+    }
+    vec![]
+}
+
+fn handle_search_backspace(state: &mut AppState) -> Vec<Cmd> {
+    if let Some(o) = state.onboarding.as_mut() {
+        o.search_query.pop();
+        let query = o.search_query.clone();
+        o.update_search(&query);
     }
     vec![]
 }
