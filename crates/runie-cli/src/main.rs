@@ -1,6 +1,8 @@
 mod agent_spawn;
 mod context_loader;
+mod event_stream;
 mod git;
+mod logging;
 mod provider_factory;
 mod settings;
 mod tui_run;
@@ -9,6 +11,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use settings::{CliSettings, Settings};
 
+use crate::event_stream::EventStreamLogger;
 use crate::provider_factory::create_provider;
 use runie_ai::providers::MockProvider;
 use runie_ai::Provider;
@@ -32,6 +35,10 @@ struct Cli {
     /// Workspace directory
     #[arg(short, long, default_value = ".")]
     workspace: PathBuf,
+
+    /// Custom config/data directory (default: ~/.runie)
+    #[arg(long)]
+    dev_folder: Option<PathBuf>,
 
     /// Session ID to resume
     #[arg(short, long)]
@@ -68,6 +75,11 @@ enum Commands {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
+    // Set RUNIE_HOME if --dev-folder is provided
+    if let Some(dev) = &cli.dev_folder {
+        std::env::set_var("RUNIE_HOME", dev.as_os_str());
+    }
+
     // Ensure runie directories exist
     settings::ensure_dirs();
 
@@ -75,6 +87,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = settings::config_path() {
         settings::create_default_config(&path);
     }
+
+    // Initialize logging and event stream
+    let event_logger = if let Some(runie_dir) = settings::runie_dir() {
+        logging::init_logging(&runie_dir);
+        Some(EventStreamLogger::new(&runie_dir))
+    } else {
+        None
+    };
 
     // Load settings with layered resolution, then apply CLI overrides
     let settings = Settings::load();
@@ -100,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             #[cfg(not(windows))]
             {
-                tui_run::run_tui(cli.workspace, cli.mock, &settings, cli.mock_setup).await?;
+                tui_run::run_tui(cli.workspace, cli.mock, &settings, cli.mock_setup, event_logger.as_ref()).await?;
             }
             #[cfg(windows)]
             {

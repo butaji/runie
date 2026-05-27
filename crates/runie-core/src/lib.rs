@@ -9,6 +9,7 @@ pub mod context;
 pub mod compactor;
 pub mod provider;
 pub mod slash_command;
+pub mod error;
 
 pub use message::{Message, ToolCall, Attachment};
 pub use tool::{Tool, ToolSchema, ToolOutput, ToolError};
@@ -18,6 +19,7 @@ pub use context::{Context, WorkingMemory};
 pub use compactor::{Compactor, CompactorError, SimpleCompactor};
 pub use provider::ProviderError;
 pub use slash_command::{SlashCommand, parse_slash_command, format_help};
+pub use error::RunieError;
 
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]

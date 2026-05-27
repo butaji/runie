@@ -3,17 +3,49 @@ use crate::tui::state::{AppState, Msg, Cmd, TuiMode, PendingPermission};
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 use runie_ai::TokenUsage;
 
+/// Agent-specific commands returned by update functions.
+#[derive(Debug, Clone)]
+pub enum AgentCmd {
+    SendPermission { decision: PermissionDecision },
+    Rollback { tool_call_id: String },
+    FetchModels { provider_id: String, api_key: String },
+}
+
+impl From<AgentCmd> for Cmd {
+    fn from(cmd: AgentCmd) -> Self {
+        match cmd {
+            AgentCmd::SendPermission { decision } => Cmd::SendPermission { decision },
+            AgentCmd::Rollback { tool_call_id } => Cmd::Rollback { tool_call_id },
+            AgentCmd::FetchModels { provider_id, api_key } => Cmd::FetchModels { provider_id, api_key },
+        }
+    }
+}
+
+/// Update agent domain: agent events, permissions.
+pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<AgentCmd> {
+    match msg {
+        crate::tui::state::Msg::AgentEvent(event) => {
+            handle_agent_event(state, event);
+            vec![]
+        }
+        crate::tui::state::Msg::PermissionConfirm | crate::tui::state::Msg::PermissionCancel | crate::tui::state::Msg::PermissionAlways | crate::tui::state::Msg::PermissionSkip => {
+            return handle_permission_msg(state, msg);
+        }
+        _ => vec![],
+    }
+}
+
 pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
     match event {
         AgentEvent::Message { role, content } => on_message(state, &role, &content),
-        AgentEvent::MessageStart { message } => on_message_start(state, message),
-        AgentEvent::MessageUpdate { message } => on_message_update(state, message),
-        AgentEvent::MessageEnd { message } => on_message_end(state, message),
-        AgentEvent::ToolExecutionStart { tool_call_id } => on_tool_start(state, tool_call_id),
+        AgentEvent::MessageStart { message, .. } => on_message_start(state, message),
+        AgentEvent::MessageUpdate { message, .. } => on_message_update(state, message),
+        AgentEvent::MessageEnd { message, .. } => on_message_end(state, message),
+        AgentEvent::ToolExecutionStart { tool_call_id, .. } => on_tool_start(state, tool_call_id),
         AgentEvent::ToolExecutionEnd { result, .. } => on_tool_end(state, result),
         AgentEvent::AgentEnd { .. } => on_agent_end(state),
-        AgentEvent::Error { message } => on_agent_error(state, message),
-        AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args } => on_permission_request(state, tool_call_id, tool_name, tool_args),
+        AgentEvent::Error { message, .. } => on_agent_error(state, message),
+        AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args, .. } => on_permission_request(state, tool_call_id, tool_name, tool_args),
         AgentEvent::TokenUsage { prompt_tokens, completion_tokens, .. } => {
             state.session_token_usage.prompt_tokens += prompt_tokens;
             state.session_token_usage.completion_tokens += completion_tokens;
@@ -251,24 +283,23 @@ pub fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
     }).collect()
 }
 
-pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Vec<Cmd> {
+pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> Vec<AgentCmd> {
     let tool_call_id = state.permission_modal.tool_call_id.clone();
     state.permission_modal.tool = None;
     state.permission_modal.tool_call_id = None;
-    
+
     // P1-4 FIX: On cancel, trigger rollback for the tool that was pending
     let should_rollback = tool_call_id.is_some()
         && (matches!(decision, PermissionDecision::Deny { .. })
             || matches!(decision, PermissionDecision::Skip { .. }));
-    
-    let mut cmds = vec![Cmd::SendPermission { decision }];
+
+    let mut cmds = vec![AgentCmd::SendPermission { decision }];
     if should_rollback {
-        cmds.push(Cmd::Rollback { tool_call_id: tool_call_id.unwrap() });
+        cmds.push(AgentCmd::Rollback { tool_call_id: tool_call_id.unwrap() });
     }
-    
+
     // BG-1 FIX: Process next pending permission if any
     if let Some(pending) = state.permission_modal.pending_queue.pop() {
-        // Show the queued permission immediately
         state.permission_modal.tool = Some(pending.tool_name.clone());
         state.permission_modal.tool_call_id = Some(pending.tool_call_id.clone());
         state.permission_modal.args = Some(pending.tool_args.clone());
@@ -279,18 +310,20 @@ pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> 
     } else {
         state.mode = TuiMode::Chat;
     }
-    
+
     cmds
 }
 
-pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<Cmd> {
+pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<AgentCmd> {
     let tool_call_id = state.permission_modal.tool_call_id.clone().unwrap_or_default();
+    let tool_name = state.permission_modal.tool.clone().unwrap_or_default();
+    let tool_args = state.permission_modal.args.clone().unwrap_or_default();
     let decision = match msg {
-        Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id },
-        Msg::PermissionCancel => PermissionDecision::Deny { tool_call_id },
-        Msg::PermissionAlways => PermissionDecision::AllowAlways { tool_call_id },
-        Msg::PermissionSkip => PermissionDecision::Skip { tool_call_id },
-        _ => PermissionDecision::Allow { tool_call_id },
+        Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
+        Msg::PermissionCancel => PermissionDecision::Deny { tool_call_id, tool_name, tool_args },
+        Msg::PermissionAlways => PermissionDecision::AllowAlways { tool_call_id, tool_name, tool_args },
+        Msg::PermissionSkip => PermissionDecision::Skip { tool_call_id, tool_name, tool_args },
+        _ => PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
     };
     handle_permission(state, decision)
 }
@@ -322,5 +355,7 @@ pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
     }
     
     // P2-5 FIX: Send denial decision to agent loop so it doesn't wait indefinitely
-    vec![Cmd::SendPermission { decision: PermissionDecision::Deny { tool_call_id } }]
+    let tool_name = state.permission_modal.tool.clone().unwrap_or_default();
+    let tool_args = state.permission_modal.args.clone().unwrap_or_default();
+    vec![Cmd::SendPermission { decision: PermissionDecision::Deny { tool_call_id, tool_name, tool_args } }]
 }

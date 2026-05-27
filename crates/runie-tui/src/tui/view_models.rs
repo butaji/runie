@@ -145,10 +145,10 @@ pub struct ViewModels {
 }
 
 impl ViewModels {
-    pub fn from_render_state(state: &crate::tui::state::RenderState, palette: &CommandPalette) -> Self {
+    pub fn from_render_state(state: &crate::tui::state::RenderState, palette: &CommandPalette, wrap_cache: crate::components::message_list::render::WrapCache) -> Self {
         Self {
             top_bar: TopBarViewModel::from_state(&state.top_bar),
-            message_list: build_message_list_vm(state),
+            message_list: build_message_list_vm(state, wrap_cache),
             input_bar: build_input_bar_vm(state),
             status_bar: build_status_bar_vm(state),
             agent_list: build_agent_list_vm(state),
@@ -164,12 +164,13 @@ impl ViewModels {
 
 // ─── Builder Helpers ────────────────────────────────────────────────────────
 
-fn build_message_list_vm(state: &crate::tui::state::RenderState) -> MessageListViewModel {
+fn build_message_list_vm(state: &crate::tui::state::RenderState, wrap_cache: crate::components::message_list::render::WrapCache) -> MessageListViewModel {
     MessageListViewModel {
         messages: state.messages.clone(),
         scroll_offset: state.scroll.feed_offset,
         agent_running: state.agent_running,
         animation: state.animation.clone(),
+        wrap_cache,
     }
 }
 

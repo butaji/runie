@@ -1,15 +1,16 @@
-use runie_agent::loop_engine::{run_agent_loop, AgentLoopConfig};
+use futures::StreamExt;
+use runie_agent::loop_engine::{agent_loop, AgentLoopConfig};
 use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 use runie_ai::providers::MockProvider;
 use runie_tools::{create_default_toolkit, Workspace};
 use std::path::PathBuf;
-use tokio::sync::mpsc;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_agent_end_to_end() {
-    let provider = MockProvider::new();
+    let provider = Arc::new(MockProvider::new());
     let ws = Workspace::new(PathBuf::from("."));
-    let registry = std::sync::Arc::new(create_default_toolkit(ws));
+    let registry = Arc::new(create_default_toolkit(ws));
 
     let config = AgentLoopConfig {
         system_prompt: "You are a helpful assistant.".to_string(),
@@ -17,9 +18,6 @@ async fn test_agent_end_to_end() {
         thinking_level: "low".to_string(),
         max_turns: 3,
     };
-
-    let (event_tx, mut event_rx) = mpsc::channel(100);
-    let (perm_tx, mut perm_rx) = mpsc::channel(100);
 
     let messages = vec![AgentMessage {
         role: "user".to_string(),
@@ -33,20 +31,14 @@ async fn test_agent_end_to_end() {
     }];
 
     // Spawn the agent loop
-    let handle = tokio::spawn(async move {
-        run_agent_loop(
-            messages,
-            config,
-            &provider,
-            &[],
-            event_tx,
-            perm_rx,
-            registry,
-            vec![],
-        )
-        .await
-        .unwrap();
-    });
+    let mut stream = agent_loop(
+        messages,
+        config,
+        provider,
+        vec![],
+        registry,
+        vec![],
+    );
 
     // Collect events
     let mut got_message_start = false;
@@ -54,7 +46,7 @@ async fn test_agent_end_to_end() {
     let mut got_message_end = false;
     let mut got_agent_end = false;
 
-    while let Some(event) = event_rx.recv().await {
+    while let Some(event) = stream.next().await {
         match event {
             AgentEvent::MessageStart { .. } => got_message_start = true,
             AgentEvent::MessageUpdate { .. } => got_message_update = true,
@@ -65,13 +57,13 @@ async fn test_agent_end_to_end() {
             }
             AgentEvent::PermissionRequest { tool_call_id, .. } => {
                 // Auto-allow permission requests for testing
-                let _ = perm_tx.send(PermissionDecision::Allow { tool_call_id });
+                let _ = stream.send_permission(PermissionDecision::Allow { tool_call_id }).await;
             }
             _ => {}
         }
     }
 
-    handle.await.ok();
+    let _final_messages = stream.result().await;
 
     assert!(got_message_start, "Should receive MessageStart");
     assert!(got_message_update, "Should receive MessageUpdate");
@@ -82,10 +74,10 @@ async fn test_agent_end_to_end() {
 #[tokio::test]
 async fn test_agent_with_mock_error_simulation() {
     // Create a mock provider that simulates errors
-    let provider = MockProvider::new().with_errors(0.0); // 0% error rate, should succeed
+    let provider = Arc::new(MockProvider::new().with_errors(0.0)); // 0% error rate, should succeed
 
     let ws = Workspace::new(PathBuf::from("/tmp"));
-    let registry = std::sync::Arc::new(create_default_toolkit(ws));
+    let registry = Arc::new(create_default_toolkit(ws));
 
     let config = AgentLoopConfig {
         system_prompt: "You are a helpful assistant.".to_string(),
@@ -93,9 +85,6 @@ async fn test_agent_with_mock_error_simulation() {
         thinking_level: "low".to_string(),
         max_turns: 2,
     };
-
-    let (event_tx, mut event_rx) = mpsc::channel(100);
-    let (_perm_tx, perm_rx) = mpsc::channel(100);
 
     let messages = vec![AgentMessage {
         role: "user".to_string(),
@@ -108,24 +97,19 @@ async fn test_agent_with_mock_error_simulation() {
         error_message: None,
     }];
 
-    tokio::spawn(async move {
-        run_agent_loop(
-            messages,
-            config,
-            &provider,
-            &[],
-            event_tx,
-            perm_rx,
-            registry,
-            vec![],
-        )
-        .await
-        .unwrap();
-    });
+    let mut stream = agent_loop(
+        messages,
+        config,
+        provider,
+        vec![],
+        registry,
+        vec![],
+    );
 
     // Should complete without errors
-    while let Some(event) = event_rx.recv().await {
+    while let Some(event) = stream.next().await {
         if let AgentEvent::AgentEnd { .. } = event {
+            let _final_messages = stream.result().await;
             return;
         }
         if let AgentEvent::Error { .. } = event {

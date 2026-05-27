@@ -13,15 +13,17 @@ pub struct MessageListViewModel {
     pub scroll_offset: usize,
     pub agent_running: bool,
     pub animation: AnimationState,
+    pub wrap_cache: WrapCache,
 }
 
 impl MessageListViewModel {
-    pub fn new(messages: Vec<MessageItem>, scroll_offset: usize, agent_running: bool, animation: AnimationState) -> Self {
+    pub fn new(messages: Vec<MessageItem>, scroll_offset: usize, agent_running: bool, animation: AnimationState, wrap_cache: WrapCache) -> Self {
         Self {
             messages,
             scroll_offset,
             agent_running,
             animation,
+            wrap_cache,
         }
     }
 }
@@ -32,8 +34,8 @@ impl MessageList {
         area: Rect,
         buf: &mut Buffer,
         theme: &ThemeWrapper,
-        wrap_cache: &mut WrapCache,
     ) {
+        let mut wrap_cache = vm.wrap_cache.clone();
         let mut row = 0u16;
         let max_rows = area.height;
 
@@ -71,7 +73,7 @@ impl MessageList {
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
                 success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-                &vm.animation, wrap_cache,
+                &vm.animation, &mut wrap_cache,
             );
             row += rendered;
         }

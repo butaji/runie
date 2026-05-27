@@ -1,8 +1,9 @@
 use runie_ai::providers::{MockProvider, OpenAiProvider, AnthropicProvider, GenAiProvider, RigProvider};
 use runie_ai::Provider;
+use runie_core::RunieError;
 use crate::settings::Settings;
 
-pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provider>, String> {
+pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
     if mock {
         return Ok(Box::new(MockProvider::new()));
     }
@@ -11,14 +12,14 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
         "openai" => {
             let api_key = settings.api_key.clone()
                 .or_else(|| std::env::var("OPENAI_API_KEY").ok())
-                .ok_or("OpenAI API key required. Set OPENAI_API_KEY env var or use --api-key")?;
+                .ok_or_else(|| RunieError::Provider("OpenAI API key required. Set OPENAI_API_KEY env var or use --api-key".to_string()))?;
             let provider = OpenAiProvider::new(api_key, settings.model.clone());
             Ok(Box::new(provider))
         }
         "anthropic" => {
             let api_key = settings.api_key.clone()
                 .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
-                .ok_or("Anthropic API key required. Set ANTHROPIC_API_KEY env var or use --api-key")?;
+                .ok_or_else(|| RunieError::Provider("Anthropic API key required. Set ANTHROPIC_API_KEY env var or use --api-key".to_string()))?;
             let provider = AnthropicProvider::new(api_key, settings.model.clone());
             Ok(Box::new(provider))
         }
@@ -28,9 +29,9 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
         }
         other => {
             let api_key = settings.api_key.clone()
-                .ok_or(format!("API key required for provider: {}", other))?;
+                .ok_or_else(|| RunieError::Provider(format!("API key required for provider: {}", other)))?;
             let provider = RigProvider::new(other, &api_key, &settings.model)
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| RunieError::Provider(e.to_string()))?;
             Ok(Box::new(provider))
         }
     }

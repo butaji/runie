@@ -4,29 +4,111 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type")]
 pub enum AgentEvent {
     /// Simple, non-streaming message for pre-agent UI messages (e.g., onboarding/welcome).
-    /// Unlike MessageStart/Update/End, this is NOT produced by the loop engine — it's
-    /// constructed directly by the CLI for messages that exist outside the streaming loop.
     Message { role: String, content: String },
-    MessageStart { message: AgentMessage },
-    MessageUpdate { message: AgentMessage },
-    MessageEnd { message: AgentMessage },
-    ToolExecutionStart { tool_call_id: String },
-    ToolExecutionEnd { tool_call_id: String, result: ToolResult },
-    TurnEnd { message: AgentMessage, tool_results: Vec<ToolResult> },
-    AgentEnd { messages: Vec<AgentMessage> },
-    TokenUsage { prompt_tokens: usize, completion_tokens: usize, total_tokens: usize },
-    Error { message: String },
-    PermissionRequest { tool_call_id: String, tool_name: String, tool_args: String },
-    PermissionGranted { tool_call_id: String },
-    PermissionDenied { tool_call_id: String },
+    
+    MessageStart { 
+        message: AgentMessage,
+        turn: usize,
+    },
+    
+    MessageUpdate { 
+        message: AgentMessage,
+        turn: usize,
+        delta: String,
+    },
+    
+    MessageEnd { 
+        message: AgentMessage,
+        turn: usize,
+    },
+    
+    ToolExecutionStart { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+        turn: usize,
+    },
+    
+    ToolExecutionEnd { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+        result: ToolResult,
+        duration_ms: u64,
+        turn: usize,
+    },
+    
+    TurnEnd { 
+        turn: usize,
+        message_count: usize,
+        tool_results_count: usize,
+        token_usage: TokenUsage,
+    },
+    
+    AgentEnd { 
+        messages: Vec<AgentMessage>,
+        total_turns: usize,
+        final_token_usage: TokenUsage,
+    },
+    
+    TokenUsage { 
+        prompt_tokens: usize, 
+        completion_tokens: usize, 
+        total_tokens: usize,
+        context_window: usize,
+    },
+    
+    Error { 
+        message: String,
+        error_type: String,
+        recoverable: bool,
+        context: String,
+    },
+    
+    PermissionRequest { 
+        tool_call_id: String, 
+        tool_name: String, 
+        tool_args: String,
+        tool_description: String,
+        turn: usize,
+        context_window_usage: f32,
+    },
+    
+    PermissionGranted { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+    },
+    
+    PermissionDenied { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PermissionDecision {
-    Allow { tool_call_id: String },
-    Deny { tool_call_id: String },
-    AllowAlways { tool_call_id: String },
-    Skip { tool_call_id: String },
+    Allow { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+    },
+    Deny { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+    },
+    AllowAlways { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+    },
+    Skip { 
+        tool_call_id: String,
+        tool_name: String,
+        tool_args: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

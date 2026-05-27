@@ -5,7 +5,8 @@ use crate::components::{MessageItem, SessionTreeNavigator};
 use crate::components::CommandPalette;
 use crate::tui::update::update;
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
-use runie_ai::TokenUsage;
+use runie_ai::TokenUsage as AiTokenUsage;
+use runie_agent::TokenUsage as AgentTokenUsage;
 use ratatui_textarea::{TextArea, Input, Key};
 
 fn make_state() -> AppState {
@@ -24,8 +25,8 @@ fn make_state() -> AppState {
         scroll: ScrollState::default(),
         animation: AnimationState::default(),
         diff_viewer: None,
-        token_usage: TokenUsage::default(),
-        session_token_usage: TokenUsage::default(),
+        token_usage: AiTokenUsage::default(),
+        session_token_usage: AiTokenUsage::default(),
         session_tree: SessionTreeNavigator::new(),
         background_jobs: Vec::new(),
         onboarding: None,
@@ -53,8 +54,8 @@ fn make_state_with_text(text: &str) -> AppState {
         scroll: ScrollState::default(),
         animation: AnimationState::default(),
         diff_viewer: None,
-        token_usage: TokenUsage::default(),
-        session_token_usage: TokenUsage::default(),
+        token_usage: AiTokenUsage::default(),
+        session_token_usage: AiTokenUsage::default(),
         session_tree: SessionTreeNavigator::new(),
         background_jobs: Vec::new(),
         onboarding: None,
@@ -148,6 +149,7 @@ fn test_agent_event_message_start() {
                 stop_reason: None,
                 error_message: None,
             },
+            turn: 1,
         }),
     );
     assert!(state.agent_running);
@@ -172,6 +174,7 @@ fn test_agent_event_message_update() {
                 stop_reason: None,
                 error_message: None,
             },
+            turn: 1,
         }),
     );
 
@@ -190,6 +193,8 @@ fn test_agent_event_message_update() {
                 stop_reason: None,
                 error_message: None,
             },
+            turn: 1,
+            delta: "Hello".to_string(),
         }),
     );
 
@@ -292,6 +297,9 @@ fn test_agent_error_resets_mode() {
     
     update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::Error {
         message: "Connection reset".to_string(),
+        error_type: "network".to_string(),
+        recoverable: true,
+        context: "test".to_string(),
     }));
     
     assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat on agent error");
@@ -346,6 +354,8 @@ fn test_agent_end_clears_permission_modal() {
     
     update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::AgentEnd {
         messages: vec![],
+        total_turns: 1,
+        final_token_usage: AgentTokenUsage::default(),
     }));
     
     assert!(!state.agent_running, "agent_running should be cleared");
@@ -366,6 +376,9 @@ fn test_permission_request_switches_mode() {
         tool_call_id: "tool_abc".to_string(),
         tool_name: "bash".to_string(),
         tool_args: "rm -rf /".to_string(),
+        tool_description: "Execute bash command".to_string(),
+        turn: 1,
+        context_window_usage: 0.0,
     }));
     
     // BG-1 FIX: Permission request is queued when in DiffViewer mode
