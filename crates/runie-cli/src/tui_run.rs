@@ -360,8 +360,8 @@ pub async fn run_tui(
                 tui.state.current_model = Some(format!("{}/{}", provider, model));
                 tui.state.top_bar.model = model.clone();
 
-                let config_path = dirs::home_dir()
-                    .map(|h| h.join(".runie").join("config.toml"))
+                // P0-CONFIG-PATH: Use crate::settings::config_path() which respects RUNIE_HOME
+                let config_path = crate::settings::config_path()
                     .unwrap_or_else(|| PathBuf::from(".runie/config.toml"));
 
                 if let Some(parent) = config_path.parent() {

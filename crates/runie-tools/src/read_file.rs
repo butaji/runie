@@ -82,3 +82,45 @@ impl Tool for ReadFileTool {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_read_file_tool() -> ReadFileTool {
+        let workspace = Workspace::new(std::path::PathBuf::from("."));
+        ReadFileTool::new(workspace)
+    }
+
+    #[tokio::test]
+    async fn test_read_file_missing_path_fails() {
+        let tool = create_read_file_tool();
+        let args = serde_json::json!({});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'path' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_read_file_empty_path_fails() {
+        let tool = create_read_file_tool();
+        let args = serde_json::json!({"path": ""});
+        let result = tool.execute(args).await;
+        // Empty path should fail validation
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_read_file_valid_path_succeeds() {
+        let tool = create_read_file_tool();
+        let args = serde_json::json!({"path": "Cargo.toml"});
+        let result = tool.execute(args).await;
+        // Should succeed or fail with file-specific error (not missing arg)
+        if result.is_err() {
+            let err = result.unwrap_err();
+            assert!(!err.to_string().contains("Missing 'path' argument"));
+        }
+    }
+}

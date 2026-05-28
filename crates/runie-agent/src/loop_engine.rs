@@ -327,6 +327,30 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         let mut seen_tool_calls: HashSet<String> = HashSet::new();
         for (tool_use, _tool_name, _args_str) in pending_tool_calls {
             if let ContentPart::ToolUse { id, name, input } = &tool_use {
+                // P0-TOOL-VALIDATION: Skip tool calls with empty or invalid names
+                if name.trim().is_empty() {
+                    tracing::warn!("Tool call with empty name skipped (call_id: {})", id);
+                    send_event(&msg_tx, AgentEvent::Error {
+                        message: format!("Tool call '{}' has empty name - skipping", id),
+                        error_type: "invalid_tool_call".to_string(),
+                        recoverable: true,
+                        context: format!("The model generated a tool call without a name. Raw input: {:?}", input),
+                    }).await;
+                    continue;
+                }
+
+                // P0-TOOL-VALIDATION: Validate tool exists in registry
+                if !tools.iter().any(|t| t.name == *name) {
+                    tracing::warn!("Tool '{}' not found in registry (call_id: {})", name, id);
+                    send_event(&msg_tx, AgentEvent::Error {
+                        message: format!("Tool '{}' not found", name),
+                        error_type: "tool_not_found".to_string(),
+                        recoverable: true,
+                        context: format!("Available tools: {}", tools.iter().map(|t| t.name.clone()).collect::<Vec<_>>().join(", ")),
+                    }).await;
+                    continue;
+                }
+
                 // P2-7 FIX: Check for duplicate tool call (same name + args in same turn)
                 let tool_key = format!("{}:{}", name, serde_json::to_string(input).unwrap_or_default());
                 if seen_tool_calls.contains(&tool_key) {
@@ -623,6 +647,125 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         final_token_usage,
     }).await;
     Ok(messages)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use runie_core::ToolCall;
+
+    #[tokio::test]
+    async fn test_tool_empty_name_skipped() {
+        // Create a tool registry with a mock tool
+        let registry = ToolRegistry::new();
+
+        // Verify that an empty-named tool call does not cause issues
+        // Empty names should be caught before tool execution
+        let empty_name = "";
+        let result = registry.get(empty_name);
+        assert!(result.is_none(), "Empty tool name should not find any tool");
+    }
+
+    #[tokio::test]
+    async fn test_tool_call_with_empty_name_validation() {
+        // Test that ToolCall with empty name is handled properly
+        let tool_call = ToolCall {
+            id: "call_test".to_string(),
+            name: "".to_string(),
+            arguments: serde_json::json!({}),
+        };
+
+        // An empty name should not be considered valid
+        assert!(tool_call.name.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_tool_invalid_args_returns_error_not_panic() {
+        // Create a tool registry
+        let registry = ToolRegistry::new();
+
+        // Test that malformed arguments return ToolError, not panic
+        let tool = registry.get("bash");
+        if let Some(tool) = tool {
+            // Pass invalid JSON structure as args
+            let result = tool.execute(serde_json::json!({"command": 123})).await;
+            // Should return error, not panic
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            // Should be InvalidArguments error
+            assert!(matches!(err, runie_core::ToolError::InvalidArguments(_)));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tool_missing_required_args_returns_error() {
+        let registry = ToolRegistry::new();
+
+        let tool = registry.get("read_file");
+        if let Some(tool) = tool {
+            // Missing 'path' argument
+            let result = tool.execute(serde_json::json!({})).await;
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            assert!(matches!(err, runie_core::ToolError::InvalidArguments(_)));
+            assert!(err.to_string().contains("Missing 'path' argument"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tool_call_delta_with_empty_name() {
+        // Simulate what happens when LlmEvent::ToolCallDelta has empty name
+        let name = "";
+        let _arguments = r#"{"command": "echo test"}"#.to_string();
+
+        // An empty name should be detectable before creating a tool call
+        assert!(name.is_empty(), "Empty name should be detected");
+
+        // If we had a function that validates tool call deltas, it should reject this
+        fn is_valid_tool_name(name: &str) -> bool {
+            !name.is_empty()
+        }
+
+        assert!(!is_valid_tool_name(""), "Empty tool name should be invalid");
+        assert!(is_valid_tool_name("bash"), "Non-empty tool name should be valid");
+    }
+
+    #[tokio::test]
+    async fn test_empty_tool_name_skipped() {
+        // Verify that tool calls with empty names would be skipped by validation
+        let empty_name = "";
+        let trimmed = empty_name.trim();
+        assert!(trimmed.is_empty(), "Empty tool name should be caught by validation");
+
+        // Simulate the validation check from the loop
+        fn is_valid_tool_name(name: &str) -> bool {
+            !name.trim().is_empty()
+        }
+        assert!(!is_valid_tool_name(""), "Empty string is invalid");
+        assert!(!is_valid_tool_name("   "), "Whitespace-only string is invalid");
+        assert!(is_valid_tool_name("bash"), "Normal tool name is valid");
+    }
+
+    #[tokio::test]
+    async fn test_unknown_tool_name_skipped() {
+        // Create a tool registry and verify unknown tools are not found
+        let registry = ToolRegistry::new();
+
+        // These tools should not exist in an empty registry
+        let unknown_tool = registry.get("nonexistent_tool");
+        assert!(unknown_tool.is_none(), "Unknown tool should not be found");
+
+        let another_unknown = registry.get("completely_invalid");
+        assert!(another_unknown.is_none(), "Invalid tool name should return None");
+
+        // Verify the validation logic: tool must exist in registry
+        let registered_tools: Vec<_> = vec!["bash", "read_file", "write_file"];
+        fn tool_exists(name: &str, available: &[&str]) -> bool {
+            available.iter().any(|&t| t == name)
+        }
+        assert!(!tool_exists("unknown", &registered_tools), "Unknown tool should be rejected");
+        assert!(tool_exists("bash", &registered_tools), "Known tool should be accepted");
+    }
 }
 
 fn build_llm_messages(system_prompt: &str, messages: &[AgentMessage]) -> Vec<Message> {

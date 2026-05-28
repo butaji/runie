@@ -68,3 +68,46 @@ impl Tool for WriteFileTool {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_write_file_tool() -> WriteFileTool {
+        let workspace = Workspace::new(std::path::PathBuf::from("."));
+        WriteFileTool::new(workspace)
+    }
+
+    #[tokio::test]
+    async fn test_write_file_missing_path_fails() {
+        let tool = create_write_file_tool();
+        let args = serde_json::json!({"content": "hello world"});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'path' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_write_file_missing_content_fails() {
+        let tool = create_write_file_tool();
+        let args = serde_json::json!({"path": "test.txt"});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'content' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_write_file_all_args_missing_fails() {
+        let tool = create_write_file_tool();
+        let args = serde_json::json!({});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing"));
+    }
+}
