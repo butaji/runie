@@ -3,7 +3,7 @@ use async_stream::stream;
 use chrono::Utc;
 use futures::stream::BoxStream;
 use reqwest::Client;
-use runie_core::{Event, Message, ProviderError, ToolCall, ToolSchema};
+use runie_core::{Event, Message, ProviderError, ToolSchema};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
@@ -485,6 +485,7 @@ struct PendingToolCall {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct Delta {
     content: Option<String>,
     role: Option<String>,

@@ -650,7 +650,6 @@ pub async fn run_tui(
                             // Reset state
                             tui.state.agent_running = false;
                             tui.state.agent_start_time = None;
-                            tui.state.animation.agent_start_time = None;
 
                             // Show error to user
                             tui.state.messages.push(runie_tui::MessageItem::Error {
