@@ -5,9 +5,6 @@ pub enum SlashCommand {
     New,
     Clear,
     Model(String),
-    Compact,
-    Save(Option<String>),
-    Load(String),
     Tree,
     Fork,
     Quit,
@@ -34,15 +31,6 @@ pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
                 Some(SlashCommand::Model(args[0].to_string()))
             }
         }
-        "/compact" => Some(SlashCommand::Compact),
-        "/save" => Some(SlashCommand::Save(args.first().map(|s| s.to_string()))),
-        "/load" => {
-            if args.is_empty() {
-                None
-            } else {
-                Some(SlashCommand::Load(args[0].to_string()))
-            }
-        }
         "/tree" | "/t" => Some(SlashCommand::Tree),
         "/fork" | "/f" => Some(SlashCommand::Fork),
         "/quit" | "/q" | "/exit" => Some(SlashCommand::Quit),
@@ -56,9 +44,6 @@ pub fn format_help() -> String {
   /new, /n           Start new session
   /clear, /c         Clear conversation
   /model, /m <name>  Switch model
-  /compact           Compact session (summarize old messages)
-  /save [name]       Save session
-  /load <name>       Load session
   /tree, /t          Open session tree navigator
   /fork, /f          Fork at current position
   /quit, /q, /exit   Exit runie

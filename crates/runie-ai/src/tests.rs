@@ -42,7 +42,7 @@ mod tests {
             parameters: serde_json::json!({}),
         }];
 
-        let mut stream = provider.chat(messages, tools).await.unwrap();
+        let stream = provider.chat(messages, tools).await.unwrap();
         let events: Vec<_> = stream.collect().await;
 
         // Debug: print what events we got

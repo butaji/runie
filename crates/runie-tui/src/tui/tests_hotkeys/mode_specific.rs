@@ -2,7 +2,6 @@
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg};
-use crate::tui::update::update;
 use crate::tui::events::event_to_msg;
 use super::helpers::simulate_key;
 

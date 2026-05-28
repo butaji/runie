@@ -241,9 +241,13 @@ pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_na
     state.mode = TuiMode::Permission;
 }
 
-/// Process the next pending permission request from the queue
+/// Process the next pending permission request from the queue (FIFO)
 pub fn process_pending_permission(state: &mut AppState) -> Option<PendingPermission> {
-    state.permission_modal.pending_queue.pop()
+    if state.permission_modal.pending_queue.is_empty() {
+        None
+    } else {
+        Some(state.permission_modal.pending_queue.remove(0))
+    }
 }
 
 pub fn extract_text_content(parts: &[ContentPart]) -> String {
@@ -299,7 +303,9 @@ pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> 
     }
 
     // BG-1 FIX: Process next pending permission if any
-    if let Some(pending) = state.permission_modal.pending_queue.pop() {
+    // BUG-09 FIX: Use remove(0) instead of pop() for FIFO order
+    if !state.permission_modal.pending_queue.is_empty() {
+        let pending = state.permission_modal.pending_queue.remove(0);
         state.permission_modal.tool = Some(pending.tool_name.clone());
         state.permission_modal.tool_call_id = Some(pending.tool_call_id.clone());
         state.permission_modal.args = Some(pending.tool_args.clone());
@@ -339,9 +345,11 @@ pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
     let tool_call_id = state.permission_modal.tool_call_id.clone().unwrap_or_default();
     state.permission_modal.tool = None;
     state.permission_modal.tool_call_id = None;
-    
+
     // BG-1 FIX: Process next pending permission if any
-    if let Some(pending) = state.permission_modal.pending_queue.pop() {
+    // BUG-09 FIX: Use remove(0) instead of pop() for FIFO order
+    if !state.permission_modal.pending_queue.is_empty() {
+        let pending = state.permission_modal.pending_queue.remove(0);
         // Show the queued permission immediately
         state.permission_modal.tool = Some(pending.tool_name.clone());
         state.permission_modal.tool_call_id = Some(pending.tool_call_id.clone());
@@ -353,7 +361,7 @@ pub fn handle_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
     } else {
         state.mode = TuiMode::Chat;
     }
-    
+
     // P2-5 FIX: Send denial decision to agent loop so it doesn't wait indefinitely
     let tool_name = state.permission_modal.tool.clone().unwrap_or_default();
     let tool_args = state.permission_modal.args.clone().unwrap_or_default();

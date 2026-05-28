@@ -40,6 +40,7 @@ fn make_state() -> AppState {
     }
 }
 
+#[allow(dead_code)]
 fn make_state_with_text(text: &str) -> AppState {
     let mut state = make_state();
     state.textarea = TextArea::new(vec![text.to_string()]);

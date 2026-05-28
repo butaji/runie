@@ -101,7 +101,7 @@ mod tests {
         let o = state.onboarding.as_mut().unwrap();
         o.step = OnboardingStep::Complete;
         o.selected_item = 0;
-        drop(o);
+        let _ = o;
         assert_eq!(state.onboarding.as_ref().unwrap().selected_item, 0);
         handle_onboarding_msg(&mut state, Msg::OnboardingNavigateDown);
         assert_eq!(state.onboarding.as_ref().unwrap().selected_item, 1);
@@ -326,7 +326,7 @@ mod tests {
         o.models.push(crate::components::onboarding::ModelOption {
             name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "".to_string()
         });
-        drop(o);
+        let _ = o;
         let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         let o = state.onboarding.as_ref().unwrap();
         assert_eq!(o.step, OnboardingStep::ProviderSelect);
@@ -348,7 +348,7 @@ mod tests {
         o.models.push(crate::components::onboarding::ModelOption {
             name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "".to_string()
         });
-        drop(o);
+        let _ = o;
         let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert!(state.onboarding.is_none());
         assert_eq!(state.mode, TuiMode::Chat);
@@ -370,7 +370,7 @@ mod tests {
         o.models.push(crate::components::onboarding::ModelOption {
             name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "".to_string()
         });
-        drop(o);
+        let _ = o;
         let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert!(state.onboarding.is_none());
         assert_eq!(state.mode, TuiMode::Chat);
@@ -397,7 +397,7 @@ mod tests {
         o.models.push(crate::components::onboarding::ModelOption {
             name: "Test".to_string(), id: "test".to_string(), description: "".to_string()
         });
-        drop(o);
+        let _ = o;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         let o = state.onboarding.as_ref().unwrap();
         assert!(o.selected_provider.is_none());
@@ -722,7 +722,7 @@ mod tests {
         o.models.push(crate::components::onboarding::ModelOption {
             name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "".to_string()
         });
-        drop(o);
+        let _ = o;
         let o = state.onboarding.as_ref().unwrap();
         let model_count = o.models.len();
         assert_eq!(model_count, 1);
@@ -746,7 +746,7 @@ mod tests {
         o.models.push(crate::components::onboarding::ModelOption {
             name: "GPT-4o Mini".to_string(), id: "gpt-4o-mini".to_string(), description: "".to_string()
         });
-        drop(o);
+        let _ = o;
         let o = state.onboarding.as_ref().unwrap();
         let model_count = o.models.len();
         assert_eq!(model_count, 2);

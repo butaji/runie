@@ -45,10 +45,13 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         state.input_right_info = "Type a message first".to_string();
         return vec![];
     }
+    // BUG-10 FIX: Set agent_running immediately to prevent race condition
+    // where rapid submissions could spawn multiple agents
     if state.agent_running {
         state.input_right_info = "Agent running (blocked)... Ctrl+C to stop".to_string();
         return vec![];
     }
+    state.agent_running = true;
     if let Some(ref onboarding) = state.onboarding {
         if onboarding.is_fetching_models {
             state.input_right_info = "Loading models...".to_string();

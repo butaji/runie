@@ -1,6 +1,6 @@
 //! Tests for palette update functions - handle_direct_command and handle_close_modal.
 
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd};
+use crate::tui::state::{AppState, TuiMode, Msg};
 use crate::components::{MessageItem, CommandPalette};
 use crate::components::command_palette::PaletteCommand;
 use crate::tui::update::palette::{handle_direct_command, handle_close_modal};
@@ -63,29 +63,6 @@ mod handle_direct_command_tests {
     }
 
     #[test]
-    fn test_load_session_pushes_cmd_with_name() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::LoadSession { name: "my_session".to_string() });
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::LoadSession { name: "my_session".to_string() });
-        // Should have system message
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Loading session"))));
-    }
-
-    #[test]
-    fn test_save_session_pushes_cmd_with_name() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::SaveSession { name: "save_me".to_string() });
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::SaveSession { name: Some("save_me".to_string()) });
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Saving session"))));
-    }
-
-    #[test]
     fn test_switch_model_opens_model_picker() {
         let mut state = make_state();
 
@@ -104,61 +81,6 @@ mod handle_direct_command_tests {
         assert_eq!(picker.providers[0].provider_name, "Anthropic");
         // Selected should be first model
         assert_eq!(picker.selected, (0, 0));
-    }
-
-    #[test]
-    fn test_read_file_pushes_cmd() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::ReadFile { path: "/tmp/test.txt".to_string() });
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::ReadFile { path: "/tmp/test.txt".to_string() });
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Reading file"))));
-    }
-
-    #[test]
-    fn test_edit_file_pushes_cmd() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::EditFile { path: "/tmp/test.txt".to_string() });
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::EditFile { path: "/tmp/test.txt".to_string() });
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Editing file"))));
-    }
-
-    #[test]
-    fn test_write_file_pushes_cmd() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::WriteFile { path: "/tmp/new.txt".to_string() });
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::WriteFile { path: "/tmp/new.txt".to_string() });
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Writing file"))));
-    }
-
-    #[test]
-    fn test_delete_file_pushes_cmd() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::DeleteFile { path: "/tmp/old.txt".to_string() });
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::DeleteFile { path: "/tmp/old.txt".to_string() });
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Deleting file"))));
-    }
-
-    #[test]
-    fn test_compact_context_pushes_cmd() {
-        let mut state = make_state();
-
-        let cmds = handle_direct_command(&mut state, PaletteCommand::CompactContext);
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::CompactContext);
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Compacting context"))));
     }
 
     #[test]
@@ -271,27 +193,4 @@ mod palette_integration_tests {
         assert!(cmds.is_empty());
     }
 
-    #[test]
-    fn test_full_flow_read_file() {
-        let mut state = make_state();
-        state.mode = TuiMode::CommandPalette;
-        state.command_palette.open = true;
-
-        let cmds = update(&mut state, &mut make_palette(), Msg::DirectCommand(PaletteCommand::ReadFile { path: "/tmp/test.txt".to_string() }));
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::ReadFile { path: "/tmp/test.txt".to_string() });
-    }
-
-    #[test]
-    fn test_full_flow_save_session() {
-        let mut state = make_state();
-        state.mode = TuiMode::CommandPalette;
-        state.command_palette.open = true;
-
-        let cmds = update(&mut state, &mut make_palette(), Msg::DirectCommand(PaletteCommand::SaveSession { name: "my_work".to_string() }));
-
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::SaveSession { name: Some("my_work".to_string()) });
-    }
 }

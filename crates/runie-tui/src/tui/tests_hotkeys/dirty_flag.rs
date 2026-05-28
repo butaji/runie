@@ -5,7 +5,6 @@ use crate::tui::state::{AppState, TuiMode, Msg};
 use crate::tui::update::update;
 use crate::components::CommandPalette;
 use crate::tui::events::event_to_msg;
-use super::helpers::simulate_key;
 
 /// Mock Tui for dirty flag testing
 struct MockTui {

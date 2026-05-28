@@ -1,0 +1,5 @@
+---
+source: crates/runie-tui/src/components/top_bar_snapshots.rs
+expression: rendered
+---
+"  runie/feature/new-ui  src/main.rs                       50000/200k 25% █25%"

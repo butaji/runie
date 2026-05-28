@@ -10,26 +10,12 @@ use crate::components::onboarding::Onboarding;
 /// UI-specific commands returned by update functions.
 #[derive(Debug, Clone)]
 pub enum UiCmd {
-    LoadSession { name: String },
-    SaveSession { name: Option<String> },
-    ReadFile { path: String },
-    EditFile { path: String },
-    WriteFile { path: String },
-    DeleteFile { path: String },
-    CompactContext,
     Quit,
 }
 
 impl From<UiCmd> for Cmd {
     fn from(cmd: UiCmd) -> Self {
         match cmd {
-            UiCmd::LoadSession { name } => Cmd::LoadSession { name },
-            UiCmd::SaveSession { name } => Cmd::SaveSession { name },
-            UiCmd::ReadFile { path } => Cmd::ReadFile { path },
-            UiCmd::EditFile { path } => Cmd::EditFile { path },
-            UiCmd::WriteFile { path } => Cmd::WriteFile { path },
-            UiCmd::DeleteFile { path } => Cmd::DeleteFile { path },
-            UiCmd::CompactContext => Cmd::CompactContext,
             UiCmd::Quit => Cmd::Interrupt,
         }
     }
@@ -177,95 +163,25 @@ pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette)
 /// Handle direct command from palette or elsewhere.
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<UiCmd> {
     match cmd {
-        PaletteCommand::NewSession => cmd_new_session(state),
-        PaletteCommand::LoadSession { name } => cmd_load_session(state, name),
-        PaletteCommand::SaveSession { name } => cmd_save_session(state, name),
-        PaletteCommand::ClearChat => cmd_clear_chat(state),
+        PaletteCommand::NewSession => {
+            state.messages.clear();
+            state.mode = TuiMode::Chat;
+            state.messages.push(MessageItem::System { text: "New session started".to_string() });
+            vec![]
+        }
+        PaletteCommand::ClearChat => {
+            state.messages.clear();
+            state.messages.push(MessageItem::System { text: "Chat cleared".to_string() });
+            vec![]
+        }
         PaletteCommand::SwitchModel => { handle_switch_model(state); vec![] }
-        PaletteCommand::ReadFile { path } => cmd_read_file(state, path),
-        PaletteCommand::EditFile { path } => cmd_edit_file(state, path),
-        PaletteCommand::WriteFile { path } => cmd_write_file(state, path),
-        PaletteCommand::DeleteFile { path } => cmd_delete_file(state, path),
-        PaletteCommand::CompactContext => cmd_compact_context(state),
-        PaletteCommand::Quit => cmd_quit(state),
-        PaletteCommand::ManageProviders => { state.messages.push(MessageItem::System { text: "Provider management: use config file".to_string() }); vec![] }
-        PaletteCommand::AddProvider => { state.messages.push(MessageItem::System { text: "Add provider: not yet implemented".to_string() }); vec![] }
-        PaletteCommand::RemoveProvider => { state.messages.push(MessageItem::System { text: "Remove provider: not yet implemented".to_string() }); vec![] }
-        PaletteCommand::EditApiKey => { state.messages.push(MessageItem::System { text: "Edit API key: not yet implemented".to_string() }); vec![] }
-        PaletteCommand::SetProviderPriority => { state.messages.push(MessageItem::System { text: "Provider priority: not yet implemented".to_string() }); vec![] }
-        PaletteCommand::BrowseModels => { state.messages.push(MessageItem::System { text: "Browse models: not yet implemented".to_string() }); vec![] }
+        PaletteCommand::Quit => {
+            state.running = false;
+            state.messages.push(MessageItem::System { text: "Goodbye!".to_string() });
+            vec![UiCmd::Quit]
+        }
         PaletteCommand::Cancel => vec![],
     }
-}
-
-// ─── Direct Command Handlers ─────────────────────────────────────────────────
-
-fn cmd_new_session(state: &mut AppState) -> Vec<UiCmd> {
-    state.messages.clear();
-    state.mode = TuiMode::Chat;
-    state.messages.push(MessageItem::System { text: "New session started".to_string() });
-    vec![]
-}
-
-fn cmd_load_session(state: &mut AppState, name: String) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::LoadSession { name: name.clone() });
-    state.messages.push(MessageItem::System { text: format!("Loading session: {}", name) });
-    cmds
-}
-
-fn cmd_save_session(state: &mut AppState, name: String) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::SaveSession { name: Some(name.clone()) });
-    state.messages.push(MessageItem::System { text: format!("Saving session: {}", name) });
-    cmds
-}
-
-fn cmd_clear_chat(state: &mut AppState) -> Vec<UiCmd> {
-    state.messages.clear();
-    state.messages.push(MessageItem::System { text: "Chat cleared".to_string() });
-    vec![]
-}
-
-fn cmd_read_file(state: &mut AppState, path: String) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::ReadFile { path: path.clone() });
-    state.messages.push(MessageItem::System { text: format!("Reading file: {}", path) });
-    cmds
-}
-
-fn cmd_edit_file(state: &mut AppState, path: String) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::EditFile { path: path.clone() });
-    state.messages.push(MessageItem::System { text: format!("Editing file: {}", path) });
-    cmds
-}
-
-fn cmd_write_file(state: &mut AppState, path: String) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::WriteFile { path: path.clone() });
-    state.messages.push(MessageItem::System { text: format!("Writing file: {}", path) });
-    cmds
-}
-
-fn cmd_delete_file(state: &mut AppState, path: String) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::DeleteFile { path: path.clone() });
-    state.messages.push(MessageItem::System { text: format!("Deleting file: {}", path) });
-    cmds
-}
-
-fn cmd_compact_context(state: &mut AppState) -> Vec<UiCmd> {
-    let mut cmds = vec![];
-    cmds.push(UiCmd::CompactContext);
-    state.messages.push(MessageItem::System { text: "Compacting context...".to_string() });
-    cmds
-}
-
-fn cmd_quit(state: &mut AppState) -> Vec<UiCmd> {
-    state.running = false;
-    state.messages.push(MessageItem::System { text: "Goodbye!".to_string() });
-    vec![UiCmd::Quit]
 }
 
 /// Switch to model picker overlay.
@@ -282,9 +198,6 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::New => { state.messages.clear(); state.scroll.feed_offset = 0; state.messages.push(MessageItem::System { text: "New session started".to_string() }); vec![] }
         SlashCommand::Clear => { state.messages.clear(); state.scroll.feed_offset = 0; vec![] }
         SlashCommand::Model(model) => { state.current_model = Some(model.clone()); state.messages.push(MessageItem::System { text: format!("Model switched to {}", model) }); vec![] }
-        SlashCommand::Compact => { state.messages.push(MessageItem::System { text: "Session compaction not yet implemented".to_string() }); vec![] }
-        SlashCommand::Save(name) => vec![UiCmd::SaveSession { name }],
-        SlashCommand::Load(name) => vec![UiCmd::LoadSession { name }],
         SlashCommand::Tree => { super::slash::handle_tree(state); vec![] }
         SlashCommand::Fork => { state.messages.push(MessageItem::System { text: "Fork created at current position".to_string() }); vec![] }
         SlashCommand::Quit => { state.running = false; vec![UiCmd::Quit] }

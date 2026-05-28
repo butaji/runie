@@ -23,8 +23,6 @@ use runie_ai::Provider;
 ///   runie --mock           TUI with mock provider (no API key)
 ///   runie --mock-setup     Run onboarding wizard with mock provider
 ///   runie run "prompt"     CLI one-shot mode
-///   runie sessions         List sessions
-///   runie tree <id>        Show session tree
 #[derive(Parser)]
 #[command(name = "runie")]
 #[command(about = "Tidy coding harness — AI agent toolkit")]
@@ -61,12 +59,6 @@ impl From<&Cli> for CliSettings {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// List saved sessions (CLI)
-    Sessions,
-    /// Show session tree (CLI)
-    Tree { session_id: String },
-    /// Compact a session (CLI)
-    Compact { session_id: String },
     /// Run a single prompt without entering TUI (CLI)
     Run { prompt: String },
 }
@@ -100,21 +92,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut settings = Settings::load();
 
     match cli.command {
-        // CLI: One-shot commands
+        // CLI: One-shot mode
         Some(Commands::Run { prompt }) => {
             run_cli_one_shot(&prompt, &cli.workspace, cli.mock, &settings).await?;
-        }
-        Some(Commands::Sessions) => {
-            println!("Saved sessions:");
-            // TODO: implement session listing
-        }
-        Some(Commands::Tree { session_id }) => {
-            println!("Session tree for: {}", session_id);
-            // TODO: implement tree display
-        }
-        Some(Commands::Compact { session_id }) => {
-            println!("Compacting session: {}", session_id);
-            // TODO: implement compaction
         }
         // TUI: Interactive terminal interface (default)
         None => {

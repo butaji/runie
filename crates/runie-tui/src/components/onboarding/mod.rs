@@ -45,7 +45,7 @@ pub struct Onboarding {
 }
 
 // ============================================================================
-// Settings (placeholder for integration with app settings)
+// Settings - provider, model, and API key configuration from onboarding
 // ============================================================================
 
 #[derive(Debug, Clone)]

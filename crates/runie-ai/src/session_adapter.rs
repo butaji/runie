@@ -204,7 +204,7 @@ fn extract_text_from_user_content(content: &OneOrMany<UserContent>) -> Option<St
 /// Currently returns empty vec since runie-core's Attachment type
 /// doesn't directly map from rig content types.
 fn extract_attachments_from_user_content(_content: &OneOrMany<UserContent>) -> Vec<runie_core::Attachment> {
-    // TODO: Implement attachment extraction when runie's Attachment type
+    // NOTE: Future enhancement — implement attachment extraction when runie's Attachment type
     // is updated to support the same content types as rig (images, audio, etc.)
     Vec::new()
 }
@@ -236,7 +236,7 @@ fn extract_assistant_content(
                 thinking = Some(r.display_text());
             }
             AssistantContent::Image(_) => {
-                // TODO: Handle assistant images when runie supports them
+                // NOTE: Future enhancement — handle assistant images when runie supports them
             }
         }
     }
@@ -254,7 +254,7 @@ fn convert_runie_to_rig(msg: Message) -> RigMessage {
                     content: OneOrMany::one(UserContent::Text(Text { text: content })),
                 }
             } else {
-                // TODO: Convert attachments to rig content types
+                // NOTE: Future enhancement — convert attachments to rig content types
                 // For now, just use the text content
                 RigMessage::User {
                     content: OneOrMany::one(UserContent::Text(Text { text: content })),

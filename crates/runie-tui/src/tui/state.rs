@@ -445,8 +445,6 @@ impl PartialEq for Msg {
 pub enum Cmd {
     SpawnAgent { messages: Vec<AgentMessage> },
     SendPermission { decision: PermissionDecision },
-    SaveSession { name: Option<String> },
-    LoadSession { name: String },
     SlashCommand(SlashCommand),
     SaveSettings { provider: String, model: String, api_key: String },
     FetchModels { provider_id: String, api_key: String },
@@ -454,12 +452,6 @@ pub enum Cmd {
     Rollback { tool_call_id: String },
     // P0-1 FIX: Interrupt — cancels the running agent task
     Interrupt,
-    // Command palette file operations
-    ReadFile { path: String },
-    EditFile { path: String },
-    WriteFile { path: String },
-    DeleteFile { path: String },
-    CompactContext,
 }
 
 impl PartialEq for Cmd {
@@ -468,18 +460,11 @@ impl PartialEq for Cmd {
         match (self, other) {
             (SpawnAgent { .. }, SpawnAgent { .. }) => true, // Can't compare messages
             (SendPermission { decision: a }, SendPermission { decision: b }) => a == b,
-            (SaveSession { name: a }, SaveSession { name: b }) => a == b,
-            (LoadSession { name: a }, LoadSession { name: b }) => a == b,
             (SlashCommand(_), SlashCommand(_)) => true, // Can't compare commands
             (SaveSettings { provider: a, model: b, api_key: c }, SaveSettings { provider: d, model: e, api_key: f }) => a == d && b == e && c == f,
             (FetchModels { provider_id: a, api_key: b }, FetchModels { provider_id: c, api_key: d }) => a == c && b == d,
             (Rollback { tool_call_id: a }, Rollback { tool_call_id: b }) => a == b,
             (Interrupt, Interrupt) => true,
-            (ReadFile { path: a }, ReadFile { path: b }) => a == b,
-            (EditFile { path: a }, EditFile { path: b }) => a == b,
-            (WriteFile { path: a }, WriteFile { path: b }) => a == b,
-            (DeleteFile { path: a }, DeleteFile { path: b }) => a == b,
-            (CompactContext, CompactContext) => true,
             _ => false,
         }
     }

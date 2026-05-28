@@ -1,5 +1,5 @@
-use ratatui::{buffer::Buffer, layout::Rect, style::Color, widgets::Widget};
-use insta::{assert_debug_snapshot, assert_yaml_snapshot};
+use ratatui::{buffer::Buffer, layout::Rect, style::Color};
+use insta::assert_debug_snapshot;
 
 use crate::components::top_bar::{render_top_bar, TopBarViewModel};
 use crate::theme::ThemeColors;
@@ -77,11 +77,7 @@ fn test_top_bar_snapshot_full() {
     };
 
     let rendered = render_to_string(&vm, 80);
-    // Use YAML snapshot for structured output with metadata
-    assert_yaml_snapshot!("top_bar_full", (
-        rendered = rendered,
-        vm = vm
-    ));
+    assert_debug_snapshot!("top_bar_full", rendered);
 }
 
 #[test]
@@ -112,8 +108,5 @@ fn test_top_bar_snapshot_high_tokens() {
     };
 
     let rendered = render_to_string(&vm, 80);
-    assert_yaml_snapshot!("top_bar_high_tokens", (
-        rendered = rendered,
-        percentage = 95.0
-    ));
+    assert_debug_snapshot!("top_bar_high_tokens", rendered);
 }
