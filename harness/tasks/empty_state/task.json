@@ -4,7 +4,7 @@
   "description": "When the chat has no messages, the message list must render an informative placeholder with: (1) a greeting/guidance text, (2) keyboard shortcut hints, (3) a CTA to start the conversation. The placeholder should NOT be blank. Verify that MessageList::render_ref checks for empty items and renders appropriate content.",
   "setup": {
     "files": {
-      "src/message_list.rs": "// Mock message list component\npub struct MessageItem;\n\npub struct MessageList {\n    pub items: Vec<MessageItem>,\n}\n\nimpl MessageList {\n    pub fn render_ref(&self, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer, theme: &crate::ThemeWrapper) {\n        // Current behavior: renders nothing if items is empty\n        for item in &self.items {\n            // render item\n        }\n        // TODO: add empty state placeholder\n    }\n}\n"
+      "src/message_list.rs": "// Mock message list component\npub struct MessageItem;\n\npub struct MessageList {\n    pub items: Vec<MessageItem>,\n}\n\nimpl MessageList {\n    pub fn render_ref(&self, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer, theme: &crate::ThemeWrapper) {\n        // Current behavior: renders nothing if items is empty\n        for item in &self.items {\n            // render item\n        }\n        // NOTE: Implement empty state rendering\n    }\n}\n"
     }
   },
   "expected": {

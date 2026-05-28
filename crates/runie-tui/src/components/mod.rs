@@ -18,6 +18,9 @@ pub mod panel;
 pub mod gradient_border;
 pub mod component;
 
+#[cfg(test)]
+mod top_bar_snapshots;
+
 pub use overlay::Overlay;
 pub use code_block::{CodeBlock, CodeLine, LineStatus};
 pub use collapsible::Collapsible;

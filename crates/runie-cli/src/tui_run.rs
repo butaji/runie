@@ -152,14 +152,22 @@ pub async fn run_tui(
     // Terminal reader - sends Msg directly (using spawn_blocking for cancellation support)
     let task_cancel = cancel.child_token();
     let msg_tx3 = msg_tx.clone();
+    // Capture current mode to check before allowing Paste (blocks in Permission/Overlay)
+    let current_mode = tui.state.mode.clone();
     tokio::task::spawn_blocking(move || {
         while !task_cancel.is_cancelled() {
             if crossterm::event::poll(Duration::from_millis(100)).unwrap_or(false) {
                 if let Ok(event) = crossterm::event::read() {
-                    // Convert event to Msg directly (Resize and Paste don't need state)
+                    // BUG-03 FIX: Check mode before emitting Paste — block in Permission/Overlay
                     let msgs = match event {
                         crossterm::event::Event::Resize(w, h) => vec![Msg::Resize(w, h)],
-                        crossterm::event::Event::Paste(text) => vec![Msg::Paste(text)],
+                        crossterm::event::Event::Paste(text) => {
+                            if matches!(current_mode, runie_tui::TuiMode::Permission | runie_tui::TuiMode::Overlay) {
+                                vec![]
+                            } else {
+                                vec![Msg::Paste(text)]
+                            }
+                        }
                         crossterm::event::Event::Key(key) => vec![Msg::TextareaKey(key)],
                         _ => vec![],
                     };
@@ -294,14 +302,6 @@ pub async fn run_tui(
                 // Recursively process SlashCommand via update
                 tui.update(Msg::SlashCommand(slash_cmd))
             }
-            Cmd::SaveSession { name } => {
-                info!("SaveSession not yet implemented: {:?}", name);
-                vec![]
-            }
-            Cmd::LoadSession { name } => {
-                info!("LoadSession not yet implemented: {}", name);
-                vec![]
-            }
             Cmd::SaveSettings { provider, model, api_key } => {
                 // Update local settings
                 settings.provider = provider.clone();
@@ -333,6 +333,24 @@ pub async fn run_tui(
                     "openai" => std::env::set_var("OPENAI_API_KEY", &api_key),
                     "anthropic" => std::env::set_var("ANTHROPIC_API_KEY", &api_key),
                     "google" => std::env::set_var("GOOGLE_API_KEY", &api_key),
+                    "cohere" => std::env::set_var("COHERE_API_KEY", &api_key),
+                    "mistral" => std::env::set_var("MISTRAL_API_KEY", &api_key),
+                    "deepseek" => std::env::set_var("DEEPSEEK_API_KEY", &api_key),
+                    "groq" => std::env::set_var("GROQ_API_KEY", &api_key),
+                    "openrouter" => std::env::set_var("OPENROUTER_API_KEY", &api_key),
+                    "huggingface" => std::env::set_var("HUGGINGFACE_API_KEY", &api_key),
+                    "xai" => std::env::set_var("XAI_API_KEY", &api_key),
+                    "azure" => std::env::set_var("AZURE_API_KEY", &api_key),
+                    "moonshot" => std::env::set_var("MOONSHOT_API_KEY", &api_key),
+                    "perplexity" => std::env::set_var("PERPLEXITY_API_KEY", &api_key),
+                    "ollama" => std::env::set_var("OLLAMA_API_KEY", &api_key),
+                    "hyperbolic" => std::env::set_var("HYPERBOLIC_API_KEY", &api_key),
+                    "together" => std::env::set_var("TOGETHER_API_KEY", &api_key),
+                    "zai" => std::env::set_var("ZAI_API_KEY", &api_key),
+                    "minimax" => std::env::set_var("MINIMAX_API_KEY", &api_key),
+                    "mira" => std::env::set_var("MIRA_API_KEY", &api_key),
+                    "galadriel" => std::env::set_var("GALADRIEL_API_KEY", &api_key),
+                    "llamafile" => std::env::set_var("LLAMAFILE_API_KEY", &api_key),
                     _ => {}
                 }
 
@@ -373,26 +391,6 @@ pub async fn run_tui(
                 // Clear permission state
                 let mut guard = permission_state.lock().await;
                 *guard = None;
-                vec![]
-            }
-            Cmd::ReadFile { path } => {
-                info!("[ReadFile] Not yet implemented: {}", path);
-                vec![]
-            }
-            Cmd::EditFile { path } => {
-                info!("[EditFile] Not yet implemented: {}", path);
-                vec![]
-            }
-            Cmd::WriteFile { path } => {
-                info!("[WriteFile] Not yet implemented: {}", path);
-                vec![]
-            }
-            Cmd::DeleteFile { path } => {
-                info!("[DeleteFile] Not yet implemented: {}", path);
-                vec![]
-            }
-            Cmd::CompactContext => {
-                info!("[CompactContext] Not yet implemented");
                 vec![]
             }
         }

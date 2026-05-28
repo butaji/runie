@@ -1,9 +1,8 @@
 //! Integration tests for command palette full flows.
 
-use crate::tui::state::{AppState, TuiMode, Msg, Cmd};
+use crate::tui::state::{AppState, TuiMode};
 use crate::components::{MessageItem, CommandPalette};
 use crate::components::command_palette::PaletteCommand;
-use crate::tui::update::update;
 use crate::tui::update::palette::{handle_direct_command, open_palette};
 
 fn make_state() -> AppState {
@@ -50,134 +49,6 @@ mod full_flow_tests {
 
         // Palette is closed by handle_close_modal which is called after confirm
         // In this test we didn't call close, but confirm() returned the command
-    }
-
-    #[test]
-    fn test_full_flow_open_palette_select_arg_command_enter_argument_confirm() {
-        // Full flow: Open palette → select arg command → enter argument → confirm
-        let mut state = make_state();
-        let mut palette = make_palette();
-
-        // Open palette
-        open_palette(&mut state, &mut palette);
-
-        // Select "read" which requires args
-        palette.filter("read");
-        assert!(!palette.filtered_commands.is_empty());
-        palette.selected = 0;
-
-        // Confirm enters argument mode
-        let result = palette.confirm(palette.selected);
-        assert!(result.is_none(), "Should enter argument mode, not return command");
-        assert!(palette.is_argument_mode);
-
-        // Type argument
-        for c in "/path/to/file.rs".chars() {
-            palette.insert_char(c);
-        }
-        assert_eq!(palette.argument_input, "/path/to/file.rs");
-
-        // Confirm with argument
-        let result = palette.confirm_with_argument();
-        assert!(result.is_some());
-
-        if let PaletteCommand::ReadFile { path } = result.unwrap() {
-            assert_eq!(path, "/path/to/file.rs");
-        } else {
-            panic!("Expected ReadFile command");
-        }
-
-        // Exit argument mode
-        assert!(!palette.is_argument_mode);
-        assert!(palette.argument_input.is_empty());
-    }
-
-    #[test]
-    fn test_full_flow_save_session_command() {
-        let mut state = make_state();
-        let mut palette = make_palette();
-
-        // Open palette and find save session
-        open_palette(&mut state, &mut palette);
-        palette.filter("save");
-        palette.selected = 0;
-
-        // Confirm enters argument mode (save session requires name)
-        let result = palette.confirm(palette.selected);
-        assert!(result.is_none());
-        assert!(palette.is_argument_mode);
-
-        // Type session name
-        for c in "my_awesome_session".chars() {
-            palette.insert_char(c);
-        }
-
-        // Confirm
-        let cmd = palette.confirm_with_argument();
-        assert!(cmd.is_some());
-
-        if let PaletteCommand::SaveSession { name } = cmd.clone().unwrap() {
-            assert_eq!(name, "my_awesome_session");
-        } else {
-            panic!("Expected SaveSession command");
-        }
-
-        // Execute the command
-        let cmds = handle_direct_command(&mut state, cmd.unwrap());
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::SaveSession { name: Some("my_awesome_session".to_string()) });
-    }
-
-    #[test]
-    fn test_full_flow_delete_file_command() {
-        let mut state = make_state();
-        let mut palette = make_palette();
-
-        open_palette(&mut state, &mut palette);
-        palette.filter("delete");
-        palette.selected = 0;
-
-        let result = palette.confirm(palette.selected);
-        assert!(result.is_none());
-        assert!(palette.is_argument_mode);
-
-        for c in "/tmp/old_file.txt".chars() {
-            palette.insert_char(c);
-        }
-
-        let cmd = palette.confirm_with_argument();
-        assert!(cmd.is_some());
-
-        if let PaletteCommand::DeleteFile { path } = cmd.clone().unwrap() {
-            assert_eq!(path, "/tmp/old_file.txt");
-        }
-
-        let cmds = handle_direct_command(&mut state, cmd.unwrap());
-        assert_eq!(cmds[0], Cmd::DeleteFile { path: "/tmp/old_file.txt".to_string() });
-    }
-
-    #[test]
-    fn test_full_flow_compact_context_command() {
-        // CompactContext is a no-arg command
-        let mut state = make_state();
-        let mut palette = make_palette();
-
-        open_palette(&mut state, &mut palette);
-        palette.filter("compact");
-        palette.selected = 0;
-
-        let cmd = palette.confirm(palette.selected);
-        assert!(cmd.is_some());
-
-        if let PaletteCommand::CompactContext = cmd.clone().unwrap() {
-            // Expected
-        } else {
-            panic!("Expected CompactContext");
-        }
-
-        let cmds = handle_direct_command(&mut state, cmd.unwrap());
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], Cmd::CompactContext);
     }
 
     #[test]
@@ -249,10 +120,10 @@ mod state_transition_tests {
         let mut state = make_state();
         let mut palette = make_palette();
 
-        // Enter argument mode
-        palette.filter("load");
-        palette.confirm(0);
-        assert!(palette.is_argument_mode);
+        // Enter argument mode using new_session which has keybinding Ctrl+N
+        palette.pending_command = Some("new_session".to_string());
+        palette.is_argument_mode = true;
+        palette.argument_input = "test_input".to_string();
 
         palette.insert_char('x');
 

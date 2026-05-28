@@ -1,0 +1,5 @@
+---
+source: crates/runie-tui/src/components/top_bar_snapshots.rs
+expression: rendered
+---
+"  40/128k 0%  s0%"

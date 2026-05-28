@@ -101,8 +101,9 @@ pub struct TaskDef {
     pub setup: TaskSetup,
     /// Expected outcomes (key = outcome name, value = expected to pass)
     pub expected: HashMap<String, bool>,
-    /// Grader script filename
-    pub grader: String,
+    /// Grader script filename (optional)
+    // BUG-11 FIX: Changed to Option<String> to match runner.rs
+    pub grader: Option<String>,
 }
 
 /// Files to create in the sandbox workspace

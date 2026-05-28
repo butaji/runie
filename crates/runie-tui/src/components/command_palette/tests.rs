@@ -111,17 +111,6 @@ mod confirm_tests {
     }
 
     #[test]
-    fn test_confirm_requires_arg_enters_argument_mode() {
-        let mut palette = make_fresh_palette();
-        palette.filter("load");
-        let result = palette.confirm(0);
-        assert!(result.is_none());
-        assert!(palette.is_argument_mode);
-        assert!(palette.pending_command.is_some());
-        assert_eq!(palette.pending_command.as_ref().unwrap(), "load_session");
-    }
-
-    #[test]
     fn test_confirm_out_of_bounds_returns_none() {
         let mut palette = make_fresh_palette();
         palette.filter("");
@@ -134,47 +123,6 @@ mod confirm_tests {
         let mut palette = make_fresh_palette();
         palette.filter("xyznonexistent");
         let result = palette.confirm(0);
-        assert!(result.is_none());
-    }
-}
-
-mod confirm_with_argument_tests {
-    use super::*;
-
-    #[test]
-    fn test_confirm_with_argument_returns_command() {
-        let mut palette = make_fresh_palette();
-        palette.filter("load");
-        palette.confirm(0);
-        assert!(palette.is_argument_mode);
-        for c in "my_session".chars() {
-            palette.insert_char(c);
-        }
-        assert_eq!(palette.argument_input, "my_session");
-        let result = palette.confirm_with_argument();
-        assert!(result.is_some());
-        let cmd = result.unwrap();
-        assert_eq!(cmd, PaletteCommand::LoadSession { name: "my_session".to_string() });
-        assert!(!palette.is_argument_mode);
-        assert!(palette.argument_input.is_empty());
-        assert!(palette.pending_command.is_none());
-    }
-
-    #[test]
-    fn test_confirm_with_argument_empty_input() {
-        let mut palette = make_fresh_palette();
-        palette.filter("load");
-        palette.confirm(0);
-        let result = palette.confirm_with_argument();
-        assert!(result.is_some());
-        let cmd = result.unwrap();
-        assert_eq!(cmd, PaletteCommand::LoadSession { name: "".to_string() });
-    }
-
-    #[test]
-    fn test_confirm_with_argument_no_pending_command_returns_none() {
-        let mut palette = make_fresh_palette();
-        let result = palette.confirm_with_argument();
         assert!(result.is_none());
     }
 }
@@ -213,53 +161,9 @@ mod argument_mode_tests {
     use super::*;
 
     #[test]
-    fn test_insert_char_in_argument_mode() {
-        let mut palette = make_fresh_palette();
-        palette.filter("load");
-        palette.confirm(0);
-        palette.insert_char('a');
-        palette.insert_char('b');
-        palette.insert_char('c');
-        assert_eq!(palette.argument_input, "abc");
-    }
-
-    #[test]
-    fn test_backspace_in_argument_mode() {
-        let mut palette = make_fresh_palette();
-        palette.filter("load");
-        palette.confirm(0);
-        palette.insert_char('a');
-        palette.insert_char('b');
-        palette.insert_char('c');
-        palette.backspace();
-        assert_eq!(palette.argument_input, "ab");
-    }
-
-    #[test]
-    fn test_clear_input_in_argument_mode() {
-        let mut palette = make_fresh_palette();
-        palette.filter("load");
-        palette.confirm(0);
-        palette.insert_char('a');
-        palette.insert_char('b');
-        palette.insert_char('c');
-        palette.clear_input();
-        assert!(palette.argument_input.is_empty());
-    }
-
-    #[test]
     fn test_insert_char_ignored_when_not_in_argument_mode() {
         let mut palette = make_fresh_palette();
         palette.insert_char('x');
         assert!(palette.argument_input.is_empty());
-    }
-
-    #[test]
-    fn test_is_argument_mode_active() {
-        let mut palette = make_fresh_palette();
-        assert!(!palette.is_argument_mode_active());
-        palette.filter("load");
-        palette.confirm(0);
-        assert!(palette.is_argument_mode_active());
     }
 }

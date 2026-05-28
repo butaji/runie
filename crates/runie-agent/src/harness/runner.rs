@@ -57,11 +57,15 @@ impl Default for HarnessConfig {
 /// Task definition loaded from `task.json`
 #[derive(Debug, Deserialize)]
 struct TaskDef {
+    #[allow(dead_code)]
     id: String,
+    #[allow(dead_code)]
     name: String,
+    #[allow(dead_code)]
     description: String,
     setup: TaskSetup,
     #[serde(rename = "expected")]
+    #[allow(dead_code)]
     expected: HashMap<String, bool>,
     grader: Option<String>,
 }

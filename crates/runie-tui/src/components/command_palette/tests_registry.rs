@@ -8,27 +8,20 @@ fn make_fresh_palette() -> CommandPalette {
 
 #[test]
 fn test_command_count() {
-    // Verify all 17 commands are registered
+    // Verify all 4 commands are registered
     let palette = make_fresh_palette();
-    assert_eq!(palette.all_commands().len(), 17);
+    assert_eq!(palette.all_commands().len(), 4);
 }
 
 #[test]
 fn test_requires_args_commands() {
-    // Verify these commands require args
+    // Verify these commands require args (none currently)
     let palette = make_fresh_palette();
 
-    let requires_args_ids = [
-        "load_session",
-        "save_session",
-        "read_file",
-        "edit_file",
-        "write_file",
-        "delete_file",
-    ];
+    let requires_args_ids: &[&str] = &[];
 
     for id in requires_args_ids {
-        let cmd = palette.all_commands().iter().find(|c| c.id == id).unwrap();
+        let cmd = palette.all_commands().iter().find(|c| c.id == *id).unwrap();
         assert!(cmd.requires_args, "{} should require args", id);
     }
 }
@@ -42,14 +35,7 @@ fn test_no_args_commands() {
         "new_session",
         "clear_chat",
         "switch_model",
-        "compact_context",
         "quit",
-        "manage_providers",
-        "add_provider",
-        "remove_provider",
-        "edit_api_key",
-        "set_provider_priority",
-        "browse_models",
     ];
 
     for id in no_args_ids {

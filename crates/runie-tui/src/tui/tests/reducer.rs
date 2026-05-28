@@ -393,7 +393,7 @@ fn test_submit_no_model_configured() {
 
 #[test]
 fn test_error_messages_filtered_from_agent_context() {
-    use runie_agent::ContentPart;
+    
     let mut state = make_state();
     let mut palette = CommandPalette::new();
     state.current_model = Some("gpt-4".to_string());
@@ -402,6 +402,10 @@ fn test_error_messages_filtered_from_agent_context() {
     state.textarea = TextArea::new(vec!["hello".to_string()]);
     update(&mut state, &mut palette, Msg::Submit);
     assert_eq!(state.messages.len(), 1); // only user
+
+    // Simulate agent completing (so we can submit again)
+    // BUG-10 FIX: agent_running is set to true on submit, must reset for second submit
+    state.agent_running = false;
 
     // Simulate an error message in the chat
     state.messages.push(MessageItem::Error { message: "Something went wrong".to_string(), recoverable: false });
@@ -514,7 +518,7 @@ fn test_agent_end_clears_permission_modal() {
     assert!(state.permission_modal.tool.is_none(), "Permission modal should be cleared");
 }
 
-// BG-1: Permission request behavior (not yet implemented - test documents expected behavior)
+// BG-1: Permission request behavior (documented gap - test verifies expected behavior)
 // KNOWN GAP: Currently, permission request switches mode to Permission.
 // The fix would queue permission and stay in DiffViewer until user dismisses the modal.
 #[test]
@@ -663,8 +667,8 @@ fn test_clear_input_confirm_second_tap_clears_text() {
 
 #[test]
 fn test_clear_input_confirm_timeout_resets() {
-    use std::thread;
-    use std::time::Duration;
+    
+    
     let mut state = make_state_with_text("Hello world");
     let mut palette = CommandPalette::new();
     
@@ -685,7 +689,7 @@ fn test_clear_input_confirm_timeout_resets() {
 
 // ─── Permission queue FIFO order ─────────────────────────────────────────────────
 
-// BUG-09: pending_queue uses Vec which is LIFO (pop returns last), not FIFO
+// BUG-09 FIX: pending_queue now uses remove(0) for FIFO order
 #[test]
 fn test_queue_fifo_order() {
     use crate::tui::state::PendingPermission;
@@ -703,14 +707,14 @@ fn test_queue_fifo_order() {
         },
     ];
     
-    // BUG-09: Vec.pop() returns LAST element (LIFO)
-    let first = queue.pop();
-    assert_eq!(first.as_ref().map(|p| p.tool_name.as_str()), Some("B"),
-        "BUG-09: pop() returns B first (LIFO), but A should be first (FIFO)");
+    // Vec.remove(0) returns FIRST element (FIFO)
+    let first = queue.remove(0);
+    assert_eq!(first.tool_name.as_str(), "A",
+        "remove(0) returns A first (FIFO)");
     
-    let second = queue.pop();
-    assert_eq!(second.as_ref().map(|p| p.tool_name.as_str()), Some("A"),
-        "BUG-09: Second pop returns A, but A should process first");
+    let second = queue.remove(0);
+    assert_eq!(second.tool_name.as_str(), "B",
+        "Second remove(0) returns B");
 }
 
 // ─── Queue processing resets timeout ────────────────────────────────────────────
@@ -721,7 +725,7 @@ fn test_queue_processing_resets_timeout() {
     use std::time::Instant;
     
     let mut state = make_state();
-    let mut palette = CommandPalette::new();
+    let _palette = CommandPalette::new();
     
     // Set initial timeout_start (in the past)
     state.permission_modal.timeout_start = Some(Instant::now() - std::time::Duration::from_secs(30));
@@ -736,12 +740,11 @@ fn test_queue_processing_resets_timeout() {
     state.permission_modal.tool = Some("Y".to_string());
     state.permission_modal.tool_call_id = Some("call_y".to_string());
     
-    // Process pending permission
-    let pending = state.permission_modal.pending_queue.pop();
-    assert!(pending.is_some());
+    // Process pending permission (FIFO)
+    let pending = state.permission_modal.pending_queue.remove(0);
     
     // timeout_start should be reset when processing next pending
-    state.permission_modal.tool = Some(pending.unwrap().tool_name);
+    state.permission_modal.tool = Some(pending.tool_name);
     state.permission_modal.timeout_start = Some(Instant::now());
     
     // Verify timeout_start was reset to "now", not left as old value

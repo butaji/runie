@@ -1,8 +1,7 @@
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, Cmd, TuiMode};
+use crate::tui::state::{AppState, TuiMode};
 
-pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<Cmd> {
-    let mut cmds = vec![];
+pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<crate::tui::state::Cmd> {
     match cmd {
         runie_core::slash_command::SlashCommand::New => {
             state.messages.clear();
@@ -17,11 +16,6 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
             state.current_model = Some(model.clone());
             state.messages.push(MessageItem::System { text: format!("Model switched to {}", model) });
         }
-        runie_core::slash_command::SlashCommand::Compact => {
-            state.messages.push(MessageItem::System { text: "Session compaction not yet implemented".to_string() });
-        }
-        runie_core::slash_command::SlashCommand::Save(name) => cmds.push(Cmd::SaveSession { name }),
-        runie_core::slash_command::SlashCommand::Load(name) => cmds.push(Cmd::LoadSession { name }),
         runie_core::slash_command::SlashCommand::Tree => handle_tree(state),
         runie_core::slash_command::SlashCommand::Fork => state.messages.push(MessageItem::System { text: "Fork created at current position".to_string() }),
         runie_core::slash_command::SlashCommand::Quit => state.running = false,
@@ -32,7 +26,7 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
             state.messages.push(MessageItem::System { text: format!("Unknown command: {}. Type /help for available commands.", cmd) });
         }
     }
-    cmds
+    vec![]
 }
 
 pub fn handle_tree(state: &mut AppState) {

@@ -47,11 +47,11 @@ fn test_exact_alias_score_higher_than_contains() {
     palette.filter("n");
     let first_id = palette.all_commands()[palette.filtered_commands[0]].id.clone();
 
-    // "w" matches write_file via alias contains
-    palette.filter("w");
-    let first_w = palette.all_commands()[palette.filtered_commands[0]].id.clone();
+    // "c" matches clear_chat via alias contains
+    palette.filter("c");
+    let first_c = palette.all_commands()[palette.filtered_commands[0]].id.clone();
 
     assert_eq!(first_id, "new_session");
-    // write_file has alias "w" so it should be first for "w" filter
-    assert_eq!(first_w, "write_file");
+    // clear_chat has alias "c" so it should be first for "c" filter
+    assert_eq!(first_c, "clear_chat");
 }

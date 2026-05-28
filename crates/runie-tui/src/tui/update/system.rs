@@ -76,8 +76,9 @@ fn handle_tick_permission_check(state: &mut AppState, _palette: &mut CommandPale
             state.permission_modal.tool = None;
             state.permission_modal.tool_call_id = None;
 
-            // Process next pending permission if any
-            if let Some(pending) = state.permission_modal.pending_queue.pop() {
+            // Process next pending permission if any (FIFO)
+            if !state.permission_modal.pending_queue.is_empty() {
+                let pending = state.permission_modal.pending_queue.remove(0);
                 state.permission_modal.tool = Some(pending.tool_name.clone());
                 state.permission_modal.tool_call_id = Some(pending.tool_call_id.clone());
                 state.permission_modal.args = Some(pending.tool_args.clone());
