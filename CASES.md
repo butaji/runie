@@ -26,10 +26,27 @@
 | `GIT-` | Git Integration |
 | `CTX-` | Context Loading |
 | `ERR-` | Error Handling |
+| `RTR-` | Router / Tier Routing |
+| `MCP-` | MCP Integration |
+| `OCH-` | Orchestrator / Sub-agents |
+| `SKL-` | Skills |
+| `AUT-` | Authentication |
+| `MOD-` | Run Modes (CLI/JSON/RPC/API) |
+| `AGM-` | Agent Modes (Build/Plan) |
+| `SES-` | Session Tree / Branching |
+| `CMD-` | Chat Commands / Input Box |
+| `MDL-` | Model Management |
+| `TOL-` | Tool Management |
+| `THK-` | Thinking Levels |
+| `TUI-` | TUI Panels / Layout / Navigation |
+| `REV-` | Code Review |
+| `APL-` | Apply Diff |
+| `DIA-` | Diagnostics |
+| `SND-` | Sandbox Execution |
 
 ---
 
-## ONB — Onboarding
+## ONB — Onboarding (P0)
 
 ### ONB-01: Advance from Welcome
 - **Given** onboarding is on `Welcome` step
@@ -266,7 +283,7 @@
 
 ---
 
-## CHT — Chat / Messages
+## CHT — Chat / Messages (P0)
 
 ### CHT-01: Submit User Message
 - **Given** user typed text in input bar
@@ -337,7 +354,7 @@
 
 ---
 
-## AGT — Agent / Tool Execution
+## AGT — Agent / Tool Execution (P0)
 
 ### AGT-01: Spawn Agent
 - **Given** user submits message, agent not running
@@ -413,7 +430,7 @@
 
 ---
 
-## PER — Permissions
+## PER — Permissions (P0)
 
 ### PER-01: Permission Request Display
 - **Given** agent requests permission for tool
@@ -491,7 +508,7 @@
 
 ---
 
-## PAL — Command Palette
+## PAL — Command Palette (P0)
 
 ### PAL-01: Open Palette
 - **Given** user presses `Ctrl+P`
@@ -557,7 +574,7 @@
 
 ---
 
-## TOP — Top Bar
+## TOP — Top Bar (P0)
 
 ### TOP-01: Display Repo/Branch/Path
 - **Given** git info available
@@ -634,7 +651,7 @@
 
 ---
 
-## STT — State Management
+## STT — State Management (P0)
 
 ### STT-01: State Initialization
 - **Given** app starts
@@ -731,7 +748,7 @@
 
 ---
 
-## CFG — Configuration
+## CFG — Configuration (P0)
 
 ### CFG-01: Layered Settings Resolution
 - **Given** multiple config sources exist
@@ -798,7 +815,7 @@
 
 ---
 
-## REN — Rendering / UI
+## REN — Rendering / UI (P0)
 
 ### REN-01: Main Layout
 - **Given** terminal area available
@@ -922,7 +939,7 @@
 
 ---
 
-## INP — Input / Keyboard
+## INP — Input / Keyboard (P0)
 
 ### INP-01: Textarea Input
 - **Given** input bar focused
@@ -975,9 +992,40 @@
 
 ### INP-09: Paste Text
 - **Given** input bar focused
-- **When** paste event received
+- **When** paste event received (Ctrl+V / Cmd+V)
 - **Then** text inserted at cursor position
 - **Files**: `events.rs`, `update/chat.rs`
+
+### INP-20: Paste Image
+- **Given** input bar focused
+- **When** image pasted (Ctrl+V / Cmd+V)
+- **Then** image attachment added to current message
+- **Files**: `runie-tui/src/events.rs`
+
+### INP-21: Paste Image from File Path
+- **Given** image file path in clipboard
+- **When** pasted into input bar
+- **Then** image loaded from path, attached to message
+- **Edge**: Invalid path → error toast, nothing attached
+- **Files**: `runie-tui/src/events.rs`
+
+### INP-22: Paste Image Multiple
+- **Given** multiple images in clipboard
+- **When** pasted
+- **Then** all images attached as separate attachments
+- **Files**: `runie-tui/src/events.rs`
+
+### INP-23: Paste Mixed Content
+- **Given** clipboard has text + image
+- **When** pasted
+- **Then** text inserted at cursor, image attached separately
+- **Files**: `runie-tui/src/events.rs`
+
+### INP-24: Paste Large Image
+- **Given** image > 5MB in clipboard
+- **When** pasted
+- **Then** image resized/compressed, or warning shown
+- **Files**: `runie-tui/src/events.rs`
 
 ### INP-10: Paste Blocked in Blocking Modes (Correct Behavior)
 - **Given** permission modal open (blocking mode)
@@ -1018,7 +1066,7 @@
 
 ---
 
-## HAR — Harness / Tasks
+## HAR — Harness / Tasks (P0)
 
 ### HAR-01: List Tasks
 - **Given** harness directory exists
@@ -1058,7 +1106,7 @@
 
 ---
 
-## LOG — Logging
+## LOG — Logging (P0)
 
 ### LOG-01: Log Level Configuration
 - **Given** `RUNIE_LOG` env var set
@@ -1092,7 +1140,7 @@
 
 ---
 
-## EVT — Event Streaming
+## EVT — Event Streaming (P0)
 
 ### EVT-01: Agent Event Channel
 - **Given** agent running
@@ -1132,7 +1180,7 @@
 
 ---
 
-## GIT — Git Integration
+## GIT — Git Integration (P0)
 
 ### GIT-01: Repository Detection
 - **Given** `.git` directory exists
@@ -1172,7 +1220,7 @@
 
 ---
 
-## CTX — Context Loading
+## CTX — Context Loading (P0)
 
 ### CTX-01: Context From Messages
 - **Given** chat messages exist
@@ -1218,7 +1266,7 @@
 
 ---
 
-## ERR — Error Handling
+## ERR — Error Handling (P0)
 
 ### ERR-01: API Key Validation Errors
 - **Given** invalid API key entered
@@ -1500,7 +1548,1336 @@
 
 ---
 
-*Phase 1: Scenarios identified (167 scenarios across 16 domains).*
-*Phase 2: Implementation researched, 20 bugs found and documented (2 fixed).*
-*Phase 3: Test implementation in progress (~569 tests, all passing).*
-*Ready for commit.*
+## Phase 4: Converged Architecture Scenarios
+
+> Scenarios for the agreed architecture: tiered routing, sub-agents, MCP, config-driven DI, session tree, multi-mode, and pi-scope features.
+>
+> **Priority Legend:**
+> - **P0** — MUST for v1. Ship blocker. Core functionality.
+> - **P1** — SHOULD for v1. Stretch goals, acceptable to defer.
+> - **P2** — COULD for v2. Major subsystems, significant complexity.
+
+---
+
+## RTR — Router / Tier Routing (P2)
+
+### RTR-01: Default Route to L1
+- **Given** routing config with default tier L1
+- **When** `route("read", ToolEvent { tokens: 100 })` called
+- **Then** returns `Tier::L1`
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-02: Route Read with Token Threshold
+- **Given** routing rule: read < 50k tokens → L1
+- **When** `route("read", ToolEvent { tokens: 50000 })` called
+- **Then** returns `Tier::L1`
+- **Edge**: tokens = 50001 → returns `Tier::L2` (or default, not L1)
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-03: Route Bash with Output Threshold
+- **Given** routing rule: bash output < 10k → L1
+- **When** `route("bash", ToolEvent { output_size: 5000 })` called
+- **Then** returns `Tier::L1`
+- **Edge**: output_size = 10001 → not L1
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-04: Route Write to L2
+- **Given** routing rule: write → L2 (no condition)
+- **When** `route("write", ToolEvent { size: 100 })` called
+- **Then** returns `Tier::L2`
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-05: Route Edit to L2
+- **Given** routing rule: edit → L2
+- **When** `route("edit", ToolEvent { size: 100 })` called
+- **Then** returns `Tier::L2`
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-06: Route Test to L2
+- **Given** routing rule: test → L2
+- **When** `route("test", ...)` called
+- **Then** returns `Tier::L2`
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-07: Route Architect to L3
+- **Given** routing rule: architect → L3
+- **When** `route("architect", ...)` called
+- **Then** returns `Tier::L3`
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-08: Route Debug to L3
+- **Given** routing rule: debug → L3
+- **When** `route("debug", ...)` called
+- **Then** returns `Tier::L3`
+- **Files**: `runie-router/src/tier_router.rs`
+
+### RTR-09: Escalation L1 Fail ×2 → L2
+- **Given** L1 agent failed twice on same task
+- **When** `escalate(L1, AgentOutcome::Fail { retryable: true })` called with failure_count = 2
+- **Then** returns `Some(Tier::L2)`
+- **Files**: `runie-router/src/escalation.rs`
+
+### RTR-10: Escalation L2 Fail ×2 → L3
+- **Given** L2 agent failed twice
+- **When** `escalate(L2, ...)` with failure_count = 2
+- **Then** returns `Some(Tier::L3)`
+- **Files**: `runie-router/src/escalation.rs`
+
+### RTR-11: Escalation Ceiling at L3
+- **Given** L3 agent failed
+- **When** `escalate(L3, ...)` called
+- **Then** returns `None` (L3 is max tier)
+- **Files**: `runie-router/src/escalation.rs`
+
+### RTR-12: Escalation Circuit Breaker
+- **Given** total escalation count ≥ 3
+- **When** `escalate(...)` called
+- **Then** returns `None` (circuit breaker open)
+- **Files**: `runie-router/src/escalation.rs`
+
+### RTR-13: Config Load from TOML
+- **Given** `runie.toml` with `[routing]` section
+- **When** `RoutingConfig::load()` called
+- **Then** parses L1/L2/L3 models, tool_tier mappings, escalation rules
+- **Files**: `runie-cli/src/settings.rs`, `runie-router/src/config.rs`
+
+### RTR-14: Config Missing Tier Model
+- **Given** `runie.toml` missing L3 model
+- **When** `RoutingConfig::load()` called
+- **Then** error: "Missing L3 model configuration"
+- **Files**: `runie-router/src/config.rs`
+
+### RTR-15: Config Tool Tier Override
+- **Given** `runie.toml` with `[[routing.tool]]` override
+- **When** routing table loaded
+- **Then** override takes precedence over defaults
+- **Files**: `runie-router/src/config.rs`
+
+---
+
+## MCP — MCP Integration (P2)
+
+### MCP-01: MCP Crate Exists
+- **Given** `runie-mcp` crate in workspace
+- **When** `cargo check` runs
+- **Then** compiles, depends on `runie-core`
+- **Files**: `Cargo.toml`, `crates/runie-mcp/Cargo.toml`
+
+### MCP-02: MCP Tool Implements Tool Trait
+- **Given** MCP server `filesystem` configured
+- **When** `McpTool::new("filesystem", ...)` created
+- **Then** implements `runie_core::Tool` trait
+- **Files**: `runie-mcp/src/tool.rs`
+
+### MCP-03: MCP Server Spawn
+- **Given** config: `mcp_servers = { fs = { command = "npx", args = [...] } }`
+- **When** `McpServer::spawn("fs")` called
+- **Then** child process started, stdio connected
+- **Files**: `runie-mcp/src/server.rs`
+
+### MCP-04: MCP Tool Discovery
+- **Given** MCP server running
+- **When** `McpServer::list_tools()` called
+- **Then** returns available tool names from server
+- **Files**: `runie-mcp/src/server.rs`
+
+### MCP-05: MCP Tool Call
+- **Given** MCP server with `read_file` tool
+- **When** `tool.execute({ path: "foo.txt" })` called
+- **Then** sends JSON-RPC request, returns tool result
+- **Files**: `runie-mcp/src/tool.rs`
+
+### MCP-06: MCP Tool Registration in Registry
+- **Given** `McpToolRegistry` with configured servers
+- **When** `registry.register_all()` called
+- **Then** all MCP tools available alongside built-in tools
+- **Files**: `runie-mcp/src/registry.rs`, `runie-tools/src/registry.rs`
+
+### MCP-07: MCP Server Crash Recovery
+- **Given** MCP server process crashes
+- **When** next tool call attempted
+- **Then** server restarted automatically, call retried once
+- **Files**: `runie-mcp/src/server.rs`
+
+### MCP-08: MCP Disabled via Config
+- **Given** config: `mcp.enabled = false`
+- **When** app starts
+- **Then** no MCP servers spawned, only built-in tools available
+- **Files**: `runie-mcp/src/lib.rs`
+
+### MCP-09: MCP Server Timeout
+- **Given** MCP server hanging
+- **When** tool call exceeds 30s
+- **Then** returns `ToolError::ExecutionFailed("timeout")`
+- **Files**: `runie-mcp/src/server.rs`
+
+### MCP-10: MCP Feature Flag Opt-Out
+- **Given** `runie-cli` built without `mcp` feature
+- **When** binary runs
+- **Then** no MCP code compiled, smaller binary
+- **Files**: `crates/runie-cli/Cargo.toml`
+
+---
+
+## OCH — Orchestrator / Sub-agents (P2)
+
+### OCH-01: Orchestrator Spawns L1 Agent
+- **Given** task classified as L1 (read < 50k tokens)
+- **When** `orchestrator.spawn(task, context)` called
+- **Then** `SubagentHandle` returned, agent running in background
+- **Files**: `runie-orchestrator/src/orchestrator.rs`
+
+### OCH-02: Orchestrator Spawns L2 Agent
+- **Given** task classified as L2 (write)
+- **When** `orchestrator.spawn(task, context)` called
+- **Then** L2 agent spawned with appropriate model
+- **Files**: `runie-orchestrator/src/orchestrator.rs`
+
+### OCH-03: Orchestrator Escalates L1 → L2
+- **Given** L1 agent failed twice
+- **When** escalation trigger fires
+- **Then** L1 cancelled, L2 spawned with full context history
+- **Files**: `runie-orchestrator/src/escalation.rs`
+
+### OCH-04: Context Inheritance on Escalation
+- **Given** L1 attempted read, got partial results
+- **When** escalated to L2
+- **Then** L2 receives `TierAttempt` history with L1's results
+- **Files**: `runie-orchestrator/src/handoff.rs`
+
+### OCH-05: Max Subagents Guard
+- **Given** 10 subagents already running
+- **When** spawning 11th
+- **Then** returns `OrchestratorError::MaxSubagentsExceeded`
+- **Files**: `runie-orchestrator/src/orchestrator.rs`
+
+### OCH-06: Subagent Cancel
+- **Given** running subagent
+- **When** `orchestrator.cancel(handle_id)` called
+- **Then** subagent stopped, status = Cancelled
+- **Files**: `runie-orchestrator/src/orchestrator.rs`
+
+### OCH-07: Subagent Result Collection
+- **Given** 3 completed subagents
+- **When** `orchestrator.collect(handles)` called
+- **Then** returns `Vec<SubagentResult>` with all events
+- **Files**: `runie-orchestrator/src/orchestrator.rs`
+
+### OCH-08: Handoff Protocol Export
+- **Given** context with 5 messages
+- **When** `handoff_protocol.export(context)` called
+- **Then** returns `HandoffPayload` with session snapshot
+- **Files**: `runie-orchestrator/src/handoff.rs`
+
+### OCH-09: Orchestrator Config-Driven
+- **Given** `runie.toml` with `[orchestrator] max_subagents = 5`
+- **When** orchestrator initialized
+- **Then** respects config limit
+- **Files**: `runie-orchestrator/src/config.rs`
+
+### OCH-10: Subagent Status Transitions
+- **Given** subagent spawned
+- **When** through lifecycle
+- **Then** status transitions: Pending → Running → Completed/Failed/Cancelled
+- **Files**: `runie-orchestrator/src/subagent.rs`
+
+---
+
+## SES — Session Tree / Branching (P0/P1)
+
+### SES-01: Session Tree Structure
+- **Given** session with messages A→B→C
+- **When** `session.get_thread(C.id)` called
+- **Then** returns [A, B, C] in order
+- **Files**: `runie-core/src/session.rs`
+
+### SES-02: Session Branching
+- **Given** session with message A
+- **When** `session.add_message(Some(A.id), message_B)` and `session.add_message(Some(A.id), message_C)`
+- **Then** B and C are siblings (both parent_id = A.id)
+- **Files**: `runie-core/src/session.rs`
+
+### SES-03: Fork Session from Message
+- **Given** existing session with branch A→B→C
+- **When** `/fork C` command executed
+- **Then** new session created with thread [A, B, C] as initial state
+- **Files**: `runie-cli/src/commands.rs`, `runie-core/src/session.rs`
+
+### SES-04: Tree Navigation
+- **Given** session with branches A→[B, C]
+- **When** user navigates to B
+- **Then** active branch = B path, C still exists in tree
+- **Files**: `runie-tui/src/tree_view.rs`
+
+### SES-05: Session Persistence as JSONL
+- **Given** session with tree structure
+- **When** `storage.save_session(&session)` called
+- **Then** JSONL file with `id`, `parent_id`, `messages`
+- **Files**: `runie-core/src/storage.rs`
+
+### SES-06: Load Session from JSONL
+- **Given** JSONL file with tree data
+- **When** `storage.load_session(id)` called
+- **Then** reconstructs full tree with branches
+- **Files**: `runie-core/src/storage.rs`
+
+### SES-07: Compaction Triggers
+- **Given** session approaching context window limit
+- **When** auto-compaction enabled
+- **Then** oldest messages summarized, tree preserved
+- **Files**: `runie-core/src/compactor.rs`
+
+### SES-08: Compaction Preserves Branches
+- **Given** session with branches, compaction runs
+- **When** compacted
+- **Then** all branches intact, only leaf messages summarized
+- **Files**: `runie-core/src/compactor.rs`
+
+### SES-09: Session List
+- **Given** multiple sessions stored
+- **When** `storage.list_sessions()` called
+- **Then** returns metadata for all sessions
+- **Files**: `runie-core/src/storage.rs`
+
+### SES-10: Session Delete
+- **Given** existing session
+- **When** `storage.delete_session(id)` called
+- **Then** session removed, returns Ok
+- **Files**: `runie-core/src/storage.rs`
+
+---
+
+## SKL — Skills (P0)
+
+### SKL-01: Skill Discovery
+- **Given** `~/.runie/skills/my-skill/SKILL.md` exists
+- **When** app starts
+- **Then** skill loaded and available via `/skill:my-skill`
+- **Files**: `runie-cli/src/skills.rs`
+
+### SKL-02: Skill Markdown Format
+- **Given** `SKILL.md` with `# My Skill` header and `## Steps`
+- **When** skill loaded
+- **Then** parsed into Skill struct with name, description, steps
+- **Files**: `runie-core/src/skill.rs`
+
+### SKL-03: Skill Invocation
+- **Given** skill loaded
+- **When** user types `/skill:my-skill`
+- **Then** skill steps injected as system prompt context
+- **Files**: `runie-cli/src/commands.rs`
+
+### SKL-04: Project-Level Skills
+- **Given** `.runie/skills/` directory in project
+- **When** app starts in that project
+- **Then** project skills loaded alongside global skills
+- **Files**: `runie-cli/src/skills.rs`
+
+### SKL-05: Skill Auto-Load
+- **Given** skill with `auto_load = true` in metadata
+- **When** relevant context detected
+- **Then** skill automatically loaded without explicit invocation
+- **Files**: `runie-core/src/skill.rs`
+
+---
+
+## AUT — Authentication (P0/P2)
+
+### AUT-01: API Key from Config
+- **Given** `runie.toml` with `api_key = "sk-..."`
+- **When** provider initialized
+- **Then** API key used for authentication
+- **Files**: `runie-cli/src/settings.rs`
+
+### AUT-02: API Key from Environment
+- **Given** `ANTHROPIC_API_KEY` env var set
+- **When** provider initialized
+- **Then** env var used, config key optional
+- **Files**: `runie-cli/src/provider_factory.rs`
+
+### AUT-03: API Key from Keychain
+- **Given** config: `api_key_keychain = "runie/anthropic"`
+- **When** provider initialized
+- **Then** keychain queried, key retrieved
+- **Edge**: Keychain unavailable → fallback to env/config
+- **Files**: `runie-cli/src/auth.rs`
+
+### AUT-04: OAuth Login
+- **Given** user runs `/login`
+- **When** OAuth flow initiated
+- **Then** browser opens, token exchanged, stored securely
+- **Files**: `runie-cli/src/auth.rs`
+
+### AUT-05: Logout
+- **Given** user authenticated
+- **When** `/logout` invoked
+- **Then** credentials cleared from storage
+- **Files**: `runie-cli/src/auth.rs`
+
+---
+
+## MOD — Run Modes (CLI / JSON / RPC / API) (P0/P2)
+
+### MOD-01: TUI Mode (Default)
+- **Given** `runie` invoked without args
+- **When** app starts
+- **Then** interactive TUI launched
+- **Files**: `runie-cli/src/main.rs`
+
+### MOD-02: CLI One-Shot Mode
+- **Given** `runie run "prompt"` invoked
+- **When** processed
+- **Then** single response printed, app exits
+- **Files**: `runie-cli/src/main.rs`
+
+### MOD-03: JSON Mode
+- **Given** `runie --json "prompt"` invoked
+- **When** response generated
+- **Then** JSON lines output to stdout
+- **Files**: `runie-cli/src/main.rs`
+
+### MOD-04: JSON Mode Streaming
+- **Given** `runie --json "prompt"` with streaming response
+- **When** events emitted
+- **Then** each event as JSON line: `{ "type": "message_delta", "content": "..." }`
+- **Files**: `runie-cli/src/json_mode.rs`
+
+### MOD-05: RPC Mode
+- **Given** `runie --mode rpc` invoked
+- **When** client sends JSON request on stdin
+- **Then** response written to stdout, LF-delimited
+- **Files**: `runie-cli/src/rpc_mode.rs`
+
+### MOD-06: RPC Session Create
+- **Given** RPC client sends `{ "method": "session.create" }`
+- **When** processed
+- **Then** returns `{ "id": "...", "status": "created" }`
+- **Files**: `runie-server/src/rpc.rs`
+
+### MOD-07: API Server Mode
+- **Given** `runie serve` invoked
+- **When** HTTP server starts
+- **Then** listens on port (default 8080)
+- **Files**: `runie-server/src/main.rs`
+
+### MOD-08: API Create Session
+- **Given** API server running
+- **When** `POST /sessions` with JSON body
+- **Then** returns `{ "id": "...", "created_at": "..." }`
+- **Files**: `runie-server/src/handlers.rs`
+
+### MOD-09: API Send Prompt
+- **Given** session exists
+- **When** `POST /sessions/:id/prompt` with `{ "message": "..." }`
+- **Then** SSE stream of events returned
+- **Files**: `runie-server/src/handlers.rs`
+
+### MOD-10: API List Sessions
+- **Given** multiple sessions exist
+- **When** `GET /sessions`
+- **Then** returns array of session metadata
+- **Files**: `runie-server/src/handlers.rs`
+
+### MOD-11: API Delete Session
+- **Given** session exists
+- **When** `DELETE /sessions/:id`
+- **Then** returns 204 No Content
+- **Files**: `runie-server/src/handlers.rs`
+
+### MOD-12: Pipe Input to CLI
+- **Given** `cat README.md | runie -p "Summarize"`
+- **When** processed
+- **Then** piped content appended to prompt
+- **Files**: `runie-cli/src/main.rs`
+
+---
+
+## CFG — Configuration Extended (P0)
+
+### CFG-11: Tier Config in TOML
+- **Given** `runie.toml` with `[routing]` section
+- **When** `Settings::load()` called
+- **Then** L1/L2/L3 models parsed, tool_tier mappings loaded
+- **Files**: `runie-cli/src/settings.rs`
+
+### CFG-12: MCP Server Config
+- **Given** `runie.toml` with `[tools.mcp_servers]`
+- **When** app starts
+- **Then** MCP servers configured, ready to spawn
+- **Files**: `runie-mcp/src/config.rs`
+
+### CFG-13: Storage Backend Config
+- **Given** `runie.toml` with `[storage] backend = "sqlite"`
+- **When** storage initialized
+- **Then** SQLite backend created
+- **Edge**: `backend = "json"` → JSONL storage
+- **Files**: `runie-core/src/storage.rs`
+
+### CFG-14: Theme Config
+- **Given** `runie.toml` with `theme = "dark"`
+- **When** TUI starts
+- **Then** dark theme loaded
+- **Files**: `runie-tui/src/theme.rs`
+
+### CFG-15: Extension Discovery Config
+- **Given** `runie.toml` with `extensions = ["~/.runie/extensions/"]`
+- **When** app starts
+- **Then** extensions loaded from specified paths
+- **Files**: `runie-cli/src/extensions.rs`
+
+### CFG-16: Skill Discovery Config
+- **Given** `runie.toml` with `skills = ["~/.runie/skills/"]`
+- **When** app starts
+- **Then** skills loaded from specified paths
+- **Files**: `runie-cli/src/skills.rs`
+
+### CFG-17: Prompt Template Discovery Config
+- **Given** `runie.toml` with `prompts = ["~/.runie/prompts/"]`
+- **When** app starts
+- **Then** prompt templates loaded
+- **Files**: `runie-cli/src/prompts.rs`
+
+---
+
+## EVT — Event Streaming Extended (P0)
+
+### EVT-07: Escalation Event
+- **Given** L1 agent fails, escalation triggered
+- **When** `AgentEvent::Escalate` emitted
+- **Then** `{ from_tier: "L1", to_tier: "L2", reason: "failures: 2" }`
+- **Files**: `runie-core/src/event.rs`
+
+### EVT-08: Subagent Spawn Event
+- **Given** orchestrator spawns subagent
+- **When** spawn completes
+- **Then** `AgentEvent::SubagentSpawned { id, tier, task }` emitted
+- **Files**: `runie-core/src/event.rs`
+
+### EVT-09: Subagent Complete Event
+- **Given** subagent finishes
+- **When** result collected
+- **Then** `AgentEvent::SubagentCompleted { id, result }` emitted
+- **Files**: `runie-core/src/event.rs`
+
+### EVT-10: MCP Tool Call Event
+- **Given** MCP tool executed
+- **When** call completes
+- **Then** `AgentEvent::McpToolCall { server, tool, result }` emitted
+- **Files**: `runie-core/src/event.rs`
+
+### EVT-11: Theme Reload Event
+- **Given** theme file changed
+- **When** hot reload triggers
+- **Then** `AgentEvent::ThemeReloaded { name }` emitted
+- **Files**: `runie-tui/src/theme.rs`
+
+### EVT-12: Session Branch Event
+- **Given** user forks session
+- **When** fork completes
+- **Then** `AgentEvent::SessionBranched { from_id, to_id }` emitted
+- **Files**: `runie-core/src/event.rs`
+
+---
+
+## STT — State Management Extended (P0)
+
+### STT-16: Multi-Mode State
+- **Given** app in TUI mode
+- **When** mode changes to CLI/JSON/RPC
+- **Then** state transitions appropriately, no data loss
+- **Files**: `runie-cli/src/main.rs`
+
+### STT-17: Tier Tracking
+- **Given** orchestrator running
+- **When** subagent spawned at L2
+- **Then** `state.current_tier = L2`, escalation count tracked
+- **Files**: `runie-orchestrator/src/state.rs`
+
+### STT-18: Session Tree State
+- **Given** session with branches
+- **When** user navigates branch
+- **Then** `state.active_branch_id` updated, history preserved
+- **Files**: `runie-core/src/session.rs`
+
+### STT-19: Extension State
+- **Given** extensions loaded
+- **When** extension registers state
+- **Then** state stored in `state.extension_data: HashMap<String, Value>`
+- **Files**: `runie-core/src/state.rs`
+
+---
+
+## CHT — Chat / Messages Extended (P0)
+
+### CHT-12: Steering Message Queue
+- **Given** agent running tools
+- **When** user sends steering message (Enter)
+- **Then** message queued, delivered after current turn
+- **Files**: `runie-agent/src/loop_engine.rs`
+
+### CHT-13: Follow-Up Message Queue
+- **Given** agent idle
+- **When** user sends follow-up (Alt+Enter)
+- **Then** message queued for next agent run
+- **Files**: `runie-agent/src/loop_engine.rs`
+
+### CHT-14: Message Queue Clear
+- **Given** messages queued
+- **When** Escape pressed
+- **Then** queued messages cleared, returned to editor
+- **Files**: `runie-agent/src/loop_engine.rs`
+
+### CHT-15: Context File Loading
+- **Given** `AGENTS.md` in cwd
+- **When** app starts
+- **Then** file loaded, appended to system prompt
+- **Files**: `runie-cli/src/context_loader.rs`
+
+### CHT-16: Context File Hierarchical
+- **Given** `AGENTS.md` in parent directory
+- **When** app starts in child directory
+- **Then** parent AGENTS.md loaded alongside project-specific
+- **Files**: `runie-cli/src/context_loader.rs`
+
+---
+
+## REN — Rendering / UI Extended (P0)
+
+### REN-21: Tree View Rendering
+- **Given** session tree with branches
+- **When** `/tree` command active
+- **Then** tree visualization rendered with branch lines
+- **Files**: `runie-tui/src/tree_view.rs`
+
+### REN-22: Theme Color Application
+- **Given** theme with custom colors
+- **When** any component rendered
+- **Then** theme colors applied via `Theme` struct
+- **Files**: `runie-tui/src/theme.rs`
+
+### REN-23: MCP Tool Indicator
+- **Given** MCP tool call in progress
+- **When** status bar rendered
+- **Then** "MCP: filesystem" shown in status
+- **Files**: `runie-tui/src/status_bar.rs`
+
+### REN-24: Tier Indicator
+- **Given** L2 agent running
+- **When** status bar rendered
+- **Then** "L2" tier badge shown
+- **Files**: `runie-tui/src/status_bar.rs`
+
+### REN-25: Extension UI Widget
+- **Given** extension registered custom widget
+- **When** widget rendered
+- **Then** extension-drawn content in dedicated area
+- **Files**: `runie-tui/src/extension_ui.rs`
+
+---
+
+## INP — Input / Keyboard Extended (P0/P1)
+
+### INP-16: Command Palette in TUI
+- **Given** TUI active
+- **When** `Ctrl+P` pressed
+- **Then** command palette overlay opened
+- **Files**: `runie-tui/src/events.rs`
+
+### INP-17: Slash Command
+- **Given** input bar focused
+- **When** `/` typed
+- **Then** command suggestion list shown
+- **Files**: `runie-tui/src/input_bar.rs`
+
+### INP-18: File Reference with @
+- **Given** input bar focused
+- **When** `@` typed
+- **Then** fuzzy file search dropdown shown
+- **Files**: `runie-tui/src/autocomplete.rs`
+
+### INP-19: Bash Command with !
+- **Given** input bar focused
+- **When** `!ls` typed and submitted
+- **Then** bash command executed, output sent to LLM
+- **Files**: `runie-cli/src/commands.rs`
+
+### INP-20: Image Paste
+- **Given** input bar focused
+- **When** image pasted (Ctrl+V)
+- **Then** image attached to message
+- **Files**: `runie-tui/src/events.rs`
+
+---
+
+## AGT — Agent / Tool Execution Extended (P0)
+
+### AGT-13: Parallel Tool Execution
+- **Given** agent calls multiple tools in one turn
+- **When** `ToolExecutionMode::Parallel` configured
+- **Then** tools execute concurrently
+- **Files**: `runie-agent/src/executor.rs`
+
+### AGT-14: Sequential Tool Execution
+- **Given** agent calls multiple tools
+- **When** `ToolExecutionMode::Sequential` configured
+- **Then** tools execute one at a time
+- **Files**: `runie-agent/src/executor.rs`
+
+### AGT-15: Tool Terminate Hint
+- **Given** tool returns `terminate: true`
+- **When** all tools in batch return terminate
+- **Then** agent skips follow-up LLM call
+- **Files**: `runie-agent/src/loop_engine.rs`
+
+### AGT-16: Thinking Level Configuration
+- **Given** config: `thinking = "high"`
+- **When** agent makes LLM request
+- **Then** thinking budget applied to request
+- **Files**: `runie-ai/src/providers.rs`
+
+---
+
+## ERR — Error Handling Extended (P0)
+
+### ERR-07: Escalation Exhausted
+- **Given** L3 failed, circuit breaker open
+- **When** error handled
+- **Then** user shown: "Task failed at highest tier. Manual intervention required."
+- **Files**: `runie-orchestrator/src/escalation.rs`
+
+### ERR-08: MCP Server Unavailable
+- **Given** MCP server not running
+- **When** MCP tool called
+- **Then** error: "MCP server 'filesystem' unavailable", fallback to built-in
+- **Files**: `runie-mcp/src/server.rs`
+
+### ERR-09: Config Parse Error
+- **Given** invalid TOML in `runie.toml`
+- **When** app starts
+- **Then** error with line number, fallback to defaults
+- **Files**: `runie-cli/src/settings.rs`
+
+### ERR-10: Storage Backend Failure
+- **Given** SQLite backend, disk full
+- **When** save attempted
+- **Then** error logged, session kept in memory
+- **Files**: `runie-core/src/storage.rs`
+
+---
+
+## MDL — Model Management (P0)
+
+### MDL-01: Root Model Selection (No Sub-agents)
+- **Given** config: `subagents = false`, provider = "anthropic", model = "claude-sonnet-4"
+- **When** app starts
+- **Then** single root agent uses specified model for all tasks
+- **Files**: `runie-cli/src/settings.rs`, `runie-agent/src/loop_engine.rs`
+
+### MDL-02: Tier Model Selection (With Sub-agents)
+- **Given** config: `subagents = true`, routing configured with L1/L2/L3 tiers
+- **When** task routed to L2
+- **Then** L2 sub-agent uses L2-configured model (e.g., claude-sonnet-4)
+- **Files**: `runie-router/src/tier_router.rs`, `runie-orchestrator/src/orchestrator.rs`
+
+### MDL-03: Model Switch via Command
+- **Given** interactive mode, user types `/model`
+- **When** provider/model selected
+- **Then** root model updated; if subagents enabled, updates active tier model
+- **Files**: `runie-cli/src/commands.rs`, `runie-ai/src/providers.rs`
+
+### MDL-04: Scoped Model Cycling
+- **Given** config: `scoped_models = ["gpt-4o-mini", "claude-sonnet-4"]`
+- **When** `Ctrl+P` pressed
+- **Then** cycles through scoped models for root agent
+- **Edge**: subagents=true → cycles root tier model only
+- **Files**: `runie-tui/src/events.rs`, `runie-cli/src/settings.rs`
+
+### MDL-05: Custom Provider Registration
+- **Given** `~/.runie/models.json` with custom OpenAI-compatible endpoint
+- **When** app starts
+- **Then** custom provider available for root or tier assignment
+- **Files**: `runie-ai/src/custom_provider.rs`
+
+### MDL-06: Model with Thinking Level Shorthand
+- **Given** config or CLI: `--model claude-sonnet-4:high`
+- **When** parsed
+- **Then** model = "claude-sonnet-4", thinking = "high"
+- **Files**: `runie-cli/src/settings.rs`
+
+### MDL-07: Model Capability Detection
+- **Given** model selected for current tier/root
+- **When** tool call prepared
+- **Then** checks model supports tools/vision/thinking, filters accordingly
+- **Edge**: Model without tool support → no tools sent
+- **Files**: `runie-ai/src/providers.rs`
+
+---
+
+## TOL — Tool Management (P0)
+
+### TOL-01: Tool Allowlist
+- **Given** CLI flag: `--tools read,grep,find`
+- **When** agent initialized
+- **Then** only specified tools available to model
+- **Files**: `runie-cli/src/settings.rs`, `runie-tools/src/registry.rs`
+
+### TOL-02: Tool Denylist (Disable Built-in)
+- **Given** CLI flag: `--no-builtin-tools`
+- **When** agent initialized
+- **Then** built-in tools disabled, MCP/extension tools still available
+- **Files**: `runie-tools/src/registry.rs`
+
+### TOL-03: Disable All Tools
+- **Given** CLI flag: `--no-tools`
+- **When** agent initialized
+- **Then** no tools available, pure chat mode
+- **Files**: `runie-tools/src/registry.rs`
+
+### TOL-04: Tool Registration Order
+- **Given** extension registers tool "bash" after built-in
+- **When** registry built
+- **Then** extension version replaces built-in (last wins)
+- **Files**: `runie-tools/src/registry.rs`
+
+### TOL-05: Tool Schema Validation
+- **Given** tool with invalid JSON schema
+- **When** registered
+- **Then** error at registration, tool excluded
+- **Files**: `runie-tools/src/registry.rs`
+
+---
+
+## CMD — Chat Commands / Input Box (P0)
+
+### CMD-01: Slash Trigger
+- **Given** input bar focused, empty
+- **When** user types `/`
+- **Then** inline suggestion dropdown appears with available commands
+- **Files**: `runie-tui/src/input_bar.rs`, `runie-core/src/slash_command.rs`
+
+### CMD-02: Slash Command Filtering
+- **Given** suggestion dropdown open
+- **When** user types `/com`
+- **Then** list filters to matching commands (`/compact`)
+- **Edge**: No matches → "No commands found" in dim text
+- **Files**: `runie-tui/src/input_bar.rs`
+
+### CMD-03: Slash Command Accept (Tab)
+- **Given** suggestion dropdown with `/compact` highlighted
+- **When** `Tab` pressed
+- **Then** command autocompleted in input: `/compact `
+- **Files**: `runie-tui/src/input_bar.rs`
+
+### CMD-04: Slash Command Accept (Enter)
+- **Given** `/clear` typed in input
+- **When** `Enter` pressed
+- **Then** command executes, input cleared, chat cleared
+- **Files**: `runie-tui/src/input_bar.rs`, `runie-cli/src/commands.rs`
+
+### CMD-05: Slash Command with Arguments
+- **Given** user types `/model gpt-4o`
+- **When** `Enter` pressed
+- **Then** model switched to gpt-4o, confirmation shown
+- **Files**: `runie-core/src/slash_command.rs`, `runie-cli/src/commands.rs`
+
+### CMD-06: Slash Command Escape
+- **Given** suggestion dropdown open
+- **When** `Esc` pressed
+- **Then** dropdown closed, `/` remains in input for regular message
+- **Files**: `runie-tui/src/input_bar.rs`
+
+### CMD-07: /tree Command Opens Overlay
+- **Given** session with branches
+- **When** `/tree` submitted
+- **Then** session tree overlay opened, can navigate and select branch
+- **Files**: `runie-tui/src/tree_view.rs`
+
+### CMD-08: /fork Command
+- **Given** session with messages
+- **When** `/fork` submitted
+- **Then** fork overlay opens, user selects message, new session created
+- **Files**: `runie-cli/src/commands.rs`, `runie-core/src/session.rs`
+
+### CMD-09: /compact Command
+- **Given** long session
+- **When** `/compact` or `/compact focus on security` submitted
+- **Then** compaction runs, messages summarized
+- **Files**: `runie-core/src/compactor.rs`
+
+### CMD-10: /name Command
+- **Given** active session
+- **When** `/name my-feature` submitted
+- **Then** session display name updated in status bar
+- **Files**: `runie-cli/src/commands.rs`
+
+### CMD-11: /session Command
+- **Given** active session
+- **When** `/session` submitted
+- **Then** session info overlay: file, ID, messages, tokens, cost
+- **Files**: `runie-cli/src/commands.rs`
+
+### CMD-12: /new Command
+- **Given** active session
+- **When** `/new` submitted
+- **Then** new empty session started, current saved
+- **Files**: `runie-cli/src/commands.rs`
+
+### CMD-13: /resume Command
+- **Given** previous sessions
+- **When** `/resume` submitted
+- **Then** session picker overlay, selected session loaded
+- **Files**: `runie-cli/src/commands.rs`
+
+### CMD-14: /quit Command
+- **Given** TUI active
+- **When** `/quit` submitted
+- **Then** session saved, app exits gracefully
+- **Files**: `runie-cli/src/commands.rs`
+
+---
+
+## THK — Thinking Levels (P0)
+
+### THK-01: Thinking Level Off
+- **Given** config: `thinking = "off"`
+- **When** LLM request made
+- **Then** no thinking block requested, standard response
+- **Files**: `runie-ai/src/providers.rs`
+
+### THK-02: Thinking Level Minimal
+- **Given** config: `thinking = "minimal"`
+- **When** LLM request made to thinking-capable model
+- **Then** minimal thinking budget applied (e.g., 128 tokens)
+- **Files**: `runie-ai/src/providers.rs`
+
+### THK-03: Thinking Level High
+- **Given** config: `thinking = "high"`
+- **When** LLM request made
+- **Then** high thinking budget applied (e.g., 2048 tokens)
+- **Files**: `runie-ai/src/providers.rs`
+
+### THK-04: Thinking Level Toggle
+- **Given** TUI active
+- **When** `Shift+Tab` pressed
+- **Then** thinking level cycles: off → minimal → low → medium → high → xhigh → off
+- **Files**: `runie-tui/src/events.rs`
+
+### THK-05: Thinking Block Display
+- **Given** response includes thinking block
+- **When** rendered in TUI
+- **Then** thinking block shown collapsed by default, expandable
+- **Files**: `runie-tui/src/render.rs`
+
+### THK-06: Thinking Block Collapse/Expand
+- **Given** thinking block visible
+- **When** `Ctrl+T` pressed
+- **Then** all thinking blocks toggle collapse/expand
+- **Files**: `runie-tui/src/events.rs`
+
+### THK-07: Thinking Budget Custom
+- **Given** config: `[thinking_budgets] minimal = 128, high = 4096`
+- **When** thinking level set
+- **Then** custom budgets override defaults
+- **Files**: `runie-cli/src/settings.rs`
+
+---
+
+## REV — Code Review (P2)
+
+### REV-01: Non-Interactive Code Review
+- **Given** git repo with changes
+- **When** `runie review` invoked
+- **Then** agent reviews diff, outputs review comments to stdout
+- **Files**: `runie-cli/src/commands.rs`
+
+### REV-02: Review with Custom Instructions
+- **Given** `runie review --instructions "focus on security"`
+- **When** processed
+- **Then** review focuses on security issues
+- **Files**: `runie-cli/src/commands.rs`
+
+### REV-03: Review Specific Files
+- **Given** `runie review src/auth.rs src/db.rs`
+- **When** processed
+- **Then** only specified files reviewed
+- **Files**: `runie-cli/src/commands.rs`
+
+## APL — Apply Diff (P2)
+
+### APL-01: Apply Last Diff
+- **Given** previous agent run generated edits
+- **When** `runie apply` invoked
+- **Then** diff applied via `git apply` to working tree
+- **Files**: `runie-cli/src/commands.rs`
+
+### APL-02: Apply Specific Diff File
+- **Given** diff file exists
+- **When** `runie apply --file changes.patch`
+- **Then** specified patch applied
+- **Files**: `runie-cli/src/commands.rs`
+
+## DIA — Diagnostics (P2)
+
+### DIA-01: Doctor Command
+- **Given** user runs `runie doctor`
+- **When** diagnostics run
+- **Then** checks: API keys, git config, disk space, network, permissions
+- **Files**: `runie-cli/src/doctor.rs`
+
+### DIA-02: Doctor Fix
+- **Given** doctor found issues
+- **When** `runie doctor --fix` invoked
+- **Then** auto-fixes applicable issues, reports what was fixed
+- **Files**: `runie-cli/src/doctor.rs`
+
+## AGM — Agent Modes (P1)
+
+### AGM-01: Build Mode (Default)
+- **Given** default configuration
+- **When** agent runs
+- **Then** full tool access: read, write, bash, edit
+- **Files**: `runie-agent/src/config.rs`
+
+### AGM-08: Plan Mode Auto-Trigger (Complex Task)
+- **Given** user submits complex task (e.g., "refactor auth system")
+- **When** agent evaluates complexity score > threshold
+- **Then** plan mode triggered automatically, no explicit mode switch needed
+- **Files**: `runie-agent/src/complexity.rs`, `runie-orchestrator/src/planner.rs`
+
+### AGM-08: Plan Mode — Simple Task Bypass
+- **Given** user submits simple task (e.g., "list files")
+- **When** agent evaluates complexity
+- **Then** plan mode NOT triggered, agent executes directly
+- **Files**: `runie-agent/src/complexity.rs`
+
+### AGM-08: Plan Display — User Review
+- **Given** plan mode triggered for complex task
+- **When** plan generated
+- **Then** plan shown in TUI with steps, user can review before execution
+- **Files**: `runie-tui/src/plan_view.rs`
+
+### AGM-08: Plan Approval — Grill-Me Session
+- **Given** plan displayed, user wants to discuss before execution
+- **When** user selects "Discuss plan"
+- **Then** enters grill-me session: agent asks clarifying questions, user refines requirements
+- **Edge**: User can modify plan steps during discussion
+- **Files**: `runie-agent/src/plan_discussion.rs`
+
+### AGM-08: Plan Approval — Proceed
+- **Given** plan displayed, user satisfied
+- **When** user selects "Proceed"
+- **Then** agent exits plan mode, begins execution with approved plan
+- **Files**: `runie-orchestrator/src/planner.rs`
+
+### AGM-08: Plan Approval — Cancel
+- **Given** plan displayed
+- **When** user selects "Cancel"
+- **Then** plan discarded, agent returns to idle state
+- **Files**: `runie-orchestrator/src/planner.rs`
+
+### AGM-08: Plan Mode Read-Only
+- **Given** plan mode active
+- **When** agent runs
+- **Then** write/edit/bash denied, only read/plan tools allowed
+- **Edge**: Bash requires explicit permission in plan mode
+- **Files**: `runie-agent/src/config.rs`, `runie-agent/src/permission.rs`
+
+### AGM-10: Mode Switch via Tab
+- **Given** TUI active
+- **When** `Tab` pressed
+- **Then** cycles through modes: build → plan → build
+- **Note**: Only switches if user explicitly enabled mode switching; auto-plan is separate
+- **Files**: `runie-tui/src/events.rs`
+
+### AGM-10: Mode Switch via Command
+- **Given** interactive mode
+- **When** `/mode plan` submitted
+- **Then** agent switches to plan mode manually, status bar updated
+- **Note**: Explicit override of auto-detection
+- **Files**: `runie-cli/src/commands.rs`
+
+## SND — Sandbox Execution (P2)
+
+### SND-01: Sandbox Bash Command
+- **Given** config: `sandbox = true`
+- **When** bash tool executed
+- **Then** command runs in sandbox (landlock/seatbelt/restricted token)
+- **Files**: `runie-tools/src/bash.rs`, `runie-cli/src/sandbox.rs`
+
+### SND-02: Sandbox File Access
+- **Given** sandbox active
+- **When** tool tries to access file outside workspace
+- **Then** access denied, error returned to agent
+- **Files**: `runie-cli/src/sandbox.rs`
+
+### SND-03: Sandbox Network
+- **Given** sandbox with network disabled
+- **When** tool tries network access
+- **Then** connection refused, error returned
+- **Files**: `runie-cli/src/sandbox.rs`
+
+## TUI — TUI Panels, Layout & Navigation (P0/P1)
+
+### TUI-01: Main Layout Structure
+- **Given** terminal available
+- **When** TUI rendered
+- **Then** layout: `[top_bar, sidebar | main_content, bottom_pane]`
+- **Files**: `runie-tui/src/layout.rs`
+
+### TUI-02: Sidebar Toggle
+- **Given** sidebar visible
+- **When** `Ctrl+B` pressed
+- **Then** sidebar hidden; press again → sidebar shown
+- **Files**: `runie-tui/src/events.rs`, `runie-tui/src/sidebar.rs`
+
+### TUI-03: Sidebar Content
+- **Given** sidebar visible
+- **When** rendered
+- **Then** shows: session list, file tree, or context (configurable)
+- **Files**: `runie-tui/src/sidebar.rs`
+
+### TUI-04: Top Bar Layout
+- **Given** TUI active
+- **When** rendered
+- **Then** left: repo/branch/path; center: mode indicator; right: tokens/model/tier
+- **Files**: `runie-tui/src/top_bar.rs`
+
+### TUI-05: Bottom Pane — Composer
+- **Given** TUI active
+- **When** rendered
+- **Then** bottom pane shows: input composer with prompt, hints
+- **Files**: `runie-tui/src/bottom_pane.rs`
+
+### TUI-06: Bottom Pane — Footer
+- **Given** TUI active
+- **When** rendered
+- **Then** footer shows: hotkeys hint, status, queued messages count
+- **Files**: `runie-tui/src/footer.rs`
+
+### TUI-07: Bottom Pane — Popup Stack
+- **Given** popup open (e.g., file search)
+- **When** `Esc` pressed
+- **Then** popup closed, composer restored
+- **Files**: `runie-tui/src/bottom_pane.rs`
+
+### TUI-08: Transcript Overlay (Ctrl+T)
+- **Given** TUI active
+- **When** `Ctrl+T` pressed
+- **Then** transcript overlay opens, shows raw conversation history
+- **Files**: `runie-tui/src/transcript.rs`
+
+### TUI-09: Transcript Overlay Scroll
+- **Given** transcript overlay open
+- **When** `↑/↓` or `PgUp/PgDown` pressed
+- **Then** scrolls through history
+- **Files**: `runie-tui/src/transcript.rs`
+
+### TUI-10: Transcript Overlay Exit
+- **Given** transcript overlay open
+- **When** `Esc` or `Ctrl+T` pressed
+- **Then** overlay closed, main view restored
+- **Files**: `runie-tui/src/transcript.rs`
+
+### TUI-11: Vim Mode Toggle
+- **Given** composer focused
+- **When** `Esc` pressed (vim enabled)
+- **Then** enters normal mode; `i` returns to insert mode
+- **Files**: `runie-tui/src/composer.rs`
+
+### TUI-12: File Search Popup
+- **Given** composer focused, user types `@`
+- **When** file search triggered
+- **Then** popup with fuzzy file search appears
+- **Files**: `runie-tui/src/file_search.rs`
+
+### TUI-13: File Search Navigation
+- **Given** file search popup open
+- **When** `↑/↓` pressed
+- **Then** selection moves through results
+- **Files**: `runie-tui/src/file_search.rs`
+
+### TUI-14: File Search Accept
+- **Given** file selected in search
+- **When** `Enter` or `Tab` pressed
+- **Then** file path inserted into composer as mention
+- **Files**: `runie-tui/src/file_search.rs`
+
+### TUI-15: Diff Viewer
+- **Given** agent proposes file edit
+- **When** diff shown
+- **Then** side-by-side or unified diff rendered with syntax highlighting
+- **Files**: `runie-tui/src/diff_viewer.rs`
+
+### TUI-16: Diff Viewer Accept
+- **Given** diff viewer open
+- **When** `y` pressed
+- **Then** diff applied
+- **Files**: `runie-tui/src/diff_viewer.rs`
+
+### TUI-17: Diff Viewer Reject
+- **Given** diff viewer open
+- **When** `n` pressed
+- **Then** diff rejected, agent notified
+- **Files**: `runie-tui/src/diff_viewer.rs`
+
+### TUI-18: Session Picker Overlay
+- **Given** `/resume` or `Ctrl+R` invoked
+- **When** picker opens
+- **Then** list of previous sessions with metadata shown
+- **Files**: `runie-tui/src/session_picker.rs`
+
+### TUI-19: Session Picker Navigation
+- **Given** session picker open
+- **When** `↑/↓` pressed
+- **Then** selection moves, preview updates
+- **Files**: `runie-tui/src/session_picker.rs`
+
+### TUI-20: Session Picker Load
+- **Given** session selected in picker
+- **When** `Enter` pressed
+- **Then** session loaded, feed updated
+- **Files**: `runie-tui/src/session_picker.rs`
+
+### TUI-21: Feed Scroll
+- **Given** message list longer than viewport
+- **When** `PgUp/PgDown` or mouse scroll
+- **Then** feed scrolls, maintains scroll offset
+- **Files**: `runie-tui/src/feed.rs`
+
+### TUI-22: Feed Auto-Scroll
+- **Given** agent streaming response
+- **When** new content arrives
+- **Then** feed auto-scrolls to bottom (if user at bottom)
+- **Files**: `runie-tui/src/feed.rs`
+
+### TUI-23: Feed Pin Scroll
+- **Given** user scrolled up to read history
+- **When** new message arrives
+- **Then** feed stays pinned, "New messages" indicator shown
+- **Files**: `runie-tui/src/feed.rs`
+
+### TUI-24: History Cell — User Message
+- **Given** user sent message
+- **When** rendered in feed
+- **Then** user avatar, message text, attachments shown
+- **Files**: `runie-tui/src/history_cell.rs`
+
+### TUI-25: History Cell — Assistant Message
+- **Given** assistant response
+- **When** rendered in feed
+- **Then** assistant avatar, markdown rendered, code blocks highlighted
+- **Files**: `runie-tui/src/history_cell.rs`
+
+### TUI-26: History Cell — Tool Call
+- **Given** agent calls tool
+- **When** rendered in feed
+- **Then** tool name, args, status spinner shown
+- **Files**: `runie-tui/src/history_cell.rs`
+
+### TUI-27: History Cell — Tool Result
+- **Given** tool execution completed
+- **When** rendered in feed
+- **Then** output collapsed by default, expandable with `Ctrl+O`
+- **Files**: `runie-tui/src/history_cell.rs`
+
+### TUI-28: History Cell — Error
+- **Given** tool or agent error
+- **When** rendered in feed
+- **Then** error cell with red styling, stack trace collapsed
+- **Files**: `runie-tui/src/history_cell.rs`
+
+### TUI-29: History Cell — Plan
+- **Given** agent creates plan
+- **When** rendered in feed
+- **Then** plan steps shown with checkboxes, progress indicator
+- **Files**: `runie-tui/src/history_cell.rs`
+
+### TUI-30: Hotkey Help Overlay
+- **Given** TUI active
+- **When** `?` or `/hotkeys` invoked
+- **Then** overlay with all keyboard shortcuts shown
+- **Files**: `runie-tui/src/help.rs`
+
+### TUI-31: Notification Toast
+- **Given** notification event
+- **When** rendered
+- **Then** transient toast at bottom, auto-dismisses after 5s
+- **Files**: `runie-tui/src/notifications.rs`
+
+### TUI-32: Resize Reflow
+- **Given** terminal resized
+- **When** new dimensions available
+- **Then** all components reflow, text re-wrapped, no truncation
+- **Files**: `runie-tui/src/layout.rs`
+
+## Summary — All Scenarios by Priority
+
+### P0 — MUST (v1 Ship Blockers)
+
+| Prefix | Domain | Scenarios | Status |
+|--------|--------|-----------|--------|
+| `ONB-` | Onboarding | 37 | Existing |
+| `CHT-` | Chat / Messages | 16 | Existing + Extended |
+| `AGT-` | Agent / Tool Execution | 16 | Existing + Extended |
+| `PER-` | Permissions | 12 | Existing |
+| `PAL-` | Command Palette | 10 | Existing |
+| `TOP-` | Top Bar | 12 | Existing |
+| `STT-` | State Management | 19 | Existing + Extended |
+| `CFG-` | Configuration | 17 | Existing + Extended |
+| `REN-` | Rendering / UI | 25 | Existing + Extended |
+| `INP-` | Input / Keyboard | 20 | Existing + Extended (text only) |
+| `HAR-` | Harness / Tasks | 6 | Existing |
+| `LOG-` | Logging | 5 | Existing |
+| `EVT-` | Event Streaming | 12 | Existing + Extended |
+| `GIT-` | Git Integration | 6 | Existing |
+| `CTX-` | Context Loading | 7 | Existing |
+| `ERR-` | Error Handling | 10 | Existing + Extended |
+| `CMD-` | Chat Commands (Input Box) | 14 | New |
+| `MDL-` | Model Management | 7 | New |
+| `TOL-` | Tool Management | 5 | New |
+| `THK-` | Thinking Levels | 7 | New |
+| `TUI-` | TUI Panels / Layout / Navigation | 32 | New |
+| `SES-` | Session Tree / Branching (flat) | 10 | New |
+| `SKL-` | Skills | 5 | New |
+| `AUT-` | Authentication (API key + env) | 5 | New |
+| `MOD-` | Run Modes (CLI / TUI) | 2 | New (TUI + CLI one-shot only) |
+
+**P0 Total: 301 scenarios**
+
+### P1 — SHOULD (v1 Stretch Goals)
+
+| Prefix | Domain | Scenarios | Risk |
+|--------|--------|-----------|------|
+| `INP-` | Image Paste | 5 | Platform-specific clipboard |
+| `SES-` | Session Branching / Forking | 0 | Complex tree UI (subset of SES) |
+| `AGM-` | Agent Modes (manual) | 10 | New subsystem |
+| `TUI-` | Diff Viewer, Transcript, Vim | 0 | Complex UI (subset of TUI) |
+| `MOD-` | JSON / Pipe modes | 2 | Additional modes |
+
+**P1 Total: ~17 scenarios**
+
+### P2 — COULD (v2 — Major Subsystems)
+
+| Prefix | Domain | Scenarios | Complexity |
+|--------|--------|-----------|------------|
+| `RTR-` | Router / Tier Routing | 15 | Multi-model orchestration |
+| `MCP-` | MCP Integration | 10 | External process management |
+| `OCH-` | Orchestrator / Sub-agents | 10 | Actor system |
+| `AUT-` | OAuth / Keychain | 0 | Platform auth APIs |
+| `MOD-` | RPC / API Server | 8 | HTTP server + protocol |
+| `REV-` | Code Review | 3 | Nice-to-have |
+| `APL-` | Apply Diff | 2 | Nice-to-have |
+| `DIA-` | Diagnostics | 2 | Nice-to-have |
+| `SND-` | Sandbox Execution | 3 | Platform-specific (landlock/seatbelt) |
+| `AGM-` | Auto-Plan + Grill-Me | 0 | Heuristic + NLP |
+
+**P2 Total: ~53 scenarios**
+
+---
+
+**Grand Total: 371 scenarios across 32 domains**
+
+*Phase 1-3: Core scenarios (200 across 16 domains).*
+*Phase 4: Architecture + pi-scope scenarios (171 new).*
+*Priority: P0=301 (v1), P1=~17 (v1 stretch), P2=~53 (v2).*
+*Ready for implementation.*
