@@ -58,7 +58,7 @@ fn render_bg_jobs(area: Rect, buf: &mut Buffer, text_secondary: ratatui::style::
     let count = running.len();
     let Some(latest) = running.last() else { return; };
     let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let spinner = braille[braille_frame % 10];
+    let _spinner = braille[braille_frame % 10];
     let text = if count == 1 {
         format!("⬡ {} │ {} │", latest.name, latest.name)
     } else {

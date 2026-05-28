@@ -23,10 +23,12 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 use serde::Deserialize;
+use tokio::process::Command as AsyncCommand;
+use tokio::time::timeout;
 
 /// Harness configuration
 #[derive(Debug, Clone)]
@@ -249,15 +251,16 @@ pub async fn run_harness_task(task_id: &str, config: &HarnessConfig) -> TaskResu
         );
     }
 
-    // NOTE: The actual agent execution step is a placeholder.
-    // In a full harness this would spawn the agent process with
-    // the task description and workspace path.
-    // For now we run the grader directly against the setup state,
-    // which tests the harness infrastructure itself.
+    // NOTE: Agent execution is intentionally NOT implemented here.
+    // A full harness would spawn the agent process with the task description
+    // and workspace path, then run the grader against the agent's output.
+    // Currently the grader runs directly against the setup state, which tests
+    // the harness infrastructure but NOT agent-to-grader integration.
+    // See GAP-06 in CASES.md for tracking.
 
     // Run grader if one is configured
     let grader_result = if let Some(ref grader_script) = task_def.grader {
-        run_grader(&task_dir, &workspace_path, grader_script, config)
+        run_grader(&task_dir, &workspace_path, grader_script, config).await
     } else {
         (
             TaskStatus::Skipped,
@@ -284,7 +287,8 @@ pub async fn run_harness_task(task_id: &str, config: &HarnessConfig) -> TaskResu
 }
 
 /// Run the Python grader script and parse its output.
-fn run_grader(
+/// BUG-05 FIX: Now applies `config.grader_timeout` to grader execution.
+async fn run_grader(
     task_dir: &Path,
     workspace_path: &Path,
     grader_script: &str,
@@ -301,21 +305,32 @@ fn run_grader(
     }
 
     // Chdir into the workspace so grader sees the right files
-    let output = Command::new(&config.python)
-        .current_dir(workspace_path)
+    let mut cmd = AsyncCommand::new(&config.python);
+    cmd.current_dir(workspace_path)
         .arg(grader_path.as_path())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output();
+        .stderr(Stdio::piped());
+
+    // BUG-05 FIX: Apply grader_timeout to execution
+    let output = timeout(config.grader_timeout, cmd.output()).await;
 
     let output = match output {
-        Ok(o) => o,
-        Err(e) => {
+        Ok(Ok(o)) => o,
+        Ok(Err(e)) => {
             return (
                 TaskStatus::Error,
                 0,
                 0,
                 format!("failed to spawn python: {}", e),
+            );
+        }
+        Err(_) => {
+            // Timeout reached
+            return (
+                TaskStatus::Fail,
+                0,
+                0,
+                format!("grader timed out after {:?}", config.grader_timeout),
             );
         }
     };

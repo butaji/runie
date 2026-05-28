@@ -24,7 +24,7 @@ pub fn render(picker: &ModelPicker, area: Rect, buf: &mut Buffer, theme: &ThemeW
         return;
     }
     let (p_idx, m_idx) = picker.selected;
-    let (dialog_area, inner) = calc_layout(area, picker, &visible);
+    let (dialog_area, _inner) = calc_layout(area, picker, &visible);
     Panel::new()
         .border_gradient(theme_color("accent.primary", theme), text_muted)
         .render(dialog_area, buf, |inner, buf| {

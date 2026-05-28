@@ -99,7 +99,7 @@ fn handle_palette_down(state: &mut AppState, palette: &mut CommandPalette) -> Ve
 
 fn handle_palette_confirm(state: &mut AppState, palette: &mut CommandPalette) -> Vec<UiCmd> {
     if let Some(cmd) = palette.confirm(palette.selected) {
-        let mut cmds = handle_direct_command(state, cmd);
+        let cmds = handle_direct_command(state, cmd);
         handle_close_modal(state);
         return cmds;
     }

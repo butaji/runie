@@ -35,6 +35,11 @@ fn handle_onboarding_next(state: &mut AppState) -> Vec<Cmd> {
     if let Some(o) = state.onboarding.as_mut() {
         match &o.step {
             OnboardingStep::ProviderSelect => {
+                // BUG-02 FIX: Check for empty filtered list before proceeding
+                if o.filtered_provider_indices.is_empty() {
+                    o.error_message = Some("No providers match your search".to_string());
+                    return vec![];
+                }
                 let idx = o.get_selected_item();
                 o.select_provider(idx);
                 o.next_step();

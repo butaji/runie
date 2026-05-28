@@ -15,7 +15,7 @@ use crate::settings::Settings;
 use crate::context_loader::ContextLoader;
 use crate::provider_factory::create_provider;
 use crate::agent_spawn::create_agent_tools;
-use runie_tui::Msg;
+
 
 /// Check if user needs onboarding (no provider, model, or API key configured)
 fn needs_onboarding(settings: &Settings) -> bool {
@@ -49,7 +49,7 @@ pub async fn run_tui(
     force_setup: bool,
     event_logger: Option<&EventStreamLogger>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use runie_tui::{Tui, TuiConfig, TuiMode, Onboarding, Msg, Cmd};
+    use runie_tui::{Tui, TuiConfig, Msg, Cmd};
 
     // Load AGENTS.md context files
     let context_files = ContextLoader::load();
@@ -233,7 +233,7 @@ pub async fn run_tui(
         mock: bool,
         settings: &mut Settings,
         base_system_prompt: &str,
-        cancel: &CancellationToken,
+        _cancel: &CancellationToken,
     ) -> Vec<Cmd> {
         match cmd {
             Cmd::SpawnAgent { messages } => {
@@ -324,7 +324,10 @@ pub async fn run_tui(
                     "provider = \"{}\"\nmodel = \"{}\"\napi_key = \"{}\"\nmax_turns = {}\nenable_thinking = {}\nshell = \"{}\"\n",
                     provider, model, api_key, settings.max_turns, settings.enable_thinking, settings.shell
                 );
-                let _ = std::fs::write(&config_path, config);
+                if let Err(e) = std::fs::write(&config_path, config) {
+                    tracing::error!("[SaveSettings] Failed to write config to {}: {}", config_path.display(), e);
+                    return vec![];
+                }
 
                 match provider.as_str() {
                     "openai" => std::env::set_var("OPENAI_API_KEY", &api_key),
