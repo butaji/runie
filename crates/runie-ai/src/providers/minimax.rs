@@ -3,7 +3,7 @@ use async_stream::stream;
 use chrono::Utc;
 use futures::stream::BoxStream;
 use reqwest::Client;
-use runie_core::{Event, Message, ProviderError, ToolCall, ToolSchema};
+use runie_core::{Event, Message, ProviderError, ToolSchema};
 use std::collections::HashMap;
 
 use crate::Provider;
@@ -478,6 +478,7 @@ struct MiniMaxStreamChunk {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[allow(dead_code)]
 struct MiniMaxStreamChoice {
     delta: Option<MiniMaxDelta>,
     finish_reason: Option<String>,
@@ -493,6 +494,7 @@ struct PendingToolCall {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[allow(dead_code)]
 struct MiniMaxDelta {
     content: Option<String>,
     role: Option<String>,
@@ -500,6 +502,7 @@ struct MiniMaxDelta {
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
+#[allow(dead_code)]
 struct MiniMaxToolCallDelta {
     index: usize,
     id: Option<String>,
@@ -525,6 +528,7 @@ struct MiniMaxChoice {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[allow(dead_code)]
 struct MiniMaxMessageResponse {
     role: String,
     content: Option<String>,

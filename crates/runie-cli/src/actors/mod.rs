@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 pub mod framework;
 pub mod input;
 
