@@ -399,10 +399,13 @@ fn render_markdown_table(rows: &[String], width: usize) -> Vec<String> {
 }
 
 /// Convert syntect style to ratatui style
+/// Note: We only apply foreground color to keep terminal background transparent.
+/// Background colors from syntect themes are intentionally ignored to maintain
+/// consistent terminal appearance.
 fn syntect_style_to_ratatui(style: SyntectStyle) -> Style {
     let fg = ratatui::style::Color::Rgb(style.foreground.r, style.foreground.g, style.foreground.b);
-    let bg = ratatui::style::Color::Rgb(style.background.r, style.background.g, style.background.b);
-    let mut ratatui_style = Style::default().fg(fg).bg(bg);
+    // Don't apply bg from syntect - keep terminal background transparent
+    let mut ratatui_style = Style::default().fg(fg);
     if style.font_style.contains(syntect::highlighting::FontStyle::BOLD) {
         ratatui_style = ratatui_style.add_modifier(ratatui::style::Modifier::BOLD);
     }

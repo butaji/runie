@@ -1,3 +1,6 @@
+mod matrix_bg;
+pub use matrix_bg::MatrixBg;
+
 // ============================================================================
 // Onboarding Types
 // ============================================================================
@@ -42,6 +45,7 @@ pub struct Onboarding {
     pub filtered_provider_indices: Vec<usize>,
     pub filtered_model_indices: Vec<usize>,
     pub is_fetching_models: bool,
+    pub binary_bg: MatrixBg,
 }
 
 // ============================================================================
@@ -305,6 +309,7 @@ impl Onboarding {
             filtered_provider_indices: Vec::new(),
             filtered_model_indices: Vec::new(),
             is_fetching_models: false,
+            binary_bg: MatrixBg::new(80, 24),
         }
     }
 
