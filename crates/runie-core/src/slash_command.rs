@@ -9,6 +9,7 @@ pub enum SlashCommand {
     Fork,
     Quit,
     Help,
+    Cost,
     Unknown(String),
 }
 
@@ -35,6 +36,7 @@ pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
         "/fork" | "/f" => Some(SlashCommand::Fork),
         "/quit" | "/q" | "/exit" => Some(SlashCommand::Quit),
         "/help" | "/h" | "/?" => Some(SlashCommand::Help),
+        "/cost" => Some(SlashCommand::Cost),
         _ => Some(SlashCommand::Unknown(cmd.to_string())),
     }
 }
@@ -46,6 +48,7 @@ pub fn format_help() -> String {
   /model, /m <name>  Switch model
   /tree, /t          Open session tree navigator
   /fork, /f          Fork at current position
+  /cost              Show cost statistics
   /quit, /q, /exit   Exit runie
   /help, /h, /?       Show this help
 

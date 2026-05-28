@@ -25,6 +25,9 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         runie_core::slash_command::SlashCommand::Unknown(cmd) => {
             state.messages.push(MessageItem::System { text: format!("Unknown command: {}. Type /help for available commands.", cmd) });
         }
+        runie_core::slash_command::SlashCommand::Cost => {
+            // Cost command shows cost info - not implemented yet
+        }
     }
     vec![]
 }

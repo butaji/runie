@@ -50,6 +50,18 @@ impl AnthropicProvider {
         self
     }
 
+    /// Returns (input_cost, output_cost) per 1K tokens in USD.
+    pub fn cost_per_1k_tokens(&self) -> (f64, f64) {
+        match self.model.as_str() {
+            "claude-3-5-sonnet" | "claude-3-5-sonnet-20241022" | "claude-sonnet-4-20250514" => (0.003, 0.015),
+            "claude-3-opus" | "claude-opus-4-20250514" => (0.015, 0.075),
+            "claude-3-haiku" | "claude-haiku-4-20250514" => (0.0003, 0.00125),
+            "claude-3-sonnet" => (0.003, 0.015),
+            "claude-3-5-haiku" => (0.0008, 0.004),
+            _ => (0.003, 0.015), // Default to 3.5-sonnet pricing
+        }
+    }
+
     fn messages_to_anthropic(&self, messages: Vec<Message>) -> (Vec<serde_json::Value>, Option<String>) {
         let mut system_content = None;
         let anthropic_messages: Vec<serde_json::Value> = messages
@@ -196,6 +208,7 @@ impl AnthropicProvider {
             let mut text_content = String::new();
             let mut current_tool_name = String::new();
             let mut current_tool_args = String::new();
+            let mut current_tool_id = String::new();
             let mut in_tool_block = false;
 
             let mut stream = response.bytes_stream();
@@ -232,6 +245,7 @@ impl AnthropicProvider {
                                             if cb.type_ == "tool_use" {
                                                 current_tool_name = cb.name.unwrap_or_default();
                                                 current_tool_args.clear();
+                                                current_tool_id = format!("call_{}", cb.index);
                                                 in_tool_block = true;
                                             }
                                         }
@@ -247,6 +261,7 @@ impl AnthropicProvider {
                                                     if let Some(partial) = delta.partial_json {
                                                         current_tool_args.push_str(&partial);
                                                         yield Event::ToolCallDelta {
+                                                            id: current_tool_id.clone(),
                                                             name: current_tool_name.clone(),
                                                             arguments: current_tool_args.clone(),
                                                         };

@@ -311,15 +311,15 @@ where
                 }
                 Ok(StreamedAssistantContent::ToolCall { tool_call, .. }) => {
                     let args = serde_json::to_string(&tool_call.function.arguments).unwrap_or_default();
-                    yield Event::ToolCallDelta { name: tool_call.function.name, arguments: args };
+                    yield Event::ToolCallDelta { id: tool_call.id, name: tool_call.function.name, arguments: args };
                 }
-                Ok(StreamedAssistantContent::ToolCallDelta { id: _, content, .. }) => {
+                Ok(StreamedAssistantContent::ToolCallDelta { id, content, .. }) => {
                     match content {
                         rig_core::streaming::ToolCallDeltaContent::Name(name) => {
-                            yield Event::ToolCallDelta { name, arguments: String::new() };
+                            yield Event::ToolCallDelta { id: id.clone(), name, arguments: String::new() };
                         }
                         rig_core::streaming::ToolCallDeltaContent::Delta(delta) => {
-                            yield Event::ToolCallDelta { name: String::new(), arguments: delta };
+                            yield Event::ToolCallDelta { id: id.clone(), name: String::new(), arguments: delta };
                         }
                     }
                 }

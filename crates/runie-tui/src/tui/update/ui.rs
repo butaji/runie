@@ -203,6 +203,7 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::Quit => { state.running = false; vec![UiCmd::Quit] }
         SlashCommand::Help => { state.messages.push(MessageItem::System { text: runie_core::slash_command::format_help() }); vec![] }
         SlashCommand::Unknown(cmd) => { state.messages.push(MessageItem::System { text: format!("Unknown command: {}. Type /help for available commands.", cmd) }); vec![] }
+        SlashCommand::Cost => { /* Cost command not implemented */ vec![] }
     }
 }
 

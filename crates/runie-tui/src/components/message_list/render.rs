@@ -4,12 +4,25 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::Style,
-    text::Line,
-    widgets::{Gauge, Paragraph, Widget, Wrap},
+    text::{Line, Span},
+    widgets::{Gauge, Paragraph, Widget},
 };
+use syntect::easy::HighlightLines;
+use syntect::parsing::SyntaxSet;
+use syntect::highlighting::{ThemeSet, Style as SyntectStyle};
+use syntect::util::LinesWithEndings;
+use once_cell::sync::Lazy;
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
 use super::types::{MessageItem, PlanStatus};
+
+static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(|| {
+    SyntaxSet::load_defaults_newlines()
+});
+
+static THEME_SET: Lazy<ThemeSet> = Lazy::new(|| {
+    ThemeSet::load_defaults()
+});
 
 /// Cache for wrap_text results to avoid recomputing every frame.
 /// Key is (text, width) -> value is Vec<String> of wrapped lines.
@@ -55,7 +68,7 @@ impl WrapCache {
             }
         }
 
-        let wrapped = wrap_text(text, width);
+        let wrapped = wrap_text_preserving_newlines(text, width);
         self.cache.insert(key.clone(), wrapped.clone());
         self.access_order.push(key);
         wrapped
@@ -98,6 +111,331 @@ pub fn wrap_text(text: &str, width: usize) -> Vec<String> {
     }
 
     lines
+}
+
+/// Wrap text while preserving newlines from source.
+/// Pi-style: split on \n first, then wrap each line separately.
+pub fn wrap_text_preserving_newlines(text: &str, width: usize) -> Vec<String> {
+    let mut result = Vec::new();
+
+    for line in text.split('\n') {
+        let trimmed = line.trim_end();
+
+        if trimmed.is_empty() {
+            // Empty line = paragraph break
+            result.push(String::new());
+            continue;
+        }
+
+        // Wrap this line if too long
+        if trimmed.len() <= width {
+            result.push(trimmed.to_string());
+        } else {
+            result.extend(wrap_single_line(trimmed, width));
+        }
+    }
+
+    result
+}
+
+/// Wrap a single line (no newlines) to width
+fn wrap_single_line(text: &str, width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+
+    for word in text.split_whitespace() {
+        if current.is_empty() {
+            current.push_str(word);
+        } else if current.len() + 1 + word.len() <= width {
+            current.push(' ');
+            current.push_str(word);
+        } else {
+            lines.push(current);
+            current = word.to_string();
+        }
+    }
+
+    if !current.is_empty() {
+        lines.push(current);
+    }
+
+    lines
+}
+
+/// Render text that may contain markdown, while preserving line breaks.
+fn render_text_content(text: &str, width: usize, base_style: Style) -> Vec<Line<'static>> {
+    let mut result = Vec::new();
+    let mut in_code_block = false;
+    let mut code_lang = String::new();
+    let mut code_lines = Vec::new();
+    let mut table_rows: Vec<String> = Vec::new();
+
+    // Split by actual newlines FIRST - never lose them
+    for line in text.split('\n') {
+        let trimmed = line.trim();
+
+        // Code block handling
+        if trimmed.starts_with("```") {
+            // Flush any pending table before code block
+            if !table_rows.is_empty() {
+                for table_line in render_markdown_table(&table_rows, width) {
+                    result.push(Line::raw(table_line).style(base_style));
+                }
+                table_rows.clear();
+            }
+
+            if in_code_block {
+                // End code block - highlight and add
+                let code_text = code_lines.join("\n");
+                let highlighted = highlight_code_block_ratatui(&code_lang, &code_text);
+                for hl_line in highlighted {
+                    result.push(hl_line);
+                }
+                code_lines.clear();
+                code_lang.clear();
+                in_code_block = false;
+            } else {
+                code_lang = trimmed[3..].trim().to_string();
+                in_code_block = true;
+            }
+            continue;
+        }
+
+        if in_code_block {
+            code_lines.push(line.to_string());
+            continue;
+        }
+
+        // Check for markdown table row
+        if trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.contains("|") {
+            table_rows.push(trimmed.to_string());
+            continue;
+        }
+
+        // Flush pending table if we hit non-table content
+        if !table_rows.is_empty() {
+            for table_line in render_markdown_table(&table_rows, width) {
+                result.push(Line::raw(table_line).style(base_style));
+            }
+            table_rows.clear();
+        }
+
+        // Empty line = paragraph break
+        if trimmed.is_empty() {
+            result.push(Line::raw("").style(base_style));
+            continue;
+        }
+
+        // Check for horizontal rule
+        if trimmed.starts_with("---") || trimmed.starts_with("***") {
+            result.push(Line::raw("─".repeat(width)).style(base_style));
+            continue;
+        }
+
+        // Headers
+        if let Some(header_text) = trimmed.strip_prefix("# ") {
+            result.push(Line::raw(header_text.to_string()).style(base_style.add_modifier(ratatui::style::Modifier::BOLD)));
+            result.push(Line::raw("").style(base_style));
+            continue;
+        }
+        if let Some(header_text) = trimmed.strip_prefix("## ") {
+            result.push(Line::raw(header_text.to_string()).style(base_style.add_modifier(ratatui::style::Modifier::BOLD)));
+            result.push(Line::raw("").style(base_style));
+            continue;
+        }
+
+        // List items with spacing
+        if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
+            let content = &trimmed[2..];
+            result.push(Line::raw(format!("• {}", content)).style(base_style));
+            result.push(Line::raw("").style(base_style)); // blank line after
+            continue;
+        }
+
+        // Fix text spacing: add space between sentences that run together
+        let fixed_line = fix_text_spacing(line);
+
+        // Regular text - wrap to width
+        if fixed_line.len() <= width {
+            result.push(Line::raw(fixed_line).style(base_style));
+        } else {
+            for wrapped in wrap_text_preserving_newlines(&fixed_line, width) {
+                result.push(Line::raw(wrapped).style(base_style));
+            }
+        }
+    }
+
+    // Flush any pending table
+    if !table_rows.is_empty() {
+        for table_line in render_markdown_table(&table_rows, width) {
+            result.push(Line::raw(table_line).style(base_style));
+        }
+    }
+
+    // Handle unclosed code block
+    if in_code_block && !code_lines.is_empty() {
+        let code_text = code_lines.join("\n");
+        let highlighted = highlight_code_block_ratatui(&code_lang, &code_text);
+        for hl_line in highlighted {
+            result.push(hl_line);
+        }
+    }
+
+    result
+}
+
+/// Add space between sentences when they run together and sanitize problematic characters
+fn fix_text_spacing(text: &str) -> String {
+    let mut result = text.to_string();
+
+    // Replace problematic Unicode characters
+    result = result.replace('ð', " ").replace('Ð', " ");
+
+    // Space after punctuation before letter (.,!?:;) followed by uppercase or lowercase
+    result = regex::Regex::new(r"([.!?;:,])([A-Za-z])")
+        .unwrap()
+        .replace_all(&result, "$1 $2")
+        .to_string();
+
+    // Space after closing paren/bracket before letter
+    result = regex::Regex::new(r"([\)\]}])([A-Za-z])")
+        .unwrap()
+        .replace_all(&result, "$1 $2")
+        .to_string();
+
+    // Space between camelCase words
+    result = regex::Regex::new(r"([a-z])([A-Z])")
+        .unwrap()
+        .replace_all(&result, "$1 $2")
+        .to_string();
+
+    // Space between number and letter
+    result = regex::Regex::new(r"(\d)([A-Za-z])")
+        .unwrap()
+        .replace_all(&result, "$1 $2")
+        .to_string();
+
+    // Fix common missing spaces
+    result = regex::Regex::new(r"\bindscripts\b")
+        .unwrap()
+        .replace_all(&result, "and scripts")
+        .to_string();
+    result = regex::Regex::new(r"\bpantry,andscripts\b")
+        .unwrap()
+        .replace_all(&result, "pantry, and scripts")
+        .to_string();
+
+    result
+}
+
+/// Render a markdown table with box drawing characters
+fn render_markdown_table(rows: &[String], width: usize) -> Vec<String> {
+    if rows.is_empty() {
+        return Vec::new();
+    }
+
+    let parsed_rows: Vec<Vec<String>> = rows.iter()
+        .map(|row| {
+            row.split('|')
+                .skip(1)
+                .filter(|s| !s.is_empty())
+                .map(|s| s.trim().to_string())
+                .collect()
+        })
+        .collect();
+
+    if parsed_rows.is_empty() {
+        return rows.to_vec();
+    }
+
+    let col_count = parsed_rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if col_count == 0 {
+        return rows.to_vec();
+    }
+
+    let mut col_widths = vec![0usize; col_count];
+    for row in &parsed_rows {
+        for (i, cell) in row.iter().enumerate() {
+            if i < col_count {
+                col_widths[i] = col_widths[i].max(cell.len());
+            }
+        }
+    }
+
+    let cell_width = ((width.saturating_sub(col_count + 1)) / col_count).max(10);
+    for w in &mut col_widths {
+        *w = (*w).min(cell_width);
+    }
+
+    let mut result = Vec::new();
+
+    let v_join = |sep: &str| -> String {
+        col_widths.iter()
+            .map(|w| "─".repeat(*w + 2))
+            .collect::<Vec<_>>()
+            .join(sep)
+    };
+
+    result.push(format!("┌{}┐", v_join("┬")));
+
+    for (i, row) in parsed_rows.iter().enumerate() {
+        let cells: Vec<String> = row.iter().enumerate()
+            .map(|(j, cell)| {
+                let w = col_widths.get(j).copied().unwrap_or(10);
+                format!(" {:w$} ", cell, w = w)
+            })
+            .collect();
+
+        result.push(format!("│{}│", cells.join("│")));
+
+        if i == 0 {
+            result.push(format!("├{}┤", v_join("┼")));
+        }
+    }
+
+    result.push(format!("└{}┘", v_join("┴")));
+
+    result
+}
+
+/// Convert syntect style to ratatui style
+fn syntect_style_to_ratatui(style: SyntectStyle) -> Style {
+    let fg = ratatui::style::Color::Rgb(style.foreground.r, style.foreground.g, style.foreground.b);
+    let bg = ratatui::style::Color::Rgb(style.background.r, style.background.g, style.background.b);
+    let mut ratatui_style = Style::default().fg(fg).bg(bg);
+    if style.font_style.contains(syntect::highlighting::FontStyle::BOLD) {
+        ratatui_style = ratatui_style.add_modifier(ratatui::style::Modifier::BOLD);
+    }
+    if style.font_style.contains(syntect::highlighting::FontStyle::ITALIC) {
+        ratatui_style = ratatui_style.add_modifier(ratatui::style::Modifier::ITALIC);
+    }
+    if style.font_style.contains(syntect::highlighting::FontStyle::UNDERLINE) {
+        ratatui_style = ratatui_style.add_modifier(ratatui::style::Modifier::UNDERLINED);
+    }
+    ratatui_style
+}
+
+/// Highlight code block and return ratatui Lines with proper styling
+fn highlight_code_block_ratatui(lang: &str, code: &str) -> Vec<Line<'static>> {
+    let syntax = SYNTAX_SET.find_syntax_by_token(lang)
+        .or_else(|| SYNTAX_SET.find_syntax_by_extension(lang))
+        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+
+    let theme = &THEME_SET.themes["base16-ocean.dark"];
+    let mut highlighter = HighlightLines::new(syntax, theme);
+
+    let mut highlighted_lines = Vec::new();
+    for line in LinesWithEndings::from(code) {
+        let ranges: Vec<(SyntectStyle, &str)> = highlighter.highlight_line(line, &SYNTAX_SET).unwrap();
+        let mut spans = Vec::new();
+        for (style, text) in ranges {
+            let ratatui_style = syntect_style_to_ratatui(style);
+            spans.push(Span::styled(text.to_string(), ratatui_style));
+        }
+        highlighted_lines.push(Line::from(spans));
+    }
+
+    highlighted_lines
 }
 
 pub fn should_show_cursor(
@@ -324,20 +662,22 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x
         return 1;
     }
 
-    let para = Paragraph::new(Line::raw(&stripped).style(Style::default().fg(text_secondary)))
-        .style(Style::default().fg(text_secondary))
-        .wrap(Wrap { trim: true });
+    let width = (area.width - margin_x + area.x - 2) as usize;
+    let base_style = Style::default().fg(text_secondary);
+    let markdown_lines = render_text_content(&stripped, width, base_style);
 
-    let available_height = (max_rows - row).min(area.height);
-    let para_area = Rect::new(margin_x, area.y + row, area.width - margin_x + area.x - 2, available_height);
-    para.render(para_area, buf);
+    let mut rendered = 0u16;
+    for (i, line) in markdown_lines.iter().enumerate() {
+        let line_y = row + i as u16;
+        if line_y >= max_rows { break; }
+        buf.set_line(margin_x, area.y + line_y, line, area.width - margin_x + area.x - 2);
+        rendered += 1;
+    }
 
-    // Estimate lines rendered based on text length and width
-    let line_count = ((stripped.len() as u16).saturating_sub(1) / (area.width.saturating_sub(4)).max(1) + 1).min(available_height);
-
-    if cursor_visible && line_count > 0 {
-        let cursor_y = area.y + row + line_count - 1;
-        let cursor_x = margin_x + (stripped.len() as u16).min(area.width - margin_x + area.x - 3);
+    if cursor_visible && rendered > 0 {
+        let cursor_y = area.y + row + rendered - 1;
+        let last_line_text = markdown_lines.last().map(|l| l.to_string()).unwrap_or_default();
+        let cursor_x = margin_x + (last_line_text.len() as u16).min(area.width - margin_x + area.x - 3);
         if cursor_x < area.x + area.width - 1 {
             if let Some(cell) = buf.cell_mut((cursor_x, cursor_y)) {
                 cell.set_char('▊');
@@ -345,7 +685,7 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x
             }
         }
     }
-    line_count
+    rendered
 }
 
 fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
@@ -416,42 +756,94 @@ fn render_tool_call_msg(
     draw_tool_header(margin_x, text_x, area, row, buf, text_muted, text_secondary, name, args);
     let mut rendered = 1;
     if let Some(result_text) = result {
-        rendered = draw_tool_result(result_text, is_error, area, row, text_x, max_rows, buf, text_muted, success, error);
+        rendered += draw_tool_result(result_text, is_error, area, row + 1, text_x, max_rows, buf, text_muted, success, error);
     }
     rendered
 }
 
-fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, text_secondary: ratatui::style::Color, name: &str, args: &str) {
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('◆');
-        cell.set_style(Style::default().fg(text_muted));
+/// Format tool arguments in compact form for single-line display
+fn format_tool_args_compact(args: &str) -> String {
+    if args.is_empty() {
+        return String::new();
     }
-    let mut header = String::with_capacity(name.len() + args.len() + 4);
-    write!(header, "{}({})", name, args).ok();
-    let line = Line::raw(header).style(Style::default().fg(text_secondary));
+
+    // Try to extract primary argument
+    if let Ok(json) = serde_json::from_str::<serde_json::Value>(args) {
+        if let serde_json::Value::Object(map) = json {
+            // For single-arg tools, show just the value
+            if map.len() == 1 {
+                if let Some((_, value)) = map.iter().next() {
+                    return match value {
+                        serde_json::Value::String(s) => s.clone(),
+                        other => other.to_string(),
+                    };
+                }
+            }
+            // For multi-arg, show first arg or summary
+            let parts: Vec<String> = map.iter()
+                .take(2)
+                .map(|(k, v)| format!("{}={}", k, v.to_string().trim_matches('"')))
+                .collect();
+            if map.len() > 2 {
+                format!("{}, ...", parts.join(", "))
+            } else {
+                parts.join(", ")
+            }
+        } else {
+            args.to_string()
+        }
+    } else {
+        args.trim().to_string()
+    }
+}
+
+fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut Buffer, _text_muted: ratatui::style::Color, text_secondary: ratatui::style::Color, name: &str, args: &str) {
+    // Codex-style: ● name · args (compact inline format)
+    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
+        cell.set_char('●');
+        cell.set_style(Style::default().fg(text_secondary));
+    }
+
+    // Build compact inline format: name · args
+    let compact_args = format_tool_args_compact(args);
+    let header_text = if compact_args.is_empty() {
+        name.to_string()
+    } else {
+        format!("{} · {}", name, compact_args)
+    };
+
+    let line = Line::raw(header_text).style(Style::default().fg(text_secondary));
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
 }
 
-fn draw_tool_result(result_text: &str, is_error: bool, area: Rect, row: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, success: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
-    let result_y = row + 1;
-    if result_y >= max_rows { return 1; }
-    for (i, ch) in "  ".chars().enumerate() {
-        if let Some(cell) = buf.cell_mut((text_x - 2 + i as u16, area.y + result_y)) {
-            cell.set_char(ch);
-            cell.set_style(Style::default().fg(text_muted));
+fn draw_tool_result(result_text: &str, is_error: bool, area: Rect, row: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, _success: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
+    // Codex-style tree result: filter empty lines and render with └ prefix
+    let result_lines: Vec<&str> = result_text.split('\n').filter(|l| !l.is_empty()).collect();
+    if result_lines.is_empty() {
+        return 0;
+    }
+
+    let mut rendered = 0u16;
+    let prefix = if is_error { "  └✗ " } else { "  └ " };
+
+    for (idx, line_text) in result_lines.iter().enumerate() {
+        let result_y = row + idx as u16;
+        if result_y >= max_rows { break; }
+
+        // First line gets tree prefix, subsequent lines get indent only
+        if idx == 0 {
+            let prefix_text = format!("{}{}", prefix, line_text);
+            let line = Line::raw(prefix_text).style(Style::default().fg(if is_error { error } else { text_muted }));
+            buf.set_line(text_x, area.y + result_y, &line, area.width.saturating_sub(text_x));
+        } else {
+            let indented_text = format!("    {}", line_text);
+            let line = Line::raw(indented_text).style(Style::default().fg(text_muted));
+            buf.set_line(text_x, area.y + result_y, &line, area.width.saturating_sub(text_x));
         }
+        rendered += 1;
     }
-    if let Some(cell) = buf.cell_mut((text_x, area.y + result_y)) {
-        cell.set_char('→');
-        cell.set_style(Style::default().fg(text_muted));
-    }
-    if let Some(cell) = buf.cell_mut((text_x + 1, area.y + result_y)) {
-        cell.set_char(if is_error { '×' } else { '✓' });
-        cell.set_style(Style::default().fg(if is_error { error } else { success }));
-    }
-    let line = Line::raw(result_text).style(Style::default().fg(text_muted));
-    buf.set_line(text_x + 3, area.y + result_y, &line, area.width - 7);
-    2
+
+    rendered
 }
 
 fn render_edit_msg(filename: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, code_path: ratatui::style::Color) -> u16 {

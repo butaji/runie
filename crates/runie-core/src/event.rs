@@ -9,7 +9,7 @@ pub enum Event {
     MessageStart { role: String, timestamp: DateTime<Utc> },
     MessageDelta { content: String },
     ThinkingDelta { content: String },
-    ToolCallDelta { name: String, arguments: String },
+    ToolCallDelta { id: String, name: String, arguments: String },
     MessageEnd,
     ToolExecutionStart { tool_call_id: String, tool_name: String, args: serde_json::Value, timestamp: DateTime<Utc> },
     ToolExecutionEnd { tool_call_id: String, result: ToolOutput, timestamp: DateTime<Utc> },
