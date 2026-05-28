@@ -6,7 +6,7 @@ use tokio::time::interval;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 use runie_agent::events::{AgentEvent, PermissionDecision};
-use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop};
+use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop, AgentLoopError};
 use runie_agent::{SafetyHook, Hook};
 use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
@@ -272,19 +272,67 @@ pub async fn run_tui(
 
                     let task = tokio::spawn(async move {
                         let provider_arc: Arc<dyn Provider> = provider.into();
-                        let result = run_agent_loop(
-                            messages,
-                            config,
-                            provider_arc,
-                            tools,
-                            msg_tx_clone,
-                            permission_state_clone,
-                            registry,
-                            hooks,
+                        // 10-minute timeout safeguard — prevents agent running forever
+                        let result = tokio::time::timeout(
+                            Duration::from_secs(600),
+                            run_agent_loop(
+                                messages,
+                                config,
+                                provider_arc,
+                                tools,
+                                msg_tx_clone.clone(),
+                                permission_state_clone,
+                                registry,
+                                hooks,
+                            )
                         ).await;
 
-                        if let Err(e) = result {
-                            tracing::error!("Agent loop error: {}", e);
+                        match result {
+                            Ok(Ok(_messages)) => {
+                                // Agent completed normally — AgentEvent::AgentEnd will be sent by the loop
+                            }
+                            Ok(Err(e)) => {
+                                tracing::error!("Agent loop error: {}", e);
+                                // Classify error to get error_type, recoverable, context
+                                let (error_type, recoverable, context) = match &e {
+                                    AgentLoopError::ProviderError(msg) => (
+                                        "provider".to_string(),
+                                        true,
+                                        format!("Provider error: {}", msg),
+                                    ),
+                                    AgentLoopError::ToolError(msg) => (
+                                        "tool".to_string(),
+                                        true,
+                                        format!("Tool error: {}", msg),
+                                    ),
+                                    AgentLoopError::SendError(msg) => (
+                                        "send".to_string(),
+                                        true,
+                                        format!("Send error: {}", msg),
+                                    ),
+                                    AgentLoopError::MaxTurnsExceeded => (
+                                        "max_turns".to_string(),
+                                        false,
+                                        "Max turns exceeded".to_string(),
+                                    ),
+                                };
+                                let _ = msg_tx_clone.send(Msg::AgentEvent(AgentEvent::Error {
+                                    message: e.to_string(),
+                                    error_type,
+                                    recoverable,
+                                    context,
+                                })).await;
+                            }
+                            Err(_) => {
+                                // Timeout
+                                tracing::error!("Agent loop timed out after 10 minutes");
+                                let _ = msg_tx_clone.send(Msg::AgentEvent(AgentEvent::Error {
+                                    message: "Agent loop timed out after 10 minutes".to_string(),
+                                    error_type: "timeout".to_string(),
+                                    recoverable: false,
+                                    context: "Agent loop exceeded 10 minute timeout".to_string(),
+                                })).await;
+                            }
                         }
                     });
 

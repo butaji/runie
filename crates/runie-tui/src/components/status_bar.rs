@@ -106,34 +106,6 @@ impl StatusBarViewModel {
         Some(format!("{} │ {} tok │ ${:.4}", model, tokens, cost))
     }
 
-    fn right_text(&self) -> Option<String> {
-        let running_jobs: Vec<_> = self
-            .background_jobs
-            .iter()
-            .filter(|j| j.status == JobStatus::Running)
-            .collect();
-
-        // P2-5 FIX: Show "Thinking..." when agent is running but no background jobs
-        if running_jobs.is_empty() {
-            if self.agent_running {
-                let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-                let spinner = braille[self.braille_frame % 10];
-                return Some(format!("{} Thinking...", spinner));
-            }
-            return None;
-        }
-
-        let job_count = running_jobs.len();
-        let latest_job = running_jobs.last()?;
-        let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        let spinner = braille[self.braille_frame % 10];
-        let text = if job_count == 1 {
-            format!("⬡ {} │ {} {}", latest_job.name, spinner, latest_job.name)
-        } else {
-            format!("⬡ {} jobs │ {} {}", job_count, spinner, latest_job.name)
-        };
-        Some(text)
-    }
 }
 
 impl StatusBar {
@@ -245,19 +217,28 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
         buf.set_line(x, area.y, &line, width);
         x += width;
     }
-
-    // Right: background jobs
-    if let Some(jobs_text) = vm.right_text() {
-        let jobs_width = jobs_text.chars().count() as u16;
-        let jobs_x = area.x + area.width - jobs_width - 1;
-        let line = Line::raw(jobs_text).style(Style::default().fg(text_secondary));
-        buf.set_line(jobs_x, area.y, &line, jobs_width);
-    }
+    let left_end = x;
 
     // Center: model, tokens, cost
-    if let Some(center_text) = vm.center_text() {
-        let center_width = center_text.chars().count() as u16;
-        let center_x = area.x + (area.width.saturating_sub(center_width)) / 2;
+    render_ref_center(area, buf, left_end, text_secondary, vm);
+}
+
+/// Renders center text only if it fits without overlapping left side
+fn render_ref_center(area: Rect, buf: &mut Buffer, left_end: u16, text_secondary: ratatui::style::Color, vm: &StatusBarViewModel) {
+    let Some(center_text) = vm.center_text() else { return };
+    let center_width = center_text.chars().count() as u16;
+    let min_padding = 2u16;
+
+    let min_center_x = left_end + min_padding;
+    let ideal_center_x = area.x + (area.width.saturating_sub(center_width)) / 2;
+
+    let center_x = if ideal_center_x >= min_center_x {
+        ideal_center_x
+    } else {
+        return; // Not enough space on left, skip center
+    };
+
+    if center_x + center_width <= area.x + area.width {
         let line = Line::raw(center_text).style(Style::default().fg(text_secondary));
         buf.set_line(center_x, area.y, &line, center_width);
     }

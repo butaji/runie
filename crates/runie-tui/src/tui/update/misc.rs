@@ -69,7 +69,7 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     
     // P0-2 FIX: Block submit when no model is configured - guide user to onboarding
     // But still clear textarea and add message for better UX
-    let model_missing = state.current_model.is_none() && state.onboarding.is_none();
+    let model_missing = state.current_model.as_deref().map_or(true, |s| s.is_empty()) && state.onboarding.is_none();
     
     state.messages.push(MessageItem::User {
         text: text.clone(),

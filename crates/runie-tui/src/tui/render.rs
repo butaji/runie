@@ -51,37 +51,18 @@ fn build_center_line(vm: &StatusBarViewModel, text_tertiary: ratatui::style::Col
     (line, width)
 }
 
-fn render_bg_jobs(area: Rect, buf: &mut Buffer, text_secondary: ratatui::style::Color, jobs: &[crate::components::status_bar::BackgroundJob], braille_frame: usize) {
-    use ratatui::text::Line;
-    let running: Vec<_> = jobs.iter().filter(|j| j.status == crate::components::status_bar::JobStatus::Running).collect();
-    if running.is_empty() { return; }
-    let count = running.len();
-    let Some(latest) = running.last() else { return; };
-    let braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let _spinner = braille[braille_frame % 10];
-    let text = if count == 1 {
-        format!("⬡ {} │ {} │", latest.name, latest.name)
-    } else {
-        format!("⬡ {} jobs │ {} │", count, latest.name)
-    };
-    let width = text.len() as u16;
-    let x = area.x + area.width - width - 1;
-    buf.set_line(x, area.y, &Line::raw(text).style(Style::default().fg(text_secondary)), width);
-}
-
 pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
     use ratatui::style::Modifier;
     use ratatui::text::{Line, Span};
 
     let text_tertiary = colors.text_dim;
-    let text_secondary = colors.text_secondary;
-    let warning = colors.error; // P0-2 FIX: Use error color for warning
+    let warning = colors.error;
     let items = get_status_items(&vm.mode);
 
     let (center_line, center_width) = build_center_line(vm, text_tertiary, warning);
     let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
-    let remaining = (area.width.saturating_sub(2) as usize).saturating_sub(left_width + center_width);
 
+    // Render left side and track ending position
     let mut x = area.x as usize + 1;
     for (i, (key, desc)) in items.iter().enumerate() {
         if i > 0 {
@@ -97,11 +78,33 @@ pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, 
         x += width as usize;
     }
 
-    if !center_line.spans.is_empty() && remaining >= center_width {
-        buf.set_line((area.x as usize + 1 + (remaining / 2)) as u16, area.y, &center_line, center_width as u16);
+    // Render center (only if no overlap with left)
+    render_status_center(area, buf, x, center_line, center_width, left_width);
+}
+
+/// Renders center text only if it fits without overlapping left or right sides
+fn render_status_center(area: Rect, buf: &mut Buffer, left_end: usize, center_line: Line<'_>, center_width: usize, left_width: usize) {
+    let right_width: u16 = 0;
+    let min_padding = 2;
+    let max_center_x = area.width as usize - right_width as usize - min_padding;
+    let min_center_x = left_end + min_padding;
+
+    if center_line.spans.is_empty() || center_width >= (area.width as usize).saturating_sub(left_width + right_width as usize + min_padding * 2) {
+        return;
     }
 
-    render_bg_jobs(area, buf, text_secondary, &vm.background_jobs, vm.braille_frame);
+    let ideal_center_x = (area.width as usize - center_width) / 2;
+    let center_x = if ideal_center_x >= min_center_x && ideal_center_x + center_width <= max_center_x {
+        ideal_center_x
+    } else if ideal_center_x < min_center_x {
+        return; // Not enough space on left, skip center
+    } else {
+        min_center_x // Would exceed right side, use min_center_x
+    };
+
+    if center_x < area.width as usize && center_x + center_width <= max_center_x {
+        buf.set_line(center_x as u16, area.y, &center_line, center_width as u16);
+    }
 }
 
 // ─── Agent List (Sidebar) ────────────────────────────────────────────────────

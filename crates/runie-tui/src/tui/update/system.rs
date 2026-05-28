@@ -33,6 +33,8 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: Msg) -> V
 
 fn handle_quit_or_stop(state: &mut AppState, msg: &Msg) -> Vec<Cmd> {
     state.agent_running = false;
+    // P0-AGENT-TIMEOUT: Clear agent start time on quit/stop/interrupt
+    state.agent_start_time = None;
     if matches!(msg, Msg::Quit) {
         state.running = false;
     }
@@ -60,6 +62,26 @@ fn handle_anim(state: &mut AppState, msg: &Msg) {
 // ─── Permission Timeout ───────────────────────────────────────────────────────
 
 fn handle_tick_permission_check(state: &mut AppState, _palette: &mut CommandPalette) -> Vec<Cmd> {
+    // P0-AGENT-TIMEOUT: Watchdog timeout check for agent hang/panic
+    if state.agent_running {
+        if let Some(start_time) = state.agent_start_time {
+            const AGENT_TIMEOUT_SECS: u64 = 600; // 10 minutes
+            if start_time.elapsed().as_secs() >= AGENT_TIMEOUT_SECS {
+                state.agent_running = false;
+                state.agent_start_time = None;
+                state.messages.push(crate::components::MessageItem::System {
+                    text: "Agent timed out after 10 minutes.".to_string(),
+                });
+                // BG-1 FIX: Clear pending permission queue on timeout
+                state.permission_modal.pending_queue.clear();
+                if state.mode != TuiMode::Onboarding {
+                    state.mode = TuiMode::Chat;
+                }
+                return vec![Cmd::Interrupt];
+            }
+        }
+    }
+
     // Only check if we're in permission mode with timeout tracking active
     if state.mode != TuiMode::Permission { return vec![]; }
     if state.permission_modal.timed_out { return vec![]; }

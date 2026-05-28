@@ -73,7 +73,7 @@ impl MessageList {
                 msg, area, row, margin_x, text_x, max_rows, buf, theme,
                 accent_primary, text_secondary, text_muted, text_dim,
                 success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-                &vm.animation, &mut wrap_cache,
+                &vm.animation, &mut wrap_cache, vm.agent_running,
             );
             row += rendered;
         }
@@ -185,5 +185,121 @@ mod tests {
         // Verify that some characters were rendered
         let non_empty = buf.content().iter().any(|c| c.symbol() != " ");
         assert!(non_empty, "Empty state should render some visible characters");
+    }
+
+    #[test]
+    fn test_assistant_empty_agent_running_shows_thinking() {
+        use ratatui::{buffer::Buffer, layout::Rect};
+        use crate::components::message_list::render::render_single_msg;
+        use crate::components::message_list::render::WrapCache;
+        use crate::theme::ThemeWrapper;
+
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        let theme = ThemeWrapper::default_for_test();
+        let mut wrap_cache = WrapCache::new();
+
+        let msg = MessageItem::Assistant { text: String::new(), model: None, timestamp: None };
+        let _rendered = render_single_msg(
+            &msg, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            &theme,
+            ratatui::style::Color::White,
+            ratatui::style::Color::Gray,
+            ratatui::style::Color::DarkGray,
+            ratatui::style::Color::Black,
+            ratatui::style::Color::Green,
+            ratatui::style::Color::Red,
+            ratatui::style::Color::Blue,
+            '⠋', // spinner
+            false, // cursor_visible
+            false, // show_spinner
+            '⠏', // rewind_spinner
+            &AnimationState::default(),
+            &mut wrap_cache,
+            true, // agent_running
+        );
+
+        // Should render "⠋ Thinking..." instead of "·"
+        let row_text: String = (0..area.width)
+            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
+            .collect();
+        assert!(row_text.contains("Thinking"), "Expected 'Thinking' indicator in row, got: '{}'", row_text.trim());
+    }
+
+    #[test]
+    fn test_assistant_empty_no_agent_running_shows_dot() {
+        use ratatui::{buffer::Buffer, layout::Rect};
+        use crate::components::message_list::render::render_single_msg;
+        use crate::components::message_list::render::WrapCache;
+        use crate::theme::ThemeWrapper;
+
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        let theme = ThemeWrapper::default_for_test();
+        let mut wrap_cache = WrapCache::new();
+
+        let msg = MessageItem::Assistant { text: String::new(), model: None, timestamp: None };
+        let _rendered = render_single_msg(
+            &msg, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            &theme,
+            ratatui::style::Color::White,
+            ratatui::style::Color::Gray,
+            ratatui::style::Color::DarkGray,
+            ratatui::style::Color::Black,
+            ratatui::style::Color::Green,
+            ratatui::style::Color::Red,
+            ratatui::style::Color::Blue,
+            '⠋', // spinner
+            false, // cursor_visible
+            false, // show_spinner
+            '⠏', // rewind_spinner
+            &AnimationState::default(),
+            &mut wrap_cache,
+            false, // agent_running
+        );
+
+        // Should render "·" when agent not running
+        let cell = buf.cell((area.x + 2, area.y)).unwrap();
+        let symbol = cell.symbol();
+        assert_eq!(symbol, "·", "Expected '·' when agent not running, got: {}", symbol);
+    }
+
+    #[test]
+    fn test_assistant_non_empty_shows_text() {
+        use ratatui::{buffer::Buffer, layout::Rect};
+        use crate::components::message_list::render::render_single_msg;
+        use crate::components::message_list::render::WrapCache;
+        use crate::theme::ThemeWrapper;
+
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        let theme = ThemeWrapper::default_for_test();
+        let mut wrap_cache = WrapCache::new();
+
+        let msg = MessageItem::Assistant { text: "Hello world".to_string(), model: None, timestamp: None };
+        let _rendered = render_single_msg(
+            &msg, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            &theme,
+            ratatui::style::Color::White,
+            ratatui::style::Color::Gray,
+            ratatui::style::Color::DarkGray,
+            ratatui::style::Color::Black,
+            ratatui::style::Color::Green,
+            ratatui::style::Color::Red,
+            ratatui::style::Color::Blue,
+            '⠋', // spinner
+            false, // cursor_visible
+            false, // show_spinner
+            '⠏', // rewind_spinner
+            &AnimationState::default(),
+            &mut wrap_cache,
+            true, // agent_running - should be ignored for non-empty text
+        );
+
+        // Should render the actual text
+        let row_text: String = (0..area.width)
+            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
+            .collect::<String>();
+        assert!(row_text.contains("Hello world"), "Expected 'Hello world' in row, got: '{}'", row_text.trim());
     }
 }

@@ -36,6 +36,7 @@ mod tests {
             clear_input_confirm: ClearInputConfirm::default(),
             // Model picker state
             model_picker: None,
+            agent_start_time: None,
         }
     }
 

@@ -2,7 +2,6 @@
 // View Model Builder Tests - Status Bar
 // ============================================================================
 
-use crate::components::status_bar::{BackgroundJob, JobStatus};
 use crate::tui::state::{AppState, TuiMode};
 use crate::tui::view_models::ViewModels;
 use crate::components::CommandPalette;
@@ -110,43 +109,4 @@ fn test_status_bar_vm_token_usage() {
     assert_eq!(vms.status_bar.session_token_usage.estimated_cost, 0.05);
 }
 
-#[test]
-fn test_status_bar_vm_background_jobs() {
-    let mut state = make_state();
-    state.background_jobs = vec![
-        BackgroundJob { name: "Job1".to_string(), status: JobStatus::Running },
-        BackgroundJob { name: "Job2".to_string(), status: JobStatus::Complete },
-    ];
-    let vms = build_vms(&state);
-    assert_eq!(vms.status_bar.background_jobs.len(), 2);
-}
 
-#[test]
-fn test_status_bar_vm_agent_running() {
-    let mut state = make_state();
-    state.agent_running = true;
-    let vms = build_vms(&state);
-    assert!(vms.status_bar.agent_running);
-}
-
-#[test]
-fn test_status_bar_vm_agent_not_running() {
-    let state = make_state();
-    let vms = build_vms(&state);
-    assert!(!vms.status_bar.agent_running);
-}
-
-#[test]
-fn test_status_bar_vm_braille_frame() {
-    let mut state = make_state();
-    state.animation.braille_frame = 5;
-    let vms = build_vms(&state);
-    assert_eq!(vms.status_bar.braille_frame, 5);
-}
-
-#[test]
-fn test_status_bar_vm_braille_frame_zero_default() {
-    let state = make_state();
-    let vms = build_vms(&state);
-    assert_eq!(vms.status_bar.braille_frame, 0);
-}

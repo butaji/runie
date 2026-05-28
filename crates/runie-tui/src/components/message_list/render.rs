@@ -164,13 +164,14 @@ pub fn render_single_msg(
     rewind_spinner: char,
     animation: &AnimationState,
     wrap_cache: &mut WrapCache,
+    agent_running: bool,
 ) -> u16 {
     match msg {
         MessageItem::User { text, .. } => {
             render_user_msg(text, area, row, margin_x, text_x, max_rows, buf, theme, accent_primary, wrap_cache)
         }
         MessageItem::Assistant { text, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner)
         }
         MessageItem::Thought { duration_secs } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -259,13 +260,69 @@ fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16
     }
 }
 
-fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, wrap_cache: &mut WrapCache) -> u16 {
+/// Strip `<think>...</think>` think blocks from text (DeepSeek models use these).
+pub fn strip_think_tags(text: &str) -> String {
+    // Regex to match <think>...</think> blocks (case-sensitive per model output)
+    // Uses lazy matching to handle multiple blocks
+    let mut result = String::with_capacity(text.len());
+    let mut last_end = 0;
+
+    // We manually scan since we want to avoid a regex dependency
+    // Pattern: <think> followed by any chars (including newlines) until </think>
+    let bytes = text.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        // Check for <think>
+        if bytes[i..].starts_with(b"<think>") {
+            let start = i;
+            // Find </think> after <think>
+            let mut j = i + 7; // skip <think>
+            let mut found = false;
+            while j < bytes.len() {
+                if bytes[j..].starts_with(b"</think>") {
+                    // Found end
+                    i = j + 8; // </think> is 8 chars
+                    found = true;
+                    // Append text before this block
+                    result.push_str(&text[last_end..start]);
+                    last_end = i;
+                    break;
+                }
+                j += 1;
+            }
+            if !found {
+                // No closing tag, keep rest as-is
+                break;
+            }
+        } else {
+            i += 1;
+        }
+    }
+
+    // Append remaining text after last processed block
+    if last_end < text.len() {
+        result.push_str(&text[last_end..]);
+    }
+
+    result
+}
+
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, wrap_cache: &mut WrapCache, agent_running: bool, spinner: char) -> u16 {
     if text.is_empty() {
-        let dot = Line::raw("·").style(Style::default().fg(text_muted));
-        buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
+        if agent_running {
+            let mut thinking = String::with_capacity(16);
+            write!(thinking, "{} Thinking...", spinner).ok();
+            let line = Line::raw(thinking).style(Style::default().fg(text_muted));
+            buf.set_line(margin_x, area.y + row, &line, area.width - 2);
+        } else {
+            let dot = Line::raw("·").style(Style::default().fg(text_muted));
+            buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
+        }
         return 1;
     }
-    let wrapped = wrap_cache.get_wrapped(text, (area.width as usize).saturating_sub(4));
+    let text = strip_think_tags(text);
+    let wrapped = wrap_cache.get_wrapped(&text, (area.width as usize).saturating_sub(4));
     let msg_height = wrapped.len() as u16;
     for (i, line_text) in wrapped.iter().enumerate() {
         if row + i as u16 >= max_rows { break; }

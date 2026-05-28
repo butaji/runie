@@ -15,6 +15,7 @@ mod tests {
     use crate::components::CommandPalette;
     use crate::tui::render::get_status_items;
     use crate::tui::state::TuiMode;
+    use crate::components::message_list::render::strip_think_tags;
 
     // ─── Layout Tests ──────────────────────────────────────────────────────────
 
@@ -200,27 +201,6 @@ mod tests {
         assert!(keys.contains(&"^q"), "Chat mode should show ^q key");
     }
 
-    #[test]
-    fn test_status_bar_shows_thinking_when_agent_running() {
-        // This tests the view model construction that includes "Thinking..." indicator
-        // The actual rendering is tested via integration tests
-        use crate::tui::view_models::StatusBarViewModel;
-
-        let vm = StatusBarViewModel {
-            mode: TuiMode::Chat,
-            current_model: Some("claude-3".to_string()),
-            agent_running: true,  // Agent is running
-            session_token_usage: runie_ai::TokenUsage::default(),
-            background_jobs: vec![],
-            braille_frame: 0,
-        };
-
-        // When agent_running is true, the status bar should show thinking indicator
-        // via the braille spinner in render_bg_jobs
-        assert!(vm.agent_running, "Agent should be marked as running");
-        assert!(vm.background_jobs.is_empty(), "No background jobs initially");
-    }
-
     // ─── Input Bar Height Tests ──────────────────────────────────────────────
 
     #[test]
@@ -294,5 +274,66 @@ mod tests {
         let _small_height = area.height < 5;
 
         assert!(small_width, "Width 9 should trigger overlay min guard");
+    }
+
+    // ─── Think Tag Stripping Tests ─────────────────────────────────────────────
+
+    #[test]
+    fn test_strip_think_tags_simple() {
+        let input = "<think>This is reasoning</think> Hello world";
+        let expected = " Hello world";
+        assert_eq!(strip_think_tags(input), expected);
+    }
+
+    #[test]
+    fn test_strip_think_tags_multiline() {
+        let input = "<think>
+This is
+multiline reasoning
+</think> Hello";
+        let expected = " Hello";
+        assert_eq!(strip_think_tags(input), expected);
+    }
+
+    #[test]
+    fn test_strip_think_tags_no_tags() {
+        let input = "Just normal text without any think tags";
+        let expected = "Just normal text without any think tags";
+        assert_eq!(strip_think_tags(input), expected);
+    }
+
+    #[test]
+    fn test_strip_think_tags_partial_opening() {
+        // Missing closing tag - should preserve everything
+        let input = "<think>unclosed tag";
+        assert_eq!(strip_think_tags(input), input);
+    }
+
+    #[test]
+    fn test_strip_think_tags_partial_closing() {
+        // Has closing but no opening - should preserve everything
+        let input = "some text</think> orphaned";
+        assert_eq!(strip_think_tags(input), input);
+    }
+
+    #[test]
+    fn test_strip_think_tags_mixed_content() {
+        let input = "<think>thinking1</think> Output A<think>thinking2</think> Output B";
+        let expected = " Output A Output B";
+        assert_eq!(strip_think_tags(input), expected);
+    }
+
+    #[test]
+    fn test_strip_think_tags_multiple_blocks() {
+        let input = "<think>first</think> middle<think>second</think> end";
+        let expected = " middle end";
+        assert_eq!(strip_think_tags(input), expected);
+    }
+
+    #[test]
+    fn test_strip_think_tags_empty_after_strip() {
+        let input = "<think>only think here</think>";
+        let expected = "";
+        assert_eq!(strip_think_tags(input), expected);
     }
 }

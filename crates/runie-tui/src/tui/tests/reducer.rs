@@ -35,6 +35,7 @@ fn make_state() -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         // Model picker state
         model_picker: None,
+        agent_start_time: None,
     }
 }
 
@@ -64,6 +65,7 @@ fn make_state_with_text(text: &str) -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         // Model picker state
         model_picker: None,
+        agent_start_time: None,
     };
     state
 }

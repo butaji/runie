@@ -209,6 +209,8 @@ pub struct AppState {
     pub clear_input_confirm: ClearInputConfirm,
     // Model picker state
     pub model_picker: Option<ModelPicker>,
+    // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
+    pub agent_start_time: Option<std::time::Instant>,
 }
 
 impl Default for AppState {
@@ -238,6 +240,8 @@ impl Default for AppState {
             clear_input_confirm: ClearInputConfirm::default(),
             // Model picker state
             model_picker: None,
+            // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
+            agent_start_time: None,
         }
     }
 }
