@@ -1,10 +1,17 @@
 use crossterm::event::{Event, KeyCode, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg, OnboardingStep};
 
-pub fn event_to_msg(event: Event, _state: &AppState) -> Vec<Msg> {
+pub fn event_to_msg(event: Event, state: &AppState) -> Vec<Msg> {
     match event {
-        Event::Key(key) => key_to_msg(key, _state).map_or_else(Vec::new, |m| vec![m]),
-        Event::Paste(text) => vec![Msg::Paste(text)],
+        Event::Key(key) => key_to_msg(key, state).map_or_else(Vec::new, |m| vec![m]),
+        // BUG-03 FIX: Check mode before emitting Paste — block in Permission/Overlay
+        Event::Paste(text) => {
+            if matches!(state.mode, TuiMode::Permission | TuiMode::Overlay) {
+                vec![]
+            } else {
+                vec![Msg::Paste(text)]
+            }
+        }
         Event::Resize(w, h) => vec![Msg::Resize(w, h)],
         _ => Vec::new(),
     }

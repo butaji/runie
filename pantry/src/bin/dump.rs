@@ -2,7 +2,7 @@ use ratatui::{
     backend::TestBackend,
     layout::Rect,
     Terminal,
-    widgets::{Widget, Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph},
     style::{Style, Color},
     text::{Line, Span},
 };
@@ -123,8 +123,9 @@ fn main() {
     // Print to stdout
     for y in 0..buffer.area.height {
         for x in 0..buffer.area.width {
-            let cell = buffer.get(x, y);
-            print!("{}", cell.symbol());
+            if let Some(cell) = buffer.cell((x, y)) {
+                print!("{}", cell.symbol());
+            }
         }
         println!();
     }

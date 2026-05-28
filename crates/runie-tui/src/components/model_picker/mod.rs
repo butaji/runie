@@ -167,7 +167,7 @@ impl ModelPicker {
         self.selected = (0, 0);
     }
 
-    pub fn is_current(&self, provider_id: &str, model_id: &str) -> bool {
+    pub fn is_current(&self, _provider_id: &str, model_id: &str) -> bool {
         self.current_model_id.as_ref().map(|id| id.as_str()) == Some(model_id)
     }
 

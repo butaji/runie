@@ -313,8 +313,8 @@ fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u1
 }
 
 // P2-1: Render structured error messages with [!] icon and recovery hint
-fn render_error_msg(message: &str, recoverable: bool, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, text_muted: ratatui::style::Color) -> u16 {
-    let inner_x = margin_x + 1;
+fn render_error_msg(message: &str, _recoverable: bool, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, _text_muted: ratatui::style::Color) -> u16 {
+    let _inner_x = margin_x + 1;
     
     // Draw [!] icon
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {

@@ -59,15 +59,40 @@ fn make_key(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {
     }
 }
 
-// BUG-03: Paste in Permission modal bypasses blocking mode and goes to textarea
+// BUG-03 FIX VERIFIED: Paste in Permission/Overlay modal is now blocked
 #[test]
-fn test_paste_bypasses_blocking_mode() {
-    // event_to_msg handles Paste separately from key events, bypassing blocking_mode_handler
+fn test_paste_blocked_in_blocking_mode() {
+    // event_to_msg now checks mode before emitting Paste
     let mut state = make_state();
     state.mode = TuiMode::Permission; // Blocking mode
 
     let msgs = event_to_msg(Event::Paste("hello".to_string()), &state);
 
+    // Paste should be blocked in Permission mode
+    assert_eq!(msgs.len(), 0);
+}
+
+// BUG-03 FIX: Paste also blocked in Overlay mode
+#[test]
+fn test_paste_blocked_in_overlay_mode() {
+    let mut state = make_state();
+    state.mode = TuiMode::Overlay; // Blocking mode
+
+    let msgs = event_to_msg(Event::Paste("hello".to_string()), &state);
+
+    // Paste should be blocked in Overlay mode
+    assert_eq!(msgs.len(), 0);
+}
+
+// BUG-03 FIX: Paste allowed in Chat mode
+#[test]
+fn test_paste_allowed_in_chat_mode() {
+    let mut state = make_state();
+    state.mode = TuiMode::Chat; // Non-blocking mode
+
+    let msgs = event_to_msg(Event::Paste("hello".to_string()), &state);
+
+    // Paste should be allowed in Chat mode
     assert_eq!(msgs.len(), 1);
     assert!(matches!(&msgs[0], Msg::Paste(p) if p == "hello"));
 }
