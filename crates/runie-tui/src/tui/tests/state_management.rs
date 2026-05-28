@@ -29,6 +29,7 @@ fn make_state() -> AppState {
         terminal_size: (0, 0),
         clear_input_confirm: crate::tui::state::ClearInputConfirm::default(),
         model_picker: None,
+        agent_start_time: None,
     }
 }
 
@@ -56,6 +57,7 @@ fn make_state_with_text(text: &str) -> AppState {
         terminal_size: (0, 0),
         clear_input_confirm: crate::tui::state::ClearInputConfirm::default(),
         model_picker: None,
+        agent_start_time: None,
     }
 }
 

@@ -4,6 +4,7 @@
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
 use crate::tui::key_to_textarea_input;
+use std::time::Instant;
 
 /// Chat-specific commands returned by update functions.
 #[derive(Debug, Clone)]
@@ -52,13 +53,15 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         return vec![];
     }
     state.agent_running = true;
+    // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
+    state.agent_start_time = Some(Instant::now());
     if let Some(ref onboarding) = state.onboarding {
         if onboarding.is_fetching_models {
             state.input_right_info = "Loading models...".to_string();
             return vec![];
         }
     }
-    let model_missing = state.current_model.is_none() && state.onboarding.is_none();
+    let model_missing = state.current_model.as_deref().map_or(true, |s| s.is_empty()) && state.onboarding.is_none();
     state.messages.push(MessageItem::User { text: text.clone(), model: Some("You".to_string()), timestamp: None });
     state.textarea.select_all();
     state.textarea.delete_line_by_end();

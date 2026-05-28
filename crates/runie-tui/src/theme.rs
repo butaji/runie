@@ -10,6 +10,12 @@ impl ThemeWrapper {
         self.inner.color(token)
     }
 
+    /// Creates a default ThemeWrapper for testing.
+    #[cfg(test)]
+    pub fn default_for_test() -> Self {
+        Self::default()
+    }
+
     pub fn silkcircuit_neon() -> Self {
         Self { inner: Theme::from(opaline::builtins::silkcircuit_neon()) }
     }

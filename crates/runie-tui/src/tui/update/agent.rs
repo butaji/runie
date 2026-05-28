@@ -59,9 +59,10 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
     }
 }
 
-pub fn on_message_start(state: &mut AppState, message: runie_agent::events::AgentMessage) {
+pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::AgentMessage) {
     state.agent_running = true;
-    state.current_model = Some(message.role.clone());
+    // NOTE: Do NOT overwrite current_model here - it contains the user's configured model
+    // and must persist across agent runs. The model used per message is tracked separately.
     state.messages.push(MessageItem::Assistant {
         text: String::new(),
         model: state.current_model.clone(),
@@ -119,7 +120,10 @@ pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolR
 
 pub fn on_agent_end(state: &mut AppState) {
     state.agent_running = false;
-    state.current_model = None;
+    // P0-AGENT-TIMEOUT: Clear agent start time on end
+    state.agent_start_time = None;
+    // NOTE: Do not clear current_model - it contains the user's configured model
+    // and must persist across agent runs for subsequent submissions.
     // BG-5 FIX: Clear any pending permission modal
     if state.mode == TuiMode::Permission {
         state.permission_modal.tool = None;
@@ -137,6 +141,8 @@ pub fn on_agent_error(state: &mut AppState, message: String) {
     let recoverable = is_recoverable_error(&sanitized_message);
     state.messages.push(MessageItem::Error { message: sanitized_message, recoverable });
     state.agent_running = false;
+    // P0-AGENT-TIMEOUT: Clear agent start time on error
+    state.agent_start_time = None;
     // BG-2 FIX: Always reset to Chat on error (unless in Onboarding)
     // Prevents getting stuck in Permission mode if agent errors out
     if state.mode != TuiMode::Onboarding {
