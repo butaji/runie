@@ -478,4 +478,131 @@ mod tests {
         
         assert_eq!(result.pass_rate(), 0.5);
     }
+
+    #[test]
+    fn test_pass_rate_all_skipped() {
+        let result = HarnessResult {
+            task_results: vec![
+                TaskResult {
+                    task_id: "t1".to_string(),
+                    status: TaskStatus::Skipped,
+                    elapsed_ms: 0,
+                    checks_passed: 0,
+                    checks_total: 0,
+                    detail: String::new(),
+                },
+                TaskResult {
+                    task_id: "t2".to_string(),
+                    status: TaskStatus::Skipped,
+                    elapsed_ms: 0,
+                    checks_passed: 0,
+                    checks_total: 0,
+                    detail: String::new(),
+                },
+            ],
+            total_ms: 0,
+        };
+        
+        assert_eq!(result.pass_rate(), 0.0, "All skipped should return 0.0 pass rate");
+    }
+
+    #[test]
+    fn test_pass_rate_mixed_statuses() {
+        let result = HarnessResult {
+            task_results: vec![
+                TaskResult {
+                    task_id: "t1".to_string(),
+                    status: TaskStatus::Pass,
+                    elapsed_ms: 100,
+                    checks_passed: 5,
+                    checks_total: 5,
+                    detail: String::new(),
+                },
+                TaskResult {
+                    task_id: "t2".to_string(),
+                    status: TaskStatus::Fail,
+                    elapsed_ms: 100,
+                    checks_passed: 3,
+                    checks_total: 5,
+                    detail: String::new(),
+                },
+                TaskResult {
+                    task_id: "t3".to_string(),
+                    status: TaskStatus::Skipped,
+                    elapsed_ms: 0,
+                    checks_passed: 0,
+                    checks_total: 0,
+                    detail: String::new(),
+                },
+            ],
+            total_ms: 200,
+        };
+        
+        // Only Pass counts: 1 Pass out of 3 total = 0.333...
+        assert_eq!(result.pass_rate(), 1.0 / 3.0, "Only Pass counts toward pass rate");
+    }
+
+    #[test]
+    fn test_csv_output_format() {
+        let result = HarnessResult {
+            task_results: vec![
+                TaskResult {
+                    task_id: "test_task".to_string(),
+                    status: TaskStatus::Pass,
+                    elapsed_ms: 1234,
+                    checks_passed: 5,
+                    checks_total: 5,
+                    detail: String::new(),
+                },
+            ],
+            total_ms: 1234,
+        };
+        
+        let csv = result.to_csv();
+        let mut lines = csv.lines();
+        
+        // Verify header
+        let header = lines.next().unwrap();
+        assert_eq!(header, "task_id,status,elapsed_ms,checks_passed,checks_total");
+        
+        // Verify row
+        let row = lines.next().unwrap();
+        assert_eq!(row, "test_task,pass,1234,5,5");
+        
+        // No more lines
+        assert!(lines.next().is_none());
+    }
+
+    #[test]
+    fn test_harness_result_to_csv() {
+        let result = HarnessResult {
+            task_results: vec![
+                TaskResult {
+                    task_id: "task1".to_string(),
+                    status: TaskStatus::Pass,
+                    elapsed_ms: 100,
+                    checks_passed: 3,
+                    checks_total: 3,
+                    detail: String::new(),
+                },
+                TaskResult {
+                    task_id: "task2".to_string(),
+                    status: TaskStatus::Fail,
+                    elapsed_ms: 200,
+                    checks_passed: 1,
+                    checks_total: 5,
+                    detail: String::new(),
+                },
+            ],
+            total_ms: 300,
+        };
+        
+        let csv = result.to_csv();
+        let lines: Vec<&str> = csv.lines().collect();
+        
+        assert_eq!(lines.len(), 3); // header + 2 rows
+        assert_eq!(lines[0], "task_id,status,elapsed_ms,checks_passed,checks_total");
+        assert_eq!(lines[1], "task1,pass,100,3,3");
+        assert_eq!(lines[2], "task2,fail,200,1,5");
+    }
 }

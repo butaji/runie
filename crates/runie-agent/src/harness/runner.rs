@@ -386,6 +386,85 @@ fn list_tasks() -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+
+    fn create_test_task(task_id: &str, task_json: &str) -> std::path::PathBuf {
+        let task_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("harness")
+            .join("tasks")
+            .join(task_id);
+        let _ = fs::create_dir_all(&task_path);
+        let _ = fs::write(task_path.join("task.json"), task_json);
+        task_path
+    }
+
+    fn remove_test_task(task_id: &str) {
+        let task_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("harness")
+            .join("tasks")
+            .join(task_id);
+        let _ = fs::remove_dir_all(&task_path);
+    }
+
+    #[tokio::test]
+    async fn test_list_tasks_empty_directory() {
+        let task_id = "test_empty_tasks_dir";
+        remove_test_task(task_id);
+        // Ensure directory does not exist
+        let task_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("harness")
+            .join("tasks")
+            .join(task_id);
+        let _ = fs::remove_dir_all(&task_path);
+
+        let tasks = list_tasks();
+        assert!(!tasks.contains(&task_id.to_string()), "Empty dir should not appear in tasks");
+    }
+
+    #[tokio::test]
+    async fn test_run_task_no_grader_skipped() {
+        let task_id = "test_no_grader_task";
+        let task_json = r#"{
+            "id": "test_no_grader_task",
+            "name": "Test No Grader",
+            "description": "Task without grader",
+            "setup": {"files": {}},
+            "expected": {},
+            "grader": null
+        }"#;
+        create_test_task(task_id, task_json);
+
+        let config = HarnessConfig::default();
+        let result = run_harness_task(task_id, &config).await;
+
+        remove_test_task(task_id);
+
+        assert_eq!(result.status, TaskStatus::Skipped, "Missing grader should skip task");
+    }
+
+    #[tokio::test]
+    async fn test_run_task_grader_not_found_skipped() {
+        let task_id = "test_grader_missing_task";
+        let task_json = r#"{
+            "id": "test_grader_missing_task",
+            "name": "Test Grader Missing",
+            "description": "Task with missing grader file",
+            "setup": {"files": {}},
+            "expected": {},
+            "grader": "grader.py"
+        }"#;
+        create_test_task(task_id, task_json);
+
+        let config = HarnessConfig::default();
+        let result = run_harness_task(task_id, &config).await;
+
+        remove_test_task(task_id);
+
+        assert_eq!(result.status, TaskStatus::Skipped, "Grader file not found should skip task");
+    }
 
     #[tokio::test]
     async fn test_harness_runs_all_tasks() {

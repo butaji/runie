@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -109,6 +110,25 @@ pub enum PermissionDecision {
         tool_name: String,
         tool_args: String,
     },
+}
+
+impl Display for PermissionDecision {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            PermissionDecision::Allow { tool_name, .. } => {
+                write!(f, "Allow({})", tool_name)
+            }
+            PermissionDecision::Deny { tool_name, .. } => {
+                write!(f, "Deny({})", tool_name)
+            }
+            PermissionDecision::AllowAlways { tool_name, .. } => {
+                write!(f, "AllowAlways({})", tool_name)
+            }
+            PermissionDecision::Skip { tool_name, .. } => {
+                write!(f, "Skip({})", tool_name)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

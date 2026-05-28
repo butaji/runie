@@ -3,7 +3,7 @@ use crate::events::*;
 use crate::tools::AgentTool;
 use crate::{Hook, HookDecision};
 use runie_ai::Provider;
-use runie_core::{Message, ToolSchema, Event as LlmEvent, Context, ToolCall as CoreToolCall};
+use runie_core::{Message, ToolSchema, Event as LlmEvent, Context, ToolCall as CoreToolCall, ProviderError};
 use runie_tools::ToolRegistry;
 use tokio::sync::{mpsc, Mutex};
 use futures::StreamExt;
@@ -101,7 +101,7 @@ async fn send_event<M: TryFrom<AgentEvent> + Send + 'static>(msg_tx: &mpsc::Send
 }
 
 /// Calculate estimated context window usage as a percentage.
-fn calculate_context_window_usage(messages: &[AgentMessage], context_window: usize) -> f32 {
+pub(crate) fn calculate_context_window_usage(messages: &[AgentMessage], context_window: usize) -> f32 {
     let total_chars: usize = messages.iter()
         .map(|m| format_message_content(&m.content).len())
         .sum();
@@ -111,6 +111,41 @@ fn calculate_context_window_usage(messages: &[AgentMessage], context_window: usi
     } else {
         0.0
     }
+}
+
+/// Start chat with retry logic for rate limit errors.
+/// Returns the stream on success, or the final error after retries are exhausted.
+/// Non-rate-limit errors (like 401) fail immediately without retry.
+pub(crate) async fn start_chat_with_retry(
+    provider: Arc<dyn Provider>,
+    messages: Vec<Message>,
+    tools: Vec<ToolSchema>,
+) -> Result<Pin<Box<dyn futures::Stream<Item = LlmEvent> + Send + 'static>>, ProviderError> {
+    const MAX_RETRIES: u32 = 4; // 3 failures + 1 success
+    const BASE_DELAY_MS: u64 = 1000; // 1 second base delay
+
+    let mut last_error: ProviderError = ProviderError::ApiError("Unknown error".to_string());
+
+    for attempt in 0..MAX_RETRIES {
+        match provider.chat(messages.clone(), tools.clone()).await {
+            Ok(stream) => return Ok(stream),
+            Err(e) => {
+                last_error = e.clone();
+                // Only retry on rate limit errors, fail immediately on others (401, etc.)
+                if !matches!(e, ProviderError::RateLimited) {
+                    return Err(e);
+                }
+                // Exponential backoff: 1s, 2s, 4s between retries
+                if attempt < MAX_RETRIES - 1 {
+                    let delay_ms = BASE_DELAY_MS * 2u64.pow(attempt);
+                    tracing::info!("Rate limited, retrying in {}ms (attempt {}/{})", delay_ms, attempt + 1, MAX_RETRIES);
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                }
+            }
+        }
+    }
+
+    Err(last_error)
 }
 
 /// Classify an error into type and recoverability.
@@ -184,8 +219,8 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         // Build LLM messages
         let llm_messages = build_llm_messages(&config.system_prompt, &messages);
 
-        // Start streaming
-        let stream = provider.chat(llm_messages, tool_schemas.clone()).await
+        // Start streaming with retry for rate limit errors
+        let stream = start_chat_with_retry(provider.clone(), llm_messages, tool_schemas.clone()).await
             .map_err(|e| AgentLoopError::ProviderError(e.to_string()))?;
 
         // Send message_start event with turn count

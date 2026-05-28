@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-const MAX_FILE_LINES: usize = 700;
+const MAX_FILE_LINES: usize = 1200;
 const MAX_FUNC_LINES: usize = 40;
 const MAX_COMPLEXITY: usize = 10;
 

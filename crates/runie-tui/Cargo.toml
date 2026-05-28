@@ -14,3 +14,6 @@ ratatui-textarea = "0.9"
 crossterm = { workspace = true }
 opaline = "0.1"
 tracing = { workspace = true }
+
+[dev-dependencies]
+insta = { version = "1.39", features = ["yaml", "redactions"] }

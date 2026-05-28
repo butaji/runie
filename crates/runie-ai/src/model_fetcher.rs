@@ -669,6 +669,20 @@ mod tests {
     }
 
     #[test]
+    fn test_model_registry_lookup_known_provider() {
+        let models = get_provider_models("openai");
+        assert!(models.is_some());
+        let models = models.unwrap();
+        assert!(!models.is_empty());
+    }
+
+    #[test]
+    fn test_model_registry_lookup_unknown_provider() {
+        let models = get_provider_models("nonexistent");
+        assert!(models.is_none());
+    }
+
+    #[test]
     fn test_all_providers_have_models() {
         let providers = vec![
             "openai", "anthropic", "groq", "together", "xai", "mistral",

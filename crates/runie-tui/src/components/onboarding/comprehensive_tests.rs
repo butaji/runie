@@ -435,7 +435,7 @@ mod tests {
         }
 
         // Press Enter to select the filtered provider
-        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        let _cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::KeyInput);
         assert!(state.onboarding.as_ref().unwrap().selected_provider.is_some());
         let provider_idx = state.onboarding.as_ref().unwrap().selected_provider.unwrap();
@@ -455,7 +455,7 @@ mod tests {
         assert_eq!(state.onboarding.as_ref().unwrap().get_filtered_provider_count(), 0);
 
         // Pressing Enter with no matches should stay on ProviderSelect
-        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        let _cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::ProviderSelect);
         assert!(state.onboarding.as_ref().unwrap().error_message.is_some());
     }
@@ -534,7 +534,7 @@ mod tests {
         }
 
         // Press Enter to select the filtered model
-        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        let _cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Complete);
         assert!(state.onboarding.as_ref().unwrap().selected_model.is_some());
     }
@@ -554,5 +554,203 @@ mod tests {
         // Type a search - selected_item should reset to 0
         handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput('o'));
         assert_eq!(state.onboarding.as_ref().unwrap().selected_item, 0);
+    }
+
+    // ─── Category 7: BUG-13 Esc/Skip Behavior ─────────────────────────────────
+
+    #[test]
+    fn test_skip_onboarding_esc() {
+        // BUG-13: Currently Esc on Welcome maps to Back, which stays at Welcome.
+        // Should map to Skip (clear onboarding) instead.
+        let mut state = setup();
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Welcome);
+        // OnboardingBack on Welcome stays at Welcome (prev_step returns Welcome)
+        handle_onboarding_msg(&mut state, Msg::OnboardingBack);
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Welcome);
+        // BUG: onboarding is NOT None when it should be (Esc should skip)
+        assert!(state.onboarding.is_some());
+        // OnboardingSkip clears onboarding immediately
+        handle_onboarding_msg(&mut state, Msg::OnboardingSkip);
+        assert!(state.onboarding.is_none());
+        assert_eq!(state.mode, TuiMode::Chat);
+    }
+
+    // ─── Category 8: Paste Behavior ────────────────────────────────────────────
+
+    #[test]
+    fn test_paste_into_api_key() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        // Paste text at KeyInput step
+        handle_onboarding_msg(&mut state, Msg::Paste("sk-test-key".to_string()));
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "sk-test-key");
+        // Paste appends, not replaces
+        handle_onboarding_msg(&mut state, Msg::Paste("-extra".to_string()));
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "sk-test-key-extra");
+    }
+
+    #[test]
+    fn test_paste_at_welcome_ignored() {
+        let mut state = setup();
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Welcome);
+        // Paste on Welcome should be ignored (_ => {})
+        handle_onboarding_msg(&mut state, Msg::Paste("ignored".to_string()));
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Welcome);
+        assert!(state.onboarding.is_some());
+    }
+
+    // ─── Category 9: API Key Validation & Fetch Transition ─────────────────────
+
+    #[test]
+    fn test_valid_key_fetch_transition() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().api_key_input = "sk-validkey123".to_string();
+        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        assert!(state.onboarding.as_ref().unwrap().is_fetching_models);
+        assert!(cmds.iter().any(|c| matches!(c, Cmd::FetchModels { .. })));
+    }
+
+    #[test]
+    fn test_retry_after_fetch_failure() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
+        // Trigger fetch failure
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext); // starts fetch
+        handle_onboarding_msg(&mut state, Msg::ModelsFetchFailed("Network error".to_string()));
+        assert!(state.onboarding.as_ref().unwrap().fetch_error.is_some());
+        assert!(state.onboarding.as_ref().unwrap().error_message.is_some());
+        // Retry (press Next again with same key)
+        let _cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        // clear_fetch_error is called on retry
+        assert!(state.onboarding.as_ref().unwrap().fetch_error.is_none());
+        assert!(state.onboarding.as_ref().unwrap().is_fetching_models);
+    }
+
+    // ─── Category 10: Token Backspace Edge Cases ───────────────────────────────
+
+    #[test]
+    fn test_token_backspace_single_separator() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        // Input just a dash
+        handle_onboarding_msg(&mut state, Msg::OnboardingKeyInput('-'));
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "-");
+        // Single backspace removes entire separator token
+        handle_onboarding_msg(&mut state, Msg::OnboardingKeyBackspace);
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "");
+    }
+
+    #[test]
+    fn test_token_backspace_all_separators() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        // Input two dashes
+        handle_onboarding_msg(&mut state, Msg::OnboardingKeyInput('-'));
+        handle_onboarding_msg(&mut state, Msg::OnboardingKeyInput('-'));
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "--");
+        // Single backspace removes all trailing separators and token
+        handle_onboarding_msg(&mut state, Msg::OnboardingKeyBackspace);
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "");
+    }
+
+    // ─── Category 11: Empty Filter & Selection ─────────────────────────────────
+
+    #[test]
+    fn test_empty_filtered_list_enter() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        // Search with no matches
+        for c in "zzzznoexists".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+        assert_eq!(state.onboarding.as_ref().unwrap().get_filtered_provider_count(), 0);
+        // Enter with empty filtered list shows error
+        let _cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        assert!(state.onboarding.as_ref().unwrap().error_message.is_some());
+    }
+
+    // ─── Category 12: Pluralization ───────────────────────────────────────────
+
+    #[test]
+    fn test_pluralization_one_model() {
+        let mut state = setup();
+        let o = state.onboarding.as_mut().unwrap();
+        o.step = OnboardingStep::Complete;
+        o.selected_item = 1;
+        let openai_idx = o.providers.iter().position(|p| p.id == "openai").expect("OpenAI provider should exist");
+        o.selected_provider = Some(openai_idx);
+        o.selected_model = Some(0);
+        o.api_key_input = "sk-test".to_string();
+        o.models.push(crate::components::onboarding::ModelOption {
+            name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "".to_string()
+        });
+        drop(o);
+        let o = state.onboarding.as_ref().unwrap();
+        let model_count = o.models.len();
+        assert_eq!(model_count, 1);
+        let model_word = if model_count == 1 { "model" } else { "models" };
+        assert_eq!(model_word, "model");
+    }
+
+    #[test]
+    fn test_pluralization_many_models() {
+        let mut state = setup();
+        let o = state.onboarding.as_mut().unwrap();
+        o.step = OnboardingStep::Complete;
+        o.selected_item = 1;
+        let openai_idx = o.providers.iter().position(|p| p.id == "openai").expect("OpenAI provider should exist");
+        o.selected_provider = Some(openai_idx);
+        o.selected_model = Some(0);
+        o.api_key_input = "sk-test".to_string();
+        o.models.push(crate::components::onboarding::ModelOption {
+            name: "GPT-4o".to_string(), id: "gpt-4o".to_string(), description: "".to_string()
+        });
+        o.models.push(crate::components::onboarding::ModelOption {
+            name: "GPT-4o Mini".to_string(), id: "gpt-4o-mini".to_string(), description: "".to_string()
+        });
+        drop(o);
+        let o = state.onboarding.as_ref().unwrap();
+        let model_count = o.models.len();
+        assert_eq!(model_count, 2);
+        let model_word = if model_count == 1 { "model" } else { "models" };
+        assert_eq!(model_word, "models");
     }
 }
