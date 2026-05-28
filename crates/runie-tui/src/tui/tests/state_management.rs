@@ -192,6 +192,7 @@ fn test_update_routes_to_all_domains() {
             usage: None,
             stop_reason: None,
             error_message: None,
+            tool_calls: vec![],
         },
         turn: 1,
     }));

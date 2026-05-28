@@ -1,5 +1,7 @@
+mod actors;
 mod agent_spawn;
 mod context_loader;
+mod event_logger;
 mod event_stream;
 mod git;
 mod logging;
@@ -83,6 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging and event stream
     let event_logger = if let Some(runie_dir) = settings::runie_dir() {
         logging::init_logging(&runie_dir);
+        // Initialize comprehensive event logger
+        let logs_dir = runie_dir.join("logs");
+        event_logger::init_event_logger(&logs_dir);
         Some(EventStreamLogger::new(&runie_dir))
     } else {
         None

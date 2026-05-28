@@ -55,7 +55,7 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
                 state.session_token_usage.estimated_cost += cost;
             }
         }
-        AgentEvent::TurnEnd { .. } | AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } => {}
+        AgentEvent::TurnEnd { .. } | AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } | AgentEvent::ContextCompacted { .. } => {}
     }
 }
 
@@ -278,6 +278,7 @@ pub fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
             usage: None,
             stop_reason: None,
             error_message: None,
+            tool_calls: vec![],
         }),
         MessageItem::Assistant { text, .. } => Some(AgentMessage {
             role: "assistant".to_string(),
@@ -286,6 +287,7 @@ pub fn to_agent_messages(items: &[MessageItem]) -> Vec<AgentMessage> {
             usage: None,
             stop_reason: None,
             error_message: None,
+            tool_calls: vec![],
         }),
         // P2-1: Don't include Error messages in agent context
         MessageItem::Error { .. } => None,

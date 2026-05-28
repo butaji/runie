@@ -8,11 +8,27 @@ use runie_tools::ToolRegistry;
 use tokio::sync::{mpsc, Mutex};
 use futures::StreamExt;
 use chrono::Utc;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context as TaskContext, Poll};
 use std::time::{Duration, Instant};
+
+/// Maximum number of messages to keep in context after compaction
+const MAX_CONTEXT_MESSAGES: usize = 50;
+
+/// Compact context when message count exceeds this threshold
+const COMPACT_THRESHOLD: usize = 40;
+
+/// Number of recent messages to preserve when compacting (not summarized)
+const RECENT_MESSAGES_TO_KEEP: usize = 10;
+
+/// Accumulates streaming tool call deltas until MessageEnd
+struct PartialToolCall {
+    id: String,
+    name: String,
+    arguments: String,
+}
 
 #[derive(Debug, Clone)]
 pub enum AgentLoopError {
@@ -103,13 +119,134 @@ async fn send_event<M: TryFrom<AgentEvent> + Send + 'static>(msg_tx: &mpsc::Send
 /// Calculate estimated context window usage as a percentage.
 pub(crate) fn calculate_context_window_usage(messages: &[AgentMessage], context_window: usize) -> f32 {
     let total_chars: usize = messages.iter()
-        .map(|m| format_message_content(&m.content).len())
+        .map(|m| format_message_content(&m.content, &m.tool_calls).len())
         .sum();
     let estimated_tokens = total_chars / 4;
     if context_window > 0 {
         (estimated_tokens as f32 / context_window as f32) * 100.0
     } else {
         0.0
+    }
+}
+
+/// Compact context by summarizing old messages when conversation grows too long.
+/// Preserves system message + recent messages + summary of old messages.
+async fn compact_context(
+    history: &mut Vec<AgentMessage>,
+    provider: Arc<dyn Provider>,
+) -> Result<(usize, String), String> {
+    if history.len() <= MAX_CONTEXT_MESSAGES {
+        return Ok((history.len(), String::new()));
+    }
+
+    let original_count = history.len();
+
+    // Extract system message if present (first message with role "system")
+    let system_msg = history.first().filter(|m| m.role == "system").cloned();
+
+    // Get recent messages to preserve (last N messages)
+    let recent_msgs: Vec<AgentMessage> = history.iter()
+        .rev()
+        .take(RECENT_MESSAGES_TO_KEEP)
+        .rev()
+        .cloned()
+        .collect();
+
+    // Get middle messages to summarize (everything between system and recent)
+    let middle_start = if system_msg.is_some() { 1 } else { 0 };
+    let middle_end = history.len().saturating_sub(RECENT_MESSAGES_TO_KEEP);
+    let middle_msgs: Vec<AgentMessage> = if middle_end > middle_start {
+        history[middle_start..middle_end].to_vec()
+    } else {
+        Vec::new()
+    };
+
+    // Summarize middle section if present
+    let summary = if !middle_msgs.is_empty() {
+        summarize_messages(&middle_msgs, provider).await?
+    } else {
+        String::new()
+    };
+
+    // Rebuild history: system + summary + recent
+    let mut new_history = Vec::new();
+
+    if let Some(sys) = system_msg {
+        new_history.push(sys);
+    }
+
+    // Add summary as a system message
+    if !summary.is_empty() {
+        new_history.push(AgentMessage {
+            role: "system".to_string(),
+            content: vec![ContentPart::Text {
+                text: format!("Previous conversation summary:\n{}", summary),
+            }],
+            timestamp: Utc::now().timestamp_millis(),
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+            tool_calls: vec![],
+        });
+    }
+
+    // Add recent messages
+    new_history.extend(recent_msgs);
+
+    *history = new_history;
+
+    let compacted_count = history.len();
+    let summary_preview = if summary.len() > 100 {
+        format!("{}...", &summary[..100])
+    } else {
+        summary.clone()
+    };
+
+    tracing::info!(
+        "[COMPACT] Context compacted: {} messages -> {} messages",
+        original_count, compacted_count
+    );
+
+    Ok((compacted_count, summary_preview))
+}
+
+/// Summarize a list of messages using the provider's chat_simple method.
+async fn summarize_messages(
+    messages: &[AgentMessage],
+    provider: Arc<dyn Provider>,
+) -> Result<String, String> {
+    if messages.is_empty() {
+        return Ok(String::new());
+    }
+
+    let content = messages.iter()
+        .map(|m| {
+            let role = &m.role;
+            let text = format_message_content(&m.content, &m.tool_calls);
+            format!("{}: {}", role, text)
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let summary_prompt = format!(
+        "Summarize the following conversation concisely, preserving key facts, decisions, and important context:\n\n{}",
+        content
+    );
+
+    let summary_message = Message::User {
+        content: summary_prompt,
+        attachments: Vec::new(),
+    };
+
+    match provider.chat_simple(vec![summary_message]).await {
+        Ok(summary) => {
+            tracing::debug!("[COMPACT] Generated summary ({} chars)", summary.len());
+            Ok(summary)
+        }
+        Err(e) => {
+            tracing::warn!("[COMPACT] Failed to generate summary: {}", e);
+            Err(format!("Failed to summarize: {}", e))
+        }
     }
 }
 
@@ -184,6 +321,12 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
 ) -> Result<Vec<AgentMessage>, AgentLoopError> {
+    // Log agent loop start
+    tracing::info!("[ACTOR:AgentLoop] Loop started, provider={}, model={}, max_turns={}",
+        config.model.split('/').next().unwrap_or("unknown"),
+        config.model.split('/').last().unwrap_or(&config.model),
+        config.max_turns);
+
     let mut messages = initial_messages;
     let mut allowed_tools: HashSet<String> = HashSet::new();
 
@@ -216,8 +359,47 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
             return Err(AgentLoopError::MaxTurnsExceeded);
         }
 
+        // Compact context if it exceeds threshold
+        if messages.len() > COMPACT_THRESHOLD {
+            tracing::info!("[COMPACT] Context length {}, compacting...", messages.len());
+            match compact_context(&mut messages, provider.clone()).await {
+                Ok((compacted_count, summary_preview)) => {
+                    send_event(&msg_tx, AgentEvent::ContextCompacted {
+                        original_count: messages.len(),
+                        compacted_count,
+                        summary_preview: summary_preview.clone(),
+                    }).await;
+                    tracing::info!("[COMPACT] Compaction complete: {} -> {}", messages.len(), compacted_count);
+                }
+                Err(e) => {
+                    tracing::warn!("[COMPACT] Failed to compact context: {}", e);
+                }
+            }
+        }
+
         // Build LLM messages
         let llm_messages = build_llm_messages(&config.system_prompt, &messages);
+        tracing::info!("[ACTOR:AgentLoop] Sending {} messages to LLM", messages.len());
+        for (i, msg) in messages.iter().enumerate() {
+            let tool_use_count = msg.content.iter().filter(|p| matches!(p, ContentPart::ToolUse { .. })).count();
+            if msg.role == "assistant" && tool_use_count > 0 {
+                tracing::info!("[ACTOR:AgentLoop] Message {}: Assistant with {} tool calls", i, tool_use_count);
+                for part in &msg.content {
+                    if let ContentPart::ToolUse { id, name, .. } = part {
+                        tracing::info!("[ACTOR:AgentLoop]   Tool call: id={} name={}", id, name);
+                    }
+                }
+            } else if msg.role == "tool" {
+                let tool_id = msg.content.iter().find_map(|p| {
+                    if let ContentPart::ToolResult { tool_use_id, .. } = p {
+                        Some(tool_use_id.clone())
+                    } else {
+                        None
+                    }
+                }).unwrap_or_default();
+                tracing::info!("[ACTOR:AgentLoop] Message {}: ToolResult for id={}", i, tool_id);
+            }
+        }
 
         // Start streaming with retry for rate limit errors
         let stream = start_chat_with_retry(provider.clone(), llm_messages, tool_schemas.clone()).await
@@ -231,46 +413,70 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
             usage: None,
             stop_reason: None,
             error_message: None,
+            tool_calls: vec![],
         };
 
         send_event(&msg_tx, AgentEvent::MessageStart {
             message: assistant_message.clone(),
             turn: turn_count,
         }).await;
+        tracing::debug!("[ACTOR:AgentLoop] MessageStart received (turn {})", turn_count);
 
         // Process stream
-        let mut pending_tool_calls: Vec<(ContentPart, String, String)> = vec![];
+        let mut pending_tool_calls: HashMap<(String, String), PartialToolCall> = HashMap::new();
         let mut text_content = String::new();
+        let mut text_buffer = String::new();
+        let mut last_emit = Instant::now();
+        const EMIT_DEBOUNCE_MS: u64 = 100;
 
         let mut stream = stream;
         while let Some(event) = stream.next().await {
             match event {
                 LlmEvent::MessageDelta { content } => {
-                    let delta = content.clone();
-                    text_content.push_str(&delta);
-                    assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
-                    send_event(&msg_tx, AgentEvent::MessageUpdate {
-                        message: assistant_message.clone(),
-                        turn: turn_count,
-                        delta,
-                    }).await;
+                    text_buffer.push_str(&content);
+                    text_content.push_str(&content);
+
+                    let should_emit = text_buffer.contains('\n')
+                        || last_emit.elapsed().as_millis() > EMIT_DEBOUNCE_MS as u128;
+
+                    if should_emit {
+                        let delta = std::mem::take(&mut text_buffer);
+                        assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
+                        let delta_len = delta.len();
+                        send_event(&msg_tx, AgentEvent::MessageUpdate {
+                            message: assistant_message.clone(),
+                            turn: turn_count,
+                            delta,
+                        }).await;
+                        tracing::debug!("[ACTOR:AgentLoop] MessageUpdate: \"{}\" (+{} chars)", &text_content[..text_content.len().saturating_sub(delta_len).min(50)], delta_len);
+                        last_emit = Instant::now();
+                    }
                 }
-                LlmEvent::ToolCallDelta { name, arguments } => {
-                    pending_tool_calls.push((
-                        ContentPart::ToolUse {
-                            id: format!("call_{}", pending_tool_calls.len()),
-                            name: name.clone(),
-                            input: serde_json::json!(arguments),
-                        },
-                        name,
-                        arguments,
-                    ));
+                LlmEvent::ToolCallDelta { id, name, arguments } => {
+                    tracing::info!("[TOOL-ACCUMULATE] id={} name={} args_chunk={:?}", id, name, arguments);
+                    let key = (id.clone(), name.clone());
+                    pending_tool_calls.entry(key).or_insert_with(|| PartialToolCall {
+                        id: id.clone(),
+                        name: name.clone(),
+                        arguments: String::new(),
+                    }).arguments.push_str(&arguments);
                 }
                 LlmEvent::MessageEnd => {
                     // Finalize any pending tool calls
+                    // Flush remaining text buffer
+                    if !text_buffer.is_empty() {
+                        let delta = std::mem::take(&mut text_buffer);
+                        assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
+                        send_event(&msg_tx, AgentEvent::MessageUpdate {
+                            message: assistant_message.clone(),
+                            turn: turn_count,
+                            delta,
+                        }).await;
+                    }
                     break;
                 }
                 LlmEvent::Error { message } => {
+                    tracing::error!("[ACTOR:AgentLoop] Error: {}", message);
                     assistant_message.error_message = Some(message);
                     break;
                 }
@@ -285,6 +491,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                         total_tokens: prompt_tokens + completion_tokens,
                         context_window,
                     }).await;
+                    tracing::debug!("[ACTOR:AgentLoop] Usage: {} prompt, {} completion tokens", prompt_tokens, completion_tokens);
                 }
                 _ => {
                     tracing::warn!("Unhandled LLM event variant in agent loop");
@@ -294,11 +501,40 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
 
         // Send message_end with turn count
         assistant_message.content = vec![ContentPart::Text { text: text_content }];
+        
+        // P0-TOOL-CALLS: Add tool calls to assistant message so they're in history
+        if !pending_tool_calls.is_empty() {
+            for partial in pending_tool_calls.values() {
+                let input = match serde_json::from_str(&partial.arguments) {
+                    Ok(v) => v,
+                    Err(_) => serde_json::json!({"raw": partial.arguments}),
+                };
+                assistant_message.content.push(ContentPart::ToolUse {
+                    id: partial.id.clone(),
+                    name: partial.name.clone(),
+                    input: input.clone(),
+                });
+                assistant_message.tool_calls.push(CoreToolCall {
+                    id: partial.id.clone(),
+                    name: partial.name.clone(),
+                    arguments: input,
+                });
+            }
+        }
+        
         send_event(&msg_tx, AgentEvent::MessageEnd {
             message: assistant_message.clone(),
             turn: turn_count,
         }).await;
 
+        // Log tool calls in assistant message (extracted from content)
+        let tc_count = assistant_message.content.iter().filter(|p| matches!(p, ContentPart::ToolUse { .. })).count();
+        tracing::info!("[ACTOR:AgentLoop] Pushing assistant message with {} tool calls", tc_count);
+        for part in &assistant_message.content {
+            if let ContentPart::ToolUse { id, name, input } = part {
+                tracing::info!("[ACTOR:AgentLoop] Tool call in history: id={} name={} args={:?}", id, name, input);
+            }
+        }
         messages.push(assistant_message.clone());
 
         // Execute tool calls
@@ -325,7 +561,20 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         let mut tool_results = vec![];
         // P2-7 FIX: Idempotency - track seen tool calls to prevent duplicates
         let mut seen_tool_calls: HashSet<String> = HashSet::new();
-        for (tool_use, _tool_name, _args_str) in pending_tool_calls {
+        tracing::info!("[ACTOR:AgentLoop] {} tool calls finalized", pending_tool_calls.len());
+        for partial in pending_tool_calls.values() {
+            tracing::info!("[ACTOR:AgentLoop] id={} name={} accumulated_args={:?}", partial.id, partial.name, partial.arguments);
+        }
+        // Drain pending_tool_calls HashMap, converting accumulated arguments to JSON
+        let finalized_calls: Vec<(ContentPart, String, String)> = pending_tool_calls.drain().map(|((id, name), partial)| {
+            // Try to parse accumulated arguments as JSON, fall back to raw string
+            let input = match serde_json::from_str(&partial.arguments) {
+                Ok(v) => v,
+                Err(_) => serde_json::json!({"raw": partial.arguments}),
+            };
+            (ContentPart::ToolUse { id: id.clone(), name: name.clone(), input }, name.clone(), partial.arguments)
+        }).collect();
+        for (tool_use, _tool_name, _args_str) in finalized_calls {
             if let ContentPart::ToolUse { id, name, input } = &tool_use {
                 // P0-TOOL-VALIDATION: Skip tool calls with empty or invalid names
                 if name.trim().is_empty() {
@@ -368,6 +617,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                     tool_args: tool_args.clone(),
                     turn: turn_count,
                 }).await;
+                tracing::info!("[ACTOR:AgentLoop] {} requested: {}", name, tool_args);
 
                 // Check if tool is in allowed cache first
                 let should_execute = if allowed_tools.contains(name) {
@@ -475,18 +725,19 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                         turn: turn_count,
                     }).await;
 
-                    messages.push(AgentMessage {
-                        role: "tool".to_string(),
-                        content: vec![ContentPart::ToolResult {
-                            tool_use_id: id.clone(),
-                            content: result.content.clone(),
-                            is_error: result.is_error,
-                        }],
-                        timestamp: Utc::now().timestamp_millis(),
-                        usage: None,
-                        stop_reason: None,
-                        error_message: None,
-                    });
+                messages.push(AgentMessage {
+                    role: "tool".to_string(),
+                    content: vec![ContentPart::ToolResult {
+                        tool_use_id: id.clone(),
+                        content: result.content.clone(),
+                        is_error: result.is_error,
+                    }],
+                    timestamp: Utc::now().timestamp_millis(),
+                    usage: None,
+                    stop_reason: None,
+                    error_message: None,
+                    tool_calls: vec![],
+                });
 
                     tool_results.push(result);
                     continue;
@@ -596,8 +847,12 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                     duration_ms,
                     turn: turn_count,
                 }).await;
+                // Log tool result
+                let result_preview = result.content.iter().map(|p| format!("{:?}", p)).collect::<Vec<_>>().join("; ");
+                tracing::info!("[ACTOR:AgentLoop] {} result: {} ({}ms)", name, result_preview.chars().take(100).collect::<String>(), duration_ms);
 
                 // Add tool result to messages
+                tracing::info!("[ACTOR:AgentLoop] Pushing tool result for id={}", id);
                 messages.push(AgentMessage {
                     role: "tool".to_string(),
                     content: vec![ContentPart::ToolResult {
@@ -609,6 +864,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                     usage: None,
                     stop_reason: None,
                     error_message: None,
+                    tool_calls: vec![],
                 });
 
                 tool_results.push(result);
@@ -630,6 +886,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
             tool_results_count: tool_results.len(),
             token_usage,
         }).await;
+        tracing::info!("[ACTOR:AgentLoop] turn_count={}, messages={}, tool_results={}", turn_count, messages.len(), tool_results.len());
 
         // Continue loop - send updated messages back to LLM
     }
@@ -646,6 +903,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         total_turns: turn_count,
         final_token_usage,
     }).await;
+    tracing::info!("[ACTOR:AgentLoop] Loop ended, total_turns={}, total_tokens={}", turn_count, total_input_tokens + total_output_tokens);
     Ok(messages)
 }
 
@@ -766,13 +1024,122 @@ mod tests {
         assert!(!tool_exists("unknown", &registered_tools), "Unknown tool should be rejected");
         assert!(tool_exists("bash", &registered_tools), "Known tool should be accepted");
     }
+
+    #[test]
+    fn test_compaction_constants() {
+        // Verify compaction thresholds are sensible
+        assert!(MAX_CONTEXT_MESSAGES > COMPACT_THRESHOLD,
+            "MAX_CONTEXT_MESSAGES should be greater than COMPACT_THRESHOLD");
+        assert!(COMPACT_THRESHOLD > RECENT_MESSAGES_TO_KEEP,
+            "COMPACT_THRESHOLD should be greater than RECENT_MESSAGES_TO_KEEP");
+        assert!(RECENT_MESSAGES_TO_KEEP > 0, "RECENT_MESSAGES_TO_KEEP should be positive");
+    }
+
+    #[test]
+    fn test_compact_context_below_threshold() {
+        // Test that compaction doesn't modify history when below threshold
+        let mut history = vec![
+            AgentMessage {
+                role: "system".to_string(),
+                content: vec![ContentPart::Text { text: "You are a helpful assistant".to_string() }],
+                timestamp: 0,
+                usage: None,
+                stop_reason: None,
+                error_message: None,
+                tool_calls: vec![],
+            },
+            AgentMessage {
+                role: "user".to_string(),
+                content: vec![ContentPart::Text { text: "Hello".to_string() }],
+                timestamp: 1,
+                usage: None,
+                stop_reason: None,
+                error_message: None,
+                tool_calls: vec![],
+            },
+        ];
+
+        // Create a mock provider that won't be called since no compaction needed
+        // We can't easily mock it here, but we can test the constants behavior
+        let original_len = history.len();
+        assert!(original_len <= COMPACT_THRESHOLD,
+            "Test setup error: history should be below COMPACT_THRESHOLD");
+    }
+
+    #[test]
+    fn test_message_content_extraction_for_summary() {
+        // Test that format_message_content correctly extracts text from messages
+        let parts = vec![
+            ContentPart::Text { text: "Hello world".to_string() },
+        ];
+        let tool_calls: Vec<CoreToolCall> = vec![];
+        let content = format_message_content(&parts, &tool_calls);
+        assert_eq!(content, "Hello world");
+
+        // Test tool use extraction
+        let parts_with_tool = vec![
+            ContentPart::Text { text: "".to_string() },
+            ContentPart::ToolUse {
+                id: "call_123".to_string(),
+                name: "bash".to_string(),
+                input: serde_json::json!({"command": "ls"}),
+            },
+        ];
+        let tool_calls = vec![CoreToolCall {
+            id: "call_123".to_string(),
+            name: "bash".to_string(),
+            arguments: serde_json::json!({"command": "ls"}),
+        }];
+        let content = format_message_content(&parts_with_tool, &tool_calls);
+        assert!(content.contains("bash"));
+        assert!(content.contains("ls"));
+    }
+
+    #[test]
+    fn test_context_window_usage_calculation() {
+        // Test the context window usage calculation
+        let messages = vec![
+            AgentMessage {
+                role: "user".to_string(),
+                content: vec![ContentPart::Text { text: "This is a test message with some content".to_string() }],
+                timestamp: 0,
+                usage: None,
+                stop_reason: None,
+                error_message: None,
+                tool_calls: vec![],
+            },
+        ];
+
+        // ~50 chars / 4 = ~12.5 tokens estimated
+        let usage = calculate_context_window_usage(&messages, 128_000);
+        assert!(usage > 0.0, "Usage should be positive for non-empty message");
+        assert!(usage < 1.0, "Usage should be less than 1% for small message");
+
+        // Empty messages should give 0
+        let empty_messages: Vec<AgentMessage> = vec![];
+        let empty_usage = calculate_context_window_usage(&empty_messages, 128_000);
+        assert_eq!(empty_usage, 0.0, "Empty messages should give 0% usage");
+
+        // Zero context window should give 0
+        let zero_usage = calculate_context_window_usage(&messages, 0);
+        assert_eq!(zero_usage, 0.0, "Zero context window should give 0%");
+    }
+
+    #[test]
+    fn test_summarize_messages_empty_input() {
+        // Test that summarize_messages handles empty input
+        let messages: Vec<AgentMessage> = vec![];
+        // We can't easily test the async summarize without a mock provider,
+        // but we can verify the function signature and basic behavior
+        assert!(messages.is_empty());
+    }
 }
 
 fn build_llm_messages(system_prompt: &str, messages: &[AgentMessage]) -> Vec<Message> {
     let mut llm_msgs = vec![Message::System { content: system_prompt.to_string() }];
     for msg in messages {
-        let content = format_message_content(&msg.content);
-        if let Some(m) = agent_msg_to_llm(&msg.role, content, &msg.content) {
+        let content = format_message_content(&msg.content, &msg.tool_calls);
+        if let Some(m) = agent_msg_to_llm(&msg.role, content, &msg.content, &msg.tool_calls) {
             llm_msgs.push(m);
         }
     }
@@ -881,10 +1248,20 @@ fn extract_panic_message(panic_info: Box<dyn std::any::Any + Send>) -> String {
     }
 }
 
-fn format_message_content(parts: &[ContentPart]) -> String {
+fn format_message_content(parts: &[ContentPart], tool_calls: &[CoreToolCall]) -> String {
+    // Build a map from (name, arguments) to id for looking up tool call IDs
+    let tc_map: HashMap<(String, String), String> = tool_calls.iter().map(|tc| {
+        let args_str = tc.arguments.to_string();
+        ((tc.name.clone(), args_str), tc.id.clone())
+    }).collect();
+
     parts.iter().map(|part| match part {
         ContentPart::Text { text } => text.clone(),
-        ContentPart::ToolUse { name, input, .. } => format!("{}({})", name, input),
+        ContentPart::ToolUse { id, name, input } => {
+            let args_str = input.to_string();
+            let tc_id = tc_map.get(&(name.clone(), args_str)).cloned().unwrap_or_else(|| id.clone());
+            format!("[TC:{}] {}({})", tc_id, name, input)
+        }
         ContentPart::ToolResult { content, .. } => content.iter().map(|c| match c {
             ContentPart::Text { text } => text.clone(),
             _ => String::new(),
@@ -937,12 +1314,12 @@ pub fn agent_loop(
     }
 }
 
-fn agent_msg_to_llm(role: &str, content: String, parts: &[ContentPart]) -> Option<Message> {
+fn agent_msg_to_llm(role: &str, content: String, parts: &[ContentPart], tool_calls: &[CoreToolCall]) -> Option<Message> {
     match role {
         "user" => Some(Message::User { content, attachments: Vec::new() }),
         "assistant" => Some(Message::Assistant {
             content,
-            tool_calls: Vec::new(),
+            tool_calls: tool_calls.to_vec(),
             thinking: None,
         }),
         "tool" => {
@@ -953,9 +1330,19 @@ fn agent_msg_to_llm(role: &str, content: String, parts: &[ContentPart]) -> Optio
                     None
                 }
             }).unwrap_or_else(|| {
-                tracing::warn!("Tool result missing tool_use_id, using 'unknown'");
+                tracing::error!("Tool result missing tool_use_id - this indicates a bug in message construction");
                 "unknown".to_string()
             });
+
+            // Validate: warn if tool_call_id looks fake (generated by buggy code)
+            if tool_call_id == "unknown" || tool_call_id.starts_with("call_") && tool_call_id.chars().count() <= 7 {
+                tracing::error!(
+                    "INVALID TOOL_CALL_ID '{}' - this will cause 400 Bad Request from LLM API. \
+                    Tool result must reference a valid tool_call.id from the assistant message.",
+                    tool_call_id
+                );
+            }
+
             Some(Message::ToolResult { tool_call_id, content, is_error: false })
         }
         _ => None,

@@ -104,30 +104,49 @@ impl Workspace {
     }
 
     pub fn contains(&self, path: &Path) -> bool {
+        // First, try to canonicalize both paths. This handles symlinks properly.
         let canonical_root = match self.root.canonicalize() {
             Ok(root) => root,
             Err(_) => return false,
         };
 
-        // NOTE: TOCTOU race - between this check and actual file operations,
-        // a symlink could be swapped. The resolved path is canonicalized
-        // to prevent symlink traversal, but there's still a window where
-        // a symlink could be created/modified. Mitigation: always resolve
-        // paths via resolve() which uses contains(), and ensure operations
-        // use the canonicalized form.
-        let absolute_path = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
-        let normalized = if absolute_path.is_relative() {
-            canonical_root.join(absolute_path)
-        } else {
-            absolute_path
-        };
+        // Try to canonicalize the path - if it exists, this handles symlinks
+        if let Ok(canonical_path) = path.canonicalize() {
+            return canonical_path.starts_with(&canonical_root);
+        }
 
-        // Canonicalize the target path to resolve any symlinks
-        let canonical_path = match normalized.canonicalize() {
-            Ok(p) => p,
-            Err(_) => return false, // Path doesn't exist or can't be resolved
-        };
+        // Path doesn't exist. We need to check if the path WOULD be inside the 
+        // workspace if it existed.
+        
+        // Normalize the path to resolve any .. components
+        let normalized = Self::normalize_path(path);
+        
+        // Try canonicalizing the normalized path
+        if let Ok(canonical_normalized) = normalized.canonicalize() {
+            return canonical_normalized.starts_with(&canonical_root);
+        }
+        
+        // If canonicalization fails, check if normalized path starts with root
+        normalized.starts_with(&self.root)
+    }
 
-        canonical_path.starts_with(&canonical_root)
+    /// Normalize a path by resolving `..` and `.` components.
+    fn normalize_path(path: &Path) -> std::path::PathBuf {
+        let mut result = std::path::PathBuf::new();
+        for component in path.components() {
+            match component {
+                std::path::Component::Prefix(_) | std::path::Component::RootDir => {
+                    result = std::path::PathBuf::from("/");
+                }
+                std::path::Component::Normal(s) => {
+                    result.push(s);
+                }
+                std::path::Component::ParentDir => {
+                    result.pop();
+                }
+                std::path::Component::CurDir => {}
+            }
+        }
+        result
     }
 }

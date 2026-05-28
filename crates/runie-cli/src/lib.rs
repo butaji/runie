@@ -3,8 +3,12 @@
 
 pub mod commands;
 pub mod context_loader;
+pub mod provider_factory;
 pub mod session_manager;
 pub mod settings;
+
+#[cfg(test)]
+mod tests;
 
 pub use commands::{Command, CommandParser};
 pub use context_loader::{build_system_prompt, ContextFile, ContextLoader};

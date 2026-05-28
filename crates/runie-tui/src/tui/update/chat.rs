@@ -94,11 +94,13 @@ fn to_agent_messages(items: &[MessageItem]) -> Vec<runie_agent::AgentMessage> {
             role: "user".to_string(),
             content: vec![ContentPart::Text { text: text.clone() }],
             timestamp: 0, usage: None, stop_reason: None, error_message: None,
+            tool_calls: vec![],
         }),
         MessageItem::Assistant { text, .. } => Some(AgentMessage {
             role: "assistant".to_string(),
             content: vec![ContentPart::Text { text: text.clone() }],
             timestamp: 0, usage: None, stop_reason: None, error_message: None,
+            tool_calls: vec![],
         }),
         MessageItem::Error { .. } => None,
         _ => None,

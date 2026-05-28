@@ -139,7 +139,7 @@ fn test_all_update_paths_update_state() {
         run_update(&mut state, Msg::TextareaKey(char_key('i')));
         let cmds = run_update(&mut state, Msg::Submit);
         assert!(!cmds.is_empty(), "Submit with content should produce commands");
-        assert_eq!(state.messages.len(), 1, "Submit should add user message");
+        assert_eq!(state.messages.len(), 2, "Submit should add user message + placeholder assistant");
     }
 
     // Submit without content produces no commands
@@ -233,8 +233,8 @@ fn test_full_pipeline_typing() {
     assert_eq!(tui.content(), "", "Input should be cleared after submit");
     assert_eq!(
         tui.state.messages.len(),
-        msg_count_before + 1,
-        "Should have added user message"
+        msg_count_before + 2,
+        "Should have added user message + placeholder assistant"
     );
 }
 

@@ -91,6 +91,12 @@ impl Settings {
                 self.api_key = Some(val);
             }
         }
+        // Provider-specific env vars
+        if let Ok(val) = std::env::var("MINIMAX_API_KEY") {
+            if self.api_key.is_none() {
+                self.api_key = Some(val);
+            }
+        }
     }
 
     /// Merge settings from CLI arguments

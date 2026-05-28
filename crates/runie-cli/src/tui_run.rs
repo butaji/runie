@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use tokio::signal::ctrl_c;
 use tokio::sync::mpsc;
 use tokio::time::interval;
 use tokio_util::sync::CancellationToken;
@@ -10,11 +11,17 @@ use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop, AgentLoopError};
 use runie_agent::{SafetyHook, Hook};
 use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
+use crate::actors::InputActor;
 use crate::event_stream::EventStreamLogger;
+use crate::event_logger as log;
 use crate::settings::Settings;
 use crate::context_loader::ContextLoader;
 use crate::provider_factory::create_provider;
 use crate::agent_spawn::create_agent_tools;
+
+// Watchdog timeouts for agent stuck detection
+const AGENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(30);
+const AGENT_HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(15);
 
 
 /// Check if user needs onboarding (no provider, model, or API key configured)
@@ -36,6 +43,7 @@ fn needs_onboarding(settings: &Settings) -> bool {
         && std::env::var("ANTHROPIC_API_KEY").is_err()
         && std::env::var("GOOGLE_API_KEY").is_err()
         && std::env::var("RUNIE_API_KEY").is_err()
+        && std::env::var("MINIMAX_API_KEY").is_err()
     {
         return true;
     }
@@ -103,6 +111,13 @@ pub async fn run_tui(
     };
     tui.update(Msg::SetInputRightInfo(input_right_info));
 
+    // P0-MODEL-INIT: Initialize current_model from settings on startup
+    if !settings.provider.is_empty() && !settings.model.is_empty() {
+        tui.state.current_model = Some(format!("{}/{}", settings.provider, settings.model));
+        tui.state.top_bar.model = settings.model.clone();
+        tui.state.top_bar.context_window = Some(128_000); // default
+    }
+
     // Build startup message with context info
     let context_info = if loaded_paths.is_empty() {
         String::new()
@@ -149,50 +164,17 @@ pub async fn run_tui(
     // Cooperative cancellation token for graceful shutdown
     let cancel = CancellationToken::new();
 
-    // Terminal reader - sends Msg directly (using spawn_blocking for cancellation support)
-    let task_cancel = cancel.child_token();
-    let msg_tx3 = msg_tx.clone();
-    // Capture current mode to check before allowing Paste (blocks in Permission/Overlay)
-    let current_mode = tui.state.mode.clone();
-    tokio::task::spawn_blocking(move || {
-        while !task_cancel.is_cancelled() {
-            if crossterm::event::poll(Duration::from_millis(100)).unwrap_or(false) {
-                if let Ok(event) = crossterm::event::read() {
-                    // BUG-03 FIX: Check mode before emitting Paste — block in Permission/Overlay
-                    let msgs = match event {
-                        crossterm::event::Event::Resize(w, h) => vec![Msg::Resize(w, h)],
-                        crossterm::event::Event::Paste(text) => {
-                            if matches!(current_mode, runie_tui::TuiMode::Permission | runie_tui::TuiMode::Overlay) {
-                                vec![]
-                            } else {
-                                vec![Msg::Paste(text)]
-                            }
-                        }
-                        crossterm::event::Event::Key(key) => vec![Msg::TextareaKey(key)],
-                        _ => vec![],
-                    };
-                    // Retry send up to 10 times with 1ms sleep to avoid dropping events
-                    for msg in msgs {
-                        let mut sent = false;
-                        for _ in 0..10 {
-                            if msg_tx3.try_send(msg.clone()).is_ok() {
-                                sent = true;
-                                break;
-                            }
-                            std::thread::sleep(Duration::from_millis(1));
-                        }
-                        if !sent {
-                            // Channel full for >10ms — drop event but keep thread alive
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+    // InputActor - reads terminal events and sends them as Msg variants
+    let input_actor = InputActor::new(msg_tx.clone(), cancel.clone());
+    tokio::spawn(async move {
+        input_actor.run().await;
     });
 
     // Agent task handle for the running agent loop
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
+
+    // Track last agent event time for watchdog
+    let mut last_agent_event = Instant::now();
 
     // Shared permission state (replaces mpsc::channel<PermissionDecision>)
     let permission_state: Arc<tokio::sync::Mutex<Option<PermissionDecision>>> = Arc::new(tokio::sync::Mutex::new(None));
@@ -246,10 +228,16 @@ pub async fn run_tui(
         match cmd {
             Cmd::SpawnAgent { messages } => {
                 if agent_task.is_none() {
+                    log::log_agent_spawned();
                     let provider = match create_provider(mock, settings) {
-                        Ok(p) => p,
+                        Ok(p) => {
+                            log::log_provider_created(&settings.provider, &settings.model, true);
+                            p
+                        }
                         Err(e) => {
                             error!("Failed to create provider: {}", e);
+                            log::log_provider_created(&settings.provider, &settings.model, false);
+                            log::log_agent_error(&format!("Provider creation failed: {}", e));
                             return vec![];
                         }
                     };
@@ -290,9 +278,11 @@ pub async fn run_tui(
                         match result {
                             Ok(Ok(_messages)) => {
                                 // Agent completed normally — AgentEvent::AgentEnd will be sent by the loop
+                                log::log_agent_completed();
                             }
                             Ok(Err(e)) => {
                                 tracing::error!("Agent loop error: {}", e);
+                                log::log_agent_error(&e.to_string());
                                 // Classify error to get error_type, recoverable, context
                                 let (error_type, recoverable, context) = match &e {
                                     AgentLoopError::ProviderError(msg) => (
@@ -326,6 +316,7 @@ pub async fn run_tui(
                             Err(_) => {
                                 // Timeout
                                 tracing::error!("Agent loop timed out after 10 minutes");
+                                log::log_agent_error("Agent loop timed out after 10 minutes");
                                 let _ = msg_tx_clone.send(Msg::AgentEvent(AgentEvent::Error {
                                     message: "Agent loop timed out after 10 minutes".to_string(),
                                     error_type: "timeout".to_string(),
@@ -359,6 +350,7 @@ pub async fn run_tui(
                 // Update TUI state
                 tui.state.current_model = Some(format!("{}/{}", provider, model));
                 tui.state.top_bar.model = model.clone();
+                tui.state.input_right_info = format!("{} · {}", provider, model);
 
                 // P0-CONFIG-PATH: Use crate::settings::config_path() which respects RUNIE_HOME
                 let config_path = crate::settings::config_path()
@@ -405,23 +397,24 @@ pub async fn run_tui(
                 vec![]
             }
             Cmd::FetchModels { provider_id, api_key } => {
-                tracing::info!("[FetchModels] Starting fetch for provider: {}", provider_id);
+                log::log(log::Subsystem::PROVIDER, log::LogLevel::INFO, &format!("[ACTOR:ModelPicker] Starting fetch for provider: {}", provider_id));
+                tracing::info!("[ACTOR:ModelPicker] Starting fetch for provider: {}", provider_id);
                 let tx = msg_tx.clone();
                 tokio::spawn(async move {
-                    tracing::debug!("[FetchModels] Fetch task started");
+                    tracing::debug!("[ACTOR:ModelPicker] Fetch task started");
                     let fetcher = runie_ai::model_fetcher::create_fetcher(&provider_id);
                     match fetcher.fetch_models(&api_key).await {
                         Ok(models) => {
-                            tracing::info!("[FetchModels] Fetched {} models for {}", models.len(), provider_id);
+                            tracing::info!("[ACTOR:ModelPicker] Fetched {} models for {}", models.len(), provider_id);
                             let result = tx.send(Msg::ModelsFetched(models)).await;
                             if let Err(e) = result {
-                                tracing::error!("[FetchModels] Failed to send ModelsFetched: {}", e);
+                                tracing::error!("[ACTOR:ModelPicker] Failed to send ModelsFetched: {}", e);
                             } else {
-                                tracing::debug!("[FetchModels] ModelsFetched sent successfully");
+                                tracing::debug!("[ACTOR:ModelPicker] ModelsFetched sent successfully");
                             }
                         }
                         Err(e) => {
-                            tracing::warn!("[FetchModels] Fetch failed for {}: {}", provider_id, e);
+                            tracing::warn!("[ACTOR:ModelPicker] Fetch failed for {}: {}", provider_id, e);
                             let _ = tx.send(Msg::ModelsFetchFailed(e.to_string())).await;
                         }
                     }
@@ -433,6 +426,13 @@ pub async fn run_tui(
                 vec![]
             }
             Cmd::Interrupt => {
+                // Send error event before aborting so UI gets notified
+                let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
+                    message: "Agent interrupted by user".to_string(),
+                    error_type: "interrupted".to_string(),
+                    recoverable: true,
+                    context: "User pressed Ctrl+C or sent interrupt signal".to_string(),
+                })).await;
                 if let Some(task) = agent_task.take() {
                     task.abort();
                 }
@@ -445,6 +445,9 @@ pub async fn run_tui(
     }
 
     // TEA main loop
+    let mut last_render = Instant::now();
+    const MIN_RENDER_INTERVAL_MS: u64 = 33; // ~30 FPS max render rate
+
     while tui.state.running {
         tokio::select! {
             // Bias: check messages before ticks to prevent starvation
@@ -458,12 +461,20 @@ pub async fn run_tui(
                     other => vec![other],
                 };
 
+                // Track if state changed — determines whether to force render
+                let mut state_changed = false;
+
                 for msg in msgs {
+                // [RAILS] Route message to update()
+                tracing::debug!("[RAILS] Routing {:?} to update()", msg);
+
                 // Log agent events to event stream
                 if let Msg::AgentEvent(ref agent_event) = msg {
                     if let Some(logger) = event_logger {
                         logger.log_agent_event(agent_event);
                     }
+                    // Reset heartbeat tracker on any agent event
+                    last_agent_event = Instant::now();
                 }
 
                 // Handle AgentEnd to clear agent task
@@ -471,16 +482,68 @@ pub async fn run_tui(
                     agent_task = None;
                     let mut guard = permission_state.lock().await;
                     *guard = None;
+                    state_changed = true;
                 }
 
                 // Log model fetch events
                 match &msg {
                     Msg::ModelsFetched(models) => {
-                        tracing::info!("[MainLoop] Received ModelsFetched with {} models", models.len());
+                        tracing::info!("[RAILS] Received ModelsFetched with {} models", models.len());
                     }
                     Msg::ModelsFetchFailed(err) => {
-                        tracing::warn!("[MainLoop] Received ModelsFetchFailed: {}", err);
+                        tracing::warn!("[RAILS] Received ModelsFetchFailed: {}", err);
                     }
+                    _ => {}
+                }
+
+                // Mark state as changed for meaningful events (triggers immediate render)
+                match &msg {
+                    // Agent events that affect UI
+                    Msg::AgentEvent(AgentEvent::MessageUpdate { .. }) => state_changed = true,
+                    Msg::AgentEvent(AgentEvent::PermissionRequest { .. }) => state_changed = true,
+                    Msg::AgentEvent(AgentEvent::Error { .. }) => state_changed = true,
+                    // Input messages
+                    Msg::TextareaKey(_) => state_changed = true,
+                    Msg::InsertNewline => state_changed = true,
+                    Msg::Paste(_) => state_changed = true,
+                    Msg::ClearInput => state_changed = true,
+                    Msg::ClearInputConfirm => state_changed = true,
+                    // Command palette
+                    Msg::CommandPaletteFilter(_) => state_changed = true,
+                    Msg::CommandPaletteBackspace => state_changed = true,
+                    Msg::CommandPaletteUp => state_changed = true,
+                    Msg::CommandPaletteDown => state_changed = true,
+                    Msg::CommandPaletteConfirm => state_changed = true,
+                    Msg::CommandPaletteCancelArgument => state_changed = true,
+                    // Navigation
+                    Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown => state_changed = true,
+                    Msg::SessionTreeUp | Msg::SessionTreeDown => state_changed = true,
+                    Msg::SessionTreeConfirm => state_changed = true,
+                    Msg::OnboardingNavigateUp | Msg::OnboardingNavigateDown => state_changed = true,
+                    Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace => state_changed = true,
+                    Msg::OnboardingSearchInput(_) | Msg::OnboardingSearchBackspace => state_changed = true,
+                    Msg::SelectUp | Msg::SelectDown => state_changed = true,
+                    Msg::SelectConfirm | Msg::SelectToggleDetails => state_changed = true,
+                    // Permission
+                    Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => state_changed = true,
+                    // Mode changes
+                    Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal => state_changed = true,
+                    Msg::ToggleSessionTree | Msg::ToggleSidebar => state_changed = true,
+                    Msg::SwitchModel => state_changed = true,
+                    Msg::OnboardingNext | Msg::OnboardingBack | Msg::OnboardingSubmit | Msg::OnboardingSkip => state_changed = true,
+                    Msg::EnterOnboarding => state_changed = true,
+                    Msg::DirectCommand(_) => state_changed = true,
+                    // Terminal events
+                    Msg::Resize(..) => state_changed = true,
+                    // Commands
+                    Msg::Submit | Msg::Quit | Msg::ClearChat => state_changed = true,
+                    Msg::Stop => state_changed = true,
+                    // State updates
+                    Msg::ModelsFetched(_) | Msg::ModelsFetchFailed(_) => state_changed = true,
+                    Msg::SetGitInfo { .. } | Msg::SetTopBarMockChecks { .. } | Msg::SetTopBarRealChecks { .. } => state_changed = true,
+                    Msg::SetInputRightInfo(_) => state_changed = true,
+                    Msg::SlashCommand(_) => state_changed = true,
+                    Msg::PermissionTimeout => state_changed = true,
                     _ => {}
                 }
 
@@ -522,7 +585,11 @@ pub async fn run_tui(
                 // Log key UI events
                 if let Some(logger) = event_logger {
                     match &msg {
-                        Msg::Submit => logger.log_ui_event("submit"),
+                        Msg::Submit => {
+                            logger.log_ui_event("submit");
+                            // Also log to our structured logger
+                            log::log_submit(&tui.state.textarea.lines().join("\n").chars().take(50).collect::<String>());
+                        }
                         Msg::Quit => logger.log_ui_event("quit"),
                         Msg::ToggleSidebar => logger.log_ui_event("toggle_sidebar"),
                         Msg::ClearChat => logger.log_ui_event("clear_chat"),
@@ -533,8 +600,14 @@ pub async fn run_tui(
                     }
                 }
 
-                // Render after every message batch — state changed, screen must reflect it
-                tui.render()?;
+                // Render: debounce to ~30 FPS max when streaming, immediate on state change
+                let now = Instant::now();
+                let elapsed_ms = now.duration_since(last_render).as_millis() as u64;
+                let time_for_render = tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS;
+                if state_changed || time_for_render {
+                    tui.render()?;
+                    last_render = now;
+                }
                 } // end for msg in msgs
             }
 
@@ -554,6 +627,50 @@ pub async fn run_tui(
 
             // Animation tick (80ms)
             _ = tick_interval.tick() => {
+                // WATCHDOG: Check if agent has been running too long without any events
+                if tui.state.agent_running {
+                    // Watchdog: 30 second timeout - force recovery if agent stuck
+                    if let Some(start_time) = tui.state.agent_start_time {
+                        if start_time.elapsed() > AGENT_WATCHDOG_TIMEOUT {
+                            tracing::error!("[WATCHDOG] Agent stuck for 30s, forcing recovery");
+
+                            // Send error event so UI gets notified
+                            let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
+                                message: "Agent timed out after 30 seconds".to_string(),
+                                error_type: "watchdog".to_string(),
+                                recoverable: true,
+                                context: "Agent was stuck and was recovered".to_string(),
+                            })).await;
+
+                            // Abort the agent task
+                            if let Some(task) = agent_task.take() {
+                                task.abort();
+                            }
+
+                            // Reset state
+                            tui.state.agent_running = false;
+                            tui.state.agent_start_time = None;
+                            tui.state.animation.agent_start_time = None;
+
+                            // Show error to user
+                            tui.state.messages.push(runie_tui::MessageItem::Error {
+                                message: "Agent timed out after 30 seconds. Please try again.".to_string(),
+                                recoverable: true,
+                            });
+
+                            // Log it
+                            log::log_agent_error("Agent watchdog timeout - forced recovery");
+                        }
+                    }
+
+                    // Heartbeat warning: 15 seconds without events - agent is slow
+                    if last_agent_event.elapsed() > AGENT_HEARTBEAT_TIMEOUT {
+                        // Agent is alive but slow - add a thinking indicator if not already present
+                        // The UI can display this via existing state
+                        tracing::debug!("[WATCHDOG] Agent silent for 15s, may be thinking...");
+                    }
+                }
+
                 if !mock {
                     update_top_bar_context(&mut tui, &settings);
                 }
@@ -566,7 +683,33 @@ pub async fn run_tui(
                     }
                     pending_cmds = next_cmds;
                 }
-                tui.render()?;
+                // Debounce tick renders: only render if 33ms passed and agent running
+                let now = Instant::now();
+                let elapsed_ms = now.duration_since(last_render).as_millis() as u64;
+                if tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS {
+                    tui.render()?;
+                    last_render = now;
+                }
+            }
+
+            // Signal handler: Ctrl+C (SIGINT) / SIGTERM
+            _ = ctrl_c() => {
+                info!("Received Ctrl+C, shutting down gracefully...");
+                if let Some(logger) = event_logger {
+                    logger.log_ui_event("sigint");
+                }
+                // Send error event before aborting so UI gets notified
+                let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
+                    message: "Agent interrupted by Ctrl+C".to_string(),
+                    error_type: "interrupted".to_string(),
+                    recoverable: true,
+                    context: "User pressed Ctrl+C to stop the agent".to_string(),
+                })).await;
+                cancel.cancel();
+                if let Some(task) = agent_task.take() {
+                    task.abort();
+                }
+                break;
             }
         }
     }

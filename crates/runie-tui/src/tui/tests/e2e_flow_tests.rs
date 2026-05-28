@@ -45,6 +45,7 @@ fn make_agent_message(role: &str, content: &str) -> AgentMessage {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }
 }
 

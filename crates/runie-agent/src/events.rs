@@ -66,6 +66,13 @@ pub enum AgentEvent {
         context: String,
     },
     
+    /// Notification that context was compacted/summarized
+    ContextCompacted {
+        original_count: usize,
+        compacted_count: usize,
+        summary_preview: String,
+    },
+    
     PermissionRequest { 
         tool_call_id: String, 
         tool_name: String, 
@@ -139,6 +146,7 @@ pub struct AgentMessage {
     pub usage: Option<TokenUsage>,
     pub stop_reason: Option<String>,
     pub error_message: Option<String>,
+    pub tool_calls: Vec<runie_core::ToolCall>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

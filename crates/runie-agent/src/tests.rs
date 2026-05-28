@@ -202,6 +202,7 @@ async fn test_max_turns_exact_boundary() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -261,6 +262,7 @@ async fn test_duplicate_tool_call_same_turn() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -312,6 +314,7 @@ async fn test_duplicate_tool_call_across_turns() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -363,6 +366,7 @@ async fn test_permission_timeout_returns_denied() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     // Use a very short timeout for testing (permission state never populated)
@@ -421,6 +425,7 @@ async fn test_token_usage_accumulates_per_turn() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -470,6 +475,7 @@ fn test_context_window_chars_div_4() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let context_window = 100_000; // Large context window
@@ -504,6 +510,7 @@ async fn test_tool_panic_caught_in_prep() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -578,6 +585,7 @@ async fn test_hook_block_prevents_execution() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -656,6 +664,7 @@ async fn test_hook_modify_changes_args() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(
@@ -697,6 +706,7 @@ fn test_compaction_keep_recent_ignored() {
             usage: None,
             stop_reason: None,
             error_message: None,
+            tool_calls: vec![],
         })
         .collect();
 
@@ -742,7 +752,7 @@ impl Provider for AlwaysToolProvider {
 
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
-            yield LlmEvent::ToolCallDelta { name: tool_name, arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name, arguments: "{}".to_string() };
             yield LlmEvent::MessageEnd;
         };
         Ok(Box::pin(s))
@@ -773,8 +783,8 @@ impl Provider for DuplicateToolProvider {
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
             // Same tool called twice with same args
-            yield LlmEvent::ToolCallDelta { name: tool_name.clone(), arguments: "{}".to_string() };
-            yield LlmEvent::ToolCallDelta { name: tool_name.clone(), arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name.clone(), arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_1".to_string(), name: tool_name.clone(), arguments: "{}".to_string() };
             yield LlmEvent::MessageEnd;
         };
         Ok(Box::pin(s))
@@ -808,13 +818,8 @@ impl Provider for SameToolAcrossTurnsProvider {
 
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
-            yield LlmEvent::ToolCallDelta { name: tool_name, arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name, arguments: "{}".to_string() };
             yield LlmEvent::MessageEnd;
-            // On first turn, send tool result to cause another turn
-            if current_turn == 1 {
-                yield LlmEvent::ToolExecutionStart { tool_call_id: "call_1".to_string(), tool_name: "bash".to_string(), args: serde_json::json!({}), timestamp: chrono::Utc::now() };
-                yield LlmEvent::ToolExecutionEnd { tool_call_id: "call_1".to_string(), result: ToolOutput { content: "done".to_string(), metadata: serde_json::json!({}), terminate: false }, timestamp: chrono::Utc::now() };
-            }
         };
         Ok(Box::pin(s))
     }
@@ -843,7 +848,7 @@ impl Provider for PermissionNeverGrantedProvider {
 
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
-            yield LlmEvent::ToolCallDelta { name: tool_name, arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name, arguments: "{}".to_string() };
             yield LlmEvent::MessageEnd;
         };
         Ok(Box::pin(s))
@@ -883,7 +888,7 @@ impl Provider for TokenCountingProvider {
             yield LlmEvent::MessageEnd;
             // First 2 turns request tools, then stop
             if current_turn < 3 {
-                yield LlmEvent::ToolCallDelta { name: tool_name, arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name, arguments: "{}".to_string() };
                 yield LlmEvent::ToolExecutionStart { tool_call_id: format!("call_{}", current_turn), tool_name: tool_name_for_execution, args: serde_json::json!({}), timestamp: chrono::Utc::now() };
                 yield LlmEvent::ToolExecutionEnd { tool_call_id: format!("call_{}", current_turn), result: ToolOutput { content: "done".to_string(), metadata: serde_json::json!({}), terminate: false }, timestamp: chrono::Utc::now() };
             }
@@ -915,7 +920,7 @@ impl Provider for PanickingToolProvider {
 
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
-            yield LlmEvent::ToolCallDelta { name: tool_name, arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name, arguments: "{}".to_string() };
             yield LlmEvent::MessageEnd;
         };
         Ok(Box::pin(s))
@@ -945,7 +950,7 @@ impl Provider for SimpleToolProvider {
 
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
-            yield LlmEvent::ToolCallDelta { name: tool_name.clone(), arguments: "{}".to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name.clone(), arguments: "{}".to_string() };
             yield LlmEvent::MessageEnd;
             yield LlmEvent::ToolExecutionStart { tool_call_id: "call_1".to_string(), tool_name: tool_name, args: serde_json::json!({}), timestamp: chrono::Utc::now() };
             yield LlmEvent::ToolExecutionEnd { tool_call_id: "call_1".to_string(), result: ToolOutput { content: "executed".to_string(), metadata: serde_json::json!({}), terminate: false }, timestamp: chrono::Utc::now() };
@@ -977,7 +982,7 @@ impl Provider for ModifyArgsProvider {
 
         let s = stream! {
             yield LlmEvent::MessageStart { role: "assistant".to_string(), timestamp: chrono::Utc::now() };
-            yield LlmEvent::ToolCallDelta { name: tool_name.clone(), arguments: r#"{"original": true}"#.to_string() };
+            yield LlmEvent::ToolCallDelta { id: "call_0".to_string(), name: tool_name.clone(), arguments: r#"{"original": true}"#.to_string() };
             yield LlmEvent::MessageEnd;
             yield LlmEvent::ToolExecutionStart { tool_call_id: "call_1".to_string(), tool_name: tool_name, args: serde_json::json!({"modified": true}), timestamp: chrono::Utc::now() };
             yield LlmEvent::ToolExecutionEnd { tool_call_id: "call_1".to_string(), result: ToolOutput { content: "modified args".to_string(), metadata: serde_json::json!({}), terminate: false }, timestamp: chrono::Utc::now() };
@@ -1102,3 +1107,9 @@ async fn test_provider_non_429_no_retry() {
     // Elapsed should be less than 1 second (no retry delay)
     assert!(elapsed.as_secs() < 1, "Should fail immediately without backoff, got {}s", elapsed.as_secs());
 }
+
+// ============================================================================
+// Tool ID Propagation Tests (regression tests for fake ID bug)
+// ============================================================================
+
+mod tool_id_tests;

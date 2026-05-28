@@ -28,6 +28,7 @@ async fn test_agent_end_to_end() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     // Spawn the agent loop
@@ -95,6 +96,7 @@ async fn test_agent_with_mock_error_simulation() {
         usage: None,
         stop_reason: None,
         error_message: None,
+        tool_calls: vec![],
     }];
 
     let mut stream = agent_loop(

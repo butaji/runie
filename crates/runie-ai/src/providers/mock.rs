@@ -52,6 +52,7 @@ impl MockProvider {
                 Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
                 Event::MessageDelta { content: "I'll help you with that.".to_string() },
                 Event::ToolCallDelta {
+                    id: "mock-1".to_string(),
                     name: tool.name.clone(),
                     arguments: "{}".to_string()
                 },

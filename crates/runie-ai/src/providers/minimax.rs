@@ -4,10 +4,7 @@ use chrono::Utc;
 use futures::stream::BoxStream;
 use reqwest::Client;
 use runie_core::{Event, Message, ProviderError, ToolCall, ToolSchema};
-use serde::Deserialize;
 use std::collections::HashMap;
-use std::env;
-use tokio::time::{sleep, Duration};
 
 use crate::Provider;
 use crate::token_usage::TokenUsage;
@@ -15,20 +12,15 @@ use crate::token_usage::TokenUsage;
 const HTTP_TIMEOUT_SECS: u64 = 120;
 const HTTP_CONNECT_TIMEOUT_SECS: u64 = 30;
 
-pub struct OpenAiProvider {
+pub struct MiniMaxProvider {
     api_key: String,
     model: String,
     base_url: String,
     client: Client,
 }
 
-impl OpenAiProvider {
+impl MiniMaxProvider {
     pub fn new(api_key: String, model: String) -> Self {
-        let api_key = if api_key.is_empty() {
-            env::var("OPENAI_API_KEY").unwrap_or_default()
-        } else {
-            api_key
-        };
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(HTTP_TIMEOUT_SECS))
             .connect_timeout(std::time::Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
@@ -37,7 +29,7 @@ impl OpenAiProvider {
         Self {
             api_key,
             model,
-            base_url: "https://api.openai.com/v1".to_string(),
+            base_url: "https://api.minimax.io/v1".to_string(),
             client,
         }
     }
@@ -49,15 +41,29 @@ impl OpenAiProvider {
 
     /// Returns (input_cost, output_cost) per 1K tokens in USD.
     pub fn cost_per_1k_tokens(&self) -> (f64, f64) {
+        // MiniMax pricing - using ABABench5 model rates
         match self.model.as_str() {
-            "gpt-4o" | "gpt-4o-2024-08-06" | "o1-preview" | "o1-mini" => (0.005, 0.015),
-            "gpt-4" | "gpt-4-turbo" | "gpt-4-turbo-2024-04-09" => (0.03, 0.06),
-            "gpt-3.5-turbo" => (0.0005, 0.0015),
-            _ => (0.0, 0.0),
+            "abab5.5s" | "abab5.5g" => (0.0006, 0.002),
+            "abab5.5-chat" => (0.001, 0.002),
+            "abab6" | "abab6.5s" => (0.001, 0.002),
+            "abab6.5g" => (0.001, 0.004),
+            _ => (0.001, 0.002), // Default fallback
         }
     }
 
-    fn messages_to_openai(&self, messages: Vec<Message>) -> Vec<serde_json::Value> {
+    fn messages_to_minimax(&self, messages: Vec<Message>) -> Vec<serde_json::Value> {
+        tracing::debug!("[MINIMAX-SERIALIZE] Serializing {} messages", messages.len());
+        for (i, msg) in messages.iter().enumerate() {
+            match msg {
+                Message::Assistant { tool_calls, .. } if !tool_calls.is_empty() => {
+                    tracing::debug!("[MINIMAX-SERIALIZE] Message {}: Assistant with {} tool calls", i, tool_calls.len());
+                }
+                Message::ToolResult { tool_call_id, .. } => {
+                    tracing::debug!("[MINIMAX-SERIALIZE] Message {}: ToolResult id={}", i, tool_call_id);
+                }
+                _ => {}
+            }
+        }
         messages
             .into_iter()
             .map(|msg| match msg {
@@ -98,7 +104,7 @@ impl OpenAiProvider {
             .collect()
     }
 
-    fn tools_to_openai(&self, tools: Vec<ToolSchema>) -> Vec<serde_json::Value> {
+    fn tools_to_minimax(&self, tools: Vec<ToolSchema>) -> Vec<serde_json::Value> {
         tools
             .into_iter()
             .map(|t| {
@@ -125,9 +131,9 @@ impl OpenAiProvider {
             match self.chat_once(messages.clone(), tools.clone()).await {
                 Ok(stream) => return Ok(stream),
                 Err(ProviderError::RateLimited) => {
-                    let delay = Duration::from_secs(2u64.pow(attempt));
+                    let delay = std::time::Duration::from_secs(2u64.pow(attempt));
                     tracing::warn!("Rate limited, retrying in {}s...", delay.as_secs());
-                    sleep(delay).await;
+                    tokio::time::sleep(delay).await;
                 }
                 Err(e) => {
                     last_error = Some(e);
@@ -144,25 +150,31 @@ impl OpenAiProvider {
         messages: Vec<Message>,
         tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
+        tracing::info!("MiniMax API key present: {}", !self.api_key.is_empty());
+        tracing::debug!("MiniMax Authorization header: Bearer {}...", &self.api_key[..8.min(self.api_key.len())]);
+
         let url = format!("{}/chat/completions", self.base_url);
-        let openai_messages = self.messages_to_openai(messages.clone());
+        let minimax_messages = self.messages_to_minimax(messages.clone());
         let has_tools = !tools.is_empty();
 
         let mut body = serde_json::json!({
             "model": self.model,
-            "messages": openai_messages,
+            "messages": minimax_messages,
             "stream": true
         });
 
         if has_tools {
-            body["tools"] = serde_json::json!(self.tools_to_openai(tools));
+            body["tools"] = serde_json::json!(self.tools_to_minimax(tools));
             body["tool_choice"] = serde_json::json!("auto");
         }
+
+        let auth_header = format!("Bearer {}", self.api_key);
+        tracing::debug!("MiniMax request to: {}", url);
 
         let response = self
             .client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Authorization", &auth_header)
             .header("Content-Type", "application/json")
             .json(&body)
             .send()
@@ -170,6 +182,7 @@ impl OpenAiProvider {
             .map_err(|e| ProviderError::ApiError(e.to_string()))?;
 
         let status = response.status();
+        tracing::debug!("MiniMax response status: {}", status);
         if status.as_u16() == 429 {
             return Err(ProviderError::RateLimited);
         }
@@ -178,10 +191,11 @@ impl OpenAiProvider {
                 Ok(text) => text,
                 Err(e) => format!("(failed to read response body: {})", e),
             };
+            tracing::error!("MiniMax API error response: {}", body);
             return Err(ProviderError::ApiError(format!("{}: {}", status, body)));
         }
 
-        let session_id = format!("openai-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let session_id = format!("minimax-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
 
         let stream = stream! {
             yield Event::AgentStart { session_id: session_id.clone(), timestamp: Utc::now() };
@@ -216,7 +230,7 @@ impl OpenAiProvider {
                             if data.trim() == "[DONE]" {
                                 continue;
                             }
-                            let chunk: OpenAIStreamChunk = match serde_json::from_str(data) {
+                            let chunk: MiniMaxStreamChunk = match serde_json::from_str(data) {
                                 Ok(c) => c,
                                 Err(_) => continue,
                             };
@@ -237,8 +251,9 @@ impl OpenAiProvider {
                                         for tc_delta in tool_calls {
                                             let index = tc_delta.index;
                                             let id = tc_delta.id.clone();
-                                            let name = tc_delta.function.as_ref().and_then(|f| f.name.clone());
-                                            let args = tc_delta.function.and_then(|f| f.arguments).unwrap_or_default();
+                                            let function = tc_delta.function.clone();
+                                            let name = function.as_ref().and_then(|f| f.name.clone());
+                                            let args = function.and_then(|f| f.arguments).unwrap_or_default();
 
                                             if let Some(real_id) = &id {
                                                 // We have a real ID - emit accumulated args if we have pending data for this index
@@ -308,17 +323,17 @@ impl OpenAiProvider {
         tools: Vec<ToolSchema>,
     ) -> Result<String, ProviderError> {
         let url = format!("{}/chat/completions", self.base_url);
-        let openai_messages = self.messages_to_openai(messages);
+        let minimax_messages = self.messages_to_minimax(messages);
         let has_tools = !tools.is_empty();
 
         let mut body = serde_json::json!({
             "model": self.model,
-            "messages": openai_messages,
+            "messages": minimax_messages,
             "stream": false
         });
 
         if has_tools {
-            body["tools"] = serde_json::json!(self.tools_to_openai(tools));
+            body["tools"] = serde_json::json!(self.tools_to_minimax(tools));
             body["tool_choice"] = serde_json::json!("auto");
         }
 
@@ -344,7 +359,7 @@ impl OpenAiProvider {
             return Err(ProviderError::ApiError(format!("{}: {}", status, body)));
         }
 
-        let result: OpenAIResponse = response
+        let result: MiniMaxResponse = response
             .json()
             .await
             .map_err(|e| ProviderError::InvalidResponse(e.to_string()))?;
@@ -359,9 +374,9 @@ impl OpenAiProvider {
 }
 
 #[async_trait]
-impl Provider for OpenAiProvider {
+impl Provider for MiniMaxProvider {
     fn name(&self) -> &str {
-        "openai"
+        "minimax"
     }
 
     fn model(&self) -> &str {
@@ -373,17 +388,11 @@ impl Provider for OpenAiProvider {
     }
 
     fn supports_vision(&self) -> bool {
-        self.model.starts_with("gpt-4o")
+        false
     }
 
     fn max_context_tokens(&self) -> usize {
-        if self.model.starts_with("gpt-4o") {
-            128_000
-        } else if self.model.starts_with("gpt-4") {
-            8_192
-        } else {
-            4_096
-        }
+        128_000
     }
 
     async fn chat(
@@ -408,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_tool_call_arguments_serialized_as_string() {
-        let provider = OpenAiProvider::new("test-key".to_string(), "gpt-4".to_string());
+        let provider = MiniMaxProvider::new("test-key".to_string(), "minimax".to_string());
         let messages = vec![Message::Assistant {
             content: "".to_string(),
             tool_calls: vec![ToolCall {
@@ -418,7 +427,7 @@ mod tests {
             }],
             thinking: None,
         }];
-        let json_messages = provider.messages_to_openai(messages);
+        let json_messages = provider.messages_to_minimax(messages);
         let tool_calls = json_messages[0]["tool_calls"].as_array().unwrap();
         let args = &tool_calls[0]["function"]["arguments"];
         assert!(args.is_string(), "arguments should be a string, got: {:?}", args);
@@ -427,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_tool_call_with_multiple_args_serialized_correctly() {
-        let provider = OpenAiProvider::new("test-key".to_string(), "gpt-4".to_string());
+        let provider = MiniMaxProvider::new("test-key".to_string(), "minimax".to_string());
         let messages = vec![Message::Assistant {
             content: "".to_string(),
             tool_calls: vec![ToolCall {
@@ -437,7 +446,7 @@ mod tests {
             }],
             thinking: None,
         }];
-        let json_messages = provider.messages_to_openai(messages);
+        let json_messages = provider.messages_to_minimax(messages);
         let tool_calls = json_messages[0]["tool_calls"].as_array().unwrap();
         let args = &tool_calls[0]["function"]["arguments"];
         assert!(args.is_string(), "arguments should be a string");
@@ -448,30 +457,29 @@ mod tests {
 
     #[test]
     fn test_empty_tool_calls_not_serialized() {
-        let provider = OpenAiProvider::new("test-key".to_string(), "gpt-4".to_string());
+        let provider = MiniMaxProvider::new("test-key".to_string(), "minimax".to_string());
         let messages = vec![Message::Assistant {
             content: "Hello".to_string(),
             tool_calls: vec![],
             thinking: None,
         }];
-        let json_messages = provider.messages_to_openai(messages);
+        let json_messages = provider.messages_to_minimax(messages);
         assert!(!json_messages[0].as_object().unwrap().contains_key("tool_calls"));
     }
 }
 
-// --- OpenAI API types ---
+// --- MiniMax API types ---
 
-#[derive(Debug, Deserialize)]
-struct OpenAIStreamChunk {
-    choices: Vec<StreamChoice>,
+#[derive(Debug, serde::Deserialize)]
+struct MiniMaxStreamChunk {
+    choices: Vec<MiniMaxStreamChoice>,
     #[serde(default)]
     usage: Option<TokenUsage>,
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct StreamChoice {
-    delta: Option<Delta>,
+#[derive(Debug, serde::Deserialize)]
+struct MiniMaxStreamChoice {
+    delta: Option<MiniMaxDelta>,
     finish_reason: Option<String>,
 }
 
@@ -484,42 +492,40 @@ struct PendingToolCall {
     arguments: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct Delta {
+#[derive(Debug, serde::Deserialize)]
+struct MiniMaxDelta {
     content: Option<String>,
     role: Option<String>,
-    tool_calls: Option<Vec<ToolCallDelta>>,
+    tool_calls: Option<Vec<MiniMaxToolCallDelta>>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[allow(dead_code)]
-struct ToolCallDelta {
+#[derive(Debug, serde::Deserialize, Clone)]
+struct MiniMaxToolCallDelta {
     index: usize,
     id: Option<String>,
     #[serde(rename = "type")]
     type_: Option<String>,
-    function: Option<FunctionDelta>,
+    function: Option<MiniMaxFunctionDelta>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-struct FunctionDelta {
+#[derive(Debug, serde::Deserialize, Clone)]
+struct MiniMaxFunctionDelta {
     name: Option<String>,
     arguments: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-struct OpenAIResponse {
-    choices: Vec<Choice>,
+#[derive(Debug, serde::Deserialize)]
+struct MiniMaxResponse {
+    choices: Vec<MiniMaxChoice>,
 }
 
-#[derive(Debug, Deserialize)]
-struct Choice {
-    message: MessageResponse,
+#[derive(Debug, serde::Deserialize)]
+struct MiniMaxChoice {
+    message: MiniMaxMessageResponse,
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct MessageResponse {
+#[derive(Debug, serde::Deserialize)]
+struct MiniMaxMessageResponse {
     role: String,
     content: Option<String>,
 }
