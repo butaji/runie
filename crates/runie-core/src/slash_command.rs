@@ -7,6 +7,7 @@ pub enum SlashCommand {
     Model(String),
     Tree,
     Fork,
+    Copy,
     Quit,
     Help,
     Cost,
@@ -34,6 +35,7 @@ pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
         }
         "/tree" | "/t" => Some(SlashCommand::Tree),
         "/fork" | "/f" => Some(SlashCommand::Fork),
+        "/copy" => Some(SlashCommand::Copy),
         "/quit" | "/q" | "/exit" => Some(SlashCommand::Quit),
         "/help" | "/h" | "/?" => Some(SlashCommand::Help),
         "/cost" => Some(SlashCommand::Cost),
@@ -48,6 +50,7 @@ pub fn format_help() -> String {
   /model, /m <name>  Switch model
   /tree, /t          Open session tree navigator
   /fork, /f          Fork at current position
+  /copy              Copy last response to clipboard
   /cost              Show cost statistics
   /quit, /q, /exit   Exit runie
   /help, /h, /?       Show this help
@@ -56,6 +59,7 @@ Keyboard shortcuts:
   Enter              Submit message
   Shift+Enter        New line
   Ctrl+C             Exit
+  Ctrl+O             Copy last response
   Ctrl+B             Toggle sidebar
   Ctrl+K / Ctrl+P    Command palette"#
         .to_string()

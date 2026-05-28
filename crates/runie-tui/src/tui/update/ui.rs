@@ -49,6 +49,7 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
         crate::tui::state::Msg::SetTopBarRealChecks { context_badges } => handle_set_top_bar_real_checks(state, context_badges),
         crate::tui::state::Msg::SetInputRightInfo(info) => handle_set_input_right_info(state, info),
         crate::tui::state::Msg::EnterOnboarding => handle_enter_onboarding(state),
+        crate::tui::state::Msg::CopyLastResponse => { handle_copy_last_response(state); vec![] }
         _ => vec![],
     }
 }
@@ -200,11 +201,78 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::Model(model) => { state.current_model = Some(model.clone()); state.messages.push(MessageItem::System { text: format!("Model switched to {}", model) }); vec![] }
         SlashCommand::Tree => { super::slash::handle_tree(state); vec![] }
         SlashCommand::Fork => { state.messages.push(MessageItem::System { text: "Fork created at current position".to_string() }); vec![] }
+        SlashCommand::Copy => { handle_copy_last_response(state); vec![] }
         SlashCommand::Quit => { state.running = false; vec![UiCmd::Quit] }
         SlashCommand::Help => { state.messages.push(MessageItem::System { text: runie_core::slash_command::format_help() }); vec![] }
         SlashCommand::Unknown(cmd) => { state.messages.push(MessageItem::System { text: format!("Unknown command: {}. Type /help for available commands.", cmd) }); vec![] }
         SlashCommand::Cost => { /* Cost command not implemented */ vec![] }
     }
+}
+
+// ─── Copy Last Response ────────────────────────────────────────────────────────
+
+/// Copy the last assistant message to clipboard using OSC 52 escape sequence.
+fn handle_copy_last_response(state: &mut AppState) -> Vec<UiCmd> {
+    // Find last assistant message
+    if let Some(last_assistant) = state.messages.iter().rev().find(|m| {
+        matches!(m, MessageItem::Assistant { .. })
+    }) {
+        let text = match last_assistant {
+            MessageItem::Assistant { text, .. } => text.clone(),
+            _ => String::new(),
+        };
+
+        if !text.is_empty() {
+            // Use OSC 52 escape sequence for clipboard (works in most modern terminals)
+            let encoded_bytes = base64_encode(&text);
+            let encoded = std::str::from_utf8(&encoded_bytes).unwrap_or_default();
+            let osc52 = format!("\x1b]52;c;{}\x07", encoded);
+            print!("{}", osc52);
+            state.messages.push(MessageItem::System {
+                text: "📋 Copied last response to clipboard".to_string(),
+            });
+        } else {
+            state.messages.push(MessageItem::System {
+                text: "No assistant response to copy".to_string(),
+            });
+        }
+    } else {
+        state.messages.push(MessageItem::System {
+            text: "No assistant response to copy".to_string(),
+        });
+    }
+    vec![]
+}
+
+/// Base64 encode a string (minimal implementation avoiding external dependency).
+fn base64_encode(input: &str) -> Vec<u8> {
+    const BASE64_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut result = Vec::with_capacity((input.len() + 2) / 3 * 4);
+    
+    for chunk in input.as_bytes().chunks(3) {
+        let b = match chunk.len() {
+            1 => [chunk[0], 0, 0],
+            2 => [chunk[0], chunk[1], 0],
+            _ => [chunk[0], chunk[1], chunk[2]],
+        };
+        
+        result.push(BASE64_CHARS[(b[0] >> 2) as usize]);
+        result.push(BASE64_CHARS[((b[0] & 0x03) << 4 | b[1] >> 4) as usize]);
+        
+        if chunk.len() > 1 {
+            result.push(BASE64_CHARS[((b[1] & 0x0f) << 2 | b[2] >> 6) as usize]);
+        } else {
+            result.push(b'=');
+        }
+        
+        if chunk.len() > 2 {
+            result.push(BASE64_CHARS[(b[2] & 0x3f) as usize]);
+        } else {
+            result.push(b'=');
+        }
+    }
+    
+    result
 }
 
 // ─── State Initialization Handlers ─────────────────────────────────────────────

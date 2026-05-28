@@ -26,14 +26,26 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
         crate::tui::state::Msg::Submit => handle_submit(state),
         crate::tui::state::Msg::TextareaKey(key) => { state.textarea.input(key_to_textarea_input(key)); vec![] }
         crate::tui::state::Msg::InsertNewline => { state.textarea.insert_newline(); vec![] }
-        crate::tui::state::Msg::ScrollUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(1); vec![] }
-        crate::tui::state::Msg::ScrollDown => { state.scroll.feed_offset = (state.scroll.feed_offset + 1).min(state.messages.len().saturating_sub(1)); vec![] }
-        crate::tui::state::Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(10); vec![] }
-        crate::tui::state::Msg::ScrollPageDown => { state.scroll.feed_offset = (state.scroll.feed_offset + 10).min(state.messages.len().saturating_sub(1)); vec![] }
+        crate::tui::state::Msg::ScrollUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(1); state.scroll.user_scrolled_up = true; vec![] }
+        crate::tui::state::Msg::ScrollDown => { 
+            let new_offset = (state.scroll.feed_offset + 1).min(state.messages.len().saturating_sub(1));
+            state.scroll.feed_offset = new_offset;
+            state.scroll.user_scrolled_up = new_offset > 0;
+            vec![]
+        }
+        crate::tui::state::Msg::ScrollPageUp => { state.scroll.feed_offset = state.scroll.feed_offset.saturating_sub(10); state.scroll.user_scrolled_up = true; vec![] }
+        crate::tui::state::Msg::ScrollPageDown => { 
+            let new_offset = (state.scroll.feed_offset + 10).min(state.messages.len().saturating_sub(1));
+            state.scroll.feed_offset = new_offset;
+            state.scroll.user_scrolled_up = new_offset > 0;
+            vec![]
+        }
         crate::tui::state::Msg::ClearInputConfirm => { handle_clear_input_confirm(state); vec![] }
         crate::tui::state::Msg::ClearInput => { state.textarea.select_all(); state.textarea.delete_line_by_end(); vec![] }
         crate::tui::state::Msg::ClearChat => { state.messages.clear(); vec![] }
         crate::tui::state::Msg::Paste(text) => { for c in text.chars() { state.textarea.input(ratatui_textarea::Input { key: ratatui_textarea::Key::Char(c), ctrl: false, alt: false, shift: false }); } vec![] }
+        crate::tui::state::Msg::HistoryUp => { handle_history_up(state); vec![] }
+        crate::tui::state::Msg::HistoryDown => { handle_history_down(state); vec![] }
         _ => vec![],
     }
 }
@@ -46,6 +58,16 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         state.input_right_info = "Type a message first".to_string();
         return vec![];
     }
+    // Save to input history
+    if !text.trim().is_empty() {
+        state.input_history.push(text.clone());
+        if state.input_history.len() > 100 {
+            state.input_history.remove(0);
+        }
+    }
+    // Reset history navigation state
+    state.input_history_index = None;
+    state.input_draft.clear();
     // BUG-10 FIX: Set agent_running immediately to prevent race condition
     // where rapid submissions could spawn multiple agents
     if state.agent_running {
@@ -53,6 +75,8 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         return vec![];
     }
     state.agent_running = true;
+    // Reset scroll state - user wants to see new output
+    state.scroll.user_scrolled_up = false;
     // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
     state.agent_start_time = Some(Instant::now());
     if let Some(ref onboarding) = state.onboarding {
@@ -82,6 +106,54 @@ fn handle_clear_input_confirm(state: &mut AppState) {
         state.input_right_info = String::new();
     } else {
         state.input_right_info = "Ctrl+C again to clear text".to_string();
+    }
+}
+
+// ─── Input History ─────────────────────────────────────────────────────────────
+
+fn handle_history_up(state: &mut AppState) {
+    if state.input_history.is_empty() {
+        return;
+    }
+
+    // Save current draft if not already browsing history
+    if state.input_history_index.is_none() {
+        state.input_draft = state.textarea.lines().join("\n");
+    }
+
+    // Move back in history
+    let new_index = state.input_history_index.map_or(
+        state.input_history.len().saturating_sub(1),
+        |i| i.saturating_sub(1),
+    );
+
+    if let Some(text) = state.input_history.get(new_index) {
+        state.input_history_index = Some(new_index);
+        state.textarea.select_all();
+        state.textarea.cut();
+        state.textarea.insert_str(text);
+    }
+}
+
+fn handle_history_down(state: &mut AppState) {
+    if let Some(index) = state.input_history_index {
+        if index + 1 >= state.input_history.len() {
+            // Back to draft
+            state.input_history_index = None;
+            state.textarea.select_all();
+            state.textarea.cut();
+            state.textarea.insert_str(&state.input_draft);
+            state.input_draft.clear();
+        } else {
+            // Forward in history
+            let new_index = index + 1;
+            if let Some(text) = state.input_history.get(new_index) {
+                state.input_history_index = Some(new_index);
+                state.textarea.select_all();
+                state.textarea.cut();
+                state.textarea.insert_str(text);
+            }
+        }
     }
 }
 

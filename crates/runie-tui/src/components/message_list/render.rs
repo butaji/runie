@@ -468,6 +468,7 @@ pub fn get_msg_type(msg: &MessageItem) -> &'static str {
         MessageItem::User { .. } => "user",
         MessageItem::Assistant { .. } => "assistant",
         MessageItem::Thought { .. } => "thought",
+        MessageItem::Separator { .. } => "separator",
         MessageItem::ToolCall { .. } => "tool",
         MessageItem::Edit { .. } => "edit",
         MessageItem::System { .. } => "system",
@@ -513,6 +514,9 @@ pub fn render_single_msg(
         }
         MessageItem::Thought { duration_secs } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
+        }
+        MessageItem::Separator { elapsed_secs, tool_calls, tokens_used } => {
+            render_separator(*elapsed_secs, *tool_calls, *tokens_used, area, row, margin_x, buf, text_dim)
         }
         MessageItem::ToolCall { name, args, result, is_error } => {
             render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
@@ -598,15 +602,13 @@ fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16
     }
 }
 
-/// Strip `<think>...</think>` think blocks from text (DeepSeek models use these).
-pub fn strip_think_tags(text: &str) -> String {
-    // Regex to match <think>...</think> blocks (case-sensitive per model output)
-    // Uses lazy matching to handle multiple blocks
-    let mut result = String::with_capacity(text.len());
+/// Extracts <think>...</think> think blocks from text and returns (main_text, think_blocks).
+/// DeepSeek models use these for internal reasoning.
+pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
+    let mut main_text = String::with_capacity(text.len());
+    let mut think_blocks = Vec::new();
     let mut last_end = 0;
 
-    // We manually scan since we want to avoid a regex dependency
-    // Pattern: <think> followed by any chars (including newlines) until </think>
     let bytes = text.as_bytes();
     let mut i = 0;
 
@@ -620,10 +622,17 @@ pub fn strip_think_tags(text: &str) -> String {
             while j < bytes.len() {
                 if bytes[j..].starts_with(b"</think>") {
                     // Found end
-                    i = j + 8; // </think> is 8 chars
+                    let block_start = i + 7; // after <think>
+                    let block_end = j;
+                    i = j + 8; // after </think>
                     found = true;
-                    // Append text before this block
-                    result.push_str(&text[last_end..start]);
+                    // Append text before this block to main_text
+                    main_text.push_str(&text[last_end..start]);
+                    // Extract the think block content (without tags)
+                    let think_content = text[block_start..block_end].trim();
+                    if !think_content.is_empty() {
+                        think_blocks.push(think_content.to_string());
+                    }
                     last_end = i;
                     break;
                 }
@@ -640,16 +649,58 @@ pub fn strip_think_tags(text: &str) -> String {
 
     // Append remaining text after last processed block
     if last_end < text.len() {
-        result.push_str(&text[last_end..]);
+        main_text.push_str(&text[last_end..]);
     }
 
-    result
+    (main_text, think_blocks)
 }
 
-fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, _wrap_cache: &mut WrapCache, agent_running: bool, spinner: char) -> u16 {
-    let stripped = strip_think_tags(text);
+/// Strips <think>...</think> think blocks from text (DeepSeek models use these).
+pub fn strip_think_tags(text: &str) -> String {
+    extract_think_blocks(text).0
+}
 
-    if stripped.is_empty() {
+
+/// Render a single think block as a box with border
+fn render_think_block_box(think_content: &str, area: Rect, row: u16, margin_x: u16, text_muted: ratatui::style::Color, wrap_cache: &mut WrapCache, buf: &mut Buffer) -> u16 {
+    let inner_width = (area.width - margin_x + area.x - 6) as usize;
+    let title = " Thinking ";
+    let border_width = inner_width + 4;
+
+    // Title line: ┌─ Thinking ─────────┐
+    let title_line = format!("┌{}{}┐", title, "─".repeat(border_width.saturating_sub(title.len() + 2)));
+    if row >= area.height { return 0; }
+    let line = Line::raw(title_line).style(Style::default().fg(text_muted));
+    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
+    let mut rendered = 1u16;
+
+    // Content lines
+    let wrapped = wrap_cache.get_wrapped(think_content, inner_width);
+    for line_text in wrapped {
+        let line_y = row + rendered;
+        if line_y >= area.height { break; }
+        let content_line = format!("│  {} │", line_text);
+        let line = Line::raw(content_line).style(Style::default().fg(text_muted));
+        buf.set_line(margin_x, area.y + line_y, &line, area.width - margin_x + area.x - 2);
+        rendered += 1;
+    }
+
+    // Bottom border: └────────────────────┘
+    if row + rendered < area.height {
+        let bottom_line = format!("└{}┘", "─".repeat(border_width));
+        let line = Line::raw(bottom_line).style(Style::default().fg(text_muted));
+        buf.set_line(margin_x, area.y + row + rendered, &line, area.width - margin_x + area.x - 2);
+        rendered += 1;
+    }
+
+    rendered
+}
+
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, wrap_cache: &mut WrapCache, agent_running: bool, spinner: char) -> u16 {
+    let (stripped, think_blocks) = extract_think_blocks(text);
+
+    // If both stripped and think_blocks are empty, show placeholder
+    if stripped.trim().is_empty() && think_blocks.is_empty() {
         let content = if agent_running {
             format!("{} Thinking...", spinner)
         } else {
@@ -663,16 +714,37 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x
     }
 
     let width = (area.width - margin_x + area.x - 2) as usize;
+    let mut rendered = 0u16;
+
+    // Render think blocks first
+    for think in &think_blocks {
+        if row + rendered >= max_rows { break; }
+        let block_rows = render_think_block_box(think, area, row + rendered, margin_x, text_muted, wrap_cache, buf);
+        rendered += block_rows;
+        // Add a blank line after think block
+        if row + rendered < max_rows {
+            let line = Line::raw("").style(Style::default().fg(text_secondary));
+            buf.set_line(margin_x, area.y + row + rendered, &line, area.width - margin_x + area.x - 2);
+            rendered += 1;
+        }
+    }
+
+    // If no main text content, we're done
+    if stripped.trim().is_empty() {
+        return rendered;
+    }
+
+    // Render main text content
     let base_style = Style::default().fg(text_secondary);
     let markdown_lines = render_text_content(&stripped, width, base_style);
 
-    let mut rendered = 0u16;
     for (i, line) in markdown_lines.iter().enumerate() {
-        let line_y = row + i as u16;
+        let line_y = row + rendered + i as u16;
         if line_y >= max_rows { break; }
         buf.set_line(margin_x, area.y + line_y, line, area.width - margin_x + area.x - 2);
-        rendered += 1;
     }
+    let text_rows = markdown_lines.len() as u16;
+    rendered += text_rows;
 
     if cursor_visible && rendered > 0 {
         let cursor_y = area.y + row + rendered - 1;
@@ -703,6 +775,61 @@ fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, t
     let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
     para.render(para_area, buf);
     1
+}
+
+fn render_separator(elapsed_secs: u64, tool_calls: usize, tokens_used: Option<usize>, area: Rect, row: u16, margin_x: u16, buf: &mut Buffer, text_dim: ratatui::style::Color) -> u16 {
+    let mut parts = Vec::new();
+
+    // Format elapsed
+    let elapsed_str = if elapsed_secs < 60 {
+        format!("{}s", elapsed_secs)
+    } else if elapsed_secs < 3600 {
+        format!("{}m {:02}s", elapsed_secs / 60, elapsed_secs % 60)
+    } else {
+        format!("{}h {:02}m", elapsed_secs / 3600, (elapsed_secs % 3600) / 60)
+    };
+
+    parts.push(format!("Worked for {}", elapsed_str));
+
+    if tool_calls > 0 {
+        parts.push(format!("{} tool call{}", tool_calls, if tool_calls == 1 { "" } else { "s" }));
+    }
+
+    if let Some(tokens) = tokens_used {
+        parts.push(format!("{} tokens", format_token_count(tokens)));
+    }
+
+    let label = parts.join(" • ");
+    let total_len = label.len() + 2; // "─ " + " ─"
+
+    let content_width = (area.width - margin_x * 2) as usize;
+    if total_len >= content_width {
+        let line = Line::raw(label).style(Style::default().fg(text_dim));
+        buf.set_line(margin_x, area.y + row, &line, area.width);
+    } else {
+        let padding = content_width - total_len;
+        let left_pad = padding / 2;
+        let right_pad = padding - left_pad;
+        let line_text = format!("{}{} {}{}",
+            "─".repeat(left_pad),
+            "─",
+            label,
+            "─".repeat(right_pad)
+        );
+        let line = Line::raw(line_text).style(Style::default().fg(text_dim));
+        buf.set_line(margin_x, area.y + row, &line, area.width);
+    }
+    1
+}
+
+fn format_token_count(tokens: usize) -> String {
+    if tokens >= 1_000_000 {
+        format!("{:.1}M", tokens as f64 / 1_000_000.0)
+    } else if tokens >= 1_000 {
+        format!("{:.1}K", tokens as f64 / 1_000.0)
+    } else {
+        tokens.to_string()
+    }
 }
 
 fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, error: ratatui::style::Color) -> u16 {

@@ -37,6 +37,16 @@ mod tests {
             // Model picker state
             model_picker: None,
             agent_start_time: None,
+            input_history: Vec::new(),
+            input_history_index: None,
+            input_draft: String::new(),
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+            // Thinking duration tracking
+            thinking_start: None,
+            thinking_duration: None,
+            is_thinking: false,
         }
     }
 

@@ -23,6 +23,10 @@ pub struct StatusBarViewModel {
     pub mode: TuiMode,
     pub current_model: Option<String>,
     pub session_token_usage: TokenUsage,
+    // Live status indicator
+    pub status_header: Option<String>,
+    pub status_details: Option<String>,
+    pub status_start_time: Option<std::time::Instant>,
 }
 
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
@@ -184,6 +188,9 @@ fn build_status_bar_vm(state: &crate::tui::state::RenderState) -> StatusBarViewM
         mode: state.mode.clone(),
         current_model: state.current_model.clone(),
         session_token_usage: state.session_token_usage.clone(),
+        status_header: state.status_header.clone(),
+        status_details: state.status_details.clone(),
+        status_start_time: state.status_start_time,
     }
 }
 

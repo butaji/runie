@@ -121,6 +121,8 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
                 Some(Msg::Submit)
             }
         }
+        KeyCode::Up => Some(Msg::HistoryUp),
+        KeyCode::Down => Some(Msg::HistoryDown),
         KeyCode::PageUp => Some(Msg::ScrollPageUp),
         KeyCode::PageDown => Some(Msg::ScrollPageDown),
         // P1-3 FIX: ? key for help (opens help overlay if available)
@@ -135,7 +137,7 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
         KeyCode::Char('n') => Some(Msg::OpenCommandPalette), // Ctrl+N = new session via palette
-        KeyCode::Char('o') => Some(Msg::OpenCommandPalette), // Ctrl+O = load session via palette
+        KeyCode::Char('o') => Some(Msg::CopyLastResponse), // Ctrl+O = copy last response
         KeyCode::Char('s') => Some(Msg::OpenCommandPalette), // Ctrl+S = save session via palette
         KeyCode::Char('l') => Some(Msg::ClearChat),
         KeyCode::Char('q') => Some(Msg::Quit),

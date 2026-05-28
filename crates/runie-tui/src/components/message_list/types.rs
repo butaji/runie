@@ -22,6 +22,8 @@ pub enum MessageItem {
     User { text: String, model: Option<String>, timestamp: Option<String> },
     Assistant { text: String, model: Option<String>, timestamp: Option<String> },
     Thought { duration_secs: f32 },
+    /// Separator between conversation turns showing elapsed time and metrics
+    Separator { elapsed_secs: u64, tool_calls: usize, tokens_used: Option<usize> },
     ToolCall { name: String, args: String, result: Option<String>, is_error: bool },
     Edit { filename: String, diff: Option<String> },
     System { text: String },

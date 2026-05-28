@@ -14,6 +14,18 @@ use crate::tui::view_models::{StatusBarViewModel, AgentListViewModel};
 const NAV_KEYS: &[(&str, &str)] = &[("Esc", "close"), ("j/k", "navigate"), ("Enter", "select")];
 const ARROW_KEYS: &[(&str, &str)] = &[("Esc", "close"), ("↑↓", "navigate"), ("Enter", "jump")];
 
+/// Format elapsed time as "1m 23s" or "1h 02m 30s"
+fn format_elapsed(start: std::time::Instant) -> String {
+    let elapsed = start.elapsed().as_secs();
+    if elapsed < 60 {
+        format!("{}s", elapsed)
+    } else if elapsed < 3600 {
+        format!("{}m {:02}s", elapsed / 60, elapsed % 60)
+    } else {
+        format!("{}h {:02}m {:02}s", elapsed / 3600, (elapsed % 3600) / 60, elapsed % 60)
+    }
+}
+
 pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
     match *mode {
         TuiMode::Chat => vec![("Enter", "send"), ("^b", "sidebar"), ("^k", "cmd"), ("^q", "quit")],
@@ -51,18 +63,9 @@ fn build_center_line(vm: &StatusBarViewModel, text_tertiary: ratatui::style::Col
     (line, width)
 }
 
-pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
-    use ratatui::style::Modifier;
+fn render_left_keys(items: &[(&str, &str)], area: Rect, buf: &mut Buffer, text_tertiary: ratatui::style::Color) -> usize {
     use ratatui::text::{Line, Span};
-
-    let text_tertiary = colors.text_dim;
-    let warning = colors.error;
-    let items = get_status_items(&vm.mode);
-
-    let (center_line, center_width) = build_center_line(vm, text_tertiary, warning);
-    let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
-
-    // Render left side and track ending position
+    use ratatui::style::Modifier;
     let mut x = area.x as usize + 1;
     for (i, (key, desc)) in items.iter().enumerate() {
         if i > 0 {
@@ -77,9 +80,58 @@ pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, 
         buf.set_line(x as u16, area.y, &Line::from(parts), width);
         x += width as usize;
     }
+    x
+}
 
-    // Render center (only if no overlap with left)
-    render_status_center(area, buf, x, center_line, center_width, left_width);
+pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
+    let text_tertiary = colors.text_dim;
+    let accent = colors.accent_primary;
+    let warning = colors.error;
+    let items = get_status_items(&vm.mode);
+
+    let (center_line, center_width) = build_center_line(vm, text_tertiary, warning);
+    let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
+
+    let mut x = render_left_keys(&items, area, buf, text_tertiary);
+    let status_width = render_live_status(vm, &mut x, buf, accent, text_tertiary, area.y);
+    render_status_center(area, buf, x, center_line, center_width, left_width + status_width);
+}
+
+/// Renders the live status indicator and returns its width
+fn render_live_status(vm: &StatusBarViewModel, x: &mut usize, buf: &mut Buffer, accent: ratatui::style::Color, text_tertiary: ratatui::style::Color, y: u16) -> usize {
+    use ratatui::text::{Line, Span};
+
+    let (Some(header), Some(start_time)) = (&vm.status_header, vm.status_start_time) else {
+        return 0;
+    };
+
+    let elapsed = format_elapsed(start_time);
+    let status_text = if vm.status_details.is_some() {
+        format!("● {} ({})", header, elapsed)
+    } else {
+        format!("● {}", header)
+    };
+
+    let details = vm.status_details.as_ref();
+    let max_details_len = 40;
+    let details_part = details.map(|d| {
+        let truncated = if d.len() > max_details_len {
+            format!("{}…", &d[..max_details_len.saturating_sub(1)])
+        } else {
+            d.clone()
+        };
+        format!("  └ {}", truncated)
+    }).unwrap_or_default();
+
+    let full_status = format!("{}{}", status_text, details_part);
+    let line = Line::from(vec![
+        Span::styled(&status_text, Style::default().fg(accent)),
+        Span::styled(&details_part, Style::default().fg(text_tertiary)),
+    ]);
+    buf.set_line(*x as u16, y, &line, full_status.len() as u16);
+    *x += full_status.len();
+    *x += 3; // spacing before center
+    full_status.len() + 3
 }
 
 /// Renders center text only if it fits without overlapping left or right sides

@@ -55,12 +55,24 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
                 state.session_token_usage.estimated_cost += cost;
             }
         }
-        AgentEvent::TurnEnd { .. } | AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } | AgentEvent::ContextCompacted { .. } => {}
+        AgentEvent::TurnEnd { .. } => on_turn_end(state),
+        AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } | AgentEvent::ContextCompacted { .. } => {}
     }
 }
 
 pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::AgentMessage) {
     state.agent_running = true;
+    state.status_header = Some("Thinking".to_string());
+    state.status_details = None;
+    state.status_start_time = Some(std::time::Instant::now());
+    // Track thinking duration
+    state.is_thinking = true;
+    state.thinking_start = Some(std::time::Instant::now());
+    state.thinking_duration = None;
+    // Auto-scroll to bottom if user hasn't scrolled up
+    if !state.scroll.user_scrolled_up {
+        state.scroll.feed_offset = 0;
+    }
     // NOTE: Do NOT overwrite current_model here - it contains the user's configured model
     // and must persist across agent runs. The model used per message is tracked separately.
     state.messages.push(MessageItem::Assistant {
@@ -88,11 +100,48 @@ pub fn on_message(state: &mut AppState, role: &str, content: &str) {
 }
 
 pub fn on_message_update(state: &mut AppState, message: runie_agent::events::AgentMessage) {
+    // Auto-scroll to bottom if user hasn't scrolled up
+    if !state.scroll.user_scrolled_up {
+        state.scroll.feed_offset = 0;
+    }
     update_last_assistant(state, &message.content);
 }
 
 pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentMessage) {
+    // Calculate and record thinking duration
+    if let Some(start) = state.thinking_start.take() {
+        state.thinking_duration = Some(start.elapsed());
+        state.is_thinking = false;
+    }
+    // Add thinking indicator if thinking took more than 0.5s
+    if let Some(duration) = state.thinking_duration {
+        let secs = duration.as_secs_f32();
+        if secs > 0.5 {
+            state.messages.push(MessageItem::Thought { duration_secs: secs });
+        }
+    }
+    // Auto-scroll to bottom if user hasn't scrolled up
+    if !state.scroll.user_scrolled_up {
+        state.scroll.feed_offset = 0;
+    }
     update_last_assistant(state, &message.content);
+}
+
+/// Handle turn end - add separator with runtime metrics
+fn on_turn_end(state: &mut AppState) {
+    // Add separator if we have timing info
+    if let Some(start_time) = state.agent_start_time {
+        let elapsed = start_time.elapsed().as_secs();
+        let tool_calls = state.messages.iter().filter(|m| {
+            matches!(m, MessageItem::ToolCall { .. })
+        }).count();
+
+        state.messages.push(MessageItem::Separator {
+            elapsed_secs: elapsed,
+            tool_calls,
+            tokens_used: Some(state.session_token_usage.total_tokens),
+        });
+    }
 }
 
 pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
@@ -102,6 +151,16 @@ pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
 }
 
 pub fn on_tool_start(state: &mut AppState, tool_call_id: String) {
+    // Pause thinking timer when tool starts - accumulate duration so far
+    if state.is_thinking {
+        if let Some(start) = state.thinking_start.take() {
+            let elapsed = start.elapsed();
+            state.thinking_duration = Some(elapsed);
+            state.is_thinking = false;
+        }
+    }
+    state.status_header = Some("Working".to_string());
+    state.status_details = Some(format!("Running {}", tool_call_id));
     state.messages.push(MessageItem::ToolCall {
         name: tool_call_id,
         args: String::new(),
@@ -122,6 +181,10 @@ pub fn on_agent_end(state: &mut AppState) {
     state.agent_running = false;
     // P0-AGENT-TIMEOUT: Clear agent start time on end
     state.agent_start_time = None;
+    // Clear live status
+    state.status_header = None;
+    state.status_details = None;
+    state.status_start_time = None;
     // NOTE: Do not clear current_model - it contains the user's configured model
     // and must persist across agent runs for subsequent submissions.
     // BG-5 FIX: Clear any pending permission modal
@@ -143,6 +206,10 @@ pub fn on_agent_error(state: &mut AppState, message: String) {
     state.agent_running = false;
     // P0-AGENT-TIMEOUT: Clear agent start time on error
     state.agent_start_time = None;
+    // Set error status
+    state.status_header = Some("Error".to_string());
+    state.status_details = Some(message);
+    state.status_start_time = Some(std::time::Instant::now());
     // BG-2 FIX: Always reset to Chat on error (unless in Onboarding)
     // Prevents getting stuck in Permission mode if agent errors out
     if state.mode != TuiMode::Onboarding {

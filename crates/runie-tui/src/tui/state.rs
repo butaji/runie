@@ -171,6 +171,8 @@ pub struct ScrollState {
     pub feed_offset: usize,
     pub diff_offset: usize,
     pub tree_offset: usize,
+    /// True if user has manually scrolled up (auto-scroll should pause)
+    pub user_scrolled_up: bool,
 }
 
 impl Default for ScrollState {
@@ -179,6 +181,7 @@ impl Default for ScrollState {
             feed_offset: 0,
             diff_offset: 0,
             tree_offset: 0,
+            user_scrolled_up: false,
         }
     }
 }
@@ -211,6 +214,18 @@ pub struct AppState {
     pub model_picker: Option<ModelPicker>,
     // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
     pub agent_start_time: Option<std::time::Instant>,
+    // Input history for Up/Down arrow navigation
+    pub input_history: Vec<String>,
+    pub input_history_index: Option<usize>,
+    pub input_draft: String,
+    // Live status indicator
+    pub status_header: Option<String>,
+    pub status_details: Option<String>,
+    pub status_start_time: Option<std::time::Instant>,
+    // Thinking duration tracking
+    pub thinking_start: Option<std::time::Instant>,
+    pub thinking_duration: Option<std::time::Duration>,
+    pub is_thinking: bool,
 }
 
 impl Default for AppState {
@@ -242,6 +257,18 @@ impl Default for AppState {
             model_picker: None,
             // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
             agent_start_time: None,
+            // Input history for Up/Down arrow navigation
+            input_history: Vec::new(),
+            input_history_index: None,
+            input_draft: String::new(),
+            // Live status indicator
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+            // Thinking duration tracking
+            thinking_start: None,
+            thinking_duration: None,
+            is_thinking: false,
         }
     }
 }
@@ -369,6 +396,13 @@ pub enum Msg {
     SetTopBarRealChecks { context_badges: Vec<String> },
     SetInputRightInfo(String),
     EnterOnboarding,
+
+    // Input history navigation
+    HistoryUp,
+    HistoryDown,
+
+    // Copy last response to clipboard
+    CopyLastResponse,
 }
 
 impl PartialEq for Msg {
@@ -437,6 +471,9 @@ impl PartialEq for Msg {
             (SetTopBarRealChecks { .. }, SetTopBarRealChecks { .. }) => true,
             (SetInputRightInfo(a), SetInputRightInfo(b)) => a == b,
             (EnterOnboarding, EnterOnboarding) => true,
+            (HistoryUp, HistoryUp) => true,
+            (HistoryDown, HistoryDown) => true,
+            (CopyLastResponse, CopyLastResponse) => true,
             _ => false,
         }
     }
@@ -509,6 +546,10 @@ pub struct RenderState {
     pub clear_input_confirm: ClearInputConfirm,
     // Model picker state
     pub model_picker: Option<ModelPicker>,
+    // Live status indicator
+    pub status_header: Option<String>,
+    pub status_details: Option<String>,
+    pub status_start_time: Option<std::time::Instant>,
 }
 
 impl RenderState {
@@ -534,6 +575,9 @@ impl RenderState {
             onboarding: state.onboarding.clone(),
             clear_input_confirm: state.clear_input_confirm.clone(),
             model_picker: state.model_picker.clone(),
+            status_header: state.status_header.clone(),
+            status_details: state.status_details.clone(),
+            status_start_time: state.status_start_time,
         }
     }
 }
