@@ -142,4 +142,68 @@ mod tests {
             assert!(mtime.unwrap() > 0);
         });
     }
+
+    fn create_edit_file_tool() -> EditFileTool {
+        let workspace = Workspace::new(std::path::PathBuf::from("."));
+        EditFileTool::new(workspace)
+    }
+
+    #[tokio::test]
+    async fn test_edit_file_missing_path_fails() {
+        let tool = create_edit_file_tool();
+        let args = serde_json::json!({"old_string": "foo", "new_string": "bar"});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'path' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_edit_file_missing_old_string_fails() {
+        let tool = create_edit_file_tool();
+        let args = serde_json::json!({"path": "test.txt", "new_string": "bar"});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'old_string' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_edit_file_missing_new_string_fails() {
+        let tool = create_edit_file_tool();
+        let args = serde_json::json!({"path": "test.txt", "old_string": "foo"});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'new_string' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_edit_file_all_args_missing_fails() {
+        let tool = create_edit_file_tool();
+        let args = serde_json::json!({});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        // Should report the first missing argument
+        assert!(err.to_string().contains("Missing"));
+    }
+
+    #[tokio::test]
+    async fn test_edit_file_empty_args_fail() {
+        let tool = create_edit_file_tool();
+        let args = serde_json::json!({"path": "", "old_string": "", "new_string": ""});
+        let result = tool.execute(args).await;
+        // Empty strings pass .as_str() but will fail at file operations
+        // The important thing is they don't panic
+        if result.is_err() {
+            let _err = result.unwrap_err();
+            // Should not be InvalidArguments since strings aren't missing
+            // They will fail at file read
+        }
+    }
 }

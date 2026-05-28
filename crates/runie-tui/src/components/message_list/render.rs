@@ -5,7 +5,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
     text::Line,
-    widgets::{Gauge, Widget},
+    widgets::{Gauge, Paragraph, Widget, Wrap},
 };
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
@@ -308,38 +308,44 @@ pub fn strip_think_tags(text: &str) -> String {
     result
 }
 
-fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, wrap_cache: &mut WrapCache, agent_running: bool, spinner: char) -> u16 {
-    if text.is_empty() {
-        if agent_running {
-            let mut thinking = String::with_capacity(16);
-            write!(thinking, "{} Thinking...", spinner).ok();
-            let line = Line::raw(thinking).style(Style::default().fg(text_muted));
-            buf.set_line(margin_x, area.y + row, &line, area.width - 2);
+fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, max_rows: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, text_muted: ratatui::style::Color, cursor_visible: bool, _wrap_cache: &mut WrapCache, agent_running: bool, spinner: char) -> u16 {
+    let stripped = strip_think_tags(text);
+
+    if stripped.is_empty() {
+        let content = if agent_running {
+            format!("{} Thinking...", spinner)
         } else {
-            let dot = Line::raw("·").style(Style::default().fg(text_muted));
-            buf.set_line(margin_x, area.y + row, &dot, area.width - 2);
-        }
+            "·".to_string()
+        };
+        let para = Paragraph::new(Line::raw(content).style(Style::default().fg(text_muted)))
+            .style(Style::default().fg(text_muted));
+        let para_area = Rect::new(margin_x, area.y + row, area.width - margin_x + area.x - 2, 1);
+        para.render(para_area, buf);
         return 1;
     }
-    let text = strip_think_tags(text);
-    let wrapped = wrap_cache.get_wrapped(&text, (area.width as usize).saturating_sub(4));
-    let msg_height = wrapped.len() as u16;
-    for (i, line_text) in wrapped.iter().enumerate() {
-        if row + i as u16 >= max_rows { break; }
-        let line = Line::raw(line_text).style(Style::default().fg(text_secondary));
-        buf.set_line(margin_x, area.y + row + i as u16, &line, area.width - 2);
-    }
-    if cursor_visible && !wrapped.is_empty() {
-        let last_line_len = wrapped.last().map(|l| l.len()).unwrap_or(0) as u16;
-        let cursor_x = margin_x + last_line_len;
+
+    let para = Paragraph::new(Line::raw(&stripped).style(Style::default().fg(text_secondary)))
+        .style(Style::default().fg(text_secondary))
+        .wrap(Wrap { trim: true });
+
+    let available_height = (max_rows - row).min(area.height);
+    let para_area = Rect::new(margin_x, area.y + row, area.width - margin_x + area.x - 2, available_height);
+    para.render(para_area, buf);
+
+    // Estimate lines rendered based on text length and width
+    let line_count = ((stripped.len() as u16).saturating_sub(1) / (area.width.saturating_sub(4)).max(1) + 1).min(available_height);
+
+    if cursor_visible && line_count > 0 {
+        let cursor_y = area.y + row + line_count - 1;
+        let cursor_x = margin_x + (stripped.len() as u16).min(area.width - margin_x + area.x - 3);
         if cursor_x < area.x + area.width - 1 {
-            if let Some(cell) = buf.cell_mut((cursor_x, area.y + row + msg_height - 1)) {
+            if let Some(cell) = buf.cell_mut((cursor_x, cursor_y)) {
                 cell.set_char('▊');
                 cell.set_style(Style::default().fg(text_secondary));
             }
         }
     }
-    msg_height
+    line_count
 }
 
 fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
@@ -352,8 +358,10 @@ fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, t
     if show_spinner {
         write!(thought_text, " {}", spinner).ok();
     }
-    let line = Line::raw(thought_text).style(Style::default().fg(text_muted));
-    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    let para = Paragraph::new(Line::raw(thought_text).style(Style::default().fg(text_muted)))
+        .style(Style::default().fg(text_muted));
+    let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
+    para.render(para_area, buf);
     1
 }
 
@@ -364,25 +372,27 @@ fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u1
         cell.set_char('◆');
         cell.set_style(Style::default().fg(color));
     }
-    let line = Line::raw(text).style(Style::default().fg(color));
-    buf.set_line(text_x, area.y + row, &line, area.width - 4);
+    let para = Paragraph::new(Line::raw(text).style(Style::default().fg(color)))
+        .style(Style::default().fg(color));
+    let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
+    para.render(para_area, buf);
     1
 }
 
 // P2-1: Render structured error messages with [!] icon and recovery hint
 fn render_error_msg(message: &str, _recoverable: bool, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, _text_muted: ratatui::style::Color) -> u16 {
-    let _inner_x = margin_x + 1;
-    
     // Draw [!] icon
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
         cell.set_char('!');
         cell.set_style(Style::default().fg(error).add_modifier(ratatui::style::Modifier::BOLD));
     }
-    
-    // Draw error message
-    let msg_line = Line::raw(message).style(Style::default().fg(error));
-    buf.set_line(text_x, area.y + row, &msg_line, area.width - 4);
-    
+
+    // Draw error message using Paragraph
+    let para = Paragraph::new(Line::raw(message).style(Style::default().fg(error)))
+        .style(Style::default().fg(error));
+    let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
+    para.render(para_area, buf);
+
     // P0 FIX: Removed misleading "(press Enter to retry)" hint - Enter submits new message, doesn't retry
     1
 }
@@ -610,24 +620,25 @@ pub fn render_empty_state(
     text_x: u16,
 ) {
     let center_y = area.height / 2;
+    let available_width = area.width - text_x + area.x;
 
     // Title line
-    let title = Line::raw("runie")
-        .style(Style::default().fg(text_dim).add_modifier(ratatui::style::Modifier::BOLD));
-    buf.set_line(text_x, center_y.saturating_sub(3), &title, area.width - text_x);
+    let title = Paragraph::new(Line::raw("runie").style(Style::default().fg(text_dim).add_modifier(ratatui::style::Modifier::BOLD)))
+        .style(Style::default().fg(text_dim));
+    title.render(Rect::new(text_x, center_y.saturating_sub(3), available_width, 1), buf);
 
     // Tagline
-    let tagline = Line::raw("Your coding companion")
+    let tagline = Paragraph::new(Line::raw("Your coding companion").style(Style::default().fg(text_muted)))
         .style(Style::default().fg(text_muted));
-    buf.set_line(text_x, center_y.saturating_sub(2), &tagline, area.width - text_x);
+    tagline.render(Rect::new(text_x, center_y.saturating_sub(2), available_width, 1), buf);
 
     // Primary CTA
-    let cta = Line::raw("Type a message and press Enter to start")
+    let cta = Paragraph::new(Line::raw("Type a message and press Enter to start").style(Style::default().fg(text_muted)))
         .style(Style::default().fg(text_muted));
-    buf.set_line(text_x, center_y, &cta, area.width - text_x);
+    cta.render(Rect::new(text_x, center_y, available_width, 1), buf);
 
     // Secondary hints
-    let hint1 = Line::raw("Press ^k for commands · ^b for sidebar · ^q to quit")
+    let hint1 = Paragraph::new(Line::raw("Press ^k for commands · ^b for sidebar · ^q to quit").style(Style::default().fg(text_dim)))
         .style(Style::default().fg(text_dim));
-    buf.set_line(text_x, center_y.saturating_add(1), &hint1, area.width - text_x);
+    hint1.render(Rect::new(text_x, center_y.saturating_add(1), available_width, 1), buf);
 }

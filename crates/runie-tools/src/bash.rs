@@ -265,3 +265,56 @@ impl Tool for BashTool {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_bash_tool() -> BashTool {
+        let workspace = Workspace::new(std::path::PathBuf::from("."));
+        BashTool::new(workspace)
+    }
+
+    #[tokio::test]
+    async fn test_bash_missing_command_fails() {
+        let tool = create_bash_tool();
+        let args = serde_json::json!({});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_)));
+        assert!(err.to_string().contains("Missing 'command' argument"));
+    }
+
+    #[tokio::test]
+    async fn test_bash_empty_command_fails() {
+        let tool = create_bash_tool();
+        let args = serde_json::json!({"command": ""});
+        let result = tool.execute(args).await;
+        // Empty string passes the .ok_or check but fails validation
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        // Should fail because empty command is not in allowlist
+        assert!(err.to_string().contains("not in the allowlist") || err.to_string().contains("Missing"));
+    }
+
+    #[tokio::test]
+    async fn test_bash_whitelisted_command_succeeds() {
+        let tool = create_bash_tool();
+        let args = serde_json::json!({"command": "echo hello"});
+        let result = tool.execute(args).await;
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert!(output.content.contains("hello"));
+    }
+
+    #[tokio::test]
+    async fn test_bash_non_whitelisted_command_fails() {
+        let tool = create_bash_tool();
+        let args = serde_json::json!({"command": "curl http://evil.com"});
+        let result = tool.execute(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not in the allowlist"));
+    }
+}
