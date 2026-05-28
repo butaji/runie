@@ -371,4 +371,201 @@ mod tests {
         assert!(has_0, "Expected '0' in buffer for zero tokens");
         assert!(has_percent, "Expected '%' in buffer");
     }
+
+    // ─── format_context_window boundary tests ───────────────────────────────────
+
+    #[test]
+    fn test_format_context_window_boundary_999_999() {
+        // 999_999 is below 1_000_000, so K path not M
+        // 999_999 / 1000 = 999.999 → rounds to "1000k"
+        assert_eq!(format_context_window(999_999), "1000k");
+    }
+
+    #[test]
+    fn test_format_context_window_boundary_1_000_001() {
+        // 1_000_001 >= 1_000_000, so M path
+        // 1_000_001 / 1_000_000 = 1.000001 → rounds to "1m"
+        assert_eq!(format_context_window(1_000_001), "1m");
+    }
+
+    // ─── calculate_pct edge case tests ────────────────────────────────────────
+
+    #[test]
+    fn test_calculate_pct_float_precision() {
+        // 99_999/100_000 = 0.99999 → 99.999% (not rounded to 100%)
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 100_000,
+            estimated_tokens: 99_999,
+        };
+        assert_eq!(calculate_pct(&vm), 99.999);
+    }
+
+    #[test]
+    fn test_calculate_pct_very_small() {
+        // 1/128_000 = 0.0000078125 → 0.00078125% (not rounded to 0)
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 128_000,
+            estimated_tokens: 1,
+        };
+        assert_eq!(calculate_pct(&vm), 0.00078125);
+    }
+
+    // ─── TopBarViewModel::from_state partial tests ─────────────────────────────
+
+    #[test]
+    fn test_from_state_partial() {
+        // Only context_window set, estimated_tokens is None → defaults to 0
+        let mut state = TopBarState::default();
+        state.context_window = Some(200_000);
+        state.estimated_tokens = None;
+
+        let vm = TopBarViewModel::from_state(&state);
+        assert_eq!(vm.context_window, 200_000);
+        assert_eq!(vm.estimated_tokens, 0); // defaulted
+    }
+
+    // ─── build_left_spans partial组合 tests ────────────────────────────────────
+
+    #[test]
+    fn test_build_left_spans_repo_only() {
+        let vm = TopBarViewModel {
+            repo: "runie".to_string(),
+            branch: String::new(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 128_000,
+            estimated_tokens: 0,
+        };
+        let dim_style = Style::default();
+        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style);
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].content.as_ref(), "runie");
+    }
+
+    #[test]
+    fn test_build_left_spans_branch_only() {
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: "main".to_string(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 128_000,
+            estimated_tokens: 0,
+        };
+        let dim_style = Style::default();
+        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style);
+        // No repo, so no leading span - but branch adds "/" + "main"
+        assert_eq!(spans.len(), 2);
+        assert_eq!(spans[0].content.as_ref(), "/");
+        assert_eq!(spans[1].content.as_ref(), "main");
+    }
+
+    #[test]
+    fn test_build_left_spans_path_only() {
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: String::new(),
+            path: "src/lib.rs".to_string(),
+            model: String::new(),
+            context_window: 128_000,
+            estimated_tokens: 0,
+        };
+        let dim_style = Style::default();
+        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style);
+        // Only path: "  src/lib.rs"
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].content.as_ref(), "  src/lib.rs");
+    }
+
+    // ─── render_top_bar narrow terminal test ───────────────────────────────────
+
+    #[test]
+    fn test_render_top_bar_narrow_terminal() {
+        // Terminal width < 19 (minimum for "0/128k 0%" + gauge)
+        // text = "0/128k 0%" = 11 chars, gauge = 6, total = 18
+        // Need right_x > x check to pass, so width=18 should fail the check
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 128_000,
+            estimated_tokens: 0,
+        };
+
+        let colors = make_test_colors();
+        let area = Rect::new(0, 0, 18, 1); // Exactly at boundary, may or may not render
+        let mut buf = Buffer::empty(area);
+
+        render_top_bar(&vm, area, &mut buf, &colors);
+
+        // With very narrow terminal, right side should be omitted
+        // Check that left side still renders
+        let content = buf.content();
+        // The left part with empty repo/branch/path just has a space
+        // Verify no percent sign appears (right side was skipped)
+        let has_percent = content.iter().any(|c| c.symbol().contains("%"));
+        assert!(!has_percent, "Expected no '%' in buffer for narrow terminal");
+    }
+
+    // ─── render_top_bar gauge boundary tests ───────────────────────────────────
+
+    #[test]
+    fn test_render_top_bar_gauge_at_0_percent() {
+        // 0% gauge - empty gauge rendered
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 100_000,
+            estimated_tokens: 0,
+        };
+
+        let colors = make_test_colors();
+        let area = Rect::new(0, 0, 80, 1);
+        let mut buf = Buffer::empty(area);
+
+        render_top_bar(&vm, area, &mut buf, &colors);
+
+        // Right side should render: "0/100k 0%"
+        let content = buf.content();
+        let has_percent = content.iter().any(|c| c.symbol().contains("%"));
+        assert!(has_percent, "Expected '%' in buffer for 0% gauge");
+    }
+
+    #[test]
+    fn test_render_top_bar_gauge_at_100_percent() {
+        // 100% gauge - full gauge rendered
+        let vm = TopBarViewModel {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            model: String::new(),
+            context_window: 100_000,
+            estimated_tokens: 100_000,
+        };
+
+        let colors = make_test_colors();
+        let area = Rect::new(0, 0, 80, 1);
+        let mut buf = Buffer::empty(area);
+
+        render_top_bar(&vm, area, &mut buf, &colors);
+
+        // Right side should render: "100000/100k 100%"
+        let content = buf.content();
+        let has_percent = content.iter().any(|c| c.symbol().contains("%"));
+        assert!(has_percent, "Expected '%' in buffer for 100% gauge");
+        // Check that "100000" appears (token count) - look for individual digits
+        let has_100 = content.iter().any(|c| c.symbol() == "1" || c.symbol() == "0");
+        assert!(has_100, "Expected '1' or '0' in buffer for 100% gauge");
+    }
 }

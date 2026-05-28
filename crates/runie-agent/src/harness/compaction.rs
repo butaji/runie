@@ -44,7 +44,7 @@ pub struct CompactionPreparation {
     pub settings: CompactionSettings,
 }
 
-fn find_cut_point(messages: &[AgentMessage], _keep_recent_tokens: u32) -> usize {
+pub(crate) fn find_cut_point(messages: &[AgentMessage], _keep_recent_tokens: u32) -> usize {
     // Simple heuristic: keep last 6 messages
     messages.len().saturating_sub(6)
 }

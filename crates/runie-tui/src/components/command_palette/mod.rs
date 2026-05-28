@@ -1,6 +1,12 @@
 mod render;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_bugs;
+#[cfg(test)]
+mod tests_scoring;
+#[cfg(test)]
+mod tests_registry;
 
 use ratatui::{
     buffer::Buffer,
