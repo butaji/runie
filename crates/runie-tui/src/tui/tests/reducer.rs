@@ -36,6 +36,18 @@ fn make_state() -> AppState {
         // Model picker state
         model_picker: None,
         agent_start_time: None,
+        // Input history
+        input_history: Vec::new(),
+        input_history_index: None,
+        input_draft: String::new(),
+        // Live status indicator
+        status_header: None,
+        status_details: None,
+        status_start_time: None,
+        // Thinking duration tracking
+        thinking_start: None,
+        thinking_duration: None,
+        is_thinking: false,
     }
 }
 
@@ -66,6 +78,18 @@ fn make_state_with_text(text: &str) -> AppState {
         // Model picker state
         model_picker: None,
         agent_start_time: None,
+        // Input history
+        input_history: Vec::new(),
+        input_history_index: None,
+        input_draft: String::new(),
+        // Live status indicator
+        status_header: None,
+        status_details: None,
+        status_start_time: None,
+        // Thinking duration tracking
+        thinking_start: None,
+        thinking_duration: None,
+        is_thinking: false,
     };
     state
 }

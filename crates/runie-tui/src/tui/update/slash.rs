@@ -28,6 +28,9 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         runie_core::slash_command::SlashCommand::Cost => {
             // Cost command shows cost info - not implemented yet
         }
+        runie_core::slash_command::SlashCommand::Copy => {
+            state.messages.push(MessageItem::System { text: "Copy command - not implemented yet".to_string() });
+        }
     }
     vec![]
 }

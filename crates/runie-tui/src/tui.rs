@@ -183,8 +183,8 @@ impl Tui {
         Ok(())
     }
 
-    fn render_onboarding_mode(buf: &mut Buffer, area: Rect, _state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
-        Self::clear_background(buf, area, theme_colors.bg_base);
+    fn render_onboarding_mode(buf: &mut Buffer, area: Rect, _state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, _theme_colors: &ThemeColors) {
+        // MatrixBg fills its own background; skip clear_background to avoid overdraw
         if show_status_bar {
             Component::render(&vms.status_bar, &vms.status_bar, main_areas[3], buf, theme);
         }
