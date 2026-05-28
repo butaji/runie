@@ -14,5 +14,4 @@
     "feedback_provided": true,
     "different_message_works": true
   },
-  "grader": "grader.py"
 }

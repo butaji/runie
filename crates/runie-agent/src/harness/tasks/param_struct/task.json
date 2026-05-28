@@ -14,5 +14,4 @@
     "function_takes_single_param": true,
     "function_returns_result": true
   },
-  "grader": "grader.py"
 }

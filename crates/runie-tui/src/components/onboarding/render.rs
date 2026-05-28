@@ -85,14 +85,17 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
 
-    let display_indices = if onboarding.filtered_provider_indices.is_empty() {
+    // Only fall back to all providers when search is empty AND list not initialized yet.
+    // If user typed something with no matches, show empty so they know.
+    let display_indices = if onboarding.filtered_provider_indices.is_empty() && onboarding.search_query.is_empty() {
         (0..onboarding.providers.len()).collect::<Vec<_>>()
     } else {
         onboarding.filtered_provider_indices.clone()
     };
     let display_count = display_indices.len();
-    let list_h = display_count as u16;
-    let dialog_h = list_h + 6;
+    let has_search = !onboarding.search_query.is_empty();
+    let list_h = display_count.max(1) as u16; // min 1 row for "no matches" or items
+    let dialog_h = list_h + if has_search { 7 } else { 6 };
     let dialog_w = 40;
 
     let dialog_area = centered_rect(area, dialog_w, dialog_h);
@@ -109,29 +112,48 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
 
-            let list_y = title_y + 2;
-            for (i, &provider_idx) in display_indices.iter().enumerate() {
-                let row_y = list_y + i as u16;
-                let provider = &onboarding.providers[provider_idx];
-                let is_selected = i == onboarding.selected_item;
-                let radio = if is_selected { "◉" } else { "○" };
-                let radio_style = if is_selected {
-                    Style::default().fg(accent)
-                } else {
-                    Style::default().fg(text_muted)
-                };
-                let name_style = if is_selected {
-                    Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(text_primary)
-                };
-                let line = Line::from(vec![
-                    Span::styled("  ", Style::default().fg(text_muted)),
-                    Span::styled(radio, radio_style),
-                    Span::styled("  ", Style::default().fg(text_muted)),
-                    Span::styled(provider.name.to_lowercase(), name_style),
-                ]);
-                Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+            let mut list_y = title_y + 2;
+
+            // Show active search query
+            if has_search {
+                let search_y = list_y;
+                Paragraph::new(format!("  > {}", onboarding.search_query))
+                    .style(Style::default().fg(accent))
+                    .alignment(Alignment::Left)
+                    .render(Rect::new(inner.x, search_y, inner.width, 1), buf);
+                list_y += 1;
+            }
+
+            if display_indices.is_empty() {
+                let row_y = list_y;
+                Paragraph::new("  no matches")
+                    .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
+                    .alignment(Alignment::Left)
+                    .render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+            } else {
+                for (i, &provider_idx) in display_indices.iter().enumerate() {
+                    let row_y = list_y + i as u16;
+                    let provider = &onboarding.providers[provider_idx];
+                    let is_selected = i == onboarding.selected_item;
+                    let radio = if is_selected { "◉" } else { "○" };
+                    let radio_style = if is_selected {
+                        Style::default().fg(accent)
+                    } else {
+                        Style::default().fg(text_muted)
+                    };
+                    let name_style = if is_selected {
+                        Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(text_primary)
+                    };
+                    let line = Line::from(vec![
+                        Span::styled("  ", Style::default().fg(text_muted)),
+                        Span::styled(radio, radio_style),
+                        Span::styled("  ", Style::default().fg(text_muted)),
+                        Span::styled(provider.name.to_lowercase(), name_style),
+                    ]);
+                    Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+                }
             }
 
             if let Some(ref err) = onboarding.error_message {
@@ -151,14 +173,16 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
 
-    let display_indices = if onboarding.filtered_model_indices.is_empty() {
+    // Only fall back to all models when search is empty AND list not initialized yet.
+    let display_indices = if onboarding.filtered_model_indices.is_empty() && onboarding.search_query.is_empty() {
         (0..onboarding.models.len()).collect::<Vec<_>>()
     } else {
         onboarding.filtered_model_indices.clone()
     };
     let display_count = display_indices.len();
-    let list_h = display_count as u16;
-    let dialog_h = list_h + 6;
+    let has_search = !onboarding.search_query.is_empty();
+    let list_h = display_count.max(1) as u16;
+    let dialog_h = list_h + if has_search { 7 } else { 6 };
     let dialog_w = 40;
 
     let dialog_area = centered_rect(area, dialog_w, dialog_h);
@@ -179,29 +203,48 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
 
-            let list_y = title_y + 2;
-            for (i, &model_idx) in display_indices.iter().enumerate() {
-                let row_y = list_y + i as u16;
-                let model = &onboarding.models[model_idx];
-                let is_selected = i == onboarding.selected_item;
-                let radio = if is_selected { "◉" } else { "○" };
-                let radio_style = if is_selected {
-                    Style::default().fg(accent)
-                } else {
-                    Style::default().fg(text_muted)
-                };
-                let name_style = if is_selected {
-                    Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(text_primary)
-                };
-                let line = Line::from(vec![
-                    Span::styled("  ", Style::default().fg(text_muted)),
-                    Span::styled(radio, radio_style),
-                    Span::styled("  ", Style::default().fg(text_muted)),
-                    Span::styled(model.name.to_lowercase(), name_style),
-                ]);
-                Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+            let mut list_y = title_y + 2;
+
+            // Show active search query
+            if has_search {
+                let search_y = list_y;
+                Paragraph::new(format!("  > {}", onboarding.search_query))
+                    .style(Style::default().fg(accent))
+                    .alignment(Alignment::Left)
+                    .render(Rect::new(inner.x, search_y, inner.width, 1), buf);
+                list_y += 1;
+            }
+
+            if display_indices.is_empty() {
+                let row_y = list_y;
+                Paragraph::new("  no matches")
+                    .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
+                    .alignment(Alignment::Left)
+                    .render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+            } else {
+                for (i, &model_idx) in display_indices.iter().enumerate() {
+                    let row_y = list_y + i as u16;
+                    let model = &onboarding.models[model_idx];
+                    let is_selected = i == onboarding.selected_item;
+                    let radio = if is_selected { "◉" } else { "○" };
+                    let radio_style = if is_selected {
+                        Style::default().fg(accent)
+                    } else {
+                        Style::default().fg(text_muted)
+                    };
+                    let name_style = if is_selected {
+                        Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(text_primary)
+                    };
+                    let line = Line::from(vec![
+                        Span::styled("  ", Style::default().fg(text_muted)),
+                        Span::styled(radio, radio_style),
+                        Span::styled("  ", Style::default().fg(text_muted)),
+                        Span::styled(model.name.to_lowercase(), name_style),
+                    ]);
+                    Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+                }
             }
 
             if let Some(ref err) = onboarding.error_message {
@@ -306,7 +349,8 @@ fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardin
             let start_y = inner.y;
 
             let configured_y = start_y;
-            Paragraph::new(format!("{} configured   {} model", provider_name, model_count))
+            let model_word = if model_count == 1 { "model" } else { "models" };
+            Paragraph::new(format!("{} configured   {} {}", provider_name, model_count, model_word))
                 .style(Style::default().fg(text_primary))
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, configured_y, inner.width, 1), buf);

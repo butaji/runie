@@ -97,6 +97,7 @@ fn test_top_bar_with_context_fields() {
         repo: "runie".to_string(),
         branch: "master".to_string(),
         path: "path/to/the/folder".to_string(),
+        model: "gpt-4o".to_string(),
         checks_passed: Some(4),
         checks_total: Some(4),
         percentage: Some(4.5),
@@ -104,6 +105,8 @@ fn test_top_bar_with_context_fields() {
         context_badges: Vec::new(),
         context_pct: None,
         context_bar_pct: None,
+        context_window: Some(128_000),
+        estimated_tokens: Some(0),
     };
 
     assert_eq!(top_bar.repo, "runie");

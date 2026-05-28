@@ -1,6 +1,6 @@
 //! Settings manager with layered resolution (CLI args > env > project config > global config > defaults)
 
-use runie_ai::ModelRegistry;
+use runie_ai::get_provider_models;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -116,11 +116,12 @@ impl Settings {
         }
     }
 
-    /// Validate model against registry
+    /// Validate model against static registry
     #[allow(dead_code)]
     pub fn validate_model(&self) -> bool {
-        let registry = ModelRegistry::new();
-        registry.get(&self.model).is_some()
+        get_provider_models(&self.provider)
+            .map(|models| models.iter().any(|m| m.id == self.model))
+            .unwrap_or(false)
     }
 }
 

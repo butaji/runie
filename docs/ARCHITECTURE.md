@@ -152,6 +152,41 @@ match msg {
 
 **Zero-cost abstractions.** The event stream compiles down to simple enum dispatch. No runtime overhead.
 
+## Static Model Registry
+
+Following [Pi](https://github.com/pi)'s approach, we use a **static, hardcoded model registry** instead of runtime API fetching.
+
+**Why static?**
+- No network dependency during onboarding
+- Instant model list (no loading states)
+- Predictable, version-controlled model data
+- Works offline
+
+**Trade-off:** Models must be updated manually when providers add new ones. The registry is generated from Pi's `models.generated.ts` which itself is auto-generated from `models.dev` API at build time.
+
+```rust
+// crates/runie-ai/src/model_fetcher.rs
+pub fn get_provider_models(provider: &str) -> Option<Vec<ModelInfo>> {
+    let mut registry: HashMap<&str, Vec<ModelInfo>> = HashMap::new();
+    
+    registry.insert("openai", vec![
+        ModelInfo { id: "gpt-4o".to_string(), name: "GPT-4o".to_string() },
+        ModelInfo { id: "gpt-4.1".to_string(), name: "GPT-4.1".to_string() },
+        // ... 40+ more models
+    ]);
+    
+    registry.insert("anthropic", vec![
+        ModelInfo { id: "claude-sonnet-4-6".to_string(), name: "Claude Sonnet 4.6".to_string() },
+        // ... 20+ more models
+    ]);
+    
+    // 20+ providers, 500+ models total
+    registry.get(provider).cloned()
+}
+```
+
+The `ModelFetcher` trait still exists for API compatibility, but `fetch_models()` now returns the static list immediately — no HTTP calls, no async runtime needed.
+
 ## Event Flow Example
 
 ```
@@ -175,7 +210,7 @@ Spawns fetch actor
     ↓
 Renders immediately: shows "loading models..."
     ↓
-... 500ms later ...
+... 0ms later (static lookup) ...
     ↓
 Fetch actor completes, sends Msg::ModelsFetched(models)
     ↓
@@ -196,6 +231,7 @@ Every step is a message. Every state change is visible. No hidden mutations.
 crates/
   runie-core/        # Msg, Cmd, AgentEvent, shared types
   runie-agent/       # Agent loop, tool execution
+  runie-ai/          # Provider abstractions, static model registry
   runie-tui/         # State, update, render, components
   runie-cli/         # Main loop, actor spawning, event routing
 ```
@@ -215,3 +251,28 @@ fn test_submit_creates_user_message() {
 ```
 
 No async runtime. No mocks. Just pure functions.
+
+## Provider Support
+
+| Provider | Source | Models |
+|----------|--------|--------|
+| OpenAI | Pi/static | 40+ |
+| Anthropic | Pi/static | 20+ |
+| Groq | Pi/static | 15+ |
+| Together | Pi/static | 20+ |
+| xAI | Pi/static | 7+ |
+| Mistral | Pi/static | 25+ |
+| DeepSeek | Pi/static | 2+ |
+| OpenRouter | Pi/static | 150+ |
+| MiniMax | Pi/static | 2+ |
+| HuggingFace | Pi/static | 15+ |
+| Z.ai | Pi/static | 5+ |
+| Google | Static | 9+ |
+| Ollama | Static | 10+ |
+| Azure | Static | 4 |
+| Cohere | Static | 4 |
+| Perplexity | Static | 4 |
+| Moonshot | Static | 3 |
+| Hyperbolic | Static | 4 |
+
+Total: 500+ models across 20+ providers.

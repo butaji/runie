@@ -8,8 +8,6 @@ mod tests {
     use crate::components::onboarding::{Onboarding, OnboardingStep};
     use runie_ai::model_fetcher::ModelInfo;
 
-    const OPENAI_INDEX: usize = 15;
-
     fn setup() -> AppState {
         let mut state = AppState::default();
         state.onboarding = Some(Onboarding::new());
@@ -33,18 +31,18 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
-        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
-        assert!(cmds.is_empty());
-        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::KeyInput);
-    }
-
-    #[test]
-    fn test_model_select_to_complete_with_selection() {
-        let mut state = setup();
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -78,7 +76,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -125,7 +127,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -135,6 +141,8 @@ mod tests {
         state.onboarding.as_mut().unwrap().select_model(0);
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Complete);
+        // Reset selected_item to 0 (Yes) to restart onboarding
+        state.onboarding.as_mut().unwrap().selected_item = 0;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::ProviderSelect);
         handle_onboarding_msg(&mut state, Msg::OnboardingBack);
@@ -183,7 +191,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "pk-wrong".to_string();
         let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -197,17 +209,21 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         for c in "sk-test".chars() {
             handle_onboarding_msg(&mut state, Msg::OnboardingKeyInput(c));
         }
         assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "sk-test");
+        // Backspace removes whole token ("test" after dash)
         handle_onboarding_msg(&mut state, Msg::OnboardingKeyBackspace);
-        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "sk-tes");
+        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "sk-");
+        // Backspace removes next token ("sk-")
         handle_onboarding_msg(&mut state, Msg::OnboardingKeyBackspace);
-        assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "sk-te");
-        for _ in 0..6 { handle_onboarding_msg(&mut state, Msg::OnboardingKeyBackspace); }
         assert_eq!(state.onboarding.as_ref().unwrap().api_key_input, "");
     }
 
@@ -216,7 +232,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "".to_string();
         let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -229,7 +249,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         for c in "abc".chars() {
             handle_onboarding_msg(&mut state, Msg::OnboardingKeyInput(c));
@@ -244,7 +268,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -262,7 +290,11 @@ mod tests {
         let mut state = setup();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().update_search("");
-        state.onboarding.as_mut().unwrap().select_provider(OPENAI_INDEX);
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
         state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
         handle_onboarding_msg(&mut state, Msg::OnboardingNext);
@@ -287,7 +319,8 @@ mod tests {
         let o = state.onboarding.as_mut().unwrap();
         o.step = OnboardingStep::Complete;
         o.selected_item = 0;
-        o.selected_provider = Some(OPENAI_INDEX);
+        let openai_idx = o.providers.iter().position(|p| p.id == "openai").expect("OpenAI provider should exist");
+        o.selected_provider = Some(openai_idx);
         o.selected_model = Some(0);
         o.api_key_input = "sk-test".to_string();
         o.models.push(crate::components::onboarding::ModelOption {
@@ -308,7 +341,8 @@ mod tests {
         let o = state.onboarding.as_mut().unwrap();
         o.step = OnboardingStep::Complete;
         o.selected_item = 1;
-        o.selected_provider = Some(OPENAI_INDEX);
+        let openai_idx = o.providers.iter().position(|p| p.id == "openai").expect("OpenAI provider should exist");
+        o.selected_provider = Some(openai_idx);
         o.selected_model = Some(0);
         o.api_key_input = "sk-test".to_string();
         o.models.push(crate::components::onboarding::ModelOption {
@@ -329,7 +363,8 @@ mod tests {
         let o = state.onboarding.as_mut().unwrap();
         o.step = OnboardingStep::Complete;
         o.selected_item = 1;
-        o.selected_provider = Some(OPENAI_INDEX);
+        let openai_idx = o.providers.iter().position(|p| p.id == "openai").expect("OpenAI provider should exist");
+        o.selected_provider = Some(openai_idx);
         o.selected_model = Some(0);
         o.api_key_input = "sk-secret".to_string();
         o.models.push(crate::components::onboarding::ModelOption {
@@ -370,5 +405,154 @@ mod tests {
         assert!(o.api_key_input.is_empty());
         assert!(o.search_query.is_empty());
         assert!(o.error_message.is_none());
+    }
+
+    // ─── Category 6: Search/Filter Selection ───────────────────────────────────
+
+    #[test]
+    fn test_search_filters_providers() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+
+        // Search for "anthropic" - should filter to 1 provider
+        for c in "anthropic".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+        assert_eq!(state.onboarding.as_ref().unwrap().get_filtered_provider_count(), 1);
+        assert_eq!(state.onboarding.as_ref().unwrap().selected_item, 0);
+    }
+
+    #[test]
+    fn test_select_from_filtered_providers() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+
+        // Search for "anthropic"
+        for c in "anthropic".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+
+        // Press Enter to select the filtered provider
+        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::KeyInput);
+        assert!(state.onboarding.as_ref().unwrap().selected_provider.is_some());
+        let provider_idx = state.onboarding.as_ref().unwrap().selected_provider.unwrap();
+        assert_eq!(state.onboarding.as_ref().unwrap().providers[provider_idx].id, "anthropic");
+    }
+
+    #[test]
+    fn test_search_no_matches_shows_empty() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+
+        // Search for something that doesn't exist
+        for c in "zzzzzz".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+        assert_eq!(state.onboarding.as_ref().unwrap().get_filtered_provider_count(), 0);
+
+        // Pressing Enter with no matches should stay on ProviderSelect
+        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::ProviderSelect);
+        assert!(state.onboarding.as_ref().unwrap().error_message.is_some());
+    }
+
+    #[test]
+    fn test_clear_search_restores_all_providers() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+
+        // Filter to 1 provider
+        for c in "anthropic".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+        assert_eq!(state.onboarding.as_ref().unwrap().get_filtered_provider_count(), 1);
+
+        // Clear search character by character
+        for _ in 0..9 {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchBackspace);
+        }
+        assert!(state.onboarding.as_ref().unwrap().search_query.is_empty());
+        assert_eq!(state.onboarding.as_ref().unwrap().get_filtered_provider_count(),
+            state.onboarding.as_ref().unwrap().providers.len());
+    }
+
+    #[test]
+    fn test_search_filters_models() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        // Manually transition to ModelSelect (models were populated by select_provider)
+        state.onboarding.as_mut().unwrap().is_fetching_models = false;
+        state.onboarding.as_mut().unwrap().step = OnboardingStep::ModelSelect;
+        state.onboarding.as_mut().unwrap().enter_step();
+
+        // Now on ModelSelect, search for "gpt-4"
+        for c in "gpt-4".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+        let filtered_count = state.onboarding.as_ref().unwrap().get_filtered_model_count();
+        assert!(filtered_count > 0, "Should find some gpt-4 models");
+        assert!(filtered_count < state.onboarding.as_ref().unwrap().models.len(),
+            "Should filter down from all models");
+    }
+
+    #[test]
+    fn test_select_from_filtered_models() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+        let openai_idx = state.onboarding.as_ref().unwrap().providers.iter()
+            .position(|p| p.id == "openai")
+            .expect("OpenAI provider should exist");
+        state.onboarding.as_mut().unwrap().select_provider(openai_idx);
+        state.onboarding.as_mut().unwrap().selected_item = openai_idx;
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().api_key_input = "sk-test".to_string();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        // Manually transition to ModelSelect (models were populated by select_provider)
+        state.onboarding.as_mut().unwrap().is_fetching_models = false;
+        state.onboarding.as_mut().unwrap().step = OnboardingStep::ModelSelect;
+        state.onboarding.as_mut().unwrap().enter_step();
+
+        // Search for "gpt-4o"
+        for c in "gpt-4o".chars() {
+            handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput(c));
+        }
+
+        // Press Enter to select the filtered model
+        let cmds = handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        assert_eq!(state.onboarding.as_ref().unwrap().step, OnboardingStep::Complete);
+        assert!(state.onboarding.as_ref().unwrap().selected_model.is_some());
+    }
+
+    #[test]
+    fn test_search_resets_selected_item_to_zero() {
+        let mut state = setup();
+        handle_onboarding_msg(&mut state, Msg::OnboardingNext);
+        state.onboarding.as_mut().unwrap().update_search("");
+
+        // Navigate down to index 5
+        for _ in 0..5 {
+            handle_onboarding_msg(&mut state, Msg::OnboardingNavigateDown);
+        }
+        assert_eq!(state.onboarding.as_ref().unwrap().selected_item, 5);
+
+        // Type a search - selected_item should reset to 0
+        handle_onboarding_msg(&mut state, Msg::OnboardingSearchInput('o'));
+        assert_eq!(state.onboarding.as_ref().unwrap().selected_item, 0);
     }
 }

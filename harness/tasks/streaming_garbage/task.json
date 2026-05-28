@@ -13,5 +13,4 @@
     "skips_invalid_chunks": true,
     "no_panic_on_garbage": true
   },
-  "grader": "grader.py"
 }

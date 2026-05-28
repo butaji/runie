@@ -16,5 +16,5 @@ pub use unified_api::UnifiedApi;
 pub use token_usage::TokenUsage;
 pub use providers::GenAiProvider;
 pub use providers::RigProvider;
-pub use model_fetcher::{ModelFetcher, FetchError, create_fetcher};
-pub use model_registry::{ModelInfo, ModelRegistry};
+pub use model_fetcher::{ModelFetcher, FetchError, create_fetcher, get_provider_models, ModelInfo};
+pub use model_registry::ModelRegistry;

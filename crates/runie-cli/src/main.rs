@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Load settings with layered resolution, then apply CLI overrides
-    let settings = Settings::load();
+    let mut settings = Settings::load();
 
     match cli.command {
         // CLI: One-shot commands
@@ -120,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             #[cfg(not(windows))]
             {
-                tui_run::run_tui(cli.workspace, cli.mock, &settings, cli.mock_setup, event_logger.as_ref()).await?;
+                tui_run::run_tui(cli.workspace, cli.mock, &mut settings, cli.mock_setup, event_logger.as_ref()).await?;
             }
             #[cfg(windows)]
             {

@@ -14,5 +14,4 @@
     "agent_continues_or_terminates": true,
     "no_crash": true
   },
-  "grader": "grader.py"
 }

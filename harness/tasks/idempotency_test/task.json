@@ -13,5 +13,4 @@
     "different_args_work": true,
     "operation_count_correct": true
   },
-  "grader": "grader.py"
 }

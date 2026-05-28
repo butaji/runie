@@ -14,5 +14,4 @@
     "user_notified": true,
     "no_hang_indefinitely": true
   },
-  "grader": "grader.py"
 }

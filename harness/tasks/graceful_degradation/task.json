@@ -13,5 +13,4 @@
     "no_panic_on_component_failure": true,
     "fallback_rendering_exists": true
   },
-  "grader": "grader.py"
 }

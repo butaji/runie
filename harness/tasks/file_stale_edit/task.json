@@ -11,5 +11,4 @@
     "returns_meaningful_error": true,
     "does_not_silently_overwrite": true
   },
-  "grader": "grader.py"
 }

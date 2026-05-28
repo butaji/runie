@@ -487,17 +487,21 @@ impl Onboarding {
     }
 
     pub fn get_filtered_provider_count(&self) -> usize {
-        if self.filtered_provider_indices.is_empty() {
+        if self.filtered_provider_indices.is_empty() && self.search_query.is_empty() {
+            // Not initialized yet - return all providers
             self.providers.len()
         } else {
+            // Either has matches or actively searched with no results
             self.filtered_provider_indices.len()
         }
     }
 
     pub fn get_filtered_model_count(&self) -> usize {
-        if self.filtered_model_indices.is_empty() {
+        if self.filtered_model_indices.is_empty() && self.search_query.is_empty() {
+            // Not initialized yet - return all models
             self.models.len()
         } else {
+            // Either has matches or actively searched with no results
             self.filtered_model_indices.len()
         }
     }

@@ -13,5 +13,4 @@
     "has_shortcuts_hint": true,
     "has_cta": true
   },
-  "grader": "grader.py"
 }

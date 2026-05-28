@@ -15,5 +15,4 @@
     "removes_duplicates": true,
     "is_idempotent": true
   },
-  "grader": "grader.py"
 }

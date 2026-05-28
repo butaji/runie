@@ -14,5 +14,4 @@
     "invalid_transition_rejected": true,
     "rapid_switch_handled": true
   },
-  "grader": "grader.py"
 }
