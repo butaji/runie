@@ -11,5 +11,4 @@
     "has_revert": true,
     "cancel_triggers_rollback": true
   },
-  "grader": "grader.py"
 }

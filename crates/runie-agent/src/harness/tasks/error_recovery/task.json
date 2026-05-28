@@ -14,5 +14,4 @@
     "max_retries_3": true,
     "returns_result": true
   },
-  "grader": "grader.py"
 }

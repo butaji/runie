@@ -14,5 +14,4 @@
     "user_can_continue": true,
     "no_panic_on_error": true
   },
-  "grader": "grader.py"
 }

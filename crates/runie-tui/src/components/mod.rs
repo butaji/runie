@@ -23,7 +23,7 @@ pub use code_block::{CodeBlock, CodeLine, LineStatus};
 pub use collapsible::Collapsible;
 pub use diff_viewer::DiffViewer;
 pub use agent_list::{AgentList, AgentItem, AgentStatus};
-pub use top_bar::{TopBarViewModel, TopBarRightItem, render_top_bar};
+pub use top_bar::{TopBarViewModel, render_top_bar};
 pub use message_list::{MessageList, MessageItem};
 pub use input_bar::{INPUT_PROMPT, input_bar_height};
 pub use status_bar::StatusBar;

@@ -45,7 +45,7 @@ fn needs_onboarding(settings: &Settings) -> bool {
 pub async fn run_tui(
     workspace: PathBuf,
     mock: bool,
-    settings: &Settings,
+    settings: &mut Settings,
     force_setup: bool,
     event_logger: Option<&EventStreamLogger>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -216,19 +216,10 @@ pub async fn run_tui(
             .map(|m| m.context_window)
             .unwrap_or(128_000); // default fallback
 
-        let pct = if context_window > 0 {
-            ((estimated_tokens as f32 / context_window as f32) * 100.0).min(100.0)
-        } else {
-            0.0
-        };
-
-        tui.state.top_bar.context_pct = Some(pct);
-        tui.state.top_bar.context_bar_pct = Some(pct);
-
-        // Ensure badges always show something meaningful
-        if tui.state.top_bar.context_badges.is_empty() {
-            tui.state.top_bar.context_badges.push(settings.model.clone());
-        }
+        // Update top bar with model and token info
+        tui.state.top_bar.model = settings.model.clone();
+        tui.state.top_bar.context_window = Some(context_window);
+        tui.state.top_bar.estimated_tokens = Some(estimated_tokens);
     }
 
     // Process Cmds that need recursive handling (SlashCommand -> more Cmds)
@@ -240,7 +231,7 @@ pub async fn run_tui(
         msg_tx: &mpsc::Sender<Msg>,
         workspace: &PathBuf,
         mock: bool,
-        settings: &Settings,
+        settings: &mut Settings,
         base_system_prompt: &str,
         cancel: &CancellationToken,
     ) -> Vec<Cmd> {
@@ -312,6 +303,15 @@ pub async fn run_tui(
                 vec![]
             }
             Cmd::SaveSettings { provider, model, api_key } => {
+                // Update local settings
+                settings.provider = provider.clone();
+                settings.model = model.clone();
+                settings.api_key = Some(api_key.clone());
+
+                // Update TUI state
+                tui.state.current_model = Some(format!("{}/{}", provider, model));
+                tui.state.top_bar.model = model.clone();
+
                 let config_path = dirs::home_dir()
                     .map(|h| h.join(".runie").join("config.toml"))
                     .unwrap_or_else(|| PathBuf::from(".runie/config.toml"));
@@ -460,7 +460,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &settings, &base_system_prompt, &cancel).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -496,7 +496,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &settings, &base_system_prompt, &cancel).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -513,7 +513,7 @@ pub async fn run_tui(
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &settings, &base_system_prompt, &cancel).await);
+                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await);
                     }
                     pending_cmds = next_cmds;
                 }

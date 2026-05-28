@@ -130,9 +130,34 @@ fn handle_keypress(state: &mut AppState, c: char) -> Vec<Cmd> {
 
 fn handle_onboarding_key_backspace(state: &mut AppState) -> Vec<Cmd> {
     if let Some(o) = state.onboarding.as_mut() {
-        o.api_key_input.pop();
+        // Remove the last token (word) instead of just one character
+        // A token is separated by whitespace, dashes, underscores, dots, or slashes
+        let s = &o.api_key_input;
+        if s.is_empty() {
+            return vec![];
+        }
+
+        // Find the last non-separator character
+        let mut end = s.len();
+        let bytes = s.as_bytes();
+
+        // Skip trailing separators
+        while end > 0 && is_token_separator(bytes[end - 1]) {
+            end -= 1;
+        }
+
+        // Now skip the token characters
+        while end > 0 && !is_token_separator(bytes[end - 1]) {
+            end -= 1;
+        }
+
+        o.api_key_input.truncate(end);
     }
     vec![]
+}
+
+fn is_token_separator(b: u8) -> bool {
+    matches!(b, b' ' | b'\t' | b'\n' | b'-' | b'_' | b'.' | b'/' | b':' | b'=')
 }
 
 fn handle_onboarding_submit(state: &mut AppState) -> Vec<Cmd> {

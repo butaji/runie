@@ -49,25 +49,25 @@ fn test_hook_decision_modify() {
 
 #[test]
 fn test_permission_decision_allow() {
-    let decision = PermissionDecision::Allow { tool_call_id: "call_1".to_string() };
+    let decision = PermissionDecision::Allow { tool_call_id: "call_1".to_string(), tool_name: "test".to_string(), tool_args: "{}".to_string() };
     assert!(matches!(decision, PermissionDecision::Allow { .. }));
 }
 
 #[test]
 fn test_permission_decision_deny() {
-    let decision = PermissionDecision::Deny { tool_call_id: "call_1".to_string() };
+    let decision = PermissionDecision::Deny { tool_call_id: "call_1".to_string(), tool_name: "test".to_string(), tool_args: "{}".to_string() };
     assert!(matches!(decision, PermissionDecision::Deny { .. }));
 }
 
 #[test]
 fn test_permission_decision_allow_always() {
-    let decision = PermissionDecision::AllowAlways { tool_call_id: "call_1".to_string() };
+    let decision = PermissionDecision::AllowAlways { tool_call_id: "call_1".to_string(), tool_name: "test".to_string(), tool_args: "{}".to_string() };
     assert!(matches!(decision, PermissionDecision::AllowAlways { .. }));
 }
 
 #[test]
 fn test_permission_decision_skip() {
-    let decision = PermissionDecision::Skip { tool_call_id: "call_1".to_string() };
+    let decision = PermissionDecision::Skip { tool_call_id: "call_1".to_string(), tool_name: "test".to_string(), tool_args: "{}".to_string() };
     assert!(matches!(decision, PermissionDecision::Skip { .. }));
 }
 

@@ -13,5 +13,4 @@
     "advanced_revealed_on_interaction": true,
     "show_advanced_toggle_exists": true
   },
-  "grader": "grader.py"
 }

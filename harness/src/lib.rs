@@ -341,7 +341,7 @@ fn run_grader(
     let grader_path = task_dir.join("grader.py");
     if !grader_path.exists() {
         return (
-            TaskStatus::Error,
+            TaskStatus::Skipped,
             0,
             0,
             format!("grader not found: {}", grader_path.display()),

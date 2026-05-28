@@ -11,5 +11,4 @@
     "mode_reset": true,
     "no_panic_hook_conflict": true
   },
-  "grader": "grader.py"
 }

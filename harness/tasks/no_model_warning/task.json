@@ -13,5 +13,4 @@
     "warning_is_visible": true,
     "submit_blocked_or_warning_shown": true
   },
-  "grader": "grader.py"
 }

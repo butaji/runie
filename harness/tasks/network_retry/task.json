@@ -11,5 +11,4 @@
     "detects_transient_errors": true,
     "has_max_retries": true
   },
-  "grader": "grader.py"
 }

@@ -79,6 +79,7 @@ pub struct TopBarState {
     pub repo: String,
     pub branch: String,
     pub path: String,
+    pub model: String,
     pub checks_passed: Option<usize>,
     pub checks_total: Option<usize>,
     pub percentage: Option<f32>,
@@ -86,6 +87,8 @@ pub struct TopBarState {
     pub context_badges: Vec<String>,
     pub context_pct: Option<f32>,
     pub context_bar_pct: Option<f32>,
+    pub context_window: Option<usize>,
+    pub estimated_tokens: Option<usize>,
 }
 
 impl Default for TopBarState {
@@ -94,6 +97,7 @@ impl Default for TopBarState {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
+            model: String::new(),
             checks_passed: None,
             checks_total: None,
             percentage: None,
@@ -101,6 +105,8 @@ impl Default for TopBarState {
             context_badges: Vec::new(),
             context_pct: None,
             context_bar_pct: None,
+            context_window: Some(128_000),
+            estimated_tokens: Some(0),
         }
     }
 }

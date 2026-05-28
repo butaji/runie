@@ -13,5 +13,4 @@
     "no_panic_calls_in_function": true,
     "error_messages_contain_size": true
   },
-  "grader": "grader.py"
 }

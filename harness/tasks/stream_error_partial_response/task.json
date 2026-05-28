@@ -13,5 +13,4 @@
     "message_marked_error": true,
     "user_can_continue": true
   },
-  "grader": "grader.py"
 }

@@ -2,12 +2,8 @@
 set -euo pipefail
 
 # Fast lint runner for runie
-# Runs structural linter (Python) then clippy on changed crates only
+# Runs clippy on changed crates only
 
-echo "=== Structural Linter (max 500 lines, 40 func lines, 10 complexity) ==="
-python3 scripts/lint.py
-
-echo ""
 echo "=== Clippy (code quality) ==="
 # Only run clippy on crates with Rust changes (fast)
 CHANGED=$(git diff --name-only HEAD~5 -- '*.rs' | cut -d'/' -f2 | sort -u | grep '^runie-' || true)

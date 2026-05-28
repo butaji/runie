@@ -55,9 +55,9 @@ async fn test_agent_end_to_end() {
                 got_agent_end = true;
                 break;
             }
-            AgentEvent::PermissionRequest { tool_call_id, .. } => {
+            AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args, .. } => {
                 // Auto-allow permission requests for testing
-                let _ = stream.send_permission(PermissionDecision::Allow { tool_call_id }).await;
+                let _ = stream.send_permission(PermissionDecision::Allow { tool_call_id, tool_name, tool_args }).await;
             }
             _ => {}
         }

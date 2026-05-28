@@ -4,22 +4,19 @@ End-to-end evaluation suite for the Runie TUI coding agent. Based on
 [SWE-bench](https://github.com/princeton-nlp/SWE-bench) and
 [Terminal Bench 2.0](https://github.com/terminal-benchmarks/terminal-bench) patterns.
 
+All graders are written in Rust — no Python dependency.
+
 ---
 
 ## Quick Start
 
 ```bash
-# Run all 20 tasks
-bash harness/run.sh
+# Run all tasks via Rust library
+cargo test -p runie-harness
 
-# Run a single task
-bash harness/run.sh --task empty_state
-
-# Verbose output
-bash harness/run.sh --verbose
-
-# With specific model
-bash harness/run.sh --model gpt-4o
+# Run a specific integration test
+cargo test -p runie-harness --test empty_state
+cargo test -p runie-harness --test panic_recovery
 ```
 
 ---
@@ -29,25 +26,25 @@ bash harness/run.sh --model gpt-4o
 ```
 harness/
 ├── README.md              # This file
-├── run.sh                 # Task runner (bash, no dependencies)
-├── run_bench.sh           # Full benchmark runner with CSV output
 ├── Cargo.toml             # Rust harness library
 ├── src/
-│   └── lib.rs             # Task discovery, grader execution, CSV output
-└── tasks/                # Individual task directories (20 tasks)
-    ├── <task_id>/
-    │   ├── task.json      # Task definition (JSON)
-    │   └── grader.py      # Python validation script
-    └── ...
+│   ├── lib.rs             # Task discovery, execution, CSV output
+│   └── graders/
+│       └── static_analysis.rs  # Rust grader utilities
+├── tests/                 # Rust integration tests (one per task)
+│   ├── empty_state.rs
+│   ├── panic_recovery.rs
+│   └── ...
+└── tasks/                 # Task definitions (JSON only)
+    └── <task_id>/
+        └── task.json      # Task definition
 ```
 
 ---
 
 ## Task Format
 
-Each task lives in `tasks/<task_id>/` and contains:
-
-### `task.json`
+Each task lives in `tasks/<task_id>/` and contains only a `task.json`:
 
 ```json
 {
@@ -61,27 +58,15 @@ Each task lives in `tasks/<task_id>/` and contains:
   },
   "expected": {
     "check_name": true
-  },
-  "grader": "grader.py"
+  }
 }
 ```
 
-### `grader.py`
-
-Python script that validates implementation. Output format:
-
-```
-PASS: <check_name>
-FAIL: <check_name>
-<pass_count>/<total> checks passed
-RESULT: pass|fail|error
-```
-
-Exit code 0 = success, non-zero = failure.
+The grader is a Rust integration test in `harness/tests/<task_id>.rs`.
 
 ---
 
-## Available Tasks (20)
+## Available Tasks
 
 ### UX / Dead-ends
 | Task | Description |
@@ -131,11 +116,8 @@ The `src/lib.rs` provides a programmatic API:
 ```rust
 use runie_harness::{HarnessConfig, run_all_tasks};
 
-let config = HarnessConfig::default()
-    .python("python3")
-    .verbose();
-
-let result = run_all_tasks(&config);
+let config = HarnessConfig::default().verbose();
+let result = run_all_tasks(&config).await;
 println!("Pass rate: {:.0}%", result.pass_rate() * 100.0);
 println!("{}", result.to_csv());
 ```
@@ -165,10 +147,9 @@ error_state_recovery,pass,3,5,5,5/5 checks passed
 
 ## Adding a New Task
 
-1. Create `harness/tasks/my_new_task/`
-2. Add `task.json` with id, name, description, expected outcomes
-3. Add `grader.py` that checks for the expected behaviors
-4. Run: `bash harness/run.sh --task my_new_task`
+1. Create `harness/tasks/my_new_task/task.json` with task definition
+2. Create `harness/tests/my_new_task.rs` with Rust grader tests
+3. Run: `cargo test -p runie-harness --test my_new_task`
 
 ---
 
@@ -177,4 +158,4 @@ error_state_recovery,pass,3,5,5,5/5 checks passed
 - No new dependencies without justification
 - All code must compile with `cargo check --all-targets`
 - Tasks validate behavior, not implementation (black-box testing)
-- Graders must exit 0 on pass, non-zero on fail
+- Graders are Rust tests that assert on source code patterns

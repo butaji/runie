@@ -14,5 +14,4 @@
     "no_silent_drop": true,
     "buffer_capacity_defined": true
   },
-  "grader": "grader.py"
 }
