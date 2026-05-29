@@ -5,6 +5,7 @@ pub mod theme;
 pub mod components;
 pub mod tui;
 pub mod pipe;
+pub mod actors;
 
 pub use theme::{ThemeWrapper, ColorPalette, OpalineColor};
 pub use tui::{Tui, TuiConfig, TuiMode, Msg, Cmd, update, event_to_msg, Onboarding, AppState};

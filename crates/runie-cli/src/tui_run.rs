@@ -11,7 +11,8 @@ use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop, AgentLoopError};
 use runie_agent::{SafetyHook, Hook};
 use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
-use crate::actors::InputActor;
+use runie_tui::actors::{spawn_actor, input::InputActor as TuiInputActor, timer::TimerActor};
+use runie_tui::pipe::{InputMsg, StatePipe, ViewModelPipe, StateChange};
 use crate::event_stream::EventStreamLogger;
 use crate::event_logger as log;
 use crate::settings::Settings;
@@ -176,11 +177,12 @@ pub async fn run_tui(
     // Cooperative cancellation token for graceful shutdown
     let cancel = CancellationToken::new();
 
-    // InputActor - reads terminal events and sends them as Msg variants
-    let input_actor = InputActor::new(msg_tx.clone(), cancel.clone());
-    tokio::spawn(async move {
-        input_actor.run().await;
-    });
+    // Spawn new actors using the actor framework
+    let (input_handle, mut input_rx) = spawn_actor(TuiInputActor::new());
+    let (timer_handle, mut timer_rx) = spawn_actor(TimerActor::new(80)); // 80ms animation tick
+
+    // InputActor - reads terminal events and sends them as InputMsg
+    // Note: InputActor runs via spawn_actor(), not manually spawned
 
     // Agent task handle for the running agent loop
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
@@ -191,8 +193,7 @@ pub async fn run_tui(
     // Shared permission state (replaces mpsc::channel<PermissionDecision>)
     let permission_state: Arc<tokio::sync::Mutex<Option<PermissionDecision>>> = Arc::new(tokio::sync::Mutex::new(None));
 
-    // Animation timers
-    let mut tick_interval = interval(Duration::from_millis(80));
+    // Animation timers - cursor blink only (animation tick is now via TimerActor)
     let mut cursor_interval = interval(Duration::from_millis(500));
 
     // Helper to update top bar context percentages from current state
@@ -465,8 +466,15 @@ pub async fn run_tui(
             // Bias: check messages before ticks to prevent starvation
             biased;
 
-            // Unified message channel — handles terminal events, agent events, model fetch
-            Some(msg) = msg_rx.recv() => {
+            // Input events from InputActor (via new actor framework)
+            Some(input_msg) = input_rx.recv() => {
+                // Convert InputMsg to Msg
+                let msg = match input_msg {
+                    InputMsg::Key(key) => Msg::TextareaKey(key),
+                    InputMsg::Paste(text) => Msg::Paste(text),
+                    InputMsg::Resize(w, h) => Msg::Resize(w, h),
+                };
+
                 // Convert raw key events to proper routed messages
                 let msgs = match msg {
                     Msg::TextareaKey(key) => runie_tui::event_to_msg(crossterm::event::Event::Key(key), &tui.state),
@@ -643,8 +651,8 @@ pub async fn run_tui(
                 tui.render()?;
             }
 
-            // Animation tick (80ms)
-            _ = tick_interval.tick() => {
+            // Animation tick (80ms) from TimerActor
+            Some(_timer_msg) = timer_rx.recv() => {
                 // WATCHDOG: Check if agent has been running too long without any events
                 if tui.state.agent_running {
                     // Watchdog: 30 second timeout - force recovery if agent stuck
@@ -727,6 +735,8 @@ pub async fn run_tui(
 
     // Graceful shutdown: signal cancellation, wait up to 2s, then force if needed
     cancel.cancel();
+    input_handle.shutdown();
+    timer_handle.shutdown();
     if let Some(task) = agent_task.take() {
         task.abort();
         let _ = tokio::time::timeout(Duration::from_secs(2), task).await;
