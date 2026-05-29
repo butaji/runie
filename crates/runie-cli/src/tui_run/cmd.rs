@@ -175,7 +175,7 @@ async fn handle_send_permission(
     StateChange::none()
 }
 
-fn handle_slash_command(tui: &mut runie_tui::Tui, slash_cmd: runie_tui::SlashCommand) -> StateChange {
+fn handle_slash_command(tui: &mut runie_tui::Tui, slash_cmd: runie_core::slash_command::SlashCommand) -> StateChange {
     tui.update(Msg::SlashCommand(slash_cmd))
 }
 
@@ -219,30 +219,37 @@ fn handle_save_settings(
 }
 
 fn set_provider_env_vars(provider: &str, api_key: &str) {
-    match provider {
-        "openai" => std::env::set_var("OPENAI_API_KEY", api_key),
-        "anthropic" => std::env::set_var("ANTHROPIC_API_KEY", api_key),
-        "google" => std::env::set_var("GOOGLE_API_KEY", api_key),
-        "cohere" => std::env::set_var("COHERE_API_KEY", api_key),
-        "mistral" => std::env::set_var("MISTRAL_API_KEY", api_key),
-        "deepseek" => std::env::set_var("DEEPSEEK_API_KEY", api_key),
-        "groq" => std::env::set_var("GROQ_API_KEY", api_key),
-        "openrouter" => std::env::set_var("OPENROUTER_API_KEY", api_key),
-        "huggingface" => std::env::set_var("HUGGINGFACE_API_KEY", api_key),
-        "xai" => std::env::set_var("XAI_API_KEY", api_key),
-        "azure" => std::env::set_var("AZURE_API_KEY", api_key),
-        "moonshot" => std::env::set_var("MOONSHOT_API_KEY", api_key),
-        "perplexity" => std::env::set_var("PERPLEXITY_API_KEY", api_key),
-        "ollama" => std::env::set_var("OLLAMA_API_KEY", api_key),
-        "hyperbolic" => std::env::set_var("HYPERBOLIC_API_KEY", api_key),
-        "together" => std::env::set_var("TOGETHER_API_KEY", api_key),
-        "zai" => std::env::set_var("ZAI_API_KEY", api_key),
-        "minimax" => std::env::set_var("MINIMAX_API_KEY", api_key),
-        "mira" => std::env::set_var("MIRA_API_KEY", api_key),
-        "galadriel" => std::env::set_var("GALADRIEL_API_KEY", api_key),
-        "llamafile" => std::env::set_var("LLAMAFILE_API_KEY", api_key),
-        _ => {}
+    let var_name = provider_env_var_name(provider);
+    if !var_name.is_empty() {
+        std::env::set_var(var_name, api_key);
     }
+}
+
+fn provider_env_var_name(provider: &str) -> &'static str {
+    const PROVIDERS: &[(&str, &str)] = &[
+        ("openai", "OPENAI_API_KEY"),
+        ("anthropic", "ANTHROPIC_API_KEY"),
+        ("google", "GOOGLE_API_KEY"),
+        ("cohere", "COHERE_API_KEY"),
+        ("mistral", "MISTRAL_API_KEY"),
+        ("deepseek", "DEEPSEEK_API_KEY"),
+        ("groq", "GROQ_API_KEY"),
+        ("openrouter", "OPENROUTER_API_KEY"),
+        ("huggingface", "HUGGINGFACE_API_KEY"),
+        ("xai", "XAI_API_KEY"),
+        ("azure", "AZURE_API_KEY"),
+        ("moonshot", "MOONSHOT_API_KEY"),
+        ("perplexity", "PERPLEXITY_API_KEY"),
+        ("ollama", "OLLAMA_API_KEY"),
+        ("hyperbolic", "HYPERBOLIC_API_KEY"),
+        ("together", "TOGETHER_API_KEY"),
+        ("zai", "ZAI_API_KEY"),
+        ("minimax", "MINIMAX_API_KEY"),
+        ("mira", "MIRA_API_KEY"),
+        ("galadriel", "GALADRIEL_API_KEY"),
+        ("llamafile", "LLAMAFILE_API_KEY"),
+    ];
+    PROVIDERS.iter().find(|(k, _)| *k == provider).map(|(_, v)| *v).unwrap_or("")
 }
 
 async fn handle_fetch_models(

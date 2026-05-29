@@ -7,6 +7,33 @@ use super::{
     ProviderOption, ModelOption, Settings,
 };
 
+// Lookup table for provider → models function
+type ModelProviderFn = fn() -> Vec<ModelOption>;
+
+const MODEL_LOOKUP: &[(&str, ModelProviderFn)] = &[
+    ("openai", super::get_openai_models),
+    ("anthropic", super::get_anthropic_models),
+    ("google", super::get_google_models),
+    ("cohere", super::get_cohere_models),
+    ("mistral", super::get_mistral_models),
+    ("deepseek", super::get_deepseek_models),
+    ("groq", super::get_groq_models),
+    ("openrouter", super::get_openrouter_models),
+    ("huggingface", super::get_huggingface_models),
+    ("xai", super::get_xai_models),
+    ("azure", super::get_azure_models),
+    ("moonshot", super::get_moonshot_models),
+    ("perplexity", super::get_perplexity_models),
+    ("ollama", super::get_ollama_models),
+    ("hyperbolic", super::get_hyperbolic_models),
+    ("together", super::get_together_models),
+    ("zai", super::get_zai_models),
+    ("minimax", super::get_minimax_models),
+    ("mira", super::get_mira_models),
+    ("galadriel", super::get_galadriel_models),
+    ("llamafile", super::get_llamafile_models),
+];
+
 impl Onboarding {
     pub fn new(mock_mode: bool) -> Self {
         let mut providers = get_default_providers();
@@ -42,34 +69,52 @@ impl Onboarding {
 
     pub fn next_step(&mut self) {
         self.error_message = None;
-        self.step = match &self.step {
-            OnboardingStep::Welcome => OnboardingStep::ProviderSelect,
+        let (next_step, err) = Self::transition_step(
+            &self.step,
+            self.selected_provider,
+            self.selected_model,
+            || self.validate_key_detailed(),
+        );
+        if let Some(e) = err {
+            self.error_message = Some(e);
+        }
+        self.step = next_step;
+        self.enter_step();
+    }
+
+    /// Computes the next step based on current step and selections.
+    /// Returns (next_step, optional_error_message).
+    fn transition_step<F>(
+        step: &OnboardingStep,
+        selected_provider: Option<usize>,
+        selected_model: Option<usize>,
+        validate_key: F,
+    ) -> (OnboardingStep, Option<String>)
+    where
+        F: FnOnce() -> Result<(), String>,
+    {
+        match step {
+            OnboardingStep::Welcome => (OnboardingStep::ProviderSelect, None),
             OnboardingStep::ProviderSelect => {
-                if self.selected_provider.is_some() {
-                    OnboardingStep::KeyInput
+                if selected_provider.is_some() {
+                    (OnboardingStep::KeyInput, None)
                 } else {
-                    self.error_message = Some("Please select a provider".to_string());
-                    OnboardingStep::ProviderSelect
+                    (OnboardingStep::ProviderSelect, Some("Please select a provider".to_string()))
                 }
             }
-            OnboardingStep::KeyInput => match self.validate_key_detailed() {
-                Ok(()) => OnboardingStep::ModelSelect,
-                Err(specific_error) => {
-                    self.error_message = Some(specific_error);
-                    OnboardingStep::KeyInput
-                }
+            OnboardingStep::KeyInput => match validate_key() {
+                Ok(()) => (OnboardingStep::ModelSelect, None),
+                Err(specific_error) => (OnboardingStep::KeyInput, Some(specific_error)),
             },
             OnboardingStep::ModelSelect => {
-                if self.selected_model.is_some() {
-                    OnboardingStep::Complete
+                if selected_model.is_some() {
+                    (OnboardingStep::Complete, None)
                 } else {
-                    self.error_message = Some("Please select a model".to_string());
-                    OnboardingStep::ModelSelect
+                    (OnboardingStep::ModelSelect, Some("Please select a model".to_string()))
                 }
             }
-            OnboardingStep::Complete => OnboardingStep::Complete,
-        };
-        self.enter_step();
+            OnboardingStep::Complete => (OnboardingStep::Complete, None),
+        }
     }
 
     pub fn prev_step(&mut self) {
@@ -187,29 +232,16 @@ impl Onboarding {
     }
 
     fn get_models_for_provider(&self, provider_id: &str) -> Vec<ModelOption> {
-        match provider_id {
-            "openai" => super::get_openai_models(),
-            "anthropic" => super::get_anthropic_models(),
-            "google" => super::get_google_models(),
-            "cohere" => super::get_cohere_models(),
-            "mistral" => super::get_mistral_models(),
-            "deepseek" => super::get_deepseek_models(),
-            "groq" => super::get_groq_models(),
-            "openrouter" => super::get_openrouter_models(),
-            "huggingface" => super::get_huggingface_models(),
-            "xai" => super::get_xai_models(),
-            "azure" => super::get_azure_models(),
-            "moonshot" => super::get_moonshot_models(),
-            "perplexity" => super::get_perplexity_models(),
-            "ollama" => super::get_ollama_models(),
-            "hyperbolic" => super::get_hyperbolic_models(),
-            "together" => super::get_together_models(),
-            "zai" => super::get_zai_models(),
-            "minimax" => super::get_minimax_models(),
-            "mira" => super::get_mira_models(),
-            "galadriel" => super::get_galadriel_models(),
-            "llamafile" => super::get_llamafile_models(),
-            "mock" => vec![
+        MODEL_LOOKUP
+            .iter()
+            .find(|(id, _)| *id == provider_id)
+            .map(|(_, f)| f())
+            .unwrap_or_else(|| self.get_mock_models_for_provider(provider_id))
+    }
+
+    fn get_mock_models_for_provider(&self, provider_id: &str) -> Vec<ModelOption> {
+        if provider_id == "mock" {
+            vec![
                 ModelOption {
                     name: "Mock GPT-4".to_string(),
                     id: "mock-gpt-4".to_string(),
@@ -220,8 +252,9 @@ impl Onboarding {
                     id: "mock-claude".to_string(),
                     description: "Mock model for testing".to_string(),
                 },
-            ],
-            _ => Vec::new(),
+            ]
+        } else {
+            Vec::new()
         }
     }
 
@@ -265,15 +298,28 @@ impl Onboarding {
             .selected_provider
             .ok_or_else(|| "No provider selected".to_string())?;
         let provider = &self.providers[provider_idx];
+
+        self.validate_key_length(key, provider)?;
+        self.validate_key_prefix(key, provider)
+    }
+
+    fn validate_key_length(&self, key: &str, provider: &ProviderOption) -> Result<(), String> {
         let min_len = if provider.key_prefix.is_empty() {
             1
         } else {
-            1.max(provider.key_prefix.len())
+            provider.key_prefix.len().max(1)
         };
         if key.len() < min_len {
             return Err(format!("Key for {} appears too short.", provider.name));
         }
-        if !provider.key_prefix.is_empty() && !key.starts_with(&provider.key_prefix) {
+        Ok(())
+    }
+
+    fn validate_key_prefix(&self, key: &str, provider: &ProviderOption) -> Result<(), String> {
+        if provider.key_prefix.is_empty() {
+            return Ok(());
+        }
+        if !key.starts_with(&provider.key_prefix) {
             let preview = if key.len() >= 8 { &key[..8] } else { key };
             return Err(format!(
                 "Key for {} must start with '{}' (yours: '{}...')",

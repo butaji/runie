@@ -111,34 +111,52 @@ impl Tool for EditFileTool {
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
         let resolved = self.resolve_path(&args.path)?;
-
-        let content = tokio::fs::read_to_string(&resolved)
-            .await
-            .map_err(|e| EditFileError::ReadFailed(format!("{}: {}", args.path, e)))?;
-
+        let content = Self::read_file(&resolved, &args.path)?;
         let occurrences = content.matches(&args.old_string).count();
-        if occurrences == 0 {
-            return Err(EditFileError::StringNotFound(args.old_string.clone()));
-        }
-        if occurrences > 1 && !args.force {
-            return Err(EditFileError::MultipleMatches(occurrences));
-        }
 
-        let new_content = if args.force {
-            content.replace(&args.old_string, &args.new_string)
-        } else {
-            content.replacen(&args.old_string, &args.new_string, 1)
-        };
+        // Validate occurrence count
+        Self::validate_occurrences(occurrences, &args.old_string, args.force)?;
 
-        tokio::fs::write(&resolved, &new_content)
-            .await
-            .map_err(|e| EditFileError::WriteFailed(format!("{}: {}", args.path, e)))?;
+        // Compute new content and replacement count
+        let (new_content, replacement_count) = Self::compute_replace(occurrences, &content, &args.old_string, &args.new_string, args.force);
 
-        let replacement_count = if args.force { occurrences } else { 1 };
-
+        // Write and return
+        Self::write_file(&resolved, &args.path, &new_content)?;
         Ok(EditFileOutput {
             path: args.path,
             replacements: replacement_count,
         })
+    }
+
+    fn read_file(path: &PathBuf, original_path: &str) -> Result<String, EditFileError> {
+        tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| EditFileError::ReadFailed(format!("{}: {}", original_path, e)))
+    }
+
+    fn validate_occurrences(occurrences: usize, old_string: &str, force: bool) -> Result<(), EditFileError> {
+        if occurrences == 0 {
+            return Err(EditFileError::StringNotFound(old_string.to_string()));
+        }
+        if occurrences > 1 && !force {
+            return Err(EditFileError::MultipleMatches(occurrences));
+        }
+        Ok(())
+    }
+
+    fn compute_replace(occurrences: usize, content: &str, old_string: &str, new_string: &str, force: bool) -> (String, usize) {
+        let new_content = if force {
+            content.replace(old_string, new_string)
+        } else {
+            content.replacen(old_string, new_string, 1)
+        };
+        let replacement_count = if force { occurrences } else { 1 };
+        (new_content, replacement_count)
+    }
+
+    fn write_file(path: &PathBuf, original_path: &str, new_content: &str) -> Result<(), EditFileError> {
+        tokio::fs::write(path, new_content)
+            .await
+            .map_err(|e| EditFileError::WriteFailed(format!("{}: {}", original_path, e)))
     }
 }

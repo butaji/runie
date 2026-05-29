@@ -258,67 +258,19 @@ pub fn list_tasks() -> Vec<String> {
 /// The sandbox workspace is created as a temp directory, setup files are
 /// copied in, then the grader is executed against the final state.
 pub async fn run_harness_task(task_id: &str, config: &HarnessConfig) -> TaskResult {
-    use std::fs;
-
     let start = Instant::now();
-    let task_dir = task_dir(task_id);
 
-    // Load task definition
-    let task_json = match fs::read_to_string(task_dir.join("task.json")) {
-        Ok(t) => t,
-        Err(e) => {
-            return TaskResult {
-                task_id: task_id.to_string(),
-                status: TaskStatus::Error,
-                elapsed_ms: start.elapsed().as_millis() as u64,
-                checks_passed: 0,
-                checks_total: 0,
-                detail: format!("Failed to read task.json: {}", e),
-            };
-        }
+    // Phase 1: Setup
+    let setup = match task_setup(task_id) {
+        Ok(s) => s,
+        Err(result) => return result.with_elapsed(start),
     };
 
-    let _task_def: TaskDef = match serde_json::from_str(&task_json) {
-        Ok(t) => t,
-        Err(e) => {
-            return TaskResult {
-                task_id: task_id.to_string(),
-                status: TaskStatus::Error,
-                elapsed_ms: start.elapsed().as_millis() as u64,
-                checks_passed: 0,
-                checks_total: 0,
-                detail: format!("Failed to parse task.json: {}", e),
-            };
-        }
-    };
+    // Phase 2: Execute
+    let grader_result = run_grader(&setup.task_dir, &setup.workspace_path, config);
 
-    // Create temp workspace
-    let sandbox_base = std::env::temp_dir().join("runie-harness").join(task_id);
-    let workspace_path = sandbox_base.join("workspace");
-    if let Err(e) = fs::create_dir_all(&workspace_path) {
-        return TaskResult {
-            task_id: task_id.to_string(),
-            status: TaskStatus::Error,
-            elapsed_ms: start.elapsed().as_millis() as u64,
-            checks_passed: 0,
-            checks_total: 0,
-            detail: format!("Failed to create temp workspace: {}", e),
-        };
-    }
-
-    // Copy setup files into workspace
-    // (In a real harness, we'd copy from task_def.setup.files)
-    // For now, we use the workspace as-is
-
-    if config.verbose {
-        eprintln!("[harness] {} — sandbox: {}", task_id, workspace_path.display());
-    }
-
-    // Run grader
-    let grader_result = run_grader(&task_dir, &workspace_path, config);
-
-    // Clean up sandbox
-    let _ = fs::remove_dir_all(&sandbox_base);
+    // Phase 3: Cleanup
+    let _ = std::fs::remove_dir_all(&setup.sandbox_base);
 
     let elapsed_ms = start.elapsed().as_millis() as u64;
     let (status, checks_passed, checks_total, detail) = grader_result;
@@ -330,6 +282,61 @@ pub async fn run_harness_task(task_id: &str, config: &HarnessConfig) -> TaskResu
         checks_passed,
         checks_total,
         detail,
+    }
+}
+
+/// Setup phase result
+struct TaskSandbox {
+    task_dir: PathBuf,
+    sandbox_base: PathBuf,
+    workspace_path: PathBuf,
+}
+
+/// Execute setup phase, returns setup info or error result
+fn task_setup(task_id: &str) -> Result<TaskSandbox, TaskResult> {
+    use std::fs;
+
+    let task_dir = task_dir(task_id);
+
+    // Load task definition
+    let task_json = fs::read_to_string(task_dir.join("task.json"))
+        .map_err(|e| TaskResult {
+            task_id: task_id.to_string(),
+            status: TaskStatus::Error,
+            elapsed_ms: 0,
+            checks_passed: 0,
+            checks_total: 0,
+            detail: format!("Failed to read task.json: {}", e),
+        })?;
+
+    let _task_def: TaskDef = serde_json::from_str(&task_json)
+        .map_err(|e| TaskResult {
+            task_id: task_id.to_string(),
+            status: TaskStatus::Error,
+            elapsed_ms: 0,
+            checks_passed: 0,
+            checks_total: 0,
+            detail: format!("Failed to parse task.json: {}", e),
+        })?;
+
+    // Create temp workspace
+    let sandbox_base = std::env::temp_dir().join("runie-harness").join(task_id);
+    let workspace_path = sandbox_base.join("workspace");
+    fs::create_dir_all(&workspace_path).map_err(|e| TaskResult {
+        task_id: task_id.to_string(),
+        status: TaskStatus::Error,
+        elapsed_ms: 0,
+        checks_passed: 0,
+        checks_total: 0,
+        detail: format!("Failed to create temp workspace: {}", e),
+    })?;
+
+    Ok(TaskSandbox { task_dir, sandbox_base, workspace_path })
+}
+
+impl TaskResult {
+    fn with_elapsed(self, start: Instant) -> TaskResult {
+        TaskResult { elapsed_ms: start.elapsed().as_millis() as u64, ..self }
     }
 }
 

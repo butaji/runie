@@ -56,50 +56,82 @@ impl Default for StatusBar {
 impl StatusBarViewModel {
     fn hotkeys(&self) -> Vec<StatusItem> {
         match self.mode {
-            TuiMode::Chat => vec![
-                StatusItem { key: "Enter".to_string(), description: "send".to_string() },
-                StatusItem { key: "Shift+Enter".to_string(), description: "newline".to_string() },
-                StatusItem { key: "^b".to_string(), description: "sidebar".to_string() },
-                StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
-                StatusItem { key: "?".to_string(), description: "help".to_string() },
-                StatusItem { key: "^q".to_string(), description: "quit".to_string() },
-            ],
-            TuiMode::Overlay => vec![
-                StatusItem { key: "Esc".to_string(), description: "close".to_string() },
-                StatusItem { key: "j/k".to_string(), description: "navigate".to_string() },
-                StatusItem { key: "Enter".to_string(), description: "select".to_string() },
-            ],
-            TuiMode::Select => vec![
-                StatusItem { key: "Esc".to_string(), description: "back".to_string() },
-                StatusItem { key: "j/k".to_string(), description: "navigate".to_string() },
-                StatusItem { key: "Enter".to_string(), description: "select".to_string() },
-            ],
-            TuiMode::Permission => vec![
-                StatusItem { key: "y".to_string(), description: "allow".to_string() },
-                StatusItem { key: "n".to_string(), description: "deny".to_string() },
-                StatusItem { key: "a".to_string(), description: "allow all".to_string() },
-            ],
-            TuiMode::CommandPalette => vec![
-                StatusItem { key: "Esc".to_string(), description: "close".to_string() },
-                StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
-                StatusItem { key: "Enter".to_string(), description: "run".to_string() },
-            ],
-            TuiMode::DiffViewer => vec![
-                StatusItem { key: "Esc/q/x".to_string(), description: "close".to_string() },
-                StatusItem { key: "j/k/↑/↓".to_string(), description: "scroll".to_string() },
-                StatusItem { key: "PgUp/PgDn".to_string(), description: "page".to_string() },
-            ],
-            TuiMode::SessionTree => vec![
-                StatusItem { key: "Esc".to_string(), description: "close".to_string() },
-                StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
-                StatusItem { key: "Enter".to_string(), description: "expand".to_string() },
-            ],
-            TuiMode::Onboarding => vec![
-                StatusItem { key: "Enter".to_string(), description: "next".to_string() },
-                StatusItem { key: "Esc".to_string(), description: "back/skip".to_string() },
-                StatusItem { key: "^q".to_string(), description: "quit".to_string() },
-            ],
+            TuiMode::Chat => Self::chat_hotkeys(),
+            TuiMode::Overlay => Self::overlay_hotkeys(),
+            TuiMode::Select => Self::select_hotkeys(),
+            TuiMode::Permission => Self::permission_hotkeys(),
+            TuiMode::CommandPalette => Self::palette_hotkeys(),
+            TuiMode::DiffViewer => Self::diff_hotkeys(),
+            TuiMode::SessionTree => Self::tree_hotkeys(),
+            TuiMode::Onboarding => Self::onboarding_hotkeys(),
         }
+    }
+
+    fn chat_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Enter".to_string(), description: "send".to_string() },
+            StatusItem { key: "Shift+Enter".to_string(), description: "newline".to_string() },
+            StatusItem { key: "^b".to_string(), description: "sidebar".to_string() },
+            StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
+            StatusItem { key: "?".to_string(), description: "help".to_string() },
+            StatusItem { key: "^q".to_string(), description: "quit".to_string() },
+        ]
+    }
+
+    fn overlay_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
+            StatusItem { key: "j/k".to_string(), description: "navigate".to_string() },
+            StatusItem { key: "Enter".to_string(), description: "select".to_string() },
+        ]
+    }
+
+    fn select_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Esc".to_string(), description: "back".to_string() },
+            StatusItem { key: "j/k".to_string(), description: "navigate".to_string() },
+            StatusItem { key: "Enter".to_string(), description: "select".to_string() },
+        ]
+    }
+
+    fn permission_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "y".to_string(), description: "allow".to_string() },
+            StatusItem { key: "n".to_string(), description: "deny".to_string() },
+            StatusItem { key: "a".to_string(), description: "allow all".to_string() },
+        ]
+    }
+
+    fn palette_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
+            StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
+            StatusItem { key: "Enter".to_string(), description: "run".to_string() },
+        ]
+    }
+
+    fn diff_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Esc/q/x".to_string(), description: "close".to_string() },
+            StatusItem { key: "j/k/↑/↓".to_string(), description: "scroll".to_string() },
+            StatusItem { key: "PgUp/PgDn".to_string(), description: "page".to_string() },
+        ]
+    }
+
+    fn tree_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
+            StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
+            StatusItem { key: "Enter".to_string(), description: "expand".to_string() },
+        ]
+    }
+
+    fn onboarding_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Enter".to_string(), description: "next".to_string() },
+            StatusItem { key: "Esc".to_string(), description: "back/skip".to_string() },
+            StatusItem { key: "^q".to_string(), description: "quit".to_string() },
+        ]
     }
 
     fn center_text(&self) -> Option<String> {

@@ -94,79 +94,55 @@ pub enum Msg {
 
 impl PartialEq for Msg {
     fn eq(&self, other: &Self) -> bool {
-        use Msg::*;
+        // Unit variants - same discriminant means equal
+        if self.is_unit_variant() {
+            return std::mem::discriminant(self) == std::mem::discriminant(other);
+        }
+        // Data-carrying variants
         match (self, other) {
-            (Submit, Submit) => true,
-            (TextareaKey(a), TextareaKey(b)) => a == b,
-            (InsertNewline, InsertNewline) => true,
-            (Quit, Quit) => true,
-            (ToggleSidebar, ToggleSidebar) => true,
-            (OpenCommandPalette, OpenCommandPalette) => true,
-            (CloseModal, CloseModal) => true,
-            (ConfirmModal, ConfirmModal) => true,
-            (ScrollUp, ScrollUp) => true,
-            (ScrollDown, ScrollDown) => true,
-            (ScrollPageUp, ScrollPageUp) => true,
-            (ScrollPageDown, ScrollPageDown) => true,
-            (PermissionConfirm, PermissionConfirm) => true,
-            (PermissionCancel, PermissionCancel) => true,
-            (PermissionAlways, PermissionAlways) => true,
-            (PermissionSkip, PermissionSkip) => true,
-            (CommandPaletteFilter(a), CommandPaletteFilter(b)) => a == b,
-            (CommandPaletteBackspace, CommandPaletteBackspace) => true,
-            (CommandPaletteUp, CommandPaletteUp) => true,
-            (CommandPaletteDown, CommandPaletteDown) => true,
-            (CommandPaletteConfirm, CommandPaletteConfirm) => true,
-            (CommandPaletteCancelArgument, CommandPaletteCancelArgument) => true,
-            (AgentEvent(_), AgentEvent(_)) => true,
-            (Tick, Tick) => true,
-            (CursorBlink, CursorBlink) => true,
-            (SlashCommand(_), SlashCommand(_)) => true,
-            (ToggleSessionTree, ToggleSessionTree) => true,
-            (SessionTreeUp, SessionTreeUp) => true,
-            (SessionTreeDown, SessionTreeDown) => true,
-            (SessionTreeConfirm, SessionTreeConfirm) => true,
-            (OnboardingNext, OnboardingNext) => true,
-            (OnboardingBack, OnboardingBack) => true,
-            (OnboardingNavigateUp, OnboardingNavigateUp) => true,
-            (OnboardingNavigateDown, OnboardingNavigateDown) => true,
-            (OnboardingSelectProvider(a), OnboardingSelectProvider(b)) => a == b,
-            (OnboardingSelectModel(a), OnboardingSelectModel(b)) => a == b,
-            (OnboardingKeyInput(a), OnboardingKeyInput(b)) => a == b,
-            (OnboardingKeyBackspace, OnboardingKeyBackspace) => true,
-            (OnboardingSearchInput(a), OnboardingSearchInput(b)) => a == b,
-            (OnboardingSearchBackspace, OnboardingSearchBackspace) => true,
-            (OnboardingSubmit, OnboardingSubmit) => true,
-            (OnboardingSkip, OnboardingSkip) => true,
-            (ClearInput, ClearInput) => true,
-            (ClearInputConfirm, ClearInputConfirm) => true,
-            (ClearChat, ClearChat) => true,
-            (DirectCommand(a), DirectCommand(b)) => a == b,
-            (Paste(a), Paste(b)) => a == b,
-            (ModelsFetched(a), ModelsFetched(b)) => a == b,
-            (ModelsFetchFailed(a), ModelsFetchFailed(b)) => a == b,
-            (Resize(a_w, a_h), Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
-            (Stop, Stop) => true,
-            (PermissionTimeout, PermissionTimeout) => true,
-            (SelectUp, SelectUp) => true,
-            (SelectDown, SelectDown) => true,
-            (SelectConfirm, SelectConfirm) => true,
-            (SelectToggleDetails, SelectToggleDetails) => true,
-            (SwitchModel, SwitchModel) => true,
-            (SetGitInfo { .. }, SetGitInfo { .. }) => true,
-            (SetTopBarMockChecks { .. }, SetTopBarMockChecks { .. }) => true,
-            (SetTopBarRealChecks { .. }, SetTopBarRealChecks { .. }) => true,
-            (SetInputRightInfo(a), SetInputRightInfo(b)) => a == b,
-            (EnterOnboarding, EnterOnboarding) => true,
-            (SetCurrentModel(a), SetCurrentModel(b)) => a == b,
-            (SetMockMode(a), SetMockMode(b)) => a == b,
-            (ResetAgentState, ResetAgentState) => true,
-            (UpdateTopBarContext { .. }, UpdateTopBarContext { .. }) => true,
-            (HistoryUp, HistoryUp) => true,
-            (HistoryDown, HistoryDown) => true,
-            (CopyLastResponse, CopyLastResponse) => true,
+            (Msg::TextareaKey(a), Msg::TextareaKey(b)) => a == b,
+            (Msg::CommandPaletteFilter(a), Msg::CommandPaletteFilter(b)) => a == b,
+            (Msg::OnboardingSelectProvider(a), Msg::OnboardingSelectProvider(b)) => a == b,
+            (Msg::OnboardingSelectModel(a), Msg::OnboardingSelectModel(b)) => a == b,
+            (Msg::OnboardingKeyInput(a), Msg::OnboardingKeyInput(b)) => a == b,
+            (Msg::OnboardingSearchInput(a), Msg::OnboardingSearchInput(b)) => a == b,
+            (Msg::DirectCommand(a), Msg::DirectCommand(b)) => a == b,
+            (Msg::Paste(a), Msg::Paste(b)) => a == b,
+            (Msg::ModelsFetched(a), Msg::ModelsFetched(b)) => a == b,
+            (Msg::ModelsFetchFailed(a), Msg::ModelsFetchFailed(b)) => a == b,
+            (Msg::Resize(a_w, a_h), Msg::Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
+            (Msg::SetGitInfo { .. }, Msg::SetGitInfo { .. }) => true,
+            (Msg::SetTopBarMockChecks { .. }, Msg::SetTopBarMockChecks { .. }) => true,
+            (Msg::SetTopBarRealChecks { .. }, Msg::SetTopBarRealChecks { .. }) => true,
+            (Msg::SetInputRightInfo(a), Msg::SetInputRightInfo(b)) => a == b,
+            (Msg::SetCurrentModel(a), Msg::SetCurrentModel(b)) => a == b,
+            (Msg::SetMockMode(a), Msg::SetMockMode(b)) => a == b,
+            (Msg::UpdateTopBarContext { .. }, Msg::UpdateTopBarContext { .. }) => true,
             _ => false,
         }
+    }
+}
+
+impl Msg {
+    fn is_unit_variant(&self) -> bool {
+        matches!(
+            self,
+            Msg::Submit | Msg::InsertNewline | Msg::Quit | Msg::ToggleSidebar
+                | Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal
+                | Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown
+                | Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways
+                | Msg::PermissionSkip | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp
+                | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm | Msg::CommandPaletteCancelArgument
+                | Msg::AgentEvent(_) | Msg::Tick | Msg::CursorBlink | Msg::SlashCommand(_)
+                | Msg::ToggleSessionTree | Msg::SessionTreeUp | Msg::SessionTreeDown
+                | Msg::SessionTreeConfirm | Msg::OnboardingNext | Msg::OnboardingBack
+                | Msg::OnboardingNavigateUp | Msg::OnboardingNavigateDown | Msg::OnboardingKeyBackspace
+                | Msg::OnboardingSearchBackspace | Msg::OnboardingSubmit | Msg::OnboardingSkip
+                | Msg::ClearInput | Msg::ClearInputConfirm | Msg::ClearChat | Msg::Stop
+                | Msg::PermissionTimeout | Msg::SelectUp | Msg::SelectDown | Msg::SelectConfirm
+                | Msg::SelectToggleDetails | Msg::SwitchModel | Msg::EnterOnboarding
+                | Msg::ResetAgentState | Msg::HistoryUp | Msg::HistoryDown | Msg::CopyLastResponse
+        )
     }
 }
 
@@ -190,7 +166,7 @@ impl PartialEq for Cmd {
             (SpawnAgent { .. }, SpawnAgent { .. }) => true,
             (SendPermission { decision: a }, SendPermission { decision: b }) => a == b,
             (SlashCommand(_), SlashCommand(_)) => true,
-            (SaveSettings { provider: a, model: b, api_key: c }, SaveSettings { provider: d, model: e, api_key: f }) => a == d && b == e && c == f,
+            (SaveSettings { .. }, SaveSettings { .. }) => true,
             (FetchModels { provider_id: a, api_key: b }, FetchModels { provider_id: c, api_key: d }) => a == c && b == d,
             (Rollback { tool_call_id: a }, Rollback { tool_call_id: b }) => a == b,
             (Interrupt, Interrupt) => true,

@@ -21,55 +21,121 @@ pub fn route_key_event(msg: Msg, state: &runie_tui::AppState) -> Vec<Msg> {
 
 /// Check if a message triggers state change (for render optimization)
 pub fn triggers_state_change(msg: &Msg) -> bool {
-    match msg {
-        // Agent events that affect UI
-        Msg::AgentEvent(AgentEvent::MessageUpdate { .. }) => true,
-        Msg::AgentEvent(AgentEvent::PermissionRequest { .. }) => true,
-        Msg::AgentEvent(AgentEvent::Error { .. }) => true,
-        // Input messages
-        Msg::TextareaKey(_) => true,
-        Msg::InsertNewline => true,
-        Msg::Paste(_) => true,
-        Msg::ClearInput => true,
-        Msg::ClearInputConfirm => true,
+    is_tick_msg(msg) || is_state_mutating_msg(msg) || is_render_triggering_msg(msg)
+}
+
+fn is_tick_msg(msg: &Msg) -> bool {
+    matches!(msg, Msg::Tick)
+}
+
+fn is_state_mutating_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::AgentEvent(AgentEvent::MessageUpdate { .. })
+            | Msg::AgentEvent(AgentEvent::PermissionRequest { .. })
+            | Msg::AgentEvent(AgentEvent::Error { .. })
+    )
+}
+
+fn is_render_triggering_msg(msg: &Msg) -> bool {
+    // Input messages
+    is_input_msg(msg)
         // Command palette
-        Msg::CommandPaletteFilter(_) => true,
-        Msg::CommandPaletteBackspace => true,
-        Msg::CommandPaletteUp => true,
-        Msg::CommandPaletteDown => true,
-        Msg::CommandPaletteConfirm => true,
-        Msg::CommandPaletteCancelArgument => true,
+        || is_command_palette_msg(msg)
         // Navigation
-        Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown => true,
-        Msg::SessionTreeUp | Msg::SessionTreeDown => true,
-        Msg::SessionTreeConfirm => true,
-        Msg::OnboardingNavigateUp | Msg::OnboardingNavigateDown => true,
-        Msg::OnboardingSelectProvider(_) | Msg::OnboardingSelectModel(_) => true,
-        Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace => true,
-        Msg::OnboardingSearchInput(_) | Msg::OnboardingSearchBackspace => true,
-        Msg::SelectUp | Msg::SelectDown => true,
-        Msg::SelectConfirm | Msg::SelectToggleDetails => true,
+        || is_navigation_msg(msg)
         // Permission
-        Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways | Msg::PermissionSkip => true,
+        || is_permission_msg(msg)
         // Mode changes
-        Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal => true,
-        Msg::ToggleSessionTree | Msg::ToggleSidebar => true,
-        Msg::SwitchModel => true,
-        Msg::OnboardingNext | Msg::OnboardingBack | Msg::OnboardingSubmit | Msg::OnboardingSkip => true,
-        Msg::EnterOnboarding => true,
-        Msg::DirectCommand(_) => true,
+        || is_mode_change_msg(msg)
         // Terminal events
-        Msg::Resize(..) => true,
+        || matches!(msg, Msg::Resize(..))
         // Commands
-        Msg::Submit | Msg::Quit | Msg::ClearChat => true,
-        Msg::Stop => true,
+        || is_command_msg(msg)
         // State updates
-        Msg::ModelsFetched(_) | Msg::ModelsFetchFailed(_) => true,
-        Msg::SetGitInfo { .. } | Msg::SetTopBarMockChecks { .. } | Msg::SetTopBarRealChecks { .. } => true,
-        Msg::SetInputRightInfo(_) | Msg::SetCurrentModel(_) | Msg::SetMockMode(_) => true,
-        Msg::ResetAgentState | Msg::UpdateTopBarContext { .. } => true,
-        Msg::SlashCommand(_) => true,
-        Msg::PermissionTimeout => true,
-        _ => false,
-    }
+        || is_state_update_msg(msg)
+}
+
+fn is_input_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::TextareaKey(_)
+            | Msg::InsertNewline
+            | Msg::Paste(_)
+            | Msg::ClearInput
+            | Msg::ClearInputConfirm
+    )
+}
+
+fn is_command_palette_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::CommandPaletteFilter(_)
+            | Msg::CommandPaletteBackspace
+            | Msg::CommandPaletteUp
+            | Msg::CommandPaletteDown
+            | Msg::CommandPaletteConfirm
+            | Msg::CommandPaletteCancelArgument
+    )
+}
+
+fn is_navigation_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown
+            | Msg::SessionTreeUp | Msg::SessionTreeDown | Msg::SessionTreeConfirm
+            | Msg::OnboardingNavigateUp | Msg::OnboardingNavigateDown
+            | Msg::OnboardingSelectProvider(_) | Msg::OnboardingSelectModel(_)
+            | Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace
+            | Msg::OnboardingSearchInput(_) | Msg::OnboardingSearchBackspace
+            | Msg::SelectUp | Msg::SelectDown
+            | Msg::SelectConfirm | Msg::SelectToggleDetails
+    )
+}
+
+fn is_permission_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::PermissionConfirm
+            | Msg::PermissionCancel
+            | Msg::PermissionAlways
+            | Msg::PermissionSkip
+    )
+}
+
+fn is_mode_change_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal
+            | Msg::ToggleSessionTree | Msg::ToggleSidebar
+            | Msg::SwitchModel
+            | Msg::OnboardingNext
+            | Msg::OnboardingBack
+            | Msg::OnboardingSubmit
+            | Msg::OnboardingSkip
+            | Msg::EnterOnboarding
+            | Msg::DirectCommand(_)
+    )
+}
+
+fn is_command_msg(msg: &Msg) -> bool {
+    matches!(msg, Msg::Submit | Msg::Quit | Msg::ClearChat | Msg::Stop)
+}
+
+fn is_state_update_msg(msg: &Msg) -> bool {
+    matches!(
+        msg,
+        Msg::ModelsFetched(_)
+            | Msg::ModelsFetchFailed(_)
+            | Msg::SetGitInfo { .. }
+            | Msg::SetTopBarMockChecks { .. }
+            | Msg::SetTopBarRealChecks { .. }
+            | Msg::SetInputRightInfo(_)
+            | Msg::SetCurrentModel(_)
+            | Msg::SetMockMode(_)
+            | Msg::ResetAgentState
+            | Msg::UpdateTopBarContext { .. }
+            | Msg::SlashCommand(_)
+            | Msg::PermissionTimeout
+    )
 }

@@ -86,7 +86,22 @@ impl<'a> Panel<'a> {
             return;
         }
 
-        // Optional background fill — clear chars and set bg to block rain bleed-through
+        self.render_header(area, buf);
+        self.render_footer(area, buf);
+
+        let inner = area.inner(Margin::new(1, 1));
+        if inner.width > 0 && inner.height > 0 {
+            render_content(inner, buf);
+        }
+    }
+
+    fn render_header(&self, area: Rect, buf: &mut Buffer) {
+        self.render_background(area, buf);
+        self.render_border(area, buf);
+        self.render_title(area, buf);
+    }
+
+    fn render_background(&self, area: Rect, buf: &mut Buffer) {
         if let Some(bg) = self.bg_color {
             for y in area.y..area.y + area.height {
                 for x in area.x..area.x + area.width {
@@ -97,8 +112,9 @@ impl<'a> Panel<'a> {
                 }
             }
         }
+    }
 
-        // Draw border
+    fn render_border(&self, area: Rect, buf: &mut Buffer) {
         match self.border {
             PanelBorder::Gradient { start, end } => {
                 render_gradient_border_custom(area, buf, start, end);
@@ -107,8 +123,9 @@ impl<'a> Panel<'a> {
                 render_solid_border(area, buf, color);
             }
         }
+    }
 
-        // Draw title in top border
+    fn render_title(&self, area: Rect, buf: &mut Buffer) {
         if let Some(title) = self.title {
             let title_text = format!(" {} ", title);
             let title_x = match self.title_alignment {
@@ -121,7 +138,9 @@ impl<'a> Panel<'a> {
                 buf.set_string(title_x, area.y, &title_text[..max_len], Style::default().fg(self.title_color));
             }
         }
+    }
 
+    fn render_footer(&self, area: Rect, buf: &mut Buffer) {
         // Draw close hint in bottom border
         if self.show_close_hint {
             let hint = " [Esc] close ";
@@ -129,12 +148,6 @@ impl<'a> Panel<'a> {
             if hint_x > area.x + 1 {
                 buf.set_string(hint_x, area.y + area.height - 1, hint, Style::default().fg(self.close_hint_color));
             }
-        }
-
-        // Content area with 1-cell margin
-        let inner = area.inner(Margin::new(1, 1));
-        if inner.width > 0 && inner.height > 0 {
-            render_content(inner, buf);
         }
     }
 }

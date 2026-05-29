@@ -182,31 +182,28 @@ fn test_render_state_excludes_token_usage() {
     assert!(true, "RenderState excludes token_usage field for performance");
 }
 
-// 7. test_update_routes_to_all_domains — Msg processed by all 5 domain handlers
-#[test]
-fn test_update_routes_to_all_domains() {
-    // Tick is handled by system domain (handle_anim) and returns no Cmd
+fn test_tick_routes_to_system_domain() {
     let mut state = make_state();
     let mut palette = CommandPalette::new();
     state.animation.braille_frame = 0;
 
     let cmds = update(&mut state, &mut palette, Msg::Tick);
 
-    // Tick is processed by system::update -> handle_anim
-    // Animation state is updated (braille_frame incremented)
     assert_eq!(state.animation.braille_frame, 1, "Tick should increment braille_frame");
     assert!(cmds.is_empty(), "Tick should not produce Cmds");
+}
 
-    // OpenCommandPalette is handled by ui domain
-    let mut state2 = make_state();
-    let mut palette2 = CommandPalette::new();
-    update(&mut state2, &mut palette2, Msg::OpenCommandPalette);
-    assert_eq!(state2.mode, TuiMode::CommandPalette, "OpenCommandPalette handled by ui domain");
+fn test_open_command_palette_routes_to_ui_domain() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    update(&mut state, &mut palette, Msg::OpenCommandPalette);
+    assert_eq!(state.mode, TuiMode::CommandPalette, "OpenCommandPalette handled by ui domain");
+}
 
-    // AgentEvent is handled by agent domain
-    let mut state3 = make_state();
-    let mut palette3 = CommandPalette::new();
-    update(&mut state3, &mut palette3, Msg::AgentEvent(AgentEvent::MessageStart {
+fn test_agent_event_routes_to_agent_domain() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::MessageStart {
         message: AgentMessage {
             role: "assistant".to_string(),
             content: vec![],
@@ -218,19 +215,31 @@ fn test_update_routes_to_all_domains() {
         },
         turn: 1,
     }));
-    assert!(state3.agent_running, "AgentEvent handled by agent domain");
+    assert!(state.agent_running, "AgentEvent handled by agent domain");
+}
 
-    // Submit is handled by chat domain
-    let mut state4 = make_state_with_text("test");
-    let mut palette4 = CommandPalette::new();
-    let cmds4 = update(&mut state4, &mut palette4, Msg::Submit);
-    assert!(!cmds4.is_empty(), "Submit handled by chat domain");
+fn test_submit_routes_to_chat_domain() {
+    let mut state = make_state_with_text("test");
+    let mut palette = CommandPalette::new();
+    let cmds = update(&mut state, &mut palette, Msg::Submit);
+    assert!(!cmds.is_empty(), "Submit handled by chat domain");
+}
 
-    // EnterOnboarding is handled by onboarding domain
-    let mut state5 = make_state();
-    let mut palette5 = CommandPalette::new();
-    update(&mut state5, &mut palette5, Msg::EnterOnboarding);
-    assert_eq!(state5.mode, TuiMode::Onboarding, "EnterOnboarding handled by onboarding domain");
+fn test_enter_onboarding_routes_to_onboarding_domain() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    update(&mut state, &mut palette, Msg::EnterOnboarding);
+    assert_eq!(state.mode, TuiMode::Onboarding, "EnterOnboarding handled by onboarding domain");
+}
+
+// 7. test_update_routes_to_all_domains — Msg processed by all 5 domain handlers
+#[test]
+fn test_update_routes_to_all_domains() {
+    test_tick_routes_to_system_domain();
+    test_open_command_palette_routes_to_ui_domain();
+    test_agent_event_routes_to_agent_domain();
+    test_submit_routes_to_chat_domain();
+    test_enter_onboarding_routes_to_onboarding_domain();
 }
 
 // 8. test_animation_tick_increments_frame — Msg::Tick increments braille_frame

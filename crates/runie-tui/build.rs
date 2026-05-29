@@ -48,51 +48,70 @@ fn check_functions(path: &Path, lines: &[&str]) {
 
     for (i, line) in lines.iter().enumerate() {
         let stripped = line.trim();
-
+        
         if !in_function {
-            if is_function_start(stripped) {
-                func_name = extract_func_name(stripped);
-                if !func_name.is_empty() {
+            if let Some(name) = try_start_function(stripped) {
+                func_name = name;
+                func_start = i;
+                brace_depth = get_initial_brace_depth(stripped);
+                if brace_depth <= 0 {
+                    in_function = false;
+                } else {
                     in_function = true;
-                    func_start = i;
-                    brace_depth = stripped.matches('{').count() as i32 - stripped.matches('}').count() as i32;
-                    if brace_depth <= 0 {
-                        in_function = false; // Single-line or trait sig
-                    }
                 }
             }
             continue;
         }
 
-        let code_part = stripped.split("//").next().unwrap_or("");
-        for ch in code_part.chars() {
-            match ch {
-                '{' => brace_depth += 1,
-                '}' => {
-                    brace_depth -= 1;
-                    if brace_depth == 0 {
-                        let func_lines = count_non_empty_lines(&lines[func_start..=i]);
-                        let complexity = calculate_complexity(&lines[func_start..=i]);
-
-                        if func_lines > MAX_FUNC_LINES {
-                            panic!(
-                                "\nFUNCTION TOO LONG: `{}` in {} has {} lines (max {} at line {})\n",
-                                func_name, path.display(), func_lines, MAX_FUNC_LINES, func_start + 1
-                            );
-                        }
-                        if complexity > MAX_COMPLEXITY {
-                            panic!(
-                                "\nCOMPLEXITY TOO HIGH: `{}` in {} has complexity {} (max {} at line {})\n",
-                                func_name, path.display(), complexity, MAX_COMPLEXITY, func_start + 1
-                            );
-                        }
-                        in_function = false;
-                        break;
-                    }
-                }
-                _ => {}
-            }
+        brace_depth = update_brace_depth(brace_depth, stripped);
+        if brace_depth == 0 {
+            check_function_violations(path, &lines[func_start..=i], &func_name, func_start);
+            in_function = false;
         }
+    }
+}
+
+fn try_start_function(line: &str) -> Option<String> {
+    if is_function_start(line) {
+        let name = extract_func_name(line);
+        if !name.is_empty() { Some(name) } else { None }
+    } else {
+        None
+    }
+}
+
+fn get_initial_brace_depth(line: &str) -> i32 {
+    line.matches('{').count() as i32 - line.matches('}').count() as i32
+}
+
+fn update_brace_depth(depth: i32, line: &str) -> i32 {
+    let code_part = line.split("//").next().unwrap_or(line);
+    let mut new_depth = depth;
+    for ch in code_part.chars() {
+        match ch {
+            '{' => new_depth += 1,
+            '}' => new_depth -= 1,
+            _ => {}
+        }
+    }
+    new_depth
+}
+
+fn check_function_violations(path: &Path, func_lines: &[&str], func_name: &str, start_line: usize) {
+    let line_count = count_non_empty_lines(func_lines);
+    let complexity = calculate_complexity(func_lines);
+
+    if line_count > MAX_FUNC_LINES {
+        panic!(
+            "\nFUNCTION TOO LONG: `{}` in {} has {} lines (max {} at line {})\n",
+            func_name, path.display(), line_count, MAX_FUNC_LINES, start_line + 1
+        );
+    }
+    if complexity > MAX_COMPLEXITY {
+        panic!(
+            "\nCOMPLEXITY TOO HIGH: `{}` in {} has complexity {} (max {} at line {})\n",
+            func_name, path.display(), complexity, MAX_COMPLEXITY, start_line + 1
+        );
     }
 }
 

@@ -248,74 +248,63 @@ fn extract_assistant_content(
 fn convert_runie_to_rig(msg: Message) -> RigMessage {
     match msg {
         Message::System { content } => RigMessage::System { content },
-        Message::User { content, attachments } => {
-            if attachments.is_empty() {
-                RigMessage::User {
-                    content: OneOrMany::one(UserContent::Text(Text { text: content })),
-                }
-            } else {
-                // NOTE: Future enhancement — convert attachments to rig content types
-                // For now, just use the text content
-                RigMessage::User {
-                    content: OneOrMany::one(UserContent::Text(Text { text: content })),
-                }
-            }
-        }
-        Message::Assistant {
-            content,
-            tool_calls,
-            thinking,
-        } => {
-            let mut contents = Vec::new();
+        Message::User { content, attachments } => convert_user_to_rig(content, attachments),
+        Message::Assistant { content, tool_calls, thinking } => convert_assistant_to_rig(content, tool_calls, thinking),
+        Message::ToolResult { tool_call_id, content, is_error: _ } => convert_tool_result_to_rig(tool_call_id, content),
+    }
+}
 
-            if !content.is_empty() {
-                contents.push(AssistantContent::Text(Text { text: content }));
-            }
+fn convert_user_to_rig(content: String, _attachments: Vec<runie_core::Attachment>) -> RigMessage {
+    // NOTE: attachments not yet supported - use text content only
+    RigMessage::User {
+        content: OneOrMany::one(UserContent::Text(Text { text: content })),
+    }
+}
 
-            for tc in tool_calls {
-                contents.push(AssistantContent::ToolCall(RigToolCall {
-                    id: tc.id,
-                    call_id: None,
-                    function: ToolFunction {
-                        name: tc.name,
-                        arguments: tc.arguments,
-                    },
-                    signature: None,
-                    additional_params: None,
-                }));
-            }
+fn convert_assistant_to_rig(content: String, tool_calls: Vec<runie_core::ToolCall>, thinking: Option<String>) -> RigMessage {
+    let mut contents = Vec::new();
 
-            // Convert thinking to rig's Reasoning content
-            if let Some(thinking_text) = thinking {
-                contents.push(AssistantContent::Reasoning(Reasoning::new(&thinking_text)));
-            }
+    if !content.is_empty() {
+        contents.push(AssistantContent::Text(Text { text: content }));
+    }
 
-            // If assistant message has no content, add empty text
-            if contents.is_empty() {
-                contents.push(AssistantContent::Text(Text {
-                    text: String::new(),
-                }));
-            }
+    for tc in tool_calls {
+        contents.push(AssistantContent::ToolCall(RigToolCall {
+            id: tc.id,
+            call_id: None,
+            function: ToolFunction {
+                name: tc.name,
+                arguments: tc.arguments,
+            },
+            signature: None,
+            additional_params: None,
+        }));
+    }
 
-            let content = OneOrMany::many(contents).unwrap_or_else(|_| {
-                OneOrMany::one(AssistantContent::Text(Text {
-                    text: String::new(),
-                }))
-            });
+    // Convert thinking to rig's Reasoning content
+    if let Some(thinking_text) = thinking {
+        contents.push(AssistantContent::Reasoning(Reasoning::new(&thinking_text)));
+    }
 
-            RigMessage::Assistant { id: None, content }
-        }
-        Message::ToolResult {
-            tool_call_id,
-            content,
-            is_error: _is_error,
-        } => RigMessage::User {
-            content: OneOrMany::one(UserContent::ToolResult(ToolResult {
-                id: tool_call_id,
-                call_id: None,
-                content: OneOrMany::one(ToolResultContent::Text(Text { text: content })),
-            })),
-        },
+    // If assistant message has no content, add empty text
+    if contents.is_empty() {
+        contents.push(AssistantContent::Text(Text { text: String::new() }));
+    }
+
+    let content = OneOrMany::many(contents).unwrap_or_else(|_| {
+        OneOrMany::one(AssistantContent::Text(Text { text: String::new() }))
+    });
+
+    RigMessage::Assistant { id: None, content }
+}
+
+fn convert_tool_result_to_rig(tool_call_id: String, content: String) -> RigMessage {
+    RigMessage::User {
+        content: OneOrMany::one(UserContent::ToolResult(ToolResult {
+            id: tool_call_id,
+            call_id: None,
+            content: OneOrMany::one(ToolResultContent::Text(Text { text: content })),
+        })),
     }
 }
 
@@ -348,10 +337,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn round_trip_assistant_message() {
-        let adapter = RigSessionAdapter::new();
-        let original = Message::Assistant {
+    fn create_test_assistant_message() -> Message {
+        Message::Assistant {
             content: "I'm an assistant".to_string(),
             tool_calls: vec![runie_core::ToolCall {
                 id: "call-1".to_string(),
@@ -359,17 +346,11 @@ mod tests {
                 arguments: serde_json::json!({"arg": "value"}),
             }],
             thinking: Some("Let me think...".to_string()),
-        };
+        }
+    }
 
-        adapter
-            .save("test-2", vec![original.clone()])
-            .await
-            .unwrap();
-
-        let loaded = adapter.load("test-2").await.unwrap();
-        assert_eq!(loaded.len(), 1);
-
-        match (&loaded[0], &original) {
+    fn verify_assistant_messages_match(loaded: &Message, original: &Message) {
+        match (loaded, original) {
             (
                 Message::Assistant {
                     content: c2,
@@ -388,11 +369,26 @@ mod tests {
                     assert_eq!(tc1[0].id, tc2[0].id);
                     assert_eq!(tc1[0].name, tc2[0].name);
                 }
-                // Note: thinking may differ due to rig's reasoning format
                 assert!(t2.is_some() || t1.is_none());
             }
             _ => panic!("Message type mismatch"),
         }
+    }
+
+    #[tokio::test]
+    async fn round_trip_assistant_message() {
+        let adapter = RigSessionAdapter::new();
+        let original = create_test_assistant_message();
+
+        adapter
+            .save("test-2", vec![original.clone()])
+            .await
+            .unwrap();
+
+        let loaded = adapter.load("test-2").await.unwrap();
+        assert_eq!(loaded.len(), 1);
+
+        verify_assistant_messages_match(&loaded[0], &original);
     }
 
     #[tokio::test]

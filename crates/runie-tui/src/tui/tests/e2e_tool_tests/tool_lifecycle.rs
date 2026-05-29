@@ -1,51 +1,34 @@
 use super::*;
+use crate::tui::state::Msg;
+use runie_agent::{AgentEvent, PermissionDecision, ContentPart};
+use crate::components::MessageItem;
 
 #[test]
 fn test_e2e_bash_tool_full_flow() {
-    let mut state = make_state();
-    let mut palette = CommandPalette::new();
+    let (mut state, mut palette) = create_test_app();
+    let (tool_call_id, tool_name, tool_args) = ("call_1", "bash", r#"{"command": "ls"}"#);
 
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::PermissionRequest {
-        tool_call_id: "call_1".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: r#"{"command": "ls"}"#.to_string(),
-        tool_description: "Execute bash command".to_string(),
-        turn: 1,
-        context_window_usage: 0.0,
-    }));
+    send_permission_request(
+        &mut state, &mut palette,
+        tool_call_id, tool_name, tool_args,
+        "Execute bash command",
+    );
 
     assert_eq!(state.mode, TuiMode::Permission);
-    assert_eq!(state.permission_modal.tool, Some("bash".to_string()));
-    assert_eq!(state.permission_modal.tool_call_id, Some("call_1".to_string()));
+    assert_eq!(state.permission_modal.tool, Some(tool_name.to_string()));
+    assert_eq!(state.permission_modal.tool_call_id, Some(tool_call_id.to_string()));
 
     let cmds = update(&mut state, &mut palette, Msg::PermissionConfirm);
-
     assert!(cmds.iter().any(|c| matches!(c, Cmd::SendPermission { decision: PermissionDecision::Allow { .. } })));
 
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionStart {
-        tool_call_id: "call_1".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: r#"{"command": "ls"}"#.to_string(),
-        turn: 1,
-    }));
+    send_tool_execution_start(&mut state, &mut palette, tool_call_id, tool_name, tool_args);
+    assert!(state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { name, .. } if name == tool_call_id)));
 
-    assert!(state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { name, .. } if name == "call_1")));
-
-    let tool_result = runie_agent::events::ToolResult {
-        tool_call_id: "call_1".to_string(),
-        tool_name: "bash".to_string(),
-        input: serde_json::json!({"command": "ls"}),
-        content: vec![ContentPart::Text { text: "file1.txt\nfile2.rs".to_string() }],
-        is_error: false,
-    };
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionEnd {
-        tool_call_id: "call_1".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: r#"{"command": "ls"}"#.to_string(),
-        result: tool_result,
-        duration_ms: 50,
-        turn: 1,
-    }));
+    send_tool_execution_end(
+        &mut state, &mut palette,
+        tool_call_id, tool_name, tool_args,
+        "file1.txt\nfile2.rs", false, 50,
+    );
 
     if let Some(MessageItem::ToolCall { result, is_error, .. }) = state.messages.last() {
         assert!(result.is_some(), "ToolCall should have result");
@@ -58,110 +41,59 @@ fn test_e2e_bash_tool_full_flow() {
 
 #[test]
 fn test_e2e_read_file_tool_flow() {
-    let mut state = make_state();
-    let mut palette = CommandPalette::new();
+    let (mut state, mut palette) = create_test_app();
+    let (tool_call_id, tool_name, tool_args) = ("call_read_1", "read_file", r#"{"path": "src/main.rs"}"#);
 
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::PermissionRequest {
-        tool_call_id: "call_read_1".to_string(),
-        tool_name: "read_file".to_string(),
-        tool_args: r#"{"path": "src/main.rs"}"#.to_string(),
-        tool_description: "Read file contents".to_string(),
-        turn: 1,
-        context_window_usage: 0.0,
-    }));
+    send_permission_request(
+        &mut state, &mut palette,
+        tool_call_id, tool_name, tool_args,
+        "Read file contents",
+    );
 
     assert_eq!(state.mode, TuiMode::Permission);
 
     let cmds = update(&mut state, &mut palette, Msg::PermissionConfirm);
     assert!(cmds.iter().any(|c| matches!(c, Cmd::SendPermission { decision: PermissionDecision::Allow { .. } })));
 
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionStart {
-        tool_call_id: "call_read_1".to_string(),
-        tool_name: "read_file".to_string(),
-        tool_args: r#"{"path": "src/main.rs"}"#.to_string(),
-        turn: 1,
-    }));
+    send_tool_execution_start(&mut state, &mut palette, tool_call_id, tool_name, tool_args);
 
-    let tool_result = runie_agent::events::ToolResult {
-        tool_call_id: "call_read_1".to_string(),
-        tool_name: "read_file".to_string(),
-        input: serde_json::json!({"path": "src/main.rs"}),
-        content: vec![ContentPart::Text { text: "fn main() {}".to_string() }],
-        is_error: false,
-    };
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionEnd {
-        tool_call_id: "call_read_1".to_string(),
-        tool_name: "read_file".to_string(),
-        tool_args: r#"{"path": "src/main.rs"}"#.to_string(),
-        result: tool_result,
-        duration_ms: 10,
-        turn: 1,
-    }));
+    send_tool_execution_end(
+        &mut state, &mut palette,
+        tool_call_id, tool_name, tool_args,
+        "fn main() {}", false, 10,
+    );
 
-    assert!(state.messages.iter().any(|m| {
-        if let MessageItem::ToolCall { result: Some(r), .. } = m {
-            r.contains("fn main()")
-        } else {
-            false
-        }
-    }));
+    assert!(verify_last_tool_result_contains(&state, "fn main()"));
 }
 
 #[test]
 fn test_e2e_tool_chain_multiple() {
-    let mut state = make_state();
-    let mut palette = CommandPalette::new();
+    let (mut state, mut palette) = create_test_app();
 
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionStart {
-        tool_call_id: "call_a".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: r#"{"command": "ls"}"#.to_string(),
-        turn: 1,
-    }));
+    send_tool_execution_start(&mut state, &mut palette, "call_a", "bash", r#"{"command": "ls"}"#);
+    send_tool_execution_end(
+        &mut state, &mut palette,
+        "call_a", "bash", r#"{"command": "ls"}"#,
+        "output_a", false, 50,
+    );
 
-    let result_a = runie_agent::events::ToolResult {
-        tool_call_id: "call_a".to_string(),
-        tool_name: "bash".to_string(),
-        input: serde_json::json!({"command": "ls"}),
-        content: vec![ContentPart::Text { text: "output_a".to_string() }],
-        is_error: false,
-    };
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionEnd {
-        tool_call_id: "call_a".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: r#"{"command": "ls"}"#.to_string(),
-        result: result_a,
-        duration_ms: 50,
-        turn: 1,
-    }));
+    send_tool_execution_start(&mut state, &mut palette, "call_b", "read_file", r#"{"path": "output_a"}"#);
+    send_tool_execution_end(
+        &mut state, &mut palette,
+        "call_b", "read_file", r#"{"path": "output_a"}"#,
+        "content_of_file", false, 30,
+    );
 
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionStart {
-        tool_call_id: "call_b".to_string(),
-        tool_name: "read_file".to_string(),
-        tool_args: r#"{"path": "output_a"}"#.to_string(),
-        turn: 1,
-    }));
-
-    let result_b = runie_agent::events::ToolResult {
-        tool_call_id: "call_b".to_string(),
-        tool_name: "read_file".to_string(),
-        input: serde_json::json!({"path": "output_a"}),
-        content: vec![ContentPart::Text { text: "content_of_file".to_string() }],
-        is_error: false,
-    };
-    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::ToolExecutionEnd {
-        tool_call_id: "call_b".to_string(),
-        tool_name: "read_file".to_string(),
-        tool_args: r#"{"path": "output_a"}"#.to_string(),
-        result: result_b,
-        duration_ms: 30,
-        turn: 1,
-    }));
-
-    let tool_calls: Vec<_> = state.messages.iter()
-        .filter_map(|m| if let MessageItem::ToolCall { name, result, .. } = m {
-            Some((name.clone(), result.clone()))
-        } else { None })
+    let tool_calls: Vec<_> = state
+        .messages
+        .iter()
+        .filter_map(|m| {
+            if let MessageItem::ToolCall { name, result, .. } = m {
+                Some((name.clone(), result.clone()))
+            } else {
+                None
+            }
+        })
         .collect();
 
     assert_eq!(tool_calls.len(), 2);

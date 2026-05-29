@@ -99,25 +99,93 @@ impl CommandPalette {
 
     fn fuzzy_score(query: &str, command: &PaletteCommandDef) -> f32 {
         let query_lower = query.to_lowercase();
+        if query_lower.is_empty() {
+            return 1.0;
+        }
+
+        // Tier 1: Exact match on label or id
+        if let Some(score) = Self::exact_match_score(&query_lower, command) {
+            return score;
+        }
+
+        // Tier 2: Prefix match on label or id
+        if let Some(score) = Self::prefix_match_score(&query_lower, command) {
+            return score;
+        }
+
+        // Tier 3: Contains match on label or id
+        if let Some(score) = Self::contains_match_score(&query_lower, command) {
+            return score;
+        }
+
+        // Tier 4: Alias matching
+        if let Some(score) = Self::alias_match_score(&query_lower, command) {
+            return score;
+        }
+
+        // Tier 5: Fuzzy character match
+        Self::fuzzy_match_score(&query_lower, &command.label)
+    }
+
+    fn exact_match_score(query: &str, command: &PaletteCommandDef) -> Option<f32> {
         let label_lower = command.label.to_lowercase();
         let id_lower = command.id.to_lowercase();
-        if query_lower.is_empty() { return 1.0; }
-        if label_lower == query_lower || id_lower == query_lower { return 1000.0; }
-        if label_lower.starts_with(&query_lower) || id_lower.starts_with(&query_lower) { return 900.0; }
-        if label_lower.contains(&query_lower) || id_lower.contains(&query_lower) { return 700.0; }
+        if label_lower == query || id_lower == query {
+            Some(1000.0)
+        } else {
+            None
+        }
+    }
+
+    fn prefix_match_score(query: &str, command: &PaletteCommandDef) -> Option<f32> {
+        let label_lower = command.label.to_lowercase();
+        let id_lower = command.id.to_lowercase();
+        if label_lower.starts_with(query) || id_lower.starts_with(query) {
+            Some(900.0)
+        } else {
+            None
+        }
+    }
+
+    fn contains_match_score(query: &str, command: &PaletteCommandDef) -> Option<f32> {
+        let label_lower = command.label.to_lowercase();
+        let id_lower = command.id.to_lowercase();
+        if label_lower.contains(query) || id_lower.contains(query) {
+            Some(700.0)
+        } else {
+            None
+        }
+    }
+
+    fn alias_match_score(query: &str, command: &PaletteCommandDef) -> Option<f32> {
         for alias in &command.aliases {
-            if alias.to_lowercase() == query_lower { return 850.0; }
+            let alias_lower = alias.to_lowercase();
+            if alias_lower == query {
+                return Some(850.0);
+            }
         }
         for alias in &command.aliases {
-            if alias.to_lowercase().starts_with(&query_lower) { return 800.0; }
+            let alias_lower = alias.to_lowercase();
+            if alias_lower.starts_with(query) {
+                return Some(800.0);
+            }
         }
         for alias in &command.aliases {
-            if alias.to_lowercase().contains(&query_lower) { return 600.0; }
+            let alias_lower = alias.to_lowercase();
+            if alias_lower.contains(query) {
+                return Some(600.0);
+            }
         }
-        if Self::is_fuzzy_match(&query_lower, &label_lower) {
-            return 500.0 + (query_lower.len() as f32 / label_lower.len() as f32) * 100.0;
+        None
+    }
+
+    fn fuzzy_match_score(query: &str, label: &str) -> f32 {
+        let label_lower = label.to_lowercase();
+        if Self::is_fuzzy_match(query, &label_lower) {
+            500.0 + (query.len() as f32 / label_lower.len() as f32) * 100.0
+        } else {
+            0.0
         }
-        0.0
     }
 
     fn is_fuzzy_match(query: &str, target: &str) -> bool {

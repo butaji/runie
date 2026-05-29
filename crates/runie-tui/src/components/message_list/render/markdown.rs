@@ -214,7 +214,17 @@ fn render_markdown_table(rows: &[String], width: usize) -> Vec<String> {
         return Vec::new();
     }
 
-    let parsed_rows: Vec<Vec<String>> = rows.iter()
+    let parsed_rows = parse_table_rows(rows);
+    if parsed_rows.is_empty() {
+        return rows.to_vec();
+    }
+
+    let col_widths = calculate_column_widths(&parsed_rows, width);
+    render_table_with_widths(&parsed_rows, &col_widths)
+}
+
+fn parse_table_rows(rows: &[String]) -> Vec<Vec<String>> {
+    rows.iter()
         .map(|row| {
             row.split('|')
                 .skip(1)
@@ -222,19 +232,17 @@ fn render_markdown_table(rows: &[String], width: usize) -> Vec<String> {
                 .map(|s| s.trim().to_string())
                 .collect()
         })
-        .collect();
+        .collect()
+}
 
-    if parsed_rows.is_empty() {
-        return rows.to_vec();
-    }
-
+fn calculate_column_widths(parsed_rows: &[Vec<String>], width: usize) -> Vec<usize> {
     let col_count = parsed_rows.iter().map(|r| r.len()).max().unwrap_or(0);
     if col_count == 0 {
-        return rows.to_vec();
+        return Vec::new();
     }
 
     let mut col_widths = vec![0usize; col_count];
-    for row in &parsed_rows {
+    for row in parsed_rows {
         for (i, cell) in row.iter().enumerate() {
             if i < col_count {
                 col_widths[i] = col_widths[i].max(cell.len());
@@ -247,10 +255,15 @@ fn render_markdown_table(rows: &[String], width: usize) -> Vec<String> {
         *w = (*w).min(cell_width);
     }
 
+    col_widths
+}
+
+fn render_table_with_widths(parsed_rows: &[Vec<String>], col_widths: &[usize]) -> Vec<String> {
     let mut result = Vec::new();
 
     let v_join = |sep: &str| -> String {
-        col_widths.iter()
+        col_widths
+            .iter()
             .map(|w| "─".repeat(*w + 2))
             .collect::<Vec<_>>()
             .join(sep)
@@ -259,9 +272,11 @@ fn render_markdown_table(rows: &[String], width: usize) -> Vec<String> {
     result.push(format!("┌{}┐", v_join("┬")));
 
     for (i, row) in parsed_rows.iter().enumerate() {
-        let cells: Vec<String> = row.iter().enumerate()
+        let cells: Vec<String> = row
+            .iter()
+            .enumerate()
             .map(|(j, cell)| {
-                let w = col_widths.get(j).copied().unwrap_or(10);
+                let w = *col_widths.get(j).unwrap_or(&10);
                 format!(" {:w$} ", cell, w = w)
             })
             .collect();

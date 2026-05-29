@@ -88,7 +88,6 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            // Chat
             messages: Vec::new(),
             textarea: ratatui_textarea::TextArea::default(),
             input_right_info: String::new(),
@@ -96,7 +95,6 @@ impl Default for AppState {
             input_history: Vec::new(),
             input_history_index: None,
             input_draft: String::new(),
-            // Agent
             agent_running: false,
             current_model: None,
             token_usage: TokenUsage::default(),
@@ -106,24 +104,20 @@ impl Default for AppState {
             thinking_start: None,
             thinking_duration: None,
             is_thinking: false,
-            // Layout
             show_sidebar: false,
             terminal_size: (0, 0),
             top_bar: TopBarState::default(),
-            // System
             running: true,
             mock_mode: false,
             status_header: None,
             status_details: None,
             status_start_time: None,
             clear_input_confirm: ClearInputConfirm::default(),
-            // Overlay
             permission_modal: PermissionModalState::default(),
             command_palette: CommandPaletteState::default(),
             model_picker: None,
             diff_viewer: None,
             session_tree: crate::components::SessionTreeNavigator::new(),
-            // Other
             animation: AnimationState::default(),
             onboarding: None,
             mode: TuiMode::Chat,

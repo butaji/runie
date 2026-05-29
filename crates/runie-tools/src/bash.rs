@@ -179,6 +179,52 @@ impl BashTool {
         }
         Ok(())
     }
+
+    /// Formats command output into ToolOutput content.
+    fn format_output(stdout: &str, stderr: &str, exit_code: Option<i32>) -> String {
+        let content = if stderr.is_empty() {
+            stdout.to_string()
+        } else {
+            format!("{}\n[stderr]: {}", stdout, stderr)
+        };
+
+        // Clip output to reasonable size (e.g., 10k chars)
+        if content.len() > 10000 {
+            format!("{}... [clipped, {} total chars]", &content[..10000], content.len())
+        } else {
+            content
+        }
+    }
+
+    /// Executes a validated command and returns the output.
+    async fn execute_command(
+        workspace: &Workspace,
+        command: &str,
+        timeout_secs: u64,
+    ) -> Result<ToolOutput, ToolError> {
+        let output = tokio::time::timeout(
+            std::time::Duration::from_secs(timeout_secs),
+            tokio::process::Command::new("sh")
+                .arg("-c")
+                .arg(command)
+                .current_dir(&workspace.root)
+                .kill_on_drop(true)
+                .output(),
+        )
+        .await
+        .map_err(|e| ToolError::ExecutionFailed(format!("Command timed out: {}", e)))?
+        .map_err(|e| ToolError::ExecutionFailed(format!("Command failed: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let content = Self::format_output(&stdout, &stderr, output.status.code());
+
+        Ok(ToolOutput {
+            content,
+            metadata: json!({"command": command, "exit_code": output.status.code()}),
+            terminate: false,
+        })
+    }
 }
 
 #[async_trait]
@@ -229,40 +275,7 @@ impl Tool for BashTool {
         // Tertiary defense: prevent subshell spawning even for whitelisted commands
         BashTool::check_subshell_patterns(command)?;
 
-        let output = tokio::time::timeout(
-            std::time::Duration::from_secs(timeout_secs),
-            tokio::process::Command::new("sh")
-                .arg("-c")
-                .arg(command)
-                .current_dir(&self.workspace.root)
-                .kill_on_drop(true)
-                .output()
-        )
-        .await
-        .map_err(|e| ToolError::ExecutionFailed(format!("Command timed out: {}", e)))?
-        .map_err(|e| ToolError::ExecutionFailed(format!("Command failed: {}", e)))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-        let content = if stderr.is_empty() {
-            stdout
-        } else {
-            format!("{}\n[stderr]: {}", stdout, stderr)
-        };
-
-        // Clip output to reasonable size (e.g., 10k chars)
-        let clipped = if content.len() > 10000 {
-            format!("{}... [clipped, {} total chars]", &content[..10000], content.len())
-        } else {
-            content
-        };
-
-        Ok(ToolOutput {
-            content: clipped,
-            metadata: json!({"command": command, "exit_code": output.status.code()}),
-            terminate: false,
-        })
+        Self::execute_command(&self.workspace, command, timeout_secs).await
     }
 }
 

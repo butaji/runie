@@ -10,34 +10,11 @@ async fn test_max_turns_exact_boundary() {
     use crate::loop_engine::agent_loop;
 
     let provider = Arc::new(AlwaysToolProvider::new());
-    let ws = Workspace::new(PathBuf::from("."));
-    let registry = Arc::new(create_default_toolkit(ws));
+    let registry = test_registry();
+    let config = test_config(3);
+    let messages = vec![test_message("test")];
 
-    let config = AgentLoopConfig {
-        system_prompt: "You are helpful".to_string(),
-        model: "test".to_string(),
-        thinking_level: "low".to_string(),
-        max_turns: 3,
-    };
-
-    let messages = vec![AgentMessage {
-        role: "user".to_string(),
-        content: vec![ContentPart::Text { text: "test".to_string() }],
-        timestamp: 0,
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-        tool_calls: vec![],
-    }];
-
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
 
     let mut turn_count = 0;
     let mut max_turns_exceeded = false;
@@ -68,34 +45,11 @@ async fn test_duplicate_tool_call_same_turn() {
     use crate::loop_engine::agent_loop;
 
     let provider = Arc::new(DuplicateToolProvider::new());
-    let ws = Workspace::new(PathBuf::from("."));
-    let registry = Arc::new(create_default_toolkit(ws));
+    let registry = test_registry();
+    let config = test_config(2);
+    let messages = vec![test_message("test")];
 
-    let config = AgentLoopConfig {
-        system_prompt: "You are helpful".to_string(),
-        model: "test".to_string(),
-        thinking_level: "low".to_string(),
-        max_turns: 2,
-    };
-
-    let messages = vec![AgentMessage {
-        role: "user".to_string(),
-        content: vec![ContentPart::Text { text: "test".to_string() }],
-        timestamp: 0,
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-        tool_calls: vec![],
-    }];
-
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
 
     let mut tool_execution_count = 0;
 
@@ -118,34 +72,11 @@ async fn test_duplicate_tool_call_across_turns() {
     use crate::loop_engine::agent_loop;
 
     let provider = Arc::new(SameToolAcrossTurnsProvider::new());
-    let ws = Workspace::new(PathBuf::from("."));
-    let registry = Arc::new(create_default_toolkit(ws));
+    let registry = test_registry();
+    let config = test_config(3);
+    let messages = vec![test_message("test")];
 
-    let config = AgentLoopConfig {
-        system_prompt: "You are helpful".to_string(),
-        model: "test".to_string(),
-        thinking_level: "low".to_string(),
-        max_turns: 3,
-    };
-
-    let messages = vec![AgentMessage {
-        role: "user".to_string(),
-        content: vec![ContentPart::Text { text: "test".to_string() }],
-        timestamp: 0,
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-        tool_calls: vec![],
-    }];
-
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
 
     let mut tool_execution_count = 0;
 
@@ -168,34 +99,11 @@ async fn test_permission_timeout_returns_denied() {
     use crate::loop_engine::agent_loop;
 
     let provider = Arc::new(PermissionNeverGrantedProvider::new());
-    let ws = Workspace::new(PathBuf::from("."));
-    let registry = Arc::new(create_default_toolkit(ws));
+    let registry = test_registry();
+    let config = test_config(2);
+    let messages = vec![test_message("test")];
 
-    let config = AgentLoopConfig {
-        system_prompt: "You are helpful".to_string(),
-        model: "test".to_string(),
-        thinking_level: "low".to_string(),
-        max_turns: 2,
-    };
-
-    let messages = vec![AgentMessage {
-        role: "user".to_string(),
-        content: vec![ContentPart::Text { text: "test".to_string() }],
-        timestamp: 0,
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-        tool_calls: vec![],
-    }];
-
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
 
     let mut permission_denied = false;
 
@@ -223,34 +131,11 @@ async fn test_token_usage_accumulates_per_turn() {
     use crate::loop_engine::agent_loop;
 
     let provider = Arc::new(TokenCountingProvider::new());
-    let ws = Workspace::new(PathBuf::from("."));
-    let registry = Arc::new(create_default_toolkit(ws));
+    let registry = test_registry();
+    let config = test_config(3);
+    let messages = vec![test_message("test")];
 
-    let config = AgentLoopConfig {
-        system_prompt: "You are helpful".to_string(),
-        model: "test".to_string(),
-        thinking_level: "low".to_string(),
-        max_turns: 3,
-    };
-
-    let messages = vec![AgentMessage {
-        role: "user".to_string(),
-        content: vec![ContentPart::Text { text: "test".to_string() }],
-        timestamp: 0,
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-        tool_calls: vec![],
-    }];
-
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
 
     let mut total_tokens_seen = 0u32;
     let mut turns_seen = 0u32;
@@ -284,34 +169,11 @@ async fn test_tool_panic_caught_in_prep() {
     use crate::loop_engine::agent_loop;
 
     let provider = Arc::new(PanickingToolProvider::new());
-    let ws = Workspace::new(PathBuf::from("."));
-    let registry = Arc::new(create_default_toolkit(ws));
+    let registry = test_registry();
+    let config = test_config(2);
+    let messages = vec![test_message("test")];
 
-    let config = AgentLoopConfig {
-        system_prompt: "You are helpful".to_string(),
-        model: "test".to_string(),
-        thinking_level: "low".to_string(),
-        max_turns: 2,
-    };
-
-    let messages = vec![AgentMessage {
-        role: "user".to_string(),
-        content: vec![ContentPart::Text { text: "test".to_string() }],
-        timestamp: 0,
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-        tool_calls: vec![],
-    }];
-
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
 
     let mut panic_caught = false;
 

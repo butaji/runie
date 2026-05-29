@@ -6,35 +6,21 @@ use super::markdown::render_text_content;
 /// Extract think blocks from text and returns (main_text, think_blocks).
 /// DeepSeek models use these for internal reasoning.
 pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
-    let mut main_text = String::with_capacity(text.len());
-    let mut think_blocks = Vec::new();
-    let mut last_end = 0;
-
     let bytes = text.as_bytes();
+    let mut main_text = String::new();
+    let mut think_blocks = Vec::new();
     let mut i = 0;
+    let mut last_end = 0;
 
     while i < bytes.len() {
         if bytes[i..].starts_with(b"<think>") {
             let start = i;
-            let mut j = i + 7;
-            let mut found = false;
-            while j < bytes.len() {
-                if bytes[j..].starts_with(b"</think>") {
-                    let block_start = i + 7;
-                    let block_end = j;
-                    i = j + 8;
-                    found = true;
-                    main_text.push_str(&text[last_end..start]);
-                    let think_content = text[block_start..block_end].trim();
-                    if !think_content.is_empty() {
-                        think_blocks.push(think_content.to_string());
-                    }
-                    last_end = i;
-                    break;
-                }
-                j += 1;
-            }
-            if !found {
+            if let Some((block_start, block_end, new_i)) = find_closing_tag(bytes, i + 7) {
+                i = new_i;
+                main_text.push_str(&text[last_end..start]);
+                push_think_block(text, block_start, block_end, &mut think_blocks);
+                last_end = i;
+            } else {
                 break;
             }
         } else {
@@ -47,6 +33,24 @@ pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
     }
 
     (main_text, think_blocks)
+}
+
+fn find_closing_tag(bytes: &[u8], start: usize) -> Option<(usize, usize, usize)> {
+    let mut j = start;
+    while j < bytes.len() {
+        if bytes[j..].starts_with(b"</think>") {
+            return Some((start, j, j + 8));
+        }
+        j += 1;
+    }
+    None
+}
+
+fn push_think_block(text: &str, block_start: usize, block_end: usize, think_blocks: &mut Vec<String>) {
+    let think_content = text[block_start..block_end].trim();
+    if !think_content.is_empty() {
+        think_blocks.push(think_content.to_string());
+    }
 }
 
 /// Strips think blocks from text (DeepSeek models use these).

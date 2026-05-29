@@ -181,111 +181,77 @@ fn task_dir(task_id: &str) -> PathBuf {
 /// The sandbox workspace is created as a temp directory, setup files are
 /// copied in, then the grader is executed against the final state.
 pub async fn run_harness_task(task_id: &str, config: &HarnessConfig) -> TaskResult {
-    use std::fs;
-
     let start = Instant::now();
-    let task_dir = task_dir(task_id);
 
-    // Load task definition
-    let task_json = match fs::read_to_string(task_dir.join("task.json")) {
-        Ok(t) => t,
-        Err(e) => {
-            return TaskResult {
-                task_id: task_id.to_string(),
-                status: TaskStatus::Error,
-                elapsed_ms: start.elapsed().as_millis() as u64,
-                checks_passed: 0,
-                checks_total: 0,
-                detail: format!("Failed to read task.json: {}", e),
-            };
-        }
+    // Phase 1: Load and parse task definition
+    let task_def = match load_task_def(task_id, start) {
+        Ok(def) => def,
+        Err(result) => return result,
     };
 
-    let task_def: TaskDef = match serde_json::from_str(&task_json) {
-        Ok(t) => t,
-        Err(e) => {
-            return TaskResult {
-                task_id: task_id.to_string(),
-                status: TaskStatus::Error,
-                elapsed_ms: start.elapsed().as_millis() as u64,
-                checks_passed: 0,
-                checks_total: 0,
-                detail: format!("Failed to parse task.json: {}", e),
-            };
-        }
-    };
-
-    // Create temp workspace using std::env::temp_dir()
+    // Phase 2: Create workspace and copy files
     let sandbox_base = std::env::temp_dir().join("runie-harness").join(task_id);
     let workspace_path = sandbox_base.join("workspace");
-    if let Err(e) = fs::create_dir_all(&workspace_path) {
-        return TaskResult {
-            task_id: task_id.to_string(),
-            status: TaskStatus::Error,
-            elapsed_ms: start.elapsed().as_millis() as u64,
-            checks_passed: 0,
-            checks_total: 0,
-            detail: format!("Failed to create temp workspace: {}", e),
-        };
+    if let Err(e) = std::fs::create_dir_all(&workspace_path) {
+        return error_result(task_id, start, format!("Failed to create temp workspace: {}", e));
     }
 
-    // Copy setup files into workspace
-    for (rel_path, content) in &task_def.setup.files {
-        let dest = workspace_path.join(rel_path);
-        if let Some(parent) = dest.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-        if let Err(e) = fs::write(&dest, content) {
-            return TaskResult {
-                task_id: task_id.to_string(),
-                status: TaskStatus::Error,
-                elapsed_ms: start.elapsed().as_millis() as u64,
-                checks_passed: 0,
-                checks_total: 0,
-                detail: format!("Failed to write setup file {}: {}", rel_path, e),
-            };
-        }
+    if let Err(e) = copy_setup_files(&task_def, &workspace_path, task_id, start) {
+        return e;
     }
 
     if config.verbose {
-        eprintln!(
-            "[harness] {} — sandbox: {}",
-            task_id,
-            workspace_path.display()
-        );
+        eprintln!("[harness] {} — sandbox: {}", task_id, workspace_path.display());
     }
 
-    // NOTE: Agent execution is intentionally NOT implemented here.
-    // A full harness would spawn the agent process with the task description
-    // and workspace path, then run the grader against the agent's output.
-    // Currently the grader runs directly against the setup state, which tests
-    // the harness infrastructure but NOT agent-to-grader integration.
-    // See GAP-06 in CASES.md for tracking.
-
-    // Run grader if one is configured
+    // Phase 3: Run grader
     let grader_result = if let Some(ref grader_script) = task_def.grader {
-        run_grader(&task_dir, &workspace_path, grader_script, config).await
+        run_grader(&sandbox_base.join("task"), &workspace_path, grader_script, config).await
     } else {
-        (
-            TaskStatus::Skipped,
-            0,
-            0,
-            "no grader configured — task skipped".to_string(),
-        )
+        (TaskStatus::Skipped, 0, 0, "no grader configured — task skipped".to_string())
     };
 
-    // Clean up sandbox
-    let _ = fs::remove_dir_all(&sandbox_base);
+    // Phase 4: Cleanup
+    let _ = std::fs::remove_dir_all(&sandbox_base);
 
     let elapsed_ms = start.elapsed().as_millis() as u64;
     let (status, checks_passed, checks_total, detail) = grader_result;
 
+    TaskResult { task_id: task_id.to_string(), status, elapsed_ms, checks_passed, checks_total, detail }
+}
+
+fn load_task_def(task_id: &str, start: Instant) -> Result<TaskDef, TaskResult> {
+    let task_dir = task_dir(task_id);
+
+    let task_json = std::fs::read_to_string(task_dir.join("task.json"))
+        .map_err(|e| error_result(task_id, start, format!("Failed to read task.json: {}", e)))?;
+
+    let task_def: TaskDef = serde_json::from_str(&task_json)
+        .map_err(|e| error_result(task_id, start, format!("Failed to parse task.json: {}", e)))?;
+
+    Ok(task_def)
+}
+
+fn copy_setup_files(task_def: &TaskDef, workspace_path: &std::path::Path, task_id: &str, start: Instant) -> Result<(), TaskResult> {
+    for (rel_path, content) in &task_def.setup.files {
+        let dest = workspace_path.join(rel_path);
+        if let Some(parent) = dest.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Err(e) = std::fs::write(&dest, content) {
+            return Err(error_result(task_id, start, format!("Failed to write setup file {}: {}", rel_path, e)));
+        }
+    }
+    Ok(())
+}
+
+fn error_result(task_id: &str, start: Instant, detail: String) -> TaskResult {
     TaskResult {
         task_id: task_id.to_string(),
-        status,
-        elapsed_ms,
-        checks_passed,
-        checks_total,
+        status: TaskStatus::Error,
+        elapsed_ms: start.elapsed().as_millis() as u64,
+        checks_passed: 0,
+        checks_total: 0,
         detail,
     }
 }

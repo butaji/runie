@@ -66,20 +66,57 @@ pub fn find_most_recent_spinner_index(messages: &[MessageItem]) -> Option<usize>
 
 /// Get the type identifier for a message
 pub fn get_msg_type(msg: &MessageItem) -> &'static str {
+    // User/Assistant core messages
     match msg {
         MessageItem::User { .. } => "user",
         MessageItem::Assistant { .. } => "assistant",
+        _ => msg_type_else(msg),
+    }
+}
+
+fn msg_type_else(msg: &MessageItem) -> &'static str {
+    // Thought/separator
+    match msg {
         MessageItem::Thought { .. } => "thought",
         MessageItem::Separator { .. } => "separator",
+        _ => msg_type_tool(msg),
+    }
+}
+
+fn msg_type_tool(msg: &MessageItem) -> &'static str {
+    // Tool-related
+    match msg {
         MessageItem::ToolCall { .. } => "tool",
-        MessageItem::Edit { .. } => "edit",
-        MessageItem::System { .. } => "system",
-        MessageItem::Error { .. } => "error",
         MessageItem::ToolRunning { .. } => "tool_running",
         MessageItem::ToolComplete { .. } => "tool_complete",
+        _ => msg_type_edit_plan(msg),
+    }
+}
+
+fn msg_type_edit_plan(msg: &MessageItem) -> &'static str {
+    // Edit/plan
+    match msg {
+        MessageItem::Edit { .. } => "edit",
         MessageItem::PlanStep { .. } => "plan_step",
+        _ => msg_type_sys_err(msg),
+    }
+}
+
+fn msg_type_sys_err(msg: &MessageItem) -> &'static str {
+    // System/error
+    match msg {
+        MessageItem::System { .. } => "system",
+        MessageItem::Error { .. } => "error",
+        _ => msg_type_misc(msg),
+    }
+}
+
+fn msg_type_misc(msg: &MessageItem) -> &'static str {
+    // Interrupt/rewind
+    match msg {
         MessageItem::Interrupt { .. } => "interrupt",
         MessageItem::Rewind { .. } => "rewind",
+        _ => "unknown",
     }
 }
 

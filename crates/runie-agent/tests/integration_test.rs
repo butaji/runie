@@ -1,13 +1,17 @@
 use futures::StreamExt;
-use runie_agent::loop_engine::{agent_loop, AgentLoopConfig};
+use runie_agent::loop_engine::{agent_loop, AgentLoopConfig, AgentLoop};
 use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 use runie_ai::providers::MockProvider;
 use runie_tools::{create_default_toolkit, Workspace};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[tokio::test]
-async fn test_agent_end_to_end() {
+fn setup_agent_test() -> (
+    Arc<MockProvider>,
+    Arc<runie_tools::ToolRegistry>,
+    AgentLoopConfig,
+    Vec<AgentMessage>,
+) {
     let provider = Arc::new(MockProvider::new());
     let ws = Workspace::new(PathBuf::from("."));
     let registry = Arc::new(create_default_toolkit(ws));
@@ -31,17 +35,10 @@ async fn test_agent_end_to_end() {
         tool_calls: vec![],
     }];
 
-    // Spawn the agent loop
-    let mut stream = agent_loop(
-        messages,
-        config,
-        provider,
-        vec![],
-        registry,
-        vec![],
-    );
+    (provider, registry, config, messages)
+}
 
-    // Collect events
+async fn collect_agent_events(stream: &mut impl AgentLoop) -> (bool, bool, bool, bool) {
     let mut got_message_start = false;
     let mut got_message_update = false;
     let mut got_message_end = false;
@@ -57,12 +54,30 @@ async fn test_agent_end_to_end() {
                 break;
             }
             AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args, .. } => {
-                // Auto-allow permission requests for testing
                 let _ = stream.send_permission(PermissionDecision::Allow { tool_call_id, tool_name, tool_args }).await;
             }
             _ => {}
         }
     }
+
+    (got_message_start, got_message_update, got_message_end, got_agent_end)
+}
+
+#[tokio::test]
+async fn test_agent_end_to_end() {
+    let (provider, registry, config, messages) = setup_agent_test();
+
+    let mut stream = agent_loop(
+        messages,
+        config,
+        provider,
+        vec![],
+        registry,
+        vec![],
+    );
+
+    let (got_message_start, got_message_update, got_message_end, got_agent_end) =
+        collect_agent_events(&mut stream).await;
 
     let _final_messages = stream.result().await;
 
@@ -72,11 +87,13 @@ async fn test_agent_end_to_end() {
     assert!(got_agent_end, "Should receive AgentEnd");
 }
 
-#[tokio::test]
-async fn test_agent_with_mock_error_simulation() {
-    // Create a mock provider that simulates errors
-    let provider = Arc::new(MockProvider::new().with_errors(0.0)); // 0% error rate, should succeed
-
+fn setup_error_test() -> (
+    Arc<MockProvider>,
+    Arc<runie_tools::ToolRegistry>,
+    AgentLoopConfig,
+    Vec<AgentMessage>,
+) {
+    let provider = Arc::new(MockProvider::new().with_errors(0.0));
     let ws = Workspace::new(PathBuf::from("/tmp"));
     let registry = Arc::new(create_default_toolkit(ws));
 
@@ -99,6 +116,13 @@ async fn test_agent_with_mock_error_simulation() {
         tool_calls: vec![],
     }];
 
+    (provider, registry, config, messages)
+}
+
+#[tokio::test]
+async fn test_agent_with_mock_error_simulation() {
+    let (provider, registry, config, messages) = setup_error_test();
+
     let mut stream = agent_loop(
         messages,
         config,
@@ -108,7 +132,6 @@ async fn test_agent_with_mock_error_simulation() {
         vec![],
     );
 
-    // Should complete without errors
     while let Some(event) = stream.next().await {
         if let AgentEvent::AgentEnd { .. } = event {
             let _final_messages = stream.result().await;

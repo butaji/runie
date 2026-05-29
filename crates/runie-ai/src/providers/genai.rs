@@ -56,36 +56,7 @@ impl Provider for GenAiProvider {
                 timestamp: chrono::Utc::now(),
             };
 
-            match client.exec_chat_stream(&model, chat_req, None).await {
-                Ok(chat_res) => {
-                    let mut stream = chat_res.stream;
-                    let mut tool_call_index = 0usize;
-                    while let Some(event_result) = stream.next().await {
-                        match event_result {
-                            Ok(genai::chat::ChatStreamEvent::Chunk(chunk)) => {
-                                yield Event::MessageDelta { content: chunk.content };
-                            }
-                            Ok(genai::chat::ChatStreamEvent::ToolCallChunk(tool_call)) => {
-                                let id = format!("call_{}", tool_call_index);
-                                tool_call_index += 1;
-                                yield Event::ToolCallDelta {
-                                    id,
-                                    name: tool_call.tool_call.fn_name,
-                                    arguments: tool_call.tool_call.fn_arguments.to_string(),
-                                };
-                            }
-                            Err(e) => {
-                                yield Event::Error { message: e.to_string() };
-                                break;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                Err(e) => {
-                    yield Event::Error { message: e.to_string() };
-                }
-            }
+            yield_events_from_chat(&client, &model, chat_req).await;
 
             yield Event::AgentEnd { timestamp: chrono::Utc::now() };
         };
@@ -106,6 +77,43 @@ impl Provider for GenAiProvider {
                 Ok(text.to_string())
             }
             Err(e) => Err(ProviderError::ApiError(e.to_string())),
+        }
+    }
+}
+
+async fn yield_events_from_chat(
+    client: &Client,
+    model: &str,
+    chat_req: ChatRequest,
+) {
+    match client.exec_chat_stream(model, chat_req, None).await {
+        Ok(chat_res) => {
+            let mut stream = chat_res.stream;
+            let mut tool_call_index = 0usize;
+            while let Some(event_result) = stream.next().await {
+                match event_result {
+                    Ok(genai::chat::ChatStreamEvent::Chunk(chunk)) => {
+                        yield Event::MessageDelta { content: chunk.content };
+                    }
+                    Ok(genai::chat::ChatStreamEvent::ToolCallChunk(tool_call)) => {
+                        let id = format!("call_{}", tool_call_index);
+                        tool_call_index += 1;
+                        yield Event::ToolCallDelta {
+                            id,
+                            name: tool_call.tool_call.fn_name,
+                            arguments: tool_call.tool_call.fn_arguments.to_string(),
+                        };
+                    }
+                    Err(e) => {
+                        yield Event::Error { message: e.to_string() };
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Err(e) => {
+            yield Event::Error { message: e.to_string() };
         }
     }
 }

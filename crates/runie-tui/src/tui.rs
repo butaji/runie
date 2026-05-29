@@ -181,21 +181,9 @@ pub fn key_to_textarea_input(key: crossterm::event::KeyEvent) -> ratatui_textare
 
     let key_code = match key.code {
         KeyCode::Char(c) => Key::Char(c),
-        KeyCode::Backspace => Key::Backspace,
-        KeyCode::Enter => Key::Enter,
-        KeyCode::Left => Key::Left,
-        KeyCode::Right => Key::Right,
-        KeyCode::Up => Key::Up,
-        KeyCode::Down => Key::Down,
-        KeyCode::Home => Key::Home,
-        KeyCode::End => Key::End,
-        KeyCode::Delete => Key::Delete,
-        KeyCode::Tab => Key::Tab,
-        KeyCode::Esc => Key::Esc,
-        KeyCode::PageUp => Key::PageUp,
-        KeyCode::PageDown => Key::PageDown,
-        KeyCode::F(n) => Key::F(n),
-        KeyCode::Null => Key::Null,
+        code if map_navigation_key(code).is_some() => map_navigation_key(code).unwrap(),
+        code if map_edit_key(code).is_some() => map_edit_key(code).unwrap(),
+        code if map_special_key(code).is_some() => map_special_key(code).unwrap(),
         _ => Key::Null,
     };
 
@@ -204,4 +192,60 @@ pub fn key_to_textarea_input(key: crossterm::event::KeyEvent) -> ratatui_textare
     let shift = key.modifiers.contains(crossterm::event::KeyModifiers::SHIFT);
 
     Input { key: key_code, ctrl, alt, shift }
+}
+
+// ─── Key mapping helpers ───────────────────────────────────────────────────────
+
+fn map_arrow_keys(code: crossterm::event::KeyCode) -> Option<ratatui_textarea::Key> {
+    use crossterm::event::KeyCode;
+    use ratatui_textarea::Key;
+    match code {
+        KeyCode::Left => Some(Key::Left),
+        KeyCode::Right => Some(Key::Right),
+        KeyCode::Up => Some(Key::Up),
+        KeyCode::Down => Some(Key::Down),
+        _ => None,
+    }
+}
+
+fn map_nav_page_keys(code: crossterm::event::KeyCode) -> Option<ratatui_textarea::Key> {
+    use crossterm::event::KeyCode;
+    use ratatui_textarea::Key;
+    match code {
+        KeyCode::Home => Some(Key::Home),
+        KeyCode::End => Some(Key::End),
+        KeyCode::PageUp => Some(Key::PageUp),
+        KeyCode::PageDown => Some(Key::PageDown),
+        _ => None,
+    }
+}
+
+/// Map navigation keys (arrows, home, end, page up/down).
+fn map_navigation_key(code: crossterm::event::KeyCode) -> Option<ratatui_textarea::Key> {
+    map_arrow_keys(code).or_else(|| map_nav_page_keys(code))
+}
+
+/// Map edit keys (backspace, delete, tab, enter, escape).
+fn map_edit_key(code: crossterm::event::KeyCode) -> Option<ratatui_textarea::Key> {
+    use crossterm::event::KeyCode;
+    use ratatui_textarea::Key;
+    match code {
+        KeyCode::Backspace => Some(Key::Backspace),
+        KeyCode::Delete => Some(Key::Delete),
+        KeyCode::Tab => Some(Key::Tab),
+        KeyCode::Enter => Some(Key::Enter),
+        KeyCode::Esc => Some(Key::Esc),
+        _ => None,
+    }
+}
+
+/// Map special keys (function keys, null).
+fn map_special_key(code: crossterm::event::KeyCode) -> Option<ratatui_textarea::Key> {
+    use crossterm::event::KeyCode;
+    use ratatui_textarea::Key;
+    match code {
+        KeyCode::F(n) => Some(Key::F(n)),
+        KeyCode::Null => Some(Key::Null),
+        _ => None,
+    }
 }

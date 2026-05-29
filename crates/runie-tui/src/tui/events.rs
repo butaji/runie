@@ -1,5 +1,19 @@
-use crossterm::event::{Event, KeyCode, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg, OnboardingStep};
+
+// --- Key classification helpers ---
+
+fn is_nav_key(key: KeyCode) -> bool {
+    matches!(key, KeyCode::Up | KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End)
+}
+
+fn is_edit_key(key: KeyCode) -> bool {
+    matches!(key, KeyCode::Backspace | KeyCode::Delete | KeyCode::Enter | KeyCode::Tab)
+}
+
+fn is_ctrl_combo(key: KeyEvent) -> bool {
+    key.modifiers.contains(KeyModifiers::CONTROL) && !key.modifiers.contains(KeyModifiers::SHIFT)
+}
 
 pub fn event_to_msg(event: Event, state: &AppState) -> Vec<Msg> {
     match event {
@@ -109,51 +123,38 @@ fn key_to_model_picker_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
+    if is_ctrl_combo(key) {
         return ctrl_chat_key(key);
     }
-    match key.code {
-        KeyCode::Enter => {
-            // Shift+Enter → newline, plain Enter → submit
-            if key.modifiers.contains(KeyModifiers::SHIFT) {
-                Some(Msg::InsertNewline)
-            } else {
-                Some(Msg::Submit)
-            }
-        }
-        KeyCode::Up => Some(Msg::HistoryUp),
-        KeyCode::Down => Some(Msg::HistoryDown),
-        KeyCode::PageUp => Some(Msg::ScrollPageUp),
-        KeyCode::PageDown => Some(Msg::ScrollPageDown),
-        _ => Some(Msg::TextareaKey(key)),
+    if matches!(key.code, KeyCode::Enter) {
+        return if key.modifiers.contains(KeyModifiers::SHIFT) { Some(Msg::InsertNewline) } else { Some(Msg::Submit) };
     }
+    // Simple navigation
+    if matches!(key.code, KeyCode::Up) { return Some(Msg::HistoryUp); }
+    if matches!(key.code, KeyCode::Down) { return Some(Msg::HistoryDown); }
+    if matches!(key.code, KeyCode::PageUp) { return Some(Msg::ScrollPageUp); }
+    if matches!(key.code, KeyCode::PageDown) { return Some(Msg::ScrollPageDown); }
+    Some(Msg::TextareaKey(key))
 }
 
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Char('j') => Some(Msg::InsertNewline), // Ctrl+J = insert newline
-        KeyCode::Char('k') | KeyCode::Char('p') => Some(Msg::OpenCommandPalette),
+        KeyCode::Char('j') | KeyCode::Enter => Some(Msg::InsertNewline),
+        KeyCode::Char('k') | KeyCode::Char('n') | KeyCode::Char('p') | KeyCode::Char('s') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
-        KeyCode::Char('n') => Some(Msg::OpenCommandPalette), // Ctrl+N = new session via palette
-        KeyCode::Char('o') => Some(Msg::CopyLastResponse), // Ctrl+O = copy last response
-        KeyCode::Char('s') => Some(Msg::OpenCommandPalette), // Ctrl+S = save session via palette
+        KeyCode::Char('o') => Some(Msg::CopyLastResponse),
         KeyCode::Char('l') => Some(Msg::ClearChat),
         KeyCode::Char('q') => Some(Msg::Quit),
-        KeyCode::Enter => Some(Msg::InsertNewline), // Ctrl+Enter = insert newline
-        _ => Some(Msg::TextareaKey(key)), // Let textarea handle Ctrl+A/E/D/W/U/etc.
+        _ => Some(Msg::TextareaKey(key)),
     }
 }
 
 fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     // Permission modal intercepts ALL keys — blocking mode
-    // P0-3 FIX: Ctrl+C and ^q in Permission mode both cancel permission
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        match key.code {
-            KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::PermissionCancel),
-            _ => {}
-        }
+    // P0-3 FIX: Ctrl+C/Ctrl+Q cancel permission
+    if is_ctrl_combo(key) && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q')) {
+        return Some(Msg::PermissionCancel);
     }
-    
     match key.code {
         KeyCode::Enter | KeyCode::Char('y') => Some(Msg::PermissionConfirm),
         KeyCode::Esc | KeyCode::Char('n') => Some(Msg::PermissionCancel),
@@ -181,19 +182,14 @@ fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_diff_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
-    // P0-4 FIX: Accept more close triggers for accessibility
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        match key.code {
-            KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::CloseModal),
-            _ => {}
-        }
+    // P0-4 FIX: Ctrl+C/Ctrl+Q close modal
+    if is_ctrl_combo(key) && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q')) {
+        return Some(Msg::CloseModal);
     }
     match key.code {
         KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('x') => Some(Msg::CloseModal),
-        KeyCode::Down | KeyCode::Char('j') => Some(Msg::ScrollDown),
-        KeyCode::Up | KeyCode::Char('k') => Some(Msg::ScrollUp),
-        KeyCode::PageDown => Some(Msg::ScrollDown),
-        KeyCode::PageUp => Some(Msg::ScrollUp),
+        KeyCode::Down | KeyCode::Char('j') | KeyCode::PageDown => Some(Msg::ScrollDown),
+        KeyCode::Up | KeyCode::Char('k') | KeyCode::PageUp => Some(Msg::ScrollUp),
         _ => None,
     }
 }
@@ -208,53 +204,56 @@ fn key_to_tree_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
 }
 
-fn key_to_onboarding_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
-    let is_picker_step = state
-        .onboarding
-        .as_ref()
-        .map(|o| matches!(o.step, OnboardingStep::ProviderSelect | OnboardingStep::ModelSelect))
-        .unwrap_or(false);
+fn key_to_onboarding_navigation(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    if matches!(key.code, KeyCode::Up) { return Some(Msg::OnboardingNavigateUp); }
+    if matches!(key.code, KeyCode::Down) { return Some(Msg::OnboardingNavigateDown); }
+    if matches!(key.code, KeyCode::Enter) { return Some(Msg::OnboardingNext); }
+    None
+}
 
-    let is_welcome = state
-        .onboarding
-        .as_ref()
-        .map(|o| matches!(o.step, OnboardingStep::Welcome))
-        .unwrap_or(false);
+fn key_to_onboarding_esc(is_welcome: bool) -> Option<Msg> {
+    Some(if is_welcome { Msg::OnboardingSkip } else { Msg::OnboardingBack })
+}
 
-    let is_model_select = state
-        .onboarding
-        .as_ref()
-        .map(|o| matches!(o.step, OnboardingStep::ModelSelect))
-        .unwrap_or(false);
-
-    match key.code {
-        // On Welcome step, Enter advances to next step (ProviderSelect)
-        KeyCode::Enter if is_welcome => Some(Msg::OnboardingNext),
-        KeyCode::Enter => Some(Msg::OnboardingNext),
-        // On Welcome step, Esc skips setup entirely
-        KeyCode::Esc if is_welcome => Some(Msg::OnboardingSkip),
-        KeyCode::Esc => Some(Msg::OnboardingBack),
-        KeyCode::Up => Some(Msg::OnboardingNavigateUp),
-        KeyCode::Down => Some(Msg::OnboardingNavigateDown),
-        // Space toggles checkbox in model select
-        KeyCode::Char(' ') if is_model_select => {
-            let idx = state.onboarding.as_ref().map(|o| o.selected_item).unwrap_or(0);
-            Some(Msg::OnboardingSelectModel(idx))
-        }
-        KeyCode::Char(c) => {
-            if is_picker_step {
-                Some(Msg::OnboardingSearchInput(c))
-            } else {
-                Some(Msg::OnboardingKeyInput(c))
-            }
-        }
-        KeyCode::Backspace | KeyCode::Delete => {
-            if is_picker_step {
-                Some(Msg::OnboardingSearchBackspace)
-            } else {
-                Some(Msg::OnboardingKeyBackspace)
-            }
-        }
-        _ => None,
+fn key_to_onboarding_space(state: &AppState) -> Option<Msg> {
+    let step = state.onboarding.as_ref().map(|o| o.step.clone());
+    if matches!(step, Some(OnboardingStep::ModelSelect)) {
+        let idx = state.onboarding.as_ref().map(|o| o.selected_item).unwrap_or(0);
+        return Some(Msg::OnboardingSelectModel(idx));
     }
+    None
+}
+
+fn key_to_onboarding_char(key: crossterm::event::KeyEvent, is_picker_step: bool) -> Option<Msg> {
+    if let KeyCode::Char(c) = key.code {
+        return Some(if is_picker_step { Msg::OnboardingSearchInput(c) } else { Msg::OnboardingKeyInput(c) });
+    }
+    None
+}
+
+fn key_to_onboarding_backspace(is_picker_step: bool) -> Option<Msg> {
+    Some(if is_picker_step { Msg::OnboardingSearchBackspace } else { Msg::OnboardingKeyBackspace })
+}
+
+fn key_to_onboarding_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    let step = state.onboarding.as_ref().map(|o| o.step.clone());
+    let is_welcome = matches!(step, Some(OnboardingStep::Welcome));
+    let is_picker_step = matches!(step, Some(OnboardingStep::ProviderSelect | OnboardingStep::ModelSelect));
+
+    if matches!(key.code, KeyCode::Up | KeyCode::Down | KeyCode::Enter) {
+        return key_to_onboarding_navigation(key);
+    }
+    if matches!(key.code, KeyCode::Esc) {
+        return key_to_onboarding_esc(is_welcome);
+    }
+    if matches!(key.code, KeyCode::Char(' ')) {
+        return key_to_onboarding_space(state);
+    }
+    if let Some(c) = key_to_onboarding_char(key, is_picker_step) {
+        return Some(c);
+    }
+    if matches!(key.code, KeyCode::Backspace | KeyCode::Delete) {
+        return key_to_onboarding_backspace(is_picker_step);
+    }
+    None
 }

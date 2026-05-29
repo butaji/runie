@@ -67,62 +67,69 @@ impl Tool for EditFileTool {
     }
 
     async fn execute(&self, args: serde_json::Value) -> Result<ToolOutput, ToolError> {
-        let old_string = args["old_string"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'old_string' argument".to_string()))?;
-        let new_string = args["new_string"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'new_string' argument".to_string()))?;
-        let path = args["path"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'path' argument".to_string()))?;
-        let force = args["force"].as_bool().unwrap_or(false);
+        // Extract arguments
+        let (old_string, new_string, path, force) = Self::extract_edit_args(args)?;
 
+        // Execute edit
         let resolved = self.workspace.resolve(path)?;
-        
-        // Get mtime before reading (for stale detection)
-        let read_mtime = Self::get_mtime(&resolved).await?;
-        
-        let content = tokio::fs::read_to_string(&resolved).await
-            .map_err(|e| ToolError::ExecutionFailed(format!("Failed to read file: {}", e)))?;
+        let content = self.read_and_validate(&resolved, old_string, force).await?;
+        let (new_content, replacement_count) = Self::compute_replacement(old_string, new_string, force, &content);
+        self.check_stale_and_write(&resolved, path, &new_content).await?;
 
+        Ok(ToolOutput {
+            content: format!("Edited {} ({} replacement{})", path, replacement_count, if replacement_count == 1 { "" } else { "s" }),
+            metadata: json!({ "path": path, "old_content": old_string, "new_content": new_string, "replacement_count": replacement_count }),
+            terminate: false,
+        })
+    }
+
+    fn extract_edit_args(args: serde_json::Value) -> Result<(&str, &str, &str, bool), ToolError> {
+        let old_string = args["old_string"].as_str()
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'old_string'".into()))?;
+        let new_string = args["new_string"].as_str()
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'new_string'".into()))?;
+        let path = args["path"].as_str()
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'path'".into()))?;
+        let force = args["force"].as_bool().unwrap_or(false);
+        Ok((old_string, new_string, path, force))
+    }
+
+    async fn read_and_validate(&self, resolved: &std::path::PathBuf, old_string: &str, force: bool) -> Result<(String, usize), ToolError> {
+        let content = tokio::fs::read_to_string(resolved).await
+            .map_err(|e| ToolError::ExecutionFailed(format!("read failed: {}", e)))?;
         let occurrences = content.matches(old_string).count();
+
         if occurrences == 0 {
-            return Err(ToolError::ExecutionFailed(
-                format!("String not found in file: {}", old_string)
-            ));
+            return Err(ToolError::ExecutionFailed(format!("String not found: {}", old_string)));
         }
         if occurrences > 1 && !force {
             return Err(ToolError::ExecutionFailed(
                 format!("String appears {} times. Use a more specific replacement.", occurrences)
             ));
         }
+        Ok((content, occurrences))
+    }
 
+    fn compute_replacement(old_string: &str, new_string: &str, force: bool, content: &str) -> (String, usize) {
         let new_content = if force {
             content.replace(old_string, new_string)
         } else {
             content.replacen(old_string, new_string, 1)
         };
-        let replacement_count = if force { occurrences } else { 1 };
-        
-        // Check if file was modified since we read it
-        let current_mtime = Self::get_mtime(&resolved).await?;
+        let replacement_count = if force { content.matches(old_string).count() } else { 1 };
+        (new_content, replacement_count)
+    }
+
+    async fn check_stale_and_write(&self, resolved: &std::path::PathBuf, path: &str, new_content: &str) -> Result<(), ToolError> {
+        let read_mtime = Self::get_mtime(resolved).await?;
+        let current_mtime = Self::get_mtime(resolved).await?;
         if current_mtime != read_mtime {
             return Err(ToolError::ExecutionFailed(
-                format!("File '{}' was modified since it was read. Please re-read the file and try again.", path)
+                format!("File '{}' was modified since read. Please re-read and try again.", path)
             ));
         }
-        
-        tokio::fs::write(&resolved, new_content).await
-            .map_err(|e| ToolError::ExecutionFailed(format!("Failed to write file: {}", e)))?;
-
-        Ok(ToolOutput {
-            content: format!("Edited {} ({} replacement{})", path, replacement_count, if replacement_count == 1 { "" } else { "s" }),
-            metadata: json!({
-                "path": path,
-                "old_content": old_string,
-                "new_content": new_string,
-                "replacement_count": replacement_count
-            }),
-            terminate: false,
-        })
+        tokio::fs::write(resolved, new_content).await
+            .map_err(|e| ToolError::ExecutionFailed(format!("write failed: {}", e)))
     }
 }
 

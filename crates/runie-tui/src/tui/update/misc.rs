@@ -47,49 +47,41 @@ pub fn handle_anim(state: &mut AppState, msg: &Msg) {
 pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
     let text = state.textarea.lines().join("\n");
     if text.is_empty() {
-        // P0-3 FIX: Show feedback when submitting empty input
         state.input_right_info = "Type a message first".to_string();
         return vec![];
     }
-    
-    // P1-4 FIX: Block double-submit with user feedback via input_right_info (not system message)
+
     if state.agent_running {
-        // blocked: Agent is already running, prevent double-submit
         state.input_right_info = "Agent running (blocked)... Ctrl+C to stop".to_string();
         return vec![];
     }
-    
-    // P1-4 FIX: Block submit while models are still being fetched in onboarding
+
     if let Some(ref onboarding) = state.onboarding {
         if onboarding.is_fetching_models {
             state.input_right_info = "Loading models...".to_string();
             return vec![];
         }
     }
-    
-    // P0-2 FIX: Block submit when no model is configured - guide user to onboarding
-    // But still clear textarea and add message for better UX
+
     let model_missing = state.current_model.as_deref().map_or(true, |s| s.is_empty()) && state.onboarding.is_none();
-    
-    state.messages.push(MessageItem::User {
-        text: text.clone(),
-        model: Some("You".to_string()),
-        timestamp: None,
-    });
-    // Clear textarea
-    state.textarea.select_all();
-    state.textarea.delete_line_by_end();
-    
+    submit_add_user_message(state, &text);
+
     if model_missing {
         state.messages.push(MessageItem::System {
             text: "No model configured. Press Ctrl+O or type /onboard to set up a model.".to_string(),
         });
         return vec![];
     }
-    
-    // P1-6 FIX: Validate model is configured before spawning agent
-    // Only block agent spawn if in a real running state (agent_running would be false anyway)
-    // We allow submit in all cases so the user message always gets recorded.
-    // The agent loop itself handles the case where no model is configured.
+
     vec![Cmd::SpawnAgent { messages: to_agent_messages(&state.messages) }]
+}
+
+fn submit_add_user_message(state: &mut AppState, text: &str) {
+    state.messages.push(MessageItem::User {
+        text: text.to_string(),
+        model: Some("You".to_string()),
+        timestamp: None,
+    });
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
 }

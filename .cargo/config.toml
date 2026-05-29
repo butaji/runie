@@ -1,9 +1,0 @@
-[target.'cfg(all())']
-rustflags = [
-    "-Dclippy::cognitive_complexity",
-    "-Dclippy::too_many_lines",
-]
-
-[env]
-CLIPPY_COGNITIVE_COMPLEXITY_THRESHOLD = "10"
-CLIPPY_TOO_MANY_LINES_THRESHOLD = "40"
