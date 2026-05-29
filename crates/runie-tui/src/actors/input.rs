@@ -21,8 +21,8 @@ impl InputActor {
     /// Blocking event loop that polls crossterm and sends messages.
     fn poll_events(cancel: CancellationToken, msg_tx: mpsc::Sender<InputMsg>) {
         while !cancel.is_cancelled() {
-            // Poll with 1ms timeout for responsive input
-            if crossterm::event::poll(Duration::from_millis(1)).unwrap_or(false) {
+            // Poll with 50ms timeout — balances responsiveness (20fps) with CPU savings
+            if crossterm::event::poll(Duration::from_millis(50)).unwrap_or(false) {
                 if let Ok(event) = crossterm::event::read() {
                     let msgs = match event {
                         crossterm::event::Event::Resize(w, h) => vec![InputMsg::Resize(w, h)],

@@ -12,6 +12,9 @@ mod render;
 mod state;
 mod view_model;
 
+#[cfg(test)]
+mod tests;
+
 pub use input_msg::InputMsg;
 pub use state::StatePipe;
 pub use view_model::ViewModelPipe;
