@@ -7,6 +7,9 @@ use ratatui::{
 };
 use crate::theme::ThemeWrapper;
 
+pub mod builder;
+pub use builder::*;
+
 #[derive(Clone)]
 pub struct AgentList {
     pub agents: Vec<AgentItem>,

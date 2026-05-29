@@ -15,6 +15,7 @@ use std::collections::VecDeque;
 use std::io::{self, stdout};
 
 use crate::{
+    pipe::{Pipe, ViewModelPipe},
     theme::{ThemeWrapper, ThemeColors},
     components::{
         Overlay,
@@ -24,7 +25,6 @@ use crate::{
     },
 };
 use crate::components::component::Component;
-use crate::components::message_list::render::WrapCache;
 use crate::tui::view_models::ViewModels;
 use runie_agent::events::AgentEvent;
 
@@ -32,6 +32,15 @@ pub struct TuiConfig {
     pub theme: ThemeWrapper,
     pub show_top_bar: bool,
     pub show_status_bar: bool,
+}
+
+pub struct Tui {
+    pub config: TuiConfig,
+    pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    pub state: AppState,
+    command_palette: CommandPalette,
+    action_log: VecDeque<Msg>,
+    action_log_capacity: usize,
 }
 
 impl Default for TuiConfig {
@@ -71,17 +80,6 @@ pub use update::update;
 pub use events::event_to_msg;
 
 
-pub struct Tui {
-    pub config: TuiConfig,
-    pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
-    pub state: AppState,
-    command_palette: CommandPalette,
-    action_log: VecDeque<Msg>,
-    action_log_capacity: usize,
-    /// Cache for text wrapping to avoid recomputing every frame
-    wrap_cache: WrapCache,
-}
-
 impl Tui {
     /// Install a panic hook that restores the terminal before printing the panic.
     /// Uses std::sync::Once to ensure it only runs once even if Tui::new is called multiple times.
@@ -120,7 +118,6 @@ impl Tui {
             command_palette: CommandPalette::new(),
             action_log: VecDeque::new(),
             action_log_capacity: 1000,
-            wrap_cache: WrapCache::new(),
         })
     }
 
@@ -159,10 +156,9 @@ impl Tui {
         let show_status_bar = true;
         let theme = self.config.theme.clone();
         let theme_colors = ThemeColors::from(&self.config.theme);
-        let render_state = RenderState::from(&self.state);
+        let view_models = ViewModelPipe.pipe(&self.state);
+        let is_onboarding = matches!(self.state.mode, TuiMode::Onboarding);
         let palette = self.command_palette.clone();
-        let view_models = ViewModels::from_render_state(&render_state, &palette, self.wrap_cache.clone());
-        let is_onboarding = matches!(render_state.mode, TuiMode::Onboarding);
 
         self.terminal.draw(|frame| {
             let area = frame.area();
@@ -175,15 +171,15 @@ impl Tui {
             let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
 
             if is_onboarding {
-                Self::render_onboarding_mode(frame.buffer_mut(), area, &render_state, &view_models, main_areas, show_status_bar, &theme, &theme_colors);
+                Self::render_onboarding_mode(frame.buffer_mut(), area, &self.state, &view_models, main_areas, show_status_bar, &theme, &theme_colors);
             } else {
-                Self::render_normal_mode(frame.buffer_mut(), area, &render_state, &view_models, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, &theme, &theme_colors);
+                Self::render_normal_mode(frame.buffer_mut(), area, &self.state, &view_models, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, &theme, &theme_colors);
             }
         })?;
         Ok(())
     }
 
-    fn render_onboarding_mode(buf: &mut Buffer, area: Rect, _state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, _theme_colors: &ThemeColors) {
+    fn render_onboarding_mode(buf: &mut Buffer, area: Rect, state: &AppState, vms: &ViewModels, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, _theme_colors: &ThemeColors) {
         // Fill entire background first to prevent black gaps
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
         for y in area.y..area.y + area.height {
@@ -194,7 +190,7 @@ impl Tui {
             }
         }
 
-        if let Some(ref onboarding) = _state.onboarding {
+        if let Some(ref onboarding) = state.onboarding {
             let onboarding_area = Rect {
                 x: area.x,
                 y: area.y,
@@ -212,7 +208,7 @@ impl Tui {
         }
     }
 
-    fn render_normal_mode(buf: &mut Buffer, area: Rect, state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_normal_mode(buf: &mut Buffer, area: Rect, state: &AppState, vms: &ViewModels, main_areas: [Rect; 4], show_sidebar: bool, show_top_bar: bool, show_status_bar: bool, palette: &CommandPalette, padded: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::clear_background(buf, area, theme_colors.bg_base);
         if show_top_bar {
             Component::render(&vms.top_bar, &vms.top_bar, main_areas[0], buf, theme);
@@ -247,7 +243,7 @@ impl Tui {
         }
     }
 
-    fn render_input(buf: &mut Buffer, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
+    fn render_input(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
         let mut textarea = state.textarea.clone();
         let accent_color = theme.color("accent.primary").into();
         let text_primary = theme.color("text.primary").into();
@@ -262,7 +258,7 @@ impl Tui {
         Component::render(&InputBar, &vm, area, buf, theme);
     }
 
-    fn render_overlays(buf: &mut Buffer, state: &RenderState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_overlays(buf: &mut Buffer, state: &AppState, palette: &CommandPalette, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         let mode = state.mode.clone();
         if mode == TuiMode::Permission && state.permission_modal.tool.is_some() {
             Self::render_permission_modal(buf, state, padded, area, theme, theme_colors);
@@ -281,7 +277,7 @@ impl Tui {
         }
     }
 
-    fn render_permission_modal(buf: &mut Buffer, state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_permission_modal(buf: &mut Buffer, state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::dim_background(buf, area, theme_colors);
         let modal_area = Self::centered_rect(padded, 50, 14);
         let mut modal = PermissionModal::new(
@@ -297,13 +293,13 @@ impl Tui {
         Component::render(&modal, &(), modal_area, buf, theme);
     }
 
-    fn render_command_palette(buf: &mut Buffer, _state: &RenderState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette, theme_colors: &ThemeColors) {
+    fn render_command_palette(buf: &mut Buffer, _state: &AppState, padded: Rect, area: Rect, theme: &ThemeWrapper, palette: &CommandPalette, theme_colors: &ThemeColors) {
         Self::dim_background(buf, area, theme_colors);
         let palette_area = Self::centered_rect(padded, 70, 20);
         Component::render(palette, &(), palette_area, buf, theme);
     }
 
-    fn render_overlay_mode(buf: &mut Buffer, state: &RenderState, area: Rect, theme: &ThemeWrapper) {
+    fn render_overlay_mode(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
         let overlay_area = Overlay::centered((70, 25), area);
         let mut overlay_buf = Buffer::empty(overlay_area);
 
@@ -314,7 +310,7 @@ impl Tui {
         Self::blit_buffer(buf, area, overlay_area, &overlay_buf);
     }
 
-    fn render_diff_viewer(buf: &mut Buffer, state: &RenderState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_diff_viewer(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::dim_background(buf, area, theme_colors);
         let diff_area = Self::centered_rect(area, 80, 25);
         if let Some(ref diff) = state.diff_viewer {
@@ -322,7 +318,7 @@ impl Tui {
         }
     }
 
-    fn render_session_tree(buf: &mut Buffer, state: &RenderState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_session_tree(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         Self::dim_background(buf, area, theme_colors);
         let tree_area = Self::centered_rect(area, 70, 25);
         Component::render(&state.session_tree, &(), tree_area, buf, theme);

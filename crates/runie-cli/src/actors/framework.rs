@@ -1,6 +1,48 @@
 //! Actor framework for the runie CLI.
 //!
-//! # Design Principles
+//! # DEPRECATED - Superseded by Phase 3 Architecture
+//!
+//! This actor framework has been replaced by the new pipe-based architecture:
+//! - `InputPipe` → `StatePipe` → `ViewModelPipe` → `RenderPipe`
+//!
+//! This file is kept for reference during migration (Phase 5) and will be
+//! removed in a future version once the migration is complete.
+//!
+//! # Original Design Principles
+//!
+//! - **Encapsulate state**: Each actor owns its state, not in a central AppState
+//! - **Tell, don't ask**: Actors receive messages, mutate state, emit events
+//! - **Single channel**: All actor communication via `mpsc::channel<ActorEvent>`
+//!
+//! # Architecture
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────┐
+//! │                    ActorSystem                           │
+//! │  ┌──────────────────────────────────────────────────┐  │
+//! │  │  Actors (state + handlers)                        │  │
+//! │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐  │  │
+//! │  │  │ MessageList │ │  InputBar   │ │  StatusBar  │  │  │
+//! │  │  │  Actor     │ │   Actor     │ │   Actor     │  │  │
+//! │  │  └─────────────┘ └─────────────┘ └─────────────┘  │  │
+//! │  │  ┌─────────────┐                                  │  │
+//! │  │  │  TopBar     │                                  │  │
+//! │  │  │   Actor     │                                  │  │
+//! │  │  └─────────────┘                                  │  │
+//! │  └──────────────────────────────────────────────────┘  │
+//! │                         │                               │
+//! │                    handle()                             │
+//! │                         ▼                               │
+//! │              Vec<<Actor::Event>>                        │
+//! └─────────────────────────────────────────────────────────┘
+//!                              │
+//!                              ▼
+//!                     Event emission
+//!                              │
+//!                              ▼
+//!                    Main event loop
+//! ```
+//!
 //!
 //! - **Encapsulate state**: Each actor owns its state, not in a central AppState
 //! - **Tell, don't ask**: Actors receive messages, mutate state, emit events

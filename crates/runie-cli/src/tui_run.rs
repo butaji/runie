@@ -12,7 +12,7 @@ use runie_agent::{SafetyHook, Hook};
 use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
 use runie_tui::actors::{spawn_actor, input::InputActor as TuiInputActor, timer::TimerActor};
-use runie_tui::pipe::{InputMsg, StatePipe, ViewModelPipe, StateChange};
+use runie_tui::pipe::InputMsg;
 use crate::event_stream::EventStreamLogger;
 use crate::event_logger as log;
 use crate::settings::Settings;

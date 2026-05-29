@@ -8,6 +8,9 @@ use ratatui::{
 use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
 
+pub mod builder;
+pub use builder::*;
+
 #[derive(Clone)]
 pub struct Overlay {
     pub title: String,

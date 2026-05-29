@@ -11,6 +11,9 @@ use crate::components::input_bar::InputBuilder;
 use crate::components::status_bar::StatusBarBuilder;
 use crate::components::permission_modal::PermissionBuilder;
 use crate::components::onboarding::OnboardingBuilder;
+use crate::components::agent_list::AgentListBuilder;
+use crate::components::command_palette::CommandPaletteBuilder;
+use crate::components::overlay::OverlayBuilder;
 use crate::components::message_list::PlanStatus;
 use super::Pipe;
 
@@ -73,10 +76,10 @@ impl Pipe<&AppState> for ViewModelPipe {
             .status_start_time(state.status_start_time.unwrap_or_else(std::time::Instant::now))
             .build();
 
-        // AgentList - inline (no builder exists)
+        // AgentList - use AgentListBuilder
         let agent_list = build_agent_list(state);
 
-        // CommandPalette - inline (no builder exists)
+        // CommandPalette - use CommandPaletteBuilder
         let command_palette = build_command_palette(state);
 
         // PermissionModal - use PermissionBuilder
@@ -120,24 +123,29 @@ fn build_agent_list(state: &AppState) -> AgentListViewModel {
         .filter(|j| j.status == crate::components::status_bar::JobStatus::Running)
         .cloned()
         .collect();
-    AgentListViewModel {
-        plan_steps,
-        running_jobs: running_jobs.clone(),
-        active_count: running_jobs.len(),
-        tokens: state.session_token_usage.total_tokens as u64,
-        cost: state.session_token_usage.estimated_cost,
-        agent_running: state.agent_running,
-        braille_frame: state.animation.braille_frame,
+
+    let mut builder = AgentListBuilder::new()
+        .tokens(state.session_token_usage.total_tokens as u64)
+        .cost(state.session_token_usage.estimated_cost)
+        .agent_running(state.agent_running)
+        .braille_frame(state.animation.braille_frame);
+
+    for step in plan_steps {
+        builder = builder.plan_step(step.0, &step.1, step.2);
     }
+
+    for job in &running_jobs {
+        builder = builder.running_job(&job.name);
+    }
+
+    builder.build()
 }
 
 fn build_command_palette(state: &AppState) -> Option<CommandPaletteViewModel> {
     if state.mode != TuiMode::CommandPalette && !state.command_palette.open {
         return None;
     }
-    Some(CommandPaletteViewModel {
-        show: state.command_palette.open,
-    })
+    Some(CommandPaletteBuilder::new().visible(state.command_palette.open).build())
 }
 
 fn build_permission_modal(state: &AppState) -> Option<PermissionModalViewModel> {
@@ -167,13 +175,7 @@ fn build_overlay(state: &AppState) -> Option<OverlayViewModel> {
     if state.mode != TuiMode::Overlay {
         return None;
     }
-    Some(OverlayViewModel {
-        title: String::new(),
-        content: vec![],
-        tabs: vec![],
-        active_tab: 0,
-        show_close: true,
-    })
+    Some(OverlayBuilder::new().build())
 }
 
 fn build_session_tree(state: &AppState) -> Option<SessionTreeViewModel> {
