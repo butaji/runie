@@ -1,5 +1,5 @@
 mod matrix_bg;
-pub use matrix_bg::MatrixBg;
+pub use matrix_bg::{render_onboarding_screen, MatrixRain};
 
 // ============================================================================
 // Onboarding Types
@@ -39,13 +39,12 @@ pub struct Onboarding {
     pub providers: Vec<ProviderOption>,
     pub models: Vec<ModelOption>,
     pub error_message: Option<String>,
-    // P1-1 FIX: Separate field for model fetch errors (network/API failures)
     pub fetch_error: Option<String>,
     pub search_query: String,
     pub filtered_provider_indices: Vec<usize>,
     pub filtered_model_indices: Vec<usize>,
     pub is_fetching_models: bool,
-    pub binary_bg: MatrixBg,
+    pub matrix_rain: Option<MatrixRain>,
 }
 
 // ============================================================================
@@ -294,14 +293,23 @@ pub fn get_llamafile_models() -> Vec<ModelOption> {
 // ============================================================================
 
 impl Onboarding {
-    pub fn new() -> Self {
+    pub fn new(mock_mode: bool) -> Self {
+        let mut providers = get_default_providers();
+        if mock_mode {
+            providers.insert(0, ProviderOption {
+                name: "Mock".to_string(),
+                id: "mock".to_string(),
+                description: "Mock provider for testing (no API calls)".to_string(),
+                key_prefix: "mock-".to_string(),
+            });
+        }
         Self {
             step: OnboardingStep::Welcome,
             selected_item: 0,
             selected_provider: None,
             api_key_input: String::new(),
             selected_model: None,
-            providers: get_default_providers(),
+            providers,
             models: Vec::new(),
             error_message: None,
             fetch_error: None,
@@ -309,7 +317,7 @@ impl Onboarding {
             filtered_provider_indices: Vec::new(),
             filtered_model_indices: Vec::new(),
             is_fetching_models: false,
-            binary_bg: MatrixBg::new(80, 24),
+            matrix_rain: None,
         }
     }
 
@@ -429,6 +437,10 @@ impl Onboarding {
             self.selected_provider = Some(real_index);
             self.selected_model = None;
             let provider = &self.providers[real_index];
+            // Pre-fill mock API key for mock provider
+            if provider.id == "mock" {
+                self.api_key_input = "mock-api-key-for-testing".to_string();
+            }
             self.models = match provider.id.as_str() {
                 "openai" => get_openai_models(),
                 "anthropic" => get_anthropic_models(),
@@ -451,6 +463,10 @@ impl Onboarding {
                 "mira" => get_mira_models(),
                 "galadriel" => get_galadriel_models(),
                 "llamafile" => get_llamafile_models(),
+                "mock" => vec![
+                    ModelOption { name: "Mock GPT-4".to_string(), id: "mock-gpt-4".to_string(), description: "Mock model for testing".to_string() },
+                    ModelOption { name: "Mock Claude".to_string(), id: "mock-claude".to_string(), description: "Mock model for testing".to_string() },
+                ],
                 _ => Vec::new(),
             };
             self.error_message = None;
@@ -598,7 +614,7 @@ impl Onboarding {
 }
 
 impl Default for Onboarding {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::new(false) }
 }
 
 /// Returns the default list of providers, sorted alphabetically by name.

@@ -9,7 +9,7 @@ mod tests {
 
     #[test]
     fn test_step_transitions() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
 
         // Welcome → ProviderSelect
         assert_eq!(onboarding.step, OnboardingStep::Welcome);
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn test_back_navigation() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::Complete;
 
         // Complete → ModelSelect
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_cannot_advance_without_selection() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
 
         // Welcome → ProviderSelect works
         onboarding.next_step();
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_provider_selection_populates_models() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
 
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_model_selection_clears_on_provider_change() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
 
         // Initialize search to populate filtered_provider_indices
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_key_validation_empty_vs_valid() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(15); // OpenAI
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_selected_item_navigation_bounds() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         let max_index = onboarding.providers.len() - 1; // 20
@@ -219,13 +219,13 @@ mod tests {
 
     #[test]
     fn test_to_settings_returns_none_when_incomplete() {
-        let onboarding = Onboarding::new();
+        let onboarding = Onboarding::new(false);
         assert!(onboarding.to_settings().is_none());
     }
 
     #[test]
     fn test_is_complete_checks_all_fields() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
 
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_google_accepts_any_key_format() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(5); // Google (index 5 after alphabetical sort)
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_onboarding_new() {
-        let onboarding = Onboarding::new();
+        let onboarding = Onboarding::new(false);
         assert_eq!(onboarding.step, OnboardingStep::Welcome);
         assert_eq!(onboarding.selected_item, 0);
         assert!(onboarding.selected_provider.is_none());
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_select_provider() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(15); // OpenAI (index 15 after alphabetical sort)
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_validate_key_openai() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(15); // OpenAI
@@ -306,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_validate_key_openai_wrong_prefix() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(15); // OpenAI
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_validate_key_anthropic() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(0); // Anthropic (index 0 after alphabetical sort)
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_validate_key_google() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(5); // Google (index 5 after alphabetical sort)
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_navigate_up_down() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         let max_index = onboarding.providers.len() - 1; // 20
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_to_settings() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(15); // OpenAI (index 15 after alphabetical sort)
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_fuzzy_search_providers() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
 
         // Search for "ope" - should match OpenAI and OpenRouter
@@ -410,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_fuzzy_search_models() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(15); // OpenAI
@@ -433,7 +433,7 @@ mod tests {
 
     #[test]
     fn test_search_no_matches() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
 
         // Search for "xyz" - no matches
@@ -443,7 +443,7 @@ mod tests {
 
     #[test]
     fn test_clear_search() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
 
         // Full list
@@ -464,7 +464,7 @@ mod tests {
 
     #[test]
     fn test_navigation_bounds_with_filtered_list() {
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
 
         // Search for "ope" - filters to OpenAI (sorted index 15) and OpenRouter (sorted index 16)

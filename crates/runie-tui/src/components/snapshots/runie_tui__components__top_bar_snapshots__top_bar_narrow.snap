@@ -2,4 +2,4 @@
 source: crates/runie-tui/src/components/top_bar_snapshots.rs
 expression: rendered
 ---
-"  runie/main  src"
+"  40/128k in 0%rc"

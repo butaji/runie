@@ -704,7 +704,7 @@ mod settings_flows {
 
         // Create state with onboarding active
         let mut state = AppState::default();
-        state.onboarding = Some(crate::components::onboarding::Onboarding::new());
+        state.onboarding = Some(crate::components::onboarding::Onboarding::new(false));
         state.mode = TuiMode::Onboarding;
         let mut palette = CommandPalette::new();
 

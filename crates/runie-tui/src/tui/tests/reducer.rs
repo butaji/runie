@@ -48,6 +48,7 @@ fn make_state() -> AppState {
         thinking_start: None,
         thinking_duration: None,
         is_thinking: false,
+        mock_mode: false,
     }
 }
 
@@ -90,6 +91,7 @@ fn make_state_with_text(text: &str) -> AppState {
         thinking_start: None,
         thinking_duration: None,
         is_thinking: false,
+        mock_mode: false,
     };
     state
 }

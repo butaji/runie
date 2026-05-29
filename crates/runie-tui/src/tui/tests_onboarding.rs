@@ -30,7 +30,7 @@ mod tests {
             session_token_usage: TokenUsage::default(),
             session_tree: SessionTreeNavigator::new(),
             background_jobs: Vec::new(),
-            onboarding: Some(Onboarding::new()),
+            onboarding: Some(Onboarding::new(false)),
             terminal_size: (0, 0),
             // P1-REMAINING-1 FIX: Clear input double-tap confirmation
             clear_input_confirm: ClearInputConfirm::default(),
@@ -47,6 +47,7 @@ mod tests {
             thinking_start: None,
             thinking_duration: None,
             is_thinking: false,
+            mock_mode: false,
         }
     }
 

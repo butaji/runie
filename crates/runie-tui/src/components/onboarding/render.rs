@@ -8,11 +8,16 @@ use ratatui::{
 };
 use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
-use super::{Onboarding, OnboardingStep};
+use super::{Onboarding, OnboardingStep, render_onboarding_screen};
 
 // ─── Main Render Entry ─────────────────────────────────────────────────────────
 
 pub fn render_onboarding(onboarding: &Onboarding, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    let accent = theme_color("accent.primary", theme);
+    let bg_base = theme_color("bg.base", theme);
+    let default_rain = crate::components::onboarding::MatrixRain::new(area.width, area.height);
+    let rain = onboarding.matrix_rain.as_ref().unwrap_or(&default_rain);
+    render_onboarding_screen(rain, buf, area, accent, bg_base);
     match &onboarding.step {
         OnboardingStep::Welcome => render_welcome(area, buf, theme),
         OnboardingStep::ProviderSelect => render_provider_select(area, buf, theme, onboarding),
@@ -398,7 +403,7 @@ mod tests {
     #[test]
     fn test_welcome_step_renders() {
         let theme = make_theme();
-        let onboarding = Onboarding::new();
+        let onboarding = Onboarding::new(false);
         let area = Rect::new(0, 0, 80, 24);
         let mut buf = Buffer::empty(area);
         render_ref(&onboarding, area, &mut buf, &theme);
@@ -409,7 +414,7 @@ mod tests {
     #[test]
     fn test_provider_select_renders() {
         let theme = make_theme();
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         let area = Rect::new(0, 0, 80, 24);
         let mut buf = Buffer::empty(area);
@@ -421,7 +426,7 @@ mod tests {
     #[test]
     fn test_key_input_renders() {
         let theme = make_theme();
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::KeyInput;
         onboarding.select_provider(0);
         onboarding.api_key_input = "sk-test".to_string();
@@ -435,7 +440,7 @@ mod tests {
     #[test]
     fn test_model_select_renders() {
         let theme = make_theme();
-        let mut onboarding = Onboarding::new();
+        let mut onboarding = Onboarding::new(false);
         onboarding.step = OnboardingStep::ProviderSelect;
         onboarding.update_search(""); // Populate filtered_provider_indices
         onboarding.select_provider(0); // Anthropic (index 0 after alphabetical sort)

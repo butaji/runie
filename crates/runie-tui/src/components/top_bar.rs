@@ -79,7 +79,7 @@ pub fn render_top_bar(vm: &TopBarViewModel, area: Rect, buf: &mut Buffer, colors
     let pct = calculate_pct(vm);
     let window_str = format_context_window(vm.context_window);
     // P0-TOPBAR: Show tokens/window in text, let gauge show percentage + bar
-    let text = format!("{}/{} ", vm.estimated_tokens, window_str);
+    let text = format!("{}/{}", vm.estimated_tokens, window_str);
     let text_len = text.len() as u16;
 
     let gauge_width = 10u16; // Wider gauge so bar is actually visible

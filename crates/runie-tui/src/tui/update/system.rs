@@ -51,6 +51,15 @@ fn handle_anim(state: &mut AppState, msg: &Msg) {
         Msg::Tick => {
             state.animation.braille_frame = (state.animation.braille_frame + 1) % 10;
             state.animation.rewind_braille_frame = (state.animation.rewind_braille_frame + 1) % 10;
+            // Tick matrix rain animation during onboarding
+            if let Some(ref mut onboarding) = state.onboarding {
+                if onboarding.matrix_rain.is_none() {
+                    onboarding.matrix_rain = Some(crate::components::onboarding::MatrixRain::new(80, 24));
+                }
+                if let Some(ref mut rain) = onboarding.matrix_rain {
+                    rain.tick();
+                }
+            }
         }
         Msg::CursorBlink => {
             state.animation.streaming_cursor_visible = !state.animation.streaming_cursor_visible;

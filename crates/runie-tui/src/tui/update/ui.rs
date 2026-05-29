@@ -317,6 +317,6 @@ fn handle_set_input_right_info(state: &mut AppState, info: String) -> Vec<UiCmd>
 
 fn handle_enter_onboarding(state: &mut AppState) -> Vec<UiCmd> {
     state.mode = TuiMode::Onboarding;
-    state.onboarding = Some(Onboarding::new());
+    state.onboarding = Some(Onboarding::new(state.mock_mode));
     vec![]
 }

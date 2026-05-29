@@ -405,6 +405,7 @@ impl Provider for OpenAiProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use runie_core::ToolCall;
 
     #[test]
     fn test_tool_call_arguments_serialized_as_string() {
