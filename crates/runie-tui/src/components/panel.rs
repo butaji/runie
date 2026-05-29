@@ -180,61 +180,48 @@ fn render_gradient_border_custom(area: Rect, buf: &mut Buffer, start: Color, end
     let top = area.y;
     let bottom = area.y + area.height - 1;
 
-    // Helper to interpolate between two RGB colors
-    fn interp(start: Color, end: Color, t: f32) -> Color {
-        let (sr, sg, sb) = match start {
-            Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
-            _ => (128.0, 128.0, 128.0),
-        };
-        let (er, eg, eb) = match end {
-            Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
-            _ => (255.0, 140.0, 0.0),
-        };
-        let t = t.clamp(0.0, 1.0);
-        Color::Rgb(
-            (sr + (er - sr) * t) as u8,
-            (sg + (eg - sg) * t) as u8,
-            (sb + (eb - sb) * t) as u8,
-        )
-    }
-
     let width_f = (area.width.saturating_sub(1)).max(1) as f32;
+    render_gradient_top_bottom(area, left, right, top, width_f, start, end, buf);
+    render_gradient_top_bottom(area, left, right, bottom, width_f, start, end, buf);
+    render_vertical_edge(left, top, bottom, start, buf, true);
+    render_vertical_edge(right, top, bottom, end, buf, false);
+}
 
-    // Top border
+fn interp(start: Color, end: Color, t: f32) -> Color {
+    let (sr, sg, sb) = match start {
+        Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
+        _ => (128.0, 128.0, 128.0),
+    };
+    let (er, eg, eb) = match end {
+        Color::Rgb(r, g, b) => (r as f32, g as f32, b as f32),
+        _ => (255.0, 140.0, 0.0),
+    };
+    let t = t.clamp(0.0, 1.0);
+    Color::Rgb(
+        (sr + (er - sr) * t) as u8,
+        (sg + (eg - sg) * t) as u8,
+        (sb + (eb - sb) * t) as u8,
+    )
+}
+
+fn render_gradient_top_bottom(area: Rect, left: u16, right: u16, y: u16, width_f: f32, start: Color, end: Color, buf: &mut Buffer) {
+    let corners = if y == area.y { ('╭', '╮') } else { ('╰', '╯') };
     for x in left..=right {
         let t = (x - left) as f32 / width_f;
         let color = interp(start, end, t);
-        let ch = if x == left { '╭' } else if x == right { '╮' } else { '─' };
-        if let Some(cell) = buf.cell_mut((x, top)) {
+        let ch = if x == left { corners.0 } else if x == right { corners.1 } else { '─' };
+        if let Some(cell) = buf.cell_mut((x, y)) {
             cell.set_char(ch);
             cell.set_style(Style::default().fg(color));
         }
     }
+}
 
-    // Bottom border
-    for x in left..=right {
-        let t = (x - left) as f32 / width_f;
-        let color = interp(start, end, t);
-        let ch = if x == left { '╰' } else if x == right { '╯' } else { '─' };
-        if let Some(cell) = buf.cell_mut((x, bottom)) {
-            cell.set_char(ch);
+fn render_vertical_edge(x: u16, top: u16, bottom: u16, color: Color, buf: &mut Buffer, _is_start: bool) {
+    for y in (top + 1)..bottom {
+        if let Some(cell) = buf.cell_mut((x, y)) {
+            cell.set_char('│');
             cell.set_style(Style::default().fg(color));
-        }
-    }
-
-    // Left border (start color)
-    for y in (top + 1)..bottom {
-        if let Some(cell) = buf.cell_mut((left, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(start));
-        }
-    }
-
-    // Right border (end color)
-    for y in (top + 1)..bottom {
-        if let Some(cell) = buf.cell_mut((right, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(end));
         }
     }
 }

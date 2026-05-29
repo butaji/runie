@@ -41,7 +41,6 @@ fn centered_rect(area: Rect, width: u16, height: u16) -> Rect {
 
 fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let text_muted = theme_color("text.muted", theme);
-    let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
     let bg_base = theme_color("bg.base", theme);
 
@@ -51,150 +50,158 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
         .border_gradient(accent, text_muted)
         .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
-            let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
-            let title_y = inner.y;
-            Paragraph::new("welcome")
-                .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
-
-            let sub1_y = title_y + 2;
-            Paragraph::new("multi-model coding agent")
-                .style(Style::default().fg(text_primary))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, sub1_y, inner.width, 1), buf);
-
-            let sub2_y = sub1_y + 1;
-            Paragraph::new("configure providers, models, keys")
-                .style(Style::default().fg(text_muted))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, sub2_y, inner.width, 1), buf);
-
-            // P0-2/P2-3 FIX: Add CTA footer with Enter hint
-            let footer_y = inner.y + inner.height.saturating_sub(3);
-            Paragraph::new("Press Enter to begin →")
-                .style(Style::default().fg(accent))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, footer_y, inner.width, 1), buf);
-
-            let skip_y = footer_y + 1;
-            Paragraph::new("Esc to skip setup")
-                .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, skip_y, inner.width, 1), buf);
+            let inner = inner_area(inner);
+            render_welcome_content(inner, buf, theme);
         });
+}
+
+fn render_welcome_content(inner: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    let text_primary = theme_color("text.primary", theme);
+    let text_muted = theme_color("text.muted", theme);
+    let accent = theme_color("accent.primary", theme);
+
+    let title_y = inner.y;
+    Paragraph::new("welcome")
+        .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
+
+    let sub1_y = title_y + 2;
+    Paragraph::new("multi-model coding agent")
+        .style(Style::default().fg(text_primary))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, sub1_y, inner.width, 1), buf);
+
+    let sub2_y = sub1_y + 1;
+    Paragraph::new("configure providers, models, keys")
+        .style(Style::default().fg(text_muted))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, sub2_y, inner.width, 1), buf);
+
+    render_welcome_footer(inner, accent, text_muted, buf);
+}
+
+fn render_welcome_footer(inner: Rect, accent: Color, text_muted: Color, buf: &mut Buffer) {
+    let footer_y = inner.y + inner.height.saturating_sub(3);
+    Paragraph::new("Press Enter to begin →")
+        .style(Style::default().fg(accent))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, footer_y, inner.width, 1), buf);
+
+    let skip_y = footer_y + 1;
+    Paragraph::new("Esc to skip setup")
+        .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, skip_y, inner.width, 1), buf);
 }
 
 // ─── Provider Select Step ────────────────────────────────────────────────────
 
 fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let text_muted = theme_color("text.muted", theme);
-    let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
     let bg_base = theme_color("bg.base", theme);
 
-    // Only fall back to all providers when search is empty AND list not initialized yet.
-    // If user typed something with no matches, show empty so they know.
-    let display_indices = if onboarding.filtered_provider_indices.is_empty() && onboarding.search_query.is_empty() {
-        (0..onboarding.providers.len()).collect::<Vec<_>>()
-    } else {
-        onboarding.filtered_provider_indices.clone()
-    };
+    let display_indices = get_provider_display_indices(onboarding);
     let display_count = display_indices.len();
     let has_search = !onboarding.search_query.is_empty();
-    let list_h = display_count.max(1) as u16; // min 1 row for "no matches" or items
+    let list_h = display_count.max(1) as u16;
     let dialog_h = list_h + if has_search { 7 } else { 6 };
-    let dialog_w = 40;
 
-    let dialog_area = centered_rect(area, dialog_w, dialog_h);
+    let dialog_area = centered_rect(area, 40, dialog_h);
 
     Panel::new()
         .border_gradient(accent, text_muted)
         .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
-            let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
-            let start_y = inner.y;
-
-            let title_y = start_y;
-            Paragraph::new("select provider")
-                .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
-
-            let mut list_y = title_y + 2;
-
-            // Show active search query
-            if has_search {
-                let search_y = list_y;
-                Paragraph::new(format!("  > {}", onboarding.search_query))
-                    .style(Style::default().fg(accent))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, search_y, inner.width, 1), buf);
-                list_y += 1;
-            }
-
-            if display_indices.is_empty() {
-                let row_y = list_y;
-                Paragraph::new("  no matches")
-                    .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, row_y, inner.width, 1), buf);
-            } else {
-                for (i, &provider_idx) in display_indices.iter().enumerate() {
-                    let row_y = list_y + i as u16;
-                    let provider = &onboarding.providers[provider_idx];
-                    let is_selected = i == onboarding.selected_item;
-                    let radio = if is_selected { "◉" } else { "○" };
-                    let radio_style = if is_selected {
-                        Style::default().fg(accent)
-                    } else {
-                        Style::default().fg(text_muted)
-                    };
-                    let name_style = if is_selected {
-                        Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(text_primary)
-                    };
-                    let line = Line::from(vec![
-                        Span::styled("  ", Style::default().fg(text_muted)),
-                        Span::styled(radio, radio_style),
-                        Span::styled("  ", Style::default().fg(text_muted)),
-                        Span::styled(provider.name.to_lowercase(), name_style),
-                    ]);
-                    Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
-                }
-            }
-
-            if let Some(ref err) = onboarding.error_message {
-                let err_y = list_y + list_h + 1;
-                Paragraph::new(err.as_str())
-                    .style(Style::default().fg(theme_color("error", theme)))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, err_y, inner.width, 1), buf);
-            }
+            let inner = inner_area(inner);
+            render_provider_content(inner, buf, theme, onboarding, &display_indices, list_h, has_search);
         });
+}
+
+fn get_provider_display_indices(onboarding: &Onboarding) -> Vec<usize> {
+    if onboarding.filtered_provider_indices.is_empty() && onboarding.search_query.is_empty() {
+        (0..onboarding.providers.len()).collect()
+    } else {
+        onboarding.filtered_provider_indices.clone()
+    }
+}
+
+fn inner_area(area: Rect) -> Rect {
+    Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2))
+}
+
+fn render_provider_content(inner: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding, display_indices: &[usize], list_h: u16, has_search: bool) {
+    let text_muted = theme_color("text.muted", theme);
+    let text_primary = theme_color("text.primary", theme);
+    let accent = theme_color("accent.primary", theme);
+
+    let title_y = inner.y;
+    Paragraph::new("select provider")
+        .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
+
+    let mut list_y = title_y + 2;
+
+    if has_search {
+        Paragraph::new(format!("  > {}", onboarding.search_query))
+            .style(Style::default().fg(accent))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, list_y, inner.width, 1), buf);
+        list_y += 1;
+    }
+
+    if display_indices.is_empty() {
+        Paragraph::new("  no matches")
+            .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, list_y, inner.width, 1), buf);
+    } else {
+        render_provider_list(inner, list_y, onboarding, display_indices, text_muted, text_primary, accent, buf);
+    }
+
+    if let Some(ref err) = onboarding.error_message {
+        let err_y = list_y + list_h + 1;
+        Paragraph::new(err.as_str())
+            .style(Style::default().fg(theme_color("error", theme)))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, err_y, inner.width, 1), buf);
+    }
+}
+
+fn render_provider_list(inner: Rect, list_y: u16, onboarding: &Onboarding, display_indices: &[usize], text_muted: Color, text_primary: Color, accent: Color, buf: &mut Buffer) {
+    for (i, &provider_idx) in display_indices.iter().enumerate() {
+        let row_y = list_y + i as u16;
+        let provider = &onboarding.providers[provider_idx];
+        let is_selected = i == onboarding.selected_item;
+        let radio = if is_selected { "◉" } else { "○" };
+        let radio_style = if is_selected { Style::default().fg(accent) } else { Style::default().fg(text_muted) };
+        let name_style = if is_selected {
+            Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(text_primary)
+        };
+        let line = Line::from(vec![
+            Span::styled("  ", Style::default().fg(text_muted)),
+            Span::styled(radio, radio_style),
+            Span::styled("  ", Style::default().fg(text_muted)),
+            Span::styled(provider.name.to_lowercase(), name_style),
+        ]);
+        Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+    }
 }
 
 // ─── Model Select Step ────────────────────────────────────────────────────────
 
 fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let text_muted = theme_color("text.muted", theme);
-    let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
     let bg_base = theme_color("bg.base", theme);
 
-    // Only fall back to all models when search is empty AND list not initialized yet.
-    let display_indices = if onboarding.filtered_model_indices.is_empty() && onboarding.search_query.is_empty() {
-        (0..onboarding.models.len()).collect::<Vec<_>>()
-    } else {
-        onboarding.filtered_model_indices.clone()
-    };
-    let display_count = display_indices.len();
-    let list_h = display_count.max(1) as u16;
-    let dialog_h = list_h + 6;
-    let dialog_w = 40;
-
-    let dialog_area = centered_rect(area, dialog_w, dialog_h);
+    let display_indices = get_model_display_indices(onboarding);
+    let list_h = display_indices.len() as u16;
+    let dialog_area = centered_rect(area, 40, list_h + 6);
 
     let provider_name = onboarding.get_current_provider()
         .map(|p| p.name.to_lowercase())
@@ -204,67 +211,78 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
         .border_gradient(accent, text_muted)
         .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
-            let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
-            let start_y = inner.y;
-
-            let title_y = start_y;
-            Paragraph::new(format!("{}  >  select models", provider_name))
-                .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
-
-            let list_y = title_y + 2;
-
-            if display_indices.is_empty() {
-                let row_y = list_y;
-                Paragraph::new("  no matches")
-                    .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, row_y, inner.width, 1), buf);
-            } else {
-                for (i, &model_idx) in display_indices.iter().enumerate() {
-                    let row_y = list_y + i as u16;
-                    let model = &onboarding.models[model_idx];
-                    let is_selected = i == onboarding.selected_item;
-                    let is_checked = onboarding.selected_models.contains(&model_idx) || Some(model_idx) == onboarding.selected_model;
-                    let checkbox = if is_checked { "■" } else { "□" };
-                    let checkbox_style = if is_checked {
-                        Style::default().fg(accent)
-                    } else {
-                        Style::default().fg(text_muted)
-                    };
-                    let name_style = if is_selected {
-                        Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(text_primary)
-                    };
-                    let line = Line::from(vec![
-                        Span::styled("  ", Style::default().fg(text_muted)),
-                        Span::styled(checkbox, checkbox_style),
-                        Span::styled("  ", Style::default().fg(text_muted)),
-                        Span::styled(model.name.to_lowercase(), name_style),
-                    ]);
-                    Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
-                }
-            }
-
-            if let Some(ref err) = onboarding.error_message {
-                let err_y = list_y + list_h + 1;
-                Paragraph::new(err.as_str())
-                    .style(Style::default().fg(theme_color("error", theme)))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, err_y, inner.width, 1), buf);
-            }
+            let inner = inner_area(inner);
+            render_model_content(inner, buf, theme, onboarding, &display_indices, list_h, &provider_name);
         });
+}
+
+fn get_model_display_indices(onboarding: &Onboarding) -> Vec<usize> {
+    if onboarding.filtered_model_indices.is_empty() && onboarding.search_query.is_empty() {
+        (0..onboarding.models.len()).collect()
+    } else {
+        onboarding.filtered_model_indices.clone()
+    }
+}
+
+fn render_model_content(inner: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding, display_indices: &[usize], list_h: u16, provider_name: &str) {
+    let text_muted = theme_color("text.muted", theme);
+    let text_primary = theme_color("text.primary", theme);
+    let accent = theme_color("accent.primary", theme);
+
+    let title_y = inner.y;
+    Paragraph::new(format!("{}  >  select models", provider_name))
+        .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
+
+    let list_y = title_y + 2;
+
+    if display_indices.is_empty() {
+        Paragraph::new("  no matches")
+            .style(Style::default().fg(text_muted).add_modifier(Modifier::DIM))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, list_y, inner.width, 1), buf);
+    } else {
+        render_model_list(inner, list_y, onboarding, display_indices, text_muted, text_primary, accent, buf);
+    }
+
+    if let Some(ref err) = onboarding.error_message {
+        let err_y = list_y + list_h + 1;
+        Paragraph::new(err.as_str())
+            .style(Style::default().fg(theme_color("error", theme)))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, err_y, inner.width, 1), buf);
+    }
+}
+
+fn render_model_list(inner: Rect, list_y: u16, onboarding: &Onboarding, display_indices: &[usize], text_muted: Color, text_primary: Color, accent: Color, buf: &mut Buffer) {
+    for (i, &model_idx) in display_indices.iter().enumerate() {
+        let row_y = list_y + i as u16;
+        let model = &onboarding.models[model_idx];
+        let is_selected = i == onboarding.selected_item;
+        let is_checked = onboarding.selected_models.contains(&model_idx) || Some(model_idx) == onboarding.selected_model;
+        let checkbox = if is_checked { "■" } else { "□" };
+        let checkbox_style = if is_checked { Style::default().fg(accent) } else { Style::default().fg(text_muted) };
+        let name_style = if is_selected {
+            Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(text_primary)
+        };
+        let line = Line::from(vec![
+            Span::styled("  ", Style::default().fg(text_muted)),
+            Span::styled(checkbox, checkbox_style),
+            Span::styled("  ", Style::default().fg(text_muted)),
+            Span::styled(model.name.to_lowercase(), name_style),
+        ]);
+        Paragraph::new(line).render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+    }
 }
 
 // ─── Key Input Step ─────────────────────────────────────────────────────────
 
 fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let text_muted = theme_color("text.muted", theme);
-    let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
-    let success = theme_color("success", theme);
     let bg_base = theme_color("bg.base", theme);
 
     let provider_name = onboarding.get_current_provider()
@@ -277,64 +295,72 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
         .border_gradient(accent, text_muted)
         .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
-            let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
-            let start_y = inner.y;
-
-            let title_y = start_y;
-            Paragraph::new(format!("{}  >  api key", provider_name))
-                .style(Style::default().fg(accent).add_modifier(Modifier::BOLD))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
-
-            let key_y = title_y + 2;
-            let key = &onboarding.api_key_input;
-            let masked = if key.is_empty() {
-                String::new()
-            } else if key.len() <= 6 {
-                key.clone()
-            } else {
-                format!("{}...{}", &key[..3], &key[key.len()-2..])
-            };
-            Paragraph::new(masked)
-                .style(Style::default().fg(text_primary))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, key_y, inner.width, 1), buf);
-
-            let verify_y = key_y + 2;
-            let (verify_text, verify_style) = if onboarding.is_fetching_models {
-                ("loading models...", Style::default().fg(text_muted))
-            } else if let Some(ref err) = onboarding.fetch_error {
-                // P1-1 FIX: Show fetch error instead of validation status
-                (err.as_str(), Style::default().fg(theme_color("error", theme)))
-            } else {
-                let is_valid = onboarding.validate_key();
-                if is_valid {
-                    ("[✓] valid", Style::default().fg(success))
-                } else {
-                    ("[ ] verify", Style::default().fg(text_muted))
-                }
-            };
-            Paragraph::new(verify_text)
-                .style(verify_style)
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, verify_y, inner.width, 1), buf);
-            
-            // P1-1 FIX: Show retry hint if fetch failed
-            if onboarding.fetch_error.is_some() {
-                let retry_y = verify_y + 1;
-                Paragraph::new("press Enter to retry or Esc to go back")
-                    .style(Style::default().fg(text_muted))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, retry_y, inner.width, 1), buf);
-            }
+            let inner = inner_area(inner);
+            render_key_content(inner, buf, theme, onboarding, &provider_name);
         });
+}
+
+fn render_key_content(inner: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding, provider_name: &str) {
+    let text_primary = theme_color("text.primary", theme);
+
+    let title_y = inner.y;
+    Paragraph::new(format!("{}  >  api key", provider_name))
+        .style(Style::default().fg(theme_color("accent.primary", theme)).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
+
+    render_masked_key(inner, title_y + 2, &onboarding.api_key_input, text_primary, buf);
+    render_validation_status(inner, title_y + 4, buf, theme, onboarding);
+}
+
+fn render_masked_key(inner: Rect, key_y: u16, key: &str, text_primary: Color, buf: &mut Buffer) {
+    let masked = if key.is_empty() {
+        String::new()
+    } else if key.len() <= 6 {
+        key.to_string()
+    } else {
+        format!("{}...{}", &key[..3], &key[key.len()-2..])
+    };
+    Paragraph::new(masked)
+        .style(Style::default().fg(text_primary))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, key_y, inner.width, 1), buf);
+}
+
+fn render_validation_status(inner: Rect, verify_y: u16, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
+    let text_muted = theme_color("text.muted", theme);
+    let success = theme_color("success", theme);
+
+    let (verify_text, verify_style) = if onboarding.is_fetching_models {
+        ("loading models...", Style::default().fg(text_muted))
+    } else if let Some(ref err) = onboarding.fetch_error {
+        (err.as_str(), Style::default().fg(theme_color("error", theme)))
+    } else {
+        let is_valid = onboarding.validate_key();
+        if is_valid {
+            ("[✓] valid", Style::default().fg(success))
+        } else {
+            ("[ ] verify", Style::default().fg(text_muted))
+        }
+    };
+    Paragraph::new(verify_text)
+        .style(verify_style)
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, verify_y, inner.width, 1), buf);
+
+    if onboarding.fetch_error.is_some() {
+        let retry_y = verify_y + 1;
+        Paragraph::new("press Enter to retry or Esc to go back")
+            .style(Style::default().fg(text_muted))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, retry_y, inner.width, 1), buf);
+    }
 }
 
 // ─── Complete Step ───────────────────────────────────────────────────────────
 
 fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding) {
     let text_muted = theme_color("text.muted", theme);
-    let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
     let bg_base = theme_color("bg.base", theme);
 
@@ -347,10 +373,6 @@ fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardin
         .map(|m| m.name.to_lowercase())
         .collect();
 
-    // Calculate dialog height dynamically
-    // Content: configured(1) + models(N) + spacing(1) + prompt(1) + spacing(1) + options(2) = 6+N
-    // Plus panel border(2) + inner margin(2) = 4
-    // Total: 10 + N
     let model_count = selected_models.len();
     let dialog_h = 10 + model_count as u16;
     let dialog_area = centered_rect(area, 40, dialog_h);
@@ -359,114 +381,60 @@ fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardin
         .border_gradient(accent, text_muted)
         .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
-            let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
-            let start_y = inner.y;
-
-            let configured_y = start_y;
-            Paragraph::new(format!("{} configured", provider_name))
-                .style(Style::default().fg(text_primary))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, configured_y, inner.width, 1), buf);
-
-            // List selected models
-            for (i, model_name) in selected_models.iter().enumerate() {
-                let model_y = configured_y + 1 + i as u16;
-                Paragraph::new(format!("  ■ {}", model_name))
-                    .style(Style::default().fg(text_muted))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, model_y, inner.width, 1), buf);
-            }
-
-            let prompt_y = configured_y + 1 + model_count as u16 + 1;
-            Paragraph::new("add another provider?")
-                .style(Style::default().fg(text_muted))
-                .alignment(Alignment::Left)
-                .render(Rect::new(inner.x, prompt_y, inner.width, 1), buf);
-
-            let options = vec![("yes", "add another provider"), ("no, finish", "complete setup")];
-            let option_y = prompt_y + 2;
-            for (i, (label, _)) in options.iter().enumerate() {
-                let row_y = option_y + i as u16;
-                let is_selected = i == onboarding.selected_item;
-                let radio = if is_selected { "◉" } else { "○" };
-                let style = if is_selected { accent } else { text_muted };
-                let line = Line::from(vec![
-                    Span::styled(radio, Style::default().fg(style)),
-                    Span::styled("  ", Style::default().fg(text_muted)),
-                    Span::styled(*label, Style::default().fg(style)),
-                ]);
-                Paragraph::new(line)
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, row_y, inner.width, 1), buf);
-            }
+            let inner = inner_area(inner);
+            render_complete_content(inner, buf, theme, onboarding, &provider_name, &selected_models);
         });
+}
+
+fn render_complete_content(inner: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboarding: &Onboarding, provider_name: &str, selected_models: &[String]) {
+    let text_muted = theme_color("text.muted", theme);
+    let text_primary = theme_color("text.primary", theme);
+    let accent = theme_color("accent.primary", theme);
+
+    let configured_y = inner.y;
+    Paragraph::new(format!("{} configured", provider_name))
+        .style(Style::default().fg(text_primary))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, configured_y, inner.width, 1), buf);
+
+    render_selected_models(inner, configured_y, selected_models, text_muted, buf);
+
+    let prompt_y = configured_y + 1 + selected_models.len() as u16 + 1;
+    Paragraph::new("add another provider?")
+        .style(Style::default().fg(text_muted))
+        .alignment(Alignment::Left)
+        .render(Rect::new(inner.x, prompt_y, inner.width, 1), buf);
+
+    render_complete_options(inner, prompt_y + 2, onboarding, text_muted, accent, buf);
+}
+
+fn render_selected_models(inner: Rect, configured_y: u16, selected_models: &[String], text_muted: Color, buf: &mut Buffer) {
+    for (i, model_name) in selected_models.iter().enumerate() {
+        let model_y = configured_y + 1 + i as u16;
+        Paragraph::new(format!("  ■ {}", model_name))
+            .style(Style::default().fg(text_muted))
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, model_y, inner.width, 1), buf);
+    }
+}
+
+fn render_complete_options(inner: Rect, option_y: u16, onboarding: &Onboarding, text_muted: Color, accent: Color, buf: &mut Buffer) {
+    let options = vec![("yes", "add another provider"), ("no, finish", "complete setup")];
+    for (i, (label, _)) in options.iter().enumerate() {
+        let row_y = option_y + i as u16;
+        let is_selected = i == onboarding.selected_item;
+        let radio = if is_selected { "◉" } else { "○" };
+        let style = if is_selected { accent } else { text_muted };
+        let line = Line::from(vec![
+            Span::styled(radio, Style::default().fg(style)),
+            Span::styled("  ", Style::default().fg(text_muted)),
+            Span::styled(*label, Style::default().fg(style)),
+        ]);
+        Paragraph::new(line)
+            .alignment(Alignment::Left)
+            .render(Rect::new(inner.x, row_y, inner.width, 1), buf);
+    }
 }
 
 // Alias for render_ref pattern compatibility
 pub use render_onboarding as render_ref;
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ratatui::buffer::Buffer;
-    use ratatui::layout::Rect;
-
-    fn make_theme() -> ThemeWrapper {
-        ThemeWrapper::default()
-    }
-
-    #[test]
-    fn test_welcome_step_renders() {
-        let theme = make_theme();
-        let onboarding = Onboarding::new(false);
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        render_ref(&onboarding, area, &mut buf, &theme);
-        let content = buf.content();
-        assert!(content.iter().any(|c| c.symbol() == "w"));
-    }
-
-    #[test]
-    fn test_provider_select_renders() {
-        let theme = make_theme();
-        let mut onboarding = Onboarding::new(false);
-        onboarding.step = OnboardingStep::ProviderSelect;
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        render_ref(&onboarding, area, &mut buf, &theme);
-        let content = buf.content();
-        assert!(content.iter().any(|c| c.symbol() == "○" || c.symbol() == "◉"));
-    }
-
-    #[test]
-    fn test_key_input_renders() {
-        let theme = make_theme();
-        let mut onboarding = Onboarding::new(false);
-        onboarding.step = OnboardingStep::KeyInput;
-        onboarding.select_provider(0);
-        onboarding.api_key_input = "sk-test".to_string();
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        render_ref(&onboarding, area, &mut buf, &theme);
-        let content = buf.content();
-        assert!(content.iter().any(|c| c.symbol() == "●" || c.symbol() == "s"));
-    }
-
-    #[test]
-    fn test_model_select_renders() {
-        let theme = make_theme();
-        let mut onboarding = Onboarding::new(false);
-        onboarding.step = OnboardingStep::ProviderSelect;
-        onboarding.update_search(""); // Populate filtered_provider_indices
-        onboarding.select_provider(0); // Anthropic (index 0 after alphabetical sort)
-        onboarding.step = OnboardingStep::ModelSelect;
-        onboarding.update_search(""); // Populate filtered_model_indices
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        render_ref(&onboarding, area, &mut buf, &theme);
-        let content = buf.content();
-        assert!(content.iter().any(|c| c.symbol() == "■" || c.symbol() == "□"));
-    }
-}

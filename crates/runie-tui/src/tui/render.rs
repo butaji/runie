@@ -258,11 +258,7 @@ fn render_plan_content(
     let max_y = inner.y + inner.height - 1;
 
     if vm.plan_steps.is_empty() {
-        let no_plan_line = Line::from(vec![
-            Span::styled(" ", Style::default()),
-            Span::styled("No plan steps", Style::default().fg(colors.text_dim)),
-        ]);
-        buf.set_line(content_x, y, &no_plan_line, inner_width);
+        render_no_plan(content_x, y, inner_width, buf, colors);
         return;
     }
 
@@ -271,38 +267,46 @@ fn render_plan_content(
         if y >= max_y - 1 {
             break;
         }
-
-        let (glyph, color) = match status {
-            crate::components::message_list::PlanStatus::Pending => ('○', colors.text_dim),
-            crate::components::message_list::PlanStatus::Active => ('●', colors.accent_primary),
-            crate::components::message_list::PlanStatus::Complete => ('✓', colors.text_secondary),
-        };
-
-        let suffix = if matches!(status, crate::components::message_list::PlanStatus::Active) {
-            format!(" {}", spinner)
-        } else {
-            String::new()
-        };
-
-        let max_text_len = (inner_width as usize).saturating_sub(8);
-        let text_truncated = if text.len() > max_text_len {
-            format!("{}…", &text[..max_text_len.saturating_sub(1)])
-        } else {
-            text.clone()
-        };
-
-        let plan_line = Line::from(vec![
-            Span::styled(" ", Style::default()),
-            Span::styled(format!("{}", glyph), Style::default().fg(color)),
-            Span::styled(
-                format!(" {}. {}", step, text_truncated),
-                Style::default().fg(color),
-            ),
-            Span::styled(&suffix, Style::default().fg(colors.text_dim)),
-        ]);
-        buf.set_line(content_x, y, &plan_line, inner_width);
+        render_plan_step(content_x, y, inner_width, step, text, status, spinner, buf, colors);
         y += 1;
     }
+}
+
+fn render_no_plan(content_x: u16, y: u16, inner_width: u16, buf: &mut Buffer, colors: &SidebarColors) {
+    let no_plan_line = Line::from(vec![
+        Span::styled(" ", Style::default()),
+        Span::styled("No plan steps", Style::default().fg(colors.text_dim)),
+    ]);
+    buf.set_line(content_x, y, &no_plan_line, inner_width);
+}
+
+fn render_plan_step(content_x: u16, y: u16, inner_width: u16, step: &usize, text: &str, status: &crate::components::message_list::PlanStatus, spinner: char, buf: &mut Buffer, colors: &SidebarColors) {
+    let (glyph, color) = match status {
+        crate::components::message_list::PlanStatus::Pending => ('○', colors.text_dim),
+        crate::components::message_list::PlanStatus::Active => ('●', colors.accent_primary),
+        crate::components::message_list::PlanStatus::Complete => ('✓', colors.text_secondary),
+    };
+
+    let suffix = if matches!(status, crate::components::message_list::PlanStatus::Active) {
+        format!(" {}", spinner)
+    } else {
+        String::new()
+    };
+
+    let max_text_len = (inner_width as usize).saturating_sub(8);
+    let text_truncated = if text.len() > max_text_len {
+        format!("{}…", &text[..max_text_len.saturating_sub(1)])
+    } else {
+        text.to_string()
+    };
+
+    let plan_line = Line::from(vec![
+        Span::styled(" ", Style::default()),
+        Span::styled(format!("{}", glyph), Style::default().fg(color)),
+        Span::styled(format!(" {}. {}", step, text_truncated), Style::default().fg(color)),
+        Span::styled(&suffix, Style::default().fg(colors.text_dim)),
+    ]);
+    buf.set_line(content_x, y, &plan_line, inner_width);
 }
 
 fn render_agents_content(

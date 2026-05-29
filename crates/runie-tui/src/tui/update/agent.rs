@@ -46,17 +46,19 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
         AgentEvent::AgentEnd { .. } => on_agent_end(state),
         AgentEvent::Error { message, .. } => on_agent_error(state, message),
         AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args, .. } => on_permission_request(state, tool_call_id, tool_name, tool_args),
-        AgentEvent::TokenUsage { prompt_tokens, completion_tokens, .. } => {
-            state.session_token_usage.prompt_tokens += prompt_tokens;
-            state.session_token_usage.completion_tokens += completion_tokens;
-            state.session_token_usage.total_tokens += prompt_tokens + completion_tokens;
-            if let Some(ref model) = state.current_model {
-                let cost = TokenUsage::estimate_cost(prompt_tokens, completion_tokens, model);
-                state.session_token_usage.estimated_cost += cost;
-            }
-        }
+        AgentEvent::TokenUsage { prompt_tokens, completion_tokens, .. } => update_token_usage(state, prompt_tokens, completion_tokens),
         AgentEvent::TurnEnd { .. } => on_turn_end(state),
         AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } | AgentEvent::ContextCompacted { .. } => {}
+    }
+}
+
+fn update_token_usage(state: &mut AppState, prompt_tokens: usize, completion_tokens: usize) {
+    state.session_token_usage.prompt_tokens += prompt_tokens;
+    state.session_token_usage.completion_tokens += completion_tokens;
+    state.session_token_usage.total_tokens += prompt_tokens + completion_tokens;
+    if let Some(ref model) = state.current_model {
+        let cost = TokenUsage::estimate_cost(prompt_tokens, completion_tokens, model);
+        state.session_token_usage.estimated_cost += cost;
     }
 }
 
@@ -75,11 +77,17 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
     }
     // NOTE: Do NOT overwrite current_model here - it contains the user's configured model
     // and must persist across agent runs. The model used per message is tracked separately.
-    state.messages.push(MessageItem::Assistant {
-        text: String::new(),
-        model: state.current_model.clone(),
-        timestamp: None,
-    });
+    // Skip pushing new assistant if placeholder already exists (added in handle_submit)
+    let has_placeholder = state.messages.last()
+        .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.is_empty()))
+        .unwrap_or(false);
+    if !has_placeholder {
+        state.messages.push(MessageItem::Assistant {
+            text: String::new(),
+            model: state.current_model.clone(),
+            timestamp: None,
+        });
+    }
 }
 
 pub fn on_message(state: &mut AppState, role: &str, content: &str) {

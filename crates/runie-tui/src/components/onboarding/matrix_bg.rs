@@ -72,80 +72,83 @@ impl MatrixRain {
     ) {
         let lanes = (area.width / LANE_WIDTH).max(1);
 
-        // Fill entire background
-        for y in area.y..area.y + area.height {
-            for x in area.x..area.x + area.width {
-                if let Some(cell) = buf.cell_mut((x, y)) {
-                    cell.set_char(' ');
-                    cell.set_style(Style::default().bg(bg_color));
-                }
-            }
-        }
+        fill_matrix_background(area, buf, bg_color);
 
         for col in &self.columns {
             if col.lane >= lanes {
                 continue;
             }
+            render_matrix_column(col, area, buf);
+        }
+    }
+}
 
-            let base_x = area.x + col.lane * LANE_WIDTH;
-            if base_x >= area.x + area.width {
-                continue;
-            }
-
-            // Wrap head around screen height
-            let cycle = area.height as f32 + col.length as f32 * 2.0;
-            let mut effective_head = col.head % cycle;
-            if effective_head < 0.0 {
-                effective_head += cycle;
-            }
-            let head = effective_head as i16 - col.length as i16;
-
-            for i in 0..col.length {
-                let y = head + i as i16;
-
-                let wrapped_y = if y < 0 {
-                    y + area.height as i16 + col.length as i16
-                } else if y >= area.height as i16 {
-                    y % area.height as i16
-                } else {
-                    y
-                };
-
-                if wrapped_y < 0 || wrapped_y >= area.height as i16 {
-                    continue;
-                }
-
-                let render_y = area.y + wrapped_y as u16;
-
-                let visible_head = (effective_head as i16).clamp(0, area.height as i16);
-                let is_head = (wrapped_y as i16 - visible_head).abs() < 2;
-
-                // Coherent stream
-                let char_idx = (col.char_offset + i as usize) % col.char_pool.len();
-                let ch = col.char_pool[char_idx];
-
-                let style = if is_head {
-                    Style::default()
-                        .fg(Color::Rgb(160, 160, 160))
-                        .add_modifier(Modifier::BOLD)
-                } else if i < 3 {
-                    Style::default()
-                        .fg(Color::Rgb(80, 80, 80))
-                } else if i < 5 {
-                    Style::default()
-                        .fg(Color::Rgb(45, 45, 45))
-                } else {
-                    Style::default()
-                        .fg(Color::Rgb(20, 20, 20))
-                        .add_modifier(Modifier::DIM)
-                };
-
-                if let Some(cell) = buf.cell_mut((base_x, render_y)) {
-                    cell.set_char(ch);
-                    cell.set_style(style);
-                }
+fn fill_matrix_background(area: Rect, buf: &mut Buffer, bg_color: Color) {
+    for y in area.y..area.y + area.height {
+        for x in area.x..area.x + area.width {
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_char(' ');
+                cell.set_style(Style::default().bg(bg_color));
             }
         }
+    }
+}
+
+fn render_matrix_column(col: &RainColumn, area: Rect, buf: &mut Buffer) {
+    let base_x = area.x + col.lane * LANE_WIDTH;
+    if base_x >= area.x + area.width {
+        return;
+    }
+
+    let cycle = area.height as f32 + col.length as f32 * 2.0;
+    let mut effective_head = col.head % cycle;
+    if effective_head < 0.0 {
+        effective_head += cycle;
+    }
+    let head = effective_head as i16 - col.length as i16;
+
+    for i in 0..col.length {
+        let y = head + i as i16;
+        let wrapped_y = wrap_y_coord(y, area.height as i16, col.length as i16);
+
+        if wrapped_y < 0 || wrapped_y >= area.height as i16 {
+            continue;
+        }
+
+        let render_y = area.y + wrapped_y as u16;
+        let visible_head = (effective_head as i16).clamp(0, area.height as i16);
+        let is_head = (wrapped_y as i16 - visible_head).abs() < 2;
+
+        let char_idx = (col.char_offset + i as usize) % col.char_pool.len();
+        let ch = col.char_pool[char_idx];
+        let style = get_column_char_style(i, is_head);
+
+        if let Some(cell) = buf.cell_mut((base_x, render_y)) {
+            cell.set_char(ch);
+            cell.set_style(style);
+        }
+    }
+}
+
+fn wrap_y_coord(y: i16, height: i16, col_length: i16) -> i16 {
+    if y < 0 {
+        y + height + col_length
+    } else if y >= height {
+        y % height
+    } else {
+        y
+    }
+}
+
+fn get_column_char_style(i: u16, is_head: bool) -> Style {
+    if is_head {
+        Style::default().fg(Color::Rgb(160, 160, 160)).add_modifier(Modifier::BOLD)
+    } else if i < 3 {
+        Style::default().fg(Color::Rgb(80, 80, 80))
+    } else if i < 5 {
+        Style::default().fg(Color::Rgb(45, 45, 45))
+    } else {
+        Style::default().fg(Color::Rgb(20, 20, 20)).add_modifier(Modifier::DIM)
     }
 }
 

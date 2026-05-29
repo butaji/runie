@@ -34,7 +34,12 @@ impl ModelRegistry {
     }
 
     fn register_defaults(&mut self) {
-        // OpenAI models
+        self.register_openai_models();
+        self.register_anthropic_models();
+        self.register_google_models();
+    }
+
+    fn register_openai_models(&mut self) {
         self.register(ModelInfo {
             id: "gpt-4o".to_string(),
             name: "GPT-4o".to_string(),
@@ -45,7 +50,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gpt-4o-mini".to_string(),
             name: "GPT-4o Mini".to_string(),
@@ -56,7 +60,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gpt-4-turbo".to_string(),
             name: "GPT-4 Turbo".to_string(),
@@ -67,7 +70,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gpt-4".to_string(),
             name: "GPT-4".to_string(),
@@ -78,8 +80,9 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: false,
         });
+    }
 
-        // Anthropic models
+    fn register_anthropic_models(&mut self) {
         self.register(ModelInfo {
             id: "claude-3-5-sonnet-20241022".to_string(),
             name: "Claude 3.5 Sonnet".to_string(),
@@ -90,7 +93,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "claude-3-5-sonnet-20240620".to_string(),
             name: "Claude 3.5 Sonnet (June)".to_string(),
@@ -101,7 +103,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "claude-3-opus-20240229".to_string(),
             name: "Claude 3 Opus".to_string(),
@@ -112,7 +113,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "claude-3-sonnet-20240229".to_string(),
             name: "Claude 3 Sonnet".to_string(),
@@ -123,7 +123,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "claude-3-haiku-20240307".to_string(),
             name: "Claude 3 Haiku".to_string(),
@@ -134,8 +133,9 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
+    }
 
-        // Google models
+    fn register_google_models(&mut self) {
         self.register(ModelInfo {
             id: "gemini-1.5-pro".to_string(),
             name: "Gemini 1.5 Pro".to_string(),
@@ -146,7 +146,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gemini-1.5-flash".to_string(),
             name: "Gemini 1.5 Flash".to_string(),
@@ -157,7 +156,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gemini-1.5-flash-8b".to_string(),
             name: "Gemini 1.5 Flash-8B".to_string(),
@@ -168,7 +166,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gemini-2.0-flash".to_string(),
             name: "Gemini 2.0 Flash".to_string(),
@@ -179,7 +176,6 @@ impl ModelRegistry {
             supports_tools: true,
             supports_vision: true,
         });
-
         self.register(ModelInfo {
             id: "gemini-pro".to_string(),
             name: "Gemini Pro".to_string(),
