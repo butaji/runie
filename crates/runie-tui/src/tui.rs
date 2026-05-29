@@ -15,7 +15,7 @@ use std::collections::VecDeque;
 use std::io::{self, stdout};
 
 use crate::{
-    pipe::{Pipe, ViewModelPipe},
+    pipe::{Pipe, StateChange, ViewModelPipe},
     theme::{ThemeWrapper, ThemeColors},
     components::{
         Overlay,
@@ -39,6 +39,8 @@ pub struct Tui {
     pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
     pub state: AppState,
     command_palette: CommandPalette,
+    state_pipe: crate::pipe::StatePipe,
+    view_model_pipe: ViewModelPipe,
     action_log: VecDeque<Msg>,
     action_log_capacity: usize,
 }
@@ -111,11 +113,18 @@ impl Tui {
         let backend = CrosstermBackend::new(stdout);
         let terminal = Terminal::new(backend)?;
 
+        let state = AppState::default();
+        let command_palette = CommandPalette::new();
+        let state_pipe = crate::pipe::StatePipe::new(state);
+        let view_model_pipe = ViewModelPipe::new();
+
         Ok(Self {
             config,
             terminal,
-            state: AppState::default(),
-            command_palette: CommandPalette::new(),
+            state: state_pipe.state().clone(),
+            command_palette,
+            state_pipe,
+            view_model_pipe,
             action_log: VecDeque::new(),
             action_log_capacity: 1000,
         })
@@ -130,10 +139,14 @@ impl Tui {
     }
 
     /// Dispatch a msg to update state (unidirectional data flow)
-    /// Returns Vec<Cmd> to be executed by the runtime
-    pub fn update(&mut self, msg: Msg) -> Vec<Cmd> {
+    /// Returns StateChange with commands to be executed and render decision
+    pub fn update(&mut self, msg: Msg) -> StateChange {
         self.log_action(&msg);
-        update(&mut self.state, &mut self.command_palette, msg)
+        let change = self.state_pipe.process(msg);
+        // Sync state_pipe.state back to tui.state for backward compatibility
+        // This ensures tui.state reflects the latest state after process()
+        self.state.clone_from(self.state_pipe.state());
+        change
     }
 
     fn log_action(&mut self, msg: &Msg) {
@@ -372,7 +385,7 @@ impl Tui {
 
     pub fn on_agent_event(&mut self, event: AgentEvent) -> Vec<Cmd> {
         // Use the update() reducer for all agent events
-        self.update(Msg::AgentEvent(event))
+        self.update(Msg::AgentEvent(event)).cmds
     }
 
     pub fn is_permission_modal_active(&self) -> bool {
