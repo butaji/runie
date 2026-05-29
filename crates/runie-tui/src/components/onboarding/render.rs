@@ -43,11 +43,13 @@ fn render_welcome(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
     let text_muted = theme_color("text.muted", theme);
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
+    let bg_base = theme_color("bg.base", theme);
 
     let dialog_area = centered_rect(area, 40, 12);
 
     Panel::new()
         .border_gradient(accent, text_muted)
+        .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
             let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
             let title_y = inner.y;
@@ -89,6 +91,7 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
     let text_muted = theme_color("text.muted", theme);
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
+    let bg_base = theme_color("bg.base", theme);
 
     // Only fall back to all providers when search is empty AND list not initialized yet.
     // If user typed something with no matches, show empty so they know.
@@ -107,6 +110,7 @@ fn render_provider_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, on
 
     Panel::new()
         .border_gradient(accent, text_muted)
+        .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
             let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
             let start_y = inner.y;
@@ -177,6 +181,7 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
     let text_muted = theme_color("text.muted", theme);
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
+    let bg_base = theme_color("bg.base", theme);
 
     // Only fall back to all models when search is empty AND list not initialized yet.
     let display_indices = if onboarding.filtered_model_indices.is_empty() && onboarding.search_query.is_empty() {
@@ -185,9 +190,8 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
         onboarding.filtered_model_indices.clone()
     };
     let display_count = display_indices.len();
-    let has_search = !onboarding.search_query.is_empty();
     let list_h = display_count.max(1) as u16;
-    let dialog_h = list_h + if has_search { 7 } else { 6 };
+    let dialog_h = list_h + 6;
     let dialog_w = 40;
 
     let dialog_area = centered_rect(area, dialog_w, dialog_h);
@@ -198,6 +202,7 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
 
     Panel::new()
         .border_gradient(accent, text_muted)
+        .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
             let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
             let start_y = inner.y;
@@ -208,17 +213,7 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, title_y, inner.width, 1), buf);
 
-            let mut list_y = title_y + 2;
-
-            // Show active search query
-            if has_search {
-                let search_y = list_y;
-                Paragraph::new(format!("  > {}", onboarding.search_query))
-                    .style(Style::default().fg(accent))
-                    .alignment(Alignment::Left)
-                    .render(Rect::new(inner.x, search_y, inner.width, 1), buf);
-                list_y += 1;
-            }
+            let list_y = title_y + 2;
 
             if display_indices.is_empty() {
                 let row_y = list_y;
@@ -231,8 +226,9 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
                     let row_y = list_y + i as u16;
                     let model = &onboarding.models[model_idx];
                     let is_selected = i == onboarding.selected_item;
-                    let radio = if is_selected { "◉" } else { "○" };
-                    let radio_style = if is_selected {
+                    let is_checked = onboarding.selected_models.contains(&model_idx) || Some(model_idx) == onboarding.selected_model;
+                    let checkbox = if is_checked { "■" } else { "□" };
+                    let checkbox_style = if is_checked {
                         Style::default().fg(accent)
                     } else {
                         Style::default().fg(text_muted)
@@ -244,7 +240,7 @@ fn render_model_select(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboa
                     };
                     let line = Line::from(vec![
                         Span::styled("  ", Style::default().fg(text_muted)),
-                        Span::styled(radio, radio_style),
+                        Span::styled(checkbox, checkbox_style),
                         Span::styled("  ", Style::default().fg(text_muted)),
                         Span::styled(model.name.to_lowercase(), name_style),
                     ]);
@@ -269,6 +265,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
     let success = theme_color("success", theme);
+    let bg_base = theme_color("bg.base", theme);
 
     let provider_name = onboarding.get_current_provider()
         .map(|p| p.name.to_lowercase())
@@ -278,6 +275,7 @@ fn render_key_input(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardi
 
     Panel::new()
         .border_gradient(accent, text_muted)
+        .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
             let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
             let start_y = inner.y;
@@ -338,29 +336,48 @@ fn render_complete(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, onboardin
     let text_muted = theme_color("text.muted", theme);
     let text_primary = theme_color("text.primary", theme);
     let accent = theme_color("accent.primary", theme);
+    let bg_base = theme_color("bg.base", theme);
 
     let provider_name = onboarding.get_current_provider()
         .map(|p| p.name.to_lowercase())
         .unwrap_or_default();
 
-    let model_count = onboarding.models.len();
+    let selected_models: Vec<String> = onboarding.selected_models.iter()
+        .filter_map(|&idx| onboarding.models.get(idx))
+        .map(|m| m.name.to_lowercase())
+        .collect();
 
-    let dialog_area = centered_rect(area, 40, 10);
+    // Calculate dialog height dynamically
+    // Content: configured(1) + models(N) + spacing(1) + prompt(1) + spacing(1) + options(2) = 6+N
+    // Plus panel border(2) + inner margin(2) = 4
+    // Total: 10 + N
+    let model_count = selected_models.len();
+    let dialog_h = 10 + model_count as u16;
+    let dialog_area = centered_rect(area, 40, dialog_h);
 
     Panel::new()
         .border_gradient(accent, text_muted)
+        .bg(bg_base)
         .render(dialog_area, buf, |inner, buf| {
             let inner = Rect::new(inner.x + 2, inner.y + 1, inner.width.saturating_sub(4), inner.height.saturating_sub(2));
             let start_y = inner.y;
 
             let configured_y = start_y;
-            let model_word = if model_count == 1 { "model" } else { "models" };
-            Paragraph::new(format!("{} configured   {} {}", provider_name, model_count, model_word))
+            Paragraph::new(format!("{} configured", provider_name))
                 .style(Style::default().fg(text_primary))
                 .alignment(Alignment::Left)
                 .render(Rect::new(inner.x, configured_y, inner.width, 1), buf);
 
-            let prompt_y = configured_y + 2;
+            // List selected models
+            for (i, model_name) in selected_models.iter().enumerate() {
+                let model_y = configured_y + 1 + i as u16;
+                Paragraph::new(format!("  ■ {}", model_name))
+                    .style(Style::default().fg(text_muted))
+                    .alignment(Alignment::Left)
+                    .render(Rect::new(inner.x, model_y, inner.width, 1), buf);
+            }
+
+            let prompt_y = configured_y + 1 + model_count as u16 + 1;
             Paragraph::new("add another provider?")
                 .style(Style::default().fg(text_muted))
                 .alignment(Alignment::Left)
@@ -450,6 +467,6 @@ mod tests {
         let mut buf = Buffer::empty(area);
         render_ref(&onboarding, area, &mut buf, &theme);
         let content = buf.content();
-        assert!(content.iter().any(|c| c.symbol() == "◉" || c.symbol() == "○"));
+        assert!(content.iter().any(|c| c.symbol() == "■" || c.symbol() == "□"));
     }
 }

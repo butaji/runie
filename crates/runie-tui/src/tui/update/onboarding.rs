@@ -46,7 +46,15 @@ fn handle_onboarding_next(state: &mut AppState) -> Vec<Cmd> {
             }
             OnboardingStep::ModelSelect => {
                 let idx = o.get_selected_item();
-                o.select_model(idx);
+                // Auto-select focused item if nothing selected yet (Enter = select + proceed)
+                if o.selected_models.is_empty() && o.selected_model.is_none() {
+                    o.select_model(idx);
+                }
+                // Require at least one model selected
+                if o.selected_models.is_empty() && o.selected_model.is_none() {
+                    o.error_message = Some("Please select at least one model".to_string());
+                    return vec![];
+                }
                 o.next_step();
             }
             OnboardingStep::Complete => {
@@ -55,6 +63,7 @@ fn handle_onboarding_next(state: &mut AppState) -> Vec<Cmd> {
                     o.step = OnboardingStep::ProviderSelect;
                     o.selected_provider = None;
                     o.selected_model = None;
+                    o.selected_models.clear();
                     o.api_key_input.clear();
                     o.search_query.clear();
                     o.filtered_provider_indices.clear();

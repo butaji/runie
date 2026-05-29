@@ -9,6 +9,9 @@ use crate::theme::{ThemeColors, ThemeWrapper};
 use crate::tui::state::TuiMode;
 use crate::tui::view_models::StatusBarViewModel;
 
+pub mod builder;
+pub use builder::*;
+
 #[derive(Clone)]
 pub struct StatusBar {
     pub items: Vec<StatusItem>,
@@ -190,6 +193,16 @@ impl StyleHelpers {
 pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
     let text_tertiary = colors.text_dim;
     let text_secondary = colors.text_secondary;
+    let bg = colors.bg_base;
+
+    // Fill background
+    for y in area.y..area.y + area.height {
+        for x in area.x..area.x + area.width {
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_style(Style::default().bg(bg));
+            }
+        }
+    }
 
     // Left: hotkeys
     let hotkeys = vm.hotkeys();

@@ -108,8 +108,15 @@ pub async fn run_tui(
         });
     }
 
+    // Override settings to mock provider when --mock flag is used
+    if mock {
+        settings.provider = "mock".to_string();
+        settings.model = "mock-gpt-4".to_string();
+        settings.api_key = Some("mock-key".to_string());
+    }
+
     let input_right_info = if mock {
-        format!("mock · {}", settings.model)
+        "mock".to_string()
     } else {
         format!("{} · {}", settings.provider, settings.model)
     };
@@ -530,6 +537,7 @@ pub async fn run_tui(
                     Msg::SessionTreeUp | Msg::SessionTreeDown => state_changed = true,
                     Msg::SessionTreeConfirm => state_changed = true,
                     Msg::OnboardingNavigateUp | Msg::OnboardingNavigateDown => state_changed = true,
+                    Msg::OnboardingSelectProvider(_) | Msg::OnboardingSelectModel(_) => state_changed = true,
                     Msg::OnboardingKeyInput(_) | Msg::OnboardingKeyBackspace => state_changed = true,
                     Msg::OnboardingSearchInput(_) | Msg::OnboardingSearchBackspace => state_changed = true,
                     Msg::SelectUp | Msg::SelectDown => state_changed = true,
