@@ -7,12 +7,12 @@
 //!  Events    StateChange     ViewModels   Terminal
 //! ```
 
-mod input;
+mod input_msg;
 mod render;
 mod state;
 mod view_model;
 
-pub use input::{InputMsg, InputPipe};
+pub use input_msg::InputMsg;
 pub use state::StatePipe;
 pub use view_model::ViewModelPipe;
 pub use render::RenderPipe;
