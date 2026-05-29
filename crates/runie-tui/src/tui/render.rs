@@ -309,23 +309,22 @@ fn render_plan_step(content_x: u16, y: u16, inner_width: u16, step: &usize, text
     buf.set_line(content_x, y, &plan_line, inner_width);
 }
 
-fn render_agents_content(
-    vm: &AgentListViewModel,
-    inner: Rect, buf: &mut Buffer,
-    colors: &SidebarColors,
-) {
+fn render_agents_header(vm: &AgentListViewModel, inner: Rect, buf: &mut Buffer, colors: &SidebarColors) {
     let inner_width = inner.width;
     let content_x = inner.x;
-    let mut y = inner.y;
-    let max_y = inner.y + inner.height - 1;
-
     let agent_status = if vm.agent_running { "● running" } else { "○ idle" };
     let agent_line = Line::from(vec![
         Span::styled(" ", Style::default()),
         Span::styled(agent_status, Style::default().fg(colors.text_dim)),
     ]);
-    buf.set_line(content_x, y, &agent_line, inner_width);
-    y += 1;
+    buf.set_line(content_x, inner.y, &agent_line, inner_width);
+}
+
+fn render_agents_jobs(vm: &AgentListViewModel, inner: Rect, buf: &mut Buffer, colors: &SidebarColors) -> usize {
+    let inner_width = inner.width;
+    let content_x = inner.x;
+    let mut y = inner.y + 1;
+    let max_y = inner.y + inner.height - 1;
 
     for job in &vm.running_jobs {
         if y >= max_y - 1 {
@@ -339,14 +338,29 @@ fn render_agents_content(
         buf.set_line(content_x, y, &job_line, inner_width);
         y += 1;
     }
+    y
+}
 
+fn render_agents_footer(vm: &AgentListViewModel, inner: Rect, buf: &mut Buffer, colors: &SidebarColors) {
     if vm.active_count > 0 {
+        let inner_width = inner.width;
+        let content_x = inner.x;
         let footer_text = format!("{} active · {}", vm.active_count, format_cost(vm.cost));
-        let footer_y = max_y - 1;
+        let footer_y = inner.y + inner.height - 2;
         let footer_line = Line::from(vec![
             Span::styled(" ", Style::default()),
             Span::styled(&footer_text, Style::default().fg(colors.text_dim)),
         ]);
         buf.set_line(content_x, footer_y, &footer_line, inner_width);
     }
+}
+
+fn render_agents_content(
+    vm: &AgentListViewModel,
+    inner: Rect, buf: &mut Buffer,
+    colors: &SidebarColors,
+) {
+    render_agents_header(vm, inner, buf, colors);
+    render_agents_jobs(vm, inner, buf, colors);
+    render_agents_footer(vm, inner, buf, colors);
 }

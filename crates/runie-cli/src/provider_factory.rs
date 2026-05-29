@@ -33,40 +33,52 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
     }
 
     match settings.provider.as_str() {
-        "openai" => {
-            let api_key = settings.api_key.clone()
-                .or_else(|| std::env::var("OPENAI_API_KEY").ok())
-                .ok_or_else(|| RunieError::Provider("OpenAI API key required. Set OPENAI_API_KEY env var or use --api-key".to_string()))?;
-            let api_key = validate_api_key(&api_key, "openai")?;
-            let provider = OpenAiProvider::new(api_key, settings.model.clone());
-            Ok(Box::new(provider))
-        }
-        "anthropic" => {
-            let api_key = settings.api_key.clone()
-                .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
-                .ok_or_else(|| RunieError::Provider("Anthropic API key required. Set ANTHROPIC_API_KEY env var or use --api-key".to_string()))?;
-            let api_key = validate_api_key(&api_key, "anthropic")?;
-            let provider = AnthropicProvider::new(api_key, settings.model.clone());
-            Ok(Box::new(provider))
-        }
-        "minimax" => {
-            let api_key = settings.api_key.clone()
-                .or_else(|| std::env::var("MINIMAX_API_KEY").ok())
-                .ok_or_else(|| RunieError::Provider("MiniMax API key required. Set MINIMAX_API_KEY env var or use --api-key".to_string()))?;
-            let api_key = validate_api_key(&api_key, "minimax")?;
-            let provider = MiniMaxProvider::new(api_key, settings.model.clone());
-            Ok(Box::new(provider))
-        }
-        "google" => {
-            let provider = GenAiProvider::new(settings.model.clone());
-            Ok(Box::new(provider))
-        }
-        other => {
-            let api_key = settings.api_key.clone()
-                .ok_or_else(|| RunieError::Provider(format!("API key required for provider: {}", other)))?;
-            let provider = RigProvider::new(other, &api_key, &settings.model)
-                .map_err(|e| RunieError::Provider(e.to_string()))?;
-            Ok(Box::new(provider))
-        }
+        "openai" => create_openai_provider(settings),
+        "anthropic" => create_anthropic_provider(settings),
+        "minimax" => create_minimax_provider(settings),
+        "google" => create_google_provider(settings),
+        other => create_rig_provider(other, settings),
     }
+}
+
+fn create_openai_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
+    let api_key = get_api_key(settings, "openai", "OPENAI_API_KEY")?;
+    let provider = OpenAiProvider::new(api_key, settings.model.clone());
+    Ok(Box::new(provider))
+}
+
+fn create_anthropic_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
+    let api_key = get_api_key(settings, "anthropic", "ANTHROPIC_API_KEY")?;
+    let provider = AnthropicProvider::new(api_key, settings.model.clone());
+    Ok(Box::new(provider))
+}
+
+fn create_minimax_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
+    let api_key = get_api_key(settings, "minimax", "MINIMAX_API_KEY")?;
+    let provider = MiniMaxProvider::new(api_key, settings.model.clone());
+    Ok(Box::new(provider))
+}
+
+fn create_google_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
+    let provider = GenAiProvider::new(settings.model.clone());
+    Ok(Box::new(provider))
+}
+
+fn create_rig_provider(other: &str, settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
+    let api_key = settings.api_key.clone()
+        .ok_or_else(|| RunieError::Provider(format!("API key required for provider: {}", other)))?;
+    let provider = RigProvider::new(other, &api_key, &settings.model)
+        .map_err(|e| RunieError::Provider(e.to_string()))?;
+    Ok(Box::new(provider))
+}
+
+fn get_api_key(settings: &Settings, provider: &str, env_var: &str) -> Result<String, RunieError> {
+    let api_key = settings.api_key.clone()
+        .or_else(|| std::env::var(env_var).ok())
+        .ok_or_else(|| RunieError::Provider(format!(
+            "{} API key required. Set {} env var or use --api-key",
+            provider.to_uppercase(),
+            env_var
+        )))?;
+    validate_api_key(&api_key, provider)
 }

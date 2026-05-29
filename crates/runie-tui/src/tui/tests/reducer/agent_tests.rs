@@ -24,49 +24,47 @@ fn test_agent_event_message_start() {
     assert_eq!(state.messages.len(), 1);
 }
 
+fn create_message_start_event(turn: u32) -> AgentEvent {
+    AgentEvent::MessageStart {
+        message: AgentMessage {
+            role: "assistant".to_string(),
+            content: vec![],
+            timestamp: 0,
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+            tool_calls: vec![],
+        },
+        turn,
+    }
+}
+
+fn create_message_update_event(turn: u32, text: &str) -> AgentEvent {
+    use runie_agent::ContentPart;
+    AgentEvent::MessageUpdate {
+        message: AgentMessage {
+            role: "assistant".to_string(),
+            content: vec![ContentPart::Text {
+                text: text.to_string(),
+            }],
+            timestamp: 0,
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+            tool_calls: vec![],
+        },
+        turn,
+        delta: text.to_string(),
+    }
+}
+
 #[test]
 fn test_agent_event_message_update() {
-    use runie_agent::ContentPart;
     let mut state = make_state();
     let mut palette = CommandPalette::new();
-    // Start message
-    update(
-        &mut state,
-        &mut palette,
-        Msg::AgentEvent(AgentEvent::MessageStart {
-            message: AgentMessage {
-                role: "assistant".to_string(),
-                content: vec![],
-                timestamp: 0,
-                usage: None,
-                stop_reason: None,
-                error_message: None,
-                tool_calls: vec![],
-            },
-            turn: 1,
-        }),
-    );
 
-    // Update with text
-    update(
-        &mut state,
-        &mut palette,
-        Msg::AgentEvent(AgentEvent::MessageUpdate {
-            message: AgentMessage {
-                role: "assistant".to_string(),
-                content: vec![ContentPart::Text {
-                    text: "Hello".to_string(),
-                }],
-                timestamp: 0,
-                usage: None,
-                stop_reason: None,
-                error_message: None,
-                tool_calls: vec![],
-            },
-            turn: 1,
-            delta: "Hello".to_string(),
-        }),
-    );
+    update(&mut state, &mut palette, Msg::AgentEvent(create_message_start_event(1)));
+    update(&mut state, &mut palette, Msg::AgentEvent(create_message_update_event(1, "Hello")));
 
     assert_eq!(state.messages.len(), 1);
     if let MessageItem::Assistant { text, .. } = &state.messages[0] {

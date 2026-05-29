@@ -40,152 +40,35 @@ impl ModelRegistry {
     }
 
     fn register_openai_models(&mut self) {
-        self.register(ModelInfo {
-            id: "gpt-4o".to_string(),
-            name: "GPT-4o".to_string(),
-            provider: "openai".to_string(),
-            context_window: 128_000,
-            input_price_per_1k: 0.005,
-            output_price_per_1k: 0.015,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gpt-4o-mini".to_string(),
-            name: "GPT-4o Mini".to_string(),
-            provider: "openai".to_string(),
-            context_window: 128_000,
-            input_price_per_1k: 0.00015,
-            output_price_per_1k: 0.0006,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gpt-4-turbo".to_string(),
-            name: "GPT-4 Turbo".to_string(),
-            provider: "openai".to_string(),
-            context_window: 128_000,
-            input_price_per_1k: 0.01,
-            output_price_per_1k: 0.03,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gpt-4".to_string(),
-            name: "GPT-4".to_string(),
-            provider: "openai".to_string(),
-            context_window: 8_192,
-            input_price_per_1k: 0.03,
-            output_price_per_1k: 0.06,
-            supports_tools: true,
-            supports_vision: false,
-        });
+        let models = [
+            ("gpt-4o", "GPT-4o", 128_000, 0.005, 0.015, true, true),
+            ("gpt-4o-mini", "GPT-4o Mini", 128_000, 0.00015, 0.0006, true, true),
+            ("gpt-4-turbo", "GPT-4 Turbo", 128_000, 0.01, 0.03, true, true),
+            ("gpt-4", "GPT-4", 8_192, 0.03, 0.06, true, false),
+        ];
+        self.register_provider_models("openai", &models);
     }
 
     fn register_anthropic_models(&mut self) {
-        self.register(ModelInfo {
-            id: "claude-3-5-sonnet-20241022".to_string(),
-            name: "Claude 3.5 Sonnet".to_string(),
-            provider: "anthropic".to_string(),
-            context_window: 200_000,
-            input_price_per_1k: 0.003,
-            output_price_per_1k: 0.015,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "claude-3-5-sonnet-20240620".to_string(),
-            name: "Claude 3.5 Sonnet (June)".to_string(),
-            provider: "anthropic".to_string(),
-            context_window: 200_000,
-            input_price_per_1k: 0.003,
-            output_price_per_1k: 0.015,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "claude-3-opus-20240229".to_string(),
-            name: "Claude 3 Opus".to_string(),
-            provider: "anthropic".to_string(),
-            context_window: 200_000,
-            input_price_per_1k: 0.015,
-            output_price_per_1k: 0.075,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "claude-3-sonnet-20240229".to_string(),
-            name: "Claude 3 Sonnet".to_string(),
-            provider: "anthropic".to_string(),
-            context_window: 200_000,
-            input_price_per_1k: 0.003,
-            output_price_per_1k: 0.015,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "claude-3-haiku-20240307".to_string(),
-            name: "Claude 3 Haiku".to_string(),
-            provider: "anthropic".to_string(),
-            context_window: 200_000,
-            input_price_per_1k: 0.00025,
-            output_price_per_1k: 0.00125,
-            supports_tools: true,
-            supports_vision: true,
-        });
+        let models = [
+            ("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet", 200_000, 0.003, 0.015, true, true),
+            ("claude-3-5-sonnet-20240620", "Claude 3.5 Sonnet (June)", 200_000, 0.003, 0.015, true, true),
+            ("claude-3-opus-20240229", "Claude 3 Opus", 200_000, 0.015, 0.075, true, true),
+            ("claude-3-sonnet-20240229", "Claude 3 Sonnet", 200_000, 0.003, 0.015, true, true),
+            ("claude-3-haiku-20240307", "Claude 3 Haiku", 200_000, 0.00025, 0.00125, true, true),
+        ];
+        self.register_provider_models("anthropic", &models);
     }
 
     fn register_google_models(&mut self) {
-        self.register(ModelInfo {
-            id: "gemini-1.5-pro".to_string(),
-            name: "Gemini 1.5 Pro".to_string(),
-            provider: "google".to_string(),
-            context_window: 2_000_000,
-            input_price_per_1k: 0.00125,
-            output_price_per_1k: 0.005,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gemini-1.5-flash".to_string(),
-            name: "Gemini 1.5 Flash".to_string(),
-            provider: "google".to_string(),
-            context_window: 1_000_000,
-            input_price_per_1k: 0.000075,
-            output_price_per_1k: 0.0003,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gemini-1.5-flash-8b".to_string(),
-            name: "Gemini 1.5 Flash-8B".to_string(),
-            provider: "google".to_string(),
-            context_window: 1_000_000,
-            input_price_per_1k: 0.0000375,
-            output_price_per_1k: 0.00015,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gemini-2.0-flash".to_string(),
-            name: "Gemini 2.0 Flash".to_string(),
-            provider: "google".to_string(),
-            context_window: 1_000_000,
-            input_price_per_1k: 0.000075,
-            output_price_per_1k: 0.0003,
-            supports_tools: true,
-            supports_vision: true,
-        });
-        self.register(ModelInfo {
-            id: "gemini-pro".to_string(),
-            name: "Gemini Pro".to_string(),
-            provider: "google".to_string(),
-            context_window: 32_768,
-            input_price_per_1k: 0.00125,
-            output_price_per_1k: 0.005,
-            supports_tools: true,
-            supports_vision: true,
-        });
+        let models = [
+            ("gemini-1.5-pro", "Gemini 1.5 Pro", 2_000_000, 0.00125, 0.005, true, true),
+            ("gemini-1.5-flash", "Gemini 1.5 Flash", 1_000_000, 0.000075, 0.0003, true, true),
+            ("gemini-1.5-flash-8b", "Gemini 1.5 Flash-8B", 1_000_000, 0.0000375, 0.00015, true, true),
+            ("gemini-2.0-flash", "Gemini 2.0 Flash", 1_000_000, 0.000075, 0.0003, true, true),
+            ("gemini-pro", "Gemini Pro", 32_768, 0.00125, 0.005, true, true),
+        ];
+        self.register_provider_models("google", &models);
     }
 
     fn register(&mut self, model: ModelInfo) {
@@ -196,6 +79,25 @@ impl ModelRegistry {
             .entry(provider)
             .or_insert_with(Vec::new)
             .push(id);
+    }
+
+    fn register_provider_models(
+        &mut self,
+        provider: &str,
+        models: &[(&str, &str, usize, f64, f64, bool, bool)],
+    ) {
+        for (id, name, context_window, input_price, output_price, tools, vision) in models {
+            self.register(ModelInfo {
+                id: (*id).to_string(),
+                name: (*name).to_string(),
+                provider: provider.to_string(),
+                context_window: *context_window,
+                input_price_per_1k: *input_price,
+                output_price_per_1k: *output_price,
+                supports_tools: *tools,
+                supports_vision: *vision,
+            });
+        }
     }
 
     pub fn get(&self, id: &str) -> Option<&ModelInfo> {

@@ -65,43 +65,35 @@ enum Commands {
     Run { prompt: String },
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
-
-    // Set RUNIE_HOME if --dev-folder is provided
+fn init_environment(cli: &Cli) {
     if let Some(dev) = &cli.dev_folder {
         std::env::set_var("RUNIE_HOME", dev.as_os_str());
     }
-
-    // Ensure runie directories exist
     settings::ensure_dirs();
-
-    // Create default config if none exists
     if let Some(path) = settings::config_path() {
         settings::create_default_config(&path);
     }
+}
 
-    // Initialize logging and event stream
-    let event_logger = if let Some(runie_dir) = settings::runie_dir() {
-        logging::init_logging(&runie_dir);
-        // Initialize comprehensive event logger
-        let logs_dir = runie_dir.join("logs");
-        event_logger::init_event_logger(&logs_dir);
-        Some(EventStreamLogger::new(&runie_dir))
-    } else {
-        None
-    };
+fn init_event_logging() -> Option<EventStreamLogger> {
+    let runie_dir = settings::runie_dir()?;
+    logging::init_logging(&runie_dir);
+    let logs_dir = runie_dir.join("logs");
+    event_logger::init_event_logger(&logs_dir);
+    Some(EventStreamLogger::new(&runie_dir))
+}
 
-    // Load settings with layered resolution, then apply CLI overrides
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
+    init_environment(&cli);
+    let event_logger = init_event_logging();
     let mut settings = Settings::load();
 
     match cli.command {
-        // CLI: One-shot mode
         Some(Commands::Run { prompt }) => {
             run_cli_one_shot(&prompt, &cli.workspace, cli.mock, &settings).await?;
         }
-        // TUI: Interactive terminal interface (default)
         None => {
             #[cfg(not(windows))]
             {

@@ -14,32 +14,45 @@ pub enum SlashCommand {
     Unknown(String),
 }
 
-pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
-    if !input.starts_with('/') {
-        return None;
-    }
-    
+fn parse_cmd(input: &str) -> Option<SlashCommand> {
     let parts: Vec<&str> = input.split_whitespace().collect();
     let cmd = parts[0];
     let args = &parts[1..];
-    
-    match cmd {
-        "/new" | "/n" => Some(SlashCommand::New),
-        "/clear" | "/c" => Some(SlashCommand::Clear),
-        "/model" | "/m" => {
-            if args.is_empty() {
-                Some(SlashCommand::Help)
-            } else {
-                Some(SlashCommand::Model(args[0].to_string()))
-            }
+
+    static COMMANDS: &[(&[&str], fn(&[&str]) -> SlashCommand)] = &[
+        (&["/new", "/n"], |_| SlashCommand::New),
+        (&["/clear", "/c"], |_| SlashCommand::Clear),
+        (&["/model", "/m"], parse_model_cmd),
+        (&["/tree", "/t"], |_| SlashCommand::Tree),
+        (&["/fork", "/f"], |_| SlashCommand::Fork),
+        (&["/copy"], |_| SlashCommand::Copy),
+        (&["/quit", "/q", "/exit"], |_| SlashCommand::Quit),
+        (&["/help", "/h", "/?"], |_| SlashCommand::Help),
+        (&["/cost"], |_| SlashCommand::Cost),
+    ];
+
+    for (aliases, handler) in COMMANDS {
+        if aliases.iter().any(|&a| a == cmd) {
+            return Some(handler(args));
         }
-        "/tree" | "/t" => Some(SlashCommand::Tree),
-        "/fork" | "/f" => Some(SlashCommand::Fork),
-        "/copy" => Some(SlashCommand::Copy),
-        "/quit" | "/q" | "/exit" => Some(SlashCommand::Quit),
-        "/help" | "/h" | "/?" => Some(SlashCommand::Help),
-        "/cost" => Some(SlashCommand::Cost),
-        _ => Some(SlashCommand::Unknown(cmd.to_string())),
+    }
+
+    Some(SlashCommand::Unknown(cmd.to_string()))
+}
+
+fn parse_model_cmd(args: &[&str]) -> SlashCommand {
+    if args.is_empty() {
+        SlashCommand::Help
+    } else {
+        SlashCommand::Model(args[0].to_string())
+    }
+}
+
+pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
+    if input.starts_with('/') {
+        parse_cmd(input)
+    } else {
+        None
     }
 }
 

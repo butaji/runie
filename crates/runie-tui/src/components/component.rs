@@ -166,19 +166,23 @@ impl Component for PermissionModal {
     fn handle_key(&mut self, key: KeyEvent) -> Option<Msg> {
         use crossterm::event::{KeyCode, KeyModifiers};
 
-        // Ctrl+C and Ctrl+Q in Permission mode both cancel permission
-        if key.modifiers.contains(KeyModifiers::CONTROL) {
-            match key.code {
-                KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::PermissionCancel),
-                _ => {}
-            }
-        }
+        // Combine modifier and key code for cleaner matching
+        match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
+            // Ctrl combinations
+            (true, KeyCode::Char('c' | 'q')) => Some(Msg::PermissionCancel),
 
-        match key.code {
-            KeyCode::Enter | KeyCode::Char('y') => Some(Msg::PermissionConfirm),
-            KeyCode::Esc | KeyCode::Char('n') => Some(Msg::PermissionCancel),
-            KeyCode::Char('a') => Some(Msg::PermissionAlways),
-            KeyCode::Char('s') => Some(Msg::PermissionSkip),
+            // Confirm/allow
+            (false, KeyCode::Enter | KeyCode::Char('y')) => Some(Msg::PermissionConfirm),
+
+            // Cancel/deny
+            (false, KeyCode::Esc | KeyCode::Char('n')) => Some(Msg::PermissionCancel),
+
+            // Always allow
+            (false, KeyCode::Char('a')) => Some(Msg::PermissionAlways),
+
+            // Skip
+            (false, KeyCode::Char('s')) => Some(Msg::PermissionSkip),
+
             _ => None,
         }
     }
@@ -207,19 +211,20 @@ impl Component for DiffViewer {
     fn handle_key(&mut self, key: KeyEvent) -> Option<Msg> {
         use crossterm::event::{KeyCode, KeyModifiers};
 
-        // Ctrl+C and Ctrl+Q close the modal
-        if key.modifiers.contains(KeyModifiers::CONTROL) {
-            match key.code {
-                KeyCode::Char('c') | KeyCode::Char('q') => return Some(Msg::CloseModal),
-                _ => {}
-            }
-        }
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('x') => Some(Msg::CloseModal),
-            KeyCode::Down | KeyCode::Char('j') => Some(Msg::ScrollDown),
-            KeyCode::Up | KeyCode::Char('k') => Some(Msg::ScrollUp),
-            KeyCode::PageDown => Some(Msg::ScrollDown),
-            KeyCode::PageUp => Some(Msg::ScrollUp),
+        // Combine modifier and key code for cleaner matching
+        match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
+            // Ctrl combinations
+            (true, KeyCode::Char('c' | 'q')) => Some(Msg::CloseModal),
+
+            // Close modal
+            (false, KeyCode::Esc | KeyCode::Char('q' | 'x')) => Some(Msg::CloseModal),
+
+            // Scrolling
+            (false, KeyCode::Down | KeyCode::Char('j')) => Some(Msg::ScrollDown),
+            (false, KeyCode::Up | KeyCode::Char('k')) => Some(Msg::ScrollUp),
+            (false, KeyCode::PageDown) => Some(Msg::ScrollDown),
+            (false, KeyCode::PageUp) => Some(Msg::ScrollUp),
+
             _ => None,
         }
     }
@@ -355,27 +360,23 @@ impl Component for Onboarding {
                 | onboarding::OnboardingStep::ModelSelect
         );
 
-        match key.code {
-            KeyCode::Enter => Some(Msg::OnboardingNext),
-            KeyCode::Esc => Some(Msg::OnboardingBack),
-            KeyCode::Up => Some(Msg::OnboardingNavigateUp),
-            KeyCode::Down => Some(Msg::OnboardingNavigateDown),
-            KeyCode::Char(c) => {
-                if is_picker_step {
-                    Some(Msg::OnboardingSearchInput(c))
-                } else {
-                    Some(Msg::OnboardingKeyInput(c))
-                }
-            }
-            KeyCode::Backspace | KeyCode::Delete => {
-                if is_picker_step {
-                    Some(Msg::OnboardingSearchBackspace)
-                } else {
-                    Some(Msg::OnboardingKeyBackspace)
-                }
-            }
-            _ => None,
+        // Simple navigation
+        if matches!(key.code, KeyCode::Enter) { return Some(Msg::OnboardingNext); }
+        if matches!(key.code, KeyCode::Esc) { return Some(Msg::OnboardingBack); }
+        if matches!(key.code, KeyCode::Up) { return Some(Msg::OnboardingNavigateUp); }
+        if matches!(key.code, KeyCode::Down) { return Some(Msg::OnboardingNavigateDown); }
+
+        // Char input
+        if let KeyCode::Char(c) = key.code {
+            return Some(if is_picker_step { Msg::OnboardingSearchInput(c) } else { Msg::OnboardingKeyInput(c) });
         }
+
+        // Backspace/Delete
+        if matches!(key.code, KeyCode::Backspace | KeyCode::Delete) {
+            return Some(if is_picker_step { Msg::OnboardingSearchBackspace } else { Msg::OnboardingKeyBackspace });
+        }
+
+        None
     }
 
     fn wants_focus(&self) -> bool {

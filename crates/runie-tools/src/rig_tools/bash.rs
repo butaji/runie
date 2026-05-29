@@ -140,6 +140,56 @@ impl BashTool {
         }
         Ok(())
     }
+
+    /// Formats raw command output into clipped content.
+    fn format_output(stdout: &str, stderr: &str) -> (Option<String>, String) {
+        let content = if stderr.is_empty() {
+            stdout.to_string()
+        } else {
+            format!("{}\n[stderr]: {}", stdout, stderr)
+        };
+        if content.len() > 10000 {
+            (
+                Some(format!("[clipped, {} total chars]", content.len())),
+                format!("{}... [clipped]", &content[..10000]),
+            )
+        } else {
+            (None, content)
+        }
+    }
+
+    /// Validates and executes a bash command, returning structured output.
+    fn run_command(workspace: &PathBuf, command: &str, timeout: u64) -> Result<BashOutput, BashError> {
+        let output = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                tokio::time::timeout(
+                    Duration::from_secs(timeout),
+                    tokio::process::Command::new("sh")
+                        .arg("-c")
+                        .arg(command)
+                        .current_dir(workspace)
+                        .kill_on_drop(true)
+                        .output(),
+                )
+                .await
+            })
+            .map_err(|_| BashError::Timeout(timeout))?
+            .map_err(|e| BashError::ExecutionFailed(e.to_string()))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let (clipped, final_content) = Self::format_output(&stdout, &stderr);
+
+        Ok(BashOutput {
+            stdout: final_content,
+            stderr,
+            exit_code: output.status.code().unwrap_or(-1),
+            clipped,
+        })
+    }
 }
 
 impl Tool for BashTool {
@@ -182,43 +232,6 @@ impl Tool for BashTool {
         // Secondary defense: check for shell metacharacters
         Self::check_forbidden_chars(&args.command)?;
 
-        let output = tokio::time::timeout(
-            Duration::from_secs(timeout),
-            tokio::process::Command::new("sh")
-                .arg("-c")
-                .arg(&args.command)
-                .current_dir(&self.workspace)
-                .kill_on_drop(true)
-                .output(),
-        )
-        .await
-        .map_err(|_| BashError::Timeout(timeout))?
-        .map_err(|e| BashError::ExecutionFailed(e.to_string()))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-        let content = if stderr.is_empty() {
-            stdout.clone()
-        } else {
-            format!("{}\n[stderr]: {}", stdout, stderr)
-        };
-
-        // Clip output to reasonable size (e.g., 10k chars)
-        let (clipped, final_content) = if content.len() > 10000 {
-            (
-                Some(format!("[clipped, {} total chars]", content.len())),
-                format!("{}... [clipped]", &content[..10000]),
-            )
-        } else {
-            (None, content)
-        };
-
-        Ok(BashOutput {
-            stdout: final_content,
-            stderr,
-            exit_code: output.status.code().unwrap_or(-1),
-            clipped,
-        })
+        Self::run_command(&self.workspace, &args.command, timeout)
     }
 }

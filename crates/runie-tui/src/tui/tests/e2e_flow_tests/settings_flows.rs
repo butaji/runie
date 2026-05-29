@@ -64,22 +64,15 @@ fn test_e2e_settings_persist_model() {
     assert!(cmds2.iter().any(|c| matches!(c, Cmd::SpawnAgent { .. })));
 }
 
-#[test]
-fn test_e2e_save_settings_respects_dev_folder() {
-    // Set RUNIE_HOME to a temp directory
-    let temp_dir = std::env::temp_dir().join("runie_test_dev");
-    std::env::set_var("RUNIE_HOME", temp_dir.display().to_string());
-
-    // Create state with onboarding active
+fn setup_onboarding_with_minimax() -> (AppState, CommandPalette) {
     let mut state = AppState::default();
     state.onboarding = Some(crate::components::onboarding::Onboarding::new(false));
     state.mode = TuiMode::Onboarding;
     let mut palette = CommandPalette::new();
 
-    // Set up minimax provider and model directly (simulating completed onboarding flow)
     let o = state.onboarding.as_mut().unwrap();
     o.step = OnboardingStep::Complete;
-    o.selected_item = 1; // "No, finish setup"
+    o.selected_item = 1;
     let minimax_idx = o.providers.iter()
         .position(|p| p.id == "minimax")
         .expect("MiniMax provider should exist");
@@ -92,15 +85,27 @@ fn test_e2e_save_settings_respects_dev_folder() {
         description: "MiniMax text model".to_string(),
     });
 
-    // Finish onboarding - this should emit SaveSettings
+    (state, palette)
+}
+
+fn verify_save_settings_result(cmds: &[Cmd]) -> Option<(String, String, String)> {
+    cmds.iter().find_map(|c| match c {
+        Cmd::SaveSettings { provider, model, api_key } =>
+            Some((provider.clone(), model.clone(), api_key.clone())),
+        _ => None,
+    })
+}
+
+#[test]
+fn test_e2e_save_settings_respects_dev_folder() {
+    let temp_dir = std::env::temp_dir().join("runie_test_dev");
+    std::env::set_var("RUNIE_HOME", temp_dir.display().to_string());
+
+    let (mut state, mut palette) = setup_onboarding_with_minimax();
     let cmds = update(&mut state, &mut palette, Msg::OnboardingNext);
 
-    // Verify SaveSettings is emitted
     assert!(!cmds.is_empty(), "Expected SaveSettings command");
-    let save_settings = cmds.iter().find_map(|c| match c {
-        Cmd::SaveSettings { provider, model, api_key } => Some((provider.clone(), model.clone(), api_key.clone())),
-        _ => None,
-    });
+    let save_settings = verify_save_settings_result(&cmds);
     assert!(save_settings.is_some(), "Expected SaveSettings command in {:?}", cmds);
 
     let (provider, model, api_key) = save_settings.unwrap();
@@ -108,16 +113,9 @@ fn test_e2e_save_settings_respects_dev_folder() {
     assert_eq!(model, "MiniMax-Text-01");
     assert_eq!(api_key, "test-minimax-api-key");
 
-    // Verify state is now in Chat mode
     assert_eq!(state.mode, TuiMode::Chat);
     assert!(state.onboarding.is_none());
 
-    // Note: current_model is set by tui_run.rs when it processes SaveSettings,
-    // not by the update function itself. The update function only emits the command.
-    // The config path verification (RUNIE_HOME vs ~/.runie) also happens in tui_run.rs
-    // when it calls settings::config_path() which respects RUNIE_HOME env var.
-
-    // Cleanup
     std::env::remove_var("RUNIE_HOME");
     let _ = std::fs::remove_dir_all(temp_dir);
 }

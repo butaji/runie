@@ -188,38 +188,32 @@ impl Plugin for GitStatusPlugin {
     fn name(&self) -> &str { &self.name }
 
     fn after_update(&self, _state: &AppState, _cmds: &[Cmd]) -> Vec<Msg> {
-        // Throttle: only check git status every check_interval ticks
-        let check_interval = 60; // Check every ~5 seconds at 80ms/tick
-
-        let tick_counter = {
-            let mut s = self.state.write().unwrap();
-            let tc = s.tick_counter;
-            s.tick_counter += 1;
-            tc
-        };
-
-        if tick_counter % check_interval != 0 {
+        let tick_counter = self.increment_tick_counter();
+        if tick_counter % 60 != 0 {
             return vec![];
         }
+        self.check_and_update_git_info()
+    }
+}
 
+impl GitStatusPlugin {
+    fn increment_tick_counter(&self) -> usize {
+        let mut s = self.state.write().unwrap();
+        let tc = s.tick_counter;
+        s.tick_counter += 1;
+        tc
+    }
+
+    fn check_and_update_git_info(&self) -> Vec<Msg> {
         let (repo, branch, path) = self.detect_git_info();
-
-        // Check if anything changed
         let changed = {
             let s = self.state.read().unwrap();
             repo != s.last_repo || branch != s.last_branch || path != s.last_path
         };
 
         if changed {
-            // Update last seen values
-            {
-                let mut s = self.state.write().unwrap();
-                s.last_repo = repo.clone();
-                s.last_branch = branch.clone();
-                s.last_path = path.clone();
-            }
-
-            return vec![Msg::SetTopBar {
+            self.update_last_seen(repo.clone(), branch.clone(), path.clone());
+            vec![Msg::SetTopBar {
                 repo: Some(repo),
                 branch: Some(branch),
                 path: Some(path),
@@ -229,10 +223,17 @@ impl Plugin for GitStatusPlugin {
                 context_badges: None,
                 context_pct: None,
                 context_bar_pct: None,
-            }];
+            }]
+        } else {
+            vec![]
         }
+    }
 
-        vec![]
+    fn update_last_seen(&self, repo: String, branch: String, path: String) {
+        let mut s = self.state.write().unwrap();
+        s.last_repo = repo;
+        s.last_branch = branch;
+        s.last_path = path;
     }
 }
 

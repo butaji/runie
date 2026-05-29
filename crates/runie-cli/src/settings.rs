@@ -65,6 +65,7 @@ impl Settings {
 
     /// Merge settings from environment variables
     fn merge_env(&mut self) {
+        // Standard RUNIE_* env vars
         if let Ok(val) = std::env::var("RUNIE_MODEL") {
             self.model = val;
         }
@@ -85,19 +86,25 @@ impl Settings {
         if let Ok(val) = std::env::var("RUNIE_SHELL") {
             self.shell = val;
         }
-        // Legacy env vars
+        // Legacy/provider-specific API key fallback
+        merge_api_key_fallback(self);
+    }
+
+fn merge_api_key_fallback(settings: &mut Settings) {
+    // Try OPENAI_API_KEY if no RUNIE_API_KEY was set
+    if settings.api_key.is_none() {
         if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-            if self.api_key.is_none() {
-                self.api_key = Some(val);
-            }
-        }
-        // Provider-specific env vars
-        if let Ok(val) = std::env::var("MINIMAX_API_KEY") {
-            if self.api_key.is_none() {
-                self.api_key = Some(val);
-            }
+            settings.api_key = Some(val);
+            return;
         }
     }
+    // Try MINIMAX_API_KEY as another fallback
+    if settings.api_key.is_none() {
+        if let Ok(val) = std::env::var("MINIMAX_API_KEY") {
+            settings.api_key = Some(val);
+        }
+    }
+}
 
     /// Merge settings from CLI arguments
     #[allow(dead_code)]

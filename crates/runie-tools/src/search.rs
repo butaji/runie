@@ -51,9 +51,20 @@ impl Tool for SearchTool {
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'pattern' argument".to_string()))?;
         let search_type = args["type"].as_str()
             .ok_or_else(|| ToolError::InvalidArguments("Missing 'type' argument".to_string()))?;
-        
+
+        let results = self.search(pattern, search_type).await?;
+        results.truncate(50);
+
+        Ok(ToolOutput {
+            content: results.join("\n"),
+            metadata: json!({"count": results.len(), "pattern": pattern}),
+            terminate: false,
+        })
+    }
+
+    async fn search(&self, pattern: &str, search_type: &str) -> Result<Vec<String>, ToolError> {
         let mut results = Vec::new();
-        
+
         for entry in WalkDir::new(&self.workspace.root)
             .follow_links(false)
             .into_iter()
@@ -63,7 +74,7 @@ impl Tool for SearchTool {
             if !self.workspace.contains(path) {
                 continue;
             }
-            
+
             match search_type {
                 "filename" => {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
@@ -73,24 +84,29 @@ impl Tool for SearchTool {
                     }
                 }
                 "content" => {
-                    if path.is_file() && path.metadata().map(|m| m.len() < 1_000_000).unwrap_or(false) {
-                        if let Ok(content) = tokio::fs::read_to_string(path).await {
-                            if content.contains(pattern) {
-                                results.push(path.strip_prefix(&self.workspace.root).unwrap_or(path).display().to_string());
-                            }
-                        }
+                    if let Some(result) = self.search_content(path, pattern).await {
+                        results.push(result);
                     }
                 }
                 _ => return Err(ToolError::InvalidArguments(format!("Invalid search type: {}", search_type))),
             }
         }
-        
-        results.truncate(50); // Limit results
-        
-        Ok(ToolOutput {
-            content: results.join("\n"),
-            metadata: json!({"count": results.len(), "pattern": pattern}),
-            terminate: false,
-        })
+
+        Ok(results)
+    }
+
+    async fn search_content(&self, path: &std::path::Path, pattern: &str) -> Option<String> {
+        if !path.is_file() {
+            return None;
+        }
+        if path.metadata().map(|m| m.len() >= 1_000_000).unwrap_or(true) {
+            return None;
+        }
+        let content = tokio::fs::read_to_string(path).await.ok()?;
+        if content.contains(pattern) {
+            Some(path.strip_prefix(&self.workspace.root).unwrap_or(path).display().to_string())
+        } else {
+            None
+        }
     }
 }

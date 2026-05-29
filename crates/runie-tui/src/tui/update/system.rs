@@ -71,27 +71,33 @@ fn handle_anim(state: &mut AppState, msg: &Msg) {
 // ─── Permission Timeout ───────────────────────────────────────────────────────
 
 fn handle_tick_permission_check(state: &mut AppState, _palette: &mut CommandPalette) -> Vec<Cmd> {
-    // P0-AGENT-TIMEOUT: Watchdog timeout check for agent hang/panic
-    if state.agent_running {
-        if let Some(start_time) = state.agent_start_time {
-            const AGENT_TIMEOUT_SECS: u64 = 600; // 10 minutes
-            if start_time.elapsed().as_secs() >= AGENT_TIMEOUT_SECS {
-                state.agent_running = false;
-                state.agent_start_time = None;
-                state.messages.push(crate::components::MessageItem::System {
-                    text: "Agent timed out after 10 minutes.".to_string(),
-                });
-                // BG-1 FIX: Clear pending permission queue on timeout
-                state.permission_modal.pending_queue.clear();
-                if state.mode != TuiMode::Onboarding {
-                    state.mode = TuiMode::Chat;
-                }
-                return vec![Cmd::Interrupt];
+    if let Some(cmd) = check_agent_timeout(state) {
+        return cmd;
+    }
+    check_permission_timeout(state)
+}
+
+fn check_agent_timeout(state: &mut AppState) -> Option<Vec<Cmd>> {
+    if !state.agent_running { return None; }
+    if let Some(start_time) = state.agent_start_time {
+        const AGENT_TIMEOUT_SECS: u64 = 600;
+        if start_time.elapsed().as_secs() >= AGENT_TIMEOUT_SECS {
+            state.agent_running = false;
+            state.agent_start_time = None;
+            state.messages.push(crate::components::MessageItem::System {
+                text: "Agent timed out after 10 minutes.".to_string(),
+            });
+            state.permission_modal.pending_queue.clear();
+            if state.mode != TuiMode::Onboarding {
+                state.mode = TuiMode::Chat;
             }
+            return Some(vec![Cmd::Interrupt]);
         }
     }
+    None
+}
 
-    // Only check if we're in permission mode with timeout tracking active
+fn check_permission_timeout(state: &mut AppState) -> Vec<Cmd> {
     if state.mode != TuiMode::Permission { return vec![]; }
     if state.permission_modal.timed_out { return vec![]; }
 
@@ -107,7 +113,6 @@ fn handle_tick_permission_check(state: &mut AppState, _palette: &mut CommandPale
             state.permission_modal.tool = None;
             state.permission_modal.tool_call_id = None;
 
-            // Process next pending permission if any (FIFO)
             if !state.permission_modal.pending_queue.is_empty() {
                 let pending = state.permission_modal.pending_queue.remove(0);
                 state.permission_modal.tool = Some(pending.tool_name.clone());

@@ -5,49 +5,48 @@ use std::path::{Path, PathBuf};
 pub struct ContextLoader;
 
 impl ContextLoader {
-    /// Load all AGENTS.md context files from standard locations.
-    /// Order: global (~/.runie/agent/AGENTS.md), then project hierarchy.
-    pub fn load() -> Vec<ContextFile> {
+    fn load_global_context() -> Vec<ContextFile> {
         let mut files = Vec::new();
-
-        // 1. Load from ~/.runie/agent/AGENTS.md (global user rules)
         if let Some(home) = dirs::home_dir() {
             let global = home.join(".runie/agent/AGENTS.md");
             if global.exists() {
                 files.push(ContextFile::load(&global));
             }
         }
+        files
+    }
 
-        // 2. Load from parent directories up to git root (project rules)
+    fn load_project_context() -> Vec<ContextFile> {
+        let mut files = Vec::new();
         if let Ok(cwd) = std::env::current_dir() {
             let git_root = find_git_root(&cwd);
             let mut current = cwd.clone();
 
             loop {
-                // Check for AGENTS.md
                 let agents_md = current.join("AGENTS.md");
                 if agents_md.exists() {
                     files.push(ContextFile::load(&agents_md));
                 }
-
-                // Check for CLAUDE.md (alternative naming)
                 let claude_md = current.join("CLAUDE.md");
                 if claude_md.exists() {
                     files.push(ContextFile::load(&claude_md));
                 }
-
-                // Stop if we reached git root
                 if Some(&current) == git_root.as_ref() {
                     break;
                 }
-
-                // Move to parent directory
                 if !current.pop() {
                     break;
                 }
             }
         }
+        files
+    }
 
+    /// Load all AGENTS.md context files from standard locations.
+    /// Order: global (~/.runie/agent/AGENTS.md), then project hierarchy.
+    pub fn load() -> Vec<ContextFile> {
+        let mut files = Self::load_global_context();
+        files.extend(Self::load_project_context());
         files
     }
 

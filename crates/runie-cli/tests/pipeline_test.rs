@@ -94,62 +94,63 @@ fn test_keyboard_event_state_update() {
     assert_eq!(state.textarea.lines()[0], "abc", "Multiple chars should accumulate");
 }
 
+fn test_textarea_key_updates_state() {
+    let mut state = AppState::default();
+    run_update(&mut state, Msg::TextareaKey(char_key('x')));
+    assert_eq!(state.textarea.lines()[0], "x", "TextareaKey should add character");
+}
+
+fn test_insert_newline() {
+    let mut state = AppState::default();
+    run_update(&mut state, Msg::TextareaKey(char_key('x')));
+    run_update(&mut state, Msg::InsertNewline);
+    assert_eq!(state.textarea.lines().len(), 2, "InsertNewline should add new line");
+    assert_eq!(state.textarea.lines()[0], "x", "First line should have 'x'");
+    assert_eq!(state.textarea.lines()[1], "", "Second line should be empty");
+}
+
+fn test_backspace() {
+    let mut state = AppState::default();
+    run_update(&mut state, Msg::TextareaKey(char_key('a')));
+    run_update(&mut state, Msg::TextareaKey(char_key('b')));
+    run_update(&mut state, Msg::TextareaKey(special_key(KeyCode::Backspace)));
+    assert_eq!(state.textarea.lines()[0], "a", "Backspace should remove last char");
+}
+
+fn test_toggle_sidebar() {
+    let mut state = AppState::default();
+    assert!(!state.show_sidebar, "Initial sidebar should be hidden");
+    run_update(&mut state, Msg::ToggleSidebar);
+    assert!(state.show_sidebar, "ToggleSidebar should show sidebar");
+}
+
+fn test_submit_with_content() {
+    let mut state = AppState::default();
+    state.current_model = Some("gpt-4".to_string());
+    run_update(&mut state, Msg::TextareaKey(char_key('h')));
+    run_update(&mut state, Msg::TextareaKey(char_key('i')));
+    let msg_count_before = state.messages.len();
+    let cmds = run_update(&mut state, Msg::Submit);
+    assert!(!cmds.is_empty(), "Submit with content should produce commands");
+    assert_eq!(state.messages.len(), msg_count_before + 1, "Submit should add user message");
+}
+
+fn test_submit_without_content() {
+    let mut state = AppState::default();
+    let cmds = run_update(&mut state, Msg::Submit);
+    assert!(cmds.is_empty(), "Submit without content should produce no commands");
+    assert_eq!(state.messages.len(), 0, "Submit without content should not add message");
+}
+
 /// Test all update paths update state correctly
 #[test]
 fn test_all_update_paths_update_state() {
-    // TextareaKey (replaces old InsertChar)
-    {
-        let mut state = AppState::default();
-        run_update(&mut state, Msg::TextareaKey(char_key('x')));
-        assert_eq!(state.textarea.lines()[0], "x", "TextareaKey should add character");
-    }
-
-    // InsertNewline
-    {
-        let mut state = AppState::default();
-        run_update(&mut state, Msg::TextareaKey(char_key('x')));
-        run_update(&mut state, Msg::InsertNewline);
-        assert_eq!(state.textarea.lines().len(), 2, "InsertNewline should add new line");
-        assert_eq!(state.textarea.lines()[0], "x", "First line should have 'x'");
-        assert_eq!(state.textarea.lines()[1], "", "Second line should be empty");
-    }
-
-    // Backspace via TextareaKey
-    {
-        let mut state = AppState::default();
-        run_update(&mut state, Msg::TextareaKey(char_key('a')));
-        run_update(&mut state, Msg::TextareaKey(char_key('b')));
-        run_update(&mut state, Msg::TextareaKey(special_key(KeyCode::Backspace)));
-        assert_eq!(state.textarea.lines()[0], "a", "Backspace should remove last char");
-    }
-
-    // ToggleSidebar
-    {
-        let mut state = AppState::default();
-        assert!(!state.show_sidebar, "Initial sidebar should be hidden");
-        run_update(&mut state, Msg::ToggleSidebar);
-        assert!(state.show_sidebar, "ToggleSidebar should show sidebar");
-    }
-
-    // Submit with content creates user message
-    {
-        let mut state = AppState::default();
-        state.current_model = Some("gpt-4".to_string()); // P0-2 FIX: Set model for submit tests
-        run_update(&mut state, Msg::TextareaKey(char_key('h')));
-        run_update(&mut state, Msg::TextareaKey(char_key('i')));
-        let msg_count_before = state.messages.len();
-        let cmds = run_update(&mut state, Msg::Submit);
-        assert!(!cmds.is_empty(), "Submit with content should produce commands");
-        assert_eq!(state.messages.len(), msg_count_before + 1, "Submit should add user message");
-    }
-
-    // Submit without content produces no commands
-    {
-        let mut state = AppState::default();
-        let cmds = run_update(&mut state, Msg::Submit);
-        assert!(cmds.is_empty(), "Submit without content should produce no commands");
-        assert_eq!(state.messages.len(), 0, "Submit without content should not add message");
-    }
+    test_textarea_key_updates_state();
+    test_insert_newline();
+    test_backspace();
+    test_toggle_sidebar();
+    test_submit_with_content();
+    test_submit_without_content();
 }
 
 /// Test that free function does NOT set dirty (documents the bug)
@@ -276,49 +277,60 @@ fn test_full_pipeline_hotkeys() {
     assert!(!tui.state.running, "Ctrl+Q should set running=false");
 }
 
+fn test_msg_sets_dirty(tui: &mut MockTui, msg: Msg, name: &str) {
+    tui.dirty = false;
+    tui.update(msg);
+    assert!(tui.dirty, "{} should set dirty=true", name);
+}
+
+fn test_input_mutations(tui: &mut MockTui) {
+    test_msg_sets_dirty(tui, Msg::TextareaKey(char_key('x')), "TextareaKey");
+    test_msg_sets_dirty(tui, Msg::TextareaKey(special_key(KeyCode::Backspace)), "Backspace");
+    test_msg_sets_dirty(tui, Msg::InsertNewline, "InsertNewline");
+}
+
+fn test_ui_mutations(tui: &mut MockTui) {
+    test_msg_sets_dirty(tui, Msg::ToggleSidebar, "ToggleSidebar");
+    test_msg_sets_dirty(tui, Msg::OpenCommandPalette, "OpenCommandPalette");
+    test_msg_sets_dirty(tui, Msg::CloseModal, "CloseModal");
+}
+
+fn test_command_palette_mutations(tui: &mut MockTui) {
+    tui.update(Msg::OpenCommandPalette);
+    test_msg_sets_dirty(tui, Msg::CommandPaletteFilter('t'), "CommandPaletteFilter");
+    test_msg_sets_dirty(tui, Msg::CommandPaletteBackspace, "CommandPaletteBackspace");
+    test_msg_sets_dirty(tui, Msg::CommandPaletteUp, "CommandPaletteUp");
+    test_msg_sets_dirty(tui, Msg::CommandPaletteDown, "CommandPaletteDown");
+    test_msg_sets_dirty(tui, Msg::CommandPaletteConfirm, "CommandPaletteConfirm");
+}
+
+fn test_scroll_mutations(tui: &mut MockTui) {
+    test_msg_sets_dirty(tui, Msg::ScrollUp, "ScrollUp");
+    test_msg_sets_dirty(tui, Msg::ScrollDown, "ScrollDown");
+    test_msg_sets_dirty(tui, Msg::ScrollPageUp, "ScrollPageUp");
+    test_msg_sets_dirty(tui, Msg::ScrollPageDown, "ScrollPageDown");
+}
+
+fn test_app_control_mutations(tui: &mut MockTui) {
+    test_msg_sets_dirty(tui, Msg::Submit, "Submit");
+    test_msg_sets_dirty(tui, Msg::Quit, "Quit");
+}
+
+fn test_animation_mutations(tui: &mut MockTui) {
+    test_msg_sets_dirty(tui, Msg::Tick, "Tick");
+    test_msg_sets_dirty(tui, Msg::CursorBlink, "CursorBlink");
+}
+
 /// Test: All Msg variants that modify state should set dirty=true
 #[test]
 fn test_all_update_paths_set_dirty() {
     let mut tui = MockTui::new();
-
-    // Helper to test a msg sets dirty
-    let test_msg = |tui: &mut MockTui, msg: Msg, name: &str| {
-        tui.dirty = false;
-        tui.update(msg);
-        assert!(tui.dirty, "{} should set dirty=true", name);
-    };
-
-    // Input mutations (via TextareaKey — textarea handles all keyboard input)
-    test_msg(&mut tui, Msg::TextareaKey(char_key('x')), "TextareaKey");
-    test_msg(&mut tui, Msg::TextareaKey(special_key(KeyCode::Backspace)), "Backspace");
-    test_msg(&mut tui, Msg::InsertNewline, "InsertNewline");
-
-    // UI mutations
-    test_msg(&mut tui, Msg::ToggleSidebar, "ToggleSidebar");
-    test_msg(&mut tui, Msg::OpenCommandPalette, "OpenCommandPalette");
-    test_msg(&mut tui, Msg::CloseModal, "CloseModal");
-
-    // Command palette
-    tui.update(Msg::OpenCommandPalette);
-    test_msg(&mut tui, Msg::CommandPaletteFilter('t'), "CommandPaletteFilter");
-    test_msg(&mut tui, Msg::CommandPaletteBackspace, "CommandPaletteBackspace");
-    test_msg(&mut tui, Msg::CommandPaletteUp, "CommandPaletteUp");
-    test_msg(&mut tui, Msg::CommandPaletteDown, "CommandPaletteDown");
-    test_msg(&mut tui, Msg::CommandPaletteConfirm, "CommandPaletteConfirm");
-
-    // Scroll
-    test_msg(&mut tui, Msg::ScrollUp, "ScrollUp");
-    test_msg(&mut tui, Msg::ScrollDown, "ScrollDown");
-    test_msg(&mut tui, Msg::ScrollPageUp, "ScrollPageUp");
-    test_msg(&mut tui, Msg::ScrollPageDown, "ScrollPageDown");
-
-    // App control
-    test_msg(&mut tui, Msg::Submit, "Submit");
-    test_msg(&mut tui, Msg::Quit, "Quit");
-
-    // Animation (also sets dirty)
-    test_msg(&mut tui, Msg::Tick, "Tick");
-    test_msg(&mut tui, Msg::CursorBlink, "CursorBlink");
+    test_input_mutations(&mut tui);
+    test_ui_mutations(&mut tui);
+    test_command_palette_mutations(&mut tui);
+    test_scroll_mutations(&mut tui);
+    test_app_control_mutations(&mut tui);
+    test_animation_mutations(&mut tui);
 }
 
 /// Test: free function does NOT set dirty
@@ -387,42 +399,27 @@ fn test_textarea_state_consistency() {
     assert_eq!(tui.content(), "abcde\nxyz", "Full content should be multiline");
 }
 
-/// Test: Hotkey behavior depends on current mode
-#[test]
-fn test_hotkey_priority() {
-    let mut tui = MockTui::new();
-
-    // In Chat mode: Ctrl+C should quit (not cancel) when textarea is empty
+fn test_ctrl_c_quits_in_chat_mode(tui: &mut MockTui) {
     assert_eq!(tui.state.mode, TuiMode::Chat);
     assert!(tui.state.running, "Should be running initially");
     if let Some(msg) = tui.simulate_key(KeyCode::Char('c'), true) {
         tui.update(msg);
     }
-    assert!(
-        !tui.state.running,
-        "Ctrl+C should quit in Chat mode when input is empty"
-    );
+    assert!(!tui.state.running, "Ctrl+C should quit in Chat mode when input is empty");
+}
 
-    // Reset
-    tui.state.running = true;
-
-    // Enter CommandPalette mode
+fn test_esc_closes_palette(tui: &mut MockTui) {
     tui.update(Msg::OpenCommandPalette);
     assert_eq!(tui.state.mode, TuiMode::CommandPalette);
 
-    // In CommandPalette mode: Ctrl+C should do nothing (passes through to terminal)
-    // Ctrl+C in palette mode maps to key_to_palette_msg which returns None
-    // because ctrl+C is only handled in ctrl_chat_key for Chat mode
-
-    // Esc should close palette
     if let Some(msg) = tui.simulate_key(KeyCode::Esc, false) {
         tui.update(msg);
     }
     assert_eq!(tui.state.mode, TuiMode::Chat, "Esc should close palette");
     assert!(tui.state.running, "Should still be running after Esc");
+}
 
-    // Ctrl+C when textarea has content: clears input instead of quitting
-    // P1-REMAINING-1 FIX: Double-tap required to clear text
+fn test_double_tap_ctrl_c_clears_input(tui: &mut MockTui) {
     tui.state.running = true;
     tui.update(Msg::TextareaKey(char_key('h')));
     tui.update(Msg::TextareaKey(char_key('i')));
@@ -438,6 +435,19 @@ fn test_hotkey_priority() {
         tui.update(msg);
     }
     assert_eq!(tui.content(), "", "Second Ctrl+C with content should clear input");
+}
+
+/// Test: Hotkey behavior depends on current mode
+#[test]
+fn test_hotkey_priority() {
+    let mut tui = MockTui::new();
+    test_ctrl_c_quits_in_chat_mode(&mut tui);
+
+    let mut tui2 = MockTui::new();
+    test_esc_closes_palette(&mut tui2);
+
+    let mut tui3 = MockTui::new();
+    test_double_tap_ctrl_c_clears_input(&mut tui3);
 }
 
 /// Test that mock mode skips onboarding

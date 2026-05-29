@@ -36,81 +36,66 @@ impl Pipe<&AppState> for ViewModelPipe {
     type Output = ViewModels;
 
     fn pipe(&self, state: &AppState) -> ViewModels {
-        // TopBar - use TopBarBuilder
-        let top_bar = TopBarBuilder::new()
-            .repo(&state.top_bar.repo)
-            .branch(&state.top_bar.branch)
-            .path(&state.top_bar.path)
-            .model(
-                &state.top_bar.model,
-                state.top_bar.context_window.unwrap_or(128_000),
-            )
-            .tokens(state.top_bar.estimated_tokens.unwrap_or(0))
-            .build();
-
-        // MessageList - use FeedBuilder with WrapCache
-        let wrap_cache = WrapCache::new();
-        let message_list = FeedBuilder::new()
-            .messages(&state.messages)
-            .scroll_offset(state.scroll.feed_offset)
-            .agent_running(state.agent_running)
-            .animation(state.animation.clone())
-            .wrap_cache(wrap_cache)
-            .build();
-
-        // InputBar - use InputBuilder
-        let input_text = state.textarea.lines().join("\n");
-        let input_bar = InputBuilder::new()
-            .text(&input_text)
-            .prompt("❯ ")
-            .info(&state.input_right_info)
-            .build();
-
-        // StatusBar - use StatusBarBuilder
-        let status_bar = StatusBarBuilder::new()
-            .mode(state.mode.clone())
-            .current_model(state.current_model.as_deref().unwrap_or("—"))
-            .session_token_usage(state.session_token_usage.clone())
-            .status_header(state.status_header.as_deref().unwrap_or(""))
-            .status_details(state.status_details.as_deref().unwrap_or(""))
-            .status_start_time(state.status_start_time.unwrap_or_else(std::time::Instant::now))
-            .build();
-
-        // AgentList - use AgentListBuilder
-        let agent_list = build_agent_list(state);
-
-        // CommandPalette - use CommandPaletteBuilder
-        let command_palette = build_command_palette(state);
-
-        // PermissionModal - use PermissionBuilder
-        let permission_modal = build_permission_modal(state);
-
-        // Overlay - inline (no builder exists)
-        let overlay = build_overlay(state);
-
-        // SessionTree - inline (no builder exists)
-        let session_tree = build_session_tree(state);
-
-        // DiffViewer - inline (no builder exists)
-        let diff_viewer = build_diff_viewer(state);
-
-        // Onboarding - use OnboardingBuilder
-        let onboarding = build_onboarding(state);
-
         ViewModels {
-            top_bar,
-            message_list,
-            input_bar,
-            status_bar,
-            agent_list,
-            command_palette,
-            permission_modal,
-            overlay,
-            session_tree,
-            diff_viewer,
-            onboarding,
+            top_bar: build_top_bar(state),
+            message_list: build_message_list(state),
+            input_bar: build_input_bar(state),
+            status_bar: build_status_bar(state),
+            agent_list: build_agent_list(state),
+            command_palette: build_command_palette(state),
+            permission_modal: build_permission_modal(state),
+            overlay: build_overlay(state),
+            session_tree: build_session_tree(state),
+            diff_viewer: build_diff_viewer(state),
+            onboarding: build_onboarding(state),
         }
     }
+}
+
+// ─── View model builders ────────────────────────────────────────────────────────
+
+fn build_top_bar(state: &AppState) -> impl crate::components::top_bar::TopBar {
+    TopBarBuilder::new()
+        .repo(&state.top_bar.repo)
+        .branch(&state.top_bar.branch)
+        .path(&state.top_bar.path)
+        .model(
+            &state.top_bar.model,
+            state.top_bar.context_window.unwrap_or(128_000),
+        )
+        .tokens(state.top_bar.estimated_tokens.unwrap_or(0))
+        .build()
+}
+
+fn build_message_list(state: &AppState) -> impl crate::components::message_list::MessageList {
+    let wrap_cache = WrapCache::new();
+    FeedBuilder::new()
+        .messages(&state.messages)
+        .scroll_offset(state.scroll.feed_offset)
+        .agent_running(state.agent_running)
+        .animation(state.animation.clone())
+        .wrap_cache(wrap_cache)
+        .build()
+}
+
+fn build_input_bar(state: &AppState) -> impl crate::components::input_bar::InputBar {
+    let input_text = state.textarea.lines().join("\n");
+    InputBuilder::new()
+        .text(&input_text)
+        .prompt("❯ ")
+        .info(&state.input_right_info)
+        .build()
+}
+
+fn build_status_bar(state: &AppState) -> impl crate::components::status_bar::StatusBar {
+    StatusBarBuilder::new()
+        .mode(state.mode.clone())
+        .current_model(state.current_model.as_deref().unwrap_or("—"))
+        .session_token_usage(state.session_token_usage.clone())
+        .status_header(state.status_header.as_deref().unwrap_or(""))
+        .status_details(state.status_details.as_deref().unwrap_or(""))
+        .status_start_time(state.status_start_time.unwrap_or_else(std::time::Instant::now))
+        .build()
 }
 
 // ─── Inline builders for ViewModels without dedicated builders ─────────────────
@@ -200,23 +185,7 @@ fn build_diff_viewer(state: &AppState) -> Option<DiffViewerViewModel> {
 
 fn build_onboarding(state: &AppState) -> Option<OnboardingViewModel> {
     state.onboarding.as_ref().map(|o| {
-        let step = match o.step {
-            crate::components::onboarding::OnboardingStep::Welcome => {
-                crate::tui::view_models::OnboardingStep::Welcome
-            }
-            crate::components::onboarding::OnboardingStep::ProviderSelect => {
-                crate::tui::view_models::OnboardingStep::ProviderSelect
-            }
-            crate::components::onboarding::OnboardingStep::KeyInput => {
-                crate::tui::view_models::OnboardingStep::KeyInput
-            }
-            crate::components::onboarding::OnboardingStep::ModelSelect => {
-                crate::tui::view_models::OnboardingStep::ModelSelect
-            }
-            crate::components::onboarding::OnboardingStep::Complete => {
-                crate::tui::view_models::OnboardingStep::Complete
-            }
-        };
+        let step = convert_onboarding_step(o.step);
         OnboardingBuilder::new()
             .step(step)
             .selected_item(o.selected_item)
@@ -228,6 +197,18 @@ fn build_onboarding(state: &AppState) -> Option<OnboardingViewModel> {
             .error_message(o.error_message.as_deref().unwrap_or(""))
             .build()
     })
+}
+
+fn convert_onboarding_step(step: crate::components::onboarding::OnboardingStep) -> crate::tui::view_models::OnboardingStep {
+    use crate::components::onboarding::OnboardingStep as Src;
+    use crate::tui::view_models::OnboardingStep as Dst;
+    match step {
+        Src::Welcome => Dst::Welcome,
+        Src::ProviderSelect => Dst::ProviderSelect,
+        Src::KeyInput => Dst::KeyInput,
+        Src::ModelSelect => Dst::ModelSelect,
+        Src::Complete => Dst::Complete,
+    }
 }
 
 fn extract_plan_steps(messages: &[crate::components::MessageItem]) -> Vec<(usize, String, PlanStatus)> {
