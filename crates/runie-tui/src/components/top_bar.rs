@@ -371,7 +371,6 @@ mod tests {
         // which would be "0/128k " + gauge (battery cells + lightning bolt)
         let content = buf.content();
         let has_0 = content.iter().any(|c| c.symbol().contains("0"));
-        let has_128k = content.iter().any(|c| c.symbol().contains("128k") || c.symbol().contains("k"));
         let has_bolt = content.iter().any(|c| c.symbol() == "○");
         assert!(has_0, "Expected '0' in buffer for zero tokens");
         assert!(has_bolt, "Expected gauge character in buffer");

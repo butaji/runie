@@ -81,9 +81,9 @@ fn test_arrow_keys_pass_to_textarea() {
     let msg = simulate_key(KeyCode::Right, KeyModifiers::NONE, TuiMode::Chat);
     assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Right should produce TextareaKey");
     let msg = simulate_key(KeyCode::Up, KeyModifiers::NONE, TuiMode::Chat);
-    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Up should produce TextareaKey");
+    assert!(matches!(msg, Some(Msg::HistoryUp)), "Up should produce HistoryUp");
     let msg = simulate_key(KeyCode::Down, KeyModifiers::NONE, TuiMode::Chat);
-    assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Down should produce TextareaKey");
+    assert!(matches!(msg, Some(Msg::HistoryDown)), "Down should produce HistoryDown");
 }
 
 #[test]

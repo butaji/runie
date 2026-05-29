@@ -859,7 +859,7 @@ mod ui_flows {
     #[test]
     fn test_e2e_top_bar_shows_model() {
         let mut state = make_state_with_model("anthropic/claude-3-opus");
-        let mut palette = CommandPalette::new();
+        let _palette = CommandPalette::new();
 
         // Top bar should show model
         assert_eq!(state.top_bar.model, "anthropic/claude-3-opus");

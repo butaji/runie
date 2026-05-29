@@ -1,6 +1,8 @@
 //! Comprehensive event logger for Runie.
 //! Writes structured event logs to the dev-folder logs directory.
 
+#![allow(dead_code)]
+
 use chrono::Local;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
