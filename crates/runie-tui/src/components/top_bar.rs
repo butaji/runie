@@ -68,19 +68,19 @@ fn calculate_pct(vm: &TopBarViewModel) -> f32 {
 
 fn draw_gauge(gauge_area: Rect, pct: f32, buf: &mut Buffer, text_dim: ratatui::style::Color, text_secondary: ratatui::style::Color, _bg_panel: ratatui::style::Color) {
     let ch = if pct >= 100.0 {
-        '✓'
+        '■'  // solid square = full/overflow
     } else if pct >= 95.0 {
-        '✦'
+        '◉'  // full circle with dot = almost full
     } else if pct >= 75.0 {
-        '●'
+        '●'  // solid circle
     } else if pct >= 50.0 {
-        '◕'
+        '◕'  // half-full
     } else if pct >= 25.0 {
-        '◐'
+        '◐'  // quarter-full
     } else if pct > 0.0 {
-        '◔'
+        '◔'  // slight fill
     } else {
-        '○'
+        '○'  // empty circle
     };
 
     // Center the gauge char in the gauge area
@@ -109,7 +109,7 @@ pub fn render_top_bar(vm: &TopBarViewModel, area: Rect, buf: &mut Buffer, colors
 
     let pct = calculate_pct(vm);
     let window_str = format_context_window(vm.context_window);
-    let text = format!("{}/{} ", vm.estimated_tokens, window_str);
+    let text = format!("{}/{} {:.0}%", vm.estimated_tokens, window_str, pct);
     let text_len = text.len() as u16;
     let gauge_width = 3u16; // single char gauge centered
     let right_x = area.x + area.width.saturating_sub(text_len + gauge_width + 1);
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn test_render_top_bar_text_appears() {
         // 40/120k case: estimated_tokens=40, context_window=120000
-        // Compact gauge shows battery cells + lightning bolt
+        // Text: "40/120k 0% " + gauge character
         let vm = TopBarViewModel {
             repo: "myrepo".to_string(),
             branch: "feature".to_string(),
@@ -283,16 +283,16 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // Check that "40/120k" text and gauge elements appear in buffer
+        // Check that text appears in buffer (digits, k, %)
         let content = buf.content();
         let has_4 = content.iter().any(|c| c.symbol() == "4");
         let has_0 = content.iter().any(|c| c.symbol() == "0");
         let has_k = content.iter().any(|c| c.symbol() == "k");
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
+        let has_percent = content.iter().any(|c| c.symbol() == "%");
         assert!(has_4, "Expected '4' in buffer");
         assert!(has_0, "Expected '0' in buffer");
         assert!(has_k, "Expected 'k' in buffer");
-        assert!(has_bolt, "Expected lightning bolt in buffer");
+        assert!(has_percent, "Expected '%' in buffer");
     }
 
     #[test]
@@ -328,7 +328,6 @@ mod tests {
 
     #[test]
     fn test_render_top_bar_gauge_rendered() {
-        // Use a case that gives a visible percentage
         // 50000 / 100000 = 50%
         let vm = TopBarViewModel {
             repo: String::new(),
@@ -345,21 +344,10 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // The gauge is 5 characters wide: 4 battery cells + 1 lightning bolt
         let content = buf.content();
-
-        // The default cell symbol is " " (space). After rendering gauge, some cells
-        // should have different symbols (battery cells or lightning bolt)
-        let has_non_default = content.iter().any(|c| {
-            c.symbol() != " " || c.fg != Color::Reset || c.bg != Color::Reset
-        });
-
-        // Gauge should render battery cells and lightning bolt
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
-        let has_battery = content.iter().any(|c| c.symbol() == "▰" || c.symbol() == "▱");
-        assert!(has_bolt, "Expected lightning bolt in buffer");
-        assert!(has_battery, "Expected battery cells in buffer");
-        assert!(has_non_default, "Expected some non-default cells in buffer after gauge render");
+        // Text with percentage should appear
+        let has_percent = content.iter().any(|c| c.symbol() == "%");
+        assert!(has_percent, "Expected '%' in buffer");
     }
 
     #[test]
@@ -384,9 +372,9 @@ mod tests {
         let content = buf.content();
         let has_0 = content.iter().any(|c| c.symbol().contains("0"));
         let has_128k = content.iter().any(|c| c.symbol().contains("128k") || c.symbol().contains("k"));
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
+        let has_bolt = content.iter().any(|c| c.symbol() == "○");
         assert!(has_0, "Expected '0' in buffer for zero tokens");
-        assert!(has_bolt, "Expected lightning bolt in buffer");
+        assert!(has_bolt, "Expected gauge character in buffer");
     }
 
     // ─── format_context_window boundary tests ───────────────────────────────────
@@ -506,9 +494,8 @@ mod tests {
 
     #[test]
     fn test_render_top_bar_narrow_terminal() {
-        // Terminal width < 19 (minimum for "0/128k 0%" + gauge)
-        // text = "0/128k 0%" = 11 chars, gauge = 6, total = 18
-        // Need right_x > x check to pass, so width=18 should fail the check
+        // Terminal width = 18, text = "0/128k 0% " (11 chars) + gauge (3 chars) = 15 total
+        // Since 15 < 18, right side renders with percentage
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -519,25 +506,22 @@ mod tests {
         };
 
         let colors = make_test_colors();
-        let area = Rect::new(0, 0, 18, 1); // Exactly at boundary, may or may not render
+        let area = Rect::new(0, 0, 18, 1);
         let mut buf = Buffer::empty(area);
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // With very narrow terminal, right side should be omitted
-        // Check that left side still renders
+        // Right side renders with percentage in narrow terminal
         let content = buf.content();
-        // The left part with empty repo/branch/path just has a space
-        // Verify no percent sign appears (right side was skipped)
         let has_percent = content.iter().any(|c| c.symbol().contains("%"));
-        assert!(!has_percent, "Expected no '%' in buffer for narrow terminal");
+        assert!(has_percent, "Expected '%' in buffer - right side renders in narrow terminal");
     }
 
     // ─── render_top_bar gauge boundary tests ───────────────────────────────────
 
     #[test]
     fn test_render_top_bar_gauge_at_0_percent() {
-        // 0% gauge - empty gauge rendered with battery cells + lightning bolt
+        // 0% gauge - gauge character ○
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -553,17 +537,15 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // Right side should render: "0/100k " + gauge (empty battery cells + bolt)
         let content = buf.content();
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
-        let has_empty_battery = content.iter().any(|c| c.symbol() == "▱");
-        assert!(has_bolt, "Expected lightning bolt in buffer for 0% gauge");
-        assert!(has_empty_battery, "Expected empty battery cells for 0% gauge");
+        // Gauge character at 0% is ○
+        let has_gauge = content.iter().any(|c| c.symbol() == "○");
+        assert!(has_gauge, "Expected gauge character in buffer for 0% gauge");
     }
 
     #[test]
     fn test_render_top_bar_gauge_at_100_percent() {
-        // 100% gauge - full gauge rendered with filled battery cells + lightning bolt
+        // 100% gauge - gauge character ■
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -579,23 +561,18 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // Right side should render: "100000/100k " + gauge (filled battery cells + bolt)
         let content = buf.content();
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
-        let has_filled_battery = content.iter().any(|c| c.symbol() == "▰");
-        assert!(has_bolt, "Expected lightning bolt in buffer for 100% gauge");
-        assert!(has_filled_battery, "Expected filled battery cells for 100% gauge");
-        // Check that "100000" appears (token count) - look for individual digits
-        let has_100 = content.iter().any(|c| c.symbol() == "1" || c.symbol() == "0");
-        assert!(has_100, "Expected '1' or '0' in buffer for 100% gauge");
+        // Gauge character at 100% is ■
+        let has_gauge = content.iter().any(|c| c.symbol() == "■");
+        assert!(has_gauge, "Expected gauge character in buffer for 100% gauge");
     }
 
     // ─── duplicate percentage + gauge visibility bug regression tests ─────────
 
     #[test]
     fn test_no_duplicate_percentage() {
-        // Compact gauge has no percentage label - just battery cells and lightning bolt
-        // "%" should not appear in the buffer at all
+        // Text format includes percentage: "{}/{} {:.0}% "
+        // "%" should appear exactly once in the buffer
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -614,15 +591,15 @@ mod tests {
         let content = buf.content();
         let percent_count = content.iter().filter(|c| c.symbol().contains("%")).count();
         assert_eq!(
-            percent_count, 0,
-            "Expected no '%' in buffer with compact gauge, found {}",
+            percent_count, 1,
+            "Expected exactly one '%' in buffer, found {}",
             percent_count
         );
     }
 
     #[test]
     fn test_gauge_label_shows_pct() {
-        // Gauge area must contain battery cells and lightning bolt
+        // Verify text with percentage renders at 50%
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -638,40 +615,17 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // text_len = "50000/100k " = 13 chars
-        // gauge_area starts at right_x + 13, width 5
-        let text_len = 13u16;
-        let gauge_width = 5u16;
-        let right_x = area.x + area.width.saturating_sub(text_len + gauge_width + 1);
-
         let content = buf.content();
-        let mut gauge_has_bolt = false;
-        let mut gauge_has_battery_cell = false;
-        for cx in right_x + text_len..right_x + text_len + gauge_width {
-            if cx < area.width {
-                let idx = (area.y * area.width + cx) as usize;
-                if idx < content.len() {
-                    let cell = &content[idx];
-                    if cell.symbol() == "⚡" {
-                        gauge_has_bolt = true;
-                    }
-                    if cell.symbol() == "▰" || cell.symbol() == "▱" {
-                        gauge_has_battery_cell = true;
-                    }
-                }
-            }
-        }
-        assert!(gauge_has_bolt, "Gauge area should contain lightning bolt");
-        assert!(gauge_has_battery_cell, "Gauge area should contain battery cells");
+        // Check text with percentage appears
+        let has_5 = content.iter().any(|c| c.symbol() == "5");
+        let has_percent = content.iter().any(|c| c.symbol() == "%");
+        assert!(has_5, "Expected '5' in buffer");
+        assert!(has_percent, "Expected '%' in buffer for 50%");
     }
 
     #[test]
     fn test_gauge_width_sufficient() {
-        // Compact gauge uses 5 chars: 4 battery cells + 1 lightning bolt
-        let gauge_width = 5u16;
-        assert_eq!(gauge_width, 5, "Gauge width should be 5 for compact battery gauge");
-
-        // Verify it renders without panic/crash at 50%
+        // Verify render doesn't panic at 50%
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -685,19 +639,19 @@ mod tests {
         let area = Rect::new(0, 0, 80, 1);
         let mut buf = Buffer::empty(area);
 
+        // Should not panic
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // Gauge should render battery cells and lightning bolt
+        // Check text appears
         let content = buf.content();
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
-        assert!(has_bolt, "Gauge should render lightning bolt");
+        let has_percent = content.iter().any(|c| c.symbol() == "%");
+        assert!(has_percent, "Text with percentage should appear");
     }
 
     #[test]
     fn test_text_no_pct_suffix() {
-        // Bug: text showing "tokens/window X%" instead of just "tokens/window "
-        // Text format: "{estimated_tokens}/{window_str} " (NO percentage suffix)
-        // With compact gauge, no percentage appears anywhere
+        // Text format: "{estimated_tokens}/{window_str} {:.0}% "
+        // The text now includes percentage suffix
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -713,19 +667,18 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // The text "50000/100k " should appear WITHOUT a trailing percentage
-        // Compact gauge has no percentage, so count should be 0
+        // The text "50000/100k 50% " includes percentage suffix
         let content = buf.content();
         let percent_count = content.iter().filter(|c| c.symbol().contains("%")).count();
         assert_eq!(
-            percent_count, 0,
-            "Text should NOT contain percentage - compact gauge has none"
+            percent_count, 1,
+            "Text should contain percentage suffix"
         );
     }
 
     #[test]
     fn test_zero_percent_visible() {
-        // At 0%, gauge should show empty battery cells and lightning bolt
+        // At 0%, gauge should show gauge character ○
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -742,19 +695,16 @@ mod tests {
         render_top_bar(&vm, area, &mut buf, &colors);
 
         let content = buf.content();
-
-        // Must have a cell with "0" and lightning bolt
+        // Gauge character at 0% is ○
         let has_zero = content.iter().any(|c| c.symbol() == "0");
-        let has_bolt = content.iter().any(|c| c.symbol() == "⚡");
-        let has_empty_battery = content.iter().any(|c| c.symbol() == "▱");
-        assert!(has_zero, "At 0%, gauge should show '0' digit for tokens");
-        assert!(has_bolt, "At 0%, gauge should show lightning bolt");
-        assert!(has_empty_battery, "At 0%, gauge should show empty battery cells");
+        let has_gauge = content.iter().any(|c| c.symbol() == "○");
+        assert!(has_zero, "At 0%, should show '0' digit for tokens");
+        assert!(has_gauge, "At 0%, gauge should show gauge character");
     }
 
     #[test]
     fn test_gauge_visible_at_zero_percent() {
-        // At 0% ratio, gauge should still show empty battery cells and lightning bolt
+        // At 0% ratio, gauge should show gauge character ○
         let vm = TopBarViewModel {
             repo: String::new(),
             branch: String::new(),
@@ -770,38 +720,9 @@ mod tests {
 
         render_top_bar(&vm, area, &mut buf, &colors);
 
-        // Calculate gauge area position
-        let text = "0/100k ";
-        let text_len = text.len() as u16;
-        let gauge_width = 5u16;
-        let right_x = area.x + area.width.saturating_sub(text_len + gauge_width + 1);
-        let gauge_area = Rect::new(right_x + text_len, area.y, gauge_width, 1);
-
-        // Check gauge area cells have battery cells and lightning bolt
         let content = buf.content();
-        let mut gauge_has_bolt = false;
-        let mut gauge_has_empty_battery = false;
-        for cx in gauge_area.x..gauge_area.x + gauge_area.width {
-            if cx < area.width {
-                let idx = (area.y * area.width + cx) as usize;
-                if idx < content.len() {
-                    let cell = &content[idx];
-                    if cell.symbol() == "⚡" {
-                        gauge_has_bolt = true;
-                    }
-                    if cell.symbol() == "▱" {
-                        gauge_has_empty_battery = true;
-                    }
-                }
-            }
-        }
-        assert!(
-            gauge_has_bolt,
-            "Gauge area should have lightning bolt at 0%"
-        );
-        assert!(
-            gauge_has_empty_battery,
-            "Gauge area should have empty battery cells at 0%"
-        );
+        // Gauge character at 0% is ○
+        let has_gauge = content.iter().any(|c| c.symbol() == "○");
+        assert!(has_gauge, "Gauge area should have gauge character at 0%");
     }
 }
