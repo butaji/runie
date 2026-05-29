@@ -68,14 +68,27 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
     // Reset history navigation state
     state.input_history_index = None;
     state.input_draft.clear();
-    // BUG-10 FIX: Set agent_running immediately to prevent race condition
-    // where rapid submissions could spawn multiple agents
+    // FIX: If agent was running, cancel it and allow new submit
+    // This prevents message dropping when user submits before AgentEnd is processed
     if state.agent_running {
-        state.input_right_info = "Agent running (blocked)... Ctrl+C to stop".to_string();
-        return vec![];
+        state.agent_running = false;
+        state.is_thinking = false;
+        state.thinking_start = None;
+        state.thinking_duration = None;
+        state.status_header = None;
+        state.status_details = None;
+        state.status_start_time = None;
+        // Remove empty placeholder from previous turn if exists
+        if let Some(MessageItem::Assistant { text, .. }) = state.messages.last() {
+            if text.is_empty() {
+                state.messages.pop();
+            }
+        }
     }
+    // Always set agent_running = true for the NEW agent we're about to spawn
     state.agent_running = true;
     // Reset scroll state - user wants to see new output
+    state.scroll.feed_offset = 0;
     state.scroll.user_scrolled_up = false;
     // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
     state.agent_start_time = Some(Instant::now());
@@ -87,6 +100,14 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
     }
     let model_missing = state.current_model.as_deref().map_or(true, |s| s.is_empty()) && state.onboarding.is_none();
     state.messages.push(MessageItem::User { text: text.clone(), model: Some("You".to_string()), timestamp: None });
+    // Add placeholder assistant message immediately so user sees "Thinking..." indicator
+    state.messages.push(MessageItem::Assistant {
+        text: String::new(),
+        model: state.current_model.clone(),
+        timestamp: None,
+    });
+    state.is_thinking = true;
+    state.thinking_start = Some(Instant::now());
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
     if model_missing {

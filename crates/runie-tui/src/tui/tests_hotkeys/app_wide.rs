@@ -51,7 +51,8 @@ fn test_enter_submits_in_chat() {
     let mut palette = CommandPalette::new();
     let cmds = update(&mut state, &mut palette, Msg::Submit);
     assert!(!cmds.is_empty(), "Submit with input should produce commands");
-    assert_eq!(state.messages.len(), 1, "One message should be added");
+    // User message + placeholder assistant
+    assert_eq!(state.messages.len(), 2, "User + placeholder assistant should be added");
     assert!(state.textarea.is_empty(), "Input should be cleared");
 }
 

@@ -37,58 +37,18 @@ impl MessageList {
         buf: &mut Buffer,
         theme: &ThemeWrapper,
     ) {
+        let colors = extract_message_colors(theme);
         let mut wrap_cache = vm.wrap_cache.clone();
-        let mut row = 0u16;
-        let max_rows = area.height;
-
-        let margin_x = area.x + 2;
-        let text_x = area.x + 4;
-
-        let accent_primary: ratatui::style::Color = theme.color("accent.primary").into();
-        let text_secondary: ratatui::style::Color = theme.color("text.secondary").into();
-        let text_muted: ratatui::style::Color = theme.color("text.muted").into();
-        let text_dim: ratatui::style::Color = theme.color("text.dim").into();
-        let success: ratatui::style::Color = theme.color("success").into();
-        let error: ratatui::style::Color = theme.color("error").into();
-        let code_path: ratatui::style::Color = theme.color("code.path").into();
-
         let spinner = BRAILLE_FRAMES[vm.animation.braille_frame % 10];
         let rewind_spinner = REVERSE_BRAILLE_FRAMES[vm.animation.braille_frame % 10];
-        let total_messages = vm.messages.len();
-        let mut prev_msg_type: Option<&str> = None;
-
         let most_recent_spinner = render::find_most_recent_spinner_index(&vm.messages);
+        let mut row = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache, most_recent_spinner);
 
-        for (idx, msg) in vm.messages.iter().skip(vm.scroll_offset).enumerate() {
-            if row >= max_rows { break; }
-
-            let absolute_idx = vm.scroll_offset + idx;
-            let msg_type = render::get_msg_type(msg);
-
-            // Add spacing between different message types
-            if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) {
-                row += 1; // blank line between different types
-            }
-            prev_msg_type = Some(msg_type);
-
-            let show_cursor = render::should_show_cursor(&vm.animation, vm.agent_running, absolute_idx, total_messages, msg);
-            let show_spinner = most_recent_spinner == Some(absolute_idx);
-            let rendered = render::render_single_msg(
-                msg, area, row, margin_x, text_x, max_rows, buf, theme,
-                accent_primary, text_secondary, text_muted, text_dim,
-                success, error, code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-                &vm.animation, &mut wrap_cache, vm.agent_running,
-            );
-            row += rendered;
-        }
-
-        // Empty state: no messages and no active agent
         if vm.messages.is_empty() && !vm.agent_running {
-            render::render_empty_state(area, buf, text_muted, text_dim, text_x);
+            render::render_empty_state(area, buf, colors.text_muted, colors.text_dim, area.x + 4);
         }
     }
 
-    /// Update the last assistant message with new text (for streaming)
     pub fn update_last_assistant(&mut self, new_text: &str) {
         if let Some(last) = self.messages.last_mut() {
             if let MessageItem::Assistant { ref mut text, .. } = last {
@@ -97,13 +57,10 @@ impl MessageList {
         }
     }
 
-    /// Check if the last message is an Assistant message
     pub fn has_assistant_in_progress(&self) -> bool {
         matches!(self.messages.last(), Some(MessageItem::Assistant { .. }))
     }
 
-    /// Add or update assistant message. If last message is assistant, updates it.
-    /// Otherwise, adds a new assistant message.
     pub fn add_or_update_assistant(&mut self, text: &str, model: Option<String>) {
         if let Some(last) = self.messages.last_mut() {
             if let MessageItem::Assistant { text: ref mut existing_text, .. } = last {
@@ -117,6 +74,93 @@ impl MessageList {
             timestamp: None,
         });
     }
+}
+
+struct MessageColors {
+    accent_primary: ratatui::style::Color,
+    text_secondary: ratatui::style::Color,
+    text_muted: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
+    success: ratatui::style::Color,
+    error: ratatui::style::Color,
+    code_path: ratatui::style::Color,
+}
+
+fn extract_message_colors(theme: &ThemeWrapper) -> MessageColors {
+    MessageColors {
+        accent_primary: theme.color("accent.primary").into(),
+        text_secondary: theme.color("text.secondary").into(),
+        text_muted: theme.color("text.muted").into(),
+        text_dim: theme.color("text.dim").into(),
+        success: theme.color("success").into(),
+        error: theme.color("error").into(),
+        code_path: theme.color("code.path").into(),
+    }
+}
+
+fn render_message_list(
+    vm: &MessageListViewModel,
+    area: Rect,
+    buf: &mut Buffer,
+    theme: &ThemeWrapper,
+    colors: &MessageColors,
+    spinner: char,
+    rewind_spinner: char,
+    wrap_cache: &mut WrapCache,
+    most_recent_spinner: Option<usize>,
+) -> u16 {
+    let mut row = 0u16;
+    let max_rows = area.height;
+    let margin_x = area.x + 2;
+    let text_x = area.x + 4;
+    let total_messages = vm.messages.len();
+    let mut prev_msg_type: Option<&str> = None;
+
+    for (idx, msg) in vm.messages.iter().skip(vm.scroll_offset).enumerate() {
+        if row >= max_rows { break; }
+        let absolute_idx = vm.scroll_offset + idx;
+        let msg_type = render::get_msg_type(msg);
+
+        if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) {
+            row += 1;
+        }
+        prev_msg_type = Some(msg_type);
+
+        let show_cursor = render::should_show_cursor(&vm.animation, vm.agent_running, absolute_idx, total_messages, msg);
+        let show_spinner = most_recent_spinner == Some(absolute_idx);
+        let rendered = render_single_msg_item(
+            msg, area, row, margin_x, text_x, max_rows, buf, theme, colors, spinner, show_cursor, show_spinner, rewind_spinner,
+            &vm.animation, wrap_cache, vm.agent_running,
+        );
+        row += rendered;
+    }
+    row
+}
+
+fn render_single_msg_item(
+    msg: &MessageItem,
+    area: Rect,
+    row: u16,
+    margin_x: u16,
+    text_x: u16,
+    max_rows: u16,
+    buf: &mut Buffer,
+    theme: &ThemeWrapper,
+    colors: &MessageColors,
+    spinner: char,
+    show_cursor: bool,
+    show_spinner: bool,
+    rewind_spinner: char,
+    animation: &AnimationState,
+    wrap_cache: &mut WrapCache,
+    agent_running: bool,
+) -> u16 {
+    render::render_single_msg(
+        msg, area, row, margin_x, text_x, max_rows, buf, theme,
+        colors.accent_primary, colors.text_secondary, colors.text_muted, colors.text_dim,
+        colors.success, colors.error, colors.code_path, spinner, show_cursor, show_spinner, rewind_spinner,
+        animation, wrap_cache, agent_running,
+    )
 }
 
 #[allow(clippy::unwrap_used)]

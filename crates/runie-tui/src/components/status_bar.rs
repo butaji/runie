@@ -195,7 +195,15 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
     let text_secondary = colors.text_secondary;
     let bg = colors.bg_base;
 
-    // Fill background
+    fill_status_background(area, buf, bg);
+
+    let hotkeys = vm.hotkeys();
+    let left_end = render_hotkey_items(area, buf, &hotkeys, text_tertiary);
+
+    render_ref_center(area, buf, left_end, text_secondary, vm);
+}
+
+fn fill_status_background(area: Rect, buf: &mut Buffer, bg: ratatui::style::Color) {
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
             if let Some(cell) = buf.cell_mut((x, y)) {
@@ -203,13 +211,13 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
             }
         }
     }
+}
 
-    // Left: hotkeys
-    let hotkeys = vm.hotkeys();
+fn render_hotkey_items(area: Rect, buf: &mut Buffer, hotkeys: &[StatusItem], text_tertiary: ratatui::style::Color) -> u16 {
     let mut x = area.x + 1;
     let mut first = true;
 
-    for item in &hotkeys {
+    for item in hotkeys {
         if !first {
             let sep = Span::styled(" | ", Style::default().fg(text_tertiary));
             let line = Line::from(sep);
@@ -220,20 +228,14 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
 
         let parts = vec![
             Span::styled(&item.key, Style::default().fg(text_tertiary)),
-            Span::styled(
-                format!(" {}", item.description),
-                Style::default().fg(text_tertiary).add_modifier(Modifier::DIM),
-            ),
+            Span::styled(format!(" {}", item.description), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
         ];
         let line = Line::from(parts);
         let width = (item.key.len() + 1 + item.description.len()) as u16;
         buf.set_line(x, area.y, &line, width);
         x += width;
     }
-    let left_end = x;
-
-    // Center: model, tokens, cost
-    render_ref_center(area, buf, left_end, text_secondary, vm);
+    x
 }
 
 /// Renders center text only if it fits without overlapping left side

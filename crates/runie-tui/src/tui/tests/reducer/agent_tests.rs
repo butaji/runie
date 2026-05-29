@@ -1,0 +1,165 @@
+use super::*;
+
+#[test]
+fn test_agent_event_message_start() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    update(
+        &mut state,
+        &mut palette,
+        Msg::AgentEvent(AgentEvent::MessageStart {
+            message: AgentMessage {
+                role: "assistant".to_string(),
+                content: vec![],
+                timestamp: 0,
+                usage: None,
+                stop_reason: None,
+                error_message: None,
+                tool_calls: vec![],
+            },
+            turn: 1,
+        }),
+    );
+    assert!(state.agent_running);
+    assert_eq!(state.messages.len(), 1);
+}
+
+#[test]
+fn test_agent_event_message_update() {
+    use runie_agent::ContentPart;
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    // Start message
+    update(
+        &mut state,
+        &mut palette,
+        Msg::AgentEvent(AgentEvent::MessageStart {
+            message: AgentMessage {
+                role: "assistant".to_string(),
+                content: vec![],
+                timestamp: 0,
+                usage: None,
+                stop_reason: None,
+                error_message: None,
+                tool_calls: vec![],
+            },
+            turn: 1,
+        }),
+    );
+
+    // Update with text
+    update(
+        &mut state,
+        &mut palette,
+        Msg::AgentEvent(AgentEvent::MessageUpdate {
+            message: AgentMessage {
+                role: "assistant".to_string(),
+                content: vec![ContentPart::Text {
+                    text: "Hello".to_string(),
+                }],
+                timestamp: 0,
+                usage: None,
+                stop_reason: None,
+                error_message: None,
+                tool_calls: vec![],
+            },
+            turn: 1,
+            delta: "Hello".to_string(),
+        }),
+    );
+
+    assert_eq!(state.messages.len(), 1);
+    if let MessageItem::Assistant { text, .. } = &state.messages[0] {
+        assert_eq!(text, "Hello");
+    } else {
+        panic!("Expected Assistant message");
+    }
+}
+
+// P0-1 FIX: Msg::Stop interrupts agent without quitting
+#[test]
+fn test_msg_stop_clears_agent_running() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.agent_running = true;
+    state.mode = TuiMode::Permission;
+
+    let cmds = update(&mut state, &mut palette, Msg::Stop);
+
+    assert!(!state.agent_running, "agent_running should be cleared on Stop");
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat on Stop (not Onboarding)");
+    assert!(state.running, "running should remain true on Stop (Quit sets it false)");
+
+    assert!(!cmds.is_empty(), "Stop should produce at least one cmd");
+    if let Cmd::Interrupt = &cmds[0] {
+        // Expected
+    } else {
+        panic!("Expected Cmd::Interrupt");
+    }
+}
+
+// BG-2 FIX: Agent error resets mode to Chat
+#[test]
+fn test_agent_error_resets_mode() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.mode = TuiMode::Permission;
+
+    update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::Error {
+        message: "Connection reset".to_string(),
+        error_type: "network".to_string(),
+        recoverable: true,
+        context: "test".to_string(),
+    }));
+
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should reset to Chat on agent error");
+}
+
+#[test]
+fn test_long_error_is_truncated() {
+    use crate::tui::update::agent::sanitize_error_message;
+
+    let long_error = "Error: ".to_string() + &"x".repeat(1000);
+    let sanitized = sanitize_error_message(&long_error);
+
+    assert!(sanitized.len() < long_error.len(), "Long error should be truncated");
+    assert!(sanitized.contains("[message truncated"), "Should indicate truncation");
+}
+
+#[test]
+fn test_stack_trace_shows_summary() {
+    use crate::tui::update::agent::sanitize_error_message;
+
+    let stack_trace = "Connection error\nstack backtrace:\n   at 0x7f8d9f... (main.rs:100)\n   at 0x7f8da0... (main.rs:101)";
+    let sanitized = sanitize_error_message(stack_trace);
+
+    assert!(sanitized.contains("Connection error"), "Should preserve error summary");
+    let first_five = "Connection error\nstack backtrace:\n   at 0x7f8d9f... (main.rs:100)\n   at 0x7f8da0... (main.rs:101)";
+    assert_eq!(sanitized.lines().count(), first_five.lines().count() + 1,
+        "Should add hidden details note");
+}
+
+#[test]
+fn test_error_messages_filtered_from_agent_context() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+    state.current_model = Some("gpt-4".to_string());
+
+    state.textarea = TextArea::new(vec!["hello".to_string()]);
+    update(&mut state, &mut palette, Msg::Submit);
+    assert_eq!(state.messages.len(), 2); // user + placeholder assistant
+
+    state.agent_running = false;
+
+    state.messages.push(MessageItem::Error { message: "Something went wrong".to_string(), recoverable: false });
+
+    state.textarea = TextArea::new(vec!["world".to_string()]);
+    let cmds = update(&mut state, &mut palette, Msg::Submit);
+
+    assert_eq!(cmds.len(), 1);
+    if let crate::tui::state::Cmd::SpawnAgent { messages } = &cmds[0] {
+        let roles: Vec<_> = messages.iter().map(|m| m.role.as_str()).collect();
+        assert!(!roles.contains(&"error"), "Error message should not be in agent messages");
+        assert!(roles.contains(&"user"));
+    }
+}
