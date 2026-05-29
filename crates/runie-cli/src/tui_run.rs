@@ -125,9 +125,12 @@ pub async fn run_tui(
 
     // P0-MODEL-INIT: Initialize current_model from settings on startup
     if !settings.provider.is_empty() && !settings.model.is_empty() {
-        tui.state.current_model = Some(format!("{}/{}", settings.provider, settings.model));
-        tui.state.top_bar.model = settings.model.clone();
-        tui.state.top_bar.context_window = Some(128_000); // default
+        tui.update(Msg::SetCurrentModel(Some(format!("{}/{}", settings.provider, settings.model))));
+        tui.update(Msg::UpdateTopBarContext {
+            model: settings.model.clone(),
+            context_window: Some(128_000),
+            estimated_tokens: Some(0),
+        });
     }
 
     // Build startup message with context info
@@ -141,7 +144,7 @@ pub async fn run_tui(
     // --mock skips onboarding unless --mock-setup is explicitly used
     let needs_setup = force_setup || (!mock && needs_onboarding(settings));
     if needs_setup {
-        tui.state.mock_mode = mock;
+        tui.update(Msg::SetMockMode(mock));
         tui.update(Msg::EnterOnboarding);
         tui.update(Msg::AgentEvent(AgentEvent::Message {
             role: "system".to_string(),
@@ -196,7 +199,7 @@ pub async fn run_tui(
     // Animation timers - cursor blink only (animation tick is now via TimerActor)
     let mut cursor_interval = interval(Duration::from_millis(500));
 
-    // Helper to update top bar context percentages from current state
+    // Helper to update top bar context percentages from current state (Critical #4)
     fn update_top_bar_context(tui: &mut Tui, settings: &Settings) {
         use runie_ai::ModelRegistry;
 
@@ -219,10 +222,12 @@ pub async fn run_tui(
             .map(|m| m.context_window)
             .unwrap_or(128_000); // default fallback
 
-        // Update top bar with model and token info
-        tui.state.top_bar.model = settings.model.clone();
-        tui.state.top_bar.context_window = Some(context_window);
-        tui.state.top_bar.estimated_tokens = Some(estimated_tokens);
+        // Update top bar via Msg (Critical #4)
+        tui.update(Msg::UpdateTopBarContext {
+            model: settings.model.clone(),
+            context_window: Some(context_window),
+            estimated_tokens: Some(estimated_tokens),
+        });
     }
 
     // Process Cmds that need recursive handling (SlashCommand -> more Cmds)
@@ -360,10 +365,14 @@ pub async fn run_tui(
                 settings.model = model.clone();
                 settings.api_key = Some(api_key.clone());
 
-                // Update TUI state
-                tui.state.current_model = Some(format!("{}/{}", provider, model));
-                tui.state.top_bar.model = model.clone();
-                tui.state.input_right_info = format!("{} · {}", provider, model);
+                // Update TUI state via Msg (Critical #3)
+                tui.update(Msg::SetCurrentModel(Some(format!("{}/{}", provider, model))));
+                tui.update(Msg::UpdateTopBarContext {
+                    model: model.clone(),
+                    context_window: None,
+                    estimated_tokens: None,
+                });
+                tui.update(Msg::SetInputRightInfo(format!("{} · {}", provider, model)));
 
                 // P0-CONFIG-PATH: Use crate::settings::config_path() which respects RUNIE_HOME
                 let config_path = crate::settings::config_path()
@@ -567,7 +576,8 @@ pub async fn run_tui(
                     // State updates
                     Msg::ModelsFetched(_) | Msg::ModelsFetchFailed(_) => state_changed = true,
                     Msg::SetGitInfo { .. } | Msg::SetTopBarMockChecks { .. } | Msg::SetTopBarRealChecks { .. } => state_changed = true,
-                    Msg::SetInputRightInfo(_) => state_changed = true,
+                    Msg::SetInputRightInfo(_) | Msg::SetCurrentModel(_) | Msg::SetMockMode(_) => state_changed = true,
+                    Msg::ResetAgentState | Msg::UpdateTopBarContext { .. } => state_changed = true,
                     Msg::SlashCommand(_) => state_changed = true,
                     Msg::PermissionTimeout => state_changed = true,
                     _ => {}
@@ -681,9 +691,8 @@ pub async fn run_tui(
                                 task.abort();
                             }
 
-                            // Reset state
-                            tui.state.agent_running = false;
-                            tui.state.agent_start_time = None;
+                            // Reset state via Msg (Critical #4)
+                            tui.update(Msg::ResetAgentState);
 
                             // Log it
                             log::log_agent_error("Agent watchdog timeout - forced recovery");
