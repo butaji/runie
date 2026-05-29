@@ -12,7 +12,7 @@ use runie_agent::{SafetyHook, Hook};
 use runie_ai::Provider;
 use runie_tools::{create_default_toolkit, Workspace};
 use runie_tui::actors::{spawn_actor, input::InputActor as TuiInputActor, timer::TimerActor};
-use runie_tui::pipe::InputMsg;
+use runie_tui::pipe::{InputMsg, StateChange};
 use crate::event_stream::EventStreamLogger;
 use crate::event_logger as log;
 use crate::settings::Settings;
@@ -237,7 +237,7 @@ pub async fn run_tui(
         settings: &mut Settings,
         base_system_prompt: &str,
         _cancel: &CancellationToken,
-    ) -> Vec<Cmd> {
+    ) -> StateChange {
         match cmd {
             Cmd::SpawnAgent { messages } => {
                 if agent_task.is_none() {
@@ -251,7 +251,7 @@ pub async fn run_tui(
                             error!("Failed to create provider: {}", e);
                             log::log_provider_created(&settings.provider, &settings.model, false);
                             log::log_agent_error(&format!("Provider creation failed: {}", e));
-                            return vec![];
+                            return StateChange::none();
                         }
                     };
 
@@ -342,16 +342,16 @@ pub async fn run_tui(
 
                     *agent_task = Some(task);
                 }
-                vec![]
+                StateChange::none()
             }
             Cmd::SendPermission { decision } => {
                 // Write permission decision to shared state for agent to poll
                 let mut guard = permission_state.lock().await;
                 *guard = Some(decision);
-                vec![]
+                StateChange::none()
             }
             Cmd::SlashCommand(slash_cmd) => {
-                // Recursively process SlashCommand via update
+                // Recursively process SlashCommand via state pipe
                 tui.update(Msg::SlashCommand(slash_cmd))
             }
             Cmd::SaveSettings { provider, model, api_key } => {
@@ -379,7 +379,7 @@ pub async fn run_tui(
                 );
                 if let Err(e) = std::fs::write(&config_path, config) {
                     tracing::error!("[SaveSettings] Failed to write config to {}: {}", config_path.display(), e);
-                    return vec![];
+                    return StateChange::none();
                 }
 
                 match provider.as_str() {
@@ -407,7 +407,7 @@ pub async fn run_tui(
                     _ => {}
                 }
 
-                vec![]
+                StateChange::none()
             }
             Cmd::FetchModels { provider_id, api_key } => {
                 log::log(log::Subsystem::PROVIDER, log::LogLevel::INFO, &format!("[ACTOR:ModelPicker] Starting fetch for provider: {}", provider_id));
@@ -432,11 +432,11 @@ pub async fn run_tui(
                         }
                     }
                 });
-                vec![]
+                StateChange::none()
             }
             Cmd::Rollback { tool_call_id } => {
                 info!("[Rollback] Tool {} cancelled - workspace state preserved", tool_call_id);
-                vec![]
+                StateChange::none()
             }
             Cmd::Interrupt => {
                 // Send error event before aborting so UI gets notified
@@ -452,7 +452,7 @@ pub async fn run_tui(
                 // Clear permission state
                 let mut guard = permission_state.lock().await;
                 *guard = None;
-                vec![]
+                StateChange::none()
             }
         }
     }
@@ -573,10 +573,10 @@ pub async fn run_tui(
                     _ => {}
                 }
 
-                let cmds = tui.update(msg.clone());
+                let change = tui.update(msg.clone());
 
                 // Batch all pending messages before rendering
-                let mut pending_cmds = cmds;
+                let mut pending_cmds = change.cmds;
                 while let Ok(msg) = msg_rx.try_recv() {
                     if let Msg::AgentEvent(AgentEvent::AgentEnd { .. }) = &msg {
                         agent_task = None;
@@ -589,16 +589,19 @@ pub async fn run_tui(
                         other => vec![other],
                     };
                     for msg in msgs {
-                        let more_cmds = tui.update(msg);
-                        pending_cmds.extend(more_cmds);
+                        let more_change = tui.update(msg);
+                        pending_cmds.extend(more_change.cmds);
                     }
                 }
 
                 // Execute commands (may produce more commands recursively)
+                let mut needs_render = change.needs_render;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await);
+                        let change = process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await;
+                        needs_render |= change.needs_render;
+                        next_cmds.extend(change.cmds);
                     }
                     pending_cmds = next_cmds;
                 }
@@ -630,7 +633,7 @@ pub async fn run_tui(
                 let now = Instant::now();
                 let elapsed_ms = now.duration_since(last_render).as_millis() as u64;
                 let time_for_render = tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS;
-                if state_changed || time_for_render {
+                if state_changed || needs_render || time_for_render {
                     tui.render()?;
                     last_render = now;
                 }
@@ -639,16 +642,21 @@ pub async fn run_tui(
 
             // Cursor blink (500ms)
             _ = cursor_interval.tick() => {
-                let cmds = tui.update(Msg::CursorBlink);
-                let mut pending_cmds = cmds;
+                let change = tui.update(Msg::CursorBlink);
+                let mut pending_cmds = change.cmds;
+                let mut needs_render = change.needs_render;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await);
+                        let change = process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await;
+                        needs_render |= change.needs_render;
+                        next_cmds.extend(change.cmds);
                     }
                     pending_cmds = next_cmds;
                 }
-                tui.render()?;
+                if needs_render {
+                    tui.render()?;
+                }
             }
 
             // Animation tick (80ms) from TimerActor
@@ -693,19 +701,22 @@ pub async fn run_tui(
                 if !mock {
                     update_top_bar_context(&mut tui, &settings);
                 }
-                let cmds = tui.update(Msg::Tick);
-                let mut pending_cmds = cmds;
+                let change = tui.update(Msg::Tick);
+                let mut pending_cmds = change.cmds;
+                let mut needs_render = change.needs_render;
                 while !pending_cmds.is_empty() {
                     let mut next_cmds = vec![];
                     for cmd in pending_cmds {
-                        next_cmds.extend(process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await);
+                        let change = process_cmd(cmd, &mut tui, &mut agent_task, &permission_state, &msg_tx, &workspace, mock, &mut *settings, &base_system_prompt, &cancel).await;
+                        needs_render |= change.needs_render;
+                        next_cmds.extend(change.cmds);
                     }
                     pending_cmds = next_cmds;
                 }
-                // Debounce tick renders: only render if 33ms passed and agent running
+                // Debounce tick renders: only render if needs_render or 33ms passed and agent running
                 let now = Instant::now();
                 let elapsed_ms = now.duration_since(last_render).as_millis() as u64;
-                if tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS {
+                if needs_render || (tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS) {
                     tui.render()?;
                     last_render = now;
                 }
