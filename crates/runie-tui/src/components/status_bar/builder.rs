@@ -1,42 +1,66 @@
-use super::{StatusBar, StatusItem, BackgroundJob, JobStatus};
-use crate::theme::ThemeWrapper;
+use crate::tui::state::TuiMode;
+use crate::tui::view_models::StatusBarViewModel;
+use runie_ai::TokenUsage;
 
 pub struct StatusBarBuilder {
-    items: Vec<StatusItem>,
-    jobs: Vec<BackgroundJob>,
-    theme: ThemeWrapper,
+    mode: TuiMode,
+    current_model: Option<String>,
+    session_token_usage: TokenUsage,
+    status_header: Option<String>,
+    status_details: Option<String>,
+    status_start_time: Option<std::time::Instant>,
 }
 
 impl StatusBarBuilder {
     pub fn new() -> Self {
         Self {
-            items: Vec::new(),
-            jobs: Vec::new(),
-            theme: ThemeWrapper::default(),
+            mode: TuiMode::Chat,
+            current_model: None,
+            session_token_usage: TokenUsage::default(),
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
         }
     }
 
-    pub fn hotkey(mut self, key: &str, desc: &str) -> Self {
-        self.items.push(StatusItem {
-            key: key.to_string(),
-            description: desc.to_string(),
-        });
+    pub fn mode(mut self, mode: TuiMode) -> Self {
+        self.mode = mode;
         self
     }
 
-    pub fn job(mut self, name: &str, status: JobStatus) -> Self {
-        self.jobs.push(BackgroundJob {
-            name: name.to_string(),
-            status,
-        });
+    pub fn current_model(mut self, model: impl Into<String>) -> Self {
+        self.current_model = Some(model.into());
         self
     }
 
-    pub fn build(self) -> StatusBar {
-        StatusBar {
-            items: self.items,
-            theme: self.theme,
-            background_jobs: self.jobs,
+    pub fn session_token_usage(mut self, usage: TokenUsage) -> Self {
+        self.session_token_usage = usage;
+        self
+    }
+
+    pub fn status_header(mut self, header: impl Into<String>) -> Self {
+        self.status_header = Some(header.into());
+        self
+    }
+
+    pub fn status_details(mut self, details: impl Into<String>) -> Self {
+        self.status_details = Some(details.into());
+        self
+    }
+
+    pub fn status_start_time(mut self, start_time: std::time::Instant) -> Self {
+        self.status_start_time = Some(start_time);
+        self
+    }
+
+    pub fn build(self) -> StatusBarViewModel {
+        StatusBarViewModel {
+            mode: self.mode,
+            current_model: self.current_model,
+            session_token_usage: self.session_token_usage,
+            status_header: self.status_header,
+            status_details: self.status_details,
+            status_start_time: self.status_start_time,
         }
     }
 }
