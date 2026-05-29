@@ -1,261 +1,182 @@
-use rand::Rng;
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use ratatui::style::Color;
-use std::cell::{Cell as StdCell, RefCell};
+use ratatui::{buffer::Buffer, layout::Rect, style::{Style, Modifier, Color}};
+use rand::{Rng, SeedableRng};
+use rand::rngs::StdRng;
 
-// ── Visible gray palette — must contrast with dark terminal bg ────────────
-const GRAYS: [Color; 5] = [
-    Color::Rgb(70, 70, 85),   // far / dim
-    Color::Rgb(100, 100, 118),// mid-dim
-    Color::Rgb(135, 135, 155),// mid
-    Color::Rgb(175, 175, 195),// bright
-    Color::Rgb(210, 210, 230),// near / bold
-];
+const LANE_WIDTH: u16 = 3;
+const CHARS: &str = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
 
-// ── ASCII art glyph definitions ───────────────────────────────────────────
-fn glyph_large_1() -> &'static [&'static str] {
-    &[
-        "  _____  ",
-        " | _   | ",
-        " |.|   | ",
-        " `-|.  | ",
-        "   |:  | ",
-        "   |::.| ",
-        "   `---' ",
-    ]
+#[derive(Debug, Clone)]
+pub struct MatrixRain {
+    columns: Vec<RainColumn>,
+    width: u16,
+    height: u16,
+    tick: u64,
 }
 
-fn glyph_large_0() -> &'static [&'static str] {
-    &[
-        " _______ ",
-        "|   _   |",
-        "|.  |   |",
-        "|.  |   |",
-        "|:  |   |",
-        "|::.. . |",
-        "`-------'",
-    ]
+#[derive(Debug, Clone)]
+struct RainColumn {
+    lane: u16,
+    head: f32,
+    speed: f32,
+    length: u16,
+    chars: Vec<char>,
 }
 
-fn glyph_med_1() -> &'static [&'static str] {
-    &[
-        "  ___  ",
-        " | _ | ",
-        " |.| | ",
-        " `-|.| ",
-        "   `-' ",
-    ]
-}
+impl MatrixRain {
+    pub fn new(width: u16, height: u16) -> Self {
+        let lanes = (width / LANE_WIDTH).max(1);
+        let mut rng = StdRng::seed_from_u64(12345);
+        let mut columns = Vec::new();
 
-fn glyph_med_0() -> &'static [&'static str] {
-    &[
-        " _____ ",
-        "|  _  |",
-        "|.| | |",
-        "|::.| |",
-        "`-----'",
-    ]
-}
-
-fn glyph_small_1() -> &'static [&'static str] {
-    &[" _ ", "|.|", "`-|"]
-}
-
-fn glyph_small_0() -> &'static [&'static str] {
-    &[" _ ", "| |", "|_|"]
-}
-
-#[derive(Clone, Copy, Debug)]
-enum GlyphSize {
-    Large,  // 9×7
-    Medium, // 7×5
-    Small,  // 3×3
-    Tiny,   // 1×1
-}
-
-impl GlyphSize {
-    fn dims(self) -> (u16, u16) {
-        match self {
-            GlyphSize::Large => (9, 7),
-            GlyphSize::Medium => (7, 5),
-            GlyphSize::Small => (3, 3),
-            GlyphSize::Tiny => (1, 1),
-        }
-    }
-
-    fn lines(self, is_one: bool) -> &'static [&'static str] {
-        match (self, is_one) {
-            (GlyphSize::Large, true) => glyph_large_1(),
-            (GlyphSize::Large, false) => glyph_large_0(),
-            (GlyphSize::Medium, true) => glyph_med_1(),
-            (GlyphSize::Medium, false) => glyph_med_0(),
-            (GlyphSize::Small, true) => glyph_small_1(),
-            (GlyphSize::Small, false) => glyph_small_0(),
-            (GlyphSize::Tiny, true) => &["1"],
-            (GlyphSize::Tiny, false) => &["0"],
-        }
-    }
-}
-
-// ── Placed glyph ──────────────────────────────────────────────────────────
-#[derive(Clone, Debug)]
-struct Glyph {
-    x: u16,
-    y: u16,
-    size: GlyphSize,
-    is_one: bool,
-    bright: usize,
-}
-
-// ── Background widget ─────────────────────────────────────────────────────
-#[derive(Debug)]
-pub struct MatrixBg {
-    glyphs: RefCell<Vec<Glyph>>,
-    cw: StdCell<u16>,
-    ch: StdCell<u16>,
-}
-
-impl Clone for MatrixBg {
-    fn clone(&self) -> Self {
-        Self {
-            glyphs: RefCell::new(self.glyphs.borrow().clone()),
-            cw: StdCell::new(self.cw.get()),
-            ch: StdCell::new(self.ch.get()),
-        }
-    }
-}
-
-impl MatrixBg {
-    pub fn new(w: u16, h: u16) -> Self {
-        Self {
-            glyphs: RefCell::new(Self::fill(w, h)),
-            cw: StdCell::new(w),
-            ch: StdCell::new(h),
-        }
-    }
-
-    fn fill(w: u16, h: u16) -> Vec<Glyph> {
-        if w < 3 || h < 3 {
-            return Vec::new();
-        }
-        let mut rng = rand::thread_rng();
-        let mut out = Vec::new();
-
-        // ── Layer 1: dense tiny specks filling the whole screen ──────────
-        // Every ~3rd cell gets a tiny 1 or 0
-        for y in (0..h).step_by(2) {
-            for x in (0..w).step_by(3) {
-                if rng.gen_bool(0.4) {
-                    out.push(Glyph {
-                        x,
-                        y,
-                        size: GlyphSize::Tiny,
-                        is_one: rng.gen_bool(0.5),
-                        bright: rng.gen_range(0..2),
-                    });
-                }
+        for lane in 0..lanes {
+            for _ in 0..2 {
+                columns.push(RainColumn {
+                    lane,
+                    head: -(rng.gen::<f32>() * height as f32 * 2.0),
+                    speed: 0.3 + rng.gen::<f32>() * 0.8,
+                    length: 8 + rng.gen::<u16>() % 15,
+                    chars: {
+                        let chars: Vec<char> = CHARS.chars().collect();
+                        (0..50).map(|_| chars[rng.gen::<usize>() % chars.len()]).collect()
+                    },
+                });
             }
         }
 
-        // ── Layer 2: small 3×3 glyphs scattered ──────────────────────────
-        let small_count = ((w as usize * h as usize) / 40).max(4);
-        for _ in 0..small_count {
-            let x = rng.gen_range(0..w.saturating_sub(3));
-            let y = rng.gen_range(0..h.saturating_sub(3));
-            out.push(Glyph {
-                x,
-                y,
-                size: GlyphSize::Small,
-                is_one: rng.gen_bool(0.5),
-                bright: rng.gen_range(1..3),
-            });
-        }
-
-        // ── Layer 3: medium 7×5 glyphs ───────────────────────────────────
-        // More toward bottom for perspective
-        let med_count = ((w as usize * h as usize) / 120).max(2);
-        for _ in 0..med_count {
-            let x = rng.gen_range(0..w.saturating_sub(7));
-            let y = rng.gen_range((h / 3)..h.saturating_sub(5));
-            out.push(Glyph {
-                x,
-                y,
-                size: GlyphSize::Medium,
-                is_one: rng.gen_bool(0.5),
-                bright: rng.gen_range(2..4),
-            });
-        }
-
-        // ── Layer 4: large 9×7 glyphs ────────────────────────────────────
-        // Only near bottom, few and proud
-        let large_count = ((w as usize * h as usize) / 350).max(1);
-        for _ in 0..large_count {
-            let x = rng.gen_range(0..w.saturating_sub(9));
-            let y = rng.gen_range((h * 2 / 3)..h.saturating_sub(7));
-            out.push(Glyph {
-                x,
-                y,
-                size: GlyphSize::Large,
-                is_one: rng.gen_bool(0.5),
-                bright: rng.gen_range(3..5),
-            });
-        }
-
-        out
+        Self { columns, width, height, tick: 0 }
     }
 
-    pub fn render(&self, area: Rect, buf: &mut Buffer) {
-        self.ensure_size(area);
-        Self::fill_bg(area, buf);
-        for g in self.glyphs.borrow().iter() {
-            Self::draw_glyph(area, buf, g);
+    pub fn tick(&mut self) {
+        self.tick += 1;
+        for col in &mut self.columns {
+            col.head += col.speed;
+            if col.head - col.length as f32 > self.height as f32 {
+                col.head = -(col.length as f32);
+            }
         }
     }
 
-    fn ensure_size(&self, area: Rect) {
-        if self.cw.get() == area.width && self.ch.get() == area.height {
-            return;
-        }
-        let new = Self::new(area.width, area.height);
-        *self.glyphs.borrow_mut() = new.glyphs.into_inner();
-        self.cw.set(area.width);
-        self.ch.set(area.height);
-    }
-
-    fn fill_bg(area: Rect, buf: &mut Buffer) {
-        let bg = Color::Rgb(12, 12, 18);
-        for y in area.y..area.bottom() {
-            for x in area.x..area.right() {
+    pub fn render(&self,
+        buf: &mut Buffer,
+        area: Rect,
+        accent_color: Color,
+        bg_color: Color,
+    ) {
+        // Fill background
+        for y in area.y..area.y + area.height {
+            for x in area.x..area.x + area.width {
                 if let Some(cell) = buf.cell_mut((x, y)) {
-                    cell.set_symbol(" ");
-                    cell.set_fg(bg);
-                    cell.set_bg(bg);
+                    cell.set_char(' ');
+                    cell.set_style(Style::default().bg(bg_color));
                 }
             }
         }
-    }
 
-    fn draw_glyph(area: Rect, buf: &mut Buffer, g: &Glyph) {
-        let bg = Color::Rgb(12, 12, 18);
-        let lines = g.size.lines(g.is_one);
-        for (ri, line) in lines.iter().enumerate() {
-            let y = area.y + g.y + ri as u16;
-            if y >= area.bottom() {
+        for col in &self.columns {
+            let base_x = area.x + col.lane * LANE_WIDTH + 1;
+            if base_x >= area.x + area.width {
                 continue;
             }
-            for (ci, ch) in line.chars().enumerate() {
-                let x = area.x + g.x + ci as u16;
-                if x >= area.right() || ch == ' ' {
+
+            let head = col.head as i16;
+
+            for i in 0..col.length {
+                let y = head - i as i16;
+                if y < 0 || y >= area.height as i16 {
                     continue;
                 }
-                if let Some(cell) = buf.cell_mut((x, y)) {
-                    cell.set_symbol(&ch.to_string());
-                    cell.set_fg(GRAYS[g.bright.min(GRAYS.len() - 1)]);
-                    cell.set_bg(bg);
+                let y = area.y + y as u16;
+
+                // Pick char from the column's char stream
+                let char_idx = ((self.tick as usize + col.lane as usize + i as usize) % col.chars.len());
+                let ch = col.chars[char_idx];
+
+                // Color based on position in trail
+                let is_head = i == 0;
+                let style = if is_head {
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD)
+                } else if i < 3 {
+                    Style::default()
+                        .fg(Color::Rgb(0, 255, 0))
+                } else if i < 6 {
+                    Style::default()
+                        .fg(Color::Rgb(0, 180, 0))
+                } else {
+                    Style::default()
+                        .fg(Color::Rgb(0, 100, 0))
+                        .add_modifier(Modifier::DIM)
+                };
+
+                if let Some(cell) = buf.cell_mut((base_x, y)) {
+                    cell.set_char(ch);
+                    cell.set_style(style);
                 }
             }
         }
+    }
+}
+
+/// Center logo ASCII art
+const LOGO_ART: &str = r#" _____        _______
+| _   |      |   _   |
+|.|   |      |.  |   |
+`-.   |      |.  |   |
+  :   |      |:  |   |
+  ::. |      |::.. . |
+ `---'       `-------'"#;
+
+pub fn render_ascii_art(buf: &mut Buffer, area: Rect, color: Color, bg_color: Color) {
+    let lines: Vec<&str> = LOGO_ART.lines().collect();
+    let art_height = lines.len() as u16;
+    let art_width = lines.iter().map(|l| l.len()).max().unwrap_or(0) as u16;
+
+    let start_x = area.x + (area.width.saturating_sub(art_width)) / 2;
+    let start_y = area.y + (area.height.saturating_sub(art_height)) / 2;
+
+    for (i, line) in lines.iter().enumerate() {
+        let y = start_y + i as u16;
+        if y >= area.y + area.height || line.is_empty() {
+            continue;
+        }
+        for (col, ch) in line.chars().enumerate() {
+            let sx = start_x + col as u16;
+            if sx >= area.x + area.width || ch == ' ' {
+                continue;
+            }
+            if let Some(cell) = buf.cell_mut((sx, y)) {
+                cell.set_char(ch);
+                cell.set_fg(color);
+                cell.set_bg(bg_color);
+            }
+        }
+    }
+}
+
+/// Full onboarding screen
+pub fn render_onboarding_screen(
+    rain: &MatrixRain,
+    buf: &mut Buffer,
+    area: Rect,
+    accent_color: Color,
+    bg_color: Color,
+) {
+    rain.render(buf, area, accent_color, bg_color);
+    render_ascii_art(buf, area, accent_color, bg_color);
+
+    let prompt = "Press Enter to start";
+    let prompt_x = area.x + (area.width.saturating_sub(prompt.len() as u16)) / 2;
+    let prompt_y = area.y + area.height.saturating_sub(2);
+
+    if prompt_y >= area.y && prompt_y < area.y + area.height {
+        for x in area.x..area.x + area.width {
+            if let Some(cell) = buf.cell_mut((x, prompt_y)) {
+                cell.set_char(' ');
+                cell.set_style(Style::default().bg(bg_color));
+            }
+        }
+        buf.set_string(prompt_x, prompt_y, prompt, Style::default().fg(accent_color).bg(bg_color));
     }
 }
 
@@ -264,85 +185,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_matrix_bg_creates_glyphs() {
-        let bg = MatrixBg::new(80, 24);
-        let glyphs = bg.glyphs.borrow();
-        assert!(!glyphs.is_empty(), "MatrixBg should create at least some glyphs");
-
-        // Should have tiny glyphs (layer 1)
-        let has_tiny = glyphs.iter().any(|g| matches!(g.size, GlyphSize::Tiny));
-        assert!(has_tiny, "Should have tiny glyphs");
-    }
-
-    #[test]
-    fn test_matrix_bg_renders_to_buffer() {
-        let bg = MatrixBg::new(40, 20);
-        let area = Rect::new(0, 0, 40, 20);
+    fn test_matrix_rain() {
+        let area = Rect::new(0, 0, 80, 24);
         let mut buf = Buffer::empty(area);
-
-        bg.render(area, &mut buf);
-
-        // Buffer should have some non-space symbols (the glyphs)
-        let has_glyphs = buf.content().iter().any(|c| {
-            let sym = c.symbol();
-            sym == "1" || sym == "0" || sym == "_" || sym == "|" || sym == "-" || sym == "·"
-        });
-        assert!(has_glyphs, "Buffer should contain glyph symbols after render");
-    }
-
-    #[test]
-    fn test_matrix_bg_fills_background() {
-        let bg = MatrixBg::new(20, 10);
-        let area = Rect::new(0, 0, 20, 10);
-        let mut buf = Buffer::empty(area);
-
-        bg.render(area, &mut buf);
-
-        // Every cell should have the background color set
-        let expected_bg = Color::Rgb(12, 12, 18);
-        for y in 0..10 {
-            for x in 0..20 {
-                let cell = buf.cell((x, y)).unwrap();
-                assert_eq!(cell.bg(), expected_bg, "Cell ({}, {}) should have bg color", x, y);
-            }
-        }
-    }
-
-    #[test]
-    fn test_matrix_bg_auto_resizes() {
-        let bg = MatrixBg::new(20, 10);
-        assert_eq!(bg.cw.get(), 20);
-        assert_eq!(bg.ch.get(), 10);
-
-        // Render to a larger area — should auto-resize
-        let area = Rect::new(0, 0, 30, 15);
-        let mut buf = Buffer::empty(area);
-        bg.render(area, &mut buf);
-
-        assert_eq!(bg.cw.get(), 30, "Should resize width");
-        assert_eq!(bg.ch.get(), 15, "Should resize height");
-    }
-
-    #[test]
-    fn test_matrix_bg_contains_ones_and_zeros() {
-        // Use a large area to ensure we get both 1s and 0s
-        let bg = MatrixBg::new(100, 50);
-        let area = Rect::new(0, 0, 100, 50);
-        let mut buf = Buffer::empty(area);
-
-        bg.render(area, &mut buf);
-
-        let content: String = buf.content().iter().map(|c| c.symbol().to_string()).collect();
-        assert!(content.contains('1'), "Should contain '1' glyphs");
-        assert!(content.contains('0'), "Should contain '0' glyphs");
-    }
-
-    #[test]
-    fn test_matrix_bg_cloneable() {
-        let bg = MatrixBg::new(40, 20);
-        let cloned = bg.clone();
-        assert_eq!(bg.cw.get(), cloned.cw.get());
-        assert_eq!(bg.ch.get(), cloned.ch.get());
-        assert_eq!(bg.glyphs.borrow().len(), cloned.glyphs.borrow().len());
+        let mut rain = MatrixRain::new(80, 24);
+        rain.tick();
+        rain.render(&mut buf, area, Color::White, Color::Black);
     }
 }

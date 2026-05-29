@@ -66,7 +66,7 @@ pub mod tests_onboarding;
 // #[cfg(test)]
 // pub mod tests_input;
 
-pub use state::{AppState, TuiMode, Msg, Cmd, RenderState, Onboarding};
+pub use state::{AppState, TuiMode, Msg, Cmd, RenderState, Onboarding, OnboardingStep};
 pub use update::update;
 pub use events::event_to_msg;
 
@@ -193,9 +193,20 @@ impl Tui {
                 x: area.x,
                 y: area.y,
                 width: area.width,
-                height: area.height - if show_status_bar { 1 } else { 0 },
+                height: area.height - if show_status_bar { 2 } else { 0 },
             };
-            Component::render(onboarding, &(), onboarding_area, buf, theme);
+            // Use render_onboarding_screen for Welcome step (animated matrix rain + ASCII art)
+            if matches!(onboarding.step, OnboardingStep::Welcome) {
+                use crate::components::onboarding::{render_onboarding_screen, MatrixRain};
+                let accent = theme.color("accent.primary").into();
+                let bg_base = theme.color("bg.base").into();
+                let default_rain = MatrixRain::new(onboarding_area.width, onboarding_area.height);
+                let rain = onboarding.matrix_rain.as_ref().unwrap_or(&default_rain);
+                render_onboarding_screen(rain, buf, onboarding_area, accent, bg_base);
+            } else {
+                // Render step-specific UI for other onboarding steps
+                Component::render(onboarding, &(), onboarding_area, buf, theme);
+            }
         }
     }
 

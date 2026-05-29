@@ -59,9 +59,15 @@ pub async fn run_tui(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use runie_tui::{Tui, TuiConfig, Msg, Cmd};
 
-    // Load AGENTS.md context files
-    let context_files = ContextLoader::load();
-    let loaded_paths = ContextLoader::loaded_paths();
+    // Load AGENTS.md context files (skip in mock mode)
+    let (context_files, loaded_paths, git_info) = if mock {
+        (Vec::new(), Vec::new(), crate::git::GitInfo::default())
+    } else {
+        let context_files = ContextLoader::load();
+        let loaded_paths = ContextLoader::loaded_paths();
+        let git_info = crate::git::detect_git_info(&workspace);
+        (context_files, loaded_paths, git_info)
+    };
 
     // Check for system prompt override
     let base_system_prompt = if let Some(override_prompt) = ContextLoader::system_override() {
@@ -73,8 +79,6 @@ pub async fn run_tui(
     let config = TuiConfig::default();
     let mut tui = Tui::new(config)?;
 
-    // Detect real git info (even in mock mode, for now)
-    let git_info = crate::git::detect_git_info(&workspace);
     let path = if mock {
         "src/components".to_string()
     } else {
@@ -129,6 +133,7 @@ pub async fn run_tui(
     // --mock skips onboarding unless --mock-setup is explicitly used
     let needs_setup = force_setup || (!mock && needs_onboarding(settings));
     if needs_setup {
+        tui.state.mock_mode = mock;
         tui.update(Msg::EnterOnboarding);
         tui.update(Msg::AgentEvent(AgentEvent::Message {
             role: "system".to_string(),
@@ -485,6 +490,11 @@ pub async fn run_tui(
                     state_changed = true;
                 }
 
+                // Handle Error to ensure state_changed is set for renders
+                if let Msg::AgentEvent(AgentEvent::Error { .. }) = &msg {
+                    state_changed = true;
+                }
+
                 // Log model fetch events
                 match &msg {
                     Msg::ModelsFetched(models) => {
@@ -634,7 +644,7 @@ pub async fn run_tui(
                         if start_time.elapsed() > AGENT_WATCHDOG_TIMEOUT {
                             tracing::error!("[WATCHDOG] Agent stuck for 30s, forcing recovery");
 
-                            // Send error event so UI gets notified
+                            // Send error event so UI gets notified (on_agent_error will add to messages)
                             let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
                                 message: "Agent timed out after 30 seconds".to_string(),
                                 error_type: "watchdog".to_string(),
@@ -650,12 +660,6 @@ pub async fn run_tui(
                             // Reset state
                             tui.state.agent_running = false;
                             tui.state.agent_start_time = None;
-
-                            // Show error to user
-                            tui.state.messages.push(runie_tui::MessageItem::Error {
-                                message: "Agent timed out after 30 seconds. Please try again.".to_string(),
-                                recoverable: true,
-                            });
 
                             // Log it
                             log::log_agent_error("Agent watchdog timeout - forced recovery");

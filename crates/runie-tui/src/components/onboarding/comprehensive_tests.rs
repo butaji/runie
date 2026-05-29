@@ -10,7 +10,7 @@ mod tests {
 
     fn setup() -> AppState {
         let mut state = AppState::default();
-        state.onboarding = Some(Onboarding::new());
+        state.onboarding = Some(Onboarding::new(false));
         state.mode = TuiMode::Onboarding;
         state
     }

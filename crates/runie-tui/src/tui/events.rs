@@ -217,7 +217,15 @@ fn key_to_onboarding_msg(key: crossterm::event::KeyEvent, state: &AppState) -> O
         .map(|o| matches!(o.step, OnboardingStep::ProviderSelect | OnboardingStep::ModelSelect))
         .unwrap_or(false);
 
+    let is_welcome = state
+        .onboarding
+        .as_ref()
+        .map(|o| matches!(o.step, OnboardingStep::Welcome))
+        .unwrap_or(false);
+
     match key.code {
+        // On Welcome step, Enter advances to next step (ProviderSelect)
+        KeyCode::Enter if is_welcome => Some(Msg::OnboardingNext),
         KeyCode::Enter => Some(Msg::OnboardingNext),
         KeyCode::Esc => Some(Msg::OnboardingBack),
         KeyCode::Up => Some(Msg::OnboardingNavigateUp),

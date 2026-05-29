@@ -226,6 +226,7 @@ pub struct AppState {
     pub thinking_start: Option<std::time::Instant>,
     pub thinking_duration: Option<std::time::Duration>,
     pub is_thinking: bool,
+    pub mock_mode: bool,
 }
 
 impl Default for AppState {
@@ -269,6 +270,7 @@ impl Default for AppState {
             thinking_start: None,
             thinking_duration: None,
             is_thinking: false,
+            mock_mode: false,
         }
     }
 }
@@ -550,6 +552,7 @@ pub struct RenderState {
     pub status_header: Option<String>,
     pub status_details: Option<String>,
     pub status_start_time: Option<std::time::Instant>,
+    pub mock_mode: bool,
 }
 
 impl RenderState {
@@ -578,6 +581,7 @@ impl RenderState {
             status_header: state.status_header.clone(),
             status_details: state.status_details.clone(),
             status_start_time: state.status_start_time,
+            mock_mode: state.mock_mode,
         }
     }
 }

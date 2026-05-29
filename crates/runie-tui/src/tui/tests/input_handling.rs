@@ -48,6 +48,7 @@ fn make_state() -> AppState {
         thinking_start: None,
         thinking_duration: None,
         is_thinking: false,
+        mock_mode: false,
     }
 }
 
