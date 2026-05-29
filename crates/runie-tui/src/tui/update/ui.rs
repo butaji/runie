@@ -6,6 +6,7 @@ use crate::tui::state::{AppState, TuiMode, Cmd};
 use crate::components::command_palette::PaletteCommand;
 use crate::components::model_picker::ModelPicker;
 use crate::components::onboarding::Onboarding;
+use runie_ai::TokenUsage;
 
 /// UI-specific commands returned by update functions.
 #[derive(Debug, Clone)]
@@ -49,6 +50,10 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
         crate::tui::state::Msg::SetTopBarRealChecks { context_badges } => handle_set_top_bar_real_checks(state, context_badges),
         crate::tui::state::Msg::SetInputRightInfo(info) => handle_set_input_right_info(state, info),
         crate::tui::state::Msg::EnterOnboarding => handle_enter_onboarding(state),
+        crate::tui::state::Msg::SetCurrentModel(model) => handle_set_current_model(state, model),
+        crate::tui::state::Msg::SetMockMode(mock) => handle_set_mock_mode(state, mock),
+        crate::tui::state::Msg::ResetAgentState => handle_reset_agent_state(state),
+        crate::tui::state::Msg::UpdateTopBarContext { model, context_window, estimated_tokens } => handle_update_top_bar_context(state, model, context_window, estimated_tokens),
         crate::tui::state::Msg::CopyLastResponse => { handle_copy_last_response(state); vec![] }
         _ => vec![],
     }
@@ -318,5 +323,46 @@ fn handle_set_input_right_info(state: &mut AppState, info: String) -> Vec<UiCmd>
 fn handle_enter_onboarding(state: &mut AppState) -> Vec<UiCmd> {
     state.mode = TuiMode::Onboarding;
     state.onboarding = Some(Onboarding::new(state.mock_mode));
+    vec![]
+}
+
+// Critical #3, #4: Handlers for state mutations that were direct in tui_run.rs
+
+fn handle_set_current_model(state: &mut AppState, model: Option<String>) -> Vec<UiCmd> {
+    state.current_model = model.clone();
+    // Extract just the model name (after "/") for top_bar.model
+    if let Some(ref m) = model {
+        if let Some(slash_idx) = m.rfind('/') {
+            state.top_bar.model = m[slash_idx + 1..].to_string();
+        } else {
+            state.top_bar.model = m.clone();
+        }
+    } else {
+        state.top_bar.model = String::new();
+    }
+    vec![]
+}
+
+fn handle_set_mock_mode(state: &mut AppState, mock: bool) -> Vec<UiCmd> {
+    state.mock_mode = mock;
+    vec![]
+}
+
+fn handle_reset_agent_state(state: &mut AppState) -> Vec<UiCmd> {
+    state.agent_running = false;
+    state.agent_start_time = None;
+    state.session_token_usage = TokenUsage::default();
+    vec![]
+}
+
+fn handle_update_top_bar_context(
+    state: &mut AppState,
+    model: String,
+    context_window: Option<usize>,
+    estimated_tokens: Option<usize>,
+) -> Vec<UiCmd> {
+    state.top_bar.model = model;
+    state.top_bar.context_window = context_window;
+    state.top_bar.estimated_tokens = estimated_tokens;
     vec![]
 }

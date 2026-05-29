@@ -426,6 +426,12 @@ pub enum Msg {
     SetInputRightInfo(String),
     EnterOnboarding,
 
+    // Critical #3, #4: State mutations that were direct in tui_run.rs
+    SetCurrentModel(Option<String>),
+    SetMockMode(bool),
+    ResetAgentState,
+    UpdateTopBarContext { model: String, context_window: Option<usize>, estimated_tokens: Option<usize> },
+
     // Input history navigation
     HistoryUp,
     HistoryDown,
@@ -500,6 +506,10 @@ impl PartialEq for Msg {
             (SetTopBarRealChecks { .. }, SetTopBarRealChecks { .. }) => true,
             (SetInputRightInfo(a), SetInputRightInfo(b)) => a == b,
             (EnterOnboarding, EnterOnboarding) => true,
+            (SetCurrentModel(a), SetCurrentModel(b)) => a == b,
+            (SetMockMode(a), SetMockMode(b)) => a == b,
+            (ResetAgentState, ResetAgentState) => true,
+            (UpdateTopBarContext { .. }, UpdateTopBarContext { .. }) => true,
             (HistoryUp, HistoryUp) => true,
             (HistoryDown, HistoryDown) => true,
             (CopyLastResponse, CopyLastResponse) => true,
