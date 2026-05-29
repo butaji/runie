@@ -1,19 +1,27 @@
-use super::{Onboarding, OnboardingStep};
+use crate::tui::view_models::{OnboardingStep, OnboardingViewModel};
 
 pub struct OnboardingBuilder {
     step: OnboardingStep,
-    provider_id: Option<String>,
-    model: Option<String>,
-    api_key: Option<String>,
+    selected_item: usize,
+    selected_provider: Option<usize>,
+    api_key_input: String,
+    selected_model: Option<usize>,
+    providers: Vec<String>,
+    models: Vec<String>,
+    error_message: Option<String>,
 }
 
 impl OnboardingBuilder {
     pub fn new() -> Self {
         Self {
             step: OnboardingStep::Welcome,
-            provider_id: None,
-            model: None,
-            api_key: None,
+            selected_item: 0,
+            selected_provider: None,
+            api_key_input: String::new(),
+            selected_model: None,
+            providers: Vec::new(),
+            models: Vec::new(),
+            error_message: None,
         }
     }
 
@@ -22,43 +30,48 @@ impl OnboardingBuilder {
         self
     }
 
-    pub fn provider(mut self, _name: &str, id: &str) -> Self {
-        self.provider_id = Some(id.to_string());
+    pub fn provider(self, _name: &str, _id: &str) -> Self {
+        // Provider selection is done via index in ViewModel
+        // Caller should use providers() method to set the list
         self
     }
 
-    pub fn model(mut self, name: &str) -> Self {
-        self.model = Some(name.to_string());
+    pub fn model(self, _name: &str) -> Self {
+        // Model selection is done via index in ViewModel
+        // Caller should use models() method to set the list
         self
     }
 
     pub fn key(mut self, key: &str) -> Self {
-        self.api_key = Some(key.to_string());
+        self.api_key_input = key.to_string();
         self
     }
 
-    pub fn build(self) -> Onboarding {
-        let mut onboarding = Onboarding::new(false);
-        onboarding.step = self.step.clone();
-        apply_provider(&mut onboarding, &self.provider_id);
-        if let Some(key) = self.api_key {
-            onboarding.api_key_input = key;
-        }
-        if self.step == OnboardingStep::Complete {
-            if let Some(model_name) = &self.model {
-                if let Some(idx) = onboarding.models.iter().position(|m| m.name == *model_name) {
-                    onboarding.select_model(idx);
-                }
-            }
-        }
-        onboarding
+    pub fn providers(mut self, providers: Vec<String>) -> Self {
+        self.providers = providers;
+        self
     }
-}
 
-fn apply_provider(onboarding: &mut Onboarding, provider_id: &Option<String>) {
-    if let Some(id) = provider_id {
-        if let Some(idx) = onboarding.providers.iter().position(|p| p.id == *id) {
-            onboarding.select_provider(idx);
+    pub fn models(mut self, models: Vec<String>) -> Self {
+        self.models = models;
+        self
+    }
+
+    pub fn error_message(mut self, msg: &str) -> Self {
+        self.error_message = Some(msg.to_string());
+        self
+    }
+
+    pub fn build(self) -> OnboardingViewModel {
+        OnboardingViewModel {
+            step: self.step,
+            selected_item: self.selected_item,
+            selected_provider: self.selected_provider,
+            api_key_input: self.api_key_input,
+            selected_model: self.selected_model,
+            providers: self.providers,
+            models: self.models,
+            error_message: self.error_message,
         }
     }
 }

@@ -1,4 +1,7 @@
 use super::types::{MessageItem, PlanStatus};
+use super::MessageListViewModel;
+use crate::tui::state::AnimationState;
+use crate::components::message_list::render::WrapCache;
 
 /// Builder for constructing feed content with the Runie visual system.
 ///
@@ -23,15 +26,23 @@ use super::types::{MessageItem, PlanStatus};
 ///     .turn(3, 1, 80)
 ///     .build();
 /// ```
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct FeedBuilder {
     messages: Vec<MessageItem>,
+    scroll_offset: usize,
+    agent_running: bool,
+    animation: AnimationState,
+    wrap_cache: WrapCache,
 }
 
 impl FeedBuilder {
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
+            scroll_offset: 0,
+            agent_running: false,
+            animation: AnimationState::default(),
+            wrap_cache: WrapCache::new(),
         }
     }
 
@@ -39,13 +50,13 @@ impl FeedBuilder {
     pub fn user(mut self, text: impl Into<String>) -> Self {
         self.messages.push(MessageItem::User {
             text: text.into(),
-            model: Some("You".to_string()),
+            model: None,
             timestamp: None,
         });
         self
     }
 
-    /// Add an assistant message. Renders as plain text.
+    /// Add an assistant message. Renders as: plain text
     pub fn assistant(mut self, text: impl Into<String>) -> Self {
         self.messages.push(MessageItem::Assistant {
             text: text.into(),
@@ -55,12 +66,23 @@ impl FeedBuilder {
         self
     }
 
-    /// Add a thinking/reasoning block. Renders as: `· text`
+    /// Add a think tag. Renders as: `<think> text</think>`
+    /// Note: Creates a new Assistant message with think tags
     pub fn think(mut self, text: impl Into<String>) -> Self {
         // Think blocks are embedded in assistant text with <think> tags
-        // For standalone think lines, we use Assistant with think markup
         self.messages.push(MessageItem::Assistant {
             text: format!("<think>{}</think>", text.into()),
+            model: None,
+            timestamp: None,
+        });
+        self
+    }
+
+    /// Add a standalone think block (not attached to a message). Renders as: `<think> text</think>`
+    pub fn think_block(mut self, text: impl Into<String>) -> Self {
+        // For standalone think lines, we use Assistant with think markup
+        self.messages.push(MessageItem::Assistant {
+            text: format!("<think>{}\n</think>\n", text.into()),
             model: None,
             timestamp: None,
         });
@@ -155,9 +177,33 @@ impl FeedBuilder {
         self
     }
 
-    /// Consume the builder and return the messages.
-    pub fn build(self) -> Vec<MessageItem> {
-        self.messages
+    /// Set scroll offset.
+    pub fn scroll_offset(mut self, offset: usize) -> Self {
+        self.scroll_offset = offset;
+        self
+    }
+
+    /// Set agent running state.
+    pub fn agent_running(mut self, running: bool) -> Self {
+        self.agent_running = running;
+        self
+    }
+
+    /// Set animation state.
+    pub fn animation(mut self, animation: AnimationState) -> Self {
+        self.animation = animation;
+        self
+    }
+
+    /// Consume the builder and return the MessageListViewModel.
+    pub fn build(self) -> MessageListViewModel {
+        MessageListViewModel {
+            messages: self.messages,
+            scroll_offset: self.scroll_offset,
+            agent_running: self.agent_running,
+            animation: self.animation,
+            wrap_cache: self.wrap_cache,
+        }
     }
 
     /// Extend an existing message list.
@@ -181,13 +227,13 @@ mod tests {
             .turn(3, 1, 80)
             .build();
 
-        assert_eq!(feed.len(), 6);
-        assert!(matches!(feed[0], MessageItem::User { .. }));
-        assert!(matches!(feed[1], MessageItem::Assistant { .. }));
-        assert!(matches!(feed[2], MessageItem::Thought { .. }));
-        assert!(matches!(feed[3], MessageItem::Assistant { .. }));
-        assert!(matches!(feed[4], MessageItem::ToolCall { .. }));
-        assert!(matches!(feed[5], MessageItem::Separator { .. }));
+        assert_eq!(feed.messages.len(), 6);
+        assert!(matches!(feed.messages[0], MessageItem::User { .. }));
+        assert!(matches!(feed.messages[1], MessageItem::Assistant { .. }));
+        assert!(matches!(feed.messages[2], MessageItem::Thought { .. }));
+        assert!(matches!(feed.messages[3], MessageItem::Assistant { .. }));
+        assert!(matches!(feed.messages[4], MessageItem::ToolCall { .. }));
+        assert!(matches!(feed.messages[5], MessageItem::Separator { .. }));
     }
 
     #[test]
@@ -198,8 +244,8 @@ mod tests {
             .error("Something went wrong")
             .build();
 
-        assert_eq!(feed.len(), 3);
-        assert!(matches!(feed[1], MessageItem::ToolCall { is_error: true, .. }));
-        assert!(matches!(feed[2], MessageItem::Error { .. }));
+        assert_eq!(feed.messages.len(), 3);
+        assert!(matches!(feed.messages[1], MessageItem::ToolCall { is_error: true, .. }));
+        assert!(matches!(feed.messages[2], MessageItem::Error { .. }));
     }
 }

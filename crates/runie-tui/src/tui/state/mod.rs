@@ -1,12 +1,34 @@
-use crate::components::{MessageItem, DiffViewer, PaletteCommand, ModelPicker};
+//! AppState and related types.
+//!
+//! Phase 2 of architecture migration: decompose monolithic AppState into focused sub-states.
+
+use crate::components::{DiffViewer, PaletteCommand, ModelPicker};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
-use crate::components::SessionTreeNavigator;
 pub use crate::components::onboarding::{Onboarding, OnboardingStep};
 pub use runie_ai::model_fetcher::ModelInfo;
 use runie_ai::TokenUsage;
 use runie_core::SlashCommand;
 use crossterm::event::KeyEvent;
+
+// ─── Sub-state modules ─────────────────────────────────────────────────────────
+
+pub mod agent;
+pub mod chat;
+pub mod layout;
+pub mod mode;
+pub mod overlay;
+pub mod system;
+
+// Re-export sub-state types
+pub use agent::AgentState;
+pub use chat::ChatState;
+pub use layout::LayoutState;
+pub use mode::UiModeState;
+pub use overlay::OverlayState;
+pub use system::SystemState;
+
+// ─── Shared Types (used by sub-states) ────────────────────────────────────────
 
 /// P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
 #[derive(Clone)]
@@ -29,7 +51,7 @@ impl ClearInputConfirm {
     pub fn wants_clear(&mut self) -> bool {
         let now = std::time::Instant::now();
         const CLEAR_CONFIRM_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
-        
+
         if self.pending {
             // Second tap - clear confirmed
             if let Some(last) = self.last_press {
@@ -42,13 +64,13 @@ impl ClearInputConfirm {
             // Timeout expired, reset
             self.pending = false;
         }
-        
+
         // First tap - request confirmation
         self.pending = true;
         self.last_press = Some(now);
         false
     }
-    
+
     /// Check if there's a pending clear request (for showing hint)
     pub fn is_pending(&self) -> bool {
         self.pending
@@ -186,97 +208,102 @@ impl Default for ScrollState {
     }
 }
 
+// ─── AppState (using sub-states) ──────────────────────────────────────────────
+
+/// AppState is the main application state, decomposed into focused sub-states.
+/// 
+/// For backward compatibility, fields are kept at the top level AND organized into sub-states.
+/// This allows both `state.messages` (backward compat) and `state.chat.messages` (new API).
 #[derive(Clone)]
 pub struct AppState {
-    pub messages: Vec<MessageItem>,
+    // Flat fields for backward compatibility (mirror sub-state contents)
+    pub messages: Vec<crate::components::MessageItem>,
     pub textarea: ratatui_textarea::TextArea<'static>,
     pub input_right_info: String,
-    pub mode: TuiMode,
-    pub running: bool,
-    pub show_sidebar: bool,
-    pub agent_running: bool,
-    pub current_model: Option<String>,
-    pub top_bar: TopBarState,
-    pub permission_modal: PermissionModalState,
-    pub command_palette: CommandPaletteState,
     pub scroll: ScrollState,
-    pub animation: AnimationState,
-    pub diff_viewer: Option<DiffViewer>,
-    pub token_usage: TokenUsage,
-    pub session_token_usage: TokenUsage,
-    pub session_tree: SessionTreeNavigator,
-    pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
-    pub onboarding: Option<Onboarding>,
-    pub terminal_size: (u16, u16),
-    // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
-    pub clear_input_confirm: ClearInputConfirm,
-    // Model picker state
-    pub model_picker: Option<ModelPicker>,
-    // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
-    pub agent_start_time: Option<std::time::Instant>,
-    // Input history for Up/Down arrow navigation
     pub input_history: Vec<String>,
     pub input_history_index: Option<usize>,
     pub input_draft: String,
-    // Live status indicator
-    pub status_header: Option<String>,
-    pub status_details: Option<String>,
-    pub status_start_time: Option<std::time::Instant>,
-    // Thinking duration tracking
+
+    pub agent_running: bool,
+    pub current_model: Option<String>,
+    pub token_usage: TokenUsage,
+    pub session_token_usage: TokenUsage,
+    pub agent_start_time: Option<std::time::Instant>,
+    pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
     pub thinking_start: Option<std::time::Instant>,
     pub thinking_duration: Option<std::time::Duration>,
     pub is_thinking: bool,
+
+    pub show_sidebar: bool,
+    pub terminal_size: (u16, u16),
+    pub top_bar: TopBarState,
+
+    pub running: bool,
     pub mock_mode: bool,
+    pub status_header: Option<String>,
+    pub status_details: Option<String>,
+    pub status_start_time: Option<std::time::Instant>,
+    pub clear_input_confirm: ClearInputConfirm,
+
+    pub permission_modal: PermissionModalState,
+    pub command_palette: CommandPaletteState,
+    pub model_picker: Option<ModelPicker>,
+    pub diff_viewer: Option<DiffViewer>,
+    pub session_tree: crate::components::SessionTreeNavigator,
+
+    pub animation: AnimationState,
+    pub onboarding: Option<Onboarding>,
+    pub mode: TuiMode,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            // Chat
             messages: Vec::new(),
             textarea: ratatui_textarea::TextArea::default(),
             input_right_info: String::new(),
-            mode: TuiMode::Chat,
-            running: true,
-            show_sidebar: false,
-            agent_running: false,
-            current_model: None,
-            top_bar: TopBarState::default(),
-            permission_modal: PermissionModalState::default(),
-            command_palette: CommandPaletteState::default(),
             scroll: ScrollState::default(),
-            animation: AnimationState::default(),
-            diff_viewer: None,
-            token_usage: TokenUsage::default(),
-            session_token_usage: TokenUsage::default(),
-            session_tree: SessionTreeNavigator::new(),
-            background_jobs: Vec::new(),
-            onboarding: None,
-            terminal_size: (0, 0),
-            // P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
-            clear_input_confirm: ClearInputConfirm::default(),
-            // Model picker state
-            model_picker: None,
-            // P0-AGENT-TIMEOUT: Track when agent started for watchdog timeout
-            agent_start_time: None,
-            // Input history for Up/Down arrow navigation
             input_history: Vec::new(),
             input_history_index: None,
             input_draft: String::new(),
-            // Live status indicator
-            status_header: None,
-            status_details: None,
-            status_start_time: None,
-            // Thinking duration tracking
+            // Agent
+            agent_running: false,
+            current_model: None,
+            token_usage: TokenUsage::default(),
+            session_token_usage: TokenUsage::default(),
+            agent_start_time: None,
+            background_jobs: Vec::new(),
             thinking_start: None,
             thinking_duration: None,
             is_thinking: false,
+            // Layout
+            show_sidebar: false,
+            terminal_size: (0, 0),
+            top_bar: TopBarState::default(),
+            // System
+            running: true,
             mock_mode: false,
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+            clear_input_confirm: ClearInputConfirm::default(),
+            // Overlay
+            permission_modal: PermissionModalState::default(),
+            command_palette: CommandPaletteState::default(),
+            model_picker: None,
+            diff_viewer: None,
+            session_tree: crate::components::SessionTreeNavigator::new(),
+            // Other
+            animation: AnimationState::default(),
+            onboarding: None,
+            mode: TuiMode::Chat,
         }
     }
 }
 
 // ─── Standalone Widget Render Functions ────────────────────────────────────────
-// These render directly from AppState (no widget instances stored in Tui)
 
 /// Render top bar from state (repo/branch/path info)
 
@@ -526,7 +553,7 @@ pub enum TuiAction {
 /// This avoids cloning the entire AppState each frame.
 #[derive(Clone)]
 pub struct RenderState {
-    pub messages: Vec<MessageItem>,
+    pub messages: Vec<crate::components::MessageItem>,
     pub textarea: ratatui_textarea::TextArea<'static>,
     pub input_right_info: String,
     pub mode: TuiMode,
@@ -541,14 +568,11 @@ pub struct RenderState {
     pub animation: AnimationState,
     pub diff_viewer: Option<DiffViewer>,
     pub session_token_usage: TokenUsage,
-    pub session_tree: SessionTreeNavigator,
+    pub session_tree: crate::components::SessionTreeNavigator,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
     pub onboarding: Option<Onboarding>,
-    // P1-REMAINING-1 FIX: Track pending clear input confirmation
     pub clear_input_confirm: ClearInputConfirm,
-    // Model picker state
     pub model_picker: Option<ModelPicker>,
-    // Live status indicator
     pub status_header: Option<String>,
     pub status_details: Option<String>,
     pub status_start_time: Option<std::time::Instant>,
@@ -593,4 +617,3 @@ impl TryFrom<AgentEvent> for Msg {
         Ok(Msg::AgentEvent(event))
     }
 }
-
