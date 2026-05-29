@@ -1,6 +1,9 @@
 mod matrix_bg;
 pub use matrix_bg::{render_onboarding_screen, MatrixRain};
 
+pub mod builder;
+pub use builder::*;
+
 // ============================================================================
 // Onboarding Types
 // ============================================================================
@@ -36,6 +39,7 @@ pub struct Onboarding {
     pub selected_provider: Option<usize>,
     pub api_key_input: String,
     pub selected_model: Option<usize>,
+    pub selected_models: Vec<usize>,  // multi-select for models
     pub providers: Vec<ProviderOption>,
     pub models: Vec<ModelOption>,
     pub error_message: Option<String>,
@@ -309,6 +313,7 @@ impl Onboarding {
             selected_provider: None,
             api_key_input: String::new(),
             selected_model: None,
+            selected_models: Vec::new(),
             providers,
             models: Vec::new(),
             error_message: None,
@@ -436,6 +441,7 @@ impl Onboarding {
         if let Some(&real_index) = self.filtered_provider_indices.get(index) {
             self.selected_provider = Some(real_index);
             self.selected_model = None;
+            self.selected_models.clear();
             let provider = &self.providers[real_index];
             // Pre-fill mock API key for mock provider
             if provider.id == "mock" {
@@ -475,7 +481,14 @@ impl Onboarding {
 
     pub fn select_model(&mut self, index: usize) {
         if let Some(&real_index) = self.filtered_model_indices.get(index) {
-            self.selected_model = Some(real_index);
+            // Toggle in multi-select list
+            if let Some(pos) = self.selected_models.iter().position(|&x| x == real_index) {
+                self.selected_models.remove(pos);
+            } else {
+                self.selected_models.push(real_index);
+            }
+            // Keep selected_model in sync with first selected (or None if empty)
+            self.selected_model = self.selected_models.first().copied();
             self.error_message = None;
         }
     }
@@ -587,12 +600,12 @@ impl Onboarding {
     }
 
     pub fn is_complete(&self) -> bool {
-        self.step == OnboardingStep::Complete && self.selected_provider.is_some() && self.selected_model.is_some() && !self.api_key_input.trim().is_empty()
+        self.step == OnboardingStep::Complete && self.selected_provider.is_some() && (!self.selected_models.is_empty() || self.selected_model.is_some()) && !self.api_key_input.trim().is_empty()
     }
 
     pub fn to_settings(&self) -> Option<Settings> {
         let provider_idx = self.selected_provider?;
-        let model_idx = self.selected_model?;
+        let model_idx = self.selected_models.first().copied().or(self.selected_model)?;
         let provider = self.providers.get(provider_idx)?;
         let model = self.models.get(model_idx)?;
         Some(Settings {

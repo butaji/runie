@@ -125,8 +125,6 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Down => Some(Msg::HistoryDown),
         KeyCode::PageUp => Some(Msg::ScrollPageUp),
         KeyCode::PageDown => Some(Msg::ScrollPageDown),
-        // P1-3 FIX: ? key for help (opens help overlay if available)
-        KeyCode::Char('?') => Some(Msg::OpenCommandPalette), // Temporary: open palette which lists commands
         _ => Some(Msg::TextareaKey(key)),
     }
 }
@@ -223,13 +221,26 @@ fn key_to_onboarding_msg(key: crossterm::event::KeyEvent, state: &AppState) -> O
         .map(|o| matches!(o.step, OnboardingStep::Welcome))
         .unwrap_or(false);
 
+    let is_model_select = state
+        .onboarding
+        .as_ref()
+        .map(|o| matches!(o.step, OnboardingStep::ModelSelect))
+        .unwrap_or(false);
+
     match key.code {
         // On Welcome step, Enter advances to next step (ProviderSelect)
         KeyCode::Enter if is_welcome => Some(Msg::OnboardingNext),
         KeyCode::Enter => Some(Msg::OnboardingNext),
+        // On Welcome step, Esc skips setup entirely
+        KeyCode::Esc if is_welcome => Some(Msg::OnboardingSkip),
         KeyCode::Esc => Some(Msg::OnboardingBack),
         KeyCode::Up => Some(Msg::OnboardingNavigateUp),
         KeyCode::Down => Some(Msg::OnboardingNavigateDown),
+        // Space toggles checkbox in model select
+        KeyCode::Char(' ') if is_model_select => {
+            let idx = state.onboarding.as_ref().map(|o| o.selected_item).unwrap_or(0);
+            Some(Msg::OnboardingSelectModel(idx))
+        }
         KeyCode::Char(c) => {
             if is_picker_step {
                 Some(Msg::OnboardingSearchInput(c))

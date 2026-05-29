@@ -4,8 +4,10 @@ use crate::tui::state::AnimationState;
 use crate::components::message_list::render::WrapCache;
 pub mod types;
 pub mod render;
+pub mod builder;
 
 pub use types::{MessageItem, MessageList, PlanStatus, BRAILLE_FRAMES, REVERSE_BRAILLE_FRAMES};
+pub use builder::FeedBuilder;
 
 /// ViewModel for rendering MessageList
 pub struct MessageListViewModel {
@@ -62,8 +64,10 @@ impl MessageList {
 
             let absolute_idx = vm.scroll_offset + idx;
             let msg_type = render::get_msg_type(msg);
-            if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) && row < max_rows {
-                row += 1;
+
+            // Add spacing between different message types
+            if prev_msg_type.is_some() && prev_msg_type != Some(msg_type) {
+                row += 1; // blank line between different types
             }
             prev_msg_type = Some(msg_type);
 

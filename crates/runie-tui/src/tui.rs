@@ -184,10 +184,16 @@ impl Tui {
     }
 
     fn render_onboarding_mode(buf: &mut Buffer, area: Rect, _state: &RenderState, vms: &ViewModels, main_areas: [Rect; 4], show_status_bar: bool, theme: &ThemeWrapper, _theme_colors: &ThemeColors) {
-        // MatrixBg fills its own background; skip clear_background to avoid overdraw
-        if show_status_bar {
-            Component::render(&vms.status_bar, &vms.status_bar, main_areas[3], buf, theme);
+        // Fill entire background first to prevent black gaps
+        let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+        for y in area.y..area.y + area.height {
+            for x in area.x..area.x + area.width {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_style(Style::default().bg(bg_base));
+                }
+            }
         }
+
         if let Some(ref onboarding) = _state.onboarding {
             let onboarding_area = Rect {
                 x: area.x,
@@ -195,18 +201,14 @@ impl Tui {
                 width: area.width,
                 height: area.height - if show_status_bar { 2 } else { 0 },
             };
-            // Use render_onboarding_screen for Welcome step (animated matrix rain + ASCII art)
-            if matches!(onboarding.step, OnboardingStep::Welcome) {
-                use crate::components::onboarding::{render_onboarding_screen, MatrixRain};
-                let accent = theme.color("accent.primary").into();
-                let bg_base = theme.color("bg.base").into();
-                let default_rain = MatrixRain::new(onboarding_area.width, onboarding_area.height);
-                let rain = onboarding.matrix_rain.as_ref().unwrap_or(&default_rain);
-                render_onboarding_screen(rain, buf, onboarding_area, accent, bg_base);
-            } else {
-                // Render step-specific UI for other onboarding steps
-                Component::render(onboarding, &(), onboarding_area, buf, theme);
-            }
+            // Always use Component::render - it delegates to render_onboarding which handles
+            // matrix rain + logo + step-specific panel for ALL steps including Welcome
+            Component::render(onboarding, &(), onboarding_area, buf, theme);
+        }
+
+        // Render status bar on top
+        if show_status_bar {
+            Component::render(&vms.status_bar, &vms.status_bar, main_areas[3], buf, theme);
         }
     }
 

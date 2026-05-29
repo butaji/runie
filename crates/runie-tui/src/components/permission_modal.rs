@@ -7,6 +7,9 @@ use ratatui::{
 use crate::components::DialogFrame;
 use crate::theme::ThemeWrapper;
 
+pub mod builder;
+pub use builder::*;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PermissionAction {
     Confirm,

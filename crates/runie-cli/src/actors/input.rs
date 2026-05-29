@@ -46,8 +46,8 @@ impl InputActor {
     /// Blocking event loop that polls crossterm and sends messages.
     fn poll_events(cancel: CancellationToken, msg_tx: mpsc::Sender<Msg>) {
         while !cancel.is_cancelled() {
-            // Poll with 100ms timeout
-            if crossterm::event::poll(Duration::from_millis(100)).unwrap_or(false) {
+            // Poll with 1ms timeout for responsive input
+            if crossterm::event::poll(Duration::from_millis(1)).unwrap_or(false) {
                 if let Ok(event) = crossterm::event::read() {
                     let msgs = match event {
                         crossterm::event::Event::Resize(w, h) => vec![Msg::Resize(w, h)],
@@ -56,20 +56,9 @@ impl InputActor {
                         _ => vec![],
                     };
 
-                    // Retry send up to 10 times with 1ms sleep to avoid dropping events
                     for msg in msgs {
-                        let mut sent = false;
-                        for _ in 0..10 {
-                            if msg_tx.try_send(msg.clone()).is_ok() {
-                                sent = true;
-                                break;
-                            }
-                            std::thread::sleep(Duration::from_millis(1));
-                        }
-                        if !sent {
-                            // Channel full for >10ms — drop event but keep polling
-                            break;
-                        }
+                        // Try once, if channel full drop the event (next poll will catch up)
+                        let _ = msg_tx.try_send(msg);
                     }
                 }
             }

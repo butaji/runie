@@ -458,8 +458,7 @@ pub fn should_show_cursor(
 pub fn find_most_recent_spinner_index(messages: &[MessageItem]) -> Option<usize> {
     messages.iter().enumerate().rev().find(|(_, msg)| {
         matches!(msg,
-            MessageItem::Thought { .. }
-            | MessageItem::ToolRunning { .. }
+            MessageItem::ToolRunning { .. }
             | MessageItem::PlanStep { status: PlanStatus::Active, .. }
             | MessageItem::Rewind { .. }
         )
@@ -524,8 +523,8 @@ pub fn render_single_msg(
         MessageItem::ToolCall { name, args, result, is_error } => {
             render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
         }
-        MessageItem::Edit { filename, diff: _ } => {
-            render_edit_msg(filename, area, row, margin_x, text_x, buf, text_secondary, code_path)
+        MessageItem::Edit { filename, diff } => {
+            render_edit_msg(filename, diff.as_deref().unwrap_or(""), area, row, margin_x, text_x, buf, text_secondary, code_path)
         }
         MessageItem::System { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
@@ -569,20 +568,26 @@ fn render_user_msg(
 
     let wrapped = wrap_cache.get_wrapped(text, (area.width as usize).saturating_sub(8));
     let msg_height = wrapped.len() as u16;
-    let total_height = msg_height + 2;
+    let padded_height = msg_height + 2; // 1 empty row above + 1 empty row below
 
-    draw_user_panel_bg(area, row, margin_x, total_height, buf, bg_panel);
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row + 1)) {
+    let panel_start_y = area.y + row;
+    draw_user_panel_bg_at_y(panel_start_y, area, margin_x, padded_height, buf, bg_panel);
+
+    // ❯ on the text row (vertically centered - row 1 of 3)
+    let text_row = panel_start_y + 1;
+    if let Some(cell) = buf.cell_mut((margin_x, text_row)) {
         cell.set_char('❯');
         cell.set_style(Style::default().fg(accent_primary).bg(bg_panel));
     }
-    draw_user_text_lines(&wrapped, row, text_x, max_rows, area, buf, text_primary, bg_panel);
 
-    total_height
+    // Text on second row (with vertical padding)
+    draw_user_text_lines_at_y(
+        &wrapped, text_row, text_x, max_rows, area, buf, text_primary, bg_panel);
+
+    padded_height
 }
 
-fn draw_user_panel_bg(area: Rect, row: u16, margin_x: u16, total_height: u16, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
-    let panel_start_y = area.y + row;
+fn draw_user_panel_bg_at_y(panel_start_y: u16, area: Rect, margin_x: u16, total_height: u16, buf: &mut Buffer, bg_panel: ratatui::style::Color) {
     let panel_start_x = margin_x - 1;
     let panel_width = area.width - 2;
     for r in 0..total_height {
@@ -597,11 +602,11 @@ fn draw_user_panel_bg(area: Rect, row: u16, margin_x: u16, total_height: u16, bu
     }
 }
 
-fn draw_user_text_lines(wrapped: &[String], row: u16, text_x: u16, max_rows: u16, area: Rect, buf: &mut Buffer, text_primary: ratatui::style::Color, bg_panel: ratatui::style::Color) {
+fn draw_user_text_lines_at_y(wrapped: &[String], panel_start_y: u16, text_x: u16, max_rows: u16, area: Rect, buf: &mut Buffer, text_primary: ratatui::style::Color, bg_panel: ratatui::style::Color) {
     for (i, line_text) in wrapped.iter().enumerate() {
-        if row + 1 + i as u16 >= max_rows { break; }
+        if panel_start_y + i as u16 >= max_rows { break; }
         let line = Line::raw(line_text).style(Style::default().fg(text_primary).bg(bg_panel));
-        buf.set_line(text_x, area.y + row + 1 + i as u16, &line, area.width - 6);
+        buf.set_line(text_x, panel_start_y + i as u16, &line, area.width - 6);
     }
 }
 
@@ -664,35 +669,17 @@ pub fn strip_think_tags(text: &str) -> String {
 }
 
 
-/// Render a single think block as a box with border
 fn render_think_block_box(think_content: &str, area: Rect, row: u16, margin_x: u16, text_muted: ratatui::style::Color, wrap_cache: &mut WrapCache, buf: &mut Buffer) -> u16 {
     let inner_width = (area.width - margin_x + area.x - 6) as usize;
-    let title = " Thinking ";
-    let border_width = inner_width + 4;
-
-    // Title line: ┌─ Thinking ─────────┐
-    let title_line = format!("┌{}{}┐", title, "─".repeat(border_width.saturating_sub(title.len() + 2)));
-    if row >= area.height { return 0; }
-    let line = Line::raw(title_line).style(Style::default().fg(text_muted));
-    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
-    let mut rendered = 1u16;
-
-    // Content lines
     let wrapped = wrap_cache.get_wrapped(think_content, inner_width);
+    let mut rendered = 0u16;
+
     for line_text in wrapped {
         let line_y = row + rendered;
         if line_y >= area.height { break; }
-        let content_line = format!("│  {} │", line_text);
-        let line = Line::raw(content_line).style(Style::default().fg(text_muted));
+        let content = format!("· {}", line_text);
+        let line = Line::raw(content).style(Style::default().fg(text_muted));
         buf.set_line(margin_x, area.y + line_y, &line, area.width - margin_x + area.x - 2);
-        rendered += 1;
-    }
-
-    // Bottom border: └────────────────────┘
-    if row + rendered < area.height {
-        let bottom_line = format!("└{}┘", "─".repeat(border_width));
-        let line = Line::raw(bottom_line).style(Style::default().fg(text_muted));
-        buf.set_line(margin_x, area.y + row + rendered, &line, area.width - margin_x + area.x - 2);
         rendered += 1;
     }
 
@@ -719,17 +706,16 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x
     let width = (area.width - margin_x + area.x - 2) as usize;
     let mut rendered = 0u16;
 
+    // Add blank line before think blocks if there are any
+    if !think_blocks.is_empty() {
+        rendered += 1; // blank line before think blocks
+    }
+
     // Render think blocks first
     for think in &think_blocks {
         if row + rendered >= max_rows { break; }
         let block_rows = render_think_block_box(think, area, row + rendered, margin_x, text_muted, wrap_cache, buf);
         rendered += block_rows;
-        // Add a blank line after think block
-        if row + rendered < max_rows {
-            let line = Line::raw("").style(Style::default().fg(text_secondary));
-            buf.set_line(margin_x, area.y + row + rendered, &line, area.width - margin_x + area.x - 2);
-            rendered += 1;
-        }
     }
 
     // If no main text content, we're done
@@ -737,9 +723,15 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x
         return rendered;
     }
 
+    // Add blank line between think blocks and main text
+    if !think_blocks.is_empty() {
+        rendered += 1; // blank line after think blocks
+    }
+
     // Render main text content
     let base_style = Style::default().fg(text_secondary);
-    let markdown_lines = render_text_content(&stripped, width, base_style);
+    let stripped_trimmed = stripped.trim_start();
+    let markdown_lines = render_text_content(stripped_trimmed, width, base_style);
 
     for (i, line) in markdown_lines.iter().enumerate() {
         let line_y = row + rendered + i as u16;
@@ -763,27 +755,14 @@ fn render_assistant_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x
     rendered
 }
 
-fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, spinner: char, show_spinner: bool) -> u16 {
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('◆');
-        cell.set_style(Style::default().fg(text_muted));
-    }
-    let mut thought_text = String::with_capacity(32);
-    write!(thought_text, "Thought for {:.1}s", duration_secs).ok();
-    if show_spinner {
-        write!(thought_text, " {}", spinner).ok();
-    }
-    let para = Paragraph::new(Line::raw(thought_text).style(Style::default().fg(text_muted)))
-        .style(Style::default().fg(text_muted));
-    let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
-    para.render(para_area, buf);
+fn render_thought_msg(duration_secs: f32, area: Rect, row: u16, margin_x: u16, _text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, _spinner: char, _show_spinner: bool) -> u16 {
+    let text = format!("◆ Thought for {:.1}s", duration_secs);
+    let line = Line::raw(text).style(Style::default().fg(text_muted));
+    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
 }
 
 fn render_separator(elapsed_secs: u64, tool_calls: usize, tokens_used: Option<usize>, area: Rect, row: u16, margin_x: u16, buf: &mut Buffer, text_dim: ratatui::style::Color) -> u16 {
-    let mut parts = Vec::new();
-
-    // Format elapsed
     let elapsed_str = if elapsed_secs < 60 {
         format!("{}s", elapsed_secs)
     } else if elapsed_secs < 3600 {
@@ -792,36 +771,24 @@ fn render_separator(elapsed_secs: u64, tool_calls: usize, tokens_used: Option<us
         format!("{}h {:02}m", elapsed_secs / 3600, (elapsed_secs % 3600) / 60)
     };
 
-    parts.push(format!("Worked for {}", elapsed_str));
-
+    let mut tag = format!("[turn: {}", elapsed_str);
     if tool_calls > 0 {
-        parts.push(format!("{} tool call{}", tool_calls, if tool_calls == 1 { "" } else { "s" }));
+        tag.push_str(&format!(", {}tc", tool_calls));
     }
-
     if let Some(tokens) = tokens_used {
-        parts.push(format!("{} tokens", format_token_count(tokens)));
+        tag.push_str(&format!(", ⇣{}", format_token_count(tokens)));
     }
+    tag.push(']');
 
-    let label = parts.join(" • ");
-    let total_len = label.len() + 2; // "─ " + " ─"
-
-    let content_width = (area.width - margin_x * 2) as usize;
-    if total_len >= content_width {
-        let line = Line::raw(label).style(Style::default().fg(text_dim));
-        buf.set_line(margin_x, area.y + row, &line, area.width);
+    let tag_width = tag.len() as u16;
+    let content_width = area.width - margin_x + area.x - 2;
+    let x = if tag_width < content_width {
+        margin_x + content_width - tag_width
     } else {
-        let padding = content_width - total_len;
-        let left_pad = padding / 2;
-        let right_pad = padding - left_pad;
-        let line_text = format!("{}{} {}{}",
-            "─".repeat(left_pad),
-            "─",
-            label,
-            "─".repeat(right_pad)
-        );
-        let line = Line::raw(line_text).style(Style::default().fg(text_dim));
-        buf.set_line(margin_x, area.y + row, &line, area.width);
-    }
+        margin_x
+    };
+    let line = Line::raw(tag).style(Style::default().fg(text_dim));
+    buf.set_line(x, area.y + row, &line, tag_width);
     1
 }
 
@@ -835,35 +802,19 @@ fn format_token_count(tokens: usize) -> String {
     }
 }
 
-fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
+fn render_system_msg(text: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
     let is_error = text.starts_with("Error:");
     let color = if is_error { error } else { text_muted };
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('◆');
-        cell.set_style(Style::default().fg(color));
-    }
-    let para = Paragraph::new(Line::raw(text).style(Style::default().fg(color)))
-        .style(Style::default().fg(color));
-    let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
-    para.render(para_area, buf);
+    let prefix = if is_error { "! " } else { "· " };
+    let line = Line::raw(format!("{}{}", prefix, text)).style(Style::default().fg(color));
+    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
 }
 
 // P2-1: Render structured error messages with [!] icon and recovery hint
-fn render_error_msg(message: &str, _recoverable: bool, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, _text_muted: ratatui::style::Color) -> u16 {
-    // Draw [!] icon
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('!');
-        cell.set_style(Style::default().fg(error).add_modifier(ratatui::style::Modifier::BOLD));
-    }
-
-    // Draw error message using Paragraph
-    let para = Paragraph::new(Line::raw(message).style(Style::default().fg(error)))
-        .style(Style::default().fg(error));
-    let para_area = Rect::new(text_x, area.y + row, area.width - text_x + area.x - 4, 1);
-    para.render(para_area, buf);
-
-    // P0 FIX: Removed misleading "(press Enter to retry)" hint - Enter submits new message, doesn't retry
+fn render_error_msg(message: &str, _recoverable: bool, area: Rect, row: u16, margin_x: u16, _text_x: u16, buf: &mut Buffer, error: ratatui::style::Color, _text_muted: ratatui::style::Color) -> u16 {
+    let line = Line::raw(format!("! {}", message)).style(Style::default().fg(error));
+    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
 }
 
@@ -875,20 +826,36 @@ fn render_tool_call_msg(
     area: Rect,
     row: u16,
     margin_x: u16,
-    text_x: u16,
-    max_rows: u16,
+    _text_x: u16,
+    _max_rows: u16,
     buf: &mut Buffer,
     text_secondary: ratatui::style::Color,
-    text_muted: ratatui::style::Color,
+    _text_muted: ratatui::style::Color,
     success: ratatui::style::Color,
     error: ratatui::style::Color,
 ) -> u16 {
-    draw_tool_header(margin_x, text_x, area, row, buf, text_muted, text_secondary, name, args);
-    let mut rendered = 1;
+    let compact_args = format_tool_args_compact(args);
+    let mut text = format!("● {} · {}", name, compact_args);
+    
     if let Some(result_text) = result {
-        rendered += draw_tool_result(result_text, is_error, area, row + 1, text_x, max_rows, buf, text_muted, success, error);
+        let result_preview = result_text.lines().next().unwrap_or("").trim();
+        if !result_preview.is_empty() {
+            let color = if is_error { error } else { success };
+            let preview = if result_preview.len() > 40 {
+                format!("{}...", &result_preview[..40])
+            } else {
+                result_preview.to_string()
+            };
+            text.push_str(&format!(" → {}", preview));
+            let line = Line::raw(text).style(Style::default().fg(color));
+            buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
+            return 1;
+        }
     }
-    rendered
+    
+    let line = Line::raw(text).style(Style::default().fg(text_secondary));
+    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
+    1
 }
 
 /// Format tool arguments in compact form for single-line display
@@ -976,29 +943,10 @@ fn draw_tool_result(result_text: &str, is_error: bool, area: Rect, row: u16, tex
     rendered
 }
 
-fn render_edit_msg(filename: &str, area: Rect, row: u16, margin_x: u16, text_x: u16, buf: &mut Buffer, text_secondary: ratatui::style::Color, code_path: ratatui::style::Color) -> u16 {
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('◆');
-        cell.set_style(Style::default().fg(text_secondary));
-    }
-    let edit_label = "Edit ";
-    let filename_only = std::path::Path::new(filename).file_name().and_then(|n| n.to_str()).unwrap_or(filename);
-    let edit_len = edit_label.len() as u16;
-    for (i, ch) in edit_label.chars().enumerate() {
-        if let Some(cell) = buf.cell_mut((text_x + i as u16, area.y + row)) {
-            cell.set_char(ch);
-            cell.set_style(Style::default().fg(text_secondary));
-        }
-    }
-    for (i, ch) in filename_only.chars().enumerate() {
-        let x_pos = text_x + edit_len + i as u16;
-        if x_pos < area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x_pos, area.y + row)) {
-                cell.set_char(ch);
-                cell.set_style(Style::default().fg(code_path));
-            }
-        }
-    }
+fn render_edit_msg(filename: &str, _diff: &str, area: Rect, row: u16, margin_x: u16, _text_x: u16, buf: &mut Buffer, _text_secondary: ratatui::style::Color, code_path: ratatui::style::Color) -> u16 {
+    let text = format!("◆ Edit {}", filename);
+    let line = Line::raw(text).style(Style::default().fg(code_path));
+    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
 }
 

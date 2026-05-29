@@ -6,6 +6,9 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::Color, prelude::Widget};
 use crate::theme::ThemeWrapper;
 
+pub mod builder;
+pub use builder::*;
+
 /// Prompt character for the input bar
 pub const INPUT_PROMPT: &str = "\u{276F} ";
 
