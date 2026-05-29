@@ -195,6 +195,18 @@ impl FeedBuilder {
         self
     }
 
+    /// Set messages from a slice (for AppState integration).
+    pub fn messages(mut self, messages: &[MessageItem]) -> Self {
+        self.messages.extend_from_slice(messages);
+        self
+    }
+
+    /// Set wrap cache (for AppState integration).
+    pub fn wrap_cache(mut self, cache: WrapCache) -> Self {
+        self.wrap_cache = cache;
+        self
+    }
+
     /// Consume the builder and return the MessageListViewModel.
     pub fn build(self) -> MessageListViewModel {
         MessageListViewModel {

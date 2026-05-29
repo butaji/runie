@@ -42,6 +42,26 @@ impl OnboardingBuilder {
         self
     }
 
+    pub fn step(mut self, step: OnboardingStep) -> Self {
+        self.step = step;
+        self
+    }
+
+    pub fn selected_item(mut self, item: usize) -> Self {
+        self.selected_item = item;
+        self
+    }
+
+    pub fn selected_provider(mut self, provider: Option<usize>) -> Self {
+        self.selected_provider = provider;
+        self
+    }
+
+    pub fn selected_model(mut self, model: Option<usize>) -> Self {
+        self.selected_model = model;
+        self
+    }
+
     pub fn key(mut self, key: &str) -> Self {
         self.api_key_input = key.to_string();
         self
