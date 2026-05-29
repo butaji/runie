@@ -8,6 +8,9 @@ mod tests_scoring;
 #[cfg(test)]
 mod tests_registry;
 
+pub mod builder;
+pub use builder::*;
+
 use ratatui::{
     buffer::Buffer,
     layout::Rect,

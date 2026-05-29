@@ -894,6 +894,8 @@ fn format_tool_args_compact(args: &str) -> String {
     }
 }
 
+/// Phase 3 placeholder - tool header rendering (superseded by FeedBuilder)
+#[allow(dead_code)]
 fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut Buffer, _text_muted: ratatui::style::Color, text_secondary: ratatui::style::Color, name: &str, args: &str) {
     // Codex-style: ● name · args (compact inline format)
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
@@ -913,6 +915,8 @@ fn draw_tool_header(margin_x: u16, text_x: u16, area: Rect, row: u16, buf: &mut 
     buf.set_line(text_x, area.y + row, &line, area.width - 4);
 }
 
+/// Phase 3 placeholder - tool result rendering (superseded by FeedBuilder)
+#[allow(dead_code)]
 fn draw_tool_result(result_text: &str, is_error: bool, area: Rect, row: u16, text_x: u16, max_rows: u16, buf: &mut Buffer, text_muted: ratatui::style::Color, _success: ratatui::style::Color, error: ratatui::style::Color) -> u16 {
     // Codex-style tree result: filter empty lines and render with └ prefix
     let result_lines: Vec<&str> = result_text.split('\n').filter(|l| !l.is_empty()).collect();
