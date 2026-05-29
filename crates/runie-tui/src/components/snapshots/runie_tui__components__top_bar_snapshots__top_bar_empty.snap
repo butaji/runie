@@ -2,4 +2,4 @@
 source: crates/runie-tui/src/components/top_bar_snapshots.rs
 expression: rendered
 ---
-"                                                                   0/128k ▱▱▱▱⚡"
+"                                                                   0/128k 0% ○"
