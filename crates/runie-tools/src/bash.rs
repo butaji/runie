@@ -181,7 +181,7 @@ impl BashTool {
     }
 
     /// Formats command output into ToolOutput content.
-    fn format_output(stdout: &str, stderr: &str, exit_code: Option<i32>) -> String {
+    fn format_output(stdout: &str, stderr: &str, _exit_code: Option<i32>) -> String {
         let content = if stderr.is_empty() {
             stdout.to_string()
         } else {

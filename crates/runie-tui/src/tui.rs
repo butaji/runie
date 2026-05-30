@@ -59,11 +59,7 @@ pub mod tests_hotkeys;
 pub mod tests_statusbar;
 #[cfg(test)]
 pub mod tests_onboarding;
-// tests_input module was deleted - intentionally commented out
-// #[cfg(test)]
-// pub mod tests_input; // intentionally commented out - module was deleted
-// #[cfg(test)]
-// pub mod tests_input;
+
 
 pub use state::{AppState, TuiMode, Msg, Cmd, RenderState, Onboarding, OnboardingStep};
 pub use update::update;

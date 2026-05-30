@@ -5,7 +5,6 @@ pub mod config;
 pub mod hook;
 pub mod permission;
 pub mod state;
-pub mod executor;
 pub mod tools;
 
 // Core agent architecture
@@ -16,7 +15,6 @@ pub mod harness;
 pub use config::{AgentConfig, ToolExecutionMode};
 pub use hook::{Hook, HookDecision, HookError, SafetyHook};
 pub use state::AgentState;
-pub use executor::ToolExecutor;
 pub use loop_engine::{AgentEventStream, AgentLoopConfig};
 pub use tools::AgentTool;
 
