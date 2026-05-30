@@ -107,7 +107,6 @@ fn merge_api_key_fallback(settings: &mut Settings) {
 }
 
     /// Merge settings from CLI arguments
-    #[allow(dead_code)]
     pub fn merge_cli(&mut self, cli: &CliSettings) {
         if let Some(ref m) = cli.model {
             self.model = m.clone();
@@ -130,7 +129,6 @@ fn merge_api_key_fallback(settings: &mut Settings) {
     }
 
     /// Validate model against static registry
-    #[allow(dead_code)]
     pub fn validate_model(&self) -> bool {
         get_provider_models(&self.provider)
             .map(|models| models.iter().any(|m| m.id == self.model))
@@ -139,7 +137,6 @@ fn merge_api_key_fallback(settings: &mut Settings) {
 }
 
 /// CLI-level settings (only fields that can be set via CLI)
-#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct CliSettings {
     pub model: Option<String>,

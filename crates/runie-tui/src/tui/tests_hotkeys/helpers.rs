@@ -32,18 +32,6 @@ pub fn make_chat_state_with_input(text: &str) -> crate::tui::state::AppState {
     state
 }
 
-/// Helper: create AppState in CommandPalette mode
-#[allow(dead_code)]
-pub fn make_palette_state() -> crate::tui::state::AppState {
-    use crate::tui::state::AppState;
-    use crate::tui::state::TuiMode;
-
-    let mut state = AppState::default();
-    state.mode = TuiMode::CommandPalette;
-    state.command_palette.open = true;
-    state
-}
-
 /// Helper: create AppState with modal open
 pub fn make_state_with_modal(mode: crate::tui::state::TuiMode) -> crate::tui::state::AppState {
     use crate::tui::state::AppState;

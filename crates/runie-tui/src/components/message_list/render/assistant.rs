@@ -1,4 +1,4 @@
-use ratatui::{buffer::Buffer, layout::Rect, style::Style, widgets::Widget};
+use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::Line, widgets::Widget};
 
 use crate::components::message_list::WrapCache;
 use super::markdown::render_text_content;
@@ -100,10 +100,13 @@ pub fn render_assistant_msg(
     wrap_cache: &mut WrapCache,
     agent_running: bool,
     spinner: char,
+    timestamp: Option<String>,
+    thought_duration: Option<f32>,
+    turn_complete: Option<u64>,
 ) -> u16 {
-    let (stripped, think_blocks) = extract_think_blocks(text);
+    let (stripped, _think_blocks) = extract_think_blocks(text);
 
-    if stripped.trim().is_empty() && think_blocks.is_empty() {
+    if stripped.trim().is_empty() && _think_blocks.is_empty() {
         let content = if agent_running {
             format!("{} Thinking...", spinner)
         } else {
@@ -117,13 +120,26 @@ pub fn render_assistant_msg(
     }
 
     let width = (area.width - margin_x + area.x - 2) as usize;
+    let content_width = area.width - margin_x + area.x - 2;
     let mut rendered = 0u16;
 
-    if !think_blocks.is_empty() {
-        rendered += 1;
-    }
+    // Render thought indicator BEFORE answer (if thought_duration is provided)
+    // ◆ Thought for 0.5s - diamond muted, "Thought" BOLD white, "for 0.5s" muted
+    let thought_rows = if let Some(duration) = thought_duration {
+        let line = Line::from(vec![
+            Span::raw("◆ ").style(Style::default().fg(text_muted)),
+            Span::raw("Thought ").style(Style::default().add_modifier(Modifier::BOLD).fg(text_secondary)),
+            Span::raw(format!("for {:.1}s", duration)).style(Style::default().fg(text_muted)),
+        ]);
+        buf.set_line(margin_x, area.y + row, &line, content_width);
+        1
+    } else {
+        0
+    };
+    rendered += thought_rows;
 
-    for think in &think_blocks {
+    // Render think blocks if any (not currently used but preserved)
+    for think in &_think_blocks {
         if row + rendered >= max_rows {
             break;
         }
@@ -135,13 +151,11 @@ pub fn render_assistant_msg(
         return rendered;
     }
 
-    if !think_blocks.is_empty() {
-        rendered += 1;
-    }
-
-    let base_style = Style::default().fg(text_secondary);
+    let base_style = Style::default().add_modifier(Modifier::BOLD).fg(text_secondary);
     let stripped_trimmed = stripped.trim_start();
     let markdown_lines = render_text_content(stripped_trimmed, width, base_style);
+
+    let text_rows = markdown_lines.len() as u16;
 
     for (i, line) in markdown_lines.iter().enumerate() {
         let line_y = row + rendered + i as u16;
@@ -150,10 +164,37 @@ pub fn render_assistant_msg(
         }
         buf.set_line(margin_x, area.y + line_y, line, area.width - margin_x + area.x - 2);
     }
-    let text_rows = markdown_lines.len() as u16;
     rendered += text_rows;
 
-    if cursor_visible && rendered > 0 {
+    // Render right-aligned timestamp on the LAST LINE of text content (before "Turn completed")
+    if let Some(ts) = timestamp {
+        if rendered > 0 && row + rendered - 1 < max_rows {
+            let ts_len = ts.len() as u16;
+            let available_width = area.width - margin_x + area.x - 2;
+            let ts_x = if ts_len < available_width {
+                margin_x + available_width - ts_len
+            } else {
+                margin_x
+            };
+            let line = ratatui::text::Line::raw(ts).style(Style::default().fg(text_muted));
+            buf.set_line(ts_x, area.y + row + rendered - 1, &line, ts_len);
+        }
+    }
+
+    // Render "Turn completed in Xs" at bottom (only when turn is done, not streaming)
+    if !agent_running {
+        if let Some(elapsed) = turn_complete {
+            if row + rendered < max_rows {
+                let complete_text = format!("Turn completed in {}s", elapsed);
+                let line = ratatui::text::Line::raw(complete_text).style(Style::default().fg(text_muted));
+                buf.set_line(margin_x, area.y + row + rendered, &line, content_width);
+                rendered += 1;
+            }
+        }
+    }
+
+    // Cursor placement at end of rendered content
+    if cursor_visible && text_rows > 0 {
         let cursor_y = area.y + row + rendered - 1;
         let last_line_text = markdown_lines.last().map(|l| l.to_string()).unwrap_or_default();
         let cursor_x = margin_x + (last_line_text.len() as u16).min(area.width - margin_x + area.x - 3);

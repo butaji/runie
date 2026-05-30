@@ -166,13 +166,14 @@ impl ViewModels {
 // ─── Builder Helpers ────────────────────────────────────────────────────────
 
 fn build_message_list_vm(state: &crate::tui::state::RenderState, wrap_cache: crate::components::message_list::render::WrapCache) -> MessageListViewModel {
-    MessageListViewModel {
-        messages: state.messages.clone(),
-        scroll_offset: state.scroll.feed_offset,
-        agent_running: state.agent_running,
-        animation: state.animation.clone(),
+    use crate::components::message_list::Feed;
+    MessageListViewModel::new(
+        Feed::from(state.messages.clone()),
+        state.scroll.feed_offset,
+        state.agent_running,
+        state.animation.clone(),
         wrap_cache,
-    }
+    )
 }
 
 fn build_input_bar_vm(state: &crate::tui::state::RenderState) -> InputBarViewModel {
