@@ -7,6 +7,9 @@ pub mod render;
 pub mod builder;
 pub mod feed;
 
+#[cfg(test)]
+mod snapshots;
+
 pub use types::{MessageItem, MessageList, PlanStatus, BRAILLE_FRAMES, REVERSE_BRAILLE_FRAMES};
 pub use builder::FeedBuilder;
 pub use feed::{Feed, FeedItem, Thought, ToolCall};

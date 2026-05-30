@@ -1,0 +1,7 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+  › Check my system                                                             
+  ◆ Thought for 0.1s                                                            
+  Your system is running well!

@@ -37,6 +37,8 @@ enum BuilderState {
     InAssistant(AssistantBuilder),
     /// Assistant builder ready for next method
     AssistantReady(AssistantBuilder),
+    /// Turn duration pending to be applied to last assistant
+    TurnDurationPending(f32),
 }
 
 #[derive(Debug, Clone)]
@@ -70,6 +72,14 @@ impl FeedBuilder {
         self
     }
 
+    /// Set turn completion duration (applied to last assistant message on build).
+    pub fn turn_completed_in(mut self, duration: f32) -> Self {
+        if let BuilderState::AssistantReady(_) = &self.state {
+            self.state = BuilderState::TurnDurationPending(duration);
+        }
+        self
+    }
+
     /// Begin an assistant message. Returns builder for assistant content.
     pub fn assistant(mut self) -> AssistantFeedBuilder {
         self.end_any_assistant();
@@ -89,6 +99,7 @@ impl FeedBuilder {
             feed_builder: self,
             assistant,
             requires_user_before: has_user,
+            turn_duration: None,
         }
     }
 
@@ -111,6 +122,16 @@ impl FeedBuilder {
     /// Finalize the builder and return the Feed.
     pub fn build(mut self) -> Feed {
         self.end_any_assistant();
+
+        // Apply pending turn duration if any
+        if let BuilderState::TurnDurationPending(duration) = &self.state {
+            if let Some(last) = self.items.last_mut() {
+                if let FeedItem::AssistantMessage { turn_duration, .. } = last {
+                    *turn_duration = Some(*duration);
+                }
+            }
+        }
+
         Feed {
             items: self.items,
             seen_ids: Default::default(),
@@ -131,6 +152,7 @@ pub struct AssistantFeedBuilder {
     assistant: AssistantBuilder,
     #[allow(dead_code)]
     requires_user_before: bool,
+    turn_duration: Option<f32>,
 }
 
 impl AssistantFeedBuilder {
@@ -172,16 +194,28 @@ impl AssistantFeedBuilder {
     }
 
     /// Set the turn completion duration.
-    pub fn turn_completed_in(self, _duration: Duration) -> Self {
-        // Note: turn_duration is tracked at Feed level
-        // This method exists for fluent chaining
+    pub fn turn_completed_in(mut self, duration: Duration) -> Self {
+        self.turn_duration = Some(duration.as_secs_f32());
         self
     }
 
+    /// Build the Feed directly from the assistant builder.
+    pub fn build(self) -> Feed {
+        self.done().build()
+    }
+
+    /// Add another user message (returns to FeedBuilder).
+    pub fn user_message(self, text: impl Into<String>) -> FeedBuilder {
+        self.done().user_message(text)
+    }
+
     /// Continue building the feed (return to parent builder).
-    pub fn done(self) -> FeedBuilder {
+    pub fn done(mut self) -> FeedBuilder {
         let mut fb = self.feed_builder;
         fb.state = BuilderState::AssistantReady(self.assistant);
+        if let Some(duration) = self.turn_duration {
+            fb.state = BuilderState::TurnDurationPending(duration);
+        }
         fb
     }
 }
