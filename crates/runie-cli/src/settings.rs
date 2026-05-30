@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 /// Resolved settings from all sources
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Settings {
     pub model: String,
     pub provider: String,
@@ -13,6 +13,8 @@ pub struct Settings {
     pub max_turns: usize,
     pub enable_thinking: bool,
     pub shell: String,
+    /// Whether a config file was loaded (vs using defaults/no config)
+    pub config_loaded: bool,
 }
 
 impl Default for Settings {
@@ -24,6 +26,7 @@ impl Default for Settings {
             max_turns: 10,
             enable_thinking: true,
             shell: std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string()),
+            config_loaded: false,
         }
     }
 }
@@ -53,6 +56,7 @@ impl Settings {
         if let Some(global) = runie_dir().map(|p| p.join("config.toml")) {
             if global.exists() {
                 settings.merge_file(&global);
+                settings.config_loaded = true;
             }
         }
 
@@ -61,6 +65,7 @@ impl Settings {
             let project = cwd.join(".runie/config.toml");
             if project.exists() {
                 settings.merge_file(&project);
+                settings.config_loaded = true;
             }
         }
 

@@ -132,7 +132,8 @@ fn test_submit_with_content() {
     let msg_count_before = state.messages.len();
     let cmds = run_update(&mut state, Msg::Submit);
     assert!(!cmds.is_empty(), "Submit with content should produce commands");
-    assert_eq!(state.messages.len(), msg_count_before + 1, "Submit should add user message");
+    // add_user_and_placeholder adds User + Assistant placeholder (2 messages)
+    assert_eq!(state.messages.len(), msg_count_before + 2, "Submit should add user + assistant placeholder messages");
 }
 
 fn test_submit_without_content() {
@@ -170,7 +171,7 @@ fn test_free_function_has_no_dirty_mechanism() {
     // external concept.  tui.update() bridges this by setting dirty=true first.
 }
 
-/// Test no forbidden pattern in tui_run.rs
+/// Test no forbidden pattern in tui_run handlers
 ///
 /// The correct pattern is: tui.update(msg)
 /// The forbidden pattern is: runie_tui::update(&mut tui.state, msg)
@@ -179,8 +180,9 @@ fn test_no_free_function_calls_in_tui_run() {
     let source = std::fs::read_to_string(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("src")
-            .join("tui_run.rs")
-    ).expect("Failed to read tui_run.rs");
+            .join("tui_run")
+            .join("handlers.rs")
+    ).expect("Failed to read tui_run/handlers.rs");
 
     // Check for forbidden patterns that would bypass dirty flag
     let forbidden = [
@@ -192,7 +194,7 @@ fn test_no_free_function_calls_in_tui_run() {
     for pattern in forbidden {
         assert!(
             !source.contains(pattern),
-            "FORBIDDEN: '{}' found in tui_run.rs - use tui.update() instead",
+            "FORBIDDEN: '{}' found in tui_run/handlers.rs - use tui.update() instead",
             pattern
         );
     }
@@ -233,10 +235,11 @@ fn test_full_pipeline_typing() {
         tui.update(msg);
     }
     assert_eq!(tui.content(), "", "Input should be cleared after submit");
+    // add_user_and_placeholder adds User + Assistant placeholder (2 messages)
     assert_eq!(
         tui.state.messages.len(),
-        msg_count_before + 1,
-        "Should have added user message"
+        msg_count_before + 2,
+        "Should have added user + assistant placeholder messages"
     );
 }
 
