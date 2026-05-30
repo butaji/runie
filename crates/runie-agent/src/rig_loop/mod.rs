@@ -176,8 +176,8 @@ pub async fn run_rig_agent_loop(
             return Err(AgentLoopError::ProviderError("No messages provided".to_string()));
         }
 
-        let prompt = rig_messages.last().cloned().unwrap();
-        let chat_history = rig_messages.into_iter().rev().skip(1).rev().collect::<Vec<_>>();
+        let prompt = rig_messages.pop().expect("rig_messages checked non-empty above");
+        let chat_history = rig_messages;
 
         let mut builder = model.completion_request(prompt);
         if !chat_history.is_empty() {

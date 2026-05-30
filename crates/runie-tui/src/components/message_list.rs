@@ -46,7 +46,7 @@ impl MessageList {
         let mut wrap_cache = vm.wrap_cache.clone();
         let spinner = BRAILLE_FRAMES[vm.animation.braille_frame % 10];
         let rewind_spinner = REVERSE_BRAILLE_FRAMES[vm.animation.braille_frame % 10];
-        let mut row = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
+        let _row = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
 
         if vm.feed.is_empty() && !vm.agent_running {
             render::render_empty_state(area, buf, colors.text_muted, colors.text_dim, area.x + 4);
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_user_message_renders() {
-        let (row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
+        let (_row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
         let cell = buf.cell((area.x + 2, area.y)).unwrap();
         assert_eq!(cell.symbol(), "\u{203A}", "Expected chevron for user message");
     }

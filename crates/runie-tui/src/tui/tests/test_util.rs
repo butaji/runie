@@ -4,6 +4,7 @@
 //! event processing, and UI components.
 
 use std::fs;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 use crate::components::MessageItem;
@@ -11,32 +12,137 @@ use crate::tui::state::AppState;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, ToolResult, TokenUsage};
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEMP DIRECTORY FIXTURE (opencode pattern)
+// TEMP DIRECTORY FIXTURE (crush pattern - RAII auto-cleanup)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// RAII-style temporary directory that auto-cleans on drop.
+///
+/// # Usage
+/// ```
+/// let temp = TestTempDir::new();
+/// let file_path = temp.write_file("test.txt", "content");
+/// // file automatically cleaned up when temp goes out of scope
+/// ```
 pub struct TestTempDir {
     dir: TempDir,
+    /// Track created files for debugging
+    #[cfg(debug_assertions)]
+    created_files: Vec<PathBuf>,
 }
 
 impl TestTempDir {
+    /// Create a new temporary directory with a custom prefix.
+    ///
+    /// # Arguments
+    /// * `prefix` - Prefix for the temp directory name
+    ///
+    /// # Example
+    /// ```
+    /// let temp = TestTempDir::with_prefix("runie_test");
+    /// ```
+    pub fn with_prefix(prefix: &str) -> Self {
+        let dir = TempDir::new_in(std::env::temp_dir(), prefix)
+            .expect("Failed to create temp directory");
+
+        Self {
+            dir,
+            #[cfg(debug_assertions)]
+            created_files: Vec::new(),
+        }
+    }
+
     /// Create a new temporary directory.
+    ///
+    /// # Panics
+    /// Panics if temp directory creation fails.
     pub fn new() -> Self {
         Self {
-            dir: TempDir::new().unwrap(),
+            dir: TempDir::new().expect("Failed to create temp directory"),
+            #[cfg(debug_assertions)]
+            created_files: Vec::new(),
         }
     }
 
     /// Get the path to the temporary directory.
-    pub fn path(&self) -> &std::path::Path {
+    pub fn path(&self) -> &Path {
         self.dir.path()
     }
 
+    /// Get a path to a file within the temp directory.
+    pub fn file_path(&self, name: &str) -> PathBuf {
+        self.dir.path().join(name)
+    }
+
     /// Write a file to the temp directory and return its path.
-    pub fn write_file(&self, name: &str, content: &str) -> std::path::PathBuf {
+    ///
+    /// # Arguments
+    /// * `name` - File name (can include subdirectories)
+    /// * `content` - File content
+    ///
+    /// # Returns
+    /// Full path to the created file.
+    pub fn write_file(&self, name: &str, content: &str) -> PathBuf {
         let path = self.dir.path().join(name);
-        fs::write(&path, content).unwrap();
+
+        // Create parent directories if needed
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("Failed to create parent directories");
+        }
+
+        fs::write(&path, content).expect("Failed to write file");
+
+        #[cfg(debug_assertions)]
+        self.created_files.push(path.clone());
+
         path
+    }
+
+    /// Write a binary file to the temp directory.
+    pub fn write_binary(&self, name: &str, content: &[u8]) -> PathBuf {
+        let path = self.dir.path().join(name);
+
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("Failed to create parent directories");
+        }
+
+        fs::write(&path, content).expect("Failed to write binary file");
+
+        #[cfg(debug_assertions)]
+        self.created_files.push(path.clone());
+
+        path
+    }
+
+    /// Create a subdirectory within the temp directory.
+    pub fn create_dir(&self, name: &str) -> PathBuf {
+        let path = self.dir.path().join(name);
+        fs::create_dir_all(&path).expect("Failed to create directory");
+        path
+    }
+
+    /// Check if the temp directory still exists.
+    pub fn exists(&self) -> bool {
+        self.dir.path().exists()
+    }
+
+    /// Get list of files in temp directory (recursive).
+    #[cfg(debug_assertions)]
+    pub fn created_files(&self) -> &[PathBuf] {
+        &self.created_files
+    }
+
+    /// Persist the temp directory to a permanent location.
+    /// Useful for debugging test failures.
+    ///
+    /// # Arguments
+    /// * `target` - Permanent path to move the directory to
+    ///
+    /// # Returns
+    /// true if persist was successful, false otherwise
+    pub fn persist_to(&self, target: &Path) -> bool {
+        // Clone directory contents instead of using TempDir's persist
+        // because we want to keep the temp dir for tests
+        copy_dir_recursive(self.dir.path(), target).is_ok()
     }
 }
 
@@ -48,8 +154,30 @@ impl Default for TestTempDir {
 
 impl Drop for TestTempDir {
     fn drop(&mut self) {
-        // Auto-cleaned by TempDir
+        // TempDir auto-cleans via Drop implementation
+        // Explicit cleanup happens when TempDir is dropped
     }
+}
+
+/// Copy directory recursively (utility function)
+fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
+    if !dst.exists() {
+        fs::create_dir_all(dst)?;
+    }
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let new_dst = dst.join(entry.file_name());
+
+        if ty.is_dir() {
+            copy_dir_recursive(&entry.path(), &new_dst)?;
+        } else {
+            fs::copy(entry.path(), new_dst)?;
+        }
+    }
+
+    Ok(())
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

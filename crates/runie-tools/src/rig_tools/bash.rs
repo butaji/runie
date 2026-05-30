@@ -160,11 +160,11 @@ impl BashTool {
 
     /// Validates and executes a bash command, returning structured output.
     fn run_command(workspace: &PathBuf, command: &str, timeout: u64) -> Result<BashOutput, BashError> {
-        let output = tokio::runtime::Builder::new_current_thread()
+        let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .unwrap()
-            .block_on(async {
+            .map_err(|e| BashError::ExecutionFailed(format!("Failed to create tokio runtime: {}", e)))?;
+        let output = runtime.block_on(async {
                 tokio::time::timeout(
                     Duration::from_secs(timeout),
                     tokio::process::Command::new("sh")

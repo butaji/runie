@@ -44,7 +44,12 @@ fn main() {
         Some(Commands::Open) | None => handle_open(&cli),
         Some(Commands::Dump { ref format }) => handle_dump(&cli, format),
         Some(Commands::List) => handle_list(),
-        Some(Commands::Init { target }) => handle_init(&target),
+        Some(Commands::Init { target }) => {
+            if let Err(e) = handle_init(&target) {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            }
+        }
         Some(Commands::Test) => handle_test(&cli),
     }
 }
@@ -70,18 +75,20 @@ fn handle_list() {
     println!("  StatusBar::Chat Mode");
 }
 
-fn handle_init(target: &PathBuf) {
+fn handle_init(target: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     println!("Initializing pantry at: {}", target.display());
-    std::fs::create_dir_all(target).expect("Failed to create directory");
-    create_pantry_toml(target);
+    std::fs::create_dir_all(target)
+        .map_err(|e| format!("Failed to create directory '{}': {}", target.display(), e))?;
+    create_pantry_toml(target)?;
     println!("Created pantry.toml");
     println!("\nNext steps:");
     println!("  1. cd {}", target.display());
     println!("  2. Create src/main.rs with your ingredients");
     println!("  3. cargo run");
+    Ok(())
 }
 
-fn create_pantry_toml(target: &PathBuf) {
+fn create_pantry_toml(target: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let pantry_toml = r##"[config]
 name = "Anvil Pantry"
 description = "Widget development environment"
@@ -101,8 +108,10 @@ doc_type = "#c792ea"
 indicator = "#5ccfe6"
 dark = true
 "##;
-    std::fs::write(target.join("pantry.toml"), pantry_toml)
-        .expect("Failed to write pantry.toml");
+    let path = target.join("pantry.toml");
+    std::fs::write(&path, pantry_toml)
+        .map_err(|e| format!("Failed to write '{}': {}", path.display(), e))?;
+    Ok(())
 }
 
 fn handle_test(cli: &Cli) {

@@ -2,12 +2,11 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::{AppState, TuiMode};
-use crate::terminal_scrollback::push_to_scrollback_auto;
 use runie_agent::{AgentEvent, ContentPart};
 use runie_ai::TokenUsage;
 
 /// Update agent domain: agent events, permissions.
-pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::AgentCmd> {
+pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::tui::update::agent::AgentCmd> {
     match msg {
         crate::tui::state::Msg::AgentEvent(event) => {
             handle_agent_event(state, event);
@@ -120,8 +119,6 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
     state.is_thinking = true;
     state.thinking_start = Some(std::time::Instant::now());
     state.thinking_duration = None;
-    // Track the start of this turn's messages for scrollback
-    state.turn_start_index = Some(state.messages.len());
     // Auto-scroll to bottom if user hasn't scrolled up
     if !state.scroll.user_scrolled_up {
         state.scroll.feed_offset = 0;
@@ -228,7 +225,7 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
     }
 }
 
-/// Handle turn end - add separator with runtime metrics and push to terminal scrollback
+/// Handle turn end - add separator with runtime metrics
 fn on_turn_end(state: &mut AppState) {
     // Add separator if we have timing info
     if let Some(start_time) = state.agent_start_time {
@@ -243,20 +240,6 @@ fn on_turn_end(state: &mut AppState) {
             tokens_used: Some(state.session_token_usage.total_tokens),
         });
     }
-
-    // Push completed turn's messages to terminal scrollback using VT100 sequences
-    // and clear from viewport. Previous turns live in terminal scrollback,
-    // viewport only shows current turn.
-    if let Some(turn_start) = state.turn_start_index {
-        let turn_messages: Vec<MessageItem> = state.messages.drain(turn_start..).collect();
-        // Push to terminal scrollback via VT100 (errors logged but ignored)
-        if let Err(e) = push_to_scrollback_auto(&turn_messages) {
-            tracing::warn!("Failed to push to scrollback: {}", e);
-        }
-    }
-    
-    // Reset turn tracking
-    state.turn_start_index = None;
 }
 
 pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {

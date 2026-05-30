@@ -1,6 +1,6 @@
 //! Reducer tests for state updates.
 
-use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, ContextState, PermissionModalState, PendingPermission, TuiMode, ClearInputConfirm};
+use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, ContextState, PermissionModalState, PendingPermission, TuiMode, ClearInputConfirm, TopBarState};
 use crate::components::{MessageItem, SessionTreeNavigator};
 use crate::components::CommandPalette;
 use crate::tui::update::update;
@@ -34,7 +34,6 @@ pub fn make_state() -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         model_picker: None,
         agent_start_time: None,
-        turn_start_index: None,
         input_history: Vec::new(),
         input_history_index: None,
         input_draft: String::new(),
@@ -45,6 +44,7 @@ pub fn make_state() -> AppState {
         thinking_duration: None,
         is_thinking: false,
         mock_mode: false,
+        top_bar: TopBarState::default(),
     }
 }
 
@@ -73,7 +73,6 @@ pub fn make_state_with_text(text: &str) -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         model_picker: None,
         agent_start_time: None,
-        turn_start_index: None,
         input_history: Vec::new(),
         input_history_index: None,
         input_draft: String::new(),
@@ -84,6 +83,7 @@ pub fn make_state_with_text(text: &str) -> AppState {
         thinking_duration: None,
         is_thinking: false,
         mock_mode: false,
+        top_bar: TopBarState::default(),
     };
     state
 }

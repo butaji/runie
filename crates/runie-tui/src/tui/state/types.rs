@@ -1,6 +1,6 @@
 //! State types for AppState and related structs.
 
-use super::*;
+
 
 /// P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
 #[derive(Clone)]

@@ -188,7 +188,7 @@ pub(crate) async fn process_tool_calls<M: TryFrom<AgentEvent> + Send + 'static>(
     permission_state: Arc<Mutex<Option<PermissionDecision>>>,
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
-    allowed_tools_mut: &mut HashSet<String>,
+    _allowed_tools_mut: &mut HashSet<String>,
     context_window: usize,
 ) -> Vec<ToolResult>
 where

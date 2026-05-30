@@ -20,7 +20,6 @@ pub async fn process_cmd(
     cmd: Cmd,
     tui: &mut runie_tui::Tui,
     agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-    permission_state: &Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
     msg_tx: &mpsc::Sender<Msg>,
     workspace: &PathBuf,
     mock: bool,
@@ -30,21 +29,21 @@ pub async fn process_cmd(
 ) -> StateChange {
     match cmd {
         Cmd::SpawnAgent { messages } => handle_spawn_agent(
-            messages, agent_task, permission_state, msg_tx, workspace, mock, settings, base_system_prompt,
+            messages, agent_task, tui, msg_tx, workspace, mock, settings, base_system_prompt,
         ).await,
-        Cmd::SendPermission { decision } => handle_send_permission(permission_state, decision).await,
+        Cmd::SendPermission { decision } => handle_send_permission(tui, decision).await,
         Cmd::SlashCommand(slash_cmd) => handle_slash_command(tui, slash_cmd),
         Cmd::SaveSettings { provider, model, api_key } => handle_save_settings(tui, settings, provider, model, api_key),
         Cmd::FetchModels { provider_id, api_key } => handle_fetch_models(msg_tx, provider_id, api_key).await,
         Cmd::Rollback { tool_call_id } => handle_rollback(tool_call_id),
-        Cmd::Interrupt => handle_interrupt(agent_task, permission_state, msg_tx).await,
+        Cmd::Interrupt => handle_interrupt(agent_task, tui, msg_tx).await,
     }
 }
 
 async fn handle_spawn_agent(
     messages: Vec<runie_agent::events::AgentMessage>,
     agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-    permission_state: &Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
+    tui: &runie_tui::Tui,
     msg_tx: &mpsc::Sender<Msg>,
     workspace: &PathBuf,
     mock: bool,
@@ -82,7 +81,7 @@ async fn handle_spawn_agent(
         max_turns: settings.max_turns,
     };
 
-    let permission_state_clone = permission_state.clone();
+    let permission_state_clone = tui.permission_state.clone();
     let msg_tx_clone = msg_tx.clone();
 
     let task = tokio::spawn(async move {
@@ -167,11 +166,10 @@ async fn handle_agent_timeout(msg_tx: &mpsc::Sender<Msg>) {
 }
 
 async fn handle_send_permission(
-    permission_state: &Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
+    tui: &mut runie_tui::Tui,
     decision: PermissionDecision,
 ) -> StateChange {
-    let mut guard = permission_state.lock().await;
-    *guard = Some(decision);
+    tui.set_permission(decision).await;
     StateChange::none()
 }
 
@@ -286,7 +284,7 @@ fn handle_rollback(tool_call_id: String) -> StateChange {
 
 async fn handle_interrupt(
     agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-    permission_state: &Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
+    tui: &mut runie_tui::Tui,
     msg_tx: &mpsc::Sender<Msg>,
 ) -> StateChange {
     let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
@@ -298,7 +296,6 @@ async fn handle_interrupt(
     if let Some(task) = agent_task.take() {
         task.abort();
     }
-    let mut guard = permission_state.lock().await;
-    *guard = None;
+    tui.clear_permission().await;
     StateChange::none()
 }

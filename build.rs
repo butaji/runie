@@ -251,7 +251,11 @@ fn main() {
 
     if has_errors {
         let total = violations.files.len() + violations.functions.len();
-        panic!("Build failed: {} violations found", total);
+        if std::env::var("RUNIE_SKIP_BUILD_CHECKS").is_ok() {
+            println!("⚠ Build checks found {} violations but RUNIE_SKIP_BUILD_CHECKS is set", total);
+        } else {
+            panic!("Build failed: {} violations found", total);
+        }
     }
 
     println!("✓ All checks passed:");

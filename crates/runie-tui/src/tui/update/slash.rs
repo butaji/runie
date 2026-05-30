@@ -1,6 +1,6 @@
 use crate::components::MessageItem;
 use crate::tui::state::{AppState, TuiMode};
-use crate::UiCmd;
+use crate::tui::update::ui::UiCmd;
 
 pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<UiCmd> {
     use runie_core::slash_command::SlashCommand;
@@ -69,7 +69,7 @@ fn handle_unknown(state: &mut AppState, cmd: String) {
     state.messages.push(MessageItem::System { text: format!("Unknown command: {}. Type /help for available commands.", cmd) });
 }
 
-fn handle_cost(state: &mut AppState) {
+fn handle_cost(_state: &mut AppState) {
     // Cost command shows cost info - not implemented yet
 }
 

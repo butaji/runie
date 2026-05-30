@@ -3,14 +3,6 @@ use crate::tui::state::{AppState, TuiMode, Msg, OnboardingStep};
 
 // --- Key classification helpers ---
 
-fn is_nav_key(key: KeyCode) -> bool {
-    matches!(key, KeyCode::Up | KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End)
-}
-
-fn is_edit_key(key: KeyCode) -> bool {
-    matches!(key, KeyCode::Backspace | KeyCode::Delete | KeyCode::Enter | KeyCode::Tab)
-}
-
 fn is_ctrl_combo(key: KeyEvent) -> bool {
     key.modifiers.contains(KeyModifiers::CONTROL) && !key.modifiers.contains(KeyModifiers::SHIFT)
 }
@@ -88,8 +80,10 @@ fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -
         TuiMode::SessionTree => key_to_tree_msg(*key),
         TuiMode::Onboarding => key_to_onboarding_msg(*key, state),
         // Permission and Overlay handled by blocking_mode_handler above
-        #[allow(unreachable_patterns)]
-        _ => unreachable!(),
+        _ => {
+            tracing::warn!("Unhandled TuiMode in route_non_blocking_mode");
+            None
+        }
     }
 }
 

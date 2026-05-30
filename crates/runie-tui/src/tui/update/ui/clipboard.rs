@@ -4,7 +4,7 @@ use crate::components::MessageItem;
 use crate::tui::state::AppState;
 
 /// Copy the last assistant message to clipboard using OSC 52 escape sequence.
-pub fn handle_copy_last_response(state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_copy_last_response(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     // Find last assistant message
     if let Some(last_assistant) = state.messages.iter().rev().find(|m| {
         matches!(m, MessageItem::Assistant { .. })

@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -21,7 +20,6 @@ pub async fn handle_input_msg(
     input_msg: InputMsg,
     tui: &mut Tui,
     agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-    permission_state: &Arc<tokio::sync::Mutex<Option<runie_agent::events::PermissionDecision>>>,
     msg_tx: &mpsc::Sender<runie_tui::Msg>,
     msg_rx: &mut mpsc::Receiver<runie_tui::Msg>,
     workspace: &PathBuf,
@@ -33,13 +31,26 @@ pub async fn handle_input_msg(
     last_agent_event: &mut Instant,
     last_render: &mut Instant,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Convert InputMsg to Msg
     let msg = input_to_msg(input_msg);
-
-    // Convert raw key events to proper routed messages
     let msgs = route_key_event(msg, &tui.state);
+    handle_msgs(msgs, tui, agent_task, msg_tx, msg_rx, workspace, mock, settings, base_system_prompt, cancel, event_logger, last_agent_event, last_render).await
+}
 
-    // Track if state changed — determines whether to force render
+pub async fn handle_msgs(
+    msgs: Vec<runie_tui::Msg>,
+    tui: &mut Tui,
+    agent_task: &mut Option<tokio::task::JoinHandle<()>>,
+    msg_tx: &mpsc::Sender<runie_tui::Msg>,
+    msg_rx: &mut mpsc::Receiver<runie_tui::Msg>,
+    workspace: &PathBuf,
+    mock: bool,
+    settings: &mut Settings,
+    base_system_prompt: &str,
+    cancel: &CancellationToken,
+    event_logger: Option<&EventStreamLogger>,
+    last_agent_event: &mut Instant,
+    last_render: &mut Instant,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut state_changed = false;
 
     for msg in msgs {
@@ -58,8 +69,7 @@ pub async fn handle_input_msg(
         // Handle AgentEnd to clear agent task
         if let runie_tui::Msg::AgentEvent(AgentEvent::AgentEnd { .. }) = &msg {
             *agent_task = None;
-            let mut guard = permission_state.lock().await;
-            *guard = None;
+            tui.clear_permission().await;
             state_changed = true;
         }
 
@@ -91,8 +101,7 @@ pub async fn handle_input_msg(
         while let Ok(msg) = msg_rx.try_recv() {
             if let runie_tui::Msg::AgentEvent(AgentEvent::AgentEnd { .. }) = &msg {
                 *agent_task = None;
-                let mut guard = permission_state.lock().await;
-                *guard = None;
+                tui.clear_permission().await;
             }
             // Convert raw key events in batched messages too
             let msgs = route_key_event(msg, &tui.state);
@@ -107,7 +116,7 @@ pub async fn handle_input_msg(
         while !pending_cmds.is_empty() {
             let mut next_cmds = vec![];
             for cmd in pending_cmds {
-                let change = process_cmd(cmd, tui, agent_task, permission_state, msg_tx, workspace, mock, settings, base_system_prompt, cancel).await;
+                let change = process_cmd(cmd, tui, agent_task, msg_tx, workspace, mock, settings, base_system_prompt, cancel).await;
                 needs_render |= change.needs_render;
                 next_cmds.extend(change.cmds);
             }
@@ -125,7 +134,7 @@ pub async fn handle_input_msg(
                 runie_tui::Msg::Submit => {
                     logger.log_ui_event("submit");
                     // Also log to our structured logger
-                    log::log_submit(&tui.state.textarea.lines().join("\n").chars().take(50).collect::<String>());
+                    log::log_submit(&tui.input_text().chars().take(50).collect::<String>());
                 }
                 runie_tui::Msg::Quit => logger.log_ui_event("quit"),
                 runie_tui::Msg::ToggleSidebar => logger.log_ui_event("toggle_sidebar"),
@@ -140,7 +149,7 @@ pub async fn handle_input_msg(
         // Render: debounce to ~30 FPS max when streaming, immediate on state change
         let now = Instant::now();
         let elapsed_ms = now.duration_since(*last_render).as_millis() as u64;
-        let time_for_render = tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS;
+        let time_for_render = tui.is_agent_running() && elapsed_ms >= MIN_RENDER_INTERVAL_MS;
         if state_changed || needs_render || time_for_render {
             tui.render()?;
             *last_render = now;
@@ -153,14 +162,13 @@ pub async fn handle_input_msg(
 pub async fn handle_cursor_blink(
     tui: &mut Tui,
     agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-    permission_state: &Arc<tokio::sync::Mutex<Option<runie_agent::events::PermissionDecision>>>,
     msg_tx: &mpsc::Sender<runie_tui::Msg>,
     workspace: &PathBuf,
     mock: bool,
     settings: &mut Settings,
     base_system_prompt: &str,
     cancel: &CancellationToken,
-    last_render: &mut Instant,
+    _last_render: &mut Instant,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let change = tui.update(runie_tui::Msg::CursorBlink);
     let mut pending_cmds = change.cmds;
@@ -168,7 +176,7 @@ pub async fn handle_cursor_blink(
     while !pending_cmds.is_empty() {
         let mut next_cmds = vec![];
         for cmd in pending_cmds {
-            let change = process_cmd(cmd, tui, agent_task, permission_state, msg_tx, workspace, mock, settings, base_system_prompt, cancel).await;
+            let change = process_cmd(cmd, tui, agent_task, msg_tx, workspace, mock, settings, base_system_prompt, cancel).await;
             needs_render |= change.needs_render;
             next_cmds.extend(change.cmds);
         }
@@ -183,7 +191,6 @@ pub async fn handle_cursor_blink(
 pub async fn handle_timer_tick(
     tui: &mut Tui,
     agent_task: &mut Option<tokio::task::JoinHandle<()>>,
-    permission_state: &Arc<tokio::sync::Mutex<Option<runie_agent::events::PermissionDecision>>>,
     msg_tx: &mpsc::Sender<runie_tui::Msg>,
     workspace: &PathBuf,
     mock: bool,
@@ -196,9 +203,9 @@ pub async fn handle_timer_tick(
     use super::{AGENT_WATCHDOG_TIMEOUT, AGENT_HEARTBEAT_TIMEOUT};
 
     // WATCHDOG: Check if agent has been running too long without any events
-    if tui.state.agent_running {
+    if tui.is_agent_running() {
         // Watchdog: 30 second timeout - force recovery if agent stuck
-        if let Some(start_time) = tui.state.agent_start_time {
+        if let Some(start_time) = tui.agent_start_time() {
             if start_time.elapsed() > AGENT_WATCHDOG_TIMEOUT {
                 tracing::error!("[WATCHDOG] Agent stuck for 30s, forcing recovery");
 
@@ -240,7 +247,7 @@ pub async fn handle_timer_tick(
     while !pending_cmds.is_empty() {
         let mut next_cmds = vec![];
         for cmd in pending_cmds {
-            let change = process_cmd(cmd, tui, agent_task, permission_state, msg_tx, workspace, mock, settings, base_system_prompt, cancel).await;
+            let change = process_cmd(cmd, tui, agent_task, msg_tx, workspace, mock, settings, base_system_prompt, cancel).await;
             needs_render |= change.needs_render;
             next_cmds.extend(change.cmds);
         }
@@ -249,7 +256,7 @@ pub async fn handle_timer_tick(
     // Debounce tick renders: only render if needs_render or 33ms passed and agent running
     let now = Instant::now();
     let elapsed_ms = now.duration_since(*last_render).as_millis() as u64;
-    if needs_render || (tui.state.agent_running && elapsed_ms >= MIN_RENDER_INTERVAL_MS) {
+    if needs_render || (tui.is_agent_running() && elapsed_ms >= MIN_RENDER_INTERVAL_MS) {
         tui.render()?;
         *last_render = now;
     }

@@ -6,23 +6,20 @@ mod setup;
 pub use cmd::process_cmd;
 pub use events::{input_to_msg, route_key_event, triggers_state_change};
 pub use setup::{needs_onboarding, update_top_bar_context};
-pub use handlers::{handle_input_msg, handle_cursor_blink, handle_timer_tick};
+pub use handlers::{handle_input_msg, handle_msgs, handle_cursor_blink, handle_timer_tick};
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::signal::ctrl_c;
 use tokio::sync::mpsc;
 use tokio::time::interval;
 use tokio_util::sync::CancellationToken;
 use tracing::info;
-use runie_agent::events::{AgentEvent, PermissionDecision};
+use runie_agent::events::AgentEvent;
 use runie_tui::actors::{spawn_actor, input::InputActor as TuiInputActor, timer::TimerActor};
-use runie_tui::pipe::InputMsg;
 use runie_tui::{Msg, Tui, TuiConfig};
 
 use crate::event_stream::EventStreamLogger;
-use crate::event_logger as log;
 use crate::settings::Settings;
 use crate::context_loader::ContextLoader;
 
@@ -56,16 +53,13 @@ pub async fn run_tui(
     // Track last agent event time for watchdog
     let mut last_agent_event = Instant::now();
 
-    // Shared permission state (replaces mpsc::channel<PermissionDecision>)
-    let permission_state: Arc<tokio::sync::Mutex<Option<PermissionDecision>>> = Arc::new(tokio::sync::Mutex::new(None));
-
     // Animation timers - cursor blink only (animation tick is now via TimerActor)
     let mut cursor_interval = interval(Duration::from_millis(500));
 
     // TEA main loop
     let mut last_render = Instant::now();
 
-    while tui.state.running {
+    while tui.is_running() {
         tokio::select! {
             biased;
             Some(input_msg) = input_rx.recv() => {
@@ -73,7 +67,6 @@ pub async fn run_tui(
                     input_msg,
                     &mut tui,
                     &mut agent_task,
-                    &permission_state,
                     &msg_tx,
                     &mut msg_rx,
                     &workspace,
@@ -90,7 +83,6 @@ pub async fn run_tui(
                 handle_cursor_blink(
                     &mut tui,
                     &mut agent_task,
-                    &permission_state,
                     &msg_tx,
                     &workspace,
                     mock,
@@ -100,17 +92,34 @@ pub async fn run_tui(
                     &mut last_render,
                 ).await?;
             }
+
             Some(_timer_msg) = timer_rx.recv() => {
                 handle_timer_tick(
                     &mut tui,
                     &mut agent_task,
-                    &permission_state,
                     &msg_tx,
                     &workspace,
                     mock,
                     settings,
                     &base_system_prompt,
                     &cancel,
+                    &mut last_agent_event,
+                    &mut last_render,
+                ).await?;
+            }
+            Some(msg) = msg_rx.recv() => {
+                handle_msgs(
+                    vec![msg],
+                    &mut tui,
+                    &mut agent_task,
+                    &msg_tx,
+                    &mut msg_rx,
+                    &workspace,
+                    mock,
+                    settings,
+                    &base_system_prompt,
+                    &cancel,
+                    event_logger,
                     &mut last_agent_event,
                     &mut last_render,
                 ).await?;

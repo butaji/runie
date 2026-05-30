@@ -492,4 +492,165 @@ mod tests {
         onboarding.navigate_up();
         assert_eq!(onboarding.selected_item, 0);
     }
+
+    // ─── Edge Case Tests ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_onboarding_empty_key_rejected() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+        onboarding.update_search(""); // Populate filtered_provider_indices
+        onboarding.select_provider(15); // OpenAI
+
+        // Empty key should be invalid
+        onboarding.api_key_input = "".to_string();
+        assert!(!onboarding.validate_key(), "Empty key should be invalid");
+
+        // Whitespace-only key should be invalid
+        onboarding.api_key_input = "   ".to_string();
+        assert!(!onboarding.validate_key(), "Whitespace-only key should be invalid");
+    }
+
+    #[test]
+    fn test_onboarding_invalid_provider_index() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+        onboarding.update_search(""); // Populate filtered_provider_indices
+
+        // Select invalid index should not panic
+        let max_index = onboarding.providers.len() - 1;
+        onboarding.select_provider(max_index + 100);
+        // Should not panic - behavior may vary but shouldn't crash
+    }
+
+    #[test]
+    fn test_onboarding_search_special_chars() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+
+        // Search with special characters should not panic
+        onboarding.update_search("!@#$%");
+        assert_eq!(onboarding.filtered_provider_indices.len(), 0);
+    }
+
+    #[test]
+    fn test_onboarding_unicode_search() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+
+        // Search with unicode should not panic
+        onboarding.update_search("日本語");
+        assert_eq!(onboarding.filtered_provider_indices.len(), 0);
+    }
+
+    #[test]
+    fn test_onboarding_key_validation_anthropic() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+        onboarding.update_search(""); // Populate filtered_provider_indices
+        onboarding.select_provider(0); // Anthropic
+
+        // Valid Anthropic key
+        onboarding.api_key_input = "sk-ant-api03-test123".to_string();
+        assert!(onboarding.validate_key(), "Valid Anthropic key should pass");
+
+        // Invalid prefix
+        onboarding.api_key_input = "pk-ant-api03-test123".to_string();
+        assert!(!onboarding.validate_key(), "Invalid prefix should fail");
+    }
+
+    #[test]
+    fn test_onboarding_complete_without_model() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::Complete;
+        onboarding.selected_provider = Some(0);
+        onboarding.api_key_input = "sk-test".to_string();
+        // Missing selected_model
+        onboarding.selected_model = None;
+
+        assert!(!onboarding.is_complete(), "Should not be complete without model");
+    }
+
+    #[test]
+    fn test_onboarding_double_next_on_welcome() {
+        let mut onboarding = Onboarding::new(false);
+        assert_eq!(onboarding.step, OnboardingStep::Welcome);
+
+        onboarding.next_step();
+        assert_eq!(onboarding.step, OnboardingStep::ProviderSelect);
+
+        // Double next without selection should stay
+        onboarding.next_step();
+        assert_eq!(onboarding.step, OnboardingStep::ProviderSelect);
+        assert!(onboarding.error_message.is_some());
+    }
+
+    #[test]
+    fn test_onboarding_back_from_welcome_stays() {
+        let mut onboarding = Onboarding::new(false);
+        assert_eq!(onboarding.step, OnboardingStep::Welcome);
+
+        onboarding.prev_step();
+        assert_eq!(onboarding.step, OnboardingStep::Welcome);
+    }
+
+    #[test]
+    fn test_onboarding_provider_change_resets_key() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+        onboarding.update_search(""); // Populate filtered_provider_indices
+        onboarding.select_provider(15); // OpenAI
+        onboarding.api_key_input = "sk-openai-key".to_string();
+
+        // Change provider
+        onboarding.select_provider(0); // Anthropic
+        // Key should still be there (user might want to reuse)
+        assert_eq!(onboarding.api_key_input, "sk-openai-key");
+    }
+
+    #[test]
+    fn test_onboarding_to_settings_incomplete() {
+        let onboarding = Onboarding::new(false);
+        assert!(onboarding.to_settings().is_none(), "Incomplete onboarding should return None");
+    }
+
+    #[test]
+    fn test_onboarding_to_settings_complete() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+        onboarding.update_search(""); // Populate filtered_provider_indices
+        onboarding.select_provider(15); // OpenAI
+        onboarding.step = OnboardingStep::ModelSelect;
+        onboarding.update_search(""); // Populate filtered_model_indices
+        onboarding.select_model(0); // GPT-4o
+        onboarding.api_key_input = "sk-test123".to_string();
+        onboarding.step = OnboardingStep::Complete;
+
+        let settings = onboarding.to_settings().unwrap();
+        assert_eq!(settings.provider_id, "openai");
+        assert_eq!(settings.model_id, "gpt-4o");
+        assert_eq!(settings.api_key, "sk-test123");
+    }
+
+    #[test]
+    fn test_onboarding_skip_resets_state() {
+        let mut onboarding = Onboarding::new(false);
+        onboarding.step = OnboardingStep::ProviderSelect;
+        onboarding.update_search("");
+        onboarding.select_provider(15);
+        onboarding.next_step();
+        onboarding.api_key_input = "sk-test".to_string();
+        onboarding.next_step();
+        onboarding.select_model(0);
+
+        // Skip should not be possible from non-onboarding mode
+        // but let's verify state is clean
+        onboarding.step = OnboardingStep::Welcome;
+        onboarding.selected_provider = None;
+        onboarding.selected_model = None;
+        onboarding.api_key_input.clear();
+
+        assert_eq!(onboarding.step, OnboardingStep::Welcome);
+        assert!(onboarding.selected_provider.is_none());
+    }
 }

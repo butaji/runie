@@ -104,7 +104,7 @@ macro_rules! with_rig_provider {
             RigProvider::Galadriel($client, $model) => $body,
             RigProvider::Llamafile($client, $model) => $body,
             RigProvider::VoyageAi(_, _) => {
-                unreachable!("VoyageAI is handled before macro dispatch")
+                panic!("internal error: VoyageAI must be handled before with_rig_provider macro")
             }
         }
     };
@@ -222,13 +222,6 @@ impl RigProvider {
 // =============================================================================
 // Context token calculation
 // =============================================================================
-
-fn model_context_tokens<F>(model: &str, tokens_fn: F) -> usize
-where
-    F: Fn(&str) -> usize,
-{
-    tokens_fn(&model.to_lowercase())
-}
 
 fn openai_tokens(model: &str) -> usize {
     let m = model.to_lowercase();
@@ -370,15 +363,15 @@ fn convert_tools(tools: Vec<ToolSchema>) -> Vec<ToolDefinition> {
 
 fn build_request<M: CompletionModel>(
     model: &M,
-    messages: Vec<RigMessage>,
+    mut messages: Vec<RigMessage>,
     tools: Vec<ToolDefinition>,
 ) -> Result<CompletionRequest, ProviderError> {
     if messages.is_empty() {
         return Err(ProviderError::InvalidResponse("No messages provided".to_string()));
     }
 
-    let prompt = messages.last().cloned().unwrap();
-    let chat_history = messages.into_iter().rev().skip(1).rev().collect::<Vec<_>>();
+    let prompt = messages.pop().expect("messages checked non-empty above");
+    let chat_history = messages;
 
     let mut builder = model.completion_request(prompt);
     if !chat_history.is_empty() {

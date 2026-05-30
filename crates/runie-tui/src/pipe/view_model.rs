@@ -5,6 +5,7 @@ use crate::tui::view_models::{
     SessionTreeViewModel, ViewModels, InputBarViewModel, StatusBarViewModel,
 };
 use crate::components::global_tags::GlobalTagsViewModel;
+use crate::components::top_bar::TopBarViewModel;
 use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::render::WrapCache;
 use crate::components::message_list::FeedBuilder;
@@ -49,11 +50,23 @@ impl Pipe<&AppState> for ViewModelPipe {
             session_tree: build_session_tree(state),
             diff_viewer: build_diff_viewer(state),
             onboarding: build_onboarding(state),
+            top_bar: build_top_bar(state),
         }
     }
 }
 
 // ─── View model builders ────────────────────────────────────────────────────────
+
+fn build_top_bar(state: &AppState) -> TopBarViewModel {
+    TopBarViewModel {
+        repo: state.top_bar.repo.clone(),
+        branch: state.top_bar.branch.clone(),
+        path: state.top_bar.path.clone(),
+        model: state.top_bar.model.clone(),
+        context_window: state.top_bar.context_window.unwrap_or(128_000),
+        estimated_tokens: state.top_bar.estimated_tokens.unwrap_or(0),
+    }
+}
 
 fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
     let model = state.current_model.as_deref().unwrap_or("—");

@@ -15,6 +15,8 @@ pub struct Settings {
     pub shell: String,
     /// Whether a config file was loaded (vs using defaults/no config)
     pub config_loaded: bool,
+    /// Skip onboarding flow permanently (persisted to config)
+    pub skip_onboarding: bool,
 }
 
 impl Default for Settings {
@@ -27,6 +29,7 @@ impl Default for Settings {
             enable_thinking: true,
             shell: std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string()),
             config_loaded: false,
+            skip_onboarding: false,
         }
     }
 }
@@ -107,11 +110,15 @@ impl Settings {
         if let Ok(val) = std::env::var("RUNIE_SHELL") {
             self.shell = val;
         }
+        if let Ok(val) = std::env::var("RUNIE_SKIP_ONBOARDING") {
+            self.skip_onboarding = val.to_lowercase() == "true";
+        }
         // Legacy/provider-specific API key fallback
         merge_api_key_fallback(self);
     }
 
     /// Merge settings from CLI arguments
+    #[allow(dead_code)]
     pub fn merge_cli(&mut self, cli: &CliSettings) {
         if let Some(ref m) = cli.model {
             self.model = m.clone();
@@ -134,6 +141,7 @@ impl Settings {
     }
 
     /// Validate model against static registry
+    #[allow(dead_code)]
     pub fn validate_model(&self) -> bool {
         get_provider_models(&self.provider)
             .map(|models| models.iter().any(|m| m.id == self.model))
@@ -143,6 +151,7 @@ impl Settings {
 
 /// CLI-level settings (only fields that can be set via CLI)
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct CliSettings {
     pub model: Option<String>,
     pub provider: Option<String>,
@@ -161,6 +170,7 @@ struct FileSettings {
     max_turns: Option<usize>,
     enable_thinking: Option<bool>,
     shell: Option<String>,
+    skip_onboarding: Option<bool>,
 }
 
 impl FileSettings {
@@ -182,6 +192,9 @@ impl FileSettings {
         }
         if let Some(ref v) = self.shell {
             settings.shell = v.clone();
+        }
+        if let Some(v) = self.skip_onboarding {
+            settings.skip_onboarding = v;
         }
     }
 }
@@ -232,6 +245,49 @@ max_turns = 10
 enable_thinking = true
 "#;
     std::fs::write(path, default).ok();
+}
+
+/// Set skip_onboarding flag in config file
+/// Returns true if successful
+pub fn set_skip_onboarding(skip: bool) -> bool {
+    let config = match config_path() {
+        Some(p) => p,
+        None => return false,
+    };
+
+    let content = match std::fs::read_to_string(&config) {
+        Ok(c) => c,
+        Err(_) => {
+            // Config doesn't exist, create with skip_onboarding
+            let new_content = format!(r#"# Runie configuration
+
+skip_onboarding = {}
+"#, skip);
+            if let Some(parent) = config.parent() {
+                std::fs::create_dir_all(parent).ok();
+            }
+            return std::fs::write(&config, new_content).is_ok();
+        }
+    };
+
+    // Check if skip_onboarding already exists
+    let new_content = if content.contains("skip_onboarding") {
+        content.lines()
+            .map(|line| {
+                if line.trim().starts_with("skip_onboarding") {
+                    format!("skip_onboarding = {}", skip)
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    } else {
+        // Append skip_onboarding to existing config
+        format!("{}\nskip_onboarding = {}\n", content.trim(), skip)
+    };
+
+    std::fs::write(&config, new_content).is_ok()
 }
 
 /// Ensure all runie directories exist
@@ -304,6 +360,7 @@ mod tests {
         let mut guard = EnvGuard::new();
         guard.save_and_clear("RUNIE_MODEL");
         guard.save_and_clear("RUNIE_MAX_TURNS");
+        guard.save_and_clear("RUNIE_HOME"); // Prevent reading external config
         guard.set("RUNIE_MODEL", "claude-3-opus");
         guard.set("RUNIE_MAX_TURNS", "20");
 

@@ -190,8 +190,11 @@ impl EventLogger {
 /// Initialize the global event logger
 pub fn init_event_logger(logs_dir: &PathBuf) {
     if let Ok(logger) = EventLogger::new(logs_dir) {
-        let mut global = EVENT_LOGGER.lock().unwrap();
-        *global = Some(logger);
+        if let Ok(mut global) = EVENT_LOGGER.lock() {
+            *global = Some(logger);
+        } else {
+            tracing::warn!("Event logger mutex poisoned, skipping initialization");
+        }
     }
 }
 

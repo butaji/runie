@@ -1,0 +1,18 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+    runie                                                                       
+    Your coding companion                                                       
+                                                                                
+    Type a message and press Enter to start                                     
+    Press ^k for commands · ^b for sidebar · ^q to quit

@@ -4,7 +4,7 @@ use crate::components::model_picker::ModelPicker;
 use crate::tui::state::{AppState, Msg};
 
 /// Handle select/model picker messages - delegates to specific handlers.
-pub fn handle_select(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_select(msg: &Msg, state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     use crate::tui::state::Msg;
     match msg {
         Msg::SelectUp => handle_select_nav(state, true),
@@ -17,7 +17,7 @@ pub fn handle_select(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
 }
 
 /// Handle session tree messages - delegates to specific handlers.
-pub fn handle_session_tree(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_session_tree(msg: &Msg, state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     use crate::tui::state::Msg;
     match msg {
         Msg::ToggleSessionTree => handle_toggle_session_tree(state),
@@ -29,7 +29,7 @@ pub fn handle_session_tree(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd>
 }
 
 /// Handle context update messages - delegates to specific handlers.
-pub fn handle_context(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_context(msg: &Msg, state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     use crate::tui::state::Msg;
     match msg {
         Msg::SetTopBarMockChecks { checks_passed, checks_total, percentage, context_badges } =>
@@ -42,7 +42,7 @@ pub fn handle_context(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
 }
 
 /// Handle model/mode state messages - delegates to specific handlers.
-pub fn handle_model_mode(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_model_mode(msg: &Msg, state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     use crate::tui::state::Msg;
     match msg {
         Msg::SetCurrentModel(model) => handle_set_current_model(state, model.clone()),
@@ -54,14 +54,14 @@ pub fn handle_model_mode(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
 
 // ─── Select/Model Picker ─────────────────────────────────────────────────
 
-fn handle_select_nav(state: &mut AppState, up: bool) -> Vec<crate::UiCmd> {
+fn handle_select_nav(state: &mut AppState, up: bool) -> Vec<crate::tui::update::ui::UiCmd> {
     if let Some(ref mut picker) = state.model_picker {
         if up { picker.prev(); } else { picker.next(); }
     }
     vec![]
 }
 
-fn handle_select_confirm(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_select_confirm(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     if let Some(ref mut picker) = state.model_picker {
         if let Some((_provider_id, model_id)) = picker.selected_model() {
             state.current_model = Some(model_id.to_string());
@@ -72,14 +72,14 @@ fn handle_select_confirm(state: &mut AppState) -> Vec<crate::UiCmd> {
     vec![]
 }
 
-fn handle_select_toggle_details(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_select_toggle_details(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     if let Some(ref mut picker) = state.model_picker {
         picker.toggle_details();
     }
     vec![]
 }
 
-fn handle_switch_model(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_switch_model(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     let picker = ModelPicker::with_default_models();
     state.model_picker = Some(picker);
     state.mode = crate::tui::state::TuiMode::Overlay;
@@ -88,29 +88,29 @@ fn handle_switch_model(state: &mut AppState) -> Vec<crate::UiCmd> {
 
 // ─── Session Tree ─────────────────────────────────────────────────────────
 
-fn handle_toggle_session_tree(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_toggle_session_tree(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     super::super::slash::handle_tree(state);
     vec![]
 }
 
-fn handle_session_tree_up(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_session_tree_up(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     state.session_tree.move_up();
     vec![]
 }
 
-fn handle_session_tree_down(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_session_tree_down(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     state.session_tree.move_down();
     vec![]
 }
 
-fn handle_session_tree_confirm(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_session_tree_confirm(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     super::super::tree::handle_tree_confirm(state);
     vec![]
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────
 
-pub fn handle_set_git_info(state: &mut AppState, repo: String, branch: String, path: String) -> Vec<crate::UiCmd> {
+pub fn handle_set_git_info(state: &mut AppState, repo: String, branch: String, path: String) -> Vec<crate::tui::update::ui::UiCmd> {
     state.context.repo = repo;
     state.context.branch = branch;
     state.context.path = path;
@@ -123,7 +123,7 @@ fn handle_set_context_mock_checks(
     checks_total: Option<usize>,
     percentage: Option<f32>,
     context_badges: Vec<String>,
-) -> Vec<crate::UiCmd> {
+) -> Vec<crate::tui::update::ui::UiCmd> {
     state.context.checks_passed = checks_passed;
     state.context.checks_total = checks_total;
     state.context.percentage = percentage;
@@ -133,7 +133,7 @@ fn handle_set_context_mock_checks(
     vec![]
 }
 
-fn handle_set_context_real_checks(state: &mut AppState, context_badges: Vec<String>) -> Vec<crate::UiCmd> {
+fn handle_set_context_real_checks(state: &mut AppState, context_badges: Vec<String>) -> Vec<crate::tui::update::ui::UiCmd> {
     state.context.checks_passed = None;
     state.context.checks_total = None;
     state.context.percentage = None;
@@ -143,30 +143,30 @@ fn handle_set_context_real_checks(state: &mut AppState, context_badges: Vec<Stri
     vec![]
 }
 
-fn handle_set_input_right_info(state: &mut AppState, info: String) -> Vec<crate::UiCmd> {
+fn handle_set_input_right_info(state: &mut AppState, info: String) -> Vec<crate::tui::update::ui::UiCmd> {
     state.input_right_info = info;
     vec![]
 }
 
 // ─── Model/Mode State ──────────────────────────────────────────────────────
 
-pub fn handle_enter_onboarding(state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_enter_onboarding(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     state.mode = crate::tui::state::TuiMode::Onboarding;
     state.onboarding = Some(crate::components::onboarding::Onboarding::new(state.mock_mode));
     vec![]
 }
 
-fn handle_set_current_model(state: &mut AppState, model: Option<String>) -> Vec<crate::UiCmd> {
+fn handle_set_current_model(state: &mut AppState, model: Option<String>) -> Vec<crate::tui::update::ui::UiCmd> {
     state.current_model = model.clone();
     vec![]
 }
 
-fn handle_set_mock_mode(state: &mut AppState, mock: bool) -> Vec<crate::UiCmd> {
+fn handle_set_mock_mode(state: &mut AppState, mock: bool) -> Vec<crate::tui::update::ui::UiCmd> {
     state.mock_mode = mock;
     vec![]
 }
 
-fn handle_reset_agent_state(state: &mut AppState) -> Vec<crate::UiCmd> {
+fn handle_reset_agent_state(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
     state.agent_running = false;
     state.agent_start_time = None;
     state.session_token_usage = runie_ai::TokenUsage::default();

@@ -11,7 +11,6 @@ use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
-use super::permissions::request_permission;
 use super::streaming::{start_chat_with_retry, send_event, process_stream_event, PartialToolCall, finalize_tool_calls};
 use super::tools::process_tool_calls;
 use tokio::sync::{mpsc, Mutex};
@@ -33,10 +32,10 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         config.max_turns);
 
     let mut messages = initial_messages;
-    let mut allowed_tools: HashSet<String> = HashSet::new();
+    let allowed_tools: HashSet<String> = HashSet::new();
     let context_window = 128_000;
-    let mut total_input_tokens = 0u32;
-    let mut total_output_tokens = 0u32;
+    let total_input_tokens = 0u32;
+    let total_output_tokens = 0u32;
 
     let tool_schemas: Vec<ToolSchema> = tools.iter().map(|t| ToolSchema {
         name: t.name.clone(),

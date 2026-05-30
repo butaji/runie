@@ -63,7 +63,9 @@ pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> 
 
     let mut cmds = vec![super::AgentCmd::SendPermission { decision }];
     if should_rollback {
-        cmds.push(super::AgentCmd::Rollback { tool_call_id: tool_call_id.unwrap() });
+        if let Some(id) = tool_call_id {
+            cmds.push(super::AgentCmd::Rollback { tool_call_id: id });
+        }
     }
 
     // BG-1 FIX: Process next pending permission if any

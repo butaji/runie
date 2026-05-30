@@ -6,7 +6,7 @@
 //! - Esc key handling in all modes
 //! - Ctrl+P/B/T shortcuts
 
-use crate::tui::state::{AppState, CommandPaletteState, Msg, TuiMode};
+use crate::tui::state::{AppState, CommandPaletteState, Msg, TuiMode, TopBarState};
 use crate::components::CommandPalette;
 use crate::tui::update::update;
 use crate::tui::events::{event_to_msg, key_to_msg};
@@ -38,7 +38,6 @@ fn make_state() -> AppState {
         clear_input_confirm: Default::default(),
         model_picker: None,
         agent_start_time: None,
-        turn_start_index: None,
         input_history: Vec::new(),
         input_history_index: None,
         input_draft: String::new(),
@@ -50,6 +49,7 @@ fn make_state() -> AppState {
         thinking_duration: None,
         is_thinking: false,
         mock_mode: false,
+        top_bar: TopBarState::default(),
     }
 }
 

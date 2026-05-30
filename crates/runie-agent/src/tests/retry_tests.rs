@@ -71,7 +71,7 @@ impl Provider for UnauthorizedProvider {
 #[tokio::test]
 #[ignore]
 async fn test_provider_429_retry_backoff() {
-    use crate::loop_engine::start_chat_with_retry;
+    use crate::loop_engine::streaming::start_chat_with_retry;
 
     let provider = Arc::new(RateLimitedProvider::new());
     let messages = vec![Message::User { content: "hello".to_string(), attachments: vec![] }];
@@ -89,7 +89,7 @@ async fn test_provider_429_retry_backoff() {
 /// Test that 401 unauthorized errors fail immediately without retry
 #[tokio::test]
 async fn test_provider_non_429_no_retry() {
-    use crate::loop_engine::start_chat_with_retry;
+    use crate::loop_engine::streaming::start_chat_with_retry;
 
     let provider = Arc::new(UnauthorizedProvider::new());
     let messages = vec![Message::User { content: "hello".to_string(), attachments: vec![] }];

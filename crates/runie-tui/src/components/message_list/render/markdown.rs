@@ -7,8 +7,17 @@ use syntect::highlighting::{Style as SyntectStyle, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 use once_cell::sync::Lazy;
+use regex::Regex;
 
 use super::wrap::wrap_text_preserving_newlines;
+
+// Static compiled regexes — avoid recompiling every frame
+static RE_PUNCT_SPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"([.!?;:,])([A-Za-z])").expect("hardcoded regex"));
+static RE_BRACKET_SPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"([\)\]\}])([A-Za-z])").expect("hardcoded regex"));
+static RE_CAMEL_SPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"([a-z])([A-Z])").expect("hardcoded regex"));
+static RE_DIGIT_SPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d)([A-Za-z])").expect("hardcoded regex"));
+static RE_INDSCRIPTS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bindscripts\b").expect("hardcoded regex"));
+static RE_PANTRY: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpantry,andscripts\b").expect("hardcoded regex"));
 
 static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(|| {
     SyntaxSet::load_defaults_newlines()
@@ -174,36 +183,12 @@ fn fix_text_spacing(text: &str) -> String {
     let mut result = text.to_string();
 
     result = result.replace('ð', " ").replace('Ð', " ");
-
-    result = regex::Regex::new(r"([.!?;:,])([A-Za-z])")
-        .unwrap()
-        .replace_all(&result, "$1 $2")
-        .to_string();
-
-    result = regex::Regex::new(r"([\)\]}])([A-Za-z])")
-        .unwrap()
-        .replace_all(&result, "$1 $2")
-        .to_string();
-
-    result = regex::Regex::new(r"([a-z])([A-Z])")
-        .unwrap()
-        .replace_all(&result, "$1 $2")
-        .to_string();
-
-    result = regex::Regex::new(r"(\d)([A-Za-z])")
-        .unwrap()
-        .replace_all(&result, "$1 $2")
-        .to_string();
-
-    result = regex::Regex::new(r"\bindscripts\b")
-        .unwrap()
-        .replace_all(&result, "in scripts")
-        .to_string();
-
-    result = regex::Regex::new(r"\bpantry,andscripts\b")
-        .unwrap()
-        .replace_all(&result, "pantry, and scripts")
-        .to_string();
+    result = RE_PUNCT_SPACE.replace_all(&result, "$1 $2").to_string();
+    result = RE_BRACKET_SPACE.replace_all(&result, "$1 $2").to_string();
+    result = RE_CAMEL_SPACE.replace_all(&result, "$1 $2").to_string();
+    result = RE_DIGIT_SPACE.replace_all(&result, "$1 $2").to_string();
+    result = RE_INDSCRIPTS.replace_all(&result, "in scripts").to_string();
+    result = RE_PANTRY.replace_all(&result, "pantry, and scripts").to_string();
 
     result
 }
@@ -323,13 +308,20 @@ pub fn highlight_code_block_ratatui(lang: &str, code: &str) -> Vec<Line<'static>
 
     let mut highlighted_lines = Vec::new();
     for line in LinesWithEndings::from(code) {
-        let ranges: Vec<(SyntectStyle, &str)> = highlighter.highlight_line(line, &SYNTAX_SET).unwrap();
-        let mut spans = Vec::new();
-        for (style, text) in ranges {
-            let ratatui_style = syntect_style_to_ratatui(style);
-            spans.push(Span::styled(text.to_string(), ratatui_style));
+        match highlighter.highlight_line(line, &SYNTAX_SET) {
+            Ok(ranges) => {
+                let mut spans = Vec::new();
+                for (style, text) in ranges {
+                    let ratatui_style = syntect_style_to_ratatui(style);
+                    spans.push(Span::styled(text.to_string(), ratatui_style));
+                }
+                highlighted_lines.push(Line::from(spans));
+            }
+            Err(e) => {
+                tracing::warn!("Syntax highlighting failed for line: {}", e);
+                highlighted_lines.push(Line::raw(line.trim_end_matches('\n').to_string()));
+            }
         }
-        highlighted_lines.push(Line::from(spans));
     }
 
     highlighted_lines

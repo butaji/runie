@@ -7,11 +7,17 @@ use crate::settings::Settings;
 ///
 /// Onboarding is NOT needed if:
 /// - Config file exists with provider AND model set
+/// - User has previously selected "don't show again" (skip_onboarding)
 ///
 /// API key presence is NOT checked here because:
 /// - API key is for provider creation, not onboarding eligibility
 /// - User may provide API key via environment variable later
 pub fn needs_onboarding(settings: &Settings) -> bool {
+    // Check skip_onboarding flag first - if set, never show onboarding
+    if settings.skip_onboarding {
+        return false;
+    }
+
     // Provider and model must be set in config
     if settings.provider.is_empty() {
         return true;
@@ -27,7 +33,7 @@ pub fn needs_onboarding(settings: &Settings) -> bool {
 /// Update top bar context percentages from current state (Critical #4)
 pub fn update_top_bar_context(tui: &mut Tui, settings: &Settings) {
     // Calculate estimated tokens from message history (rough: ~4 chars/token)
-    let total_chars: usize = tui.state.messages.iter().map(|msg| match msg {
+    let total_chars: usize = tui.messages().iter().map(|msg| match msg {
         runie_tui::MessageItem::User { text, .. } => text.len(),
         runie_tui::MessageItem::Assistant { text, .. } => text.len(),
         runie_tui::MessageItem::System { text } => text.len(),

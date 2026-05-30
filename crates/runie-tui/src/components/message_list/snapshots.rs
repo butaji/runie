@@ -30,13 +30,17 @@ fn buffer_to_string(buf: &Buffer) -> String {
 }
 
 fn render_feed(feed: Feed, width: u16, height: u16) -> String {
+    render_feed_with_agent(feed, width, height, false)
+}
+
+fn render_feed_with_agent(feed: Feed, width: u16, height: u16, agent_running: bool) -> String {
     let area = Rect::new(0, 0, width, height);
     let buf = Buffer::empty(area);
     let theme = make_test_theme();
     let vm = MessageListViewModel::new(
         feed,
         0,
-        false,
+        agent_running,
         AnimationState::default(),
         WrapCache::new(),
     );
@@ -242,4 +246,130 @@ fn test_long_assistant_message() {
         .build();
     let rendered = render_feed(feed, 60, 24);
     assert_snapshot!("feed_long_assistant_message", rendered);
+}
+
+#[test]
+fn test_exact_conversation_snapshot() {
+    let feed = Feed::builder()
+        .user_message("Hey!")
+        .assistant()
+            .thinking_for(std::time::Duration::from_millis(200))
+            .say("Hey! 👋\n\nHow can I help you with your\ncode or project today?")
+            .turn_completed_in(std::time::Duration::from_secs_f32(1.5))
+        .build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_exact_conversation", rendered);
+}
+
+// ============================================================================
+// Requested Test Cases
+// ============================================================================
+
+#[test]
+fn test_empty_state() {
+    let feed = Feed::builder().build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_empty_state", rendered);
+}
+
+#[test]
+fn test_single_user_hello() {
+    let feed = Feed::builder().user_message("Hello").build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_single_user_hello", rendered);
+}
+
+#[test]
+fn test_user_hi_assistant_hello() {
+    let feed = Feed::builder()
+        .user_message("Hi")
+        .assistant().say("Hello!").build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_user_hi_assistant_hello", rendered);
+}
+
+#[test]
+fn test_user_assistant_with_thoughts() {
+    let feed = Feed::builder()
+        .user_message("Hello")
+        .assistant()
+            .thinking_for(std::time::Duration::from_millis(200))
+            .say("Hey you too!")
+        .build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_user_assistant_thoughts", rendered);
+}
+
+#[test]
+fn test_multi_turn_three_exchanges() {
+    let feed = Feed::builder()
+        .user_message("Hello")
+        .assistant().say("Hi there!").done()
+        .user_message("How are you?")
+        .assistant().say("I'm good, thanks!").done()
+        .user_message("What's for lunch?")
+        .assistant().say("How about pizza?").done()
+        .build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_multi_turn_3", rendered);
+}
+
+#[test]
+fn test_tool_call_bash_files() {
+    let feed = Feed::builder()
+        .user_message("Show me the files")
+        .assistant()
+            .tool_call("bash", serde_json::json!({"command": "ls -la"}))
+            .say("Here are the files in your directory:")
+        .build();
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_tool_call_bash", rendered);
+}
+
+#[test]
+fn test_error_state_tool_failure() {
+    let feed = Feed::builder()
+        .user_message("Delete the file")
+        .assistant()
+            .tool_call("bash", serde_json::json!({"command": "rm important.txt"}))
+            .say("I couldn't delete the file.")
+        .build();
+    let mut feed = feed;
+    feed.add_system_notice("Tool execution failed: permission denied".to_string());
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_error_state", rendered);
+}
+
+#[test]
+fn test_long_message_wraps() {
+    let feed = Feed::builder()
+        .user_message("Tell me everything about something very long that takes up multiple lines when rendered")
+        .assistant()
+            .say("This is a very long response that should wrap correctly when the terminal is narrow. It contains multiple sentences and should demonstrate proper text wrapping behavior at different terminal widths.")
+        .build();
+    let rendered = render_feed(feed, 50, 30);
+    assert_snapshot!("feed_long_message_wrap", rendered);
+}
+
+#[test]
+fn test_top_bar_model() {
+    let feed = Feed::builder()
+        .user_message("Hello")
+        .assistant().say("Hi!").build();
+    let mut feed = feed;
+    feed.add_system_notice("openai/gpt-4o".to_string());
+    let rendered = render_feed(feed, 80, 24);
+    assert_snapshot!("feed_top_bar_model", rendered);
+}
+
+#[test]
+fn test_global_tags_running() {
+    let feed = Feed::builder()
+        .user_message("Hello")
+        .assistant()
+            .thinking_for(std::time::Duration::from_millis(500))
+            .say("Thinking...")
+        .build();
+    let rendered = render_feed_with_agent(feed, 80, 24, true);
+    assert_snapshot!("feed_global_tags_running", rendered);
 }

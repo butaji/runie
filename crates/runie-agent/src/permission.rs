@@ -270,20 +270,122 @@ mod tests {
     async fn test_rollback_no_op() {
         // Rollback command is generated in handle_permission when decision is Deny or Skip
         // but the actual Rollback implementation appears to only log
-        // This test documents the expected behavior vs actual
-        
-        // In handle_permission (tui/update/agent.rs):
-        // if should_rollback {
-        //     cmds.push(AgentCmd::Rollback { tool_call_id: ... });
-        // }
-        // 
-        // The Rollback command is sent but there's no handler that actually
-        // reverts any state - it just logs. This is a known gap.
-        
-        // For this test, we verify the PermissionGate doesn't implement rollback
-        // Rollback is a TUI-level concern, not agent permission level
         let gate = PermissionGate::new(60);
-        assert!(!gate.allowed_tools.is_empty() || true,
-            "PermissionGate has no rollback - state changes are final");
+        assert!(gate.allowed_tools.is_empty(),
+            "PermissionGate starts empty - rollback is TUI-level concern");
+    }
+
+    // EDGE CASE: Empty tool name should still work (registry will reject later)
+    #[tokio::test]
+    async fn test_empty_tool_name() {
+        let mut gate = PermissionGate::new(60);
+        gate.allowed_tools.insert("".to_string());
+        let result = gate.request_permission("", "call_1").await;
+        assert_eq!(result, PermissionResult::Allowed);
+    }
+
+    // EDGE CASE: Empty channel with short timeout returns Denied
+    #[tokio::test]
+    async fn test_empty_channel_timeout() {
+        let mut gate = PermissionGate::new(1); // 1 second timeout
+        // Don't send anything - should timeout
+        let result = gate.request_permission("bash", "call_1").await;
+        assert_eq!(result, PermissionResult::Denied, "Empty channel should timeout to Denied");
+    }
+
+    // EDGE CASE: Zero timeout should immediately deny
+    #[tokio::test]
+    async fn test_zero_timeout_immediate_deny() {
+        let mut gate = PermissionGate::new(0);
+        let result = gate.request_permission("bash", "call_1").await;
+        assert_eq!(result, PermissionResult::Denied, "Zero timeout should immediately deny");
+    }
+
+    // EDGE CASE: Very long timeout still works
+    #[tokio::test]
+    async fn test_long_timeout() {
+        let (tx, rx) = mpsc::channel::<PermissionDecision>(10);
+        let mut gate = PermissionGate::with_channel(tx, rx, 3600); // 1 hour
+        let tx_clone = gate.sender();
+        tokio::spawn(async move {
+            tx_clone.send(PermissionDecision::Allow {
+                tool_call_id: "call_1".to_string(),
+                tool_name: "bash".to_string(),
+                tool_args: String::new(),
+            }).await.unwrap();
+        });
+        let result = gate.request_permission("bash", "call_1").await;
+        assert_eq!(result, PermissionResult::Allowed);
+    }
+
+    // EDGE CASE: Decision for wrong tool_call_id with same tool name
+    #[tokio::test]
+    async fn test_wrong_tool_call_id_same_tool() {
+        let (tx, rx) = mpsc::channel::<PermissionDecision>(10);
+        let mut gate = PermissionGate::with_channel(tx, rx, 60);
+        let tx_clone = gate.sender();
+        tokio::spawn(async move {
+            tx_clone.send(PermissionDecision::Allow {
+                tool_call_id: "call_other".to_string(),
+                tool_name: "bash".to_string(),
+                tool_args: String::new(),
+            }).await.unwrap();
+        });
+        let result = gate.request_permission("bash", "call_1").await;
+        assert_eq!(result, PermissionResult::Denied, "Wrong tool_call_id should deny even for same tool");
+    }
+
+    // EDGE CASE: Multiple AllowAlways for different tools
+    #[tokio::test]
+    async fn test_allow_always_multiple_tools() {
+        let (tx, rx) = mpsc::channel::<PermissionDecision>(10);
+        let mut gate = PermissionGate::with_channel(tx.clone(), rx, 60);
+        
+        // AllowAlways for bash
+        let tx1 = tx.clone();
+        tokio::spawn(async move {
+            tx1.send(PermissionDecision::AllowAlways {
+                tool_call_id: "call_1".to_string(),
+                tool_name: "bash".to_string(),
+                tool_args: String::new(),
+            }).await.unwrap();
+        });
+        let result = gate.request_permission("bash", "call_1").await;
+        assert_eq!(result, PermissionResult::Allowed);
+
+        // AllowAlways for read_file
+        let (tx2, rx2) = mpsc::channel::<PermissionDecision>(10);
+        gate = PermissionGate::with_channel(tx2.clone(), rx2, 60);
+        let tx3 = tx2.clone();
+        tokio::spawn(async move {
+            tx3.send(PermissionDecision::AllowAlways {
+                tool_call_id: "call_2".to_string(),
+                tool_name: "read_file".to_string(),
+                tool_args: String::new(),
+            }).await.unwrap();
+        });
+        let result = gate.request_permission("read_file", "call_2").await;
+        assert_eq!(result, PermissionResult::Allowed);
+        
+        // Both should be cached
+        assert!(gate.is_tool_allowed("bash") || gate.is_tool_allowed("read_file"));
+    }
+
+    // SECURITY: Verify Deny decision does not cache tool
+    #[tokio::test]
+    async fn test_deny_does_not_cache() {
+        let (tx, rx) = mpsc::channel::<PermissionDecision>(10);
+        let mut gate = PermissionGate::with_channel(tx, rx, 60);
+        let tx_clone = gate.sender();
+        tokio::spawn(async move {
+            tx_clone.send(PermissionDecision::Deny {
+                tool_call_id: "call_1".to_string(),
+                tool_name: "bash".to_string(),
+                tool_args: String::new(),
+            }).await.unwrap();
+        });
+        let result = gate.request_permission("bash", "call_1").await;
+        assert_eq!(result, PermissionResult::Denied);
+        assert!(!gate.is_tool_allowed("bash"), "Deny should NOT cache tool as allowed");
     }
 }

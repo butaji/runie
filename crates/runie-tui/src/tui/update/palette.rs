@@ -1,4 +1,4 @@
-use crate::tui::state::{AppState, TuiMode, Cmd};
+use crate::tui::state::{AppState, TuiMode};
 use crate::tui::update::ui::UiCmd;
 use crate::components::{MessageItem, CommandPalette};
 use crate::components::command_palette::PaletteCommand;
@@ -44,14 +44,14 @@ pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette)
     }
 }
 
-pub fn handle_switch_model(state: &mut AppState) -> Vec<crate::UiCmd> {
+pub fn handle_switch_model(state: &mut AppState) -> Vec<UiCmd> {
     let picker = ModelPicker::with_default_models();
     state.model_picker = Some(picker);
     state.mode = TuiMode::Overlay;
     vec![]
 }
 
-pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<crate::UiCmd> {
+pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<UiCmd> {
     match cmd {
         PaletteCommand::NewSession => {
             state.messages.clear();

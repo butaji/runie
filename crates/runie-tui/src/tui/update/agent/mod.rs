@@ -6,9 +6,8 @@ pub mod permission;
 pub mod error;
 
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, Msg, Cmd, TuiMode, PendingPermission};
-use runie_agent::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
-use runie_ai::TokenUsage;
+use crate::tui::state::{AppState, Cmd, TuiMode};
+use runie_agent::{AgentMessage, ContentPart, PermissionDecision};
 
 pub use events::{update, handle_agent_event, on_message_start, on_message, on_message_update,
     on_message_end, update_last_assistant, on_tool_start, on_tool_end, on_agent_end,

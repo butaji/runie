@@ -36,7 +36,6 @@ pub fn make_state() -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         model_picker: None,
         agent_start_time: None,
-        turn_start_index: None,
         input_history: Vec::new(),
         input_history_index: None,
         input_draft: String::new(),

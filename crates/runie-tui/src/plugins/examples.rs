@@ -45,8 +45,8 @@ impl MetricsPlugin {
         Self { name: "metrics".to_string(), counts: RwLock::new(HashMap::new()) }
     }
 
-    pub fn get_counts(&self) -> std::sync::RwLockReadGuard<HashMap<String, usize>> {
-        self.counts.read().unwrap()
+    pub fn get_counts(&self) -> Option<std::sync::RwLockReadGuard<HashMap<String, usize>>> {
+        self.counts.read().ok()
     }
 }
 
@@ -58,8 +58,10 @@ impl Plugin for MetricsPlugin {
     fn name(&self) -> &str { &self.name }
 
     fn before_update(&self, msg: &Msg) -> Option<Msg> {
-        let key = format!("{:?}", msg);
-        *self.counts.write().unwrap().entry(key).or_insert(0) += 1;
+        if let Ok(mut counts) = self.counts.write() {
+            let key = format!("{:?}", msg);
+            *counts.entry(key).or_insert(0) += 1;
+        }
         Some(msg.clone())
     }
 
@@ -198,17 +200,23 @@ impl Plugin for GitStatusPlugin {
 
 impl GitStatusPlugin {
     fn increment_tick_counter(&self) -> usize {
-        let mut s = self.state.write().unwrap();
-        let tc = s.tick_counter;
-        s.tick_counter += 1;
-        tc
+        if let Ok(mut s) = self.state.write() {
+            let tc = s.tick_counter;
+            s.tick_counter += 1;
+            tc
+        } else {
+            0
+        }
     }
 
     fn check_and_update_git_info(&self) -> Vec<Msg> {
         let (repo, branch, path) = self.detect_git_info();
         let changed = {
-            let s = self.state.read().unwrap();
-            repo != s.last_repo || branch != s.last_branch || path != s.last_path
+            if let Ok(s) = self.state.read() {
+                repo != s.last_repo || branch != s.last_branch || path != s.last_path
+            } else {
+                false
+            }
         };
 
         if changed {
@@ -230,10 +238,11 @@ impl GitStatusPlugin {
     }
 
     fn update_last_seen(&self, repo: String, branch: String, path: String) {
-        let mut s = self.state.write().unwrap();
-        s.last_repo = repo;
-        s.last_branch = branch;
-        s.last_path = path;
+        if let Ok(mut s) = self.state.write() {
+            s.last_repo = repo;
+            s.last_branch = branch;
+            s.last_path = path;
+        }
     }
 }
 
@@ -256,13 +265,13 @@ mod tests {
     #[test]
     fn test_metrics_plugin_counts() {
         let p = MetricsPlugin::new();
-        assert_eq!(p.get_counts().len(), 0);
+        assert_eq!(p.get_counts().map(|c| c.len()).unwrap_or(0), 0);
     }
 
     #[test]
     fn test_metrics_plugin_increments() {
         let p = MetricsPlugin::new();
         p.before_update(&Msg::Tick);
-        assert_eq!(*p.get_counts().get("Tick").unwrap_or(&0), 1);
+        assert_eq!(p.get_counts().and_then(|c| c.get("Tick").copied()).unwrap_or(0), 1);
     }
 }

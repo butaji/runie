@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Static analysis utilities for Rust source code validation.
 //!
 //! Provides pattern matching and source file analysis for grader tests.

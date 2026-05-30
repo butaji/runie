@@ -120,7 +120,7 @@ fn test_stream_preserves_message_order() {
     assert_eq!(user_messages.len(), 2);
 }
 
-/// Helper: complete a single turn with message start, update, end, and turn end
+/// Helper: complete a single turn with message start, update, end, turn end, and agent end
 fn complete_turn(harness: AgentTestHarness, turn: usize, response: &str) -> AgentTestHarness {
     harness
         .handle_event(AgentEvent::MessageStart {
@@ -137,6 +137,11 @@ fn complete_turn(harness: AgentTestHarness, turn: usize, response: &str) -> Agen
             turn,
         })
         .handle_event(make_turn_end(turn))
+        .handle_event(AgentEvent::AgentEnd {
+            messages: vec![],
+            total_turns: turn,
+            final_token_usage: runie_agent::TokenUsage::default(),
+        })
 }
 
 /// Helper: set up a two-turn conversation and return harness

@@ -210,7 +210,7 @@ impl AssistantFeedBuilder {
     }
 
     /// Continue building the feed (return to parent builder).
-    pub fn done(mut self) -> FeedBuilder {
+    pub fn done(self) -> FeedBuilder {
         let mut fb = self.feed_builder;
         fb.state = BuilderState::AssistantReady(self.assistant);
         if let Some(duration) = self.turn_duration {

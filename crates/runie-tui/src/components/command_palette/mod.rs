@@ -221,7 +221,7 @@ impl CommandPalette {
             .filter(|(_, score)| *score > 0.0)
             .collect();
         scored.sort_by(|a, b| {
-            let score_cmp = b.1.partial_cmp(&a.1).unwrap();
+            let score_cmp = b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal);
             if score_cmp != std::cmp::Ordering::Equal { return score_cmp; }
             let freq_a = self.usage_stats.get(&self.all_commands[a.0].id).map(|u| u.use_count).unwrap_or(0);
             let freq_b = self.usage_stats.get(&self.all_commands[b.0].id).map(|u| u.use_count).unwrap_or(0);

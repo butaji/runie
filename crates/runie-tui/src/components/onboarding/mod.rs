@@ -16,9 +16,13 @@ pub use matrix_bg::{render_onboarding_screen, MatrixRain};
 pub mod render;
 
 // Re-export from submodules for backwards compatibility
+#[allow(unused_imports)]
 pub use events::*;
+#[allow(unused_imports)]
 pub use models::*;
+#[allow(unused_imports)]
 pub use providers::*;
+#[allow(unused_imports)]
 pub use state::*;
 
 // ─── OnboardingStep ─────────────────────────────────────────────────────────

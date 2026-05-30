@@ -282,11 +282,23 @@ fn open_log_file(events_dir: &std::path::Path, timestamp: &str, ext: &str) -> Fi
         Ok(f) => f,
         Err(e) => {
             tracing::error!("Failed to create {} file {}: {}", ext, path.display(), e);
-            OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(fallback)
-                .expect("Failed to create fallback log file")
+            match OpenOptions::new().create(true).append(true).open(&fallback) {
+                Ok(f) => f,
+                Err(e2) => {
+                    tracing::error!("Failed to create fallback log file {}: {}", fallback, e2);
+                    // Last resort: return a dummy file handle to /dev/null equivalent
+                    #[cfg(unix)]
+                    {
+                        OpenOptions::new().write(true).open("/dev/null").unwrap_or_else(|_| {
+                            panic!("Cannot create any log file (tried {} and {})", path.display(), fallback)
+                        })
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        panic!("Cannot create any log file (tried {} and {})", path.display(), fallback)
+                    }
+                }
+            }
         }
     }
 }
