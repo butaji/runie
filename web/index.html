@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Runie — TypeScript to Rust Compiler with Zero Overhead</title>
+    <title>Runie — Agent Harness That Actually Measures</title>
     <meta name="description"
-        content="Runie is the developer experience layer for Rune — the TypeScript to Rust compiler with zero runtime overhead. Write .r.ts and .r.tsx files with hot reload, ownership inference, and JSX support for Ratatui, Dioxus, Axum, Bevy, SQLx, and more. Ship static binaries." />
+        content="Runie is the agent harness that ships Rust code, supports every model, and actually lets you measure if you\'re improving. MIT licensed. Built to evaluate." />
     <meta name="keywords"
         content="TypeScript to Rust compiler, TSX transpiler, zero overhead TypeScript, Rust hot reload, .r.ts files, TypeScript native performance, Rust compiler driver, TypeScript systems programming, Ratatui JSX, Dioxus TypeScript, Bevy TypeScript, Axum TypeScript, SQLx TypeScript, ownership inference, native binary from TypeScript, Rust TUI framework, TypeScript WASM, zero cost abstraction" />
     <meta name="author" content="Runie" />
@@ -14,15 +14,15 @@
     <link rel="canonical" href="https://runie.org" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://runie.org" />
-    <meta property="og:title" content="Runie — TypeScript to Rust Compiler with Zero Overhead" />
+    <meta property="og:title" content="Runie — Agent Harness That Actually Measures" />
     <meta property="og:description"
-        content="Write TypeScript, ship native Rust. Zero runtime overhead. Hot reload in dev, static binary in release. Supports Ratatui, Dioxus, Axum, Bevy, SQLx, and 12+ frameworks." />
+        content="Stop guessing if your agent improved. Runie actually measures it. Rust-native, model-agnostic, MIT licensed." />
     <meta property="og:image" content="https://runie.org/og-image.png" />
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://runie.org" />
-    <meta property="twitter:title" content="Runie — TypeScript to Rust Compiler" />
+    <meta property="twitter:title" content="Runie — Agent Harness That Actually Measures" />
     <meta property="twitter:description"
-        content="TypeScript syntax, Rust performance. Zero overhead transpilation with hot reload." />
+        content="Stop guessing if your agent improved. Runie actually measures it." />
     <meta property="twitter:image" content="https://runie.org/og-image.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
@@ -294,6 +294,62 @@
             max-width: 260px;
         }
 
+        .feature-description {
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            font-size: 0.875rem;
+            color: #6B7280;
+            line-height: 1.5;
+            margin-top: 0.75rem;
+            max-width: 100%;
+        }
+
+        .feature-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
+            font-size: 0.8125rem;
+            color: #3C3C3C;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0.75rem 1rem;
+            background: #E8E8E8;
+            border-radius: 6px;
+        }
+
+        .feature-detail::before {
+            content: '› ';
+            color: #EF5102;
+        }
+
+        .feature-description {
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            font-size: 1rem;
+            color: #A9A9A9;
+            line-height: 1.5;
+            margin-top: 0;
+            max-width: 260px;
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .tui-header {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #3C3C3C;
+            margin: 0;
+        }
+
+        .tui-prompt {
+            color: #EF5102;
+        }
+
         .code-block {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.75rem;
@@ -528,8 +584,8 @@
                     <div class="stripes"></div>
                     <div class="metric-area">
                         <div class="vertical-text">
-                            <span class="ts-line">TYPESCRIPT &amp; TSX</span>
-                            <span class="rust-line">RUST PERFORMANCE</span>
+                            <span class="ts-line">AGENT HARNESS WITH</span>
+                            <span class="rust-line">BATTERIES INCLUDED</span>
                         </div>
                     </div>
                 </div>
@@ -537,12 +593,16 @@
                     <div class="nav-row">
                         <span class="nav-arrow" id="prev-arrow">←</span>
                         <span class="nav-label">
-                            <span id="framework-label">framework: </span>
-                            <span id="framework-name">Ratatui</span>
+                            <span id="feature-label">capability: </span>
+                            <span id="feature-name">Open Source</span>
                         </span>
                         <span class="nav-arrow" id="next-arrow">→</span>
                     </div>
-                    <pre class="code-block" id="code-example"></pre>
+                    <div class="card-body">
+                        <p class="feature-description" id="feature-description">Fork it. Break it. Fix it. Build your own tools on top. Not a hosted service that'll pivot.</p>
+                        <p class="tui-header"><span class="tui-prompt">runie</span> <span id="feature-name-display">Open Source</span></p>
+                        <p class="feature-detail" id="feature-detail">The harness is yours. The code is yours.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -567,16 +627,14 @@
       "license": "https://opensource.org/licenses/MIT",
       "programmingLanguage": ["TypeScript", "Rust", "JSX", "TSX"],
       "softwareVersion": "1.0",
-      "description": "Runie is the developer experience and brand for Rune, a compiler driver that transpiles TypeScript and TSX to native Rust with zero runtime overhead. Features hot reload development, ownership inference, JSX-to-Ratatui mapping, and support for 12+ Rust frameworks including Axum, Dioxus, Bevy, SQLx, and Candle.",
+      "description": "Runie is the agent harness that ships Rust code, supports every model, and actually lets you measure if you\'re improving. MIT licensed. Built to evaluate, not just iterate.",
       "featureList": [
-        "Zero-overhead TypeScript to Rust transpilation",
-        "Hot reload via cdylib in development",
-        "Static binary release with no runtime dependency",
-        "Ownership inference (automatic &T / &mut T / T)",
-        "JSX support transpiled to Ratatui builder patterns",
-        "Native Rust interop via native: imports",
-        "Deterministic idempotent code generation",
-        "Structured JSON error output for AI agents"
+        "Agent harness with end-to-end evaluation",
+        "Rust-native tool execution (sub-ms)",
+        "25+ LLM providers via Rig",
+        "Multi-agent orchestration",
+        "Pattern-aware skills system",
+        "MIT licensed, no vendor lock-in"
       ],
       "applicationSubCategory": "Compiler",
       "keywords": "TypeScript to Rust, TSX transpiler, zero overhead, hot reload, .r.ts, Rust compiler driver, systems programming, native binary, ownership inference, Ratatui, Dioxus, Axum, Bevy, SQLx, Tonic, Candle",
@@ -631,36 +689,54 @@
     </div>
 
     <script>
-        const examples = [
+        const features = [
             {
-                framework: 'Ratatui',
-                label: 'framework: ',
-                code: '<span class="keyword">import</span> { <span class="type">List</span>, <span class="type">ListItem</span> } <span class="keyword">from</span> <span class="string">"ratatui"</span>;\n\n<span class="keyword">function</span> <span class="type">App</span>() {\n  <span class="keyword">const</span> tasks = [<span class="string">"Build UI"</span>, <span class="string">"Ship binary"</span>];\n\n  <span class="keyword">return</span> (\n    <span class="type">&lt;List></span>\n      {tasks.<span class="fn">map</span>(t => <span class="type">&lt;ListItem></span>{t}<span class="type">&lt;/ListItem></span>)}\n    <span class="type">&lt;/List></span>\n  );\n}'
+                name: 'Summary',
+                label: 'capability: ',
+                vertical1: 'AGENT',
+                vertical2: 'HARNESS',
+                description: 'Stop guessing if your agent improved. Runie actually measures it.',
+                detail: 'Evaluate. Iterate. Ship. Repeat.'
             },
             {
-                framework: 'Axum',
-                label: 'framework: ',
-                code: '<span class="keyword">import</span> { <span class="type">Router</span>, <span class="type">TraceLayer</span> } <span class="keyword">from</span> <span class="string">"axum"</span>;\n\n<span class="keyword">const</span> router = <span class="type">Router</span>.<span class="fn">new</span>()\n  .<span class="fn">route</span>(<span class="string">"/tasks"</span>, {\n    <span class="fn">get</span>: listTasks,\n    <span class="fn">post</span>: createTask\n  })\n  .<span class="fn">layer</span>(TraceLayer.<span class="fn">new</span>())\n  .<span class="fn">with_state</span>(state);'
+                name: 'Rust Performance',
+                label: 'capability: ',
+                vertical1: 'RUST',
+                vertical2: 'NATIVE',
+                description: 'Your agent is waiting on Python. Sub-ms tool execution. True parallelism.',
+                detail: 'No GIL. No overhead. Just speed.'
             },
             {
-                framework: 'Dioxus',
-                label: 'framework: ',
-                code: '<span class="keyword">import</span> { <span class="fn">useSignal</span>, <span class="fn">useMemo</span> } <span class="keyword">from</span> <span class="string">"dioxus"</span>;\n\n<span class="keyword">const</span> tasks = <span class="fn">useSignal</span>&lt;<span class="type">Task</span>[]&gt;([]);\n<span class="keyword">const</span> filter = <span class="fn">useSignal</span>(<span class="string">"all"</span>);\n\n<span class="keyword">const</span> visible = <span class="fn">useMemo</span>(() => {\n  <span class="keyword">return</span> tasks().<span class="fn">filter</span>(t => {\n    <span class="keyword">if</span> (filter() === <span class="string">"active"</span>) <span class="keyword">return</span> !t.done;\n  });\n});'
+                name: 'Open Source',
+                label: 'capability: ',
+                vertical1: 'MIT',
+                vertical2: 'LICENSE',
+                description: 'No vendor lock-in. Fork it, break it, own it. The harness is yours forever.',
+                detail: 'Built once. Runs forever.'
             },
             {
-                framework: 'SQLx',
-                label: 'framework: ',
-                code: '<span class="keyword">import</span> { <span class="type">PgPool</span>, <span class="fn">sqlx</span> } <span class="keyword">from</span> <span class="string">"sqlx"</span>;\n\n<span class="keyword">const</span> pool = <span class="keyword">await</span> <span class="type">PgPool</span>.<span class="fn">connect</span>(url);\n\n<span class="keyword">const</span> rows = <span class="keyword">await</span> <span class="fn">sqlx</span>.<span class="fn">queryAs</span>&lt;<span class="type">Task</span>&gt;(\n  pool,\n  <span class="string">"SELECT * FROM tasks WHERE done = false"</span>\n);'
+                name: 'All Models',
+                label: 'capability: ',
+                vertical1: '25+',
+                vertical2: 'PROVIDERS',
+                description: 'Use any model you want. OpenAI, Anthropic, local models, whatever fits your workflow.',
+                detail: 'No vendor prison. Swap with one env var.'
             },
             {
-                framework: 'Bevy',
-                label: 'framework: ',
-                code: '<span class="keyword">import</span> { <span class="type">App</span>, <span class="type">DefaultPlugins</span> } <span class="keyword">from</span> <span class="string">"bevy"</span>;\n\n<span class="type">App</span>.<span class="fn">new</span>()\n  .<span class="fn">addPlugins</span>(DefaultPlugins)\n  .<span class="fn">insertResource</span>({ score: <span class="num">0</span> })\n  .<span class="fn">addSystem</span>(update)\n  .<span class="fn">run</span>();'
+                name: 'Multi-Agent',
+                label: 'capability: ',
+                vertical1: 'AGENT',
+                vertical2: 'TEAMS',
+                description: 'Specialized agents. One coordinator. Complex tasks, elegantly solved.',
+                detail: 'Orchestrate. Don\'t just iterate.'
             },
             {
-                framework: 'Candle',
-                label: 'framework: ',
-                code: '<span class="keyword">import</span> { <span class="fn">forward</span> } <span class="keyword">from</span> <span class="string">"candle"</span>;\n\n<span class="keyword">const</span> tokens = tokenizer.<span class="fn">encode</span>(prompt);\n\n<span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="num">0</span>; i < maxLen; i++) {\n  <span class="keyword">const</span> logits = <span class="fn">forward</span>(model, tokens);\n  <span class="keyword">const</span> next = logits.<span class="fn">argmax</span>(1);\n  <span class="keyword">if</span> (next === eosId) <span class="keyword">break</span>;\n}'
+                name: 'Pattern-Aware',
+                label: 'capability: ',
+                vertical1: 'SKILLS',
+                vertical2: 'ON-DEMAND',
+                description: 'We track market trends and emerging patterns. Best practices get baked in as skills.',
+                detail: 'Stay current. Ship smarter.'
             }
         ];
 
@@ -670,49 +746,55 @@
             return str.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         }
 
-        function updateExample() {
-            const example = examples[currentIndex];
-            document.getElementById('framework-name').textContent = example.framework;
-            document.getElementById('code-example').innerHTML = example.code;
-            location.hash = slugify(example.framework);
+        function updateFeature() {
+            const feature = features[currentIndex];
+            document.getElementById('feature-name').textContent = feature.name;
+            document.getElementById('feature-label').textContent = feature.label;
+            document.getElementById('feature-description').textContent = feature.description;
+            document.getElementById('feature-name-display').textContent = feature.name;
+            document.getElementById('feature-detail').textContent = feature.detail;
+            location.hash = slugify(feature.name);
         }
 
         function fromHash() {
             const hash = location.hash.replace('#', '');
             if (!hash) return 0;
-            const idx = examples.findIndex(e => slugify(e.framework) === hash);
+            const idx = features.findIndex(e => slugify(e.name) === hash);
             return idx >= 0 ? idx : 0;
         }
 
         document.getElementById('prev-arrow').addEventListener('click', () => {
-            currentIndex = (currentIndex - 1 + examples.length) % examples.length;
-            updateExample();
+            currentIndex = (currentIndex - 1 + features.length) % features.length;
+            updateFeature();
         });
 
         document.getElementById('next-arrow').addEventListener('click', () => {
-            currentIndex = (currentIndex + 1) % examples.length;
-            updateExample();
+            currentIndex = (currentIndex + 1) % features.length;
+            updateFeature();
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') {
-                currentIndex = (currentIndex - 1 + examples.length) % examples.length;
-                updateExample();
+                currentIndex = (currentIndex - 1 + features.length) % features.length;
+                updateFeature();
             } else if (e.key === 'ArrowRight') {
-                currentIndex = (currentIndex + 1) % examples.length;
-                updateExample();
+                currentIndex = (currentIndex + 1) % features.length;
+                updateFeature();
             }
         });
 
         window.addEventListener('hashchange', () => {
             currentIndex = fromHash();
-            const example = examples[currentIndex];
-            document.getElementById('framework-name').textContent = example.framework;
-            document.getElementById('code-example').innerHTML = example.code;
+            const feature = features[currentIndex];
+            document.getElementById('feature-name').textContent = feature.name;
+            document.getElementById('feature-label').textContent = feature.label;
+            document.getElementById('feature-description').textContent = feature.description;
+            document.getElementById('feature-name-display').textContent = feature.name;
+            document.getElementById('feature-detail').textContent = feature.detail;
         });
 
         currentIndex = fromHash();
-        updateExample();
+        updateFeature();
     </script>
 
     <script>
