@@ -319,13 +319,14 @@ mod tests {
     #[test]
     fn test_append_to_last() {
         let mut feed = Feed::new();
-        feed.add_user_message("Hel".to_string());
-        feed.append_to_last("lo");
-        match &feed.items[0] {
-            FeedItem::UserMessage { text, .. } => {
-                assert_eq!(text, "Hello");
+        feed.add_user_message("Hello".to_string());
+        feed.add_assistant_message();
+        feed.append_to_last("Hi");
+        match &feed.items[1] {
+            FeedItem::AssistantMessage { text, .. } => {
+                assert_eq!(text, "Hi");
             }
-            _ => panic!("Expected UserMessage"),
+            _ => panic!("Expected AssistantMessage"),
         }
     }
 
@@ -372,14 +373,15 @@ mod tests {
             timestamp: None,
         });
         assert_eq!(feed.items.len(), 1);
-        // Try to add same ID again
+        // Try to add same ID again - should be deduped
         feed.add_if_new(FeedItem::UserMessage {
-            id,
+            id: id.clone(),
             text: "Second".to_string(),
             timestamp: None,
         });
         assert_eq!(feed.items.len(), 1);
-        assert_eq!(feed.items[0].id(), ""); // First item's ID
+        // First item's ID is preserved
+        assert_eq!(feed.items[0].id(), id);
     }
 
     #[test]
@@ -427,10 +429,11 @@ mod tests {
             MessageItem::ToolCall { name: "bash".to_string(), args: "pwd".to_string(), result: None, is_error: false },
         ];
         let feed = Feed::from(messages);
-        assert_eq!(feed.items.len(), 3);
-        assert!(matches!(feed.items[0], FeedItem::UserMessage { text, .. } if text == "Hello"));
-        assert!(matches!(feed.items[1], FeedItem::AssistantMessage { text, .. } if text == "Hi"));
-        assert!(matches!(feed.items[2], FeedItem::SystemNotice { text, .. } if text == "System notice"));
+        let items = feed.items();
+        assert_eq!(items.len(), 3);
+        assert!(matches!(&items[0], FeedItem::UserMessage { text, .. } if text == "Hello"));
+        assert!(matches!(&items[1], FeedItem::AssistantMessage { text, .. } if text == "Hi"));
+        assert!(matches!(&items[2], FeedItem::SystemNotice { text, .. } if text == "System notice"));
     }
 
     #[test]
@@ -445,7 +448,8 @@ mod tests {
         feed.add_thought(1.5);
         feed.add_tool_call("bash".to_string(), "ls".to_string());
 
-        match &feed.items[1] {
+        let items = feed.items();
+        match &items[1] {
             FeedItem::AssistantMessage { thoughts, tool_calls, .. } => {
                 assert_eq!(thoughts.len(), 1);
                 assert_eq!(thoughts[0].duration, 1.5);

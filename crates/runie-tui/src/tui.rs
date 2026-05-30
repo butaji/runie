@@ -19,7 +19,6 @@ use runie_agent::events::AgentEvent;
 
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
-    pub show_top_bar: bool,
     pub show_status_bar: bool,
 }
 
@@ -39,7 +38,6 @@ impl Default for TuiConfig {
     fn default() -> Self {
         Self {
             theme: ThemeWrapper::default(),
-            show_top_bar: true,
             show_status_bar: true, // Always visible - hotkeys are context-aware and essential
         }
     }

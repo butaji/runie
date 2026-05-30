@@ -1,4 +1,4 @@
-//! Navigation handlers: select, session tree, top bar.
+//! Navigation handlers: select, session tree, context.
 
 use crate::components::model_picker::ModelPicker;
 use crate::tui::state::{AppState, Msg};
@@ -28,17 +28,15 @@ pub fn handle_session_tree(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd>
     }
 }
 
-/// Handle top bar update messages - delegates to specific handlers.
-pub fn handle_top_bar(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
+/// Handle context update messages - delegates to specific handlers.
+pub fn handle_context(msg: &Msg, state: &mut AppState) -> Vec<crate::UiCmd> {
     use crate::tui::state::Msg;
     match msg {
         Msg::SetTopBarMockChecks { checks_passed, checks_total, percentage, context_badges } =>
-            handle_set_top_bar_mock_checks(state, *checks_passed, *checks_total, *percentage, context_badges.clone()),
+            handle_set_context_mock_checks(state, *checks_passed, *checks_total, *percentage, context_badges.clone()),
         Msg::SetTopBarRealChecks { context_badges } =>
-            handle_set_top_bar_real_checks(state, context_badges.clone()),
+            handle_set_context_real_checks(state, context_badges.clone()),
         Msg::SetInputRightInfo(info) => handle_set_input_right_info(state, info.clone()),
-        Msg::UpdateTopBarContext { model, context_window, estimated_tokens } =>
-            handle_update_top_bar_context(state, model.clone(), *context_window, *estimated_tokens),
         _ => vec![],
     }
 }
@@ -110,55 +108,43 @@ fn handle_session_tree_confirm(state: &mut AppState) -> Vec<crate::UiCmd> {
     vec![]
 }
 
-// ─── Top Bar ─────────────────────────────────────────────────────────────
+// ─── Context ─────────────────────────────────────────────────────────────
 
 pub fn handle_set_git_info(state: &mut AppState, repo: String, branch: String, path: String) -> Vec<crate::UiCmd> {
-    state.top_bar.repo = repo;
-    state.top_bar.branch = branch;
-    state.top_bar.path = path;
+    state.context.repo = repo;
+    state.context.branch = branch;
+    state.context.path = path;
     vec![]
 }
 
-fn handle_set_top_bar_mock_checks(
+fn handle_set_context_mock_checks(
     state: &mut AppState,
     checks_passed: Option<usize>,
     checks_total: Option<usize>,
     percentage: Option<f32>,
     context_badges: Vec<String>,
 ) -> Vec<crate::UiCmd> {
-    state.top_bar.checks_passed = checks_passed;
-    state.top_bar.checks_total = checks_total;
-    state.top_bar.percentage = percentage;
-    state.top_bar.context_badges = context_badges;
-    state.top_bar.context_pct = None;
-    state.top_bar.context_bar_pct = None;
+    state.context.checks_passed = checks_passed;
+    state.context.checks_total = checks_total;
+    state.context.percentage = percentage;
+    state.context.context_badges = context_badges;
+    state.context.context_pct = None;
+    state.context.context_bar_pct = None;
     vec![]
 }
 
-fn handle_set_top_bar_real_checks(state: &mut AppState, context_badges: Vec<String>) -> Vec<crate::UiCmd> {
-    state.top_bar.checks_passed = None;
-    state.top_bar.checks_total = None;
-    state.top_bar.percentage = None;
-    state.top_bar.context_badges = context_badges;
-    state.top_bar.context_pct = None;
-    state.top_bar.context_bar_pct = None;
+fn handle_set_context_real_checks(state: &mut AppState, context_badges: Vec<String>) -> Vec<crate::UiCmd> {
+    state.context.checks_passed = None;
+    state.context.checks_total = None;
+    state.context.percentage = None;
+    state.context.context_badges = context_badges;
+    state.context.context_pct = None;
+    state.context.context_bar_pct = None;
     vec![]
 }
 
 fn handle_set_input_right_info(state: &mut AppState, info: String) -> Vec<crate::UiCmd> {
     state.input_right_info = info;
-    vec![]
-}
-
-fn handle_update_top_bar_context(
-    state: &mut AppState,
-    model: String,
-    context_window: Option<usize>,
-    estimated_tokens: Option<usize>,
-) -> Vec<crate::UiCmd> {
-    state.top_bar.model = model;
-    state.top_bar.context_window = context_window;
-    state.top_bar.estimated_tokens = estimated_tokens;
     vec![]
 }
 
@@ -172,16 +158,6 @@ pub fn handle_enter_onboarding(state: &mut AppState) -> Vec<crate::UiCmd> {
 
 fn handle_set_current_model(state: &mut AppState, model: Option<String>) -> Vec<crate::UiCmd> {
     state.current_model = model.clone();
-    // Extract just the model name (after "/") for top_bar.model
-    if let Some(ref m) = model {
-        if let Some(slash_idx) = m.rfind('/') {
-            state.top_bar.model = m[slash_idx + 1..].to_string();
-        } else {
-            state.top_bar.model = m.clone();
-        }
-    } else {
-        state.top_bar.model = String::new();
-    }
     vec![]
 }
 

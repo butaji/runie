@@ -2,7 +2,7 @@ use crate::components::MessageItem;
 use crate::tui::state::{AppState, TuiMode};
 
 /// P1-1 FIX: Sanitize error messages by truncating long messages and detecting stack traces
-pub(crate) fn sanitize_error_message(message: &str) -> String {
+pub fn sanitize_error_message(message: &str) -> String {
     const MAX_ERROR_LENGTH: usize = 500;
     const STACK_TRACE_PATTERNS: &[&str] = &[
         "stack backtrace",

@@ -226,11 +226,12 @@ impl FeedBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::FeedBuilder;
+    use super::super::FeedItem;
 
     #[test]
     fn test_feed_builder_basic() {
-        let feed = FeedBuilder::new()
+        let vm = FeedBuilder::new()
             .user("hey!")
             .think("The user is saying hey!")
             .thought(1.2)
@@ -239,25 +240,26 @@ mod tests {
             .turn(3, 1, 80)
             .build();
 
-        assert_eq!(feed.messages.len(), 6);
-        assert!(matches!(feed.messages[0], MessageItem::User { .. }));
-        assert!(matches!(feed.messages[1], MessageItem::Assistant { .. }));
-        assert!(matches!(feed.messages[2], MessageItem::Thought { .. }));
-        assert!(matches!(feed.messages[3], MessageItem::Assistant { .. }));
-        assert!(matches!(feed.messages[4], MessageItem::ToolCall { .. }));
-        assert!(matches!(feed.messages[5], MessageItem::Separator { .. }));
+        let items = vm.feed.items();
+        // In new architecture: thoughts/tool_calls/turns are inline in AssistantMessage
+        // So we get: UserMessage, AssistantMessage (from think), AssistantMessage (from assistant)
+        assert_eq!(items.len(), 3);
+        assert!(matches!(&items[0], FeedItem::UserMessage { .. }));
+        assert!(matches!(&items[1], FeedItem::AssistantMessage { .. })); // think block
+        assert!(matches!(&items[2], FeedItem::AssistantMessage { .. })); // assistant response
     }
 
     #[test]
     fn test_feed_builder_error() {
-        let feed = FeedBuilder::new()
+        let vm = FeedBuilder::new()
             .user("do something risky")
             .tool_error("rm", "-rf /", "permission denied")
             .error("Something went wrong")
             .build();
 
-        assert_eq!(feed.messages.len(), 3);
-        assert!(matches!(feed.messages[1], MessageItem::ToolCall { is_error: true, .. }));
-        assert!(matches!(feed.messages[2], MessageItem::Error { .. }));
+        let items = vm.feed.items();
+        // tool_error and error are filtered out in Feed conversion
+        assert_eq!(items.len(), 1);
+        assert!(matches!(&items[0], FeedItem::UserMessage { .. }));
     }
 }

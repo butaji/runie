@@ -1,6 +1,6 @@
 //! Reducer tests for state updates.
 
-use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, TopBarState, PermissionModalState, PendingPermission, TuiMode, ClearInputConfirm};
+use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, ContextState, PermissionModalState, PendingPermission, TuiMode, ClearInputConfirm};
 use crate::components::{MessageItem, SessionTreeNavigator};
 use crate::components::CommandPalette;
 use crate::tui::update::update;
@@ -19,7 +19,7 @@ pub fn make_state() -> AppState {
         show_sidebar: false,
         agent_running: false,
         current_model: None,
-        top_bar: TopBarState::default(),
+        context: ContextState::default(),
         permission_modal: PermissionModalState::default(),
         command_palette: CommandPaletteState::default(),
         scroll: ScrollState::default(),
@@ -34,6 +34,7 @@ pub fn make_state() -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         model_picker: None,
         agent_start_time: None,
+        turn_start_index: None,
         input_history: Vec::new(),
         input_history_index: None,
         input_draft: String::new(),
@@ -57,7 +58,7 @@ pub fn make_state_with_text(text: &str) -> AppState {
         show_sidebar: false,
         agent_running: false,
         current_model: Some("gpt-4".to_string()),
-        top_bar: TopBarState::default(),
+        context: ContextState::default(),
         permission_modal: PermissionModalState::default(),
         command_palette: CommandPaletteState::default(),
         scroll: ScrollState::default(),
@@ -72,6 +73,7 @@ pub fn make_state_with_text(text: &str) -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         model_picker: None,
         agent_start_time: None,
+        turn_start_index: None,
         input_history: Vec::new(),
         input_history_index: None,
         input_draft: String::new(),

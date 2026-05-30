@@ -348,13 +348,16 @@ mod tests_status_bar_onboarding {
     }
 
     fn buffer_contains(buffer: &Buffer, text: &str) -> bool {
+        // Collect each line as a string and check if it contains the text
         for y in 0..buffer.area.height {
+            let mut line = String::new();
             for x in 0..buffer.area.width {
                 if let Some(cell) = buffer.cell((x, y)) {
-                    if cell.symbol().contains(text) {
-                        return true;
-                    }
+                    line.push_str(cell.symbol());
                 }
+            }
+            if line.contains(text) {
+                return true;
             }
         }
         false
@@ -379,17 +382,17 @@ mod tests_status_bar_onboarding {
     }
 
     #[test]
-    fn test_chat_mode_shows_model_info() {
+    fn test_chat_mode_shows_hotkeys() {
         let vm = make_chat_vm_with_model();
-        let area = Rect::new(0, 0, 80, 1);
+        let area = Rect::new(0, 0, 120, 1);  // Wider area to fit hotkeys + center
         let mut buf = Buffer::empty(area);
         let colors = theme_colors();
 
         render_ref(&vm, area, &mut buf, &colors);
 
-        // Chat mode should show model info
-        assert!(buffer_contains(&buf, "openai/gpt-4o"),
-            "Chat mode should display model name");
+        // Chat mode should show hotkeys (model info moved to GlobalTags)
+        assert!(buffer_contains(&buf, "Enter"),
+            "Chat mode should display Enter hotkey");
     }
 
     #[test]

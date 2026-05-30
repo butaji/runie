@@ -168,7 +168,7 @@ fn test_command_palette_confirm_executes_command() {
     if let Some(cmd) = palette.confirm(selected_idx) {
         let cmds = handle_direct_command(&mut state, cmd);
         assert!(!state.running, "Quit command should set running=false");
-        assert!(cmds.is_empty()); // Quit doesn't return Cmds
+        assert!(!cmds.is_empty()); // Quit returns UiCmd::Quit which becomes Cmd::Interrupt
     } else {
         panic!("Expected command to be confirmed");
     }

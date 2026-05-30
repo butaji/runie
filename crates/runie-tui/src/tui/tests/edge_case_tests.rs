@@ -383,9 +383,9 @@ fn test_context_window_at_limit() {
         context_window: 128000,
     });
 
-    // Context window usage should be tracked
-    let usage = harness.state.top_bar.context_window;
-    assert_eq!(usage, Some(128000), "context window should be recorded");
+    // Token usage should be tracked in session_token_usage
+    // Note: context_window field is no longer tracked separately in state
+    assert_eq!(harness.state.session_token_usage.total_tokens, 128000);
 }
 
 // ─── Test: Rapid token usage updates ────────────────────────────────────────

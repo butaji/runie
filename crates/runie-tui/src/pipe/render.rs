@@ -35,7 +35,6 @@ impl RenderPipe {
     ) -> io::Result<()> {
         let input_height = Self::input_bar_height(state);
         let show_sidebar = state.show_sidebar;
-        let show_top_bar = config.show_top_bar;
         let show_status_bar = true;
         let theme = config.theme.clone();
         let theme_colors = ThemeColors::from(&config.theme);
@@ -50,12 +49,12 @@ impl RenderPipe {
                 width: area.width.saturating_sub(4),
                 height: area.height.saturating_sub(2),
             };
-            let main_areas = Self::layout_main(padded_area, show_top_bar, show_status_bar, input_height);
+            let main_areas = Self::layout_main(padded_area, show_status_bar, input_height);
 
             if is_onboarding {
                 Self::render_onboarding_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_status_bar, &theme, &theme_colors);
             } else {
-                Self::render_normal_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_sidebar, show_top_bar, show_status_bar, &palette, padded_area, &theme, &theme_colors);
+                Self::render_normal_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_sidebar, show_status_bar, &palette, padded_area, &theme, &theme_colors);
             }
         })?;
         Ok(())
@@ -65,12 +64,12 @@ impl RenderPipe {
         crate::components::input_bar::input_bar_height(&state.textarea)
     }
 
-    fn layout_main(padded: Rect, show_top: bool, show_status: bool, input_h: u16) -> [Rect; 4] {
+    fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 4] {
         let constraints = [
-            if show_top { Constraint::Length(2) } else { Constraint::Length(0) },
-            Constraint::Min(1),
-            Constraint::Length(input_h),
-            if show_status { Constraint::Length(1) } else { Constraint::Length(0) },
+            Constraint::Min(1),           // feed
+            Constraint::Length(1),       // global_tags
+            Constraint::Length(input_h),  // input
+            if show_status { Constraint::Length(1) } else { Constraint::Length(0) }, // hotkeys
         ];
         Layout::vertical(constraints).areas(padded)
     }
@@ -116,7 +115,6 @@ impl RenderPipe {
         vms: &ViewModels,
         main_areas: [Rect; 4],
         show_sidebar: bool,
-        show_top_bar: bool,
         show_status_bar: bool,
         palette: &CommandPalette,
         padded: Rect,
@@ -124,10 +122,9 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::clear_background(buf, area, theme_colors.bg_base);
-        if show_top_bar {
-            Component::render(&vms.top_bar, &vms.top_bar, main_areas[0], buf, theme);
-        }
-        Self::render_content(buf, vms, show_sidebar, main_areas[1], theme);
+        // main_areas[0] = feed, [1] = global_tags, [2] = input, [3] = hotkeys
+        Self::render_content(buf, vms, show_sidebar, main_areas[0], theme);
+        ratatui::widgets::Widget::render(vms.global_tags.clone(), main_areas[1], buf);
         Self::render_input(buf, state, main_areas[2], theme);
         if show_status_bar {
             Component::render(&vms.status_bar, &vms.status_bar, main_areas[3], buf, theme);

@@ -57,7 +57,8 @@ mod handle_direct_command_tests {
         let cmds = handle_direct_command(&mut state, PaletteCommand::Quit);
 
         assert!(!state.running);
-        assert!(cmds.is_empty());
+        // Quit produces UiCmd::Quit which becomes Cmd::Interrupt
+        assert!(!cmds.is_empty());
         // Should have goodbye message
         assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Goodbye"))));
     }

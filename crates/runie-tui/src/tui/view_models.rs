@@ -5,7 +5,7 @@ use crate::components::{
 use crate::components::status_bar::BackgroundJob;
 use crate::components::diff_viewer::DiffLine;
 use crate::components::command_palette::CommandPalette;
-use crate::components::top_bar::TopBarViewModel;
+use crate::components::global_tags::GlobalTagsViewModel;
 pub use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::PlanStatus;
 use crate::tui::state::TuiMode;
@@ -132,7 +132,7 @@ pub struct ContextPanelViewModel {
 
 // ─── ViewModels ─────────────────────────────────────────────────────────────
 pub struct ViewModels {
-    pub top_bar: TopBarViewModel,
+    pub global_tags: GlobalTagsViewModel,
     pub message_list: MessageListViewModel,
     pub input_bar: InputBarViewModel,
     pub status_bar: StatusBarViewModel,
@@ -148,7 +148,7 @@ pub struct ViewModels {
 impl ViewModels {
     pub fn from_render_state(state: &crate::tui::state::RenderState, palette: &CommandPalette, wrap_cache: crate::components::message_list::render::WrapCache) -> Self {
         Self {
-            top_bar: TopBarViewModel::from_state(&state.top_bar),
+            global_tags: build_global_tags_vm(state),
             message_list: build_message_list_vm(state, wrap_cache),
             input_bar: build_input_bar_vm(state),
             status_bar: build_status_bar_vm(state),
@@ -164,6 +164,20 @@ impl ViewModels {
 }
 
 // ─── Builder Helpers ────────────────────────────────────────────────────────
+
+fn build_global_tags_vm(state: &crate::tui::state::RenderState) -> GlobalTagsViewModel {
+    let model = state.current_model.as_deref().unwrap_or("—");
+    let tokens = state.session_token_usage.total_tokens as u64;
+    let cost = state.session_token_usage.estimated_cost;
+
+    if state.agent_running {
+        let status = state.status_header.as_deref().unwrap_or("running");
+        let time = state.status_details.as_deref().unwrap_or("0s");
+        GlobalTagsViewModel::running(status, time, tokens)
+    } else {
+        GlobalTagsViewModel::idle(model, tokens, cost)
+    }
+}
 
 fn build_message_list_vm(state: &crate::tui::state::RenderState, wrap_cache: crate::components::message_list::render::WrapCache) -> MessageListViewModel {
     use crate::components::message_list::Feed;

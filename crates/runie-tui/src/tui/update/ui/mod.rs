@@ -10,7 +10,7 @@ use crate::tui::state::{AppState, TuiMode, Cmd};
 use crate::components::command_palette::PaletteCommand;
 use runie_ai::TokenUsage;
 
-pub use navigation::{handle_select, handle_session_tree, handle_top_bar, handle_model_mode, handle_set_git_info, handle_enter_onboarding};
+pub use navigation::{handle_select, handle_session_tree, handle_context, handle_model_mode, handle_set_git_info, handle_enter_onboarding};
 pub use palette_helpers::handle_palette;
 pub use clipboard::handle_copy_last_response;
 
@@ -33,7 +33,11 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
     use crate::tui::state::Msg;
 
     // Palette/Modal
-    if matches!(msg, Msg::CloseModal | Msg::ConfirmModal) { return vec![]; }
+    if matches!(msg, Msg::CloseModal) {
+        super::palette::handle_close_modal(state);
+        return vec![];
+    }
+    if matches!(msg, Msg::ConfirmModal) { return vec![]; }
     if matches!(msg, Msg::OpenCommandPalette | Msg::CommandPaletteUp | Msg::CommandPaletteDown |
         Msg::CommandPaletteConfirm | Msg::CommandPaletteBackspace | Msg::CommandPaletteCancelArgument |
         Msg::CommandPaletteFilter(_))
@@ -53,10 +57,10 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
     return handle_state_msg(state, palette, msg);
 }
 
-fn is_top_bar_msg(msg: &crate::tui::state::Msg) -> bool {
+fn is_context_msg(msg: &crate::tui::state::Msg) -> bool {
     use crate::tui::state::Msg;
     matches!(msg, Msg::SetTopBarMockChecks { .. } | Msg::SetTopBarRealChecks { .. } |
-        Msg::SetInputRightInfo(_) | Msg::UpdateTopBarContext { .. })
+        Msg::SetInputRightInfo(_))
 }
 
 fn is_model_mode_msg(msg: &crate::tui::state::Msg) -> bool {
@@ -78,11 +82,11 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
     }
 }
 
-fn handle_state_msg(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tui::state::Msg) -> Vec<UiCmd> {
+fn handle_state_msg(state: &mut AppState, _palette: &mut CommandPalette, msg: crate::tui::state::Msg) -> Vec<UiCmd> {
     use crate::tui::state::Msg;
 
-    if is_top_bar_msg(&msg) {
-        return handle_top_bar(&msg, state);
+    if is_context_msg(&msg) {
+        return handle_context(&msg, state);
     }
     if is_model_mode_msg(&msg) {
         return handle_model_mode(&msg, state);
