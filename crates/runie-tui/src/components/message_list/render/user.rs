@@ -17,7 +17,7 @@ pub fn render_user_msg(
     wrap_cache: &mut WrapCache,
 ) -> u16 {
     let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
-    let chevron_color: ratatui::style::Color = bg_color; // Match input box border
+    let chevron_color: ratatui::style::Color = theme.color("accent.primary").into(); // Match input box prompt
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     let text_width = (area.width - margin_x + area.x - 2) as usize;
 
