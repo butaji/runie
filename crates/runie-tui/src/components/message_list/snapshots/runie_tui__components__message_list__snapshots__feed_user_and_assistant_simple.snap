@@ -1,0 +1,6 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+  › Hello AI                                                                    
+  Hello! How can I help you today?

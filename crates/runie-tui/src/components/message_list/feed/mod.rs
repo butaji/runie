@@ -9,6 +9,8 @@
 use std::collections::HashSet;
 use uuid::Uuid;
 
+pub mod builder;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Thought {
     pub duration: f32,
@@ -72,6 +74,11 @@ impl Feed {
             items: Vec::new(),
             seen_ids: HashSet::new(),
         }
+    }
+
+    /// Create a new FeedBuilder for declarative feed construction.
+    pub fn builder() -> crate::components::message_list::feed::builder::FeedBuilder {
+        crate::components::message_list::feed::builder::FeedBuilder::new()
     }
 
     /// Add a user message. Returns mutable reference to the inserted item.
