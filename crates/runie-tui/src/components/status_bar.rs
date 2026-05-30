@@ -232,7 +232,10 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
     let hotkeys = vm.hotkeys();
     let left_end = render_hotkey_items(area, buf, &hotkeys, text_tertiary);
 
-    render_ref_center(area, buf, left_end, text_secondary, vm);
+    // During onboarding, only show hotkeys - hide model/token/cost info
+    if !matches!(vm.mode, TuiMode::Onboarding) {
+        render_ref_center(area, buf, left_end, text_secondary, vm);
+    }
 }
 
 fn fill_status_background(area: Rect, buf: &mut Buffer, bg: ratatui::style::Color) {
@@ -288,5 +291,120 @@ fn render_ref_center(area: Rect, buf: &mut Buffer, left_end: u16, text_secondary
     if center_x + center_width <= area.x + area.width {
         let line = Line::raw(center_text).style(Style::default().fg(text_secondary));
         buf.set_line(center_x, area.y, &line, center_width);
+    }
+}
+
+#[cfg(test)]
+mod tests_status_bar_onboarding {
+    use super::*;
+    use runie_ai::TokenUsage;
+
+    fn make_onboarding_vm_with_model() -> StatusBarViewModel {
+        StatusBarViewModel {
+            mode: TuiMode::Onboarding,
+            current_model: Some("openai/gpt-4o".to_string()),
+            session_token_usage: TokenUsage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+                estimated_cost: 0.0,
+            },
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+        }
+    }
+
+    fn make_chat_vm_with_model() -> StatusBarViewModel {
+        StatusBarViewModel {
+            mode: TuiMode::Chat,
+            current_model: Some("openai/gpt-4o".to_string()),
+            session_token_usage: TokenUsage {
+                prompt_tokens: 100,
+                completion_tokens: 50,
+                total_tokens: 150,
+                estimated_cost: 0.0023,
+            },
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+        }
+    }
+
+    fn theme_colors() -> ThemeColors {
+        ThemeColors {
+            bg_base: ratatui::style::Color::Reset,
+            bg_panel: ratatui::style::Color::Black,
+            text_primary: ratatui::style::Color::White,
+            text_secondary: ratatui::style::Color::Gray,
+            text_dim: ratatui::style::Color::DarkGray,
+            text_muted: ratatui::style::Color::DarkGray,
+            accent_primary: ratatui::style::Color::Blue,
+            border_unfocused: ratatui::style::Color::DarkGray,
+            success: ratatui::style::Color::Green,
+            error: ratatui::style::Color::Red,
+            syntax_phase: ratatui::style::Color::Yellow,
+        }
+    }
+
+    fn buffer_contains(buffer: &Buffer, text: &str) -> bool {
+        for y in 0..buffer.area.height {
+            for x in 0..buffer.area.width {
+                if let Some(cell) = buffer.cell((x, y)) {
+                    if cell.symbol().contains(text) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    #[test]
+    fn test_onboarding_mode_hides_model_info() {
+        let vm = make_onboarding_vm_with_model();
+        let area = Rect::new(0, 0, 80, 1);
+        let mut buf = Buffer::empty(area);
+        let colors = theme_colors();
+
+        render_ref(&vm, area, &mut buf, &colors);
+
+        // Onboarding mode should NOT show model/token/cost info
+        assert!(!buffer_contains(&buf, "openai/gpt-4o"),
+            "Onboarding mode should not display model name");
+        assert!(!buffer_contains(&buf, "tok"),
+            "Onboarding mode should not display token count");
+        assert!(!buffer_contains(&buf, "$"),
+            "Onboarding mode should not display cost");
+    }
+
+    #[test]
+    fn test_chat_mode_shows_model_info() {
+        let vm = make_chat_vm_with_model();
+        let area = Rect::new(0, 0, 80, 1);
+        let mut buf = Buffer::empty(area);
+        let colors = theme_colors();
+
+        render_ref(&vm, area, &mut buf, &colors);
+
+        // Chat mode should show model info
+        assert!(buffer_contains(&buf, "openai/gpt-4o"),
+            "Chat mode should display model name");
+    }
+
+    #[test]
+    fn test_onboarding_mode_shows_hotkeys() {
+        let vm = make_onboarding_vm_with_model();
+        let area = Rect::new(0, 0, 80, 1);
+        let mut buf = Buffer::empty(area);
+        let colors = theme_colors();
+
+        render_ref(&vm, area, &mut buf, &colors);
+
+        // Onboarding mode SHOULD show hotkeys
+        assert!(buffer_contains(&buf, "Enter"),
+            "Onboarding mode should display Enter hotkey");
+        assert!(buffer_contains(&buf, "Esc"),
+            "Onboarding mode should display Esc hotkey");
     }
 }

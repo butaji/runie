@@ -456,3 +456,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod feed_rendering_tests;
