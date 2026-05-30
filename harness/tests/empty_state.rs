@@ -17,7 +17,7 @@ fn crate_root() -> std::path::PathBuf {
 
 fn main() {
     let root = crate_root();
-    let msg_list_path = root.join("runie-tui/src/components/message_list/render.rs");
+    let msg_list_path = root.join("runie-tui/src/components/message_list.rs");
     let mut checks = Vec::new();
 
     if !msg_list_path.exists() {
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn test_has_empty_check() {
         let root = crate_root();
-        let path = root.join("runie-tui/src/components/message_list/render.rs");
+        let path = root.join("runie-tui/src/components/message_list.rs");
         assert!(
             file_contains(&path, "is_empty()"),
             "FAIL: is_empty() not found"
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn test_has_greeting() {
         let root = crate_root();
-        let path = root.join("runie-tui/src/components/message_list/render.rs");
+        let path = root.join("runie-tui/src/components/message_list/render/messages.rs");
         let content = std::fs::read_to_string(&path).unwrap_or_default();
         let greeting_patterns = [
             "No messages",
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_has_shortcut_hints() {
         let root = crate_root();
-        let path = root.join("runie-tui/src/components/message_list/render.rs");
+        let path = root.join("runie-tui/src/components/message_list/render/messages.rs");
         let content = std::fs::read_to_string(&path).unwrap_or_default();
         let hint_patterns = ["Enter", "shortcut", "hint", "^k", "^b", "scroll", "commands"];
         let has_hints =
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_has_cta() {
         let root = crate_root();
-        let path = root.join("runie-tui/src/components/message_list/render.rs");
+        let path = root.join("runie-tui/src/components/message_list/render/messages.rs");
         let content = std::fs::read_to_string(&path).unwrap_or_default();
         let cta_patterns = [
             "Press Enter",

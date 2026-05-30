@@ -21,7 +21,7 @@ fn main() {
     let root = crate_root();
     let mut checks = Vec::new();
 
-    let state_path = root.join("runie-tui/src/tui/state.rs");
+    let state_path = root.join("runie-tui/src/tui/state/enums.rs");
 
     // Check 1: TuiMode enum exists with all expected states
     let content = std::fs::read_to_string(&state_path).unwrap_or_default();
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_tui_mode_enum_exists() {
         let root = crate_root();
-        let state_path = root.join("runie-tui/src/tui/state.rs");
+        let state_path = root.join("runie-tui/src/tui/state/enums.rs");
         assert!(
             file_contains(&state_path, "pub enum TuiMode"),
             "FAIL: TuiMode enum not found"
@@ -99,9 +99,13 @@ mod tests {
     #[test]
     fn test_chat_mode_default() {
         let root = crate_root();
-        let state_path = root.join("runie-tui/src/tui/state.rs");
+        // Chat mode default is in AppState::default() in mod.rs
+        let state_path = root.join("runie-tui/src/tui/state/mod.rs");
         assert!(
-            file_matches(&state_path, r"mode:\s*TuiMode::Chat|default.*TuiMode::Chat"),
+            file_matches(
+                &state_path,
+                r"mode:\s*TuiMode::Chat|default.*TuiMode::Chat",
+            ),
             "FAIL: Chat mode default not found"
         );
         println!("PASS: Chat mode is default");
@@ -121,7 +125,7 @@ mod tests {
     #[test]
     fn test_modal_transitions() {
         let root = crate_root();
-        let state_path = root.join("runie-tui/src/tui/state.rs");
+        let state_path = root.join("runie-tui/src/tui/state/enums.rs");
         assert!(
             file_contains(&state_path, "CloseModal") && file_contains(&state_path, "OpenCommandPalette"),
             "FAIL: Modal transitions not properly defined"
@@ -132,7 +136,7 @@ mod tests {
     #[test]
     fn test_permission_transitions() {
         let root = crate_root();
-        let state_path = root.join("runie-tui/src/tui/state.rs");
+        let state_path = root.join("runie-tui/src/tui/state/enums.rs");
         assert!(
             file_contains(&state_path, "PermissionConfirm") || file_contains(&state_path, "PermissionCancel"),
             "FAIL: Permission transitions not found"
@@ -143,7 +147,7 @@ mod tests {
     #[test]
     fn test_rapid_switching_protection() {
         let root = crate_root();
-        let state_path = root.join("runie-tui/src/tui/state.rs");
+        let state_path = root.join("runie-tui/src/tui/state/enums.rs");
         // Info check - don't fail if not found
         if file_matches(&state_path, r"debounce|throttle|cooldown|rapid") {
             println!("PASS: Rapid switching protection found");

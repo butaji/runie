@@ -6,6 +6,7 @@ use crate::components::status_bar::BackgroundJob;
 use crate::components::diff_viewer::DiffLine;
 use crate::components::command_palette::CommandPalette;
 use crate::components::global_tags::GlobalTagsViewModel;
+use crate::components::top_bar::TopBarViewModel;
 pub use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::PlanStatus;
 use crate::tui::state::TuiMode;
@@ -143,6 +144,7 @@ pub struct ViewModels {
     pub session_tree: Option<SessionTreeViewModel>,
     pub diff_viewer: Option<DiffViewerViewModel>,
     pub onboarding: Option<OnboardingViewModel>,
+    pub top_bar: TopBarViewModel,
 }
 
 impl ViewModels {
@@ -159,11 +161,23 @@ impl ViewModels {
             session_tree: build_session_tree_vm(state),
             diff_viewer: build_diff_viewer_vm(state),
             onboarding: build_onboarding_vm(state),
+            top_bar: build_top_bar_vm(state),
         }
     }
 }
 
 // ─── Builder Helpers ────────────────────────────────────────────────────────
+
+fn build_top_bar_vm(state: &crate::tui::state::RenderState) -> TopBarViewModel {
+    TopBarViewModel {
+        repo: state.top_bar.repo.clone(),
+        branch: state.top_bar.branch.clone(),
+        path: state.top_bar.path.clone(),
+        model: state.top_bar.model.clone(),
+        context_window: state.top_bar.context_window.unwrap_or(128_000),
+        estimated_tokens: state.top_bar.estimated_tokens.unwrap_or(0),
+    }
+}
 
 fn build_global_tags_vm(state: &crate::tui::state::RenderState) -> GlobalTagsViewModel {
     let model = state.current_model.as_deref().unwrap_or("—");

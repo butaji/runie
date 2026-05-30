@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used)]
 #![cfg(test)]
 
+mod comprehensive_suite;
 mod data_structures;
 mod reducer;
 mod dirty_flag;

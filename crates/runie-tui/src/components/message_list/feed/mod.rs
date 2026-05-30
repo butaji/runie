@@ -90,7 +90,8 @@ impl Feed {
             timestamp: None,
         });
         self.seen_ids.insert(id);
-        self.items.last_mut().unwrap()
+        let idx = self.items.len().saturating_sub(1);
+        &mut self.items[idx]
     }
 
     /// Begin an assistant message. Returns mutable reference to the inserted item.
@@ -105,7 +106,8 @@ impl Feed {
             turn_duration: None,
         });
         self.seen_ids.insert(id);
-        self.items.last_mut().unwrap()
+        let idx = self.items.len().saturating_sub(1);
+        &mut self.items[idx]
     }
 
     /// Append text to the last assistant message.

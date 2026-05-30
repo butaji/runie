@@ -58,7 +58,6 @@ pub struct AppState {
     pub token_usage: TokenUsage,
     pub session_token_usage: TokenUsage,
     pub agent_start_time: Option<std::time::Instant>,
-    pub turn_start_index: Option<usize>,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
     pub thinking_start: Option<std::time::Instant>,
     pub thinking_duration: Option<std::time::Duration>,
@@ -84,6 +83,8 @@ pub struct AppState {
     pub animation: AnimationState,
     pub onboarding: Option<Onboarding>,
     pub mode: TuiMode,
+
+    pub top_bar: TopBarState,
 }
 
 impl Default for AppState {
@@ -101,7 +102,6 @@ impl Default for AppState {
             token_usage: TokenUsage::default(),
             session_token_usage: TokenUsage::default(),
             agent_start_time: None,
-            turn_start_index: None,
             background_jobs: Vec::new(),
             thinking_start: None,
             thinking_duration: None,
@@ -123,6 +123,7 @@ impl Default for AppState {
             animation: AnimationState::default(),
             onboarding: None,
             mode: TuiMode::Chat,
+            top_bar: TopBarState::default(),
         }
     }
 }
@@ -157,6 +158,7 @@ pub struct RenderState {
     pub status_details: Option<String>,
     pub status_start_time: Option<std::time::Instant>,
     pub mock_mode: bool,
+    pub top_bar: TopBarState,
 }
 
 impl RenderState {
@@ -186,6 +188,7 @@ impl RenderState {
             status_details: state.status_details.clone(),
             status_start_time: state.status_start_time,
             mock_mode: state.mock_mode,
+            top_bar: state.top_bar.clone(),
         }
     }
 }

@@ -16,5 +16,6 @@ pub mod concurrent_tests;
 pub mod timeout_tests;
 pub mod tool_tests;
 pub mod error_tests;
+pub mod stream_interruption_tests;
 
 // Re-export for convenience

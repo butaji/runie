@@ -81,7 +81,7 @@ impl Provider for SameToolAcrossTurnsProvider {
     async fn chat(&self, _messages: Vec<Message>, tools: Vec<ToolSchema>) -> Result<BoxStream<'static, LlmEvent>, ProviderError> {
         let mut turn = self.turn.lock().await;
         *turn += 1;
-        let current_turn = *turn;
+        let _current_turn = *turn;
 
         let tool_name = if tools.is_empty() { "bash".to_string() } else { tools[0].name.clone() };
 

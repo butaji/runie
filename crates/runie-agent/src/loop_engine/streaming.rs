@@ -9,6 +9,27 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use runie_core::ProviderError;
 
+/// Configuration for retry behavior
+#[derive(Debug, Clone)]
+pub struct RetryConfig {
+    /// Maximum retries for rate limit errors
+    pub max_retries: u32,
+    /// Base delay in milliseconds for exponential backoff
+    pub base_delay_ms: u64,
+    /// Maximum delay cap in seconds (0 = no cap)
+    pub max_delay_seconds: u64,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: 4,
+            base_delay_ms: 1000,
+            max_delay_seconds: 60,
+        }
+    }
+}
+
 /// Accumulates streaming tool call deltas until MessageEnd
 pub(crate) struct PartialToolCall {
     pub id: String,
@@ -16,33 +37,82 @@ pub(crate) struct PartialToolCall {
     pub arguments: String,
 }
 
+/// Calculate delay with server-guided retry-after and exponential backoff
+fn calculate_delay(
+    retry_after_seconds: Option<u64>,
+    attempt: u32,
+    config: &RetryConfig,
+) -> Duration {
+    // Server-provided retry-after takes precedence
+    if let Some(retry_after) = retry_after_seconds {
+        let delay = if config.max_delay_seconds > 0 {
+            retry_after.min(config.max_delay_seconds)
+        } else {
+            retry_after
+        };
+        tracing::info!("Using server-provided retry-after: {}s", delay);
+        return Duration::from_secs(delay);
+    }
+
+    // Fall back to exponential backoff: 1s, 2s, 4s, 8s...
+    let backoff_ms = config.base_delay_ms * 2u64.pow(attempt);
+
+    // Apply max delay cap if configured
+    let delay_ms = if config.max_delay_seconds > 0 {
+        let max_ms = config.max_delay_seconds * 1000;
+        backoff_ms.min(max_ms)
+    } else {
+        backoff_ms
+    };
+
+    Duration::from_millis(delay_ms)
+}
+
 /// Start chat with retry logic for rate limit errors.
 /// Returns the stream on success, or the final error after retries are exhausted.
 /// Non-rate-limit errors (like 401) fail immediately without retry.
+///
+/// Supports server-guided retry via `retry-after` header through RateLimitedRetryAfter variant.
 pub(crate) async fn start_chat_with_retry(
     provider: Arc<dyn Provider>,
     messages: Vec<runie_core::Message>,
     tools: Vec<ToolSchema>,
 ) -> Result<Pin<Box<dyn futures::Stream<Item = LlmEvent> + Send + 'static>>, ProviderError> {
-    const MAX_RETRIES: u32 = 4; // 3 failures + 1 success
-    const BASE_DELAY_MS: u64 = 1000; // 1 second base delay
+    start_chat_with_retry_with_config(provider, messages, tools, &RetryConfig::default()).await
+}
 
+/// Start chat with custom retry configuration
+pub(crate) async fn start_chat_with_retry_with_config(
+    provider: Arc<dyn Provider>,
+    messages: Vec<runie_core::Message>,
+    tools: Vec<ToolSchema>,
+    config: &RetryConfig,
+) -> Result<Pin<Box<dyn futures::Stream<Item = LlmEvent> + Send + 'static>>, ProviderError> {
     let mut last_error: ProviderError = ProviderError::ApiError("Unknown error".to_string());
 
-    for attempt in 0..MAX_RETRIES {
+    for attempt in 0..config.max_retries {
         match provider.chat(messages.clone(), tools.clone()).await {
             Ok(stream) => return Ok(stream),
             Err(e) => {
                 last_error = e.clone();
+
                 // Only retry on rate limit errors, fail immediately on others (401, etc.)
-                if !matches!(e, ProviderError::RateLimited) {
+                if !e.is_rate_limited() {
                     return Err(e);
                 }
-                // Exponential backoff: 1s, 2s, 4s between retries
-                if attempt < MAX_RETRIES - 1 {
-                    let delay_ms = BASE_DELAY_MS * 2u64.pow(attempt);
-                    tracing::info!("Rate limited, retrying in {}ms (attempt {}/{})", delay_ms, attempt + 1, MAX_RETRIES);
-                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+
+                // Get retry-after duration if server-provided
+                let retry_after = e.retry_after_seconds();
+
+                if attempt < config.max_retries - 1 {
+                    let delay = calculate_delay(retry_after, attempt, config);
+                    tracing::info!(
+                        "Rate limited (attempt {}/{}), retrying in {:?}",
+                        attempt + 1,
+                        config.max_retries,
+                        delay
+                    );
+                    tokio::time::sleep(delay).await;
                 }
             }
         }

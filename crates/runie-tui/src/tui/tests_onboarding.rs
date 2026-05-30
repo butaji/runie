@@ -1,7 +1,7 @@
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
-    use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, ContextState, PermissionModalState, CommandPaletteState, ScrollState, ClearInputConfirm};
+    use crate::tui::state::{AppState, TuiMode, Msg, AnimationState, ContextState, PermissionModalState, CommandPaletteState, ScrollState, ClearInputConfirm, TopBarState};
     use crate::tui::update::update;
     use crate::components::onboarding::Onboarding;
     use crate::components::CommandPalette;
@@ -37,7 +37,6 @@ mod tests {
             // Model picker state
             model_picker: None,
             agent_start_time: None,
-            turn_start_index: None,
             input_history: Vec::new(),
             input_history_index: None,
             input_draft: String::new(),
@@ -49,6 +48,7 @@ mod tests {
             thinking_duration: None,
             is_thinking: false,
             mock_mode: false,
+            top_bar: TopBarState::default(),
         }
     }
 

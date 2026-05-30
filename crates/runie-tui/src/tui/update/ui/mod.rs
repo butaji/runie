@@ -6,9 +6,7 @@ pub mod palette_helpers;
 pub mod clipboard;
 
 use crate::components::CommandPalette;
-use crate::tui::state::{AppState, TuiMode, Cmd};
-use crate::components::command_palette::PaletteCommand;
-use runie_ai::TokenUsage;
+use crate::tui::state::{AppState, Cmd};
 
 pub use navigation::{handle_select, handle_session_tree, handle_context, handle_model_mode, handle_set_git_info, handle_enter_onboarding};
 pub use palette_helpers::handle_palette;
@@ -83,8 +81,6 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
 }
 
 fn handle_state_msg(state: &mut AppState, _palette: &mut CommandPalette, msg: crate::tui::state::Msg) -> Vec<UiCmd> {
-    use crate::tui::state::Msg;
-
     if is_context_msg(&msg) {
         return handle_context(&msg, state);
     }

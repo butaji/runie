@@ -64,8 +64,9 @@ impl RenderPipe {
         crate::components::input_bar::input_bar_height(&state.textarea)
     }
 
-    fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 4] {
+    fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 5] {
         let constraints = [
+            Constraint::Length(1),        // topbar
             Constraint::Min(1),           // feed
             Constraint::Length(1),       // global_tags
             Constraint::Length(input_h),  // input
@@ -79,7 +80,7 @@ impl RenderPipe {
         area: Rect,
         state: &AppState,
         vms: &ViewModels,
-        main_areas: [Rect; 4],
+        main_areas: [Rect; 5],
         show_status_bar: bool,
         theme: &ThemeWrapper,
         _theme_colors: &ThemeColors,
@@ -93,6 +94,9 @@ impl RenderPipe {
             }
         }
 
+        // Render top bar
+        Component::render(&vms.top_bar, &vms.top_bar, main_areas[0], buf, theme);
+
         if let Some(ref onboarding) = state.onboarding {
             let onboarding_area = Rect {
                 x: area.x,
@@ -104,7 +108,7 @@ impl RenderPipe {
         }
 
         if show_status_bar {
-            Component::render(&vms.status_bar, &vms.status_bar, main_areas[3], buf, theme);
+            Component::render(&vms.status_bar, &vms.status_bar, main_areas[4], buf, theme);
         }
     }
 
@@ -113,7 +117,7 @@ impl RenderPipe {
         area: Rect,
         state: &AppState,
         vms: &ViewModels,
-        main_areas: [Rect; 4],
+        main_areas: [Rect; 5],
         show_sidebar: bool,
         show_status_bar: bool,
         palette: &CommandPalette,
@@ -122,12 +126,13 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::clear_background(buf, area, theme_colors.bg_base);
-        // main_areas[0] = feed, [1] = global_tags, [2] = input, [3] = hotkeys
-        Self::render_content(buf, vms, show_sidebar, main_areas[0], theme);
-        ratatui::widgets::Widget::render(vms.global_tags.clone(), main_areas[1], buf);
-        Self::render_input(buf, state, main_areas[2], theme);
+        // main_areas[0] = topbar, [1] = feed, [2] = global_tags, [3] = input, [4] = hotkeys
+        Component::render(&vms.top_bar, &vms.top_bar, main_areas[0], buf, theme);
+        Self::render_content(buf, vms, show_sidebar, main_areas[1], theme);
+        ratatui::widgets::Widget::render(vms.global_tags.clone(), main_areas[2], buf);
+        Self::render_input(buf, state, main_areas[3], theme);
         if show_status_bar {
-            Component::render(&vms.status_bar, &vms.status_bar, main_areas[3], buf, theme);
+            Component::render(&vms.status_bar, &vms.status_bar, main_areas[4], buf, theme);
         }
         Self::render_overlays(buf, state, palette, padded, area, theme, theme_colors);
     }

@@ -19,8 +19,8 @@ impl FileLock {
         }
     }
     
-    pub fn lock(&self) -> std::sync::MutexGuard<'_, ()> {
-        self.locked.lock().unwrap()
+    pub fn lock(&self) -> Result<std::sync::MutexGuard<'_, ()>, ToolError> {
+        self.locked.lock().map_err(|_| ToolError::ExecutionFailed("File lock mutex poisoned".to_string()))
     }
 }
 
@@ -47,7 +47,8 @@ impl Workspace {
     {
         // Get or create lock for this path
         let lock = {
-            let mut locks = self.file_locks.lock().unwrap();
+            let mut locks = self.file_locks.lock()
+                .map_err(|_| ToolError::ExecutionFailed("Workspace file locks poisoned".to_string()))?;
             locks
                 .entry(path.to_path_buf())
                 .or_insert_with(|| Arc::new(Mutex::new(())))
@@ -55,7 +56,8 @@ impl Workspace {
         };
         
         // Acquire exclusive lock
-        let _guard = lock.lock().unwrap();
+        let _guard = lock.lock()
+            .map_err(|_| ToolError::ExecutionFailed("Individual file lock poisoned".to_string()))?;
         
         // Execute the operation while holding the lock
         Ok(f())

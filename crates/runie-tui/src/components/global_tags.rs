@@ -68,15 +68,13 @@ impl Widget for GlobalTagsViewModel {
         }
 
         // Render left part
-        let mut x = 1u16;
+        let x = 1u16;
         if let Some(ref left) = self.left {
             let left_style = Style::default()
                 .fg(accent)
                 .add_modifier(Modifier::DIM);
             let span = Span::styled(left.clone(), left_style);
             buf.set_line(x, 0, &Line::from(span), left.len() as u16);
-            x += left.len() as u16;
-            x += 2; // spacing
         }
 
         // Render right part (right-aligned)

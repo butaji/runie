@@ -8,25 +8,20 @@ pub mod run;
 
 mod tests;
 
-// Re-export for tests
+// Re-export for tests (only needed in test builds)
+#[cfg(test)]
 pub(crate) use streaming::start_chat_with_retry;
 pub use run::run_agent_loop;
 
 use crate::config::AgentConfig;
-use crate::events::*;
+use crate::events::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::tools::AgentTool;
 use crate::Hook;
-use futures::StreamExt;
-use permissions::{request_permission, add_denied_result, add_blocked_result, add_tool_result};
 use runie_ai::Provider;
-use runie_core::{Event as LlmEvent, ToolCall as CoreToolCall, ToolSchema, Context};
 use runie_tools::ToolRegistry;
-use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context as TaskContext, Poll};
-use streaming::{send_event, process_stream_event, PartialToolCall, finalize_tool_calls};
-use tools::{execute_tool_with_panic_catch, run_before_hooks, process_tool_calls};
 use tokio::sync::{mpsc, Mutex};
 
 /// Calculate estimated context window usage as a percentage.

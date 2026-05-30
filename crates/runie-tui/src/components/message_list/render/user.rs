@@ -6,7 +6,7 @@ use crate::theme::ThemeWrapper;
 /// Render a user message
 pub fn render_user_msg(
     text: &str,
-    timestamp: Option<String>,
+    timestamp: Option<&str>,
     area: Rect,
     row: u16,
     margin_x: u16,
@@ -65,13 +65,13 @@ pub fn render_user_msg(
         buf.set_line(margin_x + 2, first_line_y, &first_line, text_width.saturating_sub(2) as u16);
 
         // Timestamp on first line for single-line messages
-        if timestamp.is_some() && wrapped.len() <= 1 {
-            if let Some(ts) = timestamp.as_ref() {
+        if let Some(ts) = timestamp {
+            if wrapped.len() <= 1 {
                 let ts_len = ts.len() as u16;
                 let ts_x = area.right().saturating_sub(ts_len + 1);
                 if ts_x > margin_x + 2 {
                     let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-                    let ts_line = ratatui::text::Line::raw(ts.as_str())
+                    let ts_line = ratatui::text::Line::raw(ts)
                         .style(Style::default().fg(ts_color).bg(bg_color));
                     buf.set_line(ts_x, first_line_y, &ts_line, ts_len);
                 }
@@ -98,30 +98,16 @@ pub fn render_user_msg(
     }
 
     // Timestamp on last line for multi-line messages
-    if timestamp.is_some() && wrapped.len() > 1 {
-        let last_line_y = area.y + row + timestamp_line_offset as u16;
-        if let Some(ts) = timestamp.as_ref() {
+    if let Some(ts) = timestamp {
+        if wrapped.len() > 1 {
+            let last_line_y = area.y + row + timestamp_line_offset as u16;
             let ts_len = ts.len() as u16;
             let ts_x = area.right().saturating_sub(ts_len + 1);
             if ts_x > margin_x {
                 let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-                let ts_line = ratatui::text::Line::raw(ts.as_str())
+                let ts_line = ratatui::text::Line::raw(ts)
                     .style(Style::default().fg(ts_color).bg(bg_color));
                 buf.set_line(ts_x, last_line_y, &ts_line, ts_len);
-            }
-        }
-    }
-
-    // Render 2 padding lines BELOW the content
-    let last_content_line_y = area.y + row + text_lines as u16 - 1;
-    for pad_offset in 1..=2 {
-        let padding_below_y = last_content_line_y + pad_offset;
-        if padding_below_y < area.bottom() {
-            for x in (margin_x as usize)..(area.right() as usize) {
-                if let Some(cell) = buf.cell_mut((x as u16, padding_below_y)) {
-                    cell.set_char(' ');
-                    cell.set_style(Style::default().bg(bg_color));
-                }
             }
         }
     }

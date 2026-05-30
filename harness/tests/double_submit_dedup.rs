@@ -17,7 +17,7 @@ fn crate_root() -> std::path::PathBuf {
 fn main() {
     let root = crate_root();
     let misc_path = root.join("runie-tui/src/tui/update/misc.rs");
-    let state_path = root.join("runie-tui/src/tui/state.rs");
+    let state_path = root.join("runie-tui/src/tui/state/mod.rs");
     let mut checks = Vec::new();
 
     // Check misc.rs for submit handling
@@ -37,6 +37,8 @@ fn main() {
             "still running",
             "wait",
             "Please wait",
+            "Agent running",
+            "blocked",
         ];
         let has_feedback = feedback_patterns
             .iter()
@@ -94,6 +96,8 @@ mod tests {
             "still running",
             "wait",
             "Please wait",
+            "Agent running",
+            "blocked",
         ];
         let has_feedback = feedback_patterns
             .iter()
@@ -117,7 +121,7 @@ mod tests {
     #[test]
     fn test_agent_running_in_state() {
         let root = crate_root();
-        let state_path = root.join("runie-tui/src/tui/state.rs");
+        let state_path = root.join("runie-tui/src/tui/state/mod.rs");
         assert!(
             file_contains(&state_path, "agent_running"),
             "FAIL: agent_running not defined in state"

@@ -6,6 +6,11 @@ use super::markdown::render_text_content;
 /// Extract think blocks from text and returns (main_text, think_blocks).
 /// DeepSeek models use these for internal reasoning.
 pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
+    // Fast path: no think tags → zero allocation
+    if !text.contains("<think>") {
+        return (text.to_string(), Vec::new());
+    }
+
     let bytes = text.as_bytes();
     let mut main_text = String::new();
     let mut think_blocks = Vec::new();
@@ -100,7 +105,7 @@ pub fn render_assistant_msg(
     wrap_cache: &mut WrapCache,
     agent_running: bool,
     spinner: char,
-    timestamp: Option<String>,
+    timestamp: Option<&str>,
     thought_duration: Option<f32>,
     turn_complete: Option<u64>,
 ) -> u16 {
@@ -196,8 +201,8 @@ pub fn render_assistant_msg(
     // Cursor placement at end of rendered content
     if cursor_visible && text_rows > 0 {
         let cursor_y = area.y + row + rendered - 1;
-        let last_line_text = markdown_lines.last().map(|l| l.to_string()).unwrap_or_default();
-        let cursor_x = margin_x + (last_line_text.len() as u16).min(area.width - margin_x + area.x - 3);
+        let last_line_len = markdown_lines.last().map(|l| l.width()).unwrap_or(0);
+        let cursor_x = margin_x + (last_line_len as u16).min(area.width - margin_x + area.x - 3);
         if cursor_x < area.x + area.width - 1 {
             if let Some(cell) = buf.cell_mut((cursor_x, cursor_y)) {
                 cell.set_char('▊');

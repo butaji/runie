@@ -156,8 +156,10 @@ where
     }
 
     // Return the last error if all retries failed
-    #[allow(clippy::unwrap_used)]
-    Err(_last_error.unwrap())
+    match _last_error {
+        Some(err) => Err(err),
+        None => unreachable!("loop always sets _last_error before breaking"),
+    }
 }
 
 #[cfg(test)]

@@ -287,6 +287,54 @@ fn scenario2_renders_turn_completed() {
 // Integration: Full Scenario 1 - Exact Output Verification
 // ============================================================================
 
+// ============================================================================
+// User Message Spacing Tests
+// ============================================================================
+
+/// Verify user message has NO extra blank lines below it.
+/// Expected: › Hey! then ⬩ Thought for 0.2s (immediately adjacent)
+#[test]
+fn user_message_no_extra_padding_below() {
+    let feed = {
+        let mut f = Feed::new();
+        f.add_user_message("Hey!".to_string());
+        f.add_assistant_message();
+        f.add_thought(0.2);
+        f.append_to_last("Response");
+        f.complete_turn(1.0);
+        f
+    };
+    let (buf, area) = render_feed_to_buffer(feed, 80, 20);
+    let lines = buffer_lines(&buf, &area);
+
+    // Find lines containing user message and thought
+    let user_line_idx = lines.iter().position(|l| l.contains("›") && l.contains("Hey!"));
+    let thought_line_idx = lines.iter().position(|l| l.contains("Thought") && l.contains("0.2"));
+
+    assert!(user_line_idx.is_some(), "Missing user message line");
+    assert!(thought_line_idx.is_some(), "Missing thought line");
+
+    let user_idx = user_line_idx.unwrap();
+    let thought_idx = thought_line_idx.unwrap();
+
+    // Verify thought comes immediately after user message (no blank lines)
+    assert_eq!(
+        thought_idx - user_idx, 1,
+        "Expected thought immediately after user message (adjacent lines), but found {} line(s) between them. Lines: {:?}",
+        thought_idx - user_idx - 1,
+        &lines[user_idx..=thought_idx.min(5)]
+    );
+
+    // Also verify the lines between are empty (shouldn't be any, but double-check)
+    for i in (user_idx + 1)..thought_idx {
+        assert!(
+            lines[i].trim().is_empty(),
+            "Expected blank line between user and thought, but got: '{}'",
+            lines[i]
+        );
+    }
+}
+
 #[test]
 fn scenario1_full_render_exact_content() {
     let feed = build_scenario1_feed();

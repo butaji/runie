@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use crate::events::*;
 use crate::{AgentMessage, ToolResult};
 use runie_core::ToolCall;
@@ -186,4 +188,111 @@ fn test_context_window_usage_calculation() {
 fn test_summarize_messages_empty_input() {
     let messages: Vec<AgentMessage> = vec![];
     assert!(messages.is_empty());
+}
+
+// ─── Tool Execution Error Path Tests ───────────────────────────────────────
+
+#[tokio::test]
+async fn test_tool_execution_with_empty_registry() {
+    let registry = ToolRegistry::new();
+    let tool = registry.get("bash");
+    assert!(tool.is_none(), "Empty registry should not have bash tool");
+}
+
+#[tokio::test]
+async fn test_tool_execution_registry_get_unknown() {
+    let registry = ToolRegistry::new();
+    let unknown = registry.get("nonexistent_tool_xyz");
+    assert!(unknown.is_none(), "Unknown tool should return None");
+}
+
+#[tokio::test]
+async fn test_tool_call_with_malformed_json_args() {
+    let registry = ToolRegistry::new();
+    let tool = registry.get("bash");
+    if let Some(tool) = tool {
+        // Pass malformed JSON where string is expected
+        let result = tool.execute(serde_json::json!({"command": 12345})).await;
+        assert!(result.is_err(), "Malformed args should return error");
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, runie_core::ToolError::InvalidArguments(_)),
+            "Error should be InvalidArguments, got: {:?}", err
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_tool_call_with_extra_fields() {
+    let registry = ToolRegistry::new();
+    let tool = registry.get("read_file");
+    if let Some(tool) = tool {
+        // Pass extra fields - should still work if required fields present
+        let result = tool.execute(serde_json::json!({
+            "path": "test.txt",
+            "extra_field": "should_be_ignored"
+        })).await;
+        // This may succeed or fail depending on tool implementation
+        // but should NOT panic
+        println!("Extra fields result: {:?}", result);
+    }
+}
+
+#[tokio::test]
+async fn test_tool_call_with_null_args() {
+    let registry = ToolRegistry::new();
+    let tool = registry.get("bash");
+    if let Some(tool) = tool {
+        let result = tool.execute(serde_json::Value::Null).await;
+        assert!(result.is_err(), "Null args should return error");
+    }
+}
+
+#[tokio::test]
+async fn test_tool_call_with_array_args() {
+    let registry = ToolRegistry::new();
+    let tool = registry.get("bash");
+    if let Some(tool) = tool {
+        let result = tool.execute(serde_json::json!(["echo", "hello"])).await;
+        assert!(result.is_err(), "Array args should return error for object-expected tools");
+    }
+}
+
+// ─── Context Window Edge Cases ─────────────────────────────────────────────
+
+#[test]
+fn test_context_window_usage_zero_window() {
+    let messages = vec![
+        AgentMessage {
+            role: "user".to_string(),
+            content: vec![ContentPart::Text { text: "Hello".to_string() }],
+            timestamp: 0,
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+            tool_calls: vec![],
+        },
+    ];
+
+    let usage = calculate_context_window_usage(&messages, 0);
+    assert_eq!(usage, 0.0, "Zero context window should return 0% usage");
+}
+
+#[test]
+fn test_context_window_usage_large_messages() {
+    let messages = vec![
+        AgentMessage {
+            role: "user".to_string(),
+            content: vec![ContentPart::Text { text: "x".repeat(100000) }],
+            timestamp: 0,
+            usage: None,
+            stop_reason: None,
+            error_message: None,
+            tool_calls: vec![],
+        },
+    ];
+
+    let usage = calculate_context_window_usage(&messages, 128_000);
+    assert!(usage > 10.0, "Large message should show significant usage");
+    assert!(usage <= 100.0, "Usage should not exceed 100%");
 }

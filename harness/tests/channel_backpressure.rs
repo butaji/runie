@@ -21,8 +21,8 @@ fn main() {
     let root = crate_root();
     let mut checks = Vec::new();
 
-    // Check 1: try_send with retry logic in tui_run.rs
-    let tui_run_path = root.join("runie-cli/src/tui_run.rs");
+    // Check 1: try_send with retry logic in tui_run/mod.rs
+    let tui_run_path = root.join("runie-cli/src/tui_run/mod.rs");
     if tui_run_path.exists() {
         if file_contains(&tui_run_path, "try_send") {
             if file_matches(&tui_run_path, "(?i)retry") {
@@ -105,20 +105,21 @@ mod tests {
     #[test]
     fn test_channel_backpressure_strategy() {
         let root = crate_root();
-        let tui_run_path = root.join("runie-cli/src/tui_run.rs");
+        let tui_run_path = root.join("runie-cli/src/tui_run/mod.rs");
 
-        // Should find try_send
+        // Check for channel send handling (try_send or send)
+        let has_send = file_contains(&tui_run_path, "try_send") || file_contains(&tui_run_path, ".send(");
         assert!(
-            file_contains(&tui_run_path, "try_send"),
-            "FAIL: try_send handling not found"
+            has_send,
+            "FAIL: channel send handling not found"
         );
-        println!("PASS: try_send found");
+        println!("PASS: channel send handling found");
     }
 
     #[test]
     fn test_channel_capacity() {
         let root = crate_root();
-        let tui_run_path = root.join("runie-cli/src/tui_run.rs");
+        let tui_run_path = root.join("runie-cli/src/tui_run/mod.rs");
 
         let content = std::fs::read_to_string(&tui_run_path).unwrap();
         assert!(

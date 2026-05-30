@@ -16,6 +16,9 @@ use crate::{
     components::CommandPalette,
 };
 use runie_agent::events::AgentEvent;
+use runie_agent::PermissionDecision;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
@@ -32,6 +35,7 @@ pub struct Tui {
     render_pipe: RenderPipe,
     action_log: VecDeque<Msg>,
     action_log_capacity: usize,
+    pub permission_state: Arc<Mutex<Option<PermissionDecision>>>,
 }
 
 impl Default for TuiConfig {
@@ -100,6 +104,7 @@ impl Tui {
         let state_pipe = crate::pipe::StatePipe::new(state);
         let view_model_pipe = ViewModelPipe::new();
         let render_pipe = RenderPipe::new();
+        let permission_state = Arc::new(Mutex::new(None));
 
         Ok(Self {
             config,
@@ -111,6 +116,7 @@ impl Tui {
             render_pipe,
             action_log: VecDeque::new(),
             action_log_capacity: 1000,
+            permission_state,
         })
     }
 
@@ -164,6 +170,36 @@ impl Tui {
     pub fn toggle_sidebar(&mut self) {
         self.update(Msg::ToggleSidebar);
     }
+
+    pub fn is_running(&self) -> bool {
+        self.state.running
+    }
+
+    pub fn is_agent_running(&self) -> bool {
+        self.state.agent_running
+    }
+
+    pub fn agent_start_time(&self) -> Option<std::time::Instant> {
+        self.state.agent_start_time
+    }
+
+    pub fn messages(&self) -> &Vec<crate::components::MessageItem> {
+        &self.state.messages
+    }
+
+    pub fn input_text(&self) -> String {
+        self.state.textarea.lines().join("\n")
+    }
+
+    pub async fn set_permission(&self, decision: PermissionDecision) {
+        let mut guard = self.permission_state.lock().await;
+        *guard = Some(decision);
+    }
+
+    pub async fn clear_permission(&self) {
+        let mut guard = self.permission_state.lock().await;
+        *guard = None;
+    }
 }
 
 /// Convert crossterm KeyEvent to ratatui-textarea Input.
@@ -175,10 +211,17 @@ pub fn key_to_textarea_input(key: crossterm::event::KeyEvent) -> ratatui_textare
 
     let key_code = match key.code {
         KeyCode::Char(c) => Key::Char(c),
-        code if map_navigation_key(code).is_some() => map_navigation_key(code).unwrap(),
-        code if map_edit_key(code).is_some() => map_edit_key(code).unwrap(),
-        code if map_special_key(code).is_some() => map_special_key(code).unwrap(),
-        _ => Key::Null,
+        code => {
+            if let Some(k) = map_navigation_key(code) {
+                k
+            } else if let Some(k) = map_edit_key(code) {
+                k
+            } else if let Some(k) = map_special_key(code) {
+                k
+            } else {
+                Key::Null
+            }
+        }
     };
 
     let ctrl = key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);

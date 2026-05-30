@@ -38,7 +38,7 @@ use ratatui::{buffer::Buffer, layout::Rect};
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
 use super::types::{MessageItem, PlanStatus};
-use super::feed::{FeedItem, Thought, ToolCall};
+use super::feed::FeedItem;
 
 /// Determine if cursor should be shown for a message
 pub fn should_show_cursor(
@@ -145,7 +145,7 @@ pub fn render_single_msg(
     max_rows: u16,
     buf: &mut Buffer,
     theme: &ThemeWrapper,
-    accent_primary: ratatui::style::Color,
+    _accent_primary: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_muted: ratatui::style::Color,
     text_dim: ratatui::style::Color,
@@ -164,10 +164,10 @@ pub fn render_single_msg(
 ) -> u16 {
     match msg {
         MessageItem::User { text, timestamp, .. } => {
-            render_user_msg(text, timestamp.clone(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
+            render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.clone(), thought_duration, turn_complete)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete)
         }
         MessageItem::Thought { duration_secs } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -216,18 +216,18 @@ pub fn render_single_msg_feed(
     max_rows: u16,
     buf: &mut Buffer,
     theme: &ThemeWrapper,
-    accent_primary: ratatui::style::Color,
+    _accent_primary: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_muted: ratatui::style::Color,
-    text_dim: ratatui::style::Color,
-    success: ratatui::style::Color,
+    _text_dim: ratatui::style::Color,
+    _success: ratatui::style::Color,
     error: ratatui::style::Color,
-    code_path: ratatui::style::Color,
+    _code_path: ratatui::style::Color,
     spinner: char,
     cursor_visible: bool,
-    show_spinner: bool,
-    rewind_spinner: char,
-    animation: &AnimationState,
+    _show_spinner: bool,
+    _rewind_spinner: char,
+    _animation: &AnimationState,
     wrap_cache: &mut WrapCache,
     agent_running: bool,
     thought_duration: Option<f32>,
@@ -235,14 +235,14 @@ pub fn render_single_msg_feed(
 ) -> u16 {
     match item {
         FeedItem::UserMessage { text, timestamp, .. } => {
-            render_user_msg(text, timestamp.clone(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
+            render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
-        FeedItem::AssistantMessage { text, thoughts, tool_calls, timestamp, turn_duration, .. } => {
+        FeedItem::AssistantMessage { text, thoughts, tool_calls: _, timestamp, turn_duration, .. } => {
             // Use first thought's duration if provided, otherwise use the passed thought_duration
             let effective_thought_duration = thoughts.first().map(|t| t.duration).or(thought_duration);
             // Use turn_duration from FeedItem, or passed turn_complete (converted to f32)
             let effective_turn_complete = turn_duration.map(|d| d as u64).or(turn_complete.map(|d| d as u64));
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.clone(), effective_thought_duration, effective_turn_complete)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete)
         }
         FeedItem::SystemNotice { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
