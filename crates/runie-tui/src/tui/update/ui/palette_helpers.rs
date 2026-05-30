@@ -48,19 +48,19 @@ fn handle_palette_down(state: &mut AppState, palette: &mut CommandPalette) -> Ve
 
 fn handle_palette_confirm(state: &mut AppState, palette: &mut CommandPalette) -> Vec<crate::UiCmd> {
     if let Some(cmd) = palette.confirm(palette.selected) {
-        let cmds = super::palette::handle_direct_command(state, cmd);
-        super::palette::handle_close_modal(state);
+        let cmds = super::super::palette::handle_direct_command(state, cmd);
+        super::super::palette::handle_close_modal(state);
         return cmds;
     }
     vec![]
 }
 
 fn handle_open_command_palette(state: &mut AppState, palette: &mut CommandPalette) -> Vec<crate::UiCmd> {
-    super::palette::open_palette(state, palette);
+    super::super::palette::open_palette(state, palette);
     vec![]
 }
 
 fn handle_palette_cancel_argument(state: &mut AppState, palette: &mut CommandPalette) -> Vec<crate::UiCmd> {
-    super::palette::handle_palette_escape(state, palette);
+    super::super::palette::handle_palette_escape(state, palette);
     vec![]
 }

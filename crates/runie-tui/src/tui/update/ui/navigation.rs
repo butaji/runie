@@ -91,7 +91,7 @@ fn handle_switch_model(state: &mut AppState) -> Vec<crate::UiCmd> {
 // ─── Session Tree ─────────────────────────────────────────────────────────
 
 fn handle_toggle_session_tree(state: &mut AppState) -> Vec<crate::UiCmd> {
-    super::slash::handle_tree(state);
+    super::super::slash::handle_tree(state);
     vec![]
 }
 
@@ -106,7 +106,7 @@ fn handle_session_tree_down(state: &mut AppState) -> Vec<crate::UiCmd> {
 }
 
 fn handle_session_tree_confirm(state: &mut AppState) -> Vec<crate::UiCmd> {
-    super::tree::handle_tree_confirm(state);
+    super::super::tree::handle_tree_confirm(state);
     vec![]
 }
 

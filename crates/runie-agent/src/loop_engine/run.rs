@@ -4,7 +4,6 @@ use crate::events::*;
 use crate::tools::AgentTool;
 use crate::Hook;
 use futures::StreamExt;
-use permissions::request_permission;
 use runie_ai::Provider;
 use runie_core::{Event as LlmEvent, ToolSchema};
 use runie_tools::ToolRegistry;
@@ -12,9 +11,10 @@ use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
-use streaming::{start_chat_with_retry, send_event, process_stream_event, PartialToolCall, finalize_tool_calls};
-use tools::process_tool_calls;
-use tokio::sync::Mutex;
+use super::permissions::request_permission;
+use super::streaming::{start_chat_with_retry, send_event, process_stream_event, PartialToolCall, finalize_tool_calls};
+use super::tools::process_tool_calls;
+use tokio::sync::{mpsc, Mutex};
 
 /// Main agent loop entry point.
 pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
@@ -56,9 +56,9 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
 
         handle_context_compaction(&mut messages, &provider, &msg_tx).await;
 
-        let llm_messages = crate::context::build_llm_messages(&config.system_prompt, &messages);
+        let llm_messages = super::context::build_llm_messages(&config.system_prompt, &messages);
         tracing::info!("[ACTOR:AgentLoop] Sending {} messages to LLM", messages.len());
-        crate::context::log_message_content(&messages);
+        super::context::log_message_content(&messages);
 
         let should_continue = execute_turn(
             &mut messages,
@@ -106,9 +106,9 @@ async fn handle_context_compaction<M: TryFrom<AgentEvent> + Send + 'static>(
     provider: &Arc<dyn Provider>,
     msg_tx: &mpsc::Sender<M>,
 ) {
-    if messages.len() > crate::context::COMPACT_THRESHOLD {
+    if messages.len() > super::context::COMPACT_THRESHOLD {
         tracing::info!("[COMPACT] Context length {}, compacting...", messages.len());
-        match crate::context::compact_context(messages, provider.clone()).await {
+        match super::context::compact_context(messages, provider.clone()).await {
             Ok((compacted_count, summary_preview)) => {
                 send_event(msg_tx, AgentEvent::ContextCompacted {
                     original_count: messages.len(),

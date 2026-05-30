@@ -36,311 +36,220 @@ fn token_usage(prompt: usize, completion: usize) -> AgentEvent {
     }
 }
 
-/// Table-driven test for state transitions.
+/// Test: message start sets thinking
 #[test]
-fn test_state_transitions() {
-    struct TestCase {
-        name: &'static str,
-        initial: Box<dyn Fn(&mut AppState)>,
-        event: AgentEvent,
-        assertions: Box<dyn Fn(&AppState)>,
-    }
-
-    let cases = vec![
-        TestCase {
-            name: "message start sets thinking",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-            }),
-            event: AgentEvent::MessageStart {
-                message: agent_message("assistant", ""),
-                turn: 1,
-            },
-            assertions: Box::new(|state| {
-                assert!(state.is_thinking, "is_thinking should be true");
-                assert_eq!(state.status_header, Some("Thinking".to_string()), "status_header");
-            }),
+fn test_message_start_sets_thinking() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::MessageStart {
+            message: agent_message("assistant", ""),
+            turn: 1,
         },
-        TestCase {
-            name: "tool start pauses thinking",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-                state.is_thinking = true;
-                state.thinking_start = Some(Instant::now());
-            }),
-            event: AgentEvent::ToolExecutionStart {
-                tool_call_id: "t1".to_string(),
-                tool_name: "bash".to_string(),
-                tool_args: "ls".to_string(),
-                turn: 1,
-            },
-            assertions: Box::new(|state| {
-                assert!(!state.is_thinking, "is_thinking should be false");
-                assert!(state.thinking_duration.is_some(), "thinking_duration should be set");
-                assert_eq!(state.status_header, Some("Working".to_string()), "status_header");
-            }),
-        },
-        TestCase {
-            name: "agent end clears all",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-                state.is_thinking = true;
-                state.thinking_start = Some(Instant::now());
-                state.status_header = Some("Thinking".to_string());
-                state.status_start_time = Some(Instant::now());
-            }),
-            event: AgentEvent::AgentEnd {
-                messages: vec![],
-                total_turns: 1,
-                final_token_usage: AgentTokenUsage::default(),
-            },
-            assertions: Box::new(|state| {
-                assert!(!state.agent_running, "agent_running should be false");
-                assert!(!state.is_thinking, "is_thinking should be false");
-                assert!(state.thinking_start.is_none(), "thinking_start should be none");
-                assert!(state.status_header.is_none(), "status_header should be none");
-                assert!(state.status_start_time.is_none(), "status_start_time should be none");
-            }),
-        },
-        TestCase {
-            name: "error clears running but leaves message",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-                state.messages.push(MessageItem::Assistant {
-                    text: "".to_string(),
-                    model: None,
-                    timestamp: None,
-                });
-            }),
-            event: AgentEvent::Error {
-                message: "fail".to_string(),
-                error_type: "test".to_string(),
-                recoverable: true,
-                context: "".to_string(),
-            },
-            assertions: Box::new(|state| {
-                assert!(!state.agent_running, "agent_running should be false");
-                assert!(
-                    state.messages.iter().any(|m| matches!(m, MessageItem::Error { .. })),
-                    "should have error message"
-                );
-            }),
-        },
-    ];
-
-    for case in cases {
-        let mut state = AppState::default();
-        (case.initial)(&mut state);
-        agent::handle_agent_event(&mut state, case.event);
-        (case.assertions)(&state);
-    }
+    );
+    assert!(state.is_thinking, "is_thinking should be true");
+    assert_eq!(state.status_header, Some("Thinking".to_string()), "status_header");
 }
 
-/// Test: Token usage accumulation.
+/// Test: tool start pauses thinking
 #[test]
-fn test_token_usage_accumulation() {
-    struct TestCase {
-        name: &'static str,
-        events: Vec<AgentEvent>,
-        expected_prompt: usize,
-        expected_completion: usize,
-        expected_total: usize,
-    }
-
-    let cases = vec![
-        TestCase {
-            name: "single usage event",
-            events: vec![token_usage(10, 20)],
-            expected_prompt: 10,
-            expected_completion: 20,
-            expected_total: 30,
+fn test_tool_start_pauses_thinking() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    state.is_thinking = true;
+    state.thinking_start = Some(Instant::now());
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::ToolExecutionStart {
+            tool_call_id: "t1".to_string(),
+            tool_name: "bash".to_string(),
+            tool_args: "ls".to_string(),
+            turn: 1,
         },
-        TestCase {
-            name: "multiple usage events accumulate",
-            events: vec![token_usage(10, 20), token_usage(5, 10)],
-            expected_prompt: 15,
-            expected_completion: 30,
-            expected_total: 45,
-        },
-        TestCase {
-            name: "zero tokens",
-            events: vec![token_usage(0, 0)],
-            expected_prompt: 0,
-            expected_completion: 0,
-            expected_total: 0,
-        },
-    ];
-
-    for case in cases {
-        let mut state = AppState::default();
-        for event in case.events {
-            agent::handle_agent_event(&mut state, event);
-        }
-        assert_eq!(
-            state.session_token_usage.prompt_tokens, case.expected_prompt,
-            "{}: prompt", case.name
-        );
-        assert_eq!(
-            state.session_token_usage.completion_tokens, case.expected_completion,
-            "{}: completion", case.name
-        );
-        assert_eq!(
-            state.session_token_usage.total_tokens, case.expected_total,
-            "{}: total", case.name
-        );
-    }
+    );
+    assert!(!state.is_thinking, "is_thinking should be false");
+    assert!(state.thinking_duration.is_some(), "thinking_duration should be set");
+    assert_eq!(state.status_header, Some("Working".to_string()), "status_header");
 }
 
-/// Test: Message lifecycle transitions.
+/// Test: agent end clears all
 #[test]
-fn test_message_lifecycle() {
-    struct TestCase {
-        name: &'static str,
-        initial: Box<dyn Fn(&mut AppState)>,
-        events: Vec<AgentEvent>,
-        assertions: Box<dyn Fn(&AppState, &[String])>,
-    }
-
-    let assistant_texts = vec![
-        "Hello".to_string(),
-        "World".to_string(),
-    ];
-
-    let cases = vec![
-        TestCase {
-            name: "message start adds placeholder",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-            }),
-            events: vec![AgentEvent::MessageStart {
-                message: agent_message("assistant", ""),
-                turn: 1,
-            }],
-            assertions: Box::new(|state, _texts| {
-                assert!(
-                    state.messages.iter().any(|m| matches!(
-                        m,
-                        MessageItem::Assistant {
-                            text,
-                            ..
-                        } if text.is_empty()
-                    )),
-                    "should have empty assistant placeholder"
-                );
-            }),
+fn test_agent_end_clears_all() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    state.is_thinking = true;
+    state.thinking_start = Some(Instant::now());
+    state.status_header = Some("Thinking".to_string());
+    state.status_start_time = Some(Instant::now());
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::AgentEnd {
+            messages: vec![],
+            total_turns: 1,
+            final_token_usage: AgentTokenUsage::default(),
         },
-        TestCase {
-            name: "message update fills placeholder",
-            initial: Box::new(|_state| {}),
-            events: vec![
-                AgentEvent::MessageStart {
-                    message: agent_message("assistant", ""),
-                    turn: 1,
-                },
-                AgentEvent::MessageUpdate {
-                    message: agent_message("assistant", "Hello"),
-                    turn: 1,
-                    delta: "Hello".to_string(),
-                },
-            ],
-            assertions: Box::new(|state, _texts| {
-                let has_hello = state.messages.iter().any(|m| matches!(
-                    m,
-                    MessageItem::Assistant {
-                        text,
-                        ..
-                    } if text.contains("Hello")
-                ));
-                assert!(has_hello, "should have Hello in messages");
-            }),
-        },
-    ];
-
-    for case in cases {
-        let mut state = AppState::default();
-        (case.initial)(&mut state);
-        for event in case.events {
-            agent::handle_agent_event(&mut state, event);
-        }
-        (case.assertions)(&state, &assistant_texts);
-    }
+    );
+    assert!(!state.agent_running, "agent_running should be false");
+    assert!(!state.is_thinking, "is_thinking should be false");
+    assert!(state.thinking_start.is_none(), "thinking_start should be none");
+    assert!(state.status_header.is_none(), "status_header should be none");
+    assert!(state.status_start_time.is_none(), "status_start_time should be none");
 }
 
-/// Test: Tool execution transitions.
+/// Test: error clears running but leaves message
 #[test]
-fn test_tool_execution_transitions() {
-    struct TestCase {
-        name: &'static str,
-        initial: Box<dyn Fn(&mut AppState)>,
-        event: AgentEvent,
-        expect_tool_call: bool,
-        expect_working: bool,
-    }
+fn test_error_clears_running_but_leaves_message() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    state.messages.push(MessageItem::Assistant {
+        text: "".to_string(),
+        model: None,
+        timestamp: None,
+    });
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::Error {
+            message: "fail".to_string(),
+            error_type: "test".to_string(),
+            recoverable: true,
+            context: "".to_string(),
+        },
+    );
+    assert!(!state.agent_running, "agent_running should be false");
+    assert!(
+        state.messages.iter().any(|m| matches!(m, MessageItem::Error { .. })),
+        "should have error message"
+    );
+}
 
-    let cases = vec![
-        TestCase {
-            name: "tool start adds tool call message",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-                state.is_thinking = true;
-            }),
-            event: AgentEvent::ToolExecutionStart {
+/// Test: single token usage event
+#[test]
+fn test_token_usage_single_event() {
+    let mut state = AppState::default();
+    agent::handle_agent_event(&mut state, token_usage(10, 20));
+    assert_eq!(state.session_token_usage.prompt_tokens, 10);
+    assert_eq!(state.session_token_usage.completion_tokens, 20);
+    assert_eq!(state.session_token_usage.total_tokens, 30);
+}
+
+/// Test: multiple token usage events accumulate
+#[test]
+fn test_token_usage_multiple_events() {
+    let mut state = AppState::default();
+    agent::handle_agent_event(&mut state, token_usage(10, 20));
+    agent::handle_agent_event(&mut state, token_usage(5, 10));
+    assert_eq!(state.session_token_usage.prompt_tokens, 15);
+    assert_eq!(state.session_token_usage.completion_tokens, 30);
+    assert_eq!(state.session_token_usage.total_tokens, 45);
+}
+
+/// Test: zero tokens
+#[test]
+fn test_token_usage_zero() {
+    let mut state = AppState::default();
+    agent::handle_agent_event(&mut state, token_usage(0, 0));
+    assert_eq!(state.session_token_usage.prompt_tokens, 0);
+    assert_eq!(state.session_token_usage.completion_tokens, 0);
+    assert_eq!(state.session_token_usage.total_tokens, 0);
+}
+
+/// Test: message start adds placeholder
+#[test]
+fn test_message_start_adds_placeholder() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::MessageStart {
+            message: agent_message("assistant", ""),
+            turn: 1,
+        },
+    );
+    assert!(
+        state.messages.iter().any(|m| matches!(
+            m,
+            MessageItem::Assistant { text, .. } if text.is_empty()
+        )),
+        "should have empty assistant placeholder"
+    );
+}
+
+/// Test: message update fills placeholder
+#[test]
+fn test_message_update_fills_placeholder() {
+    let mut state = AppState::default();
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::MessageStart {
+            message: agent_message("assistant", ""),
+            turn: 1,
+        },
+    );
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::MessageUpdate {
+            message: agent_message("assistant", "Hello"),
+            turn: 1,
+            delta: "Hello".to_string(),
+        },
+    );
+    let has_hello = state.messages.iter().any(|m| matches!(
+        m,
+        MessageItem::Assistant { text, .. } if text.contains("Hello")
+    ));
+    assert!(has_hello, "should have Hello in messages");
+}
+
+/// Test: tool start adds tool call message
+#[test]
+fn test_tool_start_adds_tool_call_message() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    state.is_thinking = true;
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::ToolExecutionStart {
+            tool_call_id: "tool_1".to_string(),
+            tool_name: "bash".to_string(),
+            tool_args: "ls -la".to_string(),
+            turn: 1,
+        },
+    );
+    let has_tool_call = state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { .. }));
+    assert!(has_tool_call, "tool_call should be present");
+    assert_eq!(state.status_header.as_ref().map(|s| s.as_str()), Some("Working"));
+}
+
+/// Test: tool end updates tool call result
+#[test]
+fn test_tool_end_updates_tool_call_result() {
+    let mut state = AppState::default();
+    state.agent_running = true;
+    state.messages.push(MessageItem::ToolCall {
+        name: "tool_1".to_string(),
+        args: "ls".to_string(),
+        result: None,
+        is_error: false,
+    });
+    agent::handle_agent_event(
+        &mut state,
+        AgentEvent::ToolExecutionEnd {
+            tool_call_id: "tool_1".to_string(),
+            tool_name: "bash".to_string(),
+            tool_args: "ls".to_string(),
+            result: runie_agent::events::ToolResult {
                 tool_call_id: "tool_1".to_string(),
                 tool_name: "bash".to_string(),
-                tool_args: "ls -la".to_string(),
-                turn: 1,
+                input: serde_json::json!({}),
+                content: vec![Text { text: "file1.txt\nfile2.rs".to_string() }],
+                is_error: false,
             },
-            expect_tool_call: true,
-            expect_working: true,
+            duration_ms: 100,
+            turn: 1,
         },
-        TestCase {
-            name: "tool end updates tool call result",
-            initial: Box::new(|state| {
-                state.agent_running = true;
-                state.messages.push(MessageItem::ToolCall {
-                    name: "tool_1".to_string(),
-                    args: "ls".to_string(),
-                    result: None,
-                    is_error: false,
-                });
-            }),
-            event: AgentEvent::ToolExecutionEnd {
-                tool_call_id: "tool_1".to_string(),
-                tool_name: "bash".to_string(),
-                tool_args: "ls".to_string(),
-                result: runie_agent::events::ToolResult {
-                    tool_call_id: "tool_1".to_string(),
-                    tool_name: "bash".to_string(),
-                    input: serde_json::json!({}),
-                    content: vec![Text { text: "file1.txt\nfile2.rs".to_string() }],
-                    is_error: false,
-                },
-                duration_ms: 100,
-                turn: 1,
-            },
-            expect_tool_call: true,
-            expect_working: false,
-        },
-    ];
-
-    for case in cases {
-        let mut state = AppState::default();
-        (case.initial)(&mut state);
-        agent::handle_agent_event(&mut state, case.event);
-
-        let has_tool_call = state
-            .messages
-            .iter()
-            .any(|m| matches!(m, MessageItem::ToolCall { .. }));
-        assert_eq!(
-            has_tool_call, case.expect_tool_call,
-            "{}: tool_call present", case.name
-        );
-
-        assert_eq!(
-            state.status_header.as_ref().map(|s| s.as_str()),
-            if case.expect_working { Some("Working") } else { None },
-            "{}: status_header", case.name
-        );
-    }
+    );
+    let has_tool_call = state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { .. }));
+    assert!(has_tool_call, "tool_call should be present");
+    assert_eq!(state.status_header.as_ref().map(|s| s.as_str()), None);
 }

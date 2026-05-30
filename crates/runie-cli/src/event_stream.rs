@@ -16,7 +16,7 @@ impl EventStreamLogger {
         let events_dir = runie_dir.join("events");
         create_events_dir(&events_dir);
 
-        let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
+        let timestamp = Utc::now().format("%Y%m%d_%H%M%S").to_string();
         let jsonl_file = open_log_file(&events_dir, &timestamp, "jsonl");
         let log_file = open_log_file(&events_dir, &timestamp, "log");
 

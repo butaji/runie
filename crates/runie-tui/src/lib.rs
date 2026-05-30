@@ -9,6 +9,8 @@ pub mod actors;
 
 pub use theme::{ThemeWrapper, ColorPalette, OpalineColor};
 pub use tui::{Tui, TuiConfig, TuiMode, Msg, Cmd, update, event_to_msg, Onboarding, AppState};
+pub use tui::update::agent::AgentCmd;
+pub use tui::update::ui::UiCmd;
 pub use components::{
     MessageList,
     MessageItem,

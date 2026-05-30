@@ -164,7 +164,7 @@ pub fn render_single_msg(
 ) -> u16 {
     match msg {
         MessageItem::User { text, timestamp, .. } => {
-            render_user_msg(text, timestamp.clone(), area, row, margin_x, text_x, max_rows, buf, theme, accent_primary, wrap_cache)
+            render_user_msg(text, timestamp.clone(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
             render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.clone(), thought_duration, turn_complete)
@@ -235,7 +235,7 @@ pub fn render_single_msg_feed(
 ) -> u16 {
     match item {
         FeedItem::UserMessage { text, timestamp, .. } => {
-            render_user_msg(text, timestamp.clone(), area, row, margin_x, text_x, max_rows, buf, theme, accent_primary, wrap_cache)
+            render_user_msg(text, timestamp.clone(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
         FeedItem::AssistantMessage { text, thoughts, tool_calls, timestamp, turn_duration, .. } => {
             // Use first thought's duration if provided, otherwise use the passed thought_duration

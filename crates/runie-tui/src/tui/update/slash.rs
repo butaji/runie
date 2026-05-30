@@ -1,7 +1,8 @@
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, Cmd, TuiMode};
+use crate::tui::state::{AppState, TuiMode};
+use crate::UiCmd;
 
-pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<Cmd> {
+pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<UiCmd> {
     use runie_core::slash_command::SlashCommand;
     match cmd {
         // Session-modifying commands - grouped
@@ -9,7 +10,7 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
             { handle_session_cmd(state, &cmd); vec![] }
         SlashCommand::Model(model) => { handle_model(state, model); vec![] }
         SlashCommand::Tree => { handle_tree(state); vec![] }
-        SlashCommand::Quit => handle_quit(state),
+        SlashCommand::Quit => { handle_quit(state); vec![] }
         // Informational - grouped
         SlashCommand::Help | SlashCommand::Cost => { handle_info_cmd(state, &cmd); vec![] }
         SlashCommand::Unknown(cmd) => { handle_unknown(state, cmd); vec![] }

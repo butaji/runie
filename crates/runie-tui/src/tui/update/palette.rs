@@ -49,7 +49,7 @@ pub fn handle_switch_model(state: &mut AppState) {
     state.mode = TuiMode::Overlay;
 }
 
-pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<Cmd> {
+pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<crate::UiCmd> {
     match cmd {
         PaletteCommand::NewSession => {
             state.messages.clear();

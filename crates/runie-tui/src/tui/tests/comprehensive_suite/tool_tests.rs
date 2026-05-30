@@ -7,26 +7,33 @@ use super::harness::AgentTestHarness;
 use super::state_tests::make_message;
 
 #[test]
-fn test_tool_lifecycle() {
-    let mut harness = AgentTestHarness::new();
-    harness = harness.user_says("Run ls");
+fn test_tool_start_verification() {
+    let harness = AgentTestHarness::new();
+    let harness = harness.user_says("Run ls");
 
-    // Tool starts
-    harness = harness.handle_event(AgentEvent::ToolExecutionStart {
+    let harness = harness.handle_event(AgentEvent::ToolExecutionStart {
         tool_call_id: "t1".to_string(),
         tool_name: "bash".to_string(),
         tool_args: "ls".to_string(),
         turn: 1,
     });
 
-    // Assert tool in messages
-    assert!(harness.state.messages.iter().any(|m| matches!(
-        m,
-        MessageItem::ToolCall { name, .. } if name == "t1"
-    )));
+    assert!(harness.state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { name, .. } if name == "t1")));
+}
 
-    // Tool ends
-    harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
+#[test]
+fn test_tool_result_updated() {
+    let harness = AgentTestHarness::new();
+    let harness = harness.user_says("Run ls");
+
+    let harness = harness.handle_event(AgentEvent::ToolExecutionStart {
+        tool_call_id: "t1".to_string(),
+        tool_name: "bash".to_string(),
+        tool_args: "ls".to_string(),
+        turn: 1,
+    });
+
+    let harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
         tool_call_id: "t1".to_string(),
         tool_name: "bash".to_string(),
         tool_args: "ls".to_string(),
@@ -34,29 +41,17 @@ fn test_tool_lifecycle() {
             tool_call_id: "t1".to_string(),
             tool_name: "bash".to_string(),
             input: serde_json::json!({}),
-            content: vec![ContentPart::Text {
-                text: "file1.txt\nfile2.rs".to_string(),
-            }],
+            content: vec![ContentPart::Text { text: "file1.txt\nfile2.rs".to_string() }],
             is_error: false,
         },
         duration_ms: 100,
         turn: 1,
     });
 
-    // Assert result updated
-    let tool = harness
-        .state
-        .messages
-        .iter()
-        .rev()
-        .find_map(|m| match m {
-            MessageItem::ToolCall {
-                name,
-                result: Some(res),
-                ..
-            } if name == "t1" => Some(res.as_str()),
-            _ => None,
-        });
+    let tool = harness.state.messages.iter().rev().find_map(|m| match m {
+        MessageItem::ToolCall { name, result: Some(res), .. } if name == "t1" => Some(res.as_str()),
+        _ => None,
+    });
     assert!(tool.is_some());
     assert!(tool.unwrap().contains("file1.txt"));
 }
@@ -101,58 +96,38 @@ fn test_tool_with_error_result() {
     assert!(error_tool.is_some());
 }
 
+/// Helper: execute a single tool and return harness
+fn execute_tool(harness: AgentTestHarness, id: &str, name: &str, args: &str, result: &str) -> AgentTestHarness {
+    harness
+        .handle_event(AgentEvent::ToolExecutionStart {
+            tool_call_id: id.to_string(),
+            tool_name: name.to_string(),
+            tool_args: args.to_string(),
+            turn: 1,
+        })
+        .handle_event(AgentEvent::ToolExecutionEnd {
+            tool_call_id: id.to_string(),
+            tool_name: name.to_string(),
+            tool_args: args.to_string(),
+            result: ToolResult {
+                tool_call_id: id.to_string(),
+                tool_name: name.to_string(),
+                input: serde_json::json!({}),
+                content: vec![ContentPart::Text {
+                    text: result.to_string(),
+                }],
+                is_error: false,
+            },
+            duration_ms: 10,
+            turn: 1,
+        })
+}
+
 #[test]
 fn test_multiple_tools_in_sequence() {
-    let mut harness = AgentTestHarness::new();
-    harness = harness.user_says("Run commands");
-
-    // Tool 1
-    harness = harness.handle_event(AgentEvent::ToolExecutionStart {
-        tool_call_id: "t1".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: "echo 1".to_string(),
-        turn: 1,
-    });
-    harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
-        tool_call_id: "t1".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: "echo 1".to_string(),
-        result: ToolResult {
-            tool_call_id: "t1".to_string(),
-            tool_name: "bash".to_string(),
-            input: serde_json::json!({}),
-            content: vec![ContentPart::Text {
-                text: "1".to_string(),
-            }],
-            is_error: false,
-        },
-        duration_ms: 10,
-        turn: 1,
-    });
-
-    // Tool 2
-    harness = harness.handle_event(AgentEvent::ToolExecutionStart {
-        tool_call_id: "t2".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: "echo 2".to_string(),
-        turn: 1,
-    });
-    harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
-        tool_call_id: "t2".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: "echo 2".to_string(),
-        result: ToolResult {
-            tool_call_id: "t2".to_string(),
-            tool_name: "bash".to_string(),
-            input: serde_json::json!({}),
-            content: vec![ContentPart::Text {
-                text: "2".to_string(),
-            }],
-            is_error: false,
-        },
-        duration_ms: 10,
-        turn: 1,
-    });
+    let harness = AgentTestHarness::new().user_says("Run commands");
+    let harness = execute_tool(harness, "t1", "bash", "echo 1", "1");
+    let harness = execute_tool(harness, "t2", "bash", "echo 2", "2");
 
     let tool_calls: Vec<_> = harness
         .state
@@ -190,25 +165,23 @@ fn test_tool_pauses_thinking() {
     );
 }
 
+/// Helper: start a tool and return updated harness
+fn start_tool(harness: AgentTestHarness, id: &str, name: &str, args: &str) -> AgentTestHarness {
+    harness.handle_event(AgentEvent::ToolExecutionStart {
+        tool_call_id: id.to_string(),
+        tool_name: name.to_string(),
+        tool_args: args.to_string(),
+        turn: 1,
+    })
+}
+
 #[test]
 fn test_tool_updates_last_tool_call() {
-    let mut harness = AgentTestHarness::new();
+    let harness = AgentTestHarness::new();
+    let harness = start_tool(harness, "t1", "bash", "ls");
+    let harness = start_tool(harness, "t2", "bash", "echo hi");
 
-    harness = harness.handle_event(AgentEvent::ToolExecutionStart {
-        tool_call_id: "t1".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: "ls".to_string(),
-        turn: 1,
-    });
-
-    harness = harness.handle_event(AgentEvent::ToolExecutionStart {
-        tool_call_id: "t2".to_string(),
-        tool_name: "bash".to_string(),
-        tool_args: "echo hi".to_string(),
-        turn: 1,
-    });
-
-    harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
+    let harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
         tool_call_id: "t2".to_string(),
         tool_name: "bash".to_string(),
         tool_args: "echo hi".to_string(),
@@ -216,22 +189,15 @@ fn test_tool_updates_last_tool_call() {
             tool_call_id: "t2".to_string(),
             tool_name: "bash".to_string(),
             input: serde_json::json!({}),
-            content: vec![ContentPart::Text {
-                text: "hi".to_string(),
-            }],
+            content: vec![ContentPart::Text { text: "hi".to_string() }],
             is_error: false,
         },
         duration_ms: 10,
         turn: 1,
     });
 
-    // Result should be on t2, not t1
     let t2 = harness.state.messages.iter().find_map(|m| match m {
-        MessageItem::ToolCall {
-            name: t2_name,
-            result: Some(_),
-            ..
-        } if t2_name == "t2" => Some(true),
+        MessageItem::ToolCall { name: t2_name, result: Some(_), .. } if t2_name == "t2" => Some(true),
         _ => None,
     });
     assert!(t2.is_some());

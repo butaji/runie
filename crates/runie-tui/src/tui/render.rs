@@ -338,7 +338,7 @@ fn render_agents_jobs(vm: &AgentListViewModel, inner: Rect, buf: &mut Buffer, co
         buf.set_line(content_x, y, &job_line, inner_width);
         y += 1;
     }
-    y
+    y as usize
 }
 
 fn render_agents_footer(vm: &AgentListViewModel, inner: Rect, buf: &mut Buffer, colors: &SidebarColors) {

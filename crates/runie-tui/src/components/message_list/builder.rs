@@ -1,5 +1,5 @@
 use super::types::{MessageItem, PlanStatus};
-use super::MessageListViewModel;
+use super::{MessageListViewModel, Feed};
 use crate::tui::state::AnimationState;
 use crate::components::message_list::render::WrapCache;
 
@@ -210,7 +210,7 @@ impl FeedBuilder {
     /// Consume the builder and return the MessageListViewModel.
     pub fn build(self) -> MessageListViewModel {
         MessageListViewModel {
-            messages: self.messages,
+            feed: Feed::from(self.messages),
             scroll_offset: self.scroll_offset,
             agent_running: self.agent_running,
             animation: self.animation,

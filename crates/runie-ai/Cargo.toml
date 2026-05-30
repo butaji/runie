@@ -20,3 +20,4 @@ tokio = { workspace = true }
 rand = { workspace = true }
 genai = "0.5"
 rig-core = "0.37"
+bytes = { workspace = true }

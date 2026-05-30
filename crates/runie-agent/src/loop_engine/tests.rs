@@ -94,9 +94,9 @@ async fn test_unknown_tool_name_skipped() {
 
 #[test]
 fn test_compaction_constants() {
-    assert!(context::MAX_CONTEXT_MESSAGES > super::COMPACT_THRESHOLD,
+    assert!(context::MAX_CONTEXT_MESSAGES > context::COMPACT_THRESHOLD,
         "MAX_CONTEXT_MESSAGES should be greater than COMPACT_THRESHOLD");
-    assert!(super::COMPACT_THRESHOLD > context::RECENT_MESSAGES_TO_KEEP,
+    assert!(context::COMPACT_THRESHOLD > context::RECENT_MESSAGES_TO_KEEP,
         "COMPACT_THRESHOLD should be greater than RECENT_MESSAGES_TO_KEEP");
     assert!(context::RECENT_MESSAGES_TO_KEEP > 0, "RECENT_MESSAGES_TO_KEEP should be positive");
 }
@@ -125,7 +125,7 @@ fn test_compact_context_below_threshold() {
     ];
 
     let original_len = history.len();
-    assert!(original_len <= super::COMPACT_THRESHOLD,
+    assert!(original_len <= context::COMPACT_THRESHOLD,
         "Test setup error: history should be below COMPACT_THRESHOLD");
 }
 

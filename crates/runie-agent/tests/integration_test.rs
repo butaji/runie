@@ -1,5 +1,5 @@
 use futures::StreamExt;
-use runie_agent::loop_engine::{agent_loop, AgentLoopConfig, AgentLoop};
+use runie_agent::loop_engine::{agent_loop, AgentLoopConfig, AgentEventStream};
 use runie_agent::events::{AgentEvent, AgentMessage, ContentPart, PermissionDecision};
 use runie_ai::providers::MockProvider;
 use runie_tools::{create_default_toolkit, Workspace};
@@ -38,7 +38,7 @@ fn setup_agent_test() -> (
     (provider, registry, config, messages)
 }
 
-async fn collect_agent_events(stream: &mut impl AgentLoop) -> (bool, bool, bool, bool) {
+async fn collect_agent_events(stream: &mut AgentEventStream) -> (bool, bool, bool, bool) {
     let mut got_message_start = false;
     let mut got_message_update = false;
     let mut got_message_end = false;

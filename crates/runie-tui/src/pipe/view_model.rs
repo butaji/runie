@@ -2,8 +2,10 @@ use crate::tui::state::{AppState, TuiMode};
 use crate::tui::view_models::{
     AgentListViewModel, CommandPaletteViewModel, DiffViewerViewModel,
     OnboardingViewModel, OverlayViewModel, PermissionModalViewModel,
-    SessionTreeViewModel, ViewModels,
+    SessionTreeViewModel, ViewModels, InputBarViewModel, StatusBarViewModel,
 };
+use crate::components::top_bar::TopBarViewModel;
+use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::render::WrapCache;
 use crate::components::top_bar::TopBarBuilder;
 use crate::components::message_list::FeedBuilder;
@@ -54,7 +56,7 @@ impl Pipe<&AppState> for ViewModelPipe {
 
 // ─── View model builders ────────────────────────────────────────────────────────
 
-fn build_top_bar(state: &AppState) -> impl crate::components::top_bar::TopBar {
+fn build_top_bar(state: &AppState) -> TopBarViewModel {
     TopBarBuilder::new()
         .repo(&state.top_bar.repo)
         .branch(&state.top_bar.branch)
@@ -67,7 +69,7 @@ fn build_top_bar(state: &AppState) -> impl crate::components::top_bar::TopBar {
         .build()
 }
 
-fn build_message_list(state: &AppState) -> impl crate::components::message_list::MessageList {
+fn build_message_list(state: &AppState) -> MessageListViewModel {
     let wrap_cache = WrapCache::new();
     FeedBuilder::new()
         .messages(&state.messages)
@@ -78,7 +80,7 @@ fn build_message_list(state: &AppState) -> impl crate::components::message_list:
         .build()
 }
 
-fn build_input_bar(state: &AppState) -> impl crate::components::input_bar::InputBar {
+fn build_input_bar(state: &AppState) -> InputBarViewModel {
     let input_text = state.textarea.lines().join("\n");
     InputBuilder::new()
         .text(&input_text)
@@ -87,7 +89,7 @@ fn build_input_bar(state: &AppState) -> impl crate::components::input_bar::Input
         .build()
 }
 
-fn build_status_bar(state: &AppState) -> impl crate::components::status_bar::StatusBar {
+fn build_status_bar(state: &AppState) -> StatusBarViewModel {
     StatusBarBuilder::new()
         .mode(state.mode.clone())
         .current_model(state.current_model.as_deref().unwrap_or("—"))
@@ -185,7 +187,7 @@ fn build_diff_viewer(state: &AppState) -> Option<DiffViewerViewModel> {
 
 fn build_onboarding(state: &AppState) -> Option<OnboardingViewModel> {
     state.onboarding.as_ref().map(|o| {
-        let step = convert_onboarding_step(o.step);
+        let step = convert_onboarding_step(o.step.clone());
         OnboardingBuilder::new()
             .step(step)
             .selected_item(o.selected_item)

@@ -426,11 +426,12 @@ fn test_system_message_filtering() {
         &mut state,
         AgentEvent::Message {
             role: "system".to_string(),
-            content: "Using model gpt-4".to_string(),
+            content: "Using gpt-4o".to_string(),
         },
     );
+    // "Using gpt-4o" starts with "Using " so should be filtered
     assert!(!state.messages.iter().any(|m| matches!(
         m,
-        MessageItem::System { text, .. } if text.contains("Using model")
+        MessageItem::System { text, .. } if text.contains("Using")
     )));
 }

@@ -28,6 +28,22 @@ impl Default for Settings {
     }
 }
 
+fn merge_api_key_fallback(settings: &mut Settings) {
+    // Try OPENAI_API_KEY if no RUNIE_API_KEY was set
+    if settings.api_key.is_none() {
+        if let Ok(val) = std::env::var("OPENAI_API_KEY") {
+            settings.api_key = Some(val);
+            return;
+        }
+    }
+    // Try MINIMAX_API_KEY as another fallback
+    if settings.api_key.is_none() {
+        if let Ok(val) = std::env::var("MINIMAX_API_KEY") {
+            settings.api_key = Some(val);
+        }
+    }
+}
+
 impl Settings {
     /// Load settings with layered resolution
     pub fn load() -> Self {
@@ -89,22 +105,6 @@ impl Settings {
         // Legacy/provider-specific API key fallback
         merge_api_key_fallback(self);
     }
-
-fn merge_api_key_fallback(settings: &mut Settings) {
-    // Try OPENAI_API_KEY if no RUNIE_API_KEY was set
-    if settings.api_key.is_none() {
-        if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-            settings.api_key = Some(val);
-            return;
-        }
-    }
-    // Try MINIMAX_API_KEY as another fallback
-    if settings.api_key.is_none() {
-        if let Ok(val) = std::env::var("MINIMAX_API_KEY") {
-            settings.api_key = Some(val);
-        }
-    }
-}
 
     /// Merge settings from CLI arguments
     pub fn merge_cli(&mut self, cli: &CliSettings) {

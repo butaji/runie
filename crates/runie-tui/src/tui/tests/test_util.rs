@@ -58,7 +58,7 @@ impl Drop for TestTempDir {
 
 /// Assert that the sequence of agent events matches the expected event type names.
 pub fn assert_event_sequence(events: &[AgentEvent], expected: &[&str]) {
-    let actual: Vec<String> = events.iter().map(event_type_name).collect();
+    let actual: Vec<String> = events.iter().map(|e| event_type_name(e).to_string()).collect();
     assert_eq!(
         actual,
         expected.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
@@ -66,19 +66,17 @@ pub fn assert_event_sequence(events: &[AgentEvent], expected: &[&str]) {
     );
 }
 
-/// Get the type name of an agent event as a string.
-pub fn event_type_name(event: &AgentEvent) -> String {
-    match event {
-        AgentEvent::MessageStart { .. } => "message_start".to_string(),
-        AgentEvent::MessageUpdate { .. } => "message_update".to_string(),
-        AgentEvent::MessageEnd { .. } => "message_end".to_string(),
-        AgentEvent::ToolExecutionStart { .. } => "tool_start".to_string(),
-        AgentEvent::ToolExecutionEnd { .. } => "tool_end".to_string(),
-        AgentEvent::TurnEnd { .. } => "turn_end".to_string(),
-        AgentEvent::AgentEnd { .. } => "agent_end".to_string(),
-        AgentEvent::Error { .. } => "error".to_string(),
-        _ => "other".to_string(),
-    }
+/// Get the type name of an agent event as a static string.
+pub fn event_type_name(event: &AgentEvent) -> &'static str {
+    if matches!(event, AgentEvent::MessageStart { .. }) { return "message_start"; }
+    if matches!(event, AgentEvent::MessageUpdate { .. }) { return "message_update"; }
+    if matches!(event, AgentEvent::MessageEnd { .. }) { return "message_end"; }
+    if matches!(event, AgentEvent::ToolExecutionStart { .. }) { return "tool_start"; }
+    if matches!(event, AgentEvent::ToolExecutionEnd { .. }) { return "tool_end"; }
+    if matches!(event, AgentEvent::TurnEnd { .. }) { return "turn_end"; }
+    if matches!(event, AgentEvent::AgentEnd { .. }) { return "agent_end"; }
+    if matches!(event, AgentEvent::Error { .. }) { return "error"; }
+    "other"
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
