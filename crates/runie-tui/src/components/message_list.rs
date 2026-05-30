@@ -245,8 +245,35 @@ mod tests {
         assert!(non_empty, "Empty state should render some visible characters");
     }
 
-    #[test]
-    fn test_assistant_empty_agent_running_shows_thinking() {
+    fn render_assistant_msg(text: &str, agent_running: bool) -> (String, Buffer, Rect) {
+        use super::view_model_tests::helper_helpers::render_assistant_message;
+        render_assistant_message(text, Vec::new(), agent_running, None)
+    }
+
+    fn make_assistant_feed_item(text: &str, thoughts: Vec<Thought>) -> FeedItem {
+        FeedItem::AssistantMessage {
+            id: "test".to_string(),
+            text: text.to_string(),
+            thoughts,
+            tool_calls: Vec::new(),
+            timestamp: None,
+            turn_duration: None,
+        }
+    }
+
+    fn make_user_feed_item(text: &str) -> FeedItem {
+        FeedItem::UserMessage {
+            id: "test".to_string(),
+            text: text.to_string(),
+            timestamp: None,
+        }
+    }
+
+    fn make_system_feed_item(text: &str) -> FeedItem {
+        FeedItem::SystemNotice { text: text.to_string() }
+    }
+
+    fn render_feed_item(item: &FeedItem) -> (String, Buffer, Rect) {
         use ratatui::{buffer::Buffer, layout::Rect};
         use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
         use crate::theme::ThemeWrapper;
@@ -256,16 +283,8 @@ mod tests {
         let theme = ThemeWrapper::default_for_test();
         let mut wrap_cache = WrapCache::new();
 
-        let item = FeedItem::AssistantMessage {
-            id: "test".to_string(),
-            text: String::new(),
-            thoughts: Vec::new(),
-            tool_calls: Vec::new(),
-            timestamp: None,
-            turn_duration: None,
-        };
         let _rendered = render_single_msg_feed(
-            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
             &theme,
             ratatui::style::Color::White,
             ratatui::style::Color::Gray,
@@ -274,244 +293,59 @@ mod tests {
             ratatui::style::Color::Green,
             ratatui::style::Color::Red,
             ratatui::style::Color::Blue,
-            '⠋', // spinner
-            false, // cursor_visible
-            false, // show_spinner
-            '⠏', // rewind_spinner
+            '⠋',
+            false,
+            false,
+            '⠏',
             &AnimationState::default(),
             &mut wrap_cache,
-            true, // agent_running
-            None, // thought_duration
-            None, // turn_complete
+            false,
+            None,
+            None,
         );
 
-        // Should render "⠋ Thinking..." instead of "·"
         let row_text: String = (0..area.width)
             .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
             .collect();
+        (row_text, buf, area)
+    }
+
+    #[test]
+    fn test_assistant_empty_agent_running_shows_thinking() {
+        let (row_text, _, _) = render_assistant_msg("", true);
         assert!(row_text.contains("Thinking"), "Expected 'Thinking' indicator in row, got: '{}'", row_text.trim());
     }
 
     #[test]
     fn test_assistant_empty_no_agent_running_shows_dot() {
-        use ratatui::{buffer::Buffer, layout::Rect};
-        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
-        use crate::theme::ThemeWrapper;
-
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        let theme = ThemeWrapper::default_for_test();
-        let mut wrap_cache = WrapCache::new();
-
-        let item = FeedItem::AssistantMessage {
-            id: "test".to_string(),
-            text: String::new(),
-            thoughts: Vec::new(),
-            tool_calls: Vec::new(),
-            timestamp: None,
-            turn_duration: None,
-        };
-        let _rendered = render_single_msg_feed(
-            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
-            &theme,
-            ratatui::style::Color::White,
-            ratatui::style::Color::Gray,
-            ratatui::style::Color::DarkGray,
-            ratatui::style::Color::Black,
-            ratatui::style::Color::Green,
-            ratatui::style::Color::Red,
-            ratatui::style::Color::Blue,
-            '⠋', // spinner
-            false, // cursor_visible
-            false, // show_spinner
-            '⠏', // rewind_spinner
-            &AnimationState::default(),
-            &mut wrap_cache,
-            false, // agent_running
-            None, // thought_duration
-            None, // turn_complete
-        );
-
-        // Should render "·" when agent not running
+        let (_, buf, area) = render_assistant_msg("", false);
         let cell = buf.cell((area.x + 2, area.y)).unwrap();
-        let symbol = cell.symbol();
-        assert_eq!(symbol, "·", "Expected '·' when agent not running, got: {}", symbol);
+        assert_eq!(cell.symbol(), "·", "Expected '·' when agent not running");
     }
 
     #[test]
     fn test_assistant_non_empty_shows_text() {
-        use ratatui::{buffer::Buffer, layout::Rect};
-        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
-        use crate::theme::ThemeWrapper;
-
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        let theme = ThemeWrapper::default_for_test();
-        let mut wrap_cache = WrapCache::new();
-
-        let item = FeedItem::AssistantMessage {
-            id: "test".to_string(),
-            text: "Hello world".to_string(),
-            thoughts: Vec::new(),
-            tool_calls: Vec::new(),
-            timestamp: None,
-            turn_duration: None,
-        };
-        let _rendered = render_single_msg_feed(
-            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
-            &theme,
-            ratatui::style::Color::White,
-            ratatui::style::Color::Gray,
-            ratatui::style::Color::DarkGray,
-            ratatui::style::Color::Black,
-            ratatui::style::Color::Green,
-            ratatui::style::Color::Red,
-            ratatui::style::Color::Blue,
-            '⠋', // spinner
-            false, // cursor_visible
-            false, // show_spinner
-            '⠏', // rewind_spinner
-            &AnimationState::default(),
-            &mut wrap_cache,
-            true, // agent_running - should be ignored for non-empty text
-            None, // thought_duration
-            None, // turn_complete
-        );
-
-        // Should render the actual text
-        let row_text: String = (0..area.width)
-            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
-            .collect::<String>();
+        let (row_text, _, _) = render_assistant_msg("Hello world", true);
         assert!(row_text.contains("Hello world"), "Expected 'Hello world' in row, got: '{}'", row_text.trim());
     }
 
     #[test]
     fn test_user_message_renders() {
-        use ratatui::{buffer::Buffer, layout::Rect};
-        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
-        use crate::theme::ThemeWrapper;
-
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        let theme = ThemeWrapper::default_for_test();
-        let mut wrap_cache = WrapCache::new();
-
-        let item = FeedItem::UserMessage {
-            id: "test".to_string(),
-            text: "Hello".to_string(),
-            timestamp: None,
-        };
-        let _rendered = render_single_msg_feed(
-            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
-            &theme,
-            ratatui::style::Color::White,
-            ratatui::style::Color::Gray,
-            ratatui::style::Color::DarkGray,
-            ratatui::style::Color::Black,
-            ratatui::style::Color::Green,
-            ratatui::style::Color::Red,
-            ratatui::style::Color::Blue,
-            '⠋', // spinner
-            false, // cursor_visible
-            false, // show_spinner
-            '⠏', // rewind_spinner
-            &AnimationState::default(),
-            &mut wrap_cache,
-            false, // agent_running
-            None, // thought_duration
-            None, // turn_complete
-        );
-
-        // Should render chevron and text
+        let (row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
         let cell = buf.cell((area.x + 2, area.y)).unwrap();
-        let symbol = cell.symbol();
-        assert_eq!(symbol, "\u{203A}", "Expected chevron for user message, got: {}", symbol);
+        assert_eq!(cell.symbol(), "\u{203A}", "Expected chevron for user message");
     }
 
     #[test]
     fn test_system_notice_renders() {
-        use ratatui::{buffer::Buffer, layout::Rect};
-        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
-        use crate::theme::ThemeWrapper;
-
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        let theme = ThemeWrapper::default_for_test();
-        let mut wrap_cache = WrapCache::new();
-
-        let item = FeedItem::SystemNotice { text: "System message".to_string() };
-        let _rendered = render_single_msg_feed(
-            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
-            &theme,
-            ratatui::style::Color::White,
-            ratatui::style::Color::Gray,
-            ratatui::style::Color::DarkGray,
-            ratatui::style::Color::Black,
-            ratatui::style::Color::Green,
-            ratatui::style::Color::Red,
-            ratatui::style::Color::Blue,
-            '⠋', // spinner
-            false, // cursor_visible
-            false, // show_spinner
-            '⠏', // rewind_spinner
-            &AnimationState::default(),
-            &mut wrap_cache,
-            false, // agent_running
-            None, // thought_duration
-            None, // turn_complete
-        );
-
-        // Should render the system message
-        let row_text: String = (0..area.width)
-            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
-            .collect::<String>();
-        assert!(row_text.contains("System message"), "Expected 'System message' in row, got: '{}'", row_text.trim());
+        let (row_text, _, _) = render_feed_item(&make_system_feed_item("System message"));
+        assert!(row_text.contains("System message"), "Expected 'System message' in row");
     }
 
     #[test]
     fn test_assistant_with_thought_duration() {
-        use ratatui::{buffer::Buffer, layout::Rect};
-        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
-        use crate::theme::ThemeWrapper;
-
-        let area = Rect::new(0, 0, 80, 24);
-        let mut buf = Buffer::empty(area);
-        let theme = ThemeWrapper::default_for_test();
-        let mut wrap_cache = WrapCache::new();
-
-        let item = FeedItem::AssistantMessage {
-            id: "test".to_string(),
-            text: "Response".to_string(),
-            thoughts: vec![Thought { duration: 1.5 }],
-            tool_calls: Vec::new(),
-            timestamp: None,
-            turn_duration: None,
-        };
-        let _rendered = render_single_msg_feed(
-            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
-            &theme,
-            ratatui::style::Color::White,
-            ratatui::style::Color::Gray,
-            ratatui::style::Color::DarkGray,
-            ratatui::style::Color::Black,
-            ratatui::style::Color::Green,
-            ratatui::style::Color::Red,
-            ratatui::style::Color::Blue,
-            '⠋', // spinner
-            false, // cursor_visible
-            false, // show_spinner
-            '⠏', // rewind_spinner
-            &AnimationState::default(),
-            &mut wrap_cache,
-            false, // agent_running
-            None, // thought_duration - should be overridden by inline thoughts
-            None, // turn_complete
-        );
-
-        // Should render thought duration indicator
-        let row_text: String = (0..area.width)
-            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
-            .collect::<String>();
-        assert!(row_text.contains("Thought"), "Expected 'Thought' indicator in row, got: '{}'", row_text.trim());
+        let item = make_assistant_feed_item("Response", vec![Thought { duration: 1.5 }]);
+        let (row_text, _, _) = render_feed_item(&item);
+        assert!(row_text.contains("Thought"), "Expected 'Thought' indicator in row");
     }
 }

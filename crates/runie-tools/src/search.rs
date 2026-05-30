@@ -12,59 +12,9 @@ impl SearchTool {
     pub fn new(workspace: Workspace) -> Self {
         Self { workspace }
     }
-}
-
-#[async_trait]
-impl Tool for SearchTool {
-    fn name(&self) -> &str {
-        "search"
-    }
-
-    fn description(&self) -> &str {
-        "Search for files by name or content pattern in the workspace."
-    }
-
-    fn schema(&self) -> ToolSchema {
-        ToolSchema {
-            name: self.name().to_string(),
-            description: self.description().to_string(),
-            parameters: json!({
-                "type": "object",
-                "properties": {
-                    "pattern": {
-                        "type": "string",
-                        "description": "Search pattern (glob for files, substring for content)"
-                    },
-                    "type": {
-                        "type": "string",
-                        "enum": ["filename", "content"],
-                        "description": "Search type"
-                    }
-                },
-                "required": ["pattern", "type"]
-            }),
-        }
-    }
-
-    async fn execute(&self, args: serde_json::Value) -> Result<ToolOutput, ToolError> {
-        let pattern = args["pattern"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'pattern' argument".to_string()))?;
-        let search_type = args["type"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'type' argument".to_string()))?;
-
-        let results = self.search(pattern, search_type).await?;
-        results.truncate(50);
-
-        Ok(ToolOutput {
-            content: results.join("\n"),
-            metadata: json!({"count": results.len(), "pattern": pattern}),
-            terminate: false,
-        })
-    }
 
     async fn search(&self, pattern: &str, search_type: &str) -> Result<Vec<String>, ToolError> {
         let mut results = Vec::new();
-
         for entry in WalkDir::new(&self.workspace.root)
             .follow_links(false)
             .into_iter()
@@ -74,7 +24,6 @@ impl Tool for SearchTool {
             if !self.workspace.contains(path) {
                 continue;
             }
-
             match search_type {
                 "filename" => {
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
@@ -91,7 +40,6 @@ impl Tool for SearchTool {
                 _ => return Err(ToolError::InvalidArguments(format!("Invalid search type: {}", search_type))),
             }
         }
-
         Ok(results)
     }
 
@@ -108,5 +56,39 @@ impl Tool for SearchTool {
         } else {
             None
         }
+    }
+}
+
+#[async_trait]
+impl Tool for SearchTool {
+    fn name(&self) -> &str { "search" }
+    fn description(&self) -> &str { "Search for files by name or content pattern in the workspace." }
+    fn schema(&self) -> ToolSchema {
+        ToolSchema {
+            name: self.name().to_string(),
+            description: self.description().to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "pattern": { "type": "string", "description": "Search pattern" },
+                    "type": { "type": "string", "enum": ["filename", "content"], "description": "Search type" }
+                },
+                "required": ["pattern", "type"]
+            }),
+        }
+    }
+
+    async fn execute(&self, args: serde_json::Value) -> Result<ToolOutput, ToolError> {
+        let pattern = args["pattern"].as_str()
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'pattern' argument".to_string()))?;
+        let search_type = args["type"].as_str()
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'type' argument".to_string()))?;
+        let mut results = self.search(pattern, search_type).await?;
+        results.truncate(50);
+        Ok(ToolOutput {
+            content: results.join("\n"),
+            metadata: json!({"count": results.len(), "pattern": pattern}),
+            terminate: false,
+        })
     }
 }

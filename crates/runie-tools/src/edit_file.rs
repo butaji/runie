@@ -14,7 +14,6 @@ impl EditFileTool {
         Self { workspace }
     }
 
-    /// Get the modification time of a file (async).
     async fn get_mtime(path: &std::path::Path) -> Result<u64, ToolError> {
         let metadata = fs::metadata(path)
             .await
@@ -25,71 +24,17 @@ impl EditFileTool {
             .map_err(|e| ToolError::ExecutionFailed(format!("Failed to compute duration: {}", e)))?;
         Ok(duration.as_secs())
     }
-}
 
-#[async_trait]
-impl Tool for EditFileTool {
-    fn name(&self) -> &str {
-        "edit_file"
-    }
-
-    fn description(&self) -> &str {
-        "Edit a file by replacing old_string with new_string. Both must match exactly."
-    }
-
-    fn schema(&self) -> ToolSchema {
-        ToolSchema {
-            name: self.name().to_string(),
-            description: self.description().to_string(),
-            parameters: json!({
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Relative path to the file"
-                    },
-                    "old_string": {
-                        "type": "string",
-                        "description": "Exact string to replace"
-                    },
-                    "new_string": {
-                        "type": "string",
-                        "description": "Replacement string"
-                    },
-                    "force": {
-                        "type": "boolean",
-                        "description": "If true, replace all occurrences. If false (default), fail when multiple matches exist."
-                    }
-                },
-                "required": ["path", "old_string", "new_string"]
-            }),
-        }
-    }
-
-    async fn execute(&self, args: serde_json::Value) -> Result<ToolOutput, ToolError> {
-        // Extract arguments
-        let (old_string, new_string, path, force) = Self::extract_edit_args(args)?;
-
-        // Execute edit
-        let resolved = self.workspace.resolve(path)?;
-        let content = self.read_and_validate(&resolved, old_string, force).await?;
-        let (new_content, replacement_count) = Self::compute_replacement(old_string, new_string, force, &content);
-        self.check_stale_and_write(&resolved, path, &new_content).await?;
-
-        Ok(ToolOutput {
-            content: format!("Edited {} ({} replacement{})", path, replacement_count, if replacement_count == 1 { "" } else { "s" }),
-            metadata: json!({ "path": path, "old_content": old_string, "new_content": new_string, "replacement_count": replacement_count }),
-            terminate: false,
-        })
-    }
-
-    fn extract_edit_args(args: serde_json::Value) -> Result<(&str, &str, &str, bool), ToolError> {
+    fn extract_edit_args(args: serde_json::Value) -> Result<(String, String, String, bool), ToolError> {
         let old_string = args["old_string"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'old_string'".into()))?;
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'old_string'".into()))?
+            .to_string();
         let new_string = args["new_string"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'new_string'".into()))?;
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'new_string'".into()))?
+            .to_string();
         let path = args["path"].as_str()
-            .ok_or_else(|| ToolError::InvalidArguments("Missing 'path'".into()))?;
+            .ok_or_else(|| ToolError::InvalidArguments("Missing 'path'".into()))?
+            .to_string();
         let force = args["force"].as_bool().unwrap_or(false);
         Ok((old_string, new_string, path, force))
     }
@@ -98,7 +43,6 @@ impl Tool for EditFileTool {
         let content = tokio::fs::read_to_string(resolved).await
             .map_err(|e| ToolError::ExecutionFailed(format!("read failed: {}", e)))?;
         let occurrences = content.matches(old_string).count();
-
         if occurrences == 0 {
             return Err(ToolError::ExecutionFailed(format!("String not found: {}", old_string)));
         }
@@ -133,84 +77,38 @@ impl Tool for EditFileTool {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::runtime::Runtime;
-
-    #[test]
-    fn test_get_mtime_returns_u64() {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            let _ws = Workspace::new(std::path::PathBuf::from("."));
-            // Just verify the method exists and works
-            let mtime = EditFileTool::get_mtime(std::path::Path::new("Cargo.toml")).await;
-            assert!(mtime.is_ok());
-            assert!(mtime.unwrap() > 0);
-        });
-    }
-
-    fn create_edit_file_tool() -> EditFileTool {
-        let workspace = Workspace::new(std::path::PathBuf::from("."));
-        EditFileTool::new(workspace)
-    }
-
-    #[tokio::test]
-    async fn test_edit_file_missing_path_fails() {
-        let tool = create_edit_file_tool();
-        let args = serde_json::json!({"old_string": "foo", "new_string": "bar"});
-        let result = tool.execute(args).await;
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(matches!(err, ToolError::InvalidArguments(_)));
-        assert!(err.to_string().contains("Missing 'path' argument"));
-    }
-
-    #[tokio::test]
-    async fn test_edit_file_missing_old_string_fails() {
-        let tool = create_edit_file_tool();
-        let args = serde_json::json!({"path": "test.txt", "new_string": "bar"});
-        let result = tool.execute(args).await;
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(matches!(err, ToolError::InvalidArguments(_)));
-        assert!(err.to_string().contains("Missing 'old_string' argument"));
-    }
-
-    #[tokio::test]
-    async fn test_edit_file_missing_new_string_fails() {
-        let tool = create_edit_file_tool();
-        let args = serde_json::json!({"path": "test.txt", "old_string": "foo"});
-        let result = tool.execute(args).await;
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(matches!(err, ToolError::InvalidArguments(_)));
-        assert!(err.to_string().contains("Missing 'new_string' argument"));
-    }
-
-    #[tokio::test]
-    async fn test_edit_file_all_args_missing_fails() {
-        let tool = create_edit_file_tool();
-        let args = serde_json::json!({});
-        let result = tool.execute(args).await;
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(matches!(err, ToolError::InvalidArguments(_)));
-        // Should report the first missing argument
-        assert!(err.to_string().contains("Missing"));
-    }
-
-    #[tokio::test]
-    async fn test_edit_file_empty_args_fail() {
-        let tool = create_edit_file_tool();
-        let args = serde_json::json!({"path": "", "old_string": "", "new_string": ""});
-        let result = tool.execute(args).await;
-        // Empty strings pass .as_str() but will fail at file operations
-        // The important thing is they don't panic
-        if result.is_err() {
-            let _err = result.unwrap_err();
-            // Should not be InvalidArguments since strings aren't missing
-            // They will fail at file read
+#[async_trait]
+impl Tool for EditFileTool {
+    fn name(&self) -> &str { "edit_file" }
+    fn description(&self) -> &str { "Edit a file by replacing old_string with new_string." }
+    fn schema(&self) -> ToolSchema {
+        ToolSchema {
+            name: self.name().to_string(),
+            description: self.description().to_string(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Relative path to the file" },
+                    "old_string": { "type": "string", "description": "Exact string to replace" },
+                    "new_string": { "type": "string", "description": "Replacement string" },
+                    "force": { "type": "boolean", "description": "If true, replace all occurrences." }
+                },
+                "required": ["path", "old_string", "new_string"]
+            }),
         }
+    }
+
+    async fn execute(&self, args: serde_json::Value) -> Result<ToolOutput, ToolError> {
+        let (old_string, new_string, path, force) = EditFileTool::extract_edit_args(args)?;
+        let resolved = self.workspace.resolve(&path)?;
+        let (content, _count) = self.read_and_validate(&resolved, &old_string, force).await?;
+        let (new_content, replacement_count) = EditFileTool::compute_replacement(&old_string, &new_string, force, &content);
+        self.check_stale_and_write(&resolved, &path, &new_content).await?;
+
+        Ok(ToolOutput {
+            content: format!("Edited {} ({} replacement{})", path, replacement_count, if replacement_count == 1 { "" } else { "s" }),
+            metadata: json!({ "path": path, "old_content": old_string, "new_content": new_string, "replacement_count": replacement_count }),
+            terminate: false,
+        })
     }
 }

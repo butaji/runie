@@ -164,17 +164,17 @@ fn test_multiple_errors() {
 
 #[test]
 fn test_error_after_tool() {
-    let mut harness = AgentTestHarness::new();
-    harness = harness.user_says("Run tool then fail");
+    let harness = AgentTestHarness::new();
+    let harness = harness.user_says("Run tool then fail");
 
-    harness = harness.handle_event(AgentEvent::ToolExecutionStart {
+    let harness = harness.handle_event(AgentEvent::ToolExecutionStart {
         tool_call_id: "t1".to_string(),
         tool_name: "bash".to_string(),
         tool_args: "ls".to_string(),
         turn: 1,
     });
 
-    harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
+    let harness = harness.handle_event(AgentEvent::ToolExecutionEnd {
         tool_call_id: "t1".to_string(),
         tool_name: "bash".to_string(),
         tool_args: "ls".to_string(),
@@ -182,35 +182,22 @@ fn test_error_after_tool() {
             tool_call_id: "t1".to_string(),
             tool_name: "bash".to_string(),
             input: serde_json::json!({}),
-            content: vec![ContentPart::Text {
-                text: "files".to_string(),
-            }],
+            content: vec![ContentPart::Text { text: "files".to_string() }],
             is_error: false,
         },
         duration_ms: 100,
         turn: 1,
     });
 
-    harness = harness.handle_event(AgentEvent::Error {
+    let harness = harness.handle_event(AgentEvent::Error {
         message: "failed after tool".to_string(),
         error_type: "test".to_string(),
         recoverable: false,
         context: "".to_string(),
     });
 
-    // Tool should still be in messages
-    assert!(harness
-        .state
-        .messages
-        .iter()
-        .any(|m| matches!(m, MessageItem::ToolCall { .. })));
-
-    // Error should also be present
-    assert!(harness
-        .state
-        .messages
-        .iter()
-        .any(|m| matches!(m, MessageItem::Error { .. })));
+    assert!(harness.state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { .. })), "tool should still be in messages");
+    assert!(harness.state.messages.iter().any(|m| matches!(m, MessageItem::Error { .. })), "error should also be present");
 }
 
 #[test]
@@ -289,6 +276,44 @@ fn test_system_message_filtering() {
 
     // Only "User authenticated" should pass through (doesn't start with "Using " or "Mock mode")
     assert_eq!(system_messages.len(), 1);
+}
+
+#[test]
+fn test_system_message_filtering_openai_case() {
+    // User reported: "Using openai (gpt-4o) -- dont show it in the feed"
+    let harness = AgentTestHarness::new()
+        .user_says("Hello")
+        .handle_event(AgentEvent::Message {
+            role: "system".to_string(),
+            content: "Using openai (gpt-4o)".to_string(),
+        })
+        .handle_event(AgentEvent::Message {
+            role: "system".to_string(),
+            content: "Using anthropic (claude-3-5-sonnet)".to_string(),
+        })
+        .handle_event(AgentEvent::Message {
+            role: "system".to_string(),
+            content: "Mock mode — no API calls. Model: test".to_string(),
+        })
+        .handle_event(AgentEvent::Message {
+            role: "system".to_string(),
+            content: "Mock mode enabled".to_string(),
+        })
+        .handle_event(AgentEvent::Message {
+            role: "system".to_string(),
+            content: "System initialized successfully".to_string(),
+        });
+
+    let system_messages: Vec<_> = harness
+        .state
+        .messages
+        .iter()
+        .filter(|m| matches!(m, MessageItem::System { .. }))
+        .collect();
+
+    // Only "System initialized successfully" should pass through
+    assert_eq!(system_messages.len(), 1);
+    assert!(matches!(system_messages[0], MessageItem::System { text } if text == "System initialized successfully"));
 }
 
 #[test]

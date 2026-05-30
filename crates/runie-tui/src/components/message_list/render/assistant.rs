@@ -1,4 +1,4 @@
-use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::Line, widgets::Widget};
+use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::{Line, Span}, widgets::Widget};
 
 use crate::components::message_list::WrapCache;
 use super::markdown::render_text_content;

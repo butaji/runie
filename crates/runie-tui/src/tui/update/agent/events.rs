@@ -158,7 +158,12 @@ pub fn on_message(state: &mut AppState, role: &str, content: &str) {
             model: state.current_model.clone(),
             timestamp: None,
         }),
-        "system" => state.messages.push(MessageItem::System { text: content.to_string() }),
+        "system" => {
+            // Filter out system messages that are just metadata notifications
+            if !content.starts_with("Using ") && !content.starts_with("Mock mode") {
+                state.messages.push(MessageItem::System { text: content.to_string() });
+            }
+        }
         _ => state.messages.push(MessageItem::System { text: content.to_string() }),
     }
 }
@@ -168,6 +173,37 @@ pub fn on_message_update(state: &mut AppState, message: runie_agent::events::Age
     if !state.scroll.user_scrolled_up {
         state.scroll.feed_offset = 0;
     }
+
+    // Check if this is a thinking message (text starts with "[thinking:")
+    // and there's no existing assistant to update
+    let is_thinking = message.content.iter().any(|part| {
+        if let runie_agent::events::ContentPart::Text { text } = part {
+            text.trim_start().starts_with("[thinking:")
+        } else {
+            false
+        }
+    });
+
+    // If this is a thinking message and there's no assistant message yet,
+    // create a placeholder so the thinking content is preserved.
+    // Only do this if there's no assistant at all, or if the last assistant
+    // already has non-thinking content (in which case we shouldn't overwrite it).
+    let should_create_placeholder = is_thinking && {
+        let has_no_assistant = !state.messages.iter().any(|m| matches!(m, MessageItem::Assistant { .. }));
+        let last_has_thinking = state.messages.last()
+            .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.trim_start().starts_with("[thinking:")))
+            .unwrap_or(false);
+        has_no_assistant || last_has_thinking
+    };
+
+    if should_create_placeholder {
+        state.messages.push(MessageItem::Assistant {
+            text: String::new(),
+            model: state.current_model.clone(),
+            timestamp: None,
+        });
+    }
+
     update_last_assistant(state, &message.content);
 }
 
@@ -177,6 +213,17 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
         state.thinking_duration = Some(start.elapsed());
         state.is_thinking = false;
     }
+
+    // Auto-scroll to bottom if user hasn't scrolled up
+    if !state.scroll.user_scrolled_up {
+        state.scroll.feed_offset = 0;
+    }
+
+    // IMPORTANT: Update the assistant's text BEFORE adding the Thought indicator.
+    // If we add Thought first, it becomes the last item, and update_last_assistant
+    // won't find the Assistant to update (it only updates the last Assistant).
+    update_last_assistant(state, &message.content);
+
     // Add thinking indicator if thinking took more than 0.5s
     if let Some(duration) = state.thinking_duration {
         let secs = duration.as_secs_f32();
@@ -184,11 +231,6 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
             state.messages.push(MessageItem::Thought { duration_secs: secs });
         }
     }
-    // Auto-scroll to bottom if user hasn't scrolled up
-    if !state.scroll.user_scrolled_up {
-        state.scroll.feed_offset = 0;
-    }
-    update_last_assistant(state, &message.content);
 }
 
 /// Handle turn end - add separator with runtime metrics

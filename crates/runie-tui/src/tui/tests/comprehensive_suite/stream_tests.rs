@@ -6,6 +6,49 @@ use runie_agent::{AgentEvent, ContentPart, ToolResult, TokenUsage};
 use super::harness::AgentTestHarness;
 use super::state_tests::{make_message, token_usage};
 
+fn make_tool_start_event(call_id: &str, name: &str, args: &str) -> AgentEvent {
+    AgentEvent::ToolExecutionStart {
+        tool_call_id: call_id.to_string(),
+        tool_name: name.to_string(),
+        tool_args: args.to_string(),
+        turn: 1,
+    }
+}
+
+fn make_tool_end_event(call_id: &str, name: &str, args: &str, result_text: &str) -> AgentEvent {
+    AgentEvent::ToolExecutionEnd {
+        tool_call_id: call_id.to_string(),
+        tool_name: name.to_string(),
+        tool_args: args.to_string(),
+        result: ToolResult {
+            tool_call_id: call_id.to_string(),
+            tool_name: name.to_string(),
+            input: serde_json::json!({}),
+            content: vec![ContentPart::Text {
+                text: result_text.to_string(),
+            }],
+            is_error: false,
+        },
+        duration_ms: 100,
+        turn: 1,
+    }
+}
+
+fn make_turn_end(turn: usize) -> AgentEvent {
+    AgentEvent::TurnEnd {
+        turn,
+        message_count: 2,
+        tool_results_count: 0,
+        token_usage: TokenUsage {
+            input: 50,
+            output: 25,
+            cache_read: 0,
+            cache_write: 0,
+            total_tokens: 75,
+        },
+    }
+}
+
 #[test]
 fn test_stream_event_sequence() {
     let events = vec![
@@ -18,44 +61,13 @@ fn test_stream_event_sequence() {
             turn: 1,
             delta: "Hello".to_string(),
         },
-        AgentEvent::ToolExecutionStart {
-            tool_call_id: "t1".to_string(),
-            tool_name: "bash".to_string(),
-            tool_args: "ls".to_string(),
-            turn: 1,
-        },
-        AgentEvent::ToolExecutionEnd {
-            tool_call_id: "t1".to_string(),
-            tool_name: "bash".to_string(),
-            tool_args: "ls".to_string(),
-            result: ToolResult {
-                tool_call_id: "t1".to_string(),
-                tool_name: "bash".to_string(),
-                input: serde_json::json!({}),
-                content: vec![ContentPart::Text {
-                    text: "file1.txt".to_string(),
-                }],
-                is_error: false,
-            },
-            duration_ms: 100,
-            turn: 1,
-        },
+        make_tool_start_event("t1", "bash", "ls"),
+        make_tool_end_event("t1", "bash", "ls", "file1.txt"),
         AgentEvent::MessageEnd {
             message: make_message("assistant", "Hello"),
             turn: 1,
         },
-        AgentEvent::TurnEnd {
-            turn: 1,
-            message_count: 3,
-            tool_results_count: 1,
-            token_usage: TokenUsage {
-                input: 100,
-                output: 50,
-                cache_read: 0,
-                cache_write: 0,
-                total_tokens: 150,
-            },
-        },
+        make_turn_end(1),
     ];
 
     let harness = AgentTestHarness::new()
@@ -84,113 +96,60 @@ fn test_stream_text_updates() {
 }
 
 #[test]
-fn test_stream_preserves_message_order() {
-    let mut harness = AgentTestHarness::new();
-    harness = harness.user_says("First");
+fn test_first_turn_completes() {
+    let harness = AgentTestHarness::new().user_says("First");
+    let harness = complete_turn(harness, 1, "Response to first");
 
-    harness = harness.handle_event(AgentEvent::MessageStart {
-        message: make_message("assistant", ""),
-        turn: 1,
-    });
-    harness = harness.handle_event(AgentEvent::MessageUpdate {
-        message: make_message("assistant", "Response to first"),
-        turn: 1,
-        delta: "Response to first".to_string(),
-    });
-    harness = harness.handle_event(AgentEvent::MessageEnd {
-        message: make_message("assistant", "Response to first"),
-        turn: 1,
-    });
-    harness = harness.handle_event(AgentEvent::TurnEnd {
-        turn: 1,
-        message_count: 2,
-        tool_results_count: 0,
-        token_usage: TokenUsage {
-            input: 50,
-            output: 25,
-            cache_read: 0,
-            cache_write: 0,
-            total_tokens: 75,
-        },
-    });
-
-    harness = harness.user_says("Second");
-
-    harness = harness.handle_event(AgentEvent::MessageStart {
-        message: make_message("assistant", ""),
-        turn: 2,
-    });
-    harness = harness.handle_event(AgentEvent::MessageUpdate {
-        message: make_message("assistant", "Response to second"),
-        turn: 2,
-        delta: "Response to second".to_string(),
-    });
-
-    let user_messages: Vec<_> = harness
-        .state
-        .messages
-        .iter()
+    let user_messages: Vec<_> = harness.state.messages.iter()
         .filter(|m| matches!(m, MessageItem::User { .. }))
         .collect();
+    assert_eq!(user_messages.len(), 1);
+}
 
+#[test]
+fn test_stream_preserves_message_order() {
+    let harness = AgentTestHarness::new().user_says("First");
+    let harness = complete_turn(harness, 1, "Response to first");
+    let harness = harness.user_says("Second");
+    let harness = harness.handle_event(AgentEvent::MessageStart { message: make_message("assistant", ""), turn: 2 });
+    let harness = harness.handle_event(AgentEvent::MessageUpdate { message: make_message("assistant", "Response to second"), turn: 2, delta: "Response to second".to_string() });
+
+    let user_messages: Vec<_> = harness.state.messages.iter()
+        .filter(|m| matches!(m, MessageItem::User { .. }))
+        .collect();
     assert_eq!(user_messages.len(), 2);
+}
+
+/// Helper: complete a single turn with message start, update, end, and turn end
+fn complete_turn(harness: AgentTestHarness, turn: usize, response: &str) -> AgentTestHarness {
+    harness
+        .handle_event(AgentEvent::MessageStart {
+            message: make_message("assistant", ""),
+            turn,
+        })
+        .handle_event(AgentEvent::MessageUpdate {
+            message: make_message("assistant", response),
+            turn,
+            delta: response.to_string(),
+        })
+        .handle_event(AgentEvent::MessageEnd {
+            message: make_message("assistant", response),
+            turn,
+        })
+        .handle_event(make_turn_end(turn))
+}
+
+/// Helper: set up a two-turn conversation and return harness
+fn setup_two_turn_conversation() -> AgentTestHarness {
+    let h1 = AgentTestHarness::new().user_says("Turn 1");
+    let h2 = complete_turn(h1, 1, "Response 1");
+    let h3 = h2.user_says("Turn 2");
+    complete_turn(h3, 2, "Response 2")
 }
 
 #[test]
 fn test_stream_turn_separators() {
-    let harness = AgentTestHarness::new()
-        .user_says("Turn 1")
-        .handle_event(AgentEvent::MessageStart {
-            message: make_message("assistant", ""),
-            turn: 1,
-        })
-        .handle_event(AgentEvent::MessageUpdate {
-            message: make_message("assistant", "Response 1"),
-            turn: 1,
-            delta: "Response 1".to_string(),
-        })
-        .handle_event(AgentEvent::MessageEnd {
-            message: make_message("assistant", "Response 1"),
-            turn: 1,
-        })
-        .handle_event(AgentEvent::TurnEnd {
-            turn: 1,
-            message_count: 2,
-            tool_results_count: 0,
-            token_usage: TokenUsage {
-                input: 50,
-                output: 25,
-                cache_read: 0,
-                cache_write: 0,
-                total_tokens: 75,
-            },
-        })
-        .user_says("Turn 2")
-        .handle_event(AgentEvent::MessageStart {
-            message: make_message("assistant", ""),
-            turn: 2,
-        })
-        .handle_event(AgentEvent::MessageUpdate {
-            message: make_message("assistant", "Response 2"),
-            turn: 2,
-            delta: "Response 2".to_string(),
-        })
-        .handle_event(AgentEvent::MessageEnd {
-            message: make_message("assistant", "Response 2"),
-            turn: 2,
-        })
-        .handle_event(AgentEvent::TurnEnd {
-            turn: 2,
-            message_count: 2,
-            tool_results_count: 0,
-            token_usage: TokenUsage {
-                input: 50,
-                output: 25,
-                cache_read: 0,
-                cache_write: 0,
-                total_tokens: 75,
-            },
-        });
+    let harness = setup_two_turn_conversation();
 
     let separators: Vec<_> = harness
         .state
@@ -234,59 +193,7 @@ fn test_token_usage_large_numbers() {
 
 #[test]
 fn test_turn_count() {
-    let harness = AgentTestHarness::new()
-        .user_says("Turn 1")
-        .handle_event(AgentEvent::MessageStart {
-            message: make_message("assistant", ""),
-            turn: 1,
-        })
-        .handle_event(AgentEvent::MessageUpdate {
-            message: make_message("assistant", "Response X"),
-            turn: 1,
-            delta: "Response X".to_string(),
-        })
-        .handle_event(AgentEvent::MessageEnd {
-            message: make_message("assistant", "Response X"),
-            turn: 1,
-        })
-        .handle_event(AgentEvent::TurnEnd {
-            turn: 1,
-            message_count: 2,
-            tool_results_count: 0,
-            token_usage: TokenUsage {
-                input: 50,
-                output: 25,
-                cache_read: 0,
-                cache_write: 0,
-                total_tokens: 75,
-            },
-        })
-        .user_says("Turn 2")
-        .handle_event(AgentEvent::MessageStart {
-            message: make_message("assistant", ""),
-            turn: 2,
-        })
-        .handle_event(AgentEvent::MessageUpdate {
-            message: make_message("assistant", "Response X"),
-            turn: 2,
-            delta: "Response X".to_string(),
-        })
-        .handle_event(AgentEvent::MessageEnd {
-            message: make_message("assistant", "Response X"),
-            turn: 2,
-        })
-        .handle_event(AgentEvent::TurnEnd {
-            turn: 2,
-            message_count: 2,
-            tool_results_count: 0,
-            token_usage: TokenUsage {
-                input: 50,
-                output: 25,
-                cache_read: 0,
-                cache_write: 0,
-                total_tokens: 75,
-            },
-        });
+    let harness = setup_two_turn_conversation();
 
     let separators: Vec<_> = harness
         .state

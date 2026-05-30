@@ -101,16 +101,13 @@ impl Feed {
         self.items.last_mut().unwrap()
     }
 
-    /// Append text to the last message (user or assistant).
+    /// Append text to the last assistant message.
     /// For streaming content updates.
+    /// Note: Only appends to AssistantMessage, not UserMessage (user messages are immutable).
     pub fn append_to_last(&mut self, text: &str) {
         if let Some(last) = self.items.last_mut() {
-            match last {
-                FeedItem::UserMessage { text: ref mut t, .. }
-                | FeedItem::AssistantMessage { text: ref mut t, .. } => {
-                    t.push_str(text);
-                }
-                FeedItem::SystemNotice { .. } => {}
+            if let FeedItem::AssistantMessage { text: ref mut t, .. } = last {
+                t.push_str(text);
             }
         }
     }
@@ -230,39 +227,26 @@ impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
     type Error = ();
 
     fn try_from(item: crate::components::message_list::MessageItem) -> Result<Self, Self::Error> {
+        use crate::components::message_list::MessageItem::*;
         match item {
-            crate::components::message_list::MessageItem::User { text, timestamp, .. } => {
-                Ok(FeedItem::UserMessage {
-                    id: Uuid::new_v4().to_string(),
-                    text,
-                    timestamp,
-                })
-            }
-            crate::components::message_list::MessageItem::Assistant { text, timestamp, .. } => {
-                Ok(FeedItem::AssistantMessage {
-                    id: Uuid::new_v4().to_string(),
-                    text,
-                    thoughts: Vec::new(),
-                    tool_calls: Vec::new(),
-                    timestamp,
-                    turn_duration: None,
-                })
-            }
-            crate::components::message_list::MessageItem::System { text } => {
-                Ok(FeedItem::SystemNotice { text })
-            }
-            // Filter out items that are now inline in AssistantMessage
-            crate::components::message_list::MessageItem::Thought { .. } => Err(()),
-            crate::components::message_list::MessageItem::ToolCall { .. } => Err(()),
-            // Filter out separators and other UI-only items
-            crate::components::message_list::MessageItem::Separator { .. } => Err(()),
-            crate::components::message_list::MessageItem::Edit { .. } => Err(()),
-            crate::components::message_list::MessageItem::Error { .. } => Err(()),
-            crate::components::message_list::MessageItem::ToolRunning { .. } => Err(()),
-            crate::components::message_list::MessageItem::ToolComplete { .. } => Err(()),
-            crate::components::message_list::MessageItem::PlanStep { .. } => Err(()),
-            crate::components::message_list::MessageItem::Interrupt => Err(()),
-            crate::components::message_list::MessageItem::Rewind { .. } => Err(()),
+            User { text, timestamp, .. } => Ok(FeedItem::UserMessage {
+                id: Uuid::new_v4().to_string(),
+                text,
+                timestamp,
+            }),
+            Assistant { text, timestamp, .. } => Ok(FeedItem::AssistantMessage {
+                id: Uuid::new_v4().to_string(),
+                text,
+                thoughts: Vec::new(),
+                tool_calls: Vec::new(),
+                timestamp,
+                turn_duration: None,
+            }),
+            System { text } => Ok(FeedItem::SystemNotice { text }),
+            // Filter out items now inline in AssistantMessage or UI-only
+            Thought { .. } | ToolCall { .. } | Separator { .. } | Edit { .. }
+            | Error { .. } | ToolRunning { .. } | ToolComplete { .. }
+            | PlanStep { .. } | Interrupt | Rewind { .. } => Err(()),
         }
     }
 }

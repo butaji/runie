@@ -14,10 +14,10 @@ pub fn render_user_msg(
     _max_rows: u16,
     buf: &mut Buffer,
     theme: &ThemeWrapper,
-    accent_primary: ratatui::style::Color,
     wrap_cache: &mut WrapCache,
 ) -> u16 {
-    let bg_color = theme.color("border.unfocused").into();
+    let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
+    let chevron_color: ratatui::style::Color = bg_color; // Match input box border
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     let text_width = (area.width - margin_x + area.x - 2) as usize;
 
@@ -52,10 +52,10 @@ pub fn render_user_msg(
             }
         }
 
-        // Chevron
+        // Chevron - uses same color as input box border (border.unfocused)
         if let Some(cell) = buf.cell_mut((margin_x, first_line_y)) {
             cell.set_char('\u{203A}');
-            cell.set_style(Style::default().fg(accent_primary).bg(bg_color));
+            cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
         }
 
         // First line of wrapped text starts after chevron + space

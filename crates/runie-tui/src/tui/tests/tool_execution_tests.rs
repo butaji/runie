@@ -34,37 +34,25 @@ fn make_test_state() -> AppState {
     state
 }
 
-/// Test: Bash tool execution
-#[test]
-fn test_bash_tool_execution() {
+/// Helper: execute a bash tool and return the state
+fn execute_bash_tool(args: &str) -> AppState {
     let mut state = make_test_state();
-
-    // Tool starts
     handle_agent_event(
         &mut state,
         AgentEvent::ToolExecutionStart {
             tool_call_id: "call-1".to_string(),
             tool_name: "bash".to_string(),
-            tool_args: r#"{"command": "echo hello"}"#.to_string(),
+            tool_args: args.to_string(),
             turn: 1,
         },
     );
+    state
+}
 
-    let tool = state.messages.iter().rev().find_map(|m| match m {
-        MessageItem::ToolCall {
-            name,
-            args,
-            result: _,
-            is_error: _,
-        } if name == "bash" => Some(args.clone()),
-        _ => None,
-    });
-    assert!(tool.is_some());
-    assert_eq!(tool.unwrap(), r#"{"command": "echo hello"}"#);
-
-    // Tool ends
+/// Helper: complete a bash tool execution
+fn complete_bash_tool(state: &mut AppState, result_text: &str) {
     handle_agent_event(
-        &mut state,
+        state,
         AgentEvent::ToolExecutionEnd {
             tool_call_id: "call-1".to_string(),
             tool_name: "bash".to_string(),
@@ -74,7 +62,7 @@ fn test_bash_tool_execution() {
                 tool_name: "bash".to_string(),
                 input: serde_json::json!({}),
                 content: vec![ContentPart::Text {
-                    text: "hello\n".to_string(),
+                    text: result_text.to_string(),
                 }],
                 is_error: false,
             },
@@ -82,21 +70,32 @@ fn test_bash_tool_execution() {
             turn: 1,
         },
     );
+}
 
-    let tool_result_text = state.messages.iter().rev().find_map(|m| match m {
-        MessageItem::ToolCall {
-            name,
-            result,
-            is_error: _,
-            ..
-        } if name == "bash" => result.clone(),
+/// Test: Bash tool start adds tool call
+#[test]
+fn test_bash_tool_start() {
+    let mut state = execute_bash_tool(r#"{"command": "echo hello"}"#);
+
+    let tool = state.messages.iter().rev().find_map(|m| match m {
+        MessageItem::ToolCall { name, args, .. } if name == "bash" => Some(args.clone()),
         _ => None,
     });
-    assert_eq!(
-        tool_result_text,
-        Some("hello\n".to_string()),
-        "tool result should be hello\\n"
-    );
+    assert!(tool.is_some());
+    assert_eq!(tool.unwrap(), r#"{"command": "echo hello"}"#);
+}
+
+/// Test: Bash tool end updates result
+#[test]
+fn test_bash_tool_end() {
+    let mut state = execute_bash_tool(r#"{"command": "echo hello"}"#);
+    complete_bash_tool(&mut state, "hello\n");
+
+    let tool_result_text = state.messages.iter().rev().find_map(|m| match m {
+        MessageItem::ToolCall { name, result, .. } if name == "bash" => result.clone(),
+        _ => None,
+    });
+    assert_eq!(tool_result_text, Some("hello\n".to_string()), "tool result should be hello\\n");
 }
 
 /// Test: Tool error handling
@@ -104,42 +103,30 @@ fn test_bash_tool_execution() {
 fn test_tool_error() {
     let mut state = make_test_state();
 
-    handle_agent_event(
-        &mut state,
-        AgentEvent::ToolExecutionStart {
-            tool_call_id: "call-1".to_string(),
-            tool_name: "bash".to_string(),
-            tool_args: r#"{"command": "bad_command"}"#.to_string(),
-            turn: 1,
-        },
-    );
+    handle_agent_event(&mut state, AgentEvent::ToolExecutionStart {
+        tool_call_id: "call-1".to_string(),
+        tool_name: "bash".to_string(),
+        tool_args: r#"{"command": "bad_command"}"#.to_string(),
+        turn: 1,
+    });
 
-    handle_agent_event(
-        &mut state,
-        AgentEvent::ToolExecutionEnd {
+    handle_agent_event(&mut state, AgentEvent::ToolExecutionEnd {
+        tool_call_id: "call-1".to_string(),
+        tool_name: "bash".to_string(),
+        tool_args: r#"{"command": "bad_command"}"#.to_string(),
+        result: ToolResult {
             tool_call_id: "call-1".to_string(),
             tool_name: "bash".to_string(),
-            tool_args: r#"{"command": "bad_command"}"#.to_string(),
-            result: ToolResult {
-                tool_call_id: "call-1".to_string(),
-                tool_name: "bash".to_string(),
-                input: serde_json::json!({}),
-                content: vec![ContentPart::Text {
-                    text: "command not found".to_string(),
-                }],
-                is_error: true,
-            },
-            duration_ms: 50,
-            turn: 1,
+            input: serde_json::json!({}),
+            content: vec![ContentPart::Text { text: "command not found".to_string() }],
+            is_error: true,
         },
-    );
+        duration_ms: 50,
+        turn: 1,
+    });
 
     let is_error = state.messages.iter().rev().find_map(|m| match m {
-        MessageItem::ToolCall {
-            name,
-            is_error,
-            ..
-        } if name == "bash" => Some(*is_error),
+        MessageItem::ToolCall { name, is_error, .. } if name == "bash" => Some(*is_error),
         _ => None,
     });
     assert_eq!(is_error.as_ref(), Some(&true), "tool should be marked as error");
@@ -154,42 +141,30 @@ fn test_multiple_tools() {
         let tool_call_id = format!("call-{}", i);
         let tool_args = format!(r#"{{"cmd": {}}}"#, i);
 
-        handle_agent_event(
-            &mut state,
-            AgentEvent::ToolExecutionStart {
-                tool_call_id: tool_call_id.clone(),
-                tool_name: "bash".to_string(),
-                tool_args: tool_args.clone(),
-                turn: 1,
-            },
-        );
+        handle_agent_event(&mut state, AgentEvent::ToolExecutionStart {
+            tool_call_id: tool_call_id.clone(),
+            tool_name: "bash".to_string(),
+            tool_args: tool_args.clone(),
+            turn: 1,
+        });
 
-        handle_agent_event(
-            &mut state,
-            AgentEvent::ToolExecutionEnd {
-                tool_call_id: tool_call_id.clone(),
+        handle_agent_event(&mut state, AgentEvent::ToolExecutionEnd {
+            tool_call_id: tool_call_id.clone(),
+            tool_name: "bash".to_string(),
+            tool_args: tool_args.clone(),
+            result: ToolResult {
+                tool_call_id,
                 tool_name: "bash".to_string(),
-                tool_args: tool_args.clone(),
-                result: ToolResult {
-                    tool_call_id,
-                    tool_name: "bash".to_string(),
-                    input: serde_json::json!({}),
-                    content: vec![ContentPart::Text {
-                        text: format!("result{}", i),
-                    }],
-                    is_error: false,
-                },
-                duration_ms: 100,
-                turn: 1,
+                input: serde_json::json!({}),
+                content: vec![ContentPart::Text { text: format!("result{}", i) }],
+                is_error: false,
             },
-        );
+            duration_ms: 100,
+            turn: 1,
+        });
     }
 
-    let tool_count = state
-        .messages
-        .iter()
-        .filter(|m| matches!(m, MessageItem::ToolCall { .. }))
-        .count();
+    let tool_count = state.messages.iter().filter(|m| matches!(m, MessageItem::ToolCall { .. })).count();
     assert_eq!(tool_count, 3, "should have 3 tool calls");
 }
 
@@ -219,53 +194,48 @@ fn test_edit_tool() {
     assert!(tool.is_some(), "edit tool should be present in messages");
 }
 
-/// Test: Tool result preserves JSON content
-#[test]
-fn test_tool_result_json_content() {
+/// Helper: execute a bash tool with multiple text parts
+fn execute_bash_tool_multi_content(args: &str, parts: Vec<&str>) -> AppState {
     let mut state = make_test_state();
-
     handle_agent_event(
         &mut state,
         AgentEvent::ToolExecutionStart {
             tool_call_id: "list-1".to_string(),
             tool_name: "bash".to_string(),
-            tool_args: r#"{"command": "ls -la"}"#.to_string(),
+            tool_args: args.to_string(),
             turn: 1,
         },
     );
-
     handle_agent_event(
         &mut state,
         AgentEvent::ToolExecutionEnd {
             tool_call_id: "list-1".to_string(),
             tool_name: "bash".to_string(),
-            tool_args: r#"{"command": "ls -la"}"#.to_string(),
+            tool_args: args.to_string(),
             result: ToolResult {
                 tool_call_id: "list-1".to_string(),
                 tool_name: "bash".to_string(),
                 input: serde_json::json!({}),
-                content: vec![
-                    ContentPart::Text {
-                        text: "file1.txt".to_string(),
-                    },
-                    ContentPart::Text {
-                        text: "file2.rs".to_string(),
-                    },
-                ],
+                content: parts.into_iter().map(|t| ContentPart::Text { text: t.to_string() }).collect(),
                 is_error: false,
             },
             duration_ms: 75,
             turn: 1,
         },
     );
+    state
+}
+
+/// Test: Tool result preserves JSON content
+#[test]
+fn test_tool_result_json_content() {
+    let state = execute_bash_tool_multi_content(
+        r#"{"command": "ls -la"}"#,
+        vec!["file1.txt", "file2.rs"],
+    );
 
     let result_text = state.messages.iter().rev().find_map(|m| match m {
-        MessageItem::ToolCall {
-            name,
-            result,
-            is_error: _,
-            ..
-        } if name == "bash" => result.clone(),
+        MessageItem::ToolCall { name, result, .. } if name == "bash" => result.clone(),
         _ => None,
     });
 

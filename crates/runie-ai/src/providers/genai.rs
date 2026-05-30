@@ -1,3 +1,4 @@
+use async_stream::stream;
 use async_trait::async_trait;
 use runie_core::{Message, ToolSchema, Event, ProviderError};
 use futures::stream::BoxStream;
@@ -50,13 +51,16 @@ impl Provider for GenAiProvider {
         let model = self.model.clone();
         let client = self.client.clone();
 
-        let stream = async_stream::stream! {
+        let stream = stream! {
             yield Event::AgentStart {
                 session_id: model.clone(),
                 timestamp: chrono::Utc::now(),
             };
 
-            yield_events_from_chat(&client, &model, chat_req).await;
+            let events = yield_events_from_chat(&client, &model, chat_req).await;
+            for event in events {
+                yield event;
+            }
 
             yield Event::AgentEnd { timestamp: chrono::Utc::now() };
         };
@@ -85,7 +89,8 @@ async fn yield_events_from_chat(
     client: &Client,
     model: &str,
     chat_req: ChatRequest,
-) {
+) -> Vec<Event> {
+    let mut events = Vec::new();
     match client.exec_chat_stream(model, chat_req, None).await {
         Ok(chat_res) => {
             let mut stream = chat_res.stream;
@@ -93,19 +98,19 @@ async fn yield_events_from_chat(
             while let Some(event_result) = stream.next().await {
                 match event_result {
                     Ok(genai::chat::ChatStreamEvent::Chunk(chunk)) => {
-                        yield Event::MessageDelta { content: chunk.content };
+                        events.push(Event::MessageDelta { content: chunk.content });
                     }
                     Ok(genai::chat::ChatStreamEvent::ToolCallChunk(tool_call)) => {
                         let id = format!("call_{}", tool_call_index);
                         tool_call_index += 1;
-                        yield Event::ToolCallDelta {
+                        events.push(Event::ToolCallDelta {
                             id,
                             name: tool_call.tool_call.fn_name,
                             arguments: tool_call.tool_call.fn_arguments.to_string(),
-                        };
+                        });
                     }
                     Err(e) => {
-                        yield Event::Error { message: e.to_string() };
+                        events.push(Event::Error { message: e.to_string() });
                         break;
                     }
                     _ => {}
@@ -113,7 +118,8 @@ async fn yield_events_from_chat(
             }
         }
         Err(e) => {
-            yield Event::Error { message: e.to_string() };
+            events.push(Event::Error { message: e.to_string() });
         }
     }
+    events
 }
