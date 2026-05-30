@@ -1,4 +1,5 @@
 use crate::tui::state::{AppState, TuiMode, Cmd};
+use crate::tui::update::ui::UiCmd;
 use crate::components::{MessageItem, CommandPalette};
 use crate::components::command_palette::PaletteCommand;
 use crate::components::model_picker::ModelPicker;
@@ -43,10 +44,11 @@ pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette)
     }
 }
 
-pub fn handle_switch_model(state: &mut AppState) {
+pub fn handle_switch_model(state: &mut AppState) -> Vec<crate::UiCmd> {
     let picker = ModelPicker::with_default_models();
     state.model_picker = Some(picker);
     state.mode = TuiMode::Overlay;
+    vec![]
 }
 
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<crate::UiCmd> {
@@ -55,17 +57,19 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<c
             state.messages.clear();
             state.mode = TuiMode::Chat;
             state.messages.push(MessageItem::System { text: "New session started".to_string() });
+            vec![]
         }
         PaletteCommand::ClearChat => {
             state.messages.clear();
             state.messages.push(MessageItem::System { text: "Chat cleared".to_string() });
+            vec![]
         }
         PaletteCommand::SwitchModel => handle_switch_model(state),
         PaletteCommand::Quit => {
             state.running = false;
             state.messages.push(MessageItem::System { text: "Goodbye!".to_string() });
+            vec![UiCmd::Quit]
         }
-        PaletteCommand::Cancel => {}
+        PaletteCommand::Cancel => vec![],
     }
-    vec![]
 }

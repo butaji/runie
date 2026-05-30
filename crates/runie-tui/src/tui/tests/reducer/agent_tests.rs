@@ -24,7 +24,7 @@ fn test_agent_event_message_start() {
     assert_eq!(state.messages.len(), 1);
 }
 
-fn create_message_start_event(turn: u32) -> AgentEvent {
+fn create_message_start_event(turn: usize) -> AgentEvent {
     AgentEvent::MessageStart {
         message: AgentMessage {
             role: "assistant".to_string(),
@@ -39,7 +39,7 @@ fn create_message_start_event(turn: u32) -> AgentEvent {
     }
 }
 
-fn create_message_update_event(turn: u32, text: &str) -> AgentEvent {
+fn create_message_update_event(turn: usize, text: &str) -> AgentEvent {
     use runie_agent::ContentPart;
     AgentEvent::MessageUpdate {
         message: AgentMessage {

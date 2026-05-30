@@ -14,6 +14,8 @@ pub use events::{update, handle_agent_event, on_message_start, on_message, on_me
     on_message_end, update_last_assistant, on_tool_start, on_tool_end, on_agent_end,
     extract_text_content};
 
+pub use error::sanitize_error_message;
+
 /// Agent-specific commands returned by update functions.
 #[derive(Debug, Clone)]
 pub enum AgentCmd {

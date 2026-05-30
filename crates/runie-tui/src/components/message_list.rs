@@ -246,8 +246,49 @@ mod tests {
     }
 
     fn render_assistant_msg(text: &str, agent_running: bool) -> (String, Buffer, Rect) {
-        use super::view_model_tests::helper_helpers::render_assistant_message;
-        render_assistant_message(text, Vec::new(), agent_running, None)
+        use ratatui::{buffer::Buffer, layout::Rect};
+        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
+        use crate::theme::ThemeWrapper;
+
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        let theme = ThemeWrapper::default_for_test();
+        let mut wrap_cache = WrapCache::new();
+
+        let item = FeedItem::AssistantMessage {
+            id: "test".to_string(),
+            text: text.to_string(),
+            thoughts: Vec::new(),
+            tool_calls: Vec::new(),
+            timestamp: None,
+            turn_duration: None,
+        };
+
+        let _rendered = render_single_msg_feed(
+            &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            &theme,
+            ratatui::style::Color::White,
+            ratatui::style::Color::Gray,
+            ratatui::style::Color::DarkGray,
+            ratatui::style::Color::Black,
+            ratatui::style::Color::Green,
+            ratatui::style::Color::Red,
+            ratatui::style::Color::Blue,
+            '⠋',
+            false,
+            false,
+            '⠏',
+            &AnimationState::default(),
+            &mut wrap_cache,
+            agent_running,
+            None,
+            None,
+        );
+
+        let row_text: String = (0..area.width)
+            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
+            .collect();
+        (row_text, buf, area)
     }
 
     fn make_assistant_feed_item(text: &str, thoughts: Vec<Thought>) -> FeedItem {

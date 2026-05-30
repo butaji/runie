@@ -11,9 +11,9 @@ fn test_e2e_set_git_info() {
         path: "src/lib.rs".to_string(),
     });
 
-    assert_eq!(state.top_bar.repo, "myrepo");
-    assert_eq!(state.top_bar.branch, "main");
-    assert_eq!(state.top_bar.path, "src/lib.rs");
+    assert_eq!(state.context.repo, "myrepo");
+    assert_eq!(state.context.branch, "main");
+    assert_eq!(state.context.path, "src/lib.rs");
 }
 
 #[test]
@@ -28,8 +28,8 @@ fn test_e2e_set_top_bar_checks() {
         context_badges: vec!["rust".to_string(), "fmt".to_string()],
     });
 
-    assert_eq!(state.top_bar.checks_passed, Some(8));
-    assert_eq!(state.top_bar.checks_total, Some(10));
-    assert_eq!(state.top_bar.percentage, Some(80.0));
-    assert_eq!(state.top_bar.context_badges, vec!["rust", "fmt"]);
+    assert_eq!(state.context.checks_passed, Some(8));
+    assert_eq!(state.context.checks_total, Some(10));
+    assert_eq!(state.context.percentage, Some(80.0));
+    assert_eq!(state.context.context_badges, vec!["rust", "fmt"]);
 }

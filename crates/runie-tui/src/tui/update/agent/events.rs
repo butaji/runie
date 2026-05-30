@@ -2,6 +2,7 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::{AppState, TuiMode};
+use crate::terminal_scrollback::push_to_scrollback_auto;
 use runie_agent::{AgentEvent, ContentPart};
 use runie_ai::TokenUsage;
 
@@ -21,60 +22,46 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::A
 }
 
 pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
-    // Route to category handlers to reduce match complexity
-    if let Some(msg_event) = extract_message_event(&event) {
-        handle_message_event(state, msg_event);
-    } else if let Some(tool_event) = extract_tool_event(&event) {
-        handle_tool_event(state, tool_event);
-    } else if let Some(lifecycle_event) = extract_lifecycle_event(&event) {
-        handle_lifecycle_event(state, lifecycle_event);
-    } else if let Some(error_event) = extract_error_event(&event) {
-        super::error::on_agent_error(state, error_event.0);
-    } else if let Some(token_event) = extract_token_event(&event) {
-        update_token_usage(state, token_event.0, token_event.1);
+    // Route to category handlers - uses match to keep complexity low
+    match categorize_event(&event) {
+        EventCategory::Message(msg) => handle_message_event(state, msg),
+        EventCategory::Tool(tool) => handle_tool_event(state, tool),
+        EventCategory::Lifecycle(lifecycle) => handle_lifecycle_event(state, lifecycle),
+        EventCategory::Error(err) => super::error::on_agent_error(state, err),
+        EventCategory::Token(tokens) => update_token_usage(state, tokens.0, tokens.1),
+        EventCategory::Permission(perm) => handle_permission_event(state, perm),
+        EventCategory::Ignored => {}
     }
-    // No-op events: PermissionGranted, PermissionDenied, ContextCompacted - ignored
 }
 
-// ─── Event extractors (reduce match complexity by categorizing) ─────────────
+/// Event categories for routing
+enum EventCategory {
+    Message(AgentEvent),
+    Tool(AgentEvent),
+    Lifecycle(AgentEvent),
+    Error(String),
+    Token(TokenEvent),
+    Permission(AgentEvent),
+    Ignored,
+}
 
-struct ErrorEvent(String);
+/// Token usage event data
 struct TokenEvent(usize, usize);
 
-fn extract_message_event(event: &AgentEvent) -> Option<AgentEvent> {
+/// Categorize an agent event into a routing category
+fn categorize_event(event: &AgentEvent) -> EventCategory {
     match event {
         AgentEvent::Message { .. } | AgentEvent::MessageStart { .. } |
-        AgentEvent::MessageUpdate { .. } | AgentEvent::MessageEnd { .. } => Some(event.clone()),
-        _ => None,
-    }
-}
-
-fn extract_tool_event(event: &AgentEvent) -> Option<AgentEvent> {
-    match event {
-        AgentEvent::ToolExecutionStart { .. } | AgentEvent::ToolExecutionEnd { .. } => Some(event.clone()),
-        _ => None,
-    }
-}
-
-fn extract_lifecycle_event(event: &AgentEvent) -> Option<AgentEvent> {
-    match event {
-        AgentEvent::AgentEnd { .. } | AgentEvent::TurnEnd { .. } => Some(event.clone()),
-        _ => None,
-    }
-}
-
-fn extract_error_event(event: &AgentEvent) -> Option<ErrorEvent> {
-    match event {
-        AgentEvent::Error { message, .. } => Some(ErrorEvent(message.clone())),
-        _ => None,
-    }
-}
-
-fn extract_token_event(event: &AgentEvent) -> Option<TokenEvent> {
-    match event {
+        AgentEvent::MessageUpdate { .. } | AgentEvent::MessageEnd { .. } => EventCategory::Message(event.clone()),
+        AgentEvent::ToolExecutionStart { .. } | AgentEvent::ToolExecutionEnd { .. } => EventCategory::Tool(event.clone()),
+        AgentEvent::AgentEnd { .. } | AgentEvent::TurnEnd { .. } => EventCategory::Lifecycle(event.clone()),
+        AgentEvent::Error { message, .. } => EventCategory::Error(message.clone()),
         AgentEvent::TokenUsage { prompt_tokens, completion_tokens, .. } =>
-            Some(TokenEvent(*prompt_tokens, *completion_tokens)),
-        _ => None,
+            EventCategory::Token(TokenEvent(*prompt_tokens, *completion_tokens)),
+        AgentEvent::PermissionRequest { .. } => EventCategory::Permission(event.clone()),
+        // Ignored events
+        AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } |
+        AgentEvent::ContextCompacted { .. } => EventCategory::Ignored,
     }
 }
 
@@ -106,6 +93,12 @@ fn handle_lifecycle_event(state: &mut AppState, event: AgentEvent) {
     }
 }
 
+fn handle_permission_event(state: &mut AppState, event: AgentEvent) {
+    if let AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args, .. } = event {
+        super::permission::on_permission_request(state, tool_call_id, tool_name, tool_args);
+    }
+}
+
 fn update_token_usage(state: &mut AppState, prompt_tokens: usize, completion_tokens: usize) {
     state.session_token_usage.prompt_tokens += prompt_tokens;
     state.session_token_usage.completion_tokens += completion_tokens;
@@ -127,6 +120,8 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
     state.is_thinking = true;
     state.thinking_start = Some(std::time::Instant::now());
     state.thinking_duration = None;
+    // Track the start of this turn's messages for scrollback
+    state.turn_start_index = Some(state.messages.len());
     // Auto-scroll to bottom if user hasn't scrolled up
     if !state.scroll.user_scrolled_up {
         state.scroll.feed_offset = 0;
@@ -233,7 +228,7 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
     }
 }
 
-/// Handle turn end - add separator with runtime metrics
+/// Handle turn end - add separator with runtime metrics and push to terminal scrollback
 fn on_turn_end(state: &mut AppState) {
     // Add separator if we have timing info
     if let Some(start_time) = state.agent_start_time {
@@ -248,6 +243,20 @@ fn on_turn_end(state: &mut AppState) {
             tokens_used: Some(state.session_token_usage.total_tokens),
         });
     }
+
+    // Push completed turn's messages to terminal scrollback using VT100 sequences
+    // and clear from viewport. Previous turns live in terminal scrollback,
+    // viewport only shows current turn.
+    if let Some(turn_start) = state.turn_start_index {
+        let turn_messages: Vec<MessageItem> = state.messages.drain(turn_start..).collect();
+        // Push to terminal scrollback via VT100 (errors logged but ignored)
+        if let Err(e) = push_to_scrollback_auto(&turn_messages) {
+            tracing::warn!("Failed to push to scrollback: {}", e);
+        }
+    }
+    
+    // Reset turn tracking
+    state.turn_start_index = None;
 }
 
 pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {

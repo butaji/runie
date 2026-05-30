@@ -4,10 +4,9 @@ use crate::tui::view_models::{
     OnboardingViewModel, OverlayViewModel, PermissionModalViewModel,
     SessionTreeViewModel, ViewModels, InputBarViewModel, StatusBarViewModel,
 };
-use crate::components::top_bar::TopBarViewModel;
+use crate::components::global_tags::GlobalTagsViewModel;
 use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::render::WrapCache;
-use crate::components::top_bar::TopBarBuilder;
 use crate::components::message_list::FeedBuilder;
 use crate::components::input_bar::InputBuilder;
 use crate::components::status_bar::StatusBarBuilder;
@@ -39,7 +38,7 @@ impl Pipe<&AppState> for ViewModelPipe {
 
     fn pipe(&self, state: &AppState) -> ViewModels {
         ViewModels {
-            top_bar: build_top_bar(state),
+            global_tags: build_global_tags(state),
             message_list: build_message_list(state),
             input_bar: build_input_bar(state),
             status_bar: build_status_bar(state),
@@ -56,17 +55,18 @@ impl Pipe<&AppState> for ViewModelPipe {
 
 // ─── View model builders ────────────────────────────────────────────────────────
 
-fn build_top_bar(state: &AppState) -> TopBarViewModel {
-    TopBarBuilder::new()
-        .repo(&state.top_bar.repo)
-        .branch(&state.top_bar.branch)
-        .path(&state.top_bar.path)
-        .model(
-            &state.top_bar.model,
-            state.top_bar.context_window.unwrap_or(128_000),
-        )
-        .tokens(state.top_bar.estimated_tokens.unwrap_or(0))
-        .build()
+fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
+    let model = state.current_model.as_deref().unwrap_or("—");
+    let tokens = state.session_token_usage.total_tokens as u64;
+    let cost = state.session_token_usage.estimated_cost;
+
+    if state.agent_running {
+        let status = state.status_header.as_deref().unwrap_or("running");
+        let time = state.status_details.as_deref().unwrap_or("0s");
+        GlobalTagsViewModel::running(status, time, tokens)
+    } else {
+        GlobalTagsViewModel::idle(model, tokens, cost)
+    }
 }
 
 fn build_message_list(state: &AppState) -> MessageListViewModel {

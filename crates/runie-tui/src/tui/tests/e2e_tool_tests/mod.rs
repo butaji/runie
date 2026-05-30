@@ -3,7 +3,7 @@
 //! These tests verify the full tool call flow from agent request through
 //! TUI display, including permission handling, execution, and result rendering.
 
-use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, TopBarState, PermissionModalState, TuiMode, ClearInputConfirm};
+use crate::tui::state::{AppState, AnimationState, CommandPaletteState, Msg, Cmd, ScrollState, ContextState, PermissionModalState, TuiMode, ClearInputConfirm};
 use crate::components::{MessageItem, CommandPalette};
 use crate::tui::update::update;
 use runie_agent::{AgentEvent, PermissionDecision, ContentPart};
@@ -21,7 +21,7 @@ pub fn make_state() -> AppState {
         show_sidebar: false,
         agent_running: false,
         current_model: Some("test-model".to_string()),
-        top_bar: TopBarState::default(),
+        context: ContextState::default(),
         permission_modal: PermissionModalState::default(),
         command_palette: CommandPaletteState::default(),
         scroll: ScrollState::default(),
@@ -36,6 +36,17 @@ pub fn make_state() -> AppState {
         clear_input_confirm: ClearInputConfirm::default(),
         model_picker: None,
         agent_start_time: None,
+        turn_start_index: None,
+        input_history: Vec::new(),
+        input_history_index: None,
+        input_draft: String::new(),
+        status_header: None,
+        status_details: None,
+        status_start_time: None,
+        thinking_start: None,
+        thinking_duration: None,
+        is_thinking: false,
+        mock_mode: false,
     }
 }
 

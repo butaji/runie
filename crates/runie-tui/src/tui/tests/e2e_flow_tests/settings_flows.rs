@@ -125,13 +125,9 @@ fn test_e2e_model_displayed_correctly() {
     // Set current_model to minimax/MiniMax-Text-01
     let mut state = AppState::default();
     state.current_model = Some("minimax/MiniMax-Text-01".to_string());
-    state.top_bar.model = "MiniMax-Text-01".to_string();
 
     // Verify current_model is full provider/model string
     assert_eq!(state.current_model.as_deref(), Some("minimax/MiniMax-Text-01"));
-
-    // Verify top_bar.model is just the model name (not full provider/model)
-    assert_eq!(state.top_bar.model, "MiniMax-Text-01");
 
     // Verify status bar would show minimax/MiniMax-Text-01 (not openai/gpt-4o)
     // The status_bar.current_model comes from state.current_model

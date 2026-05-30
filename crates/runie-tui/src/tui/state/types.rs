@@ -102,6 +102,36 @@ impl Default for TopBarState {
     }
 }
 
+/// ContextState holds git info and context badges for global tags display.
+#[derive(Clone)]
+pub struct ContextState {
+    pub repo: String,
+    pub branch: String,
+    pub path: String,
+    pub checks_passed: Option<usize>,
+    pub checks_total: Option<usize>,
+    pub percentage: Option<f32>,
+    pub context_badges: Vec<String>,
+    pub context_pct: Option<f32>,
+    pub context_bar_pct: Option<f32>,
+}
+
+impl Default for ContextState {
+    fn default() -> Self {
+        Self {
+            repo: String::new(),
+            branch: String::new(),
+            path: String::new(),
+            checks_passed: None,
+            checks_total: None,
+            percentage: None,
+            context_badges: Vec::new(),
+            context_pct: None,
+            context_bar_pct: None,
+        }
+    }
+}
+
 /// Pending permission request (queued when in blocking mode)
 #[derive(Clone, Debug)]
 pub struct PendingPermission {

@@ -6,7 +6,7 @@
 #![allow(clippy::unwrap_used)]
 #![cfg(test)]
 
-use crate::tui::state::{AppState, Msg, Cmd, TuiMode, TopBarState, OnboardingStep};
+use crate::tui::state::{AppState, Msg, Cmd, TuiMode, ContextState, OnboardingStep};
 use crate::components::{CommandPalette, MessageItem};
 use crate::tui::update::update;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, ToolResult, PermissionDecision};
@@ -21,10 +21,6 @@ pub fn make_state() -> AppState {
 pub fn make_state_with_model(model: &str) -> AppState {
     AppState {
         current_model: Some(model.to_string()),
-        top_bar: TopBarState {
-            model: model.to_string(),
-            ..Default::default()
-        },
         ..Default::default()
     }
 }

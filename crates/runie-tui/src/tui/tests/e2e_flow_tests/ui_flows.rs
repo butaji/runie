@@ -5,13 +5,12 @@ fn test_e2e_top_bar_shows_model() {
     let mut state = make_state_with_model("anthropic/claude-3-opus");
     let _palette = CommandPalette::new();
 
-    // Top bar should show model
-    assert_eq!(state.top_bar.model, "anthropic/claude-3-opus");
+    // current_model should be set
+    assert_eq!(state.current_model, Some("anthropic/claude-3-opus".to_string()));
 
-    // Model change updates top bar
+    // Model change updates current_model
     state.current_model = Some("openai/gpt-4".to_string());
-    state.top_bar.model = "openai/gpt-4".to_string();
-    assert_eq!(state.top_bar.model, "openai/gpt-4");
+    assert_eq!(state.current_model, Some("openai/gpt-4".to_string()));
 }
 
 #[test]
