@@ -156,9 +156,9 @@ fn test_turn_end_without_tools() {
         token_usage: runie_agent::TokenUsage {
             input: 10,
             output: 5,
+            total_tokens: 15,
             cache_read: 0,
             cache_write: 0,
-            total_tokens: 15,
         },
     });
 

@@ -236,9 +236,9 @@ fn test_turn_end_adds_separator() {
             token_usage: TokenUsage {
                 input: 100,
                 output: 50,
+                total_tokens: 150,
                 cache_read: 0,
                 cache_write: 0,
-                total_tokens: 150,
             },
         },
     );

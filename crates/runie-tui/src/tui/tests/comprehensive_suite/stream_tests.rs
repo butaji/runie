@@ -42,9 +42,9 @@ fn make_turn_end(turn: usize) -> AgentEvent {
         token_usage: TokenUsage {
             input: 50,
             output: 25,
+            total_tokens: 75,
             cache_read: 0,
             cache_write: 0,
-            total_tokens: 75,
         },
     }
 }
