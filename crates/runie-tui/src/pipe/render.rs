@@ -66,7 +66,7 @@ impl RenderPipe {
 
     fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 5] {
         let constraints = [
-            Constraint::Length(1),        // topbar
+            Constraint::Length(2),        // topbar + padding
             Constraint::Min(1),           // feed
             Constraint::Length(1),       // global_tags
             Constraint::Length(input_h),  // input

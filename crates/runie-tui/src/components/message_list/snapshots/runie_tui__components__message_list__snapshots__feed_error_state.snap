@@ -5,7 +5,7 @@ expression: rendered
                                                                                 
  ❯ Delete the file                                                              
                                                                                 
-  ────────────────────────────────────────────────────────────────────────────  
+                                                                                
  I couldn't delete the file.                                                    
-  ────────────────────────────────────────────────────────────────────────────  
+                                                                                
  · Tool execution failed: permission denied
