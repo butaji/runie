@@ -43,9 +43,8 @@ mod handle_direct_command_tests {
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::ClearChat);
 
-        // Old messages cleared and system message added
-        assert_eq!(state.messages.len(), 1);
-        assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("Chat cleared")));
+        // Old messages cleared - no system message added for clear
+        assert_eq!(state.messages.len(), 0);
         assert!(cmds.is_empty());
     }
 
@@ -59,8 +58,8 @@ mod handle_direct_command_tests {
         assert!(!state.running);
         // Quit produces UiCmd::Quit which becomes Cmd::Interrupt
         assert!(!cmds.is_empty());
-        // Should have goodbye message
-        assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Goodbye"))));
+        // Quit does not add a goodbye message
+        assert!(!state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("Goodbye"))));
     }
 
     #[test]

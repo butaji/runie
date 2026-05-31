@@ -72,10 +72,9 @@ fn test_e2e_palette_clear_chat_command() {
     update(&mut state, &mut palette, Msg::CommandPaletteFilter('a'));
     update(&mut state, &mut palette, Msg::CommandPaletteFilter('r'));
 
-    // Confirm clear - adds system message "Chat cleared"
+    // Confirm clear - clears all messages
     update(&mut state, &mut palette, Msg::CommandPaletteConfirm);
-    assert_eq!(state.messages.len(), 1);
-    assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("cleared")));
+    assert_eq!(state.messages.len(), 0);
 }
 
 #[test]

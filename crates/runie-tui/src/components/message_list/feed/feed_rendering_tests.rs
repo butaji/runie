@@ -319,10 +319,11 @@ fn user_message_spacing_above_assistant() {
     let user_idx = user_line_idx.unwrap();
     let thought_idx = thought_line_idx.unwrap();
 
-    // Verify spacing line between user message and thought
+    // Verify spacing: user message + padding + separator line + thought
+    // With separator lines between feed items, expect 3 lines difference
     assert_eq!(
-        thought_idx - user_idx, 2,
-        "Expected one blank line between user and thought, but found {} line(s). Lines: {:?}",
+        thought_idx - user_idx, 3,
+        "Expected separator line between user and thought, but found {} line(s). Lines: {:?}",
         thought_idx - user_idx - 1,
         &lines[user_idx..=thought_idx.min(5)]
     );

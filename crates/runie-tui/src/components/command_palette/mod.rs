@@ -24,6 +24,12 @@ pub enum PaletteCommand {
     NewSession,
     ClearChat,
     SwitchModel,
+    ForkSession,
+    SessionTree,
+    Onboard,
+    CopyLast,
+    ShowCost,
+    Help,
     Quit,
     Cancel,
 }
@@ -52,6 +58,12 @@ impl PaletteCommandDef {
             "new_session" => PaletteCommand::NewSession,
             "clear_chat" => PaletteCommand::ClearChat,
             "switch_model" => PaletteCommand::SwitchModel,
+            "fork" => PaletteCommand::ForkSession,
+            "tree" => PaletteCommand::SessionTree,
+            "onboard" => PaletteCommand::Onboard,
+            "copy" => PaletteCommand::CopyLast,
+            "cost" => PaletteCommand::ShowCost,
+            "help" => PaletteCommand::Help,
             "quit" => PaletteCommand::Quit,
             _ => PaletteCommand::Cancel,
         }
@@ -79,9 +91,19 @@ impl Default for CommandPalette {
 impl CommandPalette {
     pub fn new() -> Self {
         let all_commands = vec![
+            // ─── Session ─────────────────────────────────────────────────
             PaletteCommandDef { id: "new_session".into(), label: "New Session".into(), description: "Start a fresh chat session".into(), category: "session".into(), aliases: vec!["n".into(), "new".into()], keybinding: Some("Ctrl+N".into()), requires_args: false, arg_hint: "".into() },
-            PaletteCommandDef { id: "clear_chat".into(), label: "Clear Chat".into(), description: "Clear all messages".into(), category: "chat".into(), aliases: vec!["c".into(), "clear".into()], keybinding: Some("Ctrl+L".into()), requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "clear_chat".into(), label: "Clear Chat".into(), description: "Clear all messages".into(), category: "session".into(), aliases: vec!["c".into(), "clear".into()], keybinding: Some("Ctrl+L".into()), requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "fork".into(), label: "Fork Session".into(), description: "Fork at current position".into(), category: "session".into(), aliases: vec!["f".into(), "fork".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "tree".into(), label: "Session Tree".into(), description: "Open session tree navigator".into(), category: "session".into(), aliases: vec!["t".into(), "tree".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            // ─── Config ──────────────────────────────────────────────────
             PaletteCommandDef { id: "switch_model".into(), label: "Switch Model...".into(), description: "Change the AI model".into(), category: "config".into(), aliases: vec!["model".into(), "m".into()], keybinding: None, requires_args: false, arg_hint: "model name".into() },
+            PaletteCommandDef { id: "onboard".into(), label: "Onboard".into(), description: "Configure provider and API key".into(), category: "config".into(), aliases: vec!["o".into(), "onboard".into()], keybinding: Some("Ctrl+O".into()), requires_args: false, arg_hint: "".into() },
+            // ─── Tools ───────────────────────────────────────────────────
+            PaletteCommandDef { id: "copy".into(), label: "Copy Last Response".into(), description: "Copy last response to clipboard".into(), category: "tools".into(), aliases: vec!["copy".into()], keybinding: Some("Ctrl+Y".into()), requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "cost".into(), label: "Show Cost".into(), description: "Show cost statistics".into(), category: "tools".into(), aliases: vec!["cost".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            // ─── App ─────────────────────────────────────────────────────
+            PaletteCommandDef { id: "help".into(), label: "Help".into(), description: "Show available commands".into(), category: "app".into(), aliases: vec!["h".into(), "help".into(), "?".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
             PaletteCommandDef { id: "quit".into(), label: "Quit".into(), description: "Exit the application".into(), category: "app".into(), aliases: vec!["q".into(), "quit".into(), "exit".into()], keybinding: Some("Ctrl+Q".into()), requires_args: false, arg_hint: "".into() },
         ];
 

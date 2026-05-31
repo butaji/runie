@@ -3,6 +3,7 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                                                         
-   ❯ Hello                                                                                                              
+ ❯ Hello                                                                                                                
                                                                                                                         
-  Hi there! How can I help you today?
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  
+ Hi there! How can I help you today?

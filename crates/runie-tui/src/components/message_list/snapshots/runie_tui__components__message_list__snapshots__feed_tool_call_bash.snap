@@ -3,6 +3,7 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
-   ❯ Show me the files                                                          
+ ❯ Show me the files                                                            
                                                                                 
-  Here are the files in your directory:
+  ────────────────────────────────────────────────────────────────────────────  
+ Here are the files in your directory:

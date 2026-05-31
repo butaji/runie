@@ -3,7 +3,9 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
-   ❯ Hello                                                                      
+ ❯ Hello                                                                        
                                                                                 
-  Hi!                                                                           
-  · Using model: gpt-4o-mini
+  ────────────────────────────────────────────────────────────────────────────  
+ Hi!                                                                            
+  ────────────────────────────────────────────────────────────────────────────  
+ · Using model: gpt-4o-mini

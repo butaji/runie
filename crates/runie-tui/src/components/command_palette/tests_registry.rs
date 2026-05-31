@@ -8,9 +8,9 @@ fn make_fresh_palette() -> CommandPalette {
 
 #[test]
 fn test_command_count() {
-    // Verify all 4 commands are registered
+    // Verify all 10 commands are registered
     let palette = make_fresh_palette();
-    assert_eq!(palette.all_commands().len(), 4);
+    assert_eq!(palette.all_commands().len(), 10);
 }
 
 #[test]
