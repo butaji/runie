@@ -2,7 +2,7 @@ use std::fmt::Write;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::Line,
     widgets::{Gauge, Paragraph, Widget},
 };
@@ -11,6 +11,22 @@ use crate::components::message_list::PlanStatus;
 use crate::glyphs;
 use crate::messages::MessageRegistry;
 use crate::tui::state::AnimationState;
+
+/// Render a thin separator line between feed items.
+pub fn render_item_separator(
+    area: Rect,
+    row: u16,
+    buf: &mut Buffer,
+    color: Color,
+) -> u16 {
+    let y = area.y + row;
+    if y >= area.bottom() {
+        return 0;
+    }
+    let line = "─".repeat(area.width.saturating_sub(4) as usize);
+    buf.set_line(area.x + 2, y, &Line::raw(line).style(Style::default().fg(color)), area.width.saturating_sub(4));
+    1
+}
 
 // ============================================================================
 // Message Renderers

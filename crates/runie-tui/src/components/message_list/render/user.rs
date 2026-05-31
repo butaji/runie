@@ -56,8 +56,8 @@ pub fn render_user_msg(
         }
 
         if i == 0 {
-            // First line: 1-symbol horizontal padding, then chevron
-            let chevron_x = margin_x + 1;
+            // First line: chevron aligned with input box prompt
+            let chevron_x = margin_x;
             if let Some(cell) = buf.cell_mut((chevron_x, line_y)) {
                 cell.set_char(glyphs::CHEVRON);
                 cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
@@ -71,7 +71,7 @@ pub fn render_user_msg(
             if let Some(ts) = timestamp {
                 if wrapped.len() <= 1 {
                     let ts_len = ts.len() as u16;
-                    let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
+                    let ts_x = area.right().saturating_sub(ts_len + 1);
                     if ts_x > text_x {
                         let ts_color: ratatui::style::Color = theme.color("text.muted").into();
                         let ts_line = ratatui::text::Line::raw(ts)
@@ -81,8 +81,8 @@ pub fn render_user_msg(
                 }
             }
         } else {
-            // Continuation lines: 1-symbol horizontal padding, no chevron
-            let text_x = margin_x + 1;
+            // Continuation lines: aligned with text after chevron
+            let text_x = margin_x + 2;
             let line = ratatui::text::Line::raw(line_text.as_str())
                 .style(Style::default().fg(text_primary).bg(bg_color));
             buf.set_line(text_x, line_y, &line, text_width as u16);

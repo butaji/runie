@@ -134,8 +134,9 @@ impl Tui {
         self.log_action(&msg);
         let change = self.state_pipe.process(msg);
         // Sync state_pipe.state back to tui.state for backward compatibility
-        // This ensures tui.state reflects the latest state after process()
         self.state.clone_from(self.state_pipe.state());
+        // CRITICAL FIX: Sync palette so render uses updated filtered_commands
+        self.command_palette = self.state_pipe.palette().clone();
         change
     }
 

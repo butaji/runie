@@ -10,6 +10,7 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
             { handle_session_cmd(state, &cmd); vec![] }
         SlashCommand::Model(model) => { handle_model(state, model); vec![] }
         SlashCommand::Tree => { handle_tree(state); vec![] }
+        SlashCommand::Onboard => { handle_onboard(state); vec![] }
         SlashCommand::Quit => { handle_quit(state); vec![] }
         // Informational - grouped
         SlashCommand::Help | SlashCommand::Cost => { handle_info_cmd(state, &cmd); vec![] }
@@ -80,4 +81,9 @@ fn handle_copy(state: &mut AppState) {
 pub fn handle_tree(state: &mut AppState) {
     state.session_tree.toggle();
     state.mode = if state.session_tree.visible { TuiMode::SessionTree } else { TuiMode::Chat };
+}
+
+fn handle_onboard(state: &mut AppState) {
+    state.mode = TuiMode::Onboarding;
+    state.onboarding = Some(crate::components::Onboarding::default());
 }

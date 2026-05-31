@@ -19,6 +19,7 @@ pub use assistant::{render_assistant_msg, extract_think_blocks, strip_think_tags
 pub use messages::{
     render_thought_msg,
     render_separator,
+    render_item_separator,
     render_system_msg,
     render_error_msg,
     render_edit_msg,

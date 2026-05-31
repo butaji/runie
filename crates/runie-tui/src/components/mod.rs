@@ -38,4 +38,5 @@ pub use context_panel::{ContextPanel, GitChange, GitStatus};
 pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
 pub use model_picker::{ModelPicker, ModelInfo, ProviderGroup};
 pub use dialog_frame::DialogFrame;
+pub use onboarding::Onboarding;
 pub use component::{Component, InputBar};

@@ -8,6 +8,7 @@ pub enum SlashCommand {
     Tree,
     Fork,
     Copy,
+    Onboard,
     Quit,
     Help,
     Cost,
@@ -26,6 +27,7 @@ fn parse_cmd(input: &str) -> Option<SlashCommand> {
         (&["/tree", "/t"], |_| SlashCommand::Tree),
         (&["/fork", "/f"], |_| SlashCommand::Fork),
         (&["/copy"], |_| SlashCommand::Copy),
+        (&["/onboard", "/o"], |_| SlashCommand::Onboard),
         (&["/quit", "/q", "/exit"], |_| SlashCommand::Quit),
         (&["/help", "/h", "/?"], |_| SlashCommand::Help),
         (&["/cost"], |_| SlashCommand::Cost),
@@ -58,21 +60,26 @@ pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
 
 pub fn format_help() -> String {
     r#"Available commands:
-  /new, /n           Start new session
-  /clear, /c         Clear conversation
-  /model, /m <name>  Switch model
-  /tree, /t          Open session tree navigator
-  /fork, /f          Fork at current position
-  /copy              Copy last response to clipboard
-  /cost              Show cost statistics
-  /quit, /q, /exit   Exit runie
-  /help, /h, /?       Show this help
+  Session
+    /new, /n           Start new session
+    /clear, /c         Clear conversation
+    /tree, /t          Open session tree navigator
+    /fork, /f          Fork at current position
+  Config
+    /model, /m <name>  Switch model
+    /onboard, /o       Configure provider and API key
+  Tools
+    /copy              Copy last response to clipboard
+    /cost              Show cost statistics
+  App
+    /quit, /q, /exit   Exit runie
+    /help, /h, /?      Show this help
 
 Keyboard shortcuts:
   Enter              Submit message
   Shift+Enter        New line
   Ctrl+C             Exit
-  Ctrl+O             Copy last response
+  Ctrl+O             Onboard / copy last response
   Ctrl+B             Toggle sidebar
   Ctrl+K / Ctrl+P    Command palette"#
         .to_string()

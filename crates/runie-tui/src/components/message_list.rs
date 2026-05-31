@@ -114,8 +114,8 @@ fn render_message_list(
 ) -> u16 {
     let mut row = 0u16;
     let max_rows = area.height;
-    let margin_x = area.x + 2;
-    let text_x = area.x + 4;
+    let margin_x = area.x + 1;
+    let text_x = area.x + 3;
     let total_items = vm.feed.len();
 
     for (idx, item) in vm.feed.items().iter().skip(vm.scroll_offset).enumerate() {
@@ -145,9 +145,10 @@ fn render_message_list(
             &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item,
         );
         row += rendered;
-        // Spacing is now handled by individual item renderers
-        // User messages include 1 line top/bottom padding
-        // Other items render without extra spacing
+        // Draw separator between items (not after last)
+        if idx < total_items.saturating_sub(1) && row < max_rows {
+            row += render::render_item_separator(area, row, buf, colors.text_muted);
+        }
     }
     row
 }
@@ -335,7 +336,7 @@ mod tests {
         let mut wrap_cache = WrapCache::new();
 
         let _rendered = render_single_msg_feed(
-            item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            item, area, 0, area.x + 1, area.x + 4, area.height, &mut buf,
             &theme,
             ratatui::style::Color::White,
             ratatui::style::Color::Gray,
@@ -385,10 +386,10 @@ mod tests {
     fn test_user_message_renders() {
         let (_row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
         // User message has 1 line top padding + 1 symbol horizontal padding
-        // margin_x = area.x + 2, chevron at margin_x + 1 = area.x + 3
+        // margin_x = area.x + 1, chevron at margin_x
         // content starts at area.y + 1 (after top padding)
-        let cell = buf.cell((area.x + 3, area.y + 1)).unwrap();
-        assert_eq!(cell.symbol(), glyphs::CHEVRON.to_string(), "Expected chevron for user message at ({}, {})", area.x + 3, area.y + 1);
+        let cell = buf.cell((area.x + 1, area.y + 1)).unwrap();
+        assert_eq!(cell.symbol(), glyphs::CHEVRON.to_string(), "Expected chevron for user message at ({}, {})", area.x + 1, area.y + 1);
     }
 
     #[test]
