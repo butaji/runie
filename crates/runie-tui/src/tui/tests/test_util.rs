@@ -379,8 +379,6 @@ pub fn turn_end(tokens: usize) -> AgentEvent {
         token_usage: TokenUsage {
             input: 0,
             output: 0,
-            cache_read: 0,
-            cache_write: 0,
             total_tokens: tokens as u32,
         },
     }

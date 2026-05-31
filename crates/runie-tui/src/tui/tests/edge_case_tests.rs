@@ -140,8 +140,6 @@ fn test_rapid_start_stop() {
             final_token_usage: TokenUsage {
                 input: 0,
                 output: 0,
-                cache_read: 0,
-                cache_write: 0,
                 total_tokens: 0,
             },
         });
