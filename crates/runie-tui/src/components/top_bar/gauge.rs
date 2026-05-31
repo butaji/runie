@@ -102,7 +102,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -115,7 +114,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
         };
@@ -128,7 +126,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 100_000,
         };
@@ -141,7 +138,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 200_000,
         };
@@ -154,7 +150,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 0,
             estimated_tokens: 50_000,
         };
@@ -167,7 +162,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 99_999,
         };
@@ -180,7 +174,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 1,
         };
@@ -195,7 +188,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
         };
@@ -211,7 +203,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 100_000,
         };

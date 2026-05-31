@@ -4,7 +4,6 @@ pub struct TopBarBuilder {
     repo: String,
     branch: String,
     path: String,
-    model: String,
     context_window: usize,
     estimated_tokens: usize,
 }
@@ -15,7 +14,6 @@ impl TopBarBuilder {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         }
@@ -36,11 +34,6 @@ impl TopBarBuilder {
         self
     }
 
-    pub fn model(mut self, model: &str, context_window: usize) -> Self {
-        self.model = model.to_string();
-        self.context_window = context_window;
-        self
-    }
 
     pub fn tokens(mut self, estimated: usize) -> Self {
         self.estimated_tokens = estimated;
@@ -52,7 +45,6 @@ impl TopBarBuilder {
             repo: self.repo,
             branch: self.branch,
             path: self.path,
-            model: self.model,
             context_window: self.context_window,
             estimated_tokens: self.estimated_tokens,
         }

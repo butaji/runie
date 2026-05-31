@@ -58,11 +58,12 @@ impl Pipe<&AppState> for ViewModelPipe {
 // ─── View model builders ────────────────────────────────────────────────────────
 
 fn build_top_bar(state: &AppState) -> TopBarViewModel {
+    // Top bar shows repo/branch/path from context state (set by SetGitInfo)
+    // Model info belongs ONLY in global_tags, not top bar
     TopBarViewModel {
-        repo: state.top_bar.repo.clone(),
-        branch: state.top_bar.branch.clone(),
-        path: state.top_bar.path.clone(),
-        model: state.top_bar.model.clone(),
+        repo: state.context.repo.clone(),
+        branch: state.context.branch.clone(),
+        path: state.context.path.clone(),
         context_window: state.top_bar.context_window.unwrap_or(128_000),
         estimated_tokens: state.top_bar.estimated_tokens.unwrap_or(0),
     }
