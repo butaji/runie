@@ -1,5 +1,6 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::{Color, Modifier, Style}};
 use crate::components::DialogFrame;
+use crate::glyphs;
 use crate::theme::ThemeWrapper;
 use super::{CommandPalette, PaletteCommandDef};
 
@@ -25,7 +26,7 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
     let inner_x = area.x + 1;
     let inner_y = area.y + 1;
     let inner_w = area.width.saturating_sub(2);
-    buf.set_string(inner_x, inner_y, "❯ ", Style::default().fg(accent_secondary));
+    buf.set_string(inner_x, inner_y, crate::glyphs::CHEVRON_WITH_SPACE, Style::default().fg(accent_secondary));
 
     // Determine the prompt text: show hint, or "No matching commands" when filtered list is empty
     let prompt = if palette.filtered_commands.is_empty() {
@@ -87,7 +88,7 @@ fn render_argument_mode(palette: &CommandPalette, area: Rect, buf: &mut Buffer, 
     let sep_y = inner_y + 2;
     draw_separator(inner_x, sep_y, inner_w, buf, text_muted);
     let input_y = inner_y + 3;
-    buf.set_string(inner_x, input_y, "❯", Style::default().fg(accent_primary));
+    buf.set_string(inner_x, input_y, &glyphs::CHEVRON.to_string(), Style::default().fg(accent_primary));
     let arg_value = &palette.argument_input;
     let display_value = if arg_value.is_empty() { "type value..." } else { arg_value };
     buf.set_string(inner_x + 2, input_y, display_value, Style::default().fg(text_primary));

@@ -209,7 +209,7 @@ fn build_message_list_vm(state: &crate::tui::state::RenderState, wrap_cache: cra
 fn build_input_bar_vm(state: &crate::tui::state::RenderState) -> InputBarViewModel {
     InputBarViewModel {
         textarea: state.textarea.clone(),
-        prompt: "❯ ".to_string(),
+        prompt: format!("{ch} ", ch = crate::glyphs::CHEVRON),
         right_info: state.input_right_info.clone(),
     }
 }

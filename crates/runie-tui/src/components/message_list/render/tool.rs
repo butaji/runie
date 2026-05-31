@@ -1,6 +1,8 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::Style, text::{Line, Span}};
 use serde_json;
 
+use crate::glyphs;
+
 /// Render a tool call message
 pub fn render_tool_call_msg(
     name: &str,
@@ -36,7 +38,7 @@ pub fn render_tool_call_msg(
             };
             // ◆ name · args → preview (all muted except → preview)
             let line = Line::from(vec![
-                Span::raw("◆ ").style(Style::default().fg(text_muted)),
+                Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(text_muted)),
                 Span::raw(&content).style(Style::default().fg(text_muted)),
                 Span::raw(format!(" → {}", preview)).style(Style::default().fg(color)),
             ]);
@@ -47,7 +49,7 @@ pub fn render_tool_call_msg(
 
     // ◆ name · args (diamond muted, rest muted)
     let line = Line::from(vec![
-        Span::raw("◆ ").style(Style::default().fg(text_muted)),
+        Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(text_muted)),
         Span::raw(&content).style(Style::default().fg(text_muted)),
     ]);
     buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);

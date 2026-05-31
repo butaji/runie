@@ -10,7 +10,7 @@ pub mod feed;
 #[cfg(test)]
 mod snapshots;
 
-pub use types::{MessageItem, MessageList, PlanStatus, BRAILLE_FRAMES, REVERSE_BRAILLE_FRAMES};
+pub use types::{MessageItem, MessageList, PlanStatus};
 pub use builder::FeedBuilder;
 pub use feed::{Feed, FeedItem, Thought, ToolCall};
 
@@ -44,8 +44,8 @@ impl MessageList {
     ) {
         let colors = extract_message_colors(theme);
         let mut wrap_cache = vm.wrap_cache.clone();
-        let spinner = BRAILLE_FRAMES[vm.animation.braille_frame % 10];
-        let rewind_spinner = REVERSE_BRAILLE_FRAMES[vm.animation.braille_frame % 10];
+        let spinner = crate::glyphs::SPINNER_FRAMES[vm.animation.braille_frame % 10];
+        let rewind_spinner = crate::glyphs::SPINNER_FRAMES_REVERSE[vm.animation.braille_frame % 10];
         let _row = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
 
         if vm.feed.is_empty() && !vm.agent_running {

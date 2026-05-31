@@ -1,9 +1,3 @@
-/// Braille spinner frames (10 frames)
-pub const BRAILLE_FRAMES: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-
-/// Braille spinner frames (10 frames) - counter-clockwise (rewind)
-pub const REVERSE_BRAILLE_FRAMES: [char; 10] = ['⠏', '⠇', '⠧', '⠦', '⠴', '⠼', '⠸', '⠹', '⠙', '⠋'];
-
 /// Plan step status
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlanStatus {

@@ -11,7 +11,7 @@ impl InputBuilder {
     pub fn new() -> Self {
         Self {
             textarea: TextArea::default(),
-            prompt: "\u{276F} ".to_string(),
+            prompt: format!("{ch} ", ch = crate::glyphs::CHEVRON),
             right_info: String::new(),
         }
     }

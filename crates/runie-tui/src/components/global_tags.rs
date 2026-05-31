@@ -6,6 +6,8 @@ use ratatui::{
     widgets::Widget,
 };
 
+use crate::glyphs;
+
 /// GlobalTagsViewModel holds tags to display between feed and input.
 #[derive(Debug, Clone)]
 pub struct GlobalTagsViewModel {
@@ -38,7 +40,7 @@ impl GlobalTagsViewModel {
     /// Create running state: "⣾ {status} [turn: {time}] [⇣{tokens}]"
     pub fn running(status: &str, time: &str, tokens: u64) -> Self {
         Self {
-            left: Some(format!("⣾ {}", status)),
+            left: Some(format!("{} {}", glyphs::SPINNER_FRAMES[0], status)),
             right: format!("[turn: {}] [⇣{}]", time, tokens),
         }
     }
@@ -124,7 +126,7 @@ mod tests {
         let cell_at_y0 = buf.cell((1, 0));
 
         assert!(
-            cell_at_y15.is_some() && cell_at_y15.unwrap().symbol() == "⣾",
+            cell_at_y15.is_some() && cell_at_y15.unwrap().symbol() == "⠋",
             "Expected spinner at y=15, found: {:?}",
             cell_at_y15.map(|c| c.symbol())
         );

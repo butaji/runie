@@ -8,6 +8,8 @@ use ratatui::{
 };
 
 use crate::components::message_list::PlanStatus;
+use crate::glyphs;
+use crate::messages::MessageRegistry;
 use crate::tui::state::AnimationState;
 
 // ============================================================================
@@ -26,7 +28,7 @@ pub fn render_thought_msg(
     _spinner: char,
     _show_spinner: bool,
 ) -> u16 {
-    let text = format!("◆ Thought for {:.1}s", duration_secs);
+    let text = format!("{} {}", glyphs::THOUGHT_MARKER, MessageRegistry::thought_duration(duration_secs));
     let line = Line::raw(text).style(Style::default().fg(text_muted));
     buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
@@ -95,7 +97,7 @@ pub fn render_system_msg(
 ) -> u16 {
     let is_error = text.starts_with("Error:");
     let color = if is_error { error } else { text_muted };
-    let prefix = if is_error { "! " } else { "· " };
+    let prefix = if is_error { "! ".to_string() } else { format!("{} ", glyphs::DOT) };
     let line = Line::raw(format!("{}{}", prefix, text)).style(Style::default().fg(color));
     buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
@@ -130,7 +132,7 @@ pub fn render_edit_msg(
     _text_secondary: ratatui::style::Color,
     code_path: ratatui::style::Color,
 ) -> u16 {
-    let text = format!("◆ Edit {}", filename);
+    let text = format!("{} Edit {}", glyphs::THOUGHT_MARKER, filename);
     let line = Line::raw(text).style(Style::default().fg(code_path));
     buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
@@ -151,7 +153,7 @@ pub fn render_tool_running_msg(
     show_spinner: bool,
 ) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('●');
+        cell.set_char(glyphs::TOOL_BULLET);
         cell.set_style(Style::default().fg(text_secondary));
     }
     let mut header = String::with_capacity(64);
@@ -191,7 +193,7 @@ pub fn render_tool_complete_msg(
     text_muted: ratatui::style::Color,
 ) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('✓');
+        cell.set_char(glyphs::CHECK_MARKER);
         cell.set_style(Style::default().fg(success));
     }
     let mut text = String::with_capacity(64);
@@ -222,7 +224,7 @@ pub fn render_plan_step_msg(
     match status {
         PlanStatus::Pending => {
             if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-                cell.set_char('▸');
+                cell.set_char(glyphs::PLAN_PENDING);
                 cell.set_style(Style::default().fg(text_dim));
             }
             let mut line_text = String::with_capacity(32);
@@ -232,21 +234,21 @@ pub fn render_plan_step_msg(
         }
         PlanStatus::Active => {
             if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-                cell.set_char('│');
+                cell.set_char(glyphs::PLAN_ACTIVE);
                 cell.set_style(Style::default().fg(text_secondary));
             }
             if let Some(cell) = buf.cell_mut((margin_x + 1, area.y + row)) {
-                cell.set_char('●');
+                cell.set_char(glyphs::TOOL_BULLET);
                 cell.set_style(Style::default().fg(text_secondary));
             }
             let pulse_char = if spinner == '⠋' || spinner == '⠹' || spinner == '⠴' || spinner == '⠧' || spinner == '⠏' {
-                '▐'
+                glyphs::PULSE_FILL
             } else {
                 ' '
             };
-            if pulse_char == '▐' {
+            if pulse_char == glyphs::PULSE_FILL {
                 if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + row)) {
-                    cell.set_char('▐');
+                    cell.set_char(glyphs::PULSE_FILL);
                     cell.set_style(Style::default().fg(text_secondary));
                 }
             }
@@ -260,7 +262,7 @@ pub fn render_plan_step_msg(
         }
         PlanStatus::Complete => {
             if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-                cell.set_char('✓');
+                cell.set_char(glyphs::CHECK_MARKER);
                 cell.set_style(Style::default().fg(text_secondary));
             }
             let mut line_text = String::with_capacity(32);
@@ -284,7 +286,7 @@ pub fn render_interrupt_msg(
     animation: &AnimationState,
 ) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('✗');
+        cell.set_char(glyphs::INTERRUPT);
         cell.set_style(Style::default().fg(error));
     }
     let style = if let Some(start) = animation.interrupt_fade_start {
@@ -316,7 +318,7 @@ pub fn render_rewind_msg(
     show_spinner: bool,
 ) -> u16 {
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('↺');
+        cell.set_char(glyphs::REWIND);
         cell.set_style(Style::default().fg(text_muted));
     }
     let mut text = String::with_capacity(32);
