@@ -30,6 +30,7 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
         EventCategory::Error(err) => super::error::on_agent_error(state, err),
         EventCategory::Token(tokens) => update_token_usage(state, tokens.0, tokens.1),
         EventCategory::Permission(perm) => handle_permission_event(state, perm),
+        EventCategory::Thinking(thinking) => handle_thinking_event(state, thinking),
         EventCategory::Ignored => {}
     }
 }
@@ -42,6 +43,7 @@ enum EventCategory {
     Error(String),
     Token(TokenEvent),
     Permission(AgentEvent),
+    Thinking(AgentEvent),
     Ignored,
 }
 
@@ -59,6 +61,8 @@ fn categorize_event(event: &AgentEvent) -> EventCategory {
         AgentEvent::TokenUsage { prompt_tokens, completion_tokens, .. } =>
             EventCategory::Token(TokenEvent(*prompt_tokens, *completion_tokens)),
         AgentEvent::PermissionRequest { .. } => EventCategory::Permission(event.clone()),
+        AgentEvent::ThinkingStart { .. } | AgentEvent::ThinkingUpdate { .. } |
+        AgentEvent::ThinkingEnd { .. } => EventCategory::Thinking(event.clone()),
         // Ignored events
         AgentEvent::PermissionGranted { .. } | AgentEvent::PermissionDenied { .. } |
         AgentEvent::ContextCompacted { .. } => EventCategory::Ignored,
@@ -73,6 +77,15 @@ fn handle_message_event(state: &mut AppState, event: AgentEvent) {
         AgentEvent::MessageStart { message, .. } => on_message_start(state, message),
         AgentEvent::MessageUpdate { message, .. } => on_message_update(state, message),
         AgentEvent::MessageEnd { message, .. } => on_message_end(state, message),
+        _ => {}
+    }
+}
+
+fn handle_thinking_event(state: &mut AppState, event: AgentEvent) {
+    match event {
+        AgentEvent::ThinkingStart { turn } => on_thinking_start(state, turn),
+        AgentEvent::ThinkingUpdate { text, .. } => on_thinking_update(state, text),
+        AgentEvent::ThinkingEnd { duration_ms, .. } => on_thinking_end(state, duration_ms),
         _ => {}
     }
 }
@@ -106,6 +119,44 @@ fn update_token_usage(state: &mut AppState, prompt_tokens: usize, completion_tok
     if let Some(ref model) = state.current_model {
         let cost = TokenUsage::estimate_cost(prompt_tokens, completion_tokens, model);
         state.session_token_usage.estimated_cost += cost;
+    }
+}
+
+// ─── Thinking handlers ───────────────────────────────────────────────────────
+// These handle the new AgentEvent::ThinkingStart/Update/End events.
+// The agent is responsible for detecting thinking patterns, not the TUI.
+
+fn on_thinking_start(state: &mut AppState, _turn: usize) {
+    state.is_thinking = true;
+    state.thinking_start = Some(std::time::Instant::now());
+    state.thinking_duration = None;
+    state.current_thinking_text.clear();
+}
+
+fn on_thinking_update(state: &mut AppState, text: String) {
+    if !state.current_thinking_text.is_empty() {
+        state.current_thinking_text.push(' ');
+    }
+    state.current_thinking_text.push_str(&text);
+}
+
+fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
+    state.is_thinking = false;
+    if duration_ms > 0 {
+        state.thinking_duration = Some(std::time::Duration::from_millis(duration_ms));
+    } else if let Some(start) = state.thinking_start.take() {
+        state.thinking_duration = Some(start.elapsed());
+    }
+    
+    // Add thought indicator if thinking took more than 0.5s
+    if let Some(duration) = state.thinking_duration {
+        let secs = duration.as_secs_f32();
+        if secs > 0.5 || !state.current_thinking_text.is_empty() {
+            state.messages.push(MessageItem::Thought {
+                duration_secs: secs,
+                text: std::mem::take(&mut state.current_thinking_text),
+            });
+        }
     }
 }
 
@@ -221,7 +272,7 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
     if let Some(duration) = state.thinking_duration {
         let secs = duration.as_secs_f32();
         if secs > 0.5 {
-            state.messages.push(MessageItem::Thought { duration_secs: secs });
+            state.messages.push(MessageItem::Thought { duration_secs: secs, text: state.current_thinking_text.clone() });
         }
     }
 }
@@ -282,6 +333,11 @@ pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolR
 
 pub fn on_agent_end(state: &mut AppState) {
     state.agent_running = false;
+    // Clear thinking state
+    state.is_thinking = false;
+    state.thinking_start = None;
+    state.thinking_duration = None;
+    state.current_thinking_text.clear();
     // P0-AGENT-TIMEOUT: Clear agent start time on end
     state.agent_start_time = None;
     // Clear live status

@@ -379,7 +379,7 @@ mod mixed_message_types {
         state.messages.push(MessageItem::System { text: "System".to_string() });
         state.messages.push(MessageItem::Error { message: "Error".to_string(), recoverable: true });
         state.messages.push(MessageItem::ToolCall { name: "tool".to_string(), args: "args".to_string(), result: None, is_error: false });
-        state.messages.push(MessageItem::Thought { duration_secs: 1.5 });
+        state.messages.push(MessageItem::Thought { duration_secs: 1.5, text: String::new() });
         state.messages.push(MessageItem::Separator { elapsed_secs: 10, tool_calls: 2, tokens_used: Some(100) });
 
         // Scroll should work with all types

@@ -435,7 +435,7 @@ mod tests {
             MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None },
             MessageItem::System { text: "System notice".to_string() },
             // These should be filtered out (now inline in AssistantMessage)
-            MessageItem::Thought { duration_secs: 1.0 },
+            MessageItem::Thought { duration_secs: 1.0, text: String::new() },
             MessageItem::ToolCall { name: "bash".to_string(), args: "pwd".to_string(), result: None, is_error: false },
         ];
         let feed = Feed::from(messages);

@@ -91,7 +91,7 @@ impl FeedBuilder {
 
     /// Add a thought duration tag. Renders as: `◆ Thought for Xs`
     pub fn thought(mut self, duration_secs: f32) -> Self {
-        self.messages.push(MessageItem::Thought { duration_secs });
+        self.messages.push(MessageItem::Thought { duration_secs, text: String::new() });
         self
     }
 
