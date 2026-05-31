@@ -408,8 +408,8 @@ mod tests {
     // ─── SSOT: Only last assistant shows Thinking... ──────────────────────────
 
     #[test]
-    fn test_old_assistant_placeholder_shows_dot_not_thinking() {
-        // When agent is running but this is NOT the last item, show dot
+    fn test_old_assistant_placeholder_shows_thinking() {
+        // All empty assistant placeholders show "Thinking..." when agent is running
         let item = FeedItem::AssistantMessage {
             id: "old".to_string(),
             text: String::new(),
@@ -419,8 +419,7 @@ mod tests {
             turn_duration: None,
         };
         let (row_text, _, _) = render_feed_item_not_last(&item);
-        assert!(!row_text.contains("Thinking"), "Old placeholder should NOT show 'Thinking...', got: '{}'", row_text.trim());
-        assert!(row_text.contains(glyphs::DOT), "Old placeholder should show dot, got: '{}'", row_text.trim());
+        assert!(row_text.contains("Thinking"), "Placeholder should show 'Thinking...', got: '{}'", row_text.trim());
     }
 
     fn render_feed_item_not_last(item: &FeedItem) -> (String, Buffer, Rect) {

@@ -35,6 +35,11 @@ impl MessageRegistry {
         "Idle"
     }
 
+    /// Waiting for response
+    pub fn status_waiting() -> &'static str {
+        "Waiting"
+    }
+
     // ─── Error messages (Title Case + description) ──────────────────────────
 
     /// No API key configured for provider

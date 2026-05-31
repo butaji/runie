@@ -115,12 +115,11 @@ pub fn render_assistant_msg(
     let (stripped, _think_blocks) = extract_think_blocks(text);
 
     if stripped.trim().is_empty() && _think_blocks.is_empty() {
-        // Only show "Thinking..." on the LAST assistant placeholder when agent is running
-        let is_active = agent_running && is_last_item;
-        let content = if is_active {
+        // Never show just a dot — always show meaningful status
+        let content = if agent_running {
             format!("{} {}...", spinner, MessageRegistry::status_thinking())
         } else {
-            glyphs::DOT.to_string()
+            format!("{} {}", glyphs::DOT, MessageRegistry::status_waiting())
         };
         let para = ratatui::widgets::Paragraph::new(ratatui::text::Line::raw(content).style(Style::default().fg(text_muted)))
             .style(Style::default().fg(text_muted));

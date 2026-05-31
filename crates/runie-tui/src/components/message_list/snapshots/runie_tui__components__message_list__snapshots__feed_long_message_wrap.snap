@@ -7,7 +7,7 @@ expression: rendered
    long that takes up multiple lines when         
    rendered                                       
                                                   
-  ──────────────────────────────────────────────  
+                                                  
  This is a very long response that should wrap    
  correctly when the terminal is narrow. It        
  contains multiple sentences and should           
