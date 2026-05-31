@@ -99,7 +99,6 @@ mod tests {
             repo: "runie".to_string(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -115,7 +114,6 @@ mod tests {
             repo: String::new(),
             branch: "main".to_string(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -132,7 +130,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: "src/lib.rs".to_string(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -150,7 +147,6 @@ mod tests {
             repo: "myrepo".to_string(),
             branch: "feature".to_string(),
             path: "src".to_string(),
-            model: "claude".to_string(),
             context_window: 120_000,
             estimated_tokens: 40,
         };
@@ -178,7 +174,6 @@ mod tests {
             repo: "runie".to_string(),
             branch: "main".to_string(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -208,7 +203,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
         };
@@ -230,7 +224,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -254,7 +247,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
         };
@@ -276,7 +268,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
         };
@@ -298,7 +289,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 100_000,
         };
@@ -320,7 +310,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
         };
@@ -342,7 +331,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
         };
@@ -366,7 +354,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
         };
@@ -388,7 +375,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
         };
@@ -410,7 +396,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
         };
@@ -434,7 +419,6 @@ mod tests {
             repo: String::new(),
             branch: String::new(),
             path: String::new(),
-            model: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
         };

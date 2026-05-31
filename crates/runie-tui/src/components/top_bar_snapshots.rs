@@ -41,7 +41,6 @@ fn test_top_bar_snapshot_empty() {
         repo: String::new(),
         branch: String::new(),
         path: String::new(),
-        model: String::new(),
         context_window: 128_000,
         estimated_tokens: 0,
     };
@@ -56,7 +55,6 @@ fn test_top_bar_snapshot_with_repo() {
         repo: "runie".to_string(),
         branch: "main".to_string(),
         path: String::new(),
-        model: String::new(),
         context_window: 128_000,
         estimated_tokens: 0,
     };
@@ -71,7 +69,7 @@ fn test_top_bar_snapshot_full() {
         repo: "runie".to_string(),
         branch: "feature/new-ui".to_string(),
         path: "src/main.rs".to_string(),
-        model: "claude-3-5-sonnet".to_string(),
+
         context_window: 200_000,
         estimated_tokens: 50_000,
     };
@@ -86,7 +84,6 @@ fn test_top_bar_snapshot_narrow() {
         repo: "runie".to_string(),
         branch: "main".to_string(),
         path: "src".to_string(),
-        model: String::new(),
         context_window: 128_000,
         estimated_tokens: 40,
     };
@@ -102,7 +99,7 @@ fn test_top_bar_snapshot_high_tokens() {
         repo: "myproject".to_string(),
         branch: "develop".to_string(),
         path: "crates/core/src/lib.rs".to_string(),
-        model: "claude".to_string(),
+
         context_window: 100_000,
         estimated_tokens: 95_000, // Near 100%
     };

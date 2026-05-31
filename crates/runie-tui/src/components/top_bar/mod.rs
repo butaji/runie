@@ -13,7 +13,6 @@ pub struct TopBarViewModel {
     pub repo: String,
     pub branch: String,
     pub path: String,
-    pub model: String,
     pub context_window: usize,
     pub estimated_tokens: usize,
 }
@@ -24,7 +23,6 @@ impl TopBarViewModel {
             repo: state.repo.clone(),
             branch: state.branch.clone(),
             path: state.path.clone(),
-            model: state.model.clone(),
             context_window: state.context_window.unwrap_or(128_000),
             estimated_tokens: state.estimated_tokens.unwrap_or(0),
         }
@@ -42,7 +40,6 @@ mod tests {
         assert_eq!(vm.repo, "");
         assert_eq!(vm.branch, "");
         assert_eq!(vm.path, "");
-        assert_eq!(vm.model, "");
         assert_eq!(vm.context_window, 128_000);
         assert_eq!(vm.estimated_tokens, 0);
     }
@@ -53,7 +50,6 @@ mod tests {
         state.repo = "runie".to_string();
         state.branch = "main".to_string();
         state.path = "src/main.rs".to_string();
-        state.model = "claude-3-5-sonnet".to_string();
         state.context_window = Some(200_000);
         state.estimated_tokens = Some(40_000);
 
@@ -61,7 +57,6 @@ mod tests {
         assert_eq!(vm.repo, "runie");
         assert_eq!(vm.branch, "main");
         assert_eq!(vm.path, "src/main.rs");
-        assert_eq!(vm.model, "claude-3-5-sonnet");
         assert_eq!(vm.context_window, 200_000);
         assert_eq!(vm.estimated_tokens, 40_000);
     }
