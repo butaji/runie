@@ -23,14 +23,14 @@ impl Default for GlobalTagsViewModel {
 }
 
 impl GlobalTagsViewModel {
-    /// Create idle state: "{model} | {tokens} tok | ${cost}"
-    pub fn idle(model: &str, tokens: u64, cost: f64) -> Self {
+    /// Create idle state: "{tokens} tok | ${cost}" or empty
+    pub fn idle(_model: &str, tokens: u64, cost: f64) -> Self {
         Self {
             left: None,
             right: if tokens > 0 {
-                format!("{} | {} tok | ${:.4}", model, tokens, cost)
+                format!("{} tok | ${:.4}", tokens, cost)
             } else {
-                model.to_string()
+                String::new()
             },
         }
     }
@@ -40,6 +40,14 @@ impl GlobalTagsViewModel {
         Self {
             left: Some(format!("⣾ {}", status)),
             right: format!("[turn: {}] [⇣{}]", time, tokens),
+        }
+    }
+
+    /// Create error state: "Error" (no spinner, no turn info)
+    pub fn error(status: &str) -> Self {
+        Self {
+            left: None,
+            right: format!("[{}]", status),
         }
     }
 }
@@ -59,7 +67,6 @@ impl Widget for GlobalTagsViewModel {
             }
         }
 
-        let width = area.width as usize;
         let right_len = self.right.len();
 
         // If nothing to show, return early
@@ -67,8 +74,8 @@ impl Widget for GlobalTagsViewModel {
             return;
         }
 
-        // Render left part
-        let x = 1u16;
+        // Render left part — align to inner left edge (account for border at x=0)
+        let x = area.x + 1;
         if let Some(ref left) = self.left {
             let left_style = Style::default()
                 .fg(accent)
@@ -77,8 +84,8 @@ impl Widget for GlobalTagsViewModel {
             buf.set_line(x, area.y, &Line::from(span), left.len() as u16);
         }
 
-        // Render right part (right-aligned)
-        let right_x = (width.saturating_sub(right_len + 1)) as u16;
+        // Render right part — right-aligned to inner right edge (account for border)
+        let right_x = area.x + (area.width.saturating_sub(right_len as u16 + 1));
         let right_style = Style::default()
             .fg(text_dim)
             .add_modifier(Modifier::DIM);

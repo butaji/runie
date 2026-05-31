@@ -2,9 +2,14 @@
 source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
-  › Hello                                                                       
+  ❯ Hello                                                                       
                                                                                 
-  › How are you?                                                                
+  Hi there!                                                                     
                                                                                 
-  › What's for lunch?                                                           
+  ❯ How are you?                                                                
+                                                                                
+  I'm good, thanks!                                                             
+                                                                                
+  ❯ What's for lunch?                                                           
+                                                                                
   How about pizza?

@@ -40,11 +40,10 @@ fn test_e2e_chat_submit_no_model_shows_hint() {
     // Submit without model
     let cmds = update(&mut state, &mut palette, Msg::Submit);
 
-    // Should not spawn agent, show hint
+    // Should not spawn agent, show error
     assert!(cmds.is_empty());
-    // Note: agent_running is set to true before model check (BUG in chat.rs)
-    // but no SpawnAgent command is issued
-    assert!(state.messages.iter().any(|m| matches!(m, MessageItem::System { text } if text.contains("No model"))));
+    assert!(!state.agent_running);
+    assert!(state.messages.iter().any(|m| matches!(m, MessageItem::Error { message, .. } if message.contains("No model"))));
 }
 
 #[test]

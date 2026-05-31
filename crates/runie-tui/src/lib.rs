@@ -2,6 +2,8 @@
 #![deny(clippy::unwrap_used)]
 
 pub mod theme;
+pub mod messages;
+pub mod glyphs;
 pub mod components;
 pub mod tui;
 pub mod pipe;

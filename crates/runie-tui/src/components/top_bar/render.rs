@@ -12,17 +12,18 @@ fn build_left_spans<'a>(
     bright: Color,
     _dim: Color,
     dim_style: &'a Style,
+    bg: Color,
 ) -> Vec<Span<'a>> {
     let mut parts = Vec::new();
     if !vm.repo.is_empty() {
-        parts.push(Span::styled(&vm.repo, Style::default().fg(bright)));
+        parts.push(Span::styled(&vm.repo, Style::default().fg(bright).bg(bg)));
     }
     if !vm.branch.is_empty() {
-        parts.push(Span::styled("/", *dim_style));
-        parts.push(Span::styled(&vm.branch, *dim_style));
+        parts.push(Span::styled("/", dim_style.clone().bg(bg)));
+        parts.push(Span::styled(&vm.branch, dim_style.clone().bg(bg)));
     }
     if !vm.path.is_empty() {
-        parts.push(Span::styled(format!("  {}", vm.path), *dim_style));
+        parts.push(Span::styled(format!("  {}", vm.path), dim_style.clone().bg(bg)));
     }
     parts
 }
@@ -33,13 +34,15 @@ pub fn render_top_bar(
     buf: &mut Buffer,
     colors: &ThemeColors,
 ) {
+    let bg = colors.bg_base;
     let x = area.x + 1;
     let bright = colors.text_dim;
     let dim = colors.text_dim;
     let dim_style = Style::default().fg(dim).add_modifier(Modifier::DIM);
 
-    let mut left_parts = vec![Span::styled(" ", Style::default())];
-    left_parts.extend(build_left_spans(vm, bright, dim, &dim_style));
+    // Build left spans with explicit bg so text cells don't show as black
+    let mut left_parts = vec![Span::styled(" ", Style::default().bg(bg))];
+    left_parts.extend(build_left_spans(vm, bright, dim, &dim_style, bg));
     if left_parts.len() > 1 {
         buf.set_line(x, area.y, &Line::from(left_parts), area.width - 2);
     }
@@ -55,7 +58,7 @@ pub fn render_top_bar(
         buf.set_line(
             right_x,
             area.y,
-            &Line::from(vec![Span::styled(text, Style::default().fg(bright))]),
+            &Line::from(vec![Span::styled(text, Style::default().fg(bright).bg(bg))]),
             text_len,
         );
         draw_gauge(
@@ -66,6 +69,17 @@ pub fn render_top_bar(
             colors.text_secondary,
             colors.bg_panel,
         );
+    }
+
+    // Fill any remaining cells in the area with bg (catches gaps not covered by text)
+    for y in area.y..area.y + area.height {
+        for x_cell in area.x..area.x + area.width {
+            if let Some(cell) = buf.cell_mut((x_cell, y)) {
+                if cell.symbol() == " " && cell.style().bg == Some(ratatui::style::Color::Reset) {
+                    cell.set_style(Style::default().bg(bg));
+                }
+            }
+        }
     }
 }
 
@@ -103,7 +117,7 @@ mod tests {
             estimated_tokens: 0,
         };
         let dim_style = Style::default();
-        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style);
+        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].content.as_ref(), "runie");
     }
@@ -118,7 +132,7 @@ mod tests {
             estimated_tokens: 0,
         };
         let dim_style = Style::default();
-        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style);
+        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
         assert_eq!(spans.len(), 2);
         assert_eq!(spans[0].content.as_ref(), "/");
         assert_eq!(spans[1].content.as_ref(), "main");
@@ -134,7 +148,7 @@ mod tests {
             estimated_tokens: 0,
         };
         let dim_style = Style::default();
-        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style);
+        let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].content.as_ref(), "  src/lib.rs");
     }

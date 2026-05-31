@@ -48,15 +48,20 @@ pub fn render_input_bar(
 }
 
 fn build_input_block(area: Rect, right_info: &str, border_color: Color) -> Block<'static> {
-    let info_text = if right_info.is_empty() { "model: claude-4" } else { right_info };
-    let info_len = info_text.chars().count() as u16;
-    let dash_count = area.width.saturating_sub(info_len + 5);
-    let dash_str = "─".repeat(dash_count as usize);
-    let title_bottom = format!("{} {} {}", dash_str, info_text, "─");
+    let mut block = Block::bordered()
+        .border_style(Style::default().fg(border_color));
 
-    Block::bordered()
-        .border_style(Style::default().fg(border_color))
-        .title_bottom(Line::from(title_bottom).style(Style::default().fg(border_color)))
+    // Only show right info in border if explicitly provided (e.g. error/status)
+    // Model name lives in global_tags, not here
+    if !right_info.is_empty() {
+        let info_len = right_info.chars().count() as u16;
+        let dash_count = area.width.saturating_sub(info_len + 5);
+        let dash_str = "─".repeat(dash_count as usize);
+        let title_bottom = format!("{} {} {}", dash_str, right_info, "─");
+        block = block.title_bottom(Line::from(title_bottom).style(Style::default().fg(border_color)));
+    }
+
+    block
 }
 
 fn render_textarea_content(textarea: &ratatui_textarea::TextArea, prompt: &str, inner: Rect, accent_color: Color, buf: &mut Buffer) {

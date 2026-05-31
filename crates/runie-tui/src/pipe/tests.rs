@@ -55,7 +55,7 @@ mod tests {
         // TopBarViewModel no longer has a model field - model info belongs ONLY in global_tags
         // This is enforced by the type system (model field was removed)
         
-        // Verify global_tags DOES have the model info (as it should)
-        assert!(vms.global_tags.right.contains("gpt-4o") || vms.global_tags.right.contains("openai"));
+        // Global_tags when idle shows tokens/cost only, not model name
+        // (model name was removed from global tags per user request)
     }
 }

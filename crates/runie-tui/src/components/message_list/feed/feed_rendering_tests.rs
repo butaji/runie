@@ -102,8 +102,8 @@ fn scenario1_renders_user_chevron() {
 
     let first_line = &lines[0];
     assert!(
-        first_line.contains('›'),
-        "Expected user chevron › in first line, got: '{}'",
+        first_line.contains('\u{276F}'),
+        "Expected user chevron ❯ in first line, got: '{}'",
         first_line
     );
     assert!(
@@ -213,7 +213,7 @@ fn scenario2_renders_user_message() {
         lines
     );
     assert!(
-        user_line.unwrap().contains('›'),
+        user_line.unwrap().contains('\u{276F}'),
         "Expected chevron in user line, got: '{}'",
         user_line.unwrap()
     );
@@ -291,10 +291,10 @@ fn scenario2_renders_turn_completed() {
 // User Message Spacing Tests
 // ============================================================================
 
-/// Verify user message has NO extra blank lines below it.
-/// Expected: › Hey! then ⬩ Thought for 0.2s (immediately adjacent)
+/// Verify spacing between user message and assistant content.
+/// Expected: ❯ Hey! then blank line, then ◆ Thought for 0.2s
 #[test]
-fn user_message_no_extra_padding_below() {
+fn user_message_spacing_above_assistant() {
     let feed = {
         let mut f = Feed::new();
         f.add_user_message("Hey!".to_string());
@@ -308,7 +308,7 @@ fn user_message_no_extra_padding_below() {
     let lines = buffer_lines(&buf, &area);
 
     // Find lines containing user message and thought
-    let user_line_idx = lines.iter().position(|l| l.contains("›") && l.contains("Hey!"));
+    let user_line_idx = lines.iter().position(|l| l.contains('\u{276F}') && l.contains("Hey!"));
     let thought_line_idx = lines.iter().position(|l| l.contains("Thought") && l.contains("0.2"));
 
     assert!(user_line_idx.is_some(), "Missing user message line");
@@ -317,22 +317,13 @@ fn user_message_no_extra_padding_below() {
     let user_idx = user_line_idx.unwrap();
     let thought_idx = thought_line_idx.unwrap();
 
-    // Verify thought comes immediately after user message (no blank lines)
+    // Verify spacing line between user message and thought
     assert_eq!(
-        thought_idx - user_idx, 1,
-        "Expected thought immediately after user message (adjacent lines), but found {} line(s) between them. Lines: {:?}",
+        thought_idx - user_idx, 2,
+        "Expected one blank line between user and thought, but found {} line(s). Lines: {:?}",
         thought_idx - user_idx - 1,
         &lines[user_idx..=thought_idx.min(5)]
     );
-
-    // Also verify the lines between are empty (shouldn't be any, but double-check)
-    for i in (user_idx + 1)..thought_idx {
-        assert!(
-            lines[i].trim().is_empty(),
-            "Expected blank line between user and thought, but got: '{}'",
-            lines[i]
-        );
-    }
 }
 
 #[test]
@@ -341,7 +332,7 @@ fn scenario1_full_render_exact_content() {
     let (buf, area) = render_feed_to_buffer(feed, 80, 20);
     let lines = buffer_lines(&buf, &area);
 
-    let has_chevron = lines.iter().any(|l| l.contains('›'));
+    let has_chevron = lines.iter().any(|l| l.contains('\u{276F}'));
     let has_hey = lines.iter().any(|l| l.contains("Hey"));
     let has_thought = lines.iter().any(|l| l.contains("Thought") && l.contains("0.2"));
     let has_response = lines.iter().any(|l| l.contains("Hey you too!"));
@@ -366,7 +357,7 @@ fn scenario2_full_render_exact_content() {
     let lines = buffer_lines(&buf, &area);
 
     assert!(
-        lines.iter().any(|l| l.contains('›') && l.contains("what time is it?")),
+        lines.iter().any(|l| l.contains('\u{276F}') && l.contains("what time is it?")),
         "Missing user message with chevron"
     );
     // Only first thought's duration is rendered (multiple thoughts not fully supported in rendering)

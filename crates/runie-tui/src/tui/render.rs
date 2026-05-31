@@ -5,6 +5,7 @@ use ratatui::{
     text::{Line, Span},
 };
 use crate::theme::ThemeColors;
+use crate::messages::MessageRegistry;
 use crate::tui::state::TuiMode;
 use crate::components::panel::Panel;
 use crate::tui::view_models::{StatusBarViewModel, AgentListViewModel};
@@ -312,10 +313,14 @@ fn render_plan_step(content_x: u16, y: u16, inner_width: u16, step: &usize, text
 fn render_agents_header(vm: &AgentListViewModel, inner: Rect, buf: &mut Buffer, colors: &SidebarColors) {
     let inner_width = inner.width;
     let content_x = inner.x;
-    let agent_status = if vm.agent_running { "● running" } else { "○ idle" };
+    let status_text = if vm.agent_running {
+        format!("● {}", MessageRegistry::status_running())
+    } else {
+        format!("○ {}", MessageRegistry::status_idle())
+    };
     let agent_line = Line::from(vec![
         Span::styled(" ", Style::default()),
-        Span::styled(agent_status, Style::default().fg(colors.text_dim)),
+        Span::styled(&status_text, Style::default().fg(colors.text_dim)),
     ]);
     buf.set_line(content_x, inner.y, &agent_line, inner_width);
 }

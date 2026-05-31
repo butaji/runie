@@ -52,9 +52,9 @@ pub fn render_user_msg(
             }
         }
 
-        // Chevron - uses same color as input box border (border.unfocused)
+        // Chevron - match input box prompt character (❯ U+276F)
         if let Some(cell) = buf.cell_mut((margin_x, first_line_y)) {
-            cell.set_char('\u{203A}');
+            cell.set_char('\u{276F}');
             cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
         }
 

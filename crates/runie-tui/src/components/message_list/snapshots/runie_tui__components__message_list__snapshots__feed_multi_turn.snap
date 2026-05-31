@@ -2,8 +2,11 @@
 source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
-  › Hello                                                                       
+  ❯ Hello                                                                       
                                                                                 
-  › How are you?                                                                
+  Hi there!                                                                     
+                                                                                
+  ❯ How are you?                                                                
+                                                                                
   ◆ Thought for 0.1s                                                            
   I'm doing great, thanks for asking!
