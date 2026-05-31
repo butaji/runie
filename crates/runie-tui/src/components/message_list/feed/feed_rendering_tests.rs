@@ -100,16 +100,18 @@ fn scenario1_renders_user_chevron() {
     let (buf, area) = render_feed_to_buffer(feed, 80, 20);
     let lines = buffer_lines(&buf, &area);
 
-    let first_line = &lines[0];
+    // User message has 1 line top padding, so chevron is on line 1
+    let user_line = lines.iter().find(|l| l.contains('\u{276F}'));
     assert!(
-        first_line.contains('\u{276F}'),
-        "Expected user chevron ❯ in first line, got: '{}'",
-        first_line
+        user_line.is_some(),
+        "Expected user chevron ❯ somewhere in output, got: {:?}",
+        lines
     );
+    let user_line = user_line.unwrap();
     assert!(
-        first_line.contains("Hey"),
+        user_line.contains("Hey"),
         "Expected 'Hey' after chevron, got: '{}'",
-        first_line
+        user_line
     );
 }
 

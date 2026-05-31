@@ -71,13 +71,14 @@ pub fn render_top_bar(
         );
     }
 
-    // Fill any remaining cells in the area with bg (catches gaps not covered by text)
+    // Fill entire area background unconditionally — gaps between left/right text
+    // must match the theme bg, never show terminal's default (black)
     for y in area.y..area.y + area.height {
         for x_cell in area.x..area.x + area.width {
             if let Some(cell) = buf.cell_mut((x_cell, y)) {
-                if cell.symbol() == " " && cell.style().bg == Some(ratatui::style::Color::Reset) {
-                    cell.set_style(Style::default().bg(bg));
-                }
+                let mut style = cell.style();
+                style = style.bg(bg);
+                cell.set_style(style);
             }
         }
     }

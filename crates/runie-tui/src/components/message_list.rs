@@ -145,10 +145,9 @@ fn render_message_list(
             &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item,
         );
         row += rendered;
-        // Add spacing line between items (except after last visible item)
-        if row < max_rows {
-            row += 1;
-        }
+        // Spacing is now handled by individual item renderers
+        // User messages include 1 line top/bottom padding
+        // Other items render without extra spacing
     }
     row
 }
@@ -385,8 +384,11 @@ mod tests {
     #[test]
     fn test_user_message_renders() {
         let (_row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
-        let cell = buf.cell((area.x + 2, area.y)).unwrap();
-        assert_eq!(cell.symbol(), glyphs::CHEVRON.to_string(), "Expected chevron for user message");
+        // User message has 1 line top padding + 1 symbol horizontal padding
+        // margin_x = area.x + 2, chevron at margin_x + 1 = area.x + 3
+        // content starts at area.y + 1 (after top padding)
+        let cell = buf.cell((area.x + 3, area.y + 1)).unwrap();
+        assert_eq!(cell.symbol(), glyphs::CHEVRON.to_string(), "Expected chevron for user message at ({}, {})", area.x + 3, area.y + 1);
     }
 
     #[test]
