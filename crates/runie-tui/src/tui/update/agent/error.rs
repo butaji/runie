@@ -69,6 +69,15 @@ pub fn on_agent_error(state: &mut AppState, message: String) {
     // P1-1: Sanitize error message - truncate long messages and detect stack traces
     let sanitized_message = sanitize_error_message(&message);
     let recoverable = is_recoverable_error(&sanitized_message);
+    
+    // SSOT FIX: Remove empty assistant placeholder before pushing error.
+    // Prevents ghost "Thinking..." indicators from failed turns.
+    if let Some(MessageItem::Assistant { text, .. }) = state.messages.last() {
+        if text.is_empty() {
+            state.messages.pop();
+        }
+    }
+    
     state.messages.push(MessageItem::Error { message: sanitized_message, recoverable });
     // P0-AGENT-TIMEOUT: Clear agent start time on error
     state.agent_start_time = None;

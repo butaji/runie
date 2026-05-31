@@ -110,11 +110,14 @@ pub fn render_assistant_msg(
     timestamp: Option<&str>,
     thought_duration: Option<f32>,
     turn_complete: Option<u64>,
+    is_last_item: bool,
 ) -> u16 {
     let (stripped, _think_blocks) = extract_think_blocks(text);
 
     if stripped.trim().is_empty() && _think_blocks.is_empty() {
-        let content = if agent_running {
+        // Only show "Thinking..." on the LAST assistant placeholder when agent is running
+        let is_active = agent_running && is_last_item;
+        let content = if is_active {
             format!("{} {}...", spinner, MessageRegistry::status_thinking())
         } else {
             glyphs::DOT.to_string()

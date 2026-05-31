@@ -64,6 +64,15 @@ async fn handle_spawn_agent(
             error!("Failed to create provider: {}", e);
             crate::event_logger::log_provider_created(&settings.provider, &settings.model, false);
             crate::event_logger::log_agent_error(&format!("Provider creation failed: {}", e));
+            // CRITICAL FIX: Send error to TUI so it can display immediately and clean up
+            let error_msg = format!("No API key configured for {}. Run /onboard or set {}_API_KEY.",
+                settings.provider, settings.provider.to_uppercase());
+            let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
+                message: error_msg,
+                error_type: "auth".to_string(),
+                recoverable: true,
+                context: e.to_string(),
+            })).await;
             return StateChange::none();
         }
     };

@@ -167,6 +167,48 @@ fn test_multiple_errors() {
 }
 
 #[test]
+fn test_error_removes_empty_assistant_placeholder() {
+    // SSOT FIX: Error should clean up ghost "Thinking..." placeholders
+    let harness = AgentTestHarness::new()
+        .user_says("Hello");
+    
+    // Simulate: user submitted, placeholder added, then error before any response
+    let mut harness = harness.handle_event(AgentEvent::MessageStart {
+        message: make_message("assistant", ""),
+        turn: 1,
+    });
+    
+    // Verify placeholder exists
+    let has_placeholder = harness.state.messages.iter().any(|m| {
+        matches!(m, MessageItem::Assistant { text, .. } if text.is_empty())
+    });
+    assert!(has_placeholder, "Should have empty assistant placeholder before error");
+    
+    // Error occurs (e.g., no API key)
+    harness = harness.handle_event(AgentEvent::Error {
+        message: "No API key configured for openai".to_string(),
+        error_type: "auth".to_string(),
+        recoverable: true,
+        context: "".to_string(),
+    });
+    
+    // Placeholder should be REMOVED - no ghost "Thinking..."
+    let has_placeholder_after = harness.state.messages.iter().any(|m| {
+        matches!(m, MessageItem::Assistant { text, .. } if text.is_empty())
+    });
+    assert!(!has_placeholder_after, "Empty placeholder should be removed on error");
+    
+    // Error message should exist
+    let has_error = harness.state.messages.iter().any(|m| {
+        matches!(m, MessageItem::Error { message, .. } if message.contains("API key"))
+    });
+    assert!(has_error, "Error message should be present");
+    
+    // agent_running should be false
+    assert!(!harness.state.agent_running, "agent_running should be false after error");
+}
+
+#[test]
 fn test_error_after_tool() {
     let harness = AgentTestHarness::new();
     let harness = harness.user_says("Run tool then fail");
