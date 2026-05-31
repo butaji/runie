@@ -18,93 +18,84 @@ pub fn render_user_msg(
     wrap_cache: &mut WrapCache,
 ) -> u16 {
     let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
-    let chevron_color: ratatui::style::Color = theme.color("accent.primary").into(); // Match input box prompt
+    let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-    let text_width = (area.width - margin_x + area.x - 2) as usize;
+    // Account for 1-symbol horizontal padding on each side + chevron + space
+    let text_width = (area.width - margin_x + area.x - 6) as usize;
 
-    // Wrap user text (accounting for chevron + space on first line)
-    let wrapped = wrap_cache.get_wrapped(text.trim(), text_width.saturating_sub(3));
+    // Wrap user text
+    let wrapped = wrap_cache.get_wrapped(text.trim(), text_width);
 
-    // For multi-line content, timestamp goes on the LAST line of content
-    // For single-line, timestamp goes on that same line
-    let text_lines = if wrapped.len() == 1 { 1 } else { wrapped.len() };
-    let timestamp_line_offset = if wrapped.len() <= 1 { 0 } else { wrapped.len() - 1 };
+    let content_lines = if wrapped.is_empty() { 1 } else { wrapped.len() };
+    let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
 
-    // Render first line: chevron + text
-    let first_line_y = area.y + row;
-
-    // Render 1 padding line ABOVE the content
-    if first_line_y > area.y {
-        let padding_above_y = first_line_y - 1;
+    // Render vertical padding ABOVE (1 line)
+    let content_start_y = area.y + row + 1;
+    if content_start_y > area.y {
+        let padding_y = content_start_y - 1;
         for x in (margin_x as usize)..(area.right() as usize) {
-            if let Some(cell) = buf.cell_mut((x as u16, padding_above_y)) {
+            if let Some(cell) = buf.cell_mut((x as u16, padding_y)) {
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
         }
     }
 
-    if first_line_y < area.bottom() {
-        // Set full-width background for the line
-        for x in (margin_x as usize)..(area.right() as usize) {
-            if let Some(cell) = buf.cell_mut((x as u16, first_line_y)) {
-                cell.set_char(' ');
-                cell.set_style(Style::default().bg(bg_color));
-            }
-        }
-
-        // Chevron - match input box prompt character (❯ U+276F)
-        if let Some(cell) = buf.cell_mut((margin_x, first_line_y)) {
-            cell.set_char(glyphs::CHEVRON);
-            cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
-        }
-
-        // First line of wrapped text starts after chevron + space
-        let first_line_text = wrapped.first().map(|s| s.as_str()).unwrap_or("");
-        let first_line = ratatui::text::Line::raw(first_line_text)
-            .style(Style::default().fg(text_primary).bg(bg_color));
-        buf.set_line(margin_x + 2, first_line_y, &first_line, text_width.saturating_sub(2) as u16);
-
-        // Timestamp on first line for single-line messages
-        if let Some(ts) = timestamp {
-            if wrapped.len() <= 1 {
-                let ts_len = ts.len() as u16;
-                let ts_x = area.right().saturating_sub(ts_len + 1);
-                if ts_x > margin_x + 2 {
-                    let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-                    let ts_line = ratatui::text::Line::raw(ts)
-                        .style(Style::default().fg(ts_color).bg(bg_color));
-                    buf.set_line(ts_x, first_line_y, &ts_line, ts_len);
-                }
-            }
-        }
-    }
-
-    // Render remaining wrapped lines (continuation lines, no chevron)
-    for (i, line_text) in wrapped.iter().enumerate().skip(1) {
-        let cont_line_y = row + i as u16;
-        if cont_line_y >= area.height || area.y + cont_line_y >= area.bottom() {
+    // Render content lines with horizontal padding
+    for (i, line_text) in wrapped.iter().enumerate() {
+        let line_y = content_start_y + i as u16;
+        if line_y >= area.bottom() {
             break;
         }
-        // Set full-width background
+        // Fill full-width gray background for the line
         for x in (margin_x as usize)..(area.right() as usize) {
-            if let Some(cell) = buf.cell_mut((x as u16, area.y + cont_line_y)) {
+            if let Some(cell) = buf.cell_mut((x as u16, line_y)) {
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
         }
-        let line = ratatui::text::Line::raw(line_text.as_str())
-            .style(Style::default().fg(text_primary).bg(bg_color));
-        buf.set_line(margin_x, area.y + cont_line_y, &line, text_width as u16);
+
+        if i == 0 {
+            // First line: 1-symbol horizontal padding, then chevron
+            let chevron_x = margin_x + 1;
+            if let Some(cell) = buf.cell_mut((chevron_x, line_y)) {
+                cell.set_char(glyphs::CHEVRON);
+                cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
+            }
+            let text_x = chevron_x + 2;
+            let first_line = ratatui::text::Line::raw(line_text.as_str())
+                .style(Style::default().fg(text_primary).bg(bg_color));
+            buf.set_line(text_x, line_y, &first_line, text_width as u16);
+
+            // Timestamp on first line for single-line messages
+            if let Some(ts) = timestamp {
+                if wrapped.len() <= 1 {
+                    let ts_len = ts.len() as u16;
+                    let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
+                    if ts_x > text_x {
+                        let ts_color: ratatui::style::Color = theme.color("text.muted").into();
+                        let ts_line = ratatui::text::Line::raw(ts)
+                            .style(Style::default().fg(ts_color).bg(bg_color));
+                        buf.set_line(ts_x, line_y, &ts_line, ts_len);
+                    }
+                }
+            }
+        } else {
+            // Continuation lines: 1-symbol horizontal padding, no chevron
+            let text_x = margin_x + 1;
+            let line = ratatui::text::Line::raw(line_text.as_str())
+                .style(Style::default().fg(text_primary).bg(bg_color));
+            buf.set_line(text_x, line_y, &line, text_width as u16);
+        }
     }
 
     // Timestamp on last line for multi-line messages
     if let Some(ts) = timestamp {
         if wrapped.len() > 1 {
-            let last_line_y = area.y + row + timestamp_line_offset as u16;
+            let last_line_y = content_start_y + wrapped.len().saturating_sub(1) as u16;
             let ts_len = ts.len() as u16;
-            let ts_x = area.right().saturating_sub(ts_len + 1);
-            if ts_x > margin_x {
+            let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
+            if ts_x > margin_x + 1 {
                 let ts_color: ratatui::style::Color = theme.color("text.muted").into();
                 let ts_line = ratatui::text::Line::raw(ts)
                     .style(Style::default().fg(ts_color).bg(bg_color));
@@ -113,5 +104,16 @@ pub fn render_user_msg(
         }
     }
 
-    text_lines as u16
+    // Render vertical padding BELOW (1 line)
+    let padding_below_y = content_start_y + content_lines as u16;
+    if padding_below_y < area.bottom() {
+        for x in (margin_x as usize)..(area.right() as usize) {
+            if let Some(cell) = buf.cell_mut((x as u16, padding_below_y)) {
+                cell.set_char(' ');
+                cell.set_style(Style::default().bg(bg_color));
+            }
+        }
+    }
+
+    total_height as u16
 }

@@ -2,6 +2,7 @@
 source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
-  ❯ Hi                                                                          
+                                                                                
+   ❯ Hi                                                                         
                                                                                 
   Hello!

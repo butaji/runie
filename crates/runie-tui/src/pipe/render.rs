@@ -265,9 +265,14 @@ impl RenderPipe {
     }
 
     fn clear_background(buf: &mut Buffer, area: Rect, bg_color: ratatui::style::Color) {
-        ratatui::widgets::Paragraph::new("")
-            .style(Style::default().bg(bg_color))
-            .render(area, buf);
+        for y in area.y..area.y + area.height {
+            for x in area.x..area.x + area.width {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char(' ');
+                    cell.set_style(Style::default().bg(bg_color));
+                }
+            }
+        }
     }
 
     fn dim_background(buf: &mut Buffer, area: Rect, theme_colors: &ThemeColors) {
