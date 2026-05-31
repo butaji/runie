@@ -201,7 +201,7 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
 pub(crate) async fn send_event<M: TryFrom<AgentEvent> + Send + 'static>(msg_tx: &mpsc::Sender<M>, event: AgentEvent) {
     if let Ok(msg) = M::try_from(event) {
         if msg_tx.send(msg).await.is_err() {
-            tracing::error!("Failed to send agent event");
+            tracing::error!("CRITICAL: Failed to send agent event - channel closed. User will not receive feedback!");
         }
     }
 }

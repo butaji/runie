@@ -333,6 +333,7 @@ fn handle_models_fetched(state: &mut AppState, models: Vec<crate::tui::state::Mo
         o.step = OnboardingStep::ModelSelect;
         o.enter_step();
     }
+
     vec![]
 }
 

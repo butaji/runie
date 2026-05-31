@@ -51,6 +51,12 @@ async fn handle_spawn_agent(
     base_system_prompt: &str,
 ) -> StateChange {
     if agent_task.is_some() {
+        let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
+            message: "Agent is already running. Wait for completion or press Ctrl+C to interrupt.".to_string(),
+            error_type: "busy".to_string(),
+            recoverable: true,
+            context: "Attempted to spawn agent while another is running".to_string(),
+        })).await;
         return StateChange::none();
     }
 
