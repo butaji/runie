@@ -1,7 +1,55 @@
 //! Clipboard utilities: copy last response, base64 encoding.
 
+use std::io::Write;
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_base64_encode_empty_string() {
+        let result = base64_encode("");
+        assert_eq!(result, b"");
+    }
+
+    #[test]
+    fn test_base64_encode_single_char() {
+        // 'A' = 0x41 = 0b01000001, padded to 8 bits
+        let result = base64_encode("A");
+        // "A" -> "QQ=="
+        assert_eq!(result, b"QQ==");
+    }
+
+    #[test]
+    fn test_base64_encode_two_chars() {
+        // "AB" -> "QUI="
+        let result = base64_encode("AB");
+        assert_eq!(result, b"QUI=");
+    }
+
+    #[test]
+    fn test_base64_encode_three_chars() {
+        // "ABC" -> "QUJD"
+        let result = base64_encode("ABC");
+        assert_eq!(result, b"QUJD");
+    }
+
+    #[test]
+    fn test_base64_encode_four_chars() {
+        // "ABCD" -> "QUJDRA=="
+        let result = base64_encode("ABCD");
+        assert_eq!(result, b"QUJDRA==");
+    }
+
+    #[test]
+    fn test_base64_encode_text_with_spaces() {
+        // "Hi" -> "SGk="
+        let result = base64_encode("Hi");
+        assert_eq!(result, b"SGk=");
+    }
+}
 
 /// Copy the last assistant message to clipboard using OSC 52 escape sequence.
 pub fn handle_copy_last_response(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {
@@ -20,6 +68,10 @@ pub fn handle_copy_last_response(state: &mut AppState) -> Vec<crate::tui::update
             let encoded = std::str::from_utf8(&encoded_bytes).unwrap_or_default();
             let osc52 = format!("\x1b]52;c;{}\x07", encoded);
             print!("{}", osc52);
+            // Flush to ensure clipboard data is sent before program continues
+            if let Err(e) = std::io::stdout().flush() {
+                eprintln!("Failed to flush stdout: {}", e);
+            }
             state.messages.push(MessageItem::System {
                 text: "Copied last response to clipboard".to_string(),
             });

@@ -3,6 +3,7 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
+use crate::tui::update::ui::UiCmd;
 use crate::tui::key_to_textarea_input;
 use std::time::Instant;
 
@@ -10,12 +11,14 @@ use std::time::Instant;
 #[derive(Debug, Clone)]
 pub enum ChatCmd {
     SpawnAgent { messages: Vec<runie_agent::AgentMessage> },
+    Ui(UiCmd),
 }
 
 impl From<ChatCmd> for crate::tui::state::Cmd {
     fn from(cmd: ChatCmd) -> Self {
         match cmd {
             ChatCmd::SpawnAgent { messages } => crate::tui::state::Cmd::SpawnAgent { messages },
+            ChatCmd::Ui(ui_cmd) => crate::tui::state::Cmd::from(ui_cmd),
         }
     }
 }
@@ -142,6 +145,16 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
     if text.is_empty() {
         state.input_right_info = "Type a message first".to_string();
         return vec![];
+    }
+
+    // Check if input is a slash command - route to slash handler instead of agent
+    if text.starts_with('/') {
+        if let Some(cmd) = runie_core::slash_command::parse_slash_command(&text) {
+            let commands = super::slash::handle_slash(state, cmd);
+            state.textarea.select_all();
+            state.textarea.delete_line_by_end();
+            return commands.into_iter().map(ChatCmd::Ui).collect();
+        }
     }
 
     // Bug 1 fix: If agent is already running, cancel it first before proceeding.
