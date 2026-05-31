@@ -6,6 +6,9 @@
 /// User message prompt chevron (matches input box)
 pub const CHEVRON: char = '\u{276F}'; // ❯
 
+/// Chevron with trailing space (for prompts)
+pub const CHEVRON_WITH_SPACE: &str = "\u{276F} ";
+
 /// Assistant idle/dot indicator
 pub const DOT: char = '·';
 
@@ -41,6 +44,24 @@ pub const GAUGE_EMPTY: char = '○';
 
 /// Gauge full
 pub const GAUGE_FULL: char = '■';
+
+/// Checkmark (complete)
+pub const CHECK_MARKER: char = '✓';
+
+/// Plan step pending arrow
+pub const PLAN_PENDING: char = '▸';
+
+/// Plan step active connector
+pub const PLAN_ACTIVE: char = '│';
+
+/// Rewind/reset indicator
+pub const REWIND: char = '↺';
+
+/// Interrupt/stop indicator
+pub const INTERRUPT: char = '✗';
+
+/// Pulse fill character
+pub const PULSE_FILL: char = '▐';
 
 /// Get current spinner frame from animation tick
 pub fn spinner_frame(tick: usize) -> char {

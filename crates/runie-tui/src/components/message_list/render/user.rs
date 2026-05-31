@@ -1,6 +1,7 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 
 use crate::components::message_list::WrapCache;
+use crate::glyphs;
 use crate::theme::ThemeWrapper;
 
 /// Render a user message
@@ -54,7 +55,7 @@ pub fn render_user_msg(
 
         // Chevron - match input box prompt character (❯ U+276F)
         if let Some(cell) = buf.cell_mut((margin_x, first_line_y)) {
-            cell.set_char('\u{276F}');
+            cell.set_char(glyphs::CHEVRON);
             cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
         }
 

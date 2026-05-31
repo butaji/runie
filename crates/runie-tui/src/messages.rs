@@ -7,6 +7,8 @@
 //! - Tool names ALWAYS lowercase
 //! - Timing ALWAYS "X.Xs" format
 
+use crate::glyphs;
+
 /// Central registry for ALL UI messages
 pub struct MessageRegistry;
 
@@ -113,7 +115,7 @@ impl MessageRegistry {
 
     /// Running status for global tags: "⣾ {status} [turn: {time}]"
     pub fn global_tags_running(status: &str, time: &str, tokens: u64) -> String {
-        format!("⣾ {} [turn: {}] [⇣{}]", status, time, tokens)
+        format!("{} {} [turn: {}] [⇣{}]", glyphs::SPINNER_FRAMES[0], status, time, tokens)
     }
 
     /// Idle status for global tags: "{model} | {tokens} tok | ${cost}"

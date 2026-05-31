@@ -158,7 +158,7 @@ impl RenderPipe {
         textarea.set_cursor_line_style(Style::default().remove_modifier(ratatui::style::Modifier::UNDERLINED));
         let vm = crate::tui::view_models::InputBarViewModel {
             textarea,
-            prompt: "\u{276F} ".to_string(),
+            prompt: format!("{ch} ", ch = crate::glyphs::CHEVRON),
             right_info: state.input_right_info.clone(),
         };
         Component::render(&crate::components::component::InputBar, &vm, area, buf, theme);

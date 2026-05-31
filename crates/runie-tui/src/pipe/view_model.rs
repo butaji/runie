@@ -104,7 +104,7 @@ fn build_input_bar(state: &AppState) -> InputBarViewModel {
     let input_text = state.textarea.lines().join("\n");
     InputBuilder::new()
         .text(&input_text)
-        .prompt("❯ ")
+        .prompt(format!("{ch} ", ch = crate::glyphs::CHEVRON).as_str())
         .info(&state.input_right_info)
         .build()
 }

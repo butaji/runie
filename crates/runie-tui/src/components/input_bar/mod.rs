@@ -17,7 +17,7 @@ pub mod builder;
 pub use builder::*;
 
 /// Prompt character for the input bar
-pub const INPUT_PROMPT: &str = "\u{276F} ";
+pub const INPUT_PROMPT: &str = crate::glyphs::CHEVRON_WITH_SPACE;
 
 /// Calculate the height needed for the input bar based on textarea content.
 pub fn input_bar_height(textarea: &ratatui_textarea::TextArea) -> u16 {

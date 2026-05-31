@@ -1,6 +1,7 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::{Line, Span}, widgets::Widget};
 
 use crate::components::message_list::WrapCache;
+use crate::glyphs;
 use crate::messages::MessageRegistry;
 use super::markdown::render_text_content;
 
@@ -82,7 +83,7 @@ fn render_think_block_box(
         if line_y >= area.height {
             break;
         }
-        let content = format!("· {}", line_text);
+        let content = format!("{} {}", glyphs::DOT, line_text);
         let line = ratatui::text::Line::raw(content).style(Style::default().fg(text_muted));
         buf.set_line(margin_x, area.y + line_y, &line, area.width - margin_x + area.x - 2);
         rendered += 1;
@@ -114,9 +115,9 @@ pub fn render_assistant_msg(
 
     if stripped.trim().is_empty() && _think_blocks.is_empty() {
         let content = if agent_running {
-            format!("{} Thinking...", spinner)
+            format!("{} {}...", spinner, MessageRegistry::status_thinking())
         } else {
-            "·".to_string()
+            glyphs::DOT.to_string()
         };
         let para = ratatui::widgets::Paragraph::new(ratatui::text::Line::raw(content).style(Style::default().fg(text_muted)))
             .style(Style::default().fg(text_muted));
@@ -134,7 +135,7 @@ pub fn render_assistant_msg(
     let thought_rows = if let Some(duration) = thought_duration {
         let duration_text = MessageRegistry::thought_duration(duration);
         let line = Line::from(vec![
-            Span::raw("◆ ").style(Style::default().fg(text_muted)),
+            Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(text_muted)),
             Span::raw(&duration_text).style(Style::default().fg(text_muted)),
         ]);
         buf.set_line(margin_x, area.y + row, &line, content_width);
@@ -206,7 +207,7 @@ pub fn render_assistant_msg(
         let cursor_x = margin_x + (last_line_len as u16).min(area.width - margin_x + area.x - 3);
         if cursor_x < area.x + area.width - 1 {
             if let Some(cell) = buf.cell_mut((cursor_x, cursor_y)) {
-                cell.set_char('▊');
+                cell.set_char(glyphs::CURSOR_BLOCK);
                 cell.set_style(Style::default().fg(text_secondary));
             }
         }
