@@ -60,9 +60,9 @@ impl Widget for GlobalTagsViewModel {
         let text_dim: ratatui::style::Color = ratatui::style::Color::DarkGray;
         let accent: ratatui::style::Color = ratatui::style::Color::Blue;
 
-        // Fill background
-        for y in 0..area.height {
-            for x in 0..area.width {
+        // Fill background at correct coordinates
+        for y in area.y..area.y + area.height {
+            for x in area.x..area.x + area.width {
                 if let Some(cell) = buf.cell_mut((x, y)) {
                     cell.set_style(Style::default().bg(bg_base));
                 }
@@ -80,8 +80,7 @@ impl Widget for GlobalTagsViewModel {
         let x = area.x + 1;
         if let Some(ref left) = self.left {
             let left_style = Style::default()
-                .fg(accent)
-                .add_modifier(Modifier::DIM);
+                .fg(accent);
             let span = Span::styled(left.clone(), left_style);
             buf.set_line(x, area.y, &Line::from(span), left.len() as u16);
         }
@@ -89,8 +88,7 @@ impl Widget for GlobalTagsViewModel {
         // Render right part — right-aligned to inner right edge (account for border)
         let right_x = area.x + (area.width.saturating_sub(right_len as u16 + 1));
         let right_style = Style::default()
-            .fg(text_dim)
-            .add_modifier(Modifier::DIM);
+            .fg(text_dim);
         let span = Span::styled(self.right.clone(), right_style);
         buf.set_line(right_x, area.y, &Line::from(span), right_len as u16);
     }
