@@ -139,9 +139,10 @@ fn render_message_list(
             None
         };
 
+        let is_last_item = absolute_idx == total_items.saturating_sub(1);
         let rendered = render_single_msg_item(
             item, area, row, margin_x, text_x, max_rows, buf, theme, colors, spinner, show_cursor, show_spinner, rewind_spinner,
-            &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration,
+            &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item,
         );
         row += rendered;
         // Add spacing line between items (except after last visible item)
@@ -171,12 +172,13 @@ fn render_single_msg_item(
     agent_running: bool,
     thought_duration: Option<f32>,
     turn_complete: Option<f32>,
+    is_last_item: bool,
 ) -> u16 {
     render::render_single_msg_feed(
         item, area, row, margin_x, text_x, max_rows, buf, theme,
         colors.accent_primary, colors.text_secondary, colors.text_muted, colors.text_dim,
         colors.success, colors.error, colors.code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-        animation, wrap_cache, agent_running, thought_duration, turn_complete,
+        animation, wrap_cache, agent_running, thought_duration, turn_complete, is_last_item,
     )
 }
 
@@ -184,6 +186,7 @@ fn render_single_msg_item(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::glyphs;
 
     #[test]
     fn test_update_last_assistant() {
@@ -290,6 +293,7 @@ mod tests {
             agent_running,
             None,
             None,
+            true, // is_last_item - single item test
         );
 
         let row_text: String = (0..area.width)
@@ -350,6 +354,7 @@ mod tests {
             false,
             None,
             None,
+            true, // is_last_item - single item test
         );
 
         let row_text: String = (0..area.width)
@@ -368,7 +373,7 @@ mod tests {
     fn test_assistant_empty_no_agent_running_shows_dot() {
         let (_, buf, area) = render_assistant_msg("", false);
         let cell = buf.cell((area.x + 2, area.y)).unwrap();
-        assert_eq!(cell.symbol(), "·", "Expected '·' when agent not running");
+        assert_eq!(cell.symbol(), glyphs::DOT.to_string(), "Expected dot when agent not running");
     }
 
     #[test]
@@ -381,7 +386,7 @@ mod tests {
     fn test_user_message_renders() {
         let (_row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
         let cell = buf.cell((area.x + 2, area.y)).unwrap();
-        assert_eq!(cell.symbol(), "\u{276F}", "Expected chevron for user message");
+        assert_eq!(cell.symbol(), glyphs::CHEVRON.to_string(), "Expected chevron for user message");
     }
 
     #[test]
@@ -395,5 +400,61 @@ mod tests {
         let item = make_assistant_feed_item("Response", vec![Thought { duration: 1.5 }]);
         let (row_text, _, _) = render_feed_item(&item);
         assert!(row_text.contains("Thought"), "Expected 'Thought' indicator in row");
+    }
+
+    // ─── SSOT: Only last assistant shows Thinking... ──────────────────────────
+
+    #[test]
+    fn test_old_assistant_placeholder_shows_dot_not_thinking() {
+        // When agent is running but this is NOT the last item, show dot
+        let item = FeedItem::AssistantMessage {
+            id: "old".to_string(),
+            text: String::new(),
+            thoughts: Vec::new(),
+            tool_calls: Vec::new(),
+            timestamp: None,
+            turn_duration: None,
+        };
+        let (row_text, _, _) = render_feed_item_not_last(&item);
+        assert!(!row_text.contains("Thinking"), "Old placeholder should NOT show 'Thinking...', got: '{}'", row_text.trim());
+        assert!(row_text.contains(glyphs::DOT), "Old placeholder should show dot, got: '{}'", row_text.trim());
+    }
+
+    fn render_feed_item_not_last(item: &FeedItem) -> (String, Buffer, Rect) {
+        use ratatui::{buffer::Buffer, layout::Rect};
+        use crate::components::message_list::render::{render_single_msg_feed, WrapCache};
+        use crate::theme::ThemeWrapper;
+
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+        let theme = ThemeWrapper::default_for_test();
+        let mut wrap_cache = WrapCache::new();
+
+        let _rendered = render_single_msg_feed(
+            item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
+            &theme,
+            ratatui::style::Color::White,
+            ratatui::style::Color::Gray,
+            ratatui::style::Color::DarkGray,
+            ratatui::style::Color::Black,
+            ratatui::style::Color::Green,
+            ratatui::style::Color::Red,
+            ratatui::style::Color::Blue,
+            '⠋',
+            false,
+            false,
+            '⠏',
+            &AnimationState::default(),
+            &mut wrap_cache,
+            true, // agent_running = true
+            None,
+            None,
+            false, // is_last_item = false - this is the key!
+        );
+
+        let row_text: String = (0..area.width)
+            .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
+            .collect();
+        (row_text, buf, area)
     }
 }

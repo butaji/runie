@@ -167,7 +167,7 @@ pub fn render_single_msg(
             render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true)
         }
         MessageItem::Thought { duration_secs } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -232,6 +232,7 @@ pub fn render_single_msg_feed(
     agent_running: bool,
     thought_duration: Option<f32>,
     turn_complete: Option<f32>,
+    is_last_item: bool,
 ) -> u16 {
     match item {
         FeedItem::UserMessage { text, timestamp, .. } => {
@@ -242,7 +243,7 @@ pub fn render_single_msg_feed(
             let effective_thought_duration = thoughts.first().map(|t| t.duration).or(thought_duration);
             // Use turn_duration from FeedItem, or passed turn_complete (converted to f32)
             let effective_turn_complete = turn_duration.map(|d| d as u64).or(turn_complete.map(|d| d as u64));
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item)
         }
         FeedItem::SystemNotice { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
