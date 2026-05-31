@@ -4,25 +4,25 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Runie — Agent Harness That Actually Measures</title>
+    <title>Runie — Agentic Harness with TUI. Register your models. Ship better code.</title>
     <meta name="description"
-        content="Runie is the agent harness that ships Rust code, supports every model, and actually lets you measure if you\'re improving. MIT licensed. Built to evaluate." />
+        content="Runie is the Rust-native coding agent harness with terminal UI. Register any LLM model, orchestrate agent swarms, and ship actual Rust code. MIT licensed. Model-agnostic." />
     <meta name="keywords"
-        content="TypeScript to Rust compiler, TSX transpiler, zero overhead TypeScript, Rust hot reload, .r.ts files, TypeScript native performance, Rust compiler driver, TypeScript systems programming, Ratatui JSX, Dioxus TypeScript, Bevy TypeScript, Axum TypeScript, SQLx TypeScript, ownership inference, native binary from TypeScript, Rust TUI framework, TypeScript WASM, zero cost abstraction" />
+        content="coding agent harness, LLM orchestration, Rust TUI, terminal UI agent, multi-agent orchestration, Erlang supervision, model-agnostic AI, OpenAI Anthropic local models, agent evaluation, pattern-aware skills, agent swarm" />
     <meta name="author" content="Runie" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://runie.org" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://runie.org" />
-    <meta property="og:title" content="Runie — Agent Harness That Actually Measures" />
+    <meta property="og:title" content="Runie — Agentic Harness with TUI. Register your models. Ship better code." />
     <meta property="og:description"
-        content="Stop guessing if your agent improved. Runie actually measures it. Rust-native, model-agnostic, MIT licensed." />
+        content="Rust-native coding agent harness with terminal UI. Register any LLM model, orchestrate agent swarms, and measure if you're actually improving." />
     <meta property="og:image" content="https://runie.org/og-image.png" />
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://runie.org" />
-    <meta property="twitter:title" content="Runie — Agent Harness That Actually Measures" />
+    <meta property="twitter:title" content="Runie — Agentic Harness with TUI. Register your models. Ship better code." />
     <meta property="twitter:description"
-        content="Stop guessing if your agent improved. Runie actually measures it." />
+        content="Rust-native coding agent harness with terminal UI. Register any LLM model, orchestrate agent swarms, and measure if you're improving." />
     <meta property="twitter:image" content="https://runie.org/og-image.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
@@ -620,25 +620,26 @@
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "Runie",
-      "alternateName": "Rune Compiler",
+      "alternateName": "Agent Harness",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Linux, macOS, Windows",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "license": "https://opensource.org/licenses/MIT",
-      "programmingLanguage": ["TypeScript", "Rust", "JSX", "TSX"],
+      "programmingLanguage": ["Rust"],
       "softwareVersion": "1.0",
-      "description": "Runie is the agent harness that ships Rust code, supports every model, and actually lets you measure if you\'re improving. MIT licensed. Built to evaluate, not just iterate.",
+      "description": "Runie is the Rust-native coding agent harness with terminal UI. Register any LLM model, orchestrate agent swarms with Erlang-style supervision, and ship actual Rust code. MIT licensed. Model-agnostic with 25+ providers.",
       "featureList": [
-        "Agent harness with end-to-end evaluation",
-        "Rust-native tool execution (sub-ms)",
-        "25+ LLM providers via Rig",
+        "Rust-native coding agent harness with TUI",
+        "Register any LLM model (OpenAI, Anthropic, local, etc.)",
+        "Erlang-style supervision for agent swarms",
         "Multi-agent orchestration",
         "Pattern-aware skills system",
+        "Actually measure if your agent is improving",
         "MIT licensed, no vendor lock-in"
       ],
-      "applicationSubCategory": "Compiler",
-      "keywords": "TypeScript to Rust, TSX transpiler, zero overhead, hot reload, .r.ts, Rust compiler driver, systems programming, native binary, ownership inference, Ratatui, Dioxus, Axum, Bevy, SQLx, Tonic, Candle",
-      "codeRepository": "https://github.com/your-org/runie",
+      "applicationSubCategory": "Agent Harness",
+      "keywords": "coding agent, LLM harness, Rust TUI, terminal UI, multi-agent, Erlang supervision, agent swarm, model-agnostic, OpenAI, Anthropic, local models",
+      "codeRepository": "https://github.com/runie-org/runie",
       "isAccessibleForFree": true,
       "inLanguage": "en"
     }
@@ -646,64 +647,45 @@
 
     <div aria-hidden="true"
         style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
-        <h1>Runie — TypeScript to Rust Compiler with Zero Overhead</h1>
-        <p>Runie is the developer experience layer for Rune, a compiler driver that makes <code>.r.ts</code> and
-            <code>.r.tsx</code> files valid source for native Rust projects. It parses TypeScript-like syntax using SWC,
-            validates a zero-overhead subset, and transpiles to Rust source code that compiles with rustc into static
-            binaries with no runtime dependency.</p>
+        <h1>Runie — Agentic Harness with TUI. Register your models. Ship better code.</h1>
+        <p>Runie is the Rust-native coding agent harness with terminal UI. You register all the models you use, and it makes sure you use them the most efficient way. Orchestrates agent swarms with Erlang-style supervision. Ships actual Rust code, not just chat.</p>
         <h2>What Runie Does</h2>
-        <p>Write TypeScript and TSX with familiar syntax. Runie (powered by the Rune compiler) transpiles it to Rust
-            with zero runtime overhead. Development builds use hot-reloadable cdylibs for live iteration. Release builds
-            produce single static executables indistinguishable from hand-written Rust.</p>
-        <h2>Supported Rust Frameworks</h2>
+        <p>Runie registers any LLM model you use — OpenAI, Anthropic, local models, and more. It orchestrates multi-agent swarms with Erlang-style supervision, measures if your agent is actually improving, and ships Rust code. MIT licensed.</p>
+        <h2>Key Features</h2>
         <ul>
-            <li>Axum — REST APIs with extractors</li>
-            <li>Actix Web — Scope-based routing</li>
-            <li>Ratatui — Terminal UI with JSX builder patterns</li>
-            <li>Tauri — Desktop commands</li>
-            <li>Dioxus — Cross-platform reactive UI</li>
-            <li>egui — Immediate-mode GUI tools</li>
-            <li>Leptos — Full-stack reactive web</li>
-            <li>Yew — Component-based WebAssembly</li>
-            <li>Bevy — ECS game engine</li>
-            <li>SQLx — Compile-time checked database queries</li>
-            <li>Tonic — gRPC services</li>
-            <li>Candle — LLM inference</li>
+            <li>Rust-native coding agent harness with terminal UI (TUI)</li>
+            <li>Register any LLM model — OpenAI, Anthropic, local, 25+ providers</li>
+            <li>Orchestrates agent swarms with Erlang-style supervision</li>
+            <li>Ships actual Rust code, not just chat</li>
+            <li>Actually measures if your agent is improving</li>
+            <li>Pattern-aware skills system</li>
+            <li>Multi-agent orchestration</li>
+            <li>MIT licensed</li>
         </ul>
-        <h2>TypeScript to Rust Type Mapping</h2>
-        <p>number maps to f64 or i32. string maps to String or &amp;str. boolean maps to bool. T | null maps to
-            Option&lt;T&gt;. Tagged unions map to Rust enums. Arrays map to Vec&lt;T&gt;. Result types replace
-            exceptions.</p>
-        <h2>Ownership Inference</h2>
-        <p>Rune automatically infers Rust ownership: const bindings are immutable, let bindings are mutable. Function
-            parameters that are only read become &amp;T borrows. Parameters that are mutated become &amp;mut T. Consumed
-            values move. No manual lifetime annotations required.</p>
-        <h2>Hot Reload Development</h2>
-        <p>cargo rune dev watches .r.ts and .r.tsx files, transpiles to target/rune-cache/, compiles to a versioned
-            dylib, and atomically swaps it while preserving AppState in the host binary. Release builds inline
-            everything into a single static binary with LTO.</p>
-        <h2>Agent-Friendly Compiler Design</h2>
-        <p>Deterministic idempotent output. Structured JSON errors with auto-fix suggestions. One-pass-per-file
-            architecture. Self-describing HIR. Example-driven rule engine. Test-as-spec integration suite. Full source
-            maps from Rust errors back to .r.ts line numbers.</p>
+        <h2>Model-Agnostic</h2>
+        <p>Runie works with any LLM provider. Register OpenAI models, Anthropic models, local models, or any of the 25+ providers supported. Swap models with a single environment variable. No vendor lock-in.</p>
+        <h2>Erlang-Style Supervision</h2>
+        <p>Agent swarms are orchestrated with Erlang-style supervision patterns. Fault tolerance, rest-for-one strategies, and hierarchical supervision trees keep your agents running reliably.</p>
+        <h2>Actually Measure Improvement</h2>
+        <p>Stop guessing if your agent improved. Runie actually measures it. Built-in evaluation lets you track performance over iterations and ship with confidence.</p>
     </div>
 
     <script>
         const features = [
             {
-                name: 'Summary',
+                name: 'TUI Harness',
                 label: 'capability: ',
                 vertical1: 'AGENT',
                 vertical2: 'HARNESS',
-                description: 'Stop guessing if your agent improved. Runie actually measures it.',
-                detail: 'Evaluate. Iterate. Ship. Repeat.'
+                description: 'Agentic Harness with TUI. Register your models. Ship better code.',
+                detail: 'Rust-native. Model-agnostic.'
             },
             {
                 name: 'Rust Performance',
                 label: 'capability: ',
                 vertical1: 'RUST',
                 vertical2: 'NATIVE',
-                description: 'Your agent is waiting on Python. Sub-ms tool execution. True parallelism.',
+                description: 'Ships actual Rust code, not just chat. Sub-ms tool execution. True parallelism.',
                 detail: 'No GIL. No overhead. Just speed.'
             },
             {
@@ -726,8 +708,8 @@
                 name: 'Multi-Agent',
                 label: 'capability: ',
                 vertical1: 'AGENT',
-                vertical2: 'TEAMS',
-                description: 'Specialized agents. One coordinator. Complex tasks, elegantly solved.',
+                vertical2: 'SWARMS',
+                description: 'Erlang-style supervision. Agent swarms that actually work. Fault tolerance built in.',
                 detail: 'Orchestrate. Don\'t just iterate.'
             },
             {
@@ -735,7 +717,7 @@
                 label: 'capability: ',
                 vertical1: 'SKILLS',
                 vertical2: 'ON-DEMAND',
-                description: 'We track market trends and emerging patterns. Best practices get baked in as skills.',
+                description: 'Tracks market trends and emerging patterns. Best practices get baked in as skills.',
                 detail: 'Stay current. Ship smarter.'
             }
         ];
