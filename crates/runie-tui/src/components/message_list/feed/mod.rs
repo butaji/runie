@@ -252,9 +252,10 @@ impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
                 turn_duration: None,
             }),
             System { text } => Ok(FeedItem::SystemNotice { text }),
+            Error { message, .. } => Ok(FeedItem::SystemNotice { text: format!("Error: {}", message) }),
             // Filter out items now inline in AssistantMessage or UI-only
             Thought { .. } | ToolCall { .. } | Separator { .. } | Edit { .. }
-            | Error { .. } | ToolRunning { .. } | ToolComplete { .. }
+            | ToolRunning { .. } | ToolComplete { .. }
             | PlanStep { .. } | Interrupt | Rewind { .. } => Err(()),
         }
     }

@@ -220,7 +220,7 @@ fn test_tool_start_sets_working_status() {
             turn: 1,
         },
     );
-    assert_eq!(state.status_header, Some("Working".to_string()));
+    assert_eq!(state.status_header, Some("Running".to_string()));
 }
 
 #[test]

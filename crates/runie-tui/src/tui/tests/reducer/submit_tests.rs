@@ -93,12 +93,13 @@ fn test_submit_no_model_configured() {
     state.onboarding = None;
     state.textarea = TextArea::new(vec!["hello".to_string()]);
     let cmds = update(&mut state, &mut palette, Msg::Submit);
-    assert_eq!(state.messages.len(), 3); // user + placeholder + error
+    assert_eq!(state.messages.len(), 2); // user + error (no placeholder when model missing)
     assert!(cmds.is_empty());
-    if let MessageItem::System { text } = &state.messages[2] {
-        assert!(text.contains("No model configured"));
+    assert!(!state.agent_running);
+    if let MessageItem::Error { message, .. } = &state.messages[1] {
+        assert!(message.contains("No model configured"));
     } else {
-        panic!("Expected System message");
+        panic!("Expected Error message, got: {:?}", state.messages[1]);
     }
 }
 

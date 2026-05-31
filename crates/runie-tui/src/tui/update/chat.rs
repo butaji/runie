@@ -143,6 +143,13 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         state.input_right_info = "Type a message first".to_string();
         return vec![];
     }
+
+    // Bug 1 fix: If agent is already running, cancel it first before proceeding.
+    // This ensures the old placeholder is removed before adding new message.
+    if state.agent_running {
+        cancel_running_agent(state);
+    }
+
     prepare_agent_messages(state, &text);
     if should_defer_submit(state) {
         return vec![];
@@ -155,10 +162,12 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
 fn prepare_agent_messages(state: &mut AppState, text: &str) {
     save_to_history(state, text);
     reset_history_nav(state);
-    cancel_running_agent(state);
+    // Note: cancel_running_agent is called in handle_submit BEFORE prepare_agent_messages
     reset_scroll(state);
     state.agent_start_time = Some(Instant::now());
-    state.agent_running = true;
+    // Bug 1 fix: Do NOT set agent_running = true here.
+    // agent_running should only be set in finalize_submit when we actually proceed.
+    // This prevents deferred submits from blocking subsequent submits.
 }
 
 fn save_to_history(state: &mut AppState, text: &str) {
@@ -212,20 +221,38 @@ fn should_defer_submit(state: &mut AppState) -> bool {
 fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     let model_missing =
         state.current_model.as_deref().map_or(true, |s| s.is_empty()) && state.onboarding.is_none();
-    add_user_and_placeholder(state, &text);
+
     if model_missing {
+        // No model configured — show error immediately, don't start agent
+        add_user_message_only(state, &text);
         state
             .messages
-            .push(MessageItem::System {
-                text: "No model configured. Press Ctrl+O or type /onboard to set up a model."
+            .push(MessageItem::Error {
+                message: "No model configured. Press Ctrl+O or type /onboard to set up a model."
                     .to_string(),
+                recoverable: true,
             });
+        state.input_right_info = String::new();
         return vec![];
     }
+
+    // Model is configured — proceed with agent
+    state.agent_running = true;
+    add_user_and_placeholder(state, &text);
     let agent_messages = to_agent_messages(&state.messages);
     vec![ChatCmd::SpawnAgent {
         messages: agent_messages,
     }]
+}
+
+fn add_user_message_only(state: &mut AppState, text: &str) {
+    state.messages.push(MessageItem::User {
+        text: text.to_string(),
+        model: Some("You".to_string()),
+        timestamp: None,
+    });
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
 }
 
 fn add_user_and_placeholder(state: &mut AppState, text: &str) {

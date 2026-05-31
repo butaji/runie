@@ -9,6 +9,7 @@ use crate::components::global_tags::GlobalTagsViewModel;
 use crate::components::top_bar::TopBarViewModel;
 pub use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::PlanStatus;
+use crate::messages::MessageRegistry;
 use crate::tui::state::TuiMode;
 use runie_ai::TokenUsage;
 
@@ -186,7 +187,7 @@ fn build_global_tags_vm(state: &crate::tui::state::RenderState) -> GlobalTagsVie
     let cost = state.session_token_usage.estimated_cost;
 
     if state.agent_running {
-        let status = state.status_header.as_deref().unwrap_or("running");
+        let status = state.status_header.as_deref().unwrap_or(MessageRegistry::status_running());
         let time = state.status_details.as_deref().unwrap_or("0s");
         GlobalTagsViewModel::running(status, time, tokens)
     } else {

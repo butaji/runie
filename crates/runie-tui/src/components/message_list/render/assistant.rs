@@ -1,6 +1,7 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::{Line, Span}, widgets::Widget};
 
 use crate::components::message_list::WrapCache;
+use crate::messages::MessageRegistry;
 use super::markdown::render_text_content;
 
 /// Extract think blocks from text and returns (main_text, think_blocks).
@@ -129,12 +130,12 @@ pub fn render_assistant_msg(
     let mut rendered = 0u16;
 
     // Render thought indicator BEFORE answer (if thought_duration is provided)
-    // ◆ Thought for 0.5s - diamond muted, "Thought" BOLD white, "for 0.5s" muted
+    // ◆ {Thought for Xs} - diamond muted, entire phrase from MessageRegistry
     let thought_rows = if let Some(duration) = thought_duration {
+        let duration_text = MessageRegistry::thought_duration(duration);
         let line = Line::from(vec![
             Span::raw("◆ ").style(Style::default().fg(text_muted)),
-            Span::raw("Thought ").style(Style::default().add_modifier(Modifier::BOLD).fg(text_secondary)),
-            Span::raw(format!("for {:.1}s", duration)).style(Style::default().fg(text_muted)),
+            Span::raw(&duration_text).style(Style::default().fg(text_muted)),
         ]);
         buf.set_line(margin_x, area.y + row, &line, content_width);
         1
@@ -190,7 +191,7 @@ pub fn render_assistant_msg(
     if !agent_running {
         if let Some(elapsed) = turn_complete {
             if row + rendered < max_rows {
-                let complete_text = format!("Turn completed in {}s", elapsed);
+                let complete_text = MessageRegistry::turn_completed(elapsed as f32);
                 let line = ratatui::text::Line::raw(complete_text).style(Style::default().fg(text_muted));
                 buf.set_line(margin_x, area.y + row + rendered, &line, content_width);
                 rendered += 1;

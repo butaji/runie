@@ -70,7 +70,7 @@ fn test_tool_start_pauses_thinking() {
     );
     assert!(!state.is_thinking, "is_thinking should be false");
     assert!(state.thinking_duration.is_some(), "thinking_duration should be set");
-    assert_eq!(state.status_header, Some("Working".to_string()), "status_header");
+    assert_eq!(state.status_header, Some("Running".to_string()), "status_header");
 }
 
 /// Test: agent end clears all
@@ -218,7 +218,7 @@ fn test_tool_start_adds_tool_call_message() {
     );
     let has_tool_call = state.messages.iter().any(|m| matches!(m, MessageItem::ToolCall { .. }));
     assert!(has_tool_call, "tool_call should be present");
-    assert_eq!(state.status_header.as_ref().map(|s| s.as_str()), Some("Working"));
+    assert_eq!(state.status_header.as_ref().map(|s| s.as_str()), Some("Running"));
 }
 
 /// Test: tool end updates tool call result

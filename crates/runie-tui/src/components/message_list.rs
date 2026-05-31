@@ -144,6 +144,10 @@ fn render_message_list(
             &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration,
         );
         row += rendered;
+        // Add spacing line between items (except after last visible item)
+        if row < max_rows {
+            row += 1;
+        }
     }
     row
 }
@@ -377,7 +381,7 @@ mod tests {
     fn test_user_message_renders() {
         let (_row_text, buf, area) = render_feed_item(&make_user_feed_item("Hello"));
         let cell = buf.cell((area.x + 2, area.y)).unwrap();
-        assert_eq!(cell.symbol(), "\u{203A}", "Expected chevron for user message");
+        assert_eq!(cell.symbol(), "\u{276F}", "Expected chevron for user message");
     }
 
     #[test]

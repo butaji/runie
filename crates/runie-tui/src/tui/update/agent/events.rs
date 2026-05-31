@@ -1,6 +1,7 @@
 //! Agent event handlers.
 
 use crate::components::MessageItem;
+use crate::messages::MessageRegistry;
 use crate::tui::state::{AppState, TuiMode};
 use runie_agent::{AgentEvent, ContentPart};
 use runie_ai::TokenUsage;
@@ -112,7 +113,7 @@ fn update_token_usage(state: &mut AppState, prompt_tokens: usize, completion_tok
 
 pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::AgentMessage) {
     state.agent_running = true;
-    state.status_header = Some("Thinking".to_string());
+    state.status_header = Some(MessageRegistry::status_thinking().to_string());
     state.status_details = None;
     state.status_start_time = Some(std::time::Instant::now());
     // Track thinking duration
@@ -259,8 +260,8 @@ pub fn on_tool_start(state: &mut AppState, tool_call_id: String) {
             state.is_thinking = false;
         }
     }
-    state.status_header = Some("Working".to_string());
-    state.status_details = Some(format!("Running {}", tool_call_id));
+    state.status_header = Some(MessageRegistry::status_running().to_string());
+    state.status_details = Some(MessageRegistry::tool_running(&tool_call_id));
     state.messages.push(MessageItem::ToolCall {
         name: tool_call_id,
         args: String::new(),

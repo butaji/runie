@@ -1,4 +1,5 @@
 use crate::components::MessageItem;
+use crate::messages::MessageRegistry;
 use crate::tui::state::{AppState, TuiMode};
 
 /// P1-1 FIX: Sanitize error messages by truncating long messages and detecting stack traces
@@ -60,15 +61,19 @@ fn is_recoverable_error(message: &str) -> bool {
 
 // P1-1 FIX: Sanitize and truncate error messages to prevent raw stack traces
 pub fn on_agent_error(state: &mut AppState, message: String) {
+    // Bug 2 fix: Clear agent_running BEFORE pushing error message.
+    // This ensures render_global_tags won't show braille spinner with error.
+    state.agent_running = false;
+    // Bug 5 fix: Clear input_right_info on error
+    state.input_right_info = String::new();
     // P1-1: Sanitize error message - truncate long messages and detect stack traces
     let sanitized_message = sanitize_error_message(&message);
     let recoverable = is_recoverable_error(&sanitized_message);
     state.messages.push(MessageItem::Error { message: sanitized_message, recoverable });
-    state.agent_running = false;
     // P0-AGENT-TIMEOUT: Clear agent start time on error
     state.agent_start_time = None;
     // Set error status
-    state.status_header = Some("Error".to_string());
+    state.status_header = Some(MessageRegistry::status_error().to_string());
     state.status_details = Some(message);
     state.status_start_time = Some(std::time::Instant::now());
     // BG-2 FIX: Always reset to Chat on error (unless in Onboarding)

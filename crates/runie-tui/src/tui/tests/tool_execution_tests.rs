@@ -261,10 +261,10 @@ fn test_tool_execution_sets_working_status() {
         },
     );
 
-    // After tool start, status should be Working
+    // After tool start, status should be Running
     assert_eq!(
         state.status_header.as_deref(),
-        Some("Working"),
-        "status should be Working during tool execution"
+        Some("Running"),
+        "status should be Running during tool execution"
     );
 }

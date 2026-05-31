@@ -70,12 +70,18 @@ fn build_top_bar(state: &AppState) -> TopBarViewModel {
 }
 
 fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
+    use crate::messages::MessageRegistry;
     let model = state.current_model.as_deref().unwrap_or("—");
     let tokens = state.session_token_usage.total_tokens as u64;
     let cost = state.session_token_usage.estimated_cost;
 
     if state.agent_running {
-        let status = state.status_header.as_deref().unwrap_or("running");
+        // Bug 3 fix: Use MessageRegistry for consistent casing ("Running" not "running")
+        let status = state.status_header.as_deref().unwrap_or(MessageRegistry::status_running());
+        // Error state: no spinner, no turn info
+        if status == MessageRegistry::status_error() {
+            return GlobalTagsViewModel::error(status);
+        }
         let time = state.status_details.as_deref().unwrap_or("0s");
         GlobalTagsViewModel::running(status, time, tokens)
     } else {

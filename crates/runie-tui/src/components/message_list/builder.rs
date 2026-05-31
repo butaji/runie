@@ -258,8 +258,9 @@ mod tests {
             .build();
 
         let items = vm.feed.items();
-        // tool_error and error are filtered out in Feed conversion
-        assert_eq!(items.len(), 1);
+        // Error renders as SystemNotice; tool_error still filtered
+        assert_eq!(items.len(), 2);
         assert!(matches!(&items[0], FeedItem::UserMessage { .. }));
+        assert!(matches!(&items[1], FeedItem::SystemNotice { .. }));
     }
 }
