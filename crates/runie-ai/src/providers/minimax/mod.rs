@@ -26,7 +26,7 @@ impl MiniMaxProvider {
             .build()
             .unwrap_or_else(|_| Client::new());
         Self {
-            api_key,
+            api_key: api_key.trim().to_string(),
             model,
             base_url: "https://api.minimax.io/v1".to_string(),
             client,
@@ -114,6 +114,9 @@ impl MiniMaxProvider {
         tools: Vec<ToolSchema>,
     ) -> Result<BoxStream<'static, Event>, ProviderError> {
         let url = format!("{}/chat/completions", self.base_url);
+        tracing::debug!("[MiniMax] Request URL: {}", url);
+        tracing::debug!("[MiniMax] Model: {}", self.model);
+        tracing::debug!("[MiniMax] API Key prefix: {}...", &self.api_key[..self.api_key.len().min(8)]);
         let minimax_messages = self.messages_to_minimax(messages.clone());
         let has_tools = !tools.is_empty();
 
@@ -140,7 +143,16 @@ impl MiniMaxProvider {
         if status.as_u16() == 429 { return Err(ProviderError::RateLimited); }
         if !status.is_success() {
             let body = response.text().await.unwrap_or_else(|e| format!("(body error: {})", e));
-            return Err(ProviderError::ApiError(format!("{}: {}", status, body)));
+            let error_msg = if status.as_u16() == 401 && body.contains("1004") {
+                format!(
+                    "{}: {}\n\nMiniMax requires an API Secret Key (not an API Key). \
+                     Please use your API Secret Key from the MiniMax console.",
+                    status, body
+                )
+            } else {
+                format!("{}: {}", status, body)
+            };
+            return Err(ProviderError::ApiError(error_msg));
         }
 
         stream::build_minimax_stream(response, messages).await
@@ -174,7 +186,16 @@ impl MiniMaxProvider {
         if status.as_u16() == 429 { return Err(ProviderError::RateLimited); }
         if !status.is_success() {
             let body = response.text().await.unwrap_or_else(|e| format!("(body error: {})", e));
-            return Err(ProviderError::ApiError(format!("{}: {}", status, body)));
+            let error_msg = if status.as_u16() == 401 && body.contains("1004") {
+                format!(
+                    "{}: {}\n\nMiniMax requires an API Secret Key (not an API Key). \
+                     Please use your API Secret Key from the MiniMax console.",
+                    status, body
+                )
+            } else {
+                format!("{}: {}", status, body)
+            };
+            return Err(ProviderError::ApiError(error_msg));
         }
 
         let result: types::MiniMaxResponse = response.json().await.map_err(|e| ProviderError::InvalidResponse(e.to_string()))?;
