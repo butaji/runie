@@ -118,6 +118,12 @@ async fn handle_context_compaction<M: TryFrom<AgentEvent> + Send + 'static>(
             }
             Err(e) => {
                 tracing::warn!("[COMPACT] Failed to compact context: {}", e);
+                send_event(msg_tx, AgentEvent::Error {
+                    message: format!("Context compaction failed: {}", e),
+                    error_type: "context".to_string(),
+                    recoverable: true,
+                    context: e.to_string(),
+                }).await;
             }
         }
     }
@@ -144,6 +150,13 @@ async fn execute_turn<M: TryFrom<AgentEvent> + Send + 'static>(
         Ok(s) => s,
         Err(e) => {
             tracing::error!("[ACTOR:AgentLoop] Stream error: {}", e);
+            let (error_type, recoverable, context) = super::classify_error(&super::AgentLoopError::ProviderError(e.to_string()));
+            send_event(msg_tx, AgentEvent::Error {
+                message: format!("Failed to start chat: {}", e),
+                error_type,
+                recoverable,
+                context,
+            }).await;
             return false;
         }
     };
@@ -282,7 +295,13 @@ async fn stream_loop<M: TryFrom<AgentEvent> + Send + 'static>(
             }
             LlmEvent::Error { message } => {
                 tracing::error!("[ACTOR:AgentLoop] Error: {}", message);
-                assistant_message.error_message = Some(message);
+                assistant_message.error_message = Some(message.clone());
+                send_event(msg_tx, AgentEvent::Error {
+                    message: format!("Stream error: {}", message),
+                    error_type: "stream".to_string(),
+                    recoverable: true,
+                    context: message,
+                }).await;
                 break;
             }
             _ => {

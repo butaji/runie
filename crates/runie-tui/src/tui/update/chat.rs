@@ -154,6 +154,15 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
             state.textarea.select_all();
             state.textarea.delete_line_by_end();
             return commands.into_iter().map(ChatCmd::Ui).collect();
+        } else {
+            // Unknown slash command — show error, don't submit
+            state.messages.push(MessageItem::Error {
+                message: format!("Unknown command: {}. Type /help for available commands.", text),
+                recoverable: true,
+            });
+            state.textarea.select_all();
+            state.textarea.delete_line_by_end();
+            return vec![];
         }
     }
 
@@ -163,10 +172,11 @@ fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         cancel_running_agent(state);
     }
 
-    prepare_agent_messages(state, &text);
     if should_defer_submit(state) {
         return vec![];
     }
+
+    prepare_agent_messages(state, &text);
     finalize_submit(state, text)
 }
 
@@ -224,7 +234,7 @@ fn reset_scroll(state: &mut AppState) {
 fn should_defer_submit(state: &mut AppState) -> bool {
     if let Some(ref onboarding) = state.onboarding {
         if onboarding.is_fetching_models {
-            state.input_right_info = "Loading models...".to_string();
+            state.input_right_info = "Loading models... retry after".to_string();
             return true;
         }
     }
