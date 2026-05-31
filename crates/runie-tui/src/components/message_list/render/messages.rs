@@ -8,6 +8,7 @@ use ratatui::{
 };
 
 use crate::components::message_list::PlanStatus;
+use crate::components::message_list::WrapCache;
 use crate::glyphs;
 use crate::messages::MessageRegistry;
 use crate::tui::state::AnimationState;
@@ -104,13 +105,25 @@ pub fn render_system_msg(
     buf: &mut Buffer,
     text_muted: ratatui::style::Color,
     error: ratatui::style::Color,
+    wrap_cache: &mut WrapCache,
 ) -> u16 {
     let is_error = text.starts_with("Error:");
     let color = if is_error { error } else { text_muted };
-    let prefix = if is_error { "! ".to_string() } else { format!("{} ", glyphs::DOT) };
-    let line = Line::raw(format!("{}{}", prefix, text)).style(Style::default().fg(color));
-    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
-    1
+    let prefix = if is_error { "! " } else { "• " };
+    let prefix_len = prefix.len();
+    let content_width = (area.width - margin_x + area.x - 2) as usize;
+    let text_width = content_width.saturating_sub(prefix_len);
+    let wrapped = wrap_cache.get_wrapped(text, text_width);
+    for (i, line_text) in wrapped.iter().enumerate() {
+        let line_y = area.y + row + i as u16;
+        if line_y >= area.bottom() {
+            break;
+        }
+        let full_line = format!("{}{}", prefix, line_text);
+        let line = Line::raw(full_line).style(Style::default().fg(color));
+        buf.set_line(margin_x, line_y, &line, content_width as u16);
+    }
+    wrapped.len() as u16
 }
 
 /// Render an error message
@@ -124,10 +137,23 @@ pub fn render_error_msg(
     buf: &mut Buffer,
     error: ratatui::style::Color,
     _text_muted: ratatui::style::Color,
+    wrap_cache: &mut WrapCache,
 ) -> u16 {
-    let line = Line::raw(format!("! {}", message)).style(Style::default().fg(error));
-    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
-    1
+    let prefix = "! ";
+    let prefix_len = prefix.len();
+    let content_width = (area.width - margin_x + area.x - 2) as usize;
+    let text_width = content_width.saturating_sub(prefix_len);
+    let wrapped = wrap_cache.get_wrapped(message, text_width);
+    for (i, line_text) in wrapped.iter().enumerate() {
+        let line_y = area.y + row + i as u16;
+        if line_y >= area.bottom() {
+            break;
+        }
+        let full_line = format!("{}{}", prefix, line_text);
+        let line = Line::raw(full_line).style(Style::default().fg(error));
+        buf.set_line(margin_x, line_y, &line, content_width as u16);
+    }
+    wrapped.len() as u16
 }
 
 /// Render an edit message

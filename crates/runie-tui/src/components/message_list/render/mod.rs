@@ -183,10 +183,10 @@ pub fn render_single_msg(
             render_edit_msg(filename, diff.as_deref().unwrap_or(""), area, row, margin_x, text_x, buf, text_secondary, code_path)
         }
         MessageItem::System { text } => {
-            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
+            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)
         }
         MessageItem::Error { message, recoverable } => {
-            render_error_msg(message, *recoverable, area, row, margin_x, text_x, buf, error, text_muted)
+            render_error_msg(message, *recoverable, area, row, margin_x, text_x, buf, error, text_muted, wrap_cache)
         }
         MessageItem::ToolRunning { name, args, duration_ms } => {
             render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
@@ -247,7 +247,7 @@ pub fn render_single_msg_feed(
             render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item)
         }
         FeedItem::SystemNotice { text } => {
-            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error)
+            render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)
         }
     }
 }
