@@ -299,9 +299,13 @@ pub fn on_agent_end(state: &mut AppState) {
     state.permission_modal.pending_queue.clear();
     state.mode = TuiMode::Chat;
     // Remove empty assistant placeholder if agent finished with no content
+    // and replace with a system notice so user knows something happened
     if let Some(MessageItem::Assistant { text, .. }) = state.messages.last() {
         if text.is_empty() {
             state.messages.pop();
+            state.messages.push(MessageItem::System {
+                text: "Agent completed but produced no response.".to_string(),
+            });
         }
     }
 }
