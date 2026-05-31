@@ -1,6 +1,6 @@
 use crate::tui::state::{AppState, TuiMode};
 use crate::tui::update::ui::UiCmd;
-use crate::components::{MessageItem, CommandPalette};
+use crate::components::CommandPalette;
 use crate::components::command_palette::PaletteCommand;
 use crate::components::model_picker::ModelPicker;
 
@@ -52,10 +52,10 @@ pub fn handle_switch_model(state: &mut AppState) -> Vec<UiCmd> {
 }
 
 fn run_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<UiCmd> {
-    crate::tui::update::slash::handle_slash(state, cmd);
+    let result = crate::tui::update::slash::handle_slash(state, cmd);
     state.mode = TuiMode::Chat;
     state.command_palette.open = false;
-    vec![]
+    result
 }
 
 fn open_onboarding(state: &mut AppState) -> Vec<UiCmd> {
@@ -69,14 +69,26 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<U
     match cmd {
         PaletteCommand::NewSession => run_slash(state, SlashCommand::New),
         PaletteCommand::ClearChat => run_slash(state, SlashCommand::Clear),
-        PaletteCommand::SwitchModel => handle_switch_model(state),
+        PaletteCommand::SwitchModel => {
+            handle_switch_model(state);
+            // SwitchModel opens model picker - close command palette but keep picker open
+            state.command_palette.open = false;
+            state.command_palette.filter.clear();
+            state.command_palette.selected = 0;
+            vec![]
+        }
         PaletteCommand::ForkSession => run_slash(state, SlashCommand::Fork),
         PaletteCommand::SessionTree => {
             crate::tui::update::slash::handle_tree(state);
             vec![]
         }
         PaletteCommand::Onboard => open_onboarding(state),
-        PaletteCommand::CopyLast => run_slash(state, SlashCommand::Copy),
+        PaletteCommand::CopyLast => {
+            let cmds = crate::tui::update::ui::handle_copy_last_response(state);
+            state.mode = TuiMode::Chat;
+            state.command_palette.open = false;
+            cmds
+        }
         PaletteCommand::ShowCost => run_slash(state, SlashCommand::Cost),
         PaletteCommand::Help => run_slash(state, SlashCommand::Help),
         PaletteCommand::Quit => {

@@ -10,6 +10,8 @@ pub mod ui;
 
 #[cfg(test)]
 mod palette_tests;
+#[cfg(test)]
+mod slash_tests;
 
 use crate::components::CommandPalette;
 use crate::tui::state::{AppState, Msg, Cmd};

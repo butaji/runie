@@ -48,8 +48,12 @@ fn handle_palette_down(state: &mut AppState, palette: &mut CommandPalette) -> Ve
 
 fn handle_palette_confirm(state: &mut AppState, palette: &mut CommandPalette) -> Vec<crate::tui::update::ui::UiCmd> {
     if let Some(cmd) = palette.confirm(palette.selected) {
-        let cmds = super::super::palette::handle_direct_command(state, cmd);
-        super::super::palette::handle_close_modal(state);
+        let cmds = super::super::palette::handle_direct_command(state, cmd.clone());
+        // SwitchModel: handle_direct_command already closes palette and sets mode=Overlay,model_picker=Some
+        // We must NOT call handle_close_modal as it would clear model_picker and set mode=Chat
+        if !matches!(cmd, crate::PaletteCommand::SwitchModel) {
+            super::super::palette::handle_close_modal(state);
+        }
         return cmds;
     }
     vec![]

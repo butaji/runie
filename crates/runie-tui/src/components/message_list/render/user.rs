@@ -29,11 +29,14 @@ pub fn render_user_msg(
     let content_lines = if wrapped.is_empty() { 1 } else { wrapped.len() };
     let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
 
+    // P1-1 FIX: Start one symbol left of chevron for gray bg padding
+    let bg_start = margin_x.saturating_sub(1);
+
     // Render vertical padding ABOVE (1 line)
     let content_start_y = area.y + row + 1;
     if content_start_y > area.y {
         let padding_y = content_start_y - 1;
-        for x in (margin_x as usize)..(area.right() as usize) {
+        for x in (bg_start as usize)..(area.right() as usize) {
             if let Some(cell) = buf.cell_mut((x as u16, padding_y)) {
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
@@ -47,8 +50,8 @@ pub fn render_user_msg(
         if line_y >= area.bottom() {
             break;
         }
-        // Fill full-width gray background for the line
-        for x in (margin_x as usize)..(area.right() as usize) {
+        // Fill full-width gray background for the line (one symbol before chevron)
+        for x in (bg_start as usize)..(area.right() as usize) {
             if let Some(cell) = buf.cell_mut((x as u16, line_y)) {
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
@@ -107,7 +110,7 @@ pub fn render_user_msg(
     // Render vertical padding BELOW (1 line)
     let padding_below_y = content_start_y + content_lines as u16;
     if padding_below_y < area.bottom() {
-        for x in (margin_x as usize)..(area.right() as usize) {
+        for x in (bg_start as usize)..(area.right() as usize) {
             if let Some(cell) = buf.cell_mut((x as u16, padding_below_y)) {
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
