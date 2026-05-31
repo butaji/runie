@@ -43,6 +43,7 @@ pub fn make_state() -> AppState {
         thinking_start: None,
         thinking_duration: None,
         is_thinking: false,
+        current_thinking_text: String::new(),
         mock_mode: false,
         top_bar: TopBarState::default(),
     }
@@ -82,6 +83,7 @@ pub fn make_state_with_text(text: &str) -> AppState {
         thinking_start: None,
         thinking_duration: None,
         is_thinking: false,
+        current_thinking_text: String::new(),
         mock_mode: false,
         top_bar: TopBarState::default(),
     };

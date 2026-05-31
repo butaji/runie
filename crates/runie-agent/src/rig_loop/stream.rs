@@ -34,15 +34,23 @@ where
         error_message: None,
     };
 
-    event_tx.send(AgentEvent::MessageStart { message: assistant_message.clone() }).await
+    event_tx.send(AgentEvent::MessageStart { message: assistant_message.clone(), turn: 0 }).await
         .map_err(|e| AgentLoopError::SendError(e.to_string()))?;
 
     let mut pending_tool_calls: Vec<(String, String, serde_json::Value)> = vec![];
     let mut text_content = String::new();
+    let mut thinking_content = String::new();
+    let mut is_thinking = false;
 
     while let Some(chunk) = stream.next().await {
         match chunk {
             Ok(StreamedAssistantContent::Text(text)) => {
+                // Text content ends thinking
+                if *is_thinking {
+                    event_tx.send(AgentEvent::ThinkingEnd { duration_ms: 0, turn: 0 }).await
+                        .map_err(|e| AgentLoopError::SendError(e.to_string()))?;
+                    *is_thinking = false;
+                }
                 handle_text_chunk(&text.text, &mut text_content, &mut assistant_message, &event_tx).await?;
             }
             Ok(StreamedAssistantContent::ToolCall { tool_call, .. }) => {
@@ -52,10 +60,10 @@ where
                 handle_tool_call_delta(&mut pending_tool_calls, content);
             }
             Ok(StreamedAssistantContent::Reasoning(r)) => {
-                handle_reasoning_chunk(r.display_text(), &event_tx).await?;
+                handle_reasoning_chunk(r.display_text(), &mut thinking_content, &mut is_thinking, &event_tx, 0).await?;
             }
             Ok(StreamedAssistantContent::ReasoningDelta { reasoning, .. }) => {
-                handle_reasoning_delta(reasoning, &event_tx).await?;
+                handle_reasoning_delta(reasoning, &mut thinking_content, &mut is_thinking, &event_tx, 0).await?;
             }
             Ok(_) => {}
             Err(e) => {
@@ -65,6 +73,12 @@ where
                 break;
             }
         }
+    }
+    
+    // Finalize thinking if still active
+    if is_thinking {
+        event_tx.send(AgentEvent::ThinkingEnd { duration_ms: 0, turn: 0 }).await
+            .map_err(|e| AgentLoopError::SendError(e.to_string()))?;
     }
 
     assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
@@ -189,33 +203,45 @@ fn handle_tool_call_delta(
 
 async fn handle_reasoning_chunk(
     reasoning: String,
+    thinking_content: &mut String,
+    is_thinking: &mut bool,
     event_tx: &mpsc::Sender<AgentEvent>,
+    turn: usize,
 ) -> Result<(), AgentLoopError> {
-    let thinking_msg = AgentMessage {
-        role: "assistant".to_string(),
-        content: vec![ContentPart::Text { text: format!("[thinking: {}]", reasoning) }],
-        timestamp: chrono::Utc::now().timestamp_millis(),
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-    };
-    event_tx.send(AgentEvent::MessageUpdate { message: thinking_msg }).await
+    if !*is_thinking {
+        *is_thinking = true;
+        *thinking_content = reasoning.clone();
+        event_tx.send(AgentEvent::ThinkingStart { turn }).await
+            .map_err(|e| AgentLoopError::SendError(e.to_string()))?;
+    } else {
+        if !thinking_content.is_empty() {
+            thinking_content.push(' ');
+        }
+        thinking_content.push_str(&reasoning);
+    }
+    event_tx.send(AgentEvent::ThinkingUpdate { text: reasoning, turn }).await
         .map_err(|e| AgentLoopError::SendError(e.to_string()))
 }
 
 async fn handle_reasoning_delta(
     reasoning: String,
+    thinking_content: &mut String,
+    is_thinking: &mut bool,
     event_tx: &mpsc::Sender<AgentEvent>,
+    turn: usize,
 ) -> Result<(), AgentLoopError> {
-    let thinking_msg = AgentMessage {
-        role: "assistant".to_string(),
-        content: vec![ContentPart::Text { text: format!("[thinking: {}]", reasoning) }],
-        timestamp: chrono::Utc::now().timestamp_millis(),
-        usage: None,
-        stop_reason: None,
-        error_message: None,
-    };
-    event_tx.send(AgentEvent::MessageUpdate { message: thinking_msg }).await
+    if !*is_thinking {
+        *is_thinking = true;
+        *thinking_content = reasoning.clone();
+        event_tx.send(AgentEvent::ThinkingStart { turn }).await
+            .map_err(|e| AgentLoopError::SendError(e.to_string()))?;
+    } else {
+        if !thinking_content.is_empty() {
+            thinking_content.push(' ');
+        }
+        thinking_content.push_str(&reasoning);
+    }
+    event_tx.send(AgentEvent::ThinkingUpdate { text: reasoning, turn }).await
         .map_err(|e| AgentLoopError::SendError(e.to_string()))
 }
 

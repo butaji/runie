@@ -394,10 +394,11 @@ fn test_multiple_agent_start_end_cycles() {
         assert!(!state.agent_running, "agent should not be running after turn {}", i);
     }
 
+    // Empty assistants are replaced with system messages per design
     assert_eq!(
-        state.messages.iter().filter(|m| matches!(m, MessageItem::Assistant { .. })).count(),
+        state.messages.iter().filter(|m| matches!(m, MessageItem::System { .. })).count(),
         3,
-        "should have 3 assistant messages"
+        "should have 3 system messages (empty assistants replaced)"
     );
 }
 

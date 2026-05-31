@@ -22,6 +22,15 @@ impl TokenUsage {
                 (prompt_tokens as f64 / 1000.0 * 0.005) +
                 (completion_tokens as f64 / 1000.0 * 0.015)
             }
+            "gpt-4o-mini" | "gpt-4o-mini-2024-07-18" => {
+                (prompt_tokens as f64 / 1000.0 * 0.00015) +
+                (completion_tokens as f64 / 1000.0 * 0.0006)
+            }
+            "o1" => {
+                // o1 uses reasoning tokens which are more expensive
+                (prompt_tokens as f64 / 1000.0 * 0.015) +
+                (completion_tokens as f64 / 1000.0 * 0.06)
+            }
             "gpt-4" | "gpt-4-turbo" | "gpt-4-turbo-2024-04-09" => {
                 (prompt_tokens as f64 / 1000.0 * 0.03) +
                 (completion_tokens as f64 / 1000.0 * 0.06)
@@ -38,9 +47,18 @@ impl TokenUsage {
                 (prompt_tokens as f64 / 1000.0 * 0.015) +
                 (completion_tokens as f64 / 1000.0 * 0.075)
             }
-            "claude-3-haiku" | "claude-haiku-4-20250514" => {
+            "claude-3-haiku" | "claude-haiku-4-20250514" | "claude-3-5-haiku" | "claude-3-5-haiku-20241022" => {
                 (prompt_tokens as f64 / 1000.0 * 0.0003) +
                 (completion_tokens as f64 / 1000.0 * 0.00125)
+            }
+            "o3" => {
+                // o3 uses extended thinking with high reasoning costs
+                (prompt_tokens as f64 / 1000.0 * 0.015) +
+                (completion_tokens as f64 / 1000.0 * 0.06)
+            }
+            "o3-mini" => {
+                (prompt_tokens as f64 / 1000.0 * 0.00015) +
+                (completion_tokens as f64 / 1000.0 * 0.0006)
             }
             _ => 0.0,
         }

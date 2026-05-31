@@ -170,7 +170,7 @@ pub fn render_single_msg(
         MessageItem::Assistant { text, timestamp, .. } => {
             render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true)
         }
-        MessageItem::Thought { duration_secs } => {
+        MessageItem::Thought { duration_secs, .. } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
         }
         MessageItem::Separator { elapsed_secs, tool_calls, tokens_used } => {

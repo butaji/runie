@@ -23,6 +23,24 @@ pub enum AgentEvent {
         turn: usize,
     },
     
+    /// Agent has started reasoning/thinking (e.g., extended thinking, reasoning models).
+    /// The agent is responsible for detecting thinking patterns, not the TUI.
+    ThinkingStart {
+        turn: usize,
+    },
+    
+    /// Agent reasoning/thinking update with accumulated content.
+    ThinkingUpdate {
+        text: String,
+        turn: usize,
+    },
+    
+    /// Agent reasoning/thinking has ended.
+    ThinkingEnd {
+        duration_ms: u64,
+        turn: usize,
+    },
+    
     ToolExecutionStart { 
         tool_call_id: String,
         tool_name: String,

@@ -62,6 +62,7 @@ pub struct AppState {
     pub thinking_start: Option<std::time::Instant>,
     pub thinking_duration: Option<std::time::Duration>,
     pub is_thinking: bool,
+    pub current_thinking_text: String,
 
     pub show_sidebar: bool,
     pub terminal_size: (u16, u16),
@@ -106,6 +107,7 @@ impl Default for AppState {
             thinking_start: None,
             thinking_duration: None,
             is_thinking: false,
+            current_thinking_text: String::new(),
             show_sidebar: false,
             terminal_size: (0, 0),
             context: ContextState::default(),
