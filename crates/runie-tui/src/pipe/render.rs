@@ -95,6 +95,7 @@ impl RenderPipe {
         for y in area.y..area.y + area.height {
             for x in area.x..area.x + area.width {
                 if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char(' ');
                     cell.set_style(Style::default().bg(bg_base));
                 }
             }
@@ -478,5 +479,81 @@ impl RenderPipe {
 impl Default for RenderPipe {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::buffer::Buffer;
+    use ratatui::layout::Rect;
+    use crate::tui::state::{AppState, TuiMode, Onboarding, OnboardingStep};
+    use crate::theme::ThemeWrapper;
+
+    /// BUG-20 REGRESSION: Onboarding background must clear cell chars,
+    /// not just set background color. Previous chat content (braille chars)
+    /// would bleed through if only bg was set.
+    #[test]
+    fn test_onboarding_background_clears_characters() {
+        let area = Rect::new(0, 0, 80, 24);
+        let mut buf = Buffer::empty(area);
+
+        // Simulate previous frame content (chat with braille chars)
+        for y in 0..area.height {
+            for x in 0..area.width {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char('⠋'); // braille spinner char
+                    cell.set_style(Style::default().fg(ratatui::style::Color::White));
+                }
+            }
+        }
+
+        let mut state = AppState::default();
+        state.mode = TuiMode::Onboarding;
+        // Use empty matrix rain so we can verify background is cleared
+        let mut onboarding = Onboarding::new(false);
+        onboarding.matrix_rain = Some(crate::components::onboarding::MatrixRain::new(0, 0));
+        onboarding.step = OnboardingStep::Welcome;
+        state.onboarding = Some(onboarding);
+
+        let palette = crate::components::CommandPalette::new();
+        let wrap_cache = crate::components::message_list::render::WrapCache::new();
+        let vms = crate::tui::view_models::ViewModels::from_app_state(&state, &palette, wrap_cache);
+        let theme = ThemeWrapper::default();
+        let theme_colors = ThemeColors::from(&theme);
+        let main_areas = RenderPipe::layout_main(area, true, 3);
+
+        RenderPipe::render_onboarding_mode(
+            &mut buf, area, &state, &vms, main_areas, true, &theme, &theme_colors,
+        );
+
+        // Verify all cells have been cleared (char = ' ')
+        // With empty matrix rain and minimal dialog, most cells should be space
+        let mut found_leakage = false;
+        for y in 0..area.height {
+            for x in 0..area.width {
+                if let Some(cell) = buf.cell((x, y)) {
+                    // Skip cells that are part of rendered elements:
+                    // - top bar (y=0..2)
+                    // - welcome dialog with border (~y=5..19, x=18..62)
+                    // - status bar (bottom rows)
+                    let is_top_bar = y < 3;
+                    let is_status_bar = y >= area.height - 3;
+                    let is_dialog = y >= 5 && y <= 19 && x >= 18 && x <= 62;
+                    if !is_top_bar && !is_status_bar && !is_dialog && cell.symbol() != " " {
+                        found_leakage = true;
+                        break;
+                    }
+                }
+            }
+            if found_leakage {
+                break;
+            }
+        }
+
+        assert!(
+            !found_leakage,
+            "Onboarding background should clear previous frame characters outside rendered elements"
+        );
     }
 }

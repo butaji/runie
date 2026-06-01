@@ -146,6 +146,7 @@ pub enum Msg {
     ToggleScrollFocus,
     OpenContextUsageModal,
     CloseContextUsageModal,
+    ShowHelp,
 }
 
 impl PartialEq for Msg {
@@ -203,6 +204,7 @@ impl Msg {
                 | Msg::FilePickerUp | Msg::FilePickerDown | Msg::FilePickerConfirm | Msg::CloseFilePicker
                 | Msg::TogglePermissionMode | Msg::ClearAlwaysApprove | Msg::PlanModeApprove | Msg::PlanModeDeny | Msg::PlanModeViewNext | Msg::PlanModeViewPrev | Msg::ToggleScrollFocus
                 | Msg::OpenContextUsageModal | Msg::CloseContextUsageModal
+                | Msg::ShowHelp
         )
     }
 }

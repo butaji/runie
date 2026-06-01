@@ -91,9 +91,12 @@ fn test_permission_mode_hotkeys() {
     let test_cases = vec![
         (KeyCode::Enter, Msg::PermissionConfirm),
         (KeyCode::Char('y'), Msg::PermissionConfirm),
+        (KeyCode::Char('Y'), Msg::PermissionConfirm), // BUG-13 FIX: uppercase Y
         (KeyCode::Esc, Msg::PermissionCancel),
         (KeyCode::Char('n'), Msg::PermissionCancel),
+        (KeyCode::Char('N'), Msg::PermissionCancel), // BUG-13 FIX: uppercase N
         (KeyCode::Char('a'), Msg::PermissionAlways),
+        (KeyCode::Char('A'), Msg::PermissionAlways), // BUG-13 FIX: uppercase A
         (KeyCode::Char('s'), Msg::PermissionSkip),
     ];
 
