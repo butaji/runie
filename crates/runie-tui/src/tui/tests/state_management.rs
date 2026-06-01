@@ -1,6 +1,6 @@
 //! State management tests for AppState, RenderState, and Msg routing.
 
-use crate::tui::state::{AppState, Msg, Cmd, TuiMode, RenderState};
+use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use crate::components::{CommandPalette, DiffViewer, ModelPicker};
 use crate::tui::update::update;
 use runie_agent::{AgentEvent, AgentMessage};
@@ -36,13 +36,14 @@ fn make_state() -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        // Thinking duration tracking
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        // Thinking state
+        thinking: None,
         mock_mode: false,
         top_bar: crate::tui::state::TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 
@@ -77,13 +78,14 @@ fn make_state_with_text(text: &str) -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        // Thinking duration tracking
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        // Thinking state
+        thinking: None,
         mock_mode: false,
         top_bar: crate::tui::state::TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 
@@ -167,23 +169,6 @@ fn test_mode_transition_chat_to_palette() {
     update(&mut state, &mut palette, Msg::CloseModal);
     assert_eq!(state.mode, TuiMode::Chat, "Should return to Chat after CloseModal");
     assert!(!state.command_palette.open, "CommandPalette should be closed");
-}
-
-// 6. test_render_state_excludes_token_usage — RenderState doesn't have token_usage field
-#[test]
-fn test_render_state_excludes_token_usage() {
-    let state = make_state();
-    let render_state = RenderState::from(&state);
-
-    // RenderState has session_token_usage but not token_usage
-    // Verify session_token_usage exists
-    let _ = render_state.session_token_usage;
-
-    // Compile-time check: RenderState should not have a `token_usage` field
-    // This test documents that RenderState excludes token_usage for performance
-    // If token_usage field is added to RenderState, this test will still pass but
-    // indicates the optimization is no longer in place
-    assert!(true, "RenderState excludes token_usage field for performance");
 }
 
 fn test_tick_routes_to_system_domain() {

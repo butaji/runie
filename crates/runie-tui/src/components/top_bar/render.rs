@@ -44,7 +44,7 @@ pub fn render_top_bar(
     let mut left_parts = vec![Span::styled(" ", Style::default().bg(bg))];
     left_parts.extend(build_left_spans(vm, bright, dim, &dim_style, bg));
     if left_parts.len() > 1 {
-        buf.set_line(x, area.y, &Line::from(left_parts), area.width - 2);
+        buf.set_line(x, area.y, &Line::from(left_parts), area.width.saturating_sub(2));
     }
 
     let pct = calculate_pct(vm);

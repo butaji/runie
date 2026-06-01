@@ -15,7 +15,6 @@ pub enum AgentEvent {
     MessageUpdate { 
         message: AgentMessage,
         turn: usize,
-        delta: String,
     },
     
     MessageEnd { 
@@ -98,18 +97,6 @@ pub enum AgentEvent {
         tool_description: String,
         turn: usize,
         context_window_usage: f32,
-    },
-    
-    PermissionGranted { 
-        tool_call_id: String,
-        tool_name: String,
-        tool_args: String,
-    },
-    
-    PermissionDenied { 
-        tool_call_id: String,
-        tool_name: String,
-        tool_args: String,
     },
 }
 

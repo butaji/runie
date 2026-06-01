@@ -241,12 +241,14 @@ mod tests {
             .build();
 
         let items = vm.feed.items();
-        // In new architecture: thoughts/tool_calls/turns are inline in AssistantMessage
-        // So we get: UserMessage, AssistantMessage (from think), AssistantMessage (from assistant)
-        assert_eq!(items.len(), 3);
+        // In new architecture: thoughts/tool_calls are inline in AssistantMessage
+        // Separator items are now preserved for turn timing display
+        // So we get: UserMessage, AssistantMessage (from think), AssistantMessage (from assistant), Separator
+        assert_eq!(items.len(), 4);
         assert!(matches!(&items[0], FeedItem::UserMessage { .. }));
         assert!(matches!(&items[1], FeedItem::AssistantMessage { .. })); // think block
         assert!(matches!(&items[2], FeedItem::AssistantMessage { .. })); // assistant response
+        assert!(matches!(&items[3], FeedItem::Separator { elapsed_secs: 3, tool_calls: 1, tokens_used: Some(80) }));
     }
 
     #[test]

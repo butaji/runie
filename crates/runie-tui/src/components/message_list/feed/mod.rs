@@ -34,6 +34,8 @@ pub enum FeedItem {
         turn_duration: Option<f32>,
     },
     SystemNotice { text: String },
+    /// Separator between conversation turns showing elapsed time and metrics
+    Separator { elapsed_secs: u64, tool_calls: usize, tokens_used: Option<usize> },
 }
 
 impl FeedItem {
@@ -42,6 +44,7 @@ impl FeedItem {
             FeedItem::UserMessage { id, .. } => id,
             FeedItem::AssistantMessage { id, .. } => id,
             FeedItem::SystemNotice { .. } => "",
+            FeedItem::Separator { .. } => "",
         }
     }
 
@@ -234,7 +237,7 @@ impl Feed {
 
 /// Convert MessageItem to FeedItem for rendering pipeline migration.
 /// Note: Thought and ToolCall items are filtered out (now inline in AssistantMessage).
-/// Separator items are also filtered (turn timing shown via turn_duration).
+/// Separator items are preserved for turn timing display.
 impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
     type Error = ();
 
@@ -256,8 +259,10 @@ impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
             }),
             System { text } => Ok(FeedItem::SystemNotice { text }),
             Error { message, .. } => Ok(FeedItem::SystemNotice { text: format!("Error: {}", message) }),
+            Separator { elapsed_secs, tool_calls, tokens_used } =>
+                Ok(FeedItem::Separator { elapsed_secs, tool_calls, tokens_used }),
             // Filter out items now inline in AssistantMessage or UI-only
-            Thought { .. } | ToolCall { .. } | Separator { .. } | Edit { .. }
+            Thought { .. } | ToolCall { .. } | Edit { .. }
             | ToolRunning { .. } | ToolComplete { .. }
             | PlanStep { .. } | Interrupt | Rewind { .. } => Err(()),
         }

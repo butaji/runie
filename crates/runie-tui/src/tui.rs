@@ -11,7 +11,7 @@ use std::collections::VecDeque;
 use std::io::{self, stdout};
 
 use crate::{
-    pipe::{Pipe, StateChange, ViewModelPipe, RenderPipe},
+    pipe::{StateChange, ViewModelPipe, RenderPipe},
     theme::ThemeWrapper,
     components::CommandPalette,
 };
@@ -30,7 +30,6 @@ pub struct Tui {
     pub terminal: Terminal<CrosstermBackend<io::Stdout>>,
     pub state: AppState,
     command_palette: CommandPalette,
-    state_pipe: crate::pipe::StatePipe,
     view_model_pipe: ViewModelPipe,
     render_pipe: RenderPipe,
     action_log: VecDeque<Msg>,
@@ -63,7 +62,7 @@ pub mod tests_statusbar;
 pub mod tests_onboarding;
 
 
-pub use state::{AppState, TuiMode, Msg, Cmd, RenderState, Onboarding, OnboardingStep};
+pub use state::{AppState, TuiMode, Msg, Cmd, Onboarding, OnboardingStep};
 pub use update::update;
 pub use events::event_to_msg;
 
@@ -104,7 +103,6 @@ impl Tui {
 
         let state = AppState::default();
         let command_palette = CommandPalette::new();
-        let state_pipe = crate::pipe::StatePipe::new(state);
         let view_model_pipe = ViewModelPipe::new();
         let render_pipe = RenderPipe::new();
         let permission_state = PermissionState::new();
@@ -112,9 +110,8 @@ impl Tui {
         Ok(Self {
             config,
             terminal,
-            state: state_pipe.state().clone(),
+            state,
             command_palette,
-            state_pipe,
             view_model_pipe,
             render_pipe,
             action_log: VecDeque::new(),
@@ -135,12 +132,11 @@ impl Tui {
     /// Returns StateChange with commands to be executed and render decision
     pub fn update(&mut self, msg: Msg) -> StateChange {
         self.log_action(&msg);
-        let change = self.state_pipe.process(msg);
-        // Sync state_pipe.state back to tui.state for backward compatibility
-        self.state.clone_from(self.state_pipe.state());
-        // CRITICAL FIX: Sync palette so render uses updated filtered_commands
-        self.command_palette = self.state_pipe.palette().clone();
-        change
+        let cmds = update(&mut self.state, &mut self.command_palette, msg);
+        StateChange {
+            cmds,
+            needs_render: true,
+        }
     }
 
     fn log_action(&mut self, msg: &Msg) {
@@ -152,7 +148,7 @@ impl Tui {
 
     /// Render to terminal. Terminal I/O happens here.
     pub fn render(&mut self) -> io::Result<()> {
-        let vms = self.view_model_pipe.pipe(&self.state);
+        let vms = self.view_model_pipe.build(&self.state);
         self.render_pipe.render(
             &mut self.terminal,
             &self.state,

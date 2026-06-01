@@ -7,7 +7,7 @@ use ratatui::{
 };
 use runie_core::session::Session;
 use crate::theme::ThemeWrapper;
-use crate::components::gradient_border::render_gradient_border;
+use crate::components::panel::render_gradient_border;
 
 #[derive(Debug, Clone)]
 pub struct SessionTreeEntry {

@@ -21,7 +21,6 @@ fn test_stream_interruption_mid_message() {
     harness = harness.handle_event(AgentEvent::MessageUpdate {
         message: make_message("assistant", "Partial"),
         turn: 1,
-        delta: "Partial".to_string(),
     });
 
     // Simulate interruption (Ctrl+C)
@@ -149,6 +148,9 @@ fn test_turn_end_without_tools() {
         turn: 1,
     });
 
+    // Set session token usage to match what TurnEnd will record
+    harness.state.session_token_usage.total_tokens = 15;
+
     harness = harness.handle_event(AgentEvent::TurnEnd {
         turn: 1,
         message_count: 2,
@@ -162,8 +164,24 @@ fn test_turn_end_without_tools() {
         },
     });
 
+    // on_turn_end now stores metrics in AppState instead of adding a Separator
+    assert!(
+        harness.state.last_turn_duration_secs.is_some(),
+        "last_turn_duration_secs should be set"
+    );
+    assert_eq!(
+        harness.state.last_turn_tokens,
+        Some(15),
+        "last_turn_tokens should match session_token_usage.total_tokens"
+    );
+    assert_eq!(
+        harness.state.last_turn_tool_calls,
+        Some(0),
+        "last_turn_tool_calls should be 0"
+    );
+    // No separator should be added to messages
     let separators = harness.state.messages.iter()
         .filter(|m| matches!(m, MessageItem::Separator { .. }))
         .count();
-    assert_eq!(separators, 1, "TurnEnd without tools should add separator");
+    assert_eq!(separators, 0, "should NOT have separator (metrics now in AppState)");
 }

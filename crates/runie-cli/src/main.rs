@@ -50,6 +50,8 @@ struct Cli {
     /// Run onboarding wizard with mock provider
     #[arg(long)]
     mock_setup: bool,
+
+
 }
 
 impl From<&Cli> for CliSettings {

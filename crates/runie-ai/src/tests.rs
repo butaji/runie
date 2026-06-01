@@ -1,7 +1,7 @@
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
-    use crate::providers::{MockProvider, OpenAiProvider, AnthropicProvider};
+    use crate::providers::MockProvider;
     use crate::Provider;
     use futures::StreamExt;
     use runie_core::{Message, ToolSchema, Event};
@@ -53,21 +53,5 @@ mod tests {
         // Should have tool call events
         assert!(events.iter().any(|e| matches!(e, Event::ToolCallDelta { .. })),
             "Expected ToolCallDelta in events, got: {:?}", events);
-    }
-
-    #[test]
-    fn test_openai_provider_capabilities() {
-        let provider = OpenAiProvider::new("key".to_string(), "gpt-4o".to_string());
-        assert!(provider.supports_tools());
-        assert!(provider.supports_vision());
-        assert_eq!(provider.max_context_tokens(), 128_000);
-    }
-
-    #[test]
-    fn test_anthropic_provider_capabilities() {
-        let provider = AnthropicProvider::new("key".to_string(), "claude-3-5-sonnet".to_string());
-        assert!(provider.supports_tools());
-        assert!(provider.supports_vision());
-        assert_eq!(provider.max_context_tokens(), 200_000);
     }
 }

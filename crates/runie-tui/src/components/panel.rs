@@ -120,7 +120,7 @@ impl<'a> Panel<'a> {
     fn render_border(&self, area: Rect, buf: &mut Buffer) {
         match self.border {
             PanelBorder::Gradient { start, end } => {
-                render_gradient_border_custom(area, buf, start, end);
+                render_gradient_border(area, buf, start, end);
             }
             PanelBorder::Solid(color) => {
                 render_solid_border(area, buf, color);
@@ -190,7 +190,7 @@ fn render_solid_border(area: Rect, buf: &mut Buffer, color: Color) {
     }
 }
 
-fn render_gradient_border_custom(area: Rect, buf: &mut Buffer, start: Color, end: Color) {
+pub fn render_gradient_border(area: Rect, buf: &mut Buffer, start: Color, end: Color) {
     let left = area.x;
     let right = area.x + area.width - 1;
     let top = area.y;

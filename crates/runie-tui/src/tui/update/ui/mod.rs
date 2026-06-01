@@ -8,7 +8,7 @@ pub mod clipboard;
 use crate::components::CommandPalette;
 use crate::tui::state::{AppState, Cmd};
 
-pub use navigation::{handle_select, handle_session_tree, handle_context, handle_model_mode, handle_set_git_info, handle_enter_onboarding};
+pub use navigation::{handle_select, handle_session_tree, handle_context, handle_model_mode, handle_set_git_info, handle_enter_onboarding, handle_update_top_bar_context};
 pub use palette_helpers::handle_palette;
 pub use clipboard::handle_copy_last_response;
 
@@ -71,11 +71,14 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
     match msg {
         Msg::DirectCommand(cmd) => super::palette::handle_direct_command(state, cmd),
         Msg::ToggleSidebar => handle_toggle_sidebar(state),
+        Msg::ToggleThoughts => handle_toggle_thoughts(state),
         Msg::SetGitInfo { repo, branch, path } =>
             handle_set_git_info(state, repo.clone(), branch.clone(), path.clone()),
         Msg::EnterOnboarding => handle_enter_onboarding(state),
         Msg::SlashCommand(cmd) => super::slash::handle_slash(state, cmd),
         Msg::CopyLastResponse => { handle_copy_last_response(state); vec![] }
+        Msg::UpdateTopBarContext { model, context_window, estimated_tokens } =>
+            handle_update_top_bar_context(state, Some(model), context_window, estimated_tokens),
         _ => vec![],
     }
 }
@@ -105,5 +108,10 @@ fn handle_nav(msg: &crate::tui::state::Msg, state: &mut AppState) -> Vec<UiCmd> 
 
 fn handle_toggle_sidebar(state: &mut AppState) -> Vec<UiCmd> {
     state.show_sidebar = !state.show_sidebar;
+    vec![]
+}
+
+fn handle_toggle_thoughts(state: &mut AppState) -> Vec<UiCmd> {
+    state.show_thoughts = !state.show_thoughts;
     vec![]
 }

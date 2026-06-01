@@ -7,6 +7,7 @@ use ratatui::{
 };
 use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
+use crate::layout::centered_rect;
 
 pub struct DialogFrame {
     pub width: u16,
@@ -71,10 +72,4 @@ impl DialogFrame {
             render_content(inner, buf);
         });
     }
-}
-
-fn centered_rect(area: Rect, width: u16, height: u16) -> Rect {
-    let x = area.x.saturating_add(area.width.saturating_sub(width) / 2);
-    let y = area.y.saturating_add(area.height.saturating_sub(height) / 2);
-    Rect::new(x, y, width.min(area.width), height.min(area.height))
 }

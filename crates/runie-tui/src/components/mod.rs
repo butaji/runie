@@ -16,8 +16,6 @@ pub mod context_panel;
 pub mod session_tree;
 pub mod dialog_frame;
 pub mod panel;
-pub mod gradient_border;
-pub mod component;
 
 #[cfg(test)]
 mod top_bar_snapshots;
@@ -39,4 +37,3 @@ pub use session_tree::{SessionTreeNavigator, SessionTreeEntry};
 pub use model_picker::{ModelPicker, ModelInfo, ProviderGroup};
 pub use dialog_frame::DialogFrame;
 pub use onboarding::Onboarding;
-pub use component::{Component, InputBar};

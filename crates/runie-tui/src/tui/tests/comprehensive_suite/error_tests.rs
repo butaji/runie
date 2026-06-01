@@ -1,6 +1,7 @@
 //! Comprehensive test suite - Section 7: Error Recovery Tests (codex + pi).
 
 use crate::components::MessageItem;
+use crate::tui::state::ThinkingState;
 use runie_agent::{AgentEvent, ContentPart};
 
 use super::harness::AgentTestHarness;
@@ -86,7 +87,7 @@ fn test_error_clears_thinking() {
         turn: 1,
     });
 
-    assert!(harness.state.is_thinking);
+    assert!(harness.state.thinking.is_some());
 
     harness = harness.handle_event(AgentEvent::Error {
         message: "fail".to_string(),
@@ -371,7 +372,11 @@ fn test_empty_submission() {
     let cmds = crate::tui::update::misc::handle_submit(&mut state);
 
     assert!(cmds.is_empty());
-    assert!(state.messages.is_empty());
+    // Empty submission adds a system message prompting user
+    assert!(state.messages.iter().any(|m| matches!(
+        m,
+        crate::components::MessageItem::System { text } if text.contains("Type a message")
+    )));
     assert!(state.input_right_info.contains("Type a message"));
 }
 
@@ -385,7 +390,11 @@ fn test_submit_blocked_when_agent_running() {
     let cmds = crate::tui::update::misc::handle_submit(&mut state);
 
     assert!(cmds.is_empty());
-    assert!(state.messages.is_empty());
+    // Blocked submission adds a system message
+    assert!(state.messages.iter().any(|m| matches!(
+        m,
+        crate::components::MessageItem::System { text } if text.contains("Agent is still running")
+    )));
     assert!(state.input_right_info.contains("Agent running"));
 }
 

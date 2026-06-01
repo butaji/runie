@@ -150,9 +150,6 @@ impl EventStreamLogger {
         if event_type == "PermissionRequest" {
             return Self::extract_permission_request_detail(payload);
         }
-        if matches!(event_type, "PermissionGranted" | "PermissionDenied") {
-            return Self::extract_permission_result_detail(payload, event_type);
-        }
         // Error
         if event_type == "Error" {
             return Self::extract_error_detail(payload);
@@ -232,12 +229,6 @@ impl EventStreamLogger {
         } else {
             format!("[WARN] {} requires permission: {}", tool_name, description)
         }
-    }
-
-    fn extract_permission_result_detail(payload: &serde_json::Value, event_type: &str) -> String {
-        let tool_name = payload.get("tool_name").and_then(|v| v.as_str()).unwrap_or("?");
-        let decision = if event_type == "PermissionGranted" { "allowed" } else { "denied" };
-        format!("{} ({})", tool_name, decision)
     }
 
     fn extract_error_detail(payload: &serde_json::Value) -> String {

@@ -96,12 +96,12 @@ fn test_permission_request_adds_system_message() {
         },
     );
 
-    assert!(
-        state.messages.iter().any(|m| matches!(
-            m,
-            MessageItem::System { text } if text.contains("read_file")
-        )),
-        "should have system message about permission request"
+    // Permission request switches mode and sets up modal - no system message added
+    assert_eq!(state.mode, TuiMode::Permission, "mode should be Permission");
+    assert_eq!(
+        state.permission_modal.tool.as_deref(),
+        Some("read_file"),
+        "tool should be set"
     );
 }
 
@@ -458,53 +458,3 @@ fn test_permission_request_in_blocking_mode_queues() {
     );
 }
 
-// ─── PermissionGranted/PermissionDenied ignored ───────────────────────────────
-
-#[test]
-fn test_permission_granted_is_ignored() {
-    let mut state = make_test_state();
-    state.mode = TuiMode::Permission;
-    state.permission_modal.tool = Some("bash".to_string());
-    state.permission_modal.tool_call_id = Some("call-1".to_string());
-
-    // These events should be handled by the agent loop, not affect TUI state
-    handle_agent_event(
-        &mut state,
-        AgentEvent::PermissionGranted {
-            tool_call_id: "call-1".to_string(),
-            tool_name: "bash".to_string(),
-            tool_args: "{}".to_string(),
-        },
-    );
-
-    // State should be unchanged
-    assert_eq!(
-        state.permission_modal.tool.as_deref(),
-        Some("bash"),
-        "modal should remain unchanged"
-    );
-}
-
-#[test]
-fn test_permission_denied_is_ignored() {
-    let mut state = make_test_state();
-    state.mode = TuiMode::Permission;
-    state.permission_modal.tool = Some("bash".to_string());
-    state.permission_modal.tool_call_id = Some("call-1".to_string());
-
-    handle_agent_event(
-        &mut state,
-        AgentEvent::PermissionDenied {
-            tool_call_id: "call-1".to_string(),
-            tool_name: "bash".to_string(),
-            tool_args: "{}".to_string(),
-        },
-    );
-
-    // State should be unchanged - agent loop handles this
-    assert_eq!(
-        state.permission_modal.tool.as_deref(),
-        Some("bash"),
-        "modal should remain unchanged"
-    );
-}

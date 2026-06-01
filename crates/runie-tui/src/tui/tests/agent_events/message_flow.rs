@@ -10,6 +10,7 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
+use crate::tui::state::ThinkingState;
 use crate::tui::update::agent::handle_agent_event;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart};
 
@@ -48,8 +49,8 @@ fn test_message_start_sets_agent_running() {
         },
     );
     assert!(state.agent_running, "agent_running should be true");
-    assert!(state.is_thinking, "is_thinking should be true");
-    assert!(state.thinking_start.is_some(), "thinking_start should be set");
+    assert!(state.thinking.is_some(), "thinking should be Some");
+    assert!(state.thinking.as_ref().map_or(false, |t| t.start.is_some()), "thinking.start should be set");
 }
 
 #[test]
@@ -113,7 +114,12 @@ fn test_message_start_sets_status_header() {
         Some("Thinking".to_string()),
         "status_header should be Thinking"
     );
-    assert!(state.status_details.is_none(), "status_details should be None");
+    // status_details now shows elapsed time (0s at start)
+    assert!(state.status_details.is_some(), "status_details should be set");
+    assert!(
+        state.status_details.unwrap().ends_with("s"),
+        "status_details should show elapsed time"
+    );
 }
 
 // ─── MessageUpdate tests ───────────────────────────────────────────────────────
@@ -135,7 +141,6 @@ fn test_message_update_accumulates_text() {
         AgentEvent::MessageUpdate {
             message: agent_message("assistant", "Hello"),
             turn: 1,
-            delta: "Hello".to_string(),
         },
     );
 
@@ -172,7 +177,6 @@ fn test_message_update_replaces_placeholder() {
         AgentEvent::MessageUpdate {
             message: agent_message("assistant", "Hello, world!"),
             turn: 1,
-            delta: "Hello, world!".to_string(),
         },
     );
 
@@ -203,7 +207,6 @@ fn test_message_update_multiple_chunks() {
             AgentEvent::MessageUpdate {
                 message: agent_message("assistant", chunk),
                 turn: 1,
-                delta: chunk.to_string(),
             },
         );
     }
@@ -213,12 +216,9 @@ fn test_message_update_multiple_chunks() {
         .iter()
         .find_map(|m| match m {
             MessageItem::Assistant { text, .. } => {
-                // `MessageUpdate` carries a full `AgentMessage` whose `content`
-                // is the latest accumulated text from the provider.  The TUI
-                // mirrors whatever the most recent update says — it does not
-                // re-accumulate from individual chunks.  The last chunk sent
-                // here is " fox", so the mirrored text is " fox".
-                assert_eq!(text, " fox", "should reflect last MessageUpdate content verbatim");
+                // MessageUpdate REPLACES text, so after 4 chunks of "The", " quick", " brown", " fox"
+                // only the last chunk " fox" remains (not accumulated)
+                assert_eq!(text, " fox", "should have final text ' fox' (last chunk)");
                 Some(())
             }
             _ => None,
@@ -250,11 +250,9 @@ fn test_message_end_records_thinking_duration() {
         },
     );
 
-    assert!(
-        state.thinking_duration.is_some(),
-        "thinking_duration should be recorded"
-    );
-    assert!(!state.is_thinking, "is_thinking should be false after end");
+    // on_message_end records duration locally and clears thinking = None
+    assert!(state.thinking.is_none(), "thinking should be None after end");
+    // Duration was recorded but thinking state is now None (not stored in accrued_duration)
 }
 
 #[test]
