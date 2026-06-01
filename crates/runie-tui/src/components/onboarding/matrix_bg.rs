@@ -21,6 +21,9 @@ struct RainColumn {
 }
 
 impl MatrixRain {
+
+    #[must_use]
+    #[must_use]
     pub fn new(_width: u16, height: u16) -> Self {
         let mut rng = StdRng::seed_from_u64(42);
         let mut columns = Vec::new();

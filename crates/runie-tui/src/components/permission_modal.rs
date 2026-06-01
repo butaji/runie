@@ -42,6 +42,9 @@ impl Default for PermissionModal {
 }
 
 impl PermissionModal {
+
+    #[must_use]
+    #[must_use]
     pub fn new(tool_name: &str, tool_args: &str, description: &str) -> Self {
         Self {
             title: "Permission Required".to_string(),

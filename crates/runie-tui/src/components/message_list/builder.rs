@@ -27,7 +27,7 @@ use crate::components::message_list::render::WrapCache;
 ///     .build();
 /// ```
 #[derive(Default)]
-pub struct FeedBuilder {
+pub(crate) struct FeedBuilder {
     messages: Vec<MessageItem>,
     scroll_offset: usize,
     agent_running: bool,
@@ -36,7 +36,7 @@ pub struct FeedBuilder {
 }
 
 impl FeedBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             messages: Vec::new(),
             scroll_offset: 0,
@@ -47,7 +47,7 @@ impl FeedBuilder {
     }
 
     /// Add a user message. Renders as: `❯ text`
-    pub fn user(mut self, text: impl Into<String>) -> Self {
+    pub(crate) fn user(mut self, text: impl Into<String>) -> Self {
         self.messages.push(MessageItem::User {
             text: text.into(),
             model: None,
@@ -57,7 +57,7 @@ impl FeedBuilder {
     }
 
     /// Add an assistant message. Renders as: plain text
-    pub fn assistant(mut self, text: impl Into<String>) -> Self {
+    pub(crate) fn assistant(mut self, text: impl Into<String>) -> Self {
         self.messages.push(MessageItem::Assistant {
             text: text.into(),
             model: None,
@@ -68,7 +68,7 @@ impl FeedBuilder {
 
     /// Add a think tag. Renders as: `<think> text</think>`
     /// Note: Creates a new Assistant message with think tags
-    pub fn think(mut self, text: impl Into<String>) -> Self {
+    pub(crate) fn think(mut self, text: impl Into<String>) -> Self {
         // Think blocks are embedded in assistant text with <think> tags
         self.messages.push(MessageItem::Assistant {
             text: format!("<think>{}</think>", text.into()),
@@ -79,7 +79,7 @@ impl FeedBuilder {
     }
 
     /// Add a standalone think block (not attached to a message). Renders as: `<think> text</think>`
-    pub fn think_block(mut self, text: impl Into<String>) -> Self {
+    pub(crate) fn think_block(mut self, text: impl Into<String>) -> Self {
         // For standalone think lines, we use Assistant with think markup
         self.messages.push(MessageItem::Assistant {
             text: format!("<think>{}\n</think>\n", text.into()),
@@ -90,13 +90,13 @@ impl FeedBuilder {
     }
 
     /// Add a thought duration tag. Renders as: `◆ Thought for Xs`
-    pub fn thought(mut self, duration_secs: f32) -> Self {
+    pub(crate) fn thought(mut self, duration_secs: f32) -> Self {
         self.messages.push(MessageItem::Thought { duration_secs, text: String::new() });
         self
     }
 
     /// Add a tool call. Renders as: `● name · args → result`
-    pub fn tool(
+    pub(crate) fn tool(
         mut self,
         name: impl Into<String>,
         args: impl Into<String>,
@@ -112,7 +112,7 @@ impl FeedBuilder {
     }
 
     /// Add a tool call that resulted in an error.
-    pub fn tool_error(
+    pub(crate) fn tool_error(
         mut self,
         name: impl Into<String>,
         args: impl Into<String>,
@@ -128,7 +128,7 @@ impl FeedBuilder {
     }
 
     /// Add a file edit. Renders as: `◆ Edit filename`
-    pub fn edit(mut self, filename: impl Into<String>) -> Self {
+    pub(crate) fn edit(mut self, filename: impl Into<String>) -> Self {
         self.messages.push(MessageItem::Edit {
             filename: filename.into(),
             diff: None,
@@ -137,13 +137,13 @@ impl FeedBuilder {
     }
 
     /// Add a system message. Renders as: `· text`
-    pub fn system(mut self, text: impl Into<String>) -> Self {
+    pub(crate) fn system(mut self, text: impl Into<String>) -> Self {
         self.messages.push(MessageItem::System { text: text.into() });
         self
     }
 
     /// Add an error. Renders as: `! text`
-    pub fn error(mut self, message: impl Into<String>) -> Self {
+    pub(crate) fn error(mut self, message: impl Into<String>) -> Self {
         self.messages.push(MessageItem::Error {
             message: message.into(),
             recoverable: true,
@@ -152,7 +152,7 @@ impl FeedBuilder {
     }
 
     /// Add a turn separator. Renders right-aligned as: `[turn: Xs, Ytc, ⇣Z]`
-    pub fn turn(mut self, elapsed_secs: u64, tool_calls: usize, tokens: usize) -> Self {
+    pub(crate) fn turn(mut self, elapsed_secs: u64, tool_calls: usize, tokens: usize) -> Self {
         self.messages.push(MessageItem::Separator {
             elapsed_secs,
             tool_calls,
@@ -162,7 +162,7 @@ impl FeedBuilder {
     }
 
     /// Add a plan step.
-    pub fn plan_step(mut self, step: usize, text: impl Into<String>, status: PlanStatus) -> Self {
+    pub(crate) fn plan_step(mut self, step: usize, text: impl Into<String>, status: PlanStatus) -> Self {
         self.messages.push(MessageItem::PlanStep {
             step,
             text: text.into(),
@@ -172,43 +172,43 @@ impl FeedBuilder {
     }
 
     /// Add an interrupt marker.
-    pub fn interrupt(mut self) -> Self {
+    pub(crate) fn interrupt(mut self) -> Self {
         self.messages.push(MessageItem::Interrupt);
         self
     }
 
     /// Set scroll offset.
-    pub fn scroll_offset(mut self, offset: usize) -> Self {
+    pub(crate) fn scroll_offset(mut self, offset: usize) -> Self {
         self.scroll_offset = offset;
         self
     }
 
     /// Set agent running state.
-    pub fn agent_running(mut self, running: bool) -> Self {
+    pub(crate) fn agent_running(mut self, running: bool) -> Self {
         self.agent_running = running;
         self
     }
 
     /// Set animation state.
-    pub fn animation(mut self, animation: AnimationState) -> Self {
+    pub(crate) fn animation(mut self, animation: AnimationState) -> Self {
         self.animation = animation;
         self
     }
 
     /// Set messages from a slice (for AppState integration).
-    pub fn messages(mut self, messages: &[MessageItem]) -> Self {
+    pub(crate) fn messages(mut self, messages: &[MessageItem]) -> Self {
         self.messages.extend_from_slice(messages);
         self
     }
 
     /// Set wrap cache (for AppState integration).
-    pub fn wrap_cache(mut self, cache: WrapCache) -> Self {
+    pub(crate) fn wrap_cache(mut self, cache: WrapCache) -> Self {
         self.wrap_cache = cache;
         self
     }
 
     /// Consume the builder and return the MessageListViewModel.
-    pub fn build(self) -> MessageListViewModel {
+    pub(crate) fn build(self) -> MessageListViewModel {
         MessageListViewModel {
             feed: Feed::from(self.messages),
             scroll_offset: self.scroll_offset,
@@ -219,7 +219,7 @@ impl FeedBuilder {
     }
 
     /// Extend an existing message list.
-    pub fn extend_into(self, list: &mut Vec<MessageItem>) {
+    pub(crate) fn extend_into(self, list: &mut Vec<MessageItem>) {
         list.extend(self.messages);
     }
 }

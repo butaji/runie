@@ -1,14 +1,14 @@
 use crate::tui::view_models::InputBarViewModel;
 use ratatui_textarea::TextArea;
 
-pub struct InputBuilder {
+pub(crate) struct InputBuilder {
     textarea: TextArea<'static>,
     prompt: String,
     right_info: String,
 }
 
 impl InputBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             textarea: TextArea::default(),
             prompt: format!("{ch} ", ch = crate::glyphs::CHEVRON),
@@ -16,27 +16,27 @@ impl InputBuilder {
         }
     }
 
-    pub fn placeholder(mut self, text: &str) -> Self {
+    pub(crate) fn placeholder(mut self, text: &str) -> Self {
         self.textarea = TextArea::new(vec![text.to_string()]);
         self
     }
 
-    pub fn prompt(mut self, prompt: &str) -> Self {
+    pub(crate) fn prompt(mut self, prompt: &str) -> Self {
         self.prompt = prompt.to_string();
         self
     }
 
-    pub fn info(mut self, info: &str) -> Self {
+    pub(crate) fn info(mut self, info: &str) -> Self {
         self.right_info = info.to_string();
         self
     }
 
-    pub fn text(mut self, text: &str) -> Self {
+    pub(crate) fn text(mut self, text: &str) -> Self {
         self.textarea = TextArea::new(vec![text.to_string()]);
         self
     }
 
-    pub fn build(self) -> InputBarViewModel {
+    pub(crate) fn build(self) -> InputBarViewModel {
         InputBarViewModel {
             textarea: self.textarea,
             prompt: self.prompt,

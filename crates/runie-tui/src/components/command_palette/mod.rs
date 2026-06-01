@@ -89,6 +89,9 @@ impl Default for CommandPalette {
 }
 
 impl CommandPalette {
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         let all_commands = vec![
             // ─── Session ─────────────────────────────────────────────────

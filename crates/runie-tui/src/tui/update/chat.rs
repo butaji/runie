@@ -104,7 +104,7 @@ fn handle_newline(state: &mut AppState) -> Vec<ChatCmd> {
 }
 
 fn handle_scroll(state: &mut AppState, delta: i32) -> Vec<ChatCmd> {
-    let page = delta.abs() as usize;
+    let page = delta.unsigned_abs() as usize;
     let new_offset = if delta > 0 {
         state.scroll.feed_offset.saturating_sub(page)
     } else {

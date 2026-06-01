@@ -21,6 +21,9 @@ const SIDEBAR_WIDTH: u16 = 28;
 pub struct RenderPipe;
 
 impl RenderPipe {
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self
     }

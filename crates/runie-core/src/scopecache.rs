@@ -33,6 +33,9 @@ pub struct ScopedCache<K: Eq + Hash + Clone, V: Clone> {
 
 impl<K: Eq + Hash + Clone, V: Clone> ScopedCache<K, V> {
     /// Create a new ScopedCache
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             cache: RwLock::new(HashMap::new()),
@@ -78,9 +81,9 @@ impl<K: Eq + Hash + Clone, V: Clone> ScopedCache<K, V> {
         let mut cache = self.cache.write().ok();
 
         if let Some(ref mut cache) = cache {
-            // Get next access order counter
+            // Get next access order counter; recover from poison
             let counter = {
-                let mut cnt_guard = self.access_counter.write().unwrap();
+                let mut cnt_guard = self.access_counter.write().unwrap_or_else(|p| p.into_inner());
                 *cnt_guard += 1;
                 *cnt_guard
             };

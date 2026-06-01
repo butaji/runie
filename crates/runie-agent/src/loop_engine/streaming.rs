@@ -81,6 +81,10 @@ pub(crate) async fn start_chat_with_retry(
     start_chat_with_retry_with_config(provider, messages, tools, &RetryConfig::default()).await
 }
 
+/// Maximum time to wait for a single `provider.chat()` call to return the stream head
+/// before treating it as a timeout. Streaming itself is bounded by the consumer.
+const CHAT_CONNECT_TIMEOUT: Duration = Duration::from_secs(120);
+
 /// Start chat with custom retry configuration
 pub(crate) async fn start_chat_with_retry_with_config(
     provider: Arc<dyn Provider>,
@@ -91,9 +95,12 @@ pub(crate) async fn start_chat_with_retry_with_config(
     let mut last_error: ProviderError = ProviderError::ApiError("Unknown error".to_string());
 
     for attempt in 0..config.max_retries {
-        match provider.chat(messages.clone(), tools.clone()).await {
-            Ok(stream) => return Ok(stream),
-            Err(e) => {
+        match tokio::time::timeout(
+            CHAT_CONNECT_TIMEOUT,
+            provider.chat(messages.clone(), tools.clone()),
+        ).await {
+            Ok(Ok(stream)) => return Ok(stream),
+            Ok(Err(e)) => {
                 last_error = e.clone();
 
                 // Only retry on rate limit errors, fail immediately on others (401, etc.)
@@ -114,6 +121,18 @@ pub(crate) async fn start_chat_with_retry_with_config(
                     );
                     tokio::time::sleep(delay).await;
                 }
+            }
+            Err(_elapsed) => {
+                tracing::warn!(
+                    "Provider chat connect timed out after {:?} (attempt {}/{})",
+                    CHAT_CONNECT_TIMEOUT,
+                    attempt + 1,
+                    config.max_retries,
+                );
+                last_error = ProviderError::ApiError(format!(
+                    "chat connect timed out after {:?}",
+                    CHAT_CONNECT_TIMEOUT
+                ));
             }
         }
     }

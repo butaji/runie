@@ -273,19 +273,28 @@ async fn handle_fetch_models(
     crate::event_logger::log(crate::event_logger::Subsystem::PROVIDER, crate::event_logger::LogLevel::INFO, &format!("[ACTOR:ModelPicker] Starting fetch for provider: {}", provider_id));
     tracing::info!("[ACTOR:ModelPicker] Starting fetch for provider: {}", provider_id);
     let tx = msg_tx.clone();
+    let provider_id_for_log = provider_id.clone();
     tokio::spawn(async move {
         tracing::debug!("[ACTOR:ModelPicker] Fetch task started");
         let fetcher = runie_ai::model_fetcher::create_fetcher(&provider_id);
-        match fetcher.fetch_models(&api_key).await {
-            Ok(models) => {
-                tracing::info!("[ACTOR:ModelPicker] Fetched {} models for {}", models.len(), provider_id);
+        let result = tokio::time::timeout(
+            Duration::from_secs(30),
+            fetcher.fetch_models(&api_key),
+        ).await;
+        match result {
+            Ok(Ok(models)) => {
+                tracing::info!("[ACTOR:ModelPicker] Fetched {} models for {}", models.len(), provider_id_for_log);
                 if let Err(e) = tx.send(Msg::ModelsFetched(models)).await {
                     tracing::error!("[ACTOR:ModelPicker] Failed to send ModelsFetched: {}", e);
                 }
             }
-            Err(e) => {
-                tracing::warn!("[ACTOR:ModelPicker] Fetch failed for {}: {}", provider_id, e);
+            Ok(Err(e)) => {
+                tracing::warn!("[ACTOR:ModelPicker] Fetch failed for {}: {}", provider_id_for_log, e);
                 let _ = tx.send(Msg::ModelsFetchFailed(e.to_string())).await;
+            }
+            Err(_) => {
+                tracing::warn!("[ACTOR:ModelPicker] Fetch timed out for {}", provider_id_for_log);
+                let _ = tx.send(Msg::ModelsFetchFailed("fetch timed out after 30s".to_string())).await;
             }
         }
     });

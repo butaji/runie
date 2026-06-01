@@ -39,6 +39,9 @@ pub struct ReadFileTool {
 }
 
 impl ReadFileTool {
+
+    #[must_use]
+    #[must_use]
     pub fn new(workspace: PathBuf) -> Self {
         Self { workspace }
     }

@@ -1,6 +1,6 @@
 use super::TopBarViewModel;
 
-pub struct TopBarBuilder {
+pub(crate) struct TopBarBuilder {
     repo: String,
     branch: String,
     path: String,
@@ -9,7 +9,7 @@ pub struct TopBarBuilder {
 }
 
 impl TopBarBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             repo: String::new(),
             branch: String::new(),
@@ -19,28 +19,28 @@ impl TopBarBuilder {
         }
     }
 
-    pub fn repo(mut self, repo: &str) -> Self {
+    pub(crate) fn repo(mut self, repo: &str) -> Self {
         self.repo = repo.to_string();
         self
     }
 
-    pub fn branch(mut self, branch: &str) -> Self {
+    pub(crate) fn branch(mut self, branch: &str) -> Self {
         self.branch = branch.to_string();
         self
     }
 
-    pub fn path(mut self, path: &str) -> Self {
+    pub(crate) fn path(mut self, path: &str) -> Self {
         self.path = path.to_string();
         self
     }
 
 
-    pub fn tokens(mut self, estimated: usize) -> Self {
+    pub(crate) fn tokens(mut self, estimated: usize) -> Self {
         self.estimated_tokens = estimated;
         self
     }
 
-    pub fn build(self) -> TopBarViewModel {
+    pub(crate) fn build(self) -> TopBarViewModel {
         TopBarViewModel {
             repo: self.repo,
             branch: self.branch,

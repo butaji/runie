@@ -34,6 +34,9 @@ pub struct WriteFileTool {
 }
 
 impl WriteFileTool {
+
+    #[must_use]
+    #[must_use]
     pub fn new(workspace: PathBuf) -> Self {
         Self { workspace }
     }

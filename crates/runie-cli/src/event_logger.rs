@@ -58,6 +58,9 @@ pub struct EventLogger {
 
 impl EventLogger {
     /// Create a new event logger that writes to the specified logs directory
+
+    #[must_use]
+    #[must_use]
     pub fn new(logs_dir: &PathBuf) -> std::io::Result<Self> {
         std::fs::create_dir_all(logs_dir)?;
 

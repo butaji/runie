@@ -10,10 +10,6 @@ default-run = "runie"
 name = "runie"
 path = "src/main.rs"
 
-[[bin]]
-name = "cargo-pantry"
-path = "src/bin/cargo-pantry.rs"
-
 [dependencies]
 runie-core = { path = "../runie-core" }
 runie-ai = { path = "../runie-ai" }
@@ -36,5 +32,3 @@ futures = { workspace = true }
 once_cell = { workspace = true }
 dirs = { workspace = true }
 toml = { workspace = true }
-phf = { workspace = true }
-uuid = { workspace = true }

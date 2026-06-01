@@ -63,6 +63,9 @@ pub struct HarnessConfig {
 
 impl HarnessConfig {
     /// Create a new config with required fields
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

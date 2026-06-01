@@ -23,6 +23,9 @@ pub struct TimerActor {
 
 impl TimerActor {
     /// Create a new TimerActor with the given interval in milliseconds.
+
+    #[must_use]
+    #[must_use]
     pub fn new(interval_ms: u64) -> Self {
         Self { interval_ms }
     }

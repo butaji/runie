@@ -8,6 +8,9 @@ pub struct AgentState {
 }
 
 impl AgentState {
+
+    #[must_use]
+    #[must_use]
     pub fn new(session: Session) -> Self {
         Self {
             session,
