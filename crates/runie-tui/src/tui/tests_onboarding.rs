@@ -49,6 +49,9 @@ mod tests {
             last_turn_duration_secs: None,
             last_turn_tokens: None,
             last_turn_tool_calls: None,
+            turn_success: None,
+            slash_menu: crate::components::SlashMenu::new(),
+            shortcuts_panel: crate::components::ShortcutsPanel::new(),
             show_thoughts: false,
         }
     }

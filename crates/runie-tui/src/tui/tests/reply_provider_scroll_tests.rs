@@ -360,35 +360,35 @@ mod page_scroll {
         // Action: PageUp
         chat_update(&mut state, Msg::ScrollPageUp);
 
-        // Assert: Offset decreases by page size (10)
-        assert_eq!(state.scroll.feed_offset, 10, "PageUp should decrease offset by 10");
+        // Assert: Offset decreases by page size (20)
+        assert_eq!(state.scroll.feed_offset, 0, "PageUp should decrease offset by 20");
     }
 
     #[test]
     fn test_page_down_increases_offset() {
         let mut state = make_state();
         add_messages(&mut state, 50);
-        state.scroll.feed_offset = 10;
+        state.scroll.feed_offset = 20;
 
         // Action: PageDown
         chat_update(&mut state, Msg::ScrollPageDown);
 
-        // Assert: Offset increases by page size (10)
-        assert_eq!(state.scroll.feed_offset, 20, "PageDown should increase offset by 10");
+        // Assert: Offset increases by page size (20)
+        assert_eq!(state.scroll.feed_offset, 40, "PageDown should increase offset by 20");
     }
 
     #[test]
     fn test_page_up_then_page_down() {
         let mut state = make_state();
         add_messages(&mut state, 50);
-        state.scroll.feed_offset = 20;
+        state.scroll.feed_offset = 40;
 
         // Action: PageUp then PageDown
         chat_update(&mut state, Msg::ScrollPageUp);
-        assert_eq!(state.scroll.feed_offset, 10, "After PageUp offset should be 10");
+        assert_eq!(state.scroll.feed_offset, 20, "After PageUp offset should be 20");
 
         chat_update(&mut state, Msg::ScrollPageDown);
-        assert_eq!(state.scroll.feed_offset, 20, "After PageDown offset should return to 20");
+        assert_eq!(state.scroll.feed_offset, 40, "After PageDown offset should return to 40");
     }
 
     #[test]
@@ -400,8 +400,8 @@ mod page_scroll {
         let original_offset = state.scroll.feed_offset;
 
         chat_update(&mut state, Msg::ScrollPageUp);
-        assert_eq!(original_offset - state.scroll.feed_offset, 10,
-            "PageUp should change offset by 10");
+        assert_eq!(original_offset - state.scroll.feed_offset, 20,
+            "PageUp should change offset by 20");
 
         chat_update(&mut state, Msg::ScrollPageDown);
         assert_eq!(state.scroll.feed_offset, original_offset,

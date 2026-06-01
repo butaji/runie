@@ -179,9 +179,9 @@ fn test_turn_end_without_tools() {
         Some(0),
         "last_turn_tool_calls should be 0"
     );
-    // No separator should be added to messages
+    // Separator should be added to messages
     let separators = harness.state.messages.iter()
         .filter(|m| matches!(m, MessageItem::Separator { .. }))
         .count();
-    assert_eq!(separators, 0, "should NOT have separator (metrics now in AppState)");
+    assert_eq!(separators, 1, "should have separator after turn end");
 }

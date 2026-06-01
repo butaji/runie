@@ -68,10 +68,16 @@ pub fn handle_submit(state: &mut AppState) -> Vec<Cmd> {
 fn try_validate_submit(state: &mut AppState, text: &str) -> Option<Vec<Cmd>> {
     if text.chars().all(|c| c.is_whitespace()) {
         state.input_right_info = "Type a message first".to_string();
+        state.messages.push(MessageItem::System {
+            text: "Type a message first".to_string(),
+        });
         return Some(vec![]);
     }
     if state.agent_running {
         state.input_right_info = "Agent running (blocked)... Ctrl+C to stop".to_string();
+        state.messages.push(MessageItem::System {
+            text: "Agent is still running. Wait or press Ctrl+C to stop.".to_string(),
+        });
         return Some(vec![]);
     }
     if let Some(ref onboarding) = state.onboarding {
