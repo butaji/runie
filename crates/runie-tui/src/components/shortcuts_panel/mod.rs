@@ -159,92 +159,81 @@ impl ShortcutsPanel {
     }
 }
 
+fn render_panel_border(area: Rect, buf: &mut Buffer, border: Color) {
+    for x in area.x..area.right() {
+        buf.get_mut(x, area.y).set_char('─').set_fg(border);
+        buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+    }
+    for y in area.y..area.bottom() {
+        buf.get_mut(area.x, y).set_char('│').set_fg(border);
+        buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+    }
+    buf.get_mut(area.x, area.y).set_char('┌');
+    buf.get_mut(area.right() - 1, area.y).set_char('┐');
+    buf.get_mut(area.x, area.bottom() - 1).set_char('└');
+    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+}
+
+fn render_panel_header(area: Rect, buf: &mut Buffer, text_primary: Color, text_muted: Color) {
+    let title = " Keyboard Shortcuts ";
+    buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), area.width - 4);
+    let close = " [✗] ";
+    let close_x = area.right() - close.len() as u16 - 2;
+    buf.set_line(close_x, area.y, &Line::raw(close).style(Style::default().fg(text_muted)), area.width);
+}
+
+fn render_panel_footer(panel: &ShortcutsPanel, area: Rect, buf: &mut Buffer, text_muted: Color) {
+    let filter_hint = if panel.filter_mode { format!(" search: {} ", panel.filter) } else { " / to search | f filter | e expand | Esc close ".to_string() };
+    buf.set_line(area.x + 2, area.bottom() - 1, &Line::raw(filter_hint).style(Style::default().fg(text_muted)), area.width - 4);
+}
+
+fn render_shortcut_row(shortcut: &ShortcutDef, is_selected: bool, inner_x: u16, inner_w: u16, y: u16, buf: &mut Buffer, accent: Color, text_primary: Color, text_muted: Color) {
+    let indicator = if is_selected { "▸" } else { " " };
+    let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
+    buf.set_string(inner_x, y, indicator, indicator_style);
+    let action_x = inner_x + 2;
+    let action_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
+    buf.set_string(action_x, y, shortcut.action, action_style);
+    let keys_len = shortcut.keys.len() as u16;
+    let keys_x = inner_x + inner_w - keys_len;
+    if keys_x > action_x + shortcut.action.len() as u16 {
+        buf.set_string(keys_x, y, shortcut.keys, Style::default().fg(text_muted));
+    }
+}
+
 impl Widget for &ShortcutsPanel {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let bg = Color::Black;
         let border = Color::DarkGray;
         let text_primary = Color::White;
         let text_muted = Color::DarkGray;
         let accent = Color::Cyan;
         let section_color = Color::Yellow;
-
-        // Border
-        for x in area.x..area.right() {
-            buf.get_mut(x, area.y).set_char('─').set_fg(border);
-            buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
-        }
-        for y in area.y..area.bottom() {
-            buf.get_mut(area.x, y).set_char('│').set_fg(border);
-            buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
-        }
-        buf.get_mut(area.x, area.y).set_char('┌');
-        buf.get_mut(area.right() - 1, area.y).set_char('┐');
-        buf.get_mut(area.x, area.bottom() - 1).set_char('└');
-        buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
-
-        // Title
-        let title = " Keyboard Shortcuts ";
-        let title_x = area.x + 2;
-        buf.set_line(title_x, area.y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), area.width - 4);
-
-        // Close hint
-        let close = " [✗] ";
-        let close_x = area.right() - close.len() as u16 - 2;
-        buf.set_line(close_x, area.y, &Line::raw(close).style(Style::default().fg(text_muted)), area.width);
-
-        // Filter hint
-        let filter_hint = if self.filter_mode {
-            format!(" search: {} ", self.filter)
-        } else {
-            " / to search | f filter | e expand | Esc close ".to_string()
-        };
-        let filter_y = area.bottom() - 1;
-        buf.set_line(area.x + 2, filter_y, &Line::raw(filter_hint).style(Style::default().fg(text_muted)), area.width - 4);
-
-        // Content
+        render_panel_border(area, buf, border);
+        render_panel_header(area, buf, text_primary, text_muted);
+        render_panel_footer(self, area, buf, text_muted);
         let inner_x = area.x + 2;
         let inner_w = area.width.saturating_sub(4);
         let mut y = area.y + 1;
         let max_y = area.bottom() - 1;
-
         let mut last_section: Option<&str> = None;
-
         for (display_idx, &idx) in self.filtered_indices.iter().enumerate() {
             if y >= max_y { break; }
             let shortcut = &SHORTCUTS[idx];
             let is_selected = display_idx == self.selected;
-
-            // Section header
             if last_section != Some(shortcut.section) {
-                if y > area.y + 1 { y += 1; } // spacing
+                if y > area.y + 1 { y += 1; }
                 if y >= max_y { break; }
-
                 let is_expanded = self.expanded_sections.contains(&shortcut.section);
                 let arrow = if is_expanded { "▼" } else { "▶" };
-                let section_text = format!("{} {} ({})", arrow, shortcut.section, SHORTCUTS.iter().filter(|s| s.section == shortcut.section).count());
+                let count = SHORTCUTS.iter().filter(|s| s.section == shortcut.section).count();
+                let section_text = format!("{} {} ({})", arrow, shortcut.section, count);
                 let section_style = Style::default().fg(section_color).add_modifier(Modifier::BOLD);
                 buf.set_line(inner_x, y, &Line::raw(section_text).style(section_style), inner_w);
                 y += 1;
                 if y >= max_y { break; }
                 last_section = Some(shortcut.section);
             }
-
-            // Shortcut row
-            let indicator = if is_selected { "▸" } else { " " };
-            let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-            buf.set_string(inner_x, y, indicator, indicator_style);
-
-            let action_x = inner_x + 2;
-            let action_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
-            buf.set_string(action_x, y, shortcut.action, action_style);
-
-            let keys_text = shortcut.keys;
-            let keys_len = keys_text.len() as u16;
-            let keys_x = inner_x + inner_w - keys_len;
-            if keys_x > action_x + shortcut.action.len() as u16 {
-                buf.set_string(keys_x, y, keys_text, Style::default().fg(text_muted));
-            }
-
+            render_shortcut_row(shortcut, is_selected, inner_x, inner_w, y, buf, accent, text_primary, text_muted);
             y += 1;
         }
     }

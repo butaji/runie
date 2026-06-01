@@ -57,6 +57,7 @@ fn blocking_mode_handler(key: &crossterm::event::KeyEvent, mode: &TuiMode, state
     match mode {
         TuiMode::Permission => Some(key_to_permission_msg(*key)),
         TuiMode::Overlay => Some(key_to_overlay_msg(*key, state)),
+        TuiMode::HomeScreen => Some(key_to_home_screen_msg(*key)),
         _ => None,
     }
 }
@@ -90,30 +91,41 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
 }
 
 /// Routes key to the appropriate mode-specific handler (non-blocking modes only).
-fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
-    // Slash menu takes precedence in Chat mode
+fn check_modal_precedence(key: &crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     if matches!(state.mode, TuiMode::Chat) && state.slash_menu.is_open() {
         return key_to_slash_menu_msg(*key);
     }
-    // Shortcuts panel takes precedence
     if state.shortcuts_panel.is_open() {
         return key_to_shortcuts_panel_msg(*key, state);
     }
-    // Settings modal takes precedence
     if state.settings_modal.is_open() {
         return key_to_settings_modal_msg(*key);
     }
-    // Ctrl+Enter interject during active turn
+    if state.file_picker.is_open() {
+        return key_to_file_picker_msg(*key);
+    }
+    if !state.history_search_matches.is_empty() {
+        return key_to_history_search_msg(*key);
+    }
+    if state.context_usage_modal.is_open() {
+        return key_to_context_usage_msg(*key);
+    }
+    None
+}
+
+fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    if let Some(msg) = check_modal_precedence(key, state) {
+        return Some(msg);
+    }
     if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Enter) && state.agent_running {
         return Some(Msg::Interject);
     }
     match state.mode {
-        TuiMode::Chat | TuiMode::Select => key_to_chat_msg(*key),
+        TuiMode::Chat | TuiMode::Select => key_to_chat_msg(*key, state),
         TuiMode::CommandPalette => key_to_palette_msg(*key),
         TuiMode::DiffViewer => key_to_diff_msg(*key),
         TuiMode::SessionTree => key_to_tree_msg(*key),
         TuiMode::Onboarding => key_to_onboarding_msg(*key, state),
-        // Permission and Overlay handled by blocking_mode_handler above
         _ => {
             tracing::warn!("Unhandled TuiMode in route_non_blocking_mode");
             None
@@ -166,27 +178,48 @@ fn key_to_slash_menu_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
 }
 
+fn shortcuts_panel_filter_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
+        KeyCode::Backspace => Some(Msg::ShortcutsPanelFilterBackspace),
+        KeyCode::Char(c) => Some(Msg::ShortcutsPanelFilterInput(c)),
+        KeyCode::Up => Some(Msg::ShortcutsPanelUp),
+        KeyCode::Down => Some(Msg::ShortcutsPanelDown),
+        KeyCode::Enter => Some(Msg::ShortcutsPanelToggleSection),
+        _ => None,
+    }
+}
+
+fn shortcuts_panel_normal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
+        KeyCode::Char('f') | KeyCode::Char('/') => Some(Msg::ShortcutsPanelToggleFilter),
+        KeyCode::Char('e') | KeyCode::Enter | KeyCode::Char(' ') => Some(Msg::ShortcutsPanelToggleSection),
+        KeyCode::Up => Some(Msg::ShortcutsPanelUp),
+        KeyCode::Down => Some(Msg::ShortcutsPanelDown),
+        _ => None,
+    }
+}
+
 fn key_to_shortcuts_panel_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     if state.shortcuts_panel.filter_mode {
-        match key.code {
-            KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
-            KeyCode::Backspace => Some(Msg::ShortcutsPanelFilterBackspace),
-            KeyCode::Char(c) => Some(Msg::ShortcutsPanelFilterInput(c)),
-            KeyCode::Up => Some(Msg::ShortcutsPanelUp),
-            KeyCode::Down => Some(Msg::ShortcutsPanelDown),
-            KeyCode::Enter => Some(Msg::ShortcutsPanelToggleSection),
-            _ => None,
-        }
+        shortcuts_panel_filter_msg(key)
     } else {
-        match key.code {
-            KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
-            KeyCode::Char('f') => Some(Msg::ShortcutsPanelToggleFilter),
-            KeyCode::Char('/') => Some(Msg::ShortcutsPanelToggleFilter),
-            KeyCode::Char('e') | KeyCode::Enter | KeyCode::Char(' ') => Some(Msg::ShortcutsPanelToggleSection),
-            KeyCode::Up => Some(Msg::ShortcutsPanelUp),
-            KeyCode::Down => Some(Msg::ShortcutsPanelDown),
-            _ => None,
-        }
+        shortcuts_panel_normal_msg(key)
+    }
+}
+
+fn key_to_home_screen_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::Quit),
+        KeyCode::Up => Some(Msg::HomeScreenUp),
+        KeyCode::Down => Some(Msg::HomeScreenDown),
+        KeyCode::Enter => Some(Msg::HomeScreenSelect),
+        KeyCode::Char('n') => Some(Msg::CloseHomeScreen),
+        KeyCode::Char('r') => Some(Msg::CloseHomeScreen),
+        KeyCode::Char('s') => Some(Msg::OpenSettingsModal),
+        KeyCode::Char('h') => Some(Msg::OpenShortcutsPanel),
+        _ => None,
     }
 }
 
@@ -202,8 +235,17 @@ fn key_to_settings_modal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
 }
 
-fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
-    // Handle Ctrl+Shift+E before the normal ctrl combo check
+fn chat_navigation_msg(key: crossterm::event::KeyEvent, scroll_focused: bool) -> Option<Msg> {
+    match key.code {
+        KeyCode::Up => Some(if scroll_focused { Msg::ScrollUp } else { Msg::HistoryUp }),
+        KeyCode::Down => Some(if scroll_focused { Msg::ScrollDown } else { Msg::HistoryDown }),
+        KeyCode::PageUp => Some(Msg::ScrollPageUp),
+        KeyCode::PageDown => Some(Msg::ScrollPageDown),
+        _ => None,
+    }
+}
+
+fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('e')) {
         return Some(Msg::ToggleThoughts);
     }
@@ -213,28 +255,52 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     if matches!(key.code, KeyCode::Enter) {
         return if key.modifiers.contains(KeyModifiers::SHIFT) { Some(Msg::InsertNewline) } else { Some(Msg::Submit) };
     }
-    // Simple navigation
-    if matches!(key.code, KeyCode::Up) { return Some(Msg::HistoryUp); }
-    if matches!(key.code, KeyCode::Down) { return Some(Msg::HistoryDown); }
-    if matches!(key.code, KeyCode::PageUp) { return Some(Msg::ScrollPageUp); }
-    if matches!(key.code, KeyCode::PageDown) { return Some(Msg::ScrollPageDown); }
+    if matches!(key.code, KeyCode::Esc | KeyCode::Tab) {
+        return Some(Msg::ToggleScrollFocus);
+    }
+    if let Some(msg) = chat_navigation_msg(key, state.scroll.scroll_focused) {
+        return Some(msg);
+    }
     Some(Msg::TextareaKey(key))
 }
 
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
-    match key.code {
-        KeyCode::Char('j') | KeyCode::Enter => Some(Msg::InsertNewline),
-        KeyCode::Enter if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Interject),
-        KeyCode::Char('k') | KeyCode::Char('n') | KeyCode::Char('p') | KeyCode::Char('s') => Some(Msg::OpenCommandPalette),
-        KeyCode::Char('.') => Some(Msg::OpenShortcutsPanel),
-        KeyCode::Char(',') => Some(Msg::OpenSettingsModal),
-        KeyCode::Char('b') => Some(Msg::ToggleSidebar),
-        KeyCode::Char('o') => Some(Msg::CopyLastResponse),
-        KeyCode::Char('l') => Some(Msg::ClearChat),
-        KeyCode::Char('q') => Some(Msg::Quit),
-        KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Msg::ToggleThoughts),
-        _ => Some(Msg::TextareaKey(key)),
+    if matches!(key.code, KeyCode::Char('j') | KeyCode::Enter) {
+        return Some(Msg::InsertNewline);
     }
+    ctrl_chat_key_match(key)
+}
+
+fn ctrl_chat_key_match(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    let c = match key.code {
+        KeyCode::Char(c) => c,
+        KeyCode::Enter => return Some(Msg::Interject),
+        _ => return Some(Msg::TextareaKey(key)),
+    };
+    if key.modifiers.contains(KeyModifiers::SHIFT) {
+        if c == 'a' { return Some(Msg::ClearAlwaysApprove); }
+        if c == 'e' { return Some(Msg::ToggleThoughts); }
+        return Some(Msg::TextareaKey(key));
+    }
+    const CTRL_MAP: &[(char, Msg)] = &[
+        ('k', Msg::OpenCommandPalette),
+        ('n', Msg::OpenCommandPalette),
+        ('p', Msg::OpenCommandPalette),
+        ('s', Msg::OpenCommandPalette),
+        ('.', Msg::OpenShortcutsPanel),
+        (',', Msg::OpenSettingsModal),
+        ('b', Msg::ToggleSidebar),
+        ('o', Msg::CopyLastResponse),
+        ('l', Msg::ClearChat),
+        ('r', Msg::HistorySearchStart),
+        ('u', Msg::OpenContextUsageModal),
+        ('a', Msg::TogglePermissionMode),
+        ('q', Msg::Quit),
+    ];
+    for &(ch, ref msg) in CTRL_MAP {
+        if c == ch { return Some(msg.clone()); }
+    }
+    Some(Msg::TextareaKey(key))
 }
 
 fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
@@ -269,6 +335,13 @@ fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
 }
 
+fn key_to_context_usage_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::CloseContextUsageModal),
+        _ => None,
+    }
+}
+
 fn key_to_diff_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     // P0-4 FIX: Ctrl+C/Ctrl+Q close modal
     if is_ctrl_combo(key) && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q')) {
@@ -288,6 +361,30 @@ fn key_to_tree_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Up | KeyCode::Char('k') => Some(Msg::SessionTreeUp),
         KeyCode::Down | KeyCode::Char('j') => Some(Msg::SessionTreeDown),
         KeyCode::Enter => Some(Msg::SessionTreeConfirm),
+        _ => None,
+    }
+}
+
+fn key_to_file_picker_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseFilePicker),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::FilePickerUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::FilePickerDown),
+        KeyCode::Enter => Some(Msg::FilePickerConfirm),
+        KeyCode::Backspace => Some(Msg::FilePickerBackspace),
+        KeyCode::Char(c) => Some(Msg::FilePickerFilter(c)),
+        _ => None,
+    }
+}
+
+fn key_to_history_search_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::HistorySearchCancel),
+        KeyCode::Enter => Some(Msg::HistorySearchConfirm),
+        KeyCode::Up | KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::HistorySearchPrev),
+        KeyCode::Down | KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::HistorySearchNext),
+        KeyCode::Backspace => Some(Msg::HistorySearchBackspace),
+        KeyCode::Char(c) => Some(Msg::HistorySearchQuery(c)),
         _ => None,
     }
 }

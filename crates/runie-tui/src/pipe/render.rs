@@ -3,7 +3,7 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
     buffer::Buffer,
-    style::Style,
+    style::{Style, Modifier},
     widgets::Widget,
 };
 use std::io;
@@ -57,6 +57,8 @@ impl RenderPipe {
 
             if is_onboarding {
                 Self::render_onboarding_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_status_bar, &theme, &theme_colors);
+            } else if state.home_screen.is_visible() || matches!(state.mode, crate::tui::TuiMode::HomeScreen) {
+                Self::render_home_screen_mode(frame.buffer_mut(), area, state, &theme, &theme_colors);
             } else {
                 Self::render_normal_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_sidebar, show_status_bar, &palette, padded_area, &theme, &theme_colors);
             }
@@ -116,6 +118,17 @@ impl RenderPipe {
         }
     }
 
+    fn render_home_screen_mode(
+        buf: &mut Buffer,
+        area: Rect,
+        state: &AppState,
+        theme: &ThemeWrapper,
+        theme_colors: &ThemeColors,
+    ) {
+        Self::clear_background(buf, area, theme_colors.bg_base);
+        crate::components::home_screen::render_home_screen(&state.home_screen, area, buf, theme);
+    }
+
     fn render_normal_mode(
         buf: &mut Buffer,
         area: Rect,
@@ -144,6 +157,17 @@ impl RenderPipe {
             };
             crate::components::slash_menu::render_slash_menu(&state.slash_menu, menu_area, buf, theme);
         }
+        if state.file_picker.is_open() {
+            let picker_h = 16u16.min(main_areas[1].height.saturating_sub(2));
+            let picker_area = Rect {
+                x: main_areas[1].x,
+                y: main_areas[2].y.saturating_sub(picker_h),
+                width: main_areas[1].width,
+                height: picker_h,
+            };
+            use ratatui::widgets::Widget;
+            (&state.file_picker).render(picker_area, buf);
+        }
         Self::render_input(buf, state, main_areas[3], theme);
         if show_status_bar {
             crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
@@ -170,7 +194,14 @@ impl RenderPipe {
         textarea.set_style(Style::default().fg(text_primary));
         textarea.set_cursor_style(Style::default().fg(accent_color).bg(accent_color));
         textarea.set_cursor_line_style(Style::default().remove_modifier(ratatui::style::Modifier::UNDERLINED));
-        let prompt = format!("{ch} ", ch = crate::glyphs::CHEVRON);
+        let text = state.textarea.lines().join("\n");
+        let prompt = if text.starts_with('!') {
+            "! ".to_string()
+        } else if text.starts_with('@') {
+            "@ ".to_string()
+        } else {
+            format!("{ch} ", ch = crate::glyphs::CHEVRON)
+        };
         crate::components::input_bar::render_input_bar(&textarea, &prompt, &state.input_right_info, area, buf, theme);
     }
 
@@ -196,6 +227,9 @@ impl RenderPipe {
         if state.settings_modal.is_open() {
             Self::render_settings_modal(buf, state, padded, area, theme, theme_colors);
         }
+        if state.context_usage_modal.is_open() {
+            Self::render_context_usage_modal(buf, state, padded, area, theme, theme_colors);
+        }
         if mode == crate::tui::TuiMode::Overlay {
             Self::render_overlay_mode(buf, state, area, theme);
         }
@@ -204,6 +238,9 @@ impl RenderPipe {
         }
         if mode == crate::tui::TuiMode::SessionTree {
             Self::render_session_tree(buf, state, area, theme, theme_colors);
+        }
+        if !state.history_search_matches.is_empty() {
+            Self::render_history_search(buf, state, area, theme);
         }
     }
 
@@ -271,6 +308,20 @@ impl RenderPipe {
             &state.settings_modal, modal_area, buf, theme);
     }
 
+    fn render_context_usage_modal(
+        buf: &mut Buffer,
+        state: &AppState,
+        padded: Rect,
+        area: Rect,
+        theme: &ThemeWrapper,
+        theme_colors: &ThemeColors,
+    ) {
+        Self::dim_background(buf, area, theme_colors);
+        let modal_area = right_aligned_rect(padded, 50, 22);
+        crate::components::context_usage_modal::render_context_usage_modal(
+            &state.context_usage_modal, state, modal_area, buf, theme);
+    }
+
     fn render_overlay_mode(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
         let overlay_area = crate::components::Overlay::centered((70, 25), area);
         let mut overlay_buf = Buffer::empty(overlay_area);
@@ -306,6 +357,76 @@ impl RenderPipe {
         Self::dim_background(buf, area, theme_colors);
         let tree_area = right_aligned_rect(area, 70, 25);
         state.session_tree.render_ref(tree_area, buf, theme);
+    }
+
+    fn render_history_search(
+        buf: &mut Buffer,
+        state: &AppState,
+        area: Rect,
+        _theme: &ThemeWrapper,
+    ) {
+        let search_h = 10u16.min(area.height.saturating_sub(4));
+        let search_area = Rect {
+            x: area.x + 2,
+            y: area.y + area.height.saturating_sub(search_h + 3),
+            width: area.width.saturating_sub(4),
+            height: search_h,
+        };
+        
+        // Background
+        for y in search_area.top()..search_area.bottom() {
+            for x in search_area.left()..search_area.right() {
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char(' ');
+                    cell.set_bg(ratatui::style::Color::Rgb(30, 30, 30));
+                }
+            }
+        }
+        
+        // Border
+        let border = ratatui::style::Color::DarkGray;
+        for x in search_area.left()..search_area.right() {
+            if let Some(cell) = buf.cell_mut((x, search_area.top())) {
+                cell.set_fg(border);
+            }
+            if let Some(cell) = buf.cell_mut((x, search_area.bottom().saturating_sub(1))) {
+                cell.set_fg(border);
+            }
+        }
+        
+        let inner = Rect {
+            x: search_area.x + 1,
+            y: search_area.y + 1,
+            width: search_area.width.saturating_sub(2),
+            height: search_area.height.saturating_sub(2),
+        };
+        
+        // Header
+        let header = format!("(reverse-i-search) `{}': ", state.history_search_query);
+        let header_style = Style::default().fg(ratatui::style::Color::Cyan).add_modifier(Modifier::BOLD);
+        let header_len = header.len() as u16;
+        buf.set_string(inner.x, inner.y, &header, header_style);
+        
+        // Show current match
+        let match_text = if let Some(&idx) = state.history_search_matches.get(state.history_search_index) {
+            state.input_history.get(idx).map(|s| s.as_str()).unwrap_or("")
+        } else {
+            "no matches"
+        };
+        
+        let match_style = Style::default().fg(ratatui::style::Color::White);
+        let header_len = header.len() as u16;
+        if header_len < inner.width {
+            buf.set_string(inner.x + header_len, inner.y, match_text, match_style);
+        }
+        
+        // Counter
+        let counter = format!("{} / {}", state.history_search_index + 1, state.history_search_matches.len());
+        let counter_style = Style::default().fg(ratatui::style::Color::Gray);
+        let counter_x = inner.x + inner.width.saturating_sub(counter.len() as u16);
+        if inner.height > 2 {
+            buf.set_string(counter_x, inner.y + inner.height.saturating_sub(1), counter, counter_style);
+        }
     }
 
     fn clear_background(buf: &mut Buffer, area: Rect, bg_color: ratatui::style::Color) {

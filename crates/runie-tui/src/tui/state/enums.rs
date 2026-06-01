@@ -2,7 +2,15 @@
 
 use super::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum PermissionMode {
+    #[default]
+    Normal,
+    AutoApprove,
+    Plan,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TuiMode {
     Chat,
     Overlay,
@@ -12,6 +20,7 @@ pub enum TuiMode {
     DiffViewer,
     SessionTree,
     Onboarding,
+    HomeScreen,
 }
 
 #[derive(Debug, Clone)]
@@ -90,6 +99,13 @@ pub enum Msg {
     UpdateTopBarContext { model: String, context_window: Option<usize>, estimated_tokens: Option<usize> },
     HistoryUp,
     HistoryDown,
+    HistorySearchStart,
+    HistorySearchQuery(char),
+    HistorySearchBackspace,
+    HistorySearchNext,
+    HistorySearchPrev,
+    HistorySearchCancel,
+    HistorySearchConfirm,
     CopyLastResponse,
     Interject,
     SlashMenuUp,
@@ -111,6 +127,25 @@ pub enum Msg {
     SettingsModalNextTab,
     SettingsModalPrevTab,
     SettingsModalSelect,
+    HomeScreenUp,
+    HomeScreenDown,
+    HomeScreenSelect,
+    CloseHomeScreen,
+    FilePickerUp,
+    FilePickerDown,
+    FilePickerConfirm,
+    FilePickerFilter(char),
+    FilePickerBackspace,
+    CloseFilePicker,
+    TogglePermissionMode,
+    ClearAlwaysApprove,
+    PlanModeApprove,
+    PlanModeDeny,
+    PlanModeViewNext,
+    PlanModeViewPrev,
+    ToggleScrollFocus,
+    OpenContextUsageModal,
+    CloseContextUsageModal,
 }
 
 impl PartialEq for Msg {
@@ -162,7 +197,12 @@ impl Msg {
                 | Msg::ClearInput | Msg::ClearInputConfirm | Msg::ClearChat | Msg::Stop
                 | Msg::PermissionTimeout | Msg::SelectUp | Msg::SelectDown | Msg::SelectConfirm
                 | Msg::SelectToggleDetails | Msg::SwitchModel | Msg::EnterOnboarding
-                | Msg::ResetAgentState | Msg::HistoryUp | Msg::HistoryDown | Msg::CopyLastResponse
+                | Msg::ResetAgentState | Msg::HistoryUp | Msg::HistoryDown | Msg::HistorySearchStart
+                | Msg::HistorySearchNext | Msg::HistorySearchPrev | Msg::HistorySearchCancel | Msg::HistorySearchConfirm
+                | Msg::CopyLastResponse
+                | Msg::FilePickerUp | Msg::FilePickerDown | Msg::FilePickerConfirm | Msg::CloseFilePicker
+                | Msg::TogglePermissionMode | Msg::ClearAlwaysApprove | Msg::PlanModeApprove | Msg::PlanModeDeny | Msg::PlanModeViewNext | Msg::PlanModeViewPrev | Msg::ToggleScrollFocus
+                | Msg::OpenContextUsageModal | Msg::CloseContextUsageModal
         )
     }
 }

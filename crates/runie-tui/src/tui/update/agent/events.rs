@@ -15,8 +15,7 @@ fn current_timestamp() -> Option<String> {
 pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::tui::update::agent::AgentCmd> {
     match msg {
         crate::tui::state::Msg::AgentEvent(event) => {
-            handle_agent_event(state, event);
-            vec![]
+            handle_agent_event(state, event)
         }
         crate::tui::state::Msg::PermissionConfirm | crate::tui::state::Msg::PermissionCancel |
         crate::tui::state::Msg::PermissionAlways | crate::tui::state::Msg::PermissionSkip => {
@@ -26,17 +25,17 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::t
     }
 }
 
-pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) {
+pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) -> Vec<super::AgentCmd> {
     // Route to category handlers - uses match to keep complexity low
     match categorize_event(&event) {
-        EventCategory::Message(msg) => handle_message_event(state, msg),
-        EventCategory::Tool(tool) => handle_tool_event(state, tool),
-        EventCategory::Lifecycle(lifecycle) => handle_lifecycle_event(state, lifecycle),
-        EventCategory::Error(err) => super::super::agent::error::on_agent_error(state, err),
-        EventCategory::Token(tokens) => update_token_usage(state, tokens.0, tokens.1),
+        EventCategory::Message(msg) => { handle_message_event(state, msg); vec![] }
+        EventCategory::Tool(tool) => { handle_tool_event(state, tool); vec![] }
+        EventCategory::Lifecycle(lifecycle) => { handle_lifecycle_event(state, lifecycle); vec![] }
+        EventCategory::Error(err) => { super::super::agent::error::on_agent_error(state, err); vec![] }
+        EventCategory::Token(tokens) => { update_token_usage(state, tokens.0, tokens.1); vec![] }
         EventCategory::Permission(perm) => handle_permission_event(state, perm),
-        EventCategory::Thinking(thinking) => handle_thinking_event(state, thinking),
-        EventCategory::Ignored => {}
+        EventCategory::Thinking(thinking) => { handle_thinking_event(state, thinking); vec![] }
+        EventCategory::Ignored => vec![]
     }
 }
 
@@ -114,9 +113,11 @@ fn handle_lifecycle_event(state: &mut AppState, event: AgentEvent) {
     }
 }
 
-fn handle_permission_event(state: &mut AppState, event: AgentEvent) {
+fn handle_permission_event(state: &mut AppState, event: AgentEvent) -> Vec<super::AgentCmd> {
     if let AgentEvent::PermissionRequest { tool_call_id, tool_name, tool_args, .. } = event {
-        super::permission::on_permission_request(state, tool_call_id, tool_name, tool_args);
+        super::permission::on_permission_request(state, tool_call_id, tool_name, tool_args)
+    } else {
+        vec![]
     }
 }
 

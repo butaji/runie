@@ -190,6 +190,7 @@ pub struct ScrollState {
     pub diff_offset: usize,
     pub tree_offset: usize,
     pub user_scrolled_up: bool,
+    pub scroll_focused: bool,
 }
 
 impl Default for ScrollState {
@@ -199,6 +200,7 @@ impl Default for ScrollState {
             diff_offset: 0,
             tree_offset: 0,
             user_scrolled_up: false,
+            scroll_focused: false,
         }
     }
 }

@@ -13,41 +13,10 @@ use ratatui_textarea::TextArea;
 // ─── Test Helpers ───────────────────────────────────────────────────────────────
 
 pub fn make_state() -> AppState {
-    AppState {
-        messages: Vec::new(),
-        textarea: TextArea::default(),
-        input_right_info: String::new(),
-        mode: TuiMode::Chat,
-        running: true,
-        show_sidebar: false,
-        agent_running: false,
-        current_model: Some("openai/gpt-4o".to_string()),
-        context: ContextState::default(),
-        permission_modal: PermissionModalState::default(),
-        command_palette: CommandPaletteState::default(),
-        scroll: ScrollState::default(),
-        animation: AnimationState::default(),
-        diff_viewer: None,
-        token_usage: AiTokenUsage::default(),
-        session_token_usage: AiTokenUsage::default(),
-        session_tree: SessionTreeNavigator::new(),
-        background_jobs: Vec::new(),
-        onboarding: None,
-        terminal_size: (0, 0),
-        clear_input_confirm: ClearInputConfirm::default(),
-        model_picker: None, agent_start_time: None,
-        input_history: Vec::new(), input_history_index: None,
-        input_draft: String::new(),
-        status_header: None, status_details: None, status_start_time: None,
-        thinking: None, mock_mode: false,
-        top_bar: TopBarState::default(),
-        last_turn_duration_secs: None, last_turn_tokens: None,
-        last_turn_tool_calls: None, turn_success: None,
-        slash_menu: crate::components::SlashMenu::new(),
-        shortcuts_panel: crate::components::ShortcutsPanel::new(),
-            settings_modal: crate::components::SettingsModal::new(),
-        show_thoughts: false,
-    }
+    let mut s = AppState::default();
+    s.mode = TuiMode::Chat;
+    s.current_model = Some("openai/gpt-4o".to_string());
+    s
 }
 
 // ─── Test 1: Slash /clear command ───────────────────────────────────────────────
