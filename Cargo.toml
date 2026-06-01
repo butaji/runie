@@ -5,10 +5,12 @@ members = [
     "crates/runie-agent",
     "crates/runie-tools",
     "crates/runie-tui",
-    "crates/runie-router",
-    "crates/runie-orchestrator",
     "crates/runie-cli",
     "harness",
+]
+exclude = [
+    "crates/runie-router",
+    "crates/runie-orchestrator",
 ]
 resolver = "2"
 
@@ -54,3 +56,6 @@ ratatui = "0.30"
 rand = "0.8"
 regex = "1.10"
 bytes = "1.0"
+dirs = "5.0"
+toml = "0.8"
+phf = { version = "0.11", features = ["macros"] }

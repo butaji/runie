@@ -19,8 +19,6 @@ runie-core = { path = "../runie-core" }
 runie-ai = { path = "../runie-ai" }
 runie-agent = { path = "../runie-agent" }
 runie-tools = { path = "../runie-tools" }
-runie-router = { path = "../runie-router" }
-runie-orchestrator = { path = "../runie-orchestrator" }
 runie-tui = { path = "../runie-tui" }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -36,7 +34,7 @@ tracing-appender = { workspace = true }
 chrono = { workspace = true }
 futures = { workspace = true }
 once_cell = { workspace = true }
-dirs = "5.0"
-toml = "0.8"
-phf = { version = "0.11", features = ["macros"] }
+dirs = { workspace = true }
+toml = { workspace = true }
+phf = { workspace = true }
 uuid = { workspace = true }
