@@ -29,6 +29,7 @@ pub enum PaletteCommand {
     Onboard,
     CopyLast,
     ShowCost,
+    Theme,
     Help,
     Quit,
     Cancel,
@@ -63,6 +64,7 @@ impl PaletteCommandDef {
             "onboard" => PaletteCommand::Onboard,
             "copy" => PaletteCommand::CopyLast,
             "cost" => PaletteCommand::ShowCost,
+            "theme" => PaletteCommand::Theme,
             "help" => PaletteCommand::Help,
             "quit" => PaletteCommand::Quit,
             _ => PaletteCommand::Cancel,
@@ -101,6 +103,7 @@ impl CommandPalette {
             PaletteCommandDef { id: "tree".into(), label: "Session Tree".into(), description: "Open session tree navigator".into(), category: "session".into(), aliases: vec!["t".into(), "tree".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
             // ─── Config ──────────────────────────────────────────────────
             PaletteCommandDef { id: "switch_model".into(), label: "Switch Model...".into(), description: "Change the AI model".into(), category: "config".into(), aliases: vec!["model".into(), "m".into()], keybinding: None, requires_args: false, arg_hint: "model name".into() },
+            PaletteCommandDef { id: "theme".into(), label: "Theme".into(), description: "Cycle between themes".into(), category: "config".into(), aliases: vec!["theme".into(), "t".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
             PaletteCommandDef { id: "onboard".into(), label: "Onboard".into(), description: "Configure provider and API key".into(), category: "config".into(), aliases: vec!["o".into(), "onboard".into()], keybinding: Some("Ctrl+O".into()), requires_args: false, arg_hint: "".into() },
             // ─── Tools ───────────────────────────────────────────────────
             PaletteCommandDef { id: "copy".into(), label: "Copy Last Response".into(), description: "Copy last response to clipboard".into(), category: "tools".into(), aliases: vec!["copy".into()], keybinding: Some("Ctrl+Y".into()), requires_args: false, arg_hint: "".into() },

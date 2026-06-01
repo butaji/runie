@@ -240,12 +240,25 @@ fn key_to_settings_modal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn chat_navigation_msg(key: crossterm::event::KeyEvent, scroll_focused: bool) -> Option<Msg> {
-    match key.code {
-        KeyCode::Up => Some(if scroll_focused { Msg::ScrollUp } else { Msg::HistoryUp }),
-        KeyCode::Down => Some(if scroll_focused { Msg::ScrollDown } else { Msg::HistoryDown }),
-        KeyCode::PageUp => Some(Msg::ScrollPageUp),
-        KeyCode::PageDown => Some(Msg::ScrollPageDown),
-        _ => None,
+    if scroll_focused {
+        // Vim-style scroll keys when feed has focus
+        match key.code {
+            KeyCode::Char('j') => Some(Msg::ScrollDown),
+            KeyCode::Char('k') => Some(Msg::ScrollUp),
+            KeyCode::Char('g') => Some(Msg::ScrollToTop), // gg - handled as 'g' first press
+            KeyCode::Char('G') => Some(Msg::ScrollToBottom),
+            KeyCode::Char('H') => Some(Msg::ScrollToPrevUserTurn),
+            KeyCode::Char('L') => Some(Msg::ScrollToNextUserTurn),
+            _ => None,
+        }
+    } else {
+        match key.code {
+            KeyCode::Up => Some(Msg::HistoryUp),
+            KeyCode::Down => Some(Msg::HistoryDown),
+            KeyCode::PageUp => Some(Msg::ScrollPageUp),
+            KeyCode::PageDown => Some(Msg::ScrollPageDown),
+            _ => None,
+        }
     }
 }
 
@@ -298,7 +311,8 @@ fn ctrl_chat_key_match(key: crossterm::event::KeyEvent) -> Option<Msg> {
         ('o', Msg::CopyLastResponse),
         ('l', Msg::ClearChat),
         ('r', Msg::HistorySearchStart),
-        ('u', Msg::OpenContextUsageModal),
+        ('u', Msg::ScrollHalfPageUp),
+        ('d', Msg::ScrollHalfPageDown),
         ('a', Msg::TogglePermissionMode),
         ('q', Msg::Quit),
     ];
