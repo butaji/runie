@@ -67,6 +67,11 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
         return handle_shortcuts_panel_msg(state, msg);
     }
 
+    // Settings modal - group
+    if matches!(msg, Msg::OpenSettingsModal | Msg::CloseSettingsModal | Msg::SettingsModalUp | Msg::SettingsModalDown | Msg::SettingsModalNextTab | Msg::SettingsModalPrevTab | Msg::SettingsModalSelect) {
+        return handle_settings_modal_msg(state, msg);
+    }
+
     vec![]
 }
 
@@ -204,6 +209,47 @@ fn handle_shortcuts_panel_msg(state: &mut AppState, msg: crate::tui::state::Msg)
             if state.shortcuts_panel.filter_mode {
                 let new_filter = state.shortcuts_panel.filter.chars().next_back().map(|_| state.shortcuts_panel.filter[..state.shortcuts_panel.filter.len()-1].to_string()).unwrap_or_default();
                 state.shortcuts_panel.set_filter(&new_filter);
+            }
+            vec![]
+        }
+        _ => vec![],
+    }
+}
+
+fn handle_settings_modal_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::OpenSettingsModal => {
+            state.settings_modal.open();
+            vec![]
+        }
+        Msg::CloseSettingsModal => {
+            state.settings_modal.close();
+            vec![]
+        }
+        Msg::SettingsModalUp => {
+            state.settings_modal.move_up();
+            vec![]
+        }
+        Msg::SettingsModalDown => {
+            state.settings_modal.move_down();
+            vec![]
+        }
+        Msg::SettingsModalNextTab => {
+            state.settings_modal.next_tab();
+            vec![]
+        }
+        Msg::SettingsModalPrevTab => {
+            state.settings_modal.prev_tab();
+            vec![]
+        }
+        Msg::SettingsModalSelect => {
+            if state.settings_modal.selected_tab == 0 {
+                if let Some((name, _)) = crate::components::settings_modal::THEMES.get(state.settings_modal.selected_item) {
+                    state.messages.push(MessageItem::System {
+                        text: format!("Theme switched to {}", name),
+                    });
+                }
             }
             vec![]
         }

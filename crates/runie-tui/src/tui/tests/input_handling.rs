@@ -53,6 +53,7 @@ fn make_state() -> AppState {
             turn_success: None,
             slash_menu: crate::components::SlashMenu::new(),
             shortcuts_panel: crate::components::ShortcutsPanel::new(),
+            settings_modal: crate::components::SettingsModal::new(),
         show_thoughts: false,
     }
 }
