@@ -37,7 +37,37 @@ pub async fn run_tui(
     event_logger: Option<&EventStreamLogger>,
     debug_port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (mut tui, base_system_prompt) = initialize_tui(&workspace, mock, settings, force_setup, event_logger, debug_port).await?;
+    // Start debug server BEFORE TUI initialization so it works even headless
+    let (mut debug_command_rx, _debug_command_tx): (
+        tokio::sync::broadcast::Receiver<runie_tui::debug_server::AgentCommand>,
+        tokio::sync::broadcast::Sender<runie_tui::debug_server::AgentCommand>,
+    ) = if debug_port > 0 {
+        let port = debug_port;
+        let state = Arc::new(tokio::sync::Mutex::new(runie_tui::AppState::default()));
+        let (server, rx) = runie_tui::debug_server::DebugServer::new(port);
+        let tx = server.command_sender();
+        tokio::spawn(async move {
+            server.start(state).await;
+        });
+        (rx, tx)
+    } else {
+        let (tx, rx) = tokio::sync::broadcast::channel(1);
+        (rx, tx)
+    };
+
+    let (mut tui, base_system_prompt) = match initialize_tui(&workspace, mock, settings, force_setup, event_logger, debug_port).await {
+        Ok(result) => result,
+        Err(e) => {
+            eprintln!("TUI initialization failed (running headless?). Debug server still active on port {}.", debug_port);
+            eprintln!("Error: {}", e);
+            // Keep the process alive so debug server remains accessible
+            if debug_port > 0 {
+                eprintln!("Debug server running. Press Ctrl+C to exit.");
+                tokio::signal::ctrl_c().await?;
+            }
+            return Err(e);
+        }
+    };
 
     // Unified message channel for ALL event sources
     let (msg_tx, mut msg_rx) = mpsc::channel::<Msg>(100);
@@ -57,25 +87,6 @@ pub async fn run_tui(
 
     // Animation timers - cursor blink only (animation tick is now via TimerActor)
     let mut cursor_interval = interval(Duration::from_millis(500));
-
-    // Debug server
-    // Debug server
-    let (mut debug_command_rx, _debug_command_tx): (
-        tokio::sync::broadcast::Receiver<runie_tui::debug_server::AgentCommand>,
-        tokio::sync::broadcast::Sender<runie_tui::debug_server::AgentCommand>,
-    ) = if tui.config.debug_port > 0 {
-        let port = tui.config.debug_port;
-        let state = Arc::new(tokio::sync::Mutex::new(tui.state.clone()));
-        let (server, rx) = runie_tui::debug_server::DebugServer::new(port);
-        let tx = server.command_sender();
-        tokio::spawn(async move {
-            server.start(state).await;
-        });
-        (rx, tx)
-    } else {
-        let (tx, rx) = tokio::sync::broadcast::channel(1);
-        (rx, tx)
-    };
 
     // TEA main loop
     let mut last_render = Instant::now();
