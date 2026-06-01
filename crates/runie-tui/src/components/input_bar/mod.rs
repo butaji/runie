@@ -49,6 +49,7 @@ pub fn render_input_bar(
 
 fn build_input_block(area: Rect, right_info: &str, border_color: Color) -> Block<'static> {
     let mut block = Block::bordered()
+        .border_set(ratatui::symbols::border::ROUNDED)
         .border_style(Style::default().fg(border_color));
 
     // Only show right info in border if explicitly provided (e.g. error/status)

@@ -7,6 +7,11 @@ use crate::tui::update::ui::UiCmd;
 use crate::tui::key_to_textarea_input;
 use std::time::Instant;
 
+fn current_timestamp() -> Option<String> {
+    use chrono::Local;
+    Some(Local::now().format("%-I:%M %p").to_string())
+}
+
 /// Chat-specific commands returned by update functions.
 #[derive(Debug, Clone)]
 pub enum ChatCmd {
@@ -308,7 +313,7 @@ fn add_user_message_only(state: &mut AppState, text: &str) {
     state.messages.push(MessageItem::User {
         text: text.to_string(),
         model: Some("You".to_string()),
-        timestamp: None,
+        timestamp: current_timestamp(),
     });
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
@@ -318,14 +323,14 @@ fn add_user_and_placeholder(state: &mut AppState, text: &str) {
     state.messages.push(MessageItem::User {
         text: text.to_string(),
         model: Some("You".to_string()),
-        timestamp: None,
+        timestamp: current_timestamp(),
     });
     state
         .messages
         .push(MessageItem::Assistant {
             text: String::new(),
             model: state.current_model.clone(),
-            timestamp: None,
+            timestamp: current_timestamp(),
         });
     state.is_thinking = true;
     state.thinking_start = Some(Instant::now());

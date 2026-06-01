@@ -6,6 +6,11 @@ use crate::tui::state::{AppState, TuiMode};
 use runie_agent::{AgentEvent, ContentPart};
 use runie_ai::TokenUsage;
 
+fn current_timestamp() -> Option<String> {
+    use chrono::Local;
+    Some(Local::now().format("%-I:%M %p").to_string())
+}
+
 /// Update agent domain: agent events, permissions.
 pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::tui::update::agent::AgentCmd> {
     match msg {
@@ -189,7 +194,7 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
         state.messages.push(MessageItem::Assistant {
             text: String::new(),
             model: state.current_model.clone(),
-            timestamp: None,
+            timestamp: current_timestamp(),
         });
     }
 }
@@ -199,12 +204,12 @@ pub fn on_message(state: &mut AppState, role: &str, content: &str) {
         "user" => state.messages.push(MessageItem::User {
             text: content.to_string(),
             model: Some("You".to_string()),
-            timestamp: None,
+            timestamp: current_timestamp(),
         }),
         "assistant" => state.messages.push(MessageItem::Assistant {
             text: content.to_string(),
             model: state.current_model.clone(),
-            timestamp: None,
+            timestamp: current_timestamp(),
         }),
         "system" => {
             // Filter out system messages that are just metadata notifications
@@ -248,7 +253,7 @@ pub fn on_message_update(state: &mut AppState, message: runie_agent::events::Age
         state.messages.push(MessageItem::Assistant {
             text: String::new(),
             model: state.current_model.clone(),
-            timestamp: None,
+            timestamp: current_timestamp(),
         });
     }
 
