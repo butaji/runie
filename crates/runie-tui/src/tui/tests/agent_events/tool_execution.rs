@@ -248,28 +248,19 @@ fn test_multiple_tools_in_one_turn() {
         let id = tool_id.to_string();
         handle_agent_event(
             &mut state,
+            AgentEvent::ToolExecutionStart {
+                tool_call_id: id.clone(),
+                tool_name: "bash".to_string(),
+                tool_args: format!(r#"{{"cmd": {}}}"#, i),
+                turn: 1,
+            },
+        );
+        handle_agent_event(
+            &mut state,
             AgentEvent::ToolExecutionEnd {
                 tool_call_id: id.clone(),
                 tool_name: "bash".to_string(),
                 tool_args: format!(r#"{{"cmd": {}}}"#, i),
-                result: ToolResult {
-                    tool_call_id: id,
-                    tool_name: "bash".to_string(),
-                    input: serde_json::json!({}),
-                    content: vec![ContentPart::Text { text: format!("result{}", i) }],
-                    is_error: false,
-                },
-                duration_ms: 100,
-                turn: 1,
-            },
-        );
-
-        handle_agent_event(
-            &mut state,
-            AgentEvent::ToolExecutionEnd {
-                tool_call_id: tool_id.to_string(),
-                tool_name: "bash".to_string(),
-                tool_args: format!(r#"{{"cmd": "echo {}", idx: {}}}"#, i, idx = i),
                 result: tool_result(tool_id, &format!("result{}", i), false),
                 duration_ms: 100,
                 turn: 1,
