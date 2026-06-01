@@ -55,6 +55,16 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
 
 fn handle_input_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
     use crate::tui::state::Msg;
+    use crate::tui::state::TuiMode;
+    // Block textarea input in modal/blocking modes (permission, overlay,
+    // command palette, onboarding) so paste/type can't leak. DiffViewer
+    // intentionally still allows it for copy-paste comparisons.
+    if matches!(
+        state.mode,
+        TuiMode::Permission | TuiMode::Overlay | TuiMode::CommandPalette | TuiMode::Onboarding
+    ) {
+        return vec![];
+    }
     match msg {
         Msg::TextareaKey(key) => { handle_textarea_key(state, key); vec![] }
         Msg::InsertNewline => handle_newline(state),
@@ -123,18 +133,14 @@ fn handle_clear_input(state: &mut AppState) -> Vec<ChatCmd> {
 
 fn handle_clear_chat(state: &mut AppState) -> Vec<ChatCmd> {
     state.messages.clear();
+    state.scroll.feed_offset = 0;
+    state.scroll.user_scrolled_up = false;
     vec![]
 }
 
 fn handle_paste(state: &mut AppState, text: String) -> Vec<ChatCmd> {
-    for c in text.chars() {
-        state.textarea.input(ratatui_textarea::Input {
-            key: ratatui_textarea::Key::Char(c),
-            ctrl: false,
-            alt: false,
-            shift: false,
-        });
-    }
+    state.textarea.move_cursor(ratatui_textarea::CursorMove::End);
+    state.textarea.insert_str(&text);
     vec![]
 }
 
@@ -142,7 +148,7 @@ fn handle_paste(state: &mut AppState, text: String) -> Vec<ChatCmd> {
 
 fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
     let text = state.textarea.lines().join("\n");
-    if text.is_empty() {
+    if text.chars().all(|c| c.is_whitespace()) {
         state.input_right_info = "Type a message first".to_string();
         return vec![];
     }

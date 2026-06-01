@@ -42,12 +42,14 @@ fn handle_info_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashC
 pub(crate) fn handle_new(state: &mut AppState) {
     state.messages.clear();
     state.scroll.feed_offset = 0;
+    state.scroll.user_scrolled_up = false;
     state.messages.push(MessageItem::System { text: "New session started".to_string() });
 }
 
 pub(crate) fn handle_clear(state: &mut AppState) {
     state.messages.clear();
     state.scroll.feed_offset = 0;
+    state.scroll.user_scrolled_up = false;
 }
 
 pub(crate) fn handle_model(state: &mut AppState, model: String) {
