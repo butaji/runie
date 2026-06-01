@@ -1,4 +1,3 @@
-mod actors;
 mod agent_spawn;
 mod context_loader;
 mod event_logger;
