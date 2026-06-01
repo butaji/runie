@@ -1,6 +1,7 @@
 use crate::events::*;
 use crate::{Hook, HookDecision, ToolResult};
 use crate::tools::AgentTool;
+use super::permission_state::PermissionState;
 use super::permissions::{request_permission, add_denied_result, add_blocked_result, add_tool_result};
 use super::streaming::PartialToolCall;
 use runie_core::{Context, ToolCall as CoreToolCall};
@@ -8,7 +9,6 @@ use runie_tools::ToolRegistry;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::Mutex;
 
 /// P1-3 FIX: Execute tool with panic recovery
 /// Wraps tool execution in a catch_unwind to prevent panics from crashing the agent.
@@ -185,7 +185,7 @@ pub(crate) async fn process_tool_calls<M: TryFrom<AgentEvent> + Send + 'static>(
     tools: &[AgentTool],
     allowed_tools: &HashSet<String>,
     msg_tx: &tokio::sync::mpsc::Sender<M>,
-    permission_state: Arc<Mutex<Option<PermissionDecision>>>,
+    permission_state: Arc<PermissionState>,
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
     _allowed_tools_mut: &mut HashSet<String>,

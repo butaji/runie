@@ -92,8 +92,12 @@ fn handle_thinking_event(state: &mut AppState, event: AgentEvent) {
 
 fn handle_tool_event(state: &mut AppState, event: AgentEvent) {
     match event {
-        AgentEvent::ToolExecutionStart { tool_call_id, .. } => on_tool_start(state, tool_call_id),
-        AgentEvent::ToolExecutionEnd { result, .. } => on_tool_end(state, result),
+        AgentEvent::ToolExecutionStart { tool_call_id, tool_args, .. } => {
+            on_tool_start(state, tool_call_id, String::new(), tool_args);
+        }
+        AgentEvent::ToolExecutionEnd { tool_call_id, result, .. } => {
+            on_tool_end(state, tool_call_id, result);
+        }
         _ => {}
     }
 }
@@ -302,8 +306,7 @@ pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
 
 // ─── Tool handlers ───────────────────────────────────────────────────────────
 
-pub fn on_tool_start(state: &mut AppState, tool_call_id: String) {
-    // Pause thinking timer when tool starts - accumulate duration so far
+pub fn on_tool_start(state: &mut AppState, tool_call_id: String, _tool_name: String, tool_args: String) {
     if state.is_thinking {
         if let Some(start) = state.thinking_start.take() {
             let elapsed = start.elapsed();
@@ -315,17 +318,25 @@ pub fn on_tool_start(state: &mut AppState, tool_call_id: String) {
     state.status_details = Some(MessageRegistry::tool_running(&tool_call_id));
     state.messages.push(MessageItem::ToolCall {
         name: tool_call_id,
-        args: String::new(),
+        args: tool_args,
         result: None,
         is_error: false,
     });
 }
 
-pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolResult) {
+pub fn on_tool_end(state: &mut AppState, tool_call_id: String, tool_result: runie_agent::events::ToolResult) {
     let text = extract_text_content(&tool_result.content);
-    if let Some(MessageItem::ToolCall { ref mut result, ref mut is_error, .. }) = state.messages.last_mut() {
-        *result = Some(text);
-        *is_error = tool_result.is_error;
+    // Match by tool_call_id (stored in the `name` field) so parallel tool
+    // calls do not race over the last message. Iterate in reverse — most
+    // recent first — to avoid O(n) scans on the hot path.
+    for msg in state.messages.iter_mut().rev() {
+        if let MessageItem::ToolCall { name, result, is_error, .. } = msg {
+            if name == &tool_call_id {
+                *result = Some(text);
+                *is_error = tool_result.is_error;
+                return;
+            }
+        }
     }
 }
 
