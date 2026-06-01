@@ -348,58 +348,53 @@ fn run_grader(
 ) -> (TaskStatus, usize, usize, String) {
     let grader_path = task_dir.join("grader.py");
     if !grader_path.exists() {
-        return (
-            TaskStatus::Skipped,
-            0,
-            0,
-            format!("grader not found: {}", grader_path.display()),
-        );
+        return (TaskStatus::Skipped, 0, 0, format!("grader not found: {}", grader_path.display()));
     }
-
-    // Run grader with timeout
-    let output = Command::new(&config.python)
-        .current_dir(workspace_path)
-        .arg(grader_path.as_path())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output();
-
-    let output = match output {
-        Ok(o) => o,
-        Err(e) => {
-            return (
-                TaskStatus::Error,
-                0,
-                0,
-                format!("failed to spawn python: {}", e),
-            );
-        }
+    let output = spawn_grader(&grader_path, workspace_path, config);
+    let (stdout, stderr, status) = match output {
+        Ok((s, e, st)) => (s, e, st),
+        Err(e) => return (TaskStatus::Error, 0, 0, format!("failed to spawn python: {}", e)),
     };
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
     if !stderr.is_empty() && config.verbose {
         eprintln!("[grader stderr] {}", stderr);
     }
+    parse_grader_output(&stdout, &stderr, status.as_ref())
+}
 
-    let status = if output.status.success() {
+fn spawn_grader(
+    grader_path: &Path,
+    workspace_path: &Path,
+    config: &HarnessConfig,
+) -> Result<(String, String, Option<std::process::ExitStatus>), std::io::Error> {
+    let output = Command::new(&config.python)
+        .current_dir(workspace_path)
+        .arg(grader_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    Ok((stdout, stderr, Some(output.status)))
+}
+
+fn parse_grader_output(
+    stdout: &str,
+    stderr: &str,
+    exit_status: Option<&std::process::ExitStatus>,
+) -> (TaskStatus, usize, usize, String) {
+    let status = if exit_status.map_or(false, |s| s.success()) {
         TaskStatus::Pass
     } else {
         TaskStatus::Fail
     };
-
-    // Parse checks from stdout (format: "PASS: description" / "FAIL: description")
     let lines: Vec<&str> = stdout.trim().split('\n').collect();
     let checks_total = lines.len();
     let checks_passed = lines.iter().filter(|l| l.starts_with("PASS")).count();
-
     let detail = if stdout.is_empty() && stderr.is_empty() {
-        format!("grader exited with status {}", output.status)
+        format!("grader exited with status {:?}", exit_status)
     } else {
         stdout.trim().to_string()
     };
-
     (status, checks_passed, checks_total, detail)
 }
 

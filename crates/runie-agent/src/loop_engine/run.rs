@@ -11,9 +11,10 @@ use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
+use super::permission_state::PermissionState;
 use super::streaming::{start_chat_with_retry, send_event, process_stream_event, PartialToolCall, finalize_tool_calls};
 use super::tools::process_tool_calls;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
 /// Main agent loop entry point.
 pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
@@ -22,7 +23,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
     provider: Arc<dyn Provider>,
     tools: Vec<AgentTool>,
     msg_tx: mpsc::Sender<M>,
-    permission_state: Arc<Mutex<Option<PermissionDecision>>>,
+    permission_state: Arc<PermissionState>,
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
 ) -> Result<Vec<AgentMessage>, super::AgentLoopError> {
@@ -34,8 +35,6 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
     let mut messages = initial_messages;
     let allowed_tools: HashSet<String> = HashSet::new();
     let context_window = 128_000;
-    let total_input_tokens = 0u32;
-    let total_output_tokens = 0u32;
 
     let tool_schemas: Vec<ToolSchema> = tools.iter().map(|t| ToolSchema {
         name: t.name.clone(),
@@ -73,8 +72,6 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
             hooks.clone(),
             &mut allowed_tools.clone(),
             context_window,
-            total_input_tokens,
-            total_output_tokens,
         ).await;
 
         if !should_continue {
@@ -82,7 +79,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         }
     }
 
-    send_agent_end(&msg_tx, &messages, turn_count, total_input_tokens, total_output_tokens).await;
+    send_agent_end(&msg_tx, &messages, turn_count).await;
     Ok(messages)
 }
 
@@ -138,13 +135,11 @@ async fn execute_turn<M: TryFrom<AgentEvent> + Send + 'static>(
     msg_tx: &mpsc::Sender<M>,
     tools: &[AgentTool],
     allowed_tools: &HashSet<String>,
-    permission_state: Arc<Mutex<Option<PermissionDecision>>>,
+    permission_state: Arc<PermissionState>,
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
     allowed_tools_mut: &mut HashSet<String>,
     context_window: usize,
-    total_input_tokens: u32,
-    total_output_tokens: u32,
 ) -> bool {
     let stream = match start_chat_with_retry(provider.clone(), llm_messages.clone(), tool_schemas.to_vec()).await {
         Ok(s) => s,
@@ -167,7 +162,7 @@ async fn execute_turn<M: TryFrom<AgentEvent> + Send + 'static>(
     messages.push(assistant_message.clone());
 
     if pending_tool_calls.is_empty() {
-        end_turn(msg_tx, turn_count, messages, total_input_tokens, total_output_tokens).await;
+        end_turn(msg_tx, turn_count, messages).await;
         return false;
     }
 
@@ -185,7 +180,7 @@ async fn execute_turn<M: TryFrom<AgentEvent> + Send + 'static>(
         context_window,
     ).await;
 
-    end_turn_with_tools(msg_tx, turn_count, messages, tool_results.len(), total_input_tokens, total_output_tokens).await;
+    end_turn_with_tools(msg_tx, turn_count, messages, tool_results.len()).await;
     true
 }
 
@@ -193,22 +188,13 @@ async fn send_agent_end<M: TryFrom<AgentEvent> + Send + 'static>(
     msg_tx: &mpsc::Sender<M>,
     messages: &[AgentMessage],
     turn_count: usize,
-    total_input_tokens: u32,
-    total_output_tokens: u32,
 ) {
-    let final_token_usage = TokenUsage {
-        input: total_input_tokens,
-        output: total_output_tokens,
-        cache_read: 0,
-        cache_write: 0,
-        total_tokens: total_input_tokens + total_output_tokens,
-    };
     send_event(msg_tx, AgentEvent::AgentEnd {
         messages: messages.to_vec(),
         total_turns: turn_count,
-        final_token_usage,
+        final_token_usage: TokenUsage::default(),
     }).await;
-    tracing::info!("[ACTOR:AgentLoop] Loop ended, total_turns={}, total_tokens={}", turn_count, total_input_tokens + total_output_tokens);
+    tracing::info!("[ACTOR:AgentLoop] Loop ended, total_turns={}", turn_count);
 }
 
 // =============================================================================
@@ -363,21 +349,12 @@ async fn end_turn<M: TryFrom<AgentEvent> + Send + 'static>(
     msg_tx: &mpsc::Sender<M>,
     turn_count: usize,
     messages: &[AgentMessage],
-    total_input_tokens: u32,
-    total_output_tokens: u32,
 ) {
-    let token_usage = TokenUsage {
-        input: total_input_tokens,
-        output: total_output_tokens,
-        cache_read: 0,
-        cache_write: 0,
-        total_tokens: total_input_tokens + total_output_tokens,
-    };
     send_event(msg_tx, AgentEvent::TurnEnd {
         turn: turn_count,
         message_count: messages.len(),
         tool_results_count: 0,
-        token_usage,
+        token_usage: TokenUsage::default(),
     }).await;
 }
 
@@ -386,21 +363,12 @@ async fn end_turn_with_tools<M: TryFrom<AgentEvent> + Send + 'static>(
     turn_count: usize,
     messages: &[AgentMessage],
     tool_results_count: usize,
-    total_input_tokens: u32,
-    total_output_tokens: u32,
 ) {
-    let token_usage = TokenUsage {
-        input: total_input_tokens,
-        output: total_output_tokens,
-        cache_read: 0,
-        cache_write: 0,
-        total_tokens: total_input_tokens + total_output_tokens,
-    };
     send_event(msg_tx, AgentEvent::TurnEnd {
         turn: turn_count,
         message_count: messages.len(),
         tool_results_count,
-        token_usage,
+        token_usage: TokenUsage::default(),
     }).await;
     tracing::info!("[ACTOR:AgentLoop] turn_count={}, messages={}, tool_results={}", turn_count, messages.len(), tool_results_count);
 }
