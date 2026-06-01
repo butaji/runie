@@ -303,8 +303,10 @@ fn add_user_and_placeholder(state: &mut AppState, text: &str) {
 fn handle_clear_input_confirm(state: &mut AppState) -> Vec<ChatCmd> {
     if state.clear_input_confirm.wants_clear() {
         state.textarea.select_all();
-        state.textarea.delete_line_by_end();
+        state.textarea.cut();
+        state.input_draft.clear();
         state.input_right_info = String::new();
+        state.input_history_index = None;
     } else {
         state.input_right_info = "Ctrl+C again to clear text".to_string();
     }
