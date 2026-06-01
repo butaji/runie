@@ -1,6 +1,19 @@
 //! Tests for Chat ↔ Onboarding transitions.
 
 use super::*;
+use crate::components::onboarding::{Onboarding, OnboardingStep};
+
+/// Onboarding needs an active `Onboarding` component to route keys.  Tests
+/// that drive `event_to_msg` with `state.mode == TuiMode::Onboarding` and
+/// expect onboarding-specific messages (`OnboardingKeyInput`, etc.) must use
+/// this helper — `make_state()` (mode=Chat) routes Char/Backspace to the
+/// textarea and never produces the Onboarding messages these tests assert.
+fn make_onboarding_active_state() -> AppState {
+    let mut state = make_state();
+    state.mode = TuiMode::Onboarding;
+    state.onboarding = Some(Onboarding::new(false));
+    state
+}
 
 /// Test: Chat → Onboarding via EnterOnboarding.
 #[test]
@@ -38,7 +51,26 @@ fn test_onboarding_complete_to_chat() {
     update(&mut state, &mut palette, Msg::EnterOnboarding);
     assert_eq!(state.mode, TuiMode::Onboarding);
 
-    // OnboardingNext on last step completes onboarding
+    // Fast-forward the onboarding state machine to `Complete` and seed the
+    // minimum data required by `to_settings()` (provider + model selected,
+    // models vec populated).  Walking the full machine Welcome →
+    // ProviderSelect → KeyInput → ModelSelect is exercised by the dedicated
+    // onboarding tests; this one only asserts the last-step transition.
+    {
+        let o = state.onboarding.as_mut().unwrap();
+        o.step = OnboardingStep::Complete;
+        o.selected_provider = Some(0);
+        o.selected_model = Some(0);
+        // selected_item == 0 would trigger the "add another provider"
+        // branch; any non-zero value commits and exits to Chat.
+        o.selected_item = 1;
+        o.models = vec![crate::components::onboarding::ModelOption {
+            name: "Test Model".to_string(),
+            id: "test-model".to_string(),
+            description: "For tests".to_string(),
+        }];
+    }
+
     update(&mut state, &mut palette, Msg::OnboardingNext);
     assert_eq!(state.mode, TuiMode::Chat);
 }
@@ -127,7 +159,7 @@ fn test_quit_during_onboarding_keeps_onboarding() {
 /// Test: Onboarding navigation keys.
 #[test]
 fn test_onboarding_navigation_keys() {
-    let state = make_state();
+    let state = make_onboarding_active_state();
 
     // Up
     let event = Event::Key(KeyEvent {
@@ -163,7 +195,7 @@ fn test_onboarding_navigation_keys() {
 /// Test: Onboarding character input.
 #[test]
 fn test_onboarding_char_input() {
-    let state = make_state();
+    let state = make_onboarding_active_state();
 
     let event = Event::Key(KeyEvent {
         code: KeyCode::Char('a'),
@@ -178,7 +210,7 @@ fn test_onboarding_char_input() {
 /// Test: Onboarding backspace.
 #[test]
 fn test_onboarding_backspace() {
-    let state = make_state();
+    let state = make_onboarding_active_state();
 
     let event = Event::Key(KeyEvent {
         code: KeyCode::Backspace,

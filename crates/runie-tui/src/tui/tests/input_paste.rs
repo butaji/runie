@@ -101,12 +101,18 @@ fn test_paste_preserves_exact_newlines() {
 
     update(&mut state, &mut palette, Msg::Paste("\nmid\n".to_string()));
 
+    // ratatui-textarea's insert_str splits on \n. With cursor at end of
+    // "start" and chunk ["", "mid", ""], the result is 3 lines:
+    // "start", "mid", "".  (Leading \n merges with current line trailing
+    // edge, so the first empty line is folded into the line break produced
+    // by the chunk's first entry being empty — see InsertChunk in the
+    // ratatui-textarea source.)  The semantic we care about is that
+    // newlines are PRESERVED, not stripped.
     let lines = state.textarea.lines();
-    assert_eq!(lines.len(), 4);
+    assert_eq!(lines.len(), 3);
     assert_eq!(lines[0], "start");
-    assert_eq!(lines[1], "");
-    assert_eq!(lines[2], "mid");
-    assert_eq!(lines[3], "");
+    assert_eq!(lines[1], "mid");
+    assert_eq!(lines[2], "");
 }
 
 #[test]

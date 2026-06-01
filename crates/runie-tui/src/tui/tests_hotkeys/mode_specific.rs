@@ -94,10 +94,10 @@ fn test_arrow_keys_dont_affect_input_in_palette_mode() {
 fn test_ctrl_q_always_quits_all_modes() {
     // P0-3 FIX: Ctrl+Q in Permission/Overlay mode now produces PermissionCancel/CloseModal
     // (blocking modes intercept ALL keys). In other modes, it produces Quit.
+    // DiffViewer is special: Ctrl+Q closes the viewer (CloseModal), not the app.
     let quit_modes = vec![
         TuiMode::Chat,
         TuiMode::CommandPalette,
-        TuiMode::DiffViewer,
         TuiMode::SessionTree,
         TuiMode::Onboarding,
         TuiMode::Select,
@@ -112,6 +112,10 @@ fn test_ctrl_q_always_quits_all_modes() {
             mode
         );
     }
+
+    // DiffViewer: Ctrl+Q closes the diff viewer, not the app.
+    let diff_msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::DiffViewer);
+    assert_eq!(diff_msg, Some(Msg::CloseModal), "Ctrl+Q in DiffViewer should close the viewer");
 
     // Blocking modes intercept Ctrl+Q
     let cancel_msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::Permission);

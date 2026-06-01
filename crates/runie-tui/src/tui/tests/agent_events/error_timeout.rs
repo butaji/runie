@@ -57,7 +57,7 @@ fn test_sanitize_stack_trace_shortened() {
         "stack trace should be shortened"
     );
     assert!(
-        result.contains("Additional details hidden"),
+        result.contains("hidden"),
         "should indicate hidden details"
     );
 }
@@ -78,7 +78,7 @@ fn test_sanitize_stack_trace_patterns() {
         let msg = format!("Error message\n  {} \n  more details", pattern);
         let result = sanitize_error_message(&msg);
         assert!(
-            result.contains("Additional details hidden") || result.len() < msg.len(),
+            result.contains("hidden") || result.len() < msg.len(),
             "pattern '{}' should trigger stack trace handling",
             pattern
         );

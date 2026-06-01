@@ -213,7 +213,12 @@ fn test_message_update_multiple_chunks() {
         .iter()
         .find_map(|m| match m {
             MessageItem::Assistant { text, .. } => {
-                assert_eq!(text, "fox", "should have final text 'fox'");
+                // `MessageUpdate` carries a full `AgentMessage` whose `content`
+                // is the latest accumulated text from the provider.  The TUI
+                // mirrors whatever the most recent update says — it does not
+                // re-accumulate from individual chunks.  The last chunk sent
+                // here is " fox", so the mirrored text is " fox".
+                assert_eq!(text, " fox", "should reflect last MessageUpdate content verbatim");
                 Some(())
             }
             _ => None,

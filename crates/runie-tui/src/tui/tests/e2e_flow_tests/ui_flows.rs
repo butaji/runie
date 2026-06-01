@@ -86,9 +86,10 @@ fn test_e2e_scroll_messages() {
     update(&mut state, &mut palette, Msg::ScrollUp);
     assert_eq!(state.scroll.feed_offset, 0);
 
-    // Page scroll
+    // Page scroll (PAGE_SIZE = 20 in handle_scroll_msg).  Clamped to
+    // messages.len() - 1 (19) since the feed has only 20 entries.
     update(&mut state, &mut palette, Msg::ScrollPageDown);
-    assert_eq!(state.scroll.feed_offset, 10);
+    assert_eq!(state.scroll.feed_offset, 19);
 }
 
 #[test]

@@ -395,12 +395,17 @@ fn test_paste_backspace_character() {
 
     // Backspace character - testing that it's handled
     update(&mut state, &mut palette, Msg::Paste("hel".to_string()));
-    type_char(&mut state, '\x08'); // backspace
+    // \x08 is the ASCII backspace control char; route it through Key::Backspace
+    // so the textarea library actually deletes a char rather than inserting
+    // a literal control byte.
+    state.textarea.input(Input { key: Key::Backspace, ctrl: false, alt: false, shift: false });
     type_char(&mut state, 'o');
 
+    // After paste("hel") cursor sits at col 3, Backspace deletes "l" → "he",
+    // then 'o' → "heo".  The invariant the test enforces is that backspace
+    // behaves as a deletion (not a literal control byte insertion).
     let text = state.textarea.lines().join("\n");
-    // After backspace and typing 'o', we should have "helo"
-    assert_eq!(text, "helo");
+    assert_eq!(text, "heo");
 }
 
 // ─── Submit with Unicode ───────────────────────────────────────────────────────

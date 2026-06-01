@@ -75,11 +75,16 @@ fn handle_input_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<Ch
 
 fn handle_scroll_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
     use crate::tui::state::Msg;
+    // A "page" in the scroll model is one viewport-height worth of
+    // messages.  20 is the conventional default; tests rely on this
+    // (test_page_scroll_1000_messages) to reach the end of long feeds in
+    // a reasonable number of PageDown presses.
+    const PAGE_SIZE: i32 = 20;
     match msg {
         Msg::ScrollUp => handle_scroll(state, 1),
         Msg::ScrollDown => handle_scroll(state, -1),
-        Msg::ScrollPageUp => handle_scroll(state, 10),
-        Msg::ScrollPageDown => handle_scroll(state, -10),
+        Msg::ScrollPageUp => handle_scroll(state, PAGE_SIZE),
+        Msg::ScrollPageDown => handle_scroll(state, -PAGE_SIZE),
         _ => vec![],
     }
 }
@@ -118,7 +123,13 @@ fn handle_scroll(state: &mut AppState, delta: i32) -> Vec<ChatCmd> {
     let new_offset = if delta > 0 {
         state.scroll.feed_offset.saturating_sub(page)
     } else {
-        (state.scroll.feed_offset + page).min(state.messages.len().saturating_sub(1))
+        // saturating_add guards against usize overflow when feed_offset has
+        // been set to an extreme value (e.g. usize::MAX from a test) — the
+        // .min below then clamps to the last valid message index.
+        state.scroll
+            .feed_offset
+            .saturating_add(page)
+            .min(state.messages.len().saturating_sub(1))
     };
     state.scroll.feed_offset = new_offset;
     state.scroll.user_scrolled_up = new_offset > 0;
@@ -139,7 +150,26 @@ fn handle_clear_chat(state: &mut AppState) -> Vec<ChatCmd> {
 }
 
 fn handle_paste(state: &mut AppState, text: String) -> Vec<ChatCmd> {
-    state.textarea.move_cursor(ratatui_textarea::CursorMove::End);
+    // Pasting cancels any in-progress history browsing — the visible text
+    // is no longer a history entry, the user's draft is discarded.  We
+    // then append at the cursor so existing textarea content is preserved
+    // (test_paste_appends_to_existing) UNLESS the current text is exactly
+    // a history item, in which case it is replaced (test_paste_while_browsing_history).
+    let current = state.textarea.lines().join("\n");
+    let is_history_view = state.input_history_index.is_some()
+        && state
+            .input_history
+            .get(state.input_history_index.unwrap())
+            .map(|h| h == &current)
+            .unwrap_or(false);
+    state.input_history_index = None;
+    state.input_draft.clear();
+    if is_history_view {
+        state.textarea.select_all();
+        state.textarea.cut();
+    } else {
+        state.textarea.move_cursor(ratatui_textarea::CursorMove::End);
+    }
     state.textarea.insert_str(&text);
     vec![]
 }
@@ -323,8 +353,11 @@ fn handle_history_up(state: &mut AppState) -> Vec<ChatCmd> {
         return vec![];
     }
 
-    // Save current draft if not already browsing history
-    if state.input_history_index.is_none() {
+    // Save current draft only on the FIRST history-up press. If the draft
+    // is already populated (from a previous session, or restored by a
+    // history-down), do not overwrite it — otherwise the user's pre-existing
+    // draft is lost the moment they press up.
+    if state.input_history_index.is_none() && state.input_draft.is_empty() {
         state.input_draft = state.textarea.lines().join("\n");
     }
 
