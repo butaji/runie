@@ -91,6 +91,10 @@ pub enum Msg {
     HistoryUp,
     HistoryDown,
     CopyLastResponse,
+    SlashMenuUp,
+    SlashMenuDown,
+    SlashMenuConfirm,
+    CloseSlashMenu,
 }
 
 impl PartialEq for Msg {

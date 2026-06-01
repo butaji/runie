@@ -1,0 +1,183 @@
+//! Inline slash menu component — grok-style autocomplete above input box.
+//!
+//! Shows when input starts with `/`. Up/Down navigate, Enter select, Esc close.
+
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    style::{Color, Modifier, Style},
+    text::Line,
+    widgets::Widget,
+};
+use crate::theme::ThemeWrapper;
+
+/// Definition of a slash command for display in the menu.
+#[derive(Debug, Clone)]
+pub struct SlashMenuItem {
+    pub command: &'static str,
+    pub aliases: &'static [&'static str],
+    pub description: &'static str,
+    pub category: &'static str,
+}
+
+/// All available slash commands.
+pub static SLASH_COMMANDS: &[SlashMenuItem] = &[
+    SlashMenuItem { command: "/new", aliases: &["/n"], description: "Start new session", category: "Session" },
+    SlashMenuItem { command: "/clear", aliases: &["/c"], description: "Clear conversation", category: "Session" },
+    SlashMenuItem { command: "/tree", aliases: &["/t"], description: "Open session tree", category: "Session" },
+    SlashMenuItem { command: "/fork", aliases: &["/f"], description: "Fork at current position", category: "Session" },
+    SlashMenuItem { command: "/model", aliases: &["/m"], description: "Switch model", category: "Config" },
+    SlashMenuItem { command: "/copy", aliases: &[], description: "Copy last response", category: "Tools" },
+    SlashMenuItem { command: "/cost", aliases: &[], description: "Show cost stats", category: "Tools" },
+    SlashMenuItem { command: "/onboard", aliases: &["/o"], description: "Configure provider", category: "Config" },
+    SlashMenuItem { command: "/quit", aliases: &["/q", "/exit"], description: "Exit runie", category: "App" },
+    SlashMenuItem { command: "/help", aliases: &["/h", "/?"], description: "Show help", category: "App" },
+];
+
+/// Inline slash menu state.
+#[derive(Debug, Clone, Default)]
+pub struct SlashMenu {
+    pub open: bool,
+    pub filter: String,
+    pub selected: usize,
+    pub filtered_indices: Vec<usize>,
+}
+
+impl SlashMenu {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Open menu with current input filter (minus the leading `/`).
+    pub fn open(&mut self, input: &str) {
+        self.open = true;
+        self.filter = input.strip_prefix('/').unwrap_or(input).to_string();
+        self.selected = 0;
+        self.update_filtered();
+    }
+
+    pub fn close(&mut self) {
+        self.open = false;
+        self.filter.clear();
+        self.selected = 0;
+        self.filtered_indices.clear();
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.open
+    }
+
+    /// Update filter from input text (caller strips `/`).
+    pub fn set_filter(&mut self, filter: &str) {
+        self.filter = filter.to_string();
+        self.update_filtered();
+    }
+
+    fn update_filtered(&mut self) {
+        let query = self.filter.to_lowercase();
+        self.filtered_indices = SLASH_COMMANDS
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| {
+                item.command.to_lowercase().contains(&query)
+                    || item.description.to_lowercase().contains(&query)
+                    || item.aliases.iter().any(|a| a.to_lowercase().contains(&query))
+            })
+            .map(|(i, _)| i)
+            .collect();
+        if self.selected >= self.filtered_indices.len() {
+            self.selected = 0;
+        }
+    }
+
+    pub fn move_up(&mut self) {
+        if self.filtered_indices.len() > 1 {
+            self.selected = self.selected.saturating_sub(1);
+        }
+    }
+
+    pub fn move_down(&mut self) {
+        if self.selected + 1 < self.filtered_indices.len() {
+            self.selected += 1;
+        }
+    }
+
+    /// Return the selected command string (e.g. "/new"), or None.
+    pub fn selected_command(&self) -> Option<String> {
+        self.filtered_indices.get(self.selected).map(|&idx| SLASH_COMMANDS[idx].command.to_string())
+    }
+
+    pub fn selected_item(&self) -> Option<&SlashMenuItem> {
+        self.filtered_indices.get(self.selected).map(|&idx| &SLASH_COMMANDS[idx])
+    }
+}
+
+impl Widget for &SlashMenu {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        // Default colors
+        let bg = Color::Black;
+        let border = Color::DarkGray;
+        let text_primary = Color::White;
+        let text_muted = Color::DarkGray;
+        let accent = Color::Cyan;
+
+        // Draw border
+        for x in area.x..area.right() {
+            buf.get_mut(x, area.y).set_char('─').set_fg(border);
+            buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+        }
+        for y in area.y..area.bottom() {
+            buf.get_mut(area.x, y).set_char('│').set_fg(border);
+            buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+        }
+        buf.get_mut(area.x, area.y).set_char('┌');
+        buf.get_mut(area.right() - 1, area.y).set_char('┐');
+        buf.get_mut(area.x, area.bottom() - 1).set_char('└');
+        buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+
+        // Title
+        let title = format!(" Commands ({}) ", self.filtered_indices.len());
+        let title_x = area.x + 2;
+        buf.set_line(title_x, area.y, &Line::raw(title).style(Style::default().fg(text_muted)), area.width - 4);
+
+        // Items
+        let inner_x = area.x + 2;
+        let inner_w = area.width.saturating_sub(4);
+        let mut y = area.y + 1;
+        let max_y = area.bottom() - 1;
+
+        for (display_idx, &cmd_idx) in self.filtered_indices.iter().enumerate() {
+            if y >= max_y { break; }
+            let cmd = &SLASH_COMMANDS[cmd_idx];
+            let is_selected = display_idx == self.selected;
+
+            let indicator = if is_selected { "▸" } else { " " };
+            let indicator_style = if is_selected {
+                Style::default().fg(accent).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(text_muted)
+            };
+            buf.set_string(inner_x, y, indicator, indicator_style);
+
+            let label_x = inner_x + 2;
+            let label_style = if is_selected {
+                Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(text_primary)
+            };
+            buf.set_string(label_x, y, cmd.command, label_style);
+
+            let desc_x = label_x + cmd.command.len() as u16 + 2;
+            if desc_x < inner_x + inner_w {
+                let desc = format!("{}", cmd.description);
+                buf.set_string(desc_x, y, &desc, Style::default().fg(text_muted));
+            }
+
+            y += 1;
+        }
+    }
+}
+
+pub fn render_slash_menu(menu: &SlashMenu, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    menu.render(area, buf);
+}

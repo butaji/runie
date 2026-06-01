@@ -83,6 +83,7 @@ pub struct AppState {
 
     pub permission_modal: PermissionModalState,
     pub command_palette: CommandPaletteState,
+    pub slash_menu: crate::components::SlashMenu,
     pub model_picker: Option<ModelPicker>,
     pub diff_viewer: Option<DiffViewer>,
     pub session_tree: crate::components::SessionTreeNavigator,
@@ -129,6 +130,7 @@ impl Default for AppState {
             clear_input_confirm: ClearInputConfirm::default(),
             permission_modal: PermissionModalState::default(),
             command_palette: CommandPaletteState::default(),
+            slash_menu: crate::components::SlashMenu::new(),
             model_picker: None,
             diff_viewer: None,
             session_tree: crate::components::SessionTreeNavigator::new(),
