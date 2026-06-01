@@ -280,62 +280,34 @@ fn open_log_file(events_dir: &std::path::Path, timestamp: &str, ext: &str) -> Fi
     let path = events_dir.join(format!("events_{}.{}", timestamp, ext));
     let fallback = format!("events_{}.{}", timestamp, ext);
 
-    match OpenOptions::new().create(true).append(true).open(&path) {
-        Ok(f) => f,
-        Err(e) => {
-            tracing::error!("Failed to create {} file {}: {}", ext, path.display(), e);
-            match OpenOptions::new().create(true).append(true).open(&fallback) {
-                Ok(f) => f,
-                Err(e2) => {
-                    tracing::error!("Failed to create fallback log file {}: {}", fallback, e2);
-                    match open_null_device() {
-                        Ok(f) => f,
-                        Err(e3) => {
-                            tracing::error!(
-                                "Cannot open null device ({}). Creating temp file as last resort.",
-                                e3
-                            );
-                            match tempfile_in_tmp() {
-                                Ok(f) => f,
-                                Err(e4) => {
-                                    tracing::error!(
-                                        "All log sinks failed. Dropping events silently. errors: fallback={} null={} tmp={}",
-                                        e2, e3, e4
-                                    );
-                                    // All sinks exhausted. Return a no-op file in /dev/null
-                                    // since the previous attempt failed. If THIS fails too,
-                                    // we have no choice but to surface the error rather than
-                                    // panic the entire CLI. The events subsystem will be inert.
-                                    OpenOptions::new()
-                                        .write(true)
-                                        .open("/dev/null")
-                                        .unwrap_or_else(|_| {
-                                            // On systems without /dev/null, write to a file in
-                                            // the working dir which we then immediately unlink.
-                                            // If even THIS fails, the world is broken.
-                                            std::fs::File::create("runie-null-sink.tmp")
-                                                .unwrap_or_else(|_| {
-                                                    // Last-resort: create the file but don't
-                                                    // unwrap. If this fails too, return a dummy
-                                                    // File handle from a closed memfd. Cannot
-                                                    // construct one without unsafe, so we open
-                                                    // /dev/null one more time; if that fails the
-                                                    // OS is unsalvageable.
-                                                    #[allow(clippy::expect_used)]
-                                                    OpenOptions::new()
-                                                        .write(true)
-                                                        .open("/dev/null")
-                                                        .expect("OS cannot open any sink file")
-                                                })
-                                        })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    if let Ok(f) = OpenOptions::new().create(true).append(true).open(&path) {
+        return f;
+    } else {
+        tracing::error!("Failed to create {} file {}", ext, path.display());
     }
+    if let Ok(f) = OpenOptions::new().create(true).append(true).open(&fallback) {
+        return f;
+    } else {
+        tracing::error!("Failed to create fallback log file {}", fallback);
+    }
+    last_resort_log_sink()
+}
+
+fn last_resort_log_sink() -> File {
+    if let Ok(f) = open_null_device() {
+        return f;
+    }
+    tracing::error!("Cannot open null device, falling back to temp file");
+    if let Ok(f) = tempfile_in_tmp() {
+        return f;
+    }
+    tracing::error!("All log sinks failed, dropping events silently");
+    open_null_device().unwrap_or_else(|_| {
+        std::fs::File::create("runie-null-sink.tmp").unwrap_or_else(|_| {
+            #[allow(clippy::expect_used)]
+            open_null_device().expect("OS cannot open any sink file")
+        })
+    })
 }
 
 fn tempfile_in_tmp() -> std::io::Result<File> {

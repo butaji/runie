@@ -3,7 +3,6 @@
 
 pub mod config;
 pub mod hook;
-pub mod permission;
 pub mod state;
 pub mod tools;
 
