@@ -20,6 +20,9 @@ impl std::fmt::Debug for AgentTool {
 }
 
 impl AgentTool {
+
+    #[must_use]
+    #[must_use]
     pub fn new(name: String, description: String, parameters: serde_json::Value) -> Self {
         Self {
             name,

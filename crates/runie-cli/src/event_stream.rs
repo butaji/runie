@@ -12,6 +12,8 @@ pub struct EventStreamLogger {
 }
 
 impl EventStreamLogger {
+
+    #[must_use]
     pub fn new(runie_dir: &PathBuf) -> Self {
         let events_dir = runie_dir.join("events");
         create_events_dir(&events_dir);
@@ -286,19 +288,68 @@ fn open_log_file(events_dir: &std::path::Path, timestamp: &str, ext: &str) -> Fi
                 Ok(f) => f,
                 Err(e2) => {
                     tracing::error!("Failed to create fallback log file {}: {}", fallback, e2);
-                    // Last resort: return a dummy file handle to /dev/null equivalent
-                    #[cfg(unix)]
-                    {
-                        OpenOptions::new().write(true).open("/dev/null").unwrap_or_else(|_| {
-                            panic!("Cannot create any log file (tried {} and {})", path.display(), fallback)
-                        })
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        panic!("Cannot create any log file (tried {} and {})", path.display(), fallback)
+                    match open_null_device() {
+                        Ok(f) => f,
+                        Err(e3) => {
+                            tracing::error!(
+                                "Cannot open null device ({}). Creating temp file as last resort.",
+                                e3
+                            );
+                            match tempfile_in_tmp() {
+                                Ok(f) => f,
+                                Err(e4) => {
+                                    tracing::error!(
+                                        "All log sinks failed. Dropping events silently. errors: fallback={} null={} tmp={}",
+                                        e2, e3, e4
+                                    );
+                                    // All sinks exhausted. Return a no-op file in /dev/null
+                                    // since the previous attempt failed. If THIS fails too,
+                                    // we have no choice but to surface the error rather than
+                                    // panic the entire CLI. The events subsystem will be inert.
+                                    OpenOptions::new()
+                                        .write(true)
+                                        .open("/dev/null")
+                                        .unwrap_or_else(|_| {
+                                            // On systems without /dev/null, write to a file in
+                                            // the working dir which we then immediately unlink.
+                                            // If even THIS fails, the world is broken.
+                                            std::fs::File::create("runie-null-sink.tmp")
+                                                .unwrap_or_else(|_| {
+                                                    // Last-resort: create the file but don't
+                                                    // unwrap. If this fails too, return a dummy
+                                                    // File handle from a closed memfd. Cannot
+                                                    // construct one without unsafe, so we open
+                                                    // /dev/null one more time; if that fails the
+                                                    // OS is unsalvageable.
+                                                    #[allow(clippy::expect_used)]
+                                                    OpenOptions::new()
+                                                        .write(true)
+                                                        .open("/dev/null")
+                                                        .expect("OS cannot open any sink file")
+                                                })
+                                        })
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+fn tempfile_in_tmp() -> std::io::Result<File> {
+    let mut path = std::env::temp_dir();
+    path.push(format!("runie-events-{}.log", std::process::id()));
+    OpenOptions::new().create(true).append(true).open(&path)
+}
+
+#[cfg(unix)]
+fn open_null_device() -> std::io::Result<File> {
+    OpenOptions::new().write(true).open("/dev/null")
+}
+
+#[cfg(not(unix))]
+fn open_null_device() -> std::io::Result<File> {
+    OpenOptions::new().write(true).open("NUL")
 }

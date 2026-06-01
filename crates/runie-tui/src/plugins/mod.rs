@@ -19,6 +19,9 @@ pub struct PluginRegistry {
 }
 
 impl PluginRegistry {
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self { Self { plugins: vec![] } }
     pub fn register(&mut self, plugin: Box<dyn Plugin>) { self.plugins.push(plugin); }
     pub fn before_update(&self, msg: Msg) -> Option<Msg> {

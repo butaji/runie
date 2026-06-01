@@ -2,7 +2,7 @@ use crate::components::status_bar::BackgroundJob;
 use crate::components::message_list::PlanStatus;
 use crate::tui::view_models::AgentListViewModel;
 
-pub struct AgentListBuilder {
+pub(crate) struct AgentListBuilder {
     plan_steps: Vec<(usize, String, PlanStatus)>,
     running_jobs: Vec<BackgroundJob>,
     active_count: usize,
@@ -13,7 +13,7 @@ pub struct AgentListBuilder {
 }
 
 impl AgentListBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             plan_steps: Vec::new(),
             running_jobs: Vec::new(),
@@ -25,12 +25,12 @@ impl AgentListBuilder {
         }
     }
 
-    pub fn plan_step(mut self, step: usize, text: &str, status: PlanStatus) -> Self {
+    pub(crate) fn plan_step(mut self, step: usize, text: &str, status: PlanStatus) -> Self {
         self.plan_steps.push((step, text.to_string(), status));
         self
     }
 
-    pub fn running_job(mut self, name: &str) -> Self {
+    pub(crate) fn running_job(mut self, name: &str) -> Self {
         self.running_jobs.push(BackgroundJob {
             name: name.to_string(),
             status: crate::components::status_bar::JobStatus::Running,
@@ -39,32 +39,32 @@ impl AgentListBuilder {
         self
     }
 
-    pub fn active_count(mut self, count: usize) -> Self {
+    pub(crate) fn active_count(mut self, count: usize) -> Self {
         self.active_count = count;
         self
     }
 
-    pub fn tokens(mut self, tokens: u64) -> Self {
+    pub(crate) fn tokens(mut self, tokens: u64) -> Self {
         self.tokens = tokens;
         self
     }
 
-    pub fn cost(mut self, cost: f64) -> Self {
+    pub(crate) fn cost(mut self, cost: f64) -> Self {
         self.cost = cost;
         self
     }
 
-    pub fn agent_running(mut self, running: bool) -> Self {
+    pub(crate) fn agent_running(mut self, running: bool) -> Self {
         self.agent_running = running;
         self
     }
 
-    pub fn braille_frame(mut self, frame: usize) -> Self {
+    pub(crate) fn braille_frame(mut self, frame: usize) -> Self {
         self.braille_frame = frame;
         self
     }
 
-    pub fn build(self) -> AgentListViewModel {
+    pub(crate) fn build(self) -> AgentListViewModel {
         AgentListViewModel {
             plan_steps: self.plan_steps,
             running_jobs: self.running_jobs,

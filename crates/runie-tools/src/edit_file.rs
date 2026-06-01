@@ -10,6 +10,9 @@ pub struct EditFileTool {
 }
 
 impl EditFileTool {
+
+    #[must_use]
+    #[must_use]
     pub fn new(workspace: Workspace) -> Self {
         Self { workspace }
     }

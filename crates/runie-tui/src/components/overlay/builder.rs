@@ -1,6 +1,6 @@
 use crate::tui::view_models::OverlayViewModel;
 
-pub struct OverlayBuilder {
+pub(crate) struct OverlayBuilder {
     title: String,
     content: Vec<String>,
     tabs: Vec<String>,
@@ -9,7 +9,7 @@ pub struct OverlayBuilder {
 }
 
 impl OverlayBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             title: String::new(),
             content: Vec::new(),
@@ -19,32 +19,32 @@ impl OverlayBuilder {
         }
     }
 
-    pub fn title(mut self, title: &str) -> Self {
+    pub(crate) fn title(mut self, title: &str) -> Self {
         self.title = title.to_string();
         self
     }
 
-    pub fn content(mut self, content: &[&str]) -> Self {
+    pub(crate) fn content(mut self, content: &[&str]) -> Self {
         self.content = content.iter().map(|s| s.to_string()).collect();
         self
     }
 
-    pub fn tab(mut self, tab: &str) -> Self {
+    pub(crate) fn tab(mut self, tab: &str) -> Self {
         self.tabs.push(tab.to_string());
         self
     }
 
-    pub fn active_tab(mut self, index: usize) -> Self {
+    pub(crate) fn active_tab(mut self, index: usize) -> Self {
         self.active_tab = index;
         self
     }
 
-    pub fn show_close(mut self, show: bool) -> Self {
+    pub(crate) fn show_close(mut self, show: bool) -> Self {
         self.show_close = show;
         self
     }
 
-    pub fn build(self) -> OverlayViewModel {
+    pub(crate) fn build(self) -> OverlayViewModel {
         OverlayViewModel {
             title: self.title,
             content: self.content,

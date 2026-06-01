@@ -104,7 +104,7 @@ macro_rules! with_rig_provider {
             RigProvider::Galadriel($client, $model) => $body,
             RigProvider::Llamafile($client, $model) => $body,
             RigProvider::VoyageAi(_, _) => {
-                panic!("internal error: VoyageAI must be handled before with_rig_provider macro")
+                unreachable!("VoyageAI must be handled before with_rig_provider macro")
             }
         }
     };
@@ -194,6 +194,9 @@ const PROVIDER_TABLE: &[(&str, ProviderCtor)] = &[
 ];
 
 impl RigProvider {
+
+    #[must_use]
+    #[must_use]
     pub fn new(provider: &str, api_key: &str, model: &str) -> Result<Self, String> {
         let model = model.to_string();
         let provider_lower = provider.to_lowercase();

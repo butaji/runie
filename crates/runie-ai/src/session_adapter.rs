@@ -80,6 +80,9 @@ pub struct RigSessionAdapter {
 
 impl RigSessionAdapter {
     /// Creates a new session adapter with an empty in-memory store.
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             memory: InMemoryConversationMemory::new(),

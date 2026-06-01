@@ -9,6 +9,9 @@ pub struct SearchTool {
 }
 
 impl SearchTool {
+
+    #[must_use]
+    #[must_use]
     pub fn new(workspace: Workspace) -> Self {
         Self { workspace }
     }

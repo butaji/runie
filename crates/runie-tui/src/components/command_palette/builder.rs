@@ -1,20 +1,20 @@
 use crate::tui::view_models::CommandPaletteViewModel;
 
-pub struct CommandPaletteBuilder {
+pub(crate) struct CommandPaletteBuilder {
     show: bool,
 }
 
 impl CommandPaletteBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { show: false }
     }
 
-    pub fn visible(mut self, visible: bool) -> Self {
+    pub(crate) fn visible(mut self, visible: bool) -> Self {
         self.show = visible;
         self
     }
 
-    pub fn build(self) -> CommandPaletteViewModel {
+    pub(crate) fn build(self) -> CommandPaletteViewModel {
         CommandPaletteViewModel { show: self.show }
     }
 }

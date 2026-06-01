@@ -15,6 +15,9 @@ pub struct MockProvider {
 }
 
 impl MockProvider {
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             model: "mock-gpt-4".to_string(),

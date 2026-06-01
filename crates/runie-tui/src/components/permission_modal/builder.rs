@@ -1,6 +1,6 @@
 use crate::tui::view_models::PermissionModalViewModel;
 
-pub struct PermissionBuilder {
+pub(crate) struct PermissionBuilder {
     tool: String,
     args: String,
     desc: String,
@@ -9,7 +9,7 @@ pub struct PermissionBuilder {
 }
 
 impl PermissionBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             tool: String::new(),
             args: String::new(),
@@ -19,28 +19,28 @@ impl PermissionBuilder {
         }
     }
 
-    pub fn tool(mut self, name: &str, args: &str) -> Self {
+    pub(crate) fn tool(mut self, name: &str, args: &str) -> Self {
         self.tool = name.to_string();
         self.args = args.to_string();
         self
     }
 
-    pub fn description(mut self, desc: &str) -> Self {
+    pub(crate) fn description(mut self, desc: &str) -> Self {
         self.desc = desc.to_string();
         self
     }
 
-    pub fn allow_all(mut self) -> Self {
+    pub(crate) fn allow_all(mut self) -> Self {
         self.selected = 2;
         self
     }
 
-    pub fn timeout_secs(mut self, secs: u64) -> Self {
+    pub(crate) fn timeout_secs(mut self, secs: u64) -> Self {
         self.timeout_secs = Some(secs);
         self
     }
 
-    pub fn build(self) -> PermissionModalViewModel {
+    pub(crate) fn build(self) -> PermissionModalViewModel {
         PermissionModalViewModel {
             tool: self.tool,
             args: self.args,

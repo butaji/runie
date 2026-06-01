@@ -9,6 +9,9 @@ pub struct UnifiedApi {
 }
 
 impl UnifiedApi {
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             providers: HashMap::new(),

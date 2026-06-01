@@ -16,6 +16,9 @@ pub struct DialogFrame {
 }
 
 impl DialogFrame {
+
+    #[must_use]
+    #[must_use]
     pub fn new(width: u16, height: u16) -> Self {
         Self {
             width,

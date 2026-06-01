@@ -2,7 +2,7 @@ use crate::tui::state::TuiMode;
 use crate::tui::view_models::StatusBarViewModel;
 use runie_ai::TokenUsage;
 
-pub struct StatusBarBuilder {
+pub(crate) struct StatusBarBuilder {
     mode: TuiMode,
     current_model: Option<String>,
     session_token_usage: TokenUsage,
@@ -12,7 +12,7 @@ pub struct StatusBarBuilder {
 }
 
 impl StatusBarBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             mode: TuiMode::Chat,
             current_model: None,
@@ -23,37 +23,37 @@ impl StatusBarBuilder {
         }
     }
 
-    pub fn mode(mut self, mode: TuiMode) -> Self {
+    pub(crate) fn mode(mut self, mode: TuiMode) -> Self {
         self.mode = mode;
         self
     }
 
-    pub fn current_model(mut self, model: impl Into<String>) -> Self {
+    pub(crate) fn current_model(mut self, model: impl Into<String>) -> Self {
         self.current_model = Some(model.into());
         self
     }
 
-    pub fn session_token_usage(mut self, usage: TokenUsage) -> Self {
+    pub(crate) fn session_token_usage(mut self, usage: TokenUsage) -> Self {
         self.session_token_usage = usage;
         self
     }
 
-    pub fn status_header(mut self, header: impl Into<String>) -> Self {
+    pub(crate) fn status_header(mut self, header: impl Into<String>) -> Self {
         self.status_header = Some(header.into());
         self
     }
 
-    pub fn status_details(mut self, details: impl Into<String>) -> Self {
+    pub(crate) fn status_details(mut self, details: impl Into<String>) -> Self {
         self.status_details = Some(details.into());
         self
     }
 
-    pub fn status_start_time(mut self, start_time: std::time::Instant) -> Self {
+    pub(crate) fn status_start_time(mut self, start_time: std::time::Instant) -> Self {
         self.status_start_time = Some(start_time);
         self
     }
 
-    pub fn build(self) -> StatusBarViewModel {
+    pub(crate) fn build(self) -> StatusBarViewModel {
         StatusBarViewModel {
             mode: self.mode,
             current_model: self.current_model,

@@ -8,10 +8,6 @@ members = [
     "crates/runie-cli",
     "harness",
 ]
-exclude = [
-    "crates/runie-router",
-    "crates/runie-orchestrator",
-]
 resolver = "2"
 
 [package]
@@ -19,9 +15,6 @@ name = "runie-workspace"
 edition = "2021"
 build = "build.rs"
 publish = false
-
-[workspace.metadata.clippy]
-# These are handled by .cargo/config.toml
 
 [workspace.package]
 version = "0.1.0"

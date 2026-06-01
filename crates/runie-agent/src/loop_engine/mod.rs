@@ -108,6 +108,8 @@ pub struct AgentEventStream {
     rx: mpsc::Receiver<AgentEvent>,
     perm_tx: mpsc::Sender<PermissionDecision>,
     result: Option<Vec<AgentMessage>>,
+    run_handle: Option<tokio::task::JoinHandle<()>>,
+    perm_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl AgentEventStream {
@@ -126,7 +128,23 @@ impl AgentEventStream {
                 return messages;
             }
         }
-        self.result.unwrap_or_default()
+        self.result.take().unwrap_or_default()
+    }
+
+    /// Abort the background tasks. Called automatically on drop.
+    pub fn shutdown(&mut self) {
+        if let Some(h) = self.run_handle.take() {
+            h.abort();
+        }
+        if let Some(h) = self.perm_handle.take() {
+            h.abort();
+        }
+    }
+}
+
+impl Drop for AgentEventStream {
+    fn drop(&mut self) {
+        self.shutdown();
     }
 }
 
@@ -152,13 +170,13 @@ pub fn agent_loop(
     let permission_state = PermissionState::new();
     let permission_state_clone = permission_state.clone();
 
-    tokio::spawn(async move {
+    let perm_handle = tokio::spawn(async move {
         while let Some(decision) = perm_rx.recv().await {
             permission_state_clone.resolve(decision).await;
         }
     });
 
-    tokio::spawn(async move {
+    let run_handle = tokio::spawn(async move {
         let _ = run_agent_loop(
             initial_messages,
             config,
@@ -175,5 +193,7 @@ pub fn agent_loop(
         rx: event_rx,
         perm_tx,
         result: None,
+        run_handle: Some(run_handle),
+        perm_handle: Some(perm_handle),
     }
 }

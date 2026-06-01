@@ -4,7 +4,7 @@ pub mod builder;
 pub mod gauge;
 pub mod render;
 
-pub use builder::TopBarBuilder;
+pub(crate) use builder::TopBarBuilder;
 pub use gauge::{calculate_pct, draw_gauge, format_context_window};
 pub use render::render_top_bar;
 

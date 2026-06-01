@@ -12,6 +12,9 @@ pub struct PermissionGate {
 }
 
 impl PermissionGate {
+
+    #[must_use]
+    #[must_use]
     pub fn new(timeout_secs: u64) -> Self {
         let (tx, rx) = mpsc::channel(100);
         Self {

@@ -19,6 +19,9 @@ pub struct PermissionState {
 }
 
 impl PermissionState {
+
+    #[must_use]
+    #[must_use]
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             inner: Mutex::new(None),
