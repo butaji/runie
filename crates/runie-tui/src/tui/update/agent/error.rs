@@ -79,6 +79,7 @@ pub fn on_agent_error(state: &mut AppState, message: String) {
     }
     
     state.messages.push(MessageItem::Error { message: sanitized_message, recoverable });
+    state.turn_success = Some(false);
     // P0-AGENT-TIMEOUT: Clear agent start time on error
     state.agent_start_time = None;
     // Set error status

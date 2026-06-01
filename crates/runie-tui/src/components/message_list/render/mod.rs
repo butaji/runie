@@ -174,7 +174,7 @@ pub fn render_single_msg(
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
         }
         MessageItem::Separator { elapsed_secs, tool_calls, tokens_used } => {
-            render_separator(*elapsed_secs, *tool_calls, *tokens_used, area, row, margin_x, buf, text_dim)
+            render_separator(*elapsed_secs, *tool_calls, *tokens_used, true, area, row, margin_x, buf, text_dim)
         }
         MessageItem::ToolCall { name, args, result, is_error } => {
             render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
@@ -250,7 +250,7 @@ pub fn render_single_msg_feed(
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)
         }
         FeedItem::Separator { elapsed_secs, tool_calls, tokens_used } => {
-            render_separator(*elapsed_secs, *tool_calls, *tokens_used, area, row, margin_x, buf, text_dim)
+            render_separator(*elapsed_secs, *tool_calls, *tokens_used, true, area, row, margin_x, buf, text_dim)
         }
     }
 }

@@ -97,6 +97,7 @@ pub struct AppState {
     pub last_turn_duration_secs: Option<u64>,
     pub last_turn_tokens: Option<usize>,
     pub last_turn_tool_calls: Option<usize>,
+    pub turn_success: Option<bool>,
 }
 
 impl Default for AppState {
@@ -138,6 +139,7 @@ impl Default for AppState {
             last_turn_duration_secs: None,
             last_turn_tokens: None,
             last_turn_tool_calls: None,
+            turn_success: None,
         }
     }
 }
