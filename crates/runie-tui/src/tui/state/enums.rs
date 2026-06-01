@@ -21,6 +21,7 @@ pub enum Msg {
     InsertNewline,
     Quit,
     ToggleSidebar,
+    ToggleThoughts,
     OpenCommandPalette,
     CloseModal,
     ConfirmModal,
@@ -128,7 +129,7 @@ impl Msg {
         matches!(
             self,
             Msg::Submit | Msg::InsertNewline | Msg::Quit | Msg::ToggleSidebar
-                | Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal
+                | Msg::ToggleThoughts | Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal
                 | Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown
                 | Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways
                 | Msg::PermissionSkip | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp

@@ -328,12 +328,11 @@ async fn flush_text_buffer<M: TryFrom<AgentEvent> + Send + 'static>(
     text_buffer: &mut String,
 ) {
     if !text_buffer.is_empty() {
-        let delta = std::mem::take(text_buffer);
+        let _delta = std::mem::take(text_buffer);
         assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
         send_event(msg_tx, AgentEvent::MessageUpdate {
             message: assistant_message.clone(),
             turn: turn_count,
-            delta,
         }).await;
     }
 }

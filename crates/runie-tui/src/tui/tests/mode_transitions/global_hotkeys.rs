@@ -26,8 +26,9 @@ fn test_ctrl_q_quits_in_palette() {
 #[test]
 fn test_ctrl_q_quits_in_diff_viewer() {
     let msg = simulate_key(KeyCode::Char('q'), KeyModifiers::CONTROL, TuiMode::DiffViewer);
-    // DiffViewer uses CloseModal for Ctrl+Q
-    assert_eq!(msg, Some(Msg::CloseModal));
+    // Note: global_hotkey_handler runs before route_non_blocking_mode,
+    // so Ctrl+Q returns Quit even in DiffViewer.
+    assert_eq!(msg, Some(Msg::Quit));
 }
 
 /// Test: Ctrl+Q quits in SessionTree.

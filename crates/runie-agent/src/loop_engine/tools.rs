@@ -257,11 +257,6 @@ where
 
             // Check permission
             let should_execute = if allowed_tools.contains(name) {
-                super::streaming::send_event(msg_tx, AgentEvent::PermissionGranted {
-                    tool_call_id: id.clone(),
-                    tool_name: name.clone(),
-                    tool_args: tool_args.clone(),
-                }).await;
                 true
             } else {
                 let tool_description = tools.iter()

@@ -2,6 +2,7 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
+use crate::tui::state::ThinkingState;
 use crate::tui::update::agent::handle_agent_event as agent_handle_event;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, ToolResult, TokenUsage};
 use std::time::{Duration, Instant};
@@ -48,8 +49,7 @@ fn test_submit_sets_running() {
 #[test]
 fn test_tool_start_pauses_thinking() {
     let mut state = AppState::default();
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now());
+    state.thinking = Some(ThinkingState { start: Some(Instant::now()), text: String::new(), accrued_duration: None });
     agent_handle_event(
         &mut state,
         AgentEvent::ToolExecutionStart {
@@ -59,8 +59,9 @@ fn test_tool_start_pauses_thinking() {
             turn: 1,
         },
     );
-    assert!(!state.is_thinking, "is_thinking should be false");
-    assert!(state.thinking_duration.is_some(), "thinking_duration should be set");
+    // on_tool_start pauses thinking (sets start = None) but doesn't clear thinking
+    assert!(state.thinking.is_some(), "thinking should still be Some (paused)");
+    assert!(state.thinking.as_ref().map_or(false, |t| t.accrued_duration.is_some()), "thinking.accrued_duration should be set");
 }
 
 #[test]
@@ -74,7 +75,7 @@ fn test_message_start_sets_thinking() {
             turn: 1,
         },
     );
-    assert!(state.is_thinking, "is_thinking should be true");
+    assert!(state.thinking.is_some(), "thinking should be Some");
     assert_eq!(state.status_header, Some("Thinking".to_string()));
 }
 
@@ -117,8 +118,7 @@ fn test_tool_end_updates_status() {
 fn test_agent_end_clears_all() {
     let mut state = AppState::default();
     state.agent_running = true;
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now());
+    state.thinking = Some(ThinkingState { start: Some(Instant::now()), text: String::new(), accrued_duration: None });
     state.status_header = Some("Thinking".to_string());
     state.status_start_time = Some(Instant::now());
     agent_handle_event(
@@ -130,10 +130,10 @@ fn test_agent_end_clears_all() {
         },
     );
     assert!(!state.agent_running, "agent_running should be false");
-    // NOTE: on_agent_end does not currently clear is_thinking/thinking_start
+    // NOTE: on_agent_end does not currently clear thinking
     // This may be intentional (thinking duration persists for display)
-    // assert!(!state.is_thinking, "is_thinking should be false");
-    // assert!(state.thinking_start.is_none(), "thinking_start should be none");
+    // assert!(state.thinking.is_none(), "thinking should be None");
+    // assert!(state.thinking.as_ref().map_or(true, |t| t.start.is_none()), "thinking.start should be none");
     assert!(state.status_header.is_none(), "status_header should be none");
 }
 
@@ -199,7 +199,6 @@ fn test_message_update_fills_placeholder() {
         AgentEvent::MessageUpdate {
             message: make_message("assistant", "Hello"),
             turn: 1,
-            delta: "Hello".to_string(),
         },
     );
     assert!(state.messages.iter().any(|m| matches!(
@@ -227,6 +226,7 @@ fn test_tool_start_sets_working_status() {
 fn test_turn_end_adds_separator() {
     let mut state = AppState::default();
     state.agent_start_time = Some(Instant::now() - Duration::from_secs(10));
+    state.session_token_usage.total_tokens = 150;
     agent_handle_event(
         &mut state,
         AgentEvent::TurnEnd {
@@ -242,7 +242,26 @@ fn test_turn_end_adds_separator() {
             },
         },
     );
-    assert!(state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })));
+    // on_turn_end now stores metrics in AppState instead of adding a Separator
+    assert!(
+        state.last_turn_duration_secs.is_some(),
+        "last_turn_duration_secs should be set"
+    );
+    assert_eq!(
+        state.last_turn_tokens,
+        Some(150),
+        "last_turn_tokens should match token_usage.total_tokens"
+    );
+    assert_eq!(
+        state.last_turn_tool_calls,
+        Some(0),
+        "last_turn_tool_calls should be 0 (tool_results_count was 0)"
+    );
+    // No separator should be added to messages
+    assert!(
+        !state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
+        "should NOT have separator after turn end (metrics now in AppState)"
+    );
 }
 
 #[test]
@@ -306,8 +325,7 @@ fn test_agent_end_resets_mode_to_chat() {
 #[test]
 fn test_tool_start_accumulates_thinking_duration() {
     let mut state = AppState::default();
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now() - Duration::from_millis(500));
+    state.thinking = Some(ThinkingState { start: Some(Instant::now() - Duration::from_millis(500)), text: String::new(), accrued_duration: None });
     agent_handle_event(
         &mut state,
         AgentEvent::ToolExecutionStart {
@@ -317,16 +335,16 @@ fn test_tool_start_accumulates_thinking_duration() {
             turn: 1,
         },
     );
-    assert!(!state.is_thinking);
-    assert!(state.thinking_duration.is_some());
-    assert!(state.thinking_duration.unwrap().as_millis() >= 400);
+    // on_tool_start pauses thinking (doesn't clear it), accumulates duration
+    assert!(state.thinking.is_some(), "thinking should still be Some (paused)");
+    assert!(state.thinking.as_ref().map_or(false, |t| t.accrued_duration.is_some()));
+    assert!(state.thinking.as_ref().unwrap().accrued_duration.unwrap().as_millis() >= 400);
 }
 
 #[test]
 fn test_message_end_records_thinking_duration() {
     let mut state = AppState::default();
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now() - Duration::from_millis(600));
+    state.thinking = Some(ThinkingState { start: Some(Instant::now() - Duration::from_millis(600)), text: String::new(), accrued_duration: None });
     agent_handle_event(
         &mut state,
         AgentEvent::MessageEnd {
@@ -334,15 +352,15 @@ fn test_message_end_records_thinking_duration() {
             turn: 1,
         },
     );
-    assert!(!state.is_thinking);
-    assert!(state.thinking_duration.is_some());
+    // on_message_end clears thinking = None after recording duration locally
+    assert!(state.thinking.is_none());
+    // accrued_duration was not stored in ThinkingState - duration was recorded locally
 }
 
 #[test]
 fn test_long_thinking_adds_thought_indicator() {
     let mut state = AppState::default();
-    state.thinking_start = Some(Instant::now() - Duration::from_millis(600));
-    state.is_thinking = true;
+    state.thinking = Some(ThinkingState { start: Some(Instant::now() - Duration::from_millis(600)), text: String::new(), accrued_duration: None });
     agent_handle_event(
         &mut state,
         AgentEvent::MessageEnd {
@@ -356,8 +374,7 @@ fn test_long_thinking_adds_thought_indicator() {
 #[test]
 fn test_quick_thinking_no_indicator() {
     let mut state = AppState::default();
-    state.thinking_start = Some(Instant::now() - Duration::from_millis(100));
-    state.is_thinking = true;
+    state.thinking = Some(ThinkingState { start: Some(Instant::now() - Duration::from_millis(100)), text: String::new(), accrued_duration: None });
     agent_handle_event(
         &mut state,
         AgentEvent::MessageEnd {

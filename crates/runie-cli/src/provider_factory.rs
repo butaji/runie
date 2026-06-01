@@ -1,4 +1,4 @@
-use runie_ai::providers::{MockProvider, OpenAiProvider, AnthropicProvider, GenAiProvider, RigProvider, MiniMaxProvider};
+use runie_ai::providers::{MockProvider, GenAiProvider, RigProvider, MiniMaxProvider};
 use runie_ai::Provider;
 use runie_core::RunieError;
 use crate::settings::Settings;
@@ -33,24 +33,10 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
     }
 
     match settings.provider.as_str() {
-        "openai" => create_openai_provider(settings),
-        "anthropic" => create_anthropic_provider(settings),
         "minimax" => create_minimax_provider(settings),
         "google" => create_google_provider(settings),
         other => create_rig_provider(other, settings),
     }
-}
-
-fn create_openai_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
-    let api_key = get_api_key(settings, "openai", "OPENAI_API_KEY")?;
-    let provider = OpenAiProvider::new(api_key, settings.model.clone());
-    Ok(Box::new(provider))
-}
-
-fn create_anthropic_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
-    let api_key = get_api_key(settings, "anthropic", "ANTHROPIC_API_KEY")?;
-    let provider = AnthropicProvider::new(api_key, settings.model.clone());
-    Ok(Box::new(provider))
 }
 
 fn create_minimax_provider(settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {

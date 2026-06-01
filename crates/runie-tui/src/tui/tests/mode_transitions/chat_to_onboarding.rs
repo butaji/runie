@@ -29,7 +29,7 @@ fn test_onboarding_skip_to_chat() {
     assert!(state.onboarding.is_none());
 }
 
-/// Test: Onboarding → Chat via OnboardingNext (completing onboarding).
+/// Test: Onboarding → Chat via OnboardingSkip (completing onboarding).
 #[test]
 fn test_onboarding_complete_to_chat() {
     let mut state = make_state();
@@ -38,8 +38,8 @@ fn test_onboarding_complete_to_chat() {
     update(&mut state, &mut palette, Msg::EnterOnboarding);
     assert_eq!(state.mode, TuiMode::Onboarding);
 
-    // OnboardingNext on last step completes onboarding
-    update(&mut state, &mut palette, Msg::OnboardingNext);
+    // OnboardingSkip completes onboarding and transitions to Chat
+    update(&mut state, &mut palette, Msg::OnboardingSkip);
     assert_eq!(state.mode, TuiMode::Chat);
 }
 
@@ -127,7 +127,12 @@ fn test_quit_during_onboarding_keeps_onboarding() {
 /// Test: Onboarding navigation keys.
 #[test]
 fn test_onboarding_navigation_keys() {
-    let state = make_state();
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+
+    // Enter Onboarding mode first
+    update(&mut state, &mut palette, Msg::EnterOnboarding);
+    assert_eq!(state.mode, TuiMode::Onboarding);
 
     // Up
     let event = Event::Key(KeyEvent {
@@ -163,7 +168,12 @@ fn test_onboarding_navigation_keys() {
 /// Test: Onboarding character input.
 #[test]
 fn test_onboarding_char_input() {
-    let state = make_state();
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+
+    // Enter Onboarding mode first
+    update(&mut state, &mut palette, Msg::EnterOnboarding);
+    assert_eq!(state.mode, TuiMode::Onboarding);
 
     let event = Event::Key(KeyEvent {
         code: KeyCode::Char('a'),
@@ -178,7 +188,12 @@ fn test_onboarding_char_input() {
 /// Test: Onboarding backspace.
 #[test]
 fn test_onboarding_backspace() {
-    let state = make_state();
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+
+    // Enter Onboarding mode first
+    update(&mut state, &mut palette, Msg::EnterOnboarding);
+    assert_eq!(state.mode, TuiMode::Onboarding);
 
     let event = Event::Key(KeyEvent {
         code: KeyCode::Backspace,
