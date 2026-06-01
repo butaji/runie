@@ -30,17 +30,18 @@ pub fn draw_gauge(
     text_secondary: Color,
     _bg_panel: Color,
 ) {
-    let ch = if pct >= 100.0 {
+    let rounded_pct = pct.round() as u32;
+    let ch = if rounded_pct >= 100 {
         '■'
-    } else if pct >= 95.0 {
+    } else if rounded_pct >= 95 {
         '◉'
-    } else if pct >= 75.0 {
+    } else if rounded_pct >= 75 {
         '●'
-    } else if pct >= 50.0 {
+    } else if rounded_pct >= 50 {
         '◕'
-    } else if pct >= 25.0 {
+    } else if rounded_pct >= 25 {
         '◐'
-    } else if pct > 0.0 {
+    } else if rounded_pct > 0 {
         '◔'
     } else {
         '○'

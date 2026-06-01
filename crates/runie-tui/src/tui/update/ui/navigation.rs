@@ -148,6 +148,24 @@ fn handle_set_input_right_info(state: &mut AppState, info: String) -> Vec<crate:
     vec![]
 }
 
+pub fn handle_update_top_bar_context(
+    state: &mut AppState,
+    model: Option<String>,
+    context_window: Option<usize>,
+    estimated_tokens: Option<usize>,
+) -> Vec<crate::tui::update::ui::UiCmd> {
+    if let Some(m) = model {
+        state.top_bar.model = m;
+    }
+    if let Some(cw) = context_window {
+        state.top_bar.context_window = Some(cw);
+    }
+    if let Some(et) = estimated_tokens {
+        state.top_bar.estimated_tokens = Some(et);
+    }
+    vec![]
+}
+
 // ─── Model/Mode State ──────────────────────────────────────────────────────
 
 pub fn handle_enter_onboarding(state: &mut AppState) -> Vec<crate::tui::update::ui::UiCmd> {

@@ -44,13 +44,13 @@ fn make_state() -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        // Thinking duration tracking
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 

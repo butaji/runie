@@ -149,7 +149,7 @@ pub struct ViewModels {
 }
 
 impl ViewModels {
-    pub fn from_render_state(state: &crate::tui::state::RenderState, palette: &CommandPalette, wrap_cache: crate::components::message_list::render::WrapCache) -> Self {
+    pub fn from_app_state(state: &crate::tui::state::AppState, palette: &CommandPalette, wrap_cache: crate::components::message_list::render::WrapCache) -> Self {
         Self {
             global_tags: build_global_tags_vm(state),
             message_list: build_message_list_vm(state, wrap_cache),
@@ -167,38 +167,112 @@ impl ViewModels {
     }
 }
 
-// ─── Builder Helpers ────────────────────────────────────────────────────────
+/// Strip thinking text from assistant messages.
+/// Models embed thinking as lines starting with markers like · • ◦ ▸.
+/// Also strips [thinking:...] wrappers and <think> blocks.
+pub fn strip_thinking_from_assistant(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut result = Vec::new();
+    let mut in_thinking_block = false;
+    let mut thinking_depth = 0usize;
 
-fn build_top_bar_vm(state: &crate::tui::state::RenderState) -> TopBarViewModel {
-    // Top bar shows repo/branch/path from context state (set by SetGitInfo)
-    // Model info belongs ONLY in global_tags, not top bar
-    TopBarViewModel {
-        repo: state.context.repo.clone(),
-        branch: state.context.branch.clone(),
-        path: state.context.path.clone(),
-        context_window: state.top_bar.context_window.unwrap_or(128_000),
-        estimated_tokens: state.top_bar.estimated_tokens.unwrap_or(0),
+    for line in &lines {
+        let trimmed = line.trim();
+
+        // Handle <think> XML blocks (DeepSeek style)
+        if trimmed.starts_with("<think>") {
+            in_thinking_block = true;
+            thinking_depth = 1;
+            if trimmed.contains("</think>") {
+                in_thinking_block = false;
+                thinking_depth = 0;
+            }
+            continue;
+        }
+        if in_thinking_block {
+            if trimmed.starts_with("</think>") {
+                in_thinking_block = false;
+                thinking_depth = 0;
+            }
+            continue;
+        }
+
+        // Handle [thinking:...] wrapper (our agent format)
+        if trimmed.starts_with("[thinking:") && trimmed.ends_with("]") {
+            continue;
+        }
+
+        // Check if line starts with a thinking marker
+        let first_char = trimmed.chars().next();
+        let is_thinking_marker = first_char.map_or(false, |c| {
+            matches!(c, '·' | '•' | '◦' | '▸' | '▹')
+        });
+
+        if is_thinking_marker {
+            continue;
+        }
+
+        result.push(*line);
     }
+
+    result.join("\n")
 }
 
-fn build_global_tags_vm(state: &crate::tui::state::RenderState) -> GlobalTagsViewModel {
-    let model = state.current_model.as_deref().unwrap_or("—");
-    let tokens = state.session_token_usage.total_tokens as u64;
-    let cost = state.session_token_usage.estimated_cost;
+// ─── Build Helper Functions ─────────────────────────────────────────────────
 
+fn build_top_bar_vm(state: &crate::tui::state::AppState) -> TopBarViewModel {
+    TopBarViewModel::from_state(&state.top_bar)
+}
+
+fn build_global_tags_vm(state: &crate::tui::state::AppState) -> GlobalTagsViewModel {
     if state.agent_running {
-        let status = state.status_header.as_deref().unwrap_or(MessageRegistry::status_running());
-        let time = state.status_details.as_deref().unwrap_or("0s");
-        GlobalTagsViewModel::running(status, time, tokens)
+        // Show spinner with status while agent is running
+        let status = state.status_header.as_deref().unwrap_or("thinking");
+        let elapsed = state.status_start_time
+            .map(|t| {
+                let dur = t.elapsed().as_secs();
+                format_duration_short(dur)
+            })
+            .unwrap_or_default();
+        GlobalTagsViewModel::running(
+            status, &elapsed, state.token_usage.total_tokens as u64,
+            state.last_turn_duration_secs,
+            state.last_turn_tokens,
+            state.last_turn_tool_calls,
+        )
+    } else if let Some(ref header) = state.status_header {
+        // Error state
+        GlobalTagsViewModel::error(header)
     } else {
-        GlobalTagsViewModel::idle(model, tokens, cost)
+        // Idle state - empty
+        GlobalTagsViewModel::idle()
     }
 }
 
-fn build_message_list_vm(state: &crate::tui::state::RenderState, wrap_cache: crate::components::message_list::render::WrapCache) -> MessageListViewModel {
+fn build_message_list_vm(
+    state: &crate::tui::state::AppState,
+    wrap_cache: crate::components::message_list::render::WrapCache,
+) -> MessageListViewModel {
     use crate::components::message_list::Feed;
+
+    // Strip thinking from assistant messages when show_thoughts is false
+    let messages_stripped: Vec<MessageItem> = state.messages.iter().map(|msg| {
+        match msg {
+            MessageItem::Assistant { text, model, timestamp } if !state.show_thoughts => {
+                MessageItem::Assistant {
+                    text: strip_thinking_from_assistant(text),
+                    model: model.clone(),
+                    timestamp: timestamp.clone(),
+                }
+            }
+            other => other.clone(),
+        }
+    }).collect();
+
+    let feed = Feed::from(messages_stripped);
+
     MessageListViewModel::new(
-        Feed::from(state.messages.clone()),
+        feed,
         state.scroll.feed_offset,
         state.agent_running,
         state.animation.clone(),
@@ -206,15 +280,15 @@ fn build_message_list_vm(state: &crate::tui::state::RenderState, wrap_cache: cra
     )
 }
 
-fn build_input_bar_vm(state: &crate::tui::state::RenderState) -> InputBarViewModel {
+fn build_input_bar_vm(state: &crate::tui::state::AppState) -> InputBarViewModel {
     InputBarViewModel {
         textarea: state.textarea.clone(),
-        prompt: format!("{ch} ", ch = crate::glyphs::CHEVRON),
+        prompt: state.input_draft.clone(),
         right_info: state.input_right_info.clone(),
     }
 }
 
-fn build_status_bar_vm(state: &crate::tui::state::RenderState) -> StatusBarViewModel {
+fn build_status_bar_vm(state: &crate::tui::state::AppState) -> StatusBarViewModel {
     StatusBarViewModel {
         mode: state.mode.clone(),
         current_model: state.current_model.clone(),
@@ -225,82 +299,71 @@ fn build_status_bar_vm(state: &crate::tui::state::RenderState) -> StatusBarViewM
     }
 }
 
-fn build_agent_list_vm(state: &crate::tui::state::RenderState) -> AgentListViewModel {
-    let plan_steps = extract_plan_steps(&state.messages);
-    let running_jobs: Vec<_> = state.background_jobs.iter()
-        .filter(|j| j.status == crate::components::status_bar::JobStatus::Running)
-        .cloned()
-        .collect();
+fn build_agent_list_vm(state: &crate::tui::state::AppState) -> AgentListViewModel {
     AgentListViewModel {
-        plan_steps,
-        running_jobs: running_jobs.clone(),
-        active_count: running_jobs.len(),
+        plan_steps: extract_plan_steps(&state.messages),
+        running_jobs: state.background_jobs.clone(),
+        active_count: state.background_jobs.iter().filter(|j| matches!(j.status, crate::components::status_bar::JobStatus::Running)).count(),
         tokens: state.session_token_usage.total_tokens as u64,
-        cost: state.session_token_usage.estimated_cost,
+        cost: 0.0, // Cost calculation requires pricing data
         agent_running: state.agent_running,
         braille_frame: state.animation.braille_frame,
     }
 }
 
 fn build_command_palette_vm(
-    state: &crate::tui::state::RenderState,
+    state: &crate::tui::state::AppState,
     _palette: &CommandPalette,
 ) -> Option<CommandPaletteViewModel> {
-    if state.mode != TuiMode::CommandPalette && !state.command_palette.open {
-        return None;
+    if state.command_palette.open {
+        Some(CommandPaletteViewModel {
+            show: true,
+        })
+    } else {
+        None
     }
-    Some(CommandPaletteViewModel {
-        show: state.command_palette.open,
-    })
 }
 
-fn build_permission_modal_vm(state: &crate::tui::state::RenderState) -> Option<PermissionModalViewModel> {
-    if state.mode != TuiMode::Permission {
-        return None;
+fn build_permission_modal_vm(state: &crate::tui::state::AppState) -> Option<PermissionModalViewModel> {
+    let pm = &state.permission_modal;
+    if pm.tool.is_some() {
+        Some(PermissionModalViewModel {
+            tool: pm.tool.clone().unwrap_or_default(),
+            args: pm.args.clone().unwrap_or_default(),
+            desc: pm.desc.clone().unwrap_or_default(),
+            selected: 0,
+            visible: true,
+            timeout_secs: pm.timeout_start.map(|t| {
+                // Calculate remaining seconds (60 second default timeout)
+                let elapsed = t.elapsed().as_secs();
+                if elapsed < 60 { 60 - elapsed } else { 0 }
+            }),
+        })
+    } else {
+        None
     }
-    
-    // P0-3 FIX: Calculate remaining timeout seconds
-    const TIMEOUT_SECS: u64 = 300; // 5 minutes
-    let timeout_secs = state.permission_modal.timeout_start.map(|start| {
-        let elapsed = start.elapsed().as_secs();
-        TIMEOUT_SECS.saturating_sub(elapsed)
-    });
-    
-    Some(PermissionModalViewModel {
-        tool: state.permission_modal.tool.clone().unwrap_or_default(),
-        args: state.permission_modal.args.clone().unwrap_or_default(),
-        desc: state.permission_modal.desc.clone().unwrap_or_default(),
-        selected: 0,
-        visible: true,
-        timeout_secs,
-    })
 }
 
-fn build_overlay_vm(state: &crate::tui::state::RenderState) -> Option<OverlayViewModel> {
-    if state.mode != TuiMode::Overlay {
-        return None;
-    }
-    Some(OverlayViewModel {
-        title: String::new(),
-        content: vec![],
-        tabs: vec![],
-        active_tab: 0,
-        show_close: true,
-    })
+fn build_overlay_vm(state: &crate::tui::state::AppState) -> Option<OverlayViewModel> {
+    // Overlay is shown when there's a context panel or similar
+    // For now, return None unless explicitly needed
+    None
 }
 
-fn build_session_tree_vm(state: &crate::tui::state::RenderState) -> Option<SessionTreeViewModel> {
-    if state.mode != TuiMode::SessionTree {
-        return None;
+fn build_session_tree_vm(state: &crate::tui::state::AppState) -> Option<SessionTreeViewModel> {
+    let nav = &state.session_tree;
+    if nav.visible && !nav.entries.is_empty() {
+        Some(SessionTreeViewModel {
+            entries: nav.entries.clone(),
+            selected: nav.selected,
+            visible: true,
+        })
+    } else {
+        None
     }
-    Some(SessionTreeViewModel {
-        entries: state.session_tree.entries.clone(),
-        selected: state.session_tree.selected,
-        visible: state.session_tree.visible,
-    })
 }
 
-fn build_diff_viewer_vm(state: &crate::tui::state::RenderState) -> Option<DiffViewerViewModel> {
+fn build_diff_viewer_vm(state: &crate::tui::state::AppState) -> Option<DiffViewerViewModel> {
     state.diff_viewer.as_ref().map(|dv| DiffViewerViewModel {
         filename: dv.filename.clone(),
         diff_lines: dv.compute_diff(),
@@ -309,20 +372,28 @@ fn build_diff_viewer_vm(state: &crate::tui::state::RenderState) -> Option<DiffVi
     })
 }
 
-fn build_onboarding_vm(state: &crate::tui::state::RenderState) -> Option<OnboardingViewModel> {
-    state.onboarding.as_ref().map(|o| OnboardingViewModel {
-        step: map_onboarding_step(&o.step),
-        selected_item: o.selected_item,
-        selected_provider: o.selected_provider,
-        api_key_input: o.api_key_input.clone(),
-        selected_model: o.selected_model,
-        providers: o.providers.iter().map(|p| p.name.clone()).collect(),
-        models: o.models.iter().map(|m| m.name.clone()).collect(),
-        error_message: o.error_message.clone(),
+fn build_onboarding_vm(state: &crate::tui::state::AppState) -> Option<OnboardingViewModel> {
+    state.onboarding.as_ref().map(|ob| OnboardingViewModel {
+        step: map_onboarding_step(&ob.step),
+        selected_item: ob.selected_item,
+        selected_provider: ob.selected_provider,
+        api_key_input: ob.api_key_input.clone(),
+        selected_model: ob.selected_model,
+        providers: ob.providers.iter().map(|p| p.name.clone()).collect(),
+        models: ob.models.iter().map(|m| m.name.clone()).collect(),
+        error_message: ob.error_message.clone().or(ob.fetch_error.clone()),
     })
 }
 
 // ─── Helper Functions ───────────────────────────────────────────────────────
+
+fn format_duration_short(duration_secs: u64) -> String {
+    if duration_secs < 60 {
+        format!("{}s", duration_secs)
+    } else {
+        format!("{}m", duration_secs / 60)
+    }
+}
 
 fn extract_plan_steps(messages: &[MessageItem]) -> Vec<(usize, String, PlanStatus)> {
     messages.iter().filter_map(|msg| {

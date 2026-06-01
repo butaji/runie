@@ -104,6 +104,3 @@ pub fn fuzzy_match(query: &str, target: &str) -> bool {
     }
     true
 }
-
-#[cfg(test)]
-mod comprehensive_tests;

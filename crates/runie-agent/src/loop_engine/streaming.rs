@@ -150,7 +150,6 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
                 send_event(msg_tx, AgentEvent::MessageUpdate {
                     message: assistant_message.clone(),
                     turn,
-                    delta,
                 }).await;
                 tracing::debug!("[ACTOR:AgentLoop] MessageUpdate: \"{}\" (+{} chars)", &text_content[..text_content.len().saturating_sub(delta_len).min(50)], delta_len);
                 *last_emit = Instant::now();
@@ -169,12 +168,11 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
             // Finalize any pending tool calls
             // Flush remaining text buffer
             if !text_buffer.is_empty() {
-                let delta = std::mem::take(text_buffer);
+                let _delta = std::mem::take(text_buffer);
                 assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
                 send_event(msg_tx, AgentEvent::MessageUpdate {
                     message: assistant_message.clone(),
                     turn,
-                    delta,
                 }).await;
             }
         }

@@ -19,8 +19,6 @@ runie-core = { path = "../runie-core" }
 runie-ai = { path = "../runie-ai" }
 runie-agent = { path = "../runie-agent" }
 runie-tools = { path = "../runie-tools" }
-runie-router = { path = "../runie-router" }
-runie-orchestrator = { path = "../runie-orchestrator" }
 runie-tui = { path = "../runie-tui" }
 serde = { workspace = true }
 serde_json = { workspace = true }

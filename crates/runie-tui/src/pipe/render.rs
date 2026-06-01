@@ -12,8 +12,9 @@ use crate::tui::view_models::ViewModels;
 use crate::tui::AppState;
 use crate::theme::ThemeWrapper;
 use crate::theme::ThemeColors;
-use crate::components::component::Component;
 use crate::components::CommandPalette;
+use crate::components::MessageList;
+use crate::layout::centered_rect;
 
 const SIDEBAR_WIDTH: u16 = 28;
 
@@ -83,7 +84,7 @@ impl RenderPipe {
         main_areas: [Rect; 5],
         show_status_bar: bool,
         theme: &ThemeWrapper,
-        _theme_colors: &ThemeColors,
+        theme_colors: &ThemeColors,
     ) {
         let bg_base: ratatui::style::Color = theme.color("bg.base").into();
         for y in area.y..area.y + area.height {
@@ -95,7 +96,7 @@ impl RenderPipe {
         }
 
         // Render top bar
-        Component::render(&vms.top_bar, &vms.top_bar, main_areas[0], buf, theme);
+        crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
 
         if let Some(ref onboarding) = state.onboarding {
             let onboarding_area = Rect {
@@ -104,11 +105,11 @@ impl RenderPipe {
                 width: area.width,
                 height: area.height - if show_status_bar { 2 } else { 0 },
             };
-            Component::render(onboarding, &(), onboarding_area, buf, theme);
+            crate::components::onboarding::render::render_onboarding(onboarding, onboarding_area, buf, theme);
         }
 
         if show_status_bar {
-            Component::render(&vms.status_bar, &vms.status_bar, main_areas[4], buf, theme);
+            crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
         }
     }
 
@@ -127,25 +128,25 @@ impl RenderPipe {
     ) {
         Self::clear_background(buf, area, theme_colors.bg_base);
         // main_areas[0] = topbar, [1] = feed, [2] = global_tags, [3] = input, [4] = hotkeys
-        Component::render(&vms.top_bar, &vms.top_bar, main_areas[0], buf, theme);
-        Self::render_content(buf, vms, show_sidebar, main_areas[1], theme);
-        ratatui::widgets::Widget::render(vms.global_tags.clone(), main_areas[2], buf);
+        crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
+        Self::render_content(buf, vms, show_sidebar, main_areas[1], theme, theme_colors);
+        crate::components::global_tags::render_global_tags(&vms.global_tags, main_areas[2], buf, theme_colors);
         Self::render_input(buf, state, main_areas[3], theme);
         if show_status_bar {
-            Component::render(&vms.status_bar, &vms.status_bar, main_areas[4], buf, theme);
+            crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
         }
         Self::render_overlays(buf, state, palette, padded, area, theme, theme_colors);
     }
 
-    fn render_content(buf: &mut Buffer, vms: &ViewModels, show_sidebar: bool, area: Rect, theme: &ThemeWrapper) {
+    fn render_content(buf: &mut Buffer, vms: &ViewModels, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
         let mut h_constraints = vec![Constraint::Min(20)];
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
         }
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
-        Component::render(&vms.message_list, &vms.message_list, h_areas[0], buf, theme);
+        MessageList::render_ref(&vms.message_list, h_areas[0], buf, theme);
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
-            Component::render(&vms.agent_list, &vms.agent_list, h_areas[1], buf, theme);
+            crate::tui::render::render_agent_list(&vms.agent_list, h_areas[1], buf, theme_colors);
         }
     }
 
@@ -156,12 +157,8 @@ impl RenderPipe {
         textarea.set_style(Style::default().fg(text_primary));
         textarea.set_cursor_style(Style::default().fg(accent_color).bg(accent_color));
         textarea.set_cursor_line_style(Style::default().remove_modifier(ratatui::style::Modifier::UNDERLINED));
-        let vm = crate::tui::view_models::InputBarViewModel {
-            textarea,
-            prompt: format!("{ch} ", ch = crate::glyphs::CHEVRON),
-            right_info: state.input_right_info.clone(),
-        };
-        Component::render(&crate::components::component::InputBar, &vm, area, buf, theme);
+        let prompt = format!("{ch} ", ch = crate::glyphs::CHEVRON);
+        crate::components::input_bar::render_input_bar(&textarea, &prompt, &state.input_right_info, area, buf, theme);
     }
 
     fn render_overlays(
@@ -200,7 +197,7 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::dim_background(buf, area, theme_colors);
-        let modal_area = Self::centered_rect(padded, 50, 14);
+        let modal_area = centered_rect(padded, 50, 14);
         let mut modal = crate::components::PermissionModal::new(
             state.permission_modal.tool.as_deref().unwrap_or(""),
             state.permission_modal.args.as_deref().unwrap_or(""),
@@ -211,7 +208,7 @@ impl RenderPipe {
             let elapsed = start.elapsed().as_secs();
             TIMEOUT_SECS.saturating_sub(elapsed)
         });
-        Component::render(&modal, &(), modal_area, buf, theme);
+        modal.render_ref(modal_area, buf, theme);
     }
 
     fn render_command_palette(
@@ -223,8 +220,8 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::dim_background(buf, area, theme_colors);
-        let palette_area = Self::centered_rect(padded, 70, 20);
-        Component::render(palette, &(), palette_area, buf, theme);
+        let palette_area = centered_rect(padded, 70, 20);
+        palette.render_ref(palette_area, buf, theme);
     }
 
     fn render_overlay_mode(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
@@ -232,7 +229,7 @@ impl RenderPipe {
         let mut overlay_buf = Buffer::empty(overlay_area);
 
         if let Some(ref picker) = state.model_picker {
-            Component::render(picker, &(), overlay_area, &mut overlay_buf, theme);
+            picker.render_ref(overlay_area, &mut overlay_buf, theme);
         }
 
         Self::blit_buffer(buf, area, overlay_area, &overlay_buf);
@@ -246,9 +243,9 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::dim_background(buf, area, theme_colors);
-        let diff_area = Self::centered_rect(area, 80, 25);
+        let diff_area = centered_rect(area, 80, 25);
         if let Some(ref diff) = state.diff_viewer {
-            Component::render(diff, &(), diff_area, buf, theme);
+            diff.render_ref(diff_area, buf, theme);
         }
     }
 
@@ -260,8 +257,8 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::dim_background(buf, area, theme_colors);
-        let tree_area = Self::centered_rect(area, 70, 25);
-        Component::render(&state.session_tree, &(), tree_area, buf, theme);
+        let tree_area = centered_rect(area, 70, 25);
+        state.session_tree.render_ref(tree_area, buf, theme);
     }
 
     fn clear_background(buf: &mut Buffer, area: Rect, bg_color: ratatui::style::Color) {
@@ -292,12 +289,6 @@ impl RenderPipe {
         ratatui::widgets::Paragraph::new("")
             .style(Style::default().bg(dim_color))
             .render(area, buf);
-    }
-
-    fn centered_rect(padded: Rect, w: u16, h: u16) -> Rect {
-        let x = padded.x + (padded.width.saturating_sub(w)) / 2;
-        let y = padded.y + (padded.height.saturating_sub(h)) / 2;
-        Rect::new(x, y, w.min(padded.width), h.min(padded.height))
     }
 
     fn blit_buffer(buf: &mut Buffer, area: Rect, src_area: Rect, src: &Buffer) {

@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests_statusbar {
     use crate::tui::render::get_status_items;
-    use crate::tui::state::{AppState, TuiMode, RenderState};
+    use crate::tui::state::{AppState, TuiMode};
     use crate::tui::TuiConfig;
 
     #[test]
@@ -53,7 +53,7 @@ mod tests_statusbar {
     fn test_status_bar_renders_in_onboarding() {
         let mut state = AppState::default();
         state.mode = TuiMode::Onboarding;
-        let render_state = RenderState::from(&state);
-        assert!(matches!(render_state.mode, TuiMode::Onboarding));
+        // AppState is used directly now (RenderState eliminated)
+        assert!(matches!(state.mode, TuiMode::Onboarding));
     }
 }

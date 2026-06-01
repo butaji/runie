@@ -44,12 +44,10 @@ fn make_state() -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        show_thoughts: false,
     }
 }
 

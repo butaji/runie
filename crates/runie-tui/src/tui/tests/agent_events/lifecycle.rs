@@ -8,6 +8,7 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
+use crate::tui::state::ThinkingState;
 use crate::tui::state::TuiMode;
 use crate::tui::update::agent::handle_agent_event;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, TokenUsage};
@@ -40,8 +41,7 @@ fn make_test_state() -> AppState {
 fn test_agent_end_clears_agent_running() {
     let mut state = make_test_state();
     state.agent_running = true;
-    state.is_thinking = true;
-    state.thinking_start = Some(std::time::Instant::now());
+    state.thinking = Some(ThinkingState { start: Some(std::time::Instant::now()), text: String::new(), accrued_duration: None });
     state.status_header = Some("Thinking".to_string());
     state.status_start_time = Some(std::time::Instant::now());
 
@@ -61,9 +61,7 @@ fn test_agent_end_clears_agent_running() {
 fn test_agent_end_clears_thinking_state() {
     let mut state = make_test_state();
     state.agent_running = true;
-    state.is_thinking = true;
-    state.thinking_start = Some(std::time::Instant::now());
-    state.thinking_duration = Some(std::time::Duration::from_millis(100));
+    state.thinking = Some(ThinkingState { start: Some(std::time::Instant::now()), text: String::new(), accrued_duration: Some(std::time::Duration::from_millis(100)) });
 
     handle_agent_event(
         &mut state,
@@ -74,8 +72,8 @@ fn test_agent_end_clears_thinking_state() {
         },
     );
 
-    assert!(!state.is_thinking, "is_thinking should be false");
-    assert!(state.thinking_start.is_none(), "thinking_start should be none");
+    assert!(state.thinking.is_none(), "thinking should be None");
+    assert!(state.thinking.as_ref().map_or(true, |t| t.start.is_none()), "thinking.start should be none");
 }
 
 #[test]
@@ -292,9 +290,25 @@ fn test_turn_end_adds_separator() {
         },
     );
 
+    // on_turn_end now stores metrics in AppState instead of adding a Separator
     assert!(
-        state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
-        "should have separator after turn end"
+        state.last_turn_duration_secs.is_some(),
+        "last_turn_duration_secs should be set"
+    );
+    assert_eq!(
+        state.last_turn_tokens,
+        Some(1000),
+        "last_turn_tokens should match session_token_usage"
+    );
+    assert_eq!(
+        state.last_turn_tool_calls,
+        Some(1),
+        "last_turn_tool_calls should be 1"
+    );
+    // No separator should be added to messages
+    assert!(
+        !state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
+        "should NOT have separator after turn end (metrics now in AppState)"
     );
 }
 
@@ -328,19 +342,26 @@ fn test_turn_end_separator_contains_metrics() {
         },
     );
 
-    let separator = state.messages.iter().find_map(|m| match m {
-        MessageItem::Separator {
-            elapsed_secs,
-            tool_calls,
-            tokens_used,
-        } => Some((*elapsed_secs, *tool_calls, *tokens_used)),
-        _ => None,
-    });
-
-    assert!(separator.is_some(), "should have separator with metrics");
-    let (_elapsed, tool_calls, tokens) = separator.unwrap();
-    assert_eq!(tool_calls, 1, "tool_calls should be 1");
-    assert_eq!(tokens, Some(500), "tokens_used should match session_token_usage");
+    // Metrics are now stored in AppState, not in a Separator message
+    assert!(
+        state.last_turn_duration_secs.is_some(),
+        "last_turn_duration_secs should be set"
+    );
+    assert_eq!(
+        state.last_turn_tokens,
+        Some(500),
+        "last_turn_tokens should match session_token_usage"
+    );
+    assert_eq!(
+        state.last_turn_tool_calls,
+        Some(1),
+        "last_turn_tool_calls should be 1"
+    );
+    // No separator in messages
+    assert!(
+        !state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
+        "should NOT have separator (metrics now in AppState)"
+    );
 }
 
 #[test]
@@ -359,9 +380,18 @@ fn test_turn_end_without_agent_start_time_no_separator() {
         },
     );
 
+    // Without agent_start_time, no turn metrics should be recorded
     assert!(
-        !state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
-        "should not have separator without agent_start_time"
+        state.last_turn_duration_secs.is_none(),
+        "last_turn_duration_secs should not be set without agent_start_time"
+    );
+    assert!(
+        state.last_turn_tokens.is_none(),
+        "last_turn_tokens should not be set without agent_start_time"
+    );
+    assert!(
+        state.last_turn_tool_calls.is_none(),
+        "last_turn_tool_calls should not be set without agent_start_time"
     );
 }
 
@@ -496,8 +526,7 @@ fn test_agent_end_without_any_prior_state() {
 fn test_turn_end_during_active_thinking() {
     let mut state = make_test_state();
     state.agent_running = true;
-    state.is_thinking = true;
-    state.thinking_start = Some(std::time::Instant::now());
+    state.thinking = Some(ThinkingState { start: Some(std::time::Instant::now()), text: String::new(), accrued_duration: None });
     state.agent_start_time = Some(std::time::Instant::now());
 
     handle_agent_event(
@@ -511,5 +540,10 @@ fn test_turn_end_during_active_thinking() {
     );
 
     // TurnEnd should not affect thinking state
-    assert!(state.is_thinking, "is_thinking should remain unchanged");
+    assert!(state.thinking.is_some(), "thinking should remain Some");
+    // But turn metrics should still be recorded
+    assert!(
+        state.last_turn_duration_secs.is_some(),
+        "last_turn_duration_secs should be set even during thinking"
+    );
 }

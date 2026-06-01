@@ -5,7 +5,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::Widget,
 };
-use crate::components::gradient_border::render_gradient_border;
+use crate::components::panel::render_gradient_border;
 use crate::theme::ThemeWrapper;
 
 const MAX_FILE_LINES: usize = 500;

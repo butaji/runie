@@ -7,6 +7,7 @@ use tracing::{error, info};
 use runie_agent::events::{AgentEvent, PermissionDecision};
 use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop, AgentLoopError};
 use runie_agent::Hook;
+use runie_agent::AgentTool;
 use runie_ai::Provider;
 use runie_tui::pipe::StateChange;
 
@@ -96,20 +97,42 @@ async fn handle_spawn_agent(
         max_turns: settings.max_turns,
     };
 
-    let permission_state_clone = tui.permission_state.clone();
-    let msg_tx_clone = msg_tx.clone();
+    let provider_arc: Arc<dyn Provider> = provider.into();
+    let task = spawn_agent_loop(
+        messages,
+        config,
+        provider_arc,
+        tools,
+        msg_tx.clone(),
+        tui.permission_state.clone(),
+        registry,
+        hooks,
+    );
 
-    let task = tokio::spawn(async move {
-        let provider_arc: Arc<dyn Provider> = provider.into();
+    *agent_task = Some(task);
+    StateChange::none()
+}
+
+fn spawn_agent_loop(
+    messages: Vec<runie_agent::events::AgentMessage>,
+    config: AgentLoopConfig,
+    provider: Arc<dyn Provider>,
+    tools: Vec<AgentTool>,
+    msg_tx: mpsc::Sender<Msg>,
+    permission_state: Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
+    registry: Arc<runie_tools::ToolRegistry>,
+    hooks: Vec<Arc<dyn Hook>>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
         let result = tokio::time::timeout(
             Duration::from_secs(600),
             run_agent_loop(
                 messages,
                 config,
-                provider_arc,
+                provider,
                 tools,
-                msg_tx_clone.clone(),
-                permission_state_clone,
+                msg_tx.clone(),
+                permission_state,
                 registry,
                 hooks,
             )
@@ -120,16 +143,13 @@ async fn handle_spawn_agent(
                 crate::event_logger::log_agent_completed();
             }
             Ok(Err(e)) => {
-                handle_agent_loop_error(&msg_tx_clone, &e).await;
+                handle_agent_loop_error(&msg_tx, &e).await;
             }
             Err(_) => {
-                handle_agent_timeout(&msg_tx_clone).await;
+                handle_agent_timeout(&msg_tx).await;
             }
         }
-    });
-
-    *agent_task = Some(task);
-    StateChange::none()
+    })
 }
 
 async fn handle_agent_loop_error(msg_tx: &mpsc::Sender<Msg>, e: &AgentLoopError) {
@@ -227,42 +247,7 @@ fn handle_save_settings(
         return StateChange::none();
     }
 
-    set_provider_env_vars(&provider, &api_key);
     StateChange::none()
-}
-
-fn set_provider_env_vars(provider: &str, api_key: &str) {
-    let var_name = provider_env_var_name(provider);
-    if !var_name.is_empty() {
-        std::env::set_var(var_name, api_key);
-    }
-}
-
-fn provider_env_var_name(provider: &str) -> &'static str {
-    const PROVIDERS: &[(&str, &str)] = &[
-        ("openai", "OPENAI_API_KEY"),
-        ("anthropic", "ANTHROPIC_API_KEY"),
-        ("google", "GOOGLE_API_KEY"),
-        ("cohere", "COHERE_API_KEY"),
-        ("mistral", "MISTRAL_API_KEY"),
-        ("deepseek", "DEEPSEEK_API_KEY"),
-        ("groq", "GROQ_API_KEY"),
-        ("openrouter", "OPENROUTER_API_KEY"),
-        ("huggingface", "HUGGINGFACE_API_KEY"),
-        ("xai", "XAI_API_KEY"),
-        ("azure", "AZURE_API_KEY"),
-        ("moonshot", "MOONSHOT_API_KEY"),
-        ("perplexity", "PERPLEXITY_API_KEY"),
-        ("ollama", "OLLAMA_API_KEY"),
-        ("hyperbolic", "HYPERBOLIC_API_KEY"),
-        ("together", "TOGETHER_API_KEY"),
-        ("zai", "ZAI_API_KEY"),
-        ("minimax", "MINIMAX_API_KEY"),
-        ("mira", "MIRA_API_KEY"),
-        ("galadriel", "GALADRIEL_API_KEY"),
-        ("llamafile", "LLAMAFILE_API_KEY"),
-    ];
-    PROVIDERS.iter().find(|(k, _)| *k == provider).map(|(_, v)| *v).unwrap_or("")
 }
 
 async fn handle_fetch_models(

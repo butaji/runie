@@ -1,6 +1,7 @@
 //! Comprehensive test suite - Section 6: Tool Execution Tests (crush + pi).
 
 use crate::components::MessageItem;
+use crate::tui::state::ThinkingState;
 use runie_agent::{AgentEvent, ContentPart, ToolResult};
 
 use super::harness::AgentTestHarness;
@@ -149,7 +150,7 @@ fn test_tool_pauses_thinking() {
         turn: 1,
     });
 
-    assert!(harness.state.is_thinking, "should be thinking after MessageStart");
+    assert!(harness.state.thinking.is_some(), "should be thinking after MessageStart");
 
     harness = harness.handle_event(AgentEvent::ToolExecutionStart {
         tool_call_id: "t1".to_string(),
@@ -158,10 +159,11 @@ fn test_tool_pauses_thinking() {
         turn: 1,
     });
 
-    assert!(!harness.state.is_thinking, "should NOT be thinking after ToolStart");
+    // on_tool_start pauses thinking (sets start = None) but doesn't clear it
+    assert!(harness.state.thinking.is_some(), "thinking should still be Some (paused)");
     assert!(
-        harness.state.thinking_duration.is_some(),
-        "thinking_duration should be recorded"
+        harness.state.thinking.as_ref().map_or(false, |t| t.accrued_duration.is_some()),
+        "thinking.accrued_duration should be recorded"
     );
 }
 

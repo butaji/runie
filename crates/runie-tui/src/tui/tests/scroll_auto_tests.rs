@@ -4,7 +4,7 @@
 //! and user_scrolled_up interaction.
 
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, TuiMode};
+use crate::tui::state::{AppState, ThinkingState, TuiMode};
 use crate::tui::update::agent::events::{
     handle_agent_event, on_message_end, on_message_start, on_message_update,
 };
@@ -188,13 +188,12 @@ mod auto_scroll_message_end {
     #[test]
     fn test_message_end_clears_is_thinking() {
         let mut state = make_state();
-        state.is_thinking = true;
-        state.thinking_start = Some(std::time::Instant::now());
+        state.thinking = Some(ThinkingState { start: Some(std::time::Instant::now()), text: String::new(), accrued_duration: None });
 
         on_message_end(&mut state, make_agent_message("Done"));
 
-        assert!(!state.is_thinking, "MessageEnd should clear is_thinking");
-        assert!(state.thinking_start.is_none(), "MessageEnd should clear thinking_start");
+        assert!(state.thinking.is_none(), "MessageEnd should clear thinking");
+        assert!(state.thinking.as_ref().map_or(true, |t| t.start.is_none()), "MessageEnd should clear thinking.start");
     }
 
     #[test]
@@ -250,7 +249,6 @@ mod agent_event_auto_scroll {
         let event = AgentEvent::MessageUpdate {
             message: make_agent_message("Update"),
             turn: 1,
-            delta: "Update".to_string(),
         };
 
         handle_agent_event(&mut state, event);
@@ -327,7 +325,6 @@ mod auto_scroll_disabled_when_user_scrolled {
             let update_event = AgentEvent::MessageUpdate {
                 message: make_agent_message("Update"),
                 turn: 1,
-                delta: "Update".to_string(),
             };
             handle_agent_event(&mut state, update_event);
             assert_eq!(

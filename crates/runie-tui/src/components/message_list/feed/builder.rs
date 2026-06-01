@@ -228,40 +228,6 @@ impl From<AssistantFeedBuilder> for FeedBuilder {
 }
 
 // ============================================================================
-// Event-driven API (for streaming/reactive scenarios)
-// ============================================================================
-
-/// Events that can occur during agent processing.
-#[derive(Debug, Clone, PartialEq)]
-pub enum AgentEvent {
-    /// Agent started processing
-    ProcessingStarted,
-    /// Thinking phase started
-    ThinkingStarted,
-    /// Thinking phase ended
-    ThinkingEnded { duration: Duration },
-    /// Text delta (for streaming)
-    TextDelta { text: String },
-    /// Tool call started
-    ToolCallStarted { name: String },
-    /// Tool call completed
-    ToolCallCompleted { name: String },
-    /// Turn completed
-    TurnCompleted { duration: Duration },
-    /// Error occurred
-    Error { message: String },
-}
-
-impl Feed {
-    /// Create a new Feed with event handlers pre-registered.
-    ///
-    /// This is a design sketch for reactive patterns.
-    pub fn with_handlers(_handlers: Vec<(AgentEvent, Box<dyn Fn(&mut Feed)>)>) -> Self {
-        Feed::new()
-    }
-}
-
-// ============================================================================
 // Convenience Traits for Even Shorter Syntax
 // ============================================================================
 
