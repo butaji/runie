@@ -91,6 +91,7 @@ pub enum Msg {
     HistoryUp,
     HistoryDown,
     CopyLastResponse,
+    ShowHelp,
 }
 
 impl PartialEq for Msg {
@@ -143,6 +144,7 @@ impl Msg {
                 | Msg::PermissionTimeout | Msg::SelectUp | Msg::SelectDown | Msg::SelectConfirm
                 | Msg::SelectToggleDetails | Msg::SwitchModel | Msg::EnterOnboarding
                 | Msg::ResetAgentState | Msg::HistoryUp | Msg::HistoryDown | Msg::CopyLastResponse
+                | Msg::ShowHelp
         )
     }
 }

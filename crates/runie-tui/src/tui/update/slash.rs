@@ -15,7 +15,7 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::Onboard => { handle_onboard(state); vec![] }
         SlashCommand::Quit => { handle_quit(state); vec![] }
         // Informational - grouped
-        SlashCommand::Help | SlashCommand::Cost => { handle_info_cmd(state, &cmd); vec![] }
+        SlashCommand::Help | SlashCommand::Cost | SlashCommand::Status | SlashCommand::Models => { handle_info_cmd(state, &cmd); vec![] }
         SlashCommand::Unknown(cmd) => { handle_unknown(state, cmd); vec![] }
     }
 }
@@ -35,6 +35,8 @@ fn handle_info_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashC
     match cmd {
         SlashCommand::Help => handle_help(state),
         SlashCommand::Cost => handle_cost(state),
+        SlashCommand::Status => handle_status(state),
+        SlashCommand::Models => handle_models(state),
         _ => {}
     }
 }
@@ -79,6 +81,19 @@ pub(crate) fn handle_cost(state: &mut AppState) {
             "Session usage: {} prompt + {} completion = {} tokens, ${:.4}",
             usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, cost
         ),
+    });
+}
+
+pub(crate) fn handle_status(state: &mut AppState) {
+    let model = state.current_model.as_deref().unwrap_or("Not set");
+    state.messages.push(MessageItem::System {
+        text: format!("Status: model={}", model),
+    });
+}
+
+pub(crate) fn handle_models(state: &mut AppState) {
+    state.messages.push(MessageItem::System {
+        text: "Use /model <name> to switch models, or press Ctrl+M to open model picker".to_string(),
     });
 }
 

@@ -336,6 +336,8 @@ fn handle_history_up(state: &mut AppState) -> Vec<ChatCmd> {
         state.textarea.select_all();
         state.textarea.cut();
         state.textarea.insert_str(text);
+        // Bug 1 fix: select all so typing replaces history text
+        state.textarea.select_all();
     }
     vec![]
 }
@@ -349,6 +351,8 @@ fn handle_history_down(state: &mut AppState) -> Vec<ChatCmd> {
             state.textarea.cut();
             state.textarea.insert_str(&state.input_draft);
             state.input_draft.clear();
+            // Bug 1 fix: select all so typing replaces draft
+            state.textarea.select_all();
         } else {
             // Forward in history
             let new_index = index + 1;
@@ -357,6 +361,8 @@ fn handle_history_down(state: &mut AppState) -> Vec<ChatCmd> {
                 state.textarea.select_all();
                 state.textarea.cut();
                 state.textarea.insert_str(text);
+                // Bug 1 fix: select all so typing replaces history text
+                state.textarea.select_all();
             }
         }
     }
