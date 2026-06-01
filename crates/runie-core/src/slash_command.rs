@@ -12,6 +12,8 @@ pub enum SlashCommand {
     Quit,
     Help,
     Cost,
+    Status,
+    Models,
     Unknown(String),
 }
 
@@ -31,6 +33,8 @@ fn parse_cmd(input: &str) -> Option<SlashCommand> {
         (&["/quit", "/q", "/exit"], |_| SlashCommand::Quit),
         (&["/help", "/h", "/?"], |_| SlashCommand::Help),
         (&["/cost"], |_| SlashCommand::Cost),
+        (&["/status"], |_| SlashCommand::Status),
+        (&["/models"], |_| SlashCommand::Models),
     ];
 
     for (aliases, handler) in COMMANDS {
@@ -68,12 +72,15 @@ pub fn format_help() -> String {
   Config
     /model, /m <name>  Switch model
     /onboard, /o       Configure provider and API key
+    /status            Show current provider and model
+    /models            Show available models
   Tools
     /copy              Copy last response to clipboard
     /cost              Show cost statistics
   App
     /quit, /q, /exit   Exit runie
-    /help, /h, /?      Show this help
+    /help, /h          Show this help
+    /?                 Show this help
 
 Keyboard shortcuts:
   Enter              Submit message
@@ -81,6 +88,7 @@ Keyboard shortcuts:
   Ctrl+C             Exit
   Ctrl+O             Onboard / copy last response
   Ctrl+B             Toggle sidebar
-  Ctrl+K / Ctrl+P    Command palette"#
+  Ctrl+K / Ctrl+P    Command palette
+  ?                  Show help"#
         .to_string()
 }

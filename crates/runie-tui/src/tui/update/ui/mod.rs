@@ -77,6 +77,7 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
         Msg::EnterOnboarding => handle_enter_onboarding(state),
         Msg::SlashCommand(cmd) => super::slash::handle_slash(state, cmd),
         Msg::CopyLastResponse => { handle_copy_last_response(state); vec![] }
+        Msg::ShowHelp => { super::slash::handle_help(state); vec![] }
         Msg::UpdateTopBarContext { model, context_window, estimated_tokens } =>
             handle_update_top_bar_context(state, Some(model), context_window, estimated_tokens),
         _ => vec![],

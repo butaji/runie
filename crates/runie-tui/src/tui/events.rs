@@ -149,6 +149,7 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     if matches!(key.code, KeyCode::Down) { return Some(Msg::HistoryDown); }
     if matches!(key.code, KeyCode::PageUp) { return Some(Msg::ScrollPageUp); }
     if matches!(key.code, KeyCode::PageDown) { return Some(Msg::ScrollPageDown); }
+    if matches!(key.code, KeyCode::Char('?')) { return Some(Msg::ShowHelp); }
     Some(Msg::TextareaKey(key))
 }
 
@@ -172,9 +173,11 @@ fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         return Some(Msg::PermissionCancel);
     }
     match key.code {
-        KeyCode::Enter | KeyCode::Char('y') => Some(Msg::PermissionConfirm),
-        KeyCode::Esc | KeyCode::Char('n') => Some(Msg::PermissionCancel),
-        KeyCode::Char('a') => Some(Msg::PermissionAlways),
+        // BUG-13 FIX: Handle uppercase Y for tmux compatibility
+        KeyCode::Enter | KeyCode::Char('y') | KeyCode::Char('Y') => Some(Msg::PermissionConfirm),
+        KeyCode::Esc | KeyCode::Char('n') | KeyCode::Char('N') => Some(Msg::PermissionCancel),
+        // BUG-13 FIX: Handle uppercase A for tmux compatibility
+        KeyCode::Char('a') | KeyCode::Char('A') => Some(Msg::PermissionAlways),
         KeyCode::Char('s') => Some(Msg::PermissionSkip),
         _ => None,
     }
