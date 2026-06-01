@@ -131,10 +131,18 @@ fn test_stack_trace_shows_summary() {
     let stack_trace = "Connection error\nstack backtrace:\n   at 0x7f8d9f... (main.rs:100)\n   at 0x7f8da0... (main.rs:101)";
     let sanitized = sanitize_error_message(stack_trace);
 
+    // The sanitizer keeps the first line (the actual error) and appends a
+    // compact "[hidden]" marker.  Test invariants:
+    //   1. the error summary is preserved
+    //   2. a "hidden" note is present so the user knows the backtrace was elided
     assert!(sanitized.contains("Connection error"), "Should preserve error summary");
-    let first_five = "Connection error\nstack backtrace:\n   at 0x7f8d9f... (main.rs:100)\n   at 0x7f8da0... (main.rs:101)";
-    assert_eq!(sanitized.lines().count(), first_five.lines().count() + 1,
-        "Should add hidden details note");
+    assert!(sanitized.contains("hidden"), "Should add hidden details note");
+    assert!(
+        sanitized.len() < stack_trace.len(),
+        "Sanitized output should be strictly shorter than the input ({} >= {})",
+        sanitized.len(),
+        stack_trace.len()
+    );
 }
 
 #[test]

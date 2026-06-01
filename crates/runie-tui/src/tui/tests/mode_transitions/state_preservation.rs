@@ -136,9 +136,17 @@ fn test_messages_preserved_across_permission() {
     update(&mut state, &mut palette, Msg::PermissionConfirm);
     assert_eq!(state.mode, TuiMode::Chat);
 
-    // Messages preserved
-    assert_eq!(state.messages.len(), original_messages.len());
-    assert_eq!(state.messages, original_messages);
+    // Messages preserved — the original entries must still be present
+    // (preservation invariant).  New entries are allowed: a System
+    // "Permission requested" message is appended when the modal opens so
+    // the chat scrollback reflects what the agent is asking for.
+    assert!(state.messages.len() >= original_messages.len());
+    for original in &original_messages {
+        assert!(
+            state.messages.contains(original),
+            "original message {original:?} not preserved across permission cycle"
+        );
+    }
 }
 
 /// Test: Textarea preserved across Chat → Permission → Chat.

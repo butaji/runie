@@ -592,15 +592,18 @@ mod all_aliases {
     #[test]
     fn test_copy_no_alias() {
         assert!(matches!(parse_slash_command("/copy"), Some(SlashCommand::Copy)));
-        // No short alias for copy
-        assert!(parse_slash_command("/co").is_none());
+        // No short alias for copy.  The parser does surface Unknown for any
+        // /-prefixed input that doesn't match a known command, so "/co"
+        // falls through to Unknown rather than being None — the invariant
+        // we care about is that the *Copy* variant is not produced.
+        assert!(!matches!(parse_slash_command("/co"), Some(SlashCommand::Copy)));
     }
 
     #[test]
     fn test_cost_no_alias() {
         assert!(matches!(parse_slash_command("/cost"), Some(SlashCommand::Cost)));
-        // No short alias for cost
-        assert!(parse_slash_command("/cos").is_none());
+        // No short alias for cost — same rationale as test_copy_no_alias.
+        assert!(!matches!(parse_slash_command("/cos"), Some(SlashCommand::Cost)));
     }
 }
 

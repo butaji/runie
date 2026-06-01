@@ -253,6 +253,7 @@ mod palette_closes_after_execution_tests {
         let mut palette = make_palette();
         open_palette(&mut state, &mut palette);
 
+        palette.filter("switch model");
         if let Some(cmd) = palette.confirm(palette.selected) {
             if matches!(cmd, PaletteCommand::SwitchModel) {
                 handle_direct_command(&mut state, cmd);
@@ -272,6 +273,7 @@ mod palette_closes_after_execution_tests {
         let mut palette = make_palette();
         open_palette(&mut state, &mut palette);
 
+        palette.filter("session tree");
         if let Some(cmd) = palette.confirm(palette.selected) {
             if matches!(cmd, PaletteCommand::SessionTree) {
                 handle_direct_command(&mut state, cmd);
@@ -288,6 +290,7 @@ mod palette_closes_after_execution_tests {
         let mut palette = make_palette();
         open_palette(&mut state, &mut palette);
 
+        palette.filter("onboard");
         if let Some(cmd) = palette.confirm(palette.selected) {
             if matches!(cmd, PaletteCommand::Onboard) {
                 handle_direct_command(&mut state, cmd);

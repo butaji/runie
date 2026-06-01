@@ -40,6 +40,12 @@ pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_na
     state.permission_modal.timeout_start = Some(std::time::Instant::now());
     state.permission_modal.timed_out = false;
     state.mode = TuiMode::Permission;
+    // Announce the permission request in the message feed so the user has
+    // a persistent record (and the chat scrollback reflects what the agent
+    // is asking for) — see test_permission_request_adds_system_message.
+    state.messages.push(MessageItem::System {
+        text: format!("Permission requested: {}", tool_name),
+    });
 }
 
 /// Process the next pending permission request from the queue (FIFO)

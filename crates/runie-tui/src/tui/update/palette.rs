@@ -66,15 +66,14 @@ fn open_onboarding(state: &mut AppState) -> Vec<UiCmd> {
 
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<UiCmd> {
     use runie_core::slash_command::SlashCommand;
-    match cmd {
+    // Close the palette on every action except Cancel — even ones that swap
+    // mode (Onboard -> TuiMode::Onboarding, SessionTree -> TuiMode::SessionTree)
+    // so the test invariants (palette.open == false after action) hold.
+    let result = match cmd {
         PaletteCommand::NewSession => run_slash(state, SlashCommand::New),
         PaletteCommand::ClearChat => run_slash(state, SlashCommand::Clear),
         PaletteCommand::SwitchModel => {
             handle_switch_model(state);
-            // SwitchModel opens model picker - close command palette but keep picker open
-            state.command_palette.open = false;
-            state.command_palette.filter.clear();
-            state.command_palette.selected = 0;
             vec![]
         }
         PaletteCommand::ForkSession => run_slash(state, SlashCommand::Fork),
@@ -85,8 +84,12 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<U
         PaletteCommand::Onboard => open_onboarding(state),
         PaletteCommand::CopyLast => {
             let cmds = crate::tui::update::ui::handle_copy_last_response(state);
+            // CopyLast is not a slash command, so the post-match close
+            // doesn't apply; explicitly return to Chat and close here.
             state.mode = TuiMode::Chat;
             state.command_palette.open = false;
+            state.command_palette.filter.clear();
+            state.command_palette.selected = 0;
             cmds
         }
         PaletteCommand::ShowCost => run_slash(state, SlashCommand::Cost),
@@ -96,5 +99,11 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<U
             vec![UiCmd::Quit]
         }
         PaletteCommand::Cancel => vec![],
+    };
+    if !matches!(cmd, PaletteCommand::Cancel) {
+        state.command_palette.open = false;
+        state.command_palette.filter.clear();
+        state.command_palette.selected = 0;
     }
+    result
 }

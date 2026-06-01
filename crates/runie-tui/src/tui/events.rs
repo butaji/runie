@@ -53,6 +53,11 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
     if !key.modifiers.contains(KeyModifiers::CONTROL) {
         return None;
     }
+    // DiffViewer intercepts Ctrl+Q to close the viewer — the global quit
+    // handler must not fire here (test_ctrl_q_quits_in_diff_viewer).
+    if matches!(state.mode, TuiMode::DiffViewer) && matches!(key.code, KeyCode::Char('q')) {
+        return None;
+    }
     match key.code {
         KeyCode::Char('c') => {
             let is_empty = state.textarea.lines() == [""];
@@ -91,6 +96,12 @@ fn key_to_overlay_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Opti
     // P0-4 FIX: Esc closes overlay; Ctrl+Q also closes
     if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('q')) {
         return Some(Msg::CloseModal);
+    }
+    // Plain Ctrl + letter combos (other than Ctrl+Q above) are NOT overlay
+    // navigation — block them so the global hotkey handler can't fire
+    // through the overlay (test_no_global_hotkeys_in_overlay).
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        return None;
     }
     // Route to model picker specific messages when model_picker is active
     if state.model_picker.is_some() {

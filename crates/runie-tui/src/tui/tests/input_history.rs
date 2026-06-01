@@ -332,11 +332,18 @@ fn test_history_navigation_with_multiline() {
     let mut state = make_state();
     state.input_history.push("single".to_string());
     state.input_history.push("multi\nline".to_string());
+    state.input_draft = "draft".to_string();
     let mut palette = CommandPalette::new();
 
+    // Up from "no history selected" lands on the newest entry.
     update(&mut state, &mut palette, Msg::HistoryUp);
     assert_eq!(state.textarea.lines().join("\n"), "multi\nline");
 
+    // Down from the newest entry exits history browsing and restores
+    // the saved draft.  The history is stored newest-last, so Down moves
+    // TOWARD newer entries; from the newest there is nothing newer, so
+    // we exit.  This matches the shell-like model exercised by
+    // test_history_down_at_newest_returns_to_draft.
     update(&mut state, &mut palette, Msg::HistoryDown);
-    assert_eq!(state.textarea.lines().join("\n"), "single");
+    assert_eq!(state.textarea.lines().join("\n"), "draft");
 }

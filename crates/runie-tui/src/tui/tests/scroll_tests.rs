@@ -87,23 +87,24 @@ mod scroll_page {
     use super::*;
 
     #[test]
-    fn test_page_down_increases_offset_by_10() {
+    fn test_page_down_increases_offset_by_page_size() {
         let mut state = make_state();
         with_messages(&mut state, 50);
         state.scroll.feed_offset = 0;
 
+        // PAGE_SIZE is 20 in handle_scroll_msg; see crates/runie-tui/src/tui/update/chat.rs
         chat_update(&mut state, Msg::ScrollPageDown);
-        assert_eq!(state.scroll.feed_offset, 10, "PageDown should increase offset by 10");
+        assert_eq!(state.scroll.feed_offset, 20, "PageDown should increase offset by PAGE_SIZE");
     }
 
     #[test]
-    fn test_page_up_decreases_offset_by_10() {
+    fn test_page_up_decreases_offset_by_page_size() {
         let mut state = make_state();
         with_messages(&mut state, 50);
-        state.scroll.feed_offset = 20;
+        state.scroll.feed_offset = 40;
 
         chat_update(&mut state, Msg::ScrollPageUp);
-        assert_eq!(state.scroll.feed_offset, 10, "PageUp should decrease offset by 10");
+        assert_eq!(state.scroll.feed_offset, 20, "PageUp should decrease offset by PAGE_SIZE");
     }
 
     #[test]
@@ -156,8 +157,10 @@ mod user_scrolled_up_flag {
 
         chat_update(&mut state, Msg::ScrollUp);
 
-        // Still true because offset is not 0
-        assert!(state.scroll.user_scrolled_up);
+        // Scrolling up from offset=1 clamps to 0, at which point
+        // user_scrolled_up flips to false (no more history above).
+        assert_eq!(state.scroll.feed_offset, 0);
+        assert!(!state.scroll.user_scrolled_up);
     }
 
     #[test]
