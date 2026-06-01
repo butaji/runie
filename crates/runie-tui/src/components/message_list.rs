@@ -264,15 +264,7 @@ mod tests {
         let mut buf = Buffer::empty(area);
         let theme = ThemeWrapper::default_for_test();
         let mut wrap_cache = WrapCache::new();
-
-        let item = FeedItem::AssistantMessage {
-            id: "test".to_string(),
-            text: text.to_string(),
-            thoughts: Vec::new(),
-            tool_calls: Vec::new(),
-            timestamp: None,
-            turn_duration: None,
-        };
+        let item = make_assistant_item(text);
 
         let _rendered = render_single_msg_feed(
             &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
@@ -293,13 +285,24 @@ mod tests {
             agent_running,
             None,
             None,
-            true, // is_last_item - single item test
+            true,
         );
 
         let row_text: String = (0..area.width)
             .filter_map(|x| buf.cell((x, area.y)).map(|c| c.symbol().to_string()))
             .collect();
         (row_text, buf, area)
+    }
+
+    fn make_assistant_item(text: &str) -> FeedItem {
+        FeedItem::AssistantMessage {
+            id: "test".to_string(),
+            text: text.to_string(),
+            thoughts: Vec::new(),
+            tool_calls: Vec::new(),
+            timestamp: None,
+            turn_duration: None,
+        }
     }
 
     fn make_assistant_feed_item(text: &str, thoughts: Vec<Thought>) -> FeedItem {
