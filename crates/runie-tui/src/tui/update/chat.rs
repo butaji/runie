@@ -55,6 +55,11 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
         return handle_history_msg(state, msg);
     }
 
+    // Slash menu - group
+    if matches!(msg, Msg::SlashMenuUp | Msg::SlashMenuDown | Msg::SlashMenuConfirm | Msg::CloseSlashMenu) {
+        return handle_slash_menu_msg(state, msg);
+    }
+
     vec![]
 }
 
@@ -113,9 +118,45 @@ fn handle_history_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
     }
 }
 
+fn handle_slash_menu_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::SlashMenuUp => { state.slash_menu.move_up(); vec![] }
+        Msg::SlashMenuDown => { state.slash_menu.move_down(); vec![] }
+        Msg::SlashMenuConfirm => {
+            if let Some(cmd) = state.slash_menu.selected_command() {
+                state.textarea.select_all();
+                state.textarea.delete_line_by_end();
+                state.textarea.insert_str(&cmd);
+                state.slash_menu.close();
+                // Submit the command
+                return handle_submit(state);
+            }
+            state.slash_menu.close();
+            vec![]
+        }
+        Msg::CloseSlashMenu => { state.slash_menu.close(); vec![] }
+        _ => vec![],
+    }
+}
+
 fn handle_textarea_key(state: &mut AppState, key: crossterm::event::KeyEvent) -> Vec<ChatCmd> {
     state.textarea.input(key_to_textarea_input(key));
+    update_slash_menu_from_input(state);
     vec![]
+}
+
+fn update_slash_menu_from_input(state: &mut AppState) {
+    let text = state.textarea.lines().join("\n");
+    if text.starts_with('/') {
+        if !state.slash_menu.is_open() {
+            state.slash_menu.open(&text);
+        } else {
+            state.slash_menu.set_filter(text.strip_prefix('/').unwrap_or(""));
+        }
+    } else {
+        state.slash_menu.close();
+    }
 }
 
 fn handle_newline(state: &mut AppState) -> Vec<ChatCmd> {

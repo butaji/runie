@@ -91,6 +91,10 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
 
 /// Routes key to the appropriate mode-specific handler (non-blocking modes only).
 fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    // Slash menu takes precedence in Chat mode
+    if matches!(state.mode, TuiMode::Chat) && state.slash_menu.is_open() {
+        return key_to_slash_menu_msg(*key);
+    }
     match state.mode {
         TuiMode::Chat | TuiMode::Select => key_to_chat_msg(*key),
         TuiMode::CommandPalette => key_to_palette_msg(*key),
@@ -137,6 +141,16 @@ fn key_to_model_picker_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Enter => Some(Msg::SelectConfirm),
         KeyCode::Char('d') => Some(Msg::SelectToggleDetails),
         _ => None,
+    }
+}
+
+fn key_to_slash_menu_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseSlashMenu),
+        KeyCode::Up => Some(Msg::SlashMenuUp),
+        KeyCode::Down => Some(Msg::SlashMenuDown),
+        KeyCode::Enter => Some(Msg::SlashMenuConfirm),
+        _ => Some(Msg::TextareaKey(key)),
     }
 }
 

@@ -134,6 +134,16 @@ impl RenderPipe {
         crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
         Self::render_content(buf, vms, show_sidebar, main_areas[1], theme, theme_colors);
         crate::components::global_tags::render_global_tags(&vms.global_tags, main_areas[2], buf, theme_colors);
+        if state.slash_menu.is_open() {
+            let menu_h = 12u16.min(main_areas[1].height.saturating_sub(2));
+            let menu_area = Rect {
+                x: main_areas[1].x,
+                y: main_areas[2].y.saturating_sub(menu_h),
+                width: main_areas[1].width,
+                height: menu_h,
+            };
+            crate::components::slash_menu::render_slash_menu(&state.slash_menu, menu_area, buf, theme);
+        }
         Self::render_input(buf, state, main_areas[3], theme);
         if show_status_bar {
             crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
