@@ -305,11 +305,9 @@ fn test_turn_end_adds_separator() {
         Some(1),
         "last_turn_tool_calls should be 1"
     );
-    // No separator should be added to messages
-    assert!(
-        !state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
-        "should NOT have separator after turn end (metrics now in AppState)"
-    );
+    // Separator should be added to messages with grok-style metrics
+    let sep = state.messages.iter().find(|m| matches!(m, MessageItem::Separator { .. }));
+    assert!(sep.is_some(), "should have separator after turn end");
 }
 
 #[test]
@@ -357,11 +355,9 @@ fn test_turn_end_separator_contains_metrics() {
         Some(1),
         "last_turn_tool_calls should be 1"
     );
-    // No separator in messages
-    assert!(
-        !state.messages.iter().any(|m| matches!(m, MessageItem::Separator { .. })),
-        "should NOT have separator (metrics now in AppState)"
-    );
+    // Separator should be added to messages
+    let sep = state.messages.iter().find(|m| matches!(m, MessageItem::Separator { .. }));
+    assert!(sep.is_some(), "should have separator after turn end");
 }
 
 #[test]

@@ -341,7 +341,13 @@ fn test_full_cycle_permission_gate() {
     // Assert: Commands include SendPermission
     assert!(cmds.iter().any(|c| matches!(c, Cmd::SendPermission { .. })), "Should send permission decision");
 
-    // Simulate tool execution completion
+    // Simulate tool execution start + completion
+    handle_agent_event(&mut state, AgentEvent::ToolExecutionStart {
+        tool_call_id: "call_bash_1".to_string(),
+        tool_name: "bash".to_string(),
+        tool_args: "{\"command\": \"ls -la\"}".to_string(),
+        turn: 0,
+    });
     handle_agent_event(&mut state, AgentEvent::ToolExecutionEnd {
         tool_call_id: "call_bash_1".to_string(),
         tool_name: "bash".to_string(),
@@ -415,8 +421,8 @@ fn test_full_cycle_multiple_turns() {
         final_token_usage: runie_agent::TokenUsage::default(),
     });
 
-    // Verify turn 1: User + Assistant (no Separator in messages - turn info stored in state fields)
-    assert_eq!(state.messages.len(), 2, "Should have 2 messages after turn 1 (User + Assistant)");
+    // Verify turn 1: User + Assistant + Separator
+    assert_eq!(state.messages.len(), 3, "Should have 3 messages after turn 1 (User + Assistant + Separator)");
     assert!(matches!(&state.messages[0], MessageItem::User { text, .. } if text == "question 1"));
     assert!(matches!(&state.messages[1], MessageItem::Assistant { text, .. } if text == "answer 1"));
     // Turn info stored in state fields

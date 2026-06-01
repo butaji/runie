@@ -265,15 +265,6 @@ fn test_multiple_tools_in_one_turn() {
         // Then send ToolExecutionEnd
         handle_agent_event(
             &mut state,
-            AgentEvent::ToolExecutionStart {
-                tool_call_id: id.clone(),
-                tool_name: "bash".to_string(),
-                tool_args: format!(r#"{{"cmd": {}}}"#, i),
-                turn: 1,
-            },
-        );
-        handle_agent_event(
-            &mut state,
             AgentEvent::ToolExecutionEnd {
                 tool_call_id: id.clone(),
                 tool_name: "bash".to_string(),
