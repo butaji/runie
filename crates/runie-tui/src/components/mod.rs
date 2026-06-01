@@ -18,6 +18,7 @@ pub mod dialog_frame;
 pub mod panel;
 pub mod slash_menu;
 pub mod shortcuts_panel;
+pub mod settings_modal;
 
 #[cfg(test)]
 mod top_bar_snapshots;
@@ -41,3 +42,4 @@ pub use dialog_frame::DialogFrame;
 pub use onboarding::Onboarding;
 pub use slash_menu::{SlashMenu, SlashMenuItem, SLASH_COMMANDS};
 pub use shortcuts_panel::{ShortcutsPanel, ShortcutDef, SHORTCUTS};
+pub use settings_modal::{SettingsModal, THEMES};

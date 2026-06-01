@@ -104,6 +104,13 @@ pub enum Msg {
     ShortcutsPanelToggleFilter,
     ShortcutsPanelFilterInput(char),
     ShortcutsPanelFilterBackspace,
+    OpenSettingsModal,
+    CloseSettingsModal,
+    SettingsModalUp,
+    SettingsModalDown,
+    SettingsModalNextTab,
+    SettingsModalPrevTab,
+    SettingsModalSelect,
 }
 
 impl PartialEq for Msg {

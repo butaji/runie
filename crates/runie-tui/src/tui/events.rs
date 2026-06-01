@@ -99,6 +99,10 @@ fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -
     if state.shortcuts_panel.is_open() {
         return key_to_shortcuts_panel_msg(*key, state);
     }
+    // Settings modal takes precedence
+    if state.settings_modal.is_open() {
+        return key_to_settings_modal_msg(*key);
+    }
     // Ctrl+Enter interject during active turn
     if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Enter) && state.agent_running {
         return Some(Msg::Interject);
@@ -186,6 +190,18 @@ fn key_to_shortcuts_panel_msg(key: crossterm::event::KeyEvent, state: &AppState)
     }
 }
 
+fn key_to_settings_modal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseSettingsModal),
+        KeyCode::Tab => Some(Msg::SettingsModalNextTab),
+        KeyCode::BackTab => Some(Msg::SettingsModalPrevTab),
+        KeyCode::Up => Some(Msg::SettingsModalUp),
+        KeyCode::Down => Some(Msg::SettingsModalDown),
+        KeyCode::Enter => Some(Msg::SettingsModalSelect),
+        _ => None,
+    }
+}
+
 fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     // Handle Ctrl+Shift+E before the normal ctrl combo check
     if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('e')) {
@@ -211,6 +227,7 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Enter if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Interject),
         KeyCode::Char('k') | KeyCode::Char('n') | KeyCode::Char('p') | KeyCode::Char('s') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('.') => Some(Msg::OpenShortcutsPanel),
+        KeyCode::Char(',') => Some(Msg::OpenSettingsModal),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
         KeyCode::Char('o') => Some(Msg::CopyLastResponse),
         KeyCode::Char('l') => Some(Msg::ClearChat),

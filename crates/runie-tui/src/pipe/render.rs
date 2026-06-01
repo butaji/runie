@@ -193,6 +193,9 @@ impl RenderPipe {
         if state.shortcuts_panel.is_open() {
             Self::render_shortcuts_panel(buf, state, padded, area, theme, theme_colors);
         }
+        if state.settings_modal.is_open() {
+            Self::render_settings_modal(buf, state, padded, area, theme, theme_colors);
+        }
         if mode == crate::tui::TuiMode::Overlay {
             Self::render_overlay_mode(buf, state, area, theme);
         }
@@ -252,6 +255,20 @@ impl RenderPipe {
         let panel_area = right_aligned_rect(padded, 70, 25);
         crate::components::shortcuts_panel::render_shortcuts_panel(
             &state.shortcuts_panel, panel_area, buf, theme);
+    }
+
+    fn render_settings_modal(
+        buf: &mut Buffer,
+        state: &AppState,
+        padded: Rect,
+        area: Rect,
+        theme: &ThemeWrapper,
+        theme_colors: &ThemeColors,
+    ) {
+        Self::dim_background(buf, area, theme_colors);
+        let modal_area = right_aligned_rect(padded, 60, 20);
+        crate::components::settings_modal::render_settings_modal(
+            &state.settings_modal, modal_area, buf, theme);
     }
 
     fn render_overlay_mode(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
