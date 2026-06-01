@@ -74,14 +74,18 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
     }
     match key.code {
         KeyCode::Char('c') => {
-            let is_empty = state.textarea.lines() == [""];
-            if is_empty {
-                // Empty textarea: quit immediately
-                Some(Some(Msg::Quit))
+            if state.agent_running {
+                Some(Some(Msg::Stop))
             } else {
-                // Has text: require double-tap Ctrl+C to clear (P1-REMAINING-1 FIX)
-                // The actual check happens in update() via clear_input_confirm
-                Some(Some(Msg::ClearInputConfirm)) // Signal that user wants to clear
+                let is_empty = state.textarea.lines() == [""];
+                if is_empty {
+                    // Empty textarea: quit immediately
+                    Some(Some(Msg::Quit))
+                } else {
+                    // Has text: require double-tap Ctrl+C to clear (P1-REMAINING-1 FIX)
+                    // The actual check happens in update() via clear_input_confirm
+                    Some(Some(Msg::ClearInputConfirm)) // Signal that user wants to clear
+                }
             }
         }
         KeyCode::Char('q') => Some(Some(Msg::Quit)),
@@ -261,6 +265,7 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<
     if let Some(msg) = chat_navigation_msg(key, state.scroll.scroll_focused) {
         return Some(msg);
     }
+    if matches!(key.code, KeyCode::Char('?')) { return Some(Msg::ShowHelp); }
     Some(Msg::TextareaKey(key))
 }
 
@@ -310,9 +315,11 @@ fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         return Some(Msg::PermissionCancel);
     }
     match key.code {
-        KeyCode::Enter | KeyCode::Char('y') => Some(Msg::PermissionConfirm),
-        KeyCode::Esc | KeyCode::Char('n') => Some(Msg::PermissionCancel),
-        KeyCode::Char('a') => Some(Msg::PermissionAlways),
+        // BUG-13 FIX: Handle uppercase Y for tmux compatibility
+        KeyCode::Enter | KeyCode::Char('y') | KeyCode::Char('Y') => Some(Msg::PermissionConfirm),
+        KeyCode::Esc | KeyCode::Char('n') | KeyCode::Char('N') => Some(Msg::PermissionCancel),
+        // BUG-13 FIX: Handle uppercase A for tmux compatibility
+        KeyCode::Char('a') | KeyCode::Char('A') => Some(Msg::PermissionAlways),
         KeyCode::Char('s') => Some(Msg::PermissionSkip),
         _ => None,
     }

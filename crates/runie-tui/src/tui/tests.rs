@@ -9,6 +9,7 @@ mod palette_integration_tests;
 mod render_tests;
 mod state_management;
 mod input_handling;
+mod input_history;
 mod e2e_flow_tests;
 mod command_integration_tests;
 mod mode_transitions;

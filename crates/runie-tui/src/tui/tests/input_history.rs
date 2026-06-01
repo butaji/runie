@@ -47,10 +47,24 @@ fn make_state() -> AppState {
         thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
         show_thoughts: false,
             history_search_query: String::new(),
             history_search_matches: Vec::new(),
             history_search_index: 0,
+            slash_menu: crate::components::SlashMenu::new(),
+            shortcuts_panel: crate::components::ShortcutsPanel::new(),
+            settings_modal: crate::components::SettingsModal::new(),
+            home_screen: crate::components::HomeScreen::new(),
+            file_picker: crate::components::FilePicker::new(),
+            permission_mode: crate::tui::state::PermissionMode::Normal,
+            plan_modal: crate::components::PlanModal::new(),
+            allowed_tools: std::collections::HashSet::new(),
+            allowed_categories: std::collections::HashSet::new(),
+            context_usage_modal: crate::components::ContextUsageModal::new(),
+            turn_success: None,
     }
 }
 
@@ -150,8 +164,14 @@ fn test_history_up_at_oldest_stays_at_oldest() {
 #[test]
 fn test_history_down_at_newest_returns_to_draft() {
     let mut state = make_state_with_history(vec!["first", "second"]);
-    state.input_draft = "draft text".to_string();
     let mut palette = CommandPalette::new();
+
+    // Type draft text into textarea (HistoryUp will save this to draft)
+    type_char(&mut state, 'd');
+    type_char(&mut state, 'r');
+    type_char(&mut state, 'a');
+    type_char(&mut state, 'f');
+    type_char(&mut state, 't');
 
     // Navigate to newest
     update(&mut state, &mut palette, Msg::HistoryUp);
@@ -162,7 +182,7 @@ fn test_history_down_at_newest_returns_to_draft() {
 
     assert!(state.input_history_index.is_none());
     let text = state.textarea.lines().join("\n");
-    assert_eq!(text, "draft text");
+    assert_eq!(text, "draft");
 }
 
 #[test]
@@ -333,18 +353,15 @@ fn test_history_navigation_with_multiline() {
     let mut state = make_state();
     state.input_history.push("single".to_string());
     state.input_history.push("multi\nline".to_string());
-    state.input_draft = "draft".to_string();
     let mut palette = CommandPalette::new();
 
-    // Up from "no history selected" lands on the newest entry.
+    // Type draft text so it gets saved when going up
+    type_char(&mut state, 'd');
+
     update(&mut state, &mut palette, Msg::HistoryUp);
     assert_eq!(state.textarea.lines().join("\n"), "multi\nline");
 
-    // Down from the newest entry exits history browsing and restores
-    // the saved draft.  The history is stored newest-last, so Down moves
-    // TOWARD newer entries; from the newest there is nothing newer, so
-    // we exit.  This matches the shell-like model exercised by
-    // test_history_down_at_newest_returns_to_draft.
+    // HistoryDown goes forward to draft (not backward to older history)
     update(&mut state, &mut palette, Msg::HistoryDown);
-    assert_eq!(state.textarea.lines().join("\n"), "draft");
+    assert_eq!(state.textarea.lines().join("\n"), "d");
 }
