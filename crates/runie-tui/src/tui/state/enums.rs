@@ -95,6 +95,14 @@ pub enum Msg {
     SlashMenuDown,
     SlashMenuConfirm,
     CloseSlashMenu,
+    OpenShortcutsPanel,
+    CloseShortcutsPanel,
+    ShortcutsPanelUp,
+    ShortcutsPanelDown,
+    ShortcutsPanelToggleSection,
+    ShortcutsPanelToggleFilter,
+    ShortcutsPanelFilterInput(char),
+    ShortcutsPanelFilterBackspace,
 }
 
 impl PartialEq for Msg {

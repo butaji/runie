@@ -95,6 +95,10 @@ fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -
     if matches!(state.mode, TuiMode::Chat) && state.slash_menu.is_open() {
         return key_to_slash_menu_msg(*key);
     }
+    // Shortcuts panel takes precedence
+    if state.shortcuts_panel.is_open() {
+        return key_to_shortcuts_panel_msg(*key, state);
+    }
     match state.mode {
         TuiMode::Chat | TuiMode::Select => key_to_chat_msg(*key),
         TuiMode::CommandPalette => key_to_palette_msg(*key),
@@ -154,6 +158,30 @@ fn key_to_slash_menu_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     }
 }
 
+fn key_to_shortcuts_panel_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    if state.shortcuts_panel.filter_mode {
+        match key.code {
+            KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
+            KeyCode::Backspace => Some(Msg::ShortcutsPanelFilterBackspace),
+            KeyCode::Char(c) => Some(Msg::ShortcutsPanelFilterInput(c)),
+            KeyCode::Up => Some(Msg::ShortcutsPanelUp),
+            KeyCode::Down => Some(Msg::ShortcutsPanelDown),
+            KeyCode::Enter => Some(Msg::ShortcutsPanelToggleSection),
+            _ => None,
+        }
+    } else {
+        match key.code {
+            KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
+            KeyCode::Char('f') => Some(Msg::ShortcutsPanelToggleFilter),
+            KeyCode::Char('/') => Some(Msg::ShortcutsPanelToggleFilter),
+            KeyCode::Char('e') | KeyCode::Enter | KeyCode::Char(' ') => Some(Msg::ShortcutsPanelToggleSection),
+            KeyCode::Up => Some(Msg::ShortcutsPanelUp),
+            KeyCode::Down => Some(Msg::ShortcutsPanelDown),
+            _ => None,
+        }
+    }
+}
+
 fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     // Handle Ctrl+Shift+E before the normal ctrl combo check
     if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('e')) {
@@ -177,6 +205,7 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
         KeyCode::Char('j') | KeyCode::Enter => Some(Msg::InsertNewline),
         KeyCode::Char('k') | KeyCode::Char('n') | KeyCode::Char('p') | KeyCode::Char('s') => Some(Msg::OpenCommandPalette),
+        KeyCode::Char('.') => Some(Msg::OpenShortcutsPanel),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),
         KeyCode::Char('o') => Some(Msg::CopyLastResponse),
         KeyCode::Char('l') => Some(Msg::ClearChat),

@@ -17,6 +17,7 @@ pub mod session_tree;
 pub mod dialog_frame;
 pub mod panel;
 pub mod slash_menu;
+pub mod shortcuts_panel;
 
 #[cfg(test)]
 mod top_bar_snapshots;
@@ -39,3 +40,4 @@ pub use model_picker::{ModelPicker, ModelInfo, ProviderGroup};
 pub use dialog_frame::DialogFrame;
 pub use onboarding::Onboarding;
 pub use slash_menu::{SlashMenu, SlashMenuItem, SLASH_COMMANDS};
+pub use shortcuts_panel::{ShortcutsPanel, ShortcutDef, SHORTCUTS};
