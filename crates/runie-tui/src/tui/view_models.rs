@@ -234,12 +234,14 @@ fn build_global_tags_vm(state: &crate::tui::state::AppState) -> GlobalTagsViewMo
                 format_duration_short(dur)
             })
             .unwrap_or_default();
-        GlobalTagsViewModel::running(
+        let mut vm = GlobalTagsViewModel::running(
             status, &elapsed, state.token_usage.total_tokens as u64,
             state.last_turn_duration_secs,
             state.last_turn_tokens,
             state.last_turn_tool_calls,
-        )
+        );
+        vm.left = Some(format!("{} {} · Ctrl+Enter:interject", crate::glyphs::spinner_frame(state.animation.braille_frame), status));
+        vm
     } else if let Some(ref header) = state.status_header {
         // Error state
         GlobalTagsViewModel::error(header)

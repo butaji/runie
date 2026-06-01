@@ -34,6 +34,8 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
 
     // Submit
     if matches!(msg, Msg::Submit) { return handle_submit(state); }
+    // Interject
+    if matches!(msg, Msg::Interject) { return handle_interject(state); }
 
     // Textarea input - group
     if matches!(msg, Msg::TextareaKey(_) | Msg::InsertNewline | Msg::Paste(_)) {
@@ -396,6 +398,23 @@ fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     vec![ChatCmd::SpawnAgent {
         messages: agent_messages,
     }]
+}
+
+fn handle_interject(state: &mut AppState) -> Vec<ChatCmd> {
+    let text = state.textarea.lines().join("\n");
+    if text.chars().all(|c| c.is_whitespace()) {
+        state.input_right_info = "Type a message to interject".to_string();
+        return vec![];
+    }
+    state.input_right_info = String::new();
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
+    state.messages.push(MessageItem::User {
+        text: text.to_string(),
+        model: Some("You".to_string()),
+        timestamp: current_timestamp(),
+    });
+    vec![]
 }
 
 fn add_user_message_only(state: &mut AppState, text: &str) {

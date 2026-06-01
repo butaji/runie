@@ -99,6 +99,10 @@ fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -
     if state.shortcuts_panel.is_open() {
         return key_to_shortcuts_panel_msg(*key, state);
     }
+    // Ctrl+Enter interject during active turn
+    if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Enter) && state.agent_running {
+        return Some(Msg::Interject);
+    }
     match state.mode {
         TuiMode::Chat | TuiMode::Select => key_to_chat_msg(*key),
         TuiMode::CommandPalette => key_to_palette_msg(*key),
@@ -204,6 +208,7 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
         KeyCode::Char('j') | KeyCode::Enter => Some(Msg::InsertNewline),
+        KeyCode::Enter if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Msg::Interject),
         KeyCode::Char('k') | KeyCode::Char('n') | KeyCode::Char('p') | KeyCode::Char('s') => Some(Msg::OpenCommandPalette),
         KeyCode::Char('.') => Some(Msg::OpenShortcutsPanel),
         KeyCode::Char('b') => Some(Msg::ToggleSidebar),

@@ -91,6 +91,7 @@ pub enum Msg {
     HistoryUp,
     HistoryDown,
     CopyLastResponse,
+    Interject,
     SlashMenuUp,
     SlashMenuDown,
     SlashMenuConfirm,
