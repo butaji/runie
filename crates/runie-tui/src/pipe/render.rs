@@ -90,6 +90,7 @@ impl RenderPipe {
         for y in area.y..area.y + area.height {
             for x in area.x..area.x + area.width {
                 if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char(' ');
                     cell.set_style(Style::default().bg(bg_base));
                 }
             }
