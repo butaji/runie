@@ -26,6 +26,12 @@ use crate::context_loader::ContextLoader;
 /// Wall-clock watchdog: if the agent has been alive this long without an
 /// AgentEnd, force recovery.
 pub const AGENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(300);
+/// Hard ceiling on a single agent-loop invocation. The outer
+/// `tokio::time::timeout` in `handle_spawn_agent` will surface an error
+/// and stop the run when this elapses.
+pub const AGENT_LOOP_TIMEOUT: Duration = Duration::from_secs(600);
+/// Cursor blink tick.
+pub const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
 /// Minimum interval between renders while the agent is streaming.
 pub const MIN_RENDER_INTERVAL_MS: u64 = 33;
 
@@ -52,7 +58,7 @@ pub async fn run_tui(
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
     // Animation timers - cursor blink only (animation tick is now via TimerActor)
-    let mut cursor_interval = interval(Duration::from_millis(500));
+    let mut cursor_interval = interval(CURSOR_BLINK_INTERVAL);
 
     // TEA render throttle
     let mut last_render = Instant::now();
@@ -135,14 +141,19 @@ async fn initialize_tui(
     force_setup: bool,
     event_logger: Option<&EventStreamLogger>,
 ) -> Result<(Tui, String), Box<dyn std::error::Error>> {
-    // Load AGENTS.md context files (skip in mock mode)
+    // Load AGENTS.md context files (skip in mock mode). All blocking work
+    // (filesystem reads, git probes) runs on the blocking pool so the async
+    // executor is not stalled during startup.
     let (context_files, loaded_paths, git_info) = if mock {
         (Vec::new(), Vec::new(), crate::git::GitInfo::default())
     } else {
-        let context_files = ContextLoader::load();
-        let loaded_paths = ContextLoader::loaded_paths();
-        let git_info = crate::git::detect_git_info(workspace);
-        (context_files, loaded_paths, git_info)
+        let workspace = workspace.clone();
+        tokio::task::spawn_blocking(move || {
+            let context_files = ContextLoader::load();
+            let loaded_paths = ContextLoader::loaded_paths();
+            let git_info = crate::git::detect_git_info(&workspace);
+            (context_files, loaded_paths, git_info)
+        }).await?
     };
 
     // Check for system prompt override

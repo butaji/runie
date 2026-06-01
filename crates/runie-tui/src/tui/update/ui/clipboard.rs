@@ -70,7 +70,7 @@ pub fn handle_copy_last_response(state: &mut AppState) -> Vec<crate::tui::update
             print!("{}", osc52);
             // Flush to ensure clipboard data is sent before program continues
             if let Err(e) = std::io::stdout().flush() {
-                eprintln!("Failed to flush stdout: {}", e);
+                tracing::warn!("Failed to flush stdout: {}", e);
             }
             state.messages.push(MessageItem::System {
                 text: "Copied last response to clipboard".to_string(),

@@ -102,7 +102,7 @@ async fn handle_spawn_agent(
     let task = tokio::spawn(async move {
         let provider_arc: Arc<dyn Provider> = provider.into();
         let result = tokio::time::timeout(
-            Duration::from_secs(600),
+            crate::tui_run::AGENT_LOOP_TIMEOUT,
             run_agent_loop(
                 messages,
                 config,
