@@ -21,7 +21,6 @@ pub struct PermissionState {
 impl PermissionState {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             inner: Mutex::new(None),
@@ -87,4 +86,97 @@ fn decision_matches(decision: &PermissionDecision, tool_call_id: &str) -> bool {
         | PermissionDecision::Deny { tool_call_id, .. } => tool_call_id,
     };
     id == tool_call_id
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::events::PermissionDecision;
+
+    fn allow(id: &str) -> PermissionDecision {
+        PermissionDecision::Allow {
+            tool_call_id: id.to_string(),
+            tool_name: "bash".to_string(),
+            tool_args: "{}".to_string(),
+        }
+    }
+
+    fn deny(id: &str) -> PermissionDecision {
+        PermissionDecision::Deny {
+            tool_call_id: id.to_string(),
+            tool_name: "bash".to_string(),
+            tool_args: "{}".to_string(),
+        }
+    }
+
+    #[tokio::test]
+    async fn resolve_then_wait_returns_matching_decision() {
+        let state = PermissionState::new();
+        let s = state.clone();
+        tokio::spawn(async move { s.resolve(allow("t1")).await });
+        let got = state.wait_for("t1").await;
+        let decision = got.expect("expected Some(decision)");
+        match decision {
+            PermissionDecision::Allow { tool_call_id, .. } => assert_eq!(tool_call_id, "t1"),
+            _ => panic!("expected Allow"),
+        }
+    }
+
+    #[tokio::test]
+    async fn wait_for_blocks_until_matching_id_arrives() {
+        let state = PermissionState::new();
+        // Submit a decision for a different id first.
+        state.resolve(allow("t0")).await;
+        // wait_for("t1") must NOT consume the t0 decision.
+        let s = state.clone();
+        let waiter = tokio::spawn(async move {
+            tokio::time::timeout(std::time::Duration::from_millis(50), s.wait_for("t1")).await
+        });
+        // Give the waiter a tick to observe it cannot match.
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        // Now submit the right id; waiter should unblock.
+        state.resolve(allow("t1")).await;
+        let result = waiter.await.unwrap();
+        let got = result.expect("wait_for should not time out");
+        match got {
+            Some(PermissionDecision::Allow { tool_call_id, .. }) => assert_eq!(tool_call_id, "t1"),
+            Some(_) => panic!("expected Allow, got other variant"),
+            None => panic!("expected Some(Allow), got None"),
+        }
+    }
+
+    #[tokio::test]
+    async fn wait_for_times_out_when_no_matching_decision() {
+        let state = PermissionState::new();
+        // No decision ever arrives.
+        let result = tokio::time::timeout(
+            std::time::Duration::from_millis(30),
+            state.wait_for("never"),
+        ).await;
+        assert!(result.is_err(), "expected timeout, got {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn clear_resets_pending_decision() {
+        let state = PermissionState::new();
+        state.resolve(allow("t0")).await;
+        state.clear().await;
+        // A subsequent wait_for for t0 must not return — there's nothing.
+        let result = tokio::time::timeout(
+            std::time::Duration::from_millis(30),
+            state.wait_for("t0"),
+        ).await;
+        assert!(result.is_err(), "expected timeout after clear, got {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn wait_returns_any_decision_regardless_of_id() {
+        let state = PermissionState::new();
+        state.resolve(deny("anything")).await;
+        let got = state.wait().await.expect("expected decision");
+        match got {
+            PermissionDecision::Deny { tool_call_id, .. } => assert_eq!(tool_call_id, "anything"),
+            _ => panic!("expected Deny"),
+        }
+    }
 }

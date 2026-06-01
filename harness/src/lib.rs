@@ -611,4 +611,76 @@ mod tests {
         assert_eq!(lines[1], "task1,pass,100,3,3");
         assert_eq!(lines[2], "task2,fail,200,1,5");
     }
+
+    fn success_exit() -> std::process::ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(0)
+        }
+        #[cfg(not(unix))]
+        {
+            std::process::Command::new("cmd").arg("/c").arg("exit 0").status().unwrap()
+        }
+    }
+
+    fn fail_exit() -> std::process::ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(1)
+        }
+        #[cfg(not(unix))]
+        {
+            std::process::Command::new("cmd").arg("/c").arg("exit 1").status().unwrap()
+        }
+    }
+
+    #[test]
+    fn parse_grader_counts_pass_lines() {
+        let stdout = "PASS check1\nPASS check2\nFAIL check3\n";
+        let (status, passed, total, detail) = parse_grader_output(stdout, "", Some(&success_exit()));
+        assert_eq!(status, TaskStatus::Pass, "exit 0 -> Pass regardless of stdout content");
+        assert_eq!(passed, 2, "two lines start with PASS");
+        assert_eq!(total, 3);
+        assert_eq!(detail, "PASS check1\nPASS check2\nFAIL check3");
+    }
+
+    #[test]
+    fn parse_grader_zero_passes_when_no_pass_lines() {
+        let stdout = "FAIL check1\nFAIL check2\n";
+        let (status, passed, total, _) = parse_grader_output(stdout, "", Some(&fail_exit()));
+        assert_eq!(status, TaskStatus::Fail);
+        assert_eq!(passed, 0);
+        assert_eq!(total, 2);
+    }
+
+    #[test]
+    fn parse_grader_handles_empty_stdout() {
+        let (status, passed, total, detail) = parse_grader_output("", "", Some(&success_exit()));
+        assert_eq!(status, TaskStatus::Pass);
+        assert_eq!(passed, 0);
+        // empty stdout -> split('\n') yields a single empty line
+        assert_eq!(total, 1);
+        assert!(detail.starts_with("grader exited with status"));
+    }
+
+    #[test]
+    fn parse_grader_handles_empty_stdout_and_fail_exit() {
+        let (status, passed, total, detail) = parse_grader_output("", "", Some(&fail_exit()));
+        assert_eq!(status, TaskStatus::Fail);
+        assert_eq!(passed, 0);
+        assert_eq!(total, 1);
+        assert!(detail.starts_with("grader exited with status"));
+    }
+
+    #[test]
+    fn parse_grader_trims_whitespace() {
+        let stdout = "   \nPASS a\nPASS b\n   \n";
+        let (_, passed, total, _) = parse_grader_output(stdout, "", Some(&success_exit()));
+        // stdout.trim() strips surrounding whitespace, leaving "PASS a\nPASS b"
+        // which is 2 lines, both PASS.
+        assert_eq!(passed, 2);
+        assert_eq!(total, 2);
+    }
 }
