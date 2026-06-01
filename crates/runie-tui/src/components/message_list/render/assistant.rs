@@ -103,6 +103,7 @@ pub fn render_assistant_msg(
     buf: &mut Buffer,
     text_secondary: ratatui::style::Color,
     text_muted: ratatui::style::Color,
+    accent_bar_color: ratatui::style::Color,
     cursor_visible: bool,
     wrap_cache: &mut WrapCache,
     agent_running: bool,
@@ -198,6 +199,19 @@ pub fn render_assistant_msg(
                 let line = ratatui::text::Line::raw(complete_text).style(Style::default().fg(text_muted));
                 buf.set_line(margin_x, area.y + row + rendered, &line, content_width);
                 rendered += 1;
+            }
+        }
+    }
+
+    // Draw accent bar (│) at left edge for ALL rendered lines (including thought rows)
+    // Bar is drawn AFTER content so it sits on top
+    let bar_x = margin_x.saturating_sub(1);
+    let bg_color = ratatui::style::Color::Reset;
+    if bar_x < area.x + area.width {
+        for y in row..(row + rendered).min(max_rows) {
+            if let Some(cell) = buf.cell_mut((bar_x, area.y + y)) {
+                cell.set_char('│');
+                cell.set_style(Style::default().fg(accent_bar_color).bg(bg_color));
             }
         }
     }

@@ -38,6 +38,12 @@ pub enum Msg {
     ScrollDown,
     ScrollPageUp,
     ScrollPageDown,
+    ScrollHalfPageUp,
+    ScrollHalfPageDown,
+    ScrollToTop,
+    ScrollToBottom,
+    ScrollToPrevUserTurn,
+    ScrollToNextUserTurn,
     PermissionConfirm,
     PermissionCancel,
     PermissionAlways,
@@ -187,6 +193,8 @@ impl Msg {
             Msg::Submit | Msg::InsertNewline | Msg::Quit | Msg::ToggleSidebar
                 | Msg::ToggleThoughts | Msg::OpenCommandPalette | Msg::CloseModal | Msg::ConfirmModal
                 | Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown
+                | Msg::ScrollHalfPageUp | Msg::ScrollHalfPageDown | Msg::ScrollToTop | Msg::ScrollToBottom
+                | Msg::ScrollToPrevUserTurn | Msg::ScrollToNextUserTurn
                 | Msg::PermissionConfirm | Msg::PermissionCancel | Msg::PermissionAlways
                 | Msg::PermissionSkip | Msg::CommandPaletteBackspace | Msg::CommandPaletteUp
                 | Msg::CommandPaletteDown | Msg::CommandPaletteConfirm | Msg::CommandPaletteCancelArgument

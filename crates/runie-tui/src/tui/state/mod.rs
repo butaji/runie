@@ -105,6 +105,7 @@ pub struct AppState {
     pub mode: TuiMode,
 
     pub top_bar: TopBarState,
+    pub current_theme: String,
 
     // Turn tracking for global tags display
     pub last_turn_duration_secs: Option<u64>,
@@ -145,7 +146,8 @@ impl Default for AppState {
             model_picker: None, diff_viewer: None,
             session_tree: crate::components::SessionTreeNavigator::new(),
             animation: AnimationState::default(), onboarding: None,
-            mode: TuiMode::Chat, top_bar: TopBarState::default(),
+            mode: TuiMode::HomeScreen, top_bar: TopBarState::default(),
+            current_theme: "crush_grok".to_string(),
             last_turn_duration_secs: None, last_turn_tokens: None,
             last_turn_tool_calls: None, turn_success: None,
         }

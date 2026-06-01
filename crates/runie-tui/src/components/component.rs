@@ -78,13 +78,19 @@ impl Component for InputBar {
         buf: &mut Buffer,
         theme: &ThemeWrapper,
     ) {
+        use crate::theme::ThemeColors;
+        let colors = ThemeColors::from(theme);
         super::input_bar::render_input_bar(
             &vm.textarea,
             &vm.prompt,
             &vm.right_info,
             area,
             buf,
-            theme,
+            &colors,
+            &vm.mode_indicator,
+            &vm.attached_files,
+            vm.char_count,
+            false, // is_focused - component doesn't know focus state
         );
     }
 

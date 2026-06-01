@@ -40,8 +40,12 @@ impl RenderPipe {
         let input_height = Self::input_bar_height(state);
         let show_sidebar = state.show_sidebar;
         let show_status_bar = true;
-        let theme = config.theme.clone();
-        let theme_colors = ThemeColors::from(&config.theme);
+        let theme = if state.current_theme == "silkcircuit_neon" {
+            ThemeWrapper::silkcircuit_neon()
+        } else {
+            ThemeWrapper::crush_grok()
+        };
+        let theme_colors = ThemeColors::from(&theme);
         let is_onboarding = matches!(state.mode, crate::tui::TuiMode::Onboarding);
         let palette = command_palette.clone();
 
@@ -67,7 +71,8 @@ impl RenderPipe {
     }
 
     fn input_bar_height(state: &AppState) -> u16 {
-        crate::components::input_bar::input_bar_height(&state.textarea)
+        // No attachments yet in pipe render path
+        crate::components::input_bar::input_bar_height(&state.textarea, false)
     }
 
     fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 5] {
@@ -146,7 +151,7 @@ impl RenderPipe {
         Self::clear_background(buf, area, theme_colors.bg_base);
         // main_areas[0] = topbar, [1] = feed, [2] = global_tags, [3] = input, [4] = hotkeys
         crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
-        Self::render_content(buf, vms, show_sidebar, main_areas[1], theme, theme_colors);
+        Self::render_content(buf, vms, state, show_sidebar, main_areas[1], theme, theme_colors);
         crate::components::global_tags::render_global_tags(&vms.global_tags, main_areas[2], buf, theme_colors);
         if state.slash_menu.is_open() {
             let menu_h = 12u16.min(main_areas[1].height.saturating_sub(2));
@@ -169,26 +174,52 @@ impl RenderPipe {
             use ratatui::widgets::Widget;
             (&state.file_picker).render(picker_area, buf);
         }
-        Self::render_input(buf, state, main_areas[3], theme);
+        Self::render_input(buf, state, main_areas[3], theme, &theme_colors);
         if show_status_bar {
             crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
         }
         Self::render_overlays(buf, state, palette, padded, area, theme, theme_colors);
     }
 
-    fn render_content(buf: &mut Buffer, vms: &ViewModels, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+    fn render_content(buf: &mut Buffer, vms: &ViewModels, state: &AppState, show_sidebar: bool, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        use crate::components::activity_panel::{ActivityPanel, ACTIVITY_PANEL_WIDTH, should_show_activity_panel, render_activity_panel};
+
+        let show_activity = should_show_activity_panel(area.width);
+        let activity_width = if show_activity { ACTIVITY_PANEL_WIDTH } else { 0 };
+
         let mut h_constraints = vec![Constraint::Min(20)];
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             h_constraints.push(Constraint::Length(SIDEBAR_WIDTH));
         }
+        if activity_width > 0 {
+            h_constraints.push(Constraint::Length(activity_width));
+        }
+
         let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
-        MessageList::render_ref(&vms.message_list, h_areas[0], buf, theme);
+        let feed_area = h_areas[0];
+        MessageList::render_ref(&vms.message_list, feed_area, buf, theme);
+
         if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
             crate::tui::render::render_agent_list(&vms.agent_list, h_areas[1], buf, theme_colors);
         }
+
+        // Render activity panel on the right
+        if show_activity {
+            let activity_area_idx = if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
+                2
+            } else {
+                1
+            };
+            if activity_area_idx < h_areas.len() {
+                let activity_panel = ActivityPanel::with_jobs(state.background_jobs.clone());
+                render_activity_panel(&activity_panel, h_areas[activity_area_idx], buf, theme_colors);
+            }
+        }
     }
 
-    fn render_input(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
+    fn render_input(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper, theme_colors: &ThemeColors) {
+        use crate::tui::state::PermissionMode;
+
         let mut textarea = state.textarea.clone();
         let accent_color = theme.color("accent.primary").into();
         let text_primary = theme.color("text.primary").into();
@@ -203,7 +234,41 @@ impl RenderPipe {
         } else {
             format!("{ch} ", ch = crate::glyphs::CHEVRON)
         };
-        crate::components::input_bar::render_input_bar(&textarea, &prompt, &state.input_right_info, area, buf, theme);
+
+        // Build mode indicator
+        let mode_indicator = match state.permission_mode {
+            PermissionMode::Normal => "runie".to_string(),
+            PermissionMode::Plan => "runie · plan".to_string(),
+            PermissionMode::AutoApprove => "runie · yolo".to_string(),
+        };
+
+        // Calculate char count if text is long (>50% of context window)
+        let char_count = {
+            let text_len = text.len();
+            let ctx_window = state.top_bar.context_window.unwrap_or(128_000);
+            let estimated_tokens = text_len * 4;
+            if estimated_tokens > ctx_window / 2 {
+                Some(text_len)
+            } else {
+                None
+            }
+        };
+
+        // Attached files (empty in pipe render path for now)
+        let attached_files: Vec<String> = Vec::new();
+
+        crate::components::input_bar::render_input_bar(
+            &textarea,
+            &prompt,
+            &state.input_right_info,
+            area,
+            buf,
+            theme_colors,
+            &mode_indicator,
+            &attached_files,
+            char_count,
+            !state.scroll.scroll_focused, // is_focused
+        );
     }
 
     fn render_overlays(

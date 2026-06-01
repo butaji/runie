@@ -33,6 +33,15 @@ impl ThemeWrapper {
         b = add_diff_tokens(b);
         Self { inner: b.build() }
     }
+
+    /// Cycles between available themes: crush_grok and silkcircuit_neon.
+    pub fn cycle_theme(current: &str) -> Self {
+        if current == "silkcircuit_neon" {
+            Self::crush_grok()
+        } else {
+            Self::silkcircuit_neon()
+        }
+    }
 }
 
 fn add_core_palettes(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
@@ -94,6 +103,8 @@ fn add_diff_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
         .token("diff.added", OpalineColor::new(0x51, 0xCF, 0x66))
         .token("diff.removed_bg", OpalineColor::new(0x3A, 0x1A, 0x1A))
         .token("diff.added_bg", OpalineColor::new(0x1A, 0x3A, 0x1A))
+        // Plan mode color (gold/brown)
+        .token("text.plan", OpalineColor::new(0xD4, 0xA0, 0x4E))
 }
 
 impl Default for ThemeWrapper {
@@ -115,6 +126,7 @@ pub struct ThemeColors {
     pub bg_base: ratatui::style::Color,
     pub bg_panel: ratatui::style::Color,
     pub accent_primary: ratatui::style::Color,
+    pub accent_secondary: ratatui::style::Color,
     pub text_primary: ratatui::style::Color,
     pub text_secondary: ratatui::style::Color,
     pub text_dim: ratatui::style::Color,
@@ -123,6 +135,7 @@ pub struct ThemeColors {
     pub success: ratatui::style::Color,
     pub error: ratatui::style::Color,
     pub syntax_phase: ratatui::style::Color,
+    pub text_plan: ratatui::style::Color,
 }
 
 impl From<&ThemeWrapper> for ThemeColors {
@@ -131,6 +144,7 @@ impl From<&ThemeWrapper> for ThemeColors {
             bg_base: theme.color("bg.base").into(),
             bg_panel: theme.color("bg.panel").into(),
             accent_primary: theme.color("accent.primary").into(),
+            accent_secondary: theme.color("accent.secondary").into(),
             text_primary: theme.color("text.primary").into(),
             text_secondary: theme.color("text.secondary").into(),
             text_dim: theme.color("text.dim").into(),
@@ -139,6 +153,7 @@ impl From<&ThemeWrapper> for ThemeColors {
             success: theme.color("success").into(),
             error: theme.color("error").into(),
             syntax_phase: theme.color("syntax.phase").into(),
+            text_plan: theme.color("text.plan").into(),
         }
     }
 }

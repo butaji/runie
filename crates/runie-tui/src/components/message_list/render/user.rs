@@ -20,6 +20,7 @@ pub fn render_user_msg(
     let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
     let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+    let accent_bar_color: ratatui::style::Color = theme.color("accent.primary").into();
     // Account for 1-symbol horizontal padding on each side + chevron + space
     let text_width = (area.width - margin_x + area.x - 6) as usize;
 
@@ -44,6 +45,18 @@ pub fn render_user_msg(
         }
     }
 
+    // Draw accent bar (│) at the left edge - spanning FULL HEIGHT including padding lines
+    // Bar is drawn AFTER background fills so it's visible on top
+    let bar_x = bg_start;
+    let bar_top = area.y + row;  // includes padding line above
+    let bar_bottom = content_start_y + content_lines as u16;  // includes padding line below
+    for y in bar_top..bar_bottom.min(area.bottom()) {
+        if let Some(cell) = buf.cell_mut((bar_x, y)) {
+            cell.set_char('│');
+            cell.set_style(Style::default().fg(accent_bar_color).bg(bg_color));
+        }
+    }
+
     // Render content lines with horizontal padding
     for (i, line_text) in wrapped.iter().enumerate() {
         let line_y = content_start_y + i as u16;
@@ -56,6 +69,12 @@ pub fn render_user_msg(
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
+        }
+
+        // Re-draw accent bar on this line (background overwrites it)
+        if let Some(cell) = buf.cell_mut((bar_x, line_y)) {
+            cell.set_char('│');
+            cell.set_style(Style::default().fg(accent_bar_color).bg(bg_color));
         }
 
         if i == 0 {

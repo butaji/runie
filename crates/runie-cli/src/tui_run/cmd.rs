@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 use runie_agent::events::{AgentEvent, PermissionDecision};
-use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop, AgentLoopError};
+use runie_agent::loop_engine::{AgentLoopConfig, run_agent_loop, AgentLoopError, PermissionState};
 use runie_agent::Hook;
 use runie_agent::AgentTool;
 use runie_ai::Provider;
@@ -119,7 +119,7 @@ fn spawn_agent_loop(
     provider: Arc<dyn Provider>,
     tools: Vec<AgentTool>,
     msg_tx: mpsc::Sender<Msg>,
-    permission_state: Arc<tokio::sync::Mutex<Option<PermissionDecision>>>,
+    permission_state: Arc<PermissionState>,
     registry: Arc<runie_tools::ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
 ) -> tokio::task::JoinHandle<()> {

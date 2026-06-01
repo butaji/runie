@@ -18,6 +18,16 @@ pub struct InputBarViewModel {
     pub textarea: ratatui_textarea::TextArea<'static>,
     pub prompt: String,
     pub right_info: String,
+    /// Placeholder text shown when empty and unfocused
+    pub placeholder: String,
+    /// Mode indicator text (e.g., "runie", "runie · plan", "runie · yolo")
+    pub mode_indicator: String,
+    /// List of attached file names to display as pills
+    pub attached_files: Vec<String>,
+    /// Character count for long inputs
+    pub char_count: Option<usize>,
+    /// Context window size for calculating threshold
+    pub context_window: Option<usize>,
 }
 
 // ─── StatusBarViewModel ─────────────────────────────────────────────────────
@@ -283,10 +293,41 @@ fn build_message_list_vm(
 }
 
 fn build_input_bar_vm(state: &crate::tui::state::AppState) -> InputBarViewModel {
+    use crate::tui::state::PermissionMode;
+
+    // Build mode indicator
+    let mode_indicator = match state.permission_mode {
+        PermissionMode::Normal => "runie".to_string(),
+        PermissionMode::Plan => "runie · plan".to_string(),
+        PermissionMode::AutoApprove => "runie · yolo".to_string(),
+    };
+
+    // Calculate char count if text is long (>50% of context window)
+    let char_count = {
+        let text = state.textarea.lines().join("\n");
+        let text_len = text.len();
+        let ctx_window = state.top_bar.context_window.unwrap_or(128_000);
+        // Rough estimate: 1 char ≈ 1/4 token
+        let estimated_tokens = text_len * 4;
+        if estimated_tokens > ctx_window / 2 {
+            Some(text_len)
+        } else {
+            None
+        }
+    };
+
+    // Attached files (placeholder - will be populated when attachments are supported)
+    let attached_files: Vec<String> = Vec::new();
+
     InputBarViewModel {
         textarea: state.textarea.clone(),
         prompt: state.input_draft.clone(),
         right_info: state.input_right_info.clone(),
+        placeholder: "Build anything...".to_string(),
+        mode_indicator,
+        attached_files,
+        char_count,
+        context_window: state.top_bar.context_window,
     }
 }
 

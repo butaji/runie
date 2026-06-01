@@ -38,7 +38,9 @@ fn is_input_msg(msg: &crate::tui::state::Msg) -> bool {
 
 fn is_scroll_msg(msg: &crate::tui::state::Msg) -> bool {
     use crate::tui::state::Msg;
-    matches!(msg, Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown)
+    matches!(msg, Msg::ScrollUp | Msg::ScrollDown | Msg::ScrollPageUp | Msg::ScrollPageDown
+        | Msg::ScrollHalfPageUp | Msg::ScrollHalfPageDown | Msg::ScrollToTop | Msg::ScrollToBottom
+        | Msg::ScrollToPrevUserTurn | Msg::ScrollToNextUserTurn)
 }
 
 fn is_clear_msg(msg: &crate::tui::state::Msg) -> bool {
@@ -169,11 +171,18 @@ fn handle_scroll_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<C
     // (test_page_scroll_1000_messages) to reach the end of long feeds in
     // a reasonable number of PageDown presses.
     const PAGE_SIZE: i32 = 20;
+    const HALF_PAGE_SIZE: i32 = PAGE_SIZE / 2;
     match msg {
         Msg::ScrollUp => handle_scroll(state, 1),
         Msg::ScrollDown => handle_scroll(state, -1),
         Msg::ScrollPageUp => handle_scroll(state, PAGE_SIZE),
         Msg::ScrollPageDown => handle_scroll(state, -PAGE_SIZE),
+        Msg::ScrollHalfPageUp => handle_scroll(state, HALF_PAGE_SIZE),
+        Msg::ScrollHalfPageDown => handle_scroll(state, -HALF_PAGE_SIZE),
+        Msg::ScrollToTop => handle_scroll_to_top(state),
+        Msg::ScrollToBottom => handle_scroll_to_bottom(state),
+        Msg::ScrollToPrevUserTurn => handle_scroll_to_prev_user_turn(state),
+        Msg::ScrollToNextUserTurn => handle_scroll_to_next_user_turn(state),
         _ => vec![],
     }
 }
@@ -289,6 +298,58 @@ fn handle_scroll(state: &mut AppState, delta: i32) -> Vec<ChatCmd> {
             .saturating_add(page)
             .min(state.messages.len().saturating_sub(1))
     };
+    state.scroll.feed_offset = new_offset;
+    state.scroll.user_scrolled_up = new_offset > 0;
+    vec![]
+}
+
+fn handle_scroll_to_top(state: &mut AppState) -> Vec<ChatCmd> {
+    state.scroll.feed_offset = 0;
+    state.scroll.user_scrolled_up = false;
+    vec![]
+}
+
+fn handle_scroll_to_bottom(state: &mut AppState) -> Vec<ChatCmd> {
+    state.scroll.feed_offset = state.messages.len().saturating_sub(1);
+    state.scroll.user_scrolled_up = true;
+    vec![]
+}
+
+fn handle_scroll_to_prev_user_turn(state: &mut AppState) -> Vec<ChatCmd> {
+    use crate::components::MessageItem;
+    // Find the previous user message before current offset
+    let current_offset = state.scroll.feed_offset;
+    let mut new_offset = current_offset;
+
+    for i in (0..current_offset).rev() {
+        if matches!(state.messages.get(i), Some(MessageItem::User { .. })) {
+            new_offset = i;
+            break;
+        }
+        if i == 0 {
+            new_offset = 0;
+        }
+    }
+    state.scroll.feed_offset = new_offset;
+    state.scroll.user_scrolled_up = new_offset > 0;
+    vec![]
+}
+
+fn handle_scroll_to_next_user_turn(state: &mut AppState) -> Vec<ChatCmd> {
+    use crate::components::MessageItem;
+    // Find the next user message after current offset
+    let current_offset = state.scroll.feed_offset;
+    let mut new_offset = current_offset;
+
+    for i in (current_offset + 1)..state.messages.len() {
+        if matches!(state.messages.get(i), Some(MessageItem::User { .. })) {
+            new_offset = i;
+            break;
+        }
+        if i == state.messages.len() - 1 {
+            new_offset = state.messages.len().saturating_sub(1);
+        }
+    }
     state.scroll.feed_offset = new_offset;
     state.scroll.user_scrolled_up = new_offset > 0;
     vec![]

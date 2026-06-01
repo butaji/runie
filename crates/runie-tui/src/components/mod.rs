@@ -23,6 +23,7 @@ pub mod home_screen;
 pub mod file_picker;
 pub mod plan_modal;
 pub mod context_usage_modal;
+pub mod activity_panel;
 
 #[cfg(test)]
 mod top_bar_snapshots;
@@ -51,3 +52,4 @@ pub use home_screen::{HomeScreen, HOME_MENU_ITEMS};
 pub use file_picker::FilePicker;
 pub use plan_modal::{PlanModal, PlanTool};
 pub use context_usage_modal::{ContextUsageModal, render_context_usage_modal};
+pub use activity_panel::{ActivityPanel, ACTIVITY_PANEL_WIDTH, render_activity_panel, should_show_activity_panel};

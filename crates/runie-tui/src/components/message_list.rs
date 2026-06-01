@@ -85,6 +85,8 @@ impl MessageList {
 
 struct MessageColors {
     accent_primary: ratatui::style::Color,
+    accent_secondary: ratatui::style::Color,
+    accent_tertiary: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_muted: ratatui::style::Color,
     text_dim: ratatui::style::Color,
@@ -96,6 +98,8 @@ struct MessageColors {
 fn extract_message_colors(theme: &ThemeWrapper) -> MessageColors {
     MessageColors {
         accent_primary: theme.color("accent.primary").into(),
+        accent_secondary: theme.color("accent.secondary").into(),
+        accent_tertiary: theme.color("accent.tertiary").into(),
         text_secondary: theme.color("text.secondary").into(),
         text_muted: theme.color("text.muted").into(),
         text_dim: theme.color("text.dim").into(),
@@ -179,7 +183,7 @@ fn render_single_msg_item(
 ) -> u16 {
     render::render_single_msg_feed(
         item, area, row, margin_x, text_x, max_rows, buf, theme,
-        colors.accent_primary, colors.text_secondary, colors.text_muted, colors.text_dim,
+        colors.accent_primary, colors.accent_secondary, colors.text_secondary, colors.text_muted, colors.text_dim,
         colors.success, colors.error, colors.code_path, spinner, show_cursor, show_spinner, rewind_spinner,
         animation, wrap_cache, agent_running, thought_duration, turn_complete, is_last_item,
     )
@@ -273,6 +277,7 @@ mod tests {
             &item, area, 0, area.x + 2, area.x + 4, area.height, &mut buf,
             &theme,
             ratatui::style::Color::White,
+            ratatui::style::Color::Cyan, // accent_secondary
             ratatui::style::Color::Gray,
             ratatui::style::Color::DarkGray,
             ratatui::style::Color::Black,
@@ -345,6 +350,7 @@ mod tests {
             item, area, 0, area.x + 1, area.x + 4, area.height, &mut buf,
             &theme,
             ratatui::style::Color::White,
+            ratatui::style::Color::Cyan, // accent_secondary
             ratatui::style::Color::Gray,
             ratatui::style::Color::DarkGray,
             ratatui::style::Color::Black,

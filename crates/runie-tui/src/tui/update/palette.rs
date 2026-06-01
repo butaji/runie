@@ -64,6 +64,15 @@ fn open_onboarding(state: &mut AppState) -> Vec<UiCmd> {
     vec![]
 }
 
+fn handle_theme(state: &mut AppState) -> Vec<UiCmd> {
+    state.current_theme = if state.current_theme == "silkcircuit_neon" {
+        "crush_grok".to_string()
+    } else {
+        "silkcircuit_neon".to_string()
+    };
+    vec![]
+}
+
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<UiCmd> {
     use runie_core::slash_command::SlashCommand;
     // Close the palette on every action except Cancel — even ones that swap
@@ -72,20 +81,12 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<U
     let result = match cmd {
         PaletteCommand::NewSession => run_slash(state, SlashCommand::New),
         PaletteCommand::ClearChat => run_slash(state, SlashCommand::Clear),
-        PaletteCommand::SwitchModel => {
-            handle_switch_model(state);
-            vec![]
-        }
+        PaletteCommand::SwitchModel => { handle_switch_model(state); vec![] },
         PaletteCommand::ForkSession => run_slash(state, SlashCommand::Fork),
-        PaletteCommand::SessionTree => {
-            crate::tui::update::slash::handle_tree(state);
-            vec![]
-        }
+        PaletteCommand::SessionTree => { crate::tui::update::slash::handle_tree(state); vec![] },
         PaletteCommand::Onboard => open_onboarding(state),
         PaletteCommand::CopyLast => {
             let cmds = crate::tui::update::ui::handle_copy_last_response(state);
-            // CopyLast is not a slash command, so the post-match close
-            // doesn't apply; explicitly return to Chat and close here.
             state.mode = TuiMode::Chat;
             state.command_palette.open = false;
             state.command_palette.filter.clear();
@@ -93,6 +94,7 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<U
             cmds
         }
         PaletteCommand::ShowCost => run_slash(state, SlashCommand::Cost),
+        PaletteCommand::Theme => handle_theme(state),
         PaletteCommand::Help => run_slash(state, SlashCommand::Help),
         PaletteCommand::Quit => {
             state.running = false;
