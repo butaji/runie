@@ -23,8 +23,6 @@ use tokio::sync::Mutex;
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
     pub show_status_bar: bool,
-    /// Debug server port (0 = disabled)
-    pub debug_port: u16,
 }
 
 pub struct Tui {
@@ -44,7 +42,6 @@ impl Default for TuiConfig {
         Self {
             theme: ThemeWrapper::default(),
             show_status_bar: true, // Always visible - hotkeys are context-aware and essential
-            debug_port: 0, // Disabled by default
         }
     }
 }
@@ -199,70 +196,6 @@ impl Tui {
     pub async fn clear_permission(&self) {
         let mut guard = self.permission_state.lock().await;
         *guard = None;
-    }
-
-    /// Handle a debug command from the debug server
-    pub fn handle_debug_command(&mut self, cmd: crate::debug_server::AgentCommand) -> Vec<Msg> {
-        use crate::debug_server::AgentCommand;
-
-        match cmd {
-            AgentCommand::InjectKey { key } => {
-                if let Some(key_event) = AgentCommand::parse_key(&key) {
-                    vec![Msg::TextareaKey(key_event)]
-                } else {
-                    vec![]
-                }
-            }
-            AgentCommand::InjectText { text } => {
-                vec![Msg::Paste(text)]
-            }
-            AgentCommand::GetState { .. } => {
-                // GetState is handled by the debug server directly via state accessor
-                vec![]
-            }
-            AgentCommand::GetScreen { .. } => {
-                // GetScreen is handled by the debug server directly via terminal access
-                vec![]
-            }
-        }
-    }
-
-    /// Get a clone of the current state for serialization
-    pub fn get_serializable_state(&self) -> crate::debug_server::SerializableState {
-        crate::debug_server::SerializableState::from(&self.state)
-    }
-
-    /// Get the current terminal buffer for screen capture
-    ///
-    /// Note: This returns a placeholder since capturing the exact terminal buffer
-    /// requires integration with the render loop. For accurate screen capture,
-    /// the debug server should be called during or after a render operation.
-    pub fn get_screen_capture(&self) -> crate::debug_server::ScreenCapture {
-        use ratatui::buffer::Buffer;
-        use ratatui::layout::Rect;
-
-        let area = self.terminal.size().unwrap_or_default();
-        let rect = Rect::new(0, 0, area.width, area.height);
-
-        // Create a buffer with default styling
-        let buf = Buffer::empty(rect);
-
-        // Fill with placeholder content indicating screen capture limitation
-        let mut capture = crate::debug_server::ScreenCapture::from_buffer(&buf);
-
-        // Mark that this is a placeholder
-        if let Some(line) = capture.lines.first_mut() {
-            if let Some(cell) = line.cells.first_mut() {
-                cell.char = "[".to_string();
-                cell.fg = Some("DebugServer".to_string());
-            }
-            if line.cells.len() > 1 {
-                line.cells[1].char = "Screen capture requires render integration".to_string();
-                line.cells[1].fg = Some("Yellow".to_string());
-            }
-        }
-
-        capture
     }
 }
 

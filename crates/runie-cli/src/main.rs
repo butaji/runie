@@ -52,9 +52,7 @@ struct Cli {
     #[arg(long)]
     mock_setup: bool,
 
-    /// Debug server port (0 = disabled)
-    #[arg(long, default_value = "0")]
-    debug_port: u16,
+
 }
 
 impl From<&Cli> for CliSettings {
@@ -101,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             #[cfg(not(windows))]
             {
-                tui_run::run_tui(cli.workspace, cli.mock, &mut settings, cli.mock_setup, event_logger.as_ref(), cli.debug_port).await?;
+                tui_run::run_tui(cli.workspace, cli.mock, &mut settings, cli.mock_setup, event_logger.as_ref()).await?;
             }
             #[cfg(windows)]
             {

@@ -9,7 +9,6 @@ pub use setup::{needs_onboarding, update_top_bar_context};
 pub use handlers::{handle_input_msg, handle_msgs, handle_cursor_blink, handle_timer_tick};
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::signal::ctrl_c;
 use tokio::sync::mpsc;
@@ -35,39 +34,8 @@ pub async fn run_tui(
     settings: &mut Settings,
     force_setup: bool,
     event_logger: Option<&EventStreamLogger>,
-    debug_port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Start debug server BEFORE TUI initialization so it works even headless
-    let (mut debug_command_rx, _debug_command_tx): (
-        tokio::sync::broadcast::Receiver<runie_tui::debug_server::AgentCommand>,
-        tokio::sync::broadcast::Sender<runie_tui::debug_server::AgentCommand>,
-    ) = if debug_port > 0 {
-        let port = debug_port;
-        let state = Arc::new(tokio::sync::Mutex::new(runie_tui::AppState::default()));
-        let (server, rx) = runie_tui::debug_server::DebugServer::new(port);
-        let tx = server.command_sender();
-        tokio::spawn(async move {
-            server.start(state).await;
-        });
-        (rx, tx)
-    } else {
-        let (tx, rx) = tokio::sync::broadcast::channel(1);
-        (rx, tx)
-    };
-
-    let (mut tui, base_system_prompt) = match initialize_tui(&workspace, mock, settings, force_setup, event_logger, debug_port).await {
-        Ok(result) => result,
-        Err(e) => {
-            eprintln!("TUI initialization failed (running headless?). Debug server still active on port {}.", debug_port);
-            eprintln!("Error: {}", e);
-            // Keep the process alive so debug server remains accessible
-            if debug_port > 0 {
-                eprintln!("Debug server running. Press Ctrl+C to exit.");
-                tokio::signal::ctrl_c().await?;
-            }
-            return Err(e);
-        }
-    };
+    let (mut tui, base_system_prompt) = initialize_tui(&workspace, mock, settings, force_setup, event_logger).await?;
 
     // Unified message channel for ALL event sources
     let (msg_tx, mut msg_rx) = mpsc::channel::<Msg>(100);
@@ -156,9 +124,6 @@ pub async fn run_tui(
                     &mut last_render,
                 ).await?;
             }
-            Ok(cmd) = debug_command_rx.recv() => {
-                let _ = tui.handle_debug_command(cmd);
-            }
             _ = ctrl_c() => {
                 handle_ctrl_c(&mut agent_task, &cancel, event_logger, &msg_tx).await;
                 break;
@@ -175,7 +140,6 @@ async fn initialize_tui(
     settings: &mut Settings,
     force_setup: bool,
     event_logger: Option<&EventStreamLogger>,
-    debug_port: u16,
 ) -> Result<(Tui, String), Box<dyn std::error::Error>> {
     // Load AGENTS.md context files (skip in mock mode)
     let (context_files, loaded_paths, git_info) = if mock {
@@ -194,11 +158,7 @@ async fn initialize_tui(
         crate::context_loader::build_system_prompt(&context_files)
     };
 
-    let config = TuiConfig {
-        debug_port,
-        ..TuiConfig::default()
-    };
-    let mut tui = Tui::new(config)?;
+    let mut tui = Tui::new(TuiConfig::default())?;
 
     let path = if mock {
         "src/components".to_string()
