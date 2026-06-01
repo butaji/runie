@@ -13,6 +13,7 @@ ratatui = { workspace = true }
 ratatui-textarea = "0.9"
 crossterm = { workspace = true }
 opaline = "0.1"
+chrono = { workspace = true }
 tracing = { workspace = true }
 syntect = "5"
 once_cell = { workspace = true }

@@ -2,6 +2,11 @@ use crate::components::MessageItem;
 use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use super::agent::to_agent_messages;
 
+fn current_timestamp() -> Option<String> {
+    use chrono::Local;
+    Some(Local::now().format("%-I:%M %p").to_string())
+}
+
 pub fn handle_scroll(state: &mut AppState, amount: usize) {
     let max_scroll = state.messages.len().saturating_sub(1);
     state.scroll.feed_offset = (state.scroll.feed_offset + amount).min(max_scroll);
@@ -85,7 +90,7 @@ fn submit_add_user_message(state: &mut AppState, text: &str) {
     state.messages.push(MessageItem::User {
         text: text.to_string(),
         model: Some("You".to_string()),
-        timestamp: None,
+        timestamp: current_timestamp(),
     });
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
