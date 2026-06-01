@@ -22,8 +22,8 @@ Runie is a terminal-based AI coding harness that provides an interactive TUI for
          ┌───────────┴───────────┐
          │                       │
     ┌────▼────┐            ┌──────▼─────┐
-    │runie-tui│            │runie-orchest│
-    │   TUI   │            │   -rator   │
+    │runie-tui│            │  harness   │
+    │   TUI   │            │  (tests)   │
     └────┬────┘            └──────┬─────┘
          │                       │
     ┌────▼───────────────────────▼─────┐
@@ -46,9 +46,8 @@ Runie is a terminal-based AI coding harness that provides an interactive TUI for
 | `runie-agent` | Agent loop engine, event streaming, permission gating |
 | `runie-tools` | Tool implementations: bash, read/write/edit files, search |
 | `runie-tui` | Terminal UI: feed, input, global tags, top bar, command palette |
-| `runie-router` | Request routing logic |
-| `runie-orchestrator` | Multi-agent: spawn, handoff, collect, supervise |
 | `runie-cli` | CLI binary (`runie`) and `cargo-pantry` |
+| `harness` | Eval/grading harness for task fixtures (Rust graders) |
 
 ## Model Support
 

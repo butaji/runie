@@ -1,5 +1,11 @@
 # Runie TUI Architecture Round 2
 
+> **DRAFT — NOT IMPLEMENTED.** This document describes a proposed redesign of
+> the runie architecture (sub-states, single `Msg` enum, etc.). It is kept here
+> for reference but the code does not yet match this design. See
+> [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the actually-implemented
+> architecture.
+
 ## Overview
 
 Round 2 architecture replaces the current monolithic AppState + ad-hoc update pattern with a clean **pipe-based architecture** where data flows through typed channels, actors own I/O scopes, and builders produce all view models.

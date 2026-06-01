@@ -23,10 +23,11 @@ use crate::event_stream::EventStreamLogger;
 use crate::settings::Settings;
 use crate::context_loader::ContextLoader;
 
-// Watchdog timeouts for agent stuck detection
-pub const AGENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(30);
-pub const AGENT_HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(15);
-pub const MIN_RENDER_INTERVAL_MS: u64 = 33; // ~30 FPS max render rate
+/// Wall-clock watchdog: if the agent has been alive this long without an
+/// AgentEnd, force recovery.
+pub const AGENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(300);
+/// Minimum interval between renders while the agent is streaming.
+pub const MIN_RENDER_INTERVAL_MS: u64 = 33;
 
 pub async fn run_tui(
     workspace: PathBuf,
@@ -50,13 +51,10 @@ pub async fn run_tui(
     // Agent task handle for the running agent loop
     let mut agent_task: Option<tokio::task::JoinHandle<()>> = None;
 
-    // Track last agent event time for watchdog
-    let mut last_agent_event = Instant::now();
-
     // Animation timers - cursor blink only (animation tick is now via TimerActor)
     let mut cursor_interval = interval(Duration::from_millis(500));
 
-    // TEA main loop
+    // TEA render throttle
     let mut last_render = Instant::now();
 
     while tui.is_running() {
@@ -75,7 +73,6 @@ pub async fn run_tui(
                     &base_system_prompt,
                     &cancel,
                     event_logger,
-                    &mut last_agent_event,
                     &mut last_render,
                 ).await?;
             }
@@ -89,7 +86,6 @@ pub async fn run_tui(
                     settings,
                     &base_system_prompt,
                     &cancel,
-                    &mut last_render,
                 ).await?;
             }
 
@@ -103,7 +99,6 @@ pub async fn run_tui(
                     settings,
                     &base_system_prompt,
                     &cancel,
-                    &mut last_agent_event,
                     &mut last_render,
                 ).await?;
             }
@@ -120,7 +115,6 @@ pub async fn run_tui(
                     &base_system_prompt,
                     &cancel,
                     event_logger,
-                    &mut last_agent_event,
                     &mut last_render,
                 ).await?;
             }
