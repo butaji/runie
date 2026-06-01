@@ -256,3 +256,54 @@ fn test_ctrl_t_toggles_session_tree() {
     // Ctrl+T is passed to textarea, not mapped to ToggleSessionTree
     assert!(matches!(msgs, Some(Msg::TextareaKey(_))));
 }
+
+// ─── Regression: End/Home Key Routing ─────────────────────────────────────────
+
+// BUG-02 FIX VERIFIED: End key is routed to textarea for cursor movement
+#[test]
+fn test_end_key_routed_to_textarea() {
+    let state = make_state();
+
+    let key = make_key(KeyCode::End, KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "End key should be routed to textarea");
+}
+
+// BUG-02 FIX VERIFIED: Home key is routed to textarea for cursor movement
+#[test]
+fn test_home_key_routed_to_textarea() {
+    let state = make_state();
+
+    let key = make_key(KeyCode::Home, KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "Home key should be routed to textarea");
+}
+
+// BUG-02 FIX VERIFIED: End with modifiers still routes to textarea
+#[test]
+fn test_end_key_with_modifiers_routed_to_textarea() {
+    let state = make_state();
+
+    // End with Ctrl modifier
+    let key = make_key(KeyCode::End, KeyModifiers::CONTROL);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "End+Ctrl should be routed to textarea");
+}
+
+// ─── Regression: ? key Shows Help ───────────────────────────────────────────────
+
+// ? key in Chat mode should produce Msg::ShowHelp
+#[test]
+fn test_question_mark_shows_help() {
+    let state = make_state();
+
+    let key = make_key(KeyCode::Char('?'), KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert_eq!(msgs, Some(Msg::ShowHelp), "? key should produce Msg::ShowHelp in Chat mode");
+}
+
+

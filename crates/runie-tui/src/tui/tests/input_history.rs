@@ -47,6 +47,9 @@ fn make_state() -> AppState {
         thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
         show_thoughts: false,
     }
 }
@@ -147,8 +150,14 @@ fn test_history_up_at_oldest_stays_at_oldest() {
 #[test]
 fn test_history_down_at_newest_returns_to_draft() {
     let mut state = make_state_with_history(vec!["first", "second"]);
-    state.input_draft = "draft text".to_string();
     let mut palette = CommandPalette::new();
+
+    // Type draft text into textarea (HistoryUp will save this to draft)
+    type_char(&mut state, 'd');
+    type_char(&mut state, 'r');
+    type_char(&mut state, 'a');
+    type_char(&mut state, 'f');
+    type_char(&mut state, 't');
 
     // Navigate to newest
     update(&mut state, &mut palette, Msg::HistoryUp);
@@ -159,7 +168,7 @@ fn test_history_down_at_newest_returns_to_draft() {
 
     assert!(state.input_history_index.is_none());
     let text = state.textarea.lines().join("\n");
-    assert_eq!(text, "draft text");
+    assert_eq!(text, "draft");
 }
 
 #[test]
@@ -332,9 +341,13 @@ fn test_history_navigation_with_multiline() {
     state.input_history.push("multi\nline".to_string());
     let mut palette = CommandPalette::new();
 
+    // Type draft text so it gets saved when going up
+    type_char(&mut state, 'd');
+
     update(&mut state, &mut palette, Msg::HistoryUp);
     assert_eq!(state.textarea.lines().join("\n"), "multi\nline");
 
+    // HistoryDown goes forward to draft (not backward to older history)
     update(&mut state, &mut palette, Msg::HistoryDown);
-    assert_eq!(state.textarea.lines().join("\n"), "single");
+    assert_eq!(state.textarea.lines().join("\n"), "d");
 }

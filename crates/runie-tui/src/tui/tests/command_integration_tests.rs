@@ -236,3 +236,63 @@ fn test_palette_confirm_flow_full_integration() {
     assert_eq!(state.mode, TuiMode::Chat);
     assert!(!state.command_palette.open);
 }
+
+// ─── Test 7: Slash /status command ─────────────────────────────────────────────
+
+#[test]
+fn test_slash_status_command_shows_model() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+
+    // Set a model
+    state.current_model = Some("openai/gpt-4o".to_string());
+
+    // User types "/status" → SlashCommand dispatched
+    update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Status));
+
+    // Should have exactly one system message
+    assert_eq!(state.messages.len(), 1, "Should have exactly one message");
+    assert!(
+        matches!(&state.messages[0], MessageItem::System { text } if text.contains("gpt-4o")),
+        "Status message should contain the model name"
+    );
+    // Mode should stay in Chat
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should stay Chat after /status");
+}
+
+#[test]
+fn test_slash_status_command_shows_not_set_when_no_model() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+
+    // No model set
+    state.current_model = None;
+
+    update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Status));
+
+    // Should have exactly one system message
+    assert_eq!(state.messages.len(), 1, "Should have exactly one message");
+    assert!(
+        matches!(&state.messages[0], MessageItem::System { text } if text.contains("Not set")),
+        "Status message should indicate no model is set"
+    );
+}
+
+// ─── Test 8: Slash /models command ─────────────────────────────────────────────
+
+#[test]
+fn test_slash_models_command_shows_guidance() {
+    let mut state = make_state();
+    let mut palette = CommandPalette::new();
+
+    update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Models));
+
+    // Should have exactly one system message with guidance
+    assert_eq!(state.messages.len(), 1, "Should have exactly one message");
+    assert!(
+        matches!(&state.messages[0], MessageItem::System { text } if text.contains("/model") || text.contains("model picker")),
+        "Models message should mention how to switch models"
+    );
+    // Mode should stay in Chat
+    assert_eq!(state.mode, TuiMode::Chat, "Mode should stay Chat after /models");
+}
