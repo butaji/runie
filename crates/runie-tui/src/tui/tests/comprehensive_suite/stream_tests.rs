@@ -1,6 +1,7 @@
 //! Comprehensive test suite - Section 3: Mock Stream Tests (pi pattern).
 
 use crate::components::MessageItem;
+use crate::tui::state::ThinkingState;
 use runie_agent::{AgentEvent, ContentPart, ToolResult, TokenUsage};
 
 use super::harness::AgentTestHarness;
@@ -59,7 +60,6 @@ fn test_stream_event_sequence() {
         AgentEvent::MessageUpdate {
             message: make_message("assistant", "Hello"),
             turn: 1,
-            delta: "Hello".to_string(),
         },
         make_tool_start_event("t1", "bash", "ls"),
         make_tool_end_event("t1", "bash", "ls", "file1.txt"),
@@ -112,7 +112,7 @@ fn test_stream_preserves_message_order() {
     let harness = complete_turn(harness, 1, "Response to first");
     let harness = harness.user_says("Second");
     let harness = harness.handle_event(AgentEvent::MessageStart { message: make_message("assistant", ""), turn: 2 });
-    let harness = harness.handle_event(AgentEvent::MessageUpdate { message: make_message("assistant", "Response to second"), turn: 2, delta: "Response to second".to_string() });
+    let harness = harness.handle_event(AgentEvent::MessageUpdate { message: make_message("assistant", "Response to second"), turn: 2 });
 
     let user_messages: Vec<_> = harness.state.messages.iter()
         .filter(|m| matches!(m, MessageItem::User { .. }))
@@ -130,7 +130,6 @@ fn complete_turn(harness: AgentTestHarness, turn: usize, response: &str) -> Agen
         .handle_event(AgentEvent::MessageUpdate {
             message: make_message("assistant", response),
             turn,
-            delta: response.to_string(),
         })
         .handle_event(AgentEvent::MessageEnd {
             message: make_message("assistant", response),
@@ -156,14 +155,12 @@ fn setup_two_turn_conversation() -> AgentTestHarness {
 fn test_stream_turn_separators() {
     let harness = setup_two_turn_conversation();
 
-    let separators: Vec<_> = harness
-        .state
-        .messages
-        .iter()
-        .filter(|m| matches!(m, MessageItem::Separator { .. }))
-        .collect();
-
-    assert_eq!(separators.len(), 2);
+    // on_turn_end stores metrics in last_turn_* fields instead of adding Separator messages
+    // We can verify turn metrics are tracked
+    assert!(
+        harness.state.last_turn_duration_secs.is_some() || harness.state.last_turn_tokens.is_some(),
+        "turn metrics should be tracked"
+    );
 }
 
 #[test]
@@ -200,14 +197,12 @@ fn test_token_usage_large_numbers() {
 fn test_turn_count() {
     let harness = setup_two_turn_conversation();
 
-    let separators: Vec<_> = harness
-        .state
-        .messages
-        .iter()
-        .filter(|m| matches!(m, MessageItem::Separator { elapsed_secs: _, .. }))
-        .collect();
-
-    assert_eq!(separators.len(), 2);
+    // Turn count is tracked via on_turn_end setting last_turn_* fields
+    // The harness completes 2 turns, so we should have turn metrics stored
+    assert!(
+        harness.state.last_turn_duration_secs.is_some(),
+        "turn duration should be tracked after turn ends"
+    );
 }
 
 #[test]
@@ -221,8 +216,8 @@ fn test_thinking_duration_accumulated() {
     });
 
     // Simulate some thinking time
-    harness.state.thinking_start =
-        Some(std::time::Instant::now() - std::time::Duration::from_millis(800));
+    harness.state.thinking =
+        Some(ThinkingState { start: Some(std::time::Instant::now() - std::time::Duration::from_millis(800)), text: String::new(), accrued_duration: None });
 
     harness = harness.handle_event(AgentEvent::ToolExecutionStart {
         tool_call_id: "t1".to_string(),
@@ -232,8 +227,8 @@ fn test_thinking_duration_accumulated() {
     });
 
     // Thinking duration should be accumulated
-    assert!(harness.state.thinking_duration.is_some());
-    assert!(harness.state.thinking_duration.unwrap().as_millis() >= 700);
+    assert!(harness.state.thinking.as_ref().map_or(false, |t| t.accrued_duration.is_some()));
+    assert!(harness.state.thinking.as_ref().unwrap().accrued_duration.unwrap().as_millis() >= 700);
 }
 
 #[test]

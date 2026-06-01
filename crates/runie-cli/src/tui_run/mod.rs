@@ -163,8 +163,7 @@ async fn initialize_tui(
         crate::context_loader::build_system_prompt(&context_files)
     };
 
-    let config = TuiConfig::default();
-    let mut tui = Tui::new(config)?;
+    let mut tui = Tui::new(TuiConfig::default())?;
 
     let path = if mock {
         "src/components".to_string()

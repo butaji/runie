@@ -8,6 +8,7 @@ use ratatui::{
 };
 use crate::components::panel::Panel;
 use crate::theme::ThemeWrapper;
+use crate::layout::centered_rect;
 use super::{Onboarding, OnboardingStep, render_onboarding_screen};
 
 // ─── Main Render Entry ─────────────────────────────────────────────────────────
@@ -29,12 +30,6 @@ pub fn render_onboarding(onboarding: &Onboarding, area: Rect, buf: &mut Buffer, 
 
 fn theme_color(key: &str, theme: &ThemeWrapper) -> Color {
     theme.color(key).into()
-}
-
-fn centered_rect(area: Rect, width: u16, height: u16) -> Rect {
-    let x = area.x.saturating_add(area.width.saturating_sub(width) / 2);
-    let y = area.y.saturating_add(area.height.saturating_sub(height) / 2);
-    Rect::new(x, y, width.min(area.width), height.min(area.height))
 }
 
 // ─── Welcome Step ─────────────────────────────────────────────────────────────

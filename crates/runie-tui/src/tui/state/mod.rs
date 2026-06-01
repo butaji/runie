@@ -16,7 +16,6 @@ use crossterm::event::KeyEvent;
 pub mod agent;
 pub mod chat;
 pub mod layout;
-pub mod mode;
 pub mod overlay;
 pub mod system;
 
@@ -24,7 +23,6 @@ pub mod system;
 pub use agent::AgentState;
 pub use chat::ChatState;
 pub use layout::LayoutState;
-pub use mode::UiModeState;
 pub use overlay::OverlayState;
 pub use system::SystemState;
 
@@ -36,12 +34,22 @@ pub mod enums;
 pub use types::*;
 pub use enums::*;
 
+// ─── Thinking state ────────────────────────────────────────────────────────────
+
+/// Collapsed thinking state - replaces 4 separate fields
+#[derive(Clone, Default)]
+pub struct ThinkingState {
+    pub start: Option<std::time::Instant>,
+    pub text: String,
+    /// Accumulated thinking duration before tool interruptions
+    pub accrued_duration: Option<std::time::Duration>,
+}
+
 // ─── AppState (using sub-states) ──────────────────────────────────────────────
 
 /// AppState is the main application state, decomposed into focused sub-states.
 /// 
 /// For backward compatibility, fields are kept at the top level AND organized into sub-states.
-/// This allows both `state.messages` (backward compat) and `state.chat.messages` (new API).
 #[derive(Clone)]
 pub struct AppState {
     // Flat fields for backward compatibility (mirror sub-state contents)
@@ -59,12 +67,10 @@ pub struct AppState {
     pub session_token_usage: TokenUsage,
     pub agent_start_time: Option<std::time::Instant>,
     pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
-    pub thinking_start: Option<std::time::Instant>,
-    pub thinking_duration: Option<std::time::Duration>,
-    pub is_thinking: bool,
-    pub current_thinking_text: String,
+    pub thinking: Option<ThinkingState>,
 
     pub show_sidebar: bool,
+    pub show_thoughts: bool,
     pub terminal_size: (u16, u16),
     pub context: ContextState,
 
@@ -86,6 +92,11 @@ pub struct AppState {
     pub mode: TuiMode,
 
     pub top_bar: TopBarState,
+
+    // Turn tracking for global tags display
+    pub last_turn_duration_secs: Option<u64>,
+    pub last_turn_tokens: Option<usize>,
+    pub last_turn_tool_calls: Option<usize>,
 }
 
 impl Default for AppState {
@@ -104,11 +115,9 @@ impl Default for AppState {
             session_token_usage: TokenUsage::default(),
             agent_start_time: None,
             background_jobs: Vec::new(),
-            thinking_start: None,
-            thinking_duration: None,
-            is_thinking: false,
-            current_thinking_text: String::new(),
+            thinking: None,
             show_sidebar: false,
+            show_thoughts: false,
             terminal_size: (0, 0),
             context: ContextState::default(),
             running: true,
@@ -126,71 +135,9 @@ impl Default for AppState {
             onboarding: None,
             mode: TuiMode::Chat,
             top_bar: TopBarState::default(),
-        }
-    }
-}
-
-// ─── RenderState ──────────────────────────────────────────────────────────────
-
-/// Render state containing only the fields needed for rendering.
-/// This avoids cloning the entire AppState each frame.
-#[derive(Clone)]
-pub struct RenderState {
-    pub messages: Vec<crate::components::MessageItem>,
-    pub textarea: ratatui_textarea::TextArea<'static>,
-    pub input_right_info: String,
-    pub mode: TuiMode,
-    pub running: bool,
-    pub show_sidebar: bool,
-    pub agent_running: bool,
-    pub current_model: Option<String>,
-    pub context: ContextState,
-    pub permission_modal: PermissionModalState,
-    pub command_palette: CommandPaletteState,
-    pub scroll: ScrollState,
-    pub animation: AnimationState,
-    pub diff_viewer: Option<DiffViewer>,
-    pub session_token_usage: TokenUsage,
-    pub session_tree: crate::components::SessionTreeNavigator,
-    pub background_jobs: Vec<crate::components::status_bar::BackgroundJob>,
-    pub onboarding: Option<Onboarding>,
-    pub clear_input_confirm: ClearInputConfirm,
-    pub model_picker: Option<ModelPicker>,
-    pub status_header: Option<String>,
-    pub status_details: Option<String>,
-    pub status_start_time: Option<std::time::Instant>,
-    pub mock_mode: bool,
-    pub top_bar: TopBarState,
-}
-
-impl RenderState {
-    pub fn from(state: &AppState) -> Self {
-        Self {
-            messages: state.messages.clone(),
-            textarea: state.textarea.clone(),
-            input_right_info: state.input_right_info.clone(),
-            mode: state.mode.clone(),
-            running: state.running,
-            show_sidebar: state.show_sidebar,
-            agent_running: state.agent_running,
-            current_model: state.current_model.clone(),
-            context: state.context.clone(),
-            permission_modal: state.permission_modal.clone(),
-            command_palette: state.command_palette.clone(),
-            scroll: state.scroll.clone(),
-            animation: state.animation.clone(),
-            diff_viewer: state.diff_viewer.clone(),
-            session_token_usage: state.session_token_usage.clone(),
-            session_tree: state.session_tree.clone(),
-            background_jobs: state.background_jobs.clone(),
-            onboarding: state.onboarding.clone(),
-            clear_input_confirm: state.clear_input_confirm.clone(),
-            model_picker: state.model_picker.clone(),
-            status_header: state.status_header.clone(),
-            status_details: state.status_details.clone(),
-            status_start_time: state.status_start_time,
-            mock_mode: state.mock_mode,
-            top_bar: state.top_bar.clone(),
+            last_turn_duration_secs: None,
+            last_turn_tokens: None,
+            last_turn_tool_calls: None,
         }
     }
 }
@@ -202,3 +149,5 @@ impl TryFrom<AgentEvent> for Msg {
         Ok(Msg::AgentEvent(event))
     }
 }
+
+

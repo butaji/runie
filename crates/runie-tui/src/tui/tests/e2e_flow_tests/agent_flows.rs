@@ -19,7 +19,6 @@ fn test_e2e_agent_message_start_end() {
     update(&mut state, &mut palette, Msg::AgentEvent(AgentEvent::MessageUpdate {
         message: make_agent_message("assistant", "Hello"),
         turn: 1,
-        delta: "Hello".to_string(),
     }));
 
     // Simulate message end

@@ -280,7 +280,7 @@ fn test_message_update_replaces_placeholder() {
     let harness = harness.submit_user_message("Hello");
 
     let harness = harness.handle_agent_event(AgentEvent::MessageStart { message: agent_message("assistant", ""), turn: 1 });
-    let harness = harness.handle_agent_event(AgentEvent::MessageUpdate { message: agent_message("assistant", "Hello, world!"), turn: 1, delta: "Hello, world!".to_string() });
+    let harness = harness.handle_agent_event(AgentEvent::MessageUpdate { message: agent_message("assistant", "Hello, world!"), turn: 1 });
 
     let assistant_count = harness.state.messages.iter().filter(|m| matches!(m, MessageItem::Assistant { .. })).count();
     assert_eq!(assistant_count, 1, "should still have exactly 1 assistant message (updated in place)");
@@ -304,7 +304,7 @@ fn test_single_turn_streaming_order() {
     let harness = harness.submit_user_message("Hello");
 
     let harness = harness.handle_agent_event(AgentEvent::MessageStart { message: agent_message("assistant", ""), turn: 1 });
-    let harness = harness.handle_agent_event(AgentEvent::MessageUpdate { message: agent_message("assistant", "Response"), turn: 1, delta: "Response".to_string() });
+    let harness = harness.handle_agent_event(AgentEvent::MessageUpdate { message: agent_message("assistant", "Response"), turn: 1 });
     let harness = harness.handle_agent_event(AgentEvent::MessageEnd { message: agent_message("assistant", "Response"), turn: 1 });
 
     let user_count = harness.state.messages.iter().filter(|m| matches!(m, MessageItem::User { .. })).count();

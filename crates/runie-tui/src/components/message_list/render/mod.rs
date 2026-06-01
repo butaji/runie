@@ -220,7 +220,7 @@ pub fn render_single_msg_feed(
     _accent_primary: ratatui::style::Color,
     text_secondary: ratatui::style::Color,
     text_muted: ratatui::style::Color,
-    _text_dim: ratatui::style::Color,
+    text_dim: ratatui::style::Color,
     _success: ratatui::style::Color,
     error: ratatui::style::Color,
     _code_path: ratatui::style::Color,
@@ -248,6 +248,9 @@ pub fn render_single_msg_feed(
         }
         FeedItem::SystemNotice { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)
+        }
+        FeedItem::Separator { elapsed_secs, tool_calls, tokens_used } => {
+            render_separator(*elapsed_secs, *tool_calls, *tokens_used, area, row, margin_x, buf, text_dim)
         }
     }
 }

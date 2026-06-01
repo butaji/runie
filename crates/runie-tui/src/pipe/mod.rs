@@ -1,33 +1,18 @@
-//! Pipe architecture for unidirectional data flow.
-//!
-//! ```text
-//! InputPipe → StatePipe → ViewModelPipe → RenderPipe
-//!     │           │              │            │
-//!     ↓           ↓              ↓            ↓
-//!  Events    StateChange     ViewModels   Terminal
-//! ```
+//! Pipe modules — kept for organization only (Pipe trait removed).
 
 mod input_msg;
 mod render;
-mod state;
 mod view_model;
 
 #[cfg(test)]
 mod tests;
 
 pub use input_msg::InputMsg;
-pub use state::StatePipe;
 pub use view_model::ViewModelPipe;
 pub use render::RenderPipe;
 
 // Re-export Cmd from tui for convenience in StateChange
 pub use crate::tui::Cmd;
-
-/// Pipe trait — unidirectional transformation
-pub trait Pipe<Input> {
-    type Output;
-    fn pipe(&self, input: Input) -> Self::Output;
-}
 
 /// StateChange represents state mutations + side effects
 #[derive(Debug, Clone, Default)]

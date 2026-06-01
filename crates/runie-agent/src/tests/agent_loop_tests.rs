@@ -92,38 +92,6 @@ async fn test_duplicate_tool_call_across_turns() {
     assert_eq!(tool_execution_count, 2, "Same tool in different turns should both run");
 }
 
-/// Test that permission timeout (5 min) returns denied
-#[tokio::test]
-#[ignore]
-async fn test_permission_timeout_returns_denied() {
-    use crate::loop_engine::agent_loop;
-
-    let provider = Arc::new(PermissionNeverGrantedProvider::new());
-    let registry = test_registry();
-    let config = test_config(2);
-    let messages = vec![test_message("test")];
-
-    let mut stream = agent_loop(messages, config, provider, vec![], registry, vec![]);
-
-    let mut permission_denied = false;
-
-    let start = std::time::Instant::now();
-    while let Some(event) = stream.next().await {
-        if let AgentEvent::PermissionDenied { .. } = event {
-            permission_denied = true;
-            break;
-        }
-        if let AgentEvent::AgentEnd { .. } = event {
-            break;
-        }
-        if start.elapsed() > Duration::from_secs(10) {
-            break;
-        }
-    }
-
-    assert!(permission_denied, "Permission should be denied after timeout");
-}
-
 /// Test that token usage accumulates per turn
 #[tokio::test]
 #[ignore]

@@ -60,56 +60,31 @@ pub(crate) async fn send_permission_request<M: TryFrom<AgentEvent> + Send + 'sta
     }).await;
 }
 
-/// Handle the permission decision, sending appropriate events.
+/// Handle the permission decision.
 /// Returns true if tool should execute, false otherwise.
 pub(crate) async fn handle_permission_decision<M: TryFrom<AgentEvent> + Send + 'static>(
     decision: Result<Option<PermissionDecision>, tokio::time::error::Elapsed>,
     tool_call_id: &str,
-    tool_name: &str,
-    tool_args: &str,
-    msg_tx: &mpsc::Sender<M>,
+    _tool_name: &str,
+    _tool_args: &str,
+    _msg_tx: &mpsc::Sender<M>,
 ) -> bool {
     match decision {
-        Ok(Some(PermissionDecision::Allow { tool_call_id: ref tid, ref tool_name, ref tool_args })) if tid == tool_call_id => {
-            crate::loop_engine::streaming::send_event(msg_tx, AgentEvent::PermissionGranted {
-                tool_call_id: tool_call_id.to_string(),
-                tool_name: tool_name.to_string(),
-                tool_args: tool_args.to_string(),
-            }).await;
+        Ok(Some(PermissionDecision::Allow { tool_call_id: ref tid, .. })) if tid == tool_call_id => {
             true
         }
-        Ok(Some(PermissionDecision::AllowAlways { tool_call_id: ref tid, ref tool_name, ref tool_args })) if tid == tool_call_id => {
+        Ok(Some(PermissionDecision::AllowAlways { tool_call_id: ref tid, .. })) if tid == tool_call_id => {
             // Cache the tool name for future auto-allow - caller should handle this
-            crate::loop_engine::streaming::send_event(msg_tx, AgentEvent::PermissionGranted {
-                tool_call_id: tool_call_id.to_string(),
-                tool_name: tool_name.to_string(),
-                tool_args: tool_args.to_string(),
-            }).await;
             true
         }
-        Ok(Some(PermissionDecision::Skip { tool_call_id: ref tid, ref tool_name, ref tool_args })) if tid == tool_call_id => {
-            crate::loop_engine::streaming::send_event(msg_tx, AgentEvent::PermissionDenied {
-                tool_call_id: tool_call_id.to_string(),
-                tool_name: tool_name.to_string(),
-                tool_args: tool_args.to_string(),
-            }).await;
+        Ok(Some(PermissionDecision::Skip { tool_call_id: ref tid, .. })) if tid == tool_call_id => {
             false // Skip this tool but continue with others
         }
-        Ok(Some(PermissionDecision::Deny { tool_call_id: ref _tid, ref tool_name, ref tool_args })) => {
-            crate::loop_engine::streaming::send_event(msg_tx, AgentEvent::PermissionDenied {
-                tool_call_id: tool_call_id.to_string(),
-                tool_name: tool_name.to_string(),
-                tool_args: tool_args.to_string(),
-            }).await;
+        Ok(Some(PermissionDecision::Deny { .. })) => {
             false
         }
         _ => {
             // Timeout, mismatch, or deny
-            crate::loop_engine::streaming::send_event(msg_tx, AgentEvent::PermissionDenied {
-                tool_call_id: tool_call_id.to_string(),
-                tool_name: tool_name.to_string(),
-                tool_args: tool_args.to_string(),
-            }).await;
             false
         }
     }

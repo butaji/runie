@@ -25,13 +25,26 @@ pub fn event_to_msg(event: Event, state: &AppState) -> Vec<Msg> {
 
 pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     // P0-3/P0-4 FIX: Blocking modes intercept ALL keys (no global hotkeys)
-    if let Some(msg) = blocking_mode_handler(&key, &state.mode, state) {
-        return msg;
+    if let Some(blocking_result) = blocking_mode_handler(&key, &state.mode, state) {
+        // blocking_result is Option<Msg>:
+        // Some(msg) = blocking mode handled the key
+        // None = blocking mode exists but didn't handle this key
+        if let Some(msg) = blocking_result {
+            return Some(msg);
+        }
+        // Blocking mode exists but didn't handle -> return None
+        return None;
     }
     
     // Global hotkeys: active in all non-blocking modes
-    if let Some(msg) = global_hotkey_handler(&key, state) {
-        return msg;
+    if let Some(global_result) = global_hotkey_handler(&key, state) {
+        // Some(msg) = global handler handled the key
+        // None = no global hotkey matched
+        if let Some(msg) = global_result {
+            return Some(msg);
+        }
+        // No global hotkey matched -> continue to mode-specific
+        return None;
     }
 
     // Route to mode-specific handler (non-blocking modes only)
@@ -109,8 +122,8 @@ fn key_to_overlay_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Opti
     }
     match key.code {
         KeyCode::Esc => Some(Msg::CloseModal),
-        KeyCode::Up | KeyCode::Char('k') => Some(Msg::SelectUp),
-        KeyCode::Down | KeyCode::Char('j') => Some(Msg::SelectDown),
+        KeyCode::Up | KeyCode::Char('k') if key.modifiers == KeyModifiers::NONE => Some(Msg::SelectUp),
+        KeyCode::Down | KeyCode::Char('j') if key.modifiers == KeyModifiers::NONE => Some(Msg::SelectDown),
         KeyCode::Enter => Some(Msg::SelectConfirm),
         _ => None,
     }
@@ -128,6 +141,10 @@ fn key_to_model_picker_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 
 fn key_to_chat_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    // Handle Ctrl+Shift+E before the normal ctrl combo check
+    if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('e')) {
+        return Some(Msg::ToggleThoughts);
+    }
     if is_ctrl_combo(key) {
         return ctrl_chat_key(key);
     }
@@ -150,6 +167,7 @@ fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Char('o') => Some(Msg::CopyLastResponse),
         KeyCode::Char('l') => Some(Msg::ClearChat),
         KeyCode::Char('q') => Some(Msg::Quit),
+        KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Msg::ToggleThoughts),
         _ => Some(Msg::TextareaKey(key)),
     }
 }

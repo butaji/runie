@@ -253,9 +253,7 @@ fn cancel_running_agent(state: &mut AppState) {
         return;
     }
     state.agent_running = false;
-    state.is_thinking = false;
-    state.thinking_start = None;
-    state.thinking_duration = None;
+    state.thinking = None;
     state.status_header = None;
     state.status_details = None;
     state.status_start_time = None;
@@ -332,8 +330,11 @@ fn add_user_and_placeholder(state: &mut AppState, text: &str) {
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
         });
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now());
+    state.thinking = Some(crate::tui::state::ThinkingState {
+        start: Some(Instant::now()),
+        text: String::new(),
+        accrued_duration: None,
+    });
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
 }

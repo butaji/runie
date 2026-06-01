@@ -17,7 +17,6 @@ use crate::components::agent_list::AgentListBuilder;
 use crate::components::command_palette::CommandPaletteBuilder;
 use crate::components::overlay::OverlayBuilder;
 use crate::components::message_list::PlanStatus;
-use super::Pipe;
 
 /// ViewModelPipe transforms AppState into ViewModels using builders.
 pub struct ViewModelPipe;
@@ -29,18 +28,8 @@ impl ViewModelPipe {
     pub fn new() -> Self {
         Self
     }
-}
 
-impl Default for ViewModelPipe {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Pipe<&AppState> for ViewModelPipe {
-    type Output = ViewModels;
-
-    fn pipe(&self, state: &AppState) -> ViewModels {
+    pub fn build(&self, state: &AppState) -> ViewModels {
         ViewModels {
             global_tags: build_global_tags(state),
             message_list: build_message_list(state),
@@ -55,6 +44,12 @@ impl Pipe<&AppState> for ViewModelPipe {
             onboarding: build_onboarding(state),
             top_bar: build_top_bar(state),
         }
+    }
+}
+
+impl Default for ViewModelPipe {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -86,9 +81,9 @@ fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
             return GlobalTagsViewModel::error(status);
         }
         let time = state.status_details.as_deref().unwrap_or("0s");
-        GlobalTagsViewModel::running(status, time, tokens)
+        GlobalTagsViewModel::running(status, time, tokens, state.last_turn_duration_secs, state.last_turn_tokens, state.last_turn_tool_calls)
     } else {
-        GlobalTagsViewModel::idle(model, tokens, cost)
+        GlobalTagsViewModel::idle()
     }
 }
 

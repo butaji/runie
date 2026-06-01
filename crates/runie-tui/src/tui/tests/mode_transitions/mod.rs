@@ -14,7 +14,7 @@
 #![cfg(test)]
 
 use crate::components::CommandPalette;
-use crate::tui::state::{AppState, Msg, TuiMode, ScrollState, ContextState, PermissionModalState, CommandPaletteState, AnimationState, TopBarState, ClearInputConfirm};
+use crate::tui::state::{AppState, Msg, TuiMode, ScrollState, ContextState, PermissionModalState, CommandPaletteState, AnimationState, TopBarState, ClearInputConfirm, OnboardingStep};
 use crate::tui::update::update;
 use crate::tui::events::event_to_msg;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart, ToolResult, PermissionDecision, TokenUsage as AgentTokenUsage};
@@ -60,12 +60,13 @@ pub fn make_state() -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 
@@ -101,12 +102,13 @@ pub fn make_state_with_text(text: &str) -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 
@@ -142,12 +144,13 @@ pub fn make_state_with_messages(messages: Vec<MessageItem>) -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 

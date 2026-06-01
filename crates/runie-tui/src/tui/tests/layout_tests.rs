@@ -27,7 +27,7 @@ fn test_layout_areas_in_correct_order() {
 fn test_global_tags_renders_in_global_tags_area() {
     let mut buf = Buffer::empty(Rect::new(0, 0, 80, 24));
     let area = Rect::new(0, 10, 80, 1); // y=10 is global tags area
-    let vm = GlobalTagsViewModel::idle("openai/gpt-4o", 0, 0.0);
+    let vm = GlobalTagsViewModel::idle("openai/gpt-4o", 0, 0.0, None, None, None);
 
     Widget::render(vm, area, &mut buf);
 
@@ -49,7 +49,7 @@ fn test_top_bar_and_global_tags_are_separate() {
     };
 
     // GlobalTagsViewModel has model info in right field
-    let global_tags = GlobalTagsViewModel::idle("gpt-4o", 0, 0.0);
+    let global_tags = GlobalTagsViewModel::idle("gpt-4o", 0, 0.0, None, None, None);
 
     // Top bar has repo
     assert_eq!(top_bar.repo, "runie");

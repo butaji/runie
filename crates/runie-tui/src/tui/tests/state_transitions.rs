@@ -9,6 +9,7 @@
 
 use crate::components::MessageItem;
 use crate::tui::state::AppState;
+use crate::tui::state::ThinkingState;
 use crate::tui::update::agent;
 use runie_agent::{AgentEvent, AgentMessage, ContentPart::Text, TokenUsage as AgentTokenUsage};
 use std::time::Instant;
@@ -48,7 +49,7 @@ fn test_message_start_sets_thinking() {
             turn: 1,
         },
     );
-    assert!(state.is_thinking, "is_thinking should be true");
+    assert!(state.thinking.is_some(), "thinking should be Some");
     assert_eq!(state.status_header, Some("Thinking".to_string()), "status_header");
 }
 
@@ -57,8 +58,7 @@ fn test_message_start_sets_thinking() {
 fn test_tool_start_pauses_thinking() {
     let mut state = AppState::default();
     state.agent_running = true;
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now());
+    state.thinking = Some(ThinkingState { start: Some(Instant::now()), text: String::new(), accrued_duration: None });
     agent::handle_agent_event(
         &mut state,
         AgentEvent::ToolExecutionStart {
@@ -68,8 +68,8 @@ fn test_tool_start_pauses_thinking() {
             turn: 1,
         },
     );
-    assert!(!state.is_thinking, "is_thinking should be false");
-    assert!(state.thinking_duration.is_some(), "thinking_duration should be set");
+    assert!(state.thinking.is_none(), "thinking should be None");
+    assert!(state.thinking.as_ref().map_or(false, |t| t.accrued_duration.is_some()), "thinking.accrued_duration should be set");
     assert_eq!(state.status_header, Some("Running".to_string()), "status_header");
 }
 
@@ -78,8 +78,7 @@ fn test_tool_start_pauses_thinking() {
 fn test_agent_end_clears_all() {
     let mut state = AppState::default();
     state.agent_running = true;
-    state.is_thinking = true;
-    state.thinking_start = Some(Instant::now());
+    state.thinking = Some(ThinkingState { start: Some(Instant::now()), text: String::new(), accrued_duration: None });
     state.status_header = Some("Thinking".to_string());
     state.status_start_time = Some(Instant::now());
     agent::handle_agent_event(
@@ -91,8 +90,8 @@ fn test_agent_end_clears_all() {
         },
     );
     assert!(!state.agent_running, "agent_running should be false");
-    assert!(!state.is_thinking, "is_thinking should be false");
-    assert!(state.thinking_start.is_none(), "thinking_start should be none");
+    assert!(state.thinking.is_none(), "thinking should be None");
+    assert!(state.thinking.as_ref().map_or(true, |t| t.start.is_none()), "thinking.start should be none");
     assert!(state.status_header.is_none(), "status_header should be none");
     assert!(state.status_start_time.is_none(), "status_start_time should be none");
 }
@@ -191,7 +190,6 @@ fn test_message_update_fills_placeholder() {
         AgentEvent::MessageUpdate {
             message: agent_message("assistant", "Hello"),
             turn: 1,
-            delta: "Hello".to_string(),
         },
     );
     let has_hello = state.messages.iter().any(|m| matches!(
@@ -206,7 +204,7 @@ fn test_message_update_fills_placeholder() {
 fn test_tool_start_adds_tool_call_message() {
     let mut state = AppState::default();
     state.agent_running = true;
-    state.is_thinking = true;
+    state.thinking = Some(ThinkingState { start: Some(Instant::now()), text: String::new(), accrued_duration: None });
     agent::handle_agent_event(
         &mut state,
         AgentEvent::ToolExecutionStart {

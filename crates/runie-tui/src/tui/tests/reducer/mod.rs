@@ -40,17 +40,18 @@ pub fn make_state() -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
     }
 }
 
 pub fn make_state_with_text(text: &str) -> AppState {
-    let state = AppState {
+    AppState {
         messages: vec![],
         textarea: TextArea::new(vec![text.to_string()]),
         input_right_info: String::new(),
@@ -80,14 +81,14 @@ pub fn make_state_with_text(text: &str) -> AppState {
         status_header: None,
         status_details: None,
         status_start_time: None,
-        thinking_start: None,
-        thinking_duration: None,
-        is_thinking: false,
-        current_thinking_text: String::new(),
+        thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
-    };
-    state
+        last_turn_duration_secs: None,
+        last_turn_tokens: None,
+        last_turn_tool_calls: None,
+        show_thoughts: false,
+    }
 }
 
 pub fn type_char(state: &mut AppState, c: char) {
