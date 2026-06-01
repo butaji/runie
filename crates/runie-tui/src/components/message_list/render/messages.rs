@@ -377,7 +377,7 @@ pub fn render_empty_state(
     text_x: u16,
 ) {
     let center_y = area.height / 2;
-    let available_width = area.width - text_x + area.x;
+    let available_width = area.width.saturating_sub(text_x).saturating_add(area.x);
 
     let title = Paragraph::new(Line::raw("runie").style(Style::default().fg(text_dim).add_modifier(Modifier::BOLD)))
         .style(Style::default().fg(text_dim));
