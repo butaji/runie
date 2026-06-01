@@ -315,7 +315,6 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
 
 /// Handle turn end - add separator with runtime metrics
 fn on_turn_end(state: &mut AppState) {
-    // Track turn info for global tags display instead of adding separator to feed
     if let Some(start_time) = state.agent_start_time {
         let elapsed = start_time.elapsed().as_secs();
         let tool_calls = state.messages.iter().filter(|m| {
@@ -325,6 +324,14 @@ fn on_turn_end(state: &mut AppState) {
         state.last_turn_duration_secs = Some(elapsed);
         state.last_turn_tokens = Some(state.session_token_usage.total_tokens);
         state.last_turn_tool_calls = Some(tool_calls);
+        state.turn_success = Some(true);
+
+        // Add separator to feed with grok-style metrics
+        state.messages.push(MessageItem::Separator {
+            elapsed_secs: elapsed,
+            tool_calls,
+            tokens_used: Some(state.session_token_usage.total_tokens),
+        });
     }
 }
 

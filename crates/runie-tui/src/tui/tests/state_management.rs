@@ -42,7 +42,8 @@ fn make_state() -> AppState {
         top_bar: crate::tui::state::TopBarState::default(),
         last_turn_duration_secs: None,
         last_turn_tokens: None,
-        last_turn_tool_calls: None,
+            last_turn_tool_calls: None,
+            turn_success: None,
         show_thoughts: false,
     }
 }
@@ -84,7 +85,8 @@ fn make_state_with_text(text: &str) -> AppState {
         top_bar: crate::tui::state::TopBarState::default(),
         last_turn_duration_secs: None,
         last_turn_tokens: None,
-        last_turn_tool_calls: None,
+            last_turn_tool_calls: None,
+            turn_success: None,
         show_thoughts: false,
     }
 }

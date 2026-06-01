@@ -50,6 +50,7 @@ pub fn render_separator(
     elapsed_secs: u64,
     tool_calls: usize,
     tokens_used: Option<usize>,
+    success: bool,
     area: Rect,
     row: u16,
     margin_x: u16,
@@ -64,14 +65,12 @@ pub fn render_separator(
         format!("{}h {:02}m", elapsed_secs / 3600, (elapsed_secs % 3600) / 60)
     };
 
-    let mut tag = format!("[turn: {}", elapsed_str);
-    if tool_calls > 0 {
-        tag.push_str(&format!(", {}tc", tool_calls));
-    }
+    let mut parts = vec![elapsed_str.clone()];
     if let Some(tokens) = tokens_used {
-        tag.push_str(&format!(", ⇣{}", format_token_count(tokens)));
+        parts.push(format!("⇣{}", format_token_count(tokens)));
     }
-    tag.push(']');
+    parts.push(if success { "[✓]".to_string() } else { "[✗]".to_string() });
+    let tag = parts.join(" ");
 
     let tag_width = tag.len() as u16;
     let content_width = area.width - margin_x + area.x - 2;

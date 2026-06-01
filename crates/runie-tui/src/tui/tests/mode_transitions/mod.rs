@@ -63,9 +63,8 @@ pub fn make_state() -> AppState {
         thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
-        last_turn_duration_secs: None,
-        last_turn_tokens: None,
-        last_turn_tool_calls: None,
+        last_turn_duration_secs: None, last_turn_tokens: None,
+        last_turn_tool_calls: None, turn_success: None,
         show_thoughts: false,
     }
 }
@@ -105,9 +104,8 @@ pub fn make_state_with_text(text: &str) -> AppState {
         thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
-        last_turn_duration_secs: None,
-        last_turn_tokens: None,
-        last_turn_tool_calls: None,
+        last_turn_duration_secs: None, last_turn_tokens: None,
+        last_turn_tool_calls: None, turn_success: None,
         show_thoughts: false,
     }
 }
@@ -147,9 +145,8 @@ pub fn make_state_with_messages(messages: Vec<MessageItem>) -> AppState {
         thinking: None,
         mock_mode: false,
         top_bar: TopBarState::default(),
-        last_turn_duration_secs: None,
-        last_turn_tokens: None,
-        last_turn_tool_calls: None,
+        last_turn_duration_secs: None, last_turn_tokens: None,
+        last_turn_tool_calls: None, turn_success: None,
         show_thoughts: false,
     }
 }
