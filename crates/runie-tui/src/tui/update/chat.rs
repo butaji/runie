@@ -60,6 +60,11 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
         return handle_slash_menu_msg(state, msg);
     }
 
+    // Shortcuts panel - group
+    if matches!(msg, Msg::OpenShortcutsPanel | Msg::CloseShortcutsPanel | Msg::ShortcutsPanelUp | Msg::ShortcutsPanelDown | Msg::ShortcutsPanelToggleSection | Msg::ShortcutsPanelToggleFilter | Msg::ShortcutsPanelFilterInput(_) | Msg::ShortcutsPanelFilterBackspace) {
+        return handle_shortcuts_panel_msg(state, msg);
+    }
+
     vec![]
 }
 
@@ -156,6 +161,51 @@ fn update_slash_menu_from_input(state: &mut AppState) {
         }
     } else {
         state.slash_menu.close();
+    }
+}
+
+fn handle_shortcuts_panel_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::OpenShortcutsPanel => {
+            state.shortcuts_panel.open();
+            vec![]
+        }
+        Msg::CloseShortcutsPanel => {
+            state.shortcuts_panel.close();
+            vec![]
+        }
+        Msg::ShortcutsPanelUp => {
+            state.shortcuts_panel.move_up();
+            vec![]
+        }
+        Msg::ShortcutsPanelDown => {
+            state.shortcuts_panel.move_down();
+            vec![]
+        }
+        Msg::ShortcutsPanelToggleSection => {
+            state.shortcuts_panel.toggle_selected_section();
+            vec![]
+        }
+        Msg::ShortcutsPanelToggleFilter => {
+            state.shortcuts_panel.toggle_filter();
+            vec![]
+        }
+        Msg::ShortcutsPanelFilterInput(c) => {
+            if state.shortcuts_panel.filter_mode {
+                let new_filter = format!("{}{}", state.shortcuts_panel.filter, c);
+                state.shortcuts_panel.set_filter(&new_filter);
+            }
+            vec![]
+        }
+        Msg::ShortcutsPanelFilterBackspace => {
+            if state.shortcuts_panel.filter_mode {
+                let new_filter = state.shortcuts_panel.filter.chars().next_back().map(|_| state.shortcuts_panel.filter[..state.shortcuts_panel.filter.len()-1].to_string()).unwrap_or_default();
+                state.shortcuts_panel.set_filter(&new_filter);
+            }
+            vec![]
+        }
+        _ => vec![],
     }
 }
 
