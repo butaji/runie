@@ -1,12 +1,15 @@
 //! Agent loop engine.
 
 pub mod context;
+pub mod permission_state;
 pub mod permissions;
 pub mod streaming;
 pub mod tools;
 pub mod run;
 
 mod tests;
+
+pub use permission_state::PermissionState;
 
 // Re-export for tests (only needed in test builds)
 #[cfg(test)]
@@ -22,7 +25,7 @@ use runie_tools::ToolRegistry;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context as TaskContext, Poll};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
 /// Calculate estimated context window usage as a percentage.
 pub(crate) fn calculate_context_window_usage(messages: &[AgentMessage], context_window: usize) -> f32 {
@@ -145,15 +148,13 @@ pub fn agent_loop(
     hooks: Vec<Arc<dyn Hook>>,
 ) -> AgentEventStream {
     let (event_tx, event_rx) = mpsc::channel::<AgentEvent>(128);
-    let (perm_tx, perm_rx) = mpsc::channel::<PermissionDecision>(1);
-    let permission_state = Arc::new(Mutex::new(None));
+    let (perm_tx, mut perm_rx) = mpsc::channel::<PermissionDecision>(1);
+    let permission_state = PermissionState::new();
     let permission_state_clone = permission_state.clone();
 
     tokio::spawn(async move {
-        let mut perm_rx = perm_rx;
         while let Some(decision) = perm_rx.recv().await {
-            let mut state = permission_state_clone.lock().await;
-            *state = Some(decision);
+            permission_state_clone.resolve(decision).await;
         }
     });
 

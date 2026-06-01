@@ -17,8 +17,8 @@ use crate::{
 };
 use runie_agent::events::AgentEvent;
 use runie_agent::PermissionDecision;
+use runie_agent::loop_engine::PermissionState;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 pub struct TuiConfig {
     pub theme: ThemeWrapper,
@@ -35,7 +35,7 @@ pub struct Tui {
     render_pipe: RenderPipe,
     action_log: VecDeque<Msg>,
     action_log_capacity: usize,
-    pub permission_state: Arc<Mutex<Option<PermissionDecision>>>,
+    pub permission_state: Arc<PermissionState>,
 }
 
 impl Default for TuiConfig {
@@ -104,7 +104,7 @@ impl Tui {
         let state_pipe = crate::pipe::StatePipe::new(state);
         let view_model_pipe = ViewModelPipe::new();
         let render_pipe = RenderPipe::new();
-        let permission_state = Arc::new(Mutex::new(None));
+        let permission_state = PermissionState::new();
 
         Ok(Self {
             config,
@@ -193,13 +193,11 @@ impl Tui {
     }
 
     pub async fn set_permission(&self, decision: PermissionDecision) {
-        let mut guard = self.permission_state.lock().await;
-        *guard = Some(decision);
+        self.permission_state.resolve(decision).await;
     }
 
     pub async fn clear_permission(&self) {
-        let mut guard = self.permission_state.lock().await;
-        *guard = None;
+        self.permission_state.clear().await;
     }
 }
 

@@ -1,11 +1,11 @@
 use crate::events::*;
 use crate::AgentMessage;
+use crate::loop_engine::permission_state::PermissionState;
 use chrono::Utc;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
-use tokio::time::timeout;
 use tokio::sync::mpsc;
+use tokio::time::timeout;
 
 /// Request permission for a tool call, waiting for user decision.
 /// Returns true if the tool should execute, false otherwise.
@@ -16,7 +16,7 @@ pub(crate) async fn request_permission<M: TryFrom<AgentEvent> + Send + 'static>(
     tool_description: String,
     context_window_usage: f32,
     turn: usize,
-    permission_state: Arc<Mutex<Option<PermissionDecision>>>,
+    permission_state: Arc<PermissionState>,
     msg_tx: &mpsc::Sender<M>,
 ) -> bool {
     // Send permission request
@@ -30,18 +30,11 @@ pub(crate) async fn request_permission<M: TryFrom<AgentEvent> + Send + 'static>(
         context_window_usage,
     ).await;
 
-    // Wait for permission decision by polling shared state
+    // Wait for permission decision, notified via PermissionState. Falls back
+    // to deny after 5 minutes.
     let decision = timeout(
-        Duration::from_secs(300), // 5 minute timeout
-        async {
-            loop {
-                tokio::time::sleep(Duration::from_millis(100)).await;
-                let permission = permission_state.lock().await.take();
-                if permission.is_some() {
-                    break permission;
-                }
-            }
-        }
+        Duration::from_secs(300),
+        permission_state.wait(),
     ).await;
 
     handle_permission_decision(decision, tool_call_id, tool_name, tool_args, msg_tx).await
