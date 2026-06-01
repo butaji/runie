@@ -47,7 +47,17 @@ fn make_state() -> AppState {
             slash_menu: crate::components::SlashMenu::new(),
             shortcuts_panel: crate::components::ShortcutsPanel::new(),
             settings_modal: crate::components::SettingsModal::new(),
+            home_screen: crate::components::HomeScreen::new(),
         show_thoughts: false,
+            history_search_query: String::new(),
+            history_search_matches: Vec::new(),
+            history_search_index: 0,
+            file_picker: crate::components::FilePicker::new(),
+            permission_mode: crate::tui::state::PermissionMode::Normal,
+            plan_modal: crate::components::PlanModal::new(),
+            allowed_tools: std::collections::HashSet::new(),
+            allowed_categories: std::collections::HashSet::new(),
+            context_usage_modal: crate::components::ContextUsageModal::new(),
     }
 }
 
@@ -93,11 +103,20 @@ fn make_state_with_text(text: &str) -> AppState {
             slash_menu: crate::components::SlashMenu::new(),
             shortcuts_panel: crate::components::ShortcutsPanel::new(),
             settings_modal: crate::components::SettingsModal::new(),
+            home_screen: crate::components::HomeScreen::new(),
         show_thoughts: false,
+            history_search_query: String::new(),
+            history_search_matches: Vec::new(),
+            history_search_index: 0,
+            file_picker: crate::components::FilePicker::new(),
+            permission_mode: crate::tui::state::PermissionMode::Normal,
+            plan_modal: crate::components::PlanModal::new(),
+            allowed_tools: std::collections::HashSet::new(),
+            allowed_categories: std::collections::HashSet::new(),
+            context_usage_modal: crate::components::ContextUsageModal::new(),
     }
 }
 
-// 1. test_terminal_size_default_zero — AppState::default() has terminal_size=(0,0)
 #[test]
 fn test_terminal_size_default_zero() {
     let state = AppState::default();

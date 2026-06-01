@@ -112,67 +112,51 @@ impl SlashMenu {
     }
 }
 
+fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color) {
+    for x in area.x..area.right() {
+        buf.get_mut(x, area.y).set_char('─').set_fg(border);
+        buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+    }
+    for y in area.y..area.bottom() {
+        buf.get_mut(area.x, y).set_char('│').set_fg(border);
+        buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+    }
+    buf.get_mut(area.x, area.y).set_char('┌');
+    buf.get_mut(area.right() - 1, area.y).set_char('┐');
+    buf.get_mut(area.x, area.bottom() - 1).set_char('└');
+    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+}
+
+fn render_slash_item(cmd: &SlashMenuItem, is_selected: bool, inner_x: u16, inner_w: u16, y: u16, buf: &mut Buffer, accent: Color, text_primary: Color, text_muted: Color) {
+    let indicator = if is_selected { "▸" } else { " " };
+    let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
+    buf.set_string(inner_x, y, indicator, indicator_style);
+    let label_x = inner_x + 2;
+    let label_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
+    buf.set_string(label_x, y, cmd.command, label_style);
+    let desc_x = label_x + cmd.command.len() as u16 + 2;
+    if desc_x < inner_x + inner_w {
+        buf.set_string(desc_x, y, cmd.description, Style::default().fg(text_muted));
+    }
+}
+
 impl Widget for &SlashMenu {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        // Default colors
-        let bg = Color::Black;
         let border = Color::DarkGray;
         let text_primary = Color::White;
         let text_muted = Color::DarkGray;
         let accent = Color::Cyan;
-
-        // Draw border
-        for x in area.x..area.right() {
-            buf.get_mut(x, area.y).set_char('─').set_fg(border);
-            buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
-        }
-        for y in area.y..area.bottom() {
-            buf.get_mut(area.x, y).set_char('│').set_fg(border);
-            buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
-        }
-        buf.get_mut(area.x, area.y).set_char('┌');
-        buf.get_mut(area.right() - 1, area.y).set_char('┐');
-        buf.get_mut(area.x, area.bottom() - 1).set_char('└');
-        buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
-
-        // Title
+        render_slash_border(area, buf, border);
         let title = format!(" Commands ({}) ", self.filtered_indices.len());
-        let title_x = area.x + 2;
-        buf.set_line(title_x, area.y, &Line::raw(title).style(Style::default().fg(text_muted)), area.width - 4);
-
-        // Items
+        buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_muted)), area.width - 4);
         let inner_x = area.x + 2;
         let inner_w = area.width.saturating_sub(4);
         let mut y = area.y + 1;
         let max_y = area.bottom() - 1;
-
         for (display_idx, &cmd_idx) in self.filtered_indices.iter().enumerate() {
             if y >= max_y { break; }
             let cmd = &SLASH_COMMANDS[cmd_idx];
-            let is_selected = display_idx == self.selected;
-
-            let indicator = if is_selected { "▸" } else { " " };
-            let indicator_style = if is_selected {
-                Style::default().fg(accent).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(text_muted)
-            };
-            buf.set_string(inner_x, y, indicator, indicator_style);
-
-            let label_x = inner_x + 2;
-            let label_style = if is_selected {
-                Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(text_primary)
-            };
-            buf.set_string(label_x, y, cmd.command, label_style);
-
-            let desc_x = label_x + cmd.command.len() as u16 + 2;
-            if desc_x < inner_x + inner_w {
-                let desc = format!("{}", cmd.description);
-                buf.set_string(desc_x, y, &desc, Style::default().fg(text_muted));
-            }
-
+            render_slash_item(cmd, display_idx == self.selected, inner_x, inner_w, y, buf, accent, text_primary, text_muted);
             y += 1;
         }
     }

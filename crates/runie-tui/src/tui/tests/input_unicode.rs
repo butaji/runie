@@ -49,6 +49,9 @@ fn make_state() -> AppState {
         mock_mode: false,
         top_bar: TopBarState::default(),
         show_thoughts: false,
+            history_search_query: String::new(),
+            history_search_matches: Vec::new(),
+            history_search_index: 0,
     }
 }
 

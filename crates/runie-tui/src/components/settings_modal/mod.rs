@@ -71,79 +71,65 @@ impl SettingsModal {
     }
 }
 
+fn render_settings_border(area: Rect, buf: &mut Buffer, border: Color) {
+    for x in area.x..area.right() {
+        buf.get_mut(x, area.y).set_char('─').set_fg(border);
+        buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+    }
+    for y in area.y..area.bottom() {
+        buf.get_mut(area.x, y).set_char('│').set_fg(border);
+        buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+    }
+    buf.get_mut(area.x, area.y).set_char('┌');
+    buf.get_mut(area.right() - 1, area.y).set_char('┐');
+    buf.get_mut(area.x, area.bottom() - 1).set_char('└');
+    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+}
+
+fn render_settings_tabs(modal: &SettingsModal, area: Rect, buf: &mut Buffer, tab_active: Color, text_muted: Color) {
+    let tabs = ["Theme", "Behavior"];
+    let mut tab_x = area.x + 2;
+    for (i, tab) in tabs.iter().enumerate() {
+        let is_active = i == modal.selected_tab;
+        let style = if is_active { Style::default().fg(tab_active).add_modifier(Modifier::BOLD | Modifier::UNDERLINED) } else { Style::default().fg(text_muted) };
+        buf.set_string(tab_x, area.y + 1, tab, style);
+        tab_x += tab.len() as u16 + 3;
+    }
+}
+
+fn render_theme_tab(modal: &SettingsModal, area: Rect, buf: &mut Buffer, accent: Color, text_primary: Color, text_muted: Color) {
+    let mut y = area.y + 3;
+    for (i, (name, _)) in THEMES.iter().enumerate() {
+        if y >= area.bottom() - 1 { break; }
+        let is_selected = i == modal.selected_item;
+        let indicator = if is_selected { "▸" } else { " " };
+        let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
+        buf.set_string(area.x + 2, y, indicator, indicator_style);
+        let name_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
+        buf.set_string(area.x + 4, y, name, name_style);
+        y += 1;
+    }
+}
+
 impl Widget for &SettingsModal {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let bg = Color::Black;
         let border = Color::DarkGray;
         let text_primary = Color::White;
         let text_muted = Color::DarkGray;
         let accent = Color::Cyan;
         let tab_active = Color::Yellow;
-
-        // Border
-        for x in area.x..area.right() {
-            buf.get_mut(x, area.y).set_char('─').set_fg(border);
-            buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
-        }
-        for y in area.y..area.bottom() {
-            buf.get_mut(area.x, y).set_char('│').set_fg(border);
-            buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
-        }
-        buf.get_mut(area.x, area.y).set_char('┌');
-        buf.get_mut(area.right() - 1, area.y).set_char('┐');
-        buf.get_mut(area.x, area.bottom() - 1).set_char('└');
-        buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
-
-        // Title
+        render_settings_border(area, buf, border);
         let title = " Settings ";
-        let title_x = area.x + 2;
-        buf.set_line(title_x, area.y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), area.width - 4);
-
-        // Close hint
+        buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), area.width - 4);
         let close = " [✗] ";
         let close_x = area.right() - close.len() as u16 - 2;
         buf.set_line(close_x, area.y, &Line::raw(close).style(Style::default().fg(text_muted)), area.width);
-
-        // Tabs
-        let tabs = ["Theme", "Behavior"];
-        let mut tab_x = area.x + 2;
-        for (i, tab) in tabs.iter().enumerate() {
-            let is_active = i == self.selected_tab;
-            let style = if is_active {
-                Style::default().fg(tab_active).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
-            } else {
-                Style::default().fg(text_muted)
-            };
-            buf.set_string(tab_x, area.y + 1, tab, style);
-            tab_x += tab.len() as u16 + 3;
-        }
-
-        // Tab separator
+        render_settings_tabs(self, area, buf, tab_active, text_muted);
         let sep_y = area.y + 2;
-        for x in area.x + 1..area.right() - 1 {
-            buf.get_mut(x, sep_y).set_char('─').set_fg(border);
-        }
-
-        // Content
-        if self.selected_tab == 0 {
-            // Theme tab
-            let mut y = sep_y + 1;
-            for (i, (name, _)) in THEMES.iter().enumerate() {
-                if y >= area.bottom() - 1 { break; }
-                let is_selected = i == self.selected_item;
-                let indicator = if is_selected { "▸" } else { " " };
-                let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-                buf.set_string(area.x + 2, y, indicator, indicator_style);
-                let name_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
-                buf.set_string(area.x + 4, y, name, name_style);
-                y += 1;
-            }
-        }
-
-        // Footer hint
+        for x in area.x + 1..area.right() - 1 { buf.get_mut(x, sep_y).set_char('─').set_fg(border); }
+        if self.selected_tab == 0 { render_theme_tab(self, area, buf, accent, text_primary, text_muted); }
         let footer = " Tab:next/prev · Enter:select · Esc:close ";
-        let footer_y = area.bottom() - 1;
-        buf.set_line(area.x + 2, footer_y, &Line::raw(footer).style(Style::default().fg(text_muted)), area.width - 4);
+        buf.set_line(area.x + 2, area.bottom() - 1, &Line::raw(footer).style(Style::default().fg(text_muted)), area.width - 4);
     }
 }
 

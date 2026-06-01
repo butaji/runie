@@ -2,50 +2,99 @@ use crate::components::MessageItem;
 use crate::tui::state::{AppState, Msg, TuiMode, PendingPermission};
 use runie_agent::PermissionDecision;
 
+/// Categorize a tool by name for always-approve grouping.
+pub fn tool_category(tool_name: &str) -> &str {
+    match tool_name {
+        "read_file" | "search" => "read-only",
+        "write_file" | "edit_file" => "file-write",
+        "bash" => "shell",
+        _ => "other",
+    }
+}
+
+/// Check if a tool is pre-approved via always-allow list.
+fn is_tool_preapproved(state: &AppState, tool_name: &str) -> bool {
+    state.allowed_tools.contains(tool_name)
+        || state.allowed_categories.contains(tool_category(tool_name))
+}
+
 /// Modes that block permission requests from interrupting
 fn is_blocking_mode(mode: &TuiMode) -> bool {
     matches!(mode, TuiMode::Overlay | TuiMode::DiffViewer | TuiMode::SessionTree)
 }
 
-pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
-    // BG-1 FIX: Queue permission if already in a blocking mode
+pub fn on_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
+    use crate::tui::state::PermissionMode;
+
+    // Always-approve: check pre-approved tools/categories
+    if is_tool_preapproved(state, &tool_name) {
+        state.messages.push(MessageItem::System {
+            text: format!("Always-approved: {}", tool_name),
+        });
+        return vec![super::AgentCmd::SendPermission {
+            decision: PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
+        }];
+    }
+
+    match state.permission_mode {
+        PermissionMode::Plan => handle_plan_mode_request(state, tool_call_id, tool_name, tool_args),
+        PermissionMode::AutoApprove => handle_auto_approve_request(state, tool_call_id, tool_name, tool_args),
+        PermissionMode::Normal => handle_normal_permission_request(state, tool_call_id, tool_name, tool_args),
+    }
+}
+
+fn handle_plan_mode_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
+    state.plan_modal.tools.push(crate::components::PlanTool {
+        tool_call_id: tool_call_id.clone(),
+        tool_name: tool_name.clone(),
+        tool_args: tool_args.clone(),
+    });
+    state.messages.push(MessageItem::System {
+        text: format!("Plan mode: auto-approved '{}'", tool_name),
+    });
+    vec![super::AgentCmd::SendPermission {
+        decision: PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
+    }]
+}
+
+fn handle_auto_approve_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
+    state.messages.push(MessageItem::System {
+        text: format!("Auto-approved: {}", tool_name),
+    });
+    vec![super::AgentCmd::SendPermission {
+        decision: PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
+    }]
+}
+
+fn handle_normal_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
     if is_blocking_mode(&state.mode) {
         state.permission_modal.pending_queue.push(PendingPermission {
             tool_call_id: tool_call_id.clone(),
             tool_name: tool_name.clone(),
             tool_args: tool_args.clone(),
         });
-        // Notify user that request is queued
         state.messages.push(MessageItem::System {
             text: format!("Permission for '{}' queued (waiting for current modal)", tool_name),
         });
-        return;
+        return vec![];
     }
-    
-    // If permission modal is already open, queue the new request
     if state.mode == TuiMode::Permission || state.permission_modal.tool.is_some() {
         state.permission_modal.pending_queue.push(PendingPermission {
-            tool_call_id: tool_call_id.clone(),
-            tool_name: tool_name.clone(),
-            tool_args: tool_args.clone(),
+            tool_call_id, tool_name, tool_args,
         });
-        return;
+        return vec![];
     }
-    
     state.permission_modal.tool = Some(tool_name.clone());
     state.permission_modal.tool_call_id = Some(tool_call_id);
-    state.permission_modal.args = Some(tool_args.clone());
+    state.permission_modal.args = Some(tool_args);
     state.permission_modal.desc = Some(format!("Agent wants to execute '{}'", tool_name));
-    // P0-1 FIX: Start timeout tracking
     state.permission_modal.timeout_start = Some(std::time::Instant::now());
     state.permission_modal.timed_out = false;
     state.mode = TuiMode::Permission;
-    // Announce the permission request in the message feed so the user has
-    // a persistent record (and the chat scrollback reflects what the agent
-    // is asking for) — see test_permission_request_adds_system_message.
     state.messages.push(MessageItem::System {
         text: format!("Permission requested: {}", tool_name),
     });
+    vec![]
 }
 
 /// Process the next pending permission request from the queue (FIFO)
@@ -99,7 +148,14 @@ pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<super::Agent
     let decision = match msg {
         Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
         Msg::PermissionCancel => PermissionDecision::Deny { tool_call_id, tool_name, tool_args },
-        Msg::PermissionAlways => PermissionDecision::AllowAlways { tool_call_id, tool_name, tool_args },
+        Msg::PermissionAlways => {
+            state.allowed_tools.insert(tool_name.clone());
+            state.allowed_categories.insert(tool_category(&tool_name).to_string());
+            state.messages.push(MessageItem::System {
+                text: format!("Always-approve: {} ({})", tool_name, tool_category(&tool_name)),
+            });
+            PermissionDecision::AllowAlways { tool_call_id, tool_name, tool_args }
+        }
         Msg::PermissionSkip => PermissionDecision::Skip { tool_call_id, tool_name, tool_args },
         _ => PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
     };

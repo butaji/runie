@@ -19,6 +19,10 @@ pub mod panel;
 pub mod slash_menu;
 pub mod shortcuts_panel;
 pub mod settings_modal;
+pub mod home_screen;
+pub mod file_picker;
+pub mod plan_modal;
+pub mod context_usage_modal;
 
 #[cfg(test)]
 mod top_bar_snapshots;
@@ -43,3 +47,7 @@ pub use onboarding::Onboarding;
 pub use slash_menu::{SlashMenu, SlashMenuItem, SLASH_COMMANDS};
 pub use shortcuts_panel::{ShortcutsPanel, ShortcutDef, SHORTCUTS};
 pub use settings_modal::{SettingsModal, THEMES};
+pub use home_screen::{HomeScreen, HOME_MENU_ITEMS};
+pub use file_picker::FilePicker;
+pub use plan_modal::{PlanModal, PlanTool};
+pub use context_usage_modal::{ContextUsageModal, render_context_usage_modal};
