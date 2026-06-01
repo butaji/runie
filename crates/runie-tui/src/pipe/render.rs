@@ -14,7 +14,7 @@ use crate::theme::ThemeWrapper;
 use crate::theme::ThemeColors;
 use crate::components::CommandPalette;
 use crate::components::MessageList;
-use crate::layout::centered_rect;
+use crate::layout::{centered_rect, right_aligned_rect};
 
 const SIDEBAR_WIDTH: u16 = 28;
 
@@ -223,7 +223,7 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::dim_background(buf, area, theme_colors);
-        let palette_area = centered_rect(padded, 70, 20);
+        let palette_area = right_aligned_rect(padded, 70, 20);
         palette.render_ref(palette_area, buf, theme);
     }
 
@@ -260,7 +260,7 @@ impl RenderPipe {
         theme_colors: &ThemeColors,
     ) {
         Self::dim_background(buf, area, theme_colors);
-        let tree_area = centered_rect(area, 70, 25);
+        let tree_area = right_aligned_rect(area, 70, 25);
         state.session_tree.render_ref(tree_area, buf, theme);
     }
 
