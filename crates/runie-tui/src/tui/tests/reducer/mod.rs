@@ -45,6 +45,7 @@ pub fn make_state() -> AppState {
             allowed_tools: std::collections::HashSet::new(),
             allowed_categories: std::collections::HashSet::new(),
             context_usage_modal: crate::components::ContextUsageModal::new(),
+            current_theme: "crush_grok".to_string(),
     }
 }
 

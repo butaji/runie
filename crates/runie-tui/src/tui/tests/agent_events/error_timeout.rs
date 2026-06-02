@@ -218,6 +218,7 @@ fn test_error_removes_empty_placeholder() {
         text: String::new(),
         model: Some("test-model".to_string()),
         timestamp: None,
+        expanded: false,
     });
 
     handle_agent_event(

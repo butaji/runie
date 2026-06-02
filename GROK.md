@@ -1,6 +1,7 @@
 # Grok Build TUI - UI Documentation
 
-**Version:** 0.2.14 Beta  
+**Version:** 0.2.15 Beta  
+**Updated:** Extended with Extensions, Modes, Commands, Headless/ACP, Skills, Plugins, Hooks, and Marketplaces  
 **Model:** Grok 4.3 (xAI, April 2026)
 
 ---
@@ -8,6 +9,33 @@
 ## Overview
 
 Grok Build is xAI's terminal-based AI coding assistant featuring a sophisticated Terminal User Interface (TUI). The interface combines a dark, modern aesthetic with efficient keyboard-driven navigation, real-time tool execution visualization, and extensive customization options.
+
+---
+
+## Features
+
+Grok Build provides a comprehensive development workflow in your terminal:
+
+| Feature | Description |
+|---------|-------------|
+| **Plan mode** | Propose a structured approach before writing code |
+| **Subagents** | Spawn parallel agents for testing and research |
+| **Skills** | Turn workflows into reusable slash commands |
+| **Hooks** | Run scripts on file edits and tool calls |
+| **MCP servers** | Connect to Linear, Sentry, Grafana, and more |
+| **AGENTS.md** | Set conventions and rules per directory |
+| **Memory** | Persist decisions and context across sessions |
+| **Code search** | Grep and navigate large codebases fast |
+| **Multi-file edits** | Refactor across files with search-and-replace |
+| **Git integration** | Stage, commit, push, and manage branches |
+| **Deep reasoning** | Step-by-step thinking for hard problems |
+| **Web search** | Look up docs and packages from the terminal |
+| **Terminal execution** | Run builds and tests with live streaming |
+| **Headless mode** | Script Grok Build in CI/CD pipelines |
+| **Code review** | Line-by-line feedback before opening a PR |
+| **Sandboxed execution** | Run untrusted code in isolated environments |
+| **Background tasks** | Monitor long-running builds and processes |
+| **Theming** | Customize colors, fonts, and appearance |
 
 ---
 
@@ -186,15 +214,69 @@ Contextual hints that change based on:
 | Agent Running | `Shift+Tab:mode` `Ctrl+c:cancel` `Ctrl+Enter:interject` `Ctrl+.:` |
 | Scrollback | `Ctrl+Shift+e:expand thinking` `Space:prompt` |
 
-### 7. Mode Indicators
+### 7. Modes
 
-Modes displayed in header/title:
+Grok operates in different modes that control behavior:
 
 | Mode | Title Suffix | Description |
 |------|--------------|-------------|
 | Normal | (none) | Standard operation |
 | Plan | `· plan` | Plan-only mode, shows reasoning without execution |
 | Always-Approve | `· always-approve` | YOLO mode, auto-approves all actions |
+| Subagents | `· subagents` | Parallel subagent panel visible |
+| Ask | `· ask` | Interactive questionnaire active |
+
+**Switching Modes:**
+- `Shift+Tab` cycles session modes in the TUI
+
+#### Plan Mode
+
+Plan mode is for planning first. When active, write tools are blocked except for the session plan file.
+
+```
+grok-build · plan
+```
+
+**Use cases:**
+- Sketch approach before making changes
+- Review proposed edits before applying
+- Ask clarifying questions before edits
+
+**Commands:**
+- `/plan` - View the current session plan
+
+#### Always-Approve Mode
+
+Always-approve skips permission prompts for tool calls.
+
+```
+grok-build · always-approve
+```
+
+**Starting in always-approve:**
+```bash
+grok --always-approve
+```
+
+**Toggling in TUI:**
+- `Ctrl+O` - Toggle auto-approve mode
+- `/always-approve` - Slash command
+
+#### Permission Configuration
+
+Set default permission behavior in `~/.grok/config.toml`:
+
+```toml
+[ui]
+permission_mode = "always-approve"   # Skip all prompts
+permission_mode = "ask"              # Prompt on each tool call (default)
+```
+
+**Legacy options (still supported):**
+- `approval_mode`
+- `yolo = true`
+
+> Note: Put config in `~/.grok/config.toml`, not project-scoped `.grok/config.toml`.
 
 ### 8. Thinking Block
 
@@ -236,6 +318,219 @@ Modes displayed in header/title:
 - **Bullet Points:** `•` for lists
 - **Tree Structure:** `└── tests/` for directory listings
 - **Suggestions:** Next-step recommendations
+
+### 11. Extensions Modal
+
+The Extensions modal provides a unified interface for managing Grok Build's extensibility system:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ [Hooks] [Plugins] [Marketplace] [Skills] [MCP Servers]                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ / to search                                        Workspace ⌄             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ › team-tool                                    (project)  [install]         │
+│ › browser-review v0.8.2                      (workspace) [install]         │
+│ › github-flow v2.1.0                         (workspace) [installed]        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Tabs:**
+| Tab | Purpose |
+|-----|---------|
+| Hooks | Pre/post action hooks |
+| Plugins | Local plugin management |
+| Marketplace | Browse and install from registry |
+| Skills | Skill bundles and configurations |
+| MCP Servers | Model Context Protocol server connections |
+
+**Plugin Entry Format:**
+- `›` - Expand indicator for nested items
+- Plugin name with optional version (`browser-review v0.8.2`)
+- Scope badge: `(project)` or `(workspace)`
+- Action button: `[install]`, `[installed]`, or `[update]`
+
+**Scope System:**
+| Scope | Description |
+|-------|-------------|
+| `(project)` | Project-level plugin, affects current repository |
+| `(workspace)` | Workspace-local plugin, isolated to current session |
+
+**Opening the Modal:**
+- Command palette: `Ctrl+P` → type `extensions` or `build`
+- Slash command: `/extensions` or `/build`
+
+### 12. Interactive Questionnaire Panel
+
+When the agent needs user input, a questionnaire panel appears:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ● ○ ● ○ ● ○  Waiting on answers for 3 questions              [turn: 7.1s]  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  1  ○  Minimal & terminal-native                                         │
+│          Clean, keyboard-first, no excess chrome                           │
+│  2  ○  Bold & expressive                                                  │
+│          Strong visuals, gradients, animations                             │
+│  3  ○  Developer-focused                                                  │
+│          Code-first aesthetic, technical precision                          │
+│  4  ○  Other                                                              │
+│          Define custom principles                                           │
+│  z  ○  Type your answer here                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  [1/3]  ↑/↓ navigate  ←/→ question  Enter:select                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Questionnaire Elements:**
+- **Dot Grid:** Shows progress across multiple questions (e.g., `● ○ ●` pattern)
+- **Numbered Options:** Questions with radio-button selection
+- **Subtitles:** Descriptive text below each option
+- **Text Input:** `z` option for custom input
+- **Progress:** `[1/3]` indicates current question of total
+
+**Radio Button States:**
+| State | Appearance |
+|-------|------------|
+| Unselected | Empty circle with border |
+| Selected | Filled circle |
+| Focused | Highlighted border |
+
+### 13. Plan Modal
+
+Plan mode displays a structured implementation document:
+
+```
+┌─────────────────────────────── plan.md ───────────────────────────────┐
+│                                                                        │
+│   1  Install Docs Refresh Plan                                         │
+│   2  Quick Assessment                                                  │
+│   3  • docs/install.md skips headless mode...                          │
+│   4  Implementation Plan                                               │
+│   5  1. Replace the install snippet with curl bootstrap                │
+│   6  2. Document `-p` headless mode                                   │
+│   7  3. Point users to config.toml for models                         │
+│   8  4. Cross-link the auth and feedback sections                      │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Plan Document Structure:**
+- **Section Headers:** Colored labels (`Quick Assessment`, `Implementation Plan`)
+- **Numbered Steps:** Sequential implementation items
+- **Bullet Points:** Supporting details and context
+- **Divider:** Centered title (`─── plan.md ───`)
+
+**Plan Mode Shortcuts:**
+| Key | Action |
+|-----|--------|
+| `Enter` | Approve plan and apply changes |
+| `Esc` | Close plan without applying |
+| `Type` | Add comment or modification request |
+
+### 14. Subagent Panel
+
+Parallel subagent execution displays in either inline or dedicated panel mode:
+
+**Inline Mode (in scrollback):**
+```
+     ⠴ Run List `.` 1.8s                                         5.7s ⇣21.2k
+```
+
+**Dedicated Panel Mode:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ projects/main jasong/folder                                       77.54% │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ [explore] Explore checkout flow                     explore · grok-build    │
+│ [explore] Explore infra and CI                     explore · grok-build    │
+│ [explore] Explore shared Go libraries              explore · grok-build    │
+│ [explore] Explore order services                    explore · grok-build    │
+│ [explore] Explore fulfillment jobs                  explore · grok-build    │
+│ [explore] Explore pricing engine                    explore · grok-build    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ❯ find the source of the p99 latency regression                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              ┌──────────────────────────────────┐
+                              │ ❯ find the source of the...      │
+                              │         grok-build · subagents    │
+                              └──────────────────────────────────┘
+```
+
+**Dot Grid Activity Indicator:**
+The 2x3 dot matrix shows agent activity state:
+```
+● ○ ●    ● = Active/working
+● ○ ●    ○ = Idle/waiting
+```
+
+| Pattern | Meaning |
+|---------|---------|
+| `● ○ ●` alternating | Multi-step task in progress |
+| All `●` | Fully active |
+| All `○` | Idle/waiting for input |
+
+**Agent Labels:**
+- `explore` - Exploration/analysis agent
+- `general` - General-purpose agent
+- `code` - Code implementation agent
+
+**Context Suffixes:**
+| Suffix | Mode |
+|--------|------|
+| `grok-build` | Normal mode |
+| `grok-build · plan` | Plan mode |
+| `grok-build · always-approve` | Auto-approve mode |
+| `grok-build · subagents` | Subagent panel visible |
+| `grok-build · ask` | Questionnaire active |
+
+### 15. Inline Diff Viewer
+
+When editing files, the diff viewer shows changes inline:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ◆ Thought for 2.3s                                                        │
+│                                                                             │
+│  41  Install the CLI with...                                               │
+│  42+ curl -fsSL x.ai/cli/install.sh | bash                                 │
+│  43                                                                         │
+│  44- Run the CLI and follow the prompts.                                   │
+│  44+ Run `grok-build -p` to use the CLI in headless ACP-compatible mode.   │
+│  45+ Sign in once, then configure models and API keys in `config.toml`.     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Diff Color System:**
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `--terminal-diff-gutter` | `#6c6c6c` | Line number color |
+| `--terminal-diff-text` | `#e1e1e1` | Unchanged line text |
+| `--terminal-diff-insert-bg` | `#202a16` | Added line background |
+| `--terminal-diff-delete-bg` | `#32181c` | Removed line background |
+| `--terminal-diff-insert-fg` | `#9ece6a` | Added line number (green) |
+| `--terminal-diff-delete-fg` | `#f7768e` | Removed line number (red) |
+
+**Gutter Styling:**
+- Right-aligned line numbers
+- 14px right padding
+- Monospace font for alignment
+- Fixed 54px gutter width
+
+### 16. Additional Color Variables
+
+Extended color palette for UI elements:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `--terminal-editor-bg` | (theme base) | Editor/panel background |
+| `--terminal-surface` | `#202020` | Elevated surface background |
+| `--terminal-popover` | `#1a1a1a` | Modal/popover background |
+| `--terminal-teal` | `#29c6be` | Teal accent for prompts |
+| `--terminal-orange` | `#d59556` | Orange for file labels (plan.md) |
+| `--terminal-purple` | `#bc97ff` | Purple for thinking blocks |
+| `--terminal-yellow` | `#cfb47c` | Yellow for plan indicator |
+| `--terminal-blue-bright` | `#88a6ff` | Bright blue for active elements |
 
 ---
 
@@ -471,6 +766,92 @@ vim_mode = true
 
 ---
 
+## Slash Commands
+
+The command palette (`Ctrl+P`) groups session, context, model, and tool actions. Type `/` in the prompt to access slash commands. User-invocable skills also appear as slash commands.
+
+### Session Commands
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `/quit` | `/exit` | Quit the application |
+| `/home` | - | Return to the welcome screen |
+| `/new` | - | Start a new session |
+| `/resume` | - | Resume a previous session |
+| `/sessions` | - | Browse and pick from past sessions |
+| `/fork` | - | Fork the current session into a new one |
+| `/rename <title>` | - | Rename the current session |
+| `/share` | - | Share the current session via URL |
+| `/session-info` | - | Show session info |
+
+### Context & Model Commands
+
+| Command | Description |
+|---------|-------------|
+| `/context` | View context usage |
+| `/model <name>` | Switch the active model |
+| `/compact [context]` | Compact conversation history |
+| `/compact-mode` | Toggle denser UI layout |
+| `/rewind` | Rewind to an earlier point in the conversation |
+| `/usage` | Show token and credit usage for the session |
+
+### UI & Display Commands
+
+| Command | Description |
+|---------|-------------|
+| `/theme [name]` | Switch the color theme |
+| `/multiline` | Toggle multiline input |
+
+### Permission & Plan Commands
+
+| Command | Description |
+|---------|-------------|
+| `/always-approve` | Toggle always-approve mode |
+| `/plan` | View the current session plan |
+| `/feedback [text]` | Send feedback about the current session |
+
+### Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `/btw <question>` | Ask a side question without interrupting |
+| `/logout` | Sign out of the current account |
+
+### Extensions Commands
+
+These open the unified extensions modal with a pre-selected tab:
+
+| Command | Tab Selected |
+|---------|--------------|
+| `/hooks` | Hooks |
+| `/plugins` | Plugins |
+| `/skills` | Skills |
+| `/mcps` | MCP Servers |
+
+### Shell-Provided Commands
+
+| Command | Description |
+|---------|-------------|
+| `/flush` | Flush conversation memory to disk now |
+| `/memory` | Search and edit persistent memory entries |
+| `/dream` | Trigger an offline memory-consolidation pass |
+| `/imagine <prompt>` | Generate an image from text |
+| `/imagine-video <prompt>` | Generate a video from text |
+
+### Skills as Commands
+
+Any user-invocable skill appears as a slash command:
+```
+/<skill-name>
+```
+
+If names collide, use the qualified form:
+```
+/local:commit
+```
+
+---
+
 ## Themes in Detail
 
 ### GrokNight (Default)
@@ -607,6 +988,92 @@ Shows connection status for Model Context Protocol servers.
 
 ---
 
+## Headless Mode & Scripting
+
+### Headless Mode
+
+Use headless mode for scripts, bots, or other machine-friendly tasks:
+
+```bash
+grok -p "Your prompt here"
+```
+
+**Common flags:**
+
+| Flag | Description |
+|------|-------------|
+| `-p, --single <PROMPT>` | Send one prompt |
+| `-m, --model <MODEL>` | Choose a model |
+| `-s, --session-id <ID>` | Create or resume a named headless session |
+| `-r, --resume <ID>` | Resume an existing session |
+| `-c, --continue` | Continue the most recent session in the current directory |
+| `--cwd <PATH>` | Set the working directory |
+| `--output-format <FMT>` | Choose `plain`, `json`, or `streaming-json` |
+| `--always-approve` | Auto-approve tool executions |
+| `--no-alt-screen` | Run inline (no fullscreen TUI takeover) |
+
+**Suppressing auto-updates in scripts:**
+```bash
+grok --no-auto-update -p "..."
+```
+
+Or persist in `~/.grok/config.toml`:
+```toml
+[cli]
+auto_update = false
+```
+
+### Output Formats
+
+| Format | Description |
+|--------|-------------|
+| `plain` | Human-readable text |
+| `json` | One JSON object at the end |
+| `streaming-json` | Newline-delimited JSON events |
+
+```bash
+grok -p "List TODO comments" --output-format json
+grok -p "Explain the architecture" --output-format streaming-json
+```
+
+### ACP (Agent Protocol)
+
+Use ACP for IDE or tool integration instead of terminal sessions:
+
+```bash
+grok agent stdio
+```
+
+This runs Grok as an ACP agent over JSON-RPC on stdin/stdout. Environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `XAI_API_KEY` | API key for authentication |
+
+**Authentication methods:**
+- `xai.api_key` - Direct API key
+- `cached_token` - Cached login token
+
+**Example Node.js integration:**
+```javascript
+import { spawn } from "node:child_process";
+import readline from "node:readline";
+import process from "node:process";
+
+const proc = spawn("grok", ["agent", "stdio"], { stdio: ["pipe", "pipe", "pipe"] });
+const rl = readline.createInterface({ input: proc.stdout });
+
+// See full example in the Headless & Scripting section of docs
+```
+
+**ACP Methods:**
+- `initialize` - Initialize the agent
+- `authenticate` - Authenticate with a method
+- `session/new` - Create a new session
+- `session/prompt` - Send a prompt to a session
+
+---
+
 ## Version Info
 
 ```
@@ -635,4 +1102,4 @@ Shows connection status for Model Context Protocol servers.
 
 ---
 
-*Documentation generated from Grok Build TUI v0.2.14 Beta*
+*Documentation generated from Grok Build TUI v0.2.15 Beta*

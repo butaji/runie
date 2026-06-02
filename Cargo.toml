@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "crates/runie-core",
+    "crates/runie-ext",
+    "crates/runie-ext-macros",
     "crates/runie-ai",
     "crates/runie-agent",
     "crates/runie-tools",
@@ -52,3 +54,4 @@ bytes = "1.0"
 dirs = "5.0"
 toml = "0.8"
 phf = { version = "0.11", features = ["macros"] }
+ctor = "0.2"

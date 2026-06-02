@@ -27,6 +27,7 @@ pub fn handle_close_modal(state: &mut AppState) {
     state.diff_viewer = None;
     state.session_tree.hide();
     state.model_picker = None;
+    state.extensions_modal = None;
 }
 
 /// P1-1 FIX: Handle Esc in command palette
@@ -99,6 +100,9 @@ pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<U
         PaletteCommand::Quit => {
             state.running = false;
             vec![UiCmd::Quit]
+        }
+        PaletteCommand::Extensions => {
+            run_slash(state, SlashCommand::Extensions)
         }
         PaletteCommand::Cancel => vec![],
     };

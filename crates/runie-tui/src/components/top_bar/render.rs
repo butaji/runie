@@ -4,8 +4,25 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
 };
-use crate::components::top_bar::{calculate_pct, draw_gauge, format_context_window, TopBarViewModel};
+use crate::components::top_bar::{calculate_pct, draw_gauge, format_context_window, format_token_count, TopBarViewModel};
 use crate::theme::ThemeColors;
+use crate::glyphs::spinner_frame;
+
+/// Git branch symbol (Powerline style)
+const GIT_BRANCH_SYMBOL: char = '\u{E0A0}';
+
+/// Shorten a path to be relative to home directory
+fn shorten_path(path: &str) -> String {
+    if let Ok(home) = std::env::var("HOME") {
+        if path.starts_with(&home) {
+            let suffix = &path[home.len()..];
+            if suffix.is_empty() || suffix.starts_with('/') {
+                return format!("~{}", suffix);
+            }
+        }
+    }
+    path.to_string()
+}
 
 fn build_left_spans<'a>(
     vm: &'a TopBarViewModel,
@@ -19,11 +36,13 @@ fn build_left_spans<'a>(
         parts.push(Span::styled(&vm.repo, Style::default().fg(bright).bg(bg)));
     }
     if !vm.branch.is_empty() {
-        parts.push(Span::styled("/", dim_style.clone().bg(bg)));
+        // Add git branch symbol before branch name
+        parts.push(Span::styled(GIT_BRANCH_SYMBOL.to_string(), dim_style.clone().bg(bg)));
         parts.push(Span::styled(&vm.branch, dim_style.clone().bg(bg)));
     }
     if !vm.path.is_empty() {
-        parts.push(Span::styled(format!("  {}", vm.path), dim_style.clone().bg(bg)));
+        let short_path = shorten_path(&vm.path);
+        parts.push(Span::styled(format!("  {}", short_path), dim_style.clone().bg(bg)));
     }
     parts
 }
@@ -42,6 +61,14 @@ pub fn render_top_bar(
 
     // Build left spans with explicit bg so text cells don't show as black
     let mut left_parts = vec![Span::styled(" ", Style::default().bg(bg))];
+
+    // Add spinner when agent is running
+    if vm.agent_running {
+        let spinner_char = spinner_frame(vm.braille_frame);
+        left_parts.push(Span::styled(spinner_char.to_string(), Style::default().fg(bright).bg(bg)));
+        left_parts.push(Span::styled(" ", Style::default().bg(bg)));
+    }
+
     left_parts.extend(build_left_spans(vm, bright, dim, &dim_style, bg));
     if left_parts.len() > 1 {
         buf.set_line(x, area.y, &Line::from(left_parts), area.width.saturating_sub(2));
@@ -49,7 +76,8 @@ pub fn render_top_bar(
 
     let pct = calculate_pct(vm);
     let window_str = format_context_window(vm.context_window);
-    let text = format!("{}/{} {:.0}%", vm.estimated_tokens, window_str, pct);
+    let tokens_str = format_token_count(vm.estimated_tokens);
+    let text = format!("{} / {} {:.0}%", tokens_str, window_str, pct);
     let text_len = text.len() as u16;
     let gauge_width = 3u16;
     let right_x = area.x + area.width.saturating_sub(text_len + gauge_width + 1);
@@ -95,6 +123,7 @@ mod tests {
             bg_base: Color::Black,
             bg_panel: Color::Black,
             accent_primary: Color::White,
+            accent_secondary: Color::Blue,
             text_primary: Color::White,
             text_secondary: Color::White,
             text_dim: Color::Gray,
@@ -103,6 +132,8 @@ mod tests {
             success: Color::Green,
             error: Color::Red,
             syntax_phase: Color::Yellow,
+            text_plan: Color::Cyan,
+            feed_tool_bar: Color::Magenta,
         }
     }
 
@@ -116,6 +147,8 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
         let dim_style = Style::default();
         let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
@@ -131,11 +164,13 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
         let dim_style = Style::default();
         let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
         assert_eq!(spans.len(), 2);
-        assert_eq!(spans[0].content.as_ref(), "/");
+        assert_eq!(spans[0].content.as_ref(), "\u{E0A0}");
         assert_eq!(spans[1].content.as_ref(), "main");
     }
 
@@ -147,6 +182,8 @@ mod tests {
             path: "src/lib.rs".to_string(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
         let dim_style = Style::default();
         let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
@@ -164,6 +201,8 @@ mod tests {
             path: "src".to_string(),
             context_window: 120_000,
             estimated_tokens: 40,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -191,6 +230,8 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -220,6 +261,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -241,6 +284,8 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -264,6 +309,8 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -285,6 +332,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -306,6 +355,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 100_000,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -327,6 +378,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -348,6 +401,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -371,6 +426,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -392,6 +449,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -413,6 +472,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();
@@ -436,6 +497,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
 
         let colors = make_test_colors();

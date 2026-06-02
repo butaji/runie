@@ -39,7 +39,7 @@ mod handle_direct_command_tests {
     fn test_clear_chat_clears_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None, expanded: false });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::ClearChat);
 
@@ -207,7 +207,7 @@ mod command_execution_tests {
     fn test_new_session_clears_all_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "user msg".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "assistant msg".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "assistant msg".to_string(), model: None, timestamp: None, expanded: false });
         state.messages.push(MessageItem::System { text: "system msg".to_string() });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::NewSession);
@@ -261,7 +261,7 @@ mod command_execution_tests {
     fn test_clear_chat_removes_all_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "user".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "assistant".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "assistant".to_string(), model: None, timestamp: None, expanded: false });
         state.messages.push(MessageItem::System { text: "system".to_string() });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::ClearChat);
@@ -499,7 +499,7 @@ mod command_execution_tests {
     fn test_copy_last_with_assistant_message_adds_confirmation() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "assistant response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "assistant response".to_string(), model: None, timestamp: None, expanded: false });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::CopyLast);
 
@@ -536,9 +536,9 @@ mod command_execution_tests {
     #[test]
     fn test_copy_last_copies_last_assistant_not_first() {
         let mut state = make_state();
-        state.messages.push(MessageItem::Assistant { text: "first response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "first response".to_string(), model: None, timestamp: None, expanded: false });
         state.messages.push(MessageItem::User { text: "question".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "last response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "last response".to_string(), model: None, timestamp: None, expanded: false });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::CopyLast);
 

@@ -29,7 +29,7 @@ pub fn handle_agent_event(state: &mut AppState, event: AgentEvent) -> Vec<super:
     // Route to category handlers - uses match to keep complexity low
     match categorize_event(&event) {
         EventCategory::Message(msg) => { handle_message_event(state, msg); vec![] }
-        EventCategory::Tool(tool) => { handle_tool_event(state, tool); vec![] }
+        EventCategory::Tool(tool) => handle_tool_event(state, tool),
         EventCategory::Lifecycle(lifecycle) => { handle_lifecycle_event(state, lifecycle); vec![] }
         EventCategory::Error(err) => { super::super::agent::error::on_agent_error(state, err); vec![] }
         EventCategory::Token(tokens) => { update_token_usage(state, tokens.0, tokens.1); vec![] }
@@ -93,15 +93,52 @@ fn handle_thinking_event(state: &mut AppState, event: AgentEvent) {
     }
 }
 
-fn handle_tool_event(state: &mut AppState, event: AgentEvent) {
+fn handle_tool_event(state: &mut AppState, event: AgentEvent) -> Vec<super::AgentCmd> {
     match event {
-        AgentEvent::ToolExecutionStart { tool_call_id, .. } => {
+        AgentEvent::ToolExecutionStart { tool_call_id, tool_name, tool_args, .. } => {
             on_tool_start(state, tool_call_id);
+            // Dispatch to extension registry
+            let ext_event = runie_ext::PluginEvent::ToolCalled {
+                tool_name,
+                arguments: serde_json::json!({"args": tool_args}),
+            };
+            let actions = state.extension_registry.dispatch_event(ext_event);
+            // Process plugin actions (for now, just log them)
+            for action in &actions {
+                tracing::debug!("Plugin action: {:?}", action);
+            }
+            vec![]
         }
-        AgentEvent::ToolExecutionEnd { result, .. } => {
+        AgentEvent::ToolExecutionEnd { tool_name, result, .. } => {
+            // Extract needed fields before moving result
+            let is_error = result.is_error;
+            let content = result.content.iter()
+                .filter_map(|p| {
+                    if let runie_agent::events::ContentPart::Text { text } = p {
+                        Some(text.as_str())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("");
             on_tool_end(state, result);
+            // Dispatch tool result to extension registry
+            let ext_event = runie_ext::PluginEvent::ToolResult {
+                tool_name,
+                output: runie_core::ToolOutput {
+                    content,
+                    metadata: serde_json::json!({"is_error": is_error}),
+                    terminate: false,
+                },
+            };
+            let actions = state.extension_registry.dispatch_event(ext_event);
+            for action in &actions {
+                tracing::debug!("Plugin action: {:?}", action);
+            }
+            vec![]
         }
-        _ => {}
+        _ => vec![]
     }
 }
 
@@ -216,6 +253,7 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
             text: String::new(),
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
+            expanded: true,
         });
     }
 }
@@ -231,6 +269,7 @@ pub fn on_message(state: &mut AppState, role: &str, content: &str) {
             text: content.to_string(),
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
+            expanded: true,
         }),
         "system" => {
             // Filter out system messages that are just metadata notifications
@@ -275,6 +314,7 @@ pub fn on_message_update(state: &mut AppState, message: runie_agent::events::Age
             text: String::new(),
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
+            expanded: true,
         });
     }
 

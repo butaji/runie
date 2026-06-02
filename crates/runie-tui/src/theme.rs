@@ -136,6 +136,7 @@ pub struct ThemeColors {
     pub error: ratatui::style::Color,
     pub syntax_phase: ratatui::style::Color,
     pub text_plan: ratatui::style::Color,
+    pub feed_tool_bar: ratatui::style::Color,
 }
 
 impl From<&ThemeWrapper> for ThemeColors {
@@ -154,6 +155,7 @@ impl From<&ThemeWrapper> for ThemeColors {
             error: theme.color("error").into(),
             syntax_phase: theme.color("syntax.phase").into(),
             text_plan: theme.color("text.plan").into(),
+            feed_tool_bar: theme.color("feed.tool.bar").into(),
         }
     }
 }

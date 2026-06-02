@@ -80,6 +80,7 @@ fn test_message_start_does_not_add_duplicate_placeholder() {
         text: String::new(),
         model: Some("test-model".to_string()),
         timestamp: None,
+        expanded: false,
     });
 
     // MessageStart should NOT add another placeholder

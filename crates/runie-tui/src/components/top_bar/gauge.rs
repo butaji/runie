@@ -14,6 +14,17 @@ pub fn format_context_window(window: usize) -> String {
     }
 }
 
+/// Format a token count with K/M suffix (e.g., 21000 -> "21K")
+pub fn format_token_count(tokens: usize) -> String {
+    if tokens >= 1_000_000 {
+        format!("{:.0}M", tokens as f32 / 1_000_000.0)
+    } else if tokens >= 1_000 {
+        format!("{:.0}K", tokens as f32 / 1_000.0)
+    } else {
+        tokens.to_string()
+    }
+}
+
 pub fn calculate_pct(vm: &super::TopBarViewModel) -> f32 {
     if vm.context_window > 0 {
         ((vm.estimated_tokens as f32 / vm.context_window as f32) * 100.0).min(100.0)
@@ -95,6 +106,27 @@ mod tests {
         assert_eq!(format_context_window(1_000_001), "1m");
     }
 
+    // ─── format_token_count tests ─────────────────────────────────────────────
+
+    #[test]
+    fn test_format_token_count_raw() {
+        assert_eq!(format_token_count(500), "500");
+        assert_eq!(format_token_count(999), "999");
+    }
+
+    #[test]
+    fn test_format_token_count_k() {
+        assert_eq!(format_token_count(1_000), "1K");
+        assert_eq!(format_token_count(21_000), "21K");
+        assert_eq!(format_token_count(512_000), "512K");
+    }
+
+    #[test]
+    fn test_format_token_count_m() {
+        assert_eq!(format_token_count(1_000_000), "1M");
+        assert_eq!(format_token_count(2_500_000), "2M");
+    }
+
     // ─── calculate_pct tests ───────────────────────────────────────────────────
 
     #[test]
@@ -105,6 +137,8 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 0.0);
     }
@@ -117,6 +151,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 50.0);
     }
@@ -129,6 +165,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 100_000,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 100.0);
     }
@@ -141,6 +179,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 200_000,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 100.0);
     }
@@ -153,6 +193,8 @@ mod tests {
             path: String::new(),
             context_window: 0,
             estimated_tokens: 50_000,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 0.0);
     }
@@ -165,6 +207,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 99_999,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 99.999);
     }
@@ -177,6 +221,8 @@ mod tests {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 1,
+            agent_running: false,
+            braille_frame: 0,
         };
         assert_eq!(calculate_pct(&vm), 0.00078125);
     }
@@ -191,6 +237,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 0,
+            agent_running: false,
+            braille_frame: 0,
         };
         let pct = calculate_pct(&vm);
         assert_eq!(pct, 0.0);
@@ -206,6 +254,8 @@ mod tests {
             path: String::new(),
             context_window: 100_000,
             estimated_tokens: 100_000,
+            agent_running: false,
+            braille_frame: 0,
         };
         let pct = calculate_pct(&vm);
         assert_eq!(pct, 100.0);

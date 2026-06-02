@@ -4,7 +4,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::Line,
-    widgets::{Gauge, Paragraph, Widget},
+    widgets::{Paragraph, Widget},
 };
 
 use crate::components::message_list::PlanStatus;
@@ -173,7 +173,7 @@ pub fn render_edit_msg(
     1
 }
 
-/// Render a tool running message
+/// Render a tool running message (Grok-style block)
 pub fn render_tool_running_msg(
     name: &str,
     args: &str,
@@ -185,36 +185,44 @@ pub fn render_tool_running_msg(
     buf: &mut Buffer,
     text_secondary: ratatui::style::Color,
     spinner: char,
-    show_spinner: bool,
+    _show_spinner: bool,
 ) -> u16 {
+    // Grok-style: "⠴ Run List `.` 1.8s                         5.7s ⇣21.2k [✗]"
+    // Left side: spinner + "Run" + name + args + elapsed
+    // Right side: total_elapsed + transfer + status (empty while running)
+
+    let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
+
+    // Draw vertical bar at left edge
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char(glyphs::TOOL_BULLET);
-        cell.set_style(Style::default().fg(text_secondary));
+        cell.set_char('│');
+        cell.set_style(Style::default().fg(tool_bar_color));
     }
-    let mut header = String::with_capacity(64);
-    write!(header, "{} {}", name, args).ok();
-    if show_spinner {
-        write!(header, " {}", spinner).ok();
-    }
-    let line = Line::raw(header).style(Style::default().fg(text_secondary));
-    buf.set_line(text_x, area.y + row, &line, area.width - 4);
-    if duration_ms > 1000 {
-        let bar_y = row + 1;
-        let bar_x = text_x;
-        let bar_width = 10u16;
-        let ratio = duration_ms.min(10000) as f64 / 10000.0;
-        let gauge_area = Rect::new(bar_x + 1, area.y + bar_y, bar_width, 1);
-        Gauge::default()
-            .ratio(ratio)
-            .label("")
-            .style(Style::default().fg(text_secondary))
-            .render(gauge_area, buf);
-        return 2;
-    }
+
+    let content_x = text_x;
+    let elapsed_secs = duration_ms as f64 / 1000.0;
+    let elapsed_str = format!("{:.1}s", elapsed_secs);
+
+    // Build left content: spinner + "Run" + name + args + elapsed
+    let mut left_content = String::with_capacity(64);
+    write!(left_content, "{} Run {} {}", spinner, name, args).ok();
+    let left_suffix = format!(" {}", elapsed_secs);
+    write!(left_content, "{}", left_suffix).ok();
+
+    let left_line = Line::raw(left_content).style(Style::default().fg(tool_bar_color));
+    buf.set_line(content_x, area.y + row, &left_line, area.width - 4);
+
+    // Right side: total elapsed placeholder + transfer + status (empty brackets while running)
+    let right_text = format!(" {} [ ]", elapsed_str);
+    let right_len = right_text.len() as u16;
+    let right_x = area.x + area.width - 1 - right_len;
+    let right_line = Line::raw(right_text).style(Style::default().fg(text_secondary));
+    buf.set_line(right_x, area.y + row, &right_line, right_len);
+
     1
 }
 
-/// Render a tool complete message
+/// Render a tool complete message (Grok-style block)
 pub fn render_tool_complete_msg(
     name: &str,
     result: &str,
@@ -227,18 +235,64 @@ pub fn render_tool_complete_msg(
     success: ratatui::style::Color,
     text_muted: ratatui::style::Color,
 ) -> u16 {
+    // Grok-style: "⠴ Run List `.` 1.8s                         5.7s ⇣21.2k [✗]"
+    // Left: checkmark + name + args + result preview
+    // Right: elapsed + transfer bytes + status
+
+    let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
+    let error_color = ratatui::style::Color::Rgb(0xEB, 0x42, 0x68);
+
+    // Determine if result looks like an error
+    let is_error = result.starts_with("Error:") || result.starts_with("error:") || result.starts_with("❌");
+    let status_color = if is_error { error_color } else { success };
+    let status_icon = if is_error { "[✗]" } else { "[✓]" };
+
+    // Draw vertical bar at left edge
     if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char(glyphs::CHECK_MARKER);
-        cell.set_style(Style::default().fg(success));
+        cell.set_char('│');
+        cell.set_style(Style::default().fg(tool_bar_color));
     }
-    let mut text = String::with_capacity(64);
-    write!(text, "{} {}", name, result).ok();
+
+    // Build left content: checkmark + name + args
+    let compact_args = super::tool::format_tool_args_compact(result);
+    let content = if compact_args.is_empty() {
+        format!("{} {}", glyphs::CHECK_MARKER, name)
+    } else {
+        format!("{} {} → {}", glyphs::CHECK_MARKER, name, compact_args)
+    };
+
+    let left_line = Line::raw(content).style(Style::default().fg(status_color));
+    buf.set_line(text_x, area.y + row, &left_line, area.width - 4);
+
+    // Right side: transfer bytes + status
+    let result_bytes = result.len();
+    let transfer_str = format_transfer_bytes(result_bytes);
+    let right_text = format!(" ⇣{} {}", transfer_str, status_icon);
+    let right_len = right_text.len() as u16;
+    let right_x = area.x + area.width - 1 - right_len;
+    let right_line = Line::raw(right_text).style(Style::default().fg(text_muted));
+    buf.set_line(right_x, area.y + row, &right_line, right_len);
+
+    // If there are lines, show on second line
     if let Some(l) = lines {
-        write!(text, " ({} lines)", l).ok();
+        if *l > 1 {
+            let line2_text = format!("  ({} lines)", l);
+            let line2 = Line::raw(line2_text).style(Style::default().fg(text_muted));
+            buf.set_line(text_x, area.y + row + 1, &line2, area.width - 4);
+            return 2;
+        }
     }
-    let line = Line::raw(text).style(Style::default().fg(text_muted));
-    buf.set_line(text_x, area.y + row, &line, area.width - 4);
     1
+}
+
+fn format_transfer_bytes(bytes: usize) -> String {
+    if bytes >= 1_000_000 {
+        format!("{:.1}M", bytes as f64 / 1_000_000.0)
+    } else if bytes >= 1_000 {
+        format!("{:.1}k", bytes as f64 / 1_000.0)
+    } else {
+        bytes.to_string()
+    }
 }
 
 /// Render a plan step message

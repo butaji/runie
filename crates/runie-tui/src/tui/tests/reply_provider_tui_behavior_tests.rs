@@ -54,6 +54,7 @@ fn test_slash_clear_command_clears_messages() {
         text: "Hi there!".to_string(),
         model: state.current_model.clone(),
         timestamp: None,
+        expanded: false,
     });
     state.scroll.feed_offset = 5;
 
@@ -105,6 +106,7 @@ fn test_slash_new_command_resets_session() {
         text: "Hi!".to_string(),
         model: state.current_model.clone(),
         timestamp: None,
+        expanded: false,
     });
 
     // Setup: set token usage
@@ -168,6 +170,7 @@ fn test_copy_last_response_finds_assistant() {
         text: "response".to_string(),
         model: state.current_model.clone(),
         timestamp: None,
+        expanded: false,
     });
 
     // Execute copy
@@ -348,6 +351,7 @@ fn test_toggle_thoughts_with_message() {
         text: "· Thinking about...\nResponse".to_string(),
         model: Some("test".to_string()),
         timestamp: None,
+        expanded: false,
     });
 
     // Verify show_thoughts is false

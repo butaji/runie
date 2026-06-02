@@ -28,7 +28,7 @@ fn test_slash_clear_command_clears_messages() {
 
     // Add some messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None, expanded: false });
 
     // User types "/clear" in chat input → SlashCommand dispatched
     update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Clear));
@@ -48,7 +48,7 @@ fn test_slash_new_command_clears_and_starts_new_session() {
 
     // Add some messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None, expanded: false });
 
     // User types "/new" in chat input → SlashCommand dispatched
     update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::New));
@@ -95,7 +95,7 @@ fn test_palette_clear_chat_command_clears_messages() {
 
     // Add some messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None, expanded: false });
 
     // Open palette
     update(&mut state, &mut palette, Msg::OpenCommandPalette);
@@ -125,7 +125,7 @@ fn test_slash_clear_and_palette_clear_produce_same_result() {
     let mut state1 = make_state();
     let mut palette1 = CommandPalette::new();
     state1.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state1.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None });
+    state1.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None, expanded: false });
     state1.scroll.feed_offset = 5;
 
     update(&mut state1, &mut palette1, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Clear));
@@ -134,7 +134,7 @@ fn test_slash_clear_and_palette_clear_produce_same_result() {
     let mut state2 = make_state();
     let mut palette2 = CommandPalette::new();
     state2.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state2.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None });
+    state2.messages.push(MessageItem::Assistant { text: "Hi there".to_string(), model: None, timestamp: None, expanded: false });
     state2.scroll.feed_offset = 5;
 
     // Open palette, filter "clear", confirm
@@ -187,7 +187,7 @@ fn test_palette_confirm_flow_full_integration() {
 
     // Add messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false });
 
     // Open palette
     update(&mut state, &mut palette, Msg::OpenCommandPalette);
