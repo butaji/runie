@@ -13,6 +13,8 @@ use crate::tui::view_models::StatusBarViewModel;
 
 pub mod builder;
 mod render;
+#[cfg(test)]
+mod mod_test;
 pub use builder::*;
 
 #[derive(Clone)]
@@ -68,7 +70,10 @@ impl Default for StatusBar {
 }
 
 impl StatusBarViewModel {
-    fn hotkeys(&self) -> Vec<StatusItem> {
+    /// Returns context-aware hotkeys based on current state.
+    /// When agent_running=true, shows 4 hints (including Ctrl+c, Ctrl+Enter).
+    /// Otherwise shows mode-specific hints (typically 2 for idle chat).
+    pub fn hotkeys(&self) -> Vec<StatusItem> {
         // Context-aware: agent running > input has text > mode-specific
         if self.agent_running {
             Self::agent_running_hotkeys()
@@ -80,13 +85,13 @@ impl StatusBarViewModel {
     }
 
     /// Hotkeys shown when agent is running
-    fn agent_running_hotkeys() -> Vec<StatusItem> {
+    pub fn agent_running_hotkeys() -> Vec<StatusItem> {
         // Grok-style hints for agent running state
         vec![
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
             StatusItem { key: "Ctrl+c".to_string(), description: "cancel".to_string() },
             StatusItem { key: "Ctrl+Enter".to_string(), description: "interject".to_string() },
-            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "".to_string() },
         ]
     }
 
@@ -95,7 +100,7 @@ impl StatusBarViewModel {
         // Grok-style minimal hints
         vec![
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
-            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "".to_string() },
         ]
     }
 
@@ -110,11 +115,17 @@ impl StatusBarViewModel {
         }
     }
 
+    /// Hotkeys shown in idle state (when agent is not running and input is empty).
+    /// Alias for chat_hotkeys - same 2 hints (Shift+Tab, Ctrl+.)
+    pub fn idle_hotkeys() -> Vec<StatusItem> {
+        Self::chat_hotkeys()
+    }
+
     fn chat_hotkeys() -> Vec<StatusItem> {
         // Grok-style minimal hints: only mode toggle and shortcuts
         vec![
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
-            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "".to_string() },
         ]
     }
 

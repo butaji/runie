@@ -190,7 +190,7 @@ pub fn render_edit_msg(
 /// Render a tool running message (Grok-style block)
 pub fn render_tool_running_msg(
     name: &str,
-    args: &str,
+    _args: &str,
     duration_ms: u64,
     total_elapsed_ms: u64,
     download_bytes: u64,
@@ -203,9 +203,9 @@ pub fn render_tool_running_msg(
     spinner: char,
     _show_spinner: bool,
 ) -> u16 {
-    // Grok-style: "     ⠴ Run List `.` 1.8s                         5.7s ⇣21.2k [ ]"
-    // Left side: spinner + "Run" + name + args + tool_duration
-    // Right side: total_elapsed + transfer + status (empty while running)
+    // Grok-style: "     ⠧ Thinking… 1.5s                                           8.0s ⇣23.2k [✗]"
+    // Left side: spinner + "Thinking…" + duration
+    // Right side: total_elapsed + transfer + status (empty brackets while running)
 
     let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
     let indent = 3; // margin_x + 3 = 5 spaces from screen edge (accounting for 2-space padding in margin_x)
@@ -213,16 +213,9 @@ pub fn render_tool_running_msg(
     let content_x = margin_x + indent;
     let elapsed_secs = duration_ms as f64 / 1000.0;
 
-    // Build left content: spinner + "Run" + name + args + tool_duration
+    // Build left content: spinner + name + "…" + tool_duration
     let mut left_content = String::with_capacity(64);
-    // Clean up args: strip JSON string quotes if present
-    let clean_args = if args.starts_with('"') && args.ends_with('"') {
-        &args[1..args.len()-1]
-    } else {
-        args
-    };
-    write!(left_content, "{} Run {} {}", spinner, name, clean_args).ok();
-    write!(left_content, " {:.1}s", elapsed_secs).ok();
+    write!(left_content, "{} {}… {:.1}s", spinner, name, elapsed_secs).ok();
 
     let left_line = Line::raw(left_content).style(Style::default().fg(tool_bar_color));
     buf.set_line(content_x, area.y + row, &left_line, area.width - 4);

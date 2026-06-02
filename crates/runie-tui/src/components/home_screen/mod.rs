@@ -80,7 +80,7 @@ impl HomeScreen {
     }
 }
 
-fn draw_divider(x: u16, y: u16, content_x: u16, content_width: u16, buf: &mut Buffer, style: Style) {
+pub(crate) fn draw_divider(x: u16, y: u16, _content_x: u16, content_width: u16, buf: &mut Buffer, style: Style) {
     let divider_x = x + 2; // Align with menu text
     let divider_width = content_width.saturating_sub(3);
     for dx in divider_x..divider_x + divider_width {
@@ -90,7 +90,7 @@ fn draw_divider(x: u16, y: u16, content_x: u16, content_width: u16, buf: &mut Bu
     }
 }
 
-fn draw_menu_item(
+pub(crate) fn draw_menu_item(
     name: &str,
     hint: &str,
     x: u16,
@@ -125,7 +125,7 @@ fn render_menu(
 
     for (i, (name, _, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
         draw_menu_item(name, hint, content_x, y, content_width, buf, selected_style, unselected_style, hint_style);
-        y += 2;
+        y += 1;
         if i < item_count - 1 {
             draw_divider(content_x, y, content_x, content_width, buf, divider_style);
             y += 1;
@@ -164,3 +164,9 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
     buf.set_string(area.x + 2, content_y + 11, tip, theme.tip_style());
 }
+
+#[cfg(test)]
+mod mod_test;
+
+#[cfg(test)]
+mod render_test;

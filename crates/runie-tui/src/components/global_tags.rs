@@ -78,8 +78,9 @@ fn format_token_count(tokens: usize) -> String {
 }
 
 impl GlobalTagsViewModel {
-    /// Create running state: "⣾ {status} [turn: {time}] [⇣{tokens}]"
-    pub fn running(status: &str, time: &str, _tokens: u64, _turn_duration: Option<u64>, turn_tokens: Option<usize>, turn_tool_calls: Option<usize>) -> Self {
+    /// Create running state with animated spinner.
+    /// Format: "{spinner} {status} · Ctrl+Enter:interject   [turn: {time}, {tools}tc, ⇣{tokens}]"
+    pub fn running(spinner: char, status: &str, time: &str, _tokens: u64, _turn_duration: Option<u64>, turn_tokens: Option<usize>, turn_tool_calls: Option<usize>) -> Self {
         let mut parts = vec![format!("turn: {}", time)];
         if let Some(tools) = turn_tool_calls {
             if tools > 0 {
@@ -91,7 +92,7 @@ impl GlobalTagsViewModel {
         }
         let right = format!("[{}]", parts.join(", "));
         Self {
-            left: Some(format!("{} {}", glyphs::SPINNER_FRAMES[0], status)),
+            left: Some(format!("{} {} · Ctrl+Enter:interject", spinner, status)),
             right,
         }
     }
@@ -180,7 +181,7 @@ mod tests {
 
     #[test]
     fn test_global_tags_running_state_position() {
-        let vm = GlobalTagsViewModel::running("thinking", "5s", 200, None, None, None);
+        let vm = GlobalTagsViewModel::running('⠋', "thinking", "5s", 200, None, None, None);
         let area = Rect::new(0, 15, 80, 1);
         let mut buf = Buffer::empty(Rect::new(0, 0, 80, 20));
 

@@ -84,7 +84,8 @@ fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
             return GlobalTagsViewModel::error(status);
         }
         let time = state.status_details.as_deref().unwrap_or("0s");
-        GlobalTagsViewModel::running(status, time, tokens, state.last_turn_duration_secs, state.last_turn_tokens, state.last_turn_tool_calls)
+        let spinner = crate::glyphs::SPINNER_FRAMES[state.animation.braille_frame % 10];
+        GlobalTagsViewModel::running(spinner, status, time, tokens, state.last_turn_duration_secs, state.last_turn_tokens, state.last_turn_tool_calls)
     } else {
         GlobalTagsViewModel::idle()
     }
@@ -102,11 +103,21 @@ fn build_message_list(state: &AppState) -> MessageListViewModel {
 }
 
 fn build_input_bar(state: &AppState) -> InputBarViewModel {
+    use crate::tui::state::PermissionMode;
+
+    // Build mode indicator
+    let mode_indicator = match state.permission_mode {
+        PermissionMode::Normal => "runie".to_string(),
+        PermissionMode::Plan => "runie · plan".to_string(),
+        PermissionMode::AutoApprove => "runie · always-approve".to_string(),
+    };
+
     let input_text = state.textarea.lines().join("\n");
     InputBuilder::new()
         .text(&input_text)
         .prompt(format!("{ch} ", ch = crate::glyphs::CHEVRON).as_str())
         .info(&state.input_right_info)
+        .mode_indicator(&mode_indicator)
         .build()
 }
 
