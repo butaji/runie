@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
 use crate::tui::state::{AppState, TuiMode, Msg, OnboardingStep};
 
 // --- Key classification helpers ---
@@ -19,6 +19,14 @@ pub fn event_to_msg(event: Event, state: &AppState) -> Vec<Msg> {
             }
         }
         Event::Resize(w, h) => vec![Msg::Resize(w, h)],
+        Event::Mouse(mouse_event) => {
+            match mouse_event.kind {
+                MouseEventKind::ScrollUp => vec![Msg::ScrollUp],
+                MouseEventKind::ScrollDown => vec![Msg::ScrollDown],
+                MouseEventKind::Down(button) => vec![Msg::MouseClick { x: mouse_event.column, y: mouse_event.row, button: 0 }],
+                _ => vec![],
+            }
+        }
         _ => Vec::new(),
     }
 }
@@ -239,6 +247,8 @@ fn key_to_home_screen_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         match key.code {
             KeyCode::Char('s') => return Some(Msg::CloseHomeScreen), // Resume session
+            KeyCode::Char('w') => return Some(Msg::ToggleWorktreeMode),
+            KeyCode::Char('i') => return Some(Msg::ImportClaudeSettings),
             _ => {}
         }
     }
@@ -282,11 +292,18 @@ fn chat_navigation_msg(key: crossterm::event::KeyEvent, scroll_focused: bool) ->
             KeyCode::Char('e') => Some(Msg::ToggleFoldEntry),
             KeyCode::Char('E') => Some(Msg::ToggleAllEntries),
             KeyCode::Char('y') => Some(Msg::CopyBlockContent),
+            KeyCode::Char('Y') => Some(Msg::CopyBlockMetadata),
             KeyCode::Char('r') => Some(Msg::ToggleRawMarkdown),
             KeyCode::Char(' ') => Some(Msg::FocusPrompt),
             KeyCode::Char('i') => Some(Msg::FocusPrompt),
             KeyCode::PageUp => Some(Msg::ScrollPageUp),
             KeyCode::PageDown => Some(Msg::ScrollPageDown),
+            // Shift + Left/Right for scrollback navigation
+            KeyCode::Left if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Msg::ScrollToPrevUserTurn),
+            KeyCode::Right if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Msg::ScrollToNextUserTurn),
+            // o/O for open entry
+            KeyCode::Char('o') => Some(Msg::OpenEntry),
+            KeyCode::Char('O') => Some(Msg::OpenEntryOptions),
             _ => None,
         }
     } else {
@@ -306,6 +323,9 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<
     }
     if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('a')) {
         return Some(Msg::ToggleSubagentPanel);
+    }
+    if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('n')) {
+        return Some(Msg::NewSessionWorktree);
     }
     if is_ctrl_combo(key) {
         return ctrl_chat_key(key);
@@ -365,9 +385,10 @@ fn ctrl_chat_key_match(key: crossterm::event::KeyEvent) -> Option<Msg> {
         ('l', Msg::ClearChat),
         ('r', Msg::HistorySearchStart),
         ('u', Msg::ScrollHalfPageUp),
-        ('d', Msg::Quit),
+        ('d', Msg::ScrollHalfPageDown),
         ('a', Msg::TogglePermissionMode),
         ('q', Msg::Quit),
+        (';', Msg::TogglePromptQueue),
     ];
     for &(ch, ref msg) in CTRL_MAP {
         if c == ch { return Some(msg.clone()); }

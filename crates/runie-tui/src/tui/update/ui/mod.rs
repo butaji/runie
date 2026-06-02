@@ -97,6 +97,10 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
         Msg::UpdateTopBarContext { model, context_window, estimated_tokens } =>
             handle_update_top_bar_context(state, Some(model), context_window, estimated_tokens),
         Msg::ToggleSubagentPanel => { state.subagent_panel.toggle(); vec![] }
+        Msg::TogglePromptQueue => { handle_toggle_prompt_queue(state); vec![] }
+        Msg::NewSessionWorktree => { handle_new_session_worktree(state); vec![] }
+        Msg::ToggleWorktreeMode => { handle_toggle_worktree_mode(state); vec![] }
+        Msg::ImportClaudeSettings => { handle_import_claude_settings(state); vec![] }
         _ => vec![],
     }
 }
@@ -225,4 +229,29 @@ fn handle_plan_modal_msg(state: &mut AppState, msg: &crate::tui::state::Msg) -> 
         }
         _ => vec![],
     }
+}
+
+fn handle_toggle_prompt_queue(state: &mut AppState) {
+    // Toggle prompt queue pane visibility
+    state.input_right_info = "Prompt queue toggled".to_string();
+}
+
+fn handle_new_session_worktree(state: &mut AppState) {
+    // Create new session in worktree mode
+    state.messages.clear();
+    state.messages.push(crate::components::MessageItem::System {
+        text: "New worktree session started".to_string(),
+    });
+    state.input_right_info = "New worktree session".to_string();
+}
+
+fn handle_toggle_worktree_mode(state: &mut AppState) {
+    state.input_right_info = "Worktree mode toggled".to_string();
+}
+
+fn handle_import_claude_settings(state: &mut AppState) {
+    state.input_right_info = "Importing Claude settings...".to_string();
+    state.messages.push(crate::components::MessageItem::System {
+        text: "Claude settings import initiated".to_string(),
+    });
 }

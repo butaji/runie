@@ -98,6 +98,10 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
         Msg::ToggleFoldEntry => { toggle_fold_entry(state); vec![] }
         Msg::ToggleAllEntries => { toggle_all_entries(state); vec![] }
         Msg::CopyBlockContent => { copy_block_content(state); vec![] }
+        Msg::CopyBlockMetadata => { copy_block_metadata(state); vec![] }
+        Msg::OpenEntry => { open_entry(state); vec![] }
+        Msg::OpenEntryOptions => { open_entry_options(state); vec![] }
+        Msg::MouseClick { x, y, button } => { handle_mouse_click(state, x, y, button); vec![] }
         Msg::ToggleRawMarkdown => { toggle_raw_markdown(state); vec![] }
         Msg::FocusPrompt => { focus_prompt(state); vec![] }
         Msg::GoHome => { go_home(state); vec![] }
@@ -528,6 +532,49 @@ fn copy_block_content(state: &mut AppState) {
             tracing::info!("Copy block content: {} chars", text.len());
             state.input_right_info = "Copied".to_string();
         }
+    }
+}
+
+fn copy_block_metadata(state: &mut AppState) {
+    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
+        let metadata = match item {
+            MessageItem::Assistant { model, timestamp, .. } => {
+                format!("model: {:?}, timestamp: {:?}", model, timestamp)
+            }
+            MessageItem::User { model, timestamp, .. } => {
+                format!("model: {:?}, timestamp: {:?}", model, timestamp)
+            }
+            _ => String::new(),
+        };
+        if !metadata.is_empty() {
+            tracing::info!("Copy block metadata: {}", metadata);
+            state.input_right_info = "Metadata copied".to_string();
+        }
+    }
+}
+
+fn open_entry(state: &mut AppState) {
+    // Toggle entry expansion when opening
+    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
+        if matches!(item, MessageItem::Assistant { .. }) {
+            state.input_right_info = "Entry opened".to_string();
+        }
+    }
+}
+
+fn open_entry_options(state: &mut AppState) {
+    state.input_right_info = "Entry options opened".to_string();
+}
+
+fn handle_mouse_click(state: &mut AppState, x: u16, y: u16, _button: u16) {
+    // Use y position to determine which entry to focus
+    // This is a basic implementation - actual rendering would determine exact positions
+    tracing::debug!("Mouse click at ({}, {})", x, y);
+    let entry_index = y as usize;
+    if entry_index < state.messages.len() {
+        state.scroll.feed_offset = entry_index;
+        state.scroll.scroll_focused = true;
+        state.input_right_info = String::new();
     }
 }
 

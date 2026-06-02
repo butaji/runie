@@ -5,6 +5,7 @@ use ratatui::{
 use crossterm::{
     cursor::{SetCursorStyle, Show, Hide},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    event::{EnableMouseCapture, DisableMouseCapture},
     ExecutableCommand,
 };
 use std::collections::VecDeque;
@@ -95,6 +96,7 @@ impl Tui {
         enable_raw_mode()?;
         let mut stdout = stdout();
         stdout.execute(EnterAlternateScreen)?;
+        stdout.execute(EnableMouseCapture)?;
         stdout.execute(Hide)?;
         stdout.execute(SetCursorStyle::SteadyBar)?;
 
@@ -122,6 +124,7 @@ impl Tui {
 
     pub fn cleanup(&mut self) -> io::Result<()> {
         disable_raw_mode()?;
+        self.terminal.backend_mut().execute(DisableMouseCapture)?;
         self.terminal.backend_mut().execute(Show)?;
         self.terminal.backend_mut().execute(SetCursorStyle::DefaultUserShape)?;
         self.terminal.backend_mut().execute(LeaveAlternateScreen)?;

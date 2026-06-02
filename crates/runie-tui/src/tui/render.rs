@@ -40,6 +40,9 @@ pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static st
         TuiMode::Onboarding => vec![("Esc", "back"), ("↑↓", "navigate"), ("Enter", "next")],
         TuiMode::HomeScreen => vec![("↑↓", "navigate"), ("Enter", "select"), ("q", "quit")],
         TuiMode::Plan => vec![("Enter", "approve"), ("Esc", "close"), ("↑↓", "scroll")],
+        TuiMode::Questionnaire => vec![("Esc", "close"), ("↑↓", "navigate"), ("←→", "question"), ("Enter", "select")],
+        TuiMode::Subagents => vec![("Enter", "send"), ("^b", "sidebar"), ("^k", "cmd"), ("^q", "quit")],
+        TuiMode::FullscreenViewer => vec![("q/Esc/Enter", "close"), ("j/k", "scroll"), ("g/G", "top/bottom")],
     }
 }
 

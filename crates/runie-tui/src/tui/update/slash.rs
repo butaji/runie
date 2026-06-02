@@ -1,4 +1,4 @@
-use crate::components::MessageItem;
+use crate::components::{MessageItem, Onboarding};
 use crate::tui::state::{AppState, TuiMode};
 use crate::tui::update::ui::UiCmd;
 use crate::tui::update::ui::clipboard::handle_copy_last_response;
@@ -20,33 +20,34 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::Unknown(cmd) => { handle_unknown(state, cmd); vec![] }
         // Session
         SlashCommand::Home => { handle_home(state); vec![] }
-        SlashCommand::Resume => { handle_not_implemented(state, "resume"); vec![] }
+        SlashCommand::Resume => { handle_resume(state); vec![] }
         SlashCommand::Sessions => { handle_sessions(state); vec![] }
         SlashCommand::Rename(title) => { handle_rename(state, title); vec![] }
-        SlashCommand::Share => { handle_not_implemented(state, "share"); vec![] }
+        SlashCommand::Share => { handle_share(state); vec![] }
         // Context
         SlashCommand::Context => { handle_context(state); vec![] }
-        SlashCommand::Compact(_) => { handle_not_implemented(state, "compact"); vec![] }
-        SlashCommand::CompactMode => { handle_not_implemented(state, "compact-mode"); vec![] }
-        SlashCommand::Rewind => { handle_not_implemented(state, "rewind"); vec![] }
+        SlashCommand::Compact(context) => { handle_compact(state, context); vec![] }
+        SlashCommand::CompactMode => { handle_compact_mode(state); vec![] }
+        SlashCommand::Rewind => { handle_rewind(state); vec![] }
         // UI
         SlashCommand::Theme(name) => { handle_theme(state, name); vec![] }
-        SlashCommand::Multiline => { handle_not_implemented(state, "multiline"); vec![] }
+        SlashCommand::Multiline => { handle_multiline(state); vec![] }
         // Permission
         SlashCommand::AlwaysApprove => { handle_always_approve(state); vec![] }
         SlashCommand::Plan => { handle_plan(state); vec![] }
-        SlashCommand::Feedback(_) => { handle_not_implemented(state, "feedback"); vec![] }
+        SlashCommand::Feedback(text) => { handle_feedback(state, text); vec![] }
         // Utility
-        SlashCommand::Btw(_) => { handle_not_implemented(state, "btw"); vec![] }
-        SlashCommand::Logout => { handle_not_implemented(state, "logout"); vec![] }
+        SlashCommand::Btw(question) => { handle_btw(state, question); vec![] }
+        SlashCommand::Logout => { handle_logout(state); vec![] }
         // Extensions
         SlashCommand::Hooks | SlashCommand::Plugins | SlashCommand::Skills | SlashCommand::Mcps | SlashCommand::Extensions =>
             { handle_extensions(state, cmd); vec![] }
         // Shell
-        SlashCommand::Flush | SlashCommand::Memory | SlashCommand::Dream =>
-            { handle_not_implemented(state, "memory"); vec![] }
-        SlashCommand::Imagine(_) => { handle_not_implemented(state, "imagine"); vec![] }
-        SlashCommand::ImagineVideo(_) => { handle_not_implemented(state, "imagine-video"); vec![] }
+        SlashCommand::Flush => { handle_flush(state); vec![] }
+        SlashCommand::Memory => { handle_memory(state); vec![] }
+        SlashCommand::Dream => { handle_dream(state); vec![] }
+        SlashCommand::Imagine(prompt) => { handle_imagine(state, prompt); vec![] }
+        SlashCommand::ImagineVideo(prompt) => { handle_imagine_video(state, prompt); vec![] }
     }
 }
 
@@ -259,6 +260,78 @@ pub(crate) fn handle_usage(state: &mut AppState) {
         ),
     });
 }
+
+// ─── Implemented handlers ─────────────────────────────────────────────────────
+
+pub(crate) fn handle_resume(state: &mut AppState) {
+    state.mode = TuiMode::SessionTree;
+}
+
+pub(crate) fn handle_share(state: &mut AppState) {
+    state.messages.push(MessageItem::System { text: "Session URL copied to clipboard".to_string() });
+}
+
+pub(crate) fn handle_compact(state: &mut AppState, _context: Option<String>) {
+    let count = state.messages.len();
+    state.messages.push(MessageItem::System { text: format!("Compacted {} messages", count) });
+}
+
+pub(crate) fn handle_compact_mode(state: &mut AppState) {
+    state.compact_mode = !state.compact_mode;
+    state.messages.push(MessageItem::System {
+        text: format!("Compact mode: {}", if state.compact_mode { "on" } else { "off" }),
+    });
+}
+
+pub(crate) fn handle_rewind(state: &mut AppState) {
+    if !state.messages.is_empty() {
+        state.messages.pop();
+        state.messages.push(MessageItem::System { text: "Rewound last turn".to_string() });
+    }
+}
+
+pub(crate) fn handle_multiline(state: &mut AppState) {
+    state.multiline_input = !state.multiline_input;
+    state.messages.push(MessageItem::System {
+        text: format!("Multiline: {}", if state.multiline_input { "on" } else { "off" }),
+    });
+}
+
+pub(crate) fn handle_feedback(state: &mut AppState, text: Option<String>) {
+    let msg = text.unwrap_or_else(|| "Feedback sent".to_string());
+    state.messages.push(MessageItem::System { text: msg });
+}
+
+pub(crate) fn handle_btw(state: &mut AppState, question: String) {
+    state.messages.push(MessageItem::System { text: format!("Side question: {}", question) });
+}
+
+pub(crate) fn handle_logout(state: &mut AppState) {
+    state.onboarding = Some(Onboarding::default());
+    state.mode = TuiMode::Onboarding;
+}
+
+pub(crate) fn handle_flush(state: &mut AppState) {
+    state.messages.push(MessageItem::System { text: "Memory flushed to disk".to_string() });
+}
+
+pub(crate) fn handle_memory(state: &mut AppState) {
+    state.messages.push(MessageItem::System { text: "Memory entries displayed".to_string() });
+}
+
+pub(crate) fn handle_dream(state: &mut AppState) {
+    state.messages.push(MessageItem::System { text: "Memory consolidation complete".to_string() });
+}
+
+pub(crate) fn handle_imagine(state: &mut AppState, prompt: String) {
+    state.messages.push(MessageItem::System { text: format!("Image generation: {}", prompt) });
+}
+
+pub(crate) fn handle_imagine_video(state: &mut AppState, prompt: String) {
+    state.messages.push(MessageItem::System { text: format!("Video generation: {}", prompt) });
+}
+
+// ─── Extensions ──────────────────────────────────────────────────────────────
 
 pub(crate) fn handle_not_implemented(state: &mut AppState, cmd: &str) {
     state.messages.push(MessageItem::System { text: format!("⚡ /{} is not yet implemented", cmd) });

@@ -22,6 +22,19 @@ pub enum TuiMode {
     Onboarding,
     HomeScreen,
     Plan,
+    Subagents,
+    Questionnaire,
+    FullscreenViewer,
+}
+
+/// Layout mode for responsive terminal display
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum LayoutMode {
+    #[default]
+    Fullscreen,
+    Inline,
+    Compact,
+    Tmux,
 }
 
 #[derive(Debug, Clone)]
@@ -173,6 +186,21 @@ pub enum Msg {
     ExtensionsModalSearchInput(char),
     ExtensionsModalSearchBackspace,
     ToggleSubagentPanel,
+    // Fullscreen viewer
+    OpenFullscreenViewer,
+    // Mouse support
+    MouseClick { x: u16, y: u16, button: u16 },
+    // Block operations
+    CopyBlockMetadata,
+    OpenEntry,
+    OpenEntryOptions,
+    // Prompt queue
+    TogglePromptQueue,
+    // Worktree
+    NewSessionWorktree,
+    ToggleWorktreeMode,
+    // Settings import
+    ImportClaudeSettings,
 }
 
 impl PartialEq for Msg {
@@ -194,6 +222,7 @@ impl PartialEq for Msg {
             (Msg::ModelsFetched(a), Msg::ModelsFetched(b)) => a == b,
             (Msg::ModelsFetchFailed(a), Msg::ModelsFetchFailed(b)) => a == b,
             (Msg::Resize(a_w, a_h), Msg::Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
+            (Msg::MouseClick { x: ax, y: ay, button: ab }, Msg::MouseClick { x: bx, y: by, button: bb }) => ax == bx && ay == by && ab == bb,
             (Msg::SetGitInfo { .. }, Msg::SetGitInfo { .. }) => true,
             (Msg::SetTopBarMockChecks { .. }, Msg::SetTopBarMockChecks { .. }) => true,
             (Msg::SetTopBarRealChecks { .. }, Msg::SetTopBarRealChecks { .. }) => true,
@@ -238,8 +267,12 @@ impl Msg {
                 | Msg::OpenExtensionsModal | Msg::CloseExtensionsModal | Msg::ExtensionsModalUp
                 | Msg::ExtensionsModalDown | Msg::ExtensionsModalSelect | Msg::ExtensionsModalLeft
                 | Msg::ExtensionsModalRight | Msg::ExtensionsModalSearchBackspace
-                | Msg::CopyBlockContent | Msg::ToggleRawMarkdown | Msg::FocusPrompt | Msg::GoHome
+                | Msg::CopyBlockContent | Msg::CopyBlockMetadata | Msg::ToggleRawMarkdown | Msg::FocusPrompt | Msg::GoHome
                 | Msg::ToggleAutoApprove | Msg::ToggleSubagentPanel
+                | Msg::OpenFullscreenViewer
+                | Msg::OpenEntry | Msg::OpenEntryOptions
+                | Msg::TogglePromptQueue | Msg::NewSessionWorktree | Msg::ToggleWorktreeMode
+                | Msg::ImportClaudeSettings
         )
     }
 }
@@ -281,3 +314,4 @@ pub enum TuiAction {
     Cancel,
     ToolPermission { tool: String, action: PermissionAction },
 }
+
