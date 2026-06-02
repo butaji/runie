@@ -260,30 +260,47 @@ async fn handle_fetch_models(
     let tx = msg_tx.clone();
     let provider_id_for_log = provider_id.clone();
     tokio::spawn(async move {
-        tracing::debug!("[ACTOR:ModelPicker] Fetch task started");
-        let fetcher = runie_ai::model_fetcher::create_fetcher(&provider_id);
-        let result = tokio::time::timeout(
-            Duration::from_secs(30),
-            fetcher.fetch_models(&api_key),
-        ).await;
-        match result {
-            Ok(Ok(models)) => {
-                tracing::info!("[ACTOR:ModelPicker] Fetched {} models for {}", models.len(), provider_id_for_log);
-                if let Err(e) = tx.send(Msg::ModelsFetched(models)).await {
-                    tracing::error!("[ACTOR:ModelPicker] Failed to send ModelsFetched: {}", e);
-                }
-            }
-            Ok(Err(e)) => {
-                tracing::warn!("[ACTOR:ModelPicker] Fetch failed for {}: {}", provider_id_for_log, e);
-                let _ = tx.send(Msg::ModelsFetchFailed(e.to_string())).await;
-            }
-            Err(_) => {
-                tracing::warn!("[ACTOR:ModelPicker] Fetch timed out for {}", provider_id_for_log);
-                let _ = tx.send(Msg::ModelsFetchFailed("fetch timed out after 30s".to_string())).await;
-            }
-        }
+        fetch_models_task(tx, provider_id, api_key, provider_id_for_log).await;
     });
     StateChange::none()
+}
+
+async fn fetch_models_task(
+    msg_tx: mpsc::Sender<Msg>,
+    provider_id: String,
+    api_key: String,
+    provider_id_for_log: String,
+) {
+    tracing::debug!("[ACTOR:ModelPicker] Fetch task started");
+    let fetcher = runie_ai::model_fetcher::create_fetcher(&provider_id);
+    let result = tokio::time::timeout(
+        Duration::from_secs(30),
+        fetcher.fetch_models(&api_key),
+    ).await;
+    process_fetch_result(&msg_tx, &provider_id_for_log, result).await;
+}
+
+async fn process_fetch_result(
+    msg_tx: &mpsc::Sender<Msg>,
+    provider_id: &str,
+    result: Result<Result<Vec<runie_ai::model_fetcher::ModelInfo>, runie_ai::model_fetcher::FetchError>, tokio::time::error::Elapsed>,
+) {
+    match result {
+        Ok(Ok(models)) => {
+            tracing::info!("[ACTOR:ModelPicker] Fetched {} models for {}", models.len(), provider_id);
+            if let Err(e) = msg_tx.send(Msg::ModelsFetched(models)).await {
+                tracing::error!("[ACTOR:ModelPicker] Failed to send ModelsFetched: {}", e);
+            }
+        }
+        Ok(Err(e)) => {
+            tracing::warn!("[ACTOR:ModelPicker] Fetch failed for {}: {}", provider_id, e);
+            let _ = msg_tx.send(Msg::ModelsFetchFailed(e.to_string())).await;
+        }
+        Err(_) => {
+            tracing::warn!("[ACTOR:ModelPicker] Fetch timed out for {}", provider_id);
+            let _ = msg_tx.send(Msg::ModelsFetchFailed("fetch timed out after 30s".to_string())).await;
+        }
+    }
 }
 
 fn handle_rollback(tool_call_id: String) -> StateChange {

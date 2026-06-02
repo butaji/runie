@@ -20,7 +20,6 @@ pub enum SessionManagerError {
 impl SessionManager {
 
     #[must_use]
-    #[must_use]
     pub fn new(sessions_dir: PathBuf) -> Self {
         Self { sessions_dir }
     }

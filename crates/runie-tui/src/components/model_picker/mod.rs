@@ -43,7 +43,7 @@ impl Default for ModelPicker {
 impl ModelPicker {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         Self {
             providers: Vec::new(),

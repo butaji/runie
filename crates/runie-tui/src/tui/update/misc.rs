@@ -2,7 +2,7 @@ use crate::components::MessageItem;
 use crate::tui::state::{AppState, Msg, Cmd, TuiMode};
 use super::agent::to_agent_messages;
 
-fn current_timestamp() -> Option<String> {
+pub(crate) fn current_timestamp() -> Option<String> {
     use chrono::Local;
     Some(Local::now().format("%-I:%M %p").to_string())
 }

@@ -18,7 +18,7 @@ impl Default for WrapCache {
 impl WrapCache {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         Self {
             cache: HashMap::new(),

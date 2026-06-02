@@ -1,8 +1,8 @@
 use crate::components::MessageItem;
 use crate::tui::state::{AppState, ThinkingState};
 use super::ChatCmd;
-use super::current_timestamp;
 use super::to_agent_messages;
+use crate::tui::update::misc::current_timestamp;
 use std::time::Instant;
 
 pub fn handle_slash_submit(state: &mut AppState, text: &str) -> Vec<ChatCmd> {

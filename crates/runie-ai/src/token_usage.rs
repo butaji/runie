@@ -17,51 +17,37 @@ impl TokenUsage {
     }
 
     pub fn estimate_cost(prompt_tokens: usize, completion_tokens: usize, model: &str) -> f64 {
-        match model {
-            "gpt-4o" | "gpt-4o-2024-08-06" | "o1-preview" | "o1-mini" => {
-                (prompt_tokens as f64 / 1000.0 * 0.005) +
-                (completion_tokens as f64 / 1000.0 * 0.015)
-            }
-            "gpt-4o-mini" | "gpt-4o-mini-2024-07-18" => {
-                (prompt_tokens as f64 / 1000.0 * 0.00015) +
-                (completion_tokens as f64 / 1000.0 * 0.0006)
-            }
-            "o1" => {
-                // o1 uses reasoning tokens which are more expensive
-                (prompt_tokens as f64 / 1000.0 * 0.015) +
-                (completion_tokens as f64 / 1000.0 * 0.06)
-            }
-            "gpt-4" | "gpt-4-turbo" | "gpt-4-turbo-2024-04-09" => {
-                (prompt_tokens as f64 / 1000.0 * 0.03) +
-                (completion_tokens as f64 / 1000.0 * 0.06)
-            }
-            "gpt-3.5-turbo" => {
-                (prompt_tokens as f64 / 1000.0 * 0.0005) +
-                (completion_tokens as f64 / 1000.0 * 0.0015)
-            }
-            "claude-3-5-sonnet" | "claude-3-5-sonnet-20241022" | "claude-sonnet-4-20250514" => {
-                (prompt_tokens as f64 / 1000.0 * 0.003) +
-                (completion_tokens as f64 / 1000.0 * 0.015)
-            }
-            "claude-3-opus" | "claude-opus-4-20250514" => {
-                (prompt_tokens as f64 / 1000.0 * 0.015) +
-                (completion_tokens as f64 / 1000.0 * 0.075)
-            }
-            "claude-3-haiku" | "claude-haiku-4-20250514" | "claude-3-5-haiku" | "claude-3-5-haiku-20241022" => {
-                (prompt_tokens as f64 / 1000.0 * 0.0003) +
-                (completion_tokens as f64 / 1000.0 * 0.00125)
-            }
-            "o3" => {
-                // o3 uses extended thinking with high reasoning costs
-                (prompt_tokens as f64 / 1000.0 * 0.015) +
-                (completion_tokens as f64 / 1000.0 * 0.06)
-            }
-            "o3-mini" => {
-                (prompt_tokens as f64 / 1000.0 * 0.00015) +
-                (completion_tokens as f64 / 1000.0 * 0.0006)
-            }
-            _ => 0.0,
-        }
+        let pt = prompt_tokens as f64 / 1000.0;
+        let ct = completion_tokens as f64 / 1000.0;
+        static RATES: std::sync::LazyLock<std::collections::HashMap<&'static str, (f64, f64)>> =
+            std::sync::LazyLock::new(|| {
+                std::collections::HashMap::from([
+                    ("gpt-4o", (0.005, 0.015)),
+                    ("gpt-4o-2024-08-06", (0.005, 0.015)),
+                    ("o1-preview", (0.005, 0.015)),
+                    ("o1-mini", (0.005, 0.015)),
+                    ("gpt-4o-mini", (0.00015, 0.0006)),
+                    ("gpt-4o-mini-2024-07-18", (0.00015, 0.0006)),
+                    ("o3-mini", (0.00015, 0.0006)),
+                    ("o1", (0.015, 0.06)),
+                    ("o3", (0.015, 0.06)),
+                    ("gpt-4", (0.03, 0.06)),
+                    ("gpt-4-turbo", (0.03, 0.06)),
+                    ("gpt-4-turbo-2024-04-09", (0.03, 0.06)),
+                    ("gpt-3.5-turbo", (0.0005, 0.0015)),
+                    ("claude-3-5-sonnet", (0.003, 0.015)),
+                    ("claude-3-5-sonnet-20241022", (0.003, 0.015)),
+                    ("claude-sonnet-4-20250514", (0.003, 0.015)),
+                    ("claude-3-opus", (0.015, 0.075)),
+                    ("claude-opus-4-20250514", (0.015, 0.075)),
+                    ("claude-3-haiku", (0.0003, 0.00125)),
+                    ("claude-haiku-4-20250514", (0.0003, 0.00125)),
+                    ("claude-3-5-haiku", (0.0003, 0.00125)),
+                    ("claude-3-5-haiku-20241022", (0.0003, 0.00125)),
+                ])
+            });
+        let rate = RATES.get(model).copied().unwrap_or((0.0, 0.0));
+        pt * rate.0 + ct * rate.1
     }
 
     pub fn estimate_from_text(prompt_text: &str, completion_text: &str) -> (usize, usize) {

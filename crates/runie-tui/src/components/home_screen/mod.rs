@@ -194,103 +194,75 @@ fn render_home_menu(screen: &HomeScreen, area: Rect, content_x: u16, div_y: u16,
     for (i, (name, desc, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
         if y >= area.bottom() { break; }
         let is_selected = i == screen.selected;
-        let indicator = if is_selected { "▸" } else { " " };
-        let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-        buf.set_string(content_x + 2, y, indicator, indicator_style);
-        let name_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
-        buf.set_string(content_x + 4, y, name, name_style);
-        // Hint in parentheses, right-aligned with proper spacing
-        let hint_text = format!(" ({}) ", hint);
-        let hint_len = hint_text.len() as u16;
-        let hint_x = content_x + content_width.saturating_sub(hint_len + 2);
-        buf.set_string(hint_x, y, &hint_text, Style::default().fg(text_muted));
-        let desc_y = y + 1;
-        if desc_y < area.bottom() {
-            // Truncate description if too long
-            let max_desc_width = content_width - 8 - hint_len - 2;
-            let desc_text = if desc.len() as u16 > max_desc_width {
-                format!("{}...", &desc[..max_desc_width as usize - 3])
-            } else {
-                desc.to_string()
-            };
-            buf.set_string(content_x + 4, desc_y, &desc_text, Style::default().fg(text_muted));
-        }
-
-        // Draw horizontal divider after each item (except the last one)
+        render_menu_item(name, desc, hint, content_x, y, content_width, buf, text_primary, text_muted, accent, is_selected);
         if i < HOME_MENU_ITEMS.len() - 1 {
-            let divider_y = y + 2;
-            if divider_y < area.bottom() {
-                for x in content_x + 2..content_x + content_width - 2 {
-                    buf.cell_mut((x, divider_y)).map(|cell| cell.set_char('─').set_fg(border));
-                }
-            }
+            render_menu_divider(content_x, content_width, y + 2, area.bottom(), buf, border);
         }
         y += 3;
     }
 }
 
+fn render_menu_item(name: &str, desc: &str, hint: &str, content_x: u16, y: u16, content_width: u16, buf: &mut Buffer, text_primary: Color, text_muted: Color, accent: Color, is_selected: bool) {
+    let indicator = if is_selected { "▸" } else { " " };
+    let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
+    buf.set_string(content_x + 2, y, indicator, indicator_style);
+
+    let name_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
+    buf.set_string(content_x + 4, y, name, name_style);
+
+    let hint_text = format!(" ({}) ", hint);
+    let hint_len = hint_text.len() as u16;
+    let hint_x = content_x + content_width.saturating_sub(hint_len + 2);
+    buf.set_string(hint_x, y, &hint_text, Style::default().fg(text_muted));
+
+    let desc_y = y + 1;
+    if desc_y < y + 10 {
+        let max_desc_width = content_width - 8 - hint_len - 2;
+        let desc_text = if desc.len() as u16 > max_desc_width {
+            format!("{}...", &desc[..max_desc_width as usize - 3])
+        } else {
+            desc.to_string()
+        };
+        buf.set_string(content_x + 4, desc_y, &desc_text, Style::default().fg(text_muted));
+    }
+}
+
+fn render_menu_divider(content_x: u16, content_width: u16, divider_y: u16, bottom: u16, buf: &mut Buffer, border: Color) {
+    if divider_y >= bottom { return; }
+    for x in content_x + 2..content_x + content_width - 2 {
+        buf.cell_mut((x, divider_y)).map(|cell| cell.set_char('─').set_fg(border));
+    }
+}
+
 impl Widget for &HomeScreen {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let theme = ThemeWrapper::default();
-        let colors = ThemeColors::from(&theme);
-
-        let bg = colors.bg_base;
-        let border = colors.border_unfocused;
-        let text_primary = colors.text_primary;
-        let text_muted = colors.text_dim;
-        let accent = colors.accent_primary;
-
+        let colors = ThemeColors::from(&ThemeWrapper::default());
+        let (bg, border, text_primary, text_muted, accent) =
+            (colors.bg_base, colors.border_unfocused, colors.text_primary, colors.text_dim, colors.accent_primary);
         render_home_bg(area, buf, bg);
-
         let content_width = 80u16;
         let content_height = 26u16;
         let content_x = area.x + (area.width.saturating_sub(content_width)) / 2;
         let content_y = area.y + (area.height.saturating_sub(content_height)) / 2;
-
-        // Render ASCII logo
         render_ascii_logo(content_x, content_y, buf, accent);
-
-        // Title and subtitle below logo
         render_home_title(content_x, content_y + 8, content_width, buf, text_primary, text_muted);
-
-        // Divider
         let div_y = content_y + 11;
-        for x in content_x..content_x + content_width {
-            buf.cell_mut((x, div_y)).map(|cell| cell.set_char('─').set_fg(border));
-        }
-
-        // Recent sessions (if any)
+        for x in content_x..content_x + content_width { buf.cell_mut((x, div_y)).map(|c| c.set_char('─').set_fg(border)); }
         render_recent_sessions(self, content_x, div_y + 2, content_width, buf, text_muted);
-
-        // Menu
-        let menu_start_y = if self.recent_sessions.is_empty() {
-            div_y + 2
-        } else {
-            div_y + 10
-        };
+        let menu_start_y = if self.recent_sessions.is_empty() { div_y + 2 } else { div_y + 10 };
         render_home_menu(self, area, content_x, menu_start_y, content_width, buf, text_primary, text_muted, accent, border);
-
-        // Footer with navigation hints
         let footer = "↑/↓ navigate · Enter select · Ctrl-Q quit";
         let footer_y = area.bottom().saturating_sub(3);
         let footer_x = content_x + (content_width.saturating_sub(footer.len() as u16)) / 2;
         buf.set_line(footer_x, footer_y, &Line::raw(footer).style(Style::default().fg(text_muted)), footer.len() as u16);
-
-        // Tip line
         let tip = format!("Tip: {}", self.current_tip());
-        let tip_len = tip.len() as u16;
-        let tip_x = content_x + (content_width.saturating_sub(tip_len)) / 2;
-        buf.set_line(tip_x, footer_y + 1, &Line::raw(tip).style(Style::default().fg(text_muted)), tip_len);
-
-        // Version badge (bottom-right)
-        let version = env!("CARGO_PKG_VERSION");
-        let version_badge = format!("{} Beta", version);
-        let badge_x = area.right().saturating_sub(version_badge.len() as u16 + 2);
-        let badge_y = area.bottom().saturating_sub(1);
-        buf.set_string(badge_x, badge_y, &version_badge, Style::default().fg(text_muted));
+        let tip_x = content_x + (content_width.saturating_sub(tip.len() as u16)) / 2;
+        buf.set_line(tip_x, footer_y + 1, &Line::raw(&tip).style(Style::default().fg(text_muted)), tip.len() as u16);
+        let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
+        buf.set_string(area.right().saturating_sub(version_badge.len() as u16 + 2), area.bottom().saturating_sub(1), &version_badge, Style::default().fg(text_muted));
     }
 }
 
-pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, _theme: &ThemeWrapper) {
     screen.render(area, buf);
 }

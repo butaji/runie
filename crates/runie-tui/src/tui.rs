@@ -90,7 +90,7 @@ impl Tui {
 
 
     #[must_use]
-    #[must_use]
+    
     pub fn new(config: TuiConfig) -> io::Result<Self> {
         Self::install_panic_hook();
         enable_raw_mode()?;

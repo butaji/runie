@@ -35,7 +35,7 @@ impl ActorHandle {
     /// Create a new ActorHandle and associated CancellationToken
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> (Self, CancellationToken) {
         let cancel = CancellationToken::new();
         (Self { cancel: cancel.clone() }, cancel)

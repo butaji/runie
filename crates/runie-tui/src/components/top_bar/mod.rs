@@ -2,11 +2,15 @@ use crate::tui::state::TopBarState;
 
 pub mod builder;
 pub mod gauge;
+pub mod helpers;
 pub mod render;
 
-pub(crate) use builder::TopBarBuilder;
+#[cfg(test)]
+mod tests;
+
 pub use gauge::{calculate_pct, draw_gauge, format_context_window, format_token_count};
 pub use render::render_top_bar;
+pub use helpers::{shorten_path, build_left_spans};
 
 #[derive(Clone)]
 pub struct TopBarViewModel {

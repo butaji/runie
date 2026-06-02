@@ -39,388 +39,11 @@
 
 #![cfg(any(test, feature = "harness"))]
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+pub mod runner;
+pub mod results;
 
-use serde::{Deserialize, Serialize};
-
-// ─── Configuration ────────────────────────────────────────────────────────────
-
-/// Harness configuration
-#[derive(Debug, Clone, Default)]
-pub struct HarnessConfig {
-    /// Maximum time to wait for grader execution
-    pub grader_timeout: Duration,
-    /// Python interpreter to use for graders
-    pub python: String,
-    /// When true, print verbose task output
-    pub verbose: bool,
-    /// Model to use (informational only — harness is model-agnostic)
-    pub model: Option<String>,
-}
-
-impl HarnessConfig {
-    /// Create a new config with required fields
-
-    #[must_use]
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Set the Python interpreter path
-    pub fn python<P: Into<String>>(mut self, path: P) -> Self {
-        self.python = path.into();
-        self
-    }
-
-    /// Enable verbose output
-    pub fn verbose(mut self) -> Self {
-        self.verbose = true;
-        self
-    }
-
-    /// Set the model name
-    pub fn model<M: Into<String>>(mut self, name: M) -> Self {
-        self.model = Some(name.into());
-        self
-    }
-}
-
-// ─── Task Definition ─────────────────────────────────────────────────────────
-
-/// Task definition loaded from `task.json`
-#[derive(Debug, Deserialize)]
-pub struct TaskDef {
-    /// Unique task identifier
-    pub id: String,
-    /// Human-readable task name
-    pub name: String,
-    /// Detailed task description
-    pub description: String,
-    /// Initial file setup
-    pub setup: TaskSetup,
-    /// Expected outcomes (key = outcome name, value = expected to pass)
-    pub expected: HashMap<String, bool>,
-    /// Grader script filename (optional)
-    // BUG-11 FIX: Changed to Option<String> to match runner.rs
-    pub grader: Option<String>,
-}
-
-/// Files to create in the sandbox workspace
-#[derive(Debug, Deserialize)]
-pub struct TaskSetup {
-    pub files: HashMap<String, String>,
-}
-
-// ─── Results ─────────────────────────────────────────────────────────────────
-
-/// Result status for a single task
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TaskStatus {
-    /// All checks passed
-    Pass,
-    /// Some checks failed
-    Fail,
-    /// Task execution error
-    Error,
-    /// Task timed out
-    Timeout,
-    /// Task was skipped
-    Skipped,
-}
-
-impl std::fmt::Display for TaskStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Pass => write!(f, "pass"),
-            Self::Fail => write!(f, "fail"),
-            Self::Error => write!(f, "error"),
-            Self::Timeout => write!(f, "timeout"),
-            Self::Skipped => write!(f, "skipped"),
-        }
-    }
-}
-
-/// Result of a single task execution
-#[derive(Debug)]
-pub struct TaskResult {
-    /// Task identifier
-    pub task_id: String,
-    /// Execution status
-    pub status: TaskStatus,
-    /// Time taken in milliseconds
-    pub elapsed_ms: u64,
-    /// Number of checks that passed
-    pub checks_passed: usize,
-    /// Total number of checks
-    pub checks_total: usize,
-    /// Detailed output or error message
-    pub detail: String,
-}
-
-impl TaskResult {
-    /// Convert to CSV row format
-    pub fn to_csv_row(&self) -> String {
-        format!(
-            "{},{},{},{},{}",
-            self.task_id,
-            self.status,
-            self.elapsed_ms,
-            self.checks_passed,
-            self.checks_total
-        )
-    }
-
-    /// Human-readable summary
-    pub fn summary(&self) -> String {
-        format!(
-            "[{}] {} — {}/{} checks passed in {}ms",
-            self.status,
-            self.task_id,
-            self.checks_passed,
-            self.checks_total,
-            self.elapsed_ms
-        )
-    }
-}
-
-/// Aggregated results across all tasks
-#[derive(Debug, Default)]
-pub struct HarnessResult {
-    /// Individual task results
-    pub task_results: Vec<TaskResult>,
-    /// Total execution time in milliseconds
-    pub total_ms: u64,
-}
-
-impl HarnessResult {
-    /// Calculate pass rate as a fraction
-    pub fn pass_rate(&self) -> f64 {
-        let total = self.task_results.len();
-        if total == 0 {
-            return 0.0;
-        }
-        let pass = self
-            .task_results
-            .iter()
-            .filter(|r| r.status == TaskStatus::Pass)
-            .count();
-        pass as f64 / total as f64
-    }
-
-    /// Convert to CSV format with header
-    pub fn to_csv(&self) -> String {
-        let mut output = String::from("task_id,status,elapsed_ms,checks_passed,checks_total\n");
-        for result in &self.task_results {
-            output.push_str(&result.to_csv_row());
-            output.push('\n');
-        }
-        output
-    }
-
-    /// Calculate total checks passed across all tasks
-    pub fn total_checks_passed(&self) -> usize {
-        self.task_results.iter().map(|r| r.checks_passed).sum()
-    }
-
-    /// Calculate total checks across all tasks
-    pub fn total_checks(&self) -> usize {
-        self.task_results.iter().map(|r| r.checks_total).sum()
-    }
-}
-
-// ─── Task Discovery ─────────────────────────────────────────────────────────
-
-/// Get the directory path for a task
-fn task_dir(task_id: &str) -> PathBuf {
-    Path::new("tasks").join(task_id)
-}
-
-/// List all available task IDs
-pub fn list_tasks() -> Vec<String> {
-    let tasks_dir = Path::new("tasks");
-    
-    std::fs::read_dir(tasks_dir)
-        .map(|entries| {
-            entries
-                .filter_map(|e| e.ok())
-                .filter(|e| e.path().is_dir())
-                .filter_map(|e| e.file_name().into_string().ok())
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-// ─── Task Execution ──────────────────────────────────────────────────────────
-
-/// Run a single harness task
-///
-/// The sandbox workspace is created as a temp directory, setup files are
-/// copied in, then the grader is executed against the final state.
-pub async fn run_harness_task(task_id: &str, config: &HarnessConfig) -> TaskResult {
-    let start = Instant::now();
-
-    // Phase 1: Setup
-    let setup = match task_setup(task_id) {
-        Ok(s) => s,
-        Err(result) => return result.with_elapsed(start),
-    };
-
-    // Phase 2: Execute
-    let grader_result = run_grader(&setup.task_dir, &setup.workspace_path, config);
-
-    // Phase 3: Cleanup
-    let _ = std::fs::remove_dir_all(&setup.sandbox_base);
-
-    let elapsed_ms = start.elapsed().as_millis() as u64;
-    let (status, checks_passed, checks_total, detail) = grader_result;
-
-    TaskResult {
-        task_id: task_id.to_string(),
-        status,
-        elapsed_ms,
-        checks_passed,
-        checks_total,
-        detail,
-    }
-}
-
-/// Setup phase result
-struct TaskSandbox {
-    task_dir: PathBuf,
-    sandbox_base: PathBuf,
-    workspace_path: PathBuf,
-}
-
-/// Execute setup phase, returns setup info or error result
-fn task_setup(task_id: &str) -> Result<TaskSandbox, TaskResult> {
-    use std::fs;
-
-    let task_dir = task_dir(task_id);
-
-    // Load task definition
-    let task_json = fs::read_to_string(task_dir.join("task.json"))
-        .map_err(|e| TaskResult {
-            task_id: task_id.to_string(),
-            status: TaskStatus::Error,
-            elapsed_ms: 0,
-            checks_passed: 0,
-            checks_total: 0,
-            detail: format!("Failed to read task.json: {}", e),
-        })?;
-
-    let _task_def: TaskDef = serde_json::from_str(&task_json)
-        .map_err(|e| TaskResult {
-            task_id: task_id.to_string(),
-            status: TaskStatus::Error,
-            elapsed_ms: 0,
-            checks_passed: 0,
-            checks_total: 0,
-            detail: format!("Failed to parse task.json: {}", e),
-        })?;
-
-    // Create temp workspace
-    let sandbox_base = std::env::temp_dir().join("runie-harness").join(task_id);
-    let workspace_path = sandbox_base.join("workspace");
-    fs::create_dir_all(&workspace_path).map_err(|e| TaskResult {
-        task_id: task_id.to_string(),
-        status: TaskStatus::Error,
-        elapsed_ms: 0,
-        checks_passed: 0,
-        checks_total: 0,
-        detail: format!("Failed to create temp workspace: {}", e),
-    })?;
-
-    Ok(TaskSandbox { task_dir, sandbox_base, workspace_path })
-}
-
-impl TaskResult {
-    fn with_elapsed(self, start: Instant) -> TaskResult {
-        TaskResult { elapsed_ms: start.elapsed().as_millis() as u64, ..self }
-    }
-}
-
-/// Run the Python grader script and parse its output
-fn run_grader(
-    task_dir: &Path,
-    workspace_path: &Path,
-    config: &HarnessConfig,
-) -> (TaskStatus, usize, usize, String) {
-    let grader_path = task_dir.join("grader.py");
-    if !grader_path.exists() {
-        return (TaskStatus::Skipped, 0, 0, format!("grader not found: {}", grader_path.display()));
-    }
-    let output = spawn_grader(&grader_path, workspace_path, config);
-    let (stdout, stderr, status) = match output {
-        Ok((s, e, st)) => (s, e, st),
-        Err(e) => return (TaskStatus::Error, 0, 0, format!("failed to spawn python: {}", e)),
-    };
-    if !stderr.is_empty() && config.verbose {
-        eprintln!("[grader stderr] {}", stderr);
-    }
-    parse_grader_output(&stdout, &stderr, status.as_ref())
-}
-
-fn spawn_grader(
-    grader_path: &Path,
-    workspace_path: &Path,
-    config: &HarnessConfig,
-) -> Result<(String, String, Option<std::process::ExitStatus>), std::io::Error> {
-    let output = Command::new(&config.python)
-        .current_dir(workspace_path)
-        .arg(grader_path)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    Ok((stdout, stderr, Some(output.status)))
-}
-
-fn parse_grader_output(
-    stdout: &str,
-    stderr: &str,
-    exit_status: Option<&std::process::ExitStatus>,
-) -> (TaskStatus, usize, usize, String) {
-    let status = if exit_status.map_or(false, |s| s.success()) {
-        TaskStatus::Pass
-    } else {
-        TaskStatus::Fail
-    };
-    let lines: Vec<&str> = stdout.trim().split('\n').collect();
-    let checks_total = lines.len();
-    let checks_passed = lines.iter().filter(|l| l.starts_with("PASS")).count();
-    let detail = if stdout.is_empty() && stderr.is_empty() {
-        format!("grader exited with status {:?}", exit_status)
-    } else {
-        stdout.trim().to_string()
-    };
-    (status, checks_passed, checks_total, detail)
-}
-
-/// Run all tasks in the harness directory
-pub async fn run_all_tasks(config: &HarnessConfig) -> HarnessResult {
-    let start = Instant::now();
-
-    let task_ids = list_tasks();
-    let mut task_results = Vec::new();
-
-    for task_id in task_ids {
-        let result = run_harness_task(&task_id, config).await;
-        if config.verbose {
-            eprintln!("[harness] {}", result.summary());
-        }
-        task_results.push(result);
-    }
-
-    HarnessResult {
-        task_results,
-        total_ms: start.elapsed().as_millis() as u64,
-    }
-}
+pub use results::{HarnessResult, TaskResult, TaskStatus};
+pub use runner::{HarnessConfig, list_tasks, run_all_tasks, run_harness_task};
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
@@ -428,20 +51,28 @@ pub async fn run_all_tasks(config: &HarnessConfig) -> HarnessResult {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_harness_runs_all_tasks() {
-        // Change to harness directory so tasks path is correct
-        let harness_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        std::env::set_current_dir(harness_dir).ok();
-        
-        let config = HarnessConfig {
-            verbose: true,
-            ..Default::default()
-        };
-        let result = run_all_tasks(&config).await;
-        eprintln!("Pass rate: {:.0}%", result.pass_rate() * 100.0);
-        eprintln!("{}", result.to_csv());
-        assert!(!result.task_results.is_empty());
+    fn success_exit() -> std::process::ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(0)
+        }
+        #[cfg(not(unix))]
+        {
+            std::process::Command::new("cmd").arg("/c").arg("exit 0").status().unwrap()
+        }
+    }
+
+    fn fail_exit() -> std::process::ExitStatus {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            std::process::ExitStatus::from_raw(1)
+        }
+        #[cfg(not(unix))]
+        {
+            std::process::Command::new("cmd").arg("/c").arg("exit 1").status().unwrap()
+        }
     }
 
     #[test]
@@ -612,32 +243,9 @@ mod tests {
         assert_eq!(lines[2], "task2,fail,200,1,5");
     }
 
-    fn success_exit() -> std::process::ExitStatus {
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::ExitStatusExt;
-            std::process::ExitStatus::from_raw(0)
-        }
-        #[cfg(not(unix))]
-        {
-            std::process::Command::new("cmd").arg("/c").arg("exit 0").status().unwrap()
-        }
-    }
-
-    fn fail_exit() -> std::process::ExitStatus {
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::ExitStatusExt;
-            std::process::ExitStatus::from_raw(1)
-        }
-        #[cfg(not(unix))]
-        {
-            std::process::Command::new("cmd").arg("/c").arg("exit 1").status().unwrap()
-        }
-    }
-
     #[test]
     fn parse_grader_counts_pass_lines() {
+        use runner::parse_grader_output;
         let stdout = "PASS check1\nPASS check2\nFAIL check3\n";
         let (status, passed, total, detail) = parse_grader_output(stdout, "", Some(&success_exit()));
         assert_eq!(status, TaskStatus::Pass, "exit 0 -> Pass regardless of stdout content");
@@ -648,6 +256,7 @@ mod tests {
 
     #[test]
     fn parse_grader_zero_passes_when_no_pass_lines() {
+        use runner::parse_grader_output;
         let stdout = "FAIL check1\nFAIL check2\n";
         let (status, passed, total, _) = parse_grader_output(stdout, "", Some(&fail_exit()));
         assert_eq!(status, TaskStatus::Fail);
@@ -657,6 +266,7 @@ mod tests {
 
     #[test]
     fn parse_grader_handles_empty_stdout() {
+        use runner::parse_grader_output;
         let (status, passed, total, detail) = parse_grader_output("", "", Some(&success_exit()));
         assert_eq!(status, TaskStatus::Pass);
         assert_eq!(passed, 0);
@@ -667,6 +277,7 @@ mod tests {
 
     #[test]
     fn parse_grader_handles_empty_stdout_and_fail_exit() {
+        use runner::parse_grader_output;
         let (status, passed, total, detail) = parse_grader_output("", "", Some(&fail_exit()));
         assert_eq!(status, TaskStatus::Fail);
         assert_eq!(passed, 0);
@@ -676,6 +287,7 @@ mod tests {
 
     #[test]
     fn parse_grader_trims_whitespace() {
+        use runner::parse_grader_output;
         let stdout = "   \nPASS a\nPASS b\n   \n";
         let (_, passed, total, _) = parse_grader_output(stdout, "", Some(&success_exit()));
         // stdout.trim() strips surrounding whitespace, leaving "PASS a\nPASS b"

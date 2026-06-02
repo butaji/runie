@@ -137,10 +137,8 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            messages: Vec::new(),
-            textarea: ratatui_textarea::TextArea::default(),
-            input_right_info: String::new(),
-            scroll: ScrollState::default(),
+            messages: Vec::new(), textarea: ratatui_textarea::TextArea::default(),
+            input_right_info: String::new(), scroll: ScrollState::default(),
             input_history: Vec::new(), input_history_index: None,
             input_draft: String::new(), history_search_query: String::new(),
             history_search_matches: Vec::new(), history_search_index: 0,
@@ -163,9 +161,7 @@ impl Default for AppState {
             file_picker: crate::components::FilePicker::new(),
             plan_modal: crate::components::PlanModal::new(),
             context_usage_modal: crate::components::ContextUsageModal::new(),
-            model_picker: None,
-            extensions_modal: None,
-            diff_viewer: None,
+            model_picker: None, extensions_modal: None, diff_viewer: None,
             session_tree: crate::components::SessionTreeNavigator::new(),
             animation: AnimationState::default(), onboarding: None,
             mode: TuiMode::HomeScreen, top_bar: TopBarState::default(),
@@ -173,14 +169,10 @@ impl Default for AppState {
             last_turn_duration_secs: None, last_turn_tokens: None,
             last_turn_tool_calls: None, turn_success: None,
             extension_registry: std::sync::Arc::new(runie_ext::ExtensionRegistry::new()),
-            questionnaire: None,
-            subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
-            fullscreen_content: None,
-            fullscreen_scroll_offset: 0,
-            layout_mode: LayoutMode::Fullscreen,
-            animation_config: AnimationConfig::default(),
-            compact_mode: false,
-            multiline_input: false,
+            questionnaire: None, subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
+            fullscreen_content: None, fullscreen_scroll_offset: 0,
+            layout_mode: LayoutMode::Fullscreen, animation_config: AnimationConfig::default(),
+            compact_mode: false, multiline_input: false,
         }
     }
 }

@@ -9,7 +9,6 @@ use crate::components::global_tags::GlobalTagsViewModel;
 use crate::components::top_bar::TopBarViewModel;
 pub use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::PlanStatus;
-use crate::messages::MessageRegistry;
 use crate::tui::state::TuiMode;
 use runie_ai::TokenUsage;
 
@@ -193,47 +192,29 @@ pub fn strip_thinking_from_assistant(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
     let mut result = Vec::new();
     let mut in_thinking_block = false;
-    let mut thinking_depth = 0usize;
-
     for line in &lines {
         let trimmed = line.trim();
-
-        // Handle <think> XML blocks (DeepSeek style)
         if trimmed.starts_with("<think>") {
             in_thinking_block = true;
-            thinking_depth = 1;
-            if trimmed.contains("</think>") {
-                in_thinking_block = false;
-                thinking_depth = 0;
-            }
+            if trimmed.contains("
+</think>
+
+") { in_thinking_block = false; }
             continue;
         }
         if in_thinking_block {
-            if trimmed.starts_with("</think>") {
-                in_thinking_block = false;
-                thinking_depth = 0;
-            }
+            if trimmed.starts_with("
+</think>
+
+") { in_thinking_block = false; }
             continue;
         }
-
-        // Handle [thinking:...] wrapper (our agent format)
-        if trimmed.starts_with("[thinking:") && trimmed.ends_with("]") {
-            continue;
-        }
-
-        // Check if line starts with a thinking marker
+        if trimmed.starts_with("[thinking:") && trimmed.ends_with("]") { continue; }
         let first_char = trimmed.chars().next();
-        let is_thinking_marker = first_char.map_or(false, |c| {
-            matches!(c, '·' | '•' | '◦' | '▸' | '▹')
-        });
-
-        if is_thinking_marker {
-            continue;
-        }
-
+        let is_thinking_marker = first_char.map_or(false, |c| matches!(c, '·' | '•' | '◦' | '▸' | '▹'));
+        if is_thinking_marker { continue; }
         result.push(*line);
     }
-
     result.join("\n")
 }
 
@@ -398,7 +379,7 @@ fn build_permission_modal_vm(state: &crate::tui::state::AppState) -> Option<Perm
     }
 }
 
-fn build_overlay_vm(state: &crate::tui::state::AppState) -> Option<OverlayViewModel> {
+fn build_overlay_vm(_state: &crate::tui::state::AppState) -> Option<OverlayViewModel> {
     // Overlay is shown when there's a context panel or similar
     // For now, return None unless explicitly needed
     None

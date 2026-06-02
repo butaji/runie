@@ -5,49 +5,67 @@ use crate::tui::update::ui::clipboard::handle_copy_last_response;
 
 pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<UiCmd> {
     use runie_core::slash_command::SlashCommand;
+    if let SlashCommand::Model(model) = cmd { handle_model(state, model); return vec![]; }
+    if let SlashCommand::Unknown(cmd) = cmd { handle_unknown(state, cmd); return vec![]; }
+    if let SlashCommand::Rename(title) = cmd { handle_rename(state, title); return vec![]; }
+    if let SlashCommand::Compact(context) = cmd { handle_compact(state, context); return vec![]; }
+    if let SlashCommand::Theme(name) = cmd { handle_theme(state, name); return vec![]; }
+    if let SlashCommand::Feedback(text) = cmd { handle_feedback(state, text); return vec![]; }
+    if let SlashCommand::Btw(question) = cmd { handle_btw(state, question); return vec![]; }
+    if let SlashCommand::Imagine(prompt) = cmd { handle_imagine(state, prompt); return vec![]; }
+    if let SlashCommand::ImagineVideo(prompt) = cmd { handle_imagine_video(state, prompt); return vec![]; }
+    handle_grouped(state, cmd);
+    vec![]
+}
+
+fn handle_grouped(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) {
+    use runie_core::slash_command::SlashCommand;
+    if matches!(cmd, SlashCommand::New | SlashCommand::Clear | SlashCommand::Fork) { handle_session_cmd(state, &cmd); return; }
+    if matches!(cmd, SlashCommand::Copy | SlashCommand::Tree | SlashCommand::AlwaysApprove | SlashCommand::Plan) { handle_action_cmd(state, &cmd); return; }
+    if matches!(cmd, SlashCommand::Onboard | SlashCommand::Quit | SlashCommand::Share | SlashCommand::Context | SlashCommand::Rewind | SlashCommand::Multiline | SlashCommand::Logout) { handle_auth_cmd(state, &cmd); return; }
+    if matches!(cmd, SlashCommand::Help | SlashCommand::Cost | SlashCommand::Status | SlashCommand::Models | SlashCommand::SessionInfo | SlashCommand::Usage) { handle_info_cmd(state, &cmd); return; }
+    if matches!(cmd, SlashCommand::Home | SlashCommand::Resume | SlashCommand::Sessions) { handle_nav_cmd(state, &cmd); return; }
+    if matches!(cmd, SlashCommand::CompactMode) { handle_compact_mode(state); return; }
+    if matches!(cmd, SlashCommand::Flush | SlashCommand::Memory | SlashCommand::Dream) { handle_util_cmd(state, &cmd); return; }
+    if matches!(cmd, SlashCommand::Hooks | SlashCommand::Plugins | SlashCommand::Skills | SlashCommand::Mcps | SlashCommand::Extensions) { handle_extensions(state, cmd); return; }
+}
+
+fn handle_action_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashCommand) {
+    use runie_core::slash_command::SlashCommand;
+    if matches!(cmd, SlashCommand::Copy) { handle_copy(state); return; }
+    if matches!(cmd, SlashCommand::Tree) { handle_tree(state); return; }
+    if matches!(cmd, SlashCommand::AlwaysApprove) { handle_always_approve(state); return; }
+    if matches!(cmd, SlashCommand::Plan) { handle_plan(state); return; }
+}
+
+fn handle_auth_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashCommand) {
+    use runie_core::slash_command::SlashCommand;
+    if matches!(cmd, SlashCommand::Onboard) { handle_onboard(state); return; }
+    if matches!(cmd, SlashCommand::Quit) { handle_quit(state); return; }
+    if matches!(cmd, SlashCommand::Share) { handle_share(state); return; }
+    if matches!(cmd, SlashCommand::Context) { handle_context(state); return; }
+    if matches!(cmd, SlashCommand::Rewind) { handle_rewind(state); return; }
+    if matches!(cmd, SlashCommand::Multiline) { handle_multiline(state); return; }
+    if matches!(cmd, SlashCommand::Logout) { handle_logout(state); return; }
+}
+
+fn handle_nav_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashCommand) {
+    use runie_core::slash_command::SlashCommand;
     match cmd {
-        // Session-modifying commands - grouped
-        SlashCommand::New | SlashCommand::Clear | SlashCommand::Fork =>
-            { handle_session_cmd(state, &cmd); vec![] }
-        SlashCommand::Copy => { handle_copy(state); vec![] }
-        SlashCommand::Model(model) => { handle_model(state, model); vec![] }
-        SlashCommand::Tree => { handle_tree(state); vec![] }
-        SlashCommand::Onboard => { handle_onboard(state); vec![] }
-        SlashCommand::Quit => { handle_quit(state); vec![] }
-        // Informational - grouped
-        SlashCommand::Help | SlashCommand::Cost | SlashCommand::Status | SlashCommand::Models |
-        SlashCommand::SessionInfo | SlashCommand::Usage => { handle_info_cmd(state, &cmd); vec![] }
-        SlashCommand::Unknown(cmd) => { handle_unknown(state, cmd); vec![] }
-        // Session
-        SlashCommand::Home => { handle_home(state); vec![] }
-        SlashCommand::Resume => { handle_resume(state); vec![] }
-        SlashCommand::Sessions => { handle_sessions(state); vec![] }
-        SlashCommand::Rename(title) => { handle_rename(state, title); vec![] }
-        SlashCommand::Share => { handle_share(state); vec![] }
-        // Context
-        SlashCommand::Context => { handle_context(state); vec![] }
-        SlashCommand::Compact(context) => { handle_compact(state, context); vec![] }
-        SlashCommand::CompactMode => { handle_compact_mode(state); vec![] }
-        SlashCommand::Rewind => { handle_rewind(state); vec![] }
-        // UI
-        SlashCommand::Theme(name) => { handle_theme(state, name); vec![] }
-        SlashCommand::Multiline => { handle_multiline(state); vec![] }
-        // Permission
-        SlashCommand::AlwaysApprove => { handle_always_approve(state); vec![] }
-        SlashCommand::Plan => { handle_plan(state); vec![] }
-        SlashCommand::Feedback(text) => { handle_feedback(state, text); vec![] }
-        // Utility
-        SlashCommand::Btw(question) => { handle_btw(state, question); vec![] }
-        SlashCommand::Logout => { handle_logout(state); vec![] }
-        // Extensions
-        SlashCommand::Hooks | SlashCommand::Plugins | SlashCommand::Skills | SlashCommand::Mcps | SlashCommand::Extensions =>
-            { handle_extensions(state, cmd); vec![] }
-        // Shell
-        SlashCommand::Flush => { handle_flush(state); vec![] }
-        SlashCommand::Memory => { handle_memory(state); vec![] }
-        SlashCommand::Dream => { handle_dream(state); vec![] }
-        SlashCommand::Imagine(prompt) => { handle_imagine(state, prompt); vec![] }
-        SlashCommand::ImagineVideo(prompt) => { handle_imagine_video(state, prompt); vec![] }
+        SlashCommand::Home => handle_home(state),
+        SlashCommand::Resume => handle_resume(state),
+        SlashCommand::Sessions => handle_sessions(state),
+        _ => {}
+    }
+}
+
+fn handle_util_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashCommand) {
+    use runie_core::slash_command::SlashCommand;
+    match cmd {
+        SlashCommand::Flush => handle_flush(state),
+        SlashCommand::Memory => handle_memory(state),
+        SlashCommand::Dream => handle_dream(state),
+        _ => {}
     }
 }
 

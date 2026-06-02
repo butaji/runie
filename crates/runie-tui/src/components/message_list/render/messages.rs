@@ -48,7 +48,7 @@ pub fn render_thought_msg(
 /// Render a separator with timing info
 pub fn render_separator(
     elapsed_secs: u64,
-    tool_calls: usize,
+    _tool_calls: usize,
     tokens_used: Option<usize>,
     success: bool,
     area: Rect,

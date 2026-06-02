@@ -1,5 +1,5 @@
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, TuiMode};
+use crate::tui::state::{AppState, Msg, TuiMode};
 use super::ChatCmd;
 use super::submit::handle_submit;
 
@@ -58,26 +58,38 @@ pub fn handle_shortcuts_panel_msg(state: &mut AppState, msg: crate::tui::state::
     match msg {
         Msg::OpenShortcutsPanel => { state.shortcuts_panel.open(); vec![] }
         Msg::CloseShortcutsPanel => { state.shortcuts_panel.close(); vec![] }
-        Msg::ShortcutsPanelUp => { state.shortcuts_panel.move_up(); vec![] }
-        Msg::ShortcutsPanelDown => { state.shortcuts_panel.move_down(); vec![] }
-        Msg::ShortcutsPanelToggleSection => { state.shortcuts_panel.toggle_selected_section(); vec![] }
-        Msg::ShortcutsPanelToggleFilter => { state.shortcuts_panel.toggle_filter(); vec![] }
-        Msg::ShortcutsPanelFilterInput(c) => {
-            if state.shortcuts_panel.filter_mode {
-                let new_filter = format!("{}{}", state.shortcuts_panel.filter, c);
-                state.shortcuts_panel.set_filter(&new_filter);
-            }
-            vec![]
-        }
-        Msg::ShortcutsPanelFilterBackspace => {
-            if state.shortcuts_panel.filter_mode {
-                let new_filter = state.shortcuts_panel.filter.chars().next_back().map(|_| state.shortcuts_panel.filter[..state.shortcuts_panel.filter.len()-1].to_string()).unwrap_or_default();
-                state.shortcuts_panel.set_filter(&new_filter);
-            }
-            vec![]
-        }
-        _ => vec![],
+        Msg::ShortcutsPanelFilterInput(c) => shortcuts_filter_input(state, c),
+        Msg::ShortcutsPanelFilterBackspace => shortcuts_filter_backspace(state),
+        _ => shortcuts_panel_navigation(&msg, state).unwrap_or(vec![]),
     }
+}
+
+fn shortcuts_panel_navigation(msg: &Msg, state: &mut AppState) -> Option<Vec<ChatCmd>> {
+    match msg {
+        Msg::ShortcutsPanelUp => { state.shortcuts_panel.move_up(); Some(vec![]) }
+        Msg::ShortcutsPanelDown => { state.shortcuts_panel.move_down(); Some(vec![]) }
+        Msg::ShortcutsPanelToggleSection => { state.shortcuts_panel.toggle_selected_section(); Some(vec![]) }
+        Msg::ShortcutsPanelToggleFilter => { state.shortcuts_panel.toggle_filter(); Some(vec![]) }
+        _ => None,
+    }
+}
+
+fn shortcuts_filter_input(state: &mut AppState, c: char) -> Vec<ChatCmd> {
+    if state.shortcuts_panel.filter_mode {
+        let new_filter = format!("{}{}", state.shortcuts_panel.filter, c);
+        state.shortcuts_panel.set_filter(&new_filter);
+    }
+    vec![]
+}
+
+fn shortcuts_filter_backspace(state: &mut AppState) -> Vec<ChatCmd> {
+    if state.shortcuts_panel.filter_mode {
+        let new_filter = state.shortcuts_panel.filter.chars().next_back()
+            .map(|_| state.shortcuts_panel.filter[..state.shortcuts_panel.filter.len()-1].to_string())
+            .unwrap_or_default();
+        state.shortcuts_panel.set_filter(&new_filter);
+    }
+    vec![]
 }
 
 pub fn handle_settings_modal_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
@@ -89,18 +101,20 @@ pub fn handle_settings_modal_msg(state: &mut AppState, msg: crate::tui::state::M
         Msg::SettingsModalDown => { state.settings_modal.move_down(); vec![] }
         Msg::SettingsModalNextTab => { state.settings_modal.next_tab(); vec![] }
         Msg::SettingsModalPrevTab => { state.settings_modal.prev_tab(); vec![] }
-        Msg::SettingsModalSelect => {
-            if state.settings_modal.selected_tab == 0 {
-                if let Some((name, _)) = crate::components::settings_modal::THEMES.get(state.settings_modal.selected_item) {
-                    state.messages.push(MessageItem::System {
-                        text: format!("Theme switched to {}", name),
-                    });
-                }
-            }
-            vec![]
-        }
+        Msg::SettingsModalSelect => settings_modal_select(state),
         _ => vec![],
     }
+}
+
+fn settings_modal_select(state: &mut AppState) -> Vec<ChatCmd> {
+    if state.settings_modal.selected_tab == 0 {
+        if let Some((name, _)) = crate::components::settings_modal::THEMES.get(state.settings_modal.selected_item) {
+            state.messages.push(MessageItem::System {
+                text: format!("Theme switched to {}", name),
+            });
+        }
+    }
+    vec![]
 }
 
 pub fn handle_home_screen_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
@@ -108,32 +122,36 @@ pub fn handle_home_screen_msg(state: &mut AppState, msg: crate::tui::state::Msg)
     match msg {
         Msg::HomeScreenUp => { state.home_screen.move_up(); vec![] }
         Msg::HomeScreenDown => { state.home_screen.move_down(); vec![] }
-        Msg::HomeScreenSelect => {
-            let action = state.home_screen.selected_action().to_string();
-            state.home_screen.hide();
-            state.mode = TuiMode::Chat;
-            match action.as_str() {
-                "New Session" => {
-                    state.messages.clear();
-                    state.messages.push(MessageItem::System { text: "New session started".to_string() });
-                }
-                "Resume Last Session" => {
-                    state.messages.push(MessageItem::System { text: "Resuming last session".to_string() });
-                }
-                "Settings" => { state.settings_modal.open(); }
-                "Help" => { state.shortcuts_panel.open(); }
-                "Quit" => { state.running = false; }
-                _ => {}
-            }
-            vec![]
-        }
-        Msg::CloseHomeScreen => {
-            state.home_screen.hide();
-            state.mode = TuiMode::Chat;
-            vec![]
-        }
+        Msg::HomeScreenSelect => home_screen_select(state),
+        Msg::CloseHomeScreen => home_screen_close(state),
         _ => vec![],
     }
+}
+
+fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
+    let action = state.home_screen.selected_action().to_string();
+    state.home_screen.hide();
+    state.mode = TuiMode::Chat;
+    match action.as_str() {
+        "New Session" => {
+            state.messages.clear();
+            state.messages.push(MessageItem::System { text: "New session started".to_string() });
+        }
+        "Resume Last Session" => {
+            state.messages.push(MessageItem::System { text: "Resuming last session".to_string() });
+        }
+        "Settings" => { state.settings_modal.open(); }
+        "Help" => { state.shortcuts_panel.open(); }
+        "Quit" => { state.running = false; }
+        _ => {}
+    }
+    vec![]
+}
+
+fn home_screen_close(state: &mut AppState) -> Vec<ChatCmd> {
+    state.home_screen.hide();
+    state.mode = TuiMode::Chat;
+    vec![]
 }
 
 pub fn handle_file_picker_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
@@ -141,18 +159,20 @@ pub fn handle_file_picker_msg(state: &mut AppState, msg: crate::tui::state::Msg)
     match msg {
         Msg::FilePickerUp => { state.file_picker.move_up(); vec![] }
         Msg::FilePickerDown => { state.file_picker.move_down(); vec![] }
-        Msg::FilePickerConfirm => {
-            if let Some(file) = state.file_picker.selected_file() {
-                let text = state.textarea.lines().join("\n");
-                let new_text = if text.starts_with('@') { file } else { format!("{} {}", text, file) };
-                state.textarea = ratatui_textarea::TextArea::new(vec![new_text]);
-            }
-            state.file_picker.close();
-            vec![]
-        }
+        Msg::FilePickerConfirm => file_picker_confirm(state),
         Msg::FilePickerFilter(c) => { state.file_picker.push_filter(c); vec![] }
         Msg::FilePickerBackspace => { state.file_picker.pop_filter(); vec![] }
         Msg::CloseFilePicker => { state.file_picker.close(); vec![] }
         _ => vec![],
     }
+}
+
+fn file_picker_confirm(state: &mut AppState) -> Vec<ChatCmd> {
+    if let Some(file) = state.file_picker.selected_file() {
+        let text = state.textarea.lines().join("\n");
+        let new_text = if text.starts_with('@') { file } else { format!("{} {}", text, file) };
+        state.textarea = ratatui_textarea::TextArea::new(vec![new_text]);
+    }
+    state.file_picker.close();
+    vec![]
 }

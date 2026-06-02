@@ -71,53 +71,64 @@ fn render_jobs(panel: &ActivityPanel, area: Rect, buf: &mut Buffer, colors: &The
     let max_y = area.bottom().saturating_sub(2);
 
     if panel.running_jobs.is_empty() {
-        let empty_style = Style::default().fg(colors.text_dim);
-        let empty_line = Line::styled("No active tasks", empty_style);
-        buf.set_line(area.x + 1, y, &empty_line, area.width.saturating_sub(2));
+        render_empty_jobs(area, y, buf, colors);
         return;
     }
 
-    // Auto-scroll: if more jobs than fit, show latest ones
     let visible_jobs: Vec<&BackgroundJob> = panel.running_jobs.iter()
         .rev()
         .skip(panel.scroll_offset)
         .take((max_y - y) as usize + 1)
         .collect();
 
-    use ratatui::text::Span;
     for job in visible_jobs {
         if y > max_y {
             break;
         }
-
-        // Truncate job name
-        let name = if job.name.len() > 14 {
-            format!("{}...", &job.name[..11])
-        } else {
-            job.name.clone()
-        };
-
-        // Progress bar (3 chars)
-        let progress = job.progress.clamp(0.0, 1.0);
-        let filled = (progress * 3.0).round() as usize;
-        let bar: String = std::iter::repeat('█').take(filled)
-            .chain(std::iter::repeat('░').take(3 - filled))
-            .collect();
-
-        let pct = format!("{:3.0}%", progress * 100.0);
-
-        let line = Line::from(vec![
-            Span::styled("◆ ", Style::default().fg(colors.accent_primary)),
-            Span::styled(name, Style::default().fg(colors.text_secondary)),
-            Span::styled("  ", Style::default()),
-            Span::styled(bar, Style::default().fg(colors.accent_primary)),
-            Span::styled(" ", Style::default()),
-            Span::styled(pct, Style::default().fg(colors.text_muted)),
-        ]);
-
-        buf.set_line(area.x + 1, y, &line, area.width.saturating_sub(2));
+        render_single_job(job, area.x + 1, y, area.width.saturating_sub(2), buf, colors);
         y += 1;
     }
+}
+
+fn render_empty_jobs(area: Rect, y: u16, buf: &mut Buffer, colors: &ThemeColors) {
+    let empty_style = Style::default().fg(colors.text_dim);
+    let empty_line = Line::styled("No active tasks", empty_style);
+    buf.set_line(area.x + 1, y, &empty_line, area.width.saturating_sub(2));
+}
+
+fn render_single_job(job: &BackgroundJob, x: u16, y: u16, width: u16, buf: &mut Buffer, colors: &ThemeColors) {
+    use ratatui::text::Span;
+
+    let name = truncate_name(&job.name);
+    let bar = render_progress_bar(job.progress);
+    let pct = format!("{:3.0}%", job.progress.clamp(0.0, 1.0) * 100.0);
+
+    let line = Line::from(vec![
+        Span::styled("◆ ", Style::default().fg(colors.accent_primary)),
+        Span::styled(name, Style::default().fg(colors.text_secondary)),
+        Span::styled("  ", Style::default()),
+        Span::styled(bar, Style::default().fg(colors.accent_primary)),
+        Span::styled(" ", Style::default()),
+        Span::styled(pct, Style::default().fg(colors.text_muted)),
+    ]);
+
+    buf.set_line(x, y, &line, width);
+}
+
+fn truncate_name(name: &str) -> String {
+    if name.len() > 14 {
+        format!("{}...", &name[..11])
+    } else {
+        name.to_string()
+    }
+}
+
+fn render_progress_bar(progress: f64) -> String {
+    let progress = progress.clamp(0.0, 1.0);
+    let filled = (progress * 3.0).round() as usize;
+    std::iter::repeat('█').take(filled)
+        .chain(std::iter::repeat('░').take(3 - filled))
+        .collect()
 }
 
 /// Render the activity panel

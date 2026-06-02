@@ -53,7 +53,7 @@ impl FeedBuilder {
     /// Start building a new Feed.
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         Self {
             items: Vec::new(),

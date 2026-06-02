@@ -1,9 +1,8 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::Paragraph,
+    style::{Color, Style},
+    text::Line,
 };
 use crate::theme::ThemeWrapper;
 
@@ -36,8 +35,8 @@ pub fn render_tool_call_block(
     margin_x: u16,
 ) -> u16 {
     let accent_color: Color = theme.color("accent.tool").into();
-    let text_color: Color = theme.color("text.primary").into();
-    let muted_color: Color = theme.color("text.muted").into();
+    let _text_color: Color = theme.color("text.primary").into();
+    let _muted_color: Color = theme.color("text.muted").into();
     let success_color: Color = theme.color("success").into();
     let error_color: Color = theme.color("error").into();
     

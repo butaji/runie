@@ -111,96 +111,65 @@ impl MiniMaxProvider {
         Err(last_error.unwrap_or(ProviderError::ApiError("Max retries exceeded".to_string())))
     }
 
-    async fn chat_once(
-        &self,
-        messages: Vec<Message>,
-        tools: Vec<ToolSchema>,
-    ) -> Result<BoxStream<'static, Event>, ProviderError> {
+    async fn chat_once(&self, messages: Vec<Message>, tools: Vec<ToolSchema>) -> Result<BoxStream<'static, Event>, ProviderError> {
+        let body = self.build_chat_body(messages.clone(), tools, true);
+        let response = self.send_chat_request(&body).await?;
+        self.handle_chat_response(response, messages).await
+    }
+
+    fn build_chat_body(&self, messages: Vec<Message>, tools: Vec<ToolSchema>, stream: bool) -> serde_json::Value {
+        let minimax_messages = self.messages_to_minimax(messages);
+        let mut body = serde_json::json!({ "model": self.model, "messages": minimax_messages, "stream": stream });
+        if !tools.is_empty() {
+            body["tools"] = serde_json::json!(self.tools_to_minimax(tools));
+            body["tool_choice"] = serde_json::json!("auto");
+        }
+        body
+    }
+
+    async fn send_chat_request(&self, body: &serde_json::Value) -> Result<reqwest::Response, ProviderError> {
         let url = format!("{}/chat/completions", self.base_url);
         tracing::debug!("[MiniMax] Request URL: {}", url);
         tracing::debug!("[MiniMax] Model: {}", self.model);
         tracing::debug!("[MiniMax] API Key prefix: {}...", &self.api_key[..self.api_key.len().min(8)]);
-        let minimax_messages = self.messages_to_minimax(messages.clone());
-        let has_tools = !tools.is_empty();
-
-        let mut body = serde_json::json!({
-            "model": self.model,
-            "messages": minimax_messages,
-            "stream": true
-        });
-
-        if has_tools {
-            body["tools"] = serde_json::json!(self.tools_to_minimax(tools));
-            body["tool_choice"] = serde_json::json!("auto");
-        }
-
-        let response = self.client.post(&url)
+        self.client.post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| ProviderError::ApiError(e.to_string()))?;
+            .json(body)
+            .send().await.map_err(|e| ProviderError::ApiError(e.to_string()))
+    }
 
+    async fn handle_chat_response(&self, response: reqwest::Response, messages: Vec<Message>) -> Result<BoxStream<'static, Event>, ProviderError> {
         let status = response.status();
         if status.as_u16() == 429 { return Err(ProviderError::RateLimited); }
         if !status.is_success() {
             let body = response.text().await.unwrap_or_else(|e| format!("(body error: {})", e));
-            let error_msg = if status.as_u16() == 401 && body.contains("1004") {
-                format!(
-                    "{}: {}\n\nMiniMax requires an API Secret Key (not an API Key). \
-                     Please use your API Secret Key from the MiniMax console.",
-                    status, body
-                )
-            } else {
-                format!("{}: {}", status, body)
-            };
-            return Err(ProviderError::ApiError(error_msg));
+            return Err(ProviderError::ApiError(self.format_error_msg(status, &body)));
         }
-
         stream::build_minimax_stream(response, messages).await
     }
 
-    async fn chat_non_streaming(&self, messages: Vec<Message>, tools: Vec<ToolSchema>) -> Result<String, ProviderError> {
-        let url = format!("{}/chat/completions", self.base_url);
-        let minimax_messages = self.messages_to_minimax(messages);
-        let has_tools = !tools.is_empty();
-
-        let mut body = serde_json::json!({
-            "model": self.model,
-            "messages": minimax_messages,
-            "stream": false
-        });
-
-        if has_tools {
-            body["tools"] = serde_json::json!(self.tools_to_minimax(tools));
-            body["tool_choice"] = serde_json::json!("auto");
+    fn format_error_msg(&self, status: reqwest::StatusCode, body: &str) -> String {
+        if status.as_u16() == 401 && body.contains("1004") {
+            format!("{}: {}\n\nMiniMax requires an API Secret Key (not an API Key). Please use your API Secret Key from the MiniMax console.", status, body)
+        } else {
+            format!("{}: {}", status, body)
         }
+    }
 
-        let response = self.client.post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| ProviderError::ApiError(e.to_string()))?;
+    async fn chat_non_streaming(&self, messages: Vec<Message>, tools: Vec<ToolSchema>) -> Result<String, ProviderError> {
+        let body = self.build_chat_body(messages, tools, false);
+        let response = self.send_chat_request(&body).await?;
+        self.handle_non_stream_response(response).await
+    }
 
+    async fn handle_non_stream_response(&self, response: reqwest::Response) -> Result<String, ProviderError> {
         let status = response.status();
         if status.as_u16() == 429 { return Err(ProviderError::RateLimited); }
         if !status.is_success() {
             let body = response.text().await.unwrap_or_else(|e| format!("(body error: {})", e));
-            let error_msg = if status.as_u16() == 401 && body.contains("1004") {
-                format!(
-                    "{}: {}\n\nMiniMax requires an API Secret Key (not an API Key). \
-                     Please use your API Secret Key from the MiniMax console.",
-                    status, body
-                )
-            } else {
-                format!("{}: {}", status, body)
-            };
-            return Err(ProviderError::ApiError(error_msg));
+            return Err(ProviderError::ApiError(self.format_error_msg(status, &body)));
         }
-
         let result: types::MiniMaxResponse = response.json().await.map_err(|e| ProviderError::InvalidResponse(e.to_string()))?;
         Ok(result.choices.into_iter().next().and_then(|c| c.message.content).unwrap_or_default())
     }

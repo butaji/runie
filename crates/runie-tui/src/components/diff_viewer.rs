@@ -22,7 +22,7 @@ pub struct DiffViewer {
 impl DiffViewer {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new(filename: String, old: String, new: String) -> Self {
         Self {
             filename,

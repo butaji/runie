@@ -228,7 +228,7 @@ fn render_title_divider(inner: Rect, buf: &mut Buffer, text_color: Color, border
 }
 
 /// Render a section header in colored text
-fn render_section_header(x: u16, y: u16, title: &str, width: u16, color: Color, buf: &mut Buffer) {
+fn render_section_header(x: u16, y: u16, title: &str, _width: u16, color: Color, buf: &mut Buffer) {
     let text = format!(" {} ", title);
     buf.set_string(x, y, &text, Style::default().fg(color).add_modifier(Modifier::BOLD));
 }

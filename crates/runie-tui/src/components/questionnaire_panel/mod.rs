@@ -2,10 +2,10 @@
 
 use ratatui::{
     buffer::Buffer,
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Paragraph, Widget, Clear, Block, Borders},
+    widgets::{Widget, Clear, Block, Borders},
 };
 
 #[derive(Debug, Clone)]
@@ -110,28 +110,26 @@ impl Widget for &QuestionnaireState {
 }
 
 fn render_questionnaire(state: &QuestionnaireState, area: Rect, buf: &mut Buffer) {
-    let bg = Color::Rgb(26, 26, 36);
     let fg = Color::Rgb(225, 225, 225);
     let muted = Color::Rgb(140, 140, 160);
     let accent = Color::Rgb(41, 198, 190);
-    
-    // Clear background
+
     Clear.render(area, buf);
     Block::default().borders(Borders::ALL).border_style(Style::default().fg(accent)).render(area, buf);
-    
+
     let inner = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2));
-    let question = &state.questions[state.current_question];
     let total = state.questions.len();
     let current = state.current_question + 1;
-    
-    // Dot grid progress
+
+    render_questionnaire_header(state, inner, current, total, fg, muted, buf);
+    let y = render_questionnaire_options(state, inner, fg, muted, accent, buf);
+    render_questionnaire_footer(inner, y, current, total, muted, buf);
+}
+
+fn render_questionnaire_header(state: &QuestionnaireState, inner: Rect, current: usize, total: usize, fg: Color, muted: Color, buf: &mut Buffer) {
     let mut dots = String::new();
     for i in 0..total {
-        if i < current {
-            dots.push('●');
-        } else {
-            dots.push('○');
-        }
+        dots.push(if i < current { '●' } else { '○' });
         if i < total - 1 {
             dots.push(' ');
         }
@@ -139,21 +137,23 @@ fn render_questionnaire(state: &QuestionnaireState, area: Rect, buf: &mut Buffer
     let header = format!("{}  Waiting on answers for {} questions              [turn: {:.1}s]", dots, total, state.turn_duration.as_secs_f32());
     let header_line = Line::styled(header, Style::default().fg(fg));
     buf.set_line(inner.x, inner.y, &header_line, inner.width);
-    
-    // Divider
+
     let div = "─".repeat(inner.width as usize);
     buf.set_line(inner.x, inner.y + 1, &Line::styled(div, Style::default().fg(muted)), inner.width);
-    
-    // Options
+}
+
+fn render_questionnaire_options(state: &QuestionnaireState, inner: Rect, fg: Color, muted: Color, accent: Color, buf: &mut Buffer) -> u16 {
+    let question = &state.questions[state.current_question];
     let mut y = inner.y + 3;
+
     for (i, opt) in question.options.iter().enumerate() {
         let radio = if opt.selected { "◉" } else { "○" };
         let num = format!("{:2}", i + 1);
         let is_selected = i == state.selected_option;
-        let style = if is_selected { 
-            Style::default().fg(accent).add_modifier(Modifier::BOLD) 
-        } else { 
-            Style::default().fg(fg) 
+        let style = if is_selected {
+            Style::default().fg(accent).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(fg)
         };
         let line = Line::from(vec![
             Span::styled(format!("{}  {}  ", num, radio), style),
@@ -161,13 +161,11 @@ fn render_questionnaire(state: &QuestionnaireState, area: Rect, buf: &mut Buffer
         ]);
         buf.set_line(inner.x, y, &line, inner.width);
         y += 1;
-        // Subtitle
         let sub = Line::styled(format!("        {}", opt.subtitle), Style::default().fg(muted));
         buf.set_line(inner.x, y, &sub, inner.width);
         y += 2;
     }
-    
-    // Custom input option
+
     if question.custom_mode || !question.custom_input.is_none() {
         let radio = if state.selected_option == question.options.len() { "◉" } else { "○" };
         let custom_text = question.custom_input.as_deref().unwrap_or("Type your answer here");
@@ -177,9 +175,10 @@ fn render_questionnaire(state: &QuestionnaireState, area: Rect, buf: &mut Buffer
         ]);
         buf.set_line(inner.x, y, &line, inner.width);
     }
-    
-    // Footer
-    let footer_y = inner.bottom().saturating_sub(1);
+    y
+}
+
+fn render_questionnaire_footer(inner: Rect, footer_y: u16, current: usize, total: usize, muted: Color, buf: &mut Buffer) {
     let footer = format!("  [{}/{}]  ↑/↓ navigate  ←/→ question  Enter:select", current, total);
     let footer_line = Line::styled(footer, Style::default().fg(muted));
     buf.set_line(inner.x, footer_y, &footer_line, inner.width);

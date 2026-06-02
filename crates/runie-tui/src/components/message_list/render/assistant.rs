@@ -113,7 +113,7 @@ pub fn render_assistant_msg(
     timestamp: Option<&str>,
     thought_duration: Option<f32>,
     turn_complete: Option<u64>,
-    is_last_item: bool,
+    _is_last_item: bool,
     tool_calls: &[ToolCall],
     tool_bar_color: ratatui::style::Color,
 ) -> u16 {

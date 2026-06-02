@@ -37,7 +37,7 @@ const MODEL_LOOKUP: &[(&str, ModelProviderFn)] = &[
 impl Onboarding {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new(mock_mode: bool) -> Self {
         let mut providers = get_default_providers();
         if mock_mode {

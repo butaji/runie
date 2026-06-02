@@ -2,8 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::Paragraph,
+    text::Line,
 };
 use crate::theme::ThemeWrapper;
 use crate::glyphs;
@@ -27,7 +26,7 @@ pub fn render_thinking_block(
     let accent_color: Color = theme.color("accent.thinking").into();
     let bg_color: Color = theme.color("bg.panel").into();
     let text_color: Color = theme.color("text.primary").into();
-    let muted_color: Color = theme.color("text.muted").into();
+    let _muted_color: Color = theme.color("text.muted").into();
     
     let y = area.y + row;
     if y >= area.bottom() {

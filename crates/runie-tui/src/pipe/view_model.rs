@@ -24,7 +24,7 @@ pub struct ViewModelPipe;
 impl ViewModelPipe {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         Self
     }
@@ -71,9 +71,9 @@ fn build_top_bar(state: &AppState) -> TopBarViewModel {
 
 fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
     use crate::messages::MessageRegistry;
-    let model = state.current_model.as_deref().unwrap_or("—");
+    let _model = state.current_model.as_deref().unwrap_or("—");
     let tokens = state.session_token_usage.total_tokens as u64;
-    let cost = state.session_token_usage.estimated_cost;
+    let _cost = state.session_token_usage.estimated_cost;
 
     if state.agent_running {
         // Bug 3 fix: Use MessageRegistry for consistent casing ("Running" not "running")
