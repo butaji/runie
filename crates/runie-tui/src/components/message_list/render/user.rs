@@ -26,7 +26,6 @@ pub fn render_user_msg(
     let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
     let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-    let accent_bar_color: ratatui::style::Color = theme.color("accent.primary").into();
     // Resolve timestamp: use provided or generate current time
     let ts_display = timestamp.map(|s| s.to_string()).unwrap_or_else(format_timestamp_now);
     // Account for 1-symbol horizontal padding on each side + chevron + space
@@ -38,8 +37,9 @@ pub fn render_user_msg(
     let content_lines = if wrapped.is_empty() { 1 } else { wrapped.len() };
     let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
 
-    // P1-1 FIX: Start one symbol left of chevron for gray bg padding
-    let bg_start = margin_x.saturating_sub(1);
+    // 5-space indent for user messages (like Grok)
+    let indent = 5;
+    let bg_start = margin_x;
 
     // Render vertical padding ABOVE (1 line)
     let content_start_y = area.y + row + 1;
@@ -50,18 +50,6 @@ pub fn render_user_msg(
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
-        }
-    }
-
-    // Draw accent bar (│) at the left edge - spanning FULL HEIGHT including padding lines
-    // Bar is drawn AFTER background fills so it's visible on top
-    let bar_x = bg_start;
-    let bar_top = area.y + row;  // includes padding line above
-    let bar_bottom = content_start_y + content_lines as u16;  // includes padding line below
-    for y in bar_top..bar_bottom.min(area.bottom()) {
-        if let Some(cell) = buf.cell_mut((bar_x, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(accent_bar_color).bg(bg_color));
         }
     }
 
@@ -79,15 +67,9 @@ pub fn render_user_msg(
             }
         }
 
-        // Re-draw accent bar on this line (background overwrites it)
-        if let Some(cell) = buf.cell_mut((bar_x, line_y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(accent_bar_color).bg(bg_color));
-        }
-
         if i == 0 {
-            // First line: chevron aligned with input box prompt
-            let chevron_x = margin_x;
+            // First line: chevron at 5-space indent
+            let chevron_x = margin_x + indent;
             if let Some(cell) = buf.cell_mut((chevron_x, line_y)) {
                 cell.set_char(glyphs::CHEVRON);
                 cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
@@ -110,7 +92,7 @@ pub fn render_user_msg(
             }
         } else {
             // Continuation lines: aligned with text after chevron
-            let text_x = margin_x + 2;
+            let text_x = margin_x + indent + 2;
             let line = ratatui::text::Line::raw(line_text.as_str())
                 .style(Style::default().fg(text_primary).bg(bg_color));
             buf.set_line(text_x, line_y, &line, text_width as u16);
@@ -122,7 +104,7 @@ pub fn render_user_msg(
         let last_line_y = content_start_y + wrapped.len().saturating_sub(1) as u16;
         let ts_len = ts_display.len() as u16;
         let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
-        if ts_x > margin_x + 1 {
+        if ts_x > margin_x + indent + 1 {
             let ts_color: ratatui::style::Color = theme.color("text.muted").into();
             let ts_line = ratatui::text::Line::raw(&ts_display)
                 .style(Style::default().fg(ts_color).bg(bg_color));

@@ -13,14 +13,14 @@ use crate::glyphs;
 use crate::messages::MessageRegistry;
 use crate::tui::state::AnimationState;
 
-/// Render an empty line between feed items.
+/// Render empty lines between feed items (2 blank lines for Grok-style spacing).
 pub fn render_item_separator(
     _area: Rect,
     _row: u16,
     _buf: &mut Buffer,
     _color: Color,
 ) -> u16 {
-    1
+    2
 }
 
 // ============================================================================
@@ -74,10 +74,12 @@ pub fn render_separator(
 
     let tag_width = tag.len() as u16;
     let content_width = area.width - margin_x + area.x - 2;
-    let x = if tag_width < content_width {
-        margin_x + content_width - tag_width
+    // Add 5-space indent for Grok-style alignment
+    let indent = margin_x + 5;
+    let x = if tag_width < content_width.saturating_sub(5) {
+        indent + content_width.saturating_sub(5) - tag_width
     } else {
-        margin_x
+        indent
     };
     let line = Line::raw(tag).style(Style::default().fg(text_dim));
     buf.set_line(x, area.y + row, &line, tag_width);
@@ -183,32 +185,26 @@ pub fn render_tool_running_msg(
     area: Rect,
     row: u16,
     margin_x: u16,
-    text_x: u16,
+    _text_x: u16,
     buf: &mut Buffer,
     text_secondary: ratatui::style::Color,
     spinner: char,
     _show_spinner: bool,
 ) -> u16 {
-    // Grok-style: "⠴ Run List `.` 1.8s                         5.7s ⇣21.2k [✗]"
-    // Left side: spinner + "Run" + name + args + elapsed
+    // Grok-style: "     ⠴ Run List `.` 1.8s                         5.7s ⇣21.2k [ ]"
+    // Left side: spinner + "Run" + name + args + tool_duration
     // Right side: total_elapsed + transfer + status (empty while running)
 
     let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
+    let indent = 5;
 
-    // Draw vertical bar at left edge
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('│');
-        cell.set_style(Style::default().fg(tool_bar_color));
-    }
-
-    let content_x = text_x;
+    let content_x = margin_x + indent;
     let elapsed_secs = duration_ms as f64 / 1000.0;
-    let elapsed_str = format!("{:.1}s", elapsed_secs);
 
-    // Build left content: spinner + "Run" + name + args + elapsed
+    // Build left content: spinner + "Run" + name + args + tool_duration
     let mut left_content = String::with_capacity(64);
     write!(left_content, "{} Run {} {}", spinner, name, args).ok();
-    write!(left_content, " {}", elapsed_secs).ok();
+    write!(left_content, " {:.1}s", elapsed_secs).ok();
 
     let left_line = Line::raw(left_content).style(Style::default().fg(tool_bar_color));
     buf.set_line(content_x, area.y + row, &left_line, area.width - 4);
@@ -233,7 +229,7 @@ pub fn render_tool_complete_msg(
     area: Rect,
     row: u16,
     margin_x: u16,
-    text_x: u16,
+    _text_x: u16,
     buf: &mut Buffer,
     success: ratatui::style::Color,
     text_muted: ratatui::style::Color,
@@ -242,7 +238,6 @@ pub fn render_tool_complete_msg(
     // Left: checkmark + name + args + result preview
     // Right: elapsed + transfer bytes + status
 
-    let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
     let error_color = ratatui::style::Color::Rgb(0xEB, 0x42, 0x68);
 
     // Determine if result looks like an error
@@ -250,13 +245,11 @@ pub fn render_tool_complete_msg(
     let status_color = if is_error { error_color } else { success };
     let status_icon = if is_error { "[✗]" } else { "[✓]" };
 
-    // Draw vertical bar at left edge
-    if let Some(cell) = buf.cell_mut((margin_x, area.y + row)) {
-        cell.set_char('│');
-        cell.set_style(Style::default().fg(tool_bar_color));
-    }
+    // 5-space indent (Grok-style)
+    let indent = 5;
+    let content_x = margin_x + indent;
 
-    // Build left content: checkmark + name + args
+    // Build left content: checkmark + name + args + result preview
     let compact_args = super::tool::format_tool_args_compact(result);
     let content = if compact_args.is_empty() {
         format!("{} {}", glyphs::CHECK_MARKER, name)
@@ -265,7 +258,7 @@ pub fn render_tool_complete_msg(
     };
 
     let left_line = Line::raw(content).style(Style::default().fg(status_color));
-    buf.set_line(text_x, area.y + row, &left_line, area.width - 4);
+    buf.set_line(content_x, area.y + row, &left_line, area.width - 4);
 
     // Right side: transfer bytes + status
     let result_bytes = result.len();
@@ -281,7 +274,7 @@ pub fn render_tool_complete_msg(
         if *l > 1 {
             let line2_text = format!("  ({} lines)", l);
             let line2 = Line::raw(line2_text).style(Style::default().fg(text_muted));
-            buf.set_line(text_x, area.y + row + 1, &line2, area.width - 4);
+            buf.set_line(content_x, area.y + row + 1, &line2, area.width - 4);
             return 2;
         }
     }
