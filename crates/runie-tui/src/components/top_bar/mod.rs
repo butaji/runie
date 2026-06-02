@@ -1,4 +1,4 @@
-use crate::tui::state::TopBarState;
+use crate::tui::state::{TopBarState, TuiMode};
 
 pub mod builder;
 pub mod gauge;
@@ -21,10 +21,11 @@ pub struct TopBarViewModel {
     pub estimated_tokens: usize,
     pub agent_running: bool,
     pub braille_frame: usize,
+    pub mode: TuiMode,
 }
 
 impl TopBarViewModel {
-    pub fn from_state(state: &TopBarState, agent_running: bool, braille_frame: usize) -> Self {
+    pub fn from_state(state: &TopBarState, agent_running: bool, braille_frame: usize, mode: TuiMode) -> Self {
         Self {
             repo: state.repo.clone(),
             branch: state.branch.clone(),
@@ -33,6 +34,7 @@ impl TopBarViewModel {
             estimated_tokens: state.estimated_tokens.unwrap_or(0),
             agent_running,
             braille_frame,
+            mode,
         }
     }
 }
@@ -44,7 +46,7 @@ mod tests {
     #[test]
     fn test_from_state_with_defaults() {
         let state = TopBarState::default();
-        let vm = TopBarViewModel::from_state(&state, false, 0);
+        let vm = TopBarViewModel::from_state(&state, false, 0, TuiMode::Chat);
         assert_eq!(vm.repo, "");
         assert_eq!(vm.branch, "");
         assert_eq!(vm.path, "");
@@ -52,6 +54,7 @@ mod tests {
         assert_eq!(vm.estimated_tokens, 0);
         assert_eq!(vm.agent_running, false);
         assert_eq!(vm.braille_frame, 0);
+        assert_eq!(vm.mode, TuiMode::Chat);
     }
 
     #[test]
@@ -63,7 +66,7 @@ mod tests {
         state.context_window = Some(200_000);
         state.estimated_tokens = Some(40_000);
 
-        let vm = TopBarViewModel::from_state(&state, true, 5);
+        let vm = TopBarViewModel::from_state(&state, true, 5, TuiMode::Chat);
         assert_eq!(vm.repo, "runie");
         assert_eq!(vm.branch, "main");
         assert_eq!(vm.path, "src/main.rs");
@@ -71,6 +74,7 @@ mod tests {
         assert_eq!(vm.estimated_tokens, 40_000);
         assert_eq!(vm.agent_running, true);
         assert_eq!(vm.braille_frame, 5);
+        assert_eq!(vm.mode, TuiMode::Chat);
     }
 
     #[test]
@@ -79,8 +83,9 @@ mod tests {
         state.context_window = Some(200_000);
         state.estimated_tokens = None;
 
-        let vm = TopBarViewModel::from_state(&state, false, 0);
+        let vm = TopBarViewModel::from_state(&state, false, 0, TuiMode::HomeScreen);
         assert_eq!(vm.context_window, 200_000);
         assert_eq!(vm.estimated_tokens, 0);
+        assert_eq!(vm.mode, TuiMode::HomeScreen);
     }
 }

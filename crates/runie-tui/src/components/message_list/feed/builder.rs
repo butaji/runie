@@ -118,6 +118,7 @@ impl FeedBuilder {
                 tool_calls: builder.tool_calls,
                 timestamp: None,
                 turn_duration: None,
+                thoughts_collapsed: false,
                 expanded: true,
             });
         }

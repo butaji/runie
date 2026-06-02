@@ -29,19 +29,16 @@ fn format_elapsed(start: std::time::Instant) -> String {
 
 pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static str)> {
     match *mode {
-        TuiMode::Chat => vec![("Enter", "send"), ("^b", "sidebar"), ("^k", "cmd"), ("^q", "quit")],
+        // Grok-style minimal hints
+        TuiMode::Chat | TuiMode::Subagents | TuiMode::Questionnaire => vec![("Shift+Tab", "mode"), ("Ctrl+.", "shortcuts")],
         TuiMode::Overlay | TuiMode::Select => NAV_KEYS.to_vec(),
-        // P0-4 FIX: Updated to reflect actual key mappings + timeout indicator
         TuiMode::Permission => vec![("y/Enter", "confirm"), ("Esc/n", "cancel"), ("a", "always")],
         TuiMode::CommandPalette => vec![("Esc", "close"), ("Enter", "select"), ("↑↓", "navigate")],
-        // P0-4 FIX: Added Ctrl+Q for consistent quit/close
         TuiMode::DiffViewer => vec![("q/Esc", "close"), ("j/k", "scroll")],
         TuiMode::SessionTree => ARROW_KEYS.to_vec(),
         TuiMode::Onboarding => vec![("Esc", "back"), ("↑↓", "navigate"), ("Enter", "next")],
         TuiMode::HomeScreen => vec![("↑↓", "navigate"), ("Enter", "select"), ("q", "quit")],
         TuiMode::Plan => vec![("Enter", "approve"), ("Esc", "close"), ("↑↓", "scroll")],
-        TuiMode::Questionnaire => vec![("Esc", "close"), ("↑↓", "navigate"), ("←→", "question"), ("Enter", "select")],
-        TuiMode::Subagents => vec![("Enter", "send"), ("^b", "sidebar"), ("^k", "cmd"), ("^q", "quit")],
         TuiMode::FullscreenViewer => vec![("q/Esc/Enter", "close"), ("j/k", "scroll"), ("g/G", "top/bottom")],
     }
 }

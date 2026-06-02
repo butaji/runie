@@ -32,6 +32,7 @@ pub enum FeedItem {
         tool_calls: Vec<ToolCall>,
         timestamp: Option<String>,
         turn_duration: Option<f32>,
+        thoughts_collapsed: bool,
         expanded: bool,
     },
     SystemNotice { text: String },
@@ -111,6 +112,7 @@ impl Feed {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            thoughts_collapsed: false,
             expanded: true,
         });
         self.seen_ids.insert(id);
@@ -251,13 +253,14 @@ impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
                 text,
                 timestamp,
             }),
-            Assistant { text, timestamp, .. } => Ok(FeedItem::AssistantMessage {
+            Assistant { text, model, timestamp, expanded } => Ok(FeedItem::AssistantMessage {
                 id: Uuid::new_v4().to_string(),
                 text,
                 thoughts: Vec::new(),
                 tool_calls: Vec::new(),
                 timestamp,
                 turn_duration: None,
+                thoughts_collapsed: !expanded, // Map expanded=false to thoughts_collapsed=true
                 expanded: true,
             }),
             System { text } => Ok(FeedItem::SystemNotice { text }),

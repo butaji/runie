@@ -13,3 +13,4 @@ Cargo.lock
 /tmp_config
 **/*.snap.new
 **/.insta/
+/ui/dumps

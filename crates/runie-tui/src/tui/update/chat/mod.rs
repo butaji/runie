@@ -75,7 +75,7 @@ fn is_settings_modal_msg(msg: &crate::tui::state::Msg) -> bool {
 
 fn is_home_screen_msg(msg: &crate::tui::state::Msg) -> bool {
     use crate::tui::state::Msg;
-    matches!(msg, Msg::HomeScreenUp | Msg::HomeScreenDown | Msg::HomeScreenSelect | Msg::CloseHomeScreen)
+    matches!(msg, Msg::HomeScreenUp | Msg::HomeScreenDown | Msg::HomeScreenSelect | Msg::HomeScreenToggleSessions | Msg::CloseHomeScreen)
 }
 
 fn is_file_picker_msg(msg: &crate::tui::state::Msg) -> bool {

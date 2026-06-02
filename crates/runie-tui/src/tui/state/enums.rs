@@ -150,6 +150,7 @@ pub enum Msg {
     HomeScreenUp,
     HomeScreenDown,
     HomeScreenSelect,
+    HomeScreenToggleSessions,
     CloseHomeScreen,
     FilePickerUp,
     FilePickerDown,
@@ -313,7 +314,7 @@ impl Msg {
                 | Msg::OpenFullscreenViewer
                 | Msg::OpenEntry | Msg::OpenEntryOptions
                 | Msg::TogglePromptQueue | Msg::NewSessionWorktree | Msg::ToggleWorktreeMode
-                | Msg::ImportClaudeSettings
+                | Msg::ImportClaudeSettings | Msg::HomeScreenToggleSessions
         )
     }
 

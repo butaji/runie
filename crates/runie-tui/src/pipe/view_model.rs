@@ -66,6 +66,7 @@ fn build_top_bar(state: &AppState) -> TopBarViewModel {
         estimated_tokens: state.top_bar.estimated_tokens.unwrap_or(0),
         agent_running: state.agent_running,
         braille_frame: state.animation.braille_frame,
+        mode: state.mode.clone(),
     }
 }
 
@@ -110,6 +111,7 @@ fn build_input_bar(state: &AppState) -> InputBarViewModel {
 }
 
 fn build_status_bar(state: &AppState) -> StatusBarViewModel {
+    let input_text = state.textarea.lines().join("\n");
     StatusBarBuilder::new()
         .mode(state.mode.clone())
         .current_model(state.current_model.as_deref().unwrap_or("—"))
@@ -117,6 +119,8 @@ fn build_status_bar(state: &AppState) -> StatusBarViewModel {
         .status_header(state.status_header.as_deref().unwrap_or(""))
         .status_details(state.status_details.as_deref().unwrap_or(""))
         .status_start_time(state.status_start_time.unwrap_or_else(std::time::Instant::now))
+        .agent_running(state.agent_running)
+        .input_has_text(!input_text.trim().is_empty())
         .build()
 }
 

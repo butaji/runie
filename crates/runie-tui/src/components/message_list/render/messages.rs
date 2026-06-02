@@ -108,7 +108,7 @@ pub fn render_system_msg(
 ) -> u16 {
     let is_error = text.starts_with("Error:");
     let color = if is_error { error } else { text_muted };
-    let prefix = if is_error { "! " } else { "• " };
+    let prefix = if is_error { "! " } else { "◆ " };
     let prefix_len = prefix.len();
     let content_width = (area.width - margin_x + area.x - 2) as usize;
     let text_width = content_width.saturating_sub(prefix_len);

@@ -317,14 +317,15 @@ fn handle_import_claude_settings(state: &mut AppState) {
 }
 
 fn handle_questionnaire_msg(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
-    let q = match &mut state.questionnaire {
-        Some(q) => q,
-        None => return vec![],
-    };
+    let Some(q) = state.questionnaire.as_mut() else { return vec![] };
     use crate::tui::state::Msg;
+    if matches!(msg, Msg::QuestionnaireUp | Msg::QuestionnaireDown) {
+        return qa_option_nav(q, msg);
+    }
+    if matches!(msg, Msg::QuestionnairePrevQuestion | Msg::QuestionnaireNextQuestion) {
+        return qa_question_nav(q, msg);
+    }
     match msg {
-        Msg::QuestionnaireUp | Msg::QuestionnaireDown => qa_option_nav(q, msg),
-        Msg::QuestionnairePrevQuestion | Msg::QuestionnaireNextQuestion => qa_question_nav(q, msg),
         Msg::QuestionnaireSelect => { qa_select(q); vec![] }
         Msg::QuestionnaireToggleCustom => { qa_toggle_custom(q); vec![] }
         Msg::CloseQuestionnaire => {

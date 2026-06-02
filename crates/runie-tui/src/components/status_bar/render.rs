@@ -13,6 +13,11 @@ use crate::tui::view_models::{McpStatus, StatusBarViewModel};
 use super::StatusItem;
 
 pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
+    // Hide status bar on home screen
+    if matches!(vm.mode, TuiMode::HomeScreen) {
+        return;
+    }
+
     let text_tertiary = colors.text_dim;
     let text_secondary = colors.text_secondary;
     let bg = colors.bg_base;
@@ -42,24 +47,22 @@ fn fill_status_background(area: Rect, buf: &mut Buffer, bg: ratatui::style::Colo
 }
 
 fn render_hotkey_items(area: Rect, buf: &mut Buffer, hotkeys: &[StatusItem], text_tertiary: ratatui::style::Color) -> u16 {
-    let mut x = area.x + 1;
+    let mut x = area.x + 2;
     let mut first = true;
 
     for item in hotkeys {
         if !first {
-            let sep = Span::styled(" | ", Style::default().fg(text_tertiary));
+            let sep = Span::styled("  │  ", Style::default().fg(text_tertiary));
             let line = Line::from(sep);
-            buf.set_line(x, area.y, &line, 3);
-            x += 3;
+            buf.set_line(x, area.y, &line, 5);
+            x += 5;
         }
         first = false;
 
-        let parts = vec![
-            Span::styled(&item.key, Style::default().fg(text_tertiary)),
-            Span::styled(format!(" {}", item.description), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
-        ];
-        let line = Line::from(parts);
-        let width = (item.key.len() + 1 + item.description.len()) as u16;
+        // Grok-style: key:description without space separator
+        let full_text = format!("{}:{}", item.key, item.description);
+        let line = Line::raw(&full_text).style(Style::default().fg(text_tertiary));
+        let width = full_text.len() as u16;
         buf.set_line(x, area.y, &line, width);
         x += width;
     }

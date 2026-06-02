@@ -26,7 +26,7 @@ pub fn render_input(
     } else if text.starts_with('@') {
         "@ ".to_string()
     } else {
-        format!("{ch} ", ch = crate::glyphs::CHEVRON)
+        format!(" {ch} ", ch = crate::glyphs::CHEVRON)
     };
 
     // Build mode indicator

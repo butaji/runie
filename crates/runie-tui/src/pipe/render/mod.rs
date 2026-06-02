@@ -64,7 +64,7 @@ impl RenderPipe {
             if is_onboarding {
                 Self::render_onboarding_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_status_bar, &theme, &theme_colors);
             } else if state.home_screen.is_visible() || matches!(state.mode, crate::tui::TuiMode::HomeScreen) {
-                Self::render_home_screen_mode(frame.buffer_mut(), area, state, &theme, &theme_colors);
+                Self::render_home_screen_mode(frame.buffer_mut(), area, state, &view_models, main_areas, &theme, &theme_colors);
             } else {
                 Self::render_normal_mode(frame.buffer_mut(), area, state, &view_models, main_areas, show_sidebar, show_status_bar, &palette, padded_area, &theme, &theme_colors);
             }
@@ -107,11 +107,13 @@ impl RenderPipe {
         buf: &mut Buffer,
         area: Rect,
         state: &AppState,
+        vms: &ViewModels,
+        main_areas: [Rect; 5],
         theme: &ThemeWrapper,
         theme_colors: &ThemeColors,
     ) {
         use self::modes::render_home_screen_mode;
-        render_home_screen_mode(buf, area, state, theme, theme_colors)
+        render_home_screen_mode(buf, area, state, vms, main_areas, theme, theme_colors)
     }
 
     fn render_normal_mode(

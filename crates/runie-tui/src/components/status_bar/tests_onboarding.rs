@@ -17,6 +17,8 @@ mod tests_status_bar_onboarding {
             status_details: None,
             status_start_time: None,
             mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
         }
     }
 
@@ -34,6 +36,8 @@ mod tests_status_bar_onboarding {
             status_details: None,
             status_start_time: None,
             mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
         }
     }
 
