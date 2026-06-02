@@ -4,12 +4,11 @@ use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
 };
+use crate::style::layout::SIDEBAR_WIDTH;
 use crate::tui::view_models::ViewModels;
 use crate::theme::ThemeWrapper;
 use crate::theme::ThemeColors;
 use crate::components::MessageList;
-
-const SIDEBAR_WIDTH: u16 = 28;
 
 pub fn render_content(
     buf: &mut Buffer,

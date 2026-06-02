@@ -3,6 +3,7 @@ use ratatui::{
     layout::{Alignment, Margin, Rect},
     style::{Color, Style},
 };
+use crate::style::box_chars;
 
 pub enum PanelBorder {
     Gradient { start: Color, end: Color },
@@ -162,7 +163,7 @@ fn render_solid_border(area: Rect, buf: &mut Buffer, color: Color) {
     let bottom = area.y + area.height - 1;
 
     // Corners
-    for (x, y, ch) in [(left, top, '╭'), (right, top, '╮'), (left, bottom, '╰'), (right, bottom, '╯')] {
+    for (x, y, ch) in [(left, top, box_chars::TL), (right, top, box_chars::TR), (left, bottom, box_chars::BL), (right, bottom, box_chars::BR)] {
         if let Some(cell) = buf.cell_mut((x, y)) {
             cell.set_char(ch);
             cell.set_style(Style::default().fg(color));
@@ -173,7 +174,7 @@ fn render_solid_border(area: Rect, buf: &mut Buffer, color: Color) {
     for x in (left + 1)..right {
         for y in [top, bottom] {
             if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_char('─');
+                cell.set_char(box_chars::H);
                 cell.set_style(Style::default().fg(color));
             }
         }
@@ -183,7 +184,7 @@ fn render_solid_border(area: Rect, buf: &mut Buffer, color: Color) {
     for y in (top + 1)..bottom {
         for x in [left, right] {
             if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_char('│');
+                cell.set_char(box_chars::V);
                 cell.set_style(Style::default().fg(color));
             }
         }
@@ -221,11 +222,11 @@ fn interp(start: Color, end: Color, t: f32) -> Color {
 }
 
 fn render_gradient_top_bottom(area: Rect, left: u16, right: u16, y: u16, width_f: f32, start: Color, end: Color, buf: &mut Buffer) {
-    let corners = if y == area.y { ('╭', '╮') } else { ('╰', '╯') };
+    let corners = if y == area.y { (box_chars::TL, box_chars::TR) } else { (box_chars::BL, box_chars::BR) };
     for x in left..=right {
         let t = (x - left) as f32 / width_f;
         let color = interp(start, end, t);
-        let ch = if x == left { corners.0 } else if x == right { corners.1 } else { '─' };
+        let ch = if x == left { corners.0 } else if x == right { corners.1 } else { box_chars::H };
         if let Some(cell) = buf.cell_mut((x, y)) {
             cell.set_char(ch);
             cell.set_style(Style::default().fg(color));
@@ -236,7 +237,7 @@ fn render_gradient_top_bottom(area: Rect, left: u16, right: u16, y: u16, width_f
 fn render_vertical_edge(x: u16, top: u16, bottom: u16, color: Color, buf: &mut Buffer, _is_start: bool) {
     for y in (top + 1)..bottom {
         if let Some(cell) = buf.cell_mut((x, y)) {
-            cell.set_char('│');
+            cell.set_char(box_chars::V);
             cell.set_style(Style::default().fg(color));
         }
     }

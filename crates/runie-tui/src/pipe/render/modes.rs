@@ -90,7 +90,7 @@ pub fn render_home_screen_mode(
     let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
     let badge_y = main_areas[3].bottom();
     let badge_x = main_areas[3].right().saturating_sub(version_badge.len() as u16 + 2);
-    buf.set_string(badge_x, badge_y, &version_badge, Style::default().fg(theme_colors.text_dim));
+    buf.set_string(badge_x, badge_y, &version_badge, theme.version_style());
 }
 
 pub fn render_normal_mode(

@@ -5,6 +5,9 @@ use ratatui::{
     text::{Line, Span},
     widgets::Widget,
 };
+use crate::glyphs::{CHECK_MARKER, INTERRUPT};
+use crate::style::selection::{STATUS_ACTIVE, STATUS_IDLE};
+use crate::style::layout::AGENT_ITEM_HEIGHT;
 use crate::theme::ThemeWrapper;
 
 pub mod builder;
@@ -149,7 +152,7 @@ fn render_agents(
         render_agent_tag(area, buf, current_y, &agent.tag, tag_color, bg_panel);
         render_agent_info(area, buf, current_y, &agent.description, &agent.model, agent.duration_secs, bg_panel, text_secondary, text_dim);
 
-        current_y += 4;
+        current_y += AGENT_ITEM_HEIGHT;
         if current_y < max_y - 1 {
             render_separator(area, buf, current_y - 1, text_dim, bg_panel);
         }
@@ -158,10 +161,10 @@ fn render_agents(
 
 fn get_status_char(status: &AgentStatus, accent_primary: ratatui::style::Color, success: ratatui::style::Color, error: ratatui::style::Color, text_dim: ratatui::style::Color) -> (char, ratatui::style::Color) {
     match status {
-        AgentStatus::Running => ('●', accent_primary),
-        AgentStatus::Completed => ('✓', success),
-        AgentStatus::Failed => ('✗', error),
-        AgentStatus::Waiting => ('○', text_dim),
+        AgentStatus::Running => (STATUS_ACTIVE, accent_primary),
+        AgentStatus::Completed => (CHECK_MARKER, success),
+        AgentStatus::Failed => (INTERRUPT, error),
+        AgentStatus::Waiting => (STATUS_IDLE, text_dim),
     }
 }
 

@@ -3,12 +3,13 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
 };
 use crate::theme::ThemeColors;
 use crate::tui::state::TuiMode;
 use crate::tui::view_models::{McpStatus, StatusBarViewModel};
+use crate::style::format::STATUS_SEPARATOR;
 
 use super::StatusItem;
 
@@ -52,7 +53,7 @@ fn render_hotkey_items(area: Rect, buf: &mut Buffer, hotkeys: &[StatusItem], tex
 
     for item in hotkeys {
         if !first {
-            let sep = Span::styled("  │  ", Style::default().fg(text_tertiary));
+            let sep = Span::styled(STATUS_SEPARATOR, Style::default().fg(text_tertiary));
             let line = Line::from(sep);
             buf.set_line(x, area.y, &line, 5);
             x += 5;

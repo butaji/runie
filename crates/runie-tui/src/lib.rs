@@ -4,6 +4,7 @@
 pub mod theme;
 pub mod messages;
 pub mod glyphs;
+pub mod style;
 pub mod components;
 pub mod tui;
 pub mod pipe;

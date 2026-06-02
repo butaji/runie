@@ -276,17 +276,17 @@ impl Widget for StatusBar {
 }
 
 struct StyleHelpers {
-    text_tertiary: Style,
+    tertiary_style: Style,
 }
 
 impl StyleHelpers {
     fn new(theme: &ThemeWrapper) -> Self {
         Self {
-            text_tertiary: Style::default().fg(theme.color("text.dim").into()),
+            tertiary_style: Style::default().fg(theme.color("text.dim").into()),
         }
     }
     fn tertiary(&self) -> Style {
-        self.text_tertiary
+        self.tertiary_style
     }
 }
 

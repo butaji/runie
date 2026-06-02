@@ -3,12 +3,13 @@
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
-    layout::Rect,
     buffer::Buffer,
+    layout::Rect,
 };
 use std::io;
 
 use crate::components::CommandPalette;
+use crate::style::helpers::padded_area;
 use crate::theme::ThemeWrapper;
 use crate::theme::ThemeColors;
 use crate::tui::view_models::ViewModels;
@@ -53,12 +54,7 @@ impl RenderPipe {
 
         terminal.draw(|frame| {
             let area = frame.area();
-            let padded_area = Rect {
-                x: area.x + 2,
-                y: area.y + 1,
-                width: area.width.saturating_sub(4),
-                height: area.height.saturating_sub(2),
-            };
+            let padded_area = padded_area(area);
             let main_areas = Self::layout_main(padded_area, show_status_bar, input_height);
 
             if is_onboarding {

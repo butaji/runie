@@ -6,6 +6,8 @@ use ratatui::{
     text::Line,
 };
 use runie_core::session::Session;
+use crate::style::layout;
+use crate::style::selection;
 use crate::theme::ThemeWrapper;
 use crate::components::panel::render_gradient_border;
 
@@ -175,8 +177,8 @@ impl SessionTreeNavigator {
             let row = i + self.scroll_offset;
             let y = inner.y + i as u16;
 
-            let indent = "  ".repeat(entry.depth.min(5));
-            let marker = if row == self.selected { "▸ " } else { "  " };
+            let indent = "  ".repeat(entry.depth.min(layout::MAX_TREE_DEPTH));
+            let marker = if row == self.selected { format!("{} ", selection::SELECTED) } else { "  ".to_string() };
             let text = format!("{}{}{} {}", marker, indent, entry.timestamp, entry.preview);
             let color = if row == self.selected { accent } else { text_secondary };
 

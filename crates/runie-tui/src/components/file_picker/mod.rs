@@ -7,10 +7,14 @@ use std::path::PathBuf;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Color, Modifier},
     text::Line,
     widgets::Widget,
 };
+use crate::style::box_chars::H;
+use crate::style::layout::{PADDING_X, PADDING_WIDTH};
+use crate::style::StyleSet;
+use crate::theme::ThemeWrapper;
 
 /// File picker state.
 #[derive(Debug, Clone, Default)]
@@ -117,29 +121,30 @@ impl FilePicker {
     }
 }
 
-fn render_file_picker_frame(area: Rect, buf: &mut Buffer, bg: Color, border: Color) -> Rect {
+fn render_file_picker_frame(area: Rect, buf: &mut Buffer, styles: &StyleSet) -> Rect {
     for y in area.top()..area.bottom() {
         for x in area.left()..area.right() {
-            buf.get_mut(x, y).set_bg(bg);
+            buf.get_mut(x, y).set_bg(styles.muted.bg.unwrap_or(Color::Black));
         }
     }
+    let border_color = styles.border.fg.unwrap_or(Color::DarkGray);
     for x in area.left()..area.right() {
-        buf.get_mut(x, area.top()).set_fg(border);
-        buf.get_mut(x, area.bottom().saturating_sub(1)).set_fg(border);
+        buf.get_mut(x, area.top()).set_fg(border_color);
+        buf.get_mut(x, area.bottom().saturating_sub(1)).set_fg(border_color);
     }
     for y in area.top()..area.bottom() {
-        buf.get_mut(area.left(), y).set_fg(border);
-        buf.get_mut(area.right().saturating_sub(1), y).set_fg(border);
+        buf.get_mut(area.left(), y).set_fg(border_color);
+        buf.get_mut(area.right().saturating_sub(1), y).set_fg(border_color);
     }
     Rect {
-        x: area.x + 1,
+        x: area.x + PADDING_X,
         y: area.y + 1,
-        width: area.width.saturating_sub(2),
+        width: area.width.saturating_sub(PADDING_WIDTH),
         height: area.height.saturating_sub(2),
     }
 }
 
-fn render_file_list(picker: &FilePicker, inner: Rect, buf: &mut Buffer, accent: Color, highlight_bg: Color, text_primary: Color) {
+fn render_file_list(picker: &FilePicker, inner: Rect, buf: &mut Buffer, styles: &StyleSet) {
     let list_start = inner.y + 3;
     let visible_count = inner.height.saturating_sub(3) as usize;
     for (i, &file_idx) in picker.filtered_indices.iter().enumerate().take(visible_count) {
@@ -153,9 +158,9 @@ fn render_file_list(picker: &FilePicker, inner: Rect, buf: &mut Buffer, accent: 
         let icon = if is_dir { "📁" } else { "📄" };
         let text = format!("{} {}", icon, name);
         let style = if i == picker.selected {
-            Style::default().fg(accent).bg(highlight_bg).add_modifier(Modifier::BOLD)
+            styles.accent.bg(styles.muted.bg.unwrap_or(Color::Black)).add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(text_primary)
+            styles.text_primary
         };
         buf.set_line(inner.x, y, &Line::from(text).style(style), inner.width);
     }
@@ -163,42 +168,40 @@ fn render_file_list(picker: &FilePicker, inner: Rect, buf: &mut Buffer, accent: 
 
 impl Widget for &FilePicker {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let bg = Color::Black;
-        let border = Color::DarkGray;
-        let text_secondary = Color::Gray;
-        let accent = Color::Cyan;
+        let theme = ThemeWrapper::default();
+        let styles = StyleSet::from_theme(&theme);
 
-        let inner = render_file_picker_frame(area, buf, bg, border);
-        render_picker_header(self, inner, buf, accent);
-        render_picker_filter(self, inner, buf, text_secondary);
-        render_picker_divider(inner, buf, border);
-        render_file_list(self, inner, buf, accent, Color::Rgb(40, 40, 40), Color::White);
-        render_picker_empty(self, inner, buf, text_secondary);
+        let inner = render_file_picker_frame(area, buf, &styles);
+        render_picker_header(self, inner, buf, &styles);
+        render_picker_filter(self, inner, buf, &styles);
+        render_picker_divider(inner, buf, &styles);
+        render_file_list(self, inner, buf, &styles);
+        render_picker_empty(self, inner, buf, &styles);
     }
 }
 
-fn render_picker_header(picker: &FilePicker, inner: Rect, buf: &mut Buffer, accent: Color) {
+fn render_picker_header(picker: &FilePicker, inner: Rect, buf: &mut Buffer, styles: &StyleSet) {
     if inner.height == 0 { return; }
     let header = format!("@ {} ({} files)", picker.cwd.display(), picker.files.len());
-    let header_line = Line::from(header).style(Style::default().fg(accent).add_modifier(Modifier::BOLD));
+    let header_line = Line::from(header).style(styles.accent.add_modifier(Modifier::BOLD));
     buf.set_line(inner.x, inner.y, &header_line, inner.width);
 }
 
-fn render_picker_filter(picker: &FilePicker, inner: Rect, buf: &mut Buffer, text_secondary: Color) {
+fn render_picker_filter(picker: &FilePicker, inner: Rect, buf: &mut Buffer, styles: &StyleSet) {
     if inner.height <= 1 { return; }
     let filter_text = if picker.filter.is_empty() { "Type to filter...".to_string() } else { format!("> {}", picker.filter) };
-    let filter_line = Line::from(filter_text).style(Style::default().fg(text_secondary));
+    let filter_line = Line::from(filter_text).style(styles.muted);
     buf.set_line(inner.x, inner.y + 1, &filter_line, inner.width);
 }
 
-fn render_picker_divider(inner: Rect, buf: &mut Buffer, border: Color) {
+fn render_picker_divider(inner: Rect, buf: &mut Buffer, styles: &StyleSet) {
     if inner.height <= 2 { return; }
-    let divider = "─".repeat(inner.width as usize);
-    buf.set_string(inner.x, inner.y + 2, divider, Style::default().fg(border));
+    let divider: String = std::iter::repeat(H).take(inner.width as usize).collect();
+    buf.set_string(inner.x, inner.y + 2, divider, styles.border);
 }
 
-fn render_picker_empty(picker: &FilePicker, inner: Rect, buf: &mut Buffer, text_secondary: Color) {
+fn render_picker_empty(picker: &FilePicker, inner: Rect, buf: &mut Buffer, styles: &StyleSet) {
     if !picker.filtered_indices.is_empty() || inner.height <= 3 { return; }
     let empty_text = if picker.filter.is_empty() { "No files in directory" } else { "No files match filter" };
-    buf.set_line(inner.x, inner.y + 3, &Line::from(empty_text).style(Style::default().fg(text_secondary)), inner.width);
+    buf.set_line(inner.x, inner.y + 3, &Line::from(empty_text).style(styles.muted), inner.width);
 }

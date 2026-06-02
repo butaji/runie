@@ -9,6 +9,8 @@ use ratatui::{
     text::Line,
     widgets::Widget,
 };
+use crate::style::box_chars;
+use crate::style::selection;
 use crate::theme::ThemeWrapper;
 
 /// Available themes matching grok's theme system.
@@ -73,17 +75,17 @@ impl SettingsModal {
 
 fn render_settings_border(area: Rect, buf: &mut Buffer, border: Color) {
     for x in area.x..area.right() {
-        buf.get_mut(x, area.y).set_char('─').set_fg(border);
-        buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+        buf.get_mut(x, area.y).set_char(box_chars::H).set_fg(border);
+        buf.get_mut(x, area.bottom() - 1).set_char(box_chars::H).set_fg(border);
     }
     for y in area.y..area.bottom() {
-        buf.get_mut(area.x, y).set_char('│').set_fg(border);
-        buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+        buf.get_mut(area.x, y).set_char(box_chars::V).set_fg(border);
+        buf.get_mut(area.right() - 1, y).set_char(box_chars::V).set_fg(border);
     }
-    buf.get_mut(area.x, area.y).set_char('┌');
-    buf.get_mut(area.right() - 1, area.y).set_char('┐');
-    buf.get_mut(area.x, area.bottom() - 1).set_char('└');
-    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+    buf.get_mut(area.x, area.y).set_char(box_chars::TL_ALT);
+    buf.get_mut(area.right() - 1, area.y).set_char(box_chars::TR_ALT);
+    buf.get_mut(area.x, area.bottom() - 1).set_char(box_chars::BL_ALT);
+    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char(box_chars::BR_ALT);
 }
 
 fn render_settings_tabs(modal: &SettingsModal, area: Rect, buf: &mut Buffer, tab_active: Color, text_muted: Color) {
@@ -102,9 +104,9 @@ fn render_theme_tab(modal: &SettingsModal, area: Rect, buf: &mut Buffer, accent:
     for (i, (name, _)) in THEMES.iter().enumerate() {
         if y >= area.bottom() - 1 { break; }
         let is_selected = i == modal.selected_item;
-        let indicator = if is_selected { "▸" } else { " " };
+        let indicator = if is_selected { selection::SELECTED.to_string() } else { selection::UNSELECTED.to_string() };
         let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-        buf.set_string(area.x + 2, y, indicator, indicator_style);
+        buf.set_string(area.x + 2, y, &indicator, indicator_style);
         let name_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
         buf.set_string(area.x + 4, y, name, name_style);
         y += 1;
@@ -121,12 +123,12 @@ impl Widget for &SettingsModal {
         render_settings_border(area, buf, border);
         let title = " Settings ";
         buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), area.width - 4);
-        let close = " [✗] ";
+        let close = selection::CLOSE_HINT;
         let close_x = area.right() - close.len() as u16 - 2;
         buf.set_line(close_x, area.y, &Line::raw(close).style(Style::default().fg(text_muted)), area.width);
         render_settings_tabs(self, area, buf, tab_active, text_muted);
         let sep_y = area.y + 2;
-        for x in area.x + 1..area.right() - 1 { buf.get_mut(x, sep_y).set_char('─').set_fg(border); }
+        for x in area.x + 1..area.right() - 1 { buf.get_mut(x, sep_y).set_char(box_chars::H).set_fg(border); }
         if self.selected_tab == 0 { render_theme_tab(self, area, buf, accent, text_primary, text_muted); }
         let footer = " Tab:next/prev · Enter:select · Esc:close ";
         buf.set_line(area.x + 2, area.bottom() - 1, &Line::raw(footer).style(Style::default().fg(text_muted)), area.width - 4);

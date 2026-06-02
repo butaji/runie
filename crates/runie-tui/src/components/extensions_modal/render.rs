@@ -8,7 +8,9 @@ use ratatui::{
     widgets::Clear,
     prelude::Widget,
 };
+use crate::style::box_chars;
 use crate::theme::ThemeWrapper;
+use crate::theme::themes::ThemeColors;
 use crate::components::extensions_modal::{ExtensionsModal, ExtensionTab, ExtensionScope, ExtensionAction};
 
 /// Render the ExtensionsModal to the given area
@@ -23,7 +25,7 @@ pub fn render(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, theme: &The
     Clear.render(area, buf);
 
     // Draw sharp corner border
-    render_sharp_border(area, buf, colors.border);
+    render_sharp_border(area, buf, colors.border_unfocused);
 
     // Draw header area (tabs on row 0, search on row 1)
     render_header(modal, area, buf, &colors);
@@ -33,30 +35,6 @@ pub fn render(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, theme: &The
 
     // Draw footer (if needed)
     render_footer(area, buf, &colors);
-}
-
-struct ThemeColors {
-    bg_panel: Color,
-    border: Color,
-    accent_primary: Color,
-    accent_secondary: Color,
-    text_primary: Color,
-    text_dim: Color,
-    text_muted: Color,
-}
-
-impl ThemeColors {
-    fn from(theme: &ThemeWrapper) -> Self {
-        Self {
-            bg_panel: theme.color("bg.panel").into(),
-            border: theme.color("border.unfocused").into(),
-            accent_primary: theme.color("accent.primary").into(),
-            accent_secondary: theme.color("accent.secondary").into(),
-            text_primary: theme.color("text.primary").into(),
-            text_dim: theme.color("text.dim").into(),
-            text_muted: theme.color("text.muted").into(),
-        }
-    }
 }
 
 /// Render sharp corner border (┌┐└┘│─)
@@ -75,19 +53,19 @@ fn render_sharp_border(area: Rect, buf: &mut Buffer, color: Color) {
 
 fn draw_corners(left: u16, right: u16, top: u16, bottom: u16, buf: &mut Buffer, color: Color) {
     if let Some(cell) = buf.cell_mut((left, top)) {
-        cell.set_char('┌');
+        cell.set_char(box_chars::TL_ALT);
         cell.set_style(Style::default().fg(color));
     }
     if let Some(cell) = buf.cell_mut((right, top)) {
-        cell.set_char('┐');
+        cell.set_char(box_chars::TR_ALT);
         cell.set_style(Style::default().fg(color));
     }
     if let Some(cell) = buf.cell_mut((left, bottom)) {
-        cell.set_char('└');
+        cell.set_char(box_chars::BL_ALT);
         cell.set_style(Style::default().fg(color));
     }
     if let Some(cell) = buf.cell_mut((right, bottom)) {
-        cell.set_char('┘');
+        cell.set_char(box_chars::BR_ALT);
         cell.set_style(Style::default().fg(color));
     }
 }
@@ -95,7 +73,7 @@ fn draw_corners(left: u16, right: u16, top: u16, bottom: u16, buf: &mut Buffer, 
 fn draw_horizontal_borders(left: u16, right: u16, y: u16, buf: &mut Buffer, color: Color) {
     for x in (left + 1)..right {
         if let Some(cell) = buf.cell_mut((x, y)) {
-            cell.set_char('─');
+            cell.set_char(box_chars::H);
             cell.set_style(Style::default().fg(color));
         }
     }
@@ -104,7 +82,7 @@ fn draw_horizontal_borders(left: u16, right: u16, y: u16, buf: &mut Buffer, colo
 fn draw_vertical_borders(x: u16, top: u16, bottom: u16, buf: &mut Buffer, color: Color) {
     for y in (top + 1)..bottom {
         if let Some(cell) = buf.cell_mut((x, y)) {
-            cell.set_char('│');
+            cell.set_char(box_chars::V);
             cell.set_style(Style::default().fg(color));
         }
     }
@@ -145,7 +123,7 @@ fn render_tabs(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, colors: &T
             let sep_x = tab_x + tab_width;
             if sep_x < area.x + area.width - 1 {
                 if let Some(cell) = buf.cell_mut((sep_x, area.y)) {
-                    cell.set_char('│');
+                    cell.set_char(box_chars::V);
                     cell.set_style(Style::default().fg(colors.text_dim));
                 }
             }
@@ -163,8 +141,8 @@ fn render_search_bar(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, colo
     // Draw horizontal separator (─)
     for x in (area.x + 1)..(area.x + area.width - 1) {
         if let Some(cell) = buf.cell_mut((x, row)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(colors.border));
+            cell.set_char(box_chars::H);
+            cell.set_style(Style::default().fg(colors.border_unfocused));
         }
     }
 

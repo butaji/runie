@@ -131,20 +131,26 @@ pub fn handle_home_screen_msg(state: &mut AppState, msg: crate::tui::state::Msg)
 
 fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
     let action = state.home_screen.selected_action().to_string();
-    state.home_screen.hide();
-    state.mode = TuiMode::Chat;
     match action.as_str() {
         "New worktree" => {
             state.messages.clear();
             state.messages.push(MessageItem::System { text: "New session started".to_string() });
+            // Show home screen after creating worktree, don't switch to chat
+            state.home_screen.show();
+            state.mode = TuiMode::HomeScreen;
         }
         "Resume session" => {
+            state.home_screen.hide();
+            state.mode = TuiMode::Chat;
             state.messages.push(MessageItem::System { text: "Resuming last session".to_string() });
         }
         "Settings" => { state.settings_modal.open(); }
         "Help" => { state.shortcuts_panel.open(); }
         "Quit" => { state.running = false; }
-        _ => {}
+        _ => {
+            state.home_screen.hide();
+            state.mode = TuiMode::Chat;
+        }
     }
     vec![]
 }

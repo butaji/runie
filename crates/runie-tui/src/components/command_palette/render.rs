@@ -1,6 +1,8 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::{Color, Modifier, Style}};
 use crate::components::DialogFrame;
 use crate::glyphs;
+use crate::style::selection;
+use crate::style::box_chars;
 use crate::theme::ThemeWrapper;
 use super::{CommandPalette, PaletteCommandDef};
 
@@ -59,9 +61,9 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
 }
 
 fn render_command_row(cmd: &PaletteCommandDef, y: u16, x: u16, max_w: u16, is_selected: bool, text_primary: Color, text_muted: Color, text_secondary: Color, buf: &mut Buffer) {
-    let indicator = if is_selected { "▸" } else { " " };
+    let indicator = if is_selected { selection::SELECTED.to_string() } else { selection::UNSELECTED.to_string() };
     let indicator_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-    buf.set_string(x + 1, y, indicator, indicator_style);
+    buf.set_string(x + 1, y, &indicator, indicator_style);
     let label_x = x + 3;
     let label_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_secondary) };
     buf.set_string(label_x, y, &cmd.label, label_style);
@@ -97,6 +99,6 @@ fn render_argument_mode(palette: &CommandPalette, area: Rect, buf: &mut Buffer, 
 }
 
 fn draw_separator(x: u16, y: u16, max_w: u16, buf: &mut Buffer, color: Color) {
-    let line: String = "─".repeat(max_w as usize);
+    let line: String = box_chars::H.to_string().repeat(max_w as usize);
     buf.set_string(x, y, &line, Style::default().fg(color));
 }
