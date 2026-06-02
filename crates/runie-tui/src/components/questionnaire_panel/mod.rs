@@ -3,10 +3,17 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Widget, Clear, Block, Borders},
 };
+use crate::style::box_chars::H;
+use crate::style::selection::STATUS_ACTIVE;
+use crate::style::selection::STATUS_IDLE;
+use crate::style::selection::RADIO_SELECTED;
+use crate::style::selection::RADIO_UNSELECTED;
+use crate::style::StyleSet;
+use crate::theme::ThemeWrapper;
 
 #[derive(Debug, Clone)]
 pub struct QuestionOption {
@@ -110,50 +117,49 @@ impl Widget for &QuestionnaireState {
 }
 
 fn render_questionnaire(state: &QuestionnaireState, area: Rect, buf: &mut Buffer) {
-    let fg = Color::Rgb(225, 225, 225);
-    let muted = Color::Rgb(140, 140, 160);
-    let accent = Color::Rgb(41, 198, 190);
+    let theme = ThemeWrapper::default();
+    let styles = StyleSet::from_theme(&theme);
 
     Clear.render(area, buf);
-    Block::default().borders(Borders::ALL).border_style(Style::default().fg(accent)).render(area, buf);
+    Block::default().borders(Borders::ALL).border_style(Style::default().fg(styles.accent.fg.unwrap())).render(area, buf);
 
     let inner = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2));
     let total = state.questions.len();
     let current = state.current_question + 1;
 
-    render_questionnaire_header(state, inner, current, total, fg, muted, buf);
-    let y = render_questionnaire_options(state, inner, fg, muted, accent, buf);
-    render_questionnaire_footer(inner, y, current, total, muted, buf);
+    render_questionnaire_header(state, inner, current, total, &styles, buf);
+    let y = render_questionnaire_options(state, inner, &styles, buf);
+    render_questionnaire_footer(inner, y, current, total, &styles, buf);
 }
 
-fn render_questionnaire_header(state: &QuestionnaireState, inner: Rect, current: usize, total: usize, fg: Color, muted: Color, buf: &mut Buffer) {
+fn render_questionnaire_header(state: &QuestionnaireState, inner: Rect, current: usize, total: usize, styles: &StyleSet, buf: &mut Buffer) {
     let mut dots = String::new();
     for i in 0..total {
-        dots.push(if i < current { '●' } else { '○' });
+        dots.push(if i < current { STATUS_ACTIVE } else { STATUS_IDLE });
         if i < total - 1 {
             dots.push(' ');
         }
     }
     let header = format!("{}  Waiting on answers for {} questions              [turn: {:.1}s]", dots, total, state.turn_duration.as_secs_f32());
-    let header_line = Line::styled(header, Style::default().fg(fg));
+    let header_line = Line::styled(header, styles.text_primary);
     buf.set_line(inner.x, inner.y, &header_line, inner.width);
 
-    let div = "─".repeat(inner.width as usize);
-    buf.set_line(inner.x, inner.y + 1, &Line::styled(div, Style::default().fg(muted)), inner.width);
+    let div: String = std::iter::repeat(H).take(inner.width as usize).collect();
+    buf.set_line(inner.x, inner.y + 1, &Line::styled(div, styles.muted), inner.width);
 }
 
-fn render_questionnaire_options(state: &QuestionnaireState, inner: Rect, fg: Color, muted: Color, accent: Color, buf: &mut Buffer) -> u16 {
+fn render_questionnaire_options(state: &QuestionnaireState, inner: Rect, styles: &StyleSet, buf: &mut Buffer) -> u16 {
     let question = &state.questions[state.current_question];
     let mut y = inner.y + 3;
 
     for (i, opt) in question.options.iter().enumerate() {
-        let radio = if opt.selected { "◉" } else { "○" };
+        let radio = if opt.selected { RADIO_SELECTED } else { RADIO_UNSELECTED };
         let num = format!("{:2}", i + 1);
         let is_selected = i == state.selected_option;
         let style = if is_selected {
-            Style::default().fg(accent).add_modifier(Modifier::BOLD)
+            styles.accent.add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(fg)
+            styles.text_primary
         };
         let line = Line::from(vec![
             Span::styled(format!("{}  {}  ", num, radio), style),
@@ -161,25 +167,25 @@ fn render_questionnaire_options(state: &QuestionnaireState, inner: Rect, fg: Col
         ]);
         buf.set_line(inner.x, y, &line, inner.width);
         y += 1;
-        let sub = Line::styled(format!("        {}", opt.subtitle), Style::default().fg(muted));
+        let sub = Line::styled(format!("        {}", opt.subtitle), styles.muted);
         buf.set_line(inner.x, y, &sub, inner.width);
         y += 2;
     }
 
     if question.custom_mode || !question.custom_input.is_none() {
-        let radio = if state.selected_option == question.options.len() { "◉" } else { "○" };
+        let radio = if state.selected_option == question.options.len() { RADIO_SELECTED } else { RADIO_UNSELECTED };
         let custom_text = question.custom_input.as_deref().unwrap_or("Type your answer here");
         let line = Line::from(vec![
-            Span::styled(format!(" z  {}  ", radio), Style::default().fg(fg)),
-            Span::styled(custom_text, Style::default().fg(muted)),
+            Span::styled(format!(" z  {}  ", radio), styles.text_primary),
+            Span::styled(custom_text, styles.muted),
         ]);
         buf.set_line(inner.x, y, &line, inner.width);
     }
     y
 }
 
-fn render_questionnaire_footer(inner: Rect, footer_y: u16, current: usize, total: usize, muted: Color, buf: &mut Buffer) {
+fn render_questionnaire_footer(inner: Rect, footer_y: u16, current: usize, total: usize, styles: &StyleSet, buf: &mut Buffer) {
     let footer = format!("  [{}/{}]  ↑/↓ navigate  ←/→ question  Enter:select", current, total);
-    let footer_line = Line::styled(footer, Style::default().fg(muted));
+    let footer_line = Line::styled(footer, styles.muted);
     buf.set_line(inner.x, footer_y, &footer_line, inner.width);
 }

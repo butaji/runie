@@ -199,11 +199,12 @@ fn render_history_search(
     buf: &mut Buffer,
     state: &AppState,
     area: Rect,
-    _theme: &ThemeWrapper,
+    theme: &ThemeWrapper,
 ) {
     use ratatui::style::{Modifier, Style};
+    use crate::style::layout::SEARCH_OVERLAY_HEIGHT;
 
-    let search_h = 10u16.min(area.height.saturating_sub(4));
+    let search_h = SEARCH_OVERLAY_HEIGHT.min(area.height.saturating_sub(4));
     let search_area = Rect {
         x: area.x + 2,
         y: area.y + area.height.saturating_sub(search_h + 3),
@@ -212,17 +213,18 @@ fn render_history_search(
     };
 
     // Background
+    let bg_panel: ratatui::style::Color = theme.color("bg.panel").into();
     for y in search_area.top()..search_area.bottom() {
         for x in search_area.left()..search_area.right() {
             if let Some(cell) = buf.cell_mut((x, y)) {
                 cell.set_char(' ');
-                cell.set_bg(ratatui::style::Color::Rgb(30, 30, 30));
+                cell.set_bg(bg_panel);
             }
         }
     }
 
     // Border
-    let border = ratatui::style::Color::DarkGray;
+    let border: ratatui::style::Color = theme.color("border.unfocused").into();
     for x in search_area.left()..search_area.right() {
         if let Some(cell) = buf.cell_mut((x, search_area.top())) {
             cell.set_fg(border);

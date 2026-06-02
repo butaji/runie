@@ -3,12 +3,16 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Widget, Clear, Block, Borders},
 };
+use crate::style::box_chars::H;
+use crate::style::selection::{STATUS_ACTIVE, STATUS_IDLE};
+use crate::style::StyleSet;
+use crate::theme::ThemeWrapper;
 
-pub const SUBAGENT_PANEL_WIDTH: u16 = 50;
+pub use crate::style::layout::SUBAGENT_PANEL_WIDTH;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SubagentStatus {
@@ -74,82 +78,75 @@ impl Widget for &SubagentPanel {
 }
 
 fn render_subagent_panel(panel: &SubagentPanel, area: Rect, buf: &mut Buffer) {
-    let muted = Color::Rgb(140, 140, 160);
-    let accent = Color::Rgb(41, 198, 190);
+    let theme = ThemeWrapper::default();
+    let styles = StyleSet::from_theme(&theme);
 
     Clear.render(area, buf);
-    Block::default().borders(Borders::ALL).border_style(Style::default().fg(accent)).render(area, buf);
+    Block::default().borders(Borders::ALL).border_style(Style::default().fg(styles.accent.fg.unwrap())).render(area, buf);
 
     let inner = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2));
 
-    let y = render_subagent_header(panel, inner, buf, muted);
-    let y = render_subagent_grid(panel, inner, y, buf, muted);
-    let _y = render_subagent_list(panel, inner, y, buf);
-    render_subagent_footer(inner, buf, muted);
+    let y = render_subagent_header(panel, inner, buf, &styles);
+    let y = render_subagent_grid(panel, inner, y, buf, &styles);
+    let _y = render_subagent_list(panel, inner, y, buf, &styles);
+    render_subagent_footer(inner, buf, &styles);
 }
 
-fn render_subagent_header(panel: &SubagentPanel, inner: Rect, buf: &mut Buffer, muted: Color) -> u16 {
-    let fg = Color::Rgb(225, 225, 225);
+fn render_subagent_header(panel: &SubagentPanel, inner: Rect, buf: &mut Buffer, styles: &StyleSet) -> u16 {
     let progress_pct = format!("{:.2}%", panel.overall_progress * 100.0);
     let header = format!("{} {}", panel.context_name, progress_pct);
-    let header_line = Line::styled(header, Style::default().fg(fg).add_modifier(Modifier::BOLD));
+    let header_line = Line::styled(header, styles.text_primary.add_modifier(Modifier::BOLD));
     buf.set_line(inner.x, inner.y, &header_line, inner.width);
-    let div = "─".repeat(inner.width as usize);
-    buf.set_line(inner.x, inner.y + 1, &Line::styled(div, Style::default().fg(muted)), inner.width);
+    let div: String = std::iter::repeat(H).take(inner.width as usize).collect();
+    buf.set_line(inner.x, inner.y + 1, &Line::styled(div, styles.muted), inner.width);
     inner.y + 3
 }
 
-fn dot_for(status: SubagentStatus) -> &'static str {
+fn dot_for(status: SubagentStatus) -> char {
     match status {
-        SubagentStatus::Active | SubagentStatus::Complete => "●",
-        SubagentStatus::Idle | SubagentStatus::Failed => "○",
+        SubagentStatus::Active | SubagentStatus::Complete => STATUS_ACTIVE,
+        SubagentStatus::Idle | SubagentStatus::Failed => STATUS_IDLE,
     }
 }
 
-fn render_subagent_grid(panel: &SubagentPanel, inner: Rect, mut y: u16, buf: &mut Buffer, muted: Color) -> u16 {
+fn render_subagent_grid(panel: &SubagentPanel, inner: Rect, mut y: u16, buf: &mut Buffer, styles: &StyleSet) -> u16 {
     let row1 = format!("{} {} {}",
-        panel.subagents.get(0).map_or("○", |s| dot_for(s.status)),
-        panel.subagents.get(1).map_or("○", |s| dot_for(s.status)),
-        panel.subagents.get(2).map_or("○", |s| dot_for(s.status)),
+        panel.subagents.get(0).map_or(STATUS_IDLE.to_string(), |s| dot_for(s.status).to_string()),
+        panel.subagents.get(1).map_or(STATUS_IDLE.to_string(), |s| dot_for(s.status).to_string()),
+        panel.subagents.get(2).map_or(STATUS_IDLE.to_string(), |s| dot_for(s.status).to_string()),
     );
-    buf.set_line(inner.x, y, &Line::styled(row1, Style::default().fg(muted)), inner.width);
+    buf.set_line(inner.x, y, &Line::styled(row1, styles.muted), inner.width);
     y += 1;
 
     let row2 = format!("{} {} {}",
-        panel.subagents.get(3).map_or("○", |s| dot_for(s.status)),
-        panel.subagents.get(4).map_or("○", |s| dot_for(s.status)),
-        panel.subagents.get(5).map_or("○", |s| dot_for(s.status)),
+        panel.subagents.get(3).map_or(STATUS_IDLE.to_string(), |s| dot_for(s.status).to_string()),
+        panel.subagents.get(4).map_or(STATUS_IDLE.to_string(), |s| dot_for(s.status).to_string()),
+        panel.subagents.get(5).map_or(STATUS_IDLE.to_string(), |s| dot_for(s.status).to_string()),
     );
-    buf.set_line(inner.x, y, &Line::styled(row2, Style::default().fg(muted)), inner.width);
+    buf.set_line(inner.x, y, &Line::styled(row2, styles.muted), inner.width);
     y += 1;
 
-    let legend = "● = Active/working  ○ = Idle/waiting";
-    buf.set_line(inner.x, y, &Line::styled(legend, Style::default().fg(muted)), inner.width);
+    let legend = format!("{} = Active/working  {} = Idle/waiting", STATUS_ACTIVE, STATUS_IDLE);
+    buf.set_line(inner.x, y, &Line::styled(legend, styles.muted), inner.width);
     y + 2
 }
 
-fn render_subagent_list(panel: &SubagentPanel, inner: Rect, mut y: u16, buf: &mut Buffer) -> u16 {
-    let fg = Color::Rgb(225, 225, 225);
-    let muted = Color::Rgb(140, 140, 160);
-    let accent = Color::Rgb(41, 198, 190);
-    let success = Color::Rgb(52, 211, 153);
-    let error = Color::Rgb(248, 113, 113);
-
+fn render_subagent_list(panel: &SubagentPanel, inner: Rect, mut y: u16, buf: &mut Buffer, styles: &StyleSet) -> u16 {
     for agent in &panel.subagents {
         if y >= inner.bottom().saturating_sub(2) {
             break;
         }
-        let status_color = match agent.status {
-            SubagentStatus::Active => accent,
-            SubagentStatus::Complete => success,
-            SubagentStatus::Failed => error,
-            SubagentStatus::Idle => muted,
+        let status_style = match agent.status {
+            SubagentStatus::Active => styles.accent,
+            SubagentStatus::Complete => styles.success,
+            SubagentStatus::Failed => styles.error_msg,
+            SubagentStatus::Idle => styles.muted,
         };
         let label = format!("[{}]", agent.label);
         let line = Line::from(vec![
-            Span::styled(label, Style::default().fg(status_color)),
+            Span::styled(label, status_style),
             Span::styled(" ", Style::default()),
-            Span::styled(&agent.description, Style::default().fg(fg)),
+            Span::styled(&agent.description, styles.text_primary),
         ]);
         buf.set_line(inner.x, y, &line, inner.width);
         y += 1;
@@ -157,8 +154,8 @@ fn render_subagent_list(panel: &SubagentPanel, inner: Rect, mut y: u16, buf: &mu
     y
 }
 
-fn render_subagent_footer(inner: Rect, buf: &mut Buffer, muted: Color) {
+fn render_subagent_footer(inner: Rect, buf: &mut Buffer, styles: &StyleSet) {
     let footer_y = inner.bottom().saturating_sub(1);
     let footer = "Ctrl+Shift+A: toggle  │  Esc: close";
-    buf.set_line(inner.x, footer_y, &Line::styled(footer, Style::default().fg(muted)), inner.width);
+    buf.set_line(inner.x, footer_y, &Line::styled(footer, styles.muted), inner.width);
 }

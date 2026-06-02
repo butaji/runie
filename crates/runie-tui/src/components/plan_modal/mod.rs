@@ -11,6 +11,7 @@ use ratatui::{
     text::Line,
     widgets::Widget,
 };
+use crate::style::box_chars;
 
 /// A single item in a plan section - either a numbered step or a bullet point.
 #[derive(Debug, Clone)]
@@ -221,7 +222,7 @@ fn render_title_divider(inner: Rect, buf: &mut Buffer, text_color: Color, border
     // Draw line before title
     let line_len = (inner.width.saturating_sub(title_len)) / 2;
     if line_len > 0 {
-        let line = "─".repeat(line_len as usize);
+        let line = box_chars::H.to_string().repeat(line_len as usize);
         buf.set_string(inner.x, inner.y, &line, Style::default().fg(border_color));
         buf.set_string(inner.x + inner.width.saturating_sub(line_len), inner.y, &line, Style::default().fg(border_color));
     }

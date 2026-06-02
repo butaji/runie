@@ -5,9 +5,7 @@ use ratatui::{
     text::Span,
 };
 use crate::components::top_bar::TopBarViewModel;
-
-/// Git branch symbol (Powerline style)
-const GIT_BRANCH_SYMBOL: char = '\u{E0A0}';
+use crate::style::selection::GIT_BRANCH_SYMBOL;
 
 /// Shorten a path to be relative to home directory
 pub fn shorten_path(path: &str) -> String {

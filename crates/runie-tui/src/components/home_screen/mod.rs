@@ -5,16 +5,19 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::Style,
     widgets::Widget,
 };
-use crate::theme::{ThemeColors, ThemeWrapper};
+use crate::theme::ThemeWrapper;
+use crate::style::box_chars::H as BOX_H;
 
-/// Home screen menu items: (label, hint)
-pub static HOME_MENU_ITEMS: &[(&str, &str)] = &[
-    ("New worktree", "ctrl-w"),
-    ("Resume session", "ctrl-s"),
-    ("Quit", "ctrl-q"),
+/// Home screen menu items: (name, description, hint)
+pub static HOME_MENU_ITEMS: &[(&str, &str, &str)] = &[
+    ("New Session", "Start a new chat", "ctrl-n"),
+    ("Resume Last Session", "Continue where you left off", "ctrl-r"),
+    ("Settings", "Configure preferences", "ctrl-s"),
+    ("Help", "Show keyboard shortcuts", "ctrl-h"),
+    ("Quit", "Exit runie", "ctrl-q"),
 ];
 
 /// Home screen state.
@@ -75,52 +78,53 @@ impl HomeScreen {
     }
 
     pub fn selected_action(&self) -> &str {
-        HOME_MENU_ITEMS.get(self.selected).map(|(action, _)| *action).unwrap_or("")
+        HOME_MENU_ITEMS.get(self.selected).map(|(action, _, _)| *action).unwrap_or("")
     }
 }
 
-fn fill_bg(area: Rect, buf: &mut Buffer, bg: Color) {
-    for y in area.y..area.bottom() {
-        for x in area.x..area.right() {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_bg(bg);
-            }
-        }
-    }
-}
-
-fn draw_divider(x: u16, y: u16, content_x: u16, content_width: u16, buf: &mut Buffer, color: Color) {
+fn draw_divider(x: u16, y: u16, content_x: u16, content_width: u16, buf: &mut Buffer, style: Style) {
     let divider_x = x + 2; // Align with menu text
     let divider_width = content_width.saturating_sub(3);
     for dx in divider_x..divider_x + divider_width {
         if let Some(cell) = buf.cell_mut((dx, y)) {
-            cell.set_char('─').set_fg(color);
+            cell.set_char(BOX_H).set_style(style);
         }
     }
 }
 
 fn draw_menu_item(
     name: &str,
+    desc: &str,
     hint: &str,
     x: u16,
     y: u16,
     content_width: u16,
     buf: &mut Buffer,
-    text_primary: Color,
-    text_muted: Color,
-    _accent: Color,
+    selected_style: Style,
+    unselected_style: Style,
+    hint_style: Style,
     is_selected: bool,
 ) {
-    let name_style = if is_selected {
-        Style::default().fg(text_primary).add_modifier(Modifier::BOLD)
+    let indicator = if is_selected { "▸" } else { " " };
+    let indicator_style = if is_selected { selected_style } else { unselected_style };
+    buf.set_string(x + 2, y, indicator, indicator_style);
+
+    let name_style = if is_selected { selected_style } else { unselected_style };
+    buf.set_string(x + 4, y, name, name_style);
+
+    let hint_text = format!(" ({}) ", hint);
+    let hint_len = hint_text.len() as u16;
+    let hint_x = x + content_width.saturating_sub(hint_len + 2);
+    buf.set_string(hint_x, y, &hint_text, hint_style);
+
+    let desc_y = y + 1;
+    let max_desc_width = content_width - 8 - hint_len - 2;
+    let desc_text = if desc.len() as u16 > max_desc_width {
+        format!("{}...", &desc[..max_desc_width as usize - 3])
     } else {
-        Style::default().fg(text_primary)
+        desc.to_string()
     };
-    // FIXED left alignment (not centered) - matches Grok
-    buf.set_string(x + 2, y, name, name_style);
-    let hint_len = hint.len() as u16;
-    let hint_x = x + content_width.saturating_sub(hint_len + 1);
-    buf.set_string(hint_x, y, hint, Style::default().fg(text_muted));
+    buf.set_string(x + 4, desc_y, &desc_text, unselected_style);
 }
 
 fn render_menu(
@@ -129,20 +133,20 @@ fn render_menu(
     start_y: u16,
     content_width: u16,
     buf: &mut Buffer,
-    text_primary: Color,
-    text_muted: Color,
-    accent: Color,
-    border: Color,
+    selected_style: Style,
+    unselected_style: Style,
+    hint_style: Style,
+    divider_style: Style,
 ) {
     let mut y = start_y;
     let item_count = HOME_MENU_ITEMS.len();
 
-    for (i, (name, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
+    for (i, (name, desc, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
         let is_selected = i == screen.selected;
-        draw_menu_item(name, hint, content_x, y, content_width, buf, text_primary, text_muted, accent, is_selected);
-        y += 1;
+        draw_menu_item(name, desc, hint, content_x, y, content_width, buf, selected_style, unselected_style, hint_style, is_selected);
+        y += 2;
         if i < item_count - 1 {
-            draw_divider(content_x, y, content_x, content_width, buf, border);
+            draw_divider(content_x, y, content_x, content_width, buf, divider_style);
             y += 1;
         }
     }
@@ -150,37 +154,32 @@ fn render_menu(
 
 impl Widget for &HomeScreen {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let colors = ThemeColors::from(&ThemeWrapper::default());
-        let (border, text_primary, text_muted, accent) = (
-            colors.border_unfocused,
-            colors.text_primary,
-            colors.text_dim,
-            colors.accent_primary,
-        );
-
-        let content_width = 40u16;
-        let content_height = 14u16;
-        let content_x = area.x + (area.width.saturating_sub(content_width)) / 2;
-        let content_y = area.y + (area.height.saturating_sub(content_height)) / 2;
-
-        let menu_start_y = content_y;
-        render_menu(
-            self,
-            content_x,
-            menu_start_y,
-            content_width,
-            buf,
-            text_primary,
-            text_muted,
-            accent,
-            border,
-        );
-
-        let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
-        buf.set_string(area.x, content_y + 11, tip, Style::default().fg(text_muted));
+        let theme = ThemeWrapper::default();
+        render_home_screen(self, area, buf, &theme);
     }
 }
 
-pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, _theme: &ThemeWrapper) {
-    screen.render(area, buf);
+pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+    use crate::style::layout::{MENU_WIDTH, MENU_HEIGHT};
+
+    let content_width = MENU_WIDTH;
+    let content_height = MENU_HEIGHT;
+    let content_x = area.x + (area.width.saturating_sub(content_width)) / 2;
+    let content_y = area.y + (area.height.saturating_sub(content_height)) / 2;
+
+    let menu_start_y = content_y;
+    render_menu(
+        screen,
+        content_x,
+        menu_start_y,
+        content_width,
+        buf,
+        theme.menu_selected_style(),
+        theme.menu_unselected_style(),
+        theme.muted_style(),
+        theme.divider_style(),
+    );
+
+    let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
+    buf.set_string(area.x + 2, content_y + 11, tip, theme.tip_style());
 }

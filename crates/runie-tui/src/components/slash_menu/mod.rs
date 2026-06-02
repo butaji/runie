@@ -9,6 +9,8 @@ use ratatui::{
     text::Line,
     widgets::Widget,
 };
+use crate::style::box_chars;
+use crate::style::selection;
 use crate::theme::ThemeWrapper;
 
 /// Definition of a slash command for display in the menu.
@@ -152,23 +154,23 @@ impl SlashMenu {
 
 fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color) {
     for x in area.x..area.right() {
-        buf.get_mut(x, area.y).set_char('─').set_fg(border);
-        buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+        buf.get_mut(x, area.y).set_char(box_chars::H).set_fg(border);
+        buf.get_mut(x, area.bottom() - 1).set_char(box_chars::H).set_fg(border);
     }
     for y in area.y..area.bottom() {
-        buf.get_mut(area.x, y).set_char('│').set_fg(border);
-        buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+        buf.get_mut(area.x, y).set_char(box_chars::V).set_fg(border);
+        buf.get_mut(area.right() - 1, y).set_char(box_chars::V).set_fg(border);
     }
-    buf.get_mut(area.x, area.y).set_char('┌');
-    buf.get_mut(area.right() - 1, area.y).set_char('┐');
-    buf.get_mut(area.x, area.bottom() - 1).set_char('└');
-    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+    buf.get_mut(area.x, area.y).set_char(box_chars::TL_ALT);
+    buf.get_mut(area.right() - 1, area.y).set_char(box_chars::TR_ALT);
+    buf.get_mut(area.x, area.bottom() - 1).set_char(box_chars::BL_ALT);
+    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char(box_chars::BR_ALT);
 }
 
 fn render_slash_item(cmd: &SlashMenuItem, is_selected: bool, inner_x: u16, inner_w: u16, y: u16, buf: &mut Buffer, accent: Color, text_primary: Color, text_muted: Color) {
-    let indicator = if is_selected { "▸" } else { " " };
+    let indicator = if is_selected { selection::SELECTED.to_string() } else { selection::UNSELECTED.to_string() };
     let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-    buf.set_string(inner_x, y, indicator, indicator_style);
+    buf.set_string(inner_x, y, &indicator, indicator_style);
     let label_x = inner_x + 2;
     let label_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
     buf.set_string(label_x, y, cmd.command, label_style);

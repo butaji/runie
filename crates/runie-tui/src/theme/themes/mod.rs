@@ -15,6 +15,7 @@ pub use silkcircuit::build_silkcircuit;
 pub use tokyo_night::build_tokyo_night;
 
 use opaline::Theme;
+use ratatui::style::Style;
 
 // ─── Theme Name Resolution ───────────────────────────────────────────────────
 
@@ -145,6 +146,40 @@ impl ThemeWrapper {
         let next_idx = idx.map(|i| (i + 1) % ALL_THEMES.len()).unwrap_or(0);
         let next = ALL_THEMES[next_idx];
         Self::from_name(next).unwrap_or_else(Self::crush_grok)
+    }
+
+    // ─── Style Builders ────────────────────────────────────────────────────────
+
+    pub fn input_bar_style(&self) -> Style {
+        Style::default().fg(self.color("text.primary").into())
+    }
+
+    pub fn chevron_style(&self) -> Style {
+        Style::default().fg(self.color("accent.user").into())
+    }
+
+    pub fn menu_selected_style(&self) -> Style {
+        Style::default().fg(self.color("accent.primary").into()).add_modifier(ratatui::style::Modifier::BOLD)
+    }
+
+    pub fn menu_unselected_style(&self) -> Style {
+        Style::default().fg(self.color("text.secondary").into())
+    }
+
+    pub fn divider_style(&self) -> Style {
+        Style::default().fg(self.color("border.unfocused").into())
+    }
+
+    pub fn tip_style(&self) -> Style {
+        Style::default().fg(self.color("text.muted").into())
+    }
+
+    pub fn version_style(&self) -> Style {
+        Style::default().fg(self.color("text.dim").into())
+    }
+
+    pub fn muted_style(&self) -> Style {
+        Style::default().fg(self.color("text.muted").into())
     }
 }
 

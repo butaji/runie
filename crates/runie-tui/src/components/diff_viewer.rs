@@ -130,6 +130,8 @@ fn render_diff_lines(
     diff: &[DiffLine],
     scroll_offset: usize,
 ) {
+    use crate::style::layout;
+
     let removed_color: Color = theme.color("diff.removed").into();
     let added_color: Color = theme.color("diff.added").into();
     let context_color: Color = theme.color("text.secondary").into();
@@ -137,9 +139,9 @@ fn render_diff_lines(
     let added_bg: Color = theme.color("diff.added_bg").into();
     let bg_panel: Color = theme.color("bg.panel").into();
 
-    let gutter_width = 5u16; // Line numbers: right-aligned, 4 chars + 1 space
-    let content_start_y = area.y + 1;
-    let max_visible = area.height.saturating_sub(2) as usize;
+    let gutter_width = layout::BORDER_WIDTH * 5; // Line numbers: right-aligned, 4 chars + 1 space
+    let content_start_y = area.y + layout::BORDER_WIDTH;
+    let max_visible = area.height.saturating_sub(layout::BORDER_WIDTH * 2) as usize;
 
     for i in 0..max_visible {
         let line_idx = scroll_offset + i;

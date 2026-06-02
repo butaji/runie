@@ -1,11 +1,12 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::Style,
     text::{Line, Span},
     widgets::{Clear, Widget},
 };
 use crate::components::panel::Panel;
+use crate::style::layout::PADDING_X;
+use crate::style::StyleSet;
 use crate::theme::ThemeWrapper;
 
 pub mod builder;
@@ -46,16 +47,16 @@ impl Overlay {
             return;
         }
 
-        let text_tertiary: ratatui::style::Color = theme.color("text.dim").into();
-        let syntax_phase: ratatui::style::Color = theme.color("accent.secondary").into();
-        let border_unfocused: ratatui::style::Color = theme.color("border.unfocused").into();
+        let styles = StyleSet::from_theme(theme);
+        let text_tertiary = styles.text_dim;
+        let syntax_phase = styles.accent;
 
         // Clear area first
         Clear.render(area, buf);
 
         // Draw panel border (without title since we render tabs in that space)
         Panel::new()
-            .border_gradient(border_unfocused, syntax_phase)
+            .border_gradient(styles.border.fg.unwrap_or(text_tertiary.fg.unwrap()), syntax_phase.fg.unwrap())
             .render(area, buf, |_inner, _buf| {
                 // Inner content is rendered separately below
             });
@@ -65,18 +66,18 @@ impl Overlay {
         let title_x = area.x + (area.width.saturating_sub(title_len)) / 2;
         let title_line = Line::from(vec![Span::styled(
             self.title.as_str(),
-            Style::default().fg(syntax_phase),
+            syntax_phase,
         )]);
         buf.set_line(title_x, area.y, &title_line, title_len);
 
         if self.show_close {
-            let close_line = Line::from(vec![Span::styled("[x]", Style::default().fg(text_tertiary))]);
+            let close_line = Line::from(vec![Span::styled("[x]", text_tertiary)]);
             let close_x = area.x + area.width.saturating_sub(5);
             buf.set_line(close_x, area.y, &close_line, 4);
         }
 
-        render_tabs(self, area, buf, text_tertiary, syntax_phase);
-        fill_content_area(self, area, buf);
+        render_tabs(self, area, buf, &styles);
+        fill_content_area(self, area, buf, PADDING_X);
     }
 }
 
@@ -84,8 +85,7 @@ fn render_tabs(
     overlay: &Overlay,
     area: Rect,
     buf: &mut Buffer,
-    text_tertiary: ratatui::style::Color,
-    syntax_phase: ratatui::style::Color,
+    styles: &StyleSet,
 ) {
     if overlay.tabs.is_empty() {
         return;
@@ -94,9 +94,9 @@ fn render_tabs(
     let mut tab_x = area.x + 2;
     for (i, tab) in overlay.tabs.iter().enumerate() {
         let tab_style = if i == overlay.active_tab {
-            Style::default().fg(syntax_phase)
+            styles.accent
         } else {
-            Style::default().fg(text_tertiary)
+            styles.text_dim
         };
         let tab_text = format!(" {} ", tab);
         let tab_line = Line::from(vec![Span::styled(&tab_text, tab_style)]);
@@ -106,12 +106,12 @@ fn render_tabs(
     }
 }
 
-fn fill_content_area(overlay: &Overlay, area: Rect, buf: &mut Buffer) {
+fn fill_content_area(overlay: &Overlay, area: Rect, buf: &mut Buffer, padding_x: u16) {
     let content_start_y = if overlay.tabs.is_empty() { 1 } else { 2 };
     let content_rect = Rect::new(
-        area.x + 1,
+        area.x + padding_x,
         area.y + content_start_y,
-        area.width - 2,
+        area.width - padding_x * 2,
         area.height - content_start_y - 1,
     );
     Clear.render(content_rect, buf);
@@ -123,6 +123,6 @@ fn fill_content_area(overlay: &Overlay, area: Rect, buf: &mut Buffer) {
             break;
         }
         let line = Line::from(line_spans.clone());
-        buf.set_line(area.x + 2, y, &line, area.width - 4);
+        buf.set_line(area.x + padding_x, y, &line, area.width - padding_x * 2);
     }
 }

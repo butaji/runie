@@ -1,11 +1,14 @@
 //! Activity Panel - shows running tools/agents in a right-side panel.
 
 use ratatui::{buffer::Buffer, layout::Rect, style::Style, text::Line, widgets::Widget};
+use crate::style::selection::PROGRESS_FILLED;
+use crate::style::selection::PROGRESS_EMPTY;
+use crate::glyphs::DIAMOND;
 use crate::theme::ThemeColors;
 use crate::components::status_bar::BackgroundJob;
 
-/// Activity panel width in characters
-pub const ACTIVITY_PANEL_WIDTH: u16 = 30;
+/// Activity panel width in characters (re-exported from style)
+pub use crate::style::layout::ACTIVITY_PANEL_WIDTH;
 
 /// Activity panel state
 #[derive(Debug, Clone, Default)]
@@ -104,7 +107,7 @@ fn render_single_job(job: &BackgroundJob, x: u16, y: u16, width: u16, buf: &mut 
     let pct = format!("{:3.0}%", job.progress.clamp(0.0, 1.0) * 100.0);
 
     let line = Line::from(vec![
-        Span::styled("◆ ", Style::default().fg(colors.accent_primary)),
+        Span::styled(format!("{} ", DIAMOND), Style::default().fg(colors.accent_primary)),
         Span::styled(name, Style::default().fg(colors.text_secondary)),
         Span::styled("  ", Style::default()),
         Span::styled(bar, Style::default().fg(colors.accent_primary)),
@@ -126,8 +129,8 @@ fn truncate_name(name: &str) -> String {
 fn render_progress_bar(progress: f64) -> String {
     let progress = progress.clamp(0.0, 1.0);
     let filled = (progress * 3.0).round() as usize;
-    std::iter::repeat('█').take(filled)
-        .chain(std::iter::repeat('░').take(3 - filled))
+    std::iter::repeat(PROGRESS_FILLED).take(filled)
+        .chain(std::iter::repeat(PROGRESS_EMPTY).take(3 - filled))
         .collect()
 }
 

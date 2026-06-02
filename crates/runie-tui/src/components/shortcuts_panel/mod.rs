@@ -10,6 +10,8 @@ use ratatui::{
     text::Line,
     widgets::Widget,
 };
+use crate::style::box_chars;
+use crate::style::selection;
 use crate::theme::ThemeWrapper;
 
 /// A single keyboard shortcut entry.
@@ -161,23 +163,23 @@ impl ShortcutsPanel {
 
 fn render_panel_border(area: Rect, buf: &mut Buffer, border: Color) {
     for x in area.x..area.right() {
-        buf.get_mut(x, area.y).set_char('─').set_fg(border);
-        buf.get_mut(x, area.bottom() - 1).set_char('─').set_fg(border);
+        buf.get_mut(x, area.y).set_char(box_chars::H).set_fg(border);
+        buf.get_mut(x, area.bottom() - 1).set_char(box_chars::H).set_fg(border);
     }
     for y in area.y..area.bottom() {
-        buf.get_mut(area.x, y).set_char('│').set_fg(border);
-        buf.get_mut(area.right() - 1, y).set_char('│').set_fg(border);
+        buf.get_mut(area.x, y).set_char(box_chars::V).set_fg(border);
+        buf.get_mut(area.right() - 1, y).set_char(box_chars::V).set_fg(border);
     }
-    buf.get_mut(area.x, area.y).set_char('┌');
-    buf.get_mut(area.right() - 1, area.y).set_char('┐');
-    buf.get_mut(area.x, area.bottom() - 1).set_char('└');
-    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char('┘');
+    buf.get_mut(area.x, area.y).set_char(box_chars::TL_ALT);
+    buf.get_mut(area.right() - 1, area.y).set_char(box_chars::TR_ALT);
+    buf.get_mut(area.x, area.bottom() - 1).set_char(box_chars::BL_ALT);
+    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char(box_chars::BR_ALT);
 }
 
 fn render_panel_header(area: Rect, buf: &mut Buffer, text_primary: Color, text_muted: Color) {
     let title = " Keyboard Shortcuts ";
     buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), area.width - 4);
-    let close = " [✗] ";
+    let close = selection::CLOSE_HINT;
     let close_x = area.right() - close.len() as u16 - 2;
     buf.set_line(close_x, area.y, &Line::raw(close).style(Style::default().fg(text_muted)), area.width);
 }
@@ -188,9 +190,9 @@ fn render_panel_footer(panel: &ShortcutsPanel, area: Rect, buf: &mut Buffer, tex
 }
 
 fn render_shortcut_row(shortcut: &ShortcutDef, is_selected: bool, inner_x: u16, inner_w: u16, y: u16, buf: &mut Buffer, accent: Color, text_primary: Color, text_muted: Color) {
-    let indicator = if is_selected { "▸" } else { " " };
+    let indicator = if is_selected { selection::SELECTED.to_string() } else { selection::UNSELECTED.to_string() };
     let indicator_style = if is_selected { Style::default().fg(accent).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_muted) };
-    buf.set_string(inner_x, y, indicator, indicator_style);
+    buf.set_string(inner_x, y, &indicator, indicator_style);
     let action_x = inner_x + 2;
     let action_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
     buf.set_string(action_x, y, shortcut.action, action_style);
@@ -224,7 +226,7 @@ impl Widget for &ShortcutsPanel {
                 if y > area.y + 1 { y += 1; }
                 if y >= max_y { break; }
                 let is_expanded = self.expanded_sections.contains(&shortcut.section);
-                let arrow = if is_expanded { "▼" } else { "▶" };
+                let arrow = if is_expanded { selection::EXPANDED } else { selection::COLLAPSED };
                 let count = SHORTCUTS.iter().filter(|s| s.section == shortcut.section).count();
                 let section_text = format!("{} {} ({})", arrow, shortcut.section, count);
                 let section_style = Style::default().fg(section_color).add_modifier(Modifier::BOLD);

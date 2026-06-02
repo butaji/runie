@@ -41,6 +41,12 @@ impl Default for CodeBlock {
     }
 }
 
+impl CodeBlock {
+    fn theme_style(&self, key: &str) -> Style {
+        Style::default().fg(self.theme.color(key).into())
+    }
+}
+
 struct StyleHelpers {
     text_body: Style,
     text_tertiary: Style,
