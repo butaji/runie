@@ -46,55 +46,73 @@ impl MockProvider {
 
     fn generate_response(&self, messages: &[Message], tools: &[ToolSchema]) -> Vec<Event> {
         let content = Self::build_content(messages);
-        let lower = content.to_lowercase();
 
-        // If tools are available and content mentions a tool action, simulate tool call
-        if !tools.is_empty() && (lower.contains("edit") || lower.contains("list") || lower.contains("read")) {
-            let tool_name = if lower.contains("read") {
-                "Read".to_string()
-            } else if lower.contains("list") {
-                "List".to_string()
-            } else {
-                tools[0].name.clone()
-            };
-            let tool_args = if lower.contains("list") {
-                ".".to_string()
-            } else {
-                "{}".to_string()
-            };
-            vec![
-                Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
-                Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
-                Event::MessageDelta { content: format!("Running {} tool...", tool_name) },
-                Event::ToolCallDelta {
-                    id: "mock-1".to_string(),
-                    name: tool_name.clone(),
-                    arguments: tool_args.clone(),
-                },
-                Event::ToolExecutionStart {
-                    tool_call_id: "mock-1".to_string(),
-                    tool_name: tool_name.clone(),
-                    args: serde_json::Value::String(tool_args.clone()),
-                    timestamp: Utc::now(),
-                },
-                Event::ToolExecutionEnd {
-                    tool_call_id: "mock-1".to_string(),
-                    result: ToolOutput { content: format!("{} completed successfully", tool_name), metadata: serde_json::json!({}), terminate: false },
-                    timestamp: Utc::now(),
-                },
-                Event::MessageEnd,
-                Event::AgentEnd { timestamp: Utc::now() },
-            ]
+        if let Some((tool_name, tool_args)) = Self::should_use_tools(&content, tools) {
+            Self::build_tool_response(&tool_name, &tool_args)
         } else {
-            // Normal text response
-            vec![
-                Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
-                Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
-                Event::MessageDelta { content },
-                Event::MessageEnd,
-                Event::AgentEnd { timestamp: Utc::now() },
-            ]
+            Self::build_text_response(&content)
         }
+    }
+
+    fn build_tool_response(name: &str, args: &str) -> Vec<Event> {
+        vec![
+            Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
+            Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
+            Event::MessageDelta { content: format!("Running {} tool...", name) },
+            Event::ToolCallDelta {
+                id: "mock-1".to_string(),
+                name: name.to_string(),
+                arguments: args.to_string(),
+            },
+            Event::ToolExecutionStart {
+                tool_call_id: "mock-1".to_string(),
+                tool_name: name.to_string(),
+                args: serde_json::Value::String(args.to_string()),
+                timestamp: Utc::now(),
+            },
+            Event::ToolExecutionEnd {
+                tool_call_id: "mock-1".to_string(),
+                result: ToolOutput { content: format!("{} completed successfully", name), metadata: serde_json::json!({}), terminate: false },
+                timestamp: Utc::now(),
+            },
+            Event::MessageEnd,
+            Event::AgentEnd { timestamp: Utc::now() },
+        ]
+    }
+
+    fn build_text_response(content: &str) -> Vec<Event> {
+        vec![
+            Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
+            Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
+            Event::MessageDelta { content: content.to_string() },
+            Event::MessageEnd,
+            Event::AgentEnd { timestamp: Utc::now() },
+        ]
+    }
+
+    fn should_use_tools(content: &str, tools: &[ToolSchema]) -> Option<(String, String)> {
+        if tools.is_empty() {
+            return None;
+        }
+        let lower = content.to_lowercase();
+        let mentions_tool = lower.contains("edit") || lower.contains("list") || lower.contains("read");
+        if !mentions_tool {
+            return None;
+        }
+        let (tool_name, tool_args) = Self::detect_tool_and_args(&lower, tools);
+        Some((tool_name, tool_args))
+    }
+
+    fn detect_tool_and_args(lower: &str, tools: &[ToolSchema]) -> (String, String) {
+        let name = if lower.contains("read") {
+            "Read".to_string()
+        } else if lower.contains("list") {
+            "List".to_string()
+        } else {
+            tools[0].name.clone()
+        };
+        let args = if lower.contains("list") { ".".to_string() } else { "{}".to_string() };
+        (name, args)
     }
 
     fn build_content(messages: &[Message]) -> String {
