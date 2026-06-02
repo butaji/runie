@@ -38,7 +38,7 @@ pub fn build_left_spans<'a>(
         let path_str = if short_path.is_empty() {
             String::new()
         } else {
-            format!(" {}/", short_path)
+            format!(" {}", short_path)
         };
         // Format: " branch ~/path" (no leading space - padding handled by padded_area)
         let combined = format!("{} {}{}", GIT_BRANCH_SYMBOL, &vm.branch, path_str);
@@ -46,7 +46,7 @@ pub fn build_left_spans<'a>(
     } else if !vm.path.is_empty() {
         // No branch, just show path (no leading space - padding handled by padded_area)
         let short_path = shorten_path(&vm.path);
-        parts.push(Span::styled(format!("{}/", short_path), dim_style.clone().bg(bg)));
+        parts.push(Span::styled(short_path.clone(), dim_style.clone().bg(bg)));
     }
     parts
 }

@@ -111,7 +111,8 @@ fn handle_tool_start(
     tool_name: String,
     tool_args: serde_json::Value,
 ) -> Vec<super::AgentCmd> {
-    on_tool_start(state, tool_call_id);
+    let tool_args_str = tool_args.to_string();
+    on_tool_start(state, tool_call_id, tool_name.clone(), tool_args_str);
     let ext_event = runie_ext::PluginEvent::ToolCalled {
         tool_name,
         arguments: serde_json::json!({"args": tool_args }),
@@ -402,7 +403,7 @@ pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
 
 // ─── Tool handlers ───────────────────────────────────────────────────────────
 
-pub fn on_tool_start(state: &mut AppState, tool_call_id: String) {
+pub fn on_tool_start(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
     // Pause thinking timer when tool starts - accumulate duration so far
     if let Some(ref mut thinking) = state.thinking {
         if let Some(start) = thinking.start.take() {
@@ -415,11 +416,12 @@ pub fn on_tool_start(state: &mut AppState, tool_call_id: String) {
     // Calculate elapsed time from status_start_time and set status_details
     let elapsed = state.status_start_time.map(|t| t.elapsed().as_secs()).unwrap_or(0);
     state.status_details = Some(MessageRegistry::format_elapsed(elapsed));
-    state.messages.push(MessageItem::ToolCall {
-        name: tool_call_id,
-        args: String::new(),
-        result: None,
-        is_error: false,
+    state.messages.push(MessageItem::ToolRunning {
+        name: tool_name,
+        args: tool_args,
+        duration_ms: 0,
+        total_elapsed_ms: 0,
+        download_bytes: 0,
     });
 }
 

@@ -13,10 +13,8 @@ use crate::style::box_chars::H as BOX_H;
 
 /// Home screen menu items: (name, description, hint)
 pub static HOME_MENU_ITEMS: &[(&str, &str, &str)] = &[
-    ("New Session", "Start a new chat", "ctrl-n"),
-    ("Resume Last Session", "Continue where you left off", "ctrl-r"),
-    ("Settings", "Configure preferences", "ctrl-s"),
-    ("Help", "Show keyboard shortcuts", "ctrl-h"),
+    ("New worktree", "Start a parallel task", "ctrl-w"),
+    ("Resume session", "Continue where you left off", "ctrl-s"),
     ("Quit", "Exit runie", "ctrl-q"),
 ];
 

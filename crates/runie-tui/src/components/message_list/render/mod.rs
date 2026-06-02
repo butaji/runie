@@ -272,5 +272,12 @@ pub fn render_single_msg_feed(
         FeedItem::Separator { elapsed_secs, tool_calls, tokens_used } => {
             render_separator(*elapsed_secs, *tool_calls, *tokens_used, true, area, row, margin_x, buf, text_dim)
         }
+        FeedItem::ToolRunning { name, args, duration_ms, total_elapsed_ms, download_bytes } => {
+            render_tool_running_msg(name, args, *duration_ms, *total_elapsed_ms, *download_bytes, area, row, margin_x, text_x, buf, text_secondary, spinner, true)
+        }
+        FeedItem::ToolComplete { name, result, lines } => {
+            let lines_ref = lines.as_ref();
+            render_tool_complete_msg(name, result, lines_ref, area, row, margin_x, text_x, buf, _success, text_muted)
+        }
     }
 }

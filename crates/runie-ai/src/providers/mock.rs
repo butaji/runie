@@ -46,31 +46,43 @@ impl MockProvider {
 
     fn generate_response(&self, messages: &[Message], tools: &[ToolSchema]) -> Vec<Event> {
         let content = Self::build_content(messages);
+        let lower = content.to_lowercase();
 
-        // If user asks about editing and tools are available, simulate tool call
-        if !tools.is_empty() && content.to_lowercase().contains("edit") {
-            let tool = &tools[0];
+        // If tools are available and content mentions a tool action, simulate tool call
+        if !tools.is_empty() && (lower.contains("edit") || lower.contains("list") || lower.contains("read")) {
+            let tool_name = if lower.contains("read") {
+                "Read".to_string()
+            } else if lower.contains("list") {
+                "List".to_string()
+            } else {
+                tools[0].name.clone()
+            };
+            let tool_args = if lower.contains("list") {
+                ".".to_string()
+            } else {
+                "{}".to_string()
+            };
             vec![
                 Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
                 Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
-                Event::MessageDelta { content: "I'll help you with that.".to_string() },
+                Event::MessageDelta { content: format!("Running {} tool...", tool_name) },
                 Event::ToolCallDelta {
                     id: "mock-1".to_string(),
-                    name: tool.name.clone(),
-                    arguments: "{}".to_string()
+                    name: tool_name.clone(),
+                    arguments: tool_args.clone(),
                 },
-                Event::MessageEnd,
                 Event::ToolExecutionStart {
                     tool_call_id: "mock-1".to_string(),
-                    tool_name: tool.name.clone(),
-                    args: serde_json::json!({}),
+                    tool_name: tool_name.clone(),
+                    args: serde_json::json!({ "args": tool_args }),
                     timestamp: Utc::now(),
                 },
                 Event::ToolExecutionEnd {
                     tool_call_id: "mock-1".to_string(),
-                    result: ToolOutput { content: "Done".to_string(), metadata: serde_json::json!({}), terminate: false },
+                    result: ToolOutput { content: format!("{} completed successfully", tool_name), metadata: serde_json::json!({}), terminate: false },
                     timestamp: Utc::now(),
                 },
+                Event::MessageEnd,
                 Event::AgentEnd { timestamp: Utc::now() },
             ]
         } else {
@@ -150,9 +162,13 @@ impl Provider for MockProvider {
 
         let events = self.generate_response(&messages, &tools);
 
+        let delay = self.response_delay_ms;
         let s = stream! {
             for event in events {
                 yield event;
+                if delay > 0 {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+                }
             }
         };
 
