@@ -13,14 +13,25 @@ use crate::glyphs;
 use crate::messages::MessageRegistry;
 use crate::tui::state::AnimationState;
 
-/// Render empty lines between feed items (2 blank lines for Grok-style spacing).
+use crate::components::message_list::feed::FeedItem;
+
+/// Render empty lines between feed items based on context.
+/// - SystemNotice → UserMessage: 2 blank lines
+/// - AssistantMessage → Separator: 1 blank line (grouped together)
+/// - All other transitions: 2 blank lines
 pub fn render_item_separator(
     _area: Rect,
     _row: u16,
     _buf: &mut Buffer,
     _color: Color,
+    current_item: &FeedItem,
+    next_item: &FeedItem,
 ) -> u16 {
-    2
+    match (current_item, next_item) {
+        (FeedItem::AssistantMessage { .. }, FeedItem::Separator { .. }) => 1,
+        (FeedItem::SystemNotice { .. }, _) => 2,
+        _ => 2,
+    }
 }
 
 // ============================================================================
@@ -74,8 +85,8 @@ pub fn render_separator(
 
     let tag_width = tag.len() as u16;
     let content_width = area.width - margin_x + area.x - 2;
-    // Add 5-space indent for Grok-style alignment
-    let indent = margin_x + 5;
+    // margin_x + 3 = area.x + 5 = 5 spaces from screen edge (Grok-style)
+    let indent = margin_x + 3;
     let x = if tag_width < content_width.saturating_sub(5) {
         indent + content_width.saturating_sub(5) - tag_width
     } else {
@@ -110,7 +121,8 @@ pub fn render_system_msg(
 ) -> u16 {
     let is_error = text.starts_with("Error:");
     let color = if is_error { error } else { text_muted };
-    let prefix = if is_error { "! " } else { "◆ " };
+    // 3 leading spaces + prefix = 5 chars before text (margin_x + 2 + 3 = area.x + 5 = 5 spaces from edge)
+    let prefix = if is_error { "   ! " } else { "   ◆ " };
     let prefix_len = prefix.len();
     let content_width = (area.width - margin_x + area.x - 2) as usize;
     let text_width = content_width.saturating_sub(prefix_len);
@@ -196,7 +208,7 @@ pub fn render_tool_running_msg(
     // Right side: total_elapsed + transfer + status (empty while running)
 
     let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
-    let indent = 5;
+    let indent = 3; // margin_x + 3 = 5 spaces from screen edge (accounting for 2-space padding in margin_x)
 
     let content_x = margin_x + indent;
     let elapsed_secs = duration_ms as f64 / 1000.0;
@@ -246,7 +258,7 @@ pub fn render_tool_complete_msg(
     let status_icon = if is_error { "[✗]" } else { "[✓]" };
 
     // 5-space indent (Grok-style)
-    let indent = 5;
+    let indent = 3; // margin_x + 3 = 5 spaces from screen edge (accounting for 2-space padding in margin_x)
     let content_x = margin_x + indent;
 
     // Build left content: checkmark + name + args + result preview

@@ -47,7 +47,7 @@ fn fill_status_background(area: Rect, buf: &mut Buffer, bg: ratatui::style::Colo
 }
 
 fn render_hotkey_items(area: Rect, buf: &mut Buffer, hotkeys: &[StatusItem], text_tertiary: ratatui::style::Color) -> u16 {
-    let mut x = area.x + 2;
+    let mut x = area.x;
     let mut first = true;
 
     for item in hotkeys {
