@@ -92,37 +92,21 @@ fn draw_divider(x: u16, y: u16, content_x: u16, content_width: u16, buf: &mut Bu
 
 fn draw_menu_item(
     name: &str,
-    desc: &str,
     hint: &str,
     x: u16,
     y: u16,
     content_width: u16,
     buf: &mut Buffer,
-    selected_style: Style,
+    _selected_style: Style,
     unselected_style: Style,
     hint_style: Style,
-    is_selected: bool,
 ) {
-    let indicator = if is_selected { "▸" } else { " " };
-    let indicator_style = if is_selected { selected_style } else { unselected_style };
-    buf.set_string(x + 2, y, indicator, indicator_style);
+    buf.set_string(x + 2, y, name, unselected_style);
 
-    let name_style = if is_selected { selected_style } else { unselected_style };
-    buf.set_string(x + 4, y, name, name_style);
-
-    let hint_text = format!(" ({}) ", hint);
+    let hint_text = format!("{}", hint);
     let hint_len = hint_text.len() as u16;
     let hint_x = x + content_width.saturating_sub(hint_len + 2);
     buf.set_string(hint_x, y, &hint_text, hint_style);
-
-    let desc_y = y + 1;
-    let max_desc_width = content_width - 8 - hint_len - 2;
-    let desc_text = if desc.len() as u16 > max_desc_width {
-        format!("{}...", &desc[..max_desc_width as usize - 3])
-    } else {
-        desc.to_string()
-    };
-    buf.set_string(x + 4, desc_y, &desc_text, unselected_style);
 }
 
 fn render_menu(
@@ -139,9 +123,8 @@ fn render_menu(
     let mut y = start_y;
     let item_count = HOME_MENU_ITEMS.len();
 
-    for (i, (name, desc, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
-        let is_selected = i == screen.selected;
-        draw_menu_item(name, desc, hint, content_x, y, content_width, buf, selected_style, unselected_style, hint_style, is_selected);
+    for (i, (name, _, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
+        draw_menu_item(name, hint, content_x, y, content_width, buf, selected_style, unselected_style, hint_style);
         y += 2;
         if i < item_count - 1 {
             draw_divider(content_x, y, content_x, content_width, buf, divider_style);
