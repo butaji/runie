@@ -1,0 +1,135 @@
+//! Subagent Panel - parallel agent execution display
+
+use ratatui::{
+    buffer::Buffer,
+    layout::{Alignment, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Paragraph, Widget, Clear, Block, Borders},
+};
+
+pub const SUBAGENT_PANEL_WIDTH: u16 = 50;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SubagentStatus {
+    Idle,
+    Active,
+    Complete,
+    Failed,
+}
+
+#[derive(Debug, Clone)]
+pub struct Subagent {
+    pub label: String,
+    pub description: String,
+    pub status: SubagentStatus,
+    pub progress: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct SubagentPanel {
+    pub visible: bool,
+    pub subagents: Vec<Subagent>,
+    pub context_name: String,
+    pub overall_progress: f64,
+}
+
+impl SubagentPanel {
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            subagents: vec![],
+            context_name: String::new(),
+            overall_progress: 0.0,
+        }
+    }
+
+    pub fn toggle(&mut self) {
+        self.visible = !self.visible;
+    }
+
+    pub fn calculate_overall_progress(&mut self) {
+        if self.subagents.is_empty() {
+            self.overall_progress = 0.0;
+            return;
+        }
+        let total: f64 = self.subagents.iter().map(|s| s.progress).sum();
+        self.overall_progress = total / self.subagents.len() as f64;
+    }
+}
+
+impl Default for SubagentPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Widget for &SubagentPanel {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        if !self.visible {
+            return;
+        }
+        render_subagent_panel(self, area, buf);
+    }
+}
+
+fn render_subagent_panel(panel: &SubagentPanel, area: Rect, buf: &mut Buffer) {
+    let bg = Color::Rgb(26, 26, 36);
+    let fg = Color::Rgb(225, 225, 225);
+    let muted = Color::Rgb(140, 140, 160);
+    let accent = Color::Rgb(41, 198, 190);
+    let success = Color::Rgb(52, 211, 153);
+    let error = Color::Rgb(248, 113, 113);
+    
+    Clear.render(area, buf);
+    Block::default().borders(Borders::ALL).border_style(Style::default().fg(accent)).render(area, buf);
+    
+    let inner = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2));
+    
+    // Header with progress
+    let progress_pct = format!("{:.2}%", panel.overall_progress * 100.0);
+    let header = format!("{} {}", panel.context_name, progress_pct);
+    let header_line = Line::styled(header, Style::default().fg(fg).add_modifier(Modifier::BOLD));
+    buf.set_line(inner.x, inner.y, &header_line, inner.width);
+    
+    // Divider
+    let div = "─".repeat(inner.width as usize);
+    buf.set_line(inner.x, inner.y + 1, &Line::styled(div, Style::default().fg(muted)), inner.width);
+    
+    // Dot grid (2x3)
+    let mut y = inner.y + 3;
+    let dot_grid = format!("{} {} {}    {} = Active  {} = Idle",
+        if panel.subagents.get(0).map_or(false, |s| s.status == SubagentStatus::Active) { "●" } else { "○" },
+        if panel.subagents.get(1).map_or(false, |s| s.status == SubagentStatus::Active) { "●" } else { "○" },
+        if panel.subagents.get(2).map_or(false, |s| s.status == SubagentStatus::Active) { "●" } else { "○" },
+        "●", "○"
+    );
+    buf.set_line(inner.x, y, &Line::styled(dot_grid, Style::default().fg(muted)), inner.width);
+    y += 2;
+    
+    // Agent list
+    for agent in &panel.subagents {
+        if y >= inner.bottom().saturating_sub(2) {
+            break;
+        }
+        let status_color = match agent.status {
+            SubagentStatus::Active => accent,
+            SubagentStatus::Complete => success,
+            SubagentStatus::Failed => error,
+            SubagentStatus::Idle => muted,
+        };
+        let label = format!("[{}]", agent.label);
+        let line = Line::from(vec![
+            Span::styled(label, Style::default().fg(status_color)),
+            Span::styled(" ", Style::default()),
+            Span::styled(&agent.description, Style::default().fg(fg)),
+        ]);
+        buf.set_line(inner.x, y, &line, inner.width);
+        y += 1;
+    }
+    
+    // Footer
+    let footer_y = inner.bottom().saturating_sub(1);
+    let footer = "Ctrl+Shift+A: toggle  │  Esc: close";
+    buf.set_line(inner.x, footer_y, &Line::styled(footer, Style::default().fg(muted)), inner.width);
+}

@@ -66,11 +66,7 @@ fn open_onboarding(state: &mut AppState) -> Vec<UiCmd> {
 }
 
 fn handle_theme(state: &mut AppState) -> Vec<UiCmd> {
-    state.current_theme = if state.current_theme == "silkcircuit_neon" {
-        "crush_grok".to_string()
-    } else {
-        "silkcircuit_neon".to_string()
-    };
+    state.current_theme = crate::theme::ThemeWrapper::cycle_theme(&state.current_theme).name().to_string();
     vec![]
 }
 

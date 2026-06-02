@@ -116,6 +116,8 @@ pub struct AppState {
 
     // Extension registry for plugins
     pub extension_registry: std::sync::Arc<runie_ext::ExtensionRegistry>,
+    pub questionnaire: Option<crate::components::questionnaire_panel::QuestionnaireState>,
+    pub subagent_panel: crate::components::subagent_panel::SubagentPanel,
 }
 
 impl Default for AppState {
@@ -157,6 +159,8 @@ impl Default for AppState {
             last_turn_duration_secs: None, last_turn_tokens: None,
             last_turn_tool_calls: None, turn_success: None,
             extension_registry: std::sync::Arc::new(runie_ext::ExtensionRegistry::new()),
+            questionnaire: None,
+            subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
         }
     }
 }

@@ -308,6 +308,17 @@ impl RenderPipe {
         if !state.history_search_matches.is_empty() {
             Self::render_history_search(buf, state, area, theme);
         }
+        if let Some(ref questionnaire) = state.questionnaire {
+            if questionnaire.visible {
+                Self::render_questionnaire(buf, questionnaire, padded, area, theme, theme_colors);
+            }
+        }
+        if state.subagent_panel.visible {
+            Self::render_subagent_panel(buf, state, padded, area, theme, theme_colors);
+        }
+        if state.plan_modal.is_open() {
+            Self::render_plan_modal(buf, state, padded, area, theme, theme_colors);
+        }
     }
 
     fn render_permission_modal(
@@ -386,6 +397,22 @@ impl RenderPipe {
         let modal_area = right_aligned_rect(padded, 50, 22);
         crate::components::context_usage_modal::render_context_usage_modal(
             &state.context_usage_modal, state, modal_area, buf, theme);
+    }
+
+    fn render_plan_modal(
+        buf: &mut Buffer,
+        state: &AppState,
+        padded: Rect,
+        area: Rect,
+        theme: &ThemeWrapper,
+        theme_colors: &ThemeColors,
+    ) {
+        Self::dim_background(buf, area, theme_colors);
+        let modal_width = 60u16.min(padded.width.saturating_sub(4));
+        let modal_height = 20u16.min(padded.height.saturating_sub(4));
+        let modal_area = centered_rect(padded, modal_width, modal_height);
+        use ratatui::widgets::Widget;
+        (&state.plan_modal).render(modal_area, buf);
     }
 
     fn render_overlay_mode(buf: &mut Buffer, state: &AppState, area: Rect, theme: &ThemeWrapper) {
@@ -497,6 +524,39 @@ impl RenderPipe {
         if inner.height > 2 {
             buf.set_string(counter_x, inner.y + inner.height.saturating_sub(1), counter, counter_style);
         }
+    }
+
+    fn render_questionnaire(
+        buf: &mut Buffer,
+        questionnaire: &crate::components::questionnaire_panel::QuestionnaireState,
+        padded: Rect,
+        area: Rect,
+        theme: &ThemeWrapper,
+        theme_colors: &ThemeColors,
+    ) {
+        Self::dim_background(buf, area, theme_colors);
+        let panel_area = centered_rect(padded, 60, 16);
+        use ratatui::widgets::Widget;
+        questionnaire.render(panel_area, buf);
+    }
+
+    fn render_subagent_panel(
+        buf: &mut Buffer,
+        state: &AppState,
+        padded: Rect,
+        area: Rect,
+        theme: &ThemeWrapper,
+        theme_colors: &ThemeColors,
+    ) {
+        use crate::components::subagent_panel::SUBAGENT_PANEL_WIDTH;
+        let panel_area = Rect {
+            x: padded.x + padded.width.saturating_sub(SUBAGENT_PANEL_WIDTH),
+            y: padded.y,
+            width: SUBAGENT_PANEL_WIDTH,
+            height: padded.height.saturating_sub(3),
+        };
+        use ratatui::widgets::Widget;
+        (&state.subagent_panel).render(panel_area, buf);
     }
 
     fn clear_background(buf: &mut Buffer, area: Rect, bg_color: ratatui::style::Color) {

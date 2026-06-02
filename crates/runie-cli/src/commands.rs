@@ -51,3 +51,87 @@ fn parse_load_cmd(parts: &[&str]) -> Result<Command, String> {
     let session_id = parts.get(1).ok_or("Missing session ID")?;
     Ok(Command::Load(session_id.to_string()))
 }
+
+// === Headless mode command handlers ===
+
+use std::path::PathBuf;
+use runie_ai::Provider;
+use crate::provider_factory::create_provider;
+use crate::settings::Settings;
+
+/// Headless execution context
+pub struct HeadlessContext {
+    pub session_id: Option<String>,
+    pub cwd: PathBuf,
+    pub always_approve: bool,
+}
+
+impl Default for HeadlessContext {
+    fn default() -> Self {
+        Self {
+            session_id: None,
+            cwd: PathBuf::from("."),
+            always_approve: false,
+        }
+    }
+}
+
+/// Execute a single prompt in headless mode
+pub async fn headless_execute_prompt(
+    prompt: &str,
+    ctx: &HeadlessContext,
+    settings: &Settings,
+) -> Result<String, String> {
+    if prompt.trim().is_empty() {
+        return Err("Empty prompt".to_string());
+    }
+
+    let provider = create_provider(false, settings)
+        .map_err(|e| format!("Provider error: {}", e))?;
+
+    let messages = vec![runie_core::Message::User {
+        content: prompt.to_string(),
+        attachments: vec![],
+    }];
+
+    provider
+        .chat_simple(messages)
+        .await
+        .map_err(|e| format!("Chat error: {}", e))
+}
+
+/// Create a new headless session
+pub fn headless_create_session(
+    ctx: &mut HeadlessContext,
+    session_id: Option<String>,
+    cwd: Option<PathBuf>,
+) {
+    ctx.session_id = session_id.or_else(|| Some(generate_session_id()));
+    if let Some(path) = cwd {
+        ctx.cwd = path;
+    }
+}
+
+/// Resume an existing headless session
+pub fn headless_resume_session(
+    _ctx: &mut HeadlessContext,
+    _session_id: &str,
+) -> Result<(), String> {
+    // TODO: Load session state from disk
+    Ok(())
+}
+
+/// Continue the most recent headless session
+pub fn headless_continue_session(_ctx: &mut HeadlessContext) -> Result<(), String> {
+    // TODO: Find and resume most recent session
+    Ok(())
+}
+
+fn generate_session_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    format!("session-{:x}", timestamp)
+}

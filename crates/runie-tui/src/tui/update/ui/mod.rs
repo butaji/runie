@@ -60,6 +60,13 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
         return handle_extensions_modal(state, &msg);
     }
 
+    // Plan Modal
+    if matches!(msg, Msg::PlanModeApprove | Msg::PlanModeDeny |
+        Msg::PlanModeViewNext | Msg::PlanModeViewPrev)
+    {
+        return handle_plan_modal_msg(state, &msg);
+    }
+
     // State handlers
     return handle_state_msg(state, palette, msg);
 }
@@ -89,6 +96,7 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
         Msg::ShowHelp => { super::slash::handle_help(state); vec![] }
         Msg::UpdateTopBarContext { model, context_window, estimated_tokens } =>
             handle_update_top_bar_context(state, Some(model), context_window, estimated_tokens),
+        Msg::ToggleSubagentPanel => { state.subagent_panel.toggle(); vec![] }
         _ => vec![],
     }
 }
@@ -179,4 +187,42 @@ fn handle_extensions_modal(state: &mut AppState, msg: &crate::tui::state::Msg) -
         _ => {}
     }
     vec![]
+}
+
+fn handle_plan_modal_msg(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    use crate::tui::state::PermissionMode;
+
+    match msg {
+        Msg::PlanModeApprove => {
+            // User approved the plan - close modal and switch to normal mode
+            state.plan_modal.close();
+            state.mode = crate::tui::TuiMode::Chat;
+            state.permission_mode = PermissionMode::Normal;
+            state.messages.push(crate::components::MessageItem::System {
+                text: "Plan approved".to_string(),
+            });
+            vec![]
+        }
+        Msg::PlanModeDeny => {
+            // User denied the plan - close modal without applying
+            state.plan_modal.close();
+            state.mode = crate::tui::TuiMode::Chat;
+            state.messages.push(crate::components::MessageItem::System {
+                text: "Plan denied".to_string(),
+            });
+            vec![]
+        }
+        Msg::PlanModeViewPrev => {
+            // Scroll up in the plan
+            state.plan_modal.scroll_up();
+            vec![]
+        }
+        Msg::PlanModeViewNext => {
+            // Scroll down in the plan
+            state.plan_modal.scroll_down();
+            vec![]
+        }
+        _ => vec![],
+    }
 }

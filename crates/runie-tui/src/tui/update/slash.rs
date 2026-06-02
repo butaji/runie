@@ -34,7 +34,7 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::Multiline => { handle_not_implemented(state, "multiline"); vec![] }
         // Permission
         SlashCommand::AlwaysApprove => { handle_always_approve(state); vec![] }
-        SlashCommand::Plan => { handle_not_implemented(state, "plan"); vec![] }
+        SlashCommand::Plan => { handle_plan(state); vec![] }
         SlashCommand::Feedback(_) => { handle_not_implemented(state, "feedback"); vec![] }
         // Utility
         SlashCommand::Btw(_) => { handle_not_implemented(state, "btw"); vec![] }
@@ -167,9 +167,16 @@ pub(crate) fn handle_context(state: &mut AppState) {
 
 pub(crate) fn handle_theme(state: &mut AppState, name: Option<String>) {
     if let Some(theme_name) = name {
-        state.messages.push(MessageItem::System { text: format!("Theme switched to {}", theme_name) });
+        if let Some(resolved) = crate::theme::resolve_theme(&theme_name) {
+            state.current_theme = resolved.clone();
+            state.messages.push(MessageItem::System { text: format!("Theme switched to {}", resolved) });
+        } else {
+            state.messages.push(MessageItem::System { text: format!("Unknown theme: {}. Use /theme without arguments to cycle.", theme_name) });
+        }
     } else {
-        state.messages.push(MessageItem::System { text: "Current theme applied".to_string() });
+        let next = crate::theme::ThemeWrapper::cycle_theme(&state.current_theme);
+        state.current_theme = next.name().to_string();
+        state.messages.push(MessageItem::System { text: format!("Theme switched to {}", state.current_theme) });
     }
 }
 
@@ -185,6 +192,51 @@ pub(crate) fn handle_always_approve(state: &mut AppState) {
         PermissionMode::Plan => "Plan",
     };
     state.messages.push(MessageItem::System { text: format!("Permission mode: {}", mode_name) });
+}
+
+pub(crate) fn handle_plan(state: &mut AppState) {
+    use crate::components::plan_modal::{PlanModal, PlanSection, PlanItem, PlanDocument};
+
+    // Build a demo plan document from recent messages
+    // In a full implementation, this would extract the actual plan from the conversation
+    let mut document = PlanDocument::new();
+
+    // Add "Quick Assessment" section
+    document.sections.push(PlanSection {
+        title: "Quick Assessment".to_string(),
+        items: vec![
+            PlanItem::Bullet {
+                text: "docs/install.md skips headless mode...".to_string(),
+            },
+        ],
+    });
+
+    // Add "Implementation Plan" section
+    document.sections.push(PlanSection {
+        title: "Implementation Plan".to_string(),
+        items: vec![
+            PlanItem::Step {
+                number: 1,
+                text: "Replace the install snippet with curl bootstrap".to_string(),
+            },
+            PlanItem::Step {
+                number: 2,
+                text: "Document `-p` headless mode".to_string(),
+            },
+            PlanItem::Step {
+                number: 3,
+                text: "Point users to config.toml for models".to_string(),
+            },
+            PlanItem::Step {
+                number: 4,
+                text: "Cross-link the auth and feedback sections".to_string(),
+            },
+        ],
+    });
+
+    // Open the plan modal with the document
+    state.plan_modal.open_with_document(document);
+    state.mode = TuiMode::Plan;
 }
 
 pub(crate) fn handle_session_info(state: &mut AppState) {

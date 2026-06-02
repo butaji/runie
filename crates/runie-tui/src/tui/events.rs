@@ -58,6 +58,7 @@ fn blocking_mode_handler(key: &crossterm::event::KeyEvent, mode: &TuiMode, state
         TuiMode::Permission => Some(key_to_permission_msg(*key)),
         TuiMode::Overlay => Some(key_to_overlay_msg(*key, state)),
         TuiMode::HomeScreen => Some(key_to_home_screen_msg(*key)),
+        TuiMode::Plan => Some(key_to_plan_modal_msg(*key, state)),
         _ => None,
     }
 }
@@ -89,7 +90,9 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
             }
         }
         KeyCode::Char('q') => Some(Some(Msg::Quit)),
+        KeyCode::Char('d') => Some(Some(Msg::Quit)),
         KeyCode::Char('m') => Some(Some(Msg::SwitchModel)),
+        KeyCode::Char('h') => Some(Some(Msg::GoHome)),
         _ => None,
     }
 }
@@ -232,6 +235,13 @@ fn key_to_shortcuts_panel_msg(key: crossterm::event::KeyEvent, state: &AppState)
 }
 
 fn key_to_home_screen_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    // Handle Ctrl+ shortcuts first
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        match key.code {
+            KeyCode::Char('s') => return Some(Msg::CloseHomeScreen), // Resume session
+            _ => {}
+        }
+    }
     match key.code {
         KeyCode::Esc | KeyCode::Char('q') => Some(Msg::Quit),
         KeyCode::Up => Some(Msg::HomeScreenUp),
@@ -259,14 +269,24 @@ fn key_to_settings_modal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
 
 fn chat_navigation_msg(key: crossterm::event::KeyEvent, scroll_focused: bool) -> Option<Msg> {
     if scroll_focused {
-        // Vim-style scroll keys when feed has focus
+        // Vim-style scroll keys + arrow navigation when feed has focus
         match key.code {
-            KeyCode::Char('j') => Some(Msg::ScrollDown),
-            KeyCode::Char('k') => Some(Msg::ScrollUp),
+            KeyCode::Char('j') | KeyCode::Down => Some(Msg::ScrollDown),
+            KeyCode::Char('k') | KeyCode::Up => Some(Msg::ScrollUp),
             KeyCode::Char('g') => Some(Msg::ScrollToTop), // gg - handled as 'g' first press
             KeyCode::Char('G') => Some(Msg::ScrollToBottom),
             KeyCode::Char('H') => Some(Msg::ScrollToPrevUserTurn),
             KeyCode::Char('L') => Some(Msg::ScrollToNextUserTurn),
+            KeyCode::Left | KeyCode::Char('h') => Some(Msg::CollapseEntry),
+            KeyCode::Right | KeyCode::Char('l') => Some(Msg::ExpandEntry),
+            KeyCode::Char('e') => Some(Msg::ToggleFoldEntry),
+            KeyCode::Char('E') => Some(Msg::ToggleAllEntries),
+            KeyCode::Char('y') => Some(Msg::CopyBlockContent),
+            KeyCode::Char('r') => Some(Msg::ToggleRawMarkdown),
+            KeyCode::Char(' ') => Some(Msg::FocusPrompt),
+            KeyCode::Char('i') => Some(Msg::FocusPrompt),
+            KeyCode::PageUp => Some(Msg::ScrollPageUp),
+            KeyCode::PageDown => Some(Msg::ScrollPageDown),
             _ => None,
         }
     } else {
@@ -284,14 +304,28 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<
     if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('e')) {
         return Some(Msg::ToggleThoughts);
     }
+    if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('a')) {
+        return Some(Msg::ToggleSubagentPanel);
+    }
     if is_ctrl_combo(key) {
         return ctrl_chat_key(key);
     }
     if matches!(key.code, KeyCode::Enter) {
         return if key.modifiers.contains(KeyModifiers::SHIFT) { Some(Msg::InsertNewline) } else { Some(Msg::Submit) };
     }
-    if matches!(key.code, KeyCode::Esc | KeyCode::Tab) {
+    if matches!(key.code, KeyCode::Esc) {
         return Some(Msg::ToggleScrollFocus);
+    }
+    // Shift+Tab cycles session modes
+    if key.modifiers.contains(KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Tab) {
+        return Some(Msg::TogglePermissionMode);
+    }
+    if matches!(key.code, KeyCode::Tab) {
+        return Some(Msg::ToggleScrollFocus);
+    }
+    // i and Space focus the prompt (vim mode / scrollback)
+    if matches!(key.code, KeyCode::Char('i') | KeyCode::Char(' ')) {
+        return Some(Msg::FocusPrompt);
     }
     if let Some(msg) = chat_navigation_msg(key, state.scroll.scroll_focused) {
         return Some(msg);
@@ -301,8 +335,8 @@ fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<
 }
 
 fn ctrl_chat_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
-    if matches!(key.code, KeyCode::Char('j') | KeyCode::Enter) {
-        return Some(Msg::InsertNewline);
+    if matches!(key.code, KeyCode::Enter) {
+        return Some(Msg::Interject);
     }
     ctrl_chat_key_match(key)
 }
@@ -319,18 +353,19 @@ fn ctrl_chat_key_match(key: crossterm::event::KeyEvent) -> Option<Msg> {
         return Some(Msg::TextareaKey(key));
     }
     const CTRL_MAP: &[(char, Msg)] = &[
-        ('k', Msg::OpenCommandPalette),
+        ('k', Msg::ScrollUp),
+        ('j', Msg::ScrollDown),
         ('n', Msg::OpenCommandPalette),
         ('p', Msg::OpenCommandPalette),
-        ('s', Msg::OpenCommandPalette),
+        ('s', Msg::ToggleSessionTree),
         ('.', Msg::OpenShortcutsPanel),
         (',', Msg::OpenSettingsModal),
         ('b', Msg::ToggleSidebar),
-        ('o', Msg::CopyLastResponse),
+        ('o', Msg::TogglePermissionMode),
         ('l', Msg::ClearChat),
         ('r', Msg::HistorySearchStart),
         ('u', Msg::ScrollHalfPageUp),
-        ('d', Msg::ScrollHalfPageDown),
+        ('d', Msg::Quit),
         ('a', Msg::TogglePermissionMode),
         ('q', Msg::Quit),
     ];
@@ -355,6 +390,35 @@ fn key_to_permission_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Char('s') => Some(Msg::PermissionSkip),
         _ => None,
     }
+}
+
+fn key_to_plan_modal_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+    // Esc closes the plan modal without applying
+    if matches!(key.code, KeyCode::Esc) {
+        return Some(Msg::CloseModal);
+    }
+    // Enter or y/Y approves the plan
+    if matches!(key.code, KeyCode::Enter | KeyCode::Char('y') | KeyCode::Char('Y')) {
+        return Some(Msg::PlanModeApprove);
+    }
+    // n/N denies the plan
+    if matches!(key.code, KeyCode::Char('n') | KeyCode::Char('N')) {
+        return Some(Msg::PlanModeDeny);
+    }
+    // Up/k or Down/j scrolls the plan
+    if matches!(key.code, KeyCode::Up | KeyCode::Char('k')) {
+        return Some(Msg::PlanModeViewPrev);
+    }
+    if matches!(key.code, KeyCode::Down | KeyCode::Char('j')) {
+        return Some(Msg::PlanModeViewNext);
+    }
+    // Any character adds to user comment
+    if let KeyCode::Char(c) = key.code {
+        if state.plan_modal.is_open() {
+            return Some(Msg::TextareaKey(key));
+        }
+    }
+    None
 }
 
 fn key_to_palette_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
