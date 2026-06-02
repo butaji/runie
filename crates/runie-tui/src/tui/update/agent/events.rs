@@ -111,7 +111,10 @@ fn handle_tool_start(
     tool_name: String,
     tool_args: serde_json::Value,
 ) -> Vec<super::AgentCmd> {
-    let tool_args_str = tool_args.to_string();
+    let tool_args_str = match &tool_args {
+        serde_json::Value::String(s) => s.clone(),
+        _ => tool_args.to_string(),
+    };
     on_tool_start(state, tool_call_id, tool_name.clone(), tool_args_str);
     let ext_event = runie_ext::PluginEvent::ToolCalled {
         tool_name,

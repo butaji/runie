@@ -215,7 +215,13 @@ pub fn render_tool_running_msg(
 
     // Build left content: spinner + "Run" + name + args + tool_duration
     let mut left_content = String::with_capacity(64);
-    write!(left_content, "{} Run {} {}", spinner, name, args).ok();
+    // Clean up args: strip JSON string quotes if present
+    let clean_args = if args.starts_with('"') && args.ends_with('"') {
+        &args[1..args.len()-1]
+    } else {
+        args
+    };
+    write!(left_content, "{} Run {} {}", spinner, name, clean_args).ok();
     write!(left_content, " {:.1}s", elapsed_secs).ok();
 
     let left_line = Line::raw(left_content).style(Style::default().fg(tool_bar_color));

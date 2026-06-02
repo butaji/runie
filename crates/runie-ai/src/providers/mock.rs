@@ -74,7 +74,7 @@ impl MockProvider {
                 Event::ToolExecutionStart {
                     tool_call_id: "mock-1".to_string(),
                     tool_name: tool_name.clone(),
-                    args: serde_json::json!({ "args": tool_args }),
+                    args: serde_json::Value::String(tool_args.clone()),
                     timestamp: Utc::now(),
                 },
                 Event::ToolExecutionEnd {
