@@ -28,8 +28,11 @@ pub fn render_user_msg(
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     // Resolve timestamp: use provided or generate current time
     let ts_display = timestamp.map(|s| s.to_string()).unwrap_or_else(format_timestamp_now);
-    // Account for 1-symbol horizontal padding on each side + chevron + space
-    let text_width = (area.width - margin_x + area.x - 6) as usize;
+    // 5-space indent for user messages (like Grok)
+    // margin_x = area.x + 2 (padded), so margin_x + 3 = area.x + 5
+    let indent = 3;
+    // Account for left margin + indent + chevron(2) + space(1) + right padding(1) = margin_x + indent + 4 from area.right()
+    let text_width = (area.width - margin_x + area.x - indent - 4) as usize;
 
     // Wrap user text
     let wrapped = wrap_cache.get_wrapped(text.trim(), text_width);
@@ -37,8 +40,6 @@ pub fn render_user_msg(
     let content_lines = if wrapped.is_empty() { 1 } else { wrapped.len() };
     let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
 
-    // 5-space indent for user messages (like Grok)
-    let indent = 5;
     let bg_start = margin_x;
 
     // Render vertical padding ABOVE (1 line)

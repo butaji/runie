@@ -206,7 +206,8 @@ pub fn render_assistant_msg(
 
     // Prepend ∘ bullet to first line of assistant response
     if !markdown_lines.is_empty() {
-        let bullet_span = Span::raw(format!("{} ", glyphs::ASSISTANT_BULLET)).style(base_style);
+        // 3 leading spaces + bullet + space = 5 chars (margin_x + 2 + 5 = area.x + 5 = 5 spaces from edge)
+        let bullet_span = Span::raw(format!("   {} ", glyphs::ASSISTANT_BULLET)).style(base_style);
         let first_line = &mut markdown_lines[0];
         let mut new_spans = vec![bullet_span];
         new_spans.append(&mut first_line.spans);

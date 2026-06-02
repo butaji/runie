@@ -122,7 +122,7 @@ fn render_message_list(
 ) -> u16 {
     let mut row = 0u16;
     let max_rows = area.height;
-    let margin_x = area.x + 1;
+    let margin_x = area.x;
     let text_x = area.x + 3;
     let total_items = vm.feed.len();
 
@@ -161,7 +161,9 @@ fn render_message_list(
         row += rendered;
         // Draw separator between items (not after last)
         if idx < total_items.saturating_sub(1) && row < max_rows {
-            row += render::render_item_separator(area, row, buf, colors.text_muted);
+            let current_item = &vm.feed.items()[absolute_idx];
+            let next_item = &vm.feed.items()[absolute_idx + 1];
+            row += render::render_item_separator(area, row, buf, colors.text_muted, current_item, next_item);
         }
     }
     row
