@@ -76,6 +76,10 @@ fn global_hotkey_handler(key: &crossterm::event::KeyEvent, state: &AppState) -> 
     if !key.modifiers.contains(KeyModifiers::CONTROL) {
         return None;
     }
+    // Ctrl+Shift+Q toggles questionnaire panel
+    if key.modifiers.contains(KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Char('q')) {
+        return Some(Some(Msg::ToggleQuestionnaire));
+    }
     // DiffViewer intercepts Ctrl+Q to close the viewer — the global quit
     // handler must not fire here (test_ctrl_q_quits_in_diff_viewer).
     if matches!(state.mode, TuiMode::DiffViewer) && matches!(key.code, KeyCode::Char('q')) {
@@ -141,6 +145,7 @@ fn route_non_blocking_mode(key: &crossterm::event::KeyEvent, state: &AppState) -
         TuiMode::DiffViewer => key_to_diff_msg(*key),
         TuiMode::SessionTree => key_to_tree_msg(*key),
         TuiMode::Onboarding => key_to_onboarding_msg(*key, state),
+        TuiMode::Questionnaire => key_to_questionnaire_msg(*key),
         _ => {
             tracing::warn!("Unhandled TuiMode in route_non_blocking_mode");
             None
@@ -565,4 +570,17 @@ fn key_to_onboarding_msg(key: crossterm::event::KeyEvent, state: &AppState) -> O
         return key_to_onboarding_backspace(is_picker_step);
     }
     None
+}
+
+fn key_to_questionnaire_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseQuestionnaire),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::QuestionnaireUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::QuestionnaireDown),
+        KeyCode::Left | KeyCode::Char('h') => Some(Msg::QuestionnairePrevQuestion),
+        KeyCode::Right | KeyCode::Char('l') => Some(Msg::QuestionnaireNextQuestion),
+        KeyCode::Enter => Some(Msg::QuestionnaireSelect),
+        KeyCode::Char('z') => Some(Msg::QuestionnaireToggleCustom),
+        _ => None,
+    }
 }

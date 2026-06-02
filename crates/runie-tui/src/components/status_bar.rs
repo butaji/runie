@@ -7,7 +7,7 @@ use ratatui::{
 };
 use crate::theme::{ThemeColors, ThemeWrapper};
 use crate::tui::state::TuiMode;
-use crate::tui::view_models::StatusBarViewModel;
+use crate::tui::view_models::{McpStatus, StatusBarViewModel};
 
 pub mod builder;
 pub use builder::*;
@@ -277,6 +277,9 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
     if !matches!(vm.mode, TuiMode::Onboarding) {
         render_ref_center(area, buf, left_end, text_secondary, vm);
     }
+
+    // Render MCP status on the right side
+    render_mcp_status(&vm.mcp_status, area, buf, colors);
 }
 
 fn fill_status_background(area: Rect, buf: &mut Buffer, bg: ratatui::style::Color) {
@@ -335,6 +338,23 @@ fn render_ref_center(area: Rect, buf: &mut Buffer, left_end: u16, text_secondary
     }
 }
 
+fn render_mcp_status(mcp: &McpStatus, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
+    let text = match mcp {
+        McpStatus::Connected(n) if *n > 0 => {
+            format!("⚡ {} MCP servers", n)
+        }
+        McpStatus::Unavailable(n) if *n > 0 => {
+            format!("⛔ {} MCP servers unavailable", n)
+        }
+        _ => return,
+    };
+
+    let line_width = text.chars().count() as u16;
+    let x = area.x + area.width.saturating_sub(line_width + 1);
+    let line = Line::styled(text, Style::default().fg(colors.text_dim));
+    buf.set_line(x, area.y, &line, line_width);
+}
+
 #[cfg(test)]
 mod tests_status_bar_onboarding {
     use super::*;
@@ -353,6 +373,7 @@ mod tests_status_bar_onboarding {
             status_header: None,
             status_details: None,
             status_start_time: None,
+            mcp_status: McpStatus::None,
         }
     }
 
@@ -369,6 +390,7 @@ mod tests_status_bar_onboarding {
             status_header: None,
             status_details: None,
             status_start_time: None,
+            mcp_status: McpStatus::None,
         }
     }
 
@@ -385,9 +407,34 @@ mod tests_status_bar_onboarding {
             border_unfocused: ratatui::style::Color::DarkGray,
             success: ratatui::style::Color::Green,
             error: ratatui::style::Color::Red,
+            warning: ratatui::style::Color::Yellow,
             syntax_phase: ratatui::style::Color::Yellow,
             text_plan: ratatui::style::Color::Magenta,
             feed_tool_bar: ratatui::style::Color::LightBlue,
+            accent_user: ratatui::style::Color::Blue,
+            accent_assistant: ratatui::style::Color::Cyan,
+            accent_thinking: ratatui::style::Color::Yellow,
+            accent_tool: ratatui::style::Color::Magenta,
+            accent_system: ratatui::style::Color::DarkGray,
+            accent_error: ratatui::style::Color::Red,
+            accent_success: ratatui::style::Color::Green,
+            accent_running: ratatui::style::Color::Yellow,
+            accent_skill: ratatui::style::Color::Blue,
+            accent_plan: ratatui::style::Color::Yellow,
+            accent_feedback: ratatui::style::Color::Red,
+            accent_model: ratatui::style::Color::Cyan,
+            accent_teal: ratatui::style::Color::Cyan,
+            accent_orange: ratatui::style::Color::Yellow,
+            accent_purple: ratatui::style::Color::Magenta,
+            accent_yellow: ratatui::style::Color::Yellow,
+            accent_blue_bright: ratatui::style::Color::Blue,
+            command: ratatui::style::Color::Blue,
+            path: ratatui::style::Color::Cyan,
+            running: ratatui::style::Color::Yellow,
+            fuzzy_accent: ratatui::style::Color::Blue,
+            editor_bg: ratatui::style::Color::Black,
+            surface_bg: ratatui::style::Color::Black,
+            popover_bg: ratatui::style::Color::Black,
         }
     }
 

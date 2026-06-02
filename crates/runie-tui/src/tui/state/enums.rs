@@ -201,6 +201,15 @@ pub enum Msg {
     ToggleWorktreeMode,
     // Settings import
     ImportClaudeSettings,
+    // Questionnaire
+    QuestionnaireUp,
+    QuestionnaireDown,
+    QuestionnairePrevQuestion,
+    QuestionnaireNextQuestion,
+    QuestionnaireSelect,
+    QuestionnaireToggleCustom,
+    CloseQuestionnaire,
+    ToggleQuestionnaire,
 }
 
 impl PartialEq for Msg {

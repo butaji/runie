@@ -10,7 +10,7 @@ pub const CHEVRON: char = '\u{276F}'; // ❯
 pub const CHEVRON_WITH_SPACE: &str = "\u{276F} ";
 
 /// Assistant idle/dot indicator
-pub const DOT: char = '·';
+pub const DOT: char = '\u{25E6}';
 
 /// Thought duration diamond
 pub const THOUGHT_MARKER: char = '◆';

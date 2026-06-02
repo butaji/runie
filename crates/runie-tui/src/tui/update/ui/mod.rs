@@ -51,24 +51,59 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
         return handle_nav(&msg, state);
     }
 
+    // Overlay modals (Extensions, Plan)
+    if let Some(result) = handle_overlay_modals(state, &msg) {
+        return result;
+    }
+
+    // Questionnaire
+    if let Some(result) = handle_questionnaire_update(state, &msg) {
+        return result;
+    }
+
+    // State handlers
+    return handle_state_msg(state, palette, msg);
+}
+
+fn handle_overlay_modals(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<UiCmd>> {
+    use crate::tui::state::Msg;
+
     // Extensions Modal
     if matches!(msg, Msg::OpenExtensionsModal | Msg::CloseExtensionsModal |
         Msg::ExtensionsModalUp | Msg::ExtensionsModalDown | Msg::ExtensionsModalSelect |
         Msg::ExtensionsModalLeft | Msg::ExtensionsModalRight |
         Msg::ExtensionsModalSearchInput(_) | Msg::ExtensionsModalSearchBackspace)
     {
-        return handle_extensions_modal(state, &msg);
+        return Some(handle_extensions_modal(state, msg));
     }
 
     // Plan Modal
     if matches!(msg, Msg::PlanModeApprove | Msg::PlanModeDeny |
         Msg::PlanModeViewNext | Msg::PlanModeViewPrev)
     {
-        return handle_plan_modal_msg(state, &msg);
+        return Some(handle_plan_modal_msg(state, msg));
     }
 
-    // State handlers
-    return handle_state_msg(state, palette, msg);
+    None
+}
+
+fn handle_questionnaire_update(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<UiCmd>> {
+    use crate::tui::state::Msg;
+    use crate::tui::TuiMode;
+
+    if matches!(msg, Msg::ToggleQuestionnaire) {
+        return Some(handle_toggle_questionnaire(state));
+    }
+    if matches!(state.mode, TuiMode::Questionnaire) {
+        if matches!(msg, Msg::QuestionnaireUp | Msg::QuestionnaireDown |
+            Msg::QuestionnairePrevQuestion | Msg::QuestionnaireNextQuestion |
+            Msg::QuestionnaireSelect | Msg::QuestionnaireToggleCustom |
+            Msg::CloseQuestionnaire)
+        {
+            return Some(handle_questionnaire_msg(state, msg));
+        }
+    }
+    None
 }
 
 fn is_context_msg(msg: &crate::tui::state::Msg) -> bool {
@@ -254,4 +289,43 @@ fn handle_import_claude_settings(state: &mut AppState) {
     state.messages.push(crate::components::MessageItem::System {
         text: "Claude settings import initiated".to_string(),
     });
+}
+
+fn handle_questionnaire_msg(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    if let Some(ref mut q) = state.questionnaire {
+        match msg {
+            Msg::QuestionnaireUp => q.prev_option(),
+            Msg::QuestionnaireDown => q.next_option(),
+            Msg::QuestionnairePrevQuestion => q.prev_question(),
+            Msg::QuestionnaireNextQuestion => q.next_question(),
+            Msg::QuestionnaireSelect => q.select_current(),
+            Msg::QuestionnaireToggleCustom => q.toggle_custom(),
+            Msg::CloseQuestionnaire => {
+                q.visible = false;
+                state.mode = crate::tui::TuiMode::Chat;
+            }
+            _ => {}
+        }
+    }
+    vec![]
+}
+
+fn handle_toggle_questionnaire(state: &mut AppState) -> Vec<UiCmd> {
+    if let Some(ref mut q) = state.questionnaire {
+        q.toggle();
+        if q.visible {
+            state.mode = crate::tui::TuiMode::Questionnaire;
+        } else {
+            state.mode = crate::tui::TuiMode::Chat;
+        }
+    } else {
+        // Initialize with default questionnaire if none exists
+        state.questionnaire = Some(crate::components::questionnaire_panel::QuestionnaireState::default());
+        if let Some(ref mut q) = state.questionnaire {
+            q.visible = true;
+        }
+        state.mode = crate::tui::TuiMode::Questionnaire;
+    }
+    vec![]
 }

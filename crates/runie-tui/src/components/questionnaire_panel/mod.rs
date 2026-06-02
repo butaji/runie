@@ -86,6 +86,12 @@ impl QuestionnaireState {
             }
         }
     }
+
+    pub fn toggle_custom(&mut self) {
+        if let Some(q) = self.questions.get_mut(self.current_question) {
+            q.custom_mode = !q.custom_mode;
+        }
+    }
 }
 
 impl Default for QuestionnaireState {

@@ -537,6 +537,14 @@ fn add_rose_pine_moon_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder 
 
 fn add_extra_tokens(b: opaline::ThemeBuilder) -> opaline::ThemeBuilder {
     b.token("syntax.phase", opaline::OpalineColor::new(0x6B, 0x50, 0xFF))
+        .token("editor.bg", opaline::OpalineColor::new(0x20, 0x20, 0x20))
+        .token("surface.bg", opaline::OpalineColor::new(0x20, 0x20, 0x20))
+        .token("popover.bg", opaline::OpalineColor::new(0x1A, 0x1A, 0x1A))
+        .token("accent.teal", opaline::OpalineColor::new(0x29, 0xC6, 0xBE))
+        .token("accent.orange", opaline::OpalineColor::new(0xD5, 0x95, 0x56))
+        .token("accent.purple", opaline::OpalineColor::new(0xBC, 0x97, 0xFF))
+        .token("accent.yellow", opaline::OpalineColor::new(0xCF, 0xB4, 0x7C))
+        .token("accent.blue_bright", opaline::OpalineColor::new(0x88, 0xA6, 0xFF))
 }
 
 // ─── ThemeColors ─────────────────────────────────────────────────────────────
@@ -567,6 +575,7 @@ pub struct ThemeColors {
     pub border_unfocused: ratatui::style::Color,
     pub success: ratatui::style::Color,
     pub error: ratatui::style::Color,
+    pub warning: ratatui::style::Color,
     pub syntax_phase: ratatui::style::Color,
     pub text_plan: ratatui::style::Color,
     pub feed_tool_bar: ratatui::style::Color,
@@ -582,10 +591,18 @@ pub struct ThemeColors {
     pub accent_plan: ratatui::style::Color,
     pub accent_feedback: ratatui::style::Color,
     pub accent_model: ratatui::style::Color,
+    pub accent_teal: ratatui::style::Color,
+    pub accent_orange: ratatui::style::Color,
+    pub accent_purple: ratatui::style::Color,
+    pub accent_yellow: ratatui::style::Color,
+    pub accent_blue_bright: ratatui::style::Color,
     pub command: ratatui::style::Color,
     pub path: ratatui::style::Color,
     pub running: ratatui::style::Color,
     pub fuzzy_accent: ratatui::style::Color,
+    pub editor_bg: ratatui::style::Color,
+    pub surface_bg: ratatui::style::Color,
+    pub popover_bg: ratatui::style::Color,
 }
 
 impl From<&ThemeWrapper> for ThemeColors {
@@ -602,6 +619,7 @@ impl From<&ThemeWrapper> for ThemeColors {
             border_unfocused: theme.color("border.unfocused").into(),
             success: theme.color("success").into(),
             error: theme.color("error").into(),
+            warning: theme.color("warning").into(),
             syntax_phase: theme.color("syntax.phase").into(),
             text_plan: theme.color("text.plan").into(),
             feed_tool_bar: theme.color("feed.tool.bar").into(),
@@ -617,11 +635,21 @@ impl From<&ThemeWrapper> for ThemeColors {
             accent_plan: theme.color("accent.plan").into(),
             accent_feedback: theme.color("accent.feedback").into(),
             accent_model: theme.color("accent.model").into(),
+            accent_teal: theme.color("accent.teal").into(),
+            accent_orange: theme.color("accent.orange").into(),
+            accent_purple: theme.color("accent.purple").into(),
+            accent_yellow: theme.color("accent.yellow").into(),
+            accent_blue_bright: theme.color("accent.blue_bright").into(),
             command: theme.color("command").into(),
             path: theme.color("path").into(),
             running: theme.color("running").into(),
             fuzzy_accent: theme.color("fuzzy.accent").into(),
+            editor_bg: theme.color("editor.bg").into(),
+            surface_bg: theme.color("surface.bg").into(),
+            popover_bg: theme.color("popover.bg").into(),
         }
+    }
+}
     }
 }
 
