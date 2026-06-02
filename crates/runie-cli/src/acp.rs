@@ -228,44 +228,42 @@ async fn handle_authenticate(
     let mut session = state.session.lock().await;
 
     match params.method.as_str() {
-        "api_key" => {
-            if let Some(ref key) = params.api_key {
-                session.authenticated = true;
-                session.api_key = Some(key.clone());
-                JsonRpcResponse::success(
-                    id,
-                    serde_json::json!({"status": "authenticated"}),
-                )
-            } else {
-                JsonRpcResponse::error(id, -32602, "api_key required for api_key method")
-            }
-        }
-        "env" => {
-            // Authenticate using environment variables
-            let key = std::env::var("XAI_API_KEY")
-                .or_else(|_| std::env::var("OPENAI_API_KEY"))
-                .or_else(|_| std::env::var("RUNIE_API_KEY"));
+        "api_key" => handle_api_key_auth(&mut session, id, &params.api_key),
+        "env" => handle_env_auth(&mut session, id),
+        _ => JsonRpcResponse::error(id, -32602, &format!("Unknown auth method: {}", params.method)),
+    }
+}
 
-            match key {
-                Ok(k) => {
-                    session.authenticated = true;
-                    session.api_key = Some(k);
-                    JsonRpcResponse::success(
-                        id,
-                        serde_json::json!({"status": "authenticated", "method": "env"}),
-                    )
-                }
-                Err(_) => JsonRpcResponse::error(
-                    id,
-                    -32603,
-                    "No API key found in environment (XAI_API_KEY, OPENAI_API_KEY, or RUNIE_API_KEY)",
-                ),
-            }
+fn handle_api_key_auth(
+    session: &mut AcpSession,
+    id: serde_json::Value,
+    api_key: &Option<String>,
+) -> JsonRpcResponse {
+    match api_key {
+        Some(key) => {
+            session.authenticated = true;
+            session.api_key = Some(key.clone());
+            JsonRpcResponse::success(id, serde_json::json!({"status": "authenticated"}))
         }
-        _ => JsonRpcResponse::error(
+        None => JsonRpcResponse::error(id, -32602, "api_key required for api_key method"),
+    }
+}
+
+fn handle_env_auth(session: &mut AcpSession, id: serde_json::Value) -> JsonRpcResponse {
+    let key = std::env::var("XAI_API_KEY")
+        .or_else(|_| std::env::var("OPENAI_API_KEY"))
+        .or_else(|_| std::env::var("RUNIE_API_KEY"));
+
+    match key {
+        Ok(k) => {
+            session.authenticated = true;
+            session.api_key = Some(k);
+            JsonRpcResponse::success(id, serde_json::json!({"status": "authenticated", "method": "env"}))
+        }
+        Err(_) => JsonRpcResponse::error(
             id,
-            -32602,
-            &format!("Unknown auth method: {}", params.method),
+            -32603,
+            "No API key found in environment (XAI_API_KEY, OPENAI_API_KEY, or RUNIE_API_KEY)",
         ),
     }
 }
@@ -321,40 +319,55 @@ async fn handle_session_prompt(
         }
     };
 
+    let current_session_id = verify_session(state, &id, &params.session_id)
+        .await;
+
+    match current_session_id {
+        Ok(session_id) => execute_session_prompt(&params.prompt, session_id, id).await,
+        Err(response) => response,
+    }
+}
+
+async fn verify_session(
+    state: &Arc<AcpState>,
+    id: &serde_json::Value,
+    provided_session_id: &Option<String>,
+) -> Result<String, JsonRpcResponse> {
     let session = state.session.lock().await;
 
-    // Verify session exists
     if session.session_id.is_none() {
-        return JsonRpcResponse::error(
-            id,
+        return Err(JsonRpcResponse::error(
+            id.clone(),
             -32603,
             "No active session. Call session/new first.",
-        );
+        ));
     }
 
     let current_session_id = session.session_id.clone().unwrap();
 
-    // If session_id provided, verify it matches
-    if let Some(ref provided) = params.session_id {
+    if let Some(ref provided) = provided_session_id {
         if provided != &current_session_id {
-            return JsonRpcResponse::error(
-                id,
+            return Err(JsonRpcResponse::error(
+                id.clone(),
                 -32603,
                 &format!("Session mismatch: expected {}, got {}", current_session_id, provided),
-            );
+            ));
         }
     }
 
-    drop(session);
+    Ok(current_session_id)
+}
 
-    // Process the prompt using the provider
-    let response = process_prompt(&params.prompt).await;
-
-    match response {
+async fn execute_session_prompt(
+    prompt: &str,
+    session_id: String,
+    id: serde_json::Value,
+) -> JsonRpcResponse {
+    match process_prompt(prompt).await {
         Ok(content) => JsonRpcResponse::success(
             id,
             serde_json::json!({
-                "session_id": current_session_id,
+                "session_id": session_id,
                 "response": content
             }),
         ),

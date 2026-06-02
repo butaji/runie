@@ -3,17 +3,17 @@
 
 pub mod modal;
 pub mod submit;
+pub mod scroll;
+pub mod search;
+pub mod metadata;
+pub mod permission;
+pub mod entry;
+pub mod history;
 
 use crate::components::MessageItem;
-use crate::tui::state::{AppState, TuiMode};
+use crate::tui::state::AppState;
 use crate::tui::update::ui::UiCmd;
 use crate::tui::key_to_textarea_input;
-use std::time::Instant;
-
-fn current_timestamp() -> Option<String> {
-    use chrono::Local;
-    Some(Local::now().format("%-I:%M %p").to_string())
-}
 
 /// Chat-specific commands returned by update functions.
 #[derive(Debug, Clone)]
@@ -85,35 +85,75 @@ fn is_file_picker_msg(msg: &crate::tui::state::Msg) -> bool {
 
 /// Update chat domain: messages, textarea, scroll, submit, clear.
 pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
+    
+
+    // Fast-path: predicate-based routing for grouped message families
+    if is_input_msg(&msg) { return handle_input_msg(state, msg); }
+    if is_scroll_msg(&msg) { return scroll::handle_scroll_msg(state, &msg); }
+    if is_clear_msg(&msg) { return handle_clear_msg(state, msg); }
+    if is_history_msg(&msg) { return history::handle_history_msg(state, msg); }
+    if is_history_search_msg(&msg) { return search::handle_history_search_msg(state, msg); }
+    if is_overlay_msg(&msg) { return handle_overlay_msg(state, msg); }
+
+    // Try handlers with early return
+    if let Some(cmds) = try_handle_permission(state, &msg) { return cmds; }
+    if let Some(cmds) = try_handle_entry(state, &msg) { return cmds; }
+    if let Some(cmds) = try_handle_misc(state, &msg) { return cmds; }
+
+    vec![]
+}
+
+fn try_handle_permission(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<ChatCmd>> {
     use crate::tui::state::Msg;
     match msg {
-        Msg::Submit => submit::handle_submit(state),
-        Msg::Interject => submit::handle_interject(state),
-        Msg::TogglePermissionMode => { toggle_permission_mode(state); vec![] }
-        Msg::ToggleAutoApprove => { toggle_auto_approve(state); vec![] }
-        Msg::ClearAlwaysApprove => { clear_always_approve(state); vec![] }
-        Msg::ToggleScrollFocus => { toggle_scroll_focus(state); vec![] }
-        Msg::CollapseEntry => { collapse_entry(state); vec![] }
-        Msg::ExpandEntry => { expand_entry(state); vec![] }
-        Msg::ToggleFoldEntry => { toggle_fold_entry(state); vec![] }
-        Msg::ToggleAllEntries => { toggle_all_entries(state); vec![] }
-        Msg::CopyBlockContent => { copy_block_content(state); vec![] }
-        Msg::CopyBlockMetadata => { copy_block_metadata(state); vec![] }
-        Msg::OpenEntry => { open_entry(state); vec![] }
-        Msg::OpenEntryOptions => { open_entry_options(state); vec![] }
-        Msg::MouseClick { x, y, button } => { handle_mouse_click(state, x, y, button); vec![] }
-        Msg::ToggleRawMarkdown => { toggle_raw_markdown(state); vec![] }
-        Msg::FocusPrompt => { focus_prompt(state); vec![] }
-        Msg::GoHome => { go_home(state); vec![] }
-        m if is_input_msg(&m) => handle_input_msg(state, m),
-        m if is_scroll_msg(&m) => handle_scroll_msg(state, m),
-        m if is_clear_msg(&m) => handle_clear_msg(state, m),
-        m if is_history_msg(&m) => handle_history_msg(state, m),
-        m if is_history_search_msg(&m) => handle_history_search_msg(state, m),
-        m if is_overlay_msg(&m) => handle_overlay_msg(state, m),
-        _ => vec![],
+        Msg::TogglePermissionMode => { permission::toggle_permission_mode(state); Some(vec![]) }
+        Msg::ToggleAutoApprove => { permission::toggle_auto_approve(state); Some(vec![]) }
+        Msg::ClearAlwaysApprove => { permission::clear_always_approve(state); Some(vec![]) }
+        Msg::ToggleScrollFocus => { permission::toggle_scroll_focus(state); Some(vec![]) }
+        _ => None,
     }
 }
+
+fn try_handle_entry(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<ChatCmd>> {
+    try_handle_entry_fold(state, msg).or_else(|| try_handle_entry_action(state, msg))
+}
+
+fn try_handle_entry_fold(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<ChatCmd>> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::CollapseEntry => { entry::collapse_entry(state); Some(vec![]) }
+        Msg::ExpandEntry => { entry::expand_entry(state); Some(vec![]) }
+        Msg::ToggleFoldEntry => { entry::toggle_fold_entry(state); Some(vec![]) }
+        Msg::ToggleAllEntries => { entry::toggle_all_entries(state); Some(vec![]) }
+        _ => None,
+    }
+}
+
+fn try_handle_entry_action(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<ChatCmd>> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::CopyBlockContent => { entry::copy_block_content(state); Some(vec![]) }
+        Msg::CopyBlockMetadata => { entry::copy_block_metadata(state); Some(vec![]) }
+        Msg::OpenEntry => { entry::open_entry(state); Some(vec![]) }
+        Msg::OpenEntryOptions => { entry::open_entry_options(state); Some(vec![]) }
+        _ => None,
+    }
+}
+
+fn try_handle_misc(state: &mut AppState, msg: &crate::tui::state::Msg) -> Option<Vec<ChatCmd>> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::Submit => Some(submit::handle_submit(state)),
+        Msg::Interject => Some(submit::handle_interject(state)),
+        Msg::MouseClick { x, y, button } => { handle_mouse_click(state, *x, *y, *button); Some(vec![]) }
+        Msg::ToggleRawMarkdown => { entry::toggle_raw_markdown(state); Some(vec![]) }
+        Msg::FocusPrompt => { entry::focus_prompt(state); Some(vec![]) }
+        Msg::GoHome => { entry::go_home(state); Some(vec![]) }
+        _ => None,
+    }
+}
+
+
 
 fn is_overlay_msg(msg: &crate::tui::state::Msg) -> bool {
     is_slash_menu_msg(msg) || is_shortcuts_panel_msg(msg) || is_settings_modal_msg(msg)
@@ -146,60 +186,6 @@ fn handle_input_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<Ch
     }
 }
 
-fn toggle_permission_mode(state: &mut AppState) {
-    use crate::tui::state::PermissionMode;
-    state.permission_mode = match state.permission_mode {
-        PermissionMode::Normal => PermissionMode::AutoApprove,
-        PermissionMode::AutoApprove => PermissionMode::Plan,
-        PermissionMode::Plan => PermissionMode::Normal,
-    };
-    let mode_name = match state.permission_mode {
-        PermissionMode::Normal => "Normal",
-        PermissionMode::AutoApprove => "AutoApprove",
-        PermissionMode::Plan => "Plan",
-    };
-    state.input_right_info = format!("Mode: {}", mode_name);
-}
-
-fn clear_always_approve(state: &mut AppState) {
-    let count = state.allowed_tools.len() + state.allowed_categories.len();
-    state.allowed_tools.clear();
-    state.allowed_categories.clear();
-    state.input_right_info = format!("Cleared {} always-approve entries", count);
-}
-
-fn toggle_scroll_focus(state: &mut AppState) {
-    state.scroll.scroll_focused = !state.scroll.scroll_focused;
-    state.input_right_info = if state.scroll.scroll_focused {
-        "[SCROLL]".to_string()
-    } else {
-        String::new()
-    };
-}
-
-fn handle_scroll_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
-    use crate::tui::state::Msg;
-    // A "page" in the scroll model is one viewport-height worth of
-    // messages.  20 is the conventional default; tests rely on this
-    // (test_page_scroll_1000_messages) to reach the end of long feeds in
-    // a reasonable number of PageDown presses.
-    const PAGE_SIZE: i32 = 20;
-    const HALF_PAGE_SIZE: i32 = PAGE_SIZE / 2;
-    match msg {
-        Msg::ScrollUp => handle_scroll(state, 1),
-        Msg::ScrollDown => handle_scroll(state, -1),
-        Msg::ScrollPageUp => handle_scroll(state, PAGE_SIZE),
-        Msg::ScrollPageDown => handle_scroll(state, -PAGE_SIZE),
-        Msg::ScrollHalfPageUp => handle_scroll(state, HALF_PAGE_SIZE),
-        Msg::ScrollHalfPageDown => handle_scroll(state, -HALF_PAGE_SIZE),
-        Msg::ScrollToTop => handle_scroll_to_top(state),
-        Msg::ScrollToBottom => handle_scroll_to_bottom(state),
-        Msg::ScrollToPrevUserTurn => handle_scroll_to_prev_user_turn(state),
-        Msg::ScrollToNextUserTurn => handle_scroll_to_next_user_turn(state),
-        _ => vec![],
-    }
-}
-
 fn handle_clear_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
     use crate::tui::state::Msg;
     match msg {
@@ -210,161 +196,8 @@ fn handle_clear_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<Ch
     }
 }
 
-fn handle_history_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
-    use crate::tui::state::Msg;
-    match msg {
-        Msg::HistoryUp => handle_history_up(state),
-        Msg::HistoryDown => handle_history_down(state),
-        _ => vec![],
-    }
-}
-
-fn start_history_search(state: &mut AppState) {
-    if !state.input_history.is_empty() {
-        state.history_search_query.clear();
-        state.history_search_matches = (0..state.input_history.len()).rev().collect();
-        state.history_search_index = 0;
-        if state.input_history_index.is_none() && state.input_draft.is_empty() {
-            state.input_draft = state.textarea.lines().join("\n");
-        }
-    }
-}
-
-fn confirm_history_search(state: &mut AppState) {
-    state.history_search_query.clear();
-    state.history_search_matches.clear();
-    state.history_search_index = 0;
-    state.input_history_index = None;
-    state.input_draft.clear();
-}
-
-fn cancel_history_search(state: &mut AppState) {
-    state.textarea.select_all();
-    state.textarea.cut();
-    state.textarea.insert_str(&state.input_draft);
-    state.input_draft.clear();
-    state.input_history_index = None;
-    state.history_search_query.clear();
-    state.history_search_matches.clear();
-    state.history_search_index = 0;
-}
-
-fn handle_history_search_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
-    use crate::tui::state::Msg;
-    match msg {
-        Msg::HistorySearchStart => { start_history_search(state); vec![] }
-        Msg::HistorySearchQuery(c) => { state.history_search_query.push(c); update_history_search(state); vec![] }
-        Msg::HistorySearchBackspace => { state.history_search_query.pop(); update_history_search(state); vec![] }
-        Msg::HistorySearchNext => {
-            if !state.history_search_matches.is_empty() {
-                state.history_search_index = (state.history_search_index + 1).min(state.history_search_matches.len() - 1);
-                apply_history_search_selection(state);
-            }
-            vec![]
-        }
-        Msg::HistorySearchPrev => { state.history_search_index = state.history_search_index.saturating_sub(1); apply_history_search_selection(state); vec![] }
-        Msg::HistorySearchConfirm => { confirm_history_search(state); vec![] }
-        Msg::HistorySearchCancel => { cancel_history_search(state); vec![] }
-        _ => vec![],
-    }
-}
-
-fn update_history_search(state: &mut AppState) {
-    let query = state.history_search_query.to_lowercase();
-    state.history_search_matches = state.input_history
-        .iter()
-        .enumerate()
-        .filter(|(_, text)| text.to_lowercase().contains(&query))
-        .map(|(i, _)| i)
-        .rev()
-        .collect();
-    state.history_search_index = 0;
-    apply_history_search_selection(state);
-}
-
-fn apply_history_search_selection(state: &mut AppState) {
-    if let Some(&idx) = state.history_search_matches.get(state.history_search_index) {
-        if let Some(text) = state.input_history.get(idx) {
-            state.textarea.select_all();
-            state.textarea.cut();
-            state.textarea.insert_str(text);
-            state.input_history_index = Some(idx);
-        }
-    }
-}
-
 fn handle_newline(state: &mut AppState) -> Vec<ChatCmd> {
     state.textarea.insert_newline();
-    vec![]
-}
-
-fn handle_scroll(state: &mut AppState, delta: i32) -> Vec<ChatCmd> {
-    let page = delta.unsigned_abs() as usize;
-    let new_offset = if delta > 0 {
-        state.scroll.feed_offset.saturating_sub(page)
-    } else {
-        // saturating_add guards against usize overflow when feed_offset has
-        // been set to an extreme value (e.g. usize::MAX from a test) — the
-        // .min below then clamps to the last valid message index.
-        state.scroll
-            .feed_offset
-            .saturating_add(page)
-            .min(state.messages.len().saturating_sub(1))
-    };
-    state.scroll.feed_offset = new_offset;
-    state.scroll.user_scrolled_up = new_offset > 0;
-    vec![]
-}
-
-fn handle_scroll_to_top(state: &mut AppState) -> Vec<ChatCmd> {
-    state.scroll.feed_offset = 0;
-    state.scroll.user_scrolled_up = false;
-    vec![]
-}
-
-fn handle_scroll_to_bottom(state: &mut AppState) -> Vec<ChatCmd> {
-    state.scroll.feed_offset = state.messages.len().saturating_sub(1);
-    state.scroll.user_scrolled_up = true;
-    vec![]
-}
-
-fn handle_scroll_to_prev_user_turn(state: &mut AppState) -> Vec<ChatCmd> {
-    use crate::components::MessageItem;
-    // Find the previous user message before current offset
-    let current_offset = state.scroll.feed_offset;
-    let mut new_offset = current_offset;
-
-    for i in (0..current_offset).rev() {
-        if matches!(state.messages.get(i), Some(MessageItem::User { .. })) {
-            new_offset = i;
-            break;
-        }
-        if i == 0 {
-            new_offset = 0;
-        }
-    }
-    state.scroll.feed_offset = new_offset;
-    state.scroll.user_scrolled_up = new_offset > 0;
-    vec![]
-}
-
-fn handle_scroll_to_next_user_turn(state: &mut AppState) -> Vec<ChatCmd> {
-    use crate::components::MessageItem;
-    // Find the next user message after current offset
-    let current_offset = state.scroll.feed_offset;
-    let mut new_offset = current_offset;
-
-    for i in (current_offset + 1)..state.messages.len() {
-        if matches!(state.messages.get(i), Some(MessageItem::User { .. })) {
-            new_offset = i;
-            break;
-        }
-        if i == state.messages.len() - 1 {
-            new_offset = state.messages.len().saturating_sub(1);
-        }
-    }
-    state.scroll.feed_offset = new_offset;
-    state.scroll.user_scrolled_up = new_offset > 0;
     vec![]
 }
 
@@ -382,11 +215,6 @@ fn handle_clear_chat(state: &mut AppState) -> Vec<ChatCmd> {
 }
 
 fn handle_paste(state: &mut AppState, text: String) -> Vec<ChatCmd> {
-    // Pasting cancels any in-progress history browsing — the visible text
-    // is no longer a history entry, the user's draft is discarded.  We
-    // then append at the cursor so existing textarea content is preserved
-    // (test_paste_appends_to_existing) UNLESS the current text is exactly
-    // a history item, in which case it is replaced (test_paste_while_browsing_history).
     let current = state.textarea.lines().join("\n");
     let is_history_view = state.input_history_index.is_some()
         && state
@@ -406,7 +234,6 @@ fn handle_paste(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     vec![]
 }
 
-
 // ─── Clear Input Confirm ────────────────────────────────────────────────────────
 
 fn handle_clear_input_confirm(state: &mut AppState) -> Vec<ChatCmd> {
@@ -418,198 +245,6 @@ fn handle_clear_input_confirm(state: &mut AppState) -> Vec<ChatCmd> {
         state.input_right_info = "Ctrl+C again to clear text".to_string();
     }
     vec![]
-}
-
-// ─── Input History ─────────────────────────────────────────────────────────────
-
-fn handle_history_up(state: &mut AppState) -> Vec<ChatCmd> {
-    if state.input_history.is_empty() {
-        return vec![];
-    }
-
-    // Save current draft only on the FIRST history-up press. If the draft
-    // is already populated (from a previous session, or restored by a
-    // history-down), do not overwrite it — otherwise the user's pre-existing
-    // draft is lost the moment they press up.
-    if state.input_history_index.is_none() && state.input_draft.is_empty() {
-        state.input_draft = state.textarea.lines().join("\n");
-    }
-
-    // Move back in history
-    let new_index = state.input_history_index.map_or(
-        state.input_history.len().saturating_sub(1),
-        |i| i.saturating_sub(1),
-    );
-
-    if let Some(text) = state.input_history.get(new_index) {
-        state.input_history_index = Some(new_index);
-        state.textarea.select_all();
-        state.textarea.cut();
-        state.textarea.insert_str(text);
-    }
-    vec![]
-}
-
-fn handle_history_down(state: &mut AppState) -> Vec<ChatCmd> {
-    if let Some(index) = state.input_history_index {
-        if index + 1 >= state.input_history.len() {
-            // Back to draft
-            state.input_history_index = None;
-            state.textarea.select_all();
-            state.textarea.cut();
-            state.textarea.insert_str(&state.input_draft);
-            state.input_draft.clear();
-        } else {
-            // Forward in history
-            let new_index = index + 1;
-            if let Some(text) = state.input_history.get(new_index) {
-                state.input_history_index = Some(new_index);
-                state.textarea.select_all();
-                state.textarea.cut();
-                state.textarea.insert_str(text);
-            }
-        }
-    }
-    vec![]
-}
-
-// ─── Entry Fold/Unfold ────────────────────────────────────────────────────────
-
-fn collapse_entry(state: &mut AppState) {
-    if let Some(item) = state.messages.get_mut(state.scroll.feed_offset) {
-        if let MessageItem::Assistant { ref mut expanded, .. } = item {
-            *expanded = false;
-        }
-    }
-}
-
-fn expand_entry(state: &mut AppState) {
-    if let Some(item) = state.messages.get_mut(state.scroll.feed_offset) {
-        if let MessageItem::Assistant { ref mut expanded, .. } = item {
-            *expanded = true;
-        }
-    }
-}
-
-fn toggle_fold_entry(state: &mut AppState) {
-    if let Some(item) = state.messages.get_mut(state.scroll.feed_offset) {
-        if let MessageItem::Assistant { ref mut expanded, .. } = item {
-            *expanded = !*expanded;
-        }
-    }
-}
-
-fn toggle_all_entries(state: &mut AppState) {
-    // Check if any entry is collapsed
-    let any_collapsed = state.messages.iter()
-        .filter_map(|m| match m {
-            MessageItem::Assistant { expanded, .. } => Some(*expanded),
-            _ => None,
-        })
-        .any(|e| !e);
-
-    // Toggle all to the opposite state
-    let new_state = any_collapsed;
-    for item in &mut state.messages {
-        if let MessageItem::Assistant { ref mut expanded, .. } = item {
-            *expanded = new_state;
-        }
-    }
-    state.input_right_info = if new_state { "All expanded" } else { "All collapsed" }.to_string();
-}
-
-fn copy_block_content(state: &mut AppState) {
-    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
-        let text = match item {
-            MessageItem::Assistant { text, .. } => text.clone(),
-            MessageItem::User { text, .. } => text.clone(),
-            MessageItem::Thought { text, .. } => text.clone(),
-            MessageItem::System { text, .. } => text.clone(),
-            _ => String::new(),
-        };
-        if !text.is_empty() {
-            // For now, just log it - clipboard integration would require platform-specific code
-            tracing::info!("Copy block content: {} chars", text.len());
-            state.input_right_info = "Copied".to_string();
-        }
-    }
-}
-
-fn copy_block_metadata(state: &mut AppState) {
-    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
-        let metadata = match item {
-            MessageItem::Assistant { model, timestamp, .. } => {
-                format!("model: {:?}, timestamp: {:?}", model, timestamp)
-            }
-            MessageItem::User { model, timestamp, .. } => {
-                format!("model: {:?}, timestamp: {:?}", model, timestamp)
-            }
-            _ => String::new(),
-        };
-        if !metadata.is_empty() {
-            tracing::info!("Copy block metadata: {}", metadata);
-            state.input_right_info = "Metadata copied".to_string();
-        }
-    }
-}
-
-fn open_entry(state: &mut AppState) {
-    // Toggle entry expansion when opening
-    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
-        if matches!(item, MessageItem::Assistant { .. }) {
-            state.input_right_info = "Entry opened".to_string();
-        }
-    }
-}
-
-fn open_entry_options(state: &mut AppState) {
-    state.input_right_info = "Entry options opened".to_string();
-}
-
-fn handle_mouse_click(state: &mut AppState, x: u16, y: u16, _button: u16) {
-    // Use y position to determine which entry to focus
-    // This is a basic implementation - actual rendering would determine exact positions
-    tracing::debug!("Mouse click at ({}, {})", x, y);
-    let entry_index = y as usize;
-    if entry_index < state.messages.len() {
-        state.scroll.feed_offset = entry_index;
-        state.scroll.scroll_focused = true;
-        state.input_right_info = String::new();
-    }
-}
-
-fn toggle_raw_markdown(state: &mut AppState) {
-    // Track raw markdown toggle per entry - for now just show status
-    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
-        if matches!(item, MessageItem::Assistant { .. }) {
-            state.input_right_info = "Raw markdown toggle".to_string();
-        }
-    }
-}
-
-fn focus_prompt(state: &mut AppState) {
-    state.scroll.scroll_focused = false;
-    state.input_right_info = String::new();
-}
-
-fn go_home(state: &mut AppState) {
-    state.mode = crate::tui::state::TuiMode::HomeScreen;
-}
-
-fn toggle_auto_approve(state: &mut AppState) {
-    use crate::tui::state::PermissionMode;
-    // Toggle between Normal and AutoApprove
-    state.permission_mode = match state.permission_mode {
-        PermissionMode::Normal => PermissionMode::AutoApprove,
-        PermissionMode::AutoApprove => PermissionMode::Normal,
-        PermissionMode::Plan => PermissionMode::AutoApprove,
-    };
-    let mode_name = match state.permission_mode {
-        PermissionMode::Normal => "Normal",
-        PermissionMode::AutoApprove => "YOLO",
-        PermissionMode::Plan => "Plan",
-    };
-    state.input_right_info = format!("Mode: {}", mode_name);
 }
 
 // ─── Message Conversion ────────────────────────────────────────────────────────
@@ -632,4 +267,14 @@ fn to_agent_messages(items: &[MessageItem]) -> Vec<runie_agent::AgentMessage> {
         MessageItem::Error { .. } => None,
         _ => None,
     }).collect()
+}
+
+fn handle_mouse_click(state: &mut AppState, x: u16, y: u16, _button: u16) {
+    tracing::debug!("Mouse click at ({}, {})", x, y);
+    let entry_index = y as usize;
+    if entry_index < state.messages.len() {
+        state.scroll.feed_offset = entry_index;
+        state.scroll.scroll_focused = true;
+        state.input_right_info = String::new();
+    }
 }

@@ -133,6 +133,6 @@ impl Widget for &SettingsModal {
     }
 }
 
-pub fn render_settings_modal(modal: &SettingsModal, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_settings_modal(modal: &SettingsModal, area: Rect, buf: &mut Buffer, _theme: &ThemeWrapper) {
     modal.render(area, buf);
 }

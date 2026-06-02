@@ -22,7 +22,7 @@ pub struct Panel<'a> {
 impl<'a> Panel<'a> {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         Self {
             title: None,

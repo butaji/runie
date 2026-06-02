@@ -75,27 +75,35 @@ impl PluginLoader {
             return Ok(());
         }
 
+        self.scan_plugin_dirs(dir)
+    }
+
+    fn scan_plugin_dirs(&mut self, dir: &Path) -> Result<(), ExtError> {
         for entry in std::fs::read_dir(dir)? {
             let entry = entry.map_err(|e| ExtError::IoError(e.to_string()))?;
             let path = entry.path();
+            self.try_load_plugin_from_dir(&path);
+        }
+        Ok(())
+    }
 
-            if path.is_dir() {
-                let manifest_path = path.join("plugin.toml");
-                if manifest_path.exists() {
-                    match self.load_manifest(&manifest_path) {
-                        Ok(manifest) => {
-                            tracing::info!("Loaded plugin manifest: {}", manifest.plugin.name);
-                            self.manifests.push(manifest);
-                        }
-                        Err(e) => {
-                            tracing::warn!("Failed to load plugin manifest {:?}: {}", manifest_path, e);
-                        }
-                    }
-                }
+    fn try_load_plugin_from_dir(&mut self, path: &Path) {
+        if !path.is_dir() {
+            return;
+        }
+        let manifest_path = path.join("plugin.toml");
+        if !manifest_path.exists() {
+            return;
+        }
+        match self.load_manifest(&manifest_path) {
+            Ok(manifest) => {
+                tracing::info!("Loaded plugin manifest: {}", manifest.plugin.name);
+                self.manifests.push(manifest);
+            }
+            Err(e) => {
+                tracing::warn!("Failed to load plugin manifest {:?}: {}", manifest_path, e);
             }
         }
-
-        Ok(())
     }
 
     /// Load a single plugin manifest
@@ -166,37 +174,47 @@ impl GitPlugin {
     }
 
     fn check_git_status(&mut self) {
-        let workspace = match &self.workspace {
-            Some(w) => w,
-            None => return,
+        let Some(workspace) = &self.workspace else {
+            return;
         };
 
-        // Throttle checks to once per second
-        if self.last_status_check.elapsed() < std::time::Duration::from_secs(1) {
+        if !self.should_check() {
             return;
         }
         self.last_status_check = std::time::Instant::now();
 
-        // Get branch
-        self.status.branch = std::process::Command::new("git")
+        self.status.branch = self.fetch_git_branch(workspace);
+        let status_data = self.fetch_git_status(workspace);
+        self.parse_git_status(&status_data);
+    }
+
+    fn should_check(&self) -> bool {
+        self.last_status_check.elapsed() >= std::time::Duration::from_secs(1)
+    }
+
+    fn fetch_git_branch(&self, workspace: &Path) -> String {
+        std::process::Command::new("git")
             .args(["branch", "--show-current"])
             .current_dir(workspace)
             .output()
             .ok()
             .filter(|o| o.status.success())
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_default();
+            .unwrap_or_default()
+    }
 
-        // Get status
-        let status_output = std::process::Command::new("git")
+    fn fetch_git_status(&self, workspace: &Path) -> String {
+        std::process::Command::new("git")
             .args(["status", "--porcelain"])
             .current_dir(workspace)
             .output()
             .ok()
             .filter(|o| o.status.success())
             .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-            .unwrap_or_default();
+            .unwrap_or_default()
+    }
 
+    fn parse_git_status(&mut self, status_output: &str) {
         let mut dirty = false;
         let mut staged = false;
         let mut conflicted = 0;
@@ -208,24 +226,27 @@ impl GitPlugin {
             let idx = line.chars().next().unwrap_or(' ');
             let second = line.chars().nth(1).unwrap_or(' ');
 
-            // First char: unstaged changes
-            if idx == '?' || idx == 'M' || idx == 'D' {
-                dirty = true;
-            }
-            // Second char: staged changes
-            if second == 'M' || second == 'D' || second == 'A' {
-                staged = true;
-            }
-            // Conflicted files have both chars set to special values
-            if idx == 'U' || second == 'U' {
-                conflicted += 1;
-            }
+            dirty = dirty || is_dirty_char(idx);
+            staged = staged || is_staged_char(second);
+            conflicted += count_conflicted(idx, second);
         }
 
         self.status.dirty = dirty;
         self.status.staged = staged;
         self.status.conflicted = conflicted;
     }
+}
+
+fn is_dirty_char(c: char) -> bool {
+    matches!(c, '?' | 'M' | 'D')
+}
+
+fn is_staged_char(c: char) -> bool {
+    matches!(c, 'M' | 'D' | 'A')
+}
+
+fn count_conflicted(idx: char, second: char) -> usize {
+    if idx == 'U' || second == 'U' { 1 } else { 0 }
 }
 
 impl Default for GitPlugin {

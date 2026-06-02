@@ -16,7 +16,7 @@ pub struct InputActor;
 impl InputActor {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         Self
     }

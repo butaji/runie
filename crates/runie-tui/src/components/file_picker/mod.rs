@@ -11,7 +11,6 @@ use ratatui::{
     text::Line,
     widgets::Widget,
 };
-use crate::theme::ThemeWrapper;
 
 /// File picker state.
 #[derive(Debug, Clone, Default)]
@@ -166,31 +165,40 @@ impl Widget for &FilePicker {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let bg = Color::Black;
         let border = Color::DarkGray;
-        let text_primary = Color::White;
         let text_secondary = Color::Gray;
         let accent = Color::Cyan;
-        let highlight_bg = Color::Rgb(40, 40, 40);
 
         let inner = render_file_picker_frame(area, buf, bg, border);
-
-        let header = format!("@ {} ({} files)", self.cwd.display(), self.files.len());
-        let header_line = Line::from(header).style(Style::default().fg(accent).add_modifier(Modifier::BOLD));
-        if inner.height > 0 { buf.set_line(inner.x, inner.y, &header_line, inner.width); }
-
-        let filter_text = if self.filter.is_empty() { "Type to filter...".to_string() } else { format!("> {}", self.filter) };
-        let filter_line = Line::from(filter_text).style(Style::default().fg(text_secondary));
-        if inner.height > 1 { buf.set_line(inner.x, inner.y + 1, &filter_line, inner.width); }
-
-        if inner.height > 2 {
-            let divider = "─".repeat(inner.width as usize);
-            buf.set_string(inner.x, inner.y + 2, divider, Style::default().fg(border));
-        }
-
-        render_file_list(self, inner, buf, accent, highlight_bg, text_primary);
-
-        if self.filtered_indices.is_empty() && inner.height > 3 {
-            let empty_text = if self.filter.is_empty() { "No files in directory" } else { "No files match filter" };
-            buf.set_line(inner.x, inner.y + 3, &Line::from(empty_text).style(Style::default().fg(text_secondary)), inner.width);
-        }
+        render_picker_header(self, inner, buf, accent);
+        render_picker_filter(self, inner, buf, text_secondary);
+        render_picker_divider(inner, buf, border);
+        render_file_list(self, inner, buf, accent, Color::Rgb(40, 40, 40), Color::White);
+        render_picker_empty(self, inner, buf, text_secondary);
     }
+}
+
+fn render_picker_header(picker: &FilePicker, inner: Rect, buf: &mut Buffer, accent: Color) {
+    if inner.height == 0 { return; }
+    let header = format!("@ {} ({} files)", picker.cwd.display(), picker.files.len());
+    let header_line = Line::from(header).style(Style::default().fg(accent).add_modifier(Modifier::BOLD));
+    buf.set_line(inner.x, inner.y, &header_line, inner.width);
+}
+
+fn render_picker_filter(picker: &FilePicker, inner: Rect, buf: &mut Buffer, text_secondary: Color) {
+    if inner.height <= 1 { return; }
+    let filter_text = if picker.filter.is_empty() { "Type to filter...".to_string() } else { format!("> {}", picker.filter) };
+    let filter_line = Line::from(filter_text).style(Style::default().fg(text_secondary));
+    buf.set_line(inner.x, inner.y + 1, &filter_line, inner.width);
+}
+
+fn render_picker_divider(inner: Rect, buf: &mut Buffer, border: Color) {
+    if inner.height <= 2 { return; }
+    let divider = "─".repeat(inner.width as usize);
+    buf.set_string(inner.x, inner.y + 2, divider, Style::default().fg(border));
+}
+
+fn render_picker_empty(picker: &FilePicker, inner: Rect, buf: &mut Buffer, text_secondary: Color) {
+    if !picker.filtered_indices.is_empty() || inner.height <= 3 { return; }
+    let empty_text = if picker.filter.is_empty() { "No files in directory" } else { "No files match filter" };
+    buf.set_line(inner.x, inner.y + 3, &Line::from(empty_text).style(Style::default().fg(text_secondary)), inner.width);
 }

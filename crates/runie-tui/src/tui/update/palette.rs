@@ -11,7 +11,6 @@ pub fn open_palette(state: &mut AppState, palette: &mut CommandPalette) {
     state.command_palette.selected = 0;
     palette.selected = 0;
     palette.filter("");
-    // P1-1 FIX: Reset argument mode when opening palette
     palette.is_argument_mode = false;
     palette.argument_input.clear();
     palette.pending_command = None;
@@ -30,17 +29,11 @@ pub fn handle_close_modal(state: &mut AppState) {
     state.extensions_modal = None;
 }
 
-/// P1-1 FIX: Handle Esc in command palette
-/// If in argument mode, cancel argument input and return to command selection.
-/// If not in argument mode, close the palette.
 pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette) {
     if palette.is_argument_mode {
-        // BUG-08 FIX: Use cancel_argument_mode() method
         palette.cancel_argument_mode();
-        // Reset filter to show all commands again
         palette.filter("");
     } else {
-        // Not in argument mode - close the palette
         handle_close_modal(state);
     }
 }
@@ -70,42 +63,86 @@ fn handle_theme(state: &mut AppState) -> Vec<UiCmd> {
     vec![]
 }
 
+fn handle_simple_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) -> Vec<UiCmd> {
+    run_slash(state, cmd)
+}
+
+fn handle_copy_last(state: &mut AppState) -> Vec<UiCmd> {
+    let cmds = crate::tui::update::ui::handle_copy_last_response(state);
+    state.mode = TuiMode::Chat;
+    state.command_palette.open = false;
+    state.command_palette.filter.clear();
+    state.command_palette.selected = 0;
+    cmds
+}
+
+fn handle_cancel(state: &mut AppState) -> Vec<UiCmd> {
+    state.command_palette.open = false;
+    state.command_palette.filter.clear();
+    state.command_palette.selected = 0;
+    vec![]
+}
+
+fn handle_quit(state: &mut AppState) -> Vec<UiCmd> {
+    state.running = false;
+    vec![UiCmd::Quit]
+}
+
 pub fn handle_direct_command(state: &mut AppState, cmd: PaletteCommand) -> Vec<UiCmd> {
-    use runie_core::slash_command::SlashCommand;
-    // Close the palette on every action except Cancel — even ones that swap
-    // mode (Onboard -> TuiMode::Onboarding, SessionTree -> TuiMode::SessionTree)
-    // so the test invariants (palette.open == false after action) hold.
-    let result = match cmd {
-        PaletteCommand::NewSession => run_slash(state, SlashCommand::New),
-        PaletteCommand::ClearChat => run_slash(state, SlashCommand::Clear),
-        PaletteCommand::SwitchModel => { handle_switch_model(state); vec![] },
-        PaletteCommand::ForkSession => run_slash(state, SlashCommand::Fork),
-        PaletteCommand::SessionTree => { crate::tui::update::slash::handle_tree(state); vec![] },
-        PaletteCommand::Onboard => open_onboarding(state),
-        PaletteCommand::CopyLast => {
-            let cmds = crate::tui::update::ui::handle_copy_last_response(state);
-            state.mode = TuiMode::Chat;
-            state.command_palette.open = false;
-            state.command_palette.filter.clear();
-            state.command_palette.selected = 0;
-            cmds
-        }
-        PaletteCommand::ShowCost => run_slash(state, SlashCommand::Cost),
-        PaletteCommand::Theme => handle_theme(state),
-        PaletteCommand::Help => run_slash(state, SlashCommand::Help),
-        PaletteCommand::Quit => {
-            state.running = false;
-            vec![UiCmd::Quit]
-        }
-        PaletteCommand::Extensions => {
-            run_slash(state, SlashCommand::Extensions)
-        }
-        PaletteCommand::Cancel => vec![],
-    };
-    if !matches!(cmd, PaletteCommand::Cancel) {
-        state.command_palette.open = false;
-        state.command_palette.filter.clear();
-        state.command_palette.selected = 0;
+    use PaletteCommand::*;
+    match cmd {
+        NewSession | ClearChat | ForkSession | ShowCost | Help | Extensions =>
+            run_simple_slash(state, cmd),
+        SwitchModel => handle_switch_model(state),
+        SessionTree => handle_session_tree(state),
+        Onboard => open_onboarding(state),
+        CopyLast => handle_copy_last(state),
+        Theme => handle_theme(state),
+        Quit => handle_quit(state),
+        Cancel => handle_cancel(state),
     }
-    result
+}
+
+fn run_simple_slash(state: &mut AppState, cmd: PaletteCommand) -> Vec<UiCmd> {
+    use PaletteCommand::*;
+    use runie_core::slash_command::SlashCommand;
+    let slash_cmd = match cmd {
+        NewSession => SlashCommand::New,
+        ClearChat => SlashCommand::Clear,
+        ForkSession => SlashCommand::Fork,
+        ShowCost => SlashCommand::Cost,
+        Help => SlashCommand::Help,
+        Extensions => SlashCommand::Extensions,
+        _ => unreachable!(),
+    };
+    handle_simple_slash(state, slash_cmd)
+}
+
+fn handle_new_session(state: &mut AppState) -> Vec<UiCmd> {
+    handle_simple_slash(state, runie_core::slash_command::SlashCommand::New)
+}
+
+fn handle_clear_chat(state: &mut AppState) -> Vec<UiCmd> {
+    handle_simple_slash(state, runie_core::slash_command::SlashCommand::Clear)
+}
+
+fn handle_fork_session(state: &mut AppState) -> Vec<UiCmd> {
+    handle_simple_slash(state, runie_core::slash_command::SlashCommand::Fork)
+}
+
+fn handle_session_tree(state: &mut AppState) -> Vec<UiCmd> {
+    crate::tui::update::slash::handle_tree(state);
+    vec![]
+}
+
+fn handle_show_cost(state: &mut AppState) -> Vec<UiCmd> {
+    handle_simple_slash(state, runie_core::slash_command::SlashCommand::Cost)
+}
+
+fn handle_help(state: &mut AppState) -> Vec<UiCmd> {
+    handle_simple_slash(state, runie_core::slash_command::SlashCommand::Help)
+}
+
+fn handle_extensions(state: &mut AppState) -> Vec<UiCmd> {
+    handle_simple_slash(state, runie_core::slash_command::SlashCommand::Extensions)
 }

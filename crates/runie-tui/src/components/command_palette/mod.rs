@@ -56,22 +56,32 @@ pub struct PaletteCommandDef {
 
 impl PaletteCommandDef {
     fn to_palette_command(&self, _arg: &str) -> PaletteCommand {
-        match self.id.as_str() {
-            "new_session" => PaletteCommand::NewSession,
-            "clear_chat" => PaletteCommand::ClearChat,
-            "switch_model" => PaletteCommand::SwitchModel,
-            "fork" => PaletteCommand::ForkSession,
-            "tree" => PaletteCommand::SessionTree,
-            "onboard" => PaletteCommand::Onboard,
-            "copy" => PaletteCommand::CopyLast,
-            "cost" => PaletteCommand::ShowCost,
-            "theme" => PaletteCommand::Theme,
-            "help" => PaletteCommand::Help,
-            "quit" => PaletteCommand::Quit,
-            "extensions" => PaletteCommand::Extensions,
-            _ => PaletteCommand::Cancel,
-        }
+        map_cmd_id_to_palette(&self.id)
     }
+}
+
+fn map_cmd_id_to_palette(id: &str) -> PaletteCommand {
+    use std::collections::HashMap;
+
+    static MAP: once_cell::sync::Lazy<HashMap<&'static str, PaletteCommand>> =
+        once_cell::sync::Lazy::new(|| {
+            let mut m = HashMap::new();
+            m.insert("new_session", PaletteCommand::NewSession);
+            m.insert("clear_chat", PaletteCommand::ClearChat);
+            m.insert("switch_model", PaletteCommand::SwitchModel);
+            m.insert("fork", PaletteCommand::ForkSession);
+            m.insert("tree", PaletteCommand::SessionTree);
+            m.insert("onboard", PaletteCommand::Onboard);
+            m.insert("copy", PaletteCommand::CopyLast);
+            m.insert("cost", PaletteCommand::ShowCost);
+            m.insert("theme", PaletteCommand::Theme);
+            m.insert("help", PaletteCommand::Help);
+            m.insert("quit", PaletteCommand::Quit);
+            m.insert("extensions", PaletteCommand::Extensions);
+            m
+        });
+
+    MAP.get(id).cloned().unwrap_or(PaletteCommand::Cancel)
 }
 
 #[derive(Clone)]
@@ -95,7 +105,7 @@ impl Default for CommandPalette {
 impl CommandPalette {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new() -> Self {
         let all_commands = vec![
             // ─── Session ─────────────────────────────────────────────────

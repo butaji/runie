@@ -88,44 +88,55 @@ impl MarketplaceClient {
 
     /// Download extension to local cache
     pub async fn download_extension(&self, id: &str, version: &str) -> Result<PathBuf, MarketplaceError> {
-        let details = self.get_extension(id).await?;
-        let asset = details.assets.iter()
-            .find(|a| a.version == version && a.platform == std::env::consts::OS)
-            .ok_or_else(|| MarketplaceError::AssetNotFound {
-                extension: id.to_string(),
-                version: version.to_string(),
-                platform: std::env::consts::OS.to_string(),
-            })?;
+        let asset = self.find_extension_asset(id, version).await?;
+        let cache_path = self.cache_path(id, version);
 
-        let cache_path = self.cache_dir.join(id).join(format!("{}.tar.gz", version));
         if cache_path.exists() {
             tracing::debug!("Using cached extension: {}", cache_path.display());
             return Ok(cache_path);
         }
 
-        // Download to temp file first
-        let response = self.http.get(&asset.download_url)
+        self.download_and_save(&asset.download_url, &cache_path).await?;
+        tracing::info!("Downloaded extension {} v{} to {}", id, version, cache_path.display());
+
+        Ok(cache_path)
+    }
+
+    async fn find_extension_asset(&self, id: &str, version: &str) -> Result<ExtensionAsset, MarketplaceError> {
+        let details = self.get_extension(id).await?;
+        details.assets.iter()
+            .find(|a| a.version == version && a.platform == std::env::consts::OS)
+            .cloned()
+            .ok_or_else(|| MarketplaceError::AssetNotFound {
+                extension: id.to_string(),
+                version: version.to_string(),
+                platform: std::env::consts::OS.to_string(),
+            })
+    }
+
+    fn cache_path(&self, id: &str, version: &str) -> PathBuf {
+        self.cache_dir.join(id).join(format!("{}.tar.gz", version))
+    }
+
+    async fn download_and_save(&self, url: &str, cache_path: &PathBuf) -> Result<(), MarketplaceError> {
+        let response = self.http.get(url)
             .send()
             .await
             .map_err(MarketplaceError::NetworkError)?
             .error_for_status()
             .map_err(|e| MarketplaceError::ApiError(e.status().unwrap_or(reqwest::StatusCode::OK)))?;
 
-        // Create directory structure
         tokio::fs::create_dir_all(cache_path.parent().unwrap())
             .await
             .map_err(|e| MarketplaceError::IoError(e.to_string()))?;
 
-        // Stream to file
         let bytes = response.bytes().await
             .map_err(MarketplaceError::NetworkError)?;
-        tokio::fs::write(&cache_path, &bytes)
+        tokio::fs::write(cache_path, &bytes)
             .await
             .map_err(|e| MarketplaceError::IoError(e.to_string()))?;
 
-        tracing::info!("Downloaded extension {} v{} to {}", id, version, cache_path.display());
-
-        Ok(cache_path)
+        Ok(())
     }
 
     /// Verify downloaded extension integrity
@@ -221,7 +232,7 @@ struct Author {
     pub email: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ExtensionAsset {
     pub version: String,
     pub platform: String,

@@ -26,7 +26,7 @@ pub struct MessageListViewModel {
 impl MessageListViewModel {
 
     #[must_use]
-    #[must_use]
+    
     pub fn new(feed: Feed, scroll_offset: usize, agent_running: bool, animation: AnimationState, wrap_cache: WrapCache) -> Self {
         Self {
             feed,

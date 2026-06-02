@@ -121,24 +121,51 @@ fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<
     use crate::tui::state::Msg;
     match msg {
         Msg::DirectCommand(cmd) => super::palette::handle_direct_command(state, cmd),
-        Msg::ToggleSidebar => handle_toggle_sidebar(state),
-        Msg::ToggleThoughts => handle_toggle_thoughts(state),
-        Msg::SetGitInfo { repo, branch, path } =>
-            handle_set_git_info(state, repo.clone(), branch.clone(), path.clone()),
+        Msg::SetGitInfo { repo, branch, path } => handle_git_info(state, repo, branch, path),
         Msg::EnterOnboarding => handle_enter_onboarding(state),
         Msg::SlashCommand(cmd) => super::slash::handle_slash(state, cmd),
-        Msg::CopyLastResponse => { handle_copy_last_response(state); vec![] }
-        Msg::ShowHelp => { super::slash::handle_help(state); vec![] }
-        Msg::UpdateTopBarContext { model, context_window, estimated_tokens } =>
-            handle_update_top_bar_context(state, Some(model), context_window, estimated_tokens),
-        Msg::ToggleSubagentPanel => { state.subagent_panel.toggle(); vec![] }
-        Msg::TogglePromptQueue => { handle_toggle_prompt_queue(state); vec![] }
-        Msg::NewSessionWorktree => { handle_new_session_worktree(state); vec![] }
-        Msg::ToggleWorktreeMode => { handle_toggle_worktree_mode(state); vec![] }
-        Msg::ImportClaudeSettings => { handle_import_claude_settings(state); vec![] }
+        Msg::UpdateTopBarContext { model, context_window, estimated_tokens } => handle_top_bar_context(state, model, context_window, estimated_tokens),
+        Msg::ToggleSidebar | Msg::ToggleThoughts | Msg::ToggleSubagentPanel | Msg::TogglePromptQueue | Msg::ToggleWorktreeMode => toggle_state(state, msg),
+        Msg::NewSessionWorktree | Msg::ImportClaudeSettings | Msg::CopyLastResponse | Msg::ShowHelp => handle_misc(state, msg),
         _ => vec![],
     }
 }
+
+fn handle_misc(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::NewSessionWorktree => new_session_worktree(state),
+        Msg::ImportClaudeSettings => import_claude_settings(state),
+        Msg::CopyLastResponse => copy_last(state),
+        Msg::ShowHelp => show_help(state),
+        _ => vec![],
+    }
+}
+
+fn toggle_state(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::ToggleSidebar => { state.show_sidebar = !state.show_sidebar; }
+        Msg::ToggleThoughts => { state.show_thoughts = !state.show_thoughts; }
+        Msg::ToggleSubagentPanel => { state.subagent_panel.toggle(); }
+        Msg::TogglePromptQueue => { state.input_right_info = "Prompt queue toggled".to_string(); }
+        Msg::ToggleWorktreeMode => { state.input_right_info = "Worktree mode toggled".to_string(); }
+        _ => {}
+    }
+    vec![]
+}
+
+fn handle_git_info(state: &mut AppState, repo: String, branch: String, path: String) -> Vec<UiCmd> { handle_set_git_info(state, repo, branch, path) }
+fn handle_top_bar_context(state: &mut AppState, model: String, context_window: Option<usize>, estimated_tokens: Option<usize>) -> Vec<UiCmd> { handle_update_top_bar_context(state, Some(model), context_window, estimated_tokens) }
+
+
+fn copy_last(state: &mut AppState) -> Vec<UiCmd> { handle_copy_last_response(state); vec![] }
+fn show_help(state: &mut AppState) -> Vec<UiCmd> { super::slash::handle_help(state); vec![] }
+fn toggle_subagent(state: &mut AppState) -> Vec<UiCmd> { state.subagent_panel.toggle(); vec![] }
+fn toggle_prompt_queue(state: &mut AppState) -> Vec<UiCmd> { handle_toggle_prompt_queue(state); vec![] }
+fn toggle_worktree_mode(state: &mut AppState) -> Vec<UiCmd> { handle_toggle_worktree_mode(state); vec![] }
+fn new_session_worktree(state: &mut AppState) -> Vec<UiCmd> { handle_new_session_worktree(state); vec![] }
+fn import_claude_settings(state: &mut AppState) -> Vec<UiCmd> { handle_import_claude_settings(state); vec![] }
 
 fn handle_state_msg(state: &mut AppState, _palette: &mut CommandPalette, msg: crate::tui::state::Msg) -> Vec<UiCmd> {
     if is_context_msg(&msg) {
@@ -174,57 +201,55 @@ fn handle_toggle_thoughts(state: &mut AppState) -> Vec<UiCmd> {
 }
 
 fn handle_extensions_modal(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    let modal = state.extensions_modal.as_mut();
+    if modal.is_none() { return vec![]; }
+    let modal = modal.unwrap();
     use crate::tui::state::Msg;
-    use crate::components::extensions_modal::ExtensionTab;
+    if matches!(msg, Msg::CloseExtensionsModal) { return ext_close(state); }
+    if matches!(msg, Msg::OpenExtensionsModal) { return ext_open(); }
+    if matches!(msg, Msg::ExtensionsModalUp | Msg::ExtensionsModalDown) { return ext_nav(modal, msg); }
+    if matches!(msg, Msg::ExtensionsModalSelect) { return ext_select(); }
+    if matches!(msg, Msg::ExtensionsModalLeft | Msg::ExtensionsModalRight) { return ext_tab(modal, msg); }
+    if let Msg::ExtensionsModalSearchInput(c) = msg { return ext_search_push(modal, *c); }
+    if matches!(msg, Msg::ExtensionsModalSearchBackspace) { return ext_search_pop(modal); }
+    vec![]
+}
 
-    let modal = match &mut state.extensions_modal {
-        Some(m) => m,
-        None => return vec![],
-    };
+fn ext_open() -> Vec<UiCmd> { vec![] }
+fn ext_select() -> Vec<UiCmd> { vec![] }
 
+fn ext_close(state: &mut AppState) -> Vec<UiCmd> {
+    state.extensions_modal = None;
+    state.mode = crate::tui::TuiMode::Chat;
+    vec![]
+}
+fn ext_nav(m: &mut crate::components::extensions_modal::ExtensionsModal, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
     match msg {
-        Msg::OpenExtensionsModal => {
-            // Already open
-        }
-        Msg::CloseExtensionsModal => {
-            state.extensions_modal = None;
-            state.mode = crate::tui::TuiMode::Chat;
-        }
-        Msg::ExtensionsModalUp => {
-            modal.move_up();
-        }
-        Msg::ExtensionsModalDown => {
-            modal.move_down();
-        }
-        Msg::ExtensionsModalSelect => {
-            // Handle selection (install/update action)
-        }
-        Msg::ExtensionsModalLeft => {
-            // Switch to previous tab
-            let tabs = ExtensionTab::all();
-            if let Some(current_idx) = tabs.iter().position(|t| *t == modal.active_tab) {
-                if current_idx > 0 {
-                    modal.set_tab(tabs[current_idx - 1]);
-                }
-            }
-        }
-        Msg::ExtensionsModalRight => {
-            // Switch to next tab
-            let tabs = ExtensionTab::all();
-            if let Some(current_idx) = tabs.iter().position(|t| *t == modal.active_tab) {
-                if current_idx < tabs.len() - 1 {
-                    modal.set_tab(tabs[current_idx + 1]);
-                }
-            }
-        }
-        Msg::ExtensionsModalSearchInput(c) => {
-            modal.search_query.push(*c);
-        }
-        Msg::ExtensionsModalSearchBackspace => {
-            modal.search_query.pop();
-        }
+        Msg::ExtensionsModalUp => m.move_up(),
+        Msg::ExtensionsModalDown => m.move_down(),
         _ => {}
     }
+    vec![]
+}
+fn ext_tab(m: &mut crate::components::extensions_modal::ExtensionsModal, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    use crate::components::extensions_modal::ExtensionTab;
+    let tabs = ExtensionTab::all();
+    let idx = tabs.iter().position(|t| *t == m.active_tab);
+    match msg {
+        Msg::ExtensionsModalLeft if idx.map_or(false, |i| i > 0) => m.set_tab(tabs[idx.unwrap() - 1]),
+        Msg::ExtensionsModalRight if idx.map_or(false, |i| i < tabs.len() - 1) => m.set_tab(tabs[idx.unwrap() + 1]),
+        _ => {}
+    }
+    vec![]
+}
+fn ext_search_push(m: &mut crate::components::extensions_modal::ExtensionsModal, c: char) -> Vec<UiCmd> {
+    m.search_query.push(c);
+    vec![]
+}
+fn ext_search_pop(m: &mut crate::components::extensions_modal::ExtensionsModal) -> Vec<UiCmd> {
+    m.search_query.pop();
     vec![]
 }
 
@@ -292,24 +317,45 @@ fn handle_import_claude_settings(state: &mut AppState) {
 }
 
 fn handle_questionnaire_msg(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    let q = match &mut state.questionnaire {
+        Some(q) => q,
+        None => return vec![],
+    };
     use crate::tui::state::Msg;
-    if let Some(ref mut q) = state.questionnaire {
-        match msg {
-            Msg::QuestionnaireUp => q.prev_option(),
-            Msg::QuestionnaireDown => q.next_option(),
-            Msg::QuestionnairePrevQuestion => q.prev_question(),
-            Msg::QuestionnaireNextQuestion => q.next_question(),
-            Msg::QuestionnaireSelect => q.select_current(),
-            Msg::QuestionnaireToggleCustom => q.toggle_custom(),
-            Msg::CloseQuestionnaire => {
-                q.visible = false;
-                state.mode = crate::tui::TuiMode::Chat;
-            }
-            _ => {}
+    match msg {
+        Msg::QuestionnaireUp | Msg::QuestionnaireDown => qa_option_nav(q, msg),
+        Msg::QuestionnairePrevQuestion | Msg::QuestionnaireNextQuestion => qa_question_nav(q, msg),
+        Msg::QuestionnaireSelect => { qa_select(q); vec![] }
+        Msg::QuestionnaireToggleCustom => { qa_toggle_custom(q); vec![] }
+        Msg::CloseQuestionnaire => {
+            q.visible = false;
+            state.mode = crate::tui::TuiMode::Chat;
+            vec![]
         }
+        _ => vec![],
+    }
+}
+
+fn qa_option_nav(q: &mut crate::components::questionnaire_panel::QuestionnaireState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::QuestionnaireUp => q.prev_option(),
+        Msg::QuestionnaireDown => q.next_option(),
+        _ => {}
     }
     vec![]
 }
+fn qa_question_nav(q: &mut crate::components::questionnaire_panel::QuestionnaireState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    match msg {
+        Msg::QuestionnairePrevQuestion => q.prev_question(),
+        Msg::QuestionnaireNextQuestion => q.next_question(),
+        _ => {}
+    }
+    vec![]
+}
+fn qa_select(q: &mut crate::components::questionnaire_panel::QuestionnaireState) { q.select_current(); }
+fn qa_toggle_custom(q: &mut crate::components::questionnaire_panel::QuestionnaireState) { q.toggle_custom(); }
 
 fn handle_toggle_questionnaire(state: &mut AppState) -> Vec<UiCmd> {
     if let Some(ref mut q) = state.questionnaire {

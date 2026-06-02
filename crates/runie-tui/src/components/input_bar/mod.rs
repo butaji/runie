@@ -6,7 +6,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     prelude::Widget,
     text::{Line, Span},
     widgets::Block,
@@ -83,7 +83,7 @@ fn build_input_block(
     right_info: &str,
     border_color: Color,
     mode_indicator: &str,
-    mode_style: Style,
+    _mode_style: Style,
     char_count: Option<usize>,
     colors: &ThemeColors,
 ) -> Block<'static> {

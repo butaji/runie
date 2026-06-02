@@ -5,9 +5,9 @@ use std::path::Path;
 // Workspace lint thresholds. Tuned to the structural shape of the code:
 // verb conjugation tables, render functions, provider adapters, and the
 // harness runner are legitimately larger than the original 40/10 caps.
-const MAX_FILE_LINES: usize = 700;
-const MAX_FUNCTION_LINES: usize = 50;
-const MAX_COMPLEXITY: usize = 15;
+const MAX_FILE_LINES: usize = 500;
+const MAX_FUNCTION_LINES: usize = 40;
+const MAX_COMPLEXITY: usize = 10;
 
 #[derive(Debug, Default)]
 struct Violations {
@@ -268,11 +268,7 @@ fn main() {
 
     if has_errors {
         let total = violations.files.len() + violations.functions.len();
-        if std::env::var("RUNIE_SKIP_BUILD_CHECKS").is_ok() {
-            println!("⚠ Build checks found {} violations but RUNIE_SKIP_BUILD_CHECKS is set", total);
-        } else {
-            panic!("Build failed: {} violations found", total);
-        }
+        panic!("Build failed: {} violations found", total);
     }
 
     println!("✓ All checks passed:");

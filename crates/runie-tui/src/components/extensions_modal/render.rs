@@ -66,54 +66,44 @@ fn render_sharp_border(area: Rect, buf: &mut Buffer, color: Color) {
     let top = area.y;
     let bottom = area.y + area.height - 1;
 
-    // Top-left corner ┌
+    draw_corners(left, right, top, bottom, buf, color);
+    draw_horizontal_borders(left, right, top, buf, color);
+    draw_horizontal_borders(left, right, bottom, buf, color);
+    draw_vertical_borders(left, top, bottom, buf, color);
+    draw_vertical_borders(right, top, bottom, buf, color);
+}
+
+fn draw_corners(left: u16, right: u16, top: u16, bottom: u16, buf: &mut Buffer, color: Color) {
     if let Some(cell) = buf.cell_mut((left, top)) {
         cell.set_char('┌');
         cell.set_style(Style::default().fg(color));
     }
-    // Top-right corner ┐
     if let Some(cell) = buf.cell_mut((right, top)) {
         cell.set_char('┐');
         cell.set_style(Style::default().fg(color));
     }
-    // Bottom-left corner └
     if let Some(cell) = buf.cell_mut((left, bottom)) {
         cell.set_char('└');
         cell.set_style(Style::default().fg(color));
     }
-    // Bottom-right corner ┘
     if let Some(cell) = buf.cell_mut((right, bottom)) {
         cell.set_char('┘');
         cell.set_style(Style::default().fg(color));
     }
+}
 
-    // Top border ─
+fn draw_horizontal_borders(left: u16, right: u16, y: u16, buf: &mut Buffer, color: Color) {
     for x in (left + 1)..right {
-        if let Some(cell) = buf.cell_mut((x, top)) {
+        if let Some(cell) = buf.cell_mut((x, y)) {
             cell.set_char('─');
             cell.set_style(Style::default().fg(color));
         }
     }
+}
 
-    // Bottom border ─
-    for x in (left + 1)..right {
-        if let Some(cell) = buf.cell_mut((x, bottom)) {
-            cell.set_char('─');
-            cell.set_style(Style::default().fg(color));
-        }
-    }
-
-    // Left border │
+fn draw_vertical_borders(x: u16, top: u16, bottom: u16, buf: &mut Buffer, color: Color) {
     for y in (top + 1)..bottom {
-        if let Some(cell) = buf.cell_mut((left, y)) {
-            cell.set_char('│');
-            cell.set_style(Style::default().fg(color));
-        }
-    }
-
-    // Right border │
-    for y in (top + 1)..bottom {
-        if let Some(cell) = buf.cell_mut((right, y)) {
+        if let Some(cell) = buf.cell_mut((x, y)) {
             cell.set_char('│');
             cell.set_style(Style::default().fg(color));
         }
@@ -168,7 +158,7 @@ fn render_tabs(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, colors: &T
 /// Render search bar with filter dropdown
 fn render_search_bar(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
     let row = area.y + 1;
-    let inner_width = area.width - 2;
+    let _inner_width = area.width - 2;
 
     // Draw horizontal separator (─)
     for x in (area.x + 1)..(area.x + area.width - 1) {
@@ -214,7 +204,16 @@ fn render_content(modal: &ExtensionsModal, area: Rect, buf: &mut Buffer, colors:
 
 /// Render a single extension item
 fn render_item(item: &crate::components::extensions_modal::ExtensionItem, area: Rect, row: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) {
-    // Clear the row first
+    clear_item_row(area, row, buf, colors, is_selected);
+    let mut x = area.x + 1;
+    x += render_item_expand(row, x, buf, colors, is_selected);
+    x += render_item_name(item, row, x, buf, colors, is_selected);
+    x += render_item_version(item, row, x, buf, colors, is_selected);
+    x += render_item_scope(item, area, row, x, buf, colors, is_selected);
+    render_item_action(item, row, x, buf, colors, is_selected);
+}
+
+fn clear_item_row(area: Rect, row: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) {
     for x in (area.x + 1)..(area.x + area.width - 1) {
         if let Some(cell) = buf.cell_mut((x, row)) {
             cell.set_char(' ');
@@ -223,11 +222,9 @@ fn render_item(item: &crate::components::extensions_modal::ExtensionItem, area: 
             }
         }
     }
+}
 
-    let mut x = area.x + 1;
-
-    // Expand indicator: ›
-    let indicator = if is_selected { "›" } else { " " };
+fn render_item_expand(row: u16, x: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) -> u16 {
     let indicator_style = if is_selected {
         Style::default().fg(colors.bg_panel)
     } else {
@@ -237,9 +234,10 @@ fn render_item(item: &crate::components::extensions_modal::ExtensionItem, area: 
         cell.set_char(' ');
         cell.set_style(indicator_style);
     }
-    x += 1;
+    1
+}
 
-    // Name
+fn render_item_name(item: &crate::components::extensions_modal::ExtensionItem, row: u16, x: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) -> u16 {
     let name_style = if is_selected {
         Style::default().fg(colors.bg_panel)
     } else {
@@ -248,21 +246,23 @@ fn render_item(item: &crate::components::extensions_modal::ExtensionItem, area: 
     let name_text = format!("{} ", item.name);
     let name_len = name_text.len() as u16;
     buf.set_string(x, row, &name_text, name_style);
-    x += name_len;
+    name_len
+}
 
-    // Version (if present)
-    if let Some(ref version) = item.version {
-        let version_style = if is_selected {
-            Style::default().fg(colors.bg_panel)
-        } else {
-            Style::default().fg(colors.text_muted)
-        };
-        let version_text = format!("{} ", version);
-        buf.set_string(x, row, &version_text, version_style);
-        x += version_text.len() as u16;
-    }
+fn render_item_version(item: &crate::components::extensions_modal::ExtensionItem, row: u16, x: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) -> u16 {
+    let Some(ref version) = item.version else { return 0; };
+    let version_style = if is_selected {
+        Style::default().fg(colors.bg_panel)
+    } else {
+        Style::default().fg(colors.text_muted)
+    };
+    let version_text = format!("{} ", version);
+    let len = version_text.len() as u16;
+    buf.set_string(x, row, &version_text, version_style);
+    len
+}
 
-    // Scope badge: (project) or (workspace)
+fn render_item_scope(item: &crate::components::extensions_modal::ExtensionItem, area: Rect, row: u16, x: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) -> u16 {
     let scope_text = match item.scope {
         ExtensionScope::Project => "(project)  ",
         ExtensionScope::Workspace => "(workspace)",
@@ -273,13 +273,14 @@ fn render_item(item: &crate::components::extensions_modal::ExtensionItem, area: 
         Style::default().fg(colors.text_muted)
     };
     let scope_len = scope_text.len() as u16;
-    // Pad to align action button
     let pad_len = 20.min((area.x + area.width - 1 - x - scope_len - 12) as usize);
-    x += pad_len as u16;
-    buf.set_string(x, row, scope_text, scope_style);
-    x += scope_len;
+    let mut cx = x + pad_len as u16;
+    buf.set_string(cx, row, scope_text, scope_style);
+    cx += scope_len;
+    cx - x
+}
 
-    // Action button
+fn render_item_action(item: &crate::components::extensions_modal::ExtensionItem, row: u16, x: u16, buf: &mut Buffer, colors: &ThemeColors, is_selected: bool) {
     let action_text = match item.action {
         ExtensionAction::Install => "[install]",
         ExtensionAction::Installed => "[installed]",

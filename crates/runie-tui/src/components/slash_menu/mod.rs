@@ -200,6 +200,6 @@ impl Widget for &SlashMenu {
     }
 }
 
-pub fn render_slash_menu(menu: &SlashMenu, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_slash_menu(menu: &SlashMenu, area: Rect, buf: &mut Buffer, _theme: &ThemeWrapper) {
     menu.render(area, buf);
 }

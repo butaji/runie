@@ -96,49 +96,67 @@ fn handle_thinking_event(state: &mut AppState, event: AgentEvent) {
 fn handle_tool_event(state: &mut AppState, event: AgentEvent) -> Vec<super::AgentCmd> {
     match event {
         AgentEvent::ToolExecutionStart { tool_call_id, tool_name, tool_args, .. } => {
-            on_tool_start(state, tool_call_id);
-            // Dispatch to extension registry
-            let ext_event = runie_ext::PluginEvent::ToolCalled {
-                tool_name,
-                arguments: serde_json::json!({"args": tool_args}),
-            };
-            let actions = state.extension_registry.dispatch_event(ext_event);
-            // Process plugin actions (for now, just log them)
-            for action in &actions {
-                tracing::debug!("Plugin action: {:?}", action);
-            }
-            vec![]
+            handle_tool_start(state, tool_call_id, tool_name, serde_json::Value::String(tool_args))
         }
         AgentEvent::ToolExecutionEnd { tool_name, result, .. } => {
-            // Extract needed fields before moving result
-            let is_error = result.is_error;
-            let content = result.content.iter()
-                .filter_map(|p| {
-                    if let runie_agent::events::ContentPart::Text { text } = p {
-                        Some(text.as_str())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("");
-            on_tool_end(state, result);
-            // Dispatch tool result to extension registry
-            let ext_event = runie_ext::PluginEvent::ToolResult {
-                tool_name,
-                output: runie_core::ToolOutput {
-                    content,
-                    metadata: serde_json::json!({"is_error": is_error}),
-                    terminate: false,
-                },
-            };
-            let actions = state.extension_registry.dispatch_event(ext_event);
-            for action in &actions {
-                tracing::debug!("Plugin action: {:?}", action);
-            }
-            vec![]
+            handle_tool_end(state, tool_name, result)
         }
-        _ => vec![]
+        _ => vec![],
+    }
+}
+
+fn handle_tool_start(
+    state: &mut AppState,
+    tool_call_id: String,
+    tool_name: String,
+    tool_args: serde_json::Value,
+) -> Vec<super::AgentCmd> {
+    on_tool_start(state, tool_call_id);
+    let ext_event = runie_ext::PluginEvent::ToolCalled {
+        tool_name,
+        arguments: serde_json::json!({"args": tool_args }),
+    };
+    log_plugin_actions(state, ext_event);
+    vec![]
+}
+
+fn handle_tool_end(
+    state: &mut AppState,
+    tool_name: String,
+    result: runie_agent::events::ToolResult,
+) -> Vec<super::AgentCmd> {
+    let is_error = result.is_error;
+    let content = extract_text_from_content(&result.content);
+    on_tool_end(state, result);
+    let ext_event = runie_ext::PluginEvent::ToolResult {
+        tool_name,
+        output: runie_core::ToolOutput {
+            content,
+            metadata: serde_json::json!({"is_error": is_error}),
+            terminate: false,
+        },
+    };
+    log_plugin_actions(state, ext_event);
+    vec![]
+}
+
+fn extract_text_from_content(parts: &[runie_agent::events::ContentPart]) -> String {
+    parts.iter()
+        .filter_map(|p| {
+            if let runie_agent::events::ContentPart::Text { text } = p {
+                Some(text.as_str())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+fn log_plugin_actions(state: &AppState, event: runie_ext::PluginEvent) {
+    let actions = state.extension_registry.dispatch_event(event);
+    for action in &actions {
+        tracing::debug!("Plugin action: {:?}", action);
     }
 }
 

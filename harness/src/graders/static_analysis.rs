@@ -150,35 +150,38 @@ fn walkdir(dir: &Path, predicate: &mut impl FnMut(&Path) -> bool) -> bool {
     if !dir.is_dir() {
         return false;
     }
-
     let mut stack = vec![dir.to_path_buf()];
-
     while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-
-        let entries = match std::fs::read_dir(&current) {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if path.is_dir() {
-                // Skip target and .git directories
-                if path.file_name().map(|n| n == "target" || n == ".git").unwrap_or(false) {
-                    continue;
-                }
-                stack.push(path);
-            } else {
-                if predicate(&path) {
-                    return true;
-                }
-            }
+        if process_dir_entry(&current, &mut stack, predicate) {
+            return true;
         }
     }
     false
+}
+
+fn process_dir_entry(dir: &Path, stack: &mut Vec<PathBuf>, predicate: &mut impl FnMut(&Path) -> bool) -> bool {
+    if !dir.is_dir() {
+        return false;
+    }
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+    for entry in entries.filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_dir() {
+            if !should_skip_dir(&path) {
+                stack.push(path);
+            }
+        } else if predicate(&path) {
+            return true;
+        }
+    }
+    false
+}
+
+fn should_skip_dir(path: &Path) -> bool {
+    path.file_name().map(|n| n == "target" || n == ".git").unwrap_or(false)
 }
 
 /// Run all checks and print results.

@@ -239,6 +239,6 @@ impl Widget for &ShortcutsPanel {
     }
 }
 
-pub fn render_shortcuts_panel(panel: &ShortcutsPanel, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
+pub fn render_shortcuts_panel(panel: &ShortcutsPanel, area: Rect, buf: &mut Buffer, _theme: &ThemeWrapper) {
     panel.render(area, buf);
 }

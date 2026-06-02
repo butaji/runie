@@ -1,7 +1,9 @@
-//! Pipe modules — kept for organization only (Pipe trait removed).
+//! Pipe modules.
 
 mod input_msg;
 mod render;
+mod render_content;
+mod render_input;
 mod view_model;
 
 #[cfg(test)]

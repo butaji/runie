@@ -214,34 +214,66 @@ pub enum Msg {
 
 impl PartialEq for Msg {
     fn eq(&self, other: &Self) -> bool {
-        // Unit variants - same discriminant means equal
         if self.is_unit_variant() {
             return std::mem::discriminant(self) == std::mem::discriminant(other);
         }
-        // Data-carrying variants
-        match (self, other) {
-            (Msg::TextareaKey(a), Msg::TextareaKey(b)) => a == b,
-            (Msg::CommandPaletteFilter(a), Msg::CommandPaletteFilter(b)) => a == b,
-            (Msg::OnboardingSelectProvider(a), Msg::OnboardingSelectProvider(b)) => a == b,
-            (Msg::OnboardingSelectModel(a), Msg::OnboardingSelectModel(b)) => a == b,
-            (Msg::OnboardingKeyInput(a), Msg::OnboardingKeyInput(b)) => a == b,
-            (Msg::OnboardingSearchInput(a), Msg::OnboardingSearchInput(b)) => a == b,
-            (Msg::DirectCommand(a), Msg::DirectCommand(b)) => a == b,
-            (Msg::Paste(a), Msg::Paste(b)) => a == b,
-            (Msg::ModelsFetched(a), Msg::ModelsFetched(b)) => a == b,
-            (Msg::ModelsFetchFailed(a), Msg::ModelsFetchFailed(b)) => a == b,
-            (Msg::Resize(a_w, a_h), Msg::Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
-            (Msg::MouseClick { x: ax, y: ay, button: ab }, Msg::MouseClick { x: bx, y: by, button: bb }) => ax == bx && ay == by && ab == bb,
-            (Msg::SetGitInfo { .. }, Msg::SetGitInfo { .. }) => true,
-            (Msg::SetTopBarMockChecks { .. }, Msg::SetTopBarMockChecks { .. }) => true,
-            (Msg::SetTopBarRealChecks { .. }, Msg::SetTopBarRealChecks { .. }) => true,
-            (Msg::SetInputRightInfo(a), Msg::SetInputRightInfo(b)) => a == b,
-            (Msg::SetCurrentModel(a), Msg::SetCurrentModel(b)) => a == b,
-            (Msg::SetMockMode(a), Msg::SetMockMode(b)) => a == b,
-            (Msg::UpdateTopBarContext { .. }, Msg::UpdateTopBarContext { .. }) => true,
-            (Msg::ExtensionsModalSearchInput(a), Msg::ExtensionsModalSearchInput(b)) => a == b,
-            _ => false,
+        // Non-unit variants with data
+        compare_msg_data(self, other)
+    }
+}
+
+fn compare_msg_data(self_: &Msg, other: &Msg) -> bool {
+    
+    // Guard: ensure same variant
+    if std::mem::discriminant(self_) != std::mem::discriminant(other) {
+        return false;
+    }
+    // Variants with single value comparison
+    single_eq(self_, other)
+        || multi_eq(self_, other)
+        || unit_like_eq(self_, other)
+}
+
+fn single_eq(self_: &Msg, other: &Msg) -> bool {
+    use Msg::*;
+    match (self_, other) {
+        (TextareaKey(a), TextareaKey(b)) => a == b,
+        (CommandPaletteFilter(a), CommandPaletteFilter(b)) => a == b,
+        (OnboardingSelectProvider(a), OnboardingSelectProvider(b)) => a == b,
+        (OnboardingSelectModel(a), OnboardingSelectModel(b)) => a == b,
+        (OnboardingKeyInput(a), OnboardingKeyInput(b)) => a == b,
+        (OnboardingSearchInput(a), OnboardingSearchInput(b)) => a == b,
+        (DirectCommand(a), DirectCommand(b)) => a == b,
+        (Paste(a), Paste(b)) => a == b,
+        (ModelsFetched(a), ModelsFetched(b)) => a == b,
+        (ModelsFetchFailed(a), ModelsFetchFailed(b)) => a == b,
+        _ => false,
+    }
+}
+
+fn multi_eq(self_: &Msg, other: &Msg) -> bool {
+    use Msg::*;
+    match (self_, other) {
+        (Resize(a_w, a_h), Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
+        (MouseClick { x: ax, y: ay, button: ab }, MouseClick { x: bx, y: by, button: bb }) => {
+            ax == bx && ay == by && ab == bb
         }
+        _ => false,
+    }
+}
+
+fn unit_like_eq(self_: &Msg, other: &Msg) -> bool {
+    use Msg::*;
+    match (self_, other) {
+        (SetGitInfo { .. }, SetGitInfo { .. }) => true,
+        (SetTopBarMockChecks { .. }, SetTopBarMockChecks { .. }) => true,
+        (SetTopBarRealChecks { .. }, SetTopBarRealChecks { .. }) => true,
+        (SetInputRightInfo(a), SetInputRightInfo(b)) => a == b,
+        (SetCurrentModel(a), SetCurrentModel(b)) => a == b,
+        (SetMockMode(a), SetMockMode(b)) => a == b,
+        (UpdateTopBarContext { .. }, UpdateTopBarContext { .. }) => true,
+        (ExtensionsModalSearchInput(a), ExtensionsModalSearchInput(b)) => a == b,
+        _ => false,
     }
 }
 
@@ -283,6 +315,32 @@ impl Msg {
                 | Msg::TogglePromptQueue | Msg::NewSessionWorktree | Msg::ToggleWorktreeMode
                 | Msg::ImportClaudeSettings
         )
+    }
+
+    fn eq_data_variant(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Msg::TextareaKey(a), Msg::TextareaKey(b)) => a == b,
+            (Msg::CommandPaletteFilter(a), Msg::CommandPaletteFilter(b)) => a == b,
+            (Msg::OnboardingSelectProvider(a), Msg::OnboardingSelectProvider(b)) => a == b,
+            (Msg::OnboardingSelectModel(a), Msg::OnboardingSelectModel(b)) => a == b,
+            (Msg::OnboardingKeyInput(a), Msg::OnboardingKeyInput(b)) => a == b,
+            (Msg::OnboardingSearchInput(a), Msg::OnboardingSearchInput(b)) => a == b,
+            (Msg::DirectCommand(a), Msg::DirectCommand(b)) => a == b,
+            (Msg::Paste(a), Msg::Paste(b)) => a == b,
+            (Msg::ModelsFetched(a), Msg::ModelsFetched(b)) => a == b,
+            (Msg::ModelsFetchFailed(a), Msg::ModelsFetchFailed(b)) => a == b,
+            (Msg::Resize(a_w, a_h), Msg::Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
+            (Msg::MouseClick { x: ax, y: ay, button: ab }, Msg::MouseClick { x: bx, y: by, button: bb }) => ax == bx && ay == by && ab == bb,
+            (Msg::SetGitInfo { .. }, Msg::SetGitInfo { .. }) => true,
+            (Msg::SetTopBarMockChecks { .. }, Msg::SetTopBarMockChecks { .. }) => true,
+            (Msg::SetTopBarRealChecks { .. }, Msg::SetTopBarRealChecks { .. }) => true,
+            (Msg::SetInputRightInfo(a), Msg::SetInputRightInfo(b)) => a == b,
+            (Msg::SetCurrentModel(a), Msg::SetCurrentModel(b)) => a == b,
+            (Msg::SetMockMode(a), Msg::SetMockMode(b)) => a == b,
+            (Msg::UpdateTopBarContext { .. }, Msg::UpdateTopBarContext { .. }) => true,
+            (Msg::ExtensionsModalSearchInput(a), Msg::ExtensionsModalSearchInput(b)) => a == b,
+            _ => false,
+        }
     }
 }
 

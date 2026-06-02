@@ -1,15 +1,18 @@
+//! StatusBar component.
+
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::Widget,
 };
-use crate::theme::{ThemeColors, ThemeWrapper};
+use crate::theme::ThemeWrapper;
 use crate::tui::state::TuiMode;
-use crate::tui::view_models::{McpStatus, StatusBarViewModel};
+use crate::tui::view_models::StatusBarViewModel;
 
 pub mod builder;
+mod render;
 pub use builder::*;
 
 #[derive(Clone)]
@@ -66,20 +69,17 @@ impl Default for StatusBar {
 
 impl StatusBarViewModel {
     fn hotkeys(&self) -> Vec<StatusItem> {
-        match self.mode {
-            TuiMode::Chat => Self::chat_hotkeys(),
-            TuiMode::Overlay => Self::overlay_hotkeys(),
-            TuiMode::Select => Self::select_hotkeys(),
-            TuiMode::Permission => Self::permission_hotkeys(),
-            TuiMode::CommandPalette => Self::palette_hotkeys(),
-            TuiMode::DiffViewer => Self::diff_hotkeys(),
-            TuiMode::SessionTree => Self::tree_hotkeys(),
-            TuiMode::Onboarding => Self::onboarding_hotkeys(),
-            TuiMode::HomeScreen => Self::home_hotkeys(),
-            TuiMode::Plan => Self::plan_hotkeys(),
-            TuiMode::Subagents => Self::chat_hotkeys(),
-            TuiMode::Questionnaire => Self::chat_hotkeys(),
-            TuiMode::FullscreenViewer => Self::fullscreen_hotkeys(),
+        hotkeys_for_mode(self.mode)
+    }
+
+    fn center_text(&self) -> Option<String> {
+        let model = self.current_model.as_deref()?;
+        let tokens = self.session_token_usage.total_tokens;
+        let cost = self.session_token_usage.estimated_cost;
+        if cost > 0.0 {
+            Some(format!("{} · {} tok · ${:.4}", model, tokens, cost))
+        } else {
+            Some(format!("{} · {} tok", model, tokens))
         }
     }
 
@@ -122,15 +122,15 @@ impl StatusBarViewModel {
         vec![
             StatusItem { key: "Esc".to_string(), description: "close".to_string() },
             StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
-            StatusItem { key: "Enter".to_string(), description: "run".to_string() },
+            StatusItem { key: "Enter".to_string(), description: "select".to_string() },
+            StatusItem { key: "Backspace".to_string(), description: "delete".to_string() },
         ]
     }
 
     fn diff_hotkeys() -> Vec<StatusItem> {
         vec![
-            StatusItem { key: "Esc/q/x".to_string(), description: "close".to_string() },
-            StatusItem { key: "j/k/↑/↓".to_string(), description: "scroll".to_string() },
-            StatusItem { key: "PgUp/PgDn".to_string(), description: "page".to_string() },
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
+            StatusItem { key: "j/k".to_string(), description: "scroll".to_string() },
         ]
     }
 
@@ -138,49 +138,55 @@ impl StatusBarViewModel {
         vec![
             StatusItem { key: "Esc".to_string(), description: "close".to_string() },
             StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
-            StatusItem { key: "Enter".to_string(), description: "expand".to_string() },
-        ]
-    }
-
-    fn home_hotkeys() -> Vec<StatusItem> {
-        vec![
-            StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
             StatusItem { key: "Enter".to_string(), description: "select".to_string() },
-            StatusItem { key: "q".to_string(), description: "quit".to_string() },
-        ]
-    }
-
-    fn plan_hotkeys() -> Vec<StatusItem> {
-        vec![
-            StatusItem { key: "Enter".to_string(), description: "approve".to_string() },
-            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
-            StatusItem { key: "↑/↓".to_string(), description: "scroll".to_string() },
         ]
     }
 
     fn onboarding_hotkeys() -> Vec<StatusItem> {
         vec![
             StatusItem { key: "Enter".to_string(), description: "next".to_string() },
-            StatusItem { key: "Esc".to_string(), description: "back/skip".to_string() },
-            StatusItem { key: "^q".to_string(), description: "quit".to_string() },
+            StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
+            StatusItem { key: "Esc".to_string(), description: "back".to_string() },
         ]
+    }
+
+    #[allow(dead_code)]
+    fn home_hotkeys() -> Vec<StatusItem> {
+        Self::tree_hotkeys()
+    }
+
+    #[allow(dead_code)]
+    fn plan_hotkeys() -> Vec<StatusItem> {
+        Self::tree_hotkeys()
     }
 
     fn fullscreen_hotkeys() -> Vec<StatusItem> {
         vec![
-            StatusItem { key: "q/Esc/Enter".to_string(), description: "close".to_string() },
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
             StatusItem { key: "j/k".to_string(), description: "scroll".to_string() },
-            StatusItem { key: "g/G".to_string(), description: "top/bottom".to_string() },
         ]
     }
 
-    fn center_text(&self) -> Option<String> {
-        let model = self.current_model.as_deref()?;
-        let tokens = self.session_token_usage.total_tokens;
-        let cost = self.session_token_usage.estimated_cost;
-        Some(format!("{} │ {} tok │ ${:.4}", model, tokens, cost))
+    fn default_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
+            StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
+            StatusItem { key: "Enter".to_string(), description: "select".to_string() },
+        ]
     }
+}
 
+fn hotkeys_for_mode(mode: TuiMode) -> Vec<StatusItem> {
+    match mode {
+        TuiMode::Chat | TuiMode::Subagents | TuiMode::Questionnaire => StatusBarViewModel::chat_hotkeys(),
+        TuiMode::Overlay => StatusBarViewModel::overlay_hotkeys(),
+        TuiMode::Select => StatusBarViewModel::select_hotkeys(),
+        TuiMode::Permission => StatusBarViewModel::permission_hotkeys(),
+        TuiMode::CommandPalette => StatusBarViewModel::palette_hotkeys(),
+        TuiMode::DiffViewer | TuiMode::FullscreenViewer => StatusBarViewModel::diff_hotkeys(),
+        TuiMode::SessionTree | TuiMode::Onboarding | TuiMode::Plan | TuiMode::HomeScreen => StatusBarViewModel::tree_hotkeys(),
+        _ => StatusBarViewModel::default_hotkeys(),
+    }
 }
 
 impl StatusBar {
@@ -263,97 +269,7 @@ impl StyleHelpers {
     }
 }
 
-pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
-    let text_tertiary = colors.text_dim;
-    let text_secondary = colors.text_secondary;
-    let bg = colors.bg_base;
-
-    fill_status_background(area, buf, bg);
-
-    let hotkeys = vm.hotkeys();
-    let left_end = render_hotkey_items(area, buf, &hotkeys, text_tertiary);
-
-    // During onboarding, only show hotkeys - hide model/token/cost info
-    if !matches!(vm.mode, TuiMode::Onboarding) {
-        render_ref_center(area, buf, left_end, text_secondary, vm);
-    }
-
-    // Render MCP status on the right side
-    render_mcp_status(&vm.mcp_status, area, buf, colors);
-}
-
-fn fill_status_background(area: Rect, buf: &mut Buffer, bg: ratatui::style::Color) {
-    for y in area.y..area.y + area.height {
-        for x in area.x..area.x + area.width {
-            if let Some(cell) = buf.cell_mut((x, y)) {
-                cell.set_style(Style::default().bg(bg));
-            }
-        }
-    }
-}
-
-fn render_hotkey_items(area: Rect, buf: &mut Buffer, hotkeys: &[StatusItem], text_tertiary: ratatui::style::Color) -> u16 {
-    let mut x = area.x + 1;
-    let mut first = true;
-
-    for item in hotkeys {
-        if !first {
-            let sep = Span::styled(" | ", Style::default().fg(text_tertiary));
-            let line = Line::from(sep);
-            buf.set_line(x, area.y, &line, 3);
-            x += 3;
-        }
-        first = false;
-
-        let parts = vec![
-            Span::styled(&item.key, Style::default().fg(text_tertiary)),
-            Span::styled(format!(" {}", item.description), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
-        ];
-        let line = Line::from(parts);
-        let width = (item.key.len() + 1 + item.description.len()) as u16;
-        buf.set_line(x, area.y, &line, width);
-        x += width;
-    }
-    x
-}
-
-/// Renders center text only if it fits without overlapping left side
-fn render_ref_center(area: Rect, buf: &mut Buffer, left_end: u16, text_secondary: ratatui::style::Color, vm: &StatusBarViewModel) {
-    let Some(center_text) = vm.center_text() else { return };
-    let center_width = center_text.chars().count() as u16;
-    let min_padding = 2u16;
-
-    let min_center_x = left_end + min_padding;
-    let ideal_center_x = area.x + (area.width.saturating_sub(center_width)) / 2;
-
-    let center_x = if ideal_center_x >= min_center_x {
-        ideal_center_x
-    } else {
-        return; // Not enough space on left, skip center
-    };
-
-    if center_x + center_width <= area.x + area.width {
-        let line = Line::raw(center_text).style(Style::default().fg(text_secondary));
-        buf.set_line(center_x, area.y, &line, center_width);
-    }
-}
-
-fn render_mcp_status(mcp: &McpStatus, area: Rect, buf: &mut Buffer, colors: &ThemeColors) {
-    let text = match mcp {
-        McpStatus::Connected(n) if *n > 0 => {
-            format!("⚡ {} MCP servers", n)
-        }
-        McpStatus::Unavailable(n) if *n > 0 => {
-            format!("⛔ {} MCP servers unavailable", n)
-        }
-        _ => return,
-    };
-
-    let line_width = text.chars().count() as u16;
-    let x = area.x + area.width.saturating_sub(line_width + 1);
-    let line = Line::styled(text, Style::default().fg(colors.text_dim));
-    buf.set_line(x, area.y, &line, line_width);
-}
+pub use render::render_ref;
 
 #[cfg(test)]
 mod tests_status_bar_onboarding {
@@ -395,51 +311,26 @@ mod tests_status_bar_onboarding {
     }
 
     fn theme_colors() -> ThemeColors {
+        use ratatui::style::Color;
         ThemeColors {
-            bg_base: ratatui::style::Color::Reset,
-            bg_panel: ratatui::style::Color::Black,
-            text_primary: ratatui::style::Color::White,
-            text_secondary: ratatui::style::Color::Gray,
-            text_dim: ratatui::style::Color::DarkGray,
-            text_muted: ratatui::style::Color::DarkGray,
-            accent_primary: ratatui::style::Color::Blue,
-            accent_secondary: ratatui::style::Color::Cyan,
-            border_unfocused: ratatui::style::Color::DarkGray,
-            success: ratatui::style::Color::Green,
-            error: ratatui::style::Color::Red,
-            warning: ratatui::style::Color::Yellow,
-            syntax_phase: ratatui::style::Color::Yellow,
-            text_plan: ratatui::style::Color::Magenta,
-            feed_tool_bar: ratatui::style::Color::LightBlue,
-            accent_user: ratatui::style::Color::Blue,
-            accent_assistant: ratatui::style::Color::Cyan,
-            accent_thinking: ratatui::style::Color::Yellow,
-            accent_tool: ratatui::style::Color::Magenta,
-            accent_system: ratatui::style::Color::DarkGray,
-            accent_error: ratatui::style::Color::Red,
-            accent_success: ratatui::style::Color::Green,
-            accent_running: ratatui::style::Color::Yellow,
-            accent_skill: ratatui::style::Color::Blue,
-            accent_plan: ratatui::style::Color::Yellow,
-            accent_feedback: ratatui::style::Color::Red,
-            accent_model: ratatui::style::Color::Cyan,
-            accent_teal: ratatui::style::Color::Cyan,
-            accent_orange: ratatui::style::Color::Yellow,
-            accent_purple: ratatui::style::Color::Magenta,
-            accent_yellow: ratatui::style::Color::Yellow,
-            accent_blue_bright: ratatui::style::Color::Blue,
-            command: ratatui::style::Color::Blue,
-            path: ratatui::style::Color::Cyan,
-            running: ratatui::style::Color::Yellow,
-            fuzzy_accent: ratatui::style::Color::Blue,
-            editor_bg: ratatui::style::Color::Black,
-            surface_bg: ratatui::style::Color::Black,
-            popover_bg: ratatui::style::Color::Black,
+            bg_base: Color::Reset, bg_panel: Color::Black, text_primary: Color::White,
+            text_secondary: Color::Gray, text_dim: Color::DarkGray, text_muted: Color::DarkGray,
+            accent_primary: Color::Blue, accent_secondary: Color::Cyan,
+            border_unfocused: Color::DarkGray, success: Color::Green, error: Color::Red,
+            warning: Color::Yellow, syntax_phase: Color::Yellow, text_plan: Color::Magenta,
+            feed_tool_bar: Color::LightBlue, accent_user: Color::Blue, accent_assistant: Color::Cyan,
+            accent_thinking: Color::Yellow, accent_tool: Color::Magenta,
+            accent_system: Color::DarkGray, accent_error: Color::Red, accent_success: Color::Green,
+            accent_running: Color::Yellow, accent_skill: Color::Blue, accent_plan: Color::Yellow,
+            accent_feedback: Color::Red, accent_model: Color::Cyan, accent_teal: Color::Cyan,
+            accent_orange: Color::Yellow, accent_purple: Color::Magenta, accent_yellow: Color::Yellow,
+            accent_blue_bright: Color::Blue, command: Color::Blue, path: Color::Cyan,
+            running: Color::Yellow, fuzzy_accent: Color::Blue, editor_bg: Color::Black,
+            surface_bg: Color::Black, popover_bg: Color::Black,
         }
     }
 
     fn buffer_contains(buffer: &Buffer, text: &str) -> bool {
-        // Collect each line as a string and check if it contains the text
         for y in 0..buffer.area.height {
             let mut line = String::new();
             for x in 0..buffer.area.width {
@@ -463,7 +354,6 @@ mod tests_status_bar_onboarding {
 
         render_ref(&vm, area, &mut buf, &colors);
 
-        // Onboarding mode should NOT show model/token/cost info
         assert!(!buffer_contains(&buf, "openai/gpt-4o"),
             "Onboarding mode should not display model name");
         assert!(!buffer_contains(&buf, "tok"),
@@ -475,13 +365,12 @@ mod tests_status_bar_onboarding {
     #[test]
     fn test_chat_mode_shows_hotkeys() {
         let vm = make_chat_vm_with_model();
-        let area = Rect::new(0, 0, 120, 1);  // Wider area to fit hotkeys + center
+        let area = Rect::new(0, 0, 120, 1);
         let mut buf = Buffer::empty(area);
         let colors = theme_colors();
 
         render_ref(&vm, area, &mut buf, &colors);
 
-        // Chat mode should show hotkeys (model info moved to GlobalTags)
         assert!(buffer_contains(&buf, "Enter"),
             "Chat mode should display Enter hotkey");
     }
@@ -495,7 +384,6 @@ mod tests_status_bar_onboarding {
 
         render_ref(&vm, area, &mut buf, &colors);
 
-        // Onboarding mode SHOULD show hotkeys
         assert!(buffer_contains(&buf, "Enter"),
             "Onboarding mode should display Enter hotkey");
         assert!(buffer_contains(&buf, "Esc"),

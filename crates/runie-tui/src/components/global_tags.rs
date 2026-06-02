@@ -79,7 +79,7 @@ fn format_token_count(tokens: usize) -> String {
 
 impl GlobalTagsViewModel {
     /// Create running state: "⣾ {status} [turn: {time}] [⇣{tokens}]"
-    pub fn running(status: &str, time: &str, tokens: u64, turn_duration: Option<u64>, turn_tokens: Option<usize>, turn_tool_calls: Option<usize>) -> Self {
+    pub fn running(status: &str, time: &str, _tokens: u64, _turn_duration: Option<u64>, turn_tokens: Option<usize>, turn_tool_calls: Option<usize>) -> Self {
         let mut parts = vec![format!("turn: {}", time)];
         if let Some(tools) = turn_tool_calls {
             if tools > 0 {
