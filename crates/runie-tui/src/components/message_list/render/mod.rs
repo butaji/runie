@@ -11,7 +11,9 @@
 mod assistant;
 mod markdown;
 mod messages;
+mod thinking;
 mod tool;
+mod tool_call;
 mod user;
 mod wrap;
 

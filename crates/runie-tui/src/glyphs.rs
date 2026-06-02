@@ -30,6 +30,12 @@ pub const SPINNER_FRAMES_REVERSE: [char; 10] = [
 /// Tool call bullet
 pub const TOOL_BULLET: char = '●';
 
+/// Diamond shape
+pub const DIAMOND: char = '\u{25C6}'; // ◆
+
+/// Bullet shape
+pub const BULLET: char = '\u{2022}'; // •
+
 /// Separator line character
 pub const SEPARATOR: char = '─';
 

@@ -21,6 +21,7 @@ pub enum TuiMode {
     SessionTree,
     Onboarding,
     HomeScreen,
+    Plan,
 }
 
 #[derive(Debug, Clone)]
@@ -171,6 +172,7 @@ pub enum Msg {
     ExtensionsModalRight,
     ExtensionsModalSearchInput(char),
     ExtensionsModalSearchBackspace,
+    ToggleSubagentPanel,
 }
 
 impl PartialEq for Msg {
@@ -237,7 +239,7 @@ impl Msg {
                 | Msg::ExtensionsModalDown | Msg::ExtensionsModalSelect | Msg::ExtensionsModalLeft
                 | Msg::ExtensionsModalRight | Msg::ExtensionsModalSearchBackspace
                 | Msg::CopyBlockContent | Msg::ToggleRawMarkdown | Msg::FocusPrompt | Msg::GoHome
-                | Msg::ToggleAutoApprove
+                | Msg::ToggleAutoApprove | Msg::ToggleSubagentPanel
         )
     }
 }

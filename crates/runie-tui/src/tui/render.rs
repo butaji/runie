@@ -39,6 +39,7 @@ pub(crate) fn get_status_items(mode: &TuiMode) -> Vec<(&'static str, &'static st
         TuiMode::SessionTree => ARROW_KEYS.to_vec(),
         TuiMode::Onboarding => vec![("Esc", "back"), ("↑↓", "navigate"), ("Enter", "next")],
         TuiMode::HomeScreen => vec![("↑↓", "navigate"), ("Enter", "select"), ("q", "quit")],
+        TuiMode::Plan => vec![("Enter", "approve"), ("Esc", "close"), ("↑↓", "scroll")],
     }
 }
 

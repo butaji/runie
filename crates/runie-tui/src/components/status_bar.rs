@@ -65,6 +65,7 @@ impl StatusBarViewModel {
             TuiMode::SessionTree => Self::tree_hotkeys(),
             TuiMode::Onboarding => Self::onboarding_hotkeys(),
             TuiMode::HomeScreen => Self::home_hotkeys(),
+            TuiMode::Plan => Self::plan_hotkeys(),
         }
     }
 
@@ -132,6 +133,14 @@ impl StatusBarViewModel {
             StatusItem { key: "↑/↓".to_string(), description: "navigate".to_string() },
             StatusItem { key: "Enter".to_string(), description: "select".to_string() },
             StatusItem { key: "q".to_string(), description: "quit".to_string() },
+        ]
+    }
+
+    fn plan_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "Enter".to_string(), description: "approve".to_string() },
+            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
+            StatusItem { key: "↑/↓".to_string(), description: "scroll".to_string() },
         ]
     }
 
