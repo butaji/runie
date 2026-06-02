@@ -96,7 +96,6 @@ pub(crate) fn handle_new(state: &mut AppState) {
     state.messages.clear();
     state.scroll.feed_offset = 0;
     state.scroll.user_scrolled_up = false;
-    state.messages.push(MessageItem::System { text: "New session started".to_string() });
     state.home_screen.show();
     state.mode = TuiMode::HomeScreen;
 }

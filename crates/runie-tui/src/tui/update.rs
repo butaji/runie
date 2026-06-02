@@ -9,6 +9,8 @@ pub mod tree;
 pub mod ui;
 
 #[cfg(test)]
+mod palette_test;
+#[cfg(test)]
 mod palette_tests;
 #[cfg(test)]
 mod slash_tests;

@@ -129,7 +129,7 @@ pub fn handle_home_screen_msg(state: &mut AppState, msg: crate::tui::state::Msg)
     }
 }
 
-fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
+pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
     let action = state.home_screen.selected_action().to_string();
     match action.as_str() {
         "New worktree" => {
@@ -141,12 +141,19 @@ fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
             state.mode = TuiMode::Chat;
         }
         "Resume session" => {
+            state.messages.clear();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
             state.messages.push(MessageItem::System { text: "Resuming last session".to_string() });
+            state.textarea.select_all();
+            state.textarea.delete_line_by_end();
         }
         "Quit" => { state.running = false; }
         _ => {
+            state.messages.clear();
+            state.messages.push(MessageItem::System { text: "New session started".to_string() });
+            state.textarea.select_all();
+            state.textarea.delete_line_by_end();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
         }
@@ -157,6 +164,8 @@ fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
 fn home_screen_close(state: &mut AppState) -> Vec<ChatCmd> {
     state.home_screen.hide();
     state.mode = TuiMode::Chat;
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
     vec![]
 }
 

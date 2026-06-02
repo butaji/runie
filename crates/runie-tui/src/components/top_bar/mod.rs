@@ -7,6 +7,8 @@ pub mod render;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod helpers_test;
 
 pub use gauge::{calculate_pct, draw_gauge, format_context_window, format_token_count};
 pub use render::render_top_bar;

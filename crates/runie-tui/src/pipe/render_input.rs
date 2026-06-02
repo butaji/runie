@@ -33,7 +33,7 @@ pub fn render_input(
     let mode_indicator = match state.permission_mode {
         PermissionMode::Normal => "runie".to_string(),
         PermissionMode::Plan => "runie · plan".to_string(),
-        PermissionMode::AutoApprove => "runie · yolo".to_string(),
+        PermissionMode::AutoApprove => "runie · always-approve".to_string(),
     };
 
     // Calculate char count if text is long (>50% of context window)

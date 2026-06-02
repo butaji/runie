@@ -51,7 +51,7 @@ pub fn render_input_bar(
     // Build mode indicator style
     let mode_style = if mode_indicator.contains("plan") {
         Style::default().fg(colors.text_plan)
-    } else if mode_indicator.contains("yolo") {
+    } else if mode_indicator.contains("always-approve") {
         Style::default().fg(colors.accent_primary)
     } else {
         Style::default().fg(colors.text_dim)
@@ -108,7 +108,7 @@ fn build_input_block(
     let title_bottom = if right_info.is_empty() {
         format!("{} {} {}{}", dash_str, mode_indicator, count_str, "─")
     } else {
-        format!("{} {} {}{} {} {}", dash_str, mode_indicator, count_str, "─", right_info, "─")
+        format!("{} {} {}{} {}", dash_str, mode_indicator, count_str, "─", right_info)
     };
 
     block = block.title_bottom(

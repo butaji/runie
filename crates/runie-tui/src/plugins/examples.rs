@@ -171,7 +171,7 @@ impl GitStatusPlugin {
 
     fn detect_relative_path(&self, workspace: &std::path::Path) -> String {
         std::process::Command::new("git")
-            .args(["rev-parse", "--show-prefix"])
+            .args(["rev-parse", "--show-toplevel"])
             .current_dir(workspace)
             .output()
             .ok()
@@ -179,7 +179,7 @@ impl GitStatusPlugin {
                 if output.status.success() {
                     let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
                     if !path.is_empty() {
-                        Some(path.trim_end_matches('/').to_string())
+                        Some(path)
                     } else {
                         None
                     }

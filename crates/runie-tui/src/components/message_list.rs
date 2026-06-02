@@ -124,13 +124,17 @@ fn render_message_list(
     let max_rows = area.height;
     let margin_x = area.x;
     let text_x = area.x + 3;
-    let total_items = vm.feed.len();
 
-    for (idx, item) in vm.feed.items().iter().skip(vm.scroll_offset).enumerate() {
+    // Filter out SystemNotice items for chat view (Grok-style: no "New session started" in scrollback)
+    let items: Vec<_> = vm.feed.items().iter().collect();
+    let visible_items: Vec<_> = items.iter().filter(|item| !matches!(item, FeedItem::SystemNotice { .. })).collect();
+    let visible_count = visible_items.len();
+
+    for (idx, item) in visible_items.iter().skip(vm.scroll_offset).enumerate() {
         if row >= max_rows { break; }
         let absolute_idx = vm.scroll_offset + idx;
 
-        let show_cursor = render::should_show_cursor_feed(&vm.animation, vm.agent_running, absolute_idx, total_items, item);
+        let show_cursor = render::should_show_cursor_feed(&vm.animation, vm.agent_running, absolute_idx, visible_count, item);
         let show_spinner = false; // Spinners for ToolRunning/PlanStep not rendered via Feed
 
         // For AssistantMessage, get thought duration from inline thoughts
@@ -153,16 +157,16 @@ fn render_message_list(
             false
         };
 
-        let is_last_item = absolute_idx == total_items.saturating_sub(1);
+        let is_last_item = absolute_idx == visible_count.saturating_sub(1);
         let rendered = render_single_msg_item(
             item, area, row, margin_x, text_x, max_rows, buf, theme, colors, spinner, show_cursor, show_spinner, rewind_spinner,
             &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item, thoughts_collapsed,
         );
         row += rendered;
         // Draw separator between items (not after last)
-        if idx < total_items.saturating_sub(1) && row < max_rows {
-            let current_item = &vm.feed.items()[absolute_idx];
-            let next_item = &vm.feed.items()[absolute_idx + 1];
+        if idx < visible_count.saturating_sub(1) && row < max_rows {
+            let current_item = visible_items[absolute_idx];
+            let next_item = visible_items[absolute_idx + 1];
             row += render::render_item_separator(area, row, buf, colors.text_muted, current_item, next_item);
         }
     }

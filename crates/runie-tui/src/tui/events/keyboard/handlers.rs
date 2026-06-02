@@ -72,7 +72,7 @@ pub(super) fn key_to_slash_menu_msg(key: crossterm::event::KeyEvent) -> Option<M
 
 pub(super) fn shortcuts_panel_filter_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
+        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::CloseShortcutsPanel),
         KeyCode::Backspace => Some(Msg::ShortcutsPanelFilterBackspace),
         KeyCode::Char(c) => Some(Msg::ShortcutsPanelFilterInput(c)),
         KeyCode::Up => Some(Msg::ShortcutsPanelUp),
@@ -84,7 +84,7 @@ pub(super) fn shortcuts_panel_filter_msg(key: crossterm::event::KeyEvent) -> Opt
 
 pub(super) fn shortcuts_panel_normal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Esc => Some(Msg::CloseShortcutsPanel),
+        KeyCode::Esc | KeyCode::Char('q') => Some(Msg::CloseShortcutsPanel),
         KeyCode::Char('f') | KeyCode::Char('/') => Some(Msg::ShortcutsPanelToggleFilter),
         KeyCode::Char('e') | KeyCode::Enter | KeyCode::Char(' ') => Some(Msg::ShortcutsPanelToggleSection),
         KeyCode::Up => Some(Msg::ShortcutsPanelUp),

@@ -93,6 +93,18 @@ fn render_command_palette(
 ) {
     dim_background(buf, area, theme_colors);
     let palette_area = right_aligned_rect(padded, 70, 20);
+
+    // Clear the palette area before rendering to prevent overlap
+    let bg_base: ratatui::style::Color = theme.color("bg.base").into();
+    for y in palette_area.y..palette_area.y + palette_area.height {
+        for x in palette_area.x..palette_area.x + palette_area.width {
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_char(' ');
+                cell.set_bg(bg_base);
+            }
+        }
+    }
+
     palette.render_ref(palette_area, buf, theme);
 }
 

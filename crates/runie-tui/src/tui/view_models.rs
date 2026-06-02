@@ -51,6 +51,22 @@ pub struct StatusBarViewModel {
     pub input_has_text: bool,
 }
 
+impl Default for StatusBarViewModel {
+    fn default() -> Self {
+        Self {
+            mode: TuiMode::Chat,
+            current_model: None,
+            session_token_usage: TokenUsage::default(),
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+            mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
+        }
+    }
+}
+
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
 pub struct AgentListViewModel {
     pub plan_steps: Vec<(usize, String, PlanStatus)>,
@@ -236,14 +252,13 @@ fn build_global_tags_vm(state: &crate::tui::state::AppState) -> GlobalTagsViewMo
                 format_duration_short(dur)
             })
             .unwrap_or_default();
-        let mut vm = GlobalTagsViewModel::running(
-            status, &elapsed, state.token_usage.total_tokens as u64,
+        let spinner = crate::glyphs::spinner_frame(state.animation.braille_frame);
+        GlobalTagsViewModel::running(
+            spinner, status, &elapsed, state.token_usage.total_tokens as u64,
             state.last_turn_duration_secs,
             state.last_turn_tokens,
             state.last_turn_tool_calls,
-        );
-        vm.left = Some(format!("{} {} · Ctrl+Enter:interject", crate::glyphs::spinner_frame(state.animation.braille_frame), status));
-        vm
+        )
     } else if let Some(ref header) = state.status_header {
         // Error state
         GlobalTagsViewModel::error(header)

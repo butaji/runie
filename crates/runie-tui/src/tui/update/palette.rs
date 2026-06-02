@@ -14,6 +14,9 @@ pub fn open_palette(state: &mut AppState, palette: &mut CommandPalette) {
     palette.is_argument_mode = false;
     palette.argument_input.clear();
     palette.pending_command = None;
+    // Close other overlays that could overlap with command palette
+    state.slash_menu.close();
+    state.file_picker.close();
 }
 
 pub fn handle_close_modal(state: &mut AppState) {
