@@ -166,7 +166,9 @@ async fn initialize_tui(
     let mut tui = Tui::new(TuiConfig::default())?;
 
     let path = if mock {
-        "src/components".to_string()
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| git_info.relative_path.clone())
     } else {
         git_info.relative_path.clone()
     };
@@ -199,12 +201,8 @@ async fn initialize_tui(
         settings.api_key = Some("mock-key".to_string());
     }
 
-    let input_right_info = if mock {
-        "mock".to_string()
-    } else {
-        format!("{} · {}", settings.provider, settings.model)
-    };
-    tui.update(Msg::SetInputRightInfo(input_right_info));
+    // Bottom label: keep empty for clean "runie" label (matches Grok Build style)
+    tui.update(Msg::SetInputRightInfo(String::new()));
 
     // P0-MODEL-INIT: Initialize current_model from settings on startup
     if !settings.provider.is_empty() && !settings.model.is_empty() {

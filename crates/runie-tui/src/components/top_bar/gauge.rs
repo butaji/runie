@@ -6,20 +6,20 @@ use ratatui::{
 
 pub fn format_context_window(window: usize) -> String {
     if window >= 1_000_000 {
-        format!("{:.0}m", window as f32 / 1_000_000.0)
+        format!("{:.1}M", window as f32 / 1_000_000.0)
     } else if window >= 1_000 {
-        format!("{:.0}k", window as f32 / 1_000.0)
+        format!("{:.1}K", window as f32 / 1_000.0)
     } else {
         window.to_string()
     }
 }
 
-/// Format a token count with K/M suffix (e.g., 21000 -> "21K")
+/// Format a token count with K/M suffix (e.g., 9500 -> "9.5K")
 pub fn format_token_count(tokens: usize) -> String {
     if tokens >= 1_000_000 {
-        format!("{:.0}M", tokens as f32 / 1_000_000.0)
+        format!("{:.1}M", tokens as f32 / 1_000_000.0)
     } else if tokens >= 1_000 {
-        format!("{:.0}K", tokens as f32 / 1_000.0)
+        format!("{:.1}K", tokens as f32 / 1_000.0)
     } else {
         tokens.to_string()
     }

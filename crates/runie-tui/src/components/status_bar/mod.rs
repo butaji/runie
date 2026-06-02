@@ -69,7 +69,32 @@ impl Default for StatusBar {
 
 impl StatusBarViewModel {
     fn hotkeys(&self) -> Vec<StatusItem> {
-        hotkeys_for_mode(self.mode)
+        // Context-aware: agent running > input has text > mode-specific
+        if self.agent_running {
+            Self::agent_running_hotkeys()
+        } else if self.input_has_text {
+            Self::input_with_text_hotkeys()
+        } else {
+            hotkeys_for_mode(self.mode)
+        }
+    }
+
+    /// Hotkeys shown when agent is running
+    fn agent_running_hotkeys() -> Vec<StatusItem> {
+        // Grok-style minimal hints
+        vec![
+            StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
+        ]
+    }
+
+    /// Hotkeys shown when input has text and agent is idle
+    fn input_with_text_hotkeys() -> Vec<StatusItem> {
+        // Grok-style minimal hints
+        vec![
+            StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
+        ]
     }
 
     fn center_text(&self) -> Option<String> {
@@ -84,13 +109,10 @@ impl StatusBarViewModel {
     }
 
     fn chat_hotkeys() -> Vec<StatusItem> {
+        // Grok-style minimal hints: only mode toggle and shortcuts
         vec![
-            StatusItem { key: "Enter".to_string(), description: "send".to_string() },
-            StatusItem { key: "Shift+Enter".to_string(), description: "newline".to_string() },
-            StatusItem { key: "^b".to_string(), description: "sidebar".to_string() },
-            StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
-            StatusItem { key: "?".to_string(), description: "help".to_string() },
-            StatusItem { key: "^q".to_string(), description: "quit".to_string() },
+            StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
         ]
     }
 
@@ -185,7 +207,6 @@ fn hotkeys_for_mode(mode: TuiMode) -> Vec<StatusItem> {
         TuiMode::CommandPalette => StatusBarViewModel::palette_hotkeys(),
         TuiMode::DiffViewer | TuiMode::FullscreenViewer => StatusBarViewModel::diff_hotkeys(),
         TuiMode::SessionTree | TuiMode::Onboarding | TuiMode::Plan | TuiMode::HomeScreen => StatusBarViewModel::tree_hotkeys(),
-        _ => StatusBarViewModel::default_hotkeys(),
     }
 }
 
@@ -290,6 +311,8 @@ mod tests_status_bar_onboarding {
             status_details: None,
             status_start_time: None,
             mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
         }
     }
 
@@ -307,6 +330,8 @@ mod tests_status_bar_onboarding {
             status_details: None,
             status_start_time: None,
             mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
         }
     }
 

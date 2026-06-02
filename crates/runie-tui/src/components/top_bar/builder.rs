@@ -1,4 +1,5 @@
 use super::TopBarViewModel;
+use crate::tui::state::TuiMode;
 
 pub(crate) struct TopBarBuilder {
     repo: String,
@@ -6,6 +7,7 @@ pub(crate) struct TopBarBuilder {
     path: String,
     context_window: usize,
     estimated_tokens: usize,
+    mode: TuiMode,
 }
 
 impl TopBarBuilder {
@@ -16,7 +18,13 @@ impl TopBarBuilder {
             path: String::new(),
             context_window: 128_000,
             estimated_tokens: 0,
+            mode: TuiMode::Chat,
         }
+    }
+
+    pub(crate) fn mode(mut self, mode: TuiMode) -> Self {
+        self.mode = mode;
+        self
     }
 
     pub(crate) fn repo(mut self, repo: &str) -> Self {
@@ -49,6 +57,7 @@ impl TopBarBuilder {
             estimated_tokens: self.estimated_tokens,
             agent_running: false,
             braille_frame: 0,
+            mode: self.mode,
         }
     }
 }

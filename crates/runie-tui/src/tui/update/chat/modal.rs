@@ -123,6 +123,7 @@ pub fn handle_home_screen_msg(state: &mut AppState, msg: crate::tui::state::Msg)
         Msg::HomeScreenUp => { state.home_screen.move_up(); vec![] }
         Msg::HomeScreenDown => { state.home_screen.move_down(); vec![] }
         Msg::HomeScreenSelect => home_screen_select(state),
+        Msg::HomeScreenToggleSessions => { state.home_screen.toggle_sessions(); vec![] }
         Msg::CloseHomeScreen => home_screen_close(state),
         _ => vec![],
     }
@@ -133,11 +134,11 @@ fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
     state.home_screen.hide();
     state.mode = TuiMode::Chat;
     match action.as_str() {
-        "New Session" => {
+        "New worktree" => {
             state.messages.clear();
             state.messages.push(MessageItem::System { text: "New session started".to_string() });
         }
-        "Resume Last Session" => {
+        "Resume session" => {
             state.messages.push(MessageItem::System { text: "Resuming last session".to_string() });
         }
         "Settings" => { state.settings_modal.open(); }

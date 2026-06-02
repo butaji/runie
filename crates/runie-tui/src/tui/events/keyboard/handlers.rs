@@ -65,7 +65,8 @@ pub(super) fn key_to_slash_menu_msg(key: crossterm::event::KeyEvent) -> Option<M
         KeyCode::Up => Some(Msg::SlashMenuUp),
         KeyCode::Down => Some(Msg::SlashMenuDown),
         KeyCode::Enter => Some(Msg::SlashMenuConfirm),
-        _ => Some(Msg::TextareaKey(key)),
+        // Let character keys fall through to normal routing so they update textarea + filter
+        _ => None,
     }
 }
 
@@ -124,10 +125,10 @@ fn home_nav_keys(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Esc | KeyCode::Char('q') => Some(Msg::Quit),
         KeyCode::Up => Some(Msg::HomeScreenUp),
         KeyCode::Down => Some(Msg::HomeScreenDown),
-        KeyCode::Enter => Some(Msg::HomeScreenSelect),
-        KeyCode::Char('n') | KeyCode::Char('r') => Some(Msg::CloseHomeScreen),
+        KeyCode::Enter | KeyCode::Char('n') => Some(Msg::HomeScreenSelect),
+        KeyCode::Char('r') => Some(Msg::CloseHomeScreen),
         KeyCode::Char('s') => Some(Msg::OpenSettingsModal),
-        KeyCode::Char('h') => Some(Msg::OpenShortcutsPanel),
+        KeyCode::Char('h') => Some(Msg::HomeScreenToggleSessions),
         _ => None,
     }
 }
@@ -494,7 +495,6 @@ pub(super) fn key_to_questionnaire_msg(key: crossterm::event::KeyEvent) -> Optio
         _ => None,
     }
 }
-
 fn is_ctrl_combo(key: crossterm::event::KeyEvent) -> bool {
     key.modifiers.contains(KeyModifiers::CONTROL) && !key.modifiers.contains(KeyModifiers::SHIFT)
 }

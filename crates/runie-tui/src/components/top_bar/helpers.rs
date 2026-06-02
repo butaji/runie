@@ -30,17 +30,25 @@ pub fn build_left_spans<'a>(
     bg: Color,
 ) -> Vec<Span<'a>> {
     let mut parts = Vec::new();
-    if !vm.repo.is_empty() {
+    // Skip repo if it equals "runie" to avoid showing app name in header
+    if !vm.repo.is_empty() && vm.repo != "runie" {
         parts.push(Span::styled(&vm.repo, Style::default().fg(bright).bg(bg)));
     }
+    // Build combined branch + path span with proper formatting
     if !vm.branch.is_empty() {
-        // Add git branch symbol before branch name
-        parts.push(Span::styled(GIT_BRANCH_SYMBOL.to_string(), dim_style.clone().bg(bg)));
-        parts.push(Span::styled(&vm.branch, dim_style.clone().bg(bg)));
-    }
-    if !vm.path.is_empty() {
         let short_path = shorten_path(&vm.path);
-        parts.push(Span::styled(format!("  {}", short_path), dim_style.clone().bg(bg)));
+        let path_str = if short_path.is_empty() {
+            String::new()
+        } else {
+            format!(" {}/", short_path)
+        };
+        // Format: " branch ~/path" (no leading space - padding handled by padded_area)
+        let combined = format!("{} {}{}", GIT_BRANCH_SYMBOL, &vm.branch, path_str);
+        parts.push(Span::styled(combined, dim_style.clone().bg(bg)));
+    } else if !vm.path.is_empty() {
+        // No branch, just show path (no leading space - padding handled by padded_area)
+        let short_path = shorten_path(&vm.path);
+        parts.push(Span::styled(format!("{}/", short_path), dim_style.clone().bg(bg)));
     }
     parts
 }

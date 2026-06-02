@@ -10,6 +10,8 @@ pub(crate) struct StatusBarBuilder {
     status_details: Option<String>,
     status_start_time: Option<std::time::Instant>,
     mcp_status: McpStatus,
+    agent_running: bool,
+    input_has_text: bool,
 }
 
 impl StatusBarBuilder {
@@ -22,6 +24,8 @@ impl StatusBarBuilder {
             status_details: None,
             status_start_time: None,
             mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
         }
     }
 
@@ -60,6 +64,16 @@ impl StatusBarBuilder {
         self
     }
 
+    pub(crate) fn agent_running(mut self, running: bool) -> Self {
+        self.agent_running = running;
+        self
+    }
+
+    pub(crate) fn input_has_text(mut self, has_text: bool) -> Self {
+        self.input_has_text = has_text;
+        self
+    }
+
     pub(crate) fn build(self) -> StatusBarViewModel {
         StatusBarViewModel {
             mode: self.mode,
@@ -69,6 +83,8 @@ impl StatusBarBuilder {
             status_details: self.status_details,
             status_start_time: self.status_start_time,
             mcp_status: self.mcp_status,
+            agent_running: self.agent_running,
+            input_has_text: self.input_has_text,
         }
     }
 }

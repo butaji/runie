@@ -47,6 +47,8 @@ pub struct StatusBarViewModel {
     pub status_details: Option<String>,
     pub status_start_time: Option<std::time::Instant>,
     pub mcp_status: McpStatus,
+    pub agent_running: bool,
+    pub input_has_text: bool,
 }
 
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
@@ -221,7 +223,7 @@ pub fn strip_thinking_from_assistant(text: &str) -> String {
 // ─── Build Helper Functions ─────────────────────────────────────────────────
 
 fn build_top_bar_vm(state: &crate::tui::state::AppState) -> TopBarViewModel {
-    TopBarViewModel::from_state(&state.top_bar, state.agent_running, state.animation.braille_frame)
+    TopBarViewModel::from_state(&state.top_bar, state.agent_running, state.animation.braille_frame, state.mode)
 }
 
 fn build_global_tags_vm(state: &crate::tui::state::AppState) -> GlobalTagsViewModel {
@@ -331,6 +333,8 @@ fn build_status_bar_vm(state: &crate::tui::state::AppState) -> StatusBarViewMode
         status_details: state.status_details.clone(),
         status_start_time: state.status_start_time,
         mcp_status: McpStatus::None, // TODO: wire to actual MCP state
+        agent_running: state.agent_running,
+        input_has_text: !state.textarea.lines().join("").trim().is_empty(),
     }
 }
 

@@ -188,7 +188,16 @@ pub fn render_assistant_msg(
 
     let base_style = Style::default().add_modifier(Modifier::BOLD).fg(text_secondary);
     let stripped_trimmed = stripped.trim_start();
-    let markdown_lines = render_text_content(stripped_trimmed, width, base_style);
+    let mut markdown_lines = render_text_content(stripped_trimmed, width, base_style);
+
+    // Prepend ∘ bullet to first line of assistant response
+    if !markdown_lines.is_empty() {
+        let bullet_span = Span::raw(format!("{} ", glyphs::ASSISTANT_BULLET)).style(base_style);
+        let first_line = &mut markdown_lines[0];
+        let mut new_spans = vec![bullet_span];
+        new_spans.append(&mut first_line.spans);
+        first_line.spans = new_spans;
+    }
 
     let text_rows = markdown_lines.len() as u16;
 
