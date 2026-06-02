@@ -97,14 +97,36 @@ fn render_subagent_panel(panel: &SubagentPanel, area: Rect, buf: &mut Buffer) {
     buf.set_line(inner.x, inner.y + 1, &Line::styled(div, Style::default().fg(muted)), inner.width);
     
     // Dot grid (2x3)
+    // Row 1: agent 0, agent 1, agent 2
+    // Row 2: agent 3, agent 4, agent 5
+    // ● = Active/Complete, ○ = Idle/Failed
+    fn dot_for(status: SubagentStatus) -> &'static str {
+        match status {
+            SubagentStatus::Active | SubagentStatus::Complete => "●",
+            SubagentStatus::Idle | SubagentStatus::Failed => "○",
+        }
+    }
+    
     let mut y = inner.y + 3;
-    let dot_grid = format!("{} {} {}    {} = Active  {} = Idle",
-        if panel.subagents.get(0).map_or(false, |s| s.status == SubagentStatus::Active) { "●" } else { "○" },
-        if panel.subagents.get(1).map_or(false, |s| s.status == SubagentStatus::Active) { "●" } else { "○" },
-        if panel.subagents.get(2).map_or(false, |s| s.status == SubagentStatus::Active) { "●" } else { "○" },
-        "●", "○"
+    let row1 = format!("{} {} {}",
+        panel.subagents.get(0).map_or("○", |s| dot_for(s.status)),
+        panel.subagents.get(1).map_or("○", |s| dot_for(s.status)),
+        panel.subagents.get(2).map_or("○", |s| dot_for(s.status)),
     );
-    buf.set_line(inner.x, y, &Line::styled(dot_grid, Style::default().fg(muted)), inner.width);
+    buf.set_line(inner.x, y, &Line::styled(row1, Style::default().fg(muted)), inner.width);
+    y += 1;
+    
+    let row2 = format!("{} {} {}",
+        panel.subagents.get(3).map_or("○", |s| dot_for(s.status)),
+        panel.subagents.get(4).map_or("○", |s| dot_for(s.status)),
+        panel.subagents.get(5).map_or("○", |s| dot_for(s.status)),
+    );
+    buf.set_line(inner.x, y, &Line::styled(row2, Style::default().fg(muted)), inner.width);
+    y += 1;
+    
+    // Legend
+    let legend = "● = Active/working  ○ = Idle/waiting";
+    buf.set_line(inner.x, y, &Line::styled(legend, Style::default().fg(muted)), inner.width);
     y += 2;
     
     // Agent list

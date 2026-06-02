@@ -34,6 +34,7 @@ impl AgentListBuilder {
         self.running_jobs.push(BackgroundJob {
             name: name.to_string(),
             status: crate::components::status_bar::JobStatus::Running,
+            progress: 0.0,
         });
         self.active_count = self.running_jobs.len();
         self

@@ -2,6 +2,22 @@
 
 
 
+/// Animation configuration from config file
+#[derive(Clone)]
+pub struct AnimationConfig {
+    pub fps: u8,        // 1-60, default 30
+    pub wave_rows: u16, // default 32
+}
+
+impl Default for AnimationConfig {
+    fn default() -> Self {
+        Self {
+            fps: 30,
+            wave_rows: 32,
+        }
+    }
+}
+
 /// P1-REMAINING-1 FIX: Track Ctrl+C double-tap to prevent accidental text loss
 #[derive(Clone)]
 pub struct ClearInputConfirm {

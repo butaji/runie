@@ -29,6 +29,17 @@ pub struct StatusItem {
 pub struct BackgroundJob {
     pub name: String,
     pub status: JobStatus,
+    pub progress: f64, // 0.0 to 1.0
+}
+
+impl Default for BackgroundJob {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            status: JobStatus::Running,
+            progress: 0.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,6 +77,9 @@ impl StatusBarViewModel {
             TuiMode::Onboarding => Self::onboarding_hotkeys(),
             TuiMode::HomeScreen => Self::home_hotkeys(),
             TuiMode::Plan => Self::plan_hotkeys(),
+            TuiMode::Subagents => Self::chat_hotkeys(),
+            TuiMode::Questionnaire => Self::chat_hotkeys(),
+            TuiMode::FullscreenViewer => Self::fullscreen_hotkeys(),
         }
     }
 
@@ -152,6 +166,14 @@ impl StatusBarViewModel {
         ]
     }
 
+    fn fullscreen_hotkeys() -> Vec<StatusItem> {
+        vec![
+            StatusItem { key: "q/Esc/Enter".to_string(), description: "close".to_string() },
+            StatusItem { key: "j/k".to_string(), description: "scroll".to_string() },
+            StatusItem { key: "g/G".to_string(), description: "top/bottom".to_string() },
+        ]
+    }
+
     fn center_text(&self) -> Option<String> {
         let model = self.current_model.as_deref()?;
         let tokens = self.session_token_usage.total_tokens;
@@ -183,6 +205,7 @@ impl StatusBar {
         self.background_jobs.push(BackgroundJob {
             name: name.to_string(),
             status: JobStatus::Running,
+            progress: 0.0,
         });
     }
 

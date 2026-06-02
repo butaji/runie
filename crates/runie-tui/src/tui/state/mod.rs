@@ -118,6 +118,20 @@ pub struct AppState {
     pub extension_registry: std::sync::Arc<runie_ext::ExtensionRegistry>,
     pub questionnaire: Option<crate::components::questionnaire_panel::QuestionnaireState>,
     pub subagent_panel: crate::components::subagent_panel::SubagentPanel,
+
+    // Fullscreen viewer state
+    pub fullscreen_content: Option<String>,
+    pub fullscreen_scroll_offset: usize,
+
+    // Layout mode for responsive terminal display
+    pub layout_mode: LayoutMode,
+
+    // Animation configuration
+    pub animation_config: AnimationConfig,
+
+    // UI toggles
+    pub compact_mode: bool,
+    pub multiline_input: bool,
 }
 
 impl Default for AppState {
@@ -161,6 +175,12 @@ impl Default for AppState {
             extension_registry: std::sync::Arc::new(runie_ext::ExtensionRegistry::new()),
             questionnaire: None,
             subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
+            fullscreen_content: None,
+            fullscreen_scroll_offset: 0,
+            layout_mode: LayoutMode::Fullscreen,
+            animation_config: AnimationConfig::default(),
+            compact_mode: false,
+            multiline_input: false,
         }
     }
 }

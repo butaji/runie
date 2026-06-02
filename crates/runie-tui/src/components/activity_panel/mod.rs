@@ -11,6 +11,7 @@ pub const ACTIVITY_PANEL_WIDTH: u16 = 30;
 #[derive(Debug, Clone, Default)]
 pub struct ActivityPanel {
     pub running_jobs: Vec<BackgroundJob>,
+    pub scroll_offset: usize,
 }
 
 impl ActivityPanel {
@@ -19,7 +20,10 @@ impl ActivityPanel {
     }
 
     pub fn with_jobs(jobs: Vec<BackgroundJob>) -> Self {
-        Self { running_jobs: jobs }
+        Self {
+            running_jobs: jobs,
+            scroll_offset: 0,
+        }
     }
 }
 
@@ -73,22 +77,44 @@ fn render_jobs(panel: &ActivityPanel, area: Rect, buf: &mut Buffer, colors: &The
         return;
     }
 
-    for job in &panel.running_jobs {
+    // Auto-scroll: if more jobs than fit, show latest ones
+    let visible_jobs: Vec<&BackgroundJob> = panel.running_jobs.iter()
+        .rev()
+        .skip(panel.scroll_offset)
+        .take((max_y - y) as usize + 1)
+        .collect();
+
+    use ratatui::text::Span;
+    for job in visible_jobs {
         if y > max_y {
             break;
         }
-        let (indicator, indicator_color) = match job.status {
-            crate::components::status_bar::JobStatus::Running => ('●', colors.accent_primary),
-            crate::components::status_bar::JobStatus::Complete => ('✓', colors.success),
-            crate::components::status_bar::JobStatus::Failed => ('✗', colors.error),
+
+        // Truncate job name
+        let name = if job.name.len() > 14 {
+            format!("{}...", &job.name[..11])
+        } else {
+            job.name.clone()
         };
-        let indicator_style = Style::default().fg(indicator_color);
-        let job_style = Style::default().fg(colors.text_secondary);
-        use ratatui::text::Span;
+
+        // Progress bar (3 chars)
+        let progress = job.progress.clamp(0.0, 1.0);
+        let filled = (progress * 3.0).round() as usize;
+        let bar: String = std::iter::repeat('█').take(filled)
+            .chain(std::iter::repeat('░').take(3 - filled))
+            .collect();
+
+        let pct = format!("{:3.0}%", progress * 100.0);
+
         let line = Line::from(vec![
-            Span::styled(format!("{} ", indicator), indicator_style),
-            Span::styled(&job.name, job_style),
+            Span::styled("◆ ", Style::default().fg(colors.accent_primary)),
+            Span::styled(name, Style::default().fg(colors.text_secondary)),
+            Span::styled("  ", Style::default()),
+            Span::styled(bar, Style::default().fg(colors.accent_primary)),
+            Span::styled(" ", Style::default()),
+            Span::styled(pct, Style::default().fg(colors.text_muted)),
         ]);
+
         buf.set_line(area.x + 1, y, &line, area.width.saturating_sub(2));
         y += 1;
     }
