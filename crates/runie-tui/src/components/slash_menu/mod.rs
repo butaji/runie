@@ -152,19 +152,30 @@ impl SlashMenu {
     }
 }
 
-fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color) {
-    for x in area.x..area.right() {
-        buf.get_mut(x, area.y).set_char(box_chars::H).set_fg(border);
-        buf.get_mut(x, area.bottom() - 1).set_char(box_chars::H).set_fg(border);
-    }
+fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color) {
+    // Clear background first to prevent content overlap
     for y in area.y..area.bottom() {
-        buf.get_mut(area.x, y).set_char(box_chars::V).set_fg(border);
-        buf.get_mut(area.right() - 1, y).set_char(box_chars::V).set_fg(border);
+        for x in area.x..area.right() {
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_char(' ');
+                cell.set_bg(bg);
+            }
+        }
     }
-    buf.get_mut(area.x, area.y).set_char(box_chars::TL_ALT);
-    buf.get_mut(area.right() - 1, area.y).set_char(box_chars::TR_ALT);
-    buf.get_mut(area.x, area.bottom() - 1).set_char(box_chars::BL_ALT);
-    buf.get_mut(area.right() - 1, area.bottom() - 1).set_char(box_chars::BR_ALT);
+    // Top horizontal divider
+    for x in area.x..area.right() {
+        if let Some(cell) = buf.cell_mut((x, area.y)) {
+            cell.set_char(box_chars::H);
+            cell.set_fg(border);
+        }
+    }
+    // Bottom horizontal divider
+    for x in area.x..area.right() {
+        if let Some(cell) = buf.cell_mut((x, area.bottom() - 1)) {
+            cell.set_char(box_chars::H);
+            cell.set_fg(border);
+        }
+    }
 }
 
 fn render_slash_item(cmd: &SlashMenuItem, is_selected: bool, inner_x: u16, inner_w: u16, y: u16, buf: &mut Buffer, accent: Color, text_primary: Color, text_muted: Color) {
@@ -174,10 +185,10 @@ fn render_slash_item(cmd: &SlashMenuItem, is_selected: bool, inner_x: u16, inner
     let label_x = inner_x + 2;
     let label_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
     buf.set_string(label_x, y, cmd.command, label_style);
-    let desc_x = label_x + cmd.command.len() as u16 + 2;
-    if desc_x < inner_x + inner_w {
-        buf.set_string(desc_x, y, cmd.description, Style::default().fg(text_muted));
-    }
+    // Right-align description
+    let desc_len = cmd.description.len() as u16;
+    let desc_x = inner_x + inner_w.saturating_sub(desc_len + 1);
+    buf.set_string(desc_x, y, cmd.description, Style::default().fg(text_muted));
 }
 
 impl Widget for &SlashMenu {
@@ -186,8 +197,9 @@ impl Widget for &SlashMenu {
         let text_primary = Color::White;
         let text_muted = Color::DarkGray;
         let accent = Color::Cyan;
-        render_slash_border(area, buf, border);
-        let title = format!(" Commands ({}) ", self.filtered_indices.len());
+        let bg = Color::Black;
+        render_slash_border(area, buf, border, bg);
+        let title = " Commands ";
         buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_muted)), area.width - 4);
         let inner_x = area.x + 2;
         let inner_w = area.width.saturating_sub(4);

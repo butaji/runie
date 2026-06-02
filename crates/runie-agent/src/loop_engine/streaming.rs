@@ -155,6 +155,20 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
     const EMIT_DEBOUNCE_MS: u64 = 100;
 
     match event {
+        LlmEvent::MessageStart { .. } => {
+            send_event(msg_tx, AgentEvent::MessageStart {
+                message: crate::events::AgentMessage {
+                    role: "assistant".to_string(),
+                    content: vec![crate::events::ContentPart::Text { text: String::new() }],
+                    timestamp: chrono::Utc::now().timestamp_millis(),
+                    usage: None,
+                    stop_reason: None,
+                    error_message: None,
+                    tool_calls: vec![],
+                },
+                turn,
+            }).await;
+        }
         LlmEvent::MessageDelta { content } => {
             text_buffer.push_str(&content);
             text_content.push_str(&content);
@@ -207,6 +221,33 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
                 context_window: 128_000,
             }).await;
             tracing::debug!("[ACTOR:AgentLoop] Usage: {} prompt, {} completion tokens", prompt_tokens, completion_tokens);
+        }
+        LlmEvent::ToolExecutionStart { tool_call_id, tool_name, args, .. } => {
+            let tool_args_str = args.to_string();
+            send_event(msg_tx, AgentEvent::ToolExecutionStart {
+                tool_call_id,
+                tool_name,
+                tool_args: tool_args_str,
+                turn,
+            }).await;
+        }
+        LlmEvent::ToolExecutionEnd { tool_call_id, result, .. } => {
+            let content_text = result.content.clone();
+            let tcid = tool_call_id.clone();
+            send_event(msg_tx, AgentEvent::ToolExecutionEnd {
+                tool_call_id: tcid.clone(),
+                tool_name: String::new(), // Will be filled by handler
+                tool_args: String::new(), // Will be filled by handler
+                result: crate::events::ToolResult {
+                    tool_call_id: tcid,
+                    tool_name: String::new(),
+                    input: serde_json::Value::Null,
+                    content: vec![crate::events::ContentPart::Text { text: content_text }],
+                    is_error: false,
+                },
+                duration_ms: 0,
+                turn,
+            }).await;
         }
         _ => {
             tracing::warn!("Unhandled LLM event variant in agent loop");

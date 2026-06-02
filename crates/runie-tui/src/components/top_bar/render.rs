@@ -42,7 +42,7 @@ pub fn render_top_bar(
         let tokens_str = format_token_count(vm.estimated_tokens);
         let text = format!("│ {} / {} │", tokens_str, window_str);
         let text_len = text.len() as u16;
-        let right_x = area.x + area.width.saturating_sub(text_len + 1);
+        let right_x = area.x + area.width.saturating_sub(text_len + 2);
 
         if right_x > x {
             buf.set_line(

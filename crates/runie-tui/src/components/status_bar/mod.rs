@@ -81,9 +81,11 @@ impl StatusBarViewModel {
 
     /// Hotkeys shown when agent is running
     fn agent_running_hotkeys() -> Vec<StatusItem> {
-        // Grok-style minimal hints
+        // Grok-style hints for agent running state
         vec![
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
+            StatusItem { key: "Ctrl+c".to_string(), description: "cancel".to_string() },
+            StatusItem { key: "Ctrl+Enter".to_string(), description: "interject".to_string() },
             StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
         ]
     }

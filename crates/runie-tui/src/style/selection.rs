@@ -1,7 +1,7 @@
 //! Selection, expansion, and status indicator characters.
 
-/// Selected item indicator (filled triangle)
-pub const SELECTED: char = '▸';
+/// Selected item indicator (right pointing)
+pub const SELECTED: char = '❯';
 
 /// Unselected item (space)
 pub const UNSELECTED: char = ' ';

@@ -38,6 +38,20 @@ pub enum FeedItem {
     SystemNotice { text: String },
     /// Separator between conversation turns showing elapsed time and metrics
     Separator { elapsed_secs: u64, tool_calls: usize, tokens_used: Option<usize> },
+    /// Tool execution in progress (shown during tool execution)
+    ToolRunning {
+        name: String,
+        args: String,
+        duration_ms: u64,
+        total_elapsed_ms: u64,
+        download_bytes: u64,
+    },
+    /// Tool execution completed
+    ToolComplete {
+        name: String,
+        result: String,
+        lines: Option<usize>,
+    },
 }
 
 impl FeedItem {
@@ -47,6 +61,8 @@ impl FeedItem {
             FeedItem::AssistantMessage { id, .. } => id,
             FeedItem::SystemNotice { .. } => "",
             FeedItem::Separator { .. } => "",
+            FeedItem::ToolRunning { .. } => "",
+            FeedItem::ToolComplete { .. } => "",
         }
     }
 
@@ -229,6 +245,26 @@ impl Feed {
         self.items.push(FeedItem::SystemNotice { text });
     }
 
+    /// Add a tool running status item.
+    pub fn add_tool_running(&mut self, name: String, args: String, duration_ms: u64, total_elapsed_ms: u64, download_bytes: u64) {
+        self.items.push(FeedItem::ToolRunning {
+            name,
+            args,
+            duration_ms,
+            total_elapsed_ms,
+            download_bytes,
+        });
+    }
+
+    /// Add a tool complete status item.
+    pub fn add_tool_complete(&mut self, name: String, result: String, lines: Option<usize>) {
+        self.items.push(FeedItem::ToolComplete {
+            name,
+            result,
+            lines,
+        });
+    }
+
     /// Remove last item if it's an assistant with empty text.
     pub fn remove_last_empty_assistant(&mut self) {
         if let Some(FeedItem::AssistantMessage { text, thoughts, tool_calls, .. }) = self.items.last() {
@@ -267,9 +303,12 @@ impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
             Error { message, .. } => Ok(FeedItem::SystemNotice { text: format!("Error: {}", message) }),
             Separator { elapsed_secs, tool_calls, tokens_used } =>
                 Ok(FeedItem::Separator { elapsed_secs, tool_calls, tokens_used }),
+            ToolRunning { name, args, duration_ms, total_elapsed_ms, download_bytes } =>
+                Ok(FeedItem::ToolRunning { name, args, duration_ms, total_elapsed_ms, download_bytes }),
+            ToolComplete { name, result, lines } =>
+                Ok(FeedItem::ToolComplete { name, result, lines }),
             // Filter out items now inline in AssistantMessage or UI-only
             Thought { .. } | ToolCall { .. } | Edit { .. }
-            | ToolRunning { .. } | ToolComplete { .. }
             | PlanStep { .. } | Interrupt | Rewind { .. } => Err(()),
         }
     }

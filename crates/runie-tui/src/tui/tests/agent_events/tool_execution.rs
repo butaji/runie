@@ -37,7 +37,7 @@ fn make_test_state() -> AppState {
 // ─── Tool start tests ─────────────────────────────────────────────────────────
 
 #[test]
-fn test_tool_start_adds_tool_call_message() {
+fn test_tool_start_adds_tool_running_message() {
     let mut state = make_test_state();
 
     handle_agent_event(
@@ -52,9 +52,9 @@ fn test_tool_start_adds_tool_call_message() {
 
     let has_tool = state.messages.iter().any(|m| matches!(
         m,
-        MessageItem::ToolCall { name, .. } if name == "call-1"
+        MessageItem::ToolRunning { name, args, .. } if name == "bash" && args == r#"{"command": "ls -la"}"#
     ));
-    assert!(has_tool, "should have ToolCall with id call-1");
+    assert!(has_tool, "should have ToolRunning with name bash");
 }
 
 #[test]
