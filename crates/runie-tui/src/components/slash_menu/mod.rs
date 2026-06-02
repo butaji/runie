@@ -22,14 +22,52 @@ pub struct SlashMenuItem {
 
 /// All available slash commands.
 pub static SLASH_COMMANDS: &[SlashMenuItem] = &[
+    // Session
     SlashMenuItem { command: "/new", aliases: &["/n"], description: "Start new session", category: "Session" },
     SlashMenuItem { command: "/clear", aliases: &["/c"], description: "Clear conversation", category: "Session" },
     SlashMenuItem { command: "/tree", aliases: &["/t"], description: "Open session tree", category: "Session" },
     SlashMenuItem { command: "/fork", aliases: &["/f"], description: "Fork at current position", category: "Session" },
+    SlashMenuItem { command: "/home", aliases: &[], description: "Return to welcome screen", category: "Session" },
+    SlashMenuItem { command: "/resume", aliases: &[], description: "Resume previous session", category: "Session" },
+    SlashMenuItem { command: "/sessions", aliases: &[], description: "Browse past sessions", category: "Session" },
+    SlashMenuItem { command: "/rename", aliases: &[], description: "Rename current session", category: "Session" },
+    SlashMenuItem { command: "/share", aliases: &[], description: "Share session", category: "Session" },
+    SlashMenuItem { command: "/session-info", aliases: &[], description: "Show session info", category: "Session" },
+    // Context
+    SlashMenuItem { command: "/context", aliases: &[], description: "View context usage", category: "Context" },
+    SlashMenuItem { command: "/compact", aliases: &[], description: "Compact conversation history", category: "Context" },
+    SlashMenuItem { command: "/compact-mode", aliases: &[], description: "Toggle denser UI layout", category: "Context" },
+    SlashMenuItem { command: "/rewind", aliases: &[], description: "Rewind conversation", category: "Context" },
+    SlashMenuItem { command: "/usage", aliases: &[], description: "Show token/credit usage", category: "Context" },
+    // Config
     SlashMenuItem { command: "/model", aliases: &["/m"], description: "Switch model", category: "Config" },
+    SlashMenuItem { command: "/onboard", aliases: &["/o"], description: "Configure provider", category: "Config" },
+    SlashMenuItem { command: "/theme", aliases: &[], description: "Switch theme", category: "Config" },
+    SlashMenuItem { command: "/status", aliases: &[], description: "Show current provider and model", category: "Config" },
+    SlashMenuItem { command: "/models", aliases: &[], description: "Show available models", category: "Config" },
+    // Tools
     SlashMenuItem { command: "/copy", aliases: &[], description: "Copy last response", category: "Tools" },
     SlashMenuItem { command: "/cost", aliases: &[], description: "Show cost stats", category: "Tools" },
-    SlashMenuItem { command: "/onboard", aliases: &["/o"], description: "Configure provider", category: "Config" },
+    SlashMenuItem { command: "/always-approve", aliases: &[], description: "Toggle auto-approve mode", category: "Tools" },
+    SlashMenuItem { command: "/multiline", aliases: &[], description: "Toggle multiline input", category: "Tools" },
+    // Permission
+    SlashMenuItem { command: "/plan", aliases: &[], description: "View current session plan", category: "Permission" },
+    SlashMenuItem { command: "/feedback", aliases: &[], description: "Send feedback", category: "Permission" },
+    // Utility
+    SlashMenuItem { command: "/btw", aliases: &[], description: "Ask side question", category: "Utility" },
+    SlashMenuItem { command: "/logout", aliases: &[], description: "Sign out", category: "Utility" },
+    // Extensions
+    SlashMenuItem { command: "/hooks", aliases: &[], description: "Open extensions (Hooks)", category: "Extensions" },
+    SlashMenuItem { command: "/plugins", aliases: &[], description: "Open extensions (Plugins)", category: "Extensions" },
+    SlashMenuItem { command: "/skills", aliases: &[], description: "Open extensions (Skills)", category: "Extensions" },
+    SlashMenuItem { command: "/mcps", aliases: &[], description: "Open extensions (MCP Servers)", category: "Extensions" },
+    // Shell
+    SlashMenuItem { command: "/flush", aliases: &[], description: "Flush memory to disk", category: "Shell" },
+    SlashMenuItem { command: "/memory", aliases: &[], description: "Search memory", category: "Shell" },
+    SlashMenuItem { command: "/dream", aliases: &[], description: "Memory consolidation", category: "Shell" },
+    SlashMenuItem { command: "/imagine", aliases: &[], description: "Generate image", category: "Shell" },
+    SlashMenuItem { command: "/imagine-video", aliases: &[], description: "Generate video", category: "Shell" },
+    // App
     SlashMenuItem { command: "/quit", aliases: &["/q", "/exit"], description: "Exit runie", category: "App" },
     SlashMenuItem { command: "/help", aliases: &["/h", "/?"], description: "Show help", category: "App" },
 ];

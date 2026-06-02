@@ -32,6 +32,7 @@ pub enum PaletteCommand {
     Theme,
     Help,
     Quit,
+    Extensions,
     Cancel,
 }
 
@@ -67,6 +68,7 @@ impl PaletteCommandDef {
             "theme" => PaletteCommand::Theme,
             "help" => PaletteCommand::Help,
             "quit" => PaletteCommand::Quit,
+            "extensions" => PaletteCommand::Extensions,
             _ => PaletteCommand::Cancel,
         }
     }
@@ -108,6 +110,7 @@ impl CommandPalette {
             // ─── Tools ───────────────────────────────────────────────────
             PaletteCommandDef { id: "copy".into(), label: "Copy Last Response".into(), description: "Copy last response to clipboard".into(), category: "tools".into(), aliases: vec!["copy".into()], keybinding: Some("Ctrl+Y".into()), requires_args: false, arg_hint: "".into() },
             PaletteCommandDef { id: "cost".into(), label: "Show Cost".into(), description: "Show cost statistics".into(), category: "tools".into(), aliases: vec!["cost".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
+            PaletteCommandDef { id: "extensions".into(), label: "Extensions".into(), description: "Open extensions modal".into(), category: "tools".into(), aliases: vec!["ext".into(), "extensions".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
             // ─── App ─────────────────────────────────────────────────────
             PaletteCommandDef { id: "help".into(), label: "Help".into(), description: "Show available commands".into(), category: "app".into(), aliases: vec!["h".into(), "help".into(), "?".into()], keybinding: None, requires_args: false, arg_hint: "".into() },
             PaletteCommandDef { id: "quit".into(), label: "Quit".into(), description: "Exit the application".into(), category: "app".into(), aliases: vec!["q".into(), "quit".into(), "exit".into()], keybinding: Some("Ctrl+Q".into()), requires_args: false, arg_hint: "".into() },

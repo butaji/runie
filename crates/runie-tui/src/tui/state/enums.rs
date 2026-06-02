@@ -153,6 +153,24 @@ pub enum Msg {
     OpenContextUsageModal,
     CloseContextUsageModal,
     ShowHelp,
+    CollapseEntry,
+    ExpandEntry,
+    ToggleFoldEntry,
+    ToggleAllEntries,
+    CopyBlockContent,
+    ToggleRawMarkdown,
+    FocusPrompt,
+    GoHome,
+    ToggleAutoApprove,
+    OpenExtensionsModal,
+    CloseExtensionsModal,
+    ExtensionsModalUp,
+    ExtensionsModalDown,
+    ExtensionsModalSelect,
+    ExtensionsModalLeft,
+    ExtensionsModalRight,
+    ExtensionsModalSearchInput(char),
+    ExtensionsModalSearchBackspace,
 }
 
 impl PartialEq for Msg {
@@ -181,6 +199,7 @@ impl PartialEq for Msg {
             (Msg::SetCurrentModel(a), Msg::SetCurrentModel(b)) => a == b,
             (Msg::SetMockMode(a), Msg::SetMockMode(b)) => a == b,
             (Msg::UpdateTopBarContext { .. }, Msg::UpdateTopBarContext { .. }) => true,
+            (Msg::ExtensionsModalSearchInput(a), Msg::ExtensionsModalSearchInput(b)) => a == b,
             _ => false,
         }
     }
@@ -213,6 +232,12 @@ impl Msg {
                 | Msg::TogglePermissionMode | Msg::ClearAlwaysApprove | Msg::PlanModeApprove | Msg::PlanModeDeny | Msg::PlanModeViewNext | Msg::PlanModeViewPrev | Msg::ToggleScrollFocus
                 | Msg::OpenContextUsageModal | Msg::CloseContextUsageModal
                 | Msg::ShowHelp
+                | Msg::CollapseEntry | Msg::ExpandEntry | Msg::ToggleFoldEntry | Msg::ToggleAllEntries
+                | Msg::OpenExtensionsModal | Msg::CloseExtensionsModal | Msg::ExtensionsModalUp
+                | Msg::ExtensionsModalDown | Msg::ExtensionsModalSelect | Msg::ExtensionsModalLeft
+                | Msg::ExtensionsModalRight | Msg::ExtensionsModalSearchBackspace
+                | Msg::CopyBlockContent | Msg::ToggleRawMarkdown | Msg::FocusPrompt | Msg::GoHome
+                | Msg::ToggleAutoApprove
         )
     }
 }

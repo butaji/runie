@@ -256,7 +256,7 @@ fn test_e2e_palette_flow_copy() {
     let mut palette = CommandPalette::new();
 
     // Add assistant message with content
-    state.messages.push(MessageItem::Assistant { text: "Hello".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hello".to_string(), model: None, timestamp: None, expanded: false });
 
     // Use DirectCommand to bypass clipboard output in tests
     update(&mut state, &mut palette, Msg::DirectCommand(crate::components::PaletteCommand::CopyLast));
@@ -302,7 +302,7 @@ fn test_e2e_slash_new_clears_and_starts_session() {
 
     // Add messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false });
 
     // Slash new
     update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::New));
@@ -334,7 +334,7 @@ fn test_e2e_slash_clear_clears_messages() {
 
     // Add messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false });
 
     // Slash clear
     update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Clear));

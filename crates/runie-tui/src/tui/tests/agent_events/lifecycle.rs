@@ -142,6 +142,7 @@ fn test_agent_end_removes_empty_placeholder() {
         text: String::new(),
         model: Some("test-model".to_string()),
         timestamp: None,
+        expanded: false,
     });
 
     handle_agent_event(
@@ -170,6 +171,7 @@ fn test_agent_end_preserves_non_empty_placeholder() {
         text: "Hello".to_string(),
         model: Some("test-model".to_string()),
         timestamp: None,
+        expanded: false,
     });
 
     handle_agent_event(

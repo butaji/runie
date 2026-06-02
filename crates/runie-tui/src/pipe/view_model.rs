@@ -64,6 +64,8 @@ fn build_top_bar(state: &AppState) -> TopBarViewModel {
         path: state.context.path.clone(),
         context_window: state.top_bar.context_window.unwrap_or(128_000),
         estimated_tokens: state.top_bar.estimated_tokens.unwrap_or(0),
+        agent_running: state.agent_running,
+        braille_frame: state.animation.braille_frame,
     }
 }
 

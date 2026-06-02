@@ -40,6 +40,7 @@ use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
 use super::types::{MessageItem, PlanStatus};
 use super::feed::FeedItem;
+use super::MessageColors;
 
 /// Determine if cursor should be shown for a message
 pub fn should_show_cursor(
@@ -163,13 +164,14 @@ pub fn render_single_msg(
     agent_running: bool,
     thought_duration: Option<f32>,
     turn_complete: Option<u64>,
+    feed_tool_bar: ratatui::style::Color,
 ) -> u16 {
     match msg {
         MessageItem::User { text, timestamp, .. } => {
             render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true, &[], accent_secondary)
         }
         MessageItem::Thought { duration_secs, .. } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -177,8 +179,19 @@ pub fn render_single_msg(
         MessageItem::Separator { elapsed_secs, tool_calls, tokens_used } => {
             render_separator(*elapsed_secs, *tool_calls, *tokens_used, true, area, row, margin_x, buf, text_dim)
         }
-        MessageItem::ToolCall { name, args, result, is_error } => {
-            render_tool_call_msg(name, args, result.as_deref(), *is_error, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, success, error)
+        MessageItem::ToolCall { name, args, result, is_error: _ } => {
+            let colors = MessageColors {
+                accent_primary: _accent_primary,
+                accent_secondary,
+                accent_tertiary: ratatui::style::Color::Reset,
+                text_secondary,
+                text_muted,
+                text_dim,
+                success,
+                error,
+                code_path,
+            };
+            render_tool_call_msg(name, args, result.as_deref(), area, buf, &colors, feed_tool_bar, theme)
         }
         MessageItem::Edit { filename, diff } => {
             render_edit_msg(filename, diff.as_deref().unwrap_or(""), area, row, margin_x, text_x, buf, text_secondary, code_path)
@@ -241,12 +254,14 @@ pub fn render_single_msg_feed(
         FeedItem::UserMessage { text, timestamp, .. } => {
             render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
-        FeedItem::AssistantMessage { text, thoughts, tool_calls: _, timestamp, turn_duration, .. } => {
+        FeedItem::AssistantMessage { text, thoughts, tool_calls, timestamp, turn_duration, .. } => {
             // Use first thought's duration if provided, otherwise use the passed thought_duration
             let effective_thought_duration = thoughts.first().map(|t| t.duration).or(thought_duration);
             // Use turn_duration from FeedItem, or passed turn_complete (converted to f32)
             let effective_turn_complete = turn_duration.map(|d| d as u64).or(turn_complete.map(|d| d as u64));
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item)
+            // Tool bar color is purple #6B50FF (same as feed.tool.bar)
+            let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF);
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item, tool_calls, tool_bar_color)
         }
         FeedItem::SystemNotice { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)

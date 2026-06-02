@@ -5,7 +5,7 @@ fn test_clear_chat_resets_messages() {
     let mut state = make_state();
     let mut palette = CommandPalette::new();
     state.messages.push(MessageItem::User { text: "hello".to_string(), model: Some("You".to_string()), timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false });
     state.messages.push(MessageItem::System { text: "system".to_string() });
 
     update(&mut state, &mut palette, Msg::ClearChat);
@@ -19,7 +19,7 @@ fn test_clear_chat_during_agent_run() {
     let mut palette = CommandPalette::new();
     state.agent_running = true;
     state.messages.push(MessageItem::User { text: "hello".to_string(), model: Some("You".to_string()), timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false });
 
     update(&mut state, &mut palette, Msg::ClearChat);
 

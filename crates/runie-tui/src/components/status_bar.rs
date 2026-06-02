@@ -349,10 +349,13 @@ mod tests_status_bar_onboarding {
             text_dim: ratatui::style::Color::DarkGray,
             text_muted: ratatui::style::Color::DarkGray,
             accent_primary: ratatui::style::Color::Blue,
+            accent_secondary: ratatui::style::Color::Cyan,
             border_unfocused: ratatui::style::Color::DarkGray,
             success: ratatui::style::Color::Green,
             error: ratatui::style::Color::Red,
             syntax_phase: ratatui::style::Color::Yellow,
+            text_plan: ratatui::style::Color::Magenta,
+            feed_tool_bar: ratatui::style::Color::LightBlue,
         }
     }
 

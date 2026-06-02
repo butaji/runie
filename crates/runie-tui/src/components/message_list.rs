@@ -79,20 +79,21 @@ impl MessageList {
             text: text.to_string(),
             model,
             timestamp: None,
+            expanded: true,
         });
     }
 }
 
-struct MessageColors {
-    accent_primary: ratatui::style::Color,
-    accent_secondary: ratatui::style::Color,
-    accent_tertiary: ratatui::style::Color,
-    text_secondary: ratatui::style::Color,
-    text_muted: ratatui::style::Color,
-    text_dim: ratatui::style::Color,
-    success: ratatui::style::Color,
-    error: ratatui::style::Color,
-    code_path: ratatui::style::Color,
+pub(crate) struct MessageColors {
+    pub accent_primary: ratatui::style::Color,
+    pub accent_secondary: ratatui::style::Color,
+    pub accent_tertiary: ratatui::style::Color,
+    pub text_secondary: ratatui::style::Color,
+    pub text_muted: ratatui::style::Color,
+    pub text_dim: ratatui::style::Color,
+    pub success: ratatui::style::Color,
+    pub error: ratatui::style::Color,
+    pub code_path: ratatui::style::Color,
 }
 
 fn extract_message_colors(theme: &ThemeWrapper) -> MessageColors {
@@ -199,18 +200,18 @@ mod tests {
     fn test_update_last_assistant() {
         let mut list = MessageList::default();
         list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-        list.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
+        list.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false });
         list.update_last_assistant("Hi there");
-        assert_eq!(list.messages.last(), Some(&MessageItem::Assistant { text: "Hi there".to_string(), model: Some("gpt-4".to_string()), timestamp: None }));
+        assert_eq!(list.messages.last(), Some(&MessageItem::Assistant { text: "Hi there".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false }));
     }
 
     #[test]
     fn test_add_or_update_assistant_updates_existing() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::Assistant { text: "Partial".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
+        list.messages.push(MessageItem::Assistant { text: "Partial".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false });
         list.add_or_update_assistant("Complete response", Some("gpt-4".to_string()));
         assert_eq!(list.messages.len(), 1);
-        assert_eq!(list.messages[0], MessageItem::Assistant { text: "Complete response".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
+        assert_eq!(list.messages[0], MessageItem::Assistant { text: "Complete response".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false });
     }
 
     #[test]
@@ -219,13 +220,13 @@ mod tests {
         list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
         list.add_or_update_assistant("Response", Some("gpt-4".to_string()));
         assert_eq!(list.messages.len(), 2);
-        assert_eq!(list.messages[1], MessageItem::Assistant { text: "Response".to_string(), model: Some("gpt-4".to_string()), timestamp: None });
+        assert_eq!(list.messages[1], MessageItem::Assistant { text: "Response".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false });
     }
 
     #[test]
     fn test_has_assistant_in_progress() {
         let mut list = MessageList::default();
-        list.messages.push(MessageItem::Assistant { text: "Thinking...".to_string(), model: None, timestamp: None });
+        list.messages.push(MessageItem::Assistant { text: "Thinking...".to_string(), model: None, timestamp: None, expanded: false });
         assert!(list.has_assistant_in_progress());
         list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
         assert!(!list.has_assistant_in_progress());
@@ -310,6 +311,7 @@ mod tests {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            expanded: true,
         }
     }
 
@@ -321,6 +323,7 @@ mod tests {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            expanded: true,
         }
     }
 
@@ -429,6 +432,7 @@ mod tests {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            expanded: true,
         };
         let (row_text, _, _) = render_feed_item_not_last(&item);
         assert!(row_text.contains("Thinking"), "Placeholder should show 'Thinking...', got: '{}'", row_text.trim());
@@ -456,14 +460,15 @@ mod tests {
             ratatui::style::Color::Blue,
             '⠋',
             false,
-            false,
+            false, // cursor_visible
+            false, // show_spinner
             '⠏',
             &AnimationState::default(),
             &mut wrap_cache,
-            true, // agent_running = true
-            None,
-            None,
-            false, // is_last_item = false - this is the key!
+            true, // agent_running
+            None, // thought_duration
+            None, // turn_complete
+            false, // is_last_item
         );
 
         let row_text: String = (0..area.width)

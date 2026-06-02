@@ -32,6 +32,7 @@ pub enum FeedItem {
         tool_calls: Vec<ToolCall>,
         timestamp: Option<String>,
         turn_duration: Option<f32>,
+        expanded: bool,
     },
     SystemNotice { text: String },
     /// Separator between conversation turns showing elapsed time and metrics
@@ -110,6 +111,7 @@ impl Feed {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            expanded: true,
         });
         self.seen_ids.insert(id);
         let idx = self.items.len().saturating_sub(1);
@@ -256,6 +258,7 @@ impl TryFrom<crate::components::message_list::MessageItem> for FeedItem {
                 tool_calls: Vec::new(),
                 timestamp,
                 turn_duration: None,
+                expanded: true,
             }),
             System { text } => Ok(FeedItem::SystemNotice { text }),
             Error { message, .. } => Ok(FeedItem::SystemNotice { text: format!("Error: {}", message) }),
@@ -440,7 +443,7 @@ mod tests {
         use crate::components::message_list::MessageItem;
         let messages = vec![
             MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None },
-            MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None },
+            MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false },
             MessageItem::System { text: "System notice".to_string() },
             // These should be filtered out (now inline in AssistantMessage)
             MessageItem::Thought { duration_secs: 1.0, text: String::new() },
@@ -459,7 +462,7 @@ mod tests {
         use crate::components::message_list::MessageItem;
         let messages = vec![
             MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None },
-            MessageItem::Assistant { text: "I'll help you".to_string(), model: None, timestamp: None },
+            MessageItem::Assistant { text: "I'll help you".to_string(), model: None, timestamp: None, expanded: false },
         ];
         let mut feed = Feed::from(messages);
         // Simulate adding thoughts and tool calls inline (as done during streaming)

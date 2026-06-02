@@ -2,7 +2,7 @@
 //!
 //! Phase 2 of architecture migration: decompose monolithic AppState into focused sub-states.
 
-use crate::components::{DiffViewer, PaletteCommand, ModelPicker};
+use crate::components::{DiffViewer, PaletteCommand, ModelPicker, ExtensionsModal};
 use runie_agent::{AgentEvent, AgentMessage, PermissionDecision};
 use crate::components::PermissionAction;
 pub use crate::components::onboarding::{Onboarding, OnboardingStep};
@@ -97,6 +97,7 @@ pub struct AppState {
     pub plan_modal: crate::components::PlanModal,
     pub context_usage_modal: crate::components::ContextUsageModal,
     pub model_picker: Option<ModelPicker>,
+    pub extensions_modal: Option<ExtensionsModal>,
     pub diff_viewer: Option<DiffViewer>,
     pub session_tree: crate::components::SessionTreeNavigator,
 
@@ -112,6 +113,9 @@ pub struct AppState {
     pub last_turn_tokens: Option<usize>,
     pub last_turn_tool_calls: Option<usize>,
     pub turn_success: Option<bool>,
+
+    // Extension registry for plugins
+    pub extension_registry: std::sync::Arc<runie_ext::ExtensionRegistry>,
 }
 
 impl Default for AppState {
@@ -143,13 +147,16 @@ impl Default for AppState {
             file_picker: crate::components::FilePicker::new(),
             plan_modal: crate::components::PlanModal::new(),
             context_usage_modal: crate::components::ContextUsageModal::new(),
-            model_picker: None, diff_viewer: None,
+            model_picker: None,
+            extensions_modal: None,
+            diff_viewer: None,
             session_tree: crate::components::SessionTreeNavigator::new(),
             animation: AnimationState::default(), onboarding: None,
             mode: TuiMode::HomeScreen, top_bar: TopBarState::default(),
             current_theme: "crush_grok".to_string(),
             last_turn_duration_secs: None, last_turn_tokens: None,
             last_turn_tool_calls: None, turn_success: None,
+            extension_registry: std::sync::Arc::new(runie_ext::ExtensionRegistry::new()),
         }
     }
 }

@@ -148,6 +148,10 @@ fn key_to_overlay_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Opti
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         return None;
     }
+    // Route to extensions modal when active
+    if state.extensions_modal.is_some() {
+        return key_to_extensions_modal_msg(key);
+    }
     // Route to model picker specific messages when model_picker is active
     if state.model_picker.is_some() {
         return key_to_model_picker_msg(key);
@@ -168,6 +172,20 @@ fn key_to_model_picker_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
         KeyCode::Down | KeyCode::Char('j') => Some(Msg::SelectDown),
         KeyCode::Enter => Some(Msg::SelectConfirm),
         KeyCode::Char('d') => Some(Msg::SelectToggleDetails),
+        _ => None,
+    }
+}
+
+fn key_to_extensions_modal_msg(key: crossterm::event::KeyEvent) -> Option<Msg> {
+    match key.code {
+        KeyCode::Esc => Some(Msg::CloseModal),
+        KeyCode::Up | KeyCode::Char('k') => Some(Msg::ExtensionsModalUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Msg::ExtensionsModalDown),
+        KeyCode::Enter => Some(Msg::ExtensionsModalSelect),
+        KeyCode::Left | KeyCode::Char('h') => Some(Msg::ExtensionsModalLeft),
+        KeyCode::Right | KeyCode::Char('l') => Some(Msg::ExtensionsModalRight),
+        KeyCode::Backspace => Some(Msg::ExtensionsModalSearchBackspace),
+        KeyCode::Char(c) => Some(Msg::ExtensionsModalSearchInput(c)),
         _ => None,
     }
 }

@@ -51,6 +51,15 @@ pub fn update(state: &mut AppState, palette: &mut CommandPalette, msg: crate::tu
         return handle_nav(&msg, state);
     }
 
+    // Extensions Modal
+    if matches!(msg, Msg::OpenExtensionsModal | Msg::CloseExtensionsModal |
+        Msg::ExtensionsModalUp | Msg::ExtensionsModalDown | Msg::ExtensionsModalSelect |
+        Msg::ExtensionsModalLeft | Msg::ExtensionsModalRight |
+        Msg::ExtensionsModalSearchInput(_) | Msg::ExtensionsModalSearchBackspace)
+    {
+        return handle_extensions_modal(state, &msg);
+    }
+
     // State handlers
     return handle_state_msg(state, palette, msg);
 }
@@ -114,5 +123,60 @@ fn handle_toggle_sidebar(state: &mut AppState) -> Vec<UiCmd> {
 
 fn handle_toggle_thoughts(state: &mut AppState) -> Vec<UiCmd> {
     state.show_thoughts = !state.show_thoughts;
+    vec![]
+}
+
+fn handle_extensions_modal(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
+    use crate::tui::state::Msg;
+    use crate::components::extensions_modal::ExtensionTab;
+
+    let modal = match &mut state.extensions_modal {
+        Some(m) => m,
+        None => return vec![],
+    };
+
+    match msg {
+        Msg::OpenExtensionsModal => {
+            // Already open
+        }
+        Msg::CloseExtensionsModal => {
+            state.extensions_modal = None;
+            state.mode = crate::tui::TuiMode::Chat;
+        }
+        Msg::ExtensionsModalUp => {
+            modal.move_up();
+        }
+        Msg::ExtensionsModalDown => {
+            modal.move_down();
+        }
+        Msg::ExtensionsModalSelect => {
+            // Handle selection (install/update action)
+        }
+        Msg::ExtensionsModalLeft => {
+            // Switch to previous tab
+            let tabs = ExtensionTab::all();
+            if let Some(current_idx) = tabs.iter().position(|t| *t == modal.active_tab) {
+                if current_idx > 0 {
+                    modal.set_tab(tabs[current_idx - 1]);
+                }
+            }
+        }
+        Msg::ExtensionsModalRight => {
+            // Switch to next tab
+            let tabs = ExtensionTab::all();
+            if let Some(current_idx) = tabs.iter().position(|t| *t == modal.active_tab) {
+                if current_idx < tabs.len() - 1 {
+                    modal.set_tab(tabs[current_idx + 1]);
+                }
+            }
+        }
+        Msg::ExtensionsModalSearchInput(c) => {
+            modal.search_query.push(*c);
+        }
+        Msg::ExtensionsModalSearchBackspace => {
+            modal.search_query.pop();
+        }
+        _ => {}
+    }
     vec![]
 }

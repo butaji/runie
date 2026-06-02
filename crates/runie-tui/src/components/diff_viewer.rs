@@ -76,17 +76,17 @@ fn compute_diff_lines(old_content: &str, new_content: &str) -> Vec<DiffLine> {
     for i in 0..max_lines {
         match (old_lines.get(i), new_lines.get(i)) {
             (Some(old), Some(new)) if old == new => {
-                diff.push(DiffLine::Context(old.to_string()));
+                diff.push(DiffLine::Context(old.to_string(), i + 1, i + 1));
             }
             (Some(old), Some(new)) => {
-                diff.push(DiffLine::Removed(old.to_string()));
-                diff.push(DiffLine::Added(new.to_string()));
+                diff.push(DiffLine::Removed(old.to_string(), i + 1, 0));
+                diff.push(DiffLine::Added(new.to_string(), 0, i + 1));
             }
             (Some(old), None) => {
-                diff.push(DiffLine::Removed(old.to_string()));
+                diff.push(DiffLine::Removed(old.to_string(), i + 1, 0));
             }
             (None, Some(new)) => {
-                diff.push(DiffLine::Added(new.to_string()));
+                diff.push(DiffLine::Added(new.to_string(), 0, i + 1));
             }
             (None, None) => break,
         }
@@ -133,7 +133,11 @@ fn render_diff_lines(
     let removed_color: Color = theme.color("diff.removed").into();
     let added_color: Color = theme.color("diff.added").into();
     let context_color: Color = theme.color("text.secondary").into();
+    let removed_bg: Color = theme.color("diff.removed_bg").into();
+    let added_bg: Color = theme.color("diff.added_bg").into();
+    let bg_panel: Color = theme.color("bg.panel").into();
 
+    let gutter_width = 5u16; // Line numbers: right-aligned, 4 chars + 1 space
     let content_start_y = area.y + 1;
     let max_visible = area.height.saturating_sub(2) as usize;
 
@@ -147,7 +151,7 @@ fn render_diff_lines(
             break;
         }
         let line = &diff[line_idx];
-        render_diff_line(buf, area, y, line, removed_color, added_color, context_color);
+        render_diff_line(buf, area, y, line, removed_color, added_color, context_color, removed_bg, added_bg, bg_panel, gutter_width);
     }
 }
 
@@ -159,26 +163,58 @@ fn render_diff_line(
     removed_color: Color,
     added_color: Color,
     context_color: Color,
+    removed_bg: Color,
+    added_bg: Color,
+    bg_panel: Color,
+    gutter_width: u16,
 ) {
-    let (prefix, text, color) = match line {
-        DiffLine::Removed(text) => ("-", text.as_str(), removed_color),
-        DiffLine::Added(text) => ("+", text.as_str(), added_color),
-        DiffLine::Context(text) => (" ", text.as_str(), context_color),
+    let (prefix, text, color, bg_color, old_line, new_line) = match line {
+        DiffLine::Removed(text, ol, _) => ("-", text.as_str(), removed_color, removed_bg, Some(*ol), None),
+        DiffLine::Added(text, _, nl) => ("+", text.as_str(), added_color, added_bg, None, Some(*nl)),
+        DiffLine::Context(text, ol, _) => (" ", text.as_str(), context_color, bg_panel, Some(*ol), None),
     };
-    if let Some(cell) = buf.cell_mut((area.x + 1, y)) {
-        cell.set_char(prefix.chars().next().unwrap_or(' '));
-        cell.set_style(Style::default().fg(color));
+
+    // Apply background color to the entire line
+    let line_width = area.width - 1; // -1 for left border
+    for x in area.x..area.x + line_width {
+        if let Some(cell) = buf.cell_mut((x, y)) {
+            cell.set_style(Style::default().bg(bg_color));
+        }
     }
-    let max_text_width = (area.width - 4) as usize;
+
+    // Render right-aligned line number in gutter
+    let gutter_end = area.x + gutter_width;
+    let line_num = old_line.or(new_line);
+    if let Some(num) = line_num {
+        let num_str = num.to_string();
+        let num_len = num_str.len() as u16;
+        let num_x = gutter_end.saturating_sub(num_len);
+        for (i, c) in num_str.chars().enumerate() {
+            if let Some(cell) = buf.cell_mut((num_x + i as u16, y)) {
+                cell.set_char(c);
+                cell.set_style(Style::default().fg(color).bg(bg_color));
+            }
+        }
+    }
+
+    // Prefix char after gutter
+    if let Some(cell) = buf.cell_mut((gutter_end, y)) {
+        cell.set_char(prefix.chars().next().unwrap_or(' '));
+        cell.set_style(Style::default().fg(color).bg(bg_color));
+    }
+
+    // Text content
+    let text_x = gutter_end + 1;
+    let max_text_width = (area.width - gutter_width - 3) as usize;
     let display_text = if text.chars().count() > max_text_width {
         let truncated: String = text.chars().take(max_text_width).collect();
         truncated
     } else {
         text.to_string()
     };
-    let content_span = Span::styled(format!(" {}", display_text), Style::default().fg(color));
+    let content_span = Span::styled(format!(" {}", display_text), Style::default().fg(color).bg(bg_color));
     let line = Line::from(vec![content_span]);
-    buf.set_line(area.x + 2, y, &line, area.width - 4);
+    buf.set_line(text_x, y, &line, area.width - gutter_width - 2);
 }
 
 fn render_footer(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
@@ -192,9 +228,9 @@ fn render_footer(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DiffLine {
-    Removed(String),
-    Added(String),
-    Context(String),
+    Removed(String, usize, usize), // text, old_line, new_line
+    Added(String, usize, usize),   // text, old_line, new_line
+    Context(String, usize, usize), // text, old_line, new_line
 }
 
 #[allow(clippy::unwrap_used)]
@@ -223,8 +259,8 @@ mod tests {
         );
         let result = diff.compute_diff();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], DiffLine::Context("hello".to_string()));
-        assert_eq!(result[1], DiffLine::Context("world".to_string()));
+        assert_eq!(result[0], DiffLine::Context("hello".to_string(), 1, 1));
+        assert_eq!(result[1], DiffLine::Context("world".to_string(), 2, 2));
     }
 
     #[test]
@@ -236,8 +272,8 @@ mod tests {
         );
         let result = diff.compute_diff();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], DiffLine::Removed("hello".to_string()));
-        assert_eq!(result[1], DiffLine::Added("hello world".to_string()));
+        assert_eq!(result[0], DiffLine::Removed("hello".to_string(), 1, 0));
+        assert_eq!(result[1], DiffLine::Added("hello world".to_string(), 0, 1));
     }
 
     #[test]
@@ -249,9 +285,9 @@ mod tests {
         );
         let result = diff.compute_diff();
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0], DiffLine::Context("line1".to_string()));
-        assert_eq!(result[1], DiffLine::Added("line2".to_string()));
-        assert_eq!(result[2], DiffLine::Added("line3".to_string()));
+        assert_eq!(result[0], DiffLine::Context("line1".to_string(), 1, 1));
+        assert_eq!(result[1], DiffLine::Added("line2".to_string(), 0, 2));
+        assert_eq!(result[2], DiffLine::Added("line3".to_string(), 0, 3));
     }
 
     #[test]
@@ -263,9 +299,9 @@ mod tests {
         );
         let result = diff.compute_diff();
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0], DiffLine::Context("line1".to_string()));
-        assert_eq!(result[1], DiffLine::Removed("line2".to_string()));
-        assert_eq!(result[2], DiffLine::Removed("line3".to_string()));
+        assert_eq!(result[0], DiffLine::Context("line1".to_string(), 1, 1));
+        assert_eq!(result[1], DiffLine::Removed("line2".to_string(), 2, 0));
+        assert_eq!(result[2], DiffLine::Removed("line3".to_string(), 3, 0));
     }
 
     #[test]

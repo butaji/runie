@@ -57,7 +57,7 @@ mod enter_executes_selected_tests {
     fn test_clear_chat_command_clears_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None, expanded: false });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::ClearChat);
 
@@ -115,7 +115,7 @@ mod enter_executes_selected_tests {
     #[test]
     fn test_copy_last_command_adds_confirmation() {
         let mut state = make_state();
-        state.messages.push(MessageItem::Assistant { text: "response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "response".to_string(), model: None, timestamp: None, expanded: false });
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::CopyLast);
 

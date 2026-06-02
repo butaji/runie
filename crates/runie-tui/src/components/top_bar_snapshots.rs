@@ -9,6 +9,7 @@ fn make_test_colors() -> ThemeColors {
         bg_base: Color::Black,
         bg_panel: Color::Black,
         accent_primary: Color::White,
+        accent_secondary: Color::Blue,
         text_primary: Color::White,
         text_secondary: Color::White,
         text_dim: Color::Gray,
@@ -17,6 +18,8 @@ fn make_test_colors() -> ThemeColors {
         success: Color::Green,
         error: Color::Red,
         syntax_phase: Color::Yellow,
+        text_plan: Color::Cyan,
+        feed_tool_bar: Color::Magenta,
     }
 }
 
@@ -43,6 +46,8 @@ fn test_top_bar_snapshot_empty() {
         path: String::new(),
         context_window: 128_000,
         estimated_tokens: 0,
+        agent_running: false,
+        braille_frame: 0,
     };
 
     let rendered = render_to_string(&vm, 80);
@@ -57,6 +62,8 @@ fn test_top_bar_snapshot_with_repo() {
         path: String::new(),
         context_window: 128_000,
         estimated_tokens: 0,
+        agent_running: false,
+        braille_frame: 0,
     };
 
     let rendered = render_to_string(&vm, 80);
@@ -72,6 +79,8 @@ fn test_top_bar_snapshot_full() {
 
         context_window: 200_000,
         estimated_tokens: 50_000,
+        agent_running: false,
+        braille_frame: 0,
     };
 
     let rendered = render_to_string(&vm, 80);
@@ -86,6 +95,8 @@ fn test_top_bar_snapshot_narrow() {
         path: "src".to_string(),
         context_window: 128_000,
         estimated_tokens: 40,
+        agent_running: false,
+        braille_frame: 0,
     };
 
     // Narrow terminal width - right side may be omitted
@@ -102,6 +113,8 @@ fn test_top_bar_snapshot_high_tokens() {
 
         context_window: 100_000,
         estimated_tokens: 95_000, // Near 100%
+        agent_running: false,
+        braille_frame: 0,
     };
 
     let rendered = render_to_string(&vm, 80);

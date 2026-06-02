@@ -396,6 +396,10 @@ impl RenderPipe {
             picker.render_ref(overlay_area, &mut overlay_buf, theme);
         }
 
+        if let Some(ref ext_modal) = state.extensions_modal {
+            ext_modal.render_ref(overlay_area, &mut overlay_buf, theme);
+        }
+
         Self::blit_buffer(buf, area, overlay_area, &overlay_buf);
     }
 

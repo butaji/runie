@@ -90,8 +90,17 @@ pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd>
         Msg::Submit => submit::handle_submit(state),
         Msg::Interject => submit::handle_interject(state),
         Msg::TogglePermissionMode => { toggle_permission_mode(state); vec![] }
+        Msg::ToggleAutoApprove => { toggle_auto_approve(state); vec![] }
         Msg::ClearAlwaysApprove => { clear_always_approve(state); vec![] }
         Msg::ToggleScrollFocus => { toggle_scroll_focus(state); vec![] }
+        Msg::CollapseEntry => { collapse_entry(state); vec![] }
+        Msg::ExpandEntry => { expand_entry(state); vec![] }
+        Msg::ToggleFoldEntry => { toggle_fold_entry(state); vec![] }
+        Msg::ToggleAllEntries => { toggle_all_entries(state); vec![] }
+        Msg::CopyBlockContent => { copy_block_content(state); vec![] }
+        Msg::ToggleRawMarkdown => { toggle_raw_markdown(state); vec![] }
+        Msg::FocusPrompt => { focus_prompt(state); vec![] }
+        Msg::GoHome => { go_home(state); vec![] }
         m if is_input_msg(&m) => handle_input_msg(state, m),
         m if is_scroll_msg(&m) => handle_scroll_msg(state, m),
         m if is_clear_msg(&m) => handle_clear_msg(state, m),
@@ -458,6 +467,102 @@ fn handle_history_down(state: &mut AppState) -> Vec<ChatCmd> {
         }
     }
     vec![]
+}
+
+// ─── Entry Fold/Unfold ────────────────────────────────────────────────────────
+
+fn collapse_entry(state: &mut AppState) {
+    if let Some(item) = state.messages.get_mut(state.scroll.feed_offset) {
+        if let MessageItem::Assistant { ref mut expanded, .. } = item {
+            *expanded = false;
+        }
+    }
+}
+
+fn expand_entry(state: &mut AppState) {
+    if let Some(item) = state.messages.get_mut(state.scroll.feed_offset) {
+        if let MessageItem::Assistant { ref mut expanded, .. } = item {
+            *expanded = true;
+        }
+    }
+}
+
+fn toggle_fold_entry(state: &mut AppState) {
+    if let Some(item) = state.messages.get_mut(state.scroll.feed_offset) {
+        if let MessageItem::Assistant { ref mut expanded, .. } = item {
+            *expanded = !*expanded;
+        }
+    }
+}
+
+fn toggle_all_entries(state: &mut AppState) {
+    // Check if any entry is collapsed
+    let any_collapsed = state.messages.iter()
+        .filter_map(|m| match m {
+            MessageItem::Assistant { expanded, .. } => Some(*expanded),
+            _ => None,
+        })
+        .any(|e| !e);
+
+    // Toggle all to the opposite state
+    let new_state = any_collapsed;
+    for item in &mut state.messages {
+        if let MessageItem::Assistant { ref mut expanded, .. } = item {
+            *expanded = new_state;
+        }
+    }
+    state.input_right_info = if new_state { "All expanded" } else { "All collapsed" }.to_string();
+}
+
+fn copy_block_content(state: &mut AppState) {
+    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
+        let text = match item {
+            MessageItem::Assistant { text, .. } => text.clone(),
+            MessageItem::User { text, .. } => text.clone(),
+            MessageItem::Thought { text, .. } => text.clone(),
+            MessageItem::System { text, .. } => text.clone(),
+            _ => String::new(),
+        };
+        if !text.is_empty() {
+            // For now, just log it - clipboard integration would require platform-specific code
+            tracing::info!("Copy block content: {} chars", text.len());
+            state.input_right_info = "Copied".to_string();
+        }
+    }
+}
+
+fn toggle_raw_markdown(state: &mut AppState) {
+    // Track raw markdown toggle per entry - for now just show status
+    if let Some(item) = state.messages.get(state.scroll.feed_offset) {
+        if matches!(item, MessageItem::Assistant { .. }) {
+            state.input_right_info = "Raw markdown toggle".to_string();
+        }
+    }
+}
+
+fn focus_prompt(state: &mut AppState) {
+    state.scroll.scroll_focused = false;
+    state.input_right_info = String::new();
+}
+
+fn go_home(state: &mut AppState) {
+    state.mode = crate::tui::state::TuiMode::HomeScreen;
+}
+
+fn toggle_auto_approve(state: &mut AppState) {
+    use crate::tui::state::PermissionMode;
+    // Toggle between Normal and AutoApprove
+    state.permission_mode = match state.permission_mode {
+        PermissionMode::Normal => PermissionMode::AutoApprove,
+        PermissionMode::AutoApprove => PermissionMode::Normal,
+        PermissionMode::Plan => PermissionMode::AutoApprove,
+    };
+    let mode_name = match state.permission_mode {
+        PermissionMode::Normal => "Normal",
+        PermissionMode::AutoApprove => "YOLO",
+        PermissionMode::Plan => "Plan",
+    };
+    state.input_right_info = format!("Mode: {}", mode_name);
 }
 
 // ─── Message Conversion ────────────────────────────────────────────────────────

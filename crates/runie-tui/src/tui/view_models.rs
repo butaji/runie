@@ -231,7 +231,7 @@ pub fn strip_thinking_from_assistant(text: &str) -> String {
 // ─── Build Helper Functions ─────────────────────────────────────────────────
 
 fn build_top_bar_vm(state: &crate::tui::state::AppState) -> TopBarViewModel {
-    TopBarViewModel::from_state(&state.top_bar)
+    TopBarViewModel::from_state(&state.top_bar, state.agent_running, state.animation.braille_frame)
 }
 
 fn build_global_tags_vm(state: &crate::tui::state::AppState) -> GlobalTagsViewModel {
@@ -270,11 +270,12 @@ fn build_message_list_vm(
     // Strip thinking from assistant messages when show_thoughts is false
     let messages_stripped: Vec<MessageItem> = state.messages.iter().map(|msg| {
         match msg {
-            MessageItem::Assistant { text, model, timestamp } if !state.show_thoughts => {
+            MessageItem::Assistant { text, model, timestamp, expanded } if !state.show_thoughts => {
                 MessageItem::Assistant {
                     text: strip_thinking_from_assistant(text),
                     model: model.clone(),
                     timestamp: timestamp.clone(),
+                    expanded: *expanded,
                 }
             }
             other => other.clone(),

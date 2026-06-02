@@ -47,6 +47,8 @@ impl TopBarBuilder {
             path: self.path,
             context_window: self.context_window,
             estimated_tokens: self.estimated_tokens,
+            agent_running: false,
+            braille_frame: 0,
         }
     }
 }

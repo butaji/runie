@@ -1,9 +1,11 @@
 use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::{Line, Span}, widgets::Widget};
 
 use crate::components::message_list::WrapCache;
+use crate::components::message_list::feed::ToolCall;
 use crate::glyphs;
 use crate::messages::MessageRegistry;
 use super::markdown::render_text_content;
+use super::tool::render_tool_call_inline;
 
 /// Extract think blocks from text and returns (main_text, think_blocks).
 /// DeepSeek models use these for internal reasoning.
@@ -112,6 +114,8 @@ pub fn render_assistant_msg(
     thought_duration: Option<f32>,
     turn_complete: Option<u64>,
     is_last_item: bool,
+    tool_calls: &[ToolCall],
+    tool_bar_color: ratatui::style::Color,
 ) -> u16 {
     let (stripped, _think_blocks) = extract_think_blocks(text);
 
@@ -147,6 +151,27 @@ pub fn render_assistant_msg(
         0
     };
     rendered += thought_rows;
+
+    // Render tool calls inline (between thought indicator and markdown content)
+    let tool_call_start_row = rendered;
+    for tool_call in tool_calls {
+        if row + rendered >= max_rows {
+            break;
+        }
+        let rows = render_tool_call_inline(
+            &tool_call.name,
+            &tool_call.args,
+            area,
+            row + rendered,
+            margin_x,
+            content_width,
+            buf,
+            tool_bar_color,
+            text_muted,
+        );
+        rendered += rows;
+    }
+    let tool_call_rows = rendered - tool_call_start_row;
 
     // Render think blocks if any (not currently used but preserved)
     for think in &_think_blocks {
@@ -205,13 +230,21 @@ pub fn render_assistant_msg(
 
     // Draw accent bar (│) at left edge for ALL rendered lines (including thought rows)
     // Bar is drawn AFTER content so it sits on top
+    // Tool call rows get tool_bar_color, others get accent_bar_color
     let bar_x = margin_x.saturating_sub(1);
     let bg_color = ratatui::style::Color::Reset;
+    let tool_call_start = row + thought_rows;
+    let tool_call_end = tool_call_start + tool_call_rows;
     if bar_x < area.x + area.width {
         for y in row..(row + rendered).min(max_rows) {
             if let Some(cell) = buf.cell_mut((bar_x, area.y + y)) {
                 cell.set_char('│');
-                cell.set_style(Style::default().fg(accent_bar_color).bg(bg_color));
+                let bar_color = if y >= tool_call_start && y < tool_call_end {
+                    tool_bar_color
+                } else {
+                    accent_bar_color
+                };
+                cell.set_style(Style::default().fg(bar_color).bg(bg_color));
             }
         }
     }

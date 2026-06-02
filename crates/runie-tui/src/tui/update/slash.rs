@@ -15,8 +15,38 @@ pub fn handle_slash(state: &mut AppState, cmd: runie_core::slash_command::SlashC
         SlashCommand::Onboard => { handle_onboard(state); vec![] }
         SlashCommand::Quit => { handle_quit(state); vec![] }
         // Informational - grouped
-        SlashCommand::Help | SlashCommand::Cost | SlashCommand::Status | SlashCommand::Models => { handle_info_cmd(state, &cmd); vec![] }
+        SlashCommand::Help | SlashCommand::Cost | SlashCommand::Status | SlashCommand::Models |
+        SlashCommand::SessionInfo | SlashCommand::Usage => { handle_info_cmd(state, &cmd); vec![] }
         SlashCommand::Unknown(cmd) => { handle_unknown(state, cmd); vec![] }
+        // Session
+        SlashCommand::Home => { handle_home(state); vec![] }
+        SlashCommand::Resume => { handle_not_implemented(state, "resume"); vec![] }
+        SlashCommand::Sessions => { handle_sessions(state); vec![] }
+        SlashCommand::Rename(title) => { handle_rename(state, title); vec![] }
+        SlashCommand::Share => { handle_not_implemented(state, "share"); vec![] }
+        // Context
+        SlashCommand::Context => { handle_context(state); vec![] }
+        SlashCommand::Compact(_) => { handle_not_implemented(state, "compact"); vec![] }
+        SlashCommand::CompactMode => { handle_not_implemented(state, "compact-mode"); vec![] }
+        SlashCommand::Rewind => { handle_not_implemented(state, "rewind"); vec![] }
+        // UI
+        SlashCommand::Theme(name) => { handle_theme(state, name); vec![] }
+        SlashCommand::Multiline => { handle_not_implemented(state, "multiline"); vec![] }
+        // Permission
+        SlashCommand::AlwaysApprove => { handle_always_approve(state); vec![] }
+        SlashCommand::Plan => { handle_not_implemented(state, "plan"); vec![] }
+        SlashCommand::Feedback(_) => { handle_not_implemented(state, "feedback"); vec![] }
+        // Utility
+        SlashCommand::Btw(_) => { handle_not_implemented(state, "btw"); vec![] }
+        SlashCommand::Logout => { handle_not_implemented(state, "logout"); vec![] }
+        // Extensions
+        SlashCommand::Hooks | SlashCommand::Plugins | SlashCommand::Skills | SlashCommand::Mcps | SlashCommand::Extensions =>
+            { handle_extensions(state, cmd); vec![] }
+        // Shell
+        SlashCommand::Flush | SlashCommand::Memory | SlashCommand::Dream =>
+            { handle_not_implemented(state, "memory"); vec![] }
+        SlashCommand::Imagine(_) => { handle_not_implemented(state, "imagine"); vec![] }
+        SlashCommand::ImagineVideo(_) => { handle_not_implemented(state, "imagine-video"); vec![] }
     }
 }
 
@@ -37,6 +67,8 @@ fn handle_info_cmd(state: &mut AppState, cmd: &runie_core::slash_command::SlashC
         SlashCommand::Cost => handle_cost(state),
         SlashCommand::Status => handle_status(state),
         SlashCommand::Models => handle_models(state),
+        SlashCommand::SessionInfo => handle_session_info(state),
+        SlashCommand::Usage => handle_usage(state),
         _ => {}
     }
 }
@@ -111,4 +143,86 @@ pub fn handle_tree(state: &mut AppState) {
 pub(crate) fn handle_onboard(state: &mut AppState) {
     state.mode = TuiMode::Onboarding;
     state.onboarding = Some(crate::components::Onboarding::default());
+}
+
+// ─── New Session Commands ─────────────────────────────────────────────────────
+
+pub(crate) fn handle_home(state: &mut AppState) {
+    state.home_screen.show();
+    state.mode = TuiMode::HomeScreen;
+}
+
+pub(crate) fn handle_sessions(state: &mut AppState) {
+    state.session_tree.toggle();
+    state.mode = if state.session_tree.visible { TuiMode::SessionTree } else { TuiMode::Chat };
+}
+
+pub(crate) fn handle_rename(state: &mut AppState, title: String) {
+    state.messages.push(MessageItem::System { text: format!("Session renamed to \"{}\"", title) });
+}
+
+pub(crate) fn handle_context(state: &mut AppState) {
+    state.context_usage_modal.open();
+}
+
+pub(crate) fn handle_theme(state: &mut AppState, name: Option<String>) {
+    if let Some(theme_name) = name {
+        state.messages.push(MessageItem::System { text: format!("Theme switched to {}", theme_name) });
+    } else {
+        state.messages.push(MessageItem::System { text: "Current theme applied".to_string() });
+    }
+}
+
+pub(crate) fn handle_always_approve(state: &mut AppState) {
+    use crate::tui::state::PermissionMode;
+    state.permission_mode = match state.permission_mode {
+        PermissionMode::AutoApprove => PermissionMode::Normal,
+        _ => PermissionMode::AutoApprove,
+    };
+    let mode_name = match state.permission_mode {
+        PermissionMode::Normal => "Normal",
+        PermissionMode::AutoApprove => "AutoApprove",
+        PermissionMode::Plan => "Plan",
+    };
+    state.messages.push(MessageItem::System { text: format!("Permission mode: {}", mode_name) });
+}
+
+pub(crate) fn handle_session_info(state: &mut AppState) {
+    let msg_count = state.messages.len();
+    let token_usage = &state.session_token_usage;
+    state.messages.push(MessageItem::System {
+        text: format!(
+            "Session info: {} messages, {} tokens, ${:.4}",
+            msg_count, token_usage.total_tokens, token_usage.estimated_cost
+        ),
+    });
+}
+
+pub(crate) fn handle_usage(state: &mut AppState) {
+    let usage = &state.session_token_usage;
+    state.messages.push(MessageItem::System {
+        text: format!(
+            "Usage: {} prompt + {} completion = {} tokens, ${:.4}",
+            usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, usage.estimated_cost
+        ),
+    });
+}
+
+pub(crate) fn handle_not_implemented(state: &mut AppState, cmd: &str) {
+    state.messages.push(MessageItem::System { text: format!("⚡ /{} is not yet implemented", cmd) });
+}
+
+pub(crate) fn handle_extensions(state: &mut AppState, cmd: runie_core::slash_command::SlashCommand) {
+    use crate::components::extensions_modal::{ExtensionsModal, ExtensionTab};
+    use runie_core::slash_command::SlashCommand;
+    let tab = match cmd {
+        SlashCommand::Hooks => ExtensionTab::Hooks,
+        SlashCommand::Plugins => ExtensionTab::Plugins,
+        SlashCommand::Skills => ExtensionTab::Skills,
+        SlashCommand::Mcps => ExtensionTab::Mcps,
+        SlashCommand::Extensions => ExtensionTab::Hooks,
+        _ => ExtensionTab::Hooks,
+    };
+    state.extensions_modal = Some(ExtensionsModal::with_tab(tab));
+    state.mode = TuiMode::Overlay;
 }

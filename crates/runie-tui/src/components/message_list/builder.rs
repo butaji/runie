@@ -62,6 +62,7 @@ impl FeedBuilder {
             text: text.into(),
             model: None,
             timestamp: None,
+            expanded: true,
         });
         self
     }
@@ -74,6 +75,7 @@ impl FeedBuilder {
             text: format!("<think>{}</think>", text.into()),
             model: None,
             timestamp: None,
+            expanded: true,
         });
         self
     }
@@ -82,9 +84,13 @@ impl FeedBuilder {
     pub(crate) fn think_block(mut self, text: impl Into<String>) -> Self {
         // For standalone think lines, we use Assistant with think markup
         self.messages.push(MessageItem::Assistant {
-            text: format!("<think>{}\n</think>\n", text.into()),
+            text: format!("<think>{}\n
+</think>
+
+\n", text.into()),
             model: None,
             timestamp: None,
+            expanded: true,
         });
         self
     }

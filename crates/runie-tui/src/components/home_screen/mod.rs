@@ -13,11 +13,11 @@ use crate::theme::{ThemeColors, ThemeWrapper};
 
 /// Home screen menu items.
 pub static HOME_MENU_ITEMS: &[(&str, &str, &str)] = &[
-    ("New Session", "Start a new chat", "n"),
-    ("Resume Last Session", "Continue where you left off", "r"),
-    ("Settings", "Configure preferences", "s"),
-    ("Help", "Show keyboard shortcuts", "h"),
-    ("Quit", "Exit runie", "q"),
+    ("New Session", "Start a new chat", "ctrl-n"),
+    ("Resume Last Session", "Continue where you left off", "ctrl-r"),
+    ("Settings", "Configure preferences", "ctrl-s"),
+    ("Help", "Show keyboard shortcuts", "ctrl-h"),
+    ("Quit", "Exit runie", "ctrl-q"),
 ];
 
 /// Rotating tips for the home screen.
@@ -47,13 +47,48 @@ pub struct RecentSession {
     pub timestamp: String,
 }
 
+/// Format a timestamp as relative time (e.g., "2h ago", "1d ago")
+pub fn format_relative_time(secs_ago: i64) -> String {
+    if secs_ago < 60 {
+        format!("{}s ago", secs_ago)
+    } else if secs_ago < 3600 {
+        format!("{}m ago", secs_ago / 60)
+    } else if secs_ago < 86400 {
+        format!("{}h ago", secs_ago / 3600)
+    } else if secs_ago < 604800 {
+        format!("{}d ago", secs_ago / 86400)
+    } else {
+        format!("{}w ago", secs_ago / 604800)
+    }
+}
+
 impl HomeScreen {
     pub fn new() -> Self {
+        // Mock recent sessions for UI testing
+        // In production, these would come from a session store
+        let recent_sessions = vec![
+            RecentSession {
+                id: "mock-session-1".to_string(),
+                title: "Debugging authentication flow".to_string(),
+                timestamp: format_relative_time(2 * 3600), // 2 hours ago
+            },
+            RecentSession {
+                id: "mock-session-2".to_string(),
+                title: "Implementing API endpoints".to_string(),
+                timestamp: format_relative_time(26 * 3600), // 1 day + 2 hours ago
+            },
+            RecentSession {
+                id: "mock-session-3".to_string(),
+                title: "Code review: PR #42".to_string(),
+                timestamp: format_relative_time(3 * 86400), // 3 days ago
+            },
+        ];
+
         Self {
             visible: true,
             selected: 0,
             tip_index: 0,
-            recent_sessions: Vec::new(),
+            recent_sessions,
         }
     }
 
@@ -128,11 +163,13 @@ fn render_ascii_logo(content_x: u16, content_y: u16, buf: &mut Buffer, accent_pr
 
 fn render_home_title(content_x: u16, content_y: u16, content_width: u16, buf: &mut Buffer, text_primary: Color, text_muted: Color) {
     let title = "runie";
-    let title_x = content_x + (content_width - title.len() as u16) / 2;
-    buf.set_line(title_x, content_y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), content_width);
+    let title_len = title.len() as u16;
+    let title_x = content_x + (content_width.saturating_sub(title_len)) / 2;
+    buf.set_line(title_x, content_y, &Line::raw(title).style(Style::default().fg(text_primary).add_modifier(Modifier::BOLD)), title_len);
     let subtitle = "Your coding companion";
-    let subtitle_x = content_x + (content_width - subtitle.len() as u16) / 2;
-    buf.set_line(subtitle_x, content_y + 1, &Line::raw(subtitle).style(Style::default().fg(text_muted)), content_width);
+    let subtitle_len = subtitle.len() as u16;
+    let subtitle_x = content_x + (content_width.saturating_sub(subtitle_len)) / 2;
+    buf.set_line(subtitle_x, content_y + 1, &Line::raw(subtitle).style(Style::default().fg(text_muted)), subtitle_len);
 }
 
 fn render_recent_sessions(screen: &HomeScreen, content_x: u16, start_y: u16, content_width: u16, buf: &mut Buffer, text_muted: Color) {
@@ -152,7 +189,7 @@ fn render_recent_sessions(screen: &HomeScreen, content_x: u16, start_y: u16, con
     }
 }
 
-fn render_home_menu(screen: &HomeScreen, area: Rect, content_x: u16, div_y: u16, content_width: u16, buf: &mut Buffer, text_primary: Color, text_muted: Color, accent: Color) {
+fn render_home_menu(screen: &HomeScreen, area: Rect, content_x: u16, div_y: u16, content_width: u16, buf: &mut Buffer, text_primary: Color, text_muted: Color, accent: Color, border: Color) {
     let mut y = div_y + 2;
     for (i, (name, desc, hint)) in HOME_MENU_ITEMS.iter().enumerate() {
         if y >= area.bottom() { break; }
@@ -162,12 +199,31 @@ fn render_home_menu(screen: &HomeScreen, area: Rect, content_x: u16, div_y: u16,
         buf.set_string(content_x + 2, y, indicator, indicator_style);
         let name_style = if is_selected { Style::default().fg(text_primary).add_modifier(Modifier::BOLD) } else { Style::default().fg(text_primary) };
         buf.set_string(content_x + 4, y, name, name_style);
-        let hint_text = format!("{}", hint);
-        let hint_x = content_x + content_width - hint_text.len() as u16 - 2;
+        // Hint in parentheses, right-aligned with proper spacing
+        let hint_text = format!(" ({}) ", hint);
+        let hint_len = hint_text.len() as u16;
+        let hint_x = content_x + content_width.saturating_sub(hint_len + 2);
         buf.set_string(hint_x, y, &hint_text, Style::default().fg(text_muted));
         let desc_y = y + 1;
         if desc_y < area.bottom() {
-            buf.set_string(content_x + 4, desc_y, desc, Style::default().fg(text_muted));
+            // Truncate description if too long
+            let max_desc_width = content_width - 8 - hint_len - 2;
+            let desc_text = if desc.len() as u16 > max_desc_width {
+                format!("{}...", &desc[..max_desc_width as usize - 3])
+            } else {
+                desc.to_string()
+            };
+            buf.set_string(content_x + 4, desc_y, &desc_text, Style::default().fg(text_muted));
+        }
+
+        // Draw horizontal divider after each item (except the last one)
+        if i < HOME_MENU_ITEMS.len() - 1 {
+            let divider_y = y + 2;
+            if divider_y < area.bottom() {
+                for x in content_x + 2..content_x + content_width - 2 {
+                    buf.cell_mut((x, divider_y)).map(|cell| cell.set_char('─').set_fg(border));
+                }
+            }
         }
         y += 3;
     }
@@ -212,18 +268,19 @@ impl Widget for &HomeScreen {
         } else {
             div_y + 10
         };
-        render_home_menu(self, area, content_x, menu_start_y, content_width, buf, text_primary, text_muted, accent);
+        render_home_menu(self, area, content_x, menu_start_y, content_width, buf, text_primary, text_muted, accent, border);
 
         // Footer with navigation hints
-        let footer = "↑/↓ navigate · Enter select · q quit";
+        let footer = "↑/↓ navigate · Enter select · Ctrl-Q quit";
         let footer_y = area.bottom().saturating_sub(3);
-        let footer_x = content_x + (content_width - footer.len() as u16) / 2;
-        buf.set_line(footer_x, footer_y, &Line::raw(footer).style(Style::default().fg(text_muted)), content_width);
+        let footer_x = content_x + (content_width.saturating_sub(footer.len() as u16)) / 2;
+        buf.set_line(footer_x, footer_y, &Line::raw(footer).style(Style::default().fg(text_muted)), footer.len() as u16);
 
         // Tip line
         let tip = format!("Tip: {}", self.current_tip());
-        let tip_x = content_x + (content_width - tip.len() as u16) / 2;
-        buf.set_line(tip_x, footer_y + 1, &Line::raw(tip).style(Style::default().fg(text_muted)), content_width);
+        let tip_len = tip.len() as u16;
+        let tip_x = content_x + (content_width.saturating_sub(tip_len)) / 2;
+        buf.set_line(tip_x, footer_y + 1, &Line::raw(tip).style(Style::default().fg(text_muted)), tip_len);
 
         // Version badge (bottom-right)
         let version = env!("CARGO_PKG_VERSION");

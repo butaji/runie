@@ -169,6 +169,7 @@ fn add_user_and_placeholder(state: &mut AppState, text: &str) {
         text: String::new(),
         model: state.current_model.clone(),
         timestamp: current_timestamp(),
+        expanded: true,
     });
     state.thinking = Some(ThinkingState {
         start: Some(Instant::now()),

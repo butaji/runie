@@ -139,7 +139,7 @@ mod handler_new_tests {
     fn test_handle_new_clears_old_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None, expanded: false });
 
         handle_slash(&mut state, SlashCommand::New);
 
@@ -185,7 +185,7 @@ mod handler_clear_tests {
     fn test_handle_clear_clears_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None, expanded: false });
 
         handle_slash(&mut state, SlashCommand::Clear);
 
@@ -358,7 +358,7 @@ mod handler_copy_tests {
         let mut state = make_state();
         state.messages.clear();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "assistant response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "assistant response".to_string(), model: None, timestamp: None, expanded: false });
 
         handle_slash(&mut state, SlashCommand::Copy);
 
@@ -371,9 +371,9 @@ mod handler_copy_tests {
     fn test_handle_copy_copies_last_assistant_not_first() {
         let mut state = make_state();
         state.messages.clear();
-        state.messages.push(MessageItem::Assistant { text: "first response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "first response".to_string(), model: None, timestamp: None, expanded: false });
         state.messages.push(MessageItem::User { text: "question".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "last response".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "last response".to_string(), model: None, timestamp: None, expanded: false });
 
         handle_slash(&mut state, SlashCommand::Copy);
 
@@ -769,7 +769,7 @@ mod integration_tests {
     fn test_unknown_command_preserves_existing_messages() {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None });
+        state.messages.push(MessageItem::Assistant { text: "hi".to_string(), model: None, timestamp: None, expanded: false });
 
         handle_slash(&mut state, SlashCommand::Unknown("/bad".to_string()));
 

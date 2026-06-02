@@ -72,7 +72,7 @@ fn test_e2e_clear_chat() {
 
     // Add some messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None });
+    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false });
 
     // Clear chat
     update(&mut state, &mut palette, Msg::ClearChat);
