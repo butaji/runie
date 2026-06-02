@@ -22,7 +22,10 @@ pub fn render_content(
 ) {
     use crate::components::activity_panel::{ActivityPanel, ACTIVITY_PANEL_WIDTH, should_show_activity_panel, render_activity_panel};
 
-    let show_activity = should_show_activity_panel(area.width);
+    // Show activity panel only when: width >= 100, agent is running, and has background jobs
+    let show_activity = should_show_activity_panel(area.width)
+        && state.agent_running
+        && !state.background_jobs.is_empty();
     let activity_width = if show_activity { ACTIVITY_PANEL_WIDTH } else { 0 };
 
     let mut h_constraints = vec![Constraint::Min(20)];

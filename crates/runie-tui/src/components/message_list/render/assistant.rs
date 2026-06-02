@@ -116,6 +116,7 @@ pub fn render_assistant_msg(
     _is_last_item: bool,
     tool_calls: &[ToolCall],
     tool_bar_color: ratatui::style::Color,
+    thoughts_collapsed: bool,
 ) -> u16 {
     let (stripped, _think_blocks) = extract_think_blocks(text);
 
@@ -136,6 +137,21 @@ pub fn render_assistant_msg(
     let width = (area.width - margin_x + area.x - 2) as usize;
     let content_width = area.width - margin_x + area.x - 2;
     let mut rendered = 0u16;
+
+    // When thoughts_collapsed is true, render collapsed indicator instead of full content
+    if thoughts_collapsed {
+        if let Some(duration) = thought_duration {
+            // Draw vertical bar at left edge
+            if let Some(cell) = buf.cell_mut((margin_x.saturating_sub(1), area.y + row)) {
+                cell.set_char('┃');
+                cell.set_style(Style::default().fg(text_muted));
+            }
+            let header_text = format!("{} ◆ Thought for {:.1}s ▶", glyphs::CHEVRON, duration);
+            let header = Line::styled(header_text, Style::default().fg(text_muted).add_modifier(Modifier::BOLD));
+            buf.set_line(margin_x, area.y + row, &header, content_width);
+            return 1;
+        }
+    }
 
     // Render thought indicator BEFORE answer (if thought_duration is provided)
     // ◆ {Thought for Xs} - diamond muted, entire phrase from MessageRegistry

@@ -178,6 +178,8 @@ pub fn render_tool_running_msg(
     name: &str,
     args: &str,
     duration_ms: u64,
+    total_elapsed_ms: u64,
+    download_bytes: u64,
     area: Rect,
     row: u16,
     margin_x: u16,
@@ -206,14 +208,15 @@ pub fn render_tool_running_msg(
     // Build left content: spinner + "Run" + name + args + elapsed
     let mut left_content = String::with_capacity(64);
     write!(left_content, "{} Run {} {}", spinner, name, args).ok();
-    let left_suffix = format!(" {}", elapsed_secs);
-    write!(left_content, "{}", left_suffix).ok();
+    write!(left_content, " {}", elapsed_secs).ok();
 
     let left_line = Line::raw(left_content).style(Style::default().fg(tool_bar_color));
     buf.set_line(content_x, area.y + row, &left_line, area.width - 4);
 
-    // Right side: total elapsed placeholder + transfer + status (empty brackets while running)
-    let right_text = format!(" {} [ ]", elapsed_str);
+    // Right side: total elapsed + transfer bytes + status (empty brackets while running)
+    let total_elapsed_secs = total_elapsed_ms as f64 / 1000.0;
+    let transfer_str = format_transfer_bytes(download_bytes as usize);
+    let right_text = format!(" {:.1}s ⇣{} [ ]", total_elapsed_secs, transfer_str);
     let right_len = right_text.len() as u16;
     let right_x = area.x + area.width - 1 - right_len;
     let right_line = Line::raw(right_text).style(Style::default().fg(text_secondary));

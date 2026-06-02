@@ -80,7 +80,7 @@ impl RenderPipe {
     fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 5] {
         use ratatui::layout::{Constraint, Layout};
         let constraints = [
-            Constraint::Length(2),        // topbar + padding
+            Constraint::Length(3),        // topbar + 2 blank lines padding
             Constraint::Min(1),           // feed
             Constraint::Length(1),       // global_tags
             Constraint::Length(input_h),  // input
