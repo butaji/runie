@@ -30,6 +30,14 @@ pub struct InputBarViewModel {
     pub context_window: Option<usize>,
 }
 
+// ─── McpStatus ─────────────────────────────────────────────────────────────
+#[derive(Debug, Clone)]
+pub enum McpStatus {
+    Connected(u32),
+    Unavailable(u32),
+    None,
+}
+
 // ─── StatusBarViewModel ─────────────────────────────────────────────────────
 pub struct StatusBarViewModel {
     pub mode: TuiMode,
@@ -39,6 +47,7 @@ pub struct StatusBarViewModel {
     pub status_header: Option<String>,
     pub status_details: Option<String>,
     pub status_start_time: Option<std::time::Instant>,
+    pub mcp_status: McpStatus,
 }
 
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
@@ -340,6 +349,7 @@ fn build_status_bar_vm(state: &crate::tui::state::AppState) -> StatusBarViewMode
         status_header: state.status_header.clone(),
         status_details: state.status_details.clone(),
         status_start_time: state.status_start_time,
+        mcp_status: McpStatus::None, // TODO: wire to actual MCP state
     }
 }
 

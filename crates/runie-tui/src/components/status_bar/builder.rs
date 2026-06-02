@@ -1,5 +1,5 @@
 use crate::tui::state::TuiMode;
-use crate::tui::view_models::StatusBarViewModel;
+use crate::tui::view_models::{McpStatus, StatusBarViewModel};
 use runie_ai::TokenUsage;
 
 pub(crate) struct StatusBarBuilder {
@@ -9,6 +9,7 @@ pub(crate) struct StatusBarBuilder {
     status_header: Option<String>,
     status_details: Option<String>,
     status_start_time: Option<std::time::Instant>,
+    mcp_status: McpStatus,
 }
 
 impl StatusBarBuilder {
@@ -20,6 +21,7 @@ impl StatusBarBuilder {
             status_header: None,
             status_details: None,
             status_start_time: None,
+            mcp_status: McpStatus::None,
         }
     }
 
@@ -53,6 +55,11 @@ impl StatusBarBuilder {
         self
     }
 
+    pub(crate) fn mcp_status(mut self, status: McpStatus) -> Self {
+        self.mcp_status = status;
+        self
+    }
+
     pub(crate) fn build(self) -> StatusBarViewModel {
         StatusBarViewModel {
             mode: self.mode,
@@ -61,6 +68,7 @@ impl StatusBarBuilder {
             status_header: self.status_header,
             status_details: self.status_details,
             status_start_time: self.status_start_time,
+            mcp_status: self.mcp_status,
         }
     }
 }
