@@ -23,7 +23,7 @@ pub enum MessageItem {
     System { text: String },
     // P2-1: Structured error with recoverable flag for better error presentation
     Error { message: String, recoverable: bool },
-    ToolRunning { name: String, args: String, duration_ms: u64 },
+    ToolRunning { name: String, args: String, duration_ms: u64, total_elapsed_ms: u64, download_bytes: u64 },
     ToolComplete { name: String, result: String, lines: Option<usize> },
     PlanStep { step: usize, text: String, status: PlanStatus },
     Interrupt,

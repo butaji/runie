@@ -140,17 +140,23 @@ fn render_message_list(
             None
         };
 
-        // Get turn_duration from AssistantMessage
+        // Get turn_duration and thoughts_collapsed from AssistantMessage
         let turn_duration = if let FeedItem::AssistantMessage { turn_duration, .. } = item {
             *turn_duration
         } else {
             None
         };
 
+        let thoughts_collapsed = if let FeedItem::AssistantMessage { thoughts_collapsed, .. } = item {
+            *thoughts_collapsed
+        } else {
+            false
+        };
+
         let is_last_item = absolute_idx == total_items.saturating_sub(1);
         let rendered = render_single_msg_item(
             item, area, row, margin_x, text_x, max_rows, buf, theme, colors, spinner, show_cursor, show_spinner, rewind_spinner,
-            &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item,
+            &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item, thoughts_collapsed,
         );
         row += rendered;
         // Draw separator between items (not after last)
@@ -181,12 +187,13 @@ fn render_single_msg_item(
     thought_duration: Option<f32>,
     turn_complete: Option<f32>,
     is_last_item: bool,
+    thoughts_collapsed: bool,
 ) -> u16 {
     render::render_single_msg_feed(
         item, area, row, margin_x, text_x, max_rows, buf, theme,
         colors.accent_primary, colors.accent_secondary, colors.text_secondary, colors.text_muted, colors.text_dim,
         colors.success, colors.error, colors.code_path, spinner, show_cursor, show_spinner, rewind_spinner,
-        animation, wrap_cache, agent_running, thought_duration, turn_complete, is_last_item,
+        animation, wrap_cache, agent_running, thought_duration, turn_complete, is_last_item, thoughts_collapsed,
     )
 }
 
@@ -295,6 +302,7 @@ mod tests {
             None,
             None,
             true,
+            false, // thoughts_collapsed
         );
 
         let row_text: String = (0..area.width)
@@ -311,6 +319,7 @@ mod tests {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            thoughts_collapsed: false,
             expanded: true,
         }
     }
@@ -323,6 +332,7 @@ mod tests {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            thoughts_collapsed: false,
             expanded: true,
         }
     }
@@ -370,6 +380,7 @@ mod tests {
             None,
             None,
             true, // is_last_item - single item test
+            false, // thoughts_collapsed
         );
 
         let row_text: String = (0..area.width)
@@ -432,6 +443,7 @@ mod tests {
             tool_calls: Vec::new(),
             timestamp: None,
             turn_duration: None,
+            thoughts_collapsed: false,
             expanded: true,
         };
         let (row_text, _, _) = render_feed_item_not_last(&item);
@@ -469,6 +481,7 @@ mod tests {
             None, // thought_duration
             None, // turn_complete
             false, // is_last_item
+            false, // thoughts_collapsed
         );
 
         let row_text: String = (0..area.width)

@@ -4,6 +4,12 @@ use crate::components::message_list::WrapCache;
 use crate::glyphs;
 use crate::theme::ThemeWrapper;
 
+/// Format current time as "h:mm AM/PM" (e.g., "4:10 PM")
+fn format_timestamp_now() -> String {
+    use chrono::Local;
+    Local::now().format("%-I:%M %p").to_string()
+}
+
 /// Render a user message
 pub fn render_user_msg(
     text: &str,
@@ -21,6 +27,8 @@ pub fn render_user_msg(
     let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     let accent_bar_color: ratatui::style::Color = theme.color("accent.primary").into();
+    // Resolve timestamp: use provided or generate current time
+    let ts_display = timestamp.map(|s| s.to_string()).unwrap_or_else(format_timestamp_now);
     // Account for 1-symbol horizontal padding on each side + chevron + space
     let text_width = (area.width - margin_x + area.x - 6) as usize;
 
@@ -90,16 +98,14 @@ pub fn render_user_msg(
             buf.set_line(text_x, line_y, &first_line, text_width as u16);
 
             // Timestamp on first line for single-line messages
-            if let Some(ts) = timestamp {
-                if wrapped.len() <= 1 {
-                    let ts_len = ts.len() as u16;
-                    let ts_x = area.right().saturating_sub(ts_len + 1);
-                    if ts_x > text_x {
-                        let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-                        let ts_line = ratatui::text::Line::raw(ts)
-                            .style(Style::default().fg(ts_color).bg(bg_color));
-                        buf.set_line(ts_x, line_y, &ts_line, ts_len);
-                    }
+            if wrapped.len() <= 1 {
+                let ts_len = ts_display.len() as u16;
+                let ts_x = area.right().saturating_sub(ts_len + 1);
+                if ts_x > text_x {
+                    let ts_color: ratatui::style::Color = theme.color("text.muted").into();
+                    let ts_line = ratatui::text::Line::raw(&ts_display)
+                        .style(Style::default().fg(ts_color).bg(bg_color));
+                    buf.set_line(ts_x, line_y, &ts_line, ts_len);
                 }
             }
         } else {
@@ -112,17 +118,15 @@ pub fn render_user_msg(
     }
 
     // Timestamp on last line for multi-line messages
-    if let Some(ts) = timestamp {
-        if wrapped.len() > 1 {
-            let last_line_y = content_start_y + wrapped.len().saturating_sub(1) as u16;
-            let ts_len = ts.len() as u16;
-            let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
-            if ts_x > margin_x + 1 {
-                let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-                let ts_line = ratatui::text::Line::raw(ts)
-                    .style(Style::default().fg(ts_color).bg(bg_color));
-                buf.set_line(ts_x, last_line_y, &ts_line, ts_len);
-            }
+    if wrapped.len() > 1 {
+        let last_line_y = content_start_y + wrapped.len().saturating_sub(1) as u16;
+        let ts_len = ts_display.len() as u16;
+        let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
+        if ts_x > margin_x + 1 {
+            let ts_color: ratatui::style::Color = theme.color("text.muted").into();
+            let ts_line = ratatui::text::Line::raw(&ts_display)
+                .style(Style::default().fg(ts_color).bg(bg_color));
+            buf.set_line(ts_x, last_line_y, &ts_line, ts_len);
         }
     }
 

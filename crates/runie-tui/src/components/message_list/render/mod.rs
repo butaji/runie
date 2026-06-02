@@ -173,7 +173,7 @@ pub fn render_single_msg(
             render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true, &[], accent_secondary)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true, &[], accent_secondary, false)
         }
         MessageItem::Thought { duration_secs, .. } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -204,8 +204,8 @@ pub fn render_single_msg(
         MessageItem::Error { message, recoverable } => {
             render_error_msg(message, *recoverable, area, row, margin_x, text_x, buf, error, text_muted, wrap_cache)
         }
-        MessageItem::ToolRunning { name, args, duration_ms } => {
-            render_tool_running_msg(name, args, *duration_ms, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
+        MessageItem::ToolRunning { name, args, duration_ms, total_elapsed_ms, download_bytes } => {
+            render_tool_running_msg(name, args, *duration_ms, *total_elapsed_ms, *download_bytes, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
         }
         MessageItem::ToolComplete { name, result, lines } => {
             render_tool_complete_msg(name, result, lines.as_ref(), area, row, margin_x, text_x, buf, success, text_muted)
@@ -251,6 +251,7 @@ pub fn render_single_msg_feed(
     thought_duration: Option<f32>,
     turn_complete: Option<f32>,
     is_last_item: bool,
+    thoughts_collapsed: bool,
 ) -> u16 {
     match item {
         FeedItem::UserMessage { text, timestamp, .. } => {
@@ -263,7 +264,7 @@ pub fn render_single_msg_feed(
             let effective_turn_complete = turn_duration.map(|d| d as u64).or(turn_complete.map(|d| d as u64));
             // Tool bar color is purple #6B50FF (same as feed.tool.bar)
             let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF);
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item, tool_calls, tool_bar_color)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item, tool_calls, tool_bar_color, thoughts_collapsed)
         }
         FeedItem::SystemNotice { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)
