@@ -84,15 +84,10 @@ fn render_think_block_box(
     streaming_download_bytes: Option<u64>,
 ) -> u16 {
     if streaming {
-        // Grok streaming: "┃  ◆ Thinking…" with "█" right border on every line
+        // Grok streaming: "┃  ◆ Thinking…"
         let header_text = "┃  ◆ Thinking…";
         let header = ratatui::text::Line::raw(header_text).style(Style::default().fg(text_muted));
         buf.set_line(response_indent, area.y + row, &header, area.width - margin_x + area.x - 2);
-        // Add █ at far right
-        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + row)) {
-            cell.set_char('█');
-            cell.set_style(Style::default().fg(text_muted));
-        }
         let mut rendered = 1u16;
 
         // Strip think tags for content
@@ -108,11 +103,6 @@ fn render_think_block_box(
             let content = format!("┃  {}", line_text);
             let line = ratatui::text::Line::raw(content).style(Style::default().fg(text_muted));
             buf.set_line(response_indent, area.y + line_y, &line, area.width - margin_x + area.x - 2);
-            // Add █ at far right
-            if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + line_y)) {
-                cell.set_char('█');
-                cell.set_style(Style::default().fg(text_muted));
-            }
             rendered += 1;
         }
 
@@ -139,12 +129,6 @@ fn render_think_block_box(
             let right_x = area.x + area.width - 1 - right_len;
             let right_line = ratatui::text::Line::raw(right_text).style(Style::default().fg(text_muted));
             buf.set_line(right_x, area.y + bottom_y, &right_line, right_len);
-
-            // Add █ at far right
-            if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + bottom_y)) {
-                cell.set_char('█');
-                cell.set_style(Style::default().fg(text_muted));
-            }
             rendered += 1;
         }
 

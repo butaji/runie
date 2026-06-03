@@ -10,14 +10,6 @@ fn format_timestamp_now() -> String {
     Local::now().format("%-I:%M %p").to_string()
 }
 
-/// Draw streaming indicator █ at far right edge of a line
-fn draw_streaming_indicator(buf: &mut Buffer, x: u16, y: u16, color: ratatui::style::Color) {
-    if let Some(cell) = buf.cell_mut((x, y)) {
-        cell.set_char('█');
-        cell.set_style(Style::default().fg(color));
-    }
-}
-
 /// Render a user message
 pub fn render_user_msg(
     text: &str,
@@ -30,12 +22,10 @@ pub fn render_user_msg(
     buf: &mut Buffer,
     theme: &ThemeWrapper,
     wrap_cache: &mut WrapCache,
-    agent_running: bool,
 ) -> u16 {
     let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
     let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
-    let text_muted: ratatui::style::Color = theme.color("text.muted").into();
     // Resolve timestamp: use provided or generate current time
     let ts_display = timestamp.map(|s| s.to_string()).unwrap_or_else(format_timestamp_now);
     // 5-space indent for user messages (like Grok)
@@ -51,7 +41,6 @@ pub fn render_user_msg(
     let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
 
     let bg_start = margin_x;
-    let far_right_x = area.x + area.width - 1;
 
     // Render vertical padding ABOVE (1 line)
     let content_start_y = area.y + row + 1;
@@ -62,10 +51,6 @@ pub fn render_user_msg(
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
-        }
-        // Streaming indicator on padding line above
-        if agent_running {
-            draw_streaming_indicator(buf, far_right_x, padding_y, text_muted);
         }
     }
 
@@ -111,11 +96,6 @@ pub fn render_user_msg(
                 .style(Style::default().fg(text_primary).bg(bg_color));
             buf.set_line(text_x, line_y, &line, text_width as u16);
         }
-
-        // Streaming indicator on content line
-        if agent_running {
-            draw_streaming_indicator(buf, far_right_x, line_y, text_muted);
-        }
     }
 
     // Render vertical padding BELOW (1 line)
@@ -126,10 +106,6 @@ pub fn render_user_msg(
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
-        }
-        // Streaming indicator on padding line below
-        if agent_running {
-            draw_streaming_indicator(buf, far_right_x, padding_below_y, text_muted);
         }
     }
 
