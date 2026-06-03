@@ -236,6 +236,7 @@ impl FeedBuilder {
             animation: self.animation,
             wrap_cache: self.wrap_cache,
             session_starting: self.session_starting,
+            streaming_think_content: None,
         }
     }
 

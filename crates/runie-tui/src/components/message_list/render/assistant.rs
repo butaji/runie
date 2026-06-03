@@ -46,8 +46,10 @@ pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
 fn find_closing_tag(bytes: &[u8], start: usize) -> Option<(usize, usize, usize)> {
     let mut j = start;
     while j < bytes.len() {
-        if bytes[j..].starts_with(b"</think>") {
-            return Some((start, j, j + 8));
+        if bytes[j..].starts_with(b"
+</think>
+") {
+            return Some((start, j, j + 9));
         }
         j += 1;
     }
@@ -252,10 +254,14 @@ pub fn render_assistant_msg(
     streaming_thinking_elapsed_ms: Option<u64>,
     streaming_total_elapsed_ms: Option<u64>,
     streaming_download_bytes: Option<u64>,
+    streaming_think_content: Option<&str>,
 ) -> u16 {
     let (stripped, _think_blocks) = extract_think_blocks(text);
 
-    if stripped.trim().is_empty() && _think_blocks.is_empty() {
+    // If we have streaming think content, we should show it (don't early return)
+    let has_streaming_content = streaming_think_content.map_or(false, |s| !s.is_empty());
+
+    if stripped.trim().is_empty() && _think_blocks.is_empty() && !has_streaming_content {
         // Never show just a dot — always show meaningful status
         let content = if agent_running {
             format!("{} {}...", spinner, MessageRegistry::status_thinking())
@@ -325,20 +331,31 @@ pub fn render_assistant_msg(
     }
     // Render think blocks if present. thought_duration only controls the header line above,
     // it does NOT indicate whether content should render.
-    for think in &_think_blocks {
-        if row + rendered >= max_rows {
-            break;
+    // During streaming, use streaming_think_content if available (from state.thinking.text)
+    if let Some(streaming_content) = streaming_think_content {
+        if !streaming_content.is_empty() && row + rendered < max_rows {
+            let block_rows = render_think_block_box(
+                streaming_content, area, row + rendered, margin_x, response_indent, text_muted, wrap_cache, buf,
+                agent_running, spinner, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes,
+            );
+            rendered += block_rows;
         }
-        let block_rows = render_think_block_box(
-            think, area, row + rendered, margin_x, response_indent, text_muted, wrap_cache, buf,
-            agent_running, spinner, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes,
-        );
-        rendered += block_rows;
+    } else {
+        for think in &_think_blocks {
+            if row + rendered >= max_rows {
+                break;
+            }
+            let block_rows = render_think_block_box(
+                think, area, row + rendered, margin_x, response_indent, text_muted, wrap_cache, buf,
+                agent_running, spinner, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes,
+            );
+            rendered += block_rows;
+        }
     }
 
     // Don't render stripped thinking text when there is none
     // But still render "Turn completed" line if turn_complete is set
-    if stripped.trim().is_empty() && turn_complete.is_none() {
+    if stripped.trim().is_empty() && turn_complete.is_none() && streaming_think_content.map_or(true, |s| s.is_empty()) {
         return rendered;
     }
 

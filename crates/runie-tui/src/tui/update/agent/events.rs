@@ -229,14 +229,27 @@ fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
         (None, String::new())
     };
     
-    // Add thought indicator if thinking took more than 0.5s
+    // Append think content with <think> tags to the last assistant message.
+    // This ensures extract_think_blocks() in render_assistant_msg can find and render it.
+    // Previously we pushed a separate MessageItem::Thought but those get filtered out
+    // in Feed::from conversion (convert.rs returns Err for Thought items).
     if let Some(duration) = duration {
         let secs = duration.as_secs_f32();
+        // Always set thought_duration on assistant if we had meaningful thinking
         if secs > 0.5 || !text.is_empty() {
-            state.messages.push(MessageItem::Thought {
-                duration_secs: secs,
-                text,
-            });
+            // Append think content with tags to assistant's text so render sees it
+            if !text.is_empty() {
+                let think_with_tags = format!("\n<think>\n{}\n</think>", text);
+                if let Some(MessageItem::Assistant { text: ref mut assistant_text, .. }) = state.messages.last_mut() {
+                    assistant_text.push_str(&think_with_tags);
+                }
+            }
+            // Set thought_duration on assistant message (for 0.5s+ thinking)
+            if secs > 0.5 {
+                if let Some(MessageItem::Assistant { thought_duration: ref mut td, .. }) = state.messages.last_mut() {
+                    *td = Some(secs);
+                }
+            }
         }
     }
     state.thinking = None;
@@ -412,7 +425,15 @@ fn on_turn_end(state: &mut AppState) {
 
 pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
     if let Some(MessageItem::Assistant { ref mut text, .. }) = state.messages.last_mut() {
-        *text = extract_text_content(content);
+        let new_content = extract_text_content(content);
+        // Append new content to existing text. This preserves think content
+        // appended in on_thinking_end while adding the final response text.
+        if !new_content.is_empty() {
+            if !text.is_empty() {
+                text.push('\n');
+            }
+            text.push_str(&new_content);
+        }
     }
 }
 
