@@ -100,7 +100,7 @@ impl StatusBarViewModel {
         // Grok-style minimal hints
         vec![
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
-            StatusItem { key: "Ctrl+.".to_string(), description: "".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
         ]
     }
 
@@ -125,7 +125,7 @@ impl StatusBarViewModel {
         // Grok-style minimal hints: only mode toggle and shortcuts
         vec![
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
-            StatusItem { key: "Ctrl+.".to_string(), description: "".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
         ]
     }
 

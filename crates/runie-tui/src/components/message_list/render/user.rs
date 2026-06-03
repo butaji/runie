@@ -80,16 +80,14 @@ pub fn render_user_msg(
                 .style(Style::default().fg(text_primary).bg(bg_color));
             buf.set_line(text_x, line_y, &first_line, text_width as u16);
 
-            // Timestamp on first line for single-line messages
-            if wrapped.len() <= 1 {
-                let ts_len = ts_display.len() as u16;
-                let ts_x = area.right().saturating_sub(ts_len + 1);
-                if ts_x > text_x {
-                    let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-                    let ts_line = ratatui::text::Line::raw(&ts_display)
-                        .style(Style::default().fg(ts_color).bg(bg_color));
-                    buf.set_line(ts_x, line_y, &ts_line, ts_len);
-                }
+            // Timestamp on first line for all messages
+            let ts_len = ts_display.len() as u16;
+            let ts_x = area.right().saturating_sub(ts_len + 1);
+            if ts_x > text_x {
+                let ts_color: ratatui::style::Color = theme.color("text.muted").into();
+                let ts_line = ratatui::text::Line::raw(&ts_display)
+                    .style(Style::default().fg(ts_color).bg(bg_color));
+                buf.set_line(ts_x, line_y, &ts_line, ts_len);
             }
         } else {
             // Continuation lines: aligned with text after chevron
@@ -97,19 +95,6 @@ pub fn render_user_msg(
             let line = ratatui::text::Line::raw(line_text.as_str())
                 .style(Style::default().fg(text_primary).bg(bg_color));
             buf.set_line(text_x, line_y, &line, text_width as u16);
-        }
-    }
-
-    // Timestamp on last line for multi-line messages
-    if wrapped.len() > 1 {
-        let last_line_y = content_start_y + wrapped.len().saturating_sub(1) as u16;
-        let ts_len = ts_display.len() as u16;
-        let ts_x = area.right().saturating_sub(ts_len + 2); // 1-symbol right padding
-        if ts_x > margin_x + indent + 1 {
-            let ts_color: ratatui::style::Color = theme.color("text.muted").into();
-            let ts_line = ratatui::text::Line::raw(&ts_display)
-                .style(Style::default().fg(ts_color).bg(bg_color));
-            buf.set_line(ts_x, last_line_y, &ts_line, ts_len);
         }
     }
 

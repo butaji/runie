@@ -87,7 +87,7 @@ pub fn render_home_screen_mode(
     super::render_input::render_input(buf, &clean_state, main_areas[3], theme, theme_colors);
 
     // Render version badge after input bar
-    let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
+    let version_badge = format!("{} [stable] Beta", env!("CARGO_PKG_VERSION"));
     let badge_y = main_areas[3].bottom();
     let badge_x = main_areas[3].right().saturating_sub(version_badge.len() as u16 + 2);
     buf.set_string(badge_x, badge_y, &version_badge, theme.version_style());

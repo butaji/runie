@@ -76,8 +76,10 @@ fn render_think_block_box(
     wrap_cache: &mut WrapCache,
     buf: &mut Buffer,
 ) -> u16 {
+    // Strip <think> and </think> tags from think content
+    let stripped = strip_think_tags(think_content);
     let inner_width = (area.width - margin_x + area.x - 6) as usize;
-    let wrapped = wrap_cache.get_wrapped(think_content, inner_width);
+    let wrapped = wrap_cache.get_wrapped(&stripped, inner_width);
     let mut rendered = 0u16;
 
     for line_text in wrapped {
@@ -215,28 +217,51 @@ pub fn render_assistant_msg(
     }
 
     let text_rows = markdown_lines.len() as u16;
+    let ts_len = timestamp.as_ref().map(|t| t.len() as u16).unwrap_or(0);
+    // Activity block when agent is running (streaming)
+    let activity_len = if agent_running { 1 } else { 0 };
+    // Reserve space for timestamp and activity on FIRST line
+    let first_line_width = if ts_len > 0 || activity_len > 0 {
+        content_width.saturating_sub(ts_len + 1 + activity_len)
+    } else {
+        content_width
+    };
 
     for (i, line) in markdown_lines.iter().enumerate() {
         let line_y = row + rendered + i as u16;
         if line_y >= max_rows {
             break;
         }
-        buf.set_line(margin_x, area.y + line_y, line, area.width - margin_x + area.x - 2);
+        // First line has less width to leave room for timestamp + activity
+        let line_width = if i == 0 && (ts_len > 0 || activity_len > 0) {
+            first_line_width
+        } else {
+            content_width
+        };
+        buf.set_line(margin_x, area.y + line_y, line, line_width);
     }
     rendered += text_rows;
 
-    // Render right-aligned timestamp on the LAST LINE of text content (before "Turn completed")
-    if let Some(ts) = timestamp {
-        if rendered > 0 && row + rendered - 1 < max_rows {
-            let ts_len = ts.len() as u16;
-            let available_width = area.width - margin_x + area.x - 2;
-            let ts_x = if ts_len < available_width {
-                margin_x + available_width - ts_len
-            } else {
-                margin_x
-            };
-            let line = ratatui::text::Line::raw(ts).style(Style::default().fg(text_muted));
-            buf.set_line(ts_x, area.y + row + rendered - 1, &line, ts_len);
+    // Render right-aligned timestamp and activity on the FIRST LINE of text content
+    if rendered > 0 {
+        let first_line_y = row + rendered;
+        // Timestamp: right-aligned at margin_x + content_width - ts_len
+        if let Some(ts) = timestamp {
+            if first_line_y < max_rows {
+                let ts_x = margin_x + content_width.saturating_sub(ts_len);
+                let line = ratatui::text::Line::raw(ts).style(Style::default().fg(text_muted));
+                buf.set_line(ts_x, area.y + first_line_y, &line, ts_len);
+            }
+        }
+        // Activity block: after timestamp on first line
+        if agent_running && ts_len > 0 {
+            if first_line_y < max_rows {
+                let act_x = margin_x + content_width;
+                if let Some(cell) = buf.cell_mut((act_x, area.y + first_line_y)) {
+                    cell.set_char(glyphs::ACTIVITY_BLOCK);
+                    cell.set_style(Style::default().fg(text_muted));
+                }
+            }
         }
     }
 
