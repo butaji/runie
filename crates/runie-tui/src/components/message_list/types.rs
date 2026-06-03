@@ -14,7 +14,14 @@ pub struct MessageList {
 #[derive(Debug, Clone, PartialEq)]
 pub enum MessageItem {
     User { text: String, model: Option<String>, timestamp: Option<String> },
-    Assistant { text: String, model: Option<String>, timestamp: Option<String>, expanded: bool },
+    Assistant { 
+        text: String, 
+        model: Option<String>, 
+        timestamp: Option<String>, 
+        expanded: bool,
+        thought_duration: Option<f32>,
+        turn_duration: Option<f32>,
+    },
     Thought { duration_secs: f32, text: String },
     /// Separator between conversation turns showing elapsed time and metrics
     Separator { elapsed_secs: u64, tool_calls: usize, tokens_used: Option<usize> },

@@ -34,6 +34,9 @@ fn make_state_with_messages() -> AppState {
         text: "Hi there!".to_string(),
         model: None,
         timestamp: None,
+        expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
     state
 }
@@ -121,6 +124,9 @@ fn node_to_message_item(node: &MessageNode) -> MessageItem {
             text: content.clone(),
             model: None,
             timestamp: None,
+            expanded: false,
+            thought_duration: None,
+            turn_duration: None,
         },
         Message::System { content, .. } => {
             if content.starts_with("[ERROR] ") {
@@ -512,6 +518,9 @@ mod integration_tests {
             text: "I'm doing well, thank you!".to_string(),
             model: None,
             timestamp: None,
+            expanded: false,
+            thought_duration: None,
+            turn_duration: None,
         });
 
         let path = temp_session_file();

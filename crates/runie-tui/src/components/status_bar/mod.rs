@@ -75,13 +75,22 @@ impl StatusBarViewModel {
     /// Otherwise shows mode-specific hints (typically 2 for idle chat).
     pub fn hotkeys(&self) -> Vec<StatusItem> {
         // Context-aware: agent running > input has text > mode-specific
-        if self.agent_running {
+        let result = if self.agent_running {
             Self::agent_running_hotkeys()
         } else if self.input_has_text {
             Self::input_with_text_hotkeys()
         } else {
             hotkeys_for_mode(self.mode)
-        }
+        };
+        // DEBUG: trace hotkeys selection
+        tracing::debug!(
+            "hotkeys() called: agent_running={}, input_has_text={}, mode={:?} -> returning {} items",
+            self.agent_running,
+            self.input_has_text,
+            self.mode,
+            result.len()
+        );
+        result
     }
 
     /// Hotkeys shown when agent is running
@@ -91,7 +100,7 @@ impl StatusBarViewModel {
             StatusItem { key: "Shift+Tab".to_string(), description: "mode".to_string() },
             StatusItem { key: "Ctrl+c".to_string(), description: "cancel".to_string() },
             StatusItem { key: "Ctrl+Enter".to_string(), description: "interject".to_string() },
-            StatusItem { key: "Ctrl+.".to_string(), description: "".to_string() },
+            StatusItem { key: "Ctrl+.".to_string(), description: "shortcuts".to_string() },
         ]
     }
 

@@ -73,13 +73,14 @@ impl RenderPipe {
         crate::components::input_bar::input_bar_height(&state.textarea, false)
     }
 
-    fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 5] {
+    fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 6] {
         use ratatui::layout::{Constraint, Layout};
         let constraints = [
             Constraint::Length(3),        // topbar + 2 blank lines padding
             Constraint::Min(1),           // feed
             Constraint::Length(1),       // global_tags
             Constraint::Length(input_h),  // input
+            Constraint::Length(1),       // version separator (blank line)
             if show_status { Constraint::Length(1) } else { Constraint::Length(0) }, // hotkeys
         ];
         Layout::vertical(constraints).areas(padded)
@@ -90,7 +91,7 @@ impl RenderPipe {
         area: Rect,
         state: &AppState,
         vms: &ViewModels,
-        main_areas: [Rect; 5],
+        main_areas: [Rect; 6],
         show_status_bar: bool,
         theme: &ThemeWrapper,
         theme_colors: &ThemeColors,
@@ -104,7 +105,7 @@ impl RenderPipe {
         area: Rect,
         state: &AppState,
         vms: &ViewModels,
-        main_areas: [Rect; 5],
+        main_areas: [Rect; 6],
         theme: &ThemeWrapper,
         theme_colors: &ThemeColors,
     ) {
@@ -117,7 +118,7 @@ impl RenderPipe {
         area: Rect,
         state: &AppState,
         vms: &ViewModels,
-        main_areas: [Rect; 5],
+        main_areas: [Rect; 6],
         show_sidebar: bool,
         show_status_bar: bool,
         palette: &CommandPalette,
@@ -216,7 +217,7 @@ mod tests {
     fn setup_render_context(
         area: Rect,
         state: &AppState,
-    ) -> (crate::tui::view_models::ViewModels, ThemeWrapper, ThemeColors, [Rect; 5]) {
+    ) -> (crate::tui::view_models::ViewModels, ThemeWrapper, ThemeColors, [Rect; 6]) {
         let palette = crate::components::CommandPalette::new();
         let wrap_cache = crate::components::message_list::render::WrapCache::new();
         let vms = crate::tui::view_models::ViewModels::from_app_state(state, &palette, wrap_cache);

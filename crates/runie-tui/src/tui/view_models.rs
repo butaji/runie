@@ -277,12 +277,14 @@ fn build_message_list_vm(
     // Strip thinking from assistant messages when show_thoughts is false
     let messages_stripped: Vec<MessageItem> = state.messages.iter().map(|msg| {
         match msg {
-            MessageItem::Assistant { text, model, timestamp, expanded } if !state.show_thoughts => {
+            MessageItem::Assistant { text, model, timestamp, expanded, thought_duration, turn_duration } if !state.show_thoughts => {
                 MessageItem::Assistant {
                     text: strip_thinking_from_assistant(text),
                     model: model.clone(),
                     timestamp: timestamp.clone(),
                     expanded: *expanded,
+                    thought_duration: *thought_duration,
+                    turn_duration: *turn_duration,
                 }
             }
             other => other.clone(),
@@ -297,6 +299,7 @@ fn build_message_list_vm(
         state.agent_running,
         state.animation.clone(),
         wrap_cache,
+        state.session_starting,
     )
 }
 
@@ -305,9 +308,9 @@ fn build_input_bar_vm(state: &crate::tui::state::AppState) -> InputBarViewModel 
 
     // Build mode indicator
     let mode_indicator = match state.permission_mode {
-        PermissionMode::Normal => "runie".to_string(),
-        PermissionMode::Plan => "runie · plan".to_string(),
-        PermissionMode::AutoApprove => "runie · yolo".to_string(),
+        PermissionMode::Normal => "Grok Build".to_string(),
+        PermissionMode::Plan => "Grok Build · plan".to_string(),
+        PermissionMode::AutoApprove => "Grok Build · always-approve".to_string(),
     };
 
     // Calculate char count if text is long (>50% of context window)

@@ -219,6 +219,8 @@ fn test_error_removes_empty_placeholder() {
         model: Some("test-model".to_string()),
         timestamp: None,
         expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
 
     handle_agent_event(

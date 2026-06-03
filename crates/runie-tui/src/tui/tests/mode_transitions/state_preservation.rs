@@ -10,7 +10,7 @@ use super::*;
 fn test_messages_preserved_across_palette() {
     let mut state = make_state_with_messages(vec![
         MessageItem::User { text: "Hello".to_string(), model: Some("You".to_string()), timestamp: None },
-        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false },
+        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None },
     ]);
     let mut palette = CommandPalette::new();
 
@@ -73,7 +73,7 @@ fn test_scroll_preserved_across_palette() {
 fn test_messages_preserved_across_overlay() {
     let mut state = make_state_with_messages(vec![
         MessageItem::User { text: "Hello".to_string(), model: Some("You".to_string()), timestamp: None },
-        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false },
+        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None },
     ]);
     let mut palette = CommandPalette::new();
 
@@ -115,7 +115,7 @@ fn test_textarea_preserved_across_overlay() {
 fn test_messages_preserved_across_permission() {
     let mut state = make_state_with_messages(vec![
         MessageItem::User { text: "Hello".to_string(), model: Some("You".to_string()), timestamp: None },
-        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false },
+        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None },
     ]);
     let mut palette = CommandPalette::new();
 
@@ -248,7 +248,7 @@ fn test_scroll_preserved_across_permission() {
 fn test_messages_preserved_across_onboarding() {
     let mut state = make_state_with_messages(vec![
         MessageItem::User { text: "Hello".to_string(), model: Some("You".to_string()), timestamp: None },
-        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false },
+        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None },
     ]);
     let mut palette = CommandPalette::new();
 
@@ -272,7 +272,7 @@ fn test_messages_preserved_across_onboarding() {
 fn test_messages_preserved_across_session_tree() {
     let mut state = make_state_with_messages(vec![
         MessageItem::User { text: "Hello".to_string(), model: Some("You".to_string()), timestamp: None },
-        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false },
+        MessageItem::Assistant { text: "Hi there!".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None },
     ]);
     let mut palette = CommandPalette::new();
 

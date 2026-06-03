@@ -73,7 +73,7 @@ impl MessageRegistry {
 
     /// Turn completed with duration
     pub fn turn_completed(seconds: f32) -> String {
-        format!("Turn completed in {:.1}s", seconds)
+        format!("Turn completed in {:.1}s.", seconds)
     }
 
     /// Thought duration indicator

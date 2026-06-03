@@ -21,7 +21,7 @@ pub enum PermissionModeConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            permission_mode: PermissionModeConfig::Ask,
+            permission_mode: PermissionModeConfig::AlwaysApprove,
             vim_mode: false,
         }
     }

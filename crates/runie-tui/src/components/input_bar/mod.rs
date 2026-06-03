@@ -92,6 +92,7 @@ fn build_input_block(
         .border_style(Style::default().fg(border_color));
 
     // Build bottom title with mode indicator and char count
+    // Grok centers the label with dashes on both sides
     let mode_len = mode_indicator.chars().count() as u16;
     let count_str = char_count.map(|c| format!(" · {} chars", c)).unwrap_or_default();
     let count_len = count_str.chars().count() as u16;
@@ -102,13 +103,17 @@ fn build_input_block(
         right_info.chars().count() as u16 + 2
     };
 
-    let dash_count = area.width.saturating_sub(mode_len + count_len + right_info_len + 5);
-    let dash_str = "─".repeat(dash_count as usize);
+    // Right-align the label with dashes on left side only
+    let remaining = area.width.saturating_sub(mode_len + count_len + right_info_len + 4);
+    let left_dashes = remaining - 1;
+    let right_dashes = 2;
+    let left_dash_str = "─".repeat(left_dashes as usize);
+    let right_dash_str = "─".repeat(right_dashes as usize);
 
     let title_bottom = if right_info.is_empty() {
-        format!("{} {} {}{}", dash_str, mode_indicator, count_str, "─")
+        format!("{} {} {}{}", left_dash_str, mode_indicator, count_str, right_dash_str)
     } else {
-        format!("{} {} {}{} {}", dash_str, mode_indicator, count_str, "─", right_info)
+        format!("{} {} {}{} ─ {} ─", left_dash_str, mode_indicator, count_str, right_dash_str, right_info)
     };
 
     block = block.title_bottom(

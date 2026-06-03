@@ -127,6 +127,7 @@ fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
         state.input_right_info = String::new();
         return vec![];
     }
+    tracing::debug!("finalize_submit: setting agent_running = true");
     state.agent_running = true;
     add_user_and_placeholder(state, &text);
     vec![ChatCmd::SpawnAgent { messages: to_agent_messages(&state.messages) }]
@@ -170,6 +171,8 @@ fn add_user_and_placeholder(state: &mut AppState, text: &str) {
         model: state.current_model.clone(),
         timestamp: current_timestamp(),
         expanded: true,
+        thought_duration: None,
+        turn_duration: None,
     });
     state.thinking = Some(ThinkingState {
         start: Some(Instant::now()),

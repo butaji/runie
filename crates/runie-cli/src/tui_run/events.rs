@@ -31,7 +31,8 @@ fn is_tick_msg(msg: &Msg) -> bool {
 fn is_state_mutating_msg(msg: &Msg) -> bool {
     matches!(
         msg,
-        Msg::AgentEvent(AgentEvent::MessageUpdate { .. })
+        Msg::AgentEvent(AgentEvent::MessageStart { .. })
+            | Msg::AgentEvent(AgentEvent::MessageUpdate { .. })
             | Msg::AgentEvent(AgentEvent::PermissionRequest { .. })
             | Msg::AgentEvent(AgentEvent::Error { .. })
     )

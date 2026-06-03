@@ -19,7 +19,7 @@ build = "build.rs"
 publish = false
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.16"
 edition = "2021"
 authors = ["Tidy Team"]
 license = "MIT"

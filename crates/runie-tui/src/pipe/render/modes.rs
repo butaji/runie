@@ -1,6 +1,6 @@
 //! RenderPipe mode-specific rendering.
 
-use ratatui::{buffer::Buffer, layout::Rect, style::Style, widgets::Widget};
+use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 
 use crate::tui::view_models::ViewModels;
 use crate::tui::AppState;
@@ -14,7 +14,7 @@ pub fn render_onboarding_mode(
     area: Rect,
     state: &AppState,
     vms: &ViewModels,
-    main_areas: [Rect; 5],
+    main_areas: [Rect; 6],
     show_status_bar: bool,
     theme: &ThemeWrapper,
     theme_colors: &ThemeColors,
@@ -43,7 +43,7 @@ pub fn render_onboarding_mode(
     }
 
     if show_status_bar {
-        crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
+        crate::components::status_bar::render_ref(&vms.status_bar, main_areas[5], buf, theme_colors);
     }
 }
 
@@ -52,7 +52,7 @@ pub fn render_home_screen_mode(
     area: Rect,
     state: &AppState,
     vms: &ViewModels,
-    main_areas: [Rect; 5],
+    main_areas: [Rect; 6],
     theme: &ThemeWrapper,
     theme_colors: &ThemeColors,
 ) {
@@ -78,7 +78,7 @@ pub fn render_home_screen_mode(
         crate::components::home_screen::render_home_screen(&state.home_screen, home_area, buf, theme);
     }
 
-    // Clear input_right_info in home screen mode to show "runie" instead of "runie ─ mock"
+    // Clear input_right_info in home screen mode to show "Grok Build" instead of "Grok Build ─ mock"
     let clean_state = {
         let mut s = state.clone();
         s.input_right_info = String::new();
@@ -86,11 +86,10 @@ pub fn render_home_screen_mode(
     };
     super::render_input::render_input(buf, &clean_state, main_areas[3], theme, theme_colors);
 
-    // Render version badge after input bar
-    let version_badge = format!("{} [stable] Beta", env!("CARGO_PKG_VERSION"));
-    let badge_y = main_areas[3].bottom();
-    let badge_x = main_areas[3].right().saturating_sub(version_badge.len() as u16 + 2);
-    buf.set_string(badge_x, badge_y, &version_badge, theme.version_style());
+    // Render version badge on version separator line, right-aligned
+    let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
+    let badge_x = main_areas[4].right().saturating_sub(version_badge.len() as u16);
+    buf.set_string(badge_x, main_areas[4].y + 1, &version_badge, theme.version_style());
 }
 
 pub fn render_normal_mode(
@@ -98,7 +97,7 @@ pub fn render_normal_mode(
     area: Rect,
     state: &AppState,
     vms: &ViewModels,
-    main_areas: [Rect; 5],
+    main_areas: [Rect; 6],
     show_sidebar: bool,
     show_status_bar: bool,
     palette: &crate::components::CommandPalette,
@@ -109,7 +108,7 @@ pub fn render_normal_mode(
     
 
     clear_background(buf, area, theme_colors.bg_base);
-    // main_areas[0] = topbar, [1] = feed, [2] = global_tags, [3] = input, [4] = hotkeys
+    // main_areas[0] = topbar, [1] = feed, [2] = global_tags, [3] = input, [4] = version separator, [5] = hotkeys
     crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
     super::render_content::render_content(buf, vms, state, show_sidebar, main_areas[1], theme, theme_colors);
     crate::components::global_tags::render_global_tags(&vms.global_tags, main_areas[2], buf, theme_colors);
@@ -134,8 +133,14 @@ pub fn render_normal_mode(
         (&state.file_picker).render(picker_area, buf);
     }
     super::render_input::render_input(buf, state, main_areas[3], theme, theme_colors);
+
+    // Render version on version separator line, right-aligned
+    let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
+    let badge_x = main_areas[4].right().saturating_sub(version_badge.len() as u16);
+    buf.set_string(badge_x, main_areas[4].y + 1, &version_badge, theme.version_style());
+
     if show_status_bar {
-        crate::components::status_bar::render_ref(&vms.status_bar, main_areas[4], buf, theme_colors);
+        crate::components::status_bar::render_ref(&vms.status_bar, main_areas[5], buf, theme_colors);
     }
     super::overlays::render_overlays(buf, state, palette, padded, area, theme, theme_colors);
 }

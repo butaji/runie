@@ -6,9 +6,13 @@ use ratatui::{
 
 pub fn format_context_window(window: usize) -> String {
     if window >= 1_000_000 {
-        format!("{:.1}M", window as f32 / 1_000_000.0)
+        let val = format!("{:.1}", window as f32 / 1_000_000.0);
+        let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
+        return format!("{}M", stripped);
     } else if window >= 1_000 {
-        format!("{:.1}K", window as f32 / 1_000.0)
+        let val = format!("{:.1}", window as f32 / 1_000.0);
+        let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
+        return format!("{}K", stripped);
     } else {
         window.to_string()
     }
@@ -19,7 +23,9 @@ pub fn format_token_count(tokens: usize) -> String {
     if tokens >= 1_000_000 {
         format!("{:.1}M", tokens as f32 / 1_000_000.0)
     } else if tokens >= 1_000 {
-        format!("{:.1}K", tokens as f32 / 1_000.0)
+        let val = format!("{:.1}", tokens as f32 / 1_000.0);
+        let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
+        return format!("{}K", stripped);
     } else {
         tokens.to_string()
     }

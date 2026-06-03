@@ -1,10 +1,9 @@
-use ratatui::{buffer::Buffer, layout::Rect, style::{Modifier, Style}, text::{Line, Span}, widgets::Widget};
+use ratatui::{buffer::Buffer, layout::Rect, style::{Style}, text::{Line, Span}, widgets::Widget};
 
 use crate::components::message_list::WrapCache;
 use crate::components::message_list::feed::ToolCall;
 use crate::glyphs;
 use crate::messages::MessageRegistry;
-use super::markdown::render_text_content;
 use super::tool::render_tool_call_inline;
 
 /// Extract think blocks from text and returns (main_text, think_blocks).
@@ -72,29 +71,160 @@ fn render_think_block_box(
     area: Rect,
     row: u16,
     margin_x: u16,
+    response_indent: u16,
     text_muted: ratatui::style::Color,
     wrap_cache: &mut WrapCache,
     buf: &mut Buffer,
+    streaming: bool,
+    spinner: char,
+    streaming_thinking_elapsed_ms: Option<u64>,
+    streaming_total_elapsed_ms: Option<u64>,
+    streaming_download_bytes: Option<u64>,
 ) -> u16 {
-    // Strip <think> and </think> tags from think content
-    let stripped = strip_think_tags(think_content);
-    let inner_width = (area.width - margin_x + area.x - 6) as usize;
-    let wrapped = wrap_cache.get_wrapped(&stripped, inner_width);
-    let mut rendered = 0u16;
-
-    for line_text in wrapped {
-        let line_y = row + rendered;
-        if line_y >= area.height {
-            break;
+    if streaming {
+        // Grok streaming: "┃  ◆ Thinking…" with "█" right border on every line
+        let header_text = "┃  ◆ Thinking…";
+        let header = ratatui::text::Line::raw(header_text).style(Style::default().fg(text_muted));
+        buf.set_line(response_indent, area.y + row, &header, area.width - margin_x + area.x - 2);
+        // Add █ at far right
+        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + row)) {
+            cell.set_char('█');
+            cell.set_style(Style::default().fg(text_muted));
         }
-        let content = format!("┃  {}", line_text);
-        let line = ratatui::text::Line::raw(content).style(Style::default().fg(text_muted));
-        buf.set_line(margin_x, area.y + line_y, &line, area.width - margin_x + area.x - 2);
-        rendered += 1;
-    }
+        let mut rendered = 1u16;
 
-    rendered
+        // Strip think tags for content
+        let stripped = strip_think_tags(think_content);
+        let inner_width = (area.width - margin_x + area.x - 6) as usize;
+        let wrapped = wrap_cache.get_wrapped(&stripped, inner_width);
+
+        for line_text in wrapped {
+            let line_y = row + rendered;
+            if line_y >= area.height {
+                break;
+            }
+            let content = format!("┃  {}", line_text);
+            let line = ratatui::text::Line::raw(content).style(Style::default().fg(text_muted));
+            buf.set_line(response_indent, area.y + line_y, &line, area.width - margin_x + area.x - 2);
+            // Add █ at far right
+            if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + line_y)) {
+                cell.set_char('█');
+                cell.set_style(Style::default().fg(text_muted));
+            }
+            rendered += 1;
+        }
+
+        // Render bottom spinner line: "⠦ Thinking… X.Xs                      X.Xs ⇣XX.Xk [ ]"
+        let bottom_y = row + rendered;
+        if bottom_y < area.height {
+            // Left: spinner + "Thinking…" + thinking elapsed
+            let thinking_elapsed_secs = streaming_thinking_elapsed_ms
+                .map(|ms| ms as f64 / 1000.0)
+                .unwrap_or(0.0);
+            let left_content = format!("{} Thinking… {:.1}s", spinner, thinking_elapsed_secs);
+            let left_line = ratatui::text::Line::raw(left_content).style(Style::default().fg(text_muted));
+            buf.set_line(response_indent, area.y + bottom_y, &left_line, area.width - margin_x + area.x - 2);
+
+            // Right: total elapsed + download bytes + status
+            let total_elapsed_secs = streaming_total_elapsed_ms
+                .map(|ms| ms as f64 / 1000.0)
+                .unwrap_or(0.0);
+            let download_str = streaming_download_bytes
+                .map(format_download_bytes)
+                .unwrap_or_else(|| "0".to_string());
+            let right_text = format!(" {:.1}s ⇣{} [ ]", total_elapsed_secs, download_str);
+            let right_len = right_text.len() as u16;
+            let right_x = area.x + area.width - 1 - right_len;
+            let right_line = ratatui::text::Line::raw(right_text).style(Style::default().fg(text_muted));
+            buf.set_line(right_x, area.y + bottom_y, &right_line, right_len);
+
+            // Add █ at far right
+            if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + bottom_y)) {
+                cell.set_char('█');
+                cell.set_style(Style::default().fg(text_muted));
+            }
+            rendered += 1;
+        }
+
+        rendered
+    } else {
+        // Grok done (compact): "◆ Thought for Xs" - just the duration line
+        let stripped = strip_think_tags(think_content);
+        let duration_text = extract_thought_duration(&stripped);
+        let header_text = format!("{} {}", glyphs::THOUGHT_MARKER, duration_text);
+        let header = ratatui::text::Line::raw(header_text).style(Style::default().fg(text_muted));
+        buf.set_line(response_indent, area.y + row, &header, area.width - margin_x + area.x - 2);
+        1
+    }
 }
+
+/// Extract thought duration from think content (first line with "took" or similar)
+fn extract_thought_duration(think_content: &str) -> String {
+    // Look for patterns like "took X seconds", "X.Xs", etc.
+    let lines: Vec<&str> = think_content.lines().collect();
+    for line in &lines {
+        // Try to find duration patterns
+        if let Some(pos) = line.to_lowercase().find("took") {
+            let rest = &line[pos + 4..];
+            let trimmed = rest.trim();
+            // Extract number and unit
+            let chars = trimmed.chars().take(10).collect::<String>();
+            if !chars.is_empty() {
+                return format!("Thought for {}", chars.trim());
+            }
+        }
+    }
+    // Fallback: return first 30 chars of content
+    let first_line = lines.first().unwrap_or(&"...");
+    let preview = first_line.chars().take(30).collect::<String>();
+    if preview.is_empty() {
+        "...".to_string()
+    } else {
+        preview
+    }
+}
+
+/// Format download bytes for display (e.g., 1234 -> "1.2k", 1500000 -> "1.5M")
+fn format_download_bytes(bytes: u64) -> String {
+    if bytes >= 1_000_000 {
+        format!("{:.1}M", bytes as f64 / 1_000_000.0)
+    } else if bytes >= 1_000 {
+        format!("{:.1}k", bytes as f64 / 1_000.0)
+    } else {
+        bytes.to_string()
+    }
+}
+
+/// Extract first sentence from text for Grok-style single-line response
+fn extract_first_sentence(text: &str) -> String {
+    if let Some(end) = find_sentence_end(text) {
+        return text[..=end].trim().to_string();
+    }
+    truncate_to_line(text)
+}
+
+fn find_sentence_end(text: &str) -> Option<usize> {
+    for (i, c) in text.chars().enumerate() {
+        if c == '.' || c == '!' || c == '?' {
+            let next_i = i + 1;
+            if next_i >= text.len() || text[next_i..].starts_with(' ') || text[next_i..].starts_with('\n') {
+                return Some(i);
+            }
+        }
+    }
+    None
+}
+
+fn truncate_to_line(text: &str) -> String {
+    let first_line = text.lines().next().unwrap_or(text);
+    let trimmed = first_line.trim();
+    if trimmed.len() <= 80 {
+        trimmed.to_string()
+    } else {
+        format!("{}...", trimmed.chars().take(77).collect::<String>())
+    }
+}
+
 
 /// Render an assistant message
 pub fn render_assistant_msg(
@@ -119,6 +249,9 @@ pub fn render_assistant_msg(
     tool_calls: &[ToolCall],
     tool_bar_color: ratatui::style::Color,
     thoughts_collapsed: bool,
+    streaming_thinking_elapsed_ms: Option<u64>,
+    streaming_total_elapsed_ms: Option<u64>,
+    streaming_download_bytes: Option<u64>,
 ) -> u16 {
     let (stripped, _think_blocks) = extract_think_blocks(text);
 
@@ -136,23 +269,23 @@ pub fn render_assistant_msg(
         return 1;
     }
 
-    let width = (area.width - margin_x + area.x - 2) as usize;
+    let _width = (area.width - margin_x + area.x - 2) as usize;
     let content_width = area.width - margin_x + area.x - 2;
+    // Response indent: 5 spaces from edge (margin_x + 3)
+    let response_indent = margin_x + 3;
     let mut rendered = 0u16;
 
-    // When thoughts_collapsed is true, render collapsed indicator instead of full content
+    // When thoughts_collapsed is true, render ONLY the compact duration line (no think block content)
     if thoughts_collapsed {
-        if let Some(duration) = thought_duration {
-            // Draw vertical bar at left edge
-            if let Some(cell) = buf.cell_mut((margin_x.saturating_sub(1), area.y + row)) {
-                cell.set_char('┃');
-                cell.set_style(Style::default().fg(text_muted));
-            }
-            let header_text = format!("{} ◆ Thought for {:.1}s ▶", glyphs::CHEVRON, duration);
-            let header = Line::styled(header_text, Style::default().fg(text_muted).add_modifier(Modifier::BOLD));
-            buf.set_line(margin_x, area.y + row, &header, content_width);
-            return 1;
-        }
+        let header_text = if let Some(duration) = thought_duration {
+            format!("{} Thought for {:.1}s", glyphs::THOUGHT_MARKER, duration)
+        } else {
+            format!("{} Thinking...", glyphs::THOUGHT_MARKER)
+        };
+        let header = Line::raw(header_text).style(Style::default().fg(text_muted));
+        // 5-space indent: response_indent (Grok-style)
+        buf.set_line(response_indent, area.y + row, &header, content_width);
+        return 1;
     }
 
     // Render thought indicator BEFORE answer (if thought_duration is provided)
@@ -163,7 +296,7 @@ pub fn render_assistant_msg(
             Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(text_muted)),
             Span::raw(&duration_text).style(Style::default().fg(text_muted)),
         ]);
-        buf.set_line(margin_x, area.y + row, &line, content_width);
+        buf.set_line(response_indent, area.y + row, &line, content_width);
         1
     } else {
         0
@@ -171,7 +304,7 @@ pub fn render_assistant_msg(
     rendered += thought_rows;
 
     // Render tool calls inline (between thought indicator and markdown content)
-    let tool_call_start_row = rendered;
+    let _tool_call_start_row = rendered;
     for tool_call in tool_calls {
         if row + rendered >= max_rows {
             break;
@@ -189,99 +322,78 @@ pub fn render_assistant_msg(
         );
         rendered += rows;
     }
-    // Render think blocks if any (not currently used but preserved)
-    for think in &_think_blocks {
-        if row + rendered >= max_rows {
-            break;
+    // Render think blocks ONLY when we don't have a pre-computed thought_duration
+    // When thought_duration is available, we already showed "◆ Thought for Xs" above
+    // So skip rendering the full think block content in that case
+    if thought_duration.is_none() {
+        for think in &_think_blocks {
+            if row + rendered >= max_rows {
+                break;
+            }
+            let block_rows = render_think_block_box(
+                think, area, row + rendered, margin_x, response_indent, text_muted, wrap_cache, buf,
+                agent_running, spinner, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes,
+            );
+            rendered += block_rows;
         }
-        let block_rows = render_think_block_box(think, area, row + rendered, margin_x, text_muted, wrap_cache, buf);
-        rendered += block_rows;
     }
 
-    if stripped.trim().is_empty() {
+    // Don't render stripped thinking text when there is none
+    // But still render "Turn completed" line if turn_complete is set
+    if stripped.trim().is_empty() && turn_complete.is_none() {
         return rendered;
     }
 
-    let base_style = Style::default().add_modifier(Modifier::BOLD).fg(text_secondary);
+    // Grok-style: extract first sentence as plain text (no markdown)
     let stripped_trimmed = stripped.trim_start();
-    let mut markdown_lines = render_text_content(stripped_trimmed, width, base_style);
-
-    // Prepend ∘ bullet to first line of assistant response
-    if !markdown_lines.is_empty() {
-        // 3 leading spaces + bullet + space = 5 chars (margin_x + 2 + 5 = area.x + 5 = 5 spaces from edge)
-        let bullet_span = Span::raw(format!("   {} ", glyphs::ASSISTANT_BULLET)).style(base_style);
-        let first_line = &mut markdown_lines[0];
-        let mut new_spans = vec![bullet_span];
-        new_spans.append(&mut first_line.spans);
-        first_line.spans = new_spans;
-    }
-
-    let text_rows = markdown_lines.len() as u16;
+    let first_sentence = extract_first_sentence(stripped_trimmed);
+    let base_style = Style::default().fg(text_secondary);
     let ts_len = timestamp.as_ref().map(|t| t.len() as u16).unwrap_or(0);
-    // Activity block when agent is running (streaming)
-    let activity_len = if agent_running { 1 } else { 0 };
-    // Reserve space for timestamp and activity on FIRST line
-    let first_line_width = if ts_len > 0 || activity_len > 0 {
-        content_width.saturating_sub(ts_len + 1 + activity_len)
-    } else {
-        content_width
-    };
 
-    for (i, line) in markdown_lines.iter().enumerate() {
-        let line_y = row + rendered + i as u16;
-        if line_y >= max_rows {
-            break;
-        }
-        // First line has less width to leave room for timestamp + activity
-        let line_width = if i == 0 && (ts_len > 0 || activity_len > 0) {
-            first_line_width
+    // Render response text with timestamp on the SAME LINE (5-space indent)
+    let _response_text = if let Some(ts) = timestamp {
+        if ts_len > 0 {
+            // Format: "response text                              timestamp"
+            let response_len = first_sentence.len() as u16;
+            let ts_x = response_indent + content_width.saturating_sub(ts_len);
+            // Only render if we have room
+            if response_len < ts_x.saturating_sub(response_indent) {
+                let line = Line::raw(&first_sentence).style(base_style);
+                buf.set_line(response_indent, area.y + row + rendered, &line, ts_x - response_indent);
+                // Timestamp on same line, right-aligned
+                let ts_line = ratatui::text::Line::raw(ts).style(Style::default().fg(text_muted));
+                buf.set_line(ts_x, area.y + row + rendered, &ts_line, ts_len);
+            } else {
+                // Not enough room, just show response
+                let line = Line::raw(&first_sentence).style(base_style);
+                buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+            }
         } else {
-            content_width
-        };
-        buf.set_line(margin_x, area.y + line_y, line, line_width);
-    }
-    rendered += text_rows;
-
-    // Render right-aligned timestamp and activity on the FIRST LINE of text content
-    if rendered > 0 {
-        let first_line_y = row + rendered;
-        // Timestamp: right-aligned at margin_x + content_width - ts_len
-        if let Some(ts) = timestamp {
-            if first_line_y < max_rows {
-                let ts_x = margin_x + content_width.saturating_sub(ts_len);
-                let line = ratatui::text::Line::raw(ts).style(Style::default().fg(text_muted));
-                buf.set_line(ts_x, area.y + first_line_y, &line, ts_len);
-            }
+            let line = Line::raw(&first_sentence).style(base_style);
+            buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
         }
-        // Activity block: after timestamp on first line
-        if agent_running && ts_len > 0 {
-            if first_line_y < max_rows {
-                let act_x = margin_x + content_width;
-                if let Some(cell) = buf.cell_mut((act_x, area.y + first_line_y)) {
-                    cell.set_char(glyphs::ACTIVITY_BLOCK);
-                    cell.set_style(Style::default().fg(text_muted));
-                }
-            }
-        }
-    }
+    } else {
+        let line = Line::raw(&first_sentence).style(base_style);
+        buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+    };
+    rendered += 1;
 
-    // Render "Turn completed in Xs" at bottom (only when turn is done, not streaming)
+    // Render "Turn completed in Xs" on the NEXT line (only when turn is done, not streaming)
     if !agent_running {
         if let Some(elapsed) = turn_complete {
             if row + rendered < max_rows {
                 let complete_text = MessageRegistry::turn_completed(elapsed as f32);
                 let line = ratatui::text::Line::raw(complete_text).style(Style::default().fg(text_muted));
-                buf.set_line(margin_x, area.y + row + rendered, &line, content_width);
+                buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
                 rendered += 1;
             }
         }
     }
 
-    // Cursor placement at end of rendered content
-    if cursor_visible && text_rows > 0 {
-        let cursor_y = area.y + row + rendered - 1;
-        let last_line_len = markdown_lines.last().map(|l| l.width()).unwrap_or(0);
-        let cursor_x = margin_x + (last_line_len as u16).min(area.width - margin_x + area.x - 3);
+    // Cursor placement at end of response line (5-space indent)
+    if cursor_visible && !first_sentence.is_empty() {
+        let cursor_y = area.y + row;
+        let cursor_x = response_indent + (first_sentence.len() as u16).min(area.width - response_indent + area.x - 3);
         if cursor_x < area.x + area.width - 1 {
             if let Some(cell) = buf.cell_mut((cursor_x, cursor_y)) {
                 cell.set_char(glyphs::CURSOR_BLOCK);

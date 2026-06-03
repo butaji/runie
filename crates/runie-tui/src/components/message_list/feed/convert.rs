@@ -18,16 +18,26 @@ impl TryFrom<MessageItem> for FeedItem {
                 text,
                 timestamp,
             }),
-            Assistant { text, model: _, timestamp, expanded } => Ok(FeedItem::AssistantMessage {
-                id: Uuid::new_v4().to_string(),
-                text,
-                thoughts: Vec::new(),
-                tool_calls: Vec::new(),
-                timestamp,
-                turn_duration: None,
-                thoughts_collapsed: !expanded,
-                expanded: true,
-            }),
+            Assistant { text, model: _, timestamp, expanded, thought_duration, turn_duration } => {
+                // Convert thought_duration to a Thought struct for the thoughts vec
+                let thoughts = thought_duration
+                    .map(|d| super::Thought { duration: d })
+                    .into_iter()
+                    .collect();
+                Ok(FeedItem::AssistantMessage {
+                    id: Uuid::new_v4().to_string(),
+                    text,
+                    thoughts,
+                    tool_calls: Vec::new(),
+                    timestamp,
+                    turn_duration,
+                    thoughts_collapsed: !expanded,
+                    expanded: true,
+                    streaming_thinking_elapsed_ms: None,
+                    streaming_total_elapsed_ms: None,
+                    streaming_download_bytes: None,
+                })
+            }
             System { text } => Ok(FeedItem::SystemNotice { text }),
             Error { message, .. } => Ok(FeedItem::SystemNotice { text: format!("Error: {}", message) }),
             Separator { elapsed_secs, tool_calls, tokens_used } =>

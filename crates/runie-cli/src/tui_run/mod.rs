@@ -20,7 +20,7 @@ use runie_tui::actors::{spawn_actor, input::InputActor as TuiInputActor, timer::
 use runie_tui::{Msg, Tui, TuiConfig};
 
 use crate::event_stream::EventStreamLogger;
-use crate::settings::Settings;
+use crate::settings::{PermissionModeConfig, Settings};
 use crate::context_loader::ContextLoader;
 
 /// Wall-clock watchdog: if the agent has been alive this long without an
@@ -165,13 +165,16 @@ async fn initialize_tui(
 
     let mut tui = Tui::new(TuiConfig::default())?;
 
-    let path = if mock {
-        std::env::current_dir()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|_| git_info.relative_path.clone())
-    } else {
-        git_info.relative_path.clone()
+    // Apply permission mode from config
+    let permission_mode = match settings.runie_config.ui.permission_mode {
+        PermissionModeConfig::AlwaysApprove => runie_tui::tui::state::PermissionMode::AutoApprove,
+        PermissionModeConfig::Ask => runie_tui::tui::state::PermissionMode::Normal,
     };
+    tui.update(Msg::SetPermissionMode(permission_mode));
+
+    let path = std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| git_info.relative_path.clone());
     tui.update(Msg::SetGitInfo {
         repo: git_info.repo,
         branch: git_info.branch,

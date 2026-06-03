@@ -12,7 +12,7 @@ enable_thinking = true
 skip_onboarding = false
 [ui]
 # Permission mode: "ask" or "always-approve"
-permission_mode = "ask"
+permission_mode = "always-approve"
 # Enable vim keybindings for navigation
 vim_mode = false
 [animation]

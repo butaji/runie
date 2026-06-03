@@ -31,9 +31,9 @@ pub fn render_input(
 
     // Build mode indicator
     let mode_indicator = match state.permission_mode {
-        PermissionMode::Normal => "runie".to_string(),
-        PermissionMode::Plan => "runie · plan".to_string(),
-        PermissionMode::AutoApprove => "runie · always-approve".to_string(),
+        PermissionMode::Normal => "Grok Build".to_string(),
+        PermissionMode::Plan => "Grok Build · plan".to_string(),
+        PermissionMode::AutoApprove => "Grok Build · always-approve".to_string(),
     };
 
     // Calculate char count if text is long (>50% of context window)

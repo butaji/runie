@@ -81,6 +81,8 @@ fn test_message_start_does_not_add_duplicate_placeholder() {
         model: Some("test-model".to_string()),
         timestamp: None,
         expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
 
     // MessageStart should NOT add another placeholder

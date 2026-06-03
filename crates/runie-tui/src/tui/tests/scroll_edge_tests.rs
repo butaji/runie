@@ -375,7 +375,7 @@ mod mixed_message_types {
 
         // Add mixed message types
         state.messages.push(MessageItem::User { text: "User".to_string(), model: None, timestamp: None });
-        state.messages.push(MessageItem::Assistant { text: "Assistant".to_string(), model: None, timestamp: None, expanded: false });
+        state.messages.push(MessageItem::Assistant { text: "Assistant".to_string(), model: None, timestamp: None, expanded: false, thought_duration: None, turn_duration: None });
         state.messages.push(MessageItem::System { text: "System".to_string() });
         state.messages.push(MessageItem::Error { message: "Error".to_string(), recoverable: true });
         state.messages.push(MessageItem::ToolCall { name: "tool".to_string(), args: "args".to_string(), result: None, is_error: false });

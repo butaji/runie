@@ -132,10 +132,14 @@ pub struct AppState {
     // UI toggles
     pub compact_mode: bool,
     pub multiline_input: bool,
+
+    // Session starting indicator (shows "⠼ Starting session… X.Xs" after HomeScreen transition)
+    pub session_starting: Option<std::time::Instant>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
+        let ui = default_ui_components();
         Self {
             messages: Vec::new(), textarea: ratatui_textarea::TextArea::default(),
             input_right_info: String::new(), scroll: ScrollState::default(),
@@ -150,17 +154,16 @@ impl Default for AppState {
             status_header: None, status_details: None, status_start_time: None,
             clear_input_confirm: ClearInputConfirm::default(),
             permission_modal: PermissionModalState::default(),
-            permission_mode: crate::tui::state::PermissionMode::Normal,
-            allowed_tools: std::collections::HashSet::new(),
+            permission_mode: PermissionMode::AutoApprove, allowed_tools: std::collections::HashSet::new(),
             allowed_categories: std::collections::HashSet::new(),
-            command_palette: CommandPaletteState::default(),
-            slash_menu: crate::components::SlashMenu::new(),
-            shortcuts_panel: crate::components::ShortcutsPanel::new(),
-            settings_modal: crate::components::SettingsModal::new(),
-            home_screen: crate::components::HomeScreen::new(),
-            file_picker: crate::components::FilePicker::new(),
-            plan_modal: crate::components::PlanModal::new(),
-            context_usage_modal: crate::components::ContextUsageModal::new(),
+            command_palette: ui.0,
+            slash_menu: ui.1,
+            shortcuts_panel: ui.2,
+            settings_modal: ui.3,
+            home_screen: ui.4,
+            file_picker: ui.5,
+            plan_modal: ui.6,
+            context_usage_modal: ui.7,
             model_picker: None, extensions_modal: None, diff_viewer: None,
             session_tree: crate::components::SessionTreeNavigator::new(),
             animation: AnimationState::default(), onboarding: None,
@@ -172,9 +175,31 @@ impl Default for AppState {
             questionnaire: None, subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
             fullscreen_content: None, fullscreen_scroll_offset: 0,
             layout_mode: LayoutMode::Fullscreen, animation_config: AnimationConfig::default(),
-            compact_mode: false, multiline_input: false,
+            compact_mode: false, multiline_input: false, session_starting: None,
         }
     }
+}
+
+fn default_ui_components() -> (
+    CommandPaletteState,
+    crate::components::SlashMenu,
+    crate::components::ShortcutsPanel,
+    crate::components::SettingsModal,
+    crate::components::HomeScreen,
+    crate::components::FilePicker,
+    crate::components::PlanModal,
+    crate::components::ContextUsageModal,
+) {
+    (
+        CommandPaletteState::default(),
+        crate::components::SlashMenu::new(),
+        crate::components::ShortcutsPanel::new(),
+        crate::components::SettingsModal::new(),
+        crate::components::HomeScreen::new(),
+        crate::components::FilePicker::new(),
+        crate::components::PlanModal::new(),
+        crate::components::ContextUsageModal::new(),
+    )
 }
 
 /// Convert AgentEvent to Msg::AgentEvent variant.

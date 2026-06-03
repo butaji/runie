@@ -25,7 +25,7 @@ mod tests {
         let home = std::env::var("HOME").unwrap();
         let path = format!("{}/Code/GitHub/runie/src/components", home);
         let result = shorten_path(&path);
-        assert_eq!(result, "~/Code/GitHub/runie/src/components");
+        assert_eq!(result, "~/Code/GitHub/runie/src/components/");
     }
 
     #[test]
@@ -37,11 +37,11 @@ mod tests {
     }
 
     #[test]
-    fn test_shorten_path_no_trailing_slash() {
+    fn test_shorten_path_trailing_slash_preserved() {
         let home = std::env::var("HOME").unwrap();
         let path = format!("{}/Code/", home);
         let result = shorten_path(&path);
-        assert!(!result.ends_with('/'), "Should not end with trailing slash: {}", result);
+        assert!(result.ends_with('/'), "Should have trailing slash (Grok-style): {}", result);
     }
 
     #[test]
@@ -49,7 +49,7 @@ mod tests {
         let home = std::env::var("HOME").unwrap();
         let path = home.clone();
         let result = shorten_path(&path);
-        assert_eq!(result, "~", "Root home should shorten to ~");
+        assert_eq!(result, "~/", "Root home should shorten to ~/ (Grok-style)");
     }
 
     #[test]
@@ -57,7 +57,7 @@ mod tests {
         let home = std::env::var("HOME").unwrap();
         let path = format!("{}/", home);
         let result = shorten_path(&path);
-        assert_eq!(result, "~", "Home with trailing slash should shorten to ~");
+        assert_eq!(result, "~/", "Home with trailing slash should shorten to ~/ (Grok-style)");
     }
 
     #[test]
