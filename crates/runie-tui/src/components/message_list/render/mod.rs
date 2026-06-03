@@ -177,7 +177,7 @@ pub fn render_single_msg(
             render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache, agent_running)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true, &[], accent_secondary, false, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true, &[], accent_secondary, false, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes, None)
         }
         MessageItem::Thought { duration_secs, .. } => {
             render_thought_msg(*duration_secs, area, row, margin_x, text_x, buf, text_muted, spinner, show_spinner)
@@ -256,6 +256,7 @@ pub fn render_single_msg_feed(
     turn_complete: Option<f32>,
     is_last_item: bool,
     thoughts_collapsed: bool,
+    streaming_think_content: Option<&str>,
 ) -> u16 {
     match item {
         FeedItem::UserMessage { text, timestamp, .. } => {
@@ -268,7 +269,7 @@ pub fn render_single_msg_feed(
             let effective_turn_complete = turn_duration.map(|d| d as u64).or(turn_complete.map(|d| d as u64));
             // Tool bar color is purple #6B50FF (same as feed.tool.bar)
             let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF);
-            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item, tool_calls, tool_bar_color, thoughts_collapsed, *streaming_thinking_elapsed_ms, *streaming_total_elapsed_ms, *streaming_download_bytes)
+            render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item, tool_calls, tool_bar_color, thoughts_collapsed, *streaming_thinking_elapsed_ms, *streaming_total_elapsed_ms, *streaming_download_bytes, streaming_think_content)
         }
         FeedItem::SystemNotice { text } => {
             render_system_msg(text, area, row, margin_x, text_x, buf, text_muted, error, wrap_cache)

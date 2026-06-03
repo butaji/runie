@@ -300,6 +300,12 @@ fn build_message_list_vm(
         state.animation.clone(),
         wrap_cache,
         state.session_starting,
+        // Pass streaming thinking content if agent is running and thinking exists
+        if state.agent_running && state.thinking.is_some() {
+            Some(state.thinking.as_ref().unwrap().text.clone())
+        } else {
+            None
+        },
     )
 }
 

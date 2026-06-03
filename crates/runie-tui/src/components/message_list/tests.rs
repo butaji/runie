@@ -99,6 +99,7 @@ mod tests {
             None,
             true,
             false,
+            None, // streaming_think_content
         );
 
         let row_text: String = (0..area.width)

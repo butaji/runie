@@ -25,13 +25,15 @@ pub struct MessageListViewModel {
     pub wrap_cache: WrapCache,
     /// Timer for "⠼ Starting session… X.Xs" indicator shown after HomeScreen transition
     pub session_starting: Option<std::time::Instant>,
+    /// Streaming thinking content (from state.thinking.text during agent streaming)
+    pub streaming_think_content: Option<String>,
 }
 
 impl MessageListViewModel {
 
     #[must_use]
 
-    pub fn new(feed: Feed, scroll_offset: usize, agent_running: bool, animation: AnimationState, wrap_cache: WrapCache, session_starting: Option<std::time::Instant>) -> Self {
+    pub fn new(feed: Feed, scroll_offset: usize, agent_running: bool, animation: AnimationState, wrap_cache: WrapCache, session_starting: Option<std::time::Instant>, streaming_think_content: Option<String>) -> Self {
         Self {
             feed,
             scroll_offset,
@@ -39,6 +41,7 @@ impl MessageListViewModel {
             animation,
             wrap_cache,
             session_starting,
+            streaming_think_content,
         }
     }
 }
@@ -175,6 +178,7 @@ fn render_message_list(
         let rendered = render_single_msg_item(
             item, area, row, margin_x, text_x, max_rows, buf, theme, colors, spinner, show_cursor, show_spinner, rewind_spinner,
             &vm.animation, wrap_cache, vm.agent_running, thought_duration, turn_duration, is_last_item, thoughts_collapsed,
+            vm.streaming_think_content.as_deref(),
         );
         row += rendered;
         // Draw separator between items (not after last)
@@ -208,11 +212,13 @@ fn render_single_msg_item(
     turn_complete: Option<f32>,
     is_last_item: bool,
     thoughts_collapsed: bool,
+    streaming_think_content: Option<&str>,
 ) -> u16 {
     render::render_single_msg_feed(
         item, area, row, margin_x, text_x, max_rows, buf, theme,
         colors.accent_primary, colors.accent_secondary, colors.text_secondary, colors.text_muted, colors.text_dim,
         colors.success, colors.error, colors.code_path, spinner, show_cursor, show_spinner, rewind_spinner,
         animation, wrap_cache, agent_running, thought_duration, turn_complete, is_last_item, thoughts_collapsed,
+        streaming_think_content,
     )
 }
