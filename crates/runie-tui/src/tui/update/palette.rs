@@ -30,6 +30,9 @@ pub fn handle_close_modal(state: &mut AppState) {
     state.session_tree.hide();
     state.model_picker = None;
     state.extensions_modal = None;
+    // Clear textarea when closing overlays per input accumulation fix
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
 }
 
 pub fn handle_palette_escape(state: &mut AppState, palette: &mut CommandPalette) {

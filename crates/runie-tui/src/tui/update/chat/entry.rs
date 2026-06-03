@@ -107,4 +107,6 @@ pub(super) fn focus_prompt(state: &mut AppState) {
 
 pub(super) fn go_home(state: &mut AppState) {
     state.mode = crate::tui::state::TuiMode::HomeScreen;
+    state.textarea.select_all();
+    state.textarea.delete_line_by_end();
 }

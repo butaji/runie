@@ -228,7 +228,7 @@ pub(super) fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState)
         return Some(msg);
     }
     if matches!(key.code, KeyCode::Char('?')) {
-        return Some(Msg::ShowHelp);
+        return Some(Msg::OpenShortcutsPanel);
     }
     Some(Msg::TextareaKey(key))
 }
