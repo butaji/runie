@@ -323,20 +323,17 @@ pub fn render_assistant_msg(
         );
         rendered += rows;
     }
-    // Render think blocks ONLY when we don't have a pre-computed thought_duration
-    // When thought_duration is available, we already showed "◆ Thought for Xs" above
-    // So skip rendering the full think block content in that case
-    if thought_duration.is_none() {
-        for think in &_think_blocks {
-            if row + rendered >= max_rows {
-                break;
-            }
-            let block_rows = render_think_block_box(
-                think, area, row + rendered, margin_x, response_indent, text_muted, wrap_cache, buf,
-                agent_running, spinner, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes,
-            );
-            rendered += block_rows;
+    // Render think blocks if present. thought_duration only controls the header line above,
+    // it does NOT indicate whether content should render.
+    for think in &_think_blocks {
+        if row + rendered >= max_rows {
+            break;
         }
+        let block_rows = render_think_block_box(
+            think, area, row + rendered, margin_x, response_indent, text_muted, wrap_cache, buf,
+            agent_running, spinner, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes,
+        );
+        rendered += block_rows;
     }
 
     // Don't render stripped thinking text when there is none
