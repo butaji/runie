@@ -129,6 +129,7 @@ fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     }
     tracing::debug!("finalize_submit: setting agent_running = true");
     state.agent_running = true;
+    state.session_starting = None;
     add_user_and_placeholder(state, &text);
     vec![ChatCmd::SpawnAgent { messages: to_agent_messages(&state.messages) }]
 }
