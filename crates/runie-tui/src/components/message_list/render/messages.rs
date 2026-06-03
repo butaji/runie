@@ -210,7 +210,6 @@ pub fn render_tool_running_msg(
     text_secondary: ratatui::style::Color,
     spinner: char,
     _show_spinner: bool,
-    agent_running: bool,
 ) -> u16 {
     // Grok-style: "⠴ Run List `.` 2.9s                                         11s ⇣22.2k [✗]"
     // Left side: spinner + "Run" + name + args + duration
@@ -245,14 +244,6 @@ pub fn render_tool_running_msg(
     let right_x = area.x + area.width - 1 - right_len;
     let right_line = Line::raw(right_text).style(Style::default().fg(text_secondary));
     buf.set_line(right_x, area.y + row, &right_line, right_len);
-
-    // Streaming indicator at far right
-    if agent_running {
-        if let Some(cell) = buf.cell_mut((area.x + area.width - 1, area.y + row)) {
-            cell.set_char('█');
-            cell.set_style(Style::default().fg(tool_bar_color));
-        }
-    }
 
     1
 }
