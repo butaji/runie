@@ -84,9 +84,11 @@ mod message_list_tests;
 mod status_bar_tests;
 mod permission_modal_tests;
 mod misc_tests;
+mod grok_parity_tests;
 
 pub use top_bar_tests::*;
 pub use message_list_tests::*;
 pub use status_bar_tests::*;
 pub use permission_modal_tests::*;
 pub use misc_tests::*;
+pub use grok_parity_tests::*;

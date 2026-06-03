@@ -148,7 +148,7 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     let content_x = area.x + (area.width.saturating_sub(content_width)) / 2 + 2;
     let content_y = area.y + (area.height.saturating_sub(content_height)) / 2;
 
-    let menu_start_y = content_y;
+    let menu_start_y = content_y + 3;
     render_menu(
         screen,
         content_x,
@@ -162,7 +162,7 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     );
 
     let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
-    buf.set_string(area.x + 2, content_y + 10, tip, theme.tip_style());
+    buf.set_string(area.x + 2, content_y + 8, tip, theme.tip_style());
 }
 
 #[cfg(test)]

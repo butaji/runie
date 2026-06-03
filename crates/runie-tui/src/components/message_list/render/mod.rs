@@ -37,6 +37,10 @@ pub use markdown::{highlight_code_block_ratatui, render_text_content};
 pub use tool::{render_tool_call_msg, format_tool_args_compact};
 pub use user::render_user_msg;
 pub use wrap::{WrapCache, wrap_text, wrap_text_preserving_newlines};
+// Re-export thinking block types for external testing
+pub use thinking::{ThinkingBlock, render_thinking_block, render_thought_indicator};
+// Re-export tool call block types for external testing
+pub use tool_call::{ToolCallBlock, ToolStatus, render_tool_call_block, render_tool_call_inline_compact};
 
 use ratatui::{buffer::Buffer, layout::Rect};
 use crate::theme::ThemeWrapper;

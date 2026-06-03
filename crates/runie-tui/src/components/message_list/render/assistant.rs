@@ -102,10 +102,34 @@ fn render_thinking_stream(
 ) -> u16 {
     let mut rendered = 0u16;
 
-    // Header: "┃  ◆ Thinking…"
-    let header_text = "┃  ◆ Thinking…";
-    let header = Line::raw(header_text).style(Style::default().fg(text_muted));
-    buf.set_line(response_indent, area.y + row, &header, content_width);
+    // Grok-style single line: "⠦ Thinking… 0.7s                           6.0s ⇣21.8k [ ]"
+    // Left: spinner + "Thinking…" + thinking elapsed
+    // Right: total elapsed + download bytes + status
+    let thinking_elapsed_secs = streaming_thinking_elapsed_ms
+        .map(|ms| ms as f64 / 1000.0)
+        .unwrap_or(0.0);
+    let total_elapsed_secs = streaming_total_elapsed_ms
+        .map(|ms| ms as f64 / 1000.0)
+        .unwrap_or(0.0);
+    let download_str = streaming_download_bytes
+        .map(format_download_bytes)
+        .unwrap_or_else(|| "0".to_string());
+
+    // Build left content: spinner + "Thinking…" + elapsed
+    let left_content = format!("{} Thinking… {:.1}s", spinner, thinking_elapsed_secs);
+    let left_len = left_content.len() as u16;
+
+    // Build right content
+    let right_text = format!(" {:.1}s ⇣{} [ ]", total_elapsed_secs, download_str);
+    let right_len = right_text.len() as u16;
+
+    // Calculate middle spacing
+    let middle_space = content_width.saturating_sub(left_len).saturating_sub(right_len);
+
+    // Combine: left + middle spacing + right
+    let full_line = format!("{}{}{}", left_content, " ".repeat(middle_space as usize), right_text);
+    let line = Line::raw(full_line).style(Style::default().fg(text_muted));
+    buf.set_line(response_indent, area.y + row, &line, content_width);
     rendered += 1;
 
     // Content lines with ┃  prefix
@@ -125,32 +149,6 @@ fn render_thinking_stream(
         let content = format!("┃  {}", line_text);
         let line = Line::raw(content).style(Style::default().fg(text_muted));
         buf.set_line(response_indent, area.y + line_y, &line, content_width);
-        rendered += 1;
-    }
-
-    // Bottom spinner line: "⠦ Thinking… X.Xs                      X.Xs ⇣XX.Xk [ ]"
-    let bottom_y = row + rendered;
-    if bottom_y < area.height {
-        // Left: spinner + "Thinking…" + thinking elapsed
-        let thinking_elapsed_secs = streaming_thinking_elapsed_ms
-            .map(|ms| ms as f64 / 1000.0)
-            .unwrap_or(0.0);
-        let left_content = format!("{} Thinking… {:.1}s", spinner, thinking_elapsed_secs);
-        let left_line = Line::raw(left_content).style(Style::default().fg(text_muted));
-        buf.set_line(response_indent, area.y + bottom_y, &left_line, content_width);
-
-        // Right: total elapsed + download bytes + status
-        let total_elapsed_secs = streaming_total_elapsed_ms
-            .map(|ms| ms as f64 / 1000.0)
-            .unwrap_or(0.0);
-        let download_str = streaming_download_bytes
-            .map(format_download_bytes)
-            .unwrap_or_else(|| "0".to_string());
-        let right_text = format!(" {:.1}s ⇣{} [ ]", total_elapsed_secs, download_str);
-        let right_len = right_text.len() as u16;
-        let right_x = area.x + area.width - 1 - right_len;
-        let right_line = Line::raw(right_text).style(Style::default().fg(text_muted));
-        buf.set_line(right_x, area.y + bottom_y, &right_line, right_len);
         rendered += 1;
     }
 
@@ -381,10 +379,31 @@ fn extract_thought_duration(think_content: &str) -> String {
     }
 }
 
-/// Extract first sentence from text for Grok-style single-line response
+/// Extract first sentence(s) from text for Grok-style response
+/// Returns first sentence, or more if needed to reach 80 chars
 fn extract_first_sentence(text: &str) -> String {
     if let Some(end) = find_sentence_end(text) {
-        return text[..=end].trim().to_string();
+        let first_sentence = text[..=end].trim().to_string();
+        // If first sentence is very short, include more content up to 80 chars
+        if first_sentence.len() < 40 && end + 1 < text.len() {
+            let remainder = text[end + 1..].trim_start();
+            if !remainder.is_empty() {
+                let combined = format!("{} {}", first_sentence, remainder);
+                if combined.len() <= 80 {
+                    return combined;
+                }
+                // Return first sentence + as much of next sentence as fits
+                if let Some(next_end) = find_sentence_end(remainder) {
+                    let second_sentence = &remainder[..=next_end];
+                    let combined = format!("{} {}", first_sentence, second_sentence);
+                    if combined.len() <= 80 {
+                        return combined.trim().to_string();
+                    }
+                }
+                // Just return first sentence if nothing else fits
+            }
+        }
+        return first_sentence;
     }
     truncate_to_line(text)
 }
