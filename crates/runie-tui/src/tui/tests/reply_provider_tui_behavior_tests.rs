@@ -55,6 +55,8 @@ fn test_slash_clear_command_clears_messages() {
         model: state.current_model.clone(),
         timestamp: None,
         expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
     state.scroll.feed_offset = 5;
 
@@ -107,6 +109,8 @@ fn test_slash_new_command_resets_session() {
         model: state.current_model.clone(),
         timestamp: None,
         expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
 
     // Setup: set token usage
@@ -171,6 +175,8 @@ fn test_copy_last_response_finds_assistant() {
         model: state.current_model.clone(),
         timestamp: None,
         expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
 
     // Execute copy
@@ -352,6 +358,8 @@ fn test_toggle_thoughts_with_message() {
         model: Some("test".to_string()),
         timestamp: None,
         expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
 
     // Verify show_thoughts is false

@@ -33,6 +33,7 @@ pub(crate) struct FeedBuilder {
     agent_running: bool,
     animation: AnimationState,
     wrap_cache: WrapCache,
+    session_starting: Option<std::time::Instant>,
 }
 
 impl FeedBuilder {
@@ -43,6 +44,7 @@ impl FeedBuilder {
             agent_running: false,
             animation: AnimationState::default(),
             wrap_cache: WrapCache::new(),
+            session_starting: None,
         }
     }
 
@@ -63,6 +65,8 @@ impl FeedBuilder {
             model: None,
             timestamp: None,
             expanded: true,
+            thought_duration: None,
+            turn_duration: None,
         });
         self
     }
@@ -76,6 +80,8 @@ impl FeedBuilder {
             model: None,
             timestamp: None,
             expanded: true,
+            thought_duration: None,
+            turn_duration: None,
         });
         self
     }
@@ -91,6 +97,8 @@ impl FeedBuilder {
             model: None,
             timestamp: None,
             expanded: true,
+            thought_duration: None,
+            turn_duration: None,
         });
         self
     }
@@ -213,6 +221,12 @@ impl FeedBuilder {
         self
     }
 
+    /// Set session_starting timer (for "Starting session..." indicator).
+    pub(crate) fn session_starting(mut self, starting: Option<std::time::Instant>) -> Self {
+        self.session_starting = starting;
+        self
+    }
+
     /// Consume the builder and return the MessageListViewModel.
     pub(crate) fn build(self) -> MessageListViewModel {
         MessageListViewModel {
@@ -221,6 +235,7 @@ impl FeedBuilder {
             agent_running: self.agent_running,
             animation: self.animation,
             wrap_cache: self.wrap_cache,
+            session_starting: self.session_starting,
         }
     }
 

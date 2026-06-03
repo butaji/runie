@@ -85,6 +85,9 @@ fn make_state_with_messages() -> AppState {
         text: "Hi there!".to_string(),
         model: state.current_model.clone(),
         timestamp: None,
+        expanded: false,
+        thought_duration: None,
+        turn_duration: None,
     });
     state
 }

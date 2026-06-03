@@ -99,6 +99,7 @@ fn build_message_list(state: &AppState) -> MessageListViewModel {
         .agent_running(state.agent_running)
         .animation(state.animation.clone())
         .wrap_cache(wrap_cache)
+        .session_starting(state.session_starting)
         .build()
 }
 
@@ -107,9 +108,9 @@ fn build_input_bar(state: &AppState) -> InputBarViewModel {
 
     // Build mode indicator
     let mode_indicator = match state.permission_mode {
-        PermissionMode::Normal => "runie".to_string(),
-        PermissionMode::Plan => "runie · plan".to_string(),
-        PermissionMode::AutoApprove => "runie · always-approve".to_string(),
+        PermissionMode::Normal => "Grok Build".to_string(),
+        PermissionMode::Plan => "Grok Build · plan".to_string(),
+        PermissionMode::AutoApprove => "Grok Build · always-approve".to_string(),
     };
 
     let input_text = state.textarea.lines().join("\n");
@@ -123,6 +124,14 @@ fn build_input_bar(state: &AppState) -> InputBarViewModel {
 
 fn build_status_bar(state: &AppState) -> StatusBarViewModel {
     let input_text = state.textarea.lines().join("\n");
+    let agent_running = state.agent_running;
+    // DEBUG: Trace agent_running state
+    tracing::debug!(
+        "build_status_bar: agent_running={}, mode={:?}, status_header={:?}",
+        agent_running,
+        state.mode,
+        state.status_header
+    );
     StatusBarBuilder::new()
         .mode(state.mode.clone())
         .current_model(state.current_model.as_deref().unwrap_or("—"))
@@ -130,7 +139,7 @@ fn build_status_bar(state: &AppState) -> StatusBarViewModel {
         .status_header(state.status_header.as_deref().unwrap_or(""))
         .status_details(state.status_details.as_deref().unwrap_or(""))
         .status_start_time(state.status_start_time.unwrap_or_else(std::time::Instant::now))
-        .agent_running(state.agent_running)
+        .agent_running(agent_running)
         .input_has_text(!input_text.trim().is_empty())
         .build()
 }

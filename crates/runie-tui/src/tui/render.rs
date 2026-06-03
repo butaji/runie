@@ -4,6 +4,8 @@ use ratatui::{
     style::Style,
     text::{Line, Span},
 };
+use crate::components::status_bar::StatusItem;
+use crate::style::format::STATUS_SEPARATOR;
 use crate::theme::ThemeColors;
 use crate::messages::MessageRegistry;
 use crate::tui::state::TuiMode;
@@ -66,20 +68,21 @@ fn build_center_line(vm: &StatusBarViewModel, text_tertiary: ratatui::style::Col
     (line, width)
 }
 
-fn render_left_keys(items: &[(&str, &str)], area: Rect, buf: &mut Buffer, text_tertiary: ratatui::style::Color) -> usize {
+fn render_left_keys(items: &[StatusItem], area: Rect, buf: &mut Buffer, text_tertiary: ratatui::style::Color) -> usize {
     use ratatui::text::{Line, Span};
     use ratatui::style::Modifier;
     let mut x = area.x as usize + 1;
-    for (i, (key, desc)) in items.iter().enumerate() {
+    for (i, item) in items.iter().enumerate() {
         if i > 0 {
-            buf.set_line(x as u16, area.y, &Line::from(Span::styled(" | ", Style::default().fg(text_tertiary))), 3);
-            x += 3;
+            let sep = Span::styled(STATUS_SEPARATOR, Style::default().fg(text_tertiary));
+            buf.set_line(x as u16, area.y, &Line::from(sep), STATUS_SEPARATOR.len() as u16);
+            x += STATUS_SEPARATOR.len();
         }
         let parts = vec![
-            Span::styled(*key, Style::default().fg(text_tertiary)),
-            Span::styled(format!(" {}", desc), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
+            Span::styled(&item.key, Style::default().fg(text_tertiary)),
+            Span::styled(format!(" {}", item.description), Style::default().fg(text_tertiary).add_modifier(Modifier::DIM)),
         ];
-        let width = (key.len() + 1 + desc.len()) as u16;
+        let width = (item.key.len() + 1 + item.description.len()) as u16;
         buf.set_line(x as u16, area.y, &Line::from(parts), width);
         x += width as usize;
     }
@@ -90,10 +93,11 @@ pub fn render_status_bar(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, 
     let text_tertiary = colors.text_dim;
     let accent = colors.accent_primary;
     let warning = colors.error;
-    let items = get_status_items(&vm.mode);
+    // Use vm.hotkeys() which is context-aware: checks agent_running first
+    let items = vm.hotkeys();
 
     let (center_line, center_width) = build_center_line(vm, text_tertiary, warning);
-    let left_width: usize = items.iter().map(|(k, d)| k.len() + 1 + d.len()).sum::<usize>() + (items.len().saturating_sub(1) * 3);
+    let left_width: usize = items.iter().map(|item| item.key.len() + 1 + item.description.len()).sum::<usize>() + (items.len().saturating_sub(1) * STATUS_SEPARATOR.len());
 
     let mut x = render_left_keys(&items, area, buf, text_tertiary);
     let status_width = render_live_status(vm, &mut x, buf, accent, text_tertiary, area.y);

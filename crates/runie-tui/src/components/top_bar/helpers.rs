@@ -7,17 +7,20 @@ use ratatui::{
 use crate::components::top_bar::TopBarViewModel;
 use crate::style::selection::GIT_BRANCH_SYMBOL;
 
-/// Shorten a path to be relative to home directory
+/// Shorten a path to be relative to home directory (no trailing slash - Grok-style)
 pub fn shorten_path(path: &str) -> String {
     if let Ok(home) = std::env::var("HOME") {
         if path.starts_with(&home) {
             let suffix = &path[home.len()..];
             if suffix.is_empty() || suffix.starts_with('/') {
-                return format!("~{}", suffix);
+                // No trailing slash (Grok-style: ~/Code/GitHub/runie)
+                let trimmed = suffix.trim_end_matches('/');
+                return format!("~{}", trimmed);
             }
         }
     }
-    path.to_string()
+    // For non-home paths, remove trailing slash
+    path.trim_end_matches('/').to_string()
 }
 
 pub fn build_left_spans<'a>(

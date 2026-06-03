@@ -2,6 +2,7 @@ use crate::components::MessageItem;
 use crate::tui::state::{AppState, Msg, TuiMode};
 use super::ChatCmd;
 use super::submit::handle_submit;
+use std::time::Instant;
 
 pub fn handle_slash_menu_msg(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<ChatCmd> {
     use crate::tui::state::Msg;
@@ -139,6 +140,7 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
             state.textarea.delete_line_by_end();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
+            state.session_starting = Some(Instant::now());
         }
         "Resume session" => {
             state.messages.clear();
@@ -156,6 +158,7 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
             state.textarea.delete_line_by_end();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
+            state.session_starting = Some(Instant::now());
         }
     }
     vec![]
@@ -164,6 +167,7 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
 fn home_screen_close(state: &mut AppState) -> Vec<ChatCmd> {
     state.home_screen.hide();
     state.mode = TuiMode::Chat;
+    state.session_starting = Some(Instant::now());
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
     vec![]

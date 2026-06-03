@@ -215,7 +215,7 @@ pub(crate) fn handle_always_approve(state: &mut AppState) {
 }
 
 pub(crate) fn handle_plan(state: &mut AppState) {
-    use crate::components::plan_modal::{PlanModal, PlanSection, PlanItem, PlanDocument};
+    use crate::components::plan_modal::{PlanSection, PlanItem, PlanDocument};
 
     // Build a demo plan document from recent messages
     // In a full implementation, this would extract the actual plan from the conversation

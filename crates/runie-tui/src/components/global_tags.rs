@@ -6,7 +6,6 @@ use ratatui::{
     widgets::Widget,
 };
 
-use crate::glyphs;
 use crate::theme::ThemeColors;
 
 /// GlobalTagsViewModel holds tags to display between feed and input.

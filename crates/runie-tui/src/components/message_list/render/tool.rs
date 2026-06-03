@@ -21,12 +21,12 @@ pub fn render_tool_call_inline(
 ) -> u16 {
     let compact_args = format_tool_args_compact(args);
     let content = if compact_args.is_empty() {
-        format!("{} ·", name)
+        format!("{}", name)
     } else {
-        format!("{} · {}", name, compact_args)
+        format!("{} {}", name, compact_args)
     };
 
-    // ◆ name · args (diamond in tool_bar_color, rest muted)
+    // ◆ name args (diamond in tool_bar_color, rest muted)
     let line = Line::from(vec![
         Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(tool_bar_color)),
         Span::raw(&content).style(Style::default().fg(text_muted)),
@@ -49,9 +49,9 @@ pub fn render_tool_call_msg(
 ) -> u16 {
     let compact_args = format_tool_args_compact(args);
     let content = if compact_args.is_empty() {
-        format!("{} ·", name)
+        format!("{}", name)
     } else {
-        format!("{} · {}", name, compact_args)
+        format!("{} {}", name, compact_args)
     };
 
     // Draw vertical bar at left edge (1 column wide, full height of block)
@@ -62,7 +62,7 @@ pub fn render_tool_call_msg(
 
     if let Some(preview) = result_preview {
         if !preview.is_empty() {
-            // ◆ name · args → preview (diamond in bar_color, rest muted except → preview)
+            // ◆ name args → preview (diamond in bar_color, rest muted except → preview)
             let line = Line::from(vec![
                 Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(bar_color)),
                 Span::raw(&content).style(Style::default().fg(colors.text_muted)),
@@ -73,7 +73,7 @@ pub fn render_tool_call_msg(
         }
     }
 
-    // ◆ name · args (diamond in bar_color, rest muted)
+    // ◆ name args (diamond in bar_color, rest muted)
     let line = Line::from(vec![
         Span::raw(format!("{} ", glyphs::THOUGHT_MARKER)).style(Style::default().fg(bar_color)),
         Span::raw(&content).style(Style::default().fg(colors.text_muted)),

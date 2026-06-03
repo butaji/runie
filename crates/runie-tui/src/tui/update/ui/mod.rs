@@ -114,7 +114,7 @@ fn is_context_msg(msg: &crate::tui::state::Msg) -> bool {
 
 fn is_model_mode_msg(msg: &crate::tui::state::Msg) -> bool {
     use crate::tui::state::Msg;
-    matches!(msg, Msg::SetCurrentModel(_) | Msg::SetMockMode(_) | Msg::ResetAgentState)
+    matches!(msg, Msg::SetCurrentModel(_) | Msg::SetMockMode(_) | Msg::SetPermissionMode(_) | Msg::ResetAgentState)
 }
 
 fn handle_state_match(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<UiCmd> {

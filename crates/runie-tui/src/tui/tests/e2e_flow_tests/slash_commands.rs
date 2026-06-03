@@ -7,7 +7,7 @@ fn test_e2e_slash_clear() {
 
     // Add messages
     state.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false });
+    state.messages.push(MessageItem::Assistant { text: "Hi".to_string(), model: None, timestamp: None, expanded: false, thought_duration: None, turn_duration: None });
 
     // Slash clear
     update(&mut state, &mut palette, Msg::SlashCommand(runie_core::slash_command::SlashCommand::Clear));

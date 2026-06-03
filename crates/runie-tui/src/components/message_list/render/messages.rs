@@ -38,7 +38,7 @@ pub fn render_item_separator(
 // Message Renderers
 // ============================================================================
 
-/// Render a thought duration message
+/// Render a thought duration message (5-space indent for Grok-style)
 pub fn render_thought_msg(
     duration_secs: f32,
     area: Rect,
@@ -52,14 +52,16 @@ pub fn render_thought_msg(
 ) -> u16 {
     let text = format!("{} {}", glyphs::THOUGHT_MARKER, MessageRegistry::thought_duration(duration_secs));
     let line = Line::raw(text).style(Style::default().fg(text_muted));
-    buf.set_line(margin_x, area.y + row, &line, area.width - margin_x + area.x - 2);
+    // 5-space indent: margin_x + 3 (Grok-style)
+    let response_indent = margin_x + 3;
+    buf.set_line(response_indent, area.y + row, &line, area.width - margin_x + area.x - 2);
     1
 }
 
-/// Render a separator with timing info
+/// Render a separator with timing info (only shown when tool_calls > 0)
 pub fn render_separator(
     elapsed_secs: u64,
-    _tool_calls: usize,
+    tool_calls: usize,
     tokens_used: Option<usize>,
     success: bool,
     area: Rect,
@@ -68,6 +70,12 @@ pub fn render_separator(
     buf: &mut Buffer,
     text_dim: ratatui::style::Color,
 ) -> u16 {
+    // Grok-style: separator only shown when there are tool calls
+    // For simple text responses, only "Turn completed in Xs." is shown
+    if tool_calls == 0 {
+        return 0;
+    }
+
     let elapsed_str = if elapsed_secs < 60 {
         format!("{}s", elapsed_secs)
     } else if elapsed_secs < 3600 {
@@ -190,7 +198,7 @@ pub fn render_edit_msg(
 /// Render a tool running message (Grok-style block)
 pub fn render_tool_running_msg(
     name: &str,
-    _args: &str,
+    args: &str,
     duration_ms: u64,
     total_elapsed_ms: u64,
     download_bytes: u64,
@@ -203,8 +211,8 @@ pub fn render_tool_running_msg(
     spinner: char,
     _show_spinner: bool,
 ) -> u16 {
-    // Grok-style: "     ⠧ Thinking… 1.5s                                           8.0s ⇣23.2k [✗]"
-    // Left side: spinner + "Thinking…" + duration
+    // Grok-style: "⠴ Run List `.` 2.9s                                         11s ⇣22.2k [✗]"
+    // Left side: spinner + "Run" + name + args + duration
     // Right side: total_elapsed + transfer + status (empty brackets while running)
 
     let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF); // Purple accent
@@ -213,9 +221,17 @@ pub fn render_tool_running_msg(
     let content_x = margin_x + indent;
     let elapsed_secs = duration_ms as f64 / 1000.0;
 
-    // Build left content: spinner + name + "…" + tool_duration
+    // Format args compactly
+    let compact_args = super::tool::format_tool_args_compact(args);
+    let args_display = if compact_args.is_empty() {
+        String::new()
+    } else {
+        format!(" {}", compact_args)
+    };
+
+    // Build left content: spinner + "Run" + name + args + duration
     let mut left_content = String::with_capacity(64);
-    write!(left_content, "{} {}… {:.1}s", spinner, name, elapsed_secs).ok();
+    write!(left_content, "{} Run {}{} {:.1}s", spinner, name, args_display, elapsed_secs).ok();
 
     let left_line = Line::raw(left_content).style(Style::default().fg(tool_bar_color));
     buf.set_line(content_x, area.y + row, &left_line, area.width - 4);
@@ -454,4 +470,19 @@ pub fn render_empty_state(
     let hint1 = Paragraph::new(Line::raw("Press ^k for commands · ^b for sidebar · ^q to quit").style(Style::default().fg(text_dim)))
         .style(Style::default().fg(text_dim));
     hint1.render(Rect::new(text_x, center_y.saturating_add(1), available_width, 1), buf);
+}
+
+/// Render "⠼ Starting session… X.Xs" loading indicator
+pub fn render_session_starting(
+    area: Rect,
+    buf: &mut Buffer,
+    text_muted: ratatui::style::Color,
+    text_x: u16,
+    elapsed_secs: f64,
+    spinner: char,
+) {
+    // Position at top of chat area with proper indent
+    let content = format!("{} Starting session… {:.1}s", spinner, elapsed_secs);
+    let line = Line::raw(content).style(Style::default().fg(text_muted));
+    buf.set_line(text_x, area.y, &line, area.width - 4);
 }

@@ -81,7 +81,7 @@ impl HomeScreen {
 }
 
 pub(crate) fn draw_divider(x: u16, y: u16, _content_x: u16, content_width: u16, buf: &mut Buffer, style: Style) {
-    let divider_x = x + 2; // Align with menu text
+    let divider_x = x; // Align with menu text
     let divider_width = content_width.saturating_sub(3);
     for dx in divider_x..divider_x + divider_width {
         if let Some(cell) = buf.cell_mut((dx, y)) {
@@ -101,16 +101,16 @@ pub(crate) fn draw_menu_item(
     unselected_style: Style,
     hint_style: Style,
 ) {
-    buf.set_string(x + 2, y, name, unselected_style);
+    buf.set_string(x, y, name, unselected_style);
 
     let hint_text = format!("{}", hint);
     let hint_len = hint_text.len() as u16;
-    let hint_x = x + content_width.saturating_sub(hint_len + 2);
+    let hint_x = x + content_width.saturating_sub(hint_len + 3);
     buf.set_string(hint_x, y, &hint_text, hint_style);
 }
 
 fn render_menu(
-    screen: &HomeScreen,
+    _screen: &HomeScreen,
     content_x: u16,
     start_y: u16,
     content_width: u16,
@@ -145,7 +145,7 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
 
     let content_width = MENU_WIDTH;
     let content_height = MENU_HEIGHT;
-    let content_x = area.x + (area.width.saturating_sub(content_width)) / 2;
+    let content_x = area.x + (area.width.saturating_sub(content_width)) / 2 + 2;
     let content_y = area.y + (area.height.saturating_sub(content_height)) / 2;
 
     let menu_start_y = content_y;
@@ -162,7 +162,7 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     );
 
     let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
-    buf.set_string(area.x + 2, content_y + 11, tip, theme.tip_style());
+    buf.set_string(area.x + 2, content_y + 10, tip, theme.tip_style());
 }
 
 #[cfg(test)]

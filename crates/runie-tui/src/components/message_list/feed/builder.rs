@@ -120,6 +120,9 @@ impl FeedBuilder {
                 turn_duration: None,
                 thoughts_collapsed: false,
                 expanded: true,
+                streaming_thinking_elapsed_ms: None,
+                streaming_total_elapsed_ms: None,
+                streaming_download_bytes: None,
             });
         }
     }

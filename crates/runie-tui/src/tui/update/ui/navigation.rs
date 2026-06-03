@@ -47,6 +47,7 @@ pub fn handle_model_mode(msg: &Msg, state: &mut AppState) -> Vec<crate::tui::upd
     match msg {
         Msg::SetCurrentModel(model) => handle_set_current_model(state, model.clone()),
         Msg::SetMockMode(mock) => handle_set_mock_mode(state, *mock),
+        Msg::SetPermissionMode(mode) => handle_set_permission_mode(state, *mode),
         Msg::ResetAgentState => handle_reset_agent_state(state),
         _ => vec![],
     }
@@ -192,6 +193,11 @@ fn handle_set_current_model(state: &mut AppState, model: Option<String>) -> Vec<
 
 fn handle_set_mock_mode(state: &mut AppState, mock: bool) -> Vec<crate::tui::update::ui::UiCmd> {
     state.mock_mode = mock;
+    vec![]
+}
+
+fn handle_set_permission_mode(state: &mut AppState, mode: crate::tui::state::PermissionMode) -> Vec<crate::tui::update::ui::UiCmd> {
+    state.permission_mode = mode;
     vec![]
 }
 

@@ -26,6 +26,13 @@ pub fn render_ref(vm: &StatusBarViewModel, area: Rect, buf: &mut Buffer, colors:
     fill_status_background(area, buf, bg);
 
     let hotkeys = vm.hotkeys();
+    // DEBUG: Trace hotkeys being rendered
+    tracing::debug!(
+        "render_ref: mode={:?}, hotkeys_count={}, items={:?}",
+        vm.mode,
+        hotkeys.len(),
+        hotkeys.iter().map(|h| format!("{}:{}", h.key, h.description)).collect::<Vec<_>>()
+    );
     let left_end = render_hotkey_items(area, buf, &hotkeys, text_tertiary);
 
     // During onboarding, only show hotkeys - hide model/token/cost info
@@ -67,6 +74,17 @@ fn render_hotkey_items(area: Rect, buf: &mut Buffer, hotkeys: &[StatusItem], tex
         buf.set_line(x, area.y, &line, width);
         x += width;
     }
+
+    // Fill remaining space with trailing spaces (Grok-style)
+    // This ensures the line is fully populated and MCP status renders correctly
+    let remaining_width = (area.x + area.width).saturating_sub(x) as usize;
+    if remaining_width > 0 {
+        let trailing_spaces = " ".repeat(remaining_width);
+        let line = Line::raw(&trailing_spaces).style(Style::default().fg(text_tertiary));
+        buf.set_line(x, area.y, &line, remaining_width as u16);
+        x += remaining_width as u16;
+    }
+
     x
 }
 

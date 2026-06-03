@@ -244,8 +244,40 @@ fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
 
 // ─── Message handlers ───────────────────────────────────────────────────────
 
+fn ensure_thinking_placeholder(state: &mut AppState, content: &[runie_agent::events::ContentPart]) {
+    let is_thinking = content.iter().any(|part| {
+        if let runie_agent::events::ContentPart::Text { text } = part {
+            text.trim_start().starts_with("[thinking:")
+        } else {
+            false
+        }
+    });
+
+    if !is_thinking {
+        return;
+    }
+
+    let has_no_assistant = !state.messages.iter().any(|m| matches!(m, MessageItem::Assistant { .. }));
+    let last_has_thinking = state.messages.last()
+        .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.trim_start().starts_with("[thinking:")))
+        .unwrap_or(false);
+
+    if has_no_assistant || last_has_thinking {
+        state.messages.push(MessageItem::Assistant {
+            text: String::new(),
+            model: state.current_model.clone(),
+            timestamp: current_timestamp(),
+            expanded: true,
+            thought_duration: None,
+            turn_duration: None,
+        });
+    }
+}
+
 pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::AgentMessage) {
+    tracing::debug!("on_message_start: setting agent_running = true");
     state.agent_running = true;
+    state.session_starting = None; // Clear "Starting session..." indicator
     state.status_header = Some(MessageRegistry::status_thinking().to_string());
     state.status_start_time = Some(std::time::Instant::now());
     // Set status_details to show elapsed time from start
@@ -276,6 +308,8 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
             expanded: true,
+            thought_duration: None,
+            turn_duration: None,
         });
     }
 }
@@ -292,6 +326,8 @@ pub fn on_message(state: &mut AppState, role: &str, content: &str) {
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
             expanded: true,
+            thought_duration: None,
+            turn_duration: None,
         }),
         "system" => {
             // Filter out system messages that are just metadata notifications
@@ -309,43 +345,13 @@ pub fn on_message_update(state: &mut AppState, message: runie_agent::events::Age
         state.scroll.feed_offset = 0;
     }
 
-    // Check if this is a thinking message (text starts with "[thinking:")
-    // and there's no existing assistant to update
-    let is_thinking = message.content.iter().any(|part| {
-        if let runie_agent::events::ContentPart::Text { text } = part {
-            text.trim_start().starts_with("[thinking:")
-        } else {
-            false
-        }
-    });
-
-    // If this is a thinking message and there's no assistant message yet,
-    // create a placeholder so the thinking content is preserved.
-    // Only do this if there's no assistant at all, or if the last assistant
-    // already has non-thinking content (in which case we shouldn't overwrite it).
-    let should_create_placeholder = is_thinking && {
-        let has_no_assistant = !state.messages.iter().any(|m| matches!(m, MessageItem::Assistant { .. }));
-        let last_has_thinking = state.messages.last()
-            .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.trim_start().starts_with("[thinking:")))
-            .unwrap_or(false);
-        has_no_assistant || last_has_thinking
-    };
-
-    if should_create_placeholder {
-        state.messages.push(MessageItem::Assistant {
-            text: String::new(),
-            model: state.current_model.clone(),
-            timestamp: current_timestamp(),
-            expanded: true,
-        });
-    }
-
+    ensure_thinking_placeholder(state, &message.content);
     update_last_assistant(state, &message.content);
 }
 
 pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentMessage) {
     // Calculate and record thinking duration
-    let (duration, text) = if let Some(ref mut thinking) = state.thinking {
+    let (duration, _text) = if let Some(ref mut thinking) = state.thinking {
         let current_duration = thinking.start.take().map(|start| start.elapsed());
         // Include any accrued duration from tools
         let total_duration = current_duration.map(|d| {
@@ -362,18 +368,19 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
         state.scroll.feed_offset = 0;
     }
 
-    // IMPORTANT: Update the assistant's text BEFORE adding the Thought indicator.
-    // If we add Thought first, it becomes the last item, and update_last_assistant
-    // won't find the Assistant to update (it only updates the last Assistant).
-    update_last_assistant(state, &message.content);
-
-    // Add thinking indicator if thinking took more than 0.5s
+    // Update the assistant's text and set thought_duration if thinking took > 0.5s
     if let Some(duration) = duration {
         let secs = duration.as_secs_f32();
         if secs > 0.5 {
-            state.messages.push(MessageItem::Thought { duration_secs: secs, text });
+            // Update last assistant message with thought duration
+            if let Some(MessageItem::Assistant { thought_duration: ref mut td, .. }) = state.messages.last_mut() {
+                *td = Some(secs);
+            }
         }
     }
+
+    // Update assistant's text content
+    update_last_assistant(state, &message.content);
 }
 
 /// Handle turn end - add separator with runtime metrics
@@ -388,6 +395,11 @@ fn on_turn_end(state: &mut AppState) {
         state.last_turn_tokens = Some(state.session_token_usage.total_tokens);
         state.last_turn_tool_calls = Some(tool_calls);
         state.turn_success = Some(true);
+
+        // Set turn_duration on the last assistant message
+        if let Some(MessageItem::Assistant { turn_duration: ref mut td, .. }) = state.messages.last_mut() {
+            *td = Some(elapsed as f32);
+        }
 
         // Add separator to feed with grok-style metrics
         state.messages.push(MessageItem::Separator {
@@ -406,7 +418,9 @@ pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
 
 // ─── Tool handlers ───────────────────────────────────────────────────────────
 
-pub fn on_tool_start(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) {
+pub fn on_tool_start(state: &mut AppState, _tool_call_id: String, tool_name: String, tool_args: String) {
+    // Clear "Starting session..." indicator - agent is now doing real work
+    state.session_starting = None;
     // Pause thinking timer when tool starts - accumulate duration so far
     if let Some(ref mut thinking) = state.thinking {
         if let Some(start) = thinking.start.take() {
