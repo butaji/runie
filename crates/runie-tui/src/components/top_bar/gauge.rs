@@ -79,6 +79,7 @@ pub fn draw_gauge(
 mod tests {
     use super::*;
     use crate::components::TopBarViewModel;
+    use crate::tui::state::TuiMode;
 
     // ─── format_context_window tests ───────────────────────────────────────────
 
@@ -145,6 +146,7 @@ mod tests {
             estimated_tokens: 0,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 0.0);
     }
@@ -159,6 +161,7 @@ mod tests {
             estimated_tokens: 50_000,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 50.0);
     }
@@ -173,6 +176,7 @@ mod tests {
             estimated_tokens: 100_000,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 100.0);
     }
@@ -187,6 +191,7 @@ mod tests {
             estimated_tokens: 200_000,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 100.0);
     }
@@ -201,6 +206,7 @@ mod tests {
             estimated_tokens: 50_000,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 0.0);
     }
@@ -215,6 +221,7 @@ mod tests {
             estimated_tokens: 99_999,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 99.999);
     }
@@ -229,6 +236,7 @@ mod tests {
             estimated_tokens: 1,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         assert_eq!(calculate_pct(&vm), 0.00078125);
     }
@@ -245,6 +253,7 @@ mod tests {
             estimated_tokens: 0,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         let pct = calculate_pct(&vm);
         assert_eq!(pct, 0.0);
@@ -262,6 +271,7 @@ mod tests {
             estimated_tokens: 100_000,
             agent_running: false,
             braille_frame: 0,
+            mode: TuiMode::Chat,
         };
         let pct = calculate_pct(&vm);
         assert_eq!(pct, 100.0);

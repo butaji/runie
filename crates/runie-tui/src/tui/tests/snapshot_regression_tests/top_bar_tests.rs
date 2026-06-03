@@ -5,6 +5,7 @@ fn snapshot_top_bar_gauge_0pct() {
     let vm = TopBarViewModel {
         repo: "runie".to_string(), branch: "main".to_string(), path: "src".to_string(),
         context_window: 128_000, estimated_tokens: 0, agent_running: false, braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let colors = make_test_colors();
     let area = Rect::new(0, 0, 80, 2);
@@ -18,6 +19,7 @@ fn snapshot_top_bar_gauge_50pct() {
     let vm = TopBarViewModel {
         repo: "runie".to_string(), branch: "main".to_string(), path: "src".to_string(),
         context_window: 128_000, estimated_tokens: 64_000, agent_running: false, braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let colors = make_test_colors();
     let area = Rect::new(0, 0, 80, 2);
@@ -31,6 +33,7 @@ fn snapshot_top_bar_gauge_100pct() {
     let vm = TopBarViewModel {
         repo: "runie".to_string(), branch: "main".to_string(), path: "src".to_string(),
         context_window: 128_000, estimated_tokens: 128_000, agent_running: false, braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let colors = make_test_colors();
     let area = Rect::new(0, 0, 80, 2);
@@ -44,6 +47,7 @@ fn snapshot_top_bar_gauge_over_100pct() {
     let vm = TopBarViewModel {
         repo: "runie".to_string(), branch: "main".to_string(), path: "src".to_string(),
         context_window: 128_000, estimated_tokens: 150_000, agent_running: false, braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let colors = make_test_colors();
     let area = Rect::new(0, 0, 80, 2);
@@ -57,6 +61,7 @@ fn snapshot_dark_theme_top_bar() {
     let vm = TopBarViewModel {
         repo: "runie".to_string(), branch: "main".to_string(), path: "src".to_string(),
         context_window: 128_000, estimated_tokens: 64_000, agent_running: false, braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let colors = make_test_colors();
     let area = Rect::new(0, 0, 80, 2);

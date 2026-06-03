@@ -5,7 +5,7 @@ mod mouse;
 
 use crossterm::event::Event;
 use crate::tui::state::{AppState, Msg};
-use keyboard::key_to_msg;
+pub use keyboard::key_to_msg;
 
 // --- Key classification helpers ---
 

@@ -5,7 +5,7 @@ mod handlers;
 use crossterm::event::{KeyCode, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg};
 
-pub(super) fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
+pub fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
     // P0-3/P0-4 FIX: Blocking modes intercept keys, but if a handler exists and
     // returns None (didn't handle), fall through to global_hotkey_handler
     if let Some(blocking_result) = blocking_mode_handler(&key, &state.mode, state) {
