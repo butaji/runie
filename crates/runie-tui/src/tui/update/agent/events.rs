@@ -1,10 +1,14 @@
 //! Agent event handlers.
 
+mod thinking;
+
 use crate::components::MessageItem;
 use crate::messages::MessageRegistry;
 use crate::tui::state::{AppState, TuiMode, ThinkingState};
 use runie_agent::{AgentEvent, ContentPart};
 use runie_ai::TokenUsage;
+
+use thinking::{ensure_thinking_placeholder, on_thinking_end, on_thinking_start, on_thinking_update};
 
 fn current_timestamp() -> Option<String> {
     use chrono::Local;
@@ -190,102 +194,7 @@ fn update_token_usage(state: &mut AppState, prompt_tokens: usize, completion_tok
     }
 }
 
-// ─── Thinking handlers ───────────────────────────────────────────────────────
-// These handle the new AgentEvent::ThinkingStart/Update/End events.
-// The agent is responsible for detecting thinking patterns, not the TUI.
-
-fn on_thinking_start(state: &mut AppState, _turn: usize) {
-    state.thinking = Some(ThinkingState {
-        start: Some(std::time::Instant::now()),
-        text: String::new(),
-        accrued_duration: None,
-    });
-}
-
-fn on_thinking_update(state: &mut AppState, text: String) {
-    if let Some(ref mut thinking) = state.thinking {
-        if !thinking.text.is_empty() {
-            thinking.text.push(' ');
-        }
-        thinking.text.push_str(&text);
-    }
-}
-
-fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
-    let (duration, text) = if let Some(ref mut thinking) = state.thinking {
-        let total_duration = if duration_ms > 0 {
-            Some(std::time::Duration::from_millis(duration_ms))
-        } else if let Some(start) = thinking.start {
-            Some(start.elapsed())
-        } else {
-            None
-        };
-        // Include any accrued duration from tools
-        let final_duration = total_duration.map(|d| {
-            thinking.accrued_duration.map(|acc| d + acc).unwrap_or(d)
-        });
-        (final_duration, std::mem::take(&mut thinking.text))
-    } else {
-        (None, String::new())
-    };
-    
-    // Append think content with <think> tags to the last assistant message.
-    // This ensures extract_think_blocks() in render_assistant_msg can find and render it.
-    // Previously we pushed a separate MessageItem::Thought but those get filtered out
-    // in Feed::from conversion (convert.rs returns Err for Thought items).
-    if let Some(duration) = duration {
-        let secs = duration.as_secs_f32();
-        // Always set thought_duration on assistant if we had meaningful thinking
-        if secs > 0.5 || !text.is_empty() {
-            // Append think content with tags to assistant's text so render sees it
-            if !text.is_empty() {
-                let think_with_tags = format!("\n<think>\n{}\n</think>", text);
-                if let Some(MessageItem::Assistant { text: ref mut assistant_text, .. }) = state.messages.last_mut() {
-                    assistant_text.push_str(&think_with_tags);
-                }
-            }
-            // Set thought_duration on assistant message (for 0.5s+ thinking)
-            if secs > 0.5 {
-                if let Some(MessageItem::Assistant { thought_duration: ref mut td, .. }) = state.messages.last_mut() {
-                    *td = Some(secs);
-                }
-            }
-        }
-    }
-    state.thinking = None;
-}
-
 // ─── Message handlers ───────────────────────────────────────────────────────
-
-fn ensure_thinking_placeholder(state: &mut AppState, content: &[runie_agent::events::ContentPart]) {
-    let is_thinking = content.iter().any(|part| {
-        if let runie_agent::events::ContentPart::Text { text } = part {
-            text.trim_start().starts_with("[thinking:")
-        } else {
-            false
-        }
-    });
-
-    if !is_thinking {
-        return;
-    }
-
-    let has_no_assistant = !state.messages.iter().any(|m| matches!(m, MessageItem::Assistant { .. }));
-    let last_has_thinking = state.messages.last()
-        .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.trim_start().starts_with("[thinking:")))
-        .unwrap_or(false);
-
-    if has_no_assistant || last_has_thinking {
-        state.messages.push(MessageItem::Assistant {
-            text: String::new(),
-            model: state.current_model.clone(),
-            timestamp: current_timestamp(),
-            expanded: true,
-            thought_duration: None,
-            turn_duration: None,
-        });
-    }
-}
 
 pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::AgentMessage) {
     tracing::debug!("on_message_start: setting agent_running = true");

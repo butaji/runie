@@ -34,6 +34,7 @@ pub(crate) struct FeedBuilder {
     animation: AnimationState,
     wrap_cache: WrapCache,
     session_starting: Option<std::time::Instant>,
+    streaming_think_content: Option<String>,
 }
 
 impl FeedBuilder {
@@ -45,6 +46,7 @@ impl FeedBuilder {
             animation: AnimationState::default(),
             wrap_cache: WrapCache::new(),
             session_starting: None,
+            streaming_think_content: None,
         }
     }
 
@@ -227,6 +229,12 @@ impl FeedBuilder {
         self
     }
 
+    /// Set streaming_think_content (from state.thinking.text during agent streaming).
+    pub(crate) fn streaming_think_content(mut self, content: Option<String>) -> Self {
+        self.streaming_think_content = content;
+        self
+    }
+
     /// Consume the builder and return the MessageListViewModel.
     pub(crate) fn build(self) -> MessageListViewModel {
         MessageListViewModel {
@@ -236,7 +244,7 @@ impl FeedBuilder {
             animation: self.animation,
             wrap_cache: self.wrap_cache,
             session_starting: self.session_starting,
-            streaming_think_content: None,
+            streaming_think_content: self.streaming_think_content,
         }
     }
 
