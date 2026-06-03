@@ -46,9 +46,11 @@ pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
 fn find_closing_tag(bytes: &[u8], start: usize) -> Option<(usize, usize, usize)> {
     let mut j = start;
     while j < bytes.len() {
-        if bytes[j..].starts_with(b"
-</think>
-") {
+        // Look for newline followed by </think> (8 bytes)
+        // newline at j, 加工厂 spans j+1 to j+8 (byte at j+8 is '>')
+        // We need j+9 to be within bounds for the byte after the tag
+        // But j+8 < bytes.len() is sufficient since 加工厂 is 8 bytes (j+1 to j+8)
+        if j + 9 <= bytes.len() && bytes[j] == b'\n' && &bytes[j+1..j+9] == b"</think>" {
             return Some((start, j, j + 9));
         }
         j += 1;

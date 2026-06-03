@@ -1,4 +1,4 @@
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 use crate::theme::ThemeWrapper;
 use crate::tui::state::AnimationState;
 use crate::components::message_list::render::WrapCache;
@@ -6,6 +6,73 @@ pub mod types;
 pub mod render;
 pub mod builder;
 pub mod feed;
+
+// ─── Scrollbar ─────────────────────────────────────────────────────────────────
+
+/// Grok-style scrollbar: thin vertical bar on right edge.
+/// Only visible when content overflows the visible area.
+fn render_scrollbar(
+    scroll_offset: usize,
+    total_items: usize,
+    visible_items: usize,
+    area: Rect,
+    buf: &mut Buffer,
+    track_color: ratatui::style::Color,
+    thumb_color: ratatui::style::Color,
+) {
+    // Only show scrollbar if there's overflow (content > visible)
+    if total_items <= visible_items {
+        return;
+    }
+
+    let scrollbar_x = area.right().saturating_sub(1);
+    if scrollbar_x < area.x {
+        return; // No space for scrollbar
+    }
+
+    let scrollbar_height = area.height;
+    if scrollbar_height < 2 {
+        return; // Need at least 2 rows for a meaningful scrollbar
+    }
+
+    // Calculate thumb size: proportional to visible/otal ratio
+    // thumb_height = visible_height * visible_height / total_height
+    let thumb_height = if total_items > 0 {
+        ((visible_items as u32 * visible_items as u32) / total_items as u32).max(1) as u16
+    } else {
+        1
+    };
+
+    // Calculate thumb position based on scroll ratio
+    // scroll_ratio = scroll_offset / (total_items - visible_items)
+    let max_scroll = total_items.saturating_sub(visible_items);
+    let scroll_ratio = if max_scroll > 0 {
+        scroll_offset as f32 / max_scroll as f32
+    } else {
+        0.0
+    };
+
+    // thumb_y positions the thumb within the scrollbar track
+    // At scroll_ratio=0 (top), thumb is at top; at scroll_ratio=1 (bottom), thumb is at bottom
+    let track_available = scrollbar_height.saturating_sub(thumb_height);
+    let thumb_y = area.y + (scroll_ratio * track_available as f32) as u16;
+
+    // Render track background (subtle dotted line effect)
+    let track_style = Style::default().fg(track_color);
+    for y in area.y..area.y + scrollbar_height {
+        buf.get_mut(scrollbar_x, y)
+            .set_char('│')
+            .set_style(track_style);
+    }
+
+    // Render thumb (solid block)
+    let thumb_style = Style::default().fg(thumb_color);
+    for y in thumb_y..thumb_y.saturating_add(thumb_height).min(area.y + scrollbar_height) {
+        buf.get_mut(scrollbar_x, y)
+            .set_char('█')
+            .set_style(thumb_style);
+    }
+}
 
 #[cfg(test)]
 mod snapshots;
@@ -57,7 +124,24 @@ impl MessageList {
         let mut wrap_cache = vm.wrap_cache.clone();
         let spinner = crate::glyphs::SPINNER_FRAMES[vm.animation.braille_frame % 10];
         let rewind_spinner = crate::glyphs::SPINNER_FRAMES_REVERSE[vm.animation.braille_frame % 10];
-        let _row = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
+        let rendered_rows = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
+
+        // Compute scrollbar info (same filtering as render_message_list)
+        let all_items: Vec<_> = vm.feed.items().iter().collect();
+        let visible_items: Vec<_> = all_items.iter().filter(|item| !matches!(item, FeedItem::SystemNotice { .. })).collect();
+        let total_visible_count = visible_items.len();
+        let visible_rows = rendered_rows as usize;
+
+        // Render Grok-style scrollbar on right edge
+        render_scrollbar(
+            vm.scroll_offset,
+            total_visible_count,
+            visible_rows,
+            area,
+            buf,
+            colors.text_dim,    // track color (subtle)
+            colors.accent_secondary, // thumb color
+        );
 
         // Render session starting indicator
         if let Some(start_time) = vm.session_starting {
