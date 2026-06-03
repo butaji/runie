@@ -84,6 +84,10 @@ mod tests;
 pub use types::{MessageItem, MessageList, PlanStatus};
 pub(crate) use builder::FeedBuilder;
 pub use feed::{Feed, FeedItem, Thought, ToolCall};
+// Re-export thinking block types for external testing
+pub use render::{ThinkingBlock, render_thinking_block};
+// Re-export tool call block types for external testing
+pub use render::{ToolCallBlock, ToolStatus, render_tool_call_block};
 
 /// ViewModel for rendering MessageList
 pub struct MessageListViewModel {
@@ -126,26 +130,29 @@ impl MessageList {
         let mut wrap_cache = vm.wrap_cache.clone();
         let spinner = crate::glyphs::SPINNER_FRAMES[vm.animation.braille_frame % 10];
         let rewind_spinner = crate::glyphs::SPINNER_FRAMES_REVERSE[vm.animation.braille_frame % 10];
-        let rendered_rows = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
+        let _rendered_rows = render_message_list(vm, area, buf, theme, &colors, spinner, rewind_spinner, &mut wrap_cache);
 
         // Compute scrollbar info
         // total_items = count of non-SystemNotice items (scrollable content)
-        // visible_rows = how many rows fit on screen
+        // visible_rows = actual visible capacity (area.height), NOT rendered_rows which can be inflated by wrapping
         let all_items: Vec<_> = vm.feed.items().iter().collect();
         let visible_items: Vec<_> = all_items.iter().filter(|item| !matches!(item, FeedItem::SystemNotice { .. })).collect();
         let total_items = visible_items.len();
-        let visible_rows = rendered_rows as usize;
+        let visible_rows = area.height as usize;
 
         // Render Grok-style scrollbar on right edge
-        render_scrollbar(
-            vm.scroll_offset,
-            total_items,
-            visible_rows,
-            area,
-            buf,
-            colors.text_dim,    // track color (subtle)
-            colors.accent_secondary, // thumb color
-        );
+        // Show when content overflows visible area
+        if total_items > visible_rows {
+            render_scrollbar(
+                vm.scroll_offset,
+                total_items,
+                visible_rows,
+                area,
+                buf,
+                colors.text_dim,    // track color (subtle)
+                colors.accent_secondary, // thumb color
+            );
+        }
 
         // Render session starting indicator
         if let Some(start_time) = vm.session_starting {

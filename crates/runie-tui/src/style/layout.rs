@@ -18,8 +18,8 @@ pub const MESSAGE_INDENT: u16 = 3;
 /// Home menu content width
 pub const MENU_WIDTH: u16 = 40;
 
-/// Home menu content height
-pub const MENU_HEIGHT: u16 = 14;
+/// Home menu content height (3 items + 2 dividers = 5 rows)
+pub const MENU_HEIGHT: u16 = 5;
 
 /// Sidebar width
 pub const SIDEBAR_WIDTH: u16 = 28;
