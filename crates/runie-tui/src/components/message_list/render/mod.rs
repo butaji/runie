@@ -174,7 +174,7 @@ pub fn render_single_msg(
 ) -> u16 {
     match msg {
         MessageItem::User { text, timestamp, .. } => {
-            render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
+            render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache, agent_running)
         }
         MessageItem::Assistant { text, timestamp, .. } => {
             render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), thought_duration, turn_complete, true, &[], accent_secondary, false, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes)
@@ -209,7 +209,7 @@ pub fn render_single_msg(
             render_error_msg(message, *recoverable, area, row, margin_x, text_x, buf, error, text_muted, wrap_cache)
         }
         MessageItem::ToolRunning { name, args, duration_ms, total_elapsed_ms, download_bytes } => {
-            render_tool_running_msg(name, args, *duration_ms, *total_elapsed_ms, *download_bytes, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner)
+            render_tool_running_msg(name, args, *duration_ms, *total_elapsed_ms, *download_bytes, area, row, margin_x, text_x, buf, text_secondary, spinner, show_spinner, agent_running)
         }
         MessageItem::ToolComplete { name, result, lines } => {
             render_tool_complete_msg(name, result, lines.as_ref(), area, row, margin_x, text_x, buf, success, text_muted)
@@ -259,7 +259,7 @@ pub fn render_single_msg_feed(
 ) -> u16 {
     match item {
         FeedItem::UserMessage { text, timestamp, .. } => {
-            render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache)
+            render_user_msg(text, timestamp.as_deref(), area, row, margin_x, text_x, max_rows, buf, theme, wrap_cache, agent_running)
         }
         FeedItem::AssistantMessage { text, thoughts, tool_calls, timestamp, turn_duration, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes, .. } => {
             // Use first thought's duration if provided, otherwise use the passed thought_duration
@@ -277,7 +277,7 @@ pub fn render_single_msg_feed(
             render_separator(*elapsed_secs, *tool_calls, *tokens_used, true, area, row, margin_x, buf, text_dim)
         }
         FeedItem::ToolRunning { name, args, duration_ms, total_elapsed_ms, download_bytes } => {
-            render_tool_running_msg(name, args, *duration_ms, *total_elapsed_ms, *download_bytes, area, row, margin_x, text_x, buf, text_secondary, spinner, true)
+            render_tool_running_msg(name, args, *duration_ms, *total_elapsed_ms, *download_bytes, area, row, margin_x, text_x, buf, text_secondary, spinner, true, agent_running)
         }
         FeedItem::ToolComplete { name, result, lines } => {
             let lines_ref = lines.as_ref();
