@@ -6,12 +6,14 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use crate::tui::state::{AppState, TuiMode, Msg};
 
 pub(super) fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> Option<Msg> {
-    // P0-3/P0-4 FIX: Blocking modes intercept ALL keys (no global hotkeys)
+    // P0-3/P0-4 FIX: Blocking modes intercept keys, but if a handler exists and
+    // returns None (didn't handle), fall through to global_hotkey_handler
     if let Some(blocking_result) = blocking_mode_handler(&key, &state.mode, state) {
         if let Some(msg) = blocking_result {
             return Some(msg);
         }
-        return None;
+        // blocking_result is None - handler existed but didn't handle this key
+        // Fall through to global_hotkey_handler
     }
     
     // Global hotkeys: active in all non-blocking modes
@@ -19,7 +21,7 @@ pub(super) fn key_to_msg(key: crossterm::event::KeyEvent, state: &AppState) -> O
         if let Some(msg) = global_result {
             return Some(msg);
         }
-        return None;
+        // global_result is None - handler existed but didn't handle, fall through
     }
 
     // Route to mode-specific handler (non-blocking modes only)

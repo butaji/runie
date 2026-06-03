@@ -309,15 +309,15 @@ fn test_end_key_with_modifiers_routed_to_textarea() {
 
 // ─── Regression: ? key Shows Help ───────────────────────────────────────────────
 
-// ? key in Chat mode should produce Msg::ShowHelp
+// ? key in Chat mode should produce Msg::OpenShortcutsPanel
 #[test]
-fn test_question_mark_shows_help() {
+fn test_question_mark_opens_shortcuts_panel() {
     let state = make_state();
 
     let key = make_key(KeyCode::Char('?'), KeyModifiers::NONE);
     let msgs = key_to_msg(key, &state);
 
-    assert_eq!(msgs, Some(Msg::ShowHelp), "? key should produce Msg::ShowHelp in Chat mode");
+    assert_eq!(msgs, Some(Msg::OpenShortcutsPanel), "? key should open shortcuts panel in Chat mode");
 }
 
 

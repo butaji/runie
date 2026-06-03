@@ -85,7 +85,7 @@ fn render_think_block_box(
         if line_y >= area.height {
             break;
         }
-        let content = format!("{} {}", glyphs::DOT, line_text);
+        let content = format!("┃  {}", line_text);
         let line = ratatui::text::Line::raw(content).style(Style::default().fg(text_muted));
         buf.set_line(margin_x, area.y + line_y, &line, area.width - margin_x + area.x - 2);
         rendered += 1;

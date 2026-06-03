@@ -17,7 +17,6 @@ pub struct MockProvider {
 impl MockProvider {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         Self {
             model: "mock-gpt-4".to_string(),
@@ -55,10 +54,11 @@ impl MockProvider {
     }
 
     fn build_tool_response(name: &str, args: &str) -> Vec<Event> {
+        let duration_ms = 150 + (rand::random::<u64>() % 300);
         vec![
             Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
             Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
-            Event::MessageDelta { content: format!("Running {} tool...", name) },
+            Event::MessageDelta { content: format!("Let me {} for you...\n\n", name.to_lowercase()) },
             Event::ToolCallDelta {
                 id: "mock-1".to_string(),
                 name: name.to_string(),
@@ -72,7 +72,11 @@ impl MockProvider {
             },
             Event::ToolExecutionEnd {
                 tool_call_id: "mock-1".to_string(),
-                result: ToolOutput { content: format!("{} completed successfully", name), metadata: serde_json::json!({}), terminate: false },
+                result: ToolOutput {
+                    content: format!("{} completed successfully", name),
+                    metadata: serde_json::json!({ "duration_ms": duration_ms }),
+                    terminate: false,
+                },
                 timestamp: Utc::now(),
             },
             Event::MessageEnd,
@@ -81,13 +85,33 @@ impl MockProvider {
     }
 
     fn build_text_response(content: &str) -> Vec<Event> {
+        let thinking = Self::thinking_for_text(content);
         vec![
             Event::AgentStart { session_id: "mock-session".to_string(), timestamp: Utc::now() },
             Event::MessageStart { role: "assistant".to_string(), timestamp: Utc::now() },
+            Event::MessageDelta { content: thinking },
             Event::MessageDelta { content: content.to_string() },
             Event::MessageEnd,
             Event::AgentEnd { timestamp: Utc::now() },
         ]
+    }
+
+    fn thinking_for_text(text: &str) -> String {
+        let lower = text.to_lowercase();
+        if lower.contains("hello") || lower.contains("hi") {
+            return "The user said \"hello\". They want a friendly greeting.\n\n".to_string();
+        }
+        if lower.contains("list") {
+            return "The user mentioned listing files. I'll show them what files are available.\n\n".to_string();
+        }
+        if lower.contains("read") {
+            return "The user wants to read something. I'll retrieve the content for them.\n\n".to_string();
+        }
+        if lower.contains("edit") || lower.contains("fix") {
+            return "The user wants to edit a file. I should first understand the current content.\n\n".to_string();
+        }
+        let preview: String = text.chars().take(30).collect();
+        format!("The user said \"{}\". This is a request I need to handle.\n\n", preview)
     }
 
     fn should_use_tools(content: &str, tools: &[ToolSchema]) -> Option<(String, String)> {
@@ -131,16 +155,22 @@ impl MockProvider {
     fn response_for_text(text: &str) -> String {
         let lower = text.to_lowercase();
         if lower.split_whitespace().any(|w| w == "hello" || w == "hi") {
-            return "Hello! I'm a mock coding agent. How can I help you today?".to_string();
+            return "Hello! 👋 How can I help you today?".to_string();
+        }
+        if lower.contains("list") {
+            return "I can help you list files. 📁 What directory would you like to see?".to_string();
+        }
+        if lower.contains("read") {
+            return "I'll read that for you. 📖 Which file are you interested in?".to_string();
         }
         if lower.contains("edit") || lower.contains("fix") {
-            return "I'll help you edit that file. Let me first read it to understand the current state.".to_string();
+            return "I can help with that edit. ✏️ Let me take a look at the current content first.".to_string();
         }
         if lower.contains("test") {
-            return "I'll run the tests for you. Let me check what test framework you're using.".to_string();
+            return "I'll run those tests for you. 🧪 Let me check your test setup.".to_string();
         }
         let preview: String = text.chars().take(50).collect();
-        format!("I received your message: \"{}\". This is a mock response for testing.", preview)
+        format!("I see: \"{}\". 🔧 How can I assist you with this?", preview)
     }
 }
 
