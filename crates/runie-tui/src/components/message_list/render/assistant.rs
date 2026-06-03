@@ -48,13 +48,15 @@ pub fn extract_think_blocks(text: &str) -> (String, Vec<String>) {
 
 fn find_closing_tag(bytes: &[u8], start: usize) -> Option<(usize, usize, usize)> {
     let mut j = start;
-    while j < bytes.len() {
-        // Look for newline followed by </think> (8 bytes)
-        if j + 9 <= bytes.len() && bytes[j] == b'\n' && &bytes[j+1..j+9] == b"
+    while j + 8 <= bytes.len() {
+        // Look for </think> (8 bytes) - with or without preceding newline
+        if &bytes[j..j+8] == b"
 </think>
 
 " {
-            return Some((start, j, j + 9));
+            // Return: (content_start, content_end, after_closing_tag)
+            // content_start = start (after <think>), content_end = j (position of </think>)
+            return Some((start, j, j + 8));
         }
         j += 1;
     }
@@ -73,17 +75,6 @@ pub fn strip_think_tags(text: &str) -> String {
     extract_think_blocks(text).0
 }
 
-/// Format download bytes for display (e.g., 1234 -> "1.2k", 1500000 -> "1.5M")
-fn format_download_bytes(bytes: u64) -> String {
-    if bytes >= 1_000_000 {
-        format!("{:.1}M", bytes as f64 / 1_000_000.0)
-    } else if bytes >= 1_000 {
-        format!("{:.1}k", bytes as f64 / 1_000.0)
-    } else {
-        bytes.to_string()
-    }
-}
-
 /// Render thinking content with ┃ prefix (streaming case).
 /// Returns the number of lines rendered.
 fn render_thinking_stream(
@@ -95,48 +86,23 @@ fn render_thinking_stream(
     text_muted: ratatui::style::Color,
     wrap_cache: &mut WrapCache,
     buf: &mut Buffer,
-    spinner: char,
-    streaming_thinking_elapsed_ms: Option<u64>,
-    streaming_total_elapsed_ms: Option<u64>,
-    streaming_download_bytes: Option<u64>,
 ) -> u16 {
     let mut rendered = 0u16;
 
-    // Grok-style single line: "⠦ Thinking… 0.7s                           6.0s ⇣21.8k [ ]"
-    // Left: spinner + "Thinking…" + thinking elapsed
-    // Right: total elapsed + download bytes + status
-    let thinking_elapsed_secs = streaming_thinking_elapsed_ms
-        .map(|ms| ms as f64 / 1000.0)
-        .unwrap_or(0.0);
-    let total_elapsed_secs = streaming_total_elapsed_ms
-        .map(|ms| ms as f64 / 1000.0)
-        .unwrap_or(0.0);
-    let download_str = streaming_download_bytes
-        .map(format_download_bytes)
-        .unwrap_or_else(|| "0".to_string());
-
-    // Build left content: spinner + "Thinking…" + elapsed
-    let left_content = format!("{} Thinking… {:.1}s", spinner, thinking_elapsed_secs);
-    let left_len = left_content.len() as u16;
-
-    // Build right content
-    let right_text = format!(" {:.1}s ⇣{} [ ]", total_elapsed_secs, download_str);
-    let right_len = right_text.len() as u16;
-
-    // Calculate middle spacing
-    let middle_space = content_width.saturating_sub(left_len).saturating_sub(right_len);
-
-    // Combine: left + middle spacing + right
-    let full_line = format!("{}{}{}", left_content, " ".repeat(middle_space as usize), right_text);
-    let line = Line::raw(full_line).style(Style::default().fg(text_muted));
-    buf.set_line(response_indent, area.y + row, &line, content_width);
+    // Header: "┃  ◆ Thinking…"
+    let header_text = format!("┃  {} Thinking…", glyphs::THOUGHT_MARKER);
+    let header = Line::raw(header_text).style(Style::default().fg(text_muted));
+    buf.set_line(response_indent, area.y + row, &header, content_width);
     rendered += 1;
 
     // Content lines with ┃  prefix
     let inner_width = (content_width - 4) as usize;
     let cleaned = think_content
         .replace("<think>", "")
-        .replace("</think>", "")
+        .replace("
+</think>
+
+", "")
         .trim()
         .to_string();
     let wrapped = wrap_cache.get_wrapped(&cleaned, inner_width);
@@ -178,9 +144,9 @@ pub fn render_assistant_msg(
     tool_calls: &[ToolCall],
     tool_bar_color: ratatui::style::Color,
     thoughts_collapsed: bool,
-    streaming_thinking_elapsed_ms: Option<u64>,
-    streaming_total_elapsed_ms: Option<u64>,
-    streaming_download_bytes: Option<u64>,
+    _streaming_thinking_elapsed_ms: Option<u64>,
+    _streaming_total_elapsed_ms: Option<u64>,
+    _streaming_download_bytes: Option<u64>,
     streaming_think_content: Option<&str>,
 ) -> u16 {
     let (stripped, _think_blocks) = extract_think_blocks(text);
@@ -207,19 +173,8 @@ pub fn render_assistant_msg(
     let response_indent = margin_x + 3;
     let mut rendered = 0u16;
 
-    // When thoughts_collapsed is true AND not streaming, render ONLY the compact duration line
-    if thoughts_collapsed && !agent_running {
-        let header_text = if let Some(duration) = thought_duration {
-            format!("{} Thought for {:.1}s", glyphs::THOUGHT_MARKER, duration)
-        } else {
-            format!("{} Thinking...", glyphs::THOUGHT_MARKER)
-        };
-        let header = Line::raw(header_text).style(Style::default().fg(text_muted));
-        buf.set_line(response_indent, area.y + row, &header, content_width);
-        return 1;
-    }
-
-    // Render thought indicator BEFORE answer (if thought_duration is provided)
+    // Always render thought indicator BEFORE answer (if thought_duration is provided)
+    // This shows "◆ Thought for Xs" even when thoughts_collapsed is true
     let thought_rows = if let Some(duration) = thought_duration {
         let duration_text = MessageRegistry::thought_duration(duration);
         let line = Line::from(vec![
@@ -265,10 +220,6 @@ pub fn render_assistant_msg(
                     text_muted,
                     wrap_cache,
                     buf,
-                    spinner,
-                    streaming_thinking_elapsed_ms,
-                    streaming_total_elapsed_ms,
-                    streaming_download_bytes,
                 );
                 rendered += block_rows;
             }
@@ -293,39 +244,45 @@ pub fn render_assistant_msg(
         return rendered;
     }
 
-    // Grok-style: extract first sentence as plain text (no markdown)
+    // Render full response text wrapped to content_width
     let stripped_trimmed = stripped.trim_start();
-    let first_sentence = extract_first_sentence(stripped_trimmed);
     let base_style = Style::default().fg(text_secondary);
-    let ts_len = timestamp.as_ref().map(|t| t.len() as u16).unwrap_or(0);
 
-    // Render response text with timestamp on the SAME LINE (5-space indent)
-    if let Some(ts) = timestamp {
-        if ts_len > 0 {
-            // Format: "response text                              timestamp"
-            let response_len = first_sentence.len() as u16;
-            let ts_x = response_indent + content_width.saturating_sub(ts_len);
-            // Only render if we have room
-            if response_len < ts_x.saturating_sub(response_indent) {
-                let line = Line::raw(&first_sentence).style(base_style);
-                buf.set_line(response_indent, area.y + row + rendered, &line, ts_x - response_indent);
-                // Timestamp on same line, right-aligned
-                let ts_line = Line::raw(ts).style(Style::default().fg(text_muted));
-                buf.set_line(ts_x, area.y + row + rendered, &ts_line, ts_len);
-            } else {
-                // Not enough room, just show response
-                let line = Line::raw(&first_sentence).style(base_style);
-                buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
-            }
-        } else {
-            let line = Line::raw(&first_sentence).style(base_style);
-            buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+    // Wrap full text using wrap_cache
+    let wrapped = wrap_cache.get_wrapped(stripped_trimmed, content_width as usize);
+
+    for (i, line_text) in wrapped.iter().enumerate() {
+        if row + rendered >= max_rows {
+            break;
         }
-    } else {
-        let line = Line::raw(&first_sentence).style(base_style);
-        buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
-    };
-    rendered += 1;
+
+        // If last line and timestamp provided, render on SAME line (Grok style: text left, timestamp right)
+        let is_last_line = i == wrapped.len() - 1;
+        if is_last_line && timestamp.is_some() {
+            let ts = timestamp.unwrap();
+            let ts_len = ts.len() as u16;
+            let line_len = line_text.len() as u16;
+
+            // Pad line with spaces so timestamp appears right-aligned
+            let padding = if line_len + ts_len + 1 < content_width {
+                content_width - line_len - ts_len - 1
+            } else {
+                0
+            };
+
+            let line = Line::from(vec![
+                Span::raw(line_text).style(base_style),
+                Span::raw(" ".repeat(padding as usize)).style(base_style),
+                Span::raw(ts).style(Style::default().fg(text_muted)),
+            ]);
+            buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+            rendered += 1;
+        } else {
+            let line = Line::raw(line_text).style(base_style);
+            buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+            rendered += 1;
+        }
+    }
 
     // Render "Turn completed in Xs" on the NEXT line (only when turn is done, not streaming)
     if !agent_running {
@@ -340,9 +297,11 @@ pub fn render_assistant_msg(
     }
 
     // Cursor placement at end of response line (5-space indent)
-    if cursor_visible && !first_sentence.is_empty() {
+    // Calculate last line length from wrapped text
+    if cursor_visible && !stripped_trimmed.is_empty() {
+        let last_line_len = wrapped.last().map(|l| l.len()).unwrap_or(0);
         let cursor_y = area.y + row + rendered - 1;
-        let cursor_x = response_indent + (first_sentence.len() as u16).min(area.width - response_indent + area.x - 3);
+        let cursor_x = response_indent + (last_line_len as u16).min(content_width);
         if cursor_x < area.x + area.width - 1 {
             if let Some(cell) = buf.cell_mut((cursor_x, cursor_y)) {
                 cell.set_char(glyphs::CURSOR_BLOCK);
@@ -376,56 +335,5 @@ fn extract_thought_duration(think_content: &str) -> String {
         "...".to_string()
     } else {
         preview
-    }
-}
-
-/// Extract first sentence(s) from text for Grok-style response
-/// Returns first sentence, or more if needed to reach 80 chars
-fn extract_first_sentence(text: &str) -> String {
-    if let Some(end) = find_sentence_end(text) {
-        let first_sentence = text[..=end].trim().to_string();
-        // If first sentence is very short, include more content up to 80 chars
-        if first_sentence.len() < 40 && end + 1 < text.len() {
-            let remainder = text[end + 1..].trim_start();
-            if !remainder.is_empty() {
-                let combined = format!("{} {}", first_sentence, remainder);
-                if combined.len() <= 80 {
-                    return combined;
-                }
-                // Return first sentence + as much of next sentence as fits
-                if let Some(next_end) = find_sentence_end(remainder) {
-                    let second_sentence = &remainder[..=next_end];
-                    let combined = format!("{} {}", first_sentence, second_sentence);
-                    if combined.len() <= 80 {
-                        return combined.trim().to_string();
-                    }
-                }
-                // Just return first sentence if nothing else fits
-            }
-        }
-        return first_sentence;
-    }
-    truncate_to_line(text)
-}
-
-fn find_sentence_end(text: &str) -> Option<usize> {
-    for (i, c) in text.chars().enumerate() {
-        if c == '.' || c == '!' || c == '?' {
-            let next_i = i + 1;
-            if next_i >= text.len() || text[next_i..].starts_with(' ') || text[next_i..].starts_with('\n') {
-                return Some(i);
-            }
-        }
-    }
-    None
-}
-
-fn truncate_to_line(text: &str) -> String {
-    let first_line = text.lines().next().unwrap_or(text);
-    let trimmed = first_line.trim();
-    if trimmed.len() <= 80 {
-        trimmed.to_string()
-    } else {
-        format!("{}...", trimmed.chars().take(77).collect::<String>())
     }
 }

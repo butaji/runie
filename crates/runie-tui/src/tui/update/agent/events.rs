@@ -335,13 +335,16 @@ fn on_turn_end(state: &mut AppState) {
 pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
     if let Some(MessageItem::Assistant { ref mut text, .. }) = state.messages.last_mut() {
         let new_content = extract_text_content(content);
-        // Append new content to existing text. This preserves think content
-        // appended in on_thinking_end while adding the final response text.
         if !new_content.is_empty() {
-            if !text.is_empty() {
-                text.push('\n');
+            // Avoid duplicate appends - only add if not already suffix
+            if !text.ends_with(&new_content) {
+                // Only insert newline if text exists and doesn't end with one
+                let needs_newline = !text.is_empty() && !text.ends_with('\n');
+                if needs_newline {
+                    text.push('\n');
+                }
+                text.push_str(&new_content);
             }
-            text.push_str(&new_content);
         }
     }
 }

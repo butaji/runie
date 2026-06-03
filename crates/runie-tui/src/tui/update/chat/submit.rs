@@ -62,9 +62,6 @@ pub fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
         state.input_right_info = "Agent still running... Ctrl+C to stop".to_string();
         return vec![];
     }
-    // Clear session_starting if present - stale indicator from prior session
-    // should not block subsequent turns
-    state.session_starting = None;
     if should_defer_submit(state) { return vec![]; }
     prepare_agent_messages(state, &text);
     finalize_submit(state, text)
@@ -141,6 +138,10 @@ fn execute_shell_command(cmd: &str) -> String {
 }
 
 fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
+    // Always clear session_starting immediately - this ensures the "Starting session..."
+    // spinner is removed whether or not we proceed with the submit.
+    state.session_starting = None;
+
     let model_missing = state.current_model.as_deref().map_or(true, |s| s.is_empty()) && state.onboarding.is_none();
     if model_missing {
         add_user_message_only(state, &text);
@@ -153,7 +154,6 @@ fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     }
     tracing::debug!("finalize_submit: setting agent_running = true");
     state.agent_running = true;
-    state.session_starting = None;
     add_user_and_placeholder(state, &text);
     let agent_messages = to_agent_messages(&state.messages);
     tracing::debug!(

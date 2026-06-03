@@ -26,12 +26,8 @@ pub(super) fn on_thinking_update(state: &mut AppState, text: String) {
         }
         thinking.text.push_str(&text);
     }
-
-    // Append think content to the last assistant message.
-    // This ensures extract_think_blocks() in render_assistant_msg can find and render it.
-    // Previously we pushed a separate MessageItem::Thought but those get filtered out
-    // in Feed::from conversion (convert.rs returns Err for Thought items).
-    append_think_content_to_last_assistant(state, &text, None);
+    // Note: thinking content is stored in state.thinking.text and rendered
+    // separately via streaming_think_content. Do NOT append to assistant_text.
 }
 
 pub(super) fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
@@ -44,44 +40,21 @@ pub(super) fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
         }
     }
 
-    let text = state.thinking.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     // Use accrued_duration if available, otherwise use duration_ms passed in
     let final_duration = state.thinking.as_ref()
         .and_then(|t| t.accrued_duration)
         .unwrap_or(duration);
 
-    // Append think content tags to the last assistant message.
-    // This ensures extract_think_blocks() in render_assistant_msg can find and render it.
-    // Previously we pushed a separate MessageItem::Thought but those get filtered out
-    // in Feed::from conversion (convert.rs returns Err for Thought items).
-    append_think_content_to_last_assistant(state, &text, Some(&final_duration));
-    state.thinking = None;
-}
-
-fn append_think_content_to_last_assistant(
-    state: &mut AppState,
-    text: &str,
-    duration: Option<&std::time::Duration>,
-) {
-    let Some(duration) = duration else { return };
-
-    let secs = duration.as_secs_f32();
-    if secs > 0.5 || !text.is_empty() {
-        if !text.is_empty() {
-            let think_with_tags = format!("\n<think>\n{}\n
-</think>
-
-", text);
-            if let Some(MessageItem::Assistant { text: ref mut assistant_text, .. }) = state.messages.last_mut() {
-                assistant_text.push_str(&think_with_tags);
-            }
-        }
-        if secs > 0.5 {
-            if let Some(MessageItem::Assistant { thought_duration: ref mut td, .. }) = state.messages.last_mut() {
-                *td = Some(secs);
-            }
+    // Update thought_duration on last assistant message if thinking took > 0.5s
+    if final_duration.as_secs_f32() > 0.5 {
+        if let Some(MessageItem::Assistant { thought_duration: ref mut td, .. }) = state.messages.last_mut() {
+            *td = Some(final_duration.as_secs_f32());
         }
     }
+
+    // Note: thinking content is stored in state.thinking.text and rendered
+    // separately via streaming_think_content. Do NOT append to assistant_text.
+    state.thinking = None;
 }
 
 /// Ensure a thinking placeholder exists when receiving thinking content.
@@ -90,7 +63,7 @@ fn append_think_content_to_last_assistant(
 pub(super) fn ensure_thinking_placeholder(state: &mut AppState, content: &[runie_agent::events::ContentPart]) {
     let is_thinking = content.iter().any(|part| {
         if let runie_agent::events::ContentPart::Text { text } = part {
-            text.trim_start().starts_with("[thinking:")
+            text.trim_start().starts_with("<think>")
         } else {
             false
         }
@@ -102,7 +75,7 @@ pub(super) fn ensure_thinking_placeholder(state: &mut AppState, content: &[runie
 
     let has_no_assistant = !state.messages.iter().any(|m| matches!(m, MessageItem::Assistant { .. }));
     let last_has_thinking = state.messages.last()
-        .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.trim_start().starts_with("[thinking:")))
+        .map(|m| matches!(m, MessageItem::Assistant { text, .. } if text.trim_start().starts_with("<think>")))
         .unwrap_or(false);
 
     if has_no_assistant || last_has_thinking {

@@ -154,11 +154,13 @@ impl MessageList {
             );
         }
 
-        // Render session starting indicator
+        // Render session starting indicator (auto-timeout after 10 seconds)
         if let Some(start_time) = vm.session_starting {
             let elapsed = start_time.elapsed().as_secs_f64();
-            let text_x = area.x + 5; // Grok-style 5-space indent
-            render::render_session_starting(area, buf, colors.text_muted, text_x, elapsed, spinner);
+            if elapsed < 10.0 {
+                let text_x = area.x + 5; // Grok-style 5-space indent
+                render::render_session_starting(area, buf, colors.text_muted, text_x, elapsed, spinner);
+            }
         }
 
         if vm.feed.is_empty() && !vm.agent_running {

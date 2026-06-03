@@ -1,4 +1,4 @@
-use runie_ai::providers::{MockProvider, GenAiProvider, RigProvider, MiniMaxProvider};
+use runie_ai::providers::{MockProvider, GenAiProvider, RigProvider, MiniMaxProvider, ReplyProvider};
 use runie_ai::Provider;
 use runie_core::RunieError;
 use crate::settings::Settings;
@@ -35,6 +35,8 @@ pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provid
     match settings.provider.as_str() {
         "minimax" => create_minimax_provider(settings),
         "google" => create_google_provider(settings),
+        "reply" => Ok(Box::new(ReplyProvider::with_default_fixtures()
+            .map_err(|e| RunieError::Provider(e.to_string()))?)),
         other => create_rig_provider(other, settings),
     }
 }

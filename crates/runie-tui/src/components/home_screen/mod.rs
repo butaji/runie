@@ -141,14 +141,12 @@ impl Widget for &HomeScreen {
 }
 
 pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, theme: &ThemeWrapper) {
-    use crate::style::layout::{MENU_WIDTH, MENU_HEIGHT};
+    use crate::style::layout::MENU_WIDTH;
 
     let content_width = MENU_WIDTH;
-    let content_height = MENU_HEIGHT;
+    // Grok layout: branch at line 2, 3 blank lines (3-5), menu at line 6 (y=5 in 0-indexed)
     let content_x = area.x + (area.width.saturating_sub(content_width)) / 2 + 2;
-    let content_y = area.y + (area.height.saturating_sub(content_height)) / 2;
-
-    let menu_start_y = content_y + 3;
+    let menu_start_y = area.y + 1;
     render_menu(
         screen,
         content_x,
@@ -162,7 +160,7 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     );
 
     let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
-    buf.set_string(area.x + 2, content_y + 8, tip, theme.tip_style());
+    buf.set_string(area.x + 2, menu_start_y + 6, tip, theme.tip_style());
 }
 
 #[cfg(test)]

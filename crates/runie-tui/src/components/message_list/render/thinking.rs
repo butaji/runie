@@ -23,7 +23,6 @@ pub fn render_thinking_block(
     margin_x: u16,
 ) -> u16 {
     let accent_color: Color = theme.color("accent.thinking").into();
-    let bg_color: Color = theme.color("bg.panel").into();
     let text_color: Color = theme.color("text.primary").into();
 
     let y = area.y + row;
@@ -34,19 +33,19 @@ pub fn render_thinking_block(
     if block.collapsed {
         // Collapsed: "┃  ◆ Thinking…"
         let header_text = "┃  ◆ Thinking…";
-        let header = Line::styled(header_text, Style::default().fg(accent_color).bg(bg_color).add_modifier(Modifier::BOLD));
+        let header = Line::styled(header_text, Style::default().fg(accent_color).add_modifier(Modifier::BOLD));
         buf.set_line(margin_x, y, &header, area.width.saturating_sub(margin_x));
         return 1;
     }
 
     // Expanded: "┃  ◆ Thinking…" followed by content lines with "┃  " prefix
-    let mut rendered = 0;
+    let mut rendered = 0u16;
 
     // Header line: "┃  ◆ Thinking…"
     if y + rendered < area.bottom() {
         let line_y = y + rendered;
         let header_text = format!("┃  ◆ Thinking…");
-        let header = Line::styled(header_text, Style::default().fg(accent_color).bg(bg_color).add_modifier(Modifier::BOLD));
+        let header = Line::styled(header_text, Style::default().fg(accent_color).add_modifier(Modifier::BOLD));
         buf.set_line(margin_x, line_y, &header, area.width.saturating_sub(margin_x));
         rendered += 1;
     }
@@ -61,7 +60,7 @@ pub fn render_thinking_block(
         }
         let line_y = y + rendered;
         let content_line = format!("┃  {}", line_text);
-        let line = Line::styled(content_line, Style::default().fg(text_color).bg(bg_color));
+        let line = Line::styled(content_line, Style::default().fg(text_color));
         buf.set_line(margin_x, line_y, &line, area.width.saturating_sub(margin_x));
         rendered += 1;
     }
