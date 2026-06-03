@@ -13,4 +13,18 @@ Cargo.lock
 /tmp_config
 **/*.snap.new
 **/.insta/
-/ui/dumps
+/ui/dumps/compare
+/ui/dumps/runie
+/ui/dumps/runie_real2
+/ui/dumps/runie_real
+/ui/dumps/runie_v2
+
+# Temporary config directories for testing
+tmp_config_mock/
+tmp_config_reply/
+
+# OS files
+.DS_Store
+
+# UI dump archives (keep only latest)
+ui/dumps/runie/archive/

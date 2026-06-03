@@ -56,6 +56,15 @@ async fn handle_spawn_agent(
         agent_task.is_some(),
         messages.len()
     );
+
+    // Clear finished task before checking - prevents blocking on stale JoinHandle
+    if let Some(task) = agent_task {
+        if task.is_finished() {
+            tracing::debug!("handle_spawn_agent: clearing finished task");
+            *agent_task = None;
+        }
+    }
+
     if agent_task.is_some() {
         tracing::error!("handle_spawn_agent: agent_task is Some, blocking spawn!");
         let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {

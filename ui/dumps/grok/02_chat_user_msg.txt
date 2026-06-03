@@ -1,0 +1,24 @@
+
+   feat/grok-redesign ~/Code/GitHub/runie                      │ 20K / 512K │
+
+
+     ❯ list the files in this directory                              4:37 PM
+
+
+     ◆ Thought for 0.8s
+  ❙  ◆ List .
+
+
+
+
+
+
+
+    ⠼ Waiting… 0.3s                                            4.9s ⇣20.9k [✗]
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯                                                                        │
+  ╰───────────────────────────────────────────────────────────── Grok Build ─╯
+
+  Shift+Tab:mode  │  Ctrl+c:cancel  │  Ctrl+Enter:interject  │  Ctrl+.:
+

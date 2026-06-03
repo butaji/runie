@@ -4,31 +4,24 @@ use ratatui::{
     style::{Color, Modifier, Style},
 };
 
-pub fn format_context_window(window: usize) -> String {
-    if window >= 1_000_000 {
-        let val = format!("{:.1}", window as f32 / 1_000_000.0);
+/// Format a token/context count with K/M suffix (e.g., 9500 -> "9.5K", 512000 -> "512K")
+pub fn format_token_count(n: usize) -> String {
+    if n >= 1_000_000 {
+        let val = format!("{:.1}", n as f32 / 1_000_000.0);
         let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
-        return format!("{}M", stripped);
-    } else if window >= 1_000 {
-        let val = format!("{:.1}", window as f32 / 1_000.0);
+        format!("{}M", stripped)
+    } else if n >= 1_000 {
+        let val = format!("{:.1}", n as f32 / 1_000.0);
         let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
-        return format!("{}K", stripped);
+        format!("{}K", stripped)
     } else {
-        window.to_string()
+        n.to_string()
     }
 }
 
-/// Format a token count with K/M suffix (e.g., 9500 -> "9.5K")
-pub fn format_token_count(tokens: usize) -> String {
-    if tokens >= 1_000_000 {
-        format!("{:.1}M", tokens as f32 / 1_000_000.0)
-    } else if tokens >= 1_000 {
-        let val = format!("{:.1}", tokens as f32 / 1_000.0);
-        let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
-        return format!("{}K", stripped);
-    } else {
-        tokens.to_string()
-    }
+/// Format context window (alias for format_token_count for backwards compatibility)
+pub fn format_context_window(window: usize) -> String {
+    format_token_count(window)
 }
 
 pub fn calculate_pct(vm: &super::TopBarViewModel) -> f32 {
@@ -81,42 +74,12 @@ mod tests {
     use crate::components::TopBarViewModel;
     use crate::tui::state::TuiMode;
 
-    // ─── format_context_window tests ───────────────────────────────────────────
-
-    #[test]
-    fn test_format_context_window_raw() {
-        assert_eq!(format_context_window(500), "500");
-        assert_eq!(format_context_window(999), "999");
-    }
-
-    #[test]
-    fn test_format_context_window_k() {
-        assert_eq!(format_context_window(1_000), "1k");
-        assert_eq!(format_context_window(10_000), "10k");
-        assert_eq!(format_context_window(120_000), "120k");
-    }
-
-    #[test]
-    fn test_format_context_window_m() {
-        assert_eq!(format_context_window(1_000_000), "1m");
-        assert_eq!(format_context_window(1_280_000), "1m");
-        assert_eq!(format_context_window(2_000_000), "2m");
-    }
-
-    #[test]
-    fn test_format_context_window_boundary_999_999() {
-        assert_eq!(format_context_window(999_999), "1000k");
-    }
-
-    #[test]
-    fn test_format_context_window_boundary_1_000_001() {
-        assert_eq!(format_context_window(1_000_001), "1m");
-    }
-
-    // ─── format_token_count tests ─────────────────────────────────────────────
+    // ─── format_token_count / format_context_window tests ─────────────────────────
 
     #[test]
     fn test_format_token_count_raw() {
+        assert_eq!(format_token_count(0), "0");
+        assert_eq!(format_token_count(4), "4");
         assert_eq!(format_token_count(500), "500");
         assert_eq!(format_token_count(999), "999");
     }
@@ -124,14 +87,29 @@ mod tests {
     #[test]
     fn test_format_token_count_k() {
         assert_eq!(format_token_count(1_000), "1K");
+        assert_eq!(format_token_count(7_600), "7.6K");
+        assert_eq!(format_token_count(10_000), "10K");
         assert_eq!(format_token_count(21_000), "21K");
+        assert_eq!(format_token_count(120_000), "120K");
         assert_eq!(format_token_count(512_000), "512K");
     }
 
     #[test]
     fn test_format_token_count_m() {
         assert_eq!(format_token_count(1_000_000), "1M");
-        assert_eq!(format_token_count(2_500_000), "2M");
+        assert_eq!(format_token_count(1_280_000), "1.3M");
+        assert_eq!(format_token_count(2_000_000), "2M");
+        assert_eq!(format_token_count(2_500_000), "2.5M");
+    }
+
+    #[test]
+    fn test_format_context_window_same_as_token_count() {
+        // format_context_window is now an alias for format_token_count
+        assert_eq!(format_context_window(0), format_token_count(0));
+        assert_eq!(format_context_window(4), format_token_count(4));
+        assert_eq!(format_context_window(7_600), format_token_count(7_600));
+        assert_eq!(format_context_window(512_000), format_token_count(512_000));
+        assert_eq!(format_context_window(1_000_000), format_token_count(1_000_000));
     }
 
     // ─── calculate_pct tests ───────────────────────────────────────────────────

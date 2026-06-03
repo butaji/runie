@@ -1,0 +1,87 @@
+=== 01_welcome.cast - Terminal Titles (UI State) ===
+
+1. grok
+2. ⠼ - Waiting - grok
+3. ⠴ - Waiting - grok
+4. ⠦ - Waiting - grok
+5. ⠧ - Waiting - grok
+6. ⠋ - Waiting - grok
+7. ⠙ - Waiting - grok
+8. ⠹ - Waiting - grok
+9. ⠸ - Waiting - grok
+10. ⠼ - Waiting - grok
+11. ⠼ - Thinking - grok
+12. ⠴ - Thinking - grok
+13. ⠦ - Thinking - grok
+14. ⠧ - Thinking - grok
+15. ⠋ - Thinking - grok
+16. ⠙ - Thinking - grok
+17. ⠹ - Thinking - grok
+18. ⠸ - Thinking - grok
+19. ⠼ - Thinking - grok
+20. ⠴ - Thinking - grok
+21. ⠦ - Thinking - grok
+22. ⠧ - Thinking - grok
+23. ⠋ - Thinking - grok
+24. ⠙ - Thinking - grok
+25. ⠙ - Running: Ask: Your message was just 'q'… - grok
+26. ⠹ - Running: Ask: Your message was just 'q'… - grok
+27. ⠸ - Running: Ask: Your message was just 'q'… - grok
+28. ⠼ - Running: Ask: Your message was just 'q'… - grok
+29. ⠴ - Running: Ask: Your message was just 'q'… - grok
+30. ⠦ - Running: Ask: Your message was just 'q'… - grok
+31. ⠧ - Running: Ask: Your message was just 'q'… - grok
+32. ⠋ - Running: Ask: Your message was just 'q'… - grok
+33. ⠙ - Running: Ask: Your message was just 'q'… - grok
+34. ⠹ - Running: Ask: Your message was just 'q'… - grok
+35. ⠸ - Running: Ask: Your message was just 'q'… - grok
+36. ⠼ - Running: Ask: Your message was just 'q'… - grok
+37. ⠴ - Running: Ask: Your message was just 'q'… - grok
+38. ⠴ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+39. ⠦ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+40. ⠧ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+41. ⠋ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+42. ⠙ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+43. ⠹ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+44. ⠸ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+45. ⠼ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+46. ⠴ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+47. ⠦ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+48. ⠧ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+49. ⠋ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+50. ⠙ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+51. ⠹ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+52. ⠸ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+53. ⠼ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+54. ⠴ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+55. ⠦ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+56. ⠧ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+57. ⠋ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+58. ⠙ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+59. ⠹ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+60. ⠸ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+61. ⠼ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+62. ⠴ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+63. ⠦ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+64. ⠧ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+65. ⠋ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+66. ⠙ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+67. ⠹ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+68. ⠸ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+69. ⠼ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+70. ⠴ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+71. ⠦ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+72. ⠧ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+73. ⠋ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+74. ⠙ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+75. ⠹ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+76. ⠸ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+77. ⠼ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+78. ⠴ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+79. ⠦ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+80. ⠧ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+81. ⠋ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+82. ⠙ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+83. ⠹ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+84. ⠸ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok
+85. ⠼ - Running: Ask: Your message was just 'q'… - Software Engineering Query on Codebase: … - grok

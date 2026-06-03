@@ -214,20 +214,16 @@ pub fn strip_thinking_from_assistant(text: &str) -> String {
         let trimmed = line.trim();
         if trimmed.starts_with("<think>") {
             in_thinking_block = true;
-            if trimmed.contains("
-</think>
-
-") { in_thinking_block = false; }
+            if trimmed.contains("</think>") {
+                in_thinking_block = false;
+            }
             continue;
         }
-        if in_thinking_block {
-            if trimmed.starts_with("
-</think>
-
-") { in_thinking_block = false; }
+        if in_thinking_block && trimmed.starts_with("</think>") {
+            in_thinking_block = false;
             continue;
         }
-        if trimmed.starts_with("[thinking:") && trimmed.ends_with("]") { continue; }
+        if trimmed.starts_with("<think>") && trimmed.ends_with("</think>") { continue; }
         let first_char = trimmed.chars().next();
         let is_thinking_marker = first_char.map_or(false, |c| matches!(c, '·' | '•' | '◦' | '▸' | '▹'));
         if is_thinking_marker { continue; }

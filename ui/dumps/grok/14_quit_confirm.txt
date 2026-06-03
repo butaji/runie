@@ -1,0 +1,24 @@
+
+   feat/grok-redesign ~/Code/GitHub/runie                 │ 61K / 512K │ +3 │
+ ┌                                                                            ┐
+ │                                                                            │
+ │   ❯ //plan                                                        4:38 PM  │
+ │                                                                            │
+ └                                                                            ┘
+     ◆ Thought for 3.9s
+  ❙  ◆ Read crates/runie-tui/src/components/plan_modal/mod.rs
+  ❙  ◆ Search "TODO|FIXME|unimplemented|parity|redesign" in …/src (1 match)
+                                                                               █
+
+     #1 extensions
+     #2 theme
+     #3 settings
+
+    ⠙ Waiting… 0.3s                                             35s ⇣61.6k [✗]
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯ Build anything                                                         │
+  ╰────────────────────────────────────────────────────── Grok Build · plan ─╯
+
+  Ctrl+q:press again to quit
+

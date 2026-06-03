@@ -1,0 +1,24 @@
+--- /Users/admin/Code/GitHub/runie/ui/dumps/compare/grok/02_clean.txt	2026-06-02 21:52:00
++++ /Users/admin/Code/GitHub/runie/ui/dumps/compare/runie/A_03_idle.txt	2026-06-03 15:05:10
+@@ -1,7 +1,8 @@
+ 
+-   feat/grok-redesign ~/Code/GitHub/runie                     │ 7.6K / 512K │ 
++   feat/grok-redesign ~/Code/GitHub/runie/                 │ 4 / 128K │
+ 
+ 
++       ⠴ Starting session… 11.7s
+ 
+ 
+ 
+@@ -15,10 +16,9 @@
+ 
+ 
+ 
+-
+   ╭──────────────────────────────────────────────────────────────────────────╮
+   │ ❯                                                                        │
+   ╰──────────────────────────────────────────── Grok Build · always-approve ─╯
+ 
+-  Shift+Tab:mode  │  Ctrl+.:shortcuts                                         
++  Shift+Tab:mode  │  Ctrl+.:shortcuts
+ 

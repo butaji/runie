@@ -1,0 +1,42 @@
+--- /Users/admin/Code/GitHub/runie/ui/dumps/compare/grok/03_clean.txt	2026-06-02 21:52:07
++++ /Users/admin/Code/GitHub/runie/ui/dumps/compare/runie/A_06_thinking.txt	2026-06-03 15:05:25
+@@ -1,24 +1,24 @@
+ 
+-   feat/grok-redesign ~/Code/GitHub/runie                      │ 21K / 512K │ 
++   feat/grok-redesign ~/Code/GitHub/runie/               │ 146 / 128K │
+ 
+-                                                                               
+-     ❯ hello                                                         9:52 PM   █
+-                                                                               █
+-                                                                               █
+-                                                                               █
+-  ┃  ◆ Thinking…                                                               █
+-  ┃                                                                            █
+-  ┃  …                                                                         █
+-  ┃  (runie-tui). There's mention of Grok in docs and GROK.md, and it seems    █
+-  ┃  related to AI/agent tooling, likely a terminal UI for interacting with    █
+-  ┃  AI models like Grok.                                                      █
+-                                                                               █
+ 
+-    ⠦ Thinking… 0.7s                                           6.0s ⇣21.8k [✗]
+ 
++     ❯ hello                                                          3:05 PM
++
++
++
++     ◆ Thought for 1.0s
++     The user<think>The user has sent a simple greeting.                3:05 PM
++     Turn completed in 3.0s.
++
++
++
++
++
++
+   ╭──────────────────────────────────────────────────────────────────────────╮
+   │ ❯                                                                        │
+   ╰──────────────────────────────────────────── Grok Build · always-approve ─╯
+ 
+-  Shift+Tab:mode  │  Ctrl+c:cancel  │  Ctrl+Enter:interject  │  Ctrl+.:       
++  Shift+Tab:mode  │  Ctrl+.:shortcuts
+ 
