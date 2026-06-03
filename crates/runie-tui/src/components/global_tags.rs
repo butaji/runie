@@ -79,22 +79,25 @@ fn format_token_count(tokens: usize) -> String {
 
 impl GlobalTagsViewModel {
     /// Create running state with animated spinner.
-    /// Format: "{spinner} {status} · Ctrl+Enter:interject   [turn: {time}, {tools}tc, ⇣{tokens}]"
-    pub fn running(spinner: char, status: &str, time: &str, _tokens: u64, _turn_duration: Option<u64>, turn_tokens: Option<usize>, turn_tool_calls: Option<usize>) -> Self {
-        let mut parts = vec![format!("turn: {}", time)];
-        if let Some(tools) = turn_tool_calls {
-            if tools > 0 {
-                parts.push(format!("{}tc", tools));
-            }
-        }
-        if let Some(t) = turn_tokens {
-            parts.push(format!("\u{21E3}{}", format_token_count(t)));
-        }
-        let right = format!("[{}]", parts.join(", "));
-        Self {
-            left: Some(format!("{} {} · Ctrl+Enter:interject", spinner, status)),
-            right,
-        }
+    /// Format: "{spinner} {status}… {thinking_duration}   {time} ⇣{tokens} [status]"
+    pub fn running(spinner: char, status: &str, time: &str, _tokens: u64, turn_duration: Option<u64>, turn_tokens: Option<usize>, turn_tool_calls: Option<usize>) -> Self {
+        // Left: thinking duration instead of keyboard hint
+        let left = if let Some(dur) = turn_duration {
+            Some(format!("{} {}… {:.1}s", spinner, status, dur as f64 / 1000.0))
+        } else {
+            Some(format!("{} {}…", spinner, status))
+        };
+
+        // Right: time + transfer + status
+        let token_str = turn_tokens.map(|t| format_token_count(t)).unwrap_or_default();
+        let status_icon = if turn_tool_calls.map_or(false, |c| c > 0) { "[✓]" } else { "[ ]" };
+        let right = if token_str.is_empty() {
+            format!("{} {}", time, status_icon)
+        } else {
+            format!("{} ⇣{} {}", time, token_str, status_icon)
+        };
+
+        Self { left, right }
     }
 
     /// Create error state: "Error" (no spinner, no turn info)

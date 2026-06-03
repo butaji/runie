@@ -152,25 +152,49 @@ impl MockProvider {
         "I'm ready to help! What would you like to work on?".to_string()
     }
 
+    fn greeting_response() -> String {
+        "Hello! 👋 How can I help you today?".to_string()
+    }
+
+    fn list_response() -> String {
+        "I can help you list files. 📁 What directory would you like to see?".to_string()
+    }
+
+    fn read_response() -> String {
+        "I'll read that for you. 📖 Which file are you interested in?".to_string()
+    }
+
+    fn edit_response() -> String {
+        "I can help with that edit. ✏️ Let me take a look at the current content first.".to_string()
+    }
+
+    fn test_response() -> String {
+        "I'll run those tests for you. 🧪 Let me check your test setup.".to_string()
+    }
+
+    fn default_text_response(text: &str) -> String {
+        let preview: String = text.chars().take(50).collect();
+        format!("I see: \"{}\". 🔧 How can I assist you with this?", preview)
+    }
+
     fn response_for_text(text: &str) -> String {
         let lower = text.to_lowercase();
         if lower.split_whitespace().any(|w| w == "hello" || w == "hi") {
-            return "Hello! 👋 How can I help you today?".to_string();
+            return Self::greeting_response();
         }
         if lower.contains("list") {
-            return "I can help you list files. 📁 What directory would you like to see?".to_string();
+            return Self::list_response();
         }
         if lower.contains("read") {
-            return "I'll read that for you. 📖 Which file are you interested in?".to_string();
+            return Self::read_response();
         }
         if lower.contains("edit") || lower.contains("fix") {
-            return "I can help with that edit. ✏️ Let me take a look at the current content first.".to_string();
+            return Self::edit_response();
         }
         if lower.contains("test") {
-            return "I'll run those tests for you. 🧪 Let me check your test setup.".to_string();
+            return Self::test_response();
         }
-        let preview: String = text.chars().take(50).collect();
-        format!("I see: \"{}\". 🔧 How can I assist you with this?", preview)
+        Self::default_text_response(text)
     }
 }
 

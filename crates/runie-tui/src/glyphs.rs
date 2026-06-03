@@ -72,6 +72,9 @@ pub const INTERRUPT: char = '✗';
 /// Pulse fill character
 pub const PULSE_FILL: char = '▐';
 
+/// Activity/streams indicator block
+pub const ACTIVITY_BLOCK: char = '█';
+
 /// Get current spinner frame from animation tick
 pub fn spinner_frame(tick: usize) -> char {
     SPINNER_FRAMES[tick % SPINNER_FRAMES.len()]

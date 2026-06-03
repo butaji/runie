@@ -111,9 +111,13 @@ fn handle_session_tree_confirm(state: &mut AppState) -> Vec<crate::tui::update::
 // ─── Context ─────────────────────────────────────────────────────────────
 
 pub fn handle_set_git_info(state: &mut AppState, repo: String, branch: String, path: String) -> Vec<crate::tui::update::ui::UiCmd> {
-    state.context.repo = repo;
-    state.context.branch = branch;
-    state.context.path = path;
+    state.context.repo = repo.clone();
+    state.context.branch = branch.clone();
+    state.context.path = path.clone();
+    // Also update top_bar so it displays correctly
+    state.top_bar.repo = repo;
+    state.top_bar.branch = branch;
+    state.top_bar.path = path;
     vec![]
 }
 
@@ -127,9 +131,16 @@ fn handle_set_context_mock_checks(
     state.context.checks_passed = checks_passed;
     state.context.checks_total = checks_total;
     state.context.percentage = percentage;
-    state.context.context_badges = context_badges;
+    state.context.context_badges = context_badges.clone();
     state.context.context_pct = None;
     state.context.context_bar_pct = None;
+    // Also sync to top_bar
+    state.top_bar.checks_passed = checks_passed;
+    state.top_bar.checks_total = checks_total;
+    state.top_bar.percentage = percentage;
+    state.top_bar.context_badges = context_badges;
+    state.top_bar.context_pct = None;
+    state.top_bar.context_bar_pct = None;
     vec![]
 }
 

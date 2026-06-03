@@ -25,7 +25,7 @@ pub const TOOL_RUNNING_FMT: &str = "{} Run {} {} {:.1}s";
 pub const TOOL_COMPLETE_FMT: &str = "{} {} {} → {} {:.1}s";
 
 /// Version badge format
-pub const VERSION_BADGE_FMT: &str = "{} Beta";
+pub const VERSION_BADGE_FMT: &str = "{} [stable] Beta";
 
 /// Status separator between status items
 pub const STATUS_SEPARATOR: &str = "  │  ";
