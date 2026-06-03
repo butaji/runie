@@ -18,7 +18,7 @@ impl TryFrom<MessageItem> for FeedItem {
                 text,
                 timestamp,
             }),
-            Assistant { text, model: _, timestamp, expanded, thought_duration, turn_duration } => {
+            Assistant { text, model: _, timestamp, expanded: _, thought_duration, turn_duration } => {
                 // Convert thought_duration to a Thought struct for the thoughts vec
                 let thoughts = thought_duration
                     .map(|d| super::Thought { duration: d })
@@ -31,7 +31,7 @@ impl TryFrom<MessageItem> for FeedItem {
                     tool_calls: Vec::new(),
                     timestamp,
                     turn_duration,
-                    thoughts_collapsed: !expanded,
+                    thoughts_collapsed: false, // Always false during streaming - ensures think blocks render
                     expanded: true,
                     streaming_thinking_elapsed_ms: None,
                     streaming_total_elapsed_ms: None,

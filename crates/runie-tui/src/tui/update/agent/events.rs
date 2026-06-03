@@ -462,6 +462,8 @@ pub fn on_agent_end(state: &mut AppState) {
     state.status_header = None;
     state.status_details = None;
     state.status_start_time = None;
+    // Clear session starting indicator - ensures subsequent turns are not blocked
+    state.session_starting = None;
     // NOTE: Do not clear current_model - it contains the user's configured model
     // and must persist across agent runs for subsequent submissions.
     // BG-5 FIX: Clear any pending permission modal

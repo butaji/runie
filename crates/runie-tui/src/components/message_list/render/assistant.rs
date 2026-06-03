@@ -275,8 +275,9 @@ pub fn render_assistant_msg(
     let response_indent = margin_x + 3;
     let mut rendered = 0u16;
 
-    // When thoughts_collapsed is true, render ONLY the compact duration line (no think block content)
-    if thoughts_collapsed {
+    // When thoughts_collapsed is true AND not streaming, render ONLY the compact duration line (no think block content)
+    // During streaming (agent_running=true), we always want to show the full thinking content
+    if thoughts_collapsed && !agent_running {
         let header_text = if let Some(duration) = thought_duration {
             format!("{} Thought for {:.1}s", glyphs::THOUGHT_MARKER, duration)
         } else {

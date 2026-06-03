@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::time::Instant;
+use std::io;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use runie_agent::events::AgentEvent;
@@ -11,6 +12,33 @@ use crate::event_logger as log;
 use crate::settings::Settings;
 
 use super::{process_cmd, input_to_msg, route_key_event, triggers_state_change, update_top_bar_context, AGENT_WATCHDOG_TIMEOUT, MIN_RENDER_INTERVAL_MS};
+
+/// Returns true if the error is a transient PTY/tty error that should not cause exit.
+/// Examples: "Device not configured", "Not a typewriter", broken pipe, etc.
+fn is_pty_error(err: &io::Error) -> bool {
+    use std::io::ErrorKind::*;
+    match err.kind() {
+        NotConnected | BrokenPipe | ConnectionReset | ConnectionRefused | 
+        InvalidInput | TimedOut => true,
+        _ => err.raw_os_error().is_some_and(|e| {
+            // ENODEV (macOS "Device not configured"), ENXIO (No such device), etc.
+            e == 6 || e == 19 || e == 255
+        }),
+    }
+}
+
+/// Attempt to render, catching PTY errors gracefully.
+/// Returns Ok(true) if render succeeded, Ok(false) if PTY error occurred (logged and skipped).
+/// Returns Err only for non-PTY errors.
+fn try_render(tui: &mut Tui) -> Result<bool, io::Error> {
+    match tui.render() {
+        Ok(()) => Ok(true),
+        Err(e) => {
+            tracing::warn!("Render error (transient): {}", e);
+            Ok(false)
+        }
+    }
+}
 
 // ============================================================================
 // Event Handlers - Extracted from tokio::select! arms
@@ -61,6 +89,7 @@ pub async fn handle_msgs(
         }
 
         if let runie_tui::Msg::AgentEvent(AgentEvent::AgentEnd { .. }) = &msg {
+            tracing::debug!("[RAILS] Received AgentEnd: clearing agent_task, is_agent_running={}", tui.is_agent_running());
             *agent_task = None;
             tui.clear_permission().await;
             state_changed = true;
@@ -134,8 +163,9 @@ pub async fn handle_msgs(
         let elapsed_ms = now.duration_since(*last_render).as_millis() as u64;
         let time_for_render = tui.is_agent_running() && elapsed_ms >= MIN_RENDER_INTERVAL_MS;
         if state_changed || needs_render || time_for_render {
-            tui.render()?;
-            *last_render = now;
+            if try_render(tui)? {
+                *last_render = now;
+            }
         }
     }
 
@@ -165,7 +195,7 @@ pub async fn handle_cursor_blink(
         pending_cmds = next_cmds;
     }
     if needs_render {
-        tui.render()?;
+        let _ = try_render(tui)?;
     }
     Ok(())
 }
@@ -220,8 +250,9 @@ pub async fn handle_timer_tick(
     let now = Instant::now();
     let elapsed_ms = now.duration_since(*last_render).as_millis() as u64;
     if needs_render || (tui.is_agent_running() && elapsed_ms >= MIN_RENDER_INTERVAL_MS) {
-        tui.render()?;
-        *last_render = now;
+        if try_render(tui)? {
+            *last_render = now;
+        }
     }
     Ok(())
 }
