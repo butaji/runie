@@ -103,10 +103,10 @@ fn build_input_block(
         right_info.chars().count() as u16 + 2
     };
 
-    // Right-align the label with dashes on left side only
+    // Right-align the label with dashes on both sides (Grok-style)
     let remaining = area.width.saturating_sub(mode_len + count_len + right_info_len + 4);
     let left_dashes = remaining - 1;
-    let right_dashes = 2;
+    let right_dashes = 1;
     let left_dash_str = "─".repeat(left_dashes as usize);
     let right_dash_str = "─".repeat(right_dashes as usize);
 

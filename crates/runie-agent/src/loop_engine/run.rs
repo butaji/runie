@@ -212,6 +212,7 @@ async fn process_stream_loop<M: TryFrom<AgentEvent> + Send + 'static>(
     let mut pending_tool_calls = HashMap::new();
     let mut text_content = String::new();
     let mut text_buffer = String::new();
+    let mut thinking_buffer = String::new();
     let mut last_emit = Instant::now();
 
     stream_loop(
@@ -222,6 +223,7 @@ async fn process_stream_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         &mut pending_tool_calls,
         &mut text_content,
         &mut text_buffer,
+        &mut thinking_buffer,
         &mut last_emit,
     ).await;
 
@@ -265,6 +267,7 @@ async fn stream_loop<M: TryFrom<AgentEvent> + Send + 'static>(
     pending_tool_calls: &mut HashMap<(String, String), PartialToolCall>,
     text_content: &mut String,
     text_buffer: &mut String,
+    thinking_buffer: &mut String,
     last_emit: &mut Instant,
 ) {
     while let Some(event) = stream.next().await {
@@ -277,6 +280,12 @@ async fn stream_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                     text_content,
                     text_buffer,
                 ).await;
+                if !thinking_buffer.is_empty() {
+                    send_event(msg_tx, AgentEvent::ThinkingEnd {
+                        duration_ms: 0,
+                        turn: turn_count,
+                    }).await;
+                }
                 break;
             }
             LlmEvent::Error { message } => {
@@ -297,6 +306,7 @@ async fn stream_loop<M: TryFrom<AgentEvent> + Send + 'static>(
                     pending_tool_calls,
                     text_content,
                     text_buffer,
+                    thinking_buffer,
                     turn_count,
                     msg_tx,
                     last_emit,

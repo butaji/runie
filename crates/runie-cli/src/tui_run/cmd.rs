@@ -51,7 +51,13 @@ async fn handle_spawn_agent(
     settings: &Settings,
     base_system_prompt: &str,
 ) -> StateChange {
+    tracing::debug!(
+        "handle_spawn_agent called: agent_task.is_some()={}, messages_count={}",
+        agent_task.is_some(),
+        messages.len()
+    );
     if agent_task.is_some() {
+        tracing::error!("handle_spawn_agent: agent_task is Some, blocking spawn!");
         let _ = msg_tx.send(Msg::AgentEvent(AgentEvent::Error {
             message: "Agent is already running. Wait for completion or press Ctrl+C to interrupt.".to_string(),
             error_type: "busy".to_string(),
@@ -109,6 +115,7 @@ async fn handle_spawn_agent(
         hooks,
     );
 
+    tracing::debug!("handle_spawn_agent: agent spawned, agent_task set to Some, tui.is_agent_running()={}", tui.is_agent_running());
     *agent_task = Some(task);
     StateChange::none()
 }

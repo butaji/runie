@@ -29,7 +29,7 @@ pub(crate) fn validate_api_key(key: &str, provider: &str) -> Result<String, Runi
 
 pub fn create_provider(mock: bool, settings: &Settings) -> Result<Box<dyn Provider>, RunieError> {
     if mock {
-        return Ok(Box::new(MockProvider::new()));
+        return Ok(Box::new(MockProvider::new().with_delay(500)));
     }
 
     match settings.provider.as_str() {

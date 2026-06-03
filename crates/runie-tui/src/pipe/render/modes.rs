@@ -89,7 +89,7 @@ pub fn render_home_screen_mode(
     // Render version badge on version separator line, right-aligned
     let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
     let badge_x = main_areas[4].right().saturating_sub(version_badge.len() as u16);
-    buf.set_string(badge_x, main_areas[4].y + 1, &version_badge, theme.version_style());
+    buf.set_string(badge_x, main_areas[4].y, &version_badge, theme.version_style());
 }
 
 pub fn render_normal_mode(
@@ -137,7 +137,7 @@ pub fn render_normal_mode(
     // Render version on version separator line, right-aligned
     let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
     let badge_x = main_areas[4].right().saturating_sub(version_badge.len() as u16);
-    buf.set_string(badge_x, main_areas[4].y + 1, &version_badge, theme.version_style());
+    buf.set_string(badge_x, main_areas[4].y, &version_badge, theme.version_style());
 
     if show_status_bar {
         crate::components::status_bar::render_ref(&vms.status_bar, main_areas[5], buf, theme_colors);

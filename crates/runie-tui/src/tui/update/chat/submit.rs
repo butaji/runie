@@ -39,13 +39,32 @@ pub fn handle_shell_submit(state: &mut AppState, text: &str) -> Vec<ChatCmd> {
 
 pub fn handle_submit(state: &mut AppState) -> Vec<ChatCmd> {
     let text = state.textarea.lines().join("\n");
+    tracing::debug!(
+        "handle_submit called: agent_running={}, text_len={}, first_msg={:?}",
+        state.agent_running,
+        text.len(),
+        state.messages.last().map(|m| format!("{:?}", m).chars().take(50).collect::<String>())
+    );
     if text.chars().all(|c| c.is_whitespace()) {
         state.input_right_info = "Type a message first".to_string();
         return vec![];
     }
     if text.starts_with('/') { return handle_slash_submit(state, &text); }
     if text.starts_with('!') { return handle_shell_submit(state, &text); }
-    if state.agent_running { cancel_running_agent(state); }
+    if state.agent_running {
+        tracing::debug!("handle_submit: agent_running=true, calling cancel_running_agent");
+        cancel_running_agent(state);
+    }
+    // Guard: ensure agent_running is false before proceeding with new submission
+    // This handles edge cases where cancellation didn't fully clear state
+    if state.agent_running {
+        tracing::debug!("handle_submit: agent_running still true after cancel, blocking");
+        state.input_right_info = "Agent still running... Ctrl+C to stop".to_string();
+        return vec![];
+    }
+    // Clear session_starting if present - stale indicator from prior session
+    // should not block subsequent turns
+    state.session_starting = None;
     if should_defer_submit(state) { return vec![]; }
     prepare_agent_messages(state, &text);
     finalize_submit(state, text)
@@ -96,6 +115,11 @@ fn should_defer_submit(state: &mut AppState) -> bool {
             return true;
         }
     }
+    // session_starting should not block subsequent turns - clear it if present
+    // It only indicates the transition from home screen to chat, not a blocking state
+    if state.session_starting.is_some() {
+        state.session_starting = None;
+    }
     false
 }
 
@@ -131,7 +155,14 @@ fn finalize_submit(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     state.agent_running = true;
     state.session_starting = None;
     add_user_and_placeholder(state, &text);
-    vec![ChatCmd::SpawnAgent { messages: to_agent_messages(&state.messages) }]
+    let agent_messages = to_agent_messages(&state.messages);
+    tracing::debug!(
+        "finalize_submit: returning SpawnAgent with {} messages, {} user, {} assistant",
+        agent_messages.len(),
+        agent_messages.iter().filter(|m| m.role == "user").count(),
+        agent_messages.iter().filter(|m| m.role == "assistant").count()
+    );
+    vec![ChatCmd::SpawnAgent { messages: agent_messages }]
 }
 
 pub fn handle_interject(state: &mut AppState) -> Vec<ChatCmd> {

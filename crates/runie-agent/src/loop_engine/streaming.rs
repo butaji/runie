@@ -148,6 +148,7 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
     pending_tool_calls: &mut HashMap<(String, String), PartialToolCall>,
     text_content: &mut String,
     text_buffer: &mut String,
+    thinking_buffer: &mut String,
     turn: usize,
     msg_tx: &mpsc::Sender<M>,
     last_emit: &mut Instant,
@@ -173,8 +174,8 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
             text_buffer.push_str(&content);
             text_content.push_str(&content);
 
-            let should_emit = text_buffer.contains('\n')
-                || last_emit.elapsed().as_millis() > EMIT_DEBOUNCE_MS as u128;
+            // Emit every chunk during active streaming for immediate feedback
+            let should_emit = true;
 
             if should_emit {
                 let delta = std::mem::take(text_buffer);
@@ -187,6 +188,17 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
                 tracing::debug!("[ACTOR:AgentLoop] MessageUpdate: \"{}\" (+{} chars)", &text_content[..text_content.len().saturating_sub(delta_len).min(50)], delta_len);
                 *last_emit = Instant::now();
             }
+        }
+        LlmEvent::ThinkingDelta { content } => {
+            // Emit ThinkingStart when first ThinkingDelta arrives
+            if thinking_buffer.is_empty() {
+                send_event(msg_tx, AgentEvent::ThinkingStart { turn }).await;
+            }
+            thinking_buffer.push_str(&content);
+            send_event(msg_tx, AgentEvent::ThinkingUpdate {
+                text: thinking_buffer.clone(),
+                turn,
+            }).await;
         }
         LlmEvent::ToolCallDelta { id, name, arguments } => {
             tracing::info!("[TOOL-ACCUMULATE] id={} name={} args_chunk={:?}", id, name, arguments);
