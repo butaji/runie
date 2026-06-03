@@ -24,5 +24,6 @@ mod reply_provider_scroll_tests;
 mod reply_provider_tui_behavior_tests;
 mod reply_provider_input_tests;
 mod reply_provider_session_tests;
+mod grok_element_tests;
 
 // Re-export all test modules for convenience

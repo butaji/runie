@@ -3,6 +3,7 @@ use insta::assert_debug_snapshot;
 
 use crate::components::top_bar::{render_top_bar, TopBarViewModel};
 use crate::theme::ThemeColors;
+use crate::tui::state::TuiMode;
 
 fn make_test_colors() -> ThemeColors {
     ThemeColors {
@@ -17,9 +18,34 @@ fn make_test_colors() -> ThemeColors {
         border_unfocused: Color::DarkGray,
         success: Color::Green,
         error: Color::Red,
+        warning: Color::Yellow,
         syntax_phase: Color::Yellow,
         text_plan: Color::Cyan,
         feed_tool_bar: Color::Magenta,
+        accent_user: Color::Green,
+        accent_assistant: Color::Blue,
+        accent_thinking: Color::Yellow,
+        accent_tool: Color::Cyan,
+        accent_system: Color::DarkGray,
+        accent_error: Color::Red,
+        accent_success: Color::Green,
+        accent_running: Color::Yellow,
+        accent_skill: Color::Magenta,
+        accent_plan: Color::Cyan,
+        accent_feedback: Color::Red,
+        accent_model: Color::Blue,
+        accent_teal: Color::Cyan,
+        accent_orange: Color::Red,
+        accent_purple: Color::Magenta,
+        accent_yellow: Color::Yellow,
+        accent_blue_bright: Color::Blue,
+        command: Color::Green,
+        path: Color::Blue,
+        running: Color::Yellow,
+        fuzzy_accent: Color::Green,
+        editor_bg: Color::Black,
+        surface_bg: Color::Black,
+        popover_bg: Color::DarkGray,
     }
 }
 
@@ -48,6 +74,7 @@ fn test_top_bar_snapshot_empty() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let rendered = render_to_string(&vm, 80);
@@ -64,6 +91,7 @@ fn test_top_bar_snapshot_with_repo() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let rendered = render_to_string(&vm, 80);
@@ -81,6 +109,7 @@ fn test_top_bar_snapshot_full() {
         estimated_tokens: 50_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let rendered = render_to_string(&vm, 80);
@@ -97,6 +126,7 @@ fn test_top_bar_snapshot_narrow() {
         estimated_tokens: 40,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     // Narrow terminal width - right side may be omitted
@@ -115,6 +145,7 @@ fn test_top_bar_snapshot_high_tokens() {
         estimated_tokens: 95_000, // Near 100%
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let rendered = render_to_string(&vm, 80);

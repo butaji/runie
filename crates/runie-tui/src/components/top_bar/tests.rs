@@ -7,6 +7,7 @@ use ratatui::{
 };
 use crate::components::top_bar::{TopBarViewModel, helpers::build_left_spans, render_top_bar};
 use crate::theme::ThemeColors;
+use crate::tui::state::TuiMode;
 
 fn make_test_colors() -> ThemeColors {
     ThemeColors {
@@ -21,6 +22,7 @@ fn make_test_colors() -> ThemeColors {
         border_unfocused: Color::DarkGray,
         success: Color::Green,
         error: Color::Red,
+        warning: Color::Yellow,
         syntax_phase: Color::Yellow,
         text_plan: Color::Cyan,
         feed_tool_bar: Color::Magenta,
@@ -63,6 +65,7 @@ fn test_build_left_spans_repo_only() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let dim_style = Style::default();
     let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
@@ -80,6 +83,7 @@ fn test_build_left_spans_branch_only() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let dim_style = Style::default();
     let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
@@ -98,6 +102,7 @@ fn test_build_left_spans_path_only() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
     let dim_style = Style::default();
     let spans = build_left_spans(&vm, Color::White, Color::White, &dim_style, Color::Black);
@@ -117,6 +122,7 @@ fn test_render_top_bar_text_appears() {
         estimated_tokens: 40,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -146,6 +152,7 @@ fn test_render_top_bar_left_side_text() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -177,6 +184,7 @@ fn test_render_top_bar_gauge_rendered() {
         estimated_tokens: 50_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -200,6 +208,7 @@ fn test_render_top_bar_empty_vm() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -225,6 +234,7 @@ fn test_render_top_bar_narrow_terminal() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -248,6 +258,7 @@ fn test_render_top_bar_gauge_at_0_percent() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -271,6 +282,7 @@ fn test_render_top_bar_gauge_at_100_percent() {
         estimated_tokens: 100_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -294,6 +306,7 @@ fn test_no_duplicate_percentage() {
         estimated_tokens: 50_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -317,6 +330,7 @@ fn test_gauge_label_shows_pct() {
         estimated_tokens: 50_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -342,6 +356,7 @@ fn test_gauge_width_sufficient() {
         estimated_tokens: 50_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -365,6 +380,7 @@ fn test_text_no_pct_suffix() {
         estimated_tokens: 50_000,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -388,6 +404,7 @@ fn test_zero_percent_visible() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();
@@ -413,6 +430,7 @@ fn test_gauge_visible_at_zero_percent() {
         estimated_tokens: 0,
         agent_running: false,
         braille_frame: 0,
+        mode: TuiMode::Chat,
     };
 
     let colors = make_test_colors();

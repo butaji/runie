@@ -9,7 +9,7 @@ use ratatui::{
 };
 use crate::theme::ThemeWrapper;
 use crate::tui::state::TuiMode;
-use crate::tui::view_models::StatusBarViewModel;
+use crate::tui::view_models::{StatusBarViewModel, McpStatus};
 
 pub mod builder;
 mod render;
