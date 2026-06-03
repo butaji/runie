@@ -93,6 +93,12 @@ fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
 
 fn build_message_list(state: &AppState) -> MessageListViewModel {
     let wrap_cache = WrapCache::new();
+    // Pass streaming thinking content if agent is running and thinking exists
+    let streaming_think_content = if state.agent_running && state.thinking.is_some() {
+        Some(state.thinking.as_ref().unwrap().text.clone())
+    } else {
+        None
+    };
     FeedBuilder::new()
         .messages(&state.messages)
         .scroll_offset(state.scroll.feed_offset)
@@ -100,6 +106,7 @@ fn build_message_list(state: &AppState) -> MessageListViewModel {
         .animation(state.animation.clone())
         .wrap_cache(wrap_cache)
         .session_starting(state.session_starting)
+        .streaming_think_content(streaming_think_content)
         .build()
 }
 
