@@ -44,16 +44,17 @@ if [ -z "$DUMP" ]; then
   done
 fi
 
-# Make sure the binary is built.
-if [ ! -x target/release/scenario_replay ]; then
+# Make sure the binary is built (debug for fast iteration; rerun
+# script does the same so a watch loop is just as fast).
+if [ ! -x target/debug/scenario_replay ]; then
   echo "→ building scenario_replay (first run only)..." >&2
-  RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --release --bin scenario_replay >&2
+  RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --bin scenario_replay >&2
 fi
 
 # Stash the path for the bacon `replay` job.
 echo "$SCENARIO" > .hermes/plans/last-scenario.txt
 
-CMD=(target/release/scenario_replay "$SCENARIO")
+CMD=(target/debug/scenario_replay "$SCENARIO")
 [ -n "$DUMP" ] && CMD+=(--diff "$DUMP")
 CMD+=("$@")
 exec "${CMD[@]}"
