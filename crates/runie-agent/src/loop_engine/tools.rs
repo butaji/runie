@@ -183,12 +183,11 @@ pub(crate) async fn process_tool_calls<M: TryFrom<AgentEvent> + Send + 'static>(
     mut pending_tool_calls: HashMap<(String, String), PartialToolCall>,
     turn_count: usize,
     tools: &[AgentTool],
-    allowed_tools: &HashSet<String>,
+    allowed_tools: &mut HashSet<String>,
     msg_tx: &tokio::sync::mpsc::Sender<M>,
     permission_state: Arc<PermissionState>,
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
-    _allowed_tools_mut: &mut HashSet<String>,
     context_window: usize,
 ) -> Vec<ToolResult>
 where
@@ -256,15 +255,15 @@ where
             tracing::info!("[ACTOR:AgentLoop] {} requested: {}", name, tool_args);
 
             // Check permission
-            let should_execute = if allowed_tools.contains(name) {
-                true
+            let (should_execute, _allow_always_unused_at_top) = if allowed_tools.contains(name) {
+                (true, false) // already in allowed set
             } else {
                 let tool_description = tools.iter()
                     .find(|t| t.name == *name)
                     .map(|t| t.description.clone())
                     .unwrap_or_default();
 
-                request_permission(
+                let (exec, always) = request_permission(
                     &id,
                     &name,
                     &tool_args,
@@ -273,7 +272,16 @@ where
                     turn_count,
                     permission_state.clone(),
                     msg_tx,
-                ).await
+                ).await;
+                // If the user picked "Always Allow", record the tool
+                // name so subsequent calls of the same tool skip the
+                // modal entirely. (Was previously only a comment in
+                // handle_permission_decision -- the "Always Allow"
+                // button was a lie until this hook was wired up.)
+                if always {
+                    allowed_tools.insert(name.clone());
+                }
+                (exec, always)
             };
 
             if !should_execute {
