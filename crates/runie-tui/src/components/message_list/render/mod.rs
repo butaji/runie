@@ -170,7 +170,7 @@ pub fn render_single_msg(
     wrap_cache: &mut WrapCache,
     agent_running: bool,
     thought_duration: Option<f32>,
-    turn_complete: Option<u64>,
+    turn_complete: Option<f32>,
     feed_tool_bar: ratatui::style::Color,
     streaming_thinking_elapsed_ms: Option<u64>,
     streaming_total_elapsed_ms: Option<u64>,
@@ -269,8 +269,13 @@ pub fn render_single_msg_feed(
         FeedItem::AssistantMessage { text, thoughts, tool_calls, timestamp, turn_duration, streaming_thinking_elapsed_ms, streaming_total_elapsed_ms, streaming_download_bytes, .. } => {
             // Use first thought's duration if provided, otherwise use the passed thought_duration
             let effective_thought_duration = thoughts.first().map(|t| t.duration).or(thought_duration);
-            // Use turn_duration from FeedItem, or passed turn_complete (converted to f32)
-            let effective_turn_complete = turn_duration.map(|d| d as u64).or(turn_complete.map(|d| d as u64));
+            // Use turn_duration from FeedItem, or passed turn_complete. Pass
+            // as f32 (seconds with 0.1s precision) — `turn_completed`
+            // formats it as "{:.1}s" so 3.6s round-trips correctly.
+            // The u64 form is only used in the (legacy) non-f32 path.
+            #[allow(unused_variables)]
+            let _ignored_legacy_u64_path = turn_duration.map(|d| (d * 10.0) as u64);
+            let effective_turn_complete = turn_duration.or(turn_complete);
             // Tool bar color is purple #6B50FF (same as feed.tool.bar)
             let tool_bar_color = ratatui::style::Color::Rgb(0x6B, 0x50, 0xFF);
             render_assistant_msg(text, area, row, margin_x, text_x, max_rows, buf, text_secondary, text_muted, accent_secondary, cursor_visible, wrap_cache, agent_running, spinner, timestamp.as_deref(), effective_thought_duration, effective_turn_complete, is_last_item, tool_calls, tool_bar_color, thoughts_collapsed, *streaming_thinking_elapsed_ms, *streaming_total_elapsed_ms, *streaming_download_bytes, streaming_think_content)
