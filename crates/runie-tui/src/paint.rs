@@ -302,8 +302,13 @@ fn paint_text(t: &Text, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         // Default placement starts at `area.x`.
         let x = area.x;
         let clipped: String = t.content.chars().take(text_w).collect();
-        let line = Line::from(Span::styled(clipped, style));
-        buf.set_line(x, area.y, &line, text_w as u16);
+        // Paint char-by-char to avoid set_line losing the leading
+        // cell when the text starts with a space.
+        for (i, c) in clipped.chars().enumerate() {
+            if let Some(cell) = buf.cell_mut((x + i as u16, area.y)) {
+                cell.set_char(c).set_style(style);
+            }
+        }
     }
 }
 fn paint_blank(area: Rect, buf: &mut Buffer, style: Style) {
@@ -328,6 +333,7 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         match c {
             Node::Fill => n_fills += 1,
             Node::T(t) => fixed_width += t.width() as u32,
+            Node::RightGap { n } => fixed_width += *n as u32,
             _ => {
                 // For non-trivial children, we measure by painting
                 // them and asking for the area used. For the
