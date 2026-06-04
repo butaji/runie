@@ -206,50 +206,70 @@ impl ViewModels {
 /// Strip thinking text from assistant messages.
 /// Models embed thinking as lines starting with markers like · • ◦ ▸.
 /// Also strips [thinking:...] wrappers and <think>...</think> blocks.
-pub fn strip_thinking_from_assistant(text: &str) -> String {
-    let mut result = Vec::new();
+///
+/// Returns `Cow::Borrowed(text)` when no thinking markers were found
+/// so the common case (no thinking) avoids a per-message allocation.
+pub fn strip_thinking_from_assistant(text: &str) -> std::borrow::Cow<'_, str> {
+    let mut result: Vec<&str> = Vec::new();
     let mut in_thinking_block = false;
+    let mut any_change = false;
     for line in text.lines() {
         let trimmed = line.trim();
-
-        // Handle same-line think block: "<think>...</think>" on one line.
-        if !in_thinking_block && trimmed.starts_with("<think>") && trimmed.ends_with("</think>") {
-            // No content to keep from a single-line think block.
+        if process_strip_line(line, trimmed, &mut in_thinking_block, &mut any_change) {
             continue;
         }
-
-        // Opening <think> marker
-        if trimmed.starts_with("<think>") {
-            in_thinking_block = true;
-            // If the opener and closer are on the same line, the
-            // condition above already handled it; otherwise the line
-            // is just an opener and we drop it.
-            continue;
-        }
-
-        // Closing </think> marker (only relevant while in block)
-        if in_thinking_block && trimmed.starts_with("</think>") {
-            in_thinking_block = false;
-            continue;
-        }
-
-        // Skip lines while inside a multi-line think block
-        if in_thinking_block {
-            continue;
-        }
-
-        // Skip "thinking bullet" marker lines (· • ◦ ▸ ▹)
-        let is_thinking_marker = trimmed
-            .chars()
-            .next()
-            .map_or(false, |c| matches!(c, '·' | '•' | '◦' | '▸' | '▹'));
-        if is_thinking_marker {
-            continue;
-        }
-
         result.push(line);
     }
-    result.join("\n")
+    if !any_change {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    std::borrow::Cow::Owned(result.join("\n"))
+}
+
+/// Returns true if the line should be skipped (i.e. is part of the
+/// thinking that we're stripping).
+fn process_strip_line(
+    line: &str,
+    trimmed: &str,
+    in_thinking_block: &mut bool,
+    any_change: &mut bool,
+) -> bool {
+    // Handle same-line think block: "<think>...</think>" on one line.
+    if !*in_thinking_block
+        && trimmed.starts_with("<think>")
+        && trimmed.ends_with("</think>")
+    {
+        *any_change = true;
+        return true;
+    }
+    // Opening <think> marker
+    if trimmed.starts_with("<think>") {
+        *in_thinking_block = true;
+        *any_change = true;
+        return true;
+    }
+    // Closing </think> marker (only relevant while in block)
+    if *in_thinking_block && trimmed.starts_with("</think>") {
+        *in_thinking_block = false;
+        *any_change = true;
+        return true;
+    }
+    // Skip lines while inside a multi-line think block
+    if *in_thinking_block {
+        *any_change = true;
+        return true;
+    }
+    // Skip "thinking bullet" marker lines (· • ◦ ▸ ▹)
+    if trimmed
+        .chars()
+        .next()
+        .map_or(false, |c| matches!(c, '·' | '•' | '◦' | '▸' | '▹'))
+    {
+        *any_change = true;
+        return true;
+    }
+    let _ = line;
+    false
 }
 
 // ─── Build Helper Functions ─────────────────────────────────────────────────
@@ -309,7 +329,7 @@ fn build_message_list_vm(
                     thought_duration,
                     turn_duration,
                 } => MessageItem::Assistant {
-                    text: strip_thinking_from_assistant(text),
+                    text: strip_thinking_from_assistant(text).into_owned(),
                     model: model.clone(),
                     timestamp: timestamp.clone(),
                     expanded: *expanded,
