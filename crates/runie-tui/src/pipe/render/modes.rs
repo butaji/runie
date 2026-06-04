@@ -2,6 +2,7 @@
 
 use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 
+use crate::style::helpers::wireframe_box;
 use crate::tui::view_models::ViewModels;
 use crate::tui::AppState;
 use crate::theme::ThemeWrapper;
@@ -58,6 +59,7 @@ pub fn render_home_screen_mode(
 ) {
     clear_background(buf, area, theme_colors.bg_base);
     crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
+    wireframe_box(buf, "top_bar", main_areas[0]);
 
     // Render home screen in the content area (between top bar and input)
     let home_area = Rect {
@@ -66,6 +68,7 @@ pub fn render_home_screen_mode(
         width: main_areas[1].width,
         height: main_areas[1].height + main_areas[2].height, // content + global tags area
     };
+    wireframe_box(buf, "home", home_area);
 
     if state.home_screen.show_sessions {
         // Render session list view using SessionTreeNavigator
