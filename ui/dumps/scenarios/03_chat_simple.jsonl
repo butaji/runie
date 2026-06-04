@@ -2,7 +2,7 @@
 # Mirrors ui/dumps/grok/03_chat.txt
 # A single user message, a thinking block, an assistant response.
 # 80x24 terminal, time-stamped in the dump as 9:45 PM.
-{"__meta__": true, "width": 80, "height": 24}
+{"__meta__": true, "width": 78, "height": 24}
 # Top bar: feature branch + repo path
 {"ui": true, "kind": "git", "value": {"repo": "runie", "branch": "feat/grok-redesign", "path": "~/Code/GitHub/runie"}}
 # Switch to chat mode and hide home

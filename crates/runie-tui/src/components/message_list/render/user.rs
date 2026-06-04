@@ -4,8 +4,16 @@ use crate::components::message_list::WrapCache;
 use crate::glyphs;
 use crate::theme::ThemeWrapper;
 
-/// Format current time as "h:mm AM/PM" (e.g., "4:10 PM")
+/// Format current time as "h:mm AM/PM" (e.g., "4:10 PM").
+/// Reads RUNIE_MOCK_TIMESTAMP from env so scenario_replay can pin
+/// the rendered timestamp to a value that matches the frozen Grok
+/// reference dump.
 fn format_timestamp_now() -> String {
+    if let Ok(mock) = std::env::var("RUNIE_MOCK_TIMESTAMP") {
+        if !mock.is_empty() {
+            return mock;
+        }
+    }
     use chrono::Local;
     Local::now().format("%-I:%M %p").to_string()
 }

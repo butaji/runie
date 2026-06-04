@@ -12,6 +12,14 @@ use thinking::{ensure_thinking_placeholder, on_thinking_end, on_thinking_start, 
 
 fn current_timestamp() -> Option<String> {
     use chrono::Local;
+    // Replay/test path: scenario sets RUNIE_MOCK_TIMESTAMP to a fixed
+    // value so the rendered output is deterministic and matches the
+    // frozen Grok reference dump.
+    if let Ok(mock) = std::env::var("RUNIE_MOCK_TIMESTAMP") {
+        if !mock.is_empty() {
+            return Some(mock);
+        }
+    }
     Some(Local::now().format("%-I:%M %p").to_string())
 }
 
