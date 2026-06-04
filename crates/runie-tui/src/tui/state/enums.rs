@@ -376,12 +376,3 @@ impl PartialEq for Cmd {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TuiAction {
-    Quit,
-    Submit(String),
-    Command(String),
-    Cancel,
-    ToolPermission { tool: String, action: PermissionAction },
-}
-

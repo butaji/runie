@@ -67,7 +67,17 @@ fn handle_auto_approve_request(state: &mut AppState, tool_call_id: String, tool_
 }
 
 fn handle_normal_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
+    const MAX_PENDING_PERMISSIONS: usize = 32;
     if is_blocking_mode(&state.mode) {
+        if state.permission_modal.pending_queue.len() >= MAX_PENDING_PERMISSIONS {
+            state.messages.push(MessageItem::System {
+                text: format!(
+                    "Permission queue full ({}); dropping '{}'",
+                    MAX_PENDING_PERMISSIONS, tool_name
+                ),
+            });
+            return vec![];
+        }
         state.permission_modal.pending_queue.push(PendingPermission {
             tool_call_id: tool_call_id.clone(),
             tool_name: tool_name.clone(),
@@ -79,6 +89,15 @@ fn handle_normal_permission_request(state: &mut AppState, tool_call_id: String, 
         return vec![];
     }
     if state.mode == TuiMode::Permission || state.permission_modal.tool.is_some() {
+        if state.permission_modal.pending_queue.len() >= MAX_PENDING_PERMISSIONS {
+            state.messages.push(MessageItem::System {
+                text: format!(
+                    "Permission queue full ({}); dropping '{}'",
+                    MAX_PENDING_PERMISSIONS, tool_name
+                ),
+            });
+            return vec![];
+        }
         state.permission_modal.pending_queue.push(PendingPermission {
             tool_call_id, tool_name, tool_args,
         });
@@ -142,8 +161,16 @@ pub fn handle_permission(state: &mut AppState, decision: PermissionDecision) -> 
 }
 
 pub fn handle_permission_msg(state: &mut AppState, msg: Msg) -> Vec<super::AgentCmd> {
-    let tool_call_id = state.permission_modal.tool_call_id.clone().unwrap_or_default();
-    let tool_name = state.permission_modal.tool.clone().unwrap_or_default();
+    // If the modal is gone (race during teardown, or duplicate keypress),
+    // the decision's tool_call_id would be "" which doesn't match any
+    // pending request in the agent loop -- the agent would stall until
+    // its 5-minute timeout. Early-return to avoid that.
+    let Some(tool_call_id) = state.permission_modal.tool_call_id.clone() else {
+        return vec![];
+    };
+    let Some(tool_name) = state.permission_modal.tool.clone() else {
+        return vec![];
+    };
     let tool_args = state.permission_modal.args.clone().unwrap_or_default();
     let decision = match msg {
         Msg::PermissionConfirm => PermissionDecision::Allow { tool_call_id, tool_name, tool_args },
