@@ -134,8 +134,8 @@ fn handle_tool_end(
     result: runie_agent::events::ToolResult,
 ) -> Vec<super::AgentCmd> {
     let is_error = result.is_error;
-    let content = extract_text_from_content(&result.content);
-    on_tool_end(state, result);
+    let content = extract_text_content(&result.content);
+    on_tool_end_with_text(state, result, content.clone());
     let ext_event = runie_ext::PluginEvent::ToolResult {
         tool_name,
         output: runie_core::ToolOutput {
@@ -146,11 +146,6 @@ fn handle_tool_end(
     };
     log_plugin_actions(state, ext_event);
     vec![]
-}
-
-fn extract_text_from_content(parts: &[runie_agent::events::ContentPart]) -> String {
-    // Delegates to the public extractor (same logic).
-    extract_text_content(parts)
 }
 
 fn log_plugin_actions(state: &AppState, event: runie_ext::PluginEvent) {
@@ -398,30 +393,42 @@ pub fn on_tool_start(state: &mut AppState, _tool_call_id: String, tool_name: Str
     });
 }
 
+/// Apply a completed tool result to the matching in-flight tool item.
+/// `precomputed_text` is the text-extracted form the caller already has
+/// (so we don't extract twice when also building a plugin event).
+pub fn on_tool_end_with_text(
+    state: &mut AppState,
+    tool_result: runie_agent::events::ToolResult,
+    precomputed_text: String,
+) {
+    apply_tool_result(state, &tool_result.tool_name, precomputed_text, tool_result.is_error);
+}
+
+/// Convenience wrapper for callers that don't already have the
+/// pre-extracted text -- computes it internally.
 pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolResult) {
     let text = extract_text_content(&tool_result.content);
-    // Find the matching tool item by tool_call_id (preferred) or
-    // tool_name (fallback). Don't blindly trust last_mut(): with
+    apply_tool_result(state, &tool_result.tool_name, text, tool_result.is_error);
+}
+
+fn apply_tool_result(
+    state: &mut AppState,
+    tool_name: &str,
+    text: String,
+    err: bool,
+) {
+    // Find the matching tool item. Don't blindly trust last_mut(): with
     // back-to-back tool calls, the wrong item could get the result.
     // on_tool_start creates ToolRunning; convert it to a completed
     // ToolCall so the renderer shows the result instead of the spinner.
-    let pos = state
-        .messages
-        .iter()
-        .position(|m| match m {
-            MessageItem::ToolCall { .. } | MessageItem::ToolRunning { .. } => {
-                // tool_call_id isn't stored on MessageItem; fall back
-                // to tool_name match. Both the start and end events
-                // carry the same tool_name in a single tool call.
-                let item_name = match m {
-                    MessageItem::ToolCall { name, .. } => name,
-                    MessageItem::ToolRunning { name, .. } => name,
-                    _ => unreachable!(),
-                };
-                item_name == &tool_result.tool_name
-            }
-            _ => false,
-        });
+    // Use rposition so a re-issued tool name overwrites its most recent
+    // in-flight call (better than first-match, which always wins).
+    let pos = state.messages.iter().rposition(|m| match m {
+        MessageItem::ToolCall { name, .. } | MessageItem::ToolRunning { name, .. } => {
+            name == tool_name
+        }
+        _ => false,
+    });
     if let Some(idx) = pos {
         if let Some(msg) = state.messages.get_mut(idx) {
             match msg {
@@ -429,7 +436,7 @@ pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolR
                     result, is_error, ..
                 } => {
                     *result = Some(text);
-                    *is_error = tool_result.is_error;
+                    *is_error = err;
                 }
                 MessageItem::ToolRunning { name, args, .. } => {
                     let name = std::mem::take(name);
@@ -438,7 +445,7 @@ pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolR
                         name,
                         args,
                         result: Some(text),
-                        is_error: tool_result.is_error,
+                        is_error: err,
                     };
                 }
                 _ => {}
