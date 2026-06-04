@@ -182,6 +182,7 @@ enum UiOp {
     SetSessionTokens { total: usize },
     SetThoughtDuration(f32),
     SetTurnComplete(f32),
+    SetToolResult { name: String, result: String, is_error: bool },
 }
 
 fn parse_scenario(raw: &str) -> Result<ParsedScenario, String> {
@@ -262,6 +263,21 @@ fn parse_ui_op(v: &serde_json::Value) -> Result<UiOp, String> {
             let secs = v.get("value").and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
             Ok(UiOp::SetTurnComplete(secs))
         }
+        "tool_result" => {
+            let g = v.get("value").ok_or("missing 'value'")?;
+            let name = g
+                .get("name")
+                .and_then(|x| x.as_str())
+                .ok_or("missing name")?
+                .to_string();
+            let result = g
+                .get("result")
+                .and_then(|x| x.as_str())
+                .ok_or("missing result")?
+                .to_string();
+            let is_error = g.get("is_error").and_then(|x| x.as_bool()).unwrap_or(false);
+            Ok(UiOp::SetToolResult { name, result, is_error })
+        }
         other => Err(format!("unknown ui kind '{other}'")),
     }
 }
@@ -331,6 +347,43 @@ fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
             }) = state.messages.last_mut()
             {
                 *turn_duration = Some(*secs);
+            }
+        }
+        UiOp::SetToolResult { name, result, is_error } => {
+            // Find the last tool item (ToolCall or ToolRunning) matching
+            // `name` and set its result. ToolRunning gets converted to
+            // ToolCall so the renderer shows the result instead of the
+            // spinner.
+            for item in state.messages.iter_mut().rev() {
+                match item {
+                    runie_tui::components::MessageItem::ToolCall {
+                        name: tname,
+                        result: tres,
+                        is_error: terr,
+                        ..
+                    } if tname == name => {
+                        *tres = Some(result.clone());
+                        *terr = *is_error;
+                        break;
+                    }
+                    runie_tui::components::MessageItem::ToolRunning {
+                        name: tname,
+                        args,
+                        ..
+                    } if tname == name => {
+                        // Convert in-place to a completed ToolCall
+                        let tname = tname.clone();
+                        let args = args.clone();
+                        *item = runie_tui::components::MessageItem::ToolCall {
+                            name: tname,
+                            args,
+                            result: Some(result.clone()),
+                            is_error: *is_error,
+                        };
+                        break;
+                    }
+                    _ => {}
+                }
             }
         }
     }

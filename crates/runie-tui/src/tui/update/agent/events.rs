@@ -387,9 +387,24 @@ pub fn on_tool_start(state: &mut AppState, _tool_call_id: String, tool_name: Str
 
 pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolResult) {
     let text = extract_text_content(&tool_result.content);
-    if let Some(MessageItem::ToolCall { ref mut result, ref mut is_error, .. }) = state.messages.last_mut() {
+    if let Some(MessageItem::ToolCall { ref mut result, ref mut is_error, .. }) =
+        state.messages.last_mut()
+    {
         *result = Some(text);
         *is_error = tool_result.is_error;
+        return;
+    }
+    // on_tool_start creates ToolRunning (with spinner). When the tool
+    // ends, convert it to a completed ToolCall so the renderer shows
+    // the result instead of the spinner.
+    if let Some(MessageItem::ToolRunning { name, args, .. }) = state.messages.last().cloned() {
+        let last = state.messages.last_mut().unwrap();
+        *last = MessageItem::ToolCall {
+            name,
+            args,
+            result: Some(text),
+            is_error: tool_result.is_error,
+        };
     }
 }
 
