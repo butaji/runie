@@ -1,0 +1,11 @@
+# Fast linkers for tight REPL iteration. Both are no-ops on non-apple
+# targets; lld is faster than Apple's ld64 on macOS.
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Generic Apple fallback
+[target.apple-darwin]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
