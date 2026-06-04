@@ -162,13 +162,21 @@ enum UiOp {
     SetSlashQuery(String),
     SetInput(String),
     AppendInput(String),
-    SetGit { repo: String, branch: String, path: String },
+    SetGit {
+        repo: String,
+        branch: String,
+        path: String,
+    },
+    SetContextWindow(usize),
+    SetSessionTokens { total: usize },
 }
 
 fn parse_scenario(raw: &str) -> Result<ParsedScenario, String> {
     let mut out = ParsedScenario {
-        width: None, height: None,
-        events: Vec::new(), ui_ops: Vec::new(),
+        width: None,
+        height: None,
+        events: Vec::new(),
+        ui_ops: Vec::new(),
     };
     for (line_no, line) in raw.lines().enumerate() {
         let trimmed = line.trim();
@@ -223,6 +231,15 @@ fn parse_ui_op(v: &serde_json::Value) -> Result<UiOp, String> {
                 path: g.get("path").and_then(|x| x.as_str()).unwrap_or("").to_string(),
             })
         }
+        "context_window" => Ok(UiOp::SetContextWindow(
+            get_u64("value").ok_or("missing 'value'")? as usize,
+        )),
+        "session_tokens" => {
+            let g = v.get("value").ok_or("missing 'value'")?;
+            Ok(UiOp::SetSessionTokens {
+                total: g.get("total").and_then(|x| x.as_u64()).unwrap_or(0) as usize,
+            })
+        }
         other => Err(format!("unknown ui kind '{other}'")),
     }
 }
@@ -258,6 +275,15 @@ fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
             state.context.repo = repo.clone();
             state.context.branch = branch.clone();
             state.context.path = path.clone();
+        }
+        UiOp::SetContextWindow(n) => {
+            state.top_bar.context_window = Some(*n);
+            // Top bar's `estimated_tokens` is what the gauge reads for "used"
+            state.top_bar.estimated_tokens = Some(state.session_token_usage.total_tokens);
+        }
+        UiOp::SetSessionTokens { total } => {
+            state.session_token_usage.total_tokens = *total;
+            state.top_bar.estimated_tokens = Some(*total);
         }
     }
     let _ = tui; // keep tui borrowed

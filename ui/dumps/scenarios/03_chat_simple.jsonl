@@ -8,8 +8,9 @@
 # Switch to chat mode and hide home
 {"ui": true, "kind": "home_visible", "value": false}
 {"ui": true, "kind": "mode", "value": "chat"}
-# Token usage: 20K / 512K
-{"type": "TokenUsage", "prompt_tokens": 0, "completion_tokens": 20000, "total_tokens": 20000, "context_window": 512000}
+# Top bar tokens: 20K / 512K
+{"ui": true, "kind": "context_window", "value": 512000}
+{"ui": true, "kind": "session_tokens", "value": {"total": 20000}}
 # User message
 {"type": "Message", "role": "user", "content": "hello"}
 # Thinking block
