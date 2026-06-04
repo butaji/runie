@@ -13,7 +13,7 @@ use std::io::{self, stdout};
 
 use crate::{
     pipe::{StateChange, ViewModelPipe, RenderPipe},
-    theme::ThemeWrapper,
+    theme::{ThemeWrapper, ThemeColors},
     components::CommandPalette,
 };
 use runie_agent::events::AgentEvent;
@@ -120,6 +120,68 @@ impl Tui {
             action_log_capacity: 1000,
             permission_state,
         })
+    }
+
+    /// Construct a Tui WITHOUT initializing a real terminal. Used by the
+    /// `scenario_replay` binary and tests that need to feed events and
+    /// render to a TestBackend buffer (no TTY required).
+    ///
+    /// The returned Tui has a `Terminal<CrosstermBackend<Stdout>>` that
+    /// will never be used — render via [`Tui::render_to_buffer`].
+    pub fn new_headless() -> Self {
+        // No panic hook, no raw mode, no alternate screen.
+        let config = TuiConfig::default();
+        let backend = CrosstermBackend::new(io::stdout());
+        // A blank 80x24 terminal — never drawn to, but the field must exist.
+        let terminal = Terminal::new(backend).expect("terminal init in headless mode");
+        let state = AppState::default();
+        let command_palette = CommandPalette::new();
+        let view_model_pipe = ViewModelPipe::new();
+        let render_pipe = RenderPipe::new();
+        let permission_state = PermissionState::new();
+        Self {
+            config,
+            terminal,
+            state,
+            command_palette,
+            view_model_pipe,
+            render_pipe,
+            action_log: VecDeque::new(),
+            action_log_capacity: 1000,
+            permission_state,
+        }
+    }
+
+    /// Render the current state into the given buffer. Doesn't touch the
+    /// real terminal. Used by the scenario-replay binary and tests.
+    pub fn render_to_buffer(&mut self, buf: &mut ratatui::buffer::Buffer, area: ratatui::layout::Rect) {
+        let vms = self.view_model_pipe.build(&self.state);
+        let input_height = crate::pipe::render::RenderPipe::input_bar_height(&self.state);
+        let show_sidebar = self.state.show_sidebar;
+        let show_status_bar = true;
+        let theme = if self.state.current_theme == "silkcircuit_neon" {
+            ThemeWrapper::silkcircuit_neon()
+        } else {
+            ThemeWrapper::crush_grok()
+        };
+        let theme_colors = ThemeColors::from(&theme);
+        let main_areas = crate::pipe::render::RenderPipe::layout_main(area, show_status_bar, input_height);
+        let is_onboarding = matches!(self.state.mode, crate::tui::TuiMode::Onboarding);
+        let palette = self.command_palette.clone();
+        let padded = crate::style::helpers::padded_area(area);
+        if is_onboarding {
+            crate::pipe::render::RenderPipe::render_onboarding_mode(
+                buf, area, &self.state, &vms, main_areas, show_status_bar, &theme, &theme_colors,
+            );
+        } else if self.state.home_screen.is_visible() || matches!(self.state.mode, crate::tui::TuiMode::HomeScreen) {
+            crate::pipe::render::RenderPipe::render_home_screen_mode(
+                buf, area, &self.state, &vms, main_areas, &theme, &theme_colors,
+            );
+        } else {
+            crate::pipe::render::RenderPipe::render_normal_mode(
+                buf, area, &self.state, &vms, main_areas, show_sidebar, show_status_bar, &palette, padded, &theme, &theme_colors,
+            );
+        }
     }
 
     pub fn cleanup(&mut self) -> io::Result<()> {
