@@ -4,12 +4,11 @@ use ratatui::{
     style::{Color, Modifier, Style},
 };
 
-/// Format a token/context count with K/M suffix (e.g., 9500 -> "9.5K", 512000 -> "512K")
+/// Format a token/context count with K/M suffix.
+/// Grok-style: 999 -> "999", 9_500 -> "9.5K", 1_000_000 -> "1.0M", 512_000 -> "512K".
 pub fn format_token_count(n: usize) -> String {
     if n >= 1_000_000 {
-        let val = format!("{:.1}", n as f32 / 1_000_000.0);
-        let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);
-        format!("{}M", stripped)
+        format!("{:.1}M", n as f32 / 1_000_000.0)
     } else if n >= 1_000 {
         let val = format!("{:.1}", n as f32 / 1_000.0);
         let stripped = val.strip_suffix(".0").map(|s| s.to_string()).unwrap_or(val);

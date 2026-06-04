@@ -156,6 +156,8 @@ fn test_permission_allow_continues_tool_execution() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I ran the command for you. Output: hello"),
+        delta: "I ran the command for you. Output: hello".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -231,6 +233,8 @@ fn test_permission_deny_skips_tool() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I won't run that dangerous command."),
+        delta: "I won't run that dangerous command.".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -371,6 +375,8 @@ fn test_interrupt_clears_agent_running() {
     // ── MessageUpdate (partial streaming text) ─────────────────────────────
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Here is a partial "),
+        delta: "Here is a partial ".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -459,6 +465,8 @@ fn test_tool_result_feeds_back_to_model() {
     // Assistant requests tool
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I'll run the ls command for you."),
+        delta: "I'll run the ls command for you.".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -501,6 +509,8 @@ fn test_tool_result_feeds_back_to_model() {
     // Model responds to tool result
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I ran ls and found 2 files: file1.txt and file2.txt"),
+        delta: "I ran ls and found 2 files: file1.txt and file2.txt".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -605,6 +615,8 @@ fn test_error_recovery_next_message_works() {
     // ── Complete new message ────────────────────────────────────────────────
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Recovery message after error."),
+        delta: "Recovery message after error.".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -707,6 +719,8 @@ fn test_multiple_tool_calls_in_one_turn() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I read file1.txt and wrote to file2.txt."),
+        delta: "I read file1.txt and wrote to file2.txt.".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -807,6 +821,8 @@ fn test_context_compacted_event_ignored() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "First message before context compaction."),
+        delta: "First message before context compaction.".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -834,6 +850,8 @@ fn test_context_compacted_event_ignored() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Second message after context compaction."),
+        delta: "Second message after context compaction.".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {

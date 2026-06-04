@@ -1,28 +1,22 @@
-//! StatusBar component.
+//! StatusBar component — kept for `BackgroundJob` and `JobStatus` types
+//! used by `AppState.background_jobs` and the activity panel.
+//!
+//! The legacy `StatusBar` struct + `Widget` impl were removed in H2 of the
+//! UI architecture review; the live render path goes through
+//! `StatusBarViewModel::hotkeys()`.
 
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    style::Style,
-    text::{Line, Span},
-    widgets::Widget,
-};
-use crate::theme::ThemeWrapper;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::Style;
+use crate::theme::ThemeColors;
 use crate::tui::state::TuiMode;
-use crate::tui::view_models::{StatusBarViewModel, McpStatus};
+use crate::tui::view_models::{McpStatus, StatusBarViewModel};
 
 pub mod builder;
 mod render;
 #[cfg(test)]
 mod mod_test;
 pub use builder::*;
-
-#[derive(Clone)]
-pub struct StatusBar {
-    pub items: Vec<StatusItem>,
-    pub theme: ThemeWrapper,
-    pub background_jobs: Vec<BackgroundJob>,
-}
 
 #[derive(Debug, Clone)]
 pub struct StatusItem {
@@ -52,21 +46,6 @@ pub enum JobStatus {
     Running,
     Complete,
     Failed,
-}
-
-impl Default for StatusBar {
-    fn default() -> Self {
-        Self {
-            items: vec![
-                StatusItem { key: "Enter".to_string(), description: "send".to_string() },
-                StatusItem { key: "^b".to_string(), description: "sidebar".to_string() },
-                StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
-                StatusItem { key: "^q".to_string(), description: "quit".to_string() },
-            ],
-            theme: ThemeWrapper::default(),
-            background_jobs: Vec::new(),
-        }
-    }
 }
 
 impl StatusBarViewModel {
@@ -229,86 +208,6 @@ fn hotkeys_for_mode(mode: TuiMode) -> Vec<StatusItem> {
         TuiMode::CommandPalette => StatusBarViewModel::palette_hotkeys(),
         TuiMode::DiffViewer | TuiMode::FullscreenViewer => StatusBarViewModel::diff_hotkeys(),
         TuiMode::SessionTree | TuiMode::Onboarding | TuiMode::Plan | TuiMode::HomeScreen => StatusBarViewModel::tree_hotkeys(),
-    }
-}
-
-impl StatusBar {
-    pub fn set_chat_mode(&mut self) {
-        self.items = vec![
-            StatusItem { key: "Enter".to_string(), description: "send".to_string() },
-            StatusItem { key: "^b".to_string(), description: "sidebar".to_string() },
-            StatusItem { key: "^k".to_string(), description: "cmd".to_string() },
-            StatusItem { key: "^q".to_string(), description: "quit".to_string() },
-        ];
-    }
-
-    pub fn set_overlay_mode(&mut self) {
-        self.items = vec![
-            StatusItem { key: "Esc".to_string(), description: "close".to_string() },
-            StatusItem { key: "j/k".to_string(), description: "navigate".to_string() },
-            StatusItem { key: "Enter".to_string(), description: "select".to_string() },
-        ];
-    }
-
-    pub fn add_job(&mut self, name: &str) {
-        self.background_jobs.push(BackgroundJob {
-            name: name.to_string(),
-            status: JobStatus::Running,
-            progress: 0.0,
-        });
-    }
-
-    pub fn complete_job(&mut self, name: &str) {
-        if let Some(job) = self.background_jobs.iter_mut().find(|j| j.name == name) {
-            job.status = JobStatus::Complete;
-        }
-    }
-
-    pub fn clear_completed_jobs(&mut self) {
-        self.background_jobs.retain(|j| j.status == JobStatus::Running);
-    }
-}
-
-impl Widget for StatusBar {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let sp = StyleHelpers::new(&self.theme);
-        let x = area.x + 1;
-        let mut current_x = x;
-        let mut first = true;
-
-        for item in &self.items {
-            if !first {
-                let sep_line = Line::from(vec![Span::styled(" | ", sp.tertiary())]);
-                buf.set_line(current_x, area.y, &sep_line, 3);
-                current_x += 3;
-            }
-            first = false;
-
-            let parts = vec![
-                Span::styled(&item.key, sp.tertiary()),
-                Span::raw(" "),
-                Span::styled(&item.description, sp.tertiary()),
-            ];
-            let line = Line::from(parts);
-            let item_width = item.key.len() + 1 + item.description.len();
-            buf.set_line(current_x, area.y, &line, item_width as u16);
-            current_x += item_width as u16;
-        }
-    }
-}
-
-struct StyleHelpers {
-    tertiary_style: Style,
-}
-
-impl StyleHelpers {
-    fn new(theme: &ThemeWrapper) -> Self {
-        Self {
-            tertiary_style: Style::default().fg(theme.color("text.dim").into()),
-        }
-    }
-    fn tertiary(&self) -> Style {
-        self.tertiary_style
     }
 }
 

@@ -14,7 +14,7 @@ pub fn render(palette: &CommandPalette, area: Rect, buf: &mut Buffer, theme: &Th
     let text_secondary: Color = theme.color("text.secondary").into();
     let dialog_w = area.width.saturating_sub(2);
     let dialog_h = area.height.saturating_sub(2);
-    DialogFrame::new(dialog_w, dialog_h).title("Command Palette").show_close_hint()
+    DialogFrame::new(dialog_w, dialog_h).title("Commands").show_close_hint()
         .render(area, buf, theme, |inner, buf| {
             if palette.is_argument_mode {
                 render_argument_mode(palette, inner, buf, accent_primary, text_primary, text_muted, text_secondary);
@@ -57,6 +57,14 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
         let is_selected = i == palette.selected;
         render_command_row(cmd, y, inner_x, inner_w, is_selected, text_primary, text_muted, text_secondary, buf);
         rendered += 1;
+    }
+    // Grok spec: in-box footer hint strip ↑/↓ nav | Enter select | Esc close
+    // Rendered 1 row above the bottom border, with a "─" divider above it.
+    if area.height >= 4 {
+        let footer_y = area.y + area.height - 2;
+        draw_separator(inner_x, footer_y, inner_w, buf, text_muted);
+        let footer_text = "↑/↓ nav  |  Enter select  |  Esc close";
+        buf.set_string(inner_x + 1, footer_y + 1, footer_text, Style::default().fg(text_muted));
     }
 }
 

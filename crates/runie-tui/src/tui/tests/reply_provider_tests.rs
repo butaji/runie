@@ -47,12 +47,11 @@ fn simulate_simple_flow(state: &mut AppState) {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: "The user wants me to say hello and tell them the current time.".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: "The user wants me to say hello and tell them the current time.".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello! I'm here and ready to help!"),
+        delta: "Hello! I'm here and ready to help!".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageEnd {
@@ -78,10 +77,7 @@ fn simulate_tool_flow(state: &mut AppState) {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: "The user is asking me to calculate 15 + 27.".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: "The user is asking me to calculate 15 + 27.".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(state, AgentEvent::ToolExecutionStart {
         tool_call_id: "call_function_m5jy6idn55ce_1".to_string(),
         tool_name: "calculator".to_string(),
@@ -112,7 +108,8 @@ fn simulate_tool_flow(state: &mut AppState) {
             error_message: None,
             tool_calls: vec![],
         },
-        turn: 0,
+                delta: String::new(),
+        replace: true,turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageEnd {
         message: agent_message("assistant", "The result is 42."),
@@ -137,24 +134,24 @@ fn simulate_streaming_flow(state: &mut AppState) {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: "The user".to_string(),
-        turn: 0,
-    });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: " wants me to count from 1 to 3.".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: "The user".to_string(), total_len: 0, turn: 0, });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: " wants me to count from 1 to 3.".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "1"),
+        delta: "1".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", ", 2"),
+        delta: ", 2".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", ", 3"),
+        delta: ", 3".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageEnd {
@@ -180,10 +177,7 @@ fn simulate_stream_tool_flow(state: &mut AppState) {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: "The user wants me to list files in the current directory using the bash tool.".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: "The user wants me to list files in the current directory using the bash tool.".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(state, AgentEvent::ToolExecutionStart {
         tool_call_id: "call_function_tliic6kofgz2_1".to_string(),
         tool_name: "bash".to_string(),
@@ -237,16 +231,12 @@ fn simulate_context_flow(state: &mut AppState) {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: "The user".to_string(),
-        turn: 0,
-    });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: " just told me their name is Alice, so I should answer that.".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: "The user".to_string(), total_len: 0, turn: 0, });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: " just told me their name is Alice, so I should greet them as Alice.".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Your name is Alice!"),
+        delta: "Your name is Alice!".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageEnd {
@@ -273,10 +263,7 @@ fn simulate_long_reasoning_flow(state: &mut AppState) {
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::ThinkingStart { turn: 0 });
-    handle_agent_event(state, AgentEvent::ThinkingUpdate {
-        text: "The user wants step-by-step instructions for making a peanut butter sandwich.".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(state, AgentEvent::ThinkingUpdate { delta: "The user wants step-by-step instructions for making a peanut butter sandwich.".to_string(), total_len: 0, turn: 0, });
     // Simulate enough time for thought indicator
     std::thread::sleep(std::time::Duration::from_millis(600));
     handle_agent_event(state, AgentEvent::ThinkingEnd {
@@ -285,6 +272,8 @@ fn simulate_long_reasoning_flow(state: &mut AppState) {
     });
     handle_agent_event(state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "# How to Make a Peanut Butter Sandwich\n\n**Ingredients:**\n- 2 slices of bread\n- Peanut butter\n- Optional: jelly, honey, or banana\n\n"),
+        delta: String::new(),
+        replace: true,
         turn: 0,
     });
     handle_agent_event(state, AgentEvent::MessageEnd {

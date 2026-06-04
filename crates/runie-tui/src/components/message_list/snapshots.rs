@@ -43,6 +43,8 @@ fn render_feed_with_agent(feed: Feed, width: u16, height: u16, agent_running: bo
         agent_running,
         AnimationState::default(),
         WrapCache::new(),
+        None,
+        None,
     );
     let mut buf = buf;
     MessageList::render_ref(&vm, area, &mut buf, &theme);

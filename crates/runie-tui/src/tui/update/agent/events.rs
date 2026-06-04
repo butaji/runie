@@ -82,7 +82,7 @@ fn handle_message_event(state: &mut AppState, event: AgentEvent) {
     match event {
         AgentEvent::Message { role, content } => on_message(state, &role, &content),
         AgentEvent::MessageStart { message, .. } => on_message_start(state, message),
-        AgentEvent::MessageUpdate { message, .. } => on_message_update(state, message),
+        AgentEvent::MessageUpdate { message, delta, replace, .. } => on_message_update(state, message, &delta, replace),
         AgentEvent::MessageEnd { message, .. } => on_message_end(state, message),
         _ => {}
     }
@@ -91,7 +91,7 @@ fn handle_message_event(state: &mut AppState, event: AgentEvent) {
 fn handle_thinking_event(state: &mut AppState, event: AgentEvent) {
     match event {
         AgentEvent::ThinkingStart { turn } => on_thinking_start(state, turn),
-        AgentEvent::ThinkingUpdate { text, .. } => on_thinking_update(state, text),
+        AgentEvent::ThinkingUpdate { delta, .. } => on_thinking_update(state, &delta),
         AgentEvent::ThinkingEnd { duration_ms, .. } => on_thinking_end(state, duration_ms),
         _ => {}
     }
@@ -261,14 +261,24 @@ pub fn on_message(state: &mut AppState, role: &str, content: &str) {
     }
 }
 
-pub fn on_message_update(state: &mut AppState, message: runie_agent::events::AgentMessage) {
+pub fn on_message_update(state: &mut AppState, message: runie_agent::events::AgentMessage, delta: &str, replace: bool) {
     // Auto-scroll to bottom if user hasn't scrolled up
     if !state.scroll.user_scrolled_up {
         state.scroll.feed_offset = 0;
     }
 
     ensure_thinking_placeholder(state, &message.content);
-    update_last_assistant(state, &message.content);
+    if replace {
+        // Test snapshot mode: replace text wholesale.
+        if let Some(MessageItem::Assistant { ref mut text, .. }) = state.messages.last_mut() {
+            *text = delta.to_string();
+        }
+    } else if !delta.is_empty() {
+        // Live streaming: append only the new characters.
+        if let Some(MessageItem::Assistant { ref mut text, .. }) = state.messages.last_mut() {
+            text.push_str(delta);
+        }
+    }
 }
 
 pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentMessage) {

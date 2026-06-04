@@ -17,7 +17,7 @@ pub use tui::{Tui, TuiConfig, TuiMode, Msg, Cmd, update, event_to_msg, Onboardin
 pub use components::{
     MessageList,
     MessageItem,
-    StatusBar,
+    StatusItem,
     Overlay,
     CodeBlock,
     CodeLine,

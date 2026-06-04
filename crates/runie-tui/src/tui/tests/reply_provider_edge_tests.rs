@@ -94,6 +94,8 @@ fn test_unicode_content_rendering() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", unicode_text),
+        delta: "".to_string(),
+        replace: true,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -145,6 +147,8 @@ fn test_rapid_events_dont_corrupt_state() {
     for chunk in &chunks {
         handle_agent_event(&mut state, AgentEvent::MessageUpdate {
             message: agent_message("assistant", chunk),
+            delta: chunk.to_string(),
+            replace: false,
             turn: 0,
         });
     }
@@ -257,10 +261,7 @@ fn test_thinking_with_special_characters() {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: thinking_text.to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: thinking_text.to_string(), total_len: 0, turn: 0, });
     // Need ThinkingEnd with duration > 0.5s to create Thought item
     handle_agent_event(&mut state, AgentEvent::ThinkingEnd {
         duration_ms: 600,
@@ -268,6 +269,8 @@ fn test_thinking_with_special_characters() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Final response"),
+        delta: "Final response".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -328,6 +331,8 @@ fn test_multiple_turns_with_token_accumulation() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Turn 1 response"),
+        delta: "Turn 1 response".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -356,6 +361,8 @@ fn test_multiple_turns_with_token_accumulation() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Turn 2 response"),
+        delta: "Turn 2 response".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -384,6 +391,8 @@ fn test_multiple_turns_with_token_accumulation() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Turn 3 response"),
+        delta: "Turn 3 response".to_string(),
+        replace: false,
         turn: 2,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -423,12 +432,11 @@ fn test_agent_end_cleans_up_properly() {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: "Thinking...".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: "Thinking...".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Response"),
+        delta: "Response".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -473,6 +481,8 @@ fn test_concurrent_message_and_tool_updates() {
     // after MessageUpdate, subsequent MessageUpdate won't update the Assistant
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Using "),
+        delta: "Using ".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::ToolExecutionStart {
@@ -484,6 +494,8 @@ fn test_concurrent_message_and_tool_updates() {
     // This MessageUpdate finds ToolCall as last item, does nothing to Assistant
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Using bash..."),
+        delta: "Using bash...".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::ToolExecutionEnd {

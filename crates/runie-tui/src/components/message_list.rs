@@ -179,23 +179,6 @@ impl MessageList {
     pub fn has_assistant_in_progress(&self) -> bool {
         matches!(self.messages.last(), Some(MessageItem::Assistant { .. }))
     }
-
-    pub fn add_or_update_assistant(&mut self, text: &str, model: Option<String>) {
-        if let Some(last) = self.messages.last_mut() {
-            if let MessageItem::Assistant { text: ref mut existing_text, .. } = last {
-                *existing_text = text.to_string();
-                return;
-            }
-        }
-        self.messages.push(MessageItem::Assistant {
-            text: text.to_string(),
-            model,
-            timestamp: None,
-            expanded: true,
-            thought_duration: None,
-            turn_duration: None,
-        });
-    }
 }
 
 pub(crate) struct MessageColors {

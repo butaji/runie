@@ -242,6 +242,8 @@ fn test_interrupt_clears_partial_message() {
     // Simulate partial message update
     crate::tui::update::agent::handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "partial"),
+        delta: "partial".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -290,6 +292,7 @@ fn test_background_job_tracking() {
     state.background_jobs.push(BackgroundJob {
         name: "test-job".to_string(),
         status: JobStatus::Running,
+        progress: 0.0,
     });
 
     // Verify running job exists

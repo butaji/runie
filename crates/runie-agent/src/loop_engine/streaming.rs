@@ -174,20 +174,18 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
             text_buffer.push_str(&content);
             text_content.push_str(&content);
 
-            // Emit every chunk during active streaming for immediate feedback
-            let should_emit = true;
-
-            if should_emit {
-                let delta = std::mem::take(text_buffer);
-                assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
-                let delta_len = delta.len();
-                send_event(msg_tx, AgentEvent::MessageUpdate {
-                    message: assistant_message.clone(),
-                    turn,
-                }).await;
-                tracing::debug!("[ACTOR:AgentLoop] MessageUpdate: \"{}\" (+{} chars)", &text_content[..text_content.len().saturating_sub(delta_len).min(50)], delta_len);
-                *last_emit = Instant::now();
-            }
+            // Send the NEW delta (append mode for live streaming).
+            let delta = std::mem::take(text_buffer);
+            assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
+            let delta_len = delta.len();
+            send_event(msg_tx, AgentEvent::MessageUpdate {
+                message: assistant_message.clone(),
+                delta,
+                replace: false,
+                turn,
+            }).await;
+            tracing::debug!("[ACTOR:AgentLoop] MessageUpdate delta (+{} chars, total={})", delta_len, text_content.len());
+            *last_emit = Instant::now();
         }
         LlmEvent::ThinkingDelta { content } => {
             // Emit ThinkingStart when first ThinkingDelta arrives
@@ -195,8 +193,10 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
                 send_event(msg_tx, AgentEvent::ThinkingStart { turn }).await;
             }
             thinking_buffer.push_str(&content);
+            // Send only the NEW delta, not the full accumulated buffer.
             send_event(msg_tx, AgentEvent::ThinkingUpdate {
-                text: thinking_buffer.clone(),
+                delta: content,
+                total_len: thinking_buffer.len(),
                 turn,
             }).await;
         }
@@ -217,6 +217,8 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
                 assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
                 send_event(msg_tx, AgentEvent::MessageUpdate {
                     message: assistant_message.clone(),
+                    delta: String::new(),
+                    replace: false,
                     turn,
                 }).await;
             }

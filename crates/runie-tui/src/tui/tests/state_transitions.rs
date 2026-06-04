@@ -189,7 +189,9 @@ fn test_message_update_fills_placeholder() {
         &mut state,
         AgentEvent::MessageUpdate {
             message: agent_message("assistant", "Hello"),
-            turn: 1,
+        delta: "Hello".to_string(),
+        replace: false,
+        turn: 1,
         },
     );
     let has_hello = state.messages.iter().any(|m| matches!(

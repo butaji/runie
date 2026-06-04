@@ -19,21 +19,12 @@ mod tests {
     }
 
     #[test]
-    fn test_add_or_update_assistant_updates_existing() {
+    fn test_update_last_assistant_updates_existing() {
         let mut list = MessageList::default();
         list.messages.push(MessageItem::Assistant { text: "Partial".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None });
-        list.add_or_update_assistant("Complete response", Some("gpt-4".to_string()));
+        list.update_last_assistant("Complete response");
         assert_eq!(list.messages.len(), 1);
         assert_eq!(list.messages[0], MessageItem::Assistant { text: "Complete response".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None });
-    }
-
-    #[test]
-    fn test_add_or_update_assistant_adds_new() {
-        let mut list = MessageList::default();
-        list.messages.push(MessageItem::User { text: "Hello".to_string(), model: None, timestamp: None });
-        list.add_or_update_assistant("Response", Some("gpt-4".to_string()));
-        assert_eq!(list.messages.len(), 2);
-        assert_eq!(list.messages[1], MessageItem::Assistant { text: "Response".to_string(), model: Some("gpt-4".to_string()), timestamp: None, expanded: false, thought_duration: None, turn_duration: None });
     }
 
     #[test]
@@ -180,6 +171,7 @@ mod tests {
             None,
             true,
             false,
+            None,
         );
 
         let row_text: String = (0..area.width)
@@ -273,6 +265,8 @@ mod tests {
             None,
             false,
             false,
+            None,
+            None,
         );
 
         let row_text: String = (0..area.width)

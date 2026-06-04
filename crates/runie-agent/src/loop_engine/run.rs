@@ -328,6 +328,8 @@ async fn flush_text_buffer<M: TryFrom<AgentEvent> + Send + 'static>(
         assistant_message.content = vec![ContentPart::Text { text: text_content.clone() }];
         send_event(msg_tx, AgentEvent::MessageUpdate {
             message: assistant_message.clone(),
+            delta: String::new(),
+            replace: false,
             turn: turn_count,
         }).await;
     }

@@ -55,7 +55,8 @@ fn test_very_long_message() {
 
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", &long_text),
-        turn: 1,
+                delta: &long_text.to_string(),
+        replace: false,turn: 1,
         delta: long_text.clone(),
     });
 
@@ -90,7 +91,8 @@ fn test_unicode_messages() {
 
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Response: 👍"),
-        turn: 1,
+                delta: "Response: 👍".to_string(),
+        replace: false,turn: 1,
         delta: "Response: 👍".to_string(),
     });
 
@@ -167,7 +169,8 @@ fn test_update_without_start() {
     // Now update should work
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hi"),
-        turn: 1,
+                delta: "Hi".to_string(),
+        replace: false,turn: 1,
         delta: "Hi".to_string(),
     });
 
@@ -240,7 +243,8 @@ fn test_many_rapid_updates() {
     for i in 0..1000 {
         harness.handle_agent_event(AgentEvent::MessageUpdate {
             message: agent_message("assistant", &i.to_string()),
-            turn: 1,
+                        delta: String::new(),
+            replace: true,turn: 1,
             delta: i.to_string(),
         });
     }
@@ -270,7 +274,8 @@ fn test_empty_content_update() {
     // Update with empty delta
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", ""),
-        turn: 1,
+                delta: "".to_string(),
+        replace: false,turn: 1,
         delta: "".to_string(),
     });
 
@@ -354,7 +359,8 @@ fn test_malformed_unicode() {
 
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", &malformed),
-        turn: 1,
+                delta: &malformed.to_string(),
+        replace: false,turn: 1,
         delta: malformed.clone(),
     });
 

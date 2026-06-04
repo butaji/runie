@@ -152,7 +152,7 @@ impl SlashMenu {
     }
 }
 
-fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color) {
+fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color, hidden_count: usize) {
     // Clear background first to prevent content overlap
     for y in area.y..area.bottom() {
         for x in area.x..area.right() {
@@ -162,11 +162,42 @@ fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color) {
             }
         }
     }
-    // Top horizontal divider
-    for x in area.x..area.right() {
-        if let Some(cell) = buf.cell_mut((x, area.y)) {
+    // Top horizontal divider with trailing count (Grok spec: "─...─N─" right-aligned)
+    let right_col = area.right().saturating_sub(1);
+    if hidden_count > 0 && area.width >= 6 {
+        // Reserve 2 columns for "<N>" (e.g. "87") and 1 trailing "─"
+        let count_str = hidden_count.to_string();
+        // Write "─" from left to (right_col - 3)
+        let left_end = right_col.saturating_sub(3);
+        for x in area.x..left_end {
+            if let Some(cell) = buf.cell_mut((x, area.y)) {
+                cell.set_char(box_chars::H);
+                cell.set_fg(border);
+            }
+        }
+        // Then "─", then count_str, then "─" at right_col
+        // Actually: we want "─...─" (left) + count + "─" (rightmost)
+        // So write count_str at left_end..left_end+count_str.len(), "─" at right_col
+        for (i, ch) in count_str.chars().enumerate() {
+            let x = left_end.saturating_add(i as u16);
+            if x <= right_col {
+                if let Some(cell) = buf.cell_mut((x, area.y)) {
+                    cell.set_char(ch);
+                    cell.set_fg(border);
+                }
+            }
+        }
+        if let Some(cell) = buf.cell_mut((right_col, area.y)) {
             cell.set_char(box_chars::H);
             cell.set_fg(border);
+        }
+    } else {
+        // No count: pure "─" line
+        for x in area.x..right_col {
+            if let Some(cell) = buf.cell_mut((x, area.y)) {
+                cell.set_char(box_chars::H);
+                cell.set_fg(border);
+            }
         }
     }
     // Bottom horizontal divider
@@ -198,9 +229,9 @@ impl Widget for &SlashMenu {
         let text_muted = Color::DarkGray;
         let accent = Color::Cyan;
         let bg = Color::Black;
-        render_slash_border(area, buf, border, bg);
-        let title = " Commands ";
-        buf.set_line(area.x + 2, area.y, &Line::raw(title).style(Style::default().fg(text_muted)), area.width - 4);
+        let visible_count = (area.height as usize).saturating_sub(2);
+        let hidden_count = self.filtered_indices.len().saturating_sub(visible_count);
+        render_slash_border(area, buf, border, bg, hidden_count);
         let inner_x = area.x + 2;
         let inner_w = area.width.saturating_sub(4);
         let mut y = area.y + 1;

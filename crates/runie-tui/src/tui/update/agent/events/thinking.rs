@@ -18,13 +18,15 @@ pub(super) fn on_thinking_start(state: &mut AppState, turn: usize) {
     state.last_turn_tool_calls = None;
 }
 
-pub(super) fn on_thinking_update(state: &mut AppState, text: String) {
+pub(super) fn on_thinking_update(state: &mut AppState, delta: &str) {
     if let Some(ref mut thinking) = state.thinking {
         if let Some(start) = thinking.start.take() {
             thinking.accrued_duration = Some(thinking.accrued_duration.unwrap_or_default() + start.elapsed());
             thinking.start = Some(std::time::Instant::now());
         }
-        thinking.text.push_str(&text);
+        if !delta.is_empty() {
+            thinking.text.push_str(delta);
+        }
     }
     // Note: thinking content is stored in state.thinking.text and rendered
     // separately via streaming_think_content. Do NOT append to assistant_text.

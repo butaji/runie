@@ -57,6 +57,8 @@ fn test_simple_message_e2e() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello! How can I help you today?"),
+        delta: "Hello! How can I help you today?".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -121,6 +123,8 @@ fn test_tool_call_e2e() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I ran the command for you."),
+        delta: "I ran the command for you.".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -168,14 +172,20 @@ fn test_streaming_accumulation_e2e() {
     // Simulate streaming: multiple chunks arrive
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "First chunk: "),
+        delta: "First chunk: ".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Second chunk: "),
+        delta: "Second chunk: ".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Third chunk complete!"),
+        delta: "Third chunk complete!".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -229,10 +239,7 @@ fn test_thinking_separation_e2e() {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: "Let me think about this...".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: "Let me think about this...".to_string(), total_len: 0, turn: 0, });
     // Need ThinkingEnd to push the Thought - with duration > 0.5s to pass the check
     std::thread::sleep(std::time::Duration::from_millis(600));
     handle_agent_event(&mut state, AgentEvent::ThinkingEnd {
@@ -241,6 +248,8 @@ fn test_thinking_separation_e2e() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Here's my response!"),
+        delta: "Here's my response!".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -326,6 +335,8 @@ fn test_token_usage_tracking_e2e() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Response text"),
+        delta: "Response text".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -375,6 +386,8 @@ fn test_multi_turn_e2e() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "First response"),
+        delta: "First response".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -404,6 +417,8 @@ fn test_multi_turn_e2e() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Second response"),
+        delta: "Second response".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -580,10 +595,7 @@ fn test_thinking_state_cleanup() {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: "Thinking...".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: "Thinking...".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
         message: agent_message("assistant", "Done"),
         turn: 0,

@@ -321,7 +321,7 @@ pub fn message_start(text: &str) -> AgentEvent {
     }
 }
 
-/// Create a MessageUpdate event.
+/// Create a MessageUpdate event (snapshot/replace mode, used by tests).
 pub fn message_update(delta: &str) -> AgentEvent {
     AgentEvent::MessageUpdate {
         message: AgentMessage {
@@ -337,6 +337,7 @@ pub fn message_update(delta: &str) -> AgentEvent {
         },
         turn: 1,
         delta: delta.to_string(),
+        replace: true,
     }
 }
 
