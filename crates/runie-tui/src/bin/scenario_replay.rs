@@ -181,6 +181,7 @@ enum UiOp {
     SetContextWindow(usize),
     SetSessionTokens { total: usize },
     SetThoughtDuration(f32),
+    SetTurnComplete(f32),
 }
 
 fn parse_scenario(raw: &str) -> Result<ParsedScenario, String> {
@@ -257,6 +258,10 @@ fn parse_ui_op(v: &serde_json::Value) -> Result<UiOp, String> {
             let secs = v.get("value").and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
             Ok(UiOp::SetThoughtDuration(secs))
         }
+        "turn_complete" => {
+            let secs = v.get("value").and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
+            Ok(UiOp::SetTurnComplete(secs))
+        }
         other => Err(format!("unknown ui kind '{other}'")),
     }
 }
@@ -292,6 +297,10 @@ fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
             state.context.repo = repo.clone();
             state.context.branch = branch.clone();
             state.context.path = path.clone();
+            // Top bar also has its own copy
+            state.top_bar.repo = repo.clone();
+            state.top_bar.branch = branch.clone();
+            state.top_bar.path = path.clone();
         }
         UiOp::SetContextWindow(n) => {
             state.top_bar.context_window = Some(*n);
@@ -311,6 +320,17 @@ fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
             }) = state.messages.last_mut()
             {
                 *thought_duration = Some(*secs);
+            }
+        }
+        UiOp::SetTurnComplete(secs) => {
+            // Set the last assistant's turn_duration so the
+            // "Turn completed in X.Xs." line renders.
+            if let Some(runie_tui::components::MessageItem::Assistant {
+                turn_duration,
+                ..
+            }) = state.messages.last_mut()
+            {
+                *turn_duration = Some(*secs);
             }
         }
     }

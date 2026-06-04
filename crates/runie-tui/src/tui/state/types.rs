@@ -112,7 +112,7 @@ impl Default for TopBarState {
             context_badges: Vec::new(),
             context_pct: None,
             context_bar_pct: None,
-            context_window: Some(128_000),
+            context_window: Some(512_000),
             estimated_tokens: Some(0),
         }
     }
