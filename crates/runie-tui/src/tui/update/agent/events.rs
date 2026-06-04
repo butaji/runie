@@ -345,16 +345,11 @@ fn on_turn_end(state: &mut AppState, turn_duration_ms: Option<u64>) {
                 .unwrap_or(1)
         }
     };
-    eprintln!(
-        "[DEBUG on_turn_end] agent_start_time={:?}, last_turn_duration_secs={:?}, replay_turn_duration_secs={:?}, elapsed={}",
-        state.agent_start_time.is_some(),
-        state.last_turn_duration_secs,
-        state.replay_turn_duration_secs,
-        elapsed
-    );
-    let tool_calls = state.messages.iter().filter(|m| {
-        matches!(m, MessageItem::ToolCall { .. })
-    }).count();
+    let tool_calls = state
+        .messages
+        .iter()
+        .filter(|m| matches!(m, MessageItem::ToolCall { .. }))
+        .count();
     state.last_turn_duration_secs = Some(elapsed);
     state.last_turn_tokens = Some(state.session_token_usage.total_tokens);
     state.last_turn_tool_calls = Some(tool_calls);
