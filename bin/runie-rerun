@@ -89,9 +89,9 @@ run_once() {
   rm -f "$BUILD_LOG"
   echo -e "${BOLD}${CYA}─── $(date +%H:%M:%S) ───${RST}"
   if [ -n "$DUMP" ]; then
-    target/release/scenario_replay "$SCENARIO" --diff "$DUMP" 2>&1 | head -40
+    target/debug/scenario_replay "$SCENARIO" --diff "$DUMP" 2>&1 | head -40
   else
-    target/release/scenario_replay "$SCENARIO" 2>&1 | head -40
+    target/debug/scenario_replay "$SCENARIO" 2>&1 | head -40
   fi
   echo
 }
@@ -104,6 +104,7 @@ echo
 run_once
 
 last=$(get_max_mtime)
+trap 'echo -e "\n${DIM}stopped${RST}"; exit 0' INT TERM
 while true; do
   sleep 0.2
   cur=$(get_max_mtime)
