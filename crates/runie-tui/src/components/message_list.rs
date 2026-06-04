@@ -265,7 +265,7 @@ fn render_message_list(
         if idx < visible_count.saturating_sub(1) && row < max_rows {
             let current_item = visible_items[absolute_idx];
             let next_item = visible_items[absolute_idx + 1];
-            row += render::render_item_separator(area, row, buf, colors.text_muted, current_item, next_item);
+            row += render::item_separator_height(current_item, next_item);
         }
     }
     row

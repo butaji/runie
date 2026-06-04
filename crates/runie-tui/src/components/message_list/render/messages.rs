@@ -19,14 +19,11 @@ use crate::components::message_list::feed::FeedItem;
 /// - SystemNotice → UserMessage: 2 blank lines
 /// - AssistantMessage → Separator: 1 blank line (grouped together)
 /// - All other transitions: 2 blank lines
-pub fn render_item_separator(
-    _area: Rect,
-    _row: u16,
-    _buf: &mut Buffer,
-    _color: Color,
-    current_item: &FeedItem,
-    next_item: &FeedItem,
-) -> u16 {
+/// Compute the row height to reserve for a separator between two feed
+/// items. (Caller is responsible for actually drawing the separator
+/// line on the row -- this function just decides how much vertical
+/// space to set aside.)
+pub fn item_separator_height(current_item: &FeedItem, next_item: &FeedItem) -> u16 {
     match (current_item, next_item) {
         (FeedItem::AssistantMessage { .. }, FeedItem::Separator { .. }) => 1,
         (FeedItem::SystemNotice { .. }, _) => 2,

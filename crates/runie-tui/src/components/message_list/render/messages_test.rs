@@ -13,7 +13,7 @@ use crate::components::message_list::PlanStatus;
 
 use super::messages::{
     format_transfer_bytes, render_edit_msg, render_empty_state, render_error_msg,
-    render_interrupt_msg, render_item_separator, render_plan_step_msg, render_rewind_msg,
+    render_interrupt_msg, render_plan_step_msg, render_rewind_msg,
     render_separator, render_system_msg, render_thought_msg, render_tool_complete_msg,
     render_tool_running_msg,
 };

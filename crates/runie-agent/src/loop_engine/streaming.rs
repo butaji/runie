@@ -227,14 +227,18 @@ pub(crate) async fn process_stream_event<M: TryFrom<AgentEvent> + Send + 'static
             tracing::error!("[ACTOR:AgentLoop] Error: {}", message);
             assistant_message.error_message = Some(message);
         }
-        LlmEvent::Usage { prompt_tokens, completion_tokens, total_tokens: _ } => {
+        LlmEvent::Usage { prompt_tokens, completion_tokens, total_tokens } => {
+            // Use the server-reported total_tokens as-is. Previously this
+            // overwrote it with prompt+completion, which silently
+            // discarded cached / reasoning token accounting from providers
+            // that report a different total.
             send_event(msg_tx, AgentEvent::TokenUsage {
                 prompt_tokens,
                 completion_tokens,
-                total_tokens: prompt_tokens + completion_tokens,
+                total_tokens,
                 context_window: 128_000,
             }).await;
-            tracing::debug!("[ACTOR:AgentLoop] Usage: {} prompt, {} completion tokens", prompt_tokens, completion_tokens);
+            tracing::debug!("[ACTOR:AgentLoop] Usage: {} prompt, {} completion, {} total tokens", prompt_tokens, completion_tokens, total_tokens);
         }
         LlmEvent::ToolExecutionStart { tool_call_id, tool_name, args, .. } => {
             let tool_args_str = args.to_string();
