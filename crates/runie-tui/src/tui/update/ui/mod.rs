@@ -201,12 +201,16 @@ fn handle_toggle_thoughts(state: &mut AppState) -> Vec<UiCmd> {
 }
 
 fn handle_extensions_modal(state: &mut AppState, msg: &crate::tui::state::Msg) -> Vec<UiCmd> {
-    let modal = state.extensions_modal.as_mut();
-    if modal.is_none() { return vec![]; }
-    let modal = modal.unwrap();
     use crate::tui::state::Msg;
-    if matches!(msg, Msg::CloseExtensionsModal) { return ext_close(state); }
-    if matches!(msg, Msg::OpenExtensionsModal) { return ext_open(); }
+    if matches!(msg, Msg::OpenExtensionsModal) {
+        return ext_open();
+    }
+    let Some(modal) = state.extensions_modal.as_mut() else {
+        return vec![];
+    };
+    if matches!(msg, Msg::CloseExtensionsModal) {
+        return ext_close(state);
+    }
     if matches!(msg, Msg::ExtensionsModalUp | Msg::ExtensionsModalDown) { return ext_nav(modal, msg); }
     if matches!(msg, Msg::ExtensionsModalSelect) { return ext_select(); }
     if matches!(msg, Msg::ExtensionsModalLeft | Msg::ExtensionsModalRight) { return ext_tab(modal, msg); }
