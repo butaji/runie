@@ -280,6 +280,13 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
     // indicator stop showing once the assistant finishes, which
     // matches Grok's behavior in 05_input_typing.)
     state.agent_running = false;
+    // Clear the "Thinking" status so the global_tags line stops showing
+    // it. on_agent_end clears it again at turn end; this is needed for
+    // the case where the assistant finishes its message but the agent
+    // is still working (e.g. executing a tool that follows the text).
+    state.status_header = None;
+    state.status_details = None;
+    state.status_start_time = None;
     // Calculate and record thinking duration (text is dropped --
     // state.thinking = None below reclaims the full struct)
     let duration = if let Some(ref mut thinking) = state.thinking {
