@@ -1,9 +1,10 @@
 //! Layout constants for spacing, dimensions, and sizing.
 
-/// Horizontal padding (area.x + 2)
+/// Horizontal padding applied to the main message-list area.
+/// 2 = 2 cells from the screen edge on each side, matching the
+///     Grok top-bar alignment.
 pub const PADDING_X: u16 = 2;
 
-/// Vertical padding (area.y + 1)
 pub const PADDING_Y: u16 = 1;
 
 /// Total width padding (2 * PADDING_X)
