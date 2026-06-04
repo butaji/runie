@@ -16,9 +16,9 @@ use crate::tui::view_models::ViewModels;
 use crate::tui::AppState;
 
 mod layout;
-mod modes;
-mod overlays;
-mod helpers;
+pub mod modes;
+pub mod overlays;
+pub mod helpers;
 
 // Import from sibling modules at pipe/ level
 use super::render_content;
@@ -68,12 +68,12 @@ impl RenderPipe {
         Ok(())
     }
 
-    fn input_bar_height(state: &AppState) -> u16 {
+    pub fn input_bar_height(state: &AppState) -> u16 {
         // No attachments yet in pipe render path
         crate::components::input_bar::input_bar_height(&state.textarea, false)
     }
 
-    fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 6] {
+    pub fn layout_main(padded: Rect, show_status: bool, input_h: u16) -> [Rect; 6] {
         use ratatui::layout::{Constraint, Layout};
         let constraints = [
             Constraint::Length(3),        // topbar + 2 blank lines padding
@@ -86,7 +86,7 @@ impl RenderPipe {
         Layout::vertical(constraints).areas(padded)
     }
 
-    fn render_onboarding_mode(
+    pub fn render_onboarding_mode(
         buf: &mut Buffer,
         area: Rect,
         state: &AppState,
@@ -100,7 +100,7 @@ impl RenderPipe {
         render_onboarding_mode(buf, area, state, vms, main_areas, show_status_bar, theme, theme_colors)
     }
 
-    fn render_home_screen_mode(
+    pub fn render_home_screen_mode(
         buf: &mut Buffer,
         area: Rect,
         state: &AppState,
@@ -113,7 +113,7 @@ impl RenderPipe {
         render_home_screen_mode(buf, area, state, vms, main_areas, theme, theme_colors)
     }
 
-    fn render_normal_mode(
+    pub fn render_normal_mode(
         buf: &mut Buffer,
         area: Rect,
         state: &AppState,

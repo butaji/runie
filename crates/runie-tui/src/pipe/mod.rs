@@ -1,7 +1,7 @@
 //! Pipe modules.
 
 mod input_msg;
-mod render;
+pub mod render;
 mod render_content;
 mod render_input;
 mod view_model;

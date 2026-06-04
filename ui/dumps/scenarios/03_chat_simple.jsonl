@@ -1,0 +1,26 @@
+# Scenario: 03_chat_simple
+# Mirrors ui/dumps/grok/03_chat.txt
+# A single user message, a thinking block, an assistant response.
+# 80x24 terminal, time-stamped in the dump as 9:45 PM.
+{"__meta__": true, "width": 80, "height": 24}
+# Top bar: feature branch + repo path
+{"ui": true, "kind": "git", "value": {"repo": "runie", "branch": "feat/grok-redesign", "path": "~/Code/GitHub/runie"}}
+# Switch to chat mode and hide home
+{"ui": true, "kind": "home_visible", "value": false}
+{"ui": true, "kind": "mode", "value": "chat"}
+# Token usage: 20K / 512K
+{"type": "TokenUsage", "prompt_tokens": 0, "completion_tokens": 20000, "total_tokens": 20000, "context_window": 512000}
+# User message
+{"type": "Message", "role": "user", "content": "hello"}
+# Thinking block
+{"type": "ThinkingStart", "turn": 0}
+{"type": "ThinkingUpdate", "delta": "The user said hello. I'll respond briefly.", "total_len": 41, "turn": 0}
+{"type": "ThinkingEnd", "duration_ms": 1200, "turn": 0}
+# Assistant message
+{"type": "MessageStart", "message": {"role": "assistant", "content": [], "timestamp": 0, "usage": null, "stop_reason": null, "error_message": null, "tool_calls": []}, "turn": 0}
+{"type": "MessageUpdate", "message": {"role": "assistant", "content": [], "timestamp": 0, "usage": null, "stop_reason": null, "error_message": null, "tool_calls": []}, "delta": "Hello. How can I help with the runie project?", "replace": true, "turn": 0}
+{"type": "MessageEnd", "message": {"role": "assistant", "content": [{"type": "Text", "text": "Hello. How can I help with the runie project?"}], "timestamp": 0, "usage": null, "stop_reason": null, "error_message": null, "tool_calls": []}, "turn": 0}
+# Turn end — finalizes
+{"type": "TurnEnd", "turn": 0, "message_count": 2, "tool_results_count": 0, "token_usage": {"input": 20000, "output": 0, "cache_read": 0, "cache_write": 0, "total_tokens": 20000}}
+# Agent end
+{"type": "AgentEnd", "messages": [], "total_turns": 1, "final_token_usage": {"input": 20000, "output": 0, "cache_read": 0, "cache_write": 0, "total_tokens": 20000}}
