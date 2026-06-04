@@ -12,4 +12,5 @@
 {"type":"AgentEnd","messages":[],"total_turns":1,"final_token_usage":{"input":29,"output":101,"cache_read":0,"cache_write":0,"total_tokens":130}}
 {"type":"MessageEnd","message":{"role":"assistant","content":[],"timestamp":0,"usage":null,"stop_reason":null,"error_message":null,"tool_calls":[]},"turn":0}
 {"ui": true, "kind": "thought_duration", "value": 1.2}
+{"ui": true, "kind": "turn_complete", "value": 3.6}
 {"ui": true, "kind": "session_tokens", "value": {"total": 130}}
