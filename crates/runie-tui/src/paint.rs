@@ -79,11 +79,15 @@ pub struct Text {
     /// When true, the text wraps and grows the column height. When
     /// false (default), it's a single line and overflow is clipped.
     pub wrap: bool,
+    /// Right-edge inset. `0` = flush with area right (default). A
+    /// positive value (e.g. `2`) leaves that many cells of empty
+    /// space on the right of the text.
+    pub right_inset: u16,
 }
 
 impl Text {
     pub fn new<S: Into<String>>(s: S) -> Self {
-        Text { content: s.into(), style: StyleRef::Primary, wrap: false }
+        Text { content: s.into(), style: StyleRef::Primary, wrap: false, right_inset: 0 }
     }
     pub fn primary(mut self) -> Self { self.style = StyleRef::Primary; self }
     pub fn secondary(mut self) -> Self { self.style = StyleRef::Secondary; self }
@@ -91,6 +95,10 @@ impl Text {
     pub fn muted(mut self) -> Self { self.style = StyleRef::Muted; self }
     pub fn accent(mut self) -> Self { self.style = StyleRef::Accent; self }
     pub fn wrap(mut self) -> Self { self.wrap = true; self }
+    /// Position this text with `n` cells of empty space on its right
+    /// edge. Used for right-aligned elements (e.g. timestamps) that
+    /// need a gap before the screen edge.
+    pub fn right_inset(mut self, n: u16) -> Self { self.right_inset = n; self }
     pub fn custom(mut self, style: Style) -> Self {
         self.style = StyleRef::Custom(style);
         self
@@ -276,11 +284,29 @@ fn paint_text(t: &Text, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
             y += 1;
         }
     } else {
-        // Single line, clipped to area.width.
-        let max = area.width as usize;
-        let clipped: String = t.content.chars().take(max).collect();
+        // Single line, clipped to area.width. Default placement
+        // starts at `area.x`. When `right_inset > 0`, the text is
+        // shifted right so its right edge sits `right_inset` cells
+        // before the area's right edge.
+        let text_w = if t.right_inset > 0 {
+            t.content
+                .chars()
+                .count()
+                .min(area.width.saturating_sub(t.right_inset) as usize)
+        } else {
+            t.content
+                .chars()
+                .count()
+                .min(area.width as usize)
+        };
+        let x = if t.right_inset > 0 {
+            area.x + (area.width - t.right_inset - text_w as u16)
+        } else {
+            area.x
+        };
+        let clipped: String = t.content.chars().take(text_w).collect();
         let line = Line::from(Span::styled(clipped, style));
-        buf.set_line(area.x, area.y, &line, area.width);
+        buf.set_line(x, area.y, &line, text_w as u16);
     }
 }
 

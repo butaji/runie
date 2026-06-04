@@ -50,7 +50,7 @@ struct Dspec {
 #[derive(serde::Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum Dnode {
-    Text { content: String, #[serde(default)] style: Option<String> },
+    Text { content: String, #[serde(default)] style: Option<String>, #[serde(default)] right_inset: u16 },
     Row {
         #[serde(default)] gap: u16,
         #[serde(default)] fill_trailing: bool,
@@ -70,9 +70,10 @@ enum Dnode {
 impl Dnode {
     fn resolve(&self) -> Node {
         match self {
-            Dnode::Text { content, style } => {
+            Dnode::Text { content, style, right_inset } => {
                 let mut t = text(content.clone());
                 if let Some(s) = style { t = apply_style(t, s); }
+                if *right_inset > 0 { t = t.right_inset(*right_inset); }
                 Node::T(t)
             }
             Dnode::Row { gap, fill_trailing, children } => {
