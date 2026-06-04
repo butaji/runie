@@ -66,6 +66,10 @@ enum Dnode {
     If { cond: bool, then: Box<Dnode> },
     Blank { style: Option<String> },
     RightGap { n: u16 },
+    /// A horizontal fill with right-aligned text — replaces
+    /// `{fill_trailing: true, children: [..., {fill}, text]}`.
+    /// `gap` is the number of empty cells between the fill and the text.
+    HFill { text: String, gap: u16, style: Option<String> },
 }
 
 impl Dnode {
@@ -104,6 +108,11 @@ impl Dnode {
                 Node::Blank { bg: s }
             }
             Dnode::RightGap { n } => Node::RightGap { n: *n },
+            Dnode::HFill { text, gap, style } => {
+                let mut t = runie_tui::paint::text(text.clone());
+                if let Some(s) = style { t = apply_style(t, s); }
+                Node::HFillText { text: t, gap: *gap }
+            }
         }
     }
 }
