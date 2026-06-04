@@ -43,32 +43,39 @@
         "type": "blank"
       },
       {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "     \u276f",
-            "style": "secondary"
-          },
-          {
-            "type": "text",
-            "content": " "
-          },
-          {
-            "type": "text",
-            "content": "test",
-            "style": "primary"
-          },
-          {
-            "type": "fill"
-          },
-          {
-            "type": "text",
-            "content": "4:10 PM",
-            "style": "dim"
-          }
-        ]
+        "type": "pad",
+        "top": 0,
+        "right": 2,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "     \u276f",
+              "style": "secondary"
+            },
+            {
+              "type": "text",
+              "content": " "
+            },
+            {
+              "type": "text",
+              "content": "test",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "4:10 PM",
+              "style": "dim"
+            }
+          ]
+        }
       },
       {
         "type": "blank"
@@ -77,14 +84,28 @@
         "type": "blank"
       },
       {
-        "type": "text",
-        "content": "     \u25c6 Thought for 0.1s",
-        "style": "muted"
+        "type": "pad",
+        "top": 0,
+        "right": 2,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "text",
+          "content": "     \u25c6 Thought for 0.1s",
+          "style": "muted"
+        }
       },
       {
-        "type": "text",
-        "content": "     \u25c6 List .",
-        "style": "primary"
+        "type": "pad",
+        "top": 0,
+        "right": 2,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "text",
+          "content": "     \u25c6 List .",
+          "style": "primary"
+        }
       },
       {
         "type": "blank"

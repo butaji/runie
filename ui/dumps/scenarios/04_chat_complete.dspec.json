@@ -43,32 +43,39 @@
         "type": "blank"
       },
       {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "     \u276f",
-            "style": "secondary"
-          },
-          {
-            "type": "text",
-            "content": " "
-          },
-          {
-            "type": "text",
-            "content": "list the files in this directory",
-            "style": "primary"
-          },
-          {
-            "type": "fill"
-          },
-          {
-            "type": "text",
-            "content": "4:37 PM",
-            "style": "dim"
-          }
-        ]
+        "type": "pad",
+        "top": 0,
+        "right": 4,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "     \u276f",
+              "style": "secondary"
+            },
+            {
+              "type": "text",
+              "content": " "
+            },
+            {
+              "type": "text",
+              "content": "list the files in this directory",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "4:37 PM",
+              "style": "dim"
+            }
+          ]
+        }
       },
       {
         "type": "blank"

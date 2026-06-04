@@ -37,23 +37,30 @@
         "type": "blank"
       },
       {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "                      New worktree",
-            "style": "primary"
-          },
-          {
-            "type": "fill"
-          },
-          {
-            "type": "text",
-            "content": "ctrl-w",
-            "style": "dim"
-          }
-        ]
+        "type": "pad",
+        "top": 0,
+        "right": 19,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "                      New worktree",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "ctrl-w",
+              "style": "dim"
+            }
+          ]
+        }
       },
       {
         "type": "row",
@@ -67,23 +74,30 @@
         ]
       },
       {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "                      Resume session",
-            "style": "primary"
-          },
-          {
-            "type": "fill"
-          },
-          {
-            "type": "text",
-            "content": "ctrl-s",
-            "style": "dim"
-          }
-        ]
+        "type": "pad",
+        "top": 0,
+        "right": 19,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "                      Resume session",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "ctrl-s",
+              "style": "dim"
+            }
+          ]
+        }
       },
       {
         "type": "row",
@@ -97,23 +111,30 @@
         ]
       },
       {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "                      Quit",
-            "style": "primary"
-          },
-          {
-            "type": "fill"
-          },
-          {
-            "type": "text",
-            "content": "ctrl-q",
-            "style": "dim"
-          }
-        ]
+        "type": "pad",
+        "top": 0,
+        "right": 19,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "                      Quit",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "ctrl-q",
+              "style": "dim"
+            }
+          ]
+        }
       },
       {
         "type": "blank"
