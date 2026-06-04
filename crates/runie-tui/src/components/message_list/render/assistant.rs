@@ -284,11 +284,16 @@ pub fn render_assistant_msg(
         }
     }
 
-    // Render "Turn completed in Xs" on the NEXT line (only when turn is done, not streaming)
+    // Render "Turn completed in Xs" on the NEXT line (only when turn is done, not streaming).
+    // Add a leading blank row above the line to match the Grok spec
+    // (1 row gap between the assistant text and the "Turn completed" footer).
     if !agent_running {
         if let Some(elapsed) = turn_complete {
+            if row + rendered + 1 < max_rows {
+                rendered += 1; // skip a row for the visual gap
+            }
             if row + rendered < max_rows {
-                let complete_text = MessageRegistry::turn_completed(elapsed as f32);
+                let complete_text = MessageRegistry::turn_completed(elapsed);
                 let line = Line::raw(complete_text).style(Style::default().fg(text_muted));
                 buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
                 rendered += 1;

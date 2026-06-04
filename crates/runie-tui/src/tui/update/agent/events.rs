@@ -158,7 +158,7 @@ fn log_plugin_actions(state: &AppState, event: runie_ext::PluginEvent) {
 fn handle_lifecycle_event(state: &mut AppState, event: AgentEvent) {
     match event {
         AgentEvent::AgentEnd { .. } => on_agent_end(state),
-        AgentEvent::TurnEnd { .. } => on_turn_end(state),
+        AgentEvent::TurnEnd { turn_duration_ms, .. } => on_turn_end(state, turn_duration_ms),
         _ => {}
     }
 }
@@ -322,7 +322,8 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
 }
 
 /// Handle turn end - add separator with runtime metrics
-fn on_turn_end(state: &mut AppState) {
+fn on_turn_end(state: &mut AppState, turn_duration_ms: Option<u64>) {
+    let turn_duration_ms = turn_duration_ms.filter(|&ms| ms > 0);
     // Use wall-clock elapsed if available, otherwise fall back to the
     // stashed last_turn_duration_secs (set by on_thinking_end during
     // replay/tests where no submit() happened).
@@ -332,14 +333,17 @@ fn on_turn_end(state: &mut AppState) {
             .as_secs()
             .max(state.last_turn_duration_secs.unwrap_or(0))
     } else {
-        // Replay path: use the f32 replay_turn_duration_secs (sub-second
-        // precision) so a 1.2s thinking time shows as 1.2s, not 1s.
-        // Floor (not round) so 3.6s -> 3 (matches "{:.1}s" render).
-        state
-            .replay_turn_duration_secs
-            .map(|d| d.floor() as u64)
-            .or(state.last_turn_duration_secs)
-            .unwrap_or(0)
+        // Replay path: scenario may carry an explicit `turn_duration_ms`
+        // that overrides wall-clock entirely (e.g., when the
+        // "Turn completed" footer should show 3.6s for a 1.2s think).
+        if let Some(override_ms) = turn_duration_ms {
+            (override_ms / 1000).max(1)
+        } else {
+            state
+                .replay_turn_duration_secs
+                .map(|s| s as u64)
+                .unwrap_or(1)
+        }
     };
     eprintln!(
         "[DEBUG on_turn_end] agent_start_time={:?}, last_turn_duration_secs={:?}, replay_turn_duration_secs={:?}, elapsed={}",
@@ -358,26 +362,31 @@ fn on_turn_end(state: &mut AppState) {
 
     // Set turn_duration on the last assistant message. Preserve the
     // f32 sub-second precision (3.6s, 1.2s) when a scenario or test
-    // supplied it via `replay_turn_duration_secs`. Otherwise fall back
-    // to the u64 wall-clock elapsed (truncated to seconds).
-    let turn_dur = if state.agent_start_time.is_some() {
+    // supplied it via `replay_turn_duration_secs` or via the explicit
+    // `turn_duration_ms` override on the TurnEnd event. Otherwise fall
+    // back to the u64 wall-clock elapsed (truncated to seconds).
+    let turn_dur_f32 = if let Some(ms) = turn_duration_ms {
+        // Highest-priority: scenario author explicit override
+        ms as f32 / 1000.0
+    } else if state.agent_start_time.is_some() {
         elapsed as f32
     } else {
         // Replay path: pass through the original f32 (with 0.1s
         // precision) so the "{:.1}s" formatter shows 3.6, not 3.0.
         state.replay_turn_duration_secs.unwrap_or(elapsed as f32)
     };
+    let turn_dur_secs = turn_dur_f32 as u64;
     if let Some(MessageItem::Assistant {
         turn_duration: ref mut td,
         ..
     }) = state.messages.last_mut()
     {
-        *td = Some(turn_dur);
+        *td = Some(turn_dur_f32);
     }
 
     // Add separator to feed with grok-style metrics
     state.messages.push(MessageItem::Separator {
-        elapsed_secs: elapsed,
+        elapsed_secs: turn_dur_secs,
         tool_calls,
         tokens_used: Some(state.session_token_usage.total_tokens),
     });
