@@ -94,8 +94,8 @@ fn build_global_tags(state: &AppState) -> GlobalTagsViewModel {
 fn build_message_list(state: &AppState) -> MessageListViewModel {
     let wrap_cache = WrapCache::new();
     // Pass streaming thinking content if agent is running and thinking exists
-    let streaming_think_content = if state.agent_running && state.thinking.is_some() {
-        Some(state.thinking.as_ref().unwrap().text.clone())
+    let streaming_think_content = if state.agent_running {
+        state.thinking.as_ref().map(|t| t.text.clone())
     } else {
         None
     };
