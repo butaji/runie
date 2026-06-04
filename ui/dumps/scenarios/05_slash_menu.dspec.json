@@ -1,0 +1,147 @@
+{
+  "width": 80,
+  "height": 24,
+  "mock_timestamp": "4:37 PM",
+  "root": {
+    "type": "col",
+    "children": [
+      { "type": "blank" },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  \ue0a0 feat/grok-redesign", "style": "accent" },
+          { "type": "text", "content": " " },
+          { "type": "text", "content": "~/Code/GitHub/runie", "style": "secondary" },
+          { "type": "fill" },
+          { "type": "text", "content": "│ 22K / 512K │", "style": "dim" }
+        ]
+      },
+      { "type": "blank" },
+      { "type": "blank" },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "     ❯", "style": "secondary" },
+          { "type": "text", "content": " " },
+          { "type": "text", "content": "list the files in this directory", "style": "primary" },
+          { "type": "fill" },
+          { "type": "text", "content": "4:37 PM", "style": "dim" }
+        ]
+      },
+      { "type": "blank" },
+      { "type": "blank" },
+      { "type": "text", "content": "     • src/ — Top-level source (lib.rs)", "style": "primary" },
+      { "type": "text", "content": "     • target/ — Build artifacts (debug)", "style": "primary" },
+      { "type": "text", "content": "     • tmp_config/ — Temporary config / runtime data", "style": "primary" },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  ───────────────────────────────────────────────────────────────────────────────" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "     ❯ /quit", "style": "accent" },
+          { "type": "text", "content": "                             " },
+          { "type": "text", "content": "Quit the application", "style": "primary" },
+          { "type": "right_gap", "n": 17 },
+          { "type": "text", "content": "█", "style": "primary" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "       /home", "style": "accent" },
+          { "type": "text", "content": "                             " },
+          { "type": "text", "content": "Return to the welcome screen", "style": "primary" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "       /new", "style": "accent" },
+          { "type": "text", "content": "                              " },
+          { "type": "text", "content": "Start a new session", "style": "primary" },
+          { "type": "right_gap", "n": 17 },
+          { "type": "text", "content": "█", "style": "primary" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "       /fork", "style": "accent" },
+          { "type": "text", "content": "                             " },
+          { "type": "text", "content": "Branch the current session into a", "style": "primary" },
+          { "type": "right_gap", "n": 17 },
+          { "type": "text", "content": "█", "style": "primary" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": " " },
+          { "type": "text", "content": "                                " },
+          { "type": "text", "content": "peer agent", "style": "primary" },
+          { "type": "right_gap", "n": 17 },
+          { "type": "text", "content": "█", "style": "primary" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "       /compact", "style": "accent" },
+          { "type": "text", "content": "                          " },
+          { "type": "text", "content": "Compact conversation history", "style": "primary" },
+          { "type": "right_gap", "n": 17 },
+          { "type": "text", "content": "█", "style": "primary" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  ────────────────────────────────────────────────────────────────────────────────" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  ╭──────────────────────────────────────────────────────────────────────────╮" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  │ ❯ /                                                                      │" }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  ╰───────────────────────────────────────────────────────────── Grok Build ─╯" }
+        ]
+      },
+      { "type": "blank" },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          { "type": "text", "content": "  Enter:send  │  Shift+Tab:mode  │  Ctrl+.:shortcuts", "style": "dim" }
+        ]
+      }
+    ]
+  }
+}

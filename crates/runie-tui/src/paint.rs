@@ -371,7 +371,7 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let child_area = if needs_full_width {
             Rect { x, y: area.y, width: (area.x + area.width).saturating_sub(x), height: area.height }
         } else if matches!(c, Node::Fill) || matches!(c, Node::T(_)) {
-            Rect { x, y: area.y, width: child_w.min(area.x + area.width - x), height: area.height }
+            Rect { x, y: area.y, width: child_w.min(area.x.saturating_add(area.width).saturating_sub(x)), height: area.height }
         } else {
             // Complex child gets the remaining width.
             let rem = area.x + area.width - x;
