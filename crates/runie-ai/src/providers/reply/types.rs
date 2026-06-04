@@ -78,39 +78,3 @@ pub struct RecordedCompletionDetails {
     #[serde(rename = "reasoning_tokens")]
     pub reasoning_tokens: Option<usize>,
 }
-
-/// Routing keywords for selecting recorded response
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Scenario {
-    Simple,
-    Tool,
-    Stream,
-    StreamTool,
-    Error,
-    Context,
-    LongReasoning,
-}
-
-impl Scenario {
-    /// Determine scenario from user input message.
-    pub fn from_input(input: &str) -> Self {
-        let lower = &input.to_lowercase();
-        for (keywords, scenario) in SCENARIO_KEYWORDS {
-            if keywords.iter().any(|kw| lower.contains(kw)) {
-                return *scenario;
-            }
-        }
-        Scenario::Simple
-    }
-}
-
-type ScenarioKeywords = (&'static [&'static str], Scenario);
-
-const SCENARIO_KEYWORDS: &[ScenarioKeywords] = &[
-    (&["calculate", "tool"], Scenario::Tool),
-    (&["stream", "count"], Scenario::Stream),
-    (&["bash", "ls", "list"], Scenario::StreamTool),
-    (&["error", "fail"], Scenario::Error),
-    (&["context", "memory"], Scenario::Context),
-    (&["long", "peanut", "explain"], Scenario::LongReasoning),
-];

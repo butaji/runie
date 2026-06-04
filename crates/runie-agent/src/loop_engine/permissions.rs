@@ -8,7 +8,11 @@ use tokio::sync::mpsc;
 use tokio::time::timeout;
 
 /// Request permission for a tool call, waiting for user decision.
-/// Returns true if the tool should execute, false otherwise.
+/// Returns `(should_execute, allow_always)`:
+/// - `should_execute` = true if the user allowed the tool
+/// - `allow_always` = true if the user picked "Always Allow" -- the
+///   caller should add the tool name to its allowed_tools set so
+///   subsequent calls of the same tool skip the modal.
 pub(crate) async fn request_permission<M: TryFrom<AgentEvent> + Send + 'static>(
     tool_call_id: &str,
     tool_name: &str,
@@ -18,7 +22,7 @@ pub(crate) async fn request_permission<M: TryFrom<AgentEvent> + Send + 'static>(
     turn: usize,
     permission_state: Arc<PermissionState>,
     msg_tx: &mpsc::Sender<M>,
-) -> bool {
+) -> (bool, bool) {
     // Send permission request
     send_permission_request(
         msg_tx,
@@ -61,31 +65,34 @@ pub(crate) async fn send_permission_request<M: TryFrom<AgentEvent> + Send + 'sta
 }
 
 /// Handle the permission decision.
-/// Returns true if tool should execute, false otherwise.
+/// Returns `(should_execute, allow_always)`:
+/// - `should_execute` = true if the user allowed the tool
+/// - `allow_always` = true if the user picked "Always Allow" -- the
+///   caller should add the tool name to its allowed_tools set so
+///   subsequent calls of the same tool skip the modal.
 pub(crate) async fn handle_permission_decision<M: TryFrom<AgentEvent> + Send + 'static>(
     decision: Result<Option<PermissionDecision>, tokio::time::error::Elapsed>,
     tool_call_id: &str,
     _tool_name: &str,
     _tool_args: &str,
     _msg_tx: &mpsc::Sender<M>,
-) -> bool {
+) -> (bool, bool) {
     match decision {
         Ok(Some(PermissionDecision::Allow { tool_call_id: ref tid, .. })) if tid == tool_call_id => {
-            true
+            (true, false)
         }
         Ok(Some(PermissionDecision::AllowAlways { tool_call_id: ref tid, .. })) if tid == tool_call_id => {
-            // Cache the tool name for future auto-allow - caller should handle this
-            true
+            (true, true)
         }
         Ok(Some(PermissionDecision::Skip { tool_call_id: ref tid, .. })) if tid == tool_call_id => {
-            false // Skip this tool but continue with others
+            (false, false) // Skip this tool but continue with others
         }
         Ok(Some(PermissionDecision::Deny { .. })) => {
-            false
+            (false, false)
         }
         _ => {
             // Timeout, mismatch, or deny
-            false
+            (false, false)
         }
     }
 }

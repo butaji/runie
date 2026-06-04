@@ -33,7 +33,7 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
         config.max_turns);
 
     let mut messages = initial_messages;
-    let allowed_tools: HashSet<String> = HashSet::new();
+    let mut allowed_tools: HashSet<String> = HashSet::new();
     let context_window = 128_000;
 
     let tool_schemas: Vec<ToolSchema> = tools.iter().map(|t| ToolSchema {
@@ -66,14 +66,13 @@ pub async fn run_agent_loop<M: TryFrom<AgentEvent> + Send + 'static>(
             turn_count,
             &msg_tx,
             &tools,
-            &allowed_tools,
+            &mut allowed_tools,
             permission_state.clone(),
             registry.clone(),
             hooks.clone(),
-            &mut allowed_tools.clone(),
             context_window,
-        ).await;
-
+        )
+        .await;
         if !should_continue {
             break;
         }
@@ -134,11 +133,10 @@ async fn execute_turn<M: TryFrom<AgentEvent> + Send + 'static>(
     turn_count: usize,
     msg_tx: &mpsc::Sender<M>,
     tools: &[AgentTool],
-    allowed_tools: &HashSet<String>,
+    allowed_tools: &mut HashSet<String>,
     permission_state: Arc<PermissionState>,
     registry: Arc<ToolRegistry>,
     hooks: Vec<Arc<dyn Hook>>,
-    allowed_tools_mut: &mut HashSet<String>,
     context_window: usize,
 ) -> bool {
     let stream = match start_chat_with_retry(provider.clone(), llm_messages.clone(), tool_schemas.to_vec()).await {
@@ -176,7 +174,6 @@ async fn execute_turn<M: TryFrom<AgentEvent> + Send + 'static>(
         permission_state,
         registry,
         hooks,
-        allowed_tools_mut,
         context_window,
     ).await;
 
