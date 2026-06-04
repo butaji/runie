@@ -65,6 +65,7 @@ enum Dnode {
     Fill,
     If { cond: bool, then: Box<Dnode> },
     Blank { style: Option<String> },
+    RightGap { n: u16 },
 }
 
 impl Dnode {
@@ -102,6 +103,7 @@ impl Dnode {
                 let s = style.as_deref().map(parse_style).unwrap_or(StyleRef::BgBase);
                 Node::Blank { bg: s }
             }
+            Dnode::RightGap { n } => Node::RightGap { n: *n },
         }
     }
 }
