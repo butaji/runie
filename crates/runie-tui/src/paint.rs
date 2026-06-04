@@ -143,6 +143,11 @@ pub enum Node {
     /// A gap of `n` cells on the right of a row. Used to leave
     /// trailing empty space before right-aligned elements.
     RightGap { n: u16 },
+    /// A horizontal fill with a right-aligned text. Fills remaining
+    /// space with bg, then places `text` at the right edge with `n`
+    /// cells of gap. This is the most common pattern in TUI rows
+    /// (e.g. top bar with right-aligned chip).
+    HFillText { text: Text, gap: u16 },
     /// A conditional node — rendered only if `cond` is true. Useful
     /// for mode-conditional UI (e.g. on home screen, hide X).
     If {
@@ -259,8 +264,26 @@ pub fn paint(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         Node::Pad(p) => paint_pad(p, area, buf, theme),
         Node::Fill => { /* parent already expanded the area */ },
         Node::Blank { bg } => paint_blank(area, buf, bg.resolve(theme)),
-        Node::RightGap { n } => {
+        Node::RightGap { n: _ } => {
             // Reserved empty cells at the end of a row.
+        }
+        Node::HFillText { text, gap } => {
+            // Fill remaining width, then place text at the right
+            // edge with `gap` cells of empty space before it.
+            let text_w = text.width() as u16;
+            let total = text_w + gap;
+            if total <= area.width {
+                let fill_w = area.width - total;
+                if fill_w > 0 {
+                    let fill_area = Rect { x: area.x, y: area.y, width: fill_w, height: area.height };
+                    paint_blank(fill_area, buf, StyleRef::BgBase.resolve(theme));
+                }
+                let text_area = Rect { x: area.x + fill_w + gap, y: area.y, width: text_w, height: area.height };
+                paint_text(text, text_area, buf, theme);
+            } else {
+                // Text wider than area — just paint at area.x
+                paint_text(text, area, buf, theme);
+            }
         }
         Node::If { cond: true, then } => paint(then, area, buf, theme),
         Node::If { cond: false, .. } => paint_blank(area, buf, StyleRef::BgBase.resolve(theme)),
