@@ -5,7 +5,3 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-
-# Generic Apple fallback
-[target.apple-darwin]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
