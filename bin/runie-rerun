@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# `runie-rerun <scenario>` — auto-rebuild on save + re-render + diff.
+#
+# The REPL loop for TUI development:
+#   1. Edit a render file in your editor
+#   2. Save
+#   3. Within 1-2s, the new render + diff appears in this terminal
+#   4. Repeat
+#
+# Polls the source files every 200ms. Skips rebuild when the timestamps
+# are unchanged. Uses lld (configured in .cargo/config.toml) for fast
+# linking on macOS.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+NAME="${1:?usage: runie-rerun <scenario-name-or-path>}"
+SCENARIO="$NAME"
+[ ! -f "$SCENARIO" ] && SCENARIO="ui/dumps/scenarios/${NAME%.jsonl}.jsonl"
+[ ! -f "$SCENARIO" ] && { echo "scenario not found: $NAME" >&2; exit 2; }
+
+# Auto-find matching Grok dump
+DUMP=""
+base="$(basename "$SCENARIO" .jsonl)"
+base="${base%_simple}"; base="${base%_basic}"
+for c in \
+  "ui/dumps/grok/${base}.txt" \
+  "ui/dumps/grok/${base}_complete.txt" \
+  "ui/dumps/grok/${base}_view.txt" \
+  "ui/dumps/grok/${base}_user_msg.txt" \
+  "ui/dumps/grok/${base}_clean.txt" \
+  "ui/dumps/grok/${base}_chat.txt" \
+  "ui/dumps/grok/${base}_tools.txt" \
+  "ui/dumps/grok/${base}_input_focused.txt"
+do
+  [ -f "$c" ] && DUMP="$c" && break
+done
+
+# Update last-scenario so the bacon `replay` job tracks it
+echo "$SCENARIO" > .hermes/plans/last-scenario.txt
+
+WATCH_PATHS=(
+  "crates/runie-tui/src"
+  "crates/runie-tui/src/bin/scenario_replay.rs"
+  "ui/dumps/scenarios"
+)
+
+# ANSI colors
+BOLD='\033[1m'
+DIM='\033[2m'
+RED='\033[31m'
+GRN='\033[32m'
+YEL='\033[33m'
+CYA='\033[36m'
+RST='\033[0m'
+
+# Compute the max mtime (epoch seconds) across all watched files
+get_max_mtime() {
+  local max=0
+  for p in "${WATCH_PATHS[@]}"; do
+    if [ -d "$p" ]; then
+      m=$(find "$p" -name '*.rs' -type f -printf '%T@\n' 2>/dev/null | sort -nr | head -1)
+      [ -n "$m" ] && m=${m%.*} && [ "$m" -gt "$max" ] && max=$m
+    elif [ -f "$p" ]; then
+      m=$(stat -f %m "$p" 2>/dev/null)
+      [ -n "$m" ] && [ "$m" -gt "$max" ] && max=$m
+    fi
+  done
+  echo "$max"
+}
+
+run_once() {
+  # Always rebuild — cargo's incremental is smart enough to skip if no
+  # change. ~1.2s when no change, ~1.2-2s on a small change.
+  RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --bin scenario_replay --quiet 2>/dev/null || {
+    echo -e "${RED}build failed${RST}" >&2
+    return 1
+  }
+  echo -e "${BOLD}${CYA}─── $(date +%H:%M:%S) ───${RST}"
+  if [ -n "$DUMP" ]; then
+    target/release/scenario_replay "$SCENARIO" --diff "$DUMP" 2>&1 | head -40
+  else
+    target/release/scenario_replay "$SCENARIO" 2>&1 | head -40
+  fi
+  echo
+}
+
+# Initial render
+echo -e "${DIM}watching ${WATCH_PATHS[*]}${RST}"
+echo -e "${DIM}scenario: $SCENARIO${RST}"
+echo -e "${DIM}reference: ${DUMP:-(none)}${RST}"
+echo
+run_once
+
+last=$(get_max_mtime)
+while true; do
+  sleep 0.2
+  cur=$(get_max_mtime)
+  if [ "$cur" != "$last" ]; then
+    last=$cur
+    # Coalesce: wait a beat in case more changes are coming (e.g. editor
+    # atomic-save writes the file twice)
+    sleep 0.1
+    cur=$(get_max_mtime)
+    [ "$cur" != "$last" ] && last=$cur
+    clear
+    run_once
+  fi
+done
