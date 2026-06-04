@@ -114,6 +114,17 @@ pub struct AppState {
     pub last_turn_tool_calls: Option<usize>,
     pub turn_success: Option<bool>,
 
+    // Replay/test path: set by on_thinking_end, used by on_turn_end when
+    // there is no agent_start_time (i.e. no submit() happened in
+    // scenario_replay or test code). Float (not u64) so a 1.2s thinking
+    // pass round-trips as 1.2s instead of 1s.
+    pub replay_turn_duration_secs: Option<f32>,
+
+    // Pending thought duration from a ThinkingEnd event that fired
+    // *before* the matching assistant MessageStart. Stored here so the
+    // next assistant message can pick it up.
+    pub pending_thought_duration: Option<f32>,
+
     // Extension registry for plugins
     pub extension_registry: std::sync::Arc<runie_ext::ExtensionRegistry>,
     pub questionnaire: Option<crate::components::questionnaire_panel::QuestionnaireState>,
@@ -171,6 +182,8 @@ impl Default for AppState {
             current_theme: "crush_grok".to_string(),
             last_turn_duration_secs: None, last_turn_tokens: None,
             last_turn_tool_calls: None, turn_success: None,
+            pending_thought_duration: None,
+            replay_turn_duration_secs: None,
             extension_registry: std::sync::Arc::new(runie_ext::ExtensionRegistry::new()),
             questionnaire: None, subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
             fullscreen_content: None, fullscreen_scroll_offset: 0,

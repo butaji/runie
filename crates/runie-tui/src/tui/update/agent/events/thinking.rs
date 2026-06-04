@@ -42,15 +42,37 @@ pub(super) fn on_thinking_end(state: &mut AppState, duration_ms: u64) {
         }
     }
 
-    // Use accrued_duration if available, otherwise use duration_ms passed in
-    let final_duration = state.thinking.as_ref()
+    // Pick the larger of the param-supplied duration and the locally
+    // accrued wall-clock duration. In replay (or any fast test) the
+    // wall-clock elapsed is ~0, so the param is authoritative. In live
+    // runs the accrued wall-clock wins for accuracy.
+    let accrued = state.thinking.as_ref()
         .and_then(|t| t.accrued_duration)
-        .unwrap_or(duration);
+        .unwrap_or_default();
+    let final_duration = if accrued > duration { accrued } else { duration };
 
-    // Update thought_duration on last assistant message if thinking took > 0.5s
+    // For replay/test: there is no agent_start_time set (no submit
+    // happened), so the subsequent TurnEnd will compute elapsed_secs = 0
+    // and the "Turn completed in Xs" separator will be missing. Record
+    // the thinking duration here so on_turn_end can use it as a proxy
+    // when the wall clock is at 0. We use a separate field
+    // `replay_turn_duration_secs` (not reset by on_thinking_start) so a
+    // second ThinkingStart in the same turn doesn't wipe it.
+    state.replay_turn_duration_secs = Some(final_duration.as_secs_f32().max(0.1));
+
+    // Update thought_duration on last assistant message if thinking took > 0.5s.
+    //
+    // On the real wire order ThinkingEnd sometimes arrives before the
+    // matching MessageStart (e.g. a quick thinking pass with no streamed
+    // text). In that case there is no assistant message yet — stash the
+    // duration in `state.pending_thought_duration` and let
+    // `on_message_start` attach it when the assistant placeholder is
+    // created.
     if final_duration.as_secs_f32() > 0.5 {
         if let Some(MessageItem::Assistant { thought_duration: ref mut td, .. }) = state.messages.last_mut() {
             *td = Some(final_duration.as_secs_f32());
+        } else {
+            state.pending_thought_duration = Some(final_duration.as_secs_f32());
         }
     }
 

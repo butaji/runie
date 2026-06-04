@@ -217,7 +217,10 @@ pub fn on_message_start(state: &mut AppState, _message: runie_agent::events::Age
             model: state.current_model.clone(),
             timestamp: current_timestamp(),
             expanded: true,
-            thought_duration: None,
+            // If on_thinking_end fired before this MessageStart, the
+            // duration is stashed in state.pending_thought_duration.
+            // Pull it in and clear the field.
+            thought_duration: state.pending_thought_duration.take(),
             turn_duration: None,
         });
     }
@@ -320,29 +323,64 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
 
 /// Handle turn end - add separator with runtime metrics
 fn on_turn_end(state: &mut AppState) {
-    if let Some(start_time) = state.agent_start_time {
-        let elapsed = start_time.elapsed().as_secs();
-        let tool_calls = state.messages.iter().filter(|m| {
-            matches!(m, MessageItem::ToolCall { .. })
-        }).count();
+    // Use wall-clock elapsed if available, otherwise fall back to the
+    // stashed last_turn_duration_secs (set by on_thinking_end during
+    // replay/tests where no submit() happened).
+    let elapsed = if let Some(start_time) = state.agent_start_time {
+        start_time
+            .elapsed()
+            .as_secs()
+            .max(state.last_turn_duration_secs.unwrap_or(0))
+    } else {
+        // Replay path: use the f32 replay_turn_duration_secs (sub-second
+        // precision) so a 1.2s thinking time shows as 1.2s, not 1s.
+        // Floor (not round) so 3.6s -> 3 (matches "{:.1}s" render).
+        state
+            .replay_turn_duration_secs
+            .map(|d| d.floor() as u64)
+            .or(state.last_turn_duration_secs)
+            .unwrap_or(0)
+    };
+    eprintln!(
+        "[DEBUG on_turn_end] agent_start_time={:?}, last_turn_duration_secs={:?}, replay_turn_duration_secs={:?}, elapsed={}",
+        state.agent_start_time.is_some(),
+        state.last_turn_duration_secs,
+        state.replay_turn_duration_secs,
+        elapsed
+    );
+    let tool_calls = state.messages.iter().filter(|m| {
+        matches!(m, MessageItem::ToolCall { .. })
+    }).count();
+    state.last_turn_duration_secs = Some(elapsed);
+    state.last_turn_tokens = Some(state.session_token_usage.total_tokens);
+    state.last_turn_tool_calls = Some(tool_calls);
+    state.turn_success = Some(true);
 
-        state.last_turn_duration_secs = Some(elapsed);
-        state.last_turn_tokens = Some(state.session_token_usage.total_tokens);
-        state.last_turn_tool_calls = Some(tool_calls);
-        state.turn_success = Some(true);
-
-        // Set turn_duration on the last assistant message
-        if let Some(MessageItem::Assistant { turn_duration: ref mut td, .. }) = state.messages.last_mut() {
-            *td = Some(elapsed as f32);
-        }
-
-        // Add separator to feed with grok-style metrics
-        state.messages.push(MessageItem::Separator {
-            elapsed_secs: elapsed,
-            tool_calls,
-            tokens_used: Some(state.session_token_usage.total_tokens),
-        });
+    // Set turn_duration on the last assistant message. Preserve the
+    // f32 sub-second precision (3.6s, 1.2s) when a scenario or test
+    // supplied it via `replay_turn_duration_secs`. Otherwise fall back
+    // to the u64 wall-clock elapsed (truncated to seconds).
+    let turn_dur = if state.agent_start_time.is_some() {
+        elapsed as f32
+    } else {
+        // Replay path: pass through the original f32 (with 0.1s
+        // precision) so the "{:.1}s" formatter shows 3.6, not 3.0.
+        state.replay_turn_duration_secs.unwrap_or(elapsed as f32)
+    };
+    if let Some(MessageItem::Assistant {
+        turn_duration: ref mut td,
+        ..
+    }) = state.messages.last_mut()
+    {
+        *td = Some(turn_dur);
     }
+
+    // Add separator to feed with grok-style metrics
+    state.messages.push(MessageItem::Separator {
+        elapsed_secs: elapsed,
+        tool_calls,
+        tokens_used: Some(state.session_token_usage.total_tokens),
+    });
 }
 
 pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {

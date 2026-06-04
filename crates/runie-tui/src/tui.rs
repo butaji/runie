@@ -165,10 +165,12 @@ impl Tui {
             ThemeWrapper::crush_grok()
         };
         let theme_colors = ThemeColors::from(&theme);
-        let main_areas = crate::pipe::render::RenderPipe::layout_main(area, show_status_bar, input_height);
+        let padded = crate::style::helpers::padded_area(area);
+        // Compute main_areas from the PADDED area so sub-rects are
+        // positioned with the same offset the renderer uses.
+        let main_areas = crate::pipe::render::RenderPipe::layout_main(padded, show_status_bar, input_height);
         let is_onboarding = matches!(self.state.mode, crate::tui::TuiMode::Onboarding);
         let palette = self.command_palette.clone();
-        let padded = crate::style::helpers::padded_area(area);
         if is_onboarding {
             crate::pipe::render::RenderPipe::render_onboarding_mode(
                 buf, area, &self.state, &vms, main_areas, show_status_bar, &theme, &theme_colors,
