@@ -140,6 +140,9 @@ pub enum Node {
     Fill,
     /// A pure blank rectangle, painted with the bg style.
     Blank { bg: StyleRef },
+    /// A gap of `n` cells on the right of a row. Used to leave
+    /// trailing empty space before right-aligned elements.
+    RightGap { n: u16 },
     /// A conditional node — rendered only if `cond` is true. Useful
     /// for mode-conditional UI (e.g. on home screen, hide X).
     If {
@@ -256,6 +259,9 @@ pub fn paint(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         Node::Pad(p) => paint_pad(p, area, buf, theme),
         Node::Fill => { /* parent already expanded the area */ },
         Node::Blank { bg } => paint_blank(area, buf, bg.resolve(theme)),
+        Node::RightGap { n } => {
+            // Reserved empty cells at the end of a row.
+        }
         Node::If { cond: true, then } => paint(then, area, buf, theme),
         Node::If { cond: false, .. } => paint_blank(area, buf, StyleRef::BgBase.resolve(theme)),
         Node::List(ns) => {
@@ -289,27 +295,17 @@ fn paint_text(t: &Text, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         // shifted right so its right edge sits `right_inset` cells
         // before the area's right edge.
         let text_w = if t.right_inset > 0 {
-            t.content
-                .chars()
-                .count()
-                .min(area.width.saturating_sub(t.right_inset) as usize)
+            t.content.chars().count().min(area.width.saturating_sub(t.right_inset) as usize)
         } else {
-            t.content
-                .chars()
-                .count()
-                .min(area.width as usize)
+            t.content.chars().count().min(area.width as usize)
         };
-        let x = if t.right_inset > 0 {
-            area.x + (area.width - t.right_inset - text_w as u16)
-        } else {
-            area.x
-        };
+        // Default placement starts at `area.x`.
+        let x = area.x;
         let clipped: String = t.content.chars().take(text_w).collect();
         let line = Line::from(Span::styled(clipped, style));
         buf.set_line(x, area.y, &line, text_w as u16);
     }
 }
-
 fn paint_blank(area: Rect, buf: &mut Buffer, style: Style) {
     for y in area.y..area.y + area.height {
         for x in area.x..area.x + area.width {
@@ -359,7 +355,15 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
             Node::T(t) => t.width(),
             _ => 0, // complex children: paint in remaining area below
         };
-        let child_area = if matches!(c, Node::Fill) || matches!(c, Node::T(_)) {
+        // When the text has `right_inset > 0`, it wants to position
+        // itself relative to the row's right edge, not its own
+        // (possibly trimmed) child area. Give it the full row
+        // area so the right_inset calculation lands in the right
+        // place.
+        let needs_full_width = matches!(c, Node::T(t) if t.right_inset > 0);
+        let child_area = if needs_full_width {
+            Rect { x, y: area.y, width: (area.x + area.width).saturating_sub(x), height: area.height }
+        } else if matches!(c, Node::Fill) || matches!(c, Node::T(_)) {
             Rect { x, y: area.y, width: child_w.min(area.x + area.width - x), height: area.height }
         } else {
             // Complex child gets the remaining width.
