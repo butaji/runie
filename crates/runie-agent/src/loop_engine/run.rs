@@ -363,6 +363,7 @@ async fn end_turn<M: TryFrom<AgentEvent> + Send + 'static>(
         message_count: messages.len(),
         tool_results_count: 0,
         token_usage: TokenUsage::default(),
+        turn_duration_ms: None,
     }).await;
 }
 
@@ -377,6 +378,7 @@ async fn end_turn_with_tools<M: TryFrom<AgentEvent> + Send + 'static>(
         message_count: messages.len(),
         tool_results_count,
         token_usage: TokenUsage::default(),
+        turn_duration_ms: None,
     }).await;
     tracing::info!("[ACTOR:AgentLoop] turn_count={}, messages={}, tool_results={}", turn_count, messages.len(), tool_results_count);
 }

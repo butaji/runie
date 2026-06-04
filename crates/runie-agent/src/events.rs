@@ -67,11 +67,17 @@ pub enum AgentEvent {
         turn: usize,
     },
     
-    TurnEnd { 
+    TurnEnd {
         turn: usize,
         message_count: usize,
         tool_results_count: usize,
         token_usage: TokenUsage,
+        /// Optional explicit total turn duration in milliseconds.
+        /// When provided, this overrides the wall-clock-derived
+        /// `elapsed` value in the "Turn completed in Xs." footer —
+        /// useful for tests/replays where wall-clock is ~0 and the
+        /// scenario author wants to specify a precise duration.
+        turn_duration_ms: Option<u64>,
     },
     
     AgentEnd { 

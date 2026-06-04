@@ -65,9 +65,14 @@ pub fn render_input_bar(
     let is_empty = text.trim().is_empty();
 
     if is_empty {
-        // Show placeholder when empty (whether focused or not) — Grok spec.
-        // Cursor still rendered by render_textarea_content when focused.
-        render_placeholder(placeholder_text(), inner, colors, buf);
+        // Show placeholder when the textarea is NOT actively focused.
+        // When focused, the textarea renders a cursor at position 0
+        // which visually overwrites the start of the placeholder (e.g.
+        // "Build..." becomes " ld..."). The Grok spec shows just the
+        // cursor when focused, no placeholder.
+        if !is_focused {
+            render_placeholder(placeholder_text(), inner, colors, buf);
+        }
     }
     // Always render textarea (provides cursor when focused, even when empty)
     render_textarea_content(textarea, prompt, inner, colors.accent_primary, buf);

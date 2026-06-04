@@ -20,7 +20,7 @@ async fn test_max_turns_exact_boundary() {
     let mut max_turns_exceeded = false;
 
     while let Some(event) = stream.next().await {
-        if let AgentEvent::TurnEnd { turn, .. } = event {
+        if let AgentEvent::TurnEnd { turn, turn_duration_ms, .. } = event {
             turn_count = turn;
         }
         if let AgentEvent::Error { error_type, .. } = &event {
@@ -113,7 +113,7 @@ async fn test_token_usage_accumulates_per_turn() {
             AgentEvent::TokenUsage { total_tokens, .. } => {
                 total_tokens_seen = *total_tokens as u32;
             }
-            AgentEvent::TurnEnd { turn, token_usage, .. } => {
+            AgentEvent::TurnEnd { turn, token_usage, turn_duration_ms, .. } => {
                 turns_seen = *turn as u32;
                 assert!(token_usage.total_tokens >= total_tokens_seen,
                     "Token usage should accumulate");
