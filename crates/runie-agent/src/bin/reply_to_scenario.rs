@@ -100,6 +100,7 @@ fn main() -> ExitCode {
         r#"{"__meta__": true, "width": 80, "height": 24}
 {"ui": true, "kind": "home_visible", "value": false}
 {"ui": true, "kind": "mode", "value": "chat"}
+{"ui": true, "kind": "git", "value": {"repo": "runie", "branch": "feat/grok-redesign", "path": "~/Code/GitHub/runie"}}
 "#,
     );
     // User message first
@@ -113,12 +114,8 @@ fn main() -> ExitCode {
     // Pre-create a placeholder assistant message so thinking_end can
     // attach thought_duration to it (Grok renders "◆ Thought for 1.2s"
     // attached to the assistant that follows).
-    if let AgentEvent::MessageUpdate { .. } = &events.first().cloned().unwrap_or(AgentEvent::Message {
-        role: String::new(),
-        content: String::new(),
-    }) {
-        // No-op: only the MessageStart matters below
-    }
+    // (No pre-creation needed: the MessageStart event will create
+    // the assistant MessageItem, and ThoughtEnd will attach to it.)
     // We need an assistant MessageItem to exist before thinking_end.
     // The TUI's on_thinking_end sets thought_duration on state.messages.last().
     // There's no public way to do that from an AgentEvent, so we skip
