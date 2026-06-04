@@ -11,7 +11,6 @@
 {"type": "ThinkingUpdate", "delta": "Listing", "total_len": 7, "turn": 0}
 {"type": "ThinkingEnd", "duration_ms": 100, "turn": 0}
 {"type": "MessageUpdate", "message": {"role": "assistant", "content": [], "timestamp": 0, "usage": null, "stop_reason": null, "error_message": null, "tool_calls": []}, "delta": "List .", "replace": false, "turn": 0}
-{"type": "MessageEnd", "message": {"role": "assistant", "content": [], "timestamp": 0, "usage": null, "stop_reason": null, "error_message": null, "tool_calls": []}, "turn": 0}
 {"ui": true, "kind": "thought_duration", "value": 0.1}
 {"ui": true, "kind": "turn_complete", "value": 0.5}
 {"ui": true, "kind": "session_tokens", "value": {"total": 9500}}

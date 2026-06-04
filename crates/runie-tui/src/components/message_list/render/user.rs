@@ -28,9 +28,9 @@ pub fn render_user_msg(
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     // Resolve timestamp: use provided or generate current time
     let ts_display = timestamp.map(|s| s.to_string()).unwrap_or_else(format_timestamp_now);
-    // 5-space indent for user messages (like Grok)
-    // margin_x = area.x + 2 (padded), so margin_x + 3 = area.x + 5
-    let indent = 3;
+    // 3-space indent for user messages (like Grok).
+    // margin_x = area.x + 2 (padded), so margin_x + 1 = area.x + 3
+    let indent = 1;
     // Account for left margin + indent + chevron(2) + space(1) + right padding(1) = margin_x + indent + 4 from area.right()
     let text_width = (area.width - margin_x + area.x - indent - 4) as usize;
 

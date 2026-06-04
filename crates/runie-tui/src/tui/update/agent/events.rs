@@ -149,16 +149,8 @@ fn handle_tool_end(
 }
 
 fn extract_text_from_content(parts: &[runie_agent::events::ContentPart]) -> String {
-    parts.iter()
-        .filter_map(|p| {
-            if let runie_agent::events::ContentPart::Text { text } = p {
-                Some(text.as_str())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("")
+    // Delegates to the public extractor (same logic).
+    extract_text_content(parts)
 }
 
 fn log_plugin_actions(state: &AppState, event: runie_ext::PluginEvent) {
@@ -288,16 +280,19 @@ pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentM
     // indicator stop showing once the assistant finishes, which
     // matches Grok's behavior in 05_input_typing.)
     state.agent_running = false;
-    // Calculate and record thinking duration
-    let (duration, _text) = if let Some(ref mut thinking) = state.thinking {
+    // Calculate and record thinking duration (text is dropped --
+    // state.thinking = None below reclaims the full struct)
+    let duration = if let Some(ref mut thinking) = state.thinking {
         let current_duration = thinking.start.take().map(|start| start.elapsed());
         // Include any accrued duration from tools
-        let total_duration = current_duration.map(|d| {
-            thinking.accrued_duration.map(|acc| d + acc).unwrap_or(d)
-        });
-        (total_duration, std::mem::take(&mut thinking.text))
+        current_duration.map(|d| {
+            thinking
+                .accrued_duration
+                .map(|acc| d + acc)
+                .unwrap_or(d)
+        })
     } else {
-        (None, String::new())
+        None
     };
     state.thinking = None;
 
@@ -368,6 +363,11 @@ pub fn update_last_assistant(state: &mut AppState, content: &[ContentPart]) {
 // ─── Tool handlers ───────────────────────────────────────────────────────────
 
 pub fn on_tool_start(state: &mut AppState, _tool_call_id: String, tool_name: String, tool_args: String) {
+    // Agent is actively working (executing a tool). Keep the top-bar
+    // spinner and global_tags "Thinking..." indicator on. (Set here
+    // because on_message_end clears it as soon as the text stream
+    // ends, but a tool execution may follow immediately.)
+    state.agent_running = true;
     // Clear "Starting session..." indicator - agent is now doing real work
     state.session_starting = None;
     // Pause thinking timer when tool starts - accumulate duration so far
@@ -393,24 +393,50 @@ pub fn on_tool_start(state: &mut AppState, _tool_call_id: String, tool_name: Str
 
 pub fn on_tool_end(state: &mut AppState, tool_result: runie_agent::events::ToolResult) {
     let text = extract_text_content(&tool_result.content);
-    if let Some(MessageItem::ToolCall { ref mut result, ref mut is_error, .. }) =
-        state.messages.last_mut()
-    {
-        *result = Some(text);
-        *is_error = tool_result.is_error;
-        return;
-    }
-    // on_tool_start creates ToolRunning (with spinner). When the tool
-    // ends, convert it to a completed ToolCall so the renderer shows
-    // the result instead of the spinner.
-    if let Some(MessageItem::ToolRunning { name, args, .. }) = state.messages.last().cloned() {
-        let last = state.messages.last_mut().unwrap();
-        *last = MessageItem::ToolCall {
-            name,
-            args,
-            result: Some(text),
-            is_error: tool_result.is_error,
-        };
+    // Find the matching tool item by tool_call_id (preferred) or
+    // tool_name (fallback). Don't blindly trust last_mut(): with
+    // back-to-back tool calls, the wrong item could get the result.
+    // on_tool_start creates ToolRunning; convert it to a completed
+    // ToolCall so the renderer shows the result instead of the spinner.
+    let pos = state
+        .messages
+        .iter()
+        .position(|m| match m {
+            MessageItem::ToolCall { .. } | MessageItem::ToolRunning { .. } => {
+                // tool_call_id isn't stored on MessageItem; fall back
+                // to tool_name match. Both the start and end events
+                // carry the same tool_name in a single tool call.
+                let item_name = match m {
+                    MessageItem::ToolCall { name, .. } => name,
+                    MessageItem::ToolRunning { name, .. } => name,
+                    _ => unreachable!(),
+                };
+                item_name == &tool_result.tool_name
+            }
+            _ => false,
+        });
+    if let Some(idx) = pos {
+        if let Some(msg) = state.messages.get_mut(idx) {
+            match msg {
+                MessageItem::ToolCall {
+                    result, is_error, ..
+                } => {
+                    *result = Some(text);
+                    *is_error = tool_result.is_error;
+                }
+                MessageItem::ToolRunning { name, args, .. } => {
+                    let name = std::mem::take(name);
+                    let args = std::mem::take(args);
+                    *msg = MessageItem::ToolCall {
+                        name,
+                        args,
+                        result: Some(text),
+                        is_error: tool_result.is_error,
+                    };
+                }
+                _ => {}
+            }
+        }
     }
 }
 

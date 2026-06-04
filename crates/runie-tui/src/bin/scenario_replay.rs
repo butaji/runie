@@ -69,10 +69,34 @@ fn main() -> ExitCode {
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
-            "--diff" => { i += 1; diff_path = Some(PathBuf::from(&args[i])); }
-            "--width" => { i += 1; width = args[i].parse().expect("--width must be a number"); }
-            "--height" => { i += 1; height = args[i].parse().expect("--height must be a number"); }
-            "--help" | "-h" => { eprintln!("see usage in source"); return ExitCode::from(0); }
+            "--diff" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("--diff requires a path argument");
+                    return ExitCode::from(2);
+                }
+                diff_path = Some(PathBuf::from(&args[i]));
+            }
+            "--width" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("--width requires a number");
+                    return ExitCode::from(2);
+                }
+                width = args[i].parse().expect("--width must be a number");
+            }
+            "--height" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("--height requires a number");
+                    return ExitCode::from(2);
+                }
+                height = args[i].parse().expect("--height must be a number");
+            }
+            "--help" | "-h" => {
+                eprintln!("see usage in source");
+                return ExitCode::from(0);
+            }
             other => {
                 if scenario_path.is_none() { scenario_path = Some(PathBuf::from(other)); }
                 else if out_path.is_none() { out_path = Some(PathBuf::from(other)); }
@@ -387,28 +411,21 @@ fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
             }
         }
     }
-    let _ = tui; // keep tui borrowed
 }
 
 fn render_to_text(tui: &mut Tui, width: u16, height: u16) -> String {
+    if width < 2 || height < 2 {
+        eprintln!("error: terminal dimensions must be >= 2x2 (got {width}x{height})");
+        std::process::exit(2);
+    }
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     let backend = TestBackend::new(width, height);
     let mut terminal = Terminal::new(backend).expect("TestBackend init");
     let _ = terminal.draw(|frame| {
         let area = frame.area();
-        let mut own_buf = frame.buffer_mut().clone();
-        tui.render_to_buffer(&mut own_buf, area);
-        for y in 0..area.height {
-            for x in 0..area.width {
-                if let Some(src) = own_buf.cell((x, y)) {
-                    if let Some(dst) = frame.buffer_mut().cell_mut((x, y)) {
-                        dst.set_symbol(src.symbol());
-                        dst.set_style(src.style());
-                    }
-                }
-            }
-        }
+        // Render directly into the frame's buffer -- no clone needed.
+        tui.render_to_buffer(frame.buffer_mut(), area);
     });
     let buf = terminal.backend().buffer().clone();
     let mut s = String::new();

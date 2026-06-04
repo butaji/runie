@@ -61,8 +61,12 @@ get_max_mtime() {
   local max=0
   for p in "${WATCH_PATHS[@]}"; do
     if [ -d "$p" ]; then
-      m=$(find "$p" -name '*.rs' -type f -printf '%T@\n' 2>/dev/null | sort -nr | head -1)
-      [ -n "$m" ] && m=${m%.*} && [ "$m" -gt "$max" ] && max=$m
+      # BSD find on macOS doesn't support -printf; use -exec stat instead.
+      # GNU find is detected at runtime; BSD find (default on macOS) is
+      # the common case.
+      m=$(find "$p" -name '*.rs' -type f -exec stat -f %m {} + 2>/dev/null \
+          | sort -nr | head -1)
+      [ -n "$m" ] && [ "$m" -gt "$max" ] && max=$m
     elif [ -f "$p" ]; then
       m=$(stat -f %m "$p" 2>/dev/null)
       [ -n "$m" ] && [ "$m" -gt "$max" ] && max=$m
@@ -74,10 +78,15 @@ get_max_mtime() {
 run_once() {
   # Always rebuild — cargo's incremental is smart enough to skip if no
   # change. ~1.2s when no change, ~1.2-2s on a small change.
-  RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --bin scenario_replay --quiet 2>/dev/null || {
+  BUILD_LOG=$(mktemp)
+  if ! RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --bin scenario_replay --quiet 2>"$BUILD_LOG"; then
     echo -e "${RED}build failed${RST}" >&2
+    # Show last 20 lines of the build error so the user can see what broke.
+    tail -20 "$BUILD_LOG" >&2
+    rm -f "$BUILD_LOG"
     return 1
-  }
+  fi
+  rm -f "$BUILD_LOG"
   echo -e "${BOLD}${CYA}─── $(date +%H:%M:%S) ───${RST}"
   if [ -n "$DUMP" ]; then
     target/release/scenario_replay "$SCENARIO" --diff "$DUMP" 2>&1 | head -40
