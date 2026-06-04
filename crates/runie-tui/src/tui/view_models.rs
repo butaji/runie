@@ -205,29 +205,49 @@ impl ViewModels {
 
 /// Strip thinking text from assistant messages.
 /// Models embed thinking as lines starting with markers like · • ◦ ▸.
-/// Also strips [thinking:...] wrappers and <think> blocks.
+/// Also strips [thinking:...] wrappers and <think>...</think> blocks.
 pub fn strip_thinking_from_assistant(text: &str) -> String {
-    let lines: Vec<&str> = text.lines().collect();
     let mut result = Vec::new();
     let mut in_thinking_block = false;
-    for line in &lines {
+    for line in text.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("<think>") {
-            in_thinking_block = true;
-            if trimmed.contains("</think>") {
-                in_thinking_block = false;
-            }
+
+        // Handle same-line think block: "<think>...</think>" on one line.
+        if !in_thinking_block && trimmed.starts_with("<think>") && trimmed.ends_with("</think>") {
+            // No content to keep from a single-line think block.
             continue;
         }
+
+        // Opening <think> marker
+        if trimmed.starts_with("<think>") {
+            in_thinking_block = true;
+            // If the opener and closer are on the same line, the
+            // condition above already handled it; otherwise the line
+            // is just an opener and we drop it.
+            continue;
+        }
+
+        // Closing </think> marker (only relevant while in block)
         if in_thinking_block && trimmed.starts_with("</think>") {
             in_thinking_block = false;
             continue;
         }
-        if trimmed.starts_with("<think>") && trimmed.ends_with("</think>") { continue; }
-        let first_char = trimmed.chars().next();
-        let is_thinking_marker = first_char.map_or(false, |c| matches!(c, '·' | '•' | '◦' | '▸' | '▹'));
-        if is_thinking_marker { continue; }
-        result.push(*line);
+
+        // Skip lines while inside a multi-line think block
+        if in_thinking_block {
+            continue;
+        }
+
+        // Skip "thinking bullet" marker lines (· • ◦ ▸ ▹)
+        let is_thinking_marker = trimmed
+            .chars()
+            .next()
+            .map_or(false, |c| matches!(c, '·' | '•' | '◦' | '▸' | '▹'));
+        if is_thinking_marker {
+            continue;
+        }
+
+        result.push(line);
     }
     result.join("\n")
 }
@@ -314,9 +334,10 @@ fn build_input_bar_vm(state: &crate::tui::state::AppState) -> InputBarViewModel 
     let char_count = {
         let text = state.textarea.lines().join("\n");
         let text_len = text.len();
-        let ctx_window = state.top_bar.context_window.unwrap_or(128_000);
-        // Rough estimate: 1 char ≈ 1/4 token
-        let estimated_tokens = text_len * 4;
+        let ctx_window = state.top_bar.context_window.unwrap_or(512_000);
+        // Rough estimate: 1 token ≈ 4 chars, so divide to get token count.
+        // (text_len is in bytes, but for ASCII chat input ≈ chars.)
+        let estimated_tokens = text_len / 4;
         if estimated_tokens > ctx_window / 2 {
             Some(text_len)
         } else {
