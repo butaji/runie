@@ -63,3 +63,17 @@ impl From<Vec<MessageItem>> for Feed {
         feed
     }
 }
+
+/// Borrowed conversion: clones nothing. Used on the hot path when the
+/// caller doesn't need to mutate or strip from the source items.
+impl From<&[MessageItem]> for Feed {
+    fn from(messages: &[MessageItem]) -> Self {
+        let mut feed = Feed::new();
+        for item in messages {
+            if let Ok(feed_item) = FeedItem::try_from(item.clone()) {
+                feed.items.push(feed_item);
+            }
+        }
+        feed
+    }
+}
