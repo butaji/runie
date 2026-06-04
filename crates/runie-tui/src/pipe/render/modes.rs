@@ -87,7 +87,15 @@ pub fn render_home_screen_mode(
         s.input_right_info = String::new();
         s
     };
-    super::render_input::render_input(buf, &clean_state, main_areas[3], theme, theme_colors);
+    // Input bar uses the FULL screen width (not the padded width)
+    // so the box border aligns with the screen edge, matching Grok.
+    let input_area = Rect {
+        x: area.x,
+        y: main_areas[3].y,
+        width: area.width,
+        height: main_areas[3].height,
+    };
+    super::render_input::render_input(buf, &clean_state, input_area, theme, theme_colors);
 
     // Render version badge below version separator line, right-aligned
     let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));

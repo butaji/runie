@@ -5,8 +5,10 @@
 ///     Grok top-bar alignment.
 pub const PADDING_X: u16 = 2;
 
+/// Vertical padding applied to the main message-list area.
+/// 1 = 1 blank row between top bar and the first user message,
+///     matching the Grok reference dump.
 pub const PADDING_Y: u16 = 1;
-
 /// Total width padding (2 * PADDING_X)
 pub const PADDING_WIDTH: u16 = 4;
 

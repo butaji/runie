@@ -42,7 +42,9 @@ pub fn render_top_bar(
         let tokens_str = format_token_count(vm.estimated_tokens);
         let text = format!("│ {} / {} │", tokens_str, window_str);
         let text_len = text.len() as u16;
-        let right_x = area.x + area.width.saturating_sub(text_len + 2);
+        // Right-align the chip at the screen edge. Grok spec puts the
+        // closing `│` at column `area.width - 1` (78-1 = 77 for a 78-wide screen).
+        let right_x = area.x + area.width.saturating_sub(text_len);
 
         if right_x > x {
             buf.set_line(
