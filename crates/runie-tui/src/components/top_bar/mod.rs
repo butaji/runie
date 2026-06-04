@@ -32,7 +32,9 @@ impl TopBarViewModel {
             repo: state.repo.clone(),
             branch: state.branch.clone(),
             path: state.path.clone(),
-            context_window: state.context_window.unwrap_or(128_000),
+            // Default to 512K to match TopBarState::default() and the
+            // canonical Grok Build default.
+            context_window: state.context_window.unwrap_or(512_000),
             estimated_tokens: state.estimated_tokens.unwrap_or(0),
             agent_running,
             braille_frame,
