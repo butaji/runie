@@ -63,3 +63,23 @@ env = { RUNIE_SKIP_BUILD_CHECKS = "1" }
 command = ["cargo", "check", "--workspace", "--message-format", "short"]
 need_stdout = false
 watch = ["crates/"]
+
+[jobs.replay]
+# Replay the last scenario you were working on. The actual file path is
+# kept in `.hermes/plans/last-scenario.txt` — just edit that file (or
+# use `runie-set-scenario <name>`) and this job picks it up.
+#
+# Sub-100ms iteration: edit a render function, save, see the new
+# render in the terminal here. No TTY needed (uses TestBackend).
+env = { RUNIE_SKIP_BUILD_CHECKS = "1" }
+command = ["sh", "-c", "SCENARIO=$(cat .hermes/plans/last-scenario.txt 2>/dev/null); target/release/scenario_replay $SCENARIO"]
+need_stdout = true
+watch = ["crates/runie-tui/src", "ui/dumps/scenarios/"]
+
+[jobs.parity]
+# Run grok_parity_test — 47/47 component-level visual assertions.
+# Catches regressions when you edit a render function.
+env = { RUNIE_SKIP_BUILD_CHECKS = "1" }
+command = ["cargo", "run", "-p", "runie-tui", "--bin", "grok_parity_test", "--release"]
+need_stdout = true
+watch = ["crates/runie-tui/src"]
