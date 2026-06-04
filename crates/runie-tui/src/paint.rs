@@ -306,7 +306,7 @@ fn paint_text(t: &Text, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         // cell when the text starts with a space.
         for (i, c) in clipped.chars().enumerate() {
             if let Some(cell) = buf.cell_mut((x + i as u16, area.y)) {
-                cell.set_char(c).set_style(style);
+                        cell.set_char(c).set_style(style);
             }
         }
     }
@@ -359,6 +359,7 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let child_w = match c {
             Node::Fill => fill_w as u16,
             Node::T(t) => t.width(),
+            Node::RightGap { n } => *n,
             _ => 0, // complex children: paint in remaining area below
         };
         // When the text has `right_inset > 0`, it wants to position
@@ -377,10 +378,10 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
             Rect { x, y: area.y, width: rem, height: area.height }
         };
         paint(c, child_area, buf, theme);
-        if !matches!(c, Node::Fill) {
-            x += child_w;
-        } else {
+        if matches!(c, Node::Fill) {
             x += fill_w as u16;
+        } else {
+            x += child_w;
         }
         last_x_end = x;
     }

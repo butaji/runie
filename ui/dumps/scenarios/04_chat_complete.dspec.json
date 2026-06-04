@@ -1,0 +1,226 @@
+{
+  "width": 80,
+  "height": 24,
+  "mock_timestamp": "4:37 PM",
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \ue0a0 feat/grok-redesign",
+            "style": "accent"
+          },
+          {
+            "type": "text",
+            "content": " "
+          },
+          {
+            "type": "text",
+            "content": "~/Code/GitHub/runie",
+            "style": "secondary"
+          },
+          {
+            "type": "fill"
+          },
+          {
+            "type": "text",
+            "content": "\u2502 22K / 512K \u2502",
+            "style": "dim"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "     \u276f",
+            "style": "secondary"
+          },
+          {
+            "type": "text",
+            "content": " "
+          },
+          {
+            "type": "text",
+            "content": "list the files in this directory",
+            "style": "primary"
+          },
+          {
+            "type": "fill"
+          },
+          {
+            "type": "text",
+            "content": "4:37 PM",
+            "style": "dim"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     \u2022 src/ \u2014 Top-level source (lib.rs)",
+        "style": "primary"
+      },
+      {
+        "type": "text",
+        "content": "     \u2022 target/ \u2014 Build artifacts (debug)",
+        "style": "primary"
+      },
+      {
+        "type": "text",
+        "content": "     \u2022 tmp_config/ \u2014 Temporary config / runtime data",
+        "style": "primary"
+      },
+      {
+        "type": "text",
+        "content": "     \u2022 ui/ \u2014 UI-related files (dumps, etc.)",
+        "style": "primary"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     Would you like me to list a specific subdirectory (e.g.",
+        "style": "primary"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "     crates/runie-tui/src or crates/runie-cli) in more detail?",
+            "style": "primary"
+          },
+          {
+            "type": "right_gap",
+            "n": 17
+          },
+          {
+            "type": "text",
+            "content": "\u2588",
+            "style": "primary"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "right_gap",
+            "n": 79
+          },
+          {
+            "type": "text",
+            "content": "\u2588",
+            "style": "primary"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "     Turn completed in 8.8s.",
+            "style": "muted"
+          },
+          {
+            "type": "right_gap",
+            "n": 51
+          },
+          {
+            "type": "text",
+            "content": "\u2588",
+            "style": "primary"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "right_gap",
+            "n": 79
+          },
+          {
+            "type": "text",
+            "content": "\u2588",
+            "style": "primary"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2502 \u276f                                                                        \u2502"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Grok Build \u2500\u256f"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  Shift+Tab:mode  \u2502  Ctrl+.:shortcuts",
+            "style": "dim"
+          }
+        ]
+      }
+    ]
+  }
+}
