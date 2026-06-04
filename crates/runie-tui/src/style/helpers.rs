@@ -133,3 +133,65 @@ mod tests {
         assert_eq!(right.width, 29);
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Wireframe debugger (enabled with `RUNIE_WIREFRAME=1` env var)
+// ─────────────────────────────────────────────────────────────────────
+//
+// Drop into any render path to overlay ASCII box borders + size labels
+// on top of your real UI. Lets you see exactly where Constraint
+// rectangles landed without rebuilding.
+//
+// Usage:
+//   RUNIE_WIREFRAME=1 runie                    # overlay everything
+//   RUNIE_WIREFRAME=ui runie                   # overlay just main layout
+//   RUNIE_WIREFRAME=input,top_bar runie        # overlay specific components
+
+/// Returns true if the wireframe overlay is enabled for the given
+/// component name. `all` matches every component.
+pub fn wireframe_enabled(component: &str) -> bool {
+    wireframe_enabled_for(component, &std::env::var("RUNIE_WIREFRAME").ok())
+}
+
+/// Variant of [`wireframe_enabled`] that takes the env value directly.
+/// Use this in tests so the env-var race (multiple threads modifying
+/// `RUNIE_WIREFRAME` concurrently) is sidestepped.
+pub fn wireframe_enabled_for(component: &str, env: &Option<String>) -> bool {
+    match env {
+        Some(v) if !v.is_empty() => v
+            .split(',')
+            .map(|s| s.trim())
+            .any(|f| f == "all" || f == component),
+        _ => false,
+    }
+}
+
+/// Draw a labeled box at `area` showing its position and size. Cheap to
+/// call; does nothing when wireframe mode is off.
+pub fn wireframe_box(buf: &mut ratatui::buffer::Buffer, component: &str, area: Rect) {
+    wireframe_box_for(buf, component, area, &std::env::var("RUNIE_WIREFRAME").ok());
+}
+
+/// Test-friendly variant that takes the env value directly. Avoids the
+/// multithreaded env-var race that `std::env::set_var` triggers in
+/// parallel test runs.
+pub fn wireframe_box_for(
+    buf: &mut ratatui::buffer::Buffer,
+    component: &str,
+    area: Rect,
+    env: &Option<String>,
+) {
+    if !wireframe_enabled_for(component, env) {
+        return;
+    }
+    use ratatui::{
+        style::{Color, Style},
+        widgets::{Block, Borders, Widget},
+    };
+    let title = format!(" {} {}x{} @({},{}) ", component, area.width, area.height, area.x, area.y);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Magenta))
+        .title(title);
+    (&block).render(area, buf);
+}
