@@ -144,9 +144,10 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     use crate::style::layout::MENU_WIDTH;
 
     let content_width = MENU_WIDTH;
-    // Grok layout: branch at line 2, 3 blank lines (3-5), menu at line 6 (y=5 in 0-indexed)
+    // Grok layout: header line 0, blank lines 1-3, menu at line 4 (y=4 in 0-indexed).
+    // Menu items are centered: 22-space indent on an 80-col terminal.
     let content_x = area.x + (area.width.saturating_sub(content_width)) / 2 + 2;
-    let menu_start_y = area.y + 1;
+    let menu_start_y = area.y + 4;
     render_menu(
         screen,
         content_x,
@@ -160,6 +161,7 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     );
 
     let tip = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
+    // Tip is left-aligned at 2-space indent (Grok style).
     buf.set_string(area.x + 2, menu_start_y + 6, tip, theme.tip_style());
 }
 

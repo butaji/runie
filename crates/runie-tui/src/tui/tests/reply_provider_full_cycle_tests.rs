@@ -84,6 +84,8 @@ fn test_full_cycle_simple_message() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hi!"),
+        delta: "Hi!".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -137,7 +139,8 @@ fn test_full_cycle_with_tool_call() {
             error_message: None,
             tool_calls: vec![],
         },
-        turn: 0,
+                delta: String::new(),
+        replace: true,turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::ToolExecutionStart {
         tool_call_id: "call_calc_1".to_string(),
@@ -161,6 +164,8 @@ fn test_full_cycle_with_tool_call() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "The result is 42."),
+        delta: "The result is 42.".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -215,14 +220,20 @@ fn test_full_cycle_streaming_response() {
 
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "1"),
+        delta: "1".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "1, 2"),
+        delta: "1, 2".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "1, 2, 3"),
+        delta: "1, 2, 3".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -262,6 +273,8 @@ fn test_full_cycle_error_during_streaming() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "partial"),
+        delta: "partial".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -309,6 +322,8 @@ fn test_full_cycle_permission_gate() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Let me run that bash command for you."),
+        delta: "Let me run that bash command for you.".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::ToolExecutionStart {
@@ -396,6 +411,8 @@ fn test_full_cycle_multiple_turns() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "answer 1"),
+        delta: "answer 1".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -439,6 +456,8 @@ fn test_full_cycle_multiple_turns() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "answer 2"),
+        delta: "answer 2".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -487,10 +506,7 @@ fn test_full_cycle_thinking_shown_then_collapsed() {
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::ThinkingStart { turn: 0 });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: "This is a complex topic about physics...".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: "This is a complex topic about physics...".to_string(), total_len: 0, turn: 0, });
     // Sleep to ensure thinking duration is significant
     std::thread::sleep(std::time::Duration::from_millis(100));
     handle_agent_event(&mut state, AgentEvent::ThinkingEnd {
@@ -499,6 +515,8 @@ fn test_full_cycle_thinking_shown_then_collapsed() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Quantum physics is..."),
+        delta: "Quantum physics is...".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -549,7 +567,8 @@ fn test_full_cycle_state_consistency() {
         });
         handle_agent_event(&mut state, AgentEvent::MessageUpdate {
             message: agent_message("assistant", &format!("response {}", iteration)),
-            turn: 0,
+                        delta: String::new(),
+            replace: true,turn: 0,
         });
         handle_agent_event(&mut state, AgentEvent::MessageEnd {
             message: agent_message("assistant", &format!("response {}", iteration)),

@@ -84,7 +84,8 @@ impl ScenarioBuilder {
                 error_message: None,
                 tool_calls: vec![],
             },
-            turn: 1,
+                        delta: String::new(),
+            replace: true,turn: 1,
             delta: text.to_string(),
         };
         self.harness.handle_agent_event(event);

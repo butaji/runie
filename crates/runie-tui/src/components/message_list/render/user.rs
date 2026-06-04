@@ -23,7 +23,7 @@ pub fn render_user_msg(
     theme: &ThemeWrapper,
     wrap_cache: &mut WrapCache,
 ) -> u16 {
-    let bg_color: ratatui::style::Color = theme.color("border.unfocused").into();
+    let bg_color: ratatui::style::Color = theme.color("bg.base").into();
     let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     // Resolve timestamp: use provided or generate current time

@@ -48,10 +48,11 @@ impl MockProvider {
         let user_message = Self::extract_user_message(messages);
         let response_content = Self::build_content(messages);
 
-        // Only use tools on first turn (when we have exactly 1 user message)
-        // This prevents infinite loops where AI's response triggers more tools
-        let turn_count = messages.iter().filter(|m| matches!(m, Message::User { .. })).count();
-        let can_use_tools = turn_count <= 1 && !tools.is_empty();
+        // Only use tools on the user's literal first message — never on tool
+        // outputs (would loop forever because tool result text contains "read",
+        // "list", etc., which the heuristic below would re-fire on).
+        let last_msg_is_tool = messages.last().map_or(false, |m| matches!(m, Message::ToolResult { .. }));
+        let can_use_tools = !last_msg_is_tool && !tools.is_empty();
 
         if can_use_tools {
             if let Some((tool_name, tool_args)) = Self::should_use_tools(&user_message, tools) {

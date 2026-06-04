@@ -80,6 +80,8 @@ fn test_feed_renders_thinking_during_streaming() {
     // After chunk 1: assistant text contains chunk 1 content
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello "),
+        delta: "Hello ".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -96,6 +98,8 @@ fn test_feed_renders_thinking_during_streaming() {
     // After chunk 2: assistant text is concatenation of chunk 1 + chunk 2
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello world!"),
+        delta: "Hello world!".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -128,6 +132,8 @@ fn test_tag_transitions_from_thinking_to_completed() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Working..."),
+        delta: "Working...".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -255,10 +261,7 @@ fn test_response_appears_in_feed_correctly() {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: "Let me think about this...".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: "Let me think about this...".to_string(), total_len: 0, turn: 0, });
     // Sleep to ensure duration > 0.5s threshold
     std::thread::sleep(std::time::Duration::from_millis(600));
     handle_agent_event(&mut state, AgentEvent::ThinkingEnd {
@@ -267,6 +270,8 @@ fn test_response_appears_in_feed_correctly() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Here's my response!"),
+        delta: "Here's my response!".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -325,6 +330,8 @@ fn test_streaming_chunks_accumulate_visually() {
     // Chunk 1: "Hello"
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello"),
+        delta: "Hello".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -335,6 +342,8 @@ fn test_streaming_chunks_accumulate_visually() {
     // Chunk 2: "Hello world"
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello world"),
+        delta: "Hello world".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -345,6 +354,8 @@ fn test_streaming_chunks_accumulate_visually() {
     // Chunk 3: "Hello world!"
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hello world!"),
+        delta: "Hello world!".to_string(),
+        replace: false,
         turn: 0,
     });
 
@@ -431,6 +442,8 @@ fn test_multi_turn_feed_separation() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "First response"),
+        delta: "First response".to_string(),
+        replace: false,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -466,6 +479,8 @@ fn test_multi_turn_feed_separation() {
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Second response"),
+        delta: "Second response".to_string(),
+        replace: false,
         turn: 1,
     });
     handle_agent_event(&mut state, AgentEvent::MessageEnd {
@@ -528,16 +543,15 @@ fn test_thinking_text_not_in_assistant_text() {
         message: agent_message("assistant", ""),
         turn: 0,
     });
-    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate {
-        text: "thinking...".to_string(),
-        turn: 0,
-    });
+    handle_agent_event(&mut state, AgentEvent::ThinkingUpdate { delta: "thinking...".to_string(), total_len: 0, turn: 0, });
     handle_agent_event(&mut state, AgentEvent::ThinkingEnd {
         duration_ms: 100,
         turn: 0,
     });
     handle_agent_event(&mut state, AgentEvent::MessageUpdate {
         message: agent_message("assistant", "response"),
+        delta: "response".to_string(),
+        replace: false,
         turn: 0,
     });
 

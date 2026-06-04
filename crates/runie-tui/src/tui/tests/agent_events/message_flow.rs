@@ -143,7 +143,9 @@ fn test_message_update_accumulates_text() {
         &mut state,
         AgentEvent::MessageUpdate {
             message: agent_message("assistant", "Hello"),
-            turn: 1,
+        delta: "Hello".to_string(),
+        replace: false,
+        turn: 1,
         },
     );
 
@@ -179,7 +181,9 @@ fn test_message_update_replaces_placeholder() {
         &mut state,
         AgentEvent::MessageUpdate {
             message: agent_message("assistant", "Hello, world!"),
-            turn: 1,
+        delta: "Hello, world!".to_string(),
+        replace: false,
+        turn: 1,
         },
     );
 
@@ -209,6 +213,8 @@ fn test_message_update_multiple_chunks() {
             &mut state,
             AgentEvent::MessageUpdate {
                 message: agent_message("assistant", chunk),
+                delta: chunk.to_string(),
+                replace: false,
                 turn: 1,
             },
         );

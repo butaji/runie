@@ -20,6 +20,8 @@ fn test_stream_interruption_mid_message() {
 
     harness = harness.handle_event(AgentEvent::MessageUpdate {
         message: make_message("assistant", "Partial"),
+        delta: "Partial".to_string(),
+        replace: false,
         turn: 1,
     });
 

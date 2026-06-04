@@ -40,7 +40,7 @@ pub use top_bar::{TopBarViewModel, render_top_bar};
 pub use global_tags::GlobalTagsViewModel;
 pub use message_list::{MessageList, MessageItem};
 pub use input_bar::{INPUT_PROMPT, input_bar_height};
-pub use status_bar::StatusBar;
+pub use status_bar::{BackgroundJob, JobStatus, StatusItem};
 pub use permission_modal::{PermissionModal, PermissionAction};
 pub use command_palette::{CommandPalette, PaletteCommand};
 pub use context_panel::{ContextPanel, GitChange, GitStatus};

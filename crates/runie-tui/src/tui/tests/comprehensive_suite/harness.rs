@@ -73,7 +73,8 @@ impl AgentTestHarness {
                 error_message: None,
                 tool_calls: vec![],
             },
-            turn: 1,
+                        delta: String::new(),
+            replace: true,turn: 1,
         };
         self.events.push(update_event.clone());
         agent_handle_event(&mut self.state, update_event);

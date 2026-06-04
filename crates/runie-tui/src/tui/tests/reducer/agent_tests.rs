@@ -53,6 +53,8 @@ fn create_message_update_event(turn: usize, text: &str) -> AgentEvent {
             error_message: None,
             tool_calls: vec![],
         },
+        delta: text.to_string(),
+        replace: true,
         turn,
     }
 }

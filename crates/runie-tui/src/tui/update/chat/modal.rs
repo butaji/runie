@@ -135,7 +135,6 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
     match action.as_str() {
         "New worktree" => {
             state.messages.clear();
-            state.messages.push(MessageItem::System { text: "New session started".to_string() });
             state.textarea.select_all();
             state.textarea.delete_line_by_end();
             state.home_screen.hide();
@@ -146,14 +145,12 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
             state.messages.clear();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
-            state.messages.push(MessageItem::System { text: "Resuming last session".to_string() });
             state.textarea.select_all();
             state.textarea.delete_line_by_end();
         }
         "Quit" => { state.running = false; }
         _ => {
             state.messages.clear();
-            state.messages.push(MessageItem::System { text: "New session started".to_string() });
             state.textarea.select_all();
             state.textarea.delete_line_by_end();
             state.home_screen.hide();

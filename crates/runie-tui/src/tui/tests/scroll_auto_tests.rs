@@ -248,6 +248,8 @@ mod agent_event_auto_scroll {
 
         let event = AgentEvent::MessageUpdate {
             message: make_agent_message("Update"),
+            delta: "".to_string(),
+            replace: true,
             turn: 1,
         };
 
@@ -324,6 +326,8 @@ mod auto_scroll_disabled_when_user_scrolled {
             state.scroll.feed_offset = offset;
             let update_event = AgentEvent::MessageUpdate {
                 message: make_agent_message("Update"),
+                delta: "".to_string(),
+                replace: true,
                 turn: 1,
             };
             handle_agent_event(&mut state, update_event);

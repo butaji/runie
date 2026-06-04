@@ -116,6 +116,8 @@ mod no_auto_scroll_when_user_scrolled_up {
         // Process MessageUpdate
         handle_agent_event(&mut state, AgentEvent::MessageUpdate {
             message: agent_message("Partial response"),
+            delta: "".to_string(),
+            replace: true,
             turn: 1,
         });
 
@@ -312,6 +314,8 @@ mod scroll_during_streaming {
         // Process MessageUpdate while scrolled up
         handle_agent_event(&mut state, AgentEvent::MessageUpdate {
             message: agent_message("Streaming content..."),
+            delta: "".to_string(),
+            replace: true,
             turn: 1,
         });
 
@@ -337,6 +341,8 @@ mod scroll_during_streaming {
 
         handle_agent_event(&mut state, AgentEvent::MessageUpdate {
             message: agent_message("Streaming..."),
+            delta: "".to_string(),
+            replace: true,
             turn: 1,
         });
 

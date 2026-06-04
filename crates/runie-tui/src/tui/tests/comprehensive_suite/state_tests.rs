@@ -198,6 +198,8 @@ fn test_message_update_fills_placeholder() {
         &mut state,
         AgentEvent::MessageUpdate {
             message: make_message("assistant", "Hello"),
+            delta: "Hello".to_string(),
+            replace: false,
             turn: 1,
         },
     );

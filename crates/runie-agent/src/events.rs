@@ -12,8 +12,15 @@ pub enum AgentEvent {
         turn: usize,
     },
     
-    MessageUpdate { 
+    /// Streaming message update. If `replace` is true, `delta` is the
+    /// absolute content (used by tests and for re-snapshots). If false,
+    /// `delta` is appended to the last assistant message.
+    MessageUpdate {
         message: AgentMessage,
+        delta: String,
+        /// When true, replace last assistant text with `delta` (test snapshot mode).
+        /// When false (default for live streaming), append `delta` to last assistant.
+        replace: bool,
         turn: usize,
     },
     
@@ -28,9 +35,13 @@ pub enum AgentEvent {
         turn: usize,
     },
     
-    /// Agent reasoning/thinking update with accumulated content.
+    /// Agent reasoning/thinking update with NEW text since the last update.
+    /// Consumer should `push_str(&delta)` rather than overwrite.
     ThinkingUpdate {
-        text: String,
+        /// New characters accumulated since last update; full snapshot = sum of all deltas.
+        delta: String,
+        /// Total accumulated length so far (consumer can ignore this if it tracks length itself).
+        total_len: usize,
         turn: usize,
     },
     

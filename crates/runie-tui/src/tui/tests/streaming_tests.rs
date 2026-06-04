@@ -57,7 +57,8 @@ async fn test_stream_text_accumulation() {
     for (full, delta) in full_texts.iter().zip(deltas.iter()) {
         harness.handle_agent_event(AgentEvent::MessageUpdate {
             message: agent_message("assistant", full),
-            turn: 1,
+                        delta: String::new(),
+            replace: true,turn: 1,
             delta: delta.to_string(),
         });
     }
@@ -81,7 +82,8 @@ async fn test_stream_with_tool_calls() {
     // Stream partial text - message has FULL text
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I'll"),
-        turn: 1,
+                delta: "I'll".to_string(),
+        replace: false,turn: 1,
         delta: "I'll".to_string(),
     });
 
@@ -96,7 +98,8 @@ async fn test_stream_with_tool_calls() {
     // More text after tool - message has FULL text
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", "I'll list the files"),
-        turn: 1,
+                delta: "I'll list the files".to_string(),
+        replace: false,turn: 1,
         delta: " list the files".to_string(),
     });
 
@@ -121,7 +124,8 @@ fn test_rapid_updates() {
         let full_text = i.to_string();
         harness.handle_agent_event(AgentEvent::MessageUpdate {
             message: agent_message("assistant", &full_text),
-            turn: 1,
+                        delta: &full_text.to_string(),
+            replace: false,turn: 1,
             delta: i.to_string(),
         });
     }
@@ -213,7 +217,8 @@ fn test_stream_cursor_visibility_during_streaming() {
     // During streaming, cursor should be visible
     harness.handle_agent_event(AgentEvent::MessageUpdate {
         message: agent_message("assistant", "Hi"),
-        turn: 1,
+                delta: "Hi".to_string(),
+        replace: false,turn: 1,
         delta: "Hi".to_string(),
     });
 

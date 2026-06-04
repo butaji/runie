@@ -296,6 +296,17 @@ pub fn render_assistant_msg(
         }
     }
 
+    // Activity block: trailing `█` on the right edge while agent is still streaming.
+    // Grok draws this on the last line of the in-progress assistant message.
+    if agent_running && row + rendered < max_rows {
+        let block_x = (area.x + area.width).saturating_sub(2);
+        let block_y = area.y + row + rendered.saturating_sub(1);
+        if let Some(cell) = buf.cell_mut((block_x, block_y)) {
+            cell.set_char(glyphs::CURSOR_BLOCK);
+            cell.set_style(Style::default().fg(_accent_bar_color));
+        }
+    }
+
     // Cursor placement at end of response line (5-space indent)
     // Calculate last line length from wrapped text
     if cursor_visible && !stripped_trimmed.is_empty() {

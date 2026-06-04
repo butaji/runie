@@ -8,6 +8,7 @@ use crate::theme::ThemeWrapper;
 
 #[derive(Debug, Clone)]
 pub enum ToolStatus {
+    Pending,
     Running,
     Complete,
     Error,
@@ -46,6 +47,13 @@ pub fn render_tool_call_block(
     }
     
     match block.status {
+        ToolStatus::Pending => {
+            // Grok spec: pending tool calls get a "❙  " 2-cell rail prefix
+            // (U+2759 HEAVY VERTICAL BAR + 2 spaces) before the "◆ ToolName ." line
+            let label = format!("❙  ◆ {} {}", block.tool_name, block.args);
+            let line = Line::styled(label, Style::default().fg(accent_color));
+            buf.set_line(margin_x, y, &line, area.width.saturating_sub(margin_x));
+        }
         ToolStatus::Running => {
             let spinner = SPINNER_FRAMES[block.spinner_frame % SPINNER_FRAMES.len()];
             let label = format!("{} Run {} `{}` {:.1}s", spinner, block.tool_name, block.args, block.elapsed_secs);
@@ -53,10 +61,18 @@ pub fn render_tool_call_block(
             buf.set_line(margin_x, y, &left, area.width.saturating_sub(margin_x));
         }
         ToolStatus::Complete => {
-            let bytes_str = if block.bytes_in > 0 { format!(" ⇣{}", format_bytes(block.bytes_in)) } else { String::new() };
-            let label = format!("✓ {} → ok {:.1}s{}{}", block.tool_name, block.total_secs, bytes_str, " [✓]");
-            let left = Line::styled(label, Style::default().fg(success_color));
-            buf.set_line(margin_x, y, &left, area.width.saturating_sub(margin_x));
+            // Grok spec: very short tool calls (no bytes / < 0.3s) use the
+            // compact single-line form "◆ ToolName .", same as the inline form.
+            if block.bytes_in == 0 || block.total_secs < 0.3 {
+                let label = format!("◆ {} {}", block.tool_name, block.args);
+                let left = Line::styled(label, Style::default().fg(accent_color));
+                buf.set_line(margin_x, y, &left, area.width.saturating_sub(margin_x));
+            } else {
+                let bytes_str = format!(" ⇣{}", format_bytes(block.bytes_in));
+                let label = format!("✓ {} → ok {:.1}s{} [✓]", block.tool_name, block.total_secs, bytes_str);
+                let left = Line::styled(label, Style::default().fg(success_color));
+                buf.set_line(margin_x, y, &left, area.width.saturating_sub(margin_x));
+            }
         }
         ToolStatus::Error => {
             let label = format!("✗ {} → error {:.1}s [✗]", block.tool_name, block.total_secs);

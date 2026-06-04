@@ -39,7 +39,7 @@ pub fn render_input(
     // Calculate char count if text is long (>50% of context window)
     let char_count = {
         let text_len = text.len();
-        let ctx_window = state.top_bar.context_window.unwrap_or(128_000);
+        let ctx_window = state.top_bar.context_window.unwrap_or(512_000);
         let estimated_tokens = text_len * 4;
         if estimated_tokens > ctx_window / 2 {
             Some(text_len)

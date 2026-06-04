@@ -59,6 +59,8 @@ fn test_stream_event_sequence() {
         },
         AgentEvent::MessageUpdate {
             message: make_message("assistant", "Hello"),
+            delta: "Hello".to_string(),
+            replace: false,
             turn: 1,
         },
         make_tool_start_event("t1", "bash", "ls"),
@@ -112,7 +114,12 @@ fn test_stream_preserves_message_order() {
     let harness = complete_turn(harness, 1, "Response to first");
     let harness = harness.user_says("Second");
     let harness = harness.handle_event(AgentEvent::MessageStart { message: make_message("assistant", ""), turn: 2 });
-    let harness = harness.handle_event(AgentEvent::MessageUpdate { message: make_message("assistant", "Response to second"), turn: 2 });
+    let harness = harness.handle_event(AgentEvent::MessageUpdate {
+        message: make_message("assistant", "Response to second"),
+        delta: "Response to second".to_string(),
+        replace: false,
+        turn: 2,
+    });
 
     let user_messages: Vec<_> = harness.state.messages.iter()
         .filter(|m| matches!(m, MessageItem::User { .. }))
@@ -129,6 +136,8 @@ fn complete_turn(harness: AgentTestHarness, turn: usize, response: &str) -> Agen
         })
         .handle_event(AgentEvent::MessageUpdate {
             message: make_message("assistant", response),
+            delta: response.to_string(),
+            replace: false,
             turn,
         })
         .handle_event(AgentEvent::MessageEnd {
