@@ -220,7 +220,7 @@ fn render_message_list(
     let mut row = 0u16;
     let max_rows = area.height;
     let margin_x = area.x;
-    let text_x = area.x + 3;
+    let text_x = area.x + 5;
 
     // Filter out SystemNotice items for chat view (Grok-style: no "New session started" in scrollback)
     let items: Vec<_> = vm.feed.items().iter().collect();
