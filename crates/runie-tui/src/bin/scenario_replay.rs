@@ -99,18 +99,24 @@ fn main() -> ExitCode {
     if let Some(w) = parsed.width { width = w; }
     if let Some(h) = parsed.height { height = h; }
     eprintln!(
-        "[scenario_replay] {} events, {} UI ops, terminal {}x{}",
-        parsed.events.len(), parsed.ui_ops.len(), width, height
+        "[scenario_replay] {} actions, terminal {}x{}",
+        parsed.actions.len(), width, height
     );
 
     let mut tui = Tui::new_headless();
-    // Apply UI ops FIRST (they set up the screen state)
-    for op in &parsed.ui_ops {
-        apply_ui_op(&mut tui, op);
-    }
-    // Then feed agent events
-    for event in &parsed.events {
-        tui.on_agent_event(event.clone());
+
+    // Apply UI ops + agent events in their original file order. The
+    // scenario file may interleave them — e.g. set_context_window op
+    // at the start, then agent events, then set_thought_duration op
+    // at the end after the assistant message has been created.
+    for action in &parsed.actions {
+        // apply_ui_op returns terminal commands (we drop them, headless)
+        // on_agent_event returns ()
+        if let ScenarioAction::UiOp(op) = action {
+            drop(apply_ui_op(&mut tui, op));
+        } else if let ScenarioAction::Event(ev) = action {
+            tui.on_agent_event(ev.clone());
+        }
     }
     let rendered = render_to_text(&mut tui, width, height);
 
@@ -148,8 +154,13 @@ fn main() -> ExitCode {
 struct ParsedScenario {
     width: Option<u16>,
     height: Option<u16>,
-    events: Vec<AgentEvent>,
-    ui_ops: Vec<UiOp>,
+    actions: Vec<ScenarioAction>,
+}
+
+#[derive(Debug, Clone)]
+enum ScenarioAction {
+    UiOp(UiOp),
+    Event(AgentEvent),
 }
 
 #[derive(Debug, Clone)]
@@ -169,20 +180,22 @@ enum UiOp {
     },
     SetContextWindow(usize),
     SetSessionTokens { total: usize },
+    SetThoughtDuration(f32),
 }
 
 fn parse_scenario(raw: &str) -> Result<ParsedScenario, String> {
     let mut out = ParsedScenario {
         width: None,
         height: None,
-        events: Vec::new(),
-        ui_ops: Vec::new(),
+        actions: Vec::new(),
     };
     for (line_no, line) in raw.lines().enumerate() {
         let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') { continue; }
-        let v: serde_json::Value = serde_json::from_str(trimmed)
-            .map_err(|e| format!("line {}: {e}", line_no + 1))?;
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let v: serde_json::Value =
+            serde_json::from_str(trimmed).map_err(|e| format!("line {}: {e}", line_no + 1))?;
         if v.get("__meta__").and_then(|x| x.as_bool()).unwrap_or(false) {
             out.width = v.get("width").and_then(|x| x.as_u64()).map(|n| n as u16);
             out.height = v.get("height").and_then(|x| x.as_u64()).map(|n| n as u16);
@@ -190,12 +203,12 @@ fn parse_scenario(raw: &str) -> Result<ParsedScenario, String> {
         }
         if v.get("ui").and_then(|x| x.as_bool()).unwrap_or(false) {
             let op = parse_ui_op(&v).map_err(|e| format!("line {} (ui): {e}", line_no + 1))?;
-            out.ui_ops.push(op);
+            out.actions.push(ScenarioAction::UiOp(op));
             continue;
         }
         let event: AgentEvent = serde_json::from_value(v)
             .map_err(|e| format!("line {} (agent event): {e}", line_no + 1))?;
-        out.events.push(event);
+        out.actions.push(ScenarioAction::Event(event));
     }
     Ok(out)
 }
@@ -239,6 +252,10 @@ fn parse_ui_op(v: &serde_json::Value) -> Result<UiOp, String> {
             Ok(UiOp::SetSessionTokens {
                 total: g.get("total").and_then(|x| x.as_u64()).unwrap_or(0) as usize,
             })
+        }
+        "thought_duration" => {
+            let secs = v.get("value").and_then(|x| x.as_f64()).unwrap_or(0.0) as f32;
+            Ok(UiOp::SetThoughtDuration(secs))
         }
         other => Err(format!("unknown ui kind '{other}'")),
     }
@@ -284,6 +301,17 @@ fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
         UiOp::SetSessionTokens { total } => {
             state.session_token_usage.total_tokens = *total;
             state.top_bar.estimated_tokens = Some(*total);
+        }
+        UiOp::SetThoughtDuration(secs) => {
+            // Set the last assistant's thought_duration so the
+            // "◆ Thought for X.Xs" header renders.
+            if let Some(runie_tui::components::MessageItem::Assistant {
+                thought_duration,
+                ..
+            }) = state.messages.last_mut()
+            {
+                *thought_duration = Some(*secs);
+            }
         }
     }
     let _ = tui; // keep tui borrowed

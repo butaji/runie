@@ -110,6 +110,22 @@ fn main() -> ExitCode {
     out.push_str(&serde_json::to_string(&user_event).unwrap());
     out.push('\n');
 
+    // Pre-create a placeholder assistant message so thinking_end can
+    // attach thought_duration to it (Grok renders "◆ Thought for 1.2s"
+    // attached to the assistant that follows).
+    if let AgentEvent::MessageUpdate { .. } = &events.first().cloned().unwrap_or(AgentEvent::Message {
+        role: String::new(),
+        content: String::new(),
+    }) {
+        // No-op: only the MessageStart matters below
+    }
+    // We need an assistant MessageItem to exist before thinking_end.
+    // The TUI's on_thinking_end sets thought_duration on state.messages.last().
+    // There's no public way to do that from an AgentEvent, so we skip
+    // this for now and rely on the assistant message itself being
+    // rendered first (the scenario ReplayProvider emits MessageStart for
+    // assistant before ThinkingStart in some flows).
+
     // Then provider events. The provider emits its own Event enum (not
     // AgentEvent) so we map them. We also track usage so we can inject a
     // session_tokens UI op after AgentEnd.
