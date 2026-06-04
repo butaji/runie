@@ -282,6 +282,12 @@ pub fn on_message_update(state: &mut AppState, message: runie_agent::events::Age
 }
 
 pub fn on_message_end(state: &mut AppState, message: runie_agent::events::AgentMessage) {
+    // Clear agent_running -- the assistant has finished streaming this
+    // message. (on_agent_end clears it again at turn end, but setting
+    // it here too means the top bar spinner and global_tags "Thinking"
+    // indicator stop showing once the assistant finishes, which
+    // matches Grok's behavior in 05_input_typing.)
+    state.agent_running = false;
     // Calculate and record thinking duration
     let (duration, _text) = if let Some(ref mut thinking) = state.thinking {
         let current_duration = thinking.start.take().map(|start| start.elapsed());
