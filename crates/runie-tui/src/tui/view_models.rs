@@ -290,24 +290,37 @@ fn build_message_list_vm(
 ) -> MessageListViewModel {
     use crate::components::message_list::Feed;
 
-    // Strip thinking from assistant messages when show_thoughts is false
-    let messages_stripped: Vec<MessageItem> = state.messages.iter().map(|msg| {
-        match msg {
-            MessageItem::Assistant { text, model, timestamp, expanded, thought_duration, turn_duration } if !state.show_thoughts => {
+    // Only clone messages when we actually need to strip thinking from
+    // them. When show_thoughts is true, the Feed sees the original
+    // MessageItem slice and clones nothing on the hot path.
+    let feed = if state.show_thoughts {
+        Feed::from(&state.messages[..])
+    } else {
+        // Strip thinking from assistant messages when show_thoughts is false
+        let messages_stripped: Vec<MessageItem> = state
+            .messages
+            .iter()
+            .map(|msg| match msg {
                 MessageItem::Assistant {
+                    text,
+                    model,
+                    timestamp,
+                    expanded,
+                    thought_duration,
+                    turn_duration,
+                } => MessageItem::Assistant {
                     text: strip_thinking_from_assistant(text),
                     model: model.clone(),
                     timestamp: timestamp.clone(),
                     expanded: *expanded,
                     thought_duration: *thought_duration,
                     turn_duration: *turn_duration,
-                }
-            }
-            other => other.clone(),
-        }
-    }).collect();
-
-    let feed = Feed::from(messages_stripped);
+                },
+                other => other.clone(),
+            })
+            .collect();
+        Feed::from(messages_stripped)
+    };
 
     MessageListViewModel::new(
         feed,
