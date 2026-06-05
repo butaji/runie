@@ -14,58 +14,9 @@ use ratatui_textarea::{TextArea, Input, Key};
 use crossterm::event::{Event, KeyCode, KeyModifiers, KeyEvent, KeyEventKind, KeyEventState};
 
 fn make_state() -> AppState {
-    AppState {
-        messages: vec![],
-        textarea: TextArea::default(),
-        input_right_info: String::new(),
-        mode: TuiMode::Chat,
-        running: true,
-        show_sidebar: false,
-        agent_running: false,
-        current_model: None,
-        context: Default::default(),
-        permission_modal: Default::default(),
-        command_palette: CommandPaletteState::default(),
-        scroll: Default::default(),
-        animation: Default::default(),
-        diff_viewer: None,
-        token_usage: Default::default(),
-        session_token_usage: Default::default(),
-        session_tree: Default::default(),
-        background_jobs: Vec::new(),
-        onboarding: None,
-        terminal_size: (0, 0),
-        clear_input_confirm: Default::default(),
-        model_picker: None,
-        agent_start_time: None,
-        input_history: Vec::new(),
-        input_history_index: None,
-        input_draft: String::new(),
-        status_header: None,
-        status_details: None,
-        status_start_time: None,
-        thinking: None,
-        mock_mode: false,
-        top_bar: TopBarState::default(),
-        last_turn_duration_secs: None,
-        last_turn_tokens: None,
-            last_turn_tool_calls: None,
-            turn_success: None,
-            slash_menu: crate::components::SlashMenu::new(),
-            shortcuts_panel: crate::components::ShortcutsPanel::new(),
-            settings_modal: crate::components::SettingsModal::new(),
-            home_screen: crate::components::HomeScreen::new(),
-        show_thoughts: false,
-            history_search_query: String::new(),
-            history_search_matches: Vec::new(),
-            history_search_index: 0,
-            file_picker: crate::components::FilePicker::new(),
-            permission_mode: crate::tui::state::PermissionMode::Normal,
-            plan_modal: crate::components::PlanModal::new(),
-            allowed_tools: std::collections::HashSet::new(),
-            allowed_categories: std::collections::HashSet::new(),
-            context_usage_modal: crate::components::ContextUsageModal::new(),
-    }
+    let mut state = AppState::default();
+    state.mode = TuiMode::Chat;
+    state
 }
 
 fn type_char(state: &mut AppState, c: char) {
@@ -307,17 +258,101 @@ fn test_end_key_with_modifiers_routed_to_textarea() {
     assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "End+Ctrl should be routed to textarea");
 }
 
-// ─── Regression: ? key Shows Help ───────────────────────────────────────────────
+// ─── Regression: ? key is typed into textarea ─────────────────────────────────
 
-// ? key in Chat mode should produce Msg::OpenShortcutsPanel
+// ? key in Chat mode should be routed to textarea (all symbols must type)
 #[test]
-fn test_question_mark_opens_shortcuts_panel() {
+fn test_question_mark_types_in_chat() {
     let state = make_state();
 
     let key = make_key(KeyCode::Char('?'), KeyModifiers::NONE);
     let msgs = key_to_msg(key, &state);
 
-    assert_eq!(msgs, Some(Msg::OpenShortcutsPanel), "? key should open shortcuts panel in Chat mode");
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "? key should be routed to textarea in Chat mode");
+}
+
+// Ctrl+. opens shortcuts panel in Chat mode
+#[test]
+fn test_ctrl_dot_opens_shortcuts_panel() {
+    let state = make_state();
+
+    let key = make_key(KeyCode::Char('.'), KeyModifiers::CONTROL);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::OpenShortcutsPanel)), "Ctrl+. should open shortcuts panel in Chat mode");
+}
+
+// ─── Symbol Typing in Input Box ───────────────────────────────────────────────
+
+// Space should be typed into the textarea when prompt is focused
+#[test]
+fn test_space_types_in_chat() {
+    let mut state = make_state();
+    state.scroll.scroll_focused = false; // prompt focused
+
+    let key = make_key(KeyCode::Char(' '), KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "Space should be routed to textarea when prompt is focused");
+}
+
+// 'i' should be typed into the textarea when prompt is focused
+#[test]
+fn test_i_types_in_chat() {
+    let mut state = make_state();
+    state.scroll.scroll_focused = false; // prompt focused
+
+    let key = make_key(KeyCode::Char('i'), KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "'i' should be routed to textarea when prompt is focused");
+}
+
+// Tab should insert a tab character when prompt is focused
+#[test]
+fn test_tab_types_in_chat() {
+    let mut state = make_state();
+    state.scroll.scroll_focused = false; // prompt focused
+
+    let key = make_key(KeyCode::Tab, KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert!(matches!(msgs, Some(Msg::TextareaKey(_))), "Tab should be routed to textarea when prompt is focused");
+}
+
+// Space should focus prompt when scroll is focused
+#[test]
+fn test_space_focuses_when_scroll_focused() {
+    let mut state = make_state();
+    state.scroll.scroll_focused = true;
+
+    let key = make_key(KeyCode::Char(' '), KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert_eq!(msgs, Some(Msg::FocusPrompt), "Space should focus prompt when scroll is focused");
+}
+
+// Tab should focus prompt when scroll is focused
+#[test]
+fn test_tab_focuses_when_scroll_focused() {
+    let mut state = make_state();
+    state.scroll.scroll_focused = true;
+
+    let key = make_key(KeyCode::Tab, KeyModifiers::NONE);
+    let msgs = key_to_msg(key, &state);
+
+    assert_eq!(msgs, Some(Msg::FocusPrompt), "Tab should focus prompt when scroll is focused");
+}
+
+// Ctrl+J should insert newline in Chat mode
+#[test]
+fn test_ctrl_j_inserts_newline_in_chat() {
+    let state = make_state();
+
+    let key = make_key(KeyCode::Char('j'), KeyModifiers::CONTROL);
+    let msgs = key_to_msg(key, &state);
+
+    assert_eq!(msgs, Some(Msg::InsertNewline), "Ctrl+J should insert newline in Chat mode");
 }
 
 

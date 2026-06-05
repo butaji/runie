@@ -203,7 +203,7 @@ fn page_shift_keys(key: crossterm::event::KeyEvent) -> Option<Msg> {
 }
 fn focus_key(key: crossterm::event::KeyEvent) -> Option<Msg> {
     match key.code {
-        KeyCode::Char(' ') | KeyCode::Char('i') => Some(Msg::FocusPrompt),
+        KeyCode::Char(' ') | KeyCode::Char('i') | KeyCode::Tab => Some(Msg::FocusPrompt),
         _ => None,
     }
 }
@@ -259,12 +259,6 @@ fn handle_chat_special(key: crossterm::event::KeyEvent) -> Option<Msg> {
     if key.modifiers.contains(KeyModifiers::SHIFT) && matches!(key.code, KeyCode::Tab) {
         return Some(Msg::TogglePermissionMode);
     }
-    if matches!(key.code, KeyCode::Tab) {
-        return Some(Msg::ToggleScrollFocus);
-    }
-    if matches!(key.code, KeyCode::Char('i') | KeyCode::Char(' ')) {
-        return Some(Msg::FocusPrompt);
-    }
     None
 }
 
@@ -285,6 +279,10 @@ fn ctrl_chat_key_match(key: crossterm::event::KeyEvent) -> Option<Msg> {
         if c == 'a' { return Some(Msg::ClearAlwaysApprove); }
         if c == 'e' { return Some(Msg::ToggleThoughts); }
         return Some(Msg::TextareaKey(key));
+    }
+    // Ctrl+J inserts newline in the input box
+    if c == 'j' {
+        return Some(Msg::InsertNewline);
     }
     const CTRL_MAP: &[(char, Msg)] = &[
         ('k', Msg::ScrollUp),

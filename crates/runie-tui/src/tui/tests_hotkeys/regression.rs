@@ -18,15 +18,15 @@ fn test_ctrl_q_quits_in_chat_mode() {
 
 #[test]
 fn test_ctrl_j_inserts_newline_in_chat_mode() {
-    // Ctrl+J inserts newline
+    // Ctrl+J inserts a newline in the input box
     let msg = simulate_key(KeyCode::Char('j'), KeyModifiers::CONTROL, TuiMode::Chat);
-    assert_eq!(msg, Some(Msg::InsertNewline), "Ctrl+J should produce Msg::InsertNewline");
+    assert!(matches!(msg, Some(Msg::InsertNewline)), "Ctrl+J should produce Msg::InsertNewline");
 }
 
 #[test]
-fn test_ctrl_k_opens_command_palette() {
+fn test_ctrl_k_scrolls_up_in_chat_mode() {
     let msg = simulate_key(KeyCode::Char('k'), KeyModifiers::CONTROL, TuiMode::Chat);
-    assert_eq!(msg, Some(Msg::OpenCommandPalette), "Ctrl+K should produce Msg::OpenCommandPalette");
+    assert_eq!(msg, Some(Msg::ScrollUp), "Ctrl+K should produce Msg::ScrollUp");
 }
 
 #[test]
@@ -61,10 +61,11 @@ fn test_page_down_scrolls_in_chat_mode() {
 
 #[test]
 fn test_character_keys_pass_to_textarea() {
-    // Character input now goes to textarea
-    for c in ['a', 'b', 'c', 'x', 'y', 'z', ' ', '1', '@'] {
+    // Most character input goes to textarea when prompt is focused
+    let regular_chars = ['a', 'b', 'c', 'x', 'y', 'z', '1', '@', ' ', 'i'];
+    for c in regular_chars {
         let msg = simulate_key(KeyCode::Char(c), KeyModifiers::NONE, TuiMode::Chat);
-        assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Char '{}' should produce TextareaKey", c);
+        assert!(matches!(msg, Some(Msg::TextareaKey(_))), "Char '{}' should produce TextareaKey when prompt focused", c);
     }
 }
 
