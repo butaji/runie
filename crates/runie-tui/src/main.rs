@@ -15,7 +15,7 @@ use runie_agent::{
     types::Message,
 };
 use std::{
-    io,
+    io::{self, Write},
     sync::Arc,
     time::Duration,
 };
@@ -27,27 +27,25 @@ mod ui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if !isatty(0) {
-        eprintln!("No TTY available, cannot run TUI");
-        return Ok(());
-    }
+    // Try to set up terminal, but don't fail hard
+    let _ = enable_raw_mode();
+    let _ = execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture);
 
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let backend = CrosstermBackend::new(io::stdout());
+    let mut terminal = match Terminal::new(backend) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Failed to create terminal: {}", e);
+            return Ok(());
+        }
+    };
 
     let res = run_app(&mut terminal).await;
 
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
+    let _ = disable_raw_mode();
+    let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
+    let _ = io::stdout().flush();
+    
     if let Err(err) = res {
         eprintln!("Error: {:?}", err);
     }
