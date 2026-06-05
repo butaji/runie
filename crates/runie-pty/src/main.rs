@@ -1,87 +1,60 @@
-//! PTY wrapper for TUI.
+//! PTY wrapper for TUI using portable-pty.
+use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::io::{Read, Write};
-use std::process::{Command, Stdio};
-use std::os::unix::process::CommandExt;
 use std::thread;
 
 fn main() {
-    let (master_fd, slave_fd) = unsafe {
-        let mut master: libc::c_int = 0;
-        let mut slave: libc::c_int = 0;
-        let mut win: libc::winsize = std::mem::zeroed();
-        win.ws_row = 24;
-        win.ws_col = 80;
-        let mut name: [libc::c_char; 128] = [0; 128];
-        if libc::openpty(&mut master, &mut slave, name.as_mut_ptr(), std::ptr::null_mut(), &mut win) < 0 {
-            eprintln!("PTY: Failed to create");
-            std::process::exit(1);
-        }
-        (master, slave)
-    };
+    let pty_system = native_pty_system();
+    
+    let pair = pty_system
+        .openpty(PtySize {
+            rows: 24,
+            cols: 80,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .expect("Failed to create PTY");
 
-    let pid = unsafe { libc::fork() };
-    if pid == 0 {
-        unsafe { libc::close(master_fd) };
-        unsafe { libc::setsid() };
-        let _ = unsafe { libc::ioctl(slave_fd, libc::TIOCSCTTY as libc::c_ulong, 0) };
-        unsafe {
-            libc::dup2(slave_fd, 0);
-            libc::dup2(slave_fd, 1);
-            libc::dup2(slave_fd, 2);
-            libc::close(slave_fd);
-        }
-        std::env::set_current_dir("/Users/admin/Code/GitHub/runie").ok();
-        Command::new("./target/debug/runie-tui")
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .exec();
-        unsafe { libc::_exit(1) };
-    }
-
-    if pid < 0 {
-        eprintln!("PTY: Fork failed");
-        std::process::exit(1);
-    }
-
-    unsafe { libc::close(slave_fd) };
-
-    // Spawn thread to forward stdin to PTY
-    let master_for_input = master_fd;
+    let mut cmd = CommandBuilder::new("./target/debug/runie-tui");
+    cmd.cwd("/Users/admin/Code/GitHub/runie");
+    
+    let mut child = pair.slave.spawn_command(cmd).expect("Failed to spawn TUI");
+    
+    let mut reader = pair.master.try_clone_reader().expect("Failed to clone reader");
+    let mut writer = pair.master.take_writer().expect("Failed to get writer");
+    
+    // Thread to read stdin and forward to PTY
     thread::spawn(move || {
         let mut stdin = std::io::stdin();
-        let mut buf = [0u8; 256];
+        let mut buf = [0u8; 1];
         loop {
             match stdin.read(&mut buf) {
                 Ok(0) | Err(_) => break,
-                Ok(n) => {
-                    let written = unsafe { libc::write(master_for_input, buf.as_ptr() as *const libc::c_void, n) };
-                    if written < 0 { break; }
+                Ok(1) => {
+                    if writer.write_all(&buf).is_err() { break; }
+                    if writer.flush().is_err() { break; }
                 }
+                Ok(_) => {}
             }
         }
     });
-
-    // Forward output from PTY to stdout
-    let mut buf = [0u8; 4096];
-    let timeout = std::time::Duration::from_secs(300);
-    let start = std::time::Instant::now();
     
-    while start.elapsed() < timeout {
-        let mut status: libc::c_int = 0;
-        let result = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
-        if result != 0 {
-            break;
+    // Main loop - forward PTY output to stdout
+    let mut buf = [0u8; 4096];
+    loop {
+        // Check if child exited
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            _ => {}
         }
-        let n = unsafe { libc::read(master_fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) };
-        if n > 0 {
-            std::io::stdout().write_all(&buf[..n as usize]).ok();
-            std::io::stdout().flush().ok();
-        } else {
-            std::thread::sleep(std::time::Duration::from_millis(50));
+        
+        match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => {
+                std::io::stdout().write_all(&buf[..n]).ok();
+                std::io::stdout().flush().ok();
+            }
+            Err(_) => break,
         }
     }
-
-    unsafe { libc::close(master_fd) };
-    unsafe { libc::waitpid(pid, std::ptr::null_mut(), 0) };
 }
