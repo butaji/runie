@@ -21,6 +21,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
         Event::AgentThinking => {
             let mut state = state;
             state.streaming = true;
+            state.thinking_started_at = Some(std::time::Instant::now());
             state
         }
         Event::AgentResponse { content } => {
@@ -35,6 +36,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
         Event::AgentDone => {
             let mut state = state;
             state.streaming = false;
+            state.thinking_started_at = None;
             state
         }
         Event::AgentError { message } => {

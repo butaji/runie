@@ -78,17 +78,29 @@ fn message_to_lines(msg: &runie_core::ChatMessage) -> Vec<Line<'_>> {
 }
 
 fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
+    // Determine title and content based on state
+    let (title, content, border_style) = if state.streaming {
+        let elapsed = state.thinking_elapsed_secs()
+            .map(|s| format!(" Thinking... {:.1}s ", s))
+            .unwrap_or_else(|| " Thinking... ".to_string());
+        (elapsed, String::new(), Style::default().fg(Color::Yellow))
+    } else {
+        (" Input ".to_string(), state.input.clone(), Style::default().fg(Color::DarkGray))
+    };
+    
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Input ")
-        .border_style(Style::default().fg(Color::DarkGray))
+        .title(title)
+        .border_style(border_style)
         .title_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
-    let paragraph = Paragraph::new(state.input.as_str()).block(block);
+    let paragraph = Paragraph::new(content).block(block);
     f.render_widget(paragraph, area);
     
-    // Position cursor at end of input
-    let cursor_x = (inner.x + state.input.len() as u16).min(inner.right() - 1);
-    let cursor_y = inner.y;
-    f.set_cursor_position((cursor_x, cursor_y));
+    // Position cursor at end of input (only when not streaming)
+    if !state.streaming {
+        let cursor_x = (inner.x + state.input.len() as u16).min(inner.right() - 1);
+        let cursor_y = inner.y;
+        f.set_cursor_position((cursor_x, cursor_y));
+    }
 }
