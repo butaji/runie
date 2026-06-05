@@ -3,7 +3,7 @@
 //! Converts ChatMessage + state metadata into display lines.
 
 use crate::model::AppState;
-use crate::labels::{PREFIX_USER, PREFIX_AGENT, THINKING_LOADING, thinking_with_time};
+use crate::labels::{PREFIX_USER, PREFIX_AGENT};
 
 /// A formatted line ready for rendering
 #[derive(Debug, Clone)]
@@ -44,9 +44,7 @@ pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
                 last_was_assistant = false;
             }
             "assistant" => {
-                // Combine consecutive assistant messages
                 if last_was_assistant {
-                    // Append to last agent line's content span (index 1)
                     if let Some(last) = lines.last_mut() {
                         if last.spans.len() > 1 {
                             last.spans[1].text.push_str(&msg.content);
@@ -61,12 +59,17 @@ pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
         }
     }
     
+    // Show thinking indicator if agent is working
+    if state.streaming || !state.request_queue.is_empty() {
+        lines.extend(thinking_indicator(state));
+    }
+    
     lines
 }
 
 // === Message Component Formatters ===
 
-/// User message: "You: <content>"
+/// User message
 pub fn user_message(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
@@ -79,7 +82,7 @@ pub fn user_message(content: &str) -> Vec<DisplayLine> {
     ]
 }
 
-/// Agent answer: "Agent: <content>"
+/// Agent answer
 pub fn agent_answer(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
@@ -92,13 +95,12 @@ pub fn agent_answer(content: &str) -> Vec<DisplayLine> {
     ]
 }
 
-/// Bailer spinner characters (animation frames)
+/// Bailer spinner characters
 const SPINNER_FRAMES: [&str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
 
-/// Thinking indicator (animated spinner): "⠋ Thinking... X.Xs"
-pub fn thinking(state: &AppState) -> Vec<DisplayLine> {
+/// Thinking indicator (animated): "⠋ Thinking... Xs"
+pub fn thinking_indicator(state: &AppState) -> Vec<DisplayLine> {
     let elapsed = state.thinking_elapsed_secs().unwrap_or(0.0);
-    // Animate spinner based on elapsed time (switch frame every 0.1s)
     let frame_idx = ((elapsed * 10.0) as usize) % SPINNER_FRAMES.len();
     let spinner = SPINNER_FRAMES[frame_idx];
     let text = format!("{} Thinking... {:.1}s", spinner, elapsed);
@@ -111,7 +113,7 @@ pub fn thinking(state: &AppState) -> Vec<DisplayLine> {
     ]
 }
 
-/// Thought message (stored): "⏳ Thought X.Xs"
+/// Thought message (stored): "◆ Thought Xs"
 pub fn thought_message(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
