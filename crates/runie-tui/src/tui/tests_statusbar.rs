@@ -10,10 +10,9 @@ mod tests_statusbar {
     #[test]
     fn test_chat_mode_hotkeys() {
         let items = get_status_items(&TuiMode::Chat);
-        assert!(items.iter().any(|(k, _)| k == &"Enter"));
-        assert!(items.iter().any(|(k, _)| k == &"^b"));
-        assert!(items.iter().any(|(k, _)| k == &"^k"));
-        assert!(items.iter().any(|(k, _)| k == &"^q"));
+        // Chat idle mode shows Shift+Tab and Ctrl+.
+        assert!(items.iter().any(|(k, _)| k == &"Shift+Tab"), "Chat mode should show Shift+Tab");
+        assert!(items.iter().any(|(k, _)| k == &"Ctrl+."), "Chat mode should show Ctrl+.");
     }
 
     #[test]

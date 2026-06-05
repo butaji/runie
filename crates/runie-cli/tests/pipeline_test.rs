@@ -39,6 +39,8 @@ impl MockTui {
         let mut state = AppState::default();
         // P0-2 FIX: Set model so submit tests work
         state.current_model = Some("gpt-4".to_string());
+        // Set mode to Chat so keyboard tests work (default is HomeScreen)
+        state.mode = TuiMode::Chat;
         Self {
             state,
             palette: CommandPalette::new(),
@@ -244,7 +246,7 @@ fn test_full_pipeline_typing() {
 }
 
 /// Test: Ctrl+B → check sidebar toggled
-/// Test: Ctrl+K → check mode is CommandPalette
+/// Test: Ctrl+P → check mode is CommandPalette
 /// Test: Esc → check mode back to Chat
 /// Test: Ctrl+Q → check running=false
 #[test]
@@ -258,12 +260,12 @@ fn test_full_pipeline_hotkeys() {
     }
     assert!(tui.state.show_sidebar, "Ctrl+B should toggle sidebar on");
 
-    // Ctrl+K opens command palette
+    // Ctrl+P opens command palette (not Ctrl+K which is ScrollUp)
     assert_eq!(tui.state.mode, TuiMode::Chat, "Mode should start as Chat");
-    if let Some(msg) = tui.simulate_key(KeyCode::Char('k'), true) {
+    if let Some(msg) = tui.simulate_key(KeyCode::Char('p'), true) {
         tui.update(msg);
     }
-    assert_eq!(tui.state.mode, TuiMode::CommandPalette, "Ctrl+K should open palette");
+    assert_eq!(tui.state.mode, TuiMode::CommandPalette, "Ctrl+P should open palette");
 
     // Esc closes palette and returns to Chat
     if let Some(msg) = tui.simulate_key(KeyCode::Esc, false) {

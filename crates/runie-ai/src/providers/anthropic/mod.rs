@@ -20,7 +20,6 @@ pub struct AnthropicProvider {
 impl AnthropicProvider {
 
     #[must_use]
-    #[must_use]
     pub fn new(api_key: String, model: String) -> Self {
         let api_key = if api_key.is_empty() { env::var("ANTHROPIC_API_KEY").unwrap_or_default() } else { api_key };
         let client = Client::builder()

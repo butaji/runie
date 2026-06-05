@@ -15,7 +15,6 @@ pub struct LoggingPlugin {
 impl LoggingPlugin {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self { Self { name: "logging".to_string() } }
 }
 
@@ -45,7 +44,6 @@ pub struct MetricsPlugin {
 
 impl MetricsPlugin {
 
-    #[must_use]
     #[must_use]
     pub fn new() -> Self {
         Self { name: "metrics".to_string(), counts: RwLock::new(HashMap::new()) }
@@ -97,7 +95,6 @@ struct GitPluginState {
 
 impl GitStatusPlugin {
 
-    #[must_use]
     #[must_use]
     pub fn new() -> Self {
         Self {

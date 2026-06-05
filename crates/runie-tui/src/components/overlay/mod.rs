@@ -1,6 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
+    style::Color,
     text::{Line, Span},
     widgets::{Clear, Widget},
 };
@@ -55,8 +56,10 @@ impl Overlay {
         Clear.render(area, buf);
 
         // Draw panel border (without title since we render tabs in that space)
+        let border_color = styles.border.fg.unwrap_or(text_tertiary.fg.unwrap_or(Color::White));
+        let accent_color = syntax_phase.fg.unwrap_or(Color::White);
         Panel::new()
-            .border_gradient(styles.border.fg.unwrap_or(text_tertiary.fg.unwrap()), syntax_phase.fg.unwrap())
+            .border_gradient(border_color, accent_color)
             .render(area, buf, |_inner, _buf| {
                 // Inner content is rendered separately below
             });

@@ -98,7 +98,7 @@ impl Settings {
     }
 
     /// Merge settings from environment variables
-    fn merge_env(&mut self) {
+    pub(crate) fn merge_env(&mut self) {
         // Standard RUNIE_* env vars
         if let Ok(val) = std::env::var("RUNIE_MODEL") {
             self.model = val;

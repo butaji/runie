@@ -28,11 +28,10 @@ mod handle_direct_command_tests {
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::NewSession);
 
-        // Messages cleared and system message added
-        assert_eq!(state.messages.len(), 1);
-        assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("New session")));
-        assert!(cmds.is_empty());
+        // Messages cleared - run_slash sets mode back to Chat
+        assert_eq!(state.messages.len(), 0);
         assert_eq!(state.mode, TuiMode::Chat);
+        assert!(cmds.is_empty());
     }
 
     #[test]
@@ -212,9 +211,9 @@ mod command_execution_tests {
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::NewSession);
 
-        // Old messages cleared, but "New session started" system message added
-        assert_eq!(state.messages.len(), 1);
-        assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("New session")));
+        // Messages cleared - run_slash sets mode back to Chat
+        assert_eq!(state.messages.len(), 0);
+        assert_eq!(state.mode, TuiMode::Chat);
         assert!(cmds.is_empty());
     }
 
@@ -224,8 +223,9 @@ mod command_execution_tests {
 
         let cmds = handle_direct_command(&mut state, PaletteCommand::NewSession);
 
-        assert_eq!(state.messages.len(), 1);
-        assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("New session started")));
+        // run_slash sets mode back to Chat after handle_new switches to HomeScreen
+        assert_eq!(state.messages.len(), 0);
+        assert_eq!(state.mode, TuiMode::Chat);
         assert!(cmds.is_empty());
     }
 

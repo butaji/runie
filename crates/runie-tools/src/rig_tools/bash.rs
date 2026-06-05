@@ -65,7 +65,6 @@ pub struct BashTool {
 impl BashTool {
 
     #[must_use]
-    #[must_use]
     pub fn new(workspace: PathBuf) -> Self {
         Self { workspace }
     }

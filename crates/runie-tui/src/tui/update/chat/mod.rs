@@ -216,12 +216,15 @@ fn handle_clear_chat(state: &mut AppState) -> Vec<ChatCmd> {
 
 fn handle_paste(state: &mut AppState, text: String) -> Vec<ChatCmd> {
     let current = state.textarea.lines().join("\n");
-    let is_history_view = state.input_history_index.is_some()
-        && state
+    let is_history_view = if let Some(idx) = state.input_history_index {
+        state
             .input_history
-            .get(state.input_history_index.unwrap())
+            .get(idx)
             .map(|h| h == &current)
-            .unwrap_or(false);
+            .unwrap_or(false)
+    } else {
+        false
+    };
     state.input_history_index = None;
     state.input_draft.clear();
     if is_history_view {

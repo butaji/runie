@@ -28,7 +28,6 @@ pub struct ProviderModelFetcher {
 impl ProviderModelFetcher {
 
     #[must_use]
-    #[must_use]
     pub fn new(provider_id: &str, _base_url: Option<&str>) -> Self {
         Self {
             provider_id: provider_id.to_lowercase(),

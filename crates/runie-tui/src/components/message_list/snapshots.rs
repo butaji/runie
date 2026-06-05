@@ -10,6 +10,16 @@ use crate::components::message_list::MessageList;
 use crate::tui::state::AnimationState;
 use crate::theme::ThemeWrapper;
 
+/// Mock timestamp for deterministic snapshot tests.
+/// This ensures all timestamp-dependent snapshots are consistent.
+/// Uses "4:38 AM" to match the reference Grok dumps.
+static MOCK_TIMESTAMP: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| {
+        // Set the environment variable so render functions use this timestamp
+        std::env::set_var("RUNIE_MOCK_TIMESTAMP", "4:38 AM");
+        "4:38 AM".to_string()
+    });
+
 fn make_test_theme() -> ThemeWrapper {
     ThemeWrapper::default_for_test()
 }
@@ -30,10 +40,14 @@ fn buffer_to_string(buf: &Buffer) -> String {
 }
 
 fn render_feed(feed: Feed, width: u16, height: u16) -> String {
+    // Ensure mock timestamp is set before rendering
+    let _ = &*MOCK_TIMESTAMP;
     render_feed_with_agent(feed, width, height, false)
 }
 
 fn render_feed_with_agent(feed: Feed, width: u16, height: u16, agent_running: bool) -> String {
+    // Ensure mock timestamp is set before rendering
+    let _ = &*MOCK_TIMESTAMP;
     let area = Rect::new(0, 0, width, height);
     let buf = Buffer::empty(area);
     let theme = make_test_theme();

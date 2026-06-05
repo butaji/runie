@@ -164,8 +164,9 @@ mod handler_new_tests {
 
         handle_slash(&mut state, SlashCommand::New);
 
-        assert_eq!(state.messages.len(), 1);
-        assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("New session")));
+        // handle_new clears messages and shows home screen, doesn't add a system message
+        assert_eq!(state.messages.len(), 0);
+        assert_eq!(state.mode, TuiMode::HomeScreen);
     }
 
     #[test]
@@ -724,14 +725,17 @@ mod integration_tests {
         let mut state = make_state();
         state.messages.push(MessageItem::User { text: "hello".to_string(), model: None, timestamp: None });
 
+        // Note: handle_slash is called directly (not through run_slash), so mode stays at HomeScreen after New
         handle_slash(&mut state, SlashCommand::New);
 
-        assert_eq!(state.messages.len(), 1); // Only system message
-        assert!(matches!(&state.messages[0], MessageItem::System { text } if text.contains("New session")));
+        // handle_new clears messages and switches to HomeScreen
+        assert_eq!(state.messages.len(), 0);
+        assert_eq!(state.mode, TuiMode::HomeScreen);
 
         handle_slash(&mut state, SlashCommand::Model("claude-3-opus".to_string()));
 
-        assert_eq!(state.messages.len(), 2);
+        // handle_model adds a system message
+        assert_eq!(state.messages.len(), 1);
         assert_eq!(state.current_model, Some("claude-3-opus".to_string()));
     }
 

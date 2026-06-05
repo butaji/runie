@@ -3,4 +3,4 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
- ❯ Hey
+   ❯ Hey                                                             4:38 AM

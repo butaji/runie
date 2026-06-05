@@ -47,6 +47,7 @@ fn make_turn_end(turn: usize) -> AgentEvent {
             cache_read: 0,
             cache_write: 0,
         },
+        turn_duration_ms: None,
     }
 }
 

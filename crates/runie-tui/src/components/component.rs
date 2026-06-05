@@ -56,7 +56,6 @@ pub struct InputBar;
 impl InputBar {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         InputBar
     }

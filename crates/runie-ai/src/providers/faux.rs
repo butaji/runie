@@ -37,7 +37,6 @@ impl ResponseSequence {
     /// Create a new empty sequence
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         Self { steps: vec![] }
     }
@@ -138,7 +137,6 @@ pub struct FauxResponse {
 impl FauxResponse {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         Self {
             sequence: ResponseSequence::new(),
@@ -197,7 +195,6 @@ pub struct FauxProvider {
 
 impl FauxProvider {
 
-    #[must_use]
     #[must_use]
     pub fn new() -> Self {
         Self {

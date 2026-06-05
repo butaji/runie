@@ -6,115 +6,17 @@ use crate::tui::update::update;
 use runie_agent::{AgentEvent, AgentMessage};
 
 fn make_state() -> AppState {
-    AppState {
-        messages: vec![],
-        textarea: ratatui_textarea::TextArea::default(),
-        input_right_info: String::new(),
-        mode: TuiMode::Chat,
-        running: true,
-        show_sidebar: false,
-        agent_running: false,
-        current_model: None,
-        context: crate::tui::state::ContextState::default(),
-        permission_modal: crate::tui::state::PermissionModalState::default(),
-        command_palette: crate::tui::state::CommandPaletteState::default(),
-        scroll: crate::tui::state::ScrollState::default(),
-        animation: crate::tui::state::AnimationState::default(),
-        diff_viewer: None,
-        token_usage: runie_ai::TokenUsage::default(),
-        session_token_usage: runie_ai::TokenUsage::default(),
-        session_tree: crate::components::SessionTreeNavigator::new(),
-        background_jobs: Vec::new(),
-        onboarding: None,
-        terminal_size: (0, 0),
-        clear_input_confirm: crate::tui::state::ClearInputConfirm::default(),
-        model_picker: None,
-        agent_start_time: None,
-        input_history: Vec::new(),
-        input_history_index: None,
-        input_draft: String::new(),
-        status_header: None,
-        status_details: None,
-        status_start_time: None,
-        // Thinking state
-        thinking: None,
-        mock_mode: false,
-        top_bar: crate::tui::state::TopBarState::default(),
-        last_turn_duration_secs: None,
-        last_turn_tokens: None,
-            last_turn_tool_calls: None,
-            turn_success: None,
-            slash_menu: crate::components::SlashMenu::new(),
-            shortcuts_panel: crate::components::ShortcutsPanel::new(),
-            settings_modal: crate::components::SettingsModal::new(),
-            home_screen: crate::components::HomeScreen::new(),
-        show_thoughts: false,
-            history_search_query: String::new(),
-            history_search_matches: Vec::new(),
-            history_search_index: 0,
-            file_picker: crate::components::FilePicker::new(),
-            permission_mode: crate::tui::state::PermissionMode::Normal,
-            plan_modal: crate::components::PlanModal::new(),
-            allowed_tools: std::collections::HashSet::new(),
-            allowed_categories: std::collections::HashSet::new(),
-            context_usage_modal: crate::components::ContextUsageModal::new(),
-    }
+    let mut state = AppState::default();
+    state.mode = TuiMode::Chat;
+    state
 }
 
 fn make_state_with_text(text: &str) -> AppState {
-    AppState {
-        messages: vec![],
-        textarea: ratatui_textarea::TextArea::new(vec![text.to_string()]),
-        input_right_info: String::new(),
-        mode: TuiMode::Chat,
-        running: true,
-        show_sidebar: false,
-        agent_running: false,
-        current_model: Some("gpt-4".to_string()),
-        context: crate::tui::state::ContextState::default(),
-        permission_modal: crate::tui::state::PermissionModalState::default(),
-        command_palette: crate::tui::state::CommandPaletteState::default(),
-        scroll: crate::tui::state::ScrollState::default(),
-        animation: crate::tui::state::AnimationState::default(),
-        diff_viewer: None,
-        token_usage: runie_ai::TokenUsage::default(),
-        session_token_usage: runie_ai::TokenUsage::default(),
-        session_tree: crate::components::SessionTreeNavigator::new(),
-        background_jobs: Vec::new(),
-        onboarding: None,
-        terminal_size: (0, 0),
-        clear_input_confirm: crate::tui::state::ClearInputConfirm::default(),
-        model_picker: None,
-        agent_start_time: None,
-        input_history: Vec::new(),
-        input_history_index: None,
-        input_draft: String::new(),
-        status_header: None,
-        status_details: None,
-        status_start_time: None,
-        // Thinking state
-        thinking: None,
-        mock_mode: false,
-        top_bar: crate::tui::state::TopBarState::default(),
-        last_turn_duration_secs: None,
-        last_turn_tokens: None,
-            last_turn_tool_calls: None,
-            turn_success: None,
-            slash_menu: crate::components::SlashMenu::new(),
-            shortcuts_panel: crate::components::ShortcutsPanel::new(),
-            settings_modal: crate::components::SettingsModal::new(),
-            home_screen: crate::components::HomeScreen::new(),
-        show_thoughts: false,
-            history_search_query: String::new(),
-            history_search_matches: Vec::new(),
-            history_search_index: 0,
-            file_picker: crate::components::FilePicker::new(),
-            permission_mode: crate::tui::state::PermissionMode::Normal,
-            plan_modal: crate::components::PlanModal::new(),
-            allowed_tools: std::collections::HashSet::new(),
-            allowed_categories: std::collections::HashSet::new(),
-            context_usage_modal: crate::components::ContextUsageModal::new(),
-    }
+    let mut state = AppState::default();
+    state.mode = TuiMode::Chat;
+    state.textarea = ratatui_textarea::TextArea::new(vec![text.to_string()]);
+    state.current_model = Some("gpt-4".to_string());
+    state
 }
 
 #[test]

@@ -8,7 +8,6 @@ pub struct ToolRegistry {
 impl ToolRegistry {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         Self {
             tools: HashMap::new(),

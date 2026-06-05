@@ -382,6 +382,7 @@ pub fn turn_end(tokens: usize) -> AgentEvent {
             output: 0,
             total_tokens: tokens as u32,
         },
+        turn_duration_ms: None,
     }
 }
 

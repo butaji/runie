@@ -3,8 +3,11 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
- ❯ Check my system                                                              
+   ❯ Check my system                                                 4:38 AM    
                                                                                 
                                                                                 
- ◆ Thought for 0.1s                                                             
- Your system is running well!
+                                                                                
+   ◆ Thought for 0.1s                                                           
+◆ bash uname -a                                                                 
+◆ bash uptime                                                                   
+   Your system is running well!

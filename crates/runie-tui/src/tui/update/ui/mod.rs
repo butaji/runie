@@ -242,8 +242,16 @@ fn ext_tab(m: &mut crate::components::extensions_modal::ExtensionsModal, msg: &c
     let tabs = ExtensionTab::all();
     let idx = tabs.iter().position(|t| *t == m.active_tab);
     match msg {
-        Msg::ExtensionsModalLeft if idx.map_or(false, |i| i > 0) => m.set_tab(tabs[idx.unwrap() - 1]),
-        Msg::ExtensionsModalRight if idx.map_or(false, |i| i < tabs.len() - 1) => m.set_tab(tabs[idx.unwrap() + 1]),
+        Msg::ExtensionsModalLeft if idx.is_some_and(|i| i > 0) => {
+            if let Some(i) = idx {
+                m.set_tab(tabs[i - 1]);
+            }
+        }
+        Msg::ExtensionsModalRight if idx.is_some_and(|i| i < tabs.len() - 1) => {
+            if let Some(i) = idx {
+                m.set_tab(tabs[i + 1]);
+            }
+        }
         _ => {}
     }
     vec![]

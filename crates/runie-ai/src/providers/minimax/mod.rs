@@ -21,7 +21,6 @@ pub struct MiniMaxProvider {
 impl MiniMaxProvider {
 
     #[must_use]
-    #[must_use]
     pub fn new(api_key: String, model: String) -> Self {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(HTTP_TIMEOUT_SECS))

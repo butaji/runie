@@ -14,7 +14,6 @@ pub struct Context {
 impl Context {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         Self {
             session: Session::new(uuid::Uuid::new_v4().to_string()),

@@ -164,6 +164,7 @@ fn test_turn_end_without_tools() {
             cache_read: 0,
             cache_write: 0,
         },
+        turn_duration_ms: None,
     });
 
     // on_turn_end now stores metrics in AppState instead of adding a Separator

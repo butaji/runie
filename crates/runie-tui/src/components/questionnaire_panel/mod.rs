@@ -3,7 +3,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Widget, Clear, Block, Borders},
 };
@@ -121,7 +121,8 @@ fn render_questionnaire(state: &QuestionnaireState, area: Rect, buf: &mut Buffer
     let styles = StyleSet::from_theme(&theme);
 
     Clear.render(area, buf);
-    Block::default().borders(Borders::ALL).border_style(Style::default().fg(styles.accent.fg.unwrap())).render(area, buf);
+    let accent_color = styles.accent.fg.unwrap_or(Color::White);
+    Block::default().borders(Borders::ALL).border_style(Style::default().fg(accent_color)).render(area, buf);
 
     let inner = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), area.height.saturating_sub(2));
     let total = state.questions.len();

@@ -102,8 +102,10 @@ mod tests_status_bar_onboarding {
 
         render_ref(&vm, area, &mut buf, &colors);
 
-        assert!(buffer_contains(&buf, "Enter"),
-            "Chat mode should display Enter hotkey");
+        // Chat idle mode shows Shift+Tab and Ctrl+.
+        // We check for Tab which appears in both Shift+Tab and Ctrl+.
+        assert!(buffer_contains(&buf, "Tab"),
+            "Chat mode should display Tab hotkey");
     }
 
     #[test]
