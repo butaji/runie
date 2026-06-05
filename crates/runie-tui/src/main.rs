@@ -1,6 +1,9 @@
 mod app;
 mod ui;
 
+// Include build-time information
+include!(concat!(env!("OUT_DIR"), "/built.rs"));
+
 use app::App;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers},
@@ -51,7 +54,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut app = App::new();
+    // Get build time formatted as HHMM
+    let build_time = chrono::Local::now().format("%H%M").to_string();
+    let mut app = App::new(build_time);
     let provider = Arc::new(MockProvider);
     let agent = AgentLoop::new(provider);
 

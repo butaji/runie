@@ -14,10 +14,11 @@ pub struct App {
     pub stream_buffer: String,
     pub quit: bool,
     pub needs_redraw: bool,
+    pub build_time: String,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(build_time: String) -> Self {
         Self {
             messages: vec![ChatMessage {
                 role: "system".into(),
@@ -29,6 +30,7 @@ impl App {
             stream_buffer: String::new(),
             quit: false,
             needs_redraw: true,
+            build_time,
         }
     }
 
