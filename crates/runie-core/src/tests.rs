@@ -372,7 +372,11 @@ mod tests {
     
     #[test]
     fn test_turn_complete_event() {
-        let state = update(fresh_state(), Event::AgentTurnComplete { 
+        // Turn complete only shows if there were intermediate steps (like tool execution)
+        let mut state = fresh_state();
+        state.has_intermediate_steps = true;  // Simulate tool was run
+        
+        let state = update(state, Event::AgentTurnComplete { 
             id: "req.0".to_string(), 
             duration_secs: 5.1 
         });
@@ -381,6 +385,23 @@ mod tests {
         let msg = &state.messages[0];
         assert_eq!(msg.role, "turn_complete");
         assert!(msg.content.contains("5.1s"));
+    }
+    
+    #[test]
+    fn test_turn_complete_not_shown_for_simple_flow() {
+        // Simple flow (thinking + response) should NOT show turn complete
+        let mut state = fresh_state();
+        state.streaming = true;
+        
+        state = update(state, Event::AgentThinking { id: "req.0".to_string() });
+        state = update(state, Event::AgentThoughtDone { id: "req.0".to_string() });
+        state = update(state, Event::AgentResponse { id: "req.0".to_string(), content: "Hi".to_string() });
+        // No intermediate steps, so turn complete should not be added
+        let state = update(state, Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 1.0 });
+        
+        // Should NOT have turn_complete message
+        let has_turn_complete = state.messages.iter().any(|m| m.role == "turn_complete");
+        assert!(!has_turn_complete, "Simple flow should not show turn complete");
     }
     
     #[test]

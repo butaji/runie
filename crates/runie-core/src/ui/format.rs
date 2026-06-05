@@ -62,7 +62,7 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         ],
         
         Element::Thinking { elapsed } => {
-            let text = format!("Though... {:.1}s", elapsed);
+            let text = format!("⠋ Though... {:.1}s", elapsed);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
@@ -77,7 +77,7 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         ],
         
         Element::ToolRunning { name, elapsed } => {
-            let text = format!("Running {}... {:.1}s", name, elapsed);
+            let text = format!("⠋ Running {}... {:.1}s", name, elapsed);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
@@ -86,7 +86,7 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         }
         
         Element::ToolDone { name, duration_secs } => {
-            let text = format!("Ran {} {:.1}s", name, duration_secs);
+            let text = format!("◆ Ran {} {:.1}s", name, duration_secs);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],

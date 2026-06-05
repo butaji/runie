@@ -53,6 +53,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.current_request_id = Some(id.clone());
             state.current_tool_name = Some(name.clone());
             state.tool_started_at = Some(std::time::Instant::now());
+            state.has_intermediate_steps = true;  // Mark that this turn has intermediate steps
             
             state.messages.push(ChatMessage {
                 role: "tool".into(),
@@ -85,12 +86,15 @@ pub fn update(state: AppState, event: Event) -> AppState {
         }
         Event::AgentTurnComplete { id, duration_secs } => {
             let mut state = state;
-            state.messages.push(ChatMessage {
-                role: "turn_complete".into(),
-                content: format!("Turn completed in {:.1}s", duration_secs),
-                timestamp: now(),
-                id,
-            });
+            // Only show "Turn completed" if there were intermediate steps
+            if state.has_intermediate_steps {
+                state.messages.push(ChatMessage {
+                    role: "turn_complete".into(),
+                    content: format!("Turn completed in {:.1}s", duration_secs),
+                    timestamp: now(),
+                    id,
+                });
+            }
             state.turn_started_at = None;
             state
         }
@@ -98,6 +102,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.current_request_id = None;
             state.current_tool_name = None;
+            state.has_intermediate_steps = false;  // Reset for next turn
             if state.request_queue.is_empty() {
                 state.streaming = false;
                 state.thinking_started_at = None;

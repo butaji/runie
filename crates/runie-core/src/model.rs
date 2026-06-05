@@ -20,6 +20,8 @@ pub struct AppState {
     pub current_tool_name: Option<String>,
     #[serde(skip)]
     pub tool_started_at: Option<std::time::Instant>,
+    #[serde(skip)]
+    pub has_intermediate_steps: bool,  // True if tool or other steps occurred in this turn
 }
 
 impl AppState {
