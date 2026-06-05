@@ -26,5 +26,5 @@ pub fn thinking_with_time(seconds: f64) -> String {
 
 /// Thought duration (after completion)
 pub fn thought_with_time(seconds: f64) -> String {
-    format!("✓ Thought {:.1}s", seconds)
+    format!("◆ Thought {:.1}s", seconds)
 }
