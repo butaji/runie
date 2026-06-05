@@ -82,7 +82,7 @@ fn message_to_lines(msg: &ChatMessage) -> Vec<Line<'_>> {
 fn draw_input(f: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(format!(" Input "))
+        .title(format!(" Input  v{}", app.build_time))
         .border_style(if app.streaming {
             Style::default().fg(Color::DarkGray)
         } else {
@@ -91,23 +91,9 @@ fn draw_input(f: &mut Frame, app: &App, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    // Show build time in bottom right
+    // Show input text
     let input_text = Paragraph::new(app.input.as_str());
     f.render_widget(input_text, inner);
-
-    // Build time in bottom right corner
-    let build_time = format!("v{}", app.build_time);
-    let build_time_width = build_time.len() as u16 + 2;
-    let build_time_area = Rect::new(
-        inner.right().saturating_sub(build_time_width),
-        inner.y + inner.height.saturating_sub(1),
-        build_time_width,
-        1,
-    );
-    let build_time_widget = Paragraph::new(build_time)
-        .style(Style::default().fg(Color::DarkGray))
-        .alignment(ratatui::layout::Alignment::Right);
-    f.render_widget(build_time_widget, build_time_area);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
