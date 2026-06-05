@@ -112,3 +112,49 @@ impl AgentLoop {
         Box::pin(ReceiverStream::new(rx))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::provider::MockProvider;
+    use futures::StreamExt;
+
+    #[tokio::test]
+    async fn test_mock_provider_echo() {
+        let provider = Arc::new(MockProvider);
+        let agent = AgentLoop::new(provider);
+        let msgs = vec![Message::User { content: "hello".into() }];
+        let events: Vec<AgentEvent> = agent.run(msgs).collect().await;
+
+        let mut found_start = false;
+        let mut found_delta = false;
+        let mut found_end = false;
+        for e in &events {
+            match e {
+                AgentEvent::MessageStart { role } => {
+                    assert_eq!(role, "assistant");
+                    found_start = true;
+                }
+                AgentEvent::MessageDelta { content } => {
+                    if !content.is_empty() {
+                        found_delta = true;
+                    }
+                }
+                AgentEvent::MessageEnd => found_end = true,
+                _ => {}
+            }
+        }
+        assert!(found_start);
+        assert!(found_delta);
+        assert!(found_end);
+    }
+
+    #[tokio::test]
+    async fn test_empty_tools_no_crash() {
+        let provider = Arc::new(MockProvider);
+        let agent = AgentLoop::new(provider).with_tools(vec![]);
+        let msgs = vec![Message::User { content: "test".into() }];
+        let events: Vec<AgentEvent> = agent.run(msgs).collect().await;
+        assert!(!events.is_empty());
+    }
+}
