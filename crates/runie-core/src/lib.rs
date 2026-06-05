@@ -16,7 +16,7 @@ pub mod labels;
 pub use model::{AppState, ChatMessage};
 pub use event::Event;
 pub use format::{
-    format_messages, user_message, agent_answer, thinking, thought_message,
+    format_messages, user_message, agent_answer, thought_message,
     DisplayLine, DisplaySpan, Color,
 };
 pub use labels::{
