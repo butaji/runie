@@ -5,7 +5,8 @@ use crate::messages::MessageRegistry;
 use crate::tui::state::{AppState, ThinkingState};
 use runie_agent::events::AgentMessage;
 
-use super::{extract_text_content, thinking::ensure_thinking_placeholder, AgentCmd};
+use super::super::AgentCmd;
+use super::{extract_text_content, thinking::ensure_thinking_placeholder};
 
 fn current_timestamp() -> Option<String> {
     use chrono::Local;

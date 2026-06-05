@@ -31,7 +31,9 @@ pub fn render_onboarding_mode(
     }
 
     // Render top bar
-    crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
+    if let Some(ref top_bar) = vms.top_bar {
+        crate::components::top_bar::render_top_bar(top_bar, main_areas[0], buf, theme_colors);
+    }
 
     if let Some(ref onboarding) = state.onboarding {
         let onboarding_area = Rect {
@@ -44,7 +46,9 @@ pub fn render_onboarding_mode(
     }
 
     if show_status_bar {
-        crate::components::status_bar::render_ref(&vms.status_bar, main_areas[5], buf, theme_colors);
+        if let Some(ref status_bar) = vms.status_bar {
+            crate::components::status_bar::render_ref(status_bar, main_areas[5], buf, theme_colors);
+        }
     }
 }
 
@@ -58,8 +62,10 @@ pub fn render_home_screen_mode(
     theme_colors: &ThemeColors,
 ) {
     clear_background(buf, area, theme_colors.bg_base);
-    crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
-    wireframe_box(buf, "top_bar", main_areas[0]);
+    if let Some(ref top_bar) = vms.top_bar {
+        crate::components::top_bar::render_top_bar(top_bar, main_areas[0], buf, theme_colors);
+        wireframe_box(buf, "top_bar", main_areas[0]);
+    }
 
     // Render home screen in the content area (between top bar and input)
     let home_area = Rect {
@@ -113,9 +119,13 @@ pub fn render_normal_mode(
 
     clear_background(buf, area, theme_colors.bg_base);
     // main_areas[0] = topbar, [1] = feed, [2] = global_tags, [3] = input, [4] = version separator, [5] = hotkeys
-    crate::components::top_bar::render_top_bar(&vms.top_bar, main_areas[0], buf, theme_colors);
+    if let Some(ref top_bar) = vms.top_bar {
+        crate::components::top_bar::render_top_bar(top_bar, main_areas[0], buf, theme_colors);
+    }
     super::render_content::render_content(buf, vms, state, show_sidebar, main_areas[1], theme, theme_colors);
-    crate::components::global_tags::render_global_tags(&vms.global_tags, main_areas[2], buf, theme_colors);
+    if let Some(ref global_tags) = vms.global_tags {
+        crate::components::global_tags::render_global_tags(global_tags, main_areas[2], buf, theme_colors);
+    }
     if state.slash_menu.is_open() {
         let menu_h = 12u16.min(main_areas[1].height.saturating_sub(2));
         let menu_area = Rect {
@@ -152,7 +162,9 @@ pub fn render_normal_mode(
     buf.set_string(badge_x, main_areas[4].y + 1, &version_badge, theme.version_style());
 
     if show_status_bar {
-        crate::components::status_bar::render_ref(&vms.status_bar, main_areas[5], buf, theme_colors);
+        if let Some(ref status_bar) = vms.status_bar {
+            crate::components::status_bar::render_ref(status_bar, main_areas[5], buf, theme_colors);
+        }
     }
     super::overlays::render_overlays(buf, state, palette, padded, area, theme, theme_colors);
 }

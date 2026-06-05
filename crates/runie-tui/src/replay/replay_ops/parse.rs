@@ -6,7 +6,7 @@ use std::sync::LazyLock;
 
 use crate::tui::TuiMode;
 
-use super::{UiOp, ScenarioAction, Replay};
+use super::super::{UiOp, ScenarioAction, Replay};
 
 pub fn load_scenario(path: &Path) -> Result<Replay, String> {
     let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
@@ -37,41 +37,52 @@ pub fn parse_scenario(raw: &str) -> Result<Replay, String> {
 
 type OpParser = fn(&serde_json::Value) -> Result<UiOp, String>;
 
-static PARSERS: LazyLock<HashMap<&'static str, OpParser>> = LazyLock::new(|| {
-    let mut m = HashMap::new();
-    m.insert("SetMode", |v| v.get("value").or_else(|| v.get("mode"))
+fn parse_mode_value(v: &serde_json::Value) -> Result<UiOp, String> {
+    v.get("value").or_else(|| v.get("mode"))
         .and_then(|x| x.as_str()).map(parse_mode).map(UiOp::SetMode)
-        .ok_or_else(|| "SetMode needs a mode string".to_string()));
+        .ok_or_else(|| String::from("SetMode needs a mode string"))
+}
+
+fn parse_bool_op(op: UiOp) -> impl Fn(&serde_json::Value) -> Result<UiOp, String> {
+    move |v: &serde_json::Value| {
+        v.get("value").and_then(|x| x.as_bool()).map(|_| op.clone())
+            .ok_or_else(|| String::from("expected bool value"))
+    }
+}
+
+static PARSERS: LazyLock<HashMap<&'static str, OpParser>> = LazyLock::new(|| {
+    let mut m: HashMap<&'static str, OpParser> = HashMap::new();
+    m.insert("SetMode", |v| parse_mode_value(v));
     m.insert("SetHomeVisible", |v| v.get("value").and_then(|x| x.as_bool()).map(UiOp::SetHomeVisible)
-        .ok_or_else(|| "SetHomeVisible needs bool".to_string()));
+        .ok_or_else(|| String::from("SetHomeVisible needs bool")));
     m.insert("SetHomeSelected", |v| v.get("value").and_then(|x| x.as_u64()).map(|n| UiOp::SetHomeSelected(n as usize))
-        .ok_or_else(|| "SetHomeSelected needs int".to_string()));
+        .ok_or_else(|| String::from("SetHomeSelected needs int")));
     m.insert("SetShowSessions", |v| v.get("value").and_then(|x| x.as_bool()).map(UiOp::SetShowSessions)
-        .ok_or_else(|| "SetShowSessions needs bool".to_string()));
+        .ok_or_else(|| String::from("SetShowSessions needs bool")));
     m.insert("SetSlashOpen", |v| v.get("value").and_then(|x| x.as_bool()).map(UiOp::SetSlashOpen)
-        .ok_or_else(|| "SetSlashOpen needs bool".to_string()));
+        .ok_or_else(|| String::from("SetSlashOpen needs bool")));
     m.insert("SetSlashQuery", |v| v.get("value").and_then(|x| x.as_str()).map(|s| UiOp::SetSlashQuery(s.to_string()))
-        .ok_or_else(|| "SetSlashQuery needs string".to_string()));
+        .ok_or_else(|| String::from("SetSlashQuery needs string")));
     m.insert("SetInput", |v| v.get("value").and_then(|x| x.as_str()).map(|s| UiOp::SetInput(s.to_string()))
-        .ok_or_else(|| "SetInput needs string".to_string()));
+        .ok_or_else(|| String::from("SetInput needs string")));
     m.insert("SetGit", |v| Ok(UiOp::SetGit {
         repo: get_str(v, "repo"), branch: get_str(v, "branch"), path: get_str(v, "path"),
     }));
     m.insert("SetContextWindow", |v| v.get("value").and_then(|x| x.as_u64()).map(|n| UiOp::SetContextWindow(n as usize))
-        .ok_or_else(|| "SetContextWindow needs int".to_string()));
+        .ok_or_else(|| String::from("SetContextWindow needs int")));
     m.insert("SetSessionTokens", |v| v.get("value").and_then(|x| x.get("total")).and_then(|x| x.as_u64())
         .map(|n| UiOp::SetSessionTokens { total: n as usize })
-        .ok_or_else(|| "SetSessionTokens needs {total: int}".to_string()));
+        .ok_or_else(|| String::from("SetSessionTokens needs {total: int}")));
     m.insert("SetThoughtDuration", |v| v.get("value").and_then(|x| x.as_f64()).map(|n| UiOp::SetThoughtDuration(n as f32))
-        .ok_or_else(|| "SetThoughtDuration needs float".to_string()));
+        .ok_or_else(|| String::from("SetThoughtDuration needs float")));
     m.insert("SetTurnComplete", |v| v.get("value").and_then(|x| x.as_f64()).map(|n| UiOp::SetTurnComplete(n as f32))
-        .ok_or_else(|| "SetTurnComplete needs float".to_string()));
+        .ok_or_else(|| String::from("SetTurnComplete needs float")));
     m.insert("SetToolResult", |v| Ok(UiOp::SetToolResult {
         name: get_str(v, "name"), result: get_str(v, "result"),
         is_error: v.get("is_error").and_then(|x| x.as_bool()).unwrap_or(false),
     }));
     m.insert("SetAgentRunning", |v| v.get("value").and_then(|x| x.as_bool()).map(UiOp::SetAgentRunning)
-        .ok_or_else(|| "SetAgentRunning needs bool".to_string()));
+        .ok_or_else(|| String::from("SetAgentRunning needs bool")));
     m
 });
 
@@ -90,9 +101,9 @@ pub fn parse_mode(s: &str) -> TuiMode {
     match s {
         "Chat" | "chat" => TuiMode::Chat,
         "Permission" | "permission" => TuiMode::Permission,
-        "Home" | "home" => TuiMode::Home,
+        "Home" | "home" | "HomeScreen" | "homescreen" => TuiMode::HomeScreen,
         "Onboarding" | "onboarding" => TuiMode::Onboarding,
-        "Diff" | "diff" => TuiMode::Diff,
+        "Diff" | "diff" => TuiMode::DiffViewer,
         _ => TuiMode::Chat,
     }
 }

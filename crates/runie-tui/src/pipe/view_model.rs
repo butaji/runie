@@ -31,18 +31,21 @@ impl ViewModelPipe {
 
     pub fn build(&self, state: &AppState) -> ViewModels {
         ViewModels {
-            global_tags: build_global_tags(state),
-            message_list: build_message_list(state),
-            input_bar: build_input_bar(state),
-            status_bar: build_status_bar(state),
-            agent_list: build_agent_list(state),
+            global_tags: Some(build_global_tags(state)),
+            message_list: Some(build_message_list(state)),
+            input_bar: Some(build_input_bar(state)),
+            status_bar: Some(build_status_bar(state)),
+            agent_list: Some(build_agent_list(state)),
             command_palette: build_command_palette(state),
             permission_modal: build_permission_modal(state),
             overlay: build_overlay(state),
             session_tree: build_session_tree(state),
             diff_viewer: build_diff_viewer(state),
             onboarding: build_onboarding(state),
-            top_bar: build_top_bar(state),
+            top_bar: Some(build_top_bar(state)),
+            code_blocks: Vec::new(),
+            collapsibles: Vec::new(),
+            context_panel: None,
         }
     }
 }
@@ -238,9 +241,8 @@ fn build_diff_viewer(state: &AppState) -> Option<DiffViewerViewModel> {
 
 fn build_onboarding(state: &AppState) -> Option<OnboardingViewModel> {
     state.onboarding.as_ref().map(|o| {
-        let step = convert_onboarding_step(o.step.clone());
         OnboardingBuilder::new()
-            .step(step)
+            .step(o.step)
             .selected_item(o.selected_item)
             .selected_provider(o.selected_provider)
             .selected_model(o.selected_model)
@@ -250,18 +252,6 @@ fn build_onboarding(state: &AppState) -> Option<OnboardingViewModel> {
             .error_message(o.error_message.as_deref().unwrap_or(""))
             .build()
     })
-}
-
-fn convert_onboarding_step(step: crate::components::onboarding::OnboardingStep) -> crate::tui::view_models::OnboardingStep {
-    use crate::components::onboarding::OnboardingStep as Src;
-    use crate::tui::view_models::OnboardingStep as Dst;
-    match step {
-        Src::Welcome => Dst::Welcome,
-        Src::ProviderSelect => Dst::ProviderSelect,
-        Src::KeyInput => Dst::KeyInput,
-        Src::ModelSelect => Dst::ModelSelect,
-        Src::Complete => Dst::Complete,
-    }
 }
 
 fn extract_plan_steps(messages: &[crate::components::MessageItem]) -> Vec<(usize, String, PlanStatus)> {

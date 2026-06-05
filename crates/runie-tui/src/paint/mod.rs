@@ -199,8 +199,8 @@ pub struct Pad {
 }
 
 // ─── Builders ─────────────────────────────────────────────────────────
-mod builders;
-pub use builders::{row, col, border, pad};
+mod paint_builders;
+pub use paint_builders::{row, col, border, pad};
 
 // ─── Paint (the render function) ──────────────────────────────────────
 

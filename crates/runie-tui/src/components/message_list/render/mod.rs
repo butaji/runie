@@ -78,7 +78,7 @@ pub fn should_show_cursor_feed(
 }
 
 /// Find the index of the most recent message that needs a spinner.
-pub fn find_most_recent_spinner_index(messages: &[MessageItem]) -> Option<usize> {
+fn find_most_recent_spinner_index(messages: &[MessageItem]) -> Option<usize> {
     messages.iter().enumerate().rev().find(|(_, msg)| {
         matches!(msg,
             MessageItem::ToolRunning { .. }
@@ -89,7 +89,7 @@ pub fn find_most_recent_spinner_index(messages: &[MessageItem]) -> Option<usize>
 }
 
 /// Get the type identifier for a message
-pub fn get_msg_type(msg: &MessageItem) -> &'static str {
+fn get_msg_type(msg: &MessageItem) -> &'static str {
     // User/Assistant core messages
     match msg {
         MessageItem::User { .. } => "user",

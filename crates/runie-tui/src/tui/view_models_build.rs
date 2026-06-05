@@ -3,15 +3,18 @@
 use crate::components::MessageItem;
 use crate::components::message_list::Feed;
 use crate::components::message_list::PlanStatus;
-use crate::components::command_palette::CommandPalette;
+use crate::tui::state::types::CommandPaletteState;
+use crate::components::global_tags::GlobalTagsViewModel;
+use crate::components::top_bar::TopBarViewModel;
 
-use super::{
+use crate::tui::view_models::{
     InputBarViewModel, StatusBarViewModel, AgentListViewModel, CommandPaletteViewModel,
     PermissionModalViewModel, OverlayViewModel, SessionTreeViewModel, DiffViewerViewModel,
-    OnboardingViewModel, OnboardingStep, McpStatus,
-    GlobalTagsViewModel, TopBarViewModel, MessageListViewModel,
+    OnboardingViewModel, McpStatus,
+    MessageListViewModel,
     strip_thinking_from_assistant,
 };
+use crate::components::onboarding::OnboardingStep;
 
 // ─── Build Helper Functions ─────────────────────────────────────────────────
 
@@ -129,13 +132,13 @@ pub fn build_agent_list_vm(state: &crate::tui::state::AppState) -> AgentListView
         tokens: state.session_token_usage.total_tokens as u64,
         cost: 0.0,
         agent_running: state.agent_running,
-        braille_frame: state.animation.braille_frame,
+        braille_frame: state.animation.braille_frame as u8,
     }
 }
 
 pub fn build_command_palette_vm(
     state: &crate::tui::state::AppState,
-    _palette: &CommandPalette,
+    _palette: &CommandPaletteState,
 ) -> Option<CommandPaletteViewModel> {
     if state.command_palette.open {
         Some(CommandPaletteViewModel { show: true })

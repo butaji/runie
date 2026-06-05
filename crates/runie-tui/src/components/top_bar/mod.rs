@@ -14,7 +14,7 @@ pub use gauge::{calculate_pct, draw_gauge, format_context_window, format_token_c
 pub use render::render_top_bar;
 pub use helpers::{shorten_path, build_left_spans};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TopBarViewModel {
     pub repo: String,
     pub branch: String,

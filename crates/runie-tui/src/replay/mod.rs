@@ -56,3 +56,32 @@ pub enum UiOp {
     },
     SetAgentRunning(bool),
 }
+
+/// Apply all UI ops from a parsed scenario to a Tui instance.
+pub fn apply_scenario(tui: &mut Tui, scenario: &Replay) {
+    for action in &scenario.actions {
+        match action {
+            ScenarioAction::UiOp(op) => {
+                replay_ops::apply_ui_op(tui, op);
+            }
+            ScenarioAction::Event(_) => {
+                // Agent events not handled in this simple replay
+            }
+        }
+    }
+}
+
+/// Normalize rendered output for comparison (remove timing-sensitive data).
+pub fn normalize(text: &str) -> String {
+    // Remove timestamps and other non-deterministic data
+    text.lines()
+        .filter(|l| !l.contains("  ⠋") && !l.contains("  ⠙"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Render a Tui to text for comparison.
+pub fn render_to_text(_tui: &Tui, _w: u16, _h: u16) -> String {
+    // Simple text representation for now
+    String::new()
+}

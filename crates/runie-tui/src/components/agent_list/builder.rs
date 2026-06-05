@@ -9,7 +9,7 @@ pub(crate) struct AgentListBuilder {
     tokens: u64,
     cost: f64,
     agent_running: bool,
-    braille_frame: usize,
+    braille_frame: u8,
 }
 
 impl AgentListBuilder {
@@ -61,7 +61,7 @@ impl AgentListBuilder {
     }
 
     pub(crate) fn braille_frame(mut self, frame: usize) -> Self {
-        self.braille_frame = frame;
+        self.braille_frame = frame as u8;
         self
     }
 

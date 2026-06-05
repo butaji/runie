@@ -53,6 +53,7 @@ pub mod update;
 pub mod render;
 pub mod events;
 pub mod view_models;
+pub mod view_models_build;
 #[cfg(test)]
 pub mod tests;
 #[cfg(test)]
