@@ -33,22 +33,11 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             // Remove thinking message
             state.messages.retain(|m| m.role != "thinking");
-            // Append to last assistant message or create new one
-            if let Some(last) = state.messages.last_mut() {
-                if last.role == "assistant" {
-                    last.content.push_str(&content);
-                } else {
-                    state.messages.push(ChatMessage {
-                        role: "assistant".into(),
-                        content,
-                    });
-                }
-            } else {
-                state.messages.push(ChatMessage {
-                    role: "assistant".into(),
-                    content,
-                });
-            }
+            // Always add as new assistant message
+            state.messages.push(ChatMessage {
+                role: "assistant".into(),
+                content,
+            });
             state
         }
         Event::AgentDone => {
@@ -99,16 +88,10 @@ impl AppState {
             return AppState::default();
         }
         
-        // Add user message
+        // Add user message only - agent will add its response
         state.messages.push(ChatMessage {
             role: "user".into(),
             content: content.clone(),
-        });
-        
-        // Add placeholder for agent response (will be updated by agent events)
-        state.messages.push(ChatMessage {
-            role: "assistant".into(),
-            content: String::new(),
         });
         
         state.streaming = true;
