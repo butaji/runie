@@ -12,7 +12,11 @@ pub struct AppState {
     pub thinking_started_at: Option<std::time::Instant>,
     #[serde(skip)]
     pub thought_duration_secs: Option<f64>,  // Duration of thinking (static)
-    pub request_queue: Vec<String>,  // Pending requests waiting for agent
+    pub request_queue: Vec<(String, String)>,  // (content, id) pairs
+    #[serde(skip)]
+    pub next_id: u64,  // Next ID to assign
+    #[serde(skip)]
+    pub current_request_id: Option<String>,  // ID of currently processing request
 }
 
 impl AppState {
@@ -25,6 +29,13 @@ impl AppState {
     pub fn thought_duration_secs(&self) -> Option<f64> {
         self.thought_duration_secs
     }
+    
+    /// Generate and return next ID
+    pub fn next_id(&mut self) -> String {
+        let id = format!("req.{}", self.next_id);
+        self.next_id += 1;
+        id
+    }
 }
 
 /// A chat message
@@ -33,6 +44,7 @@ pub struct ChatMessage {
     pub role: String,      // "user", "assistant", "thought"
     pub content: String,
     pub timestamp: f64,    // Unix timestamp for ordering
+    pub id: String,         // Composite ID with dot separator, e.g. "user.1", "thought.1", "agent.1"
 }
 
 /// Messages for agent communication

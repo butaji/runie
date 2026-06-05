@@ -1,7 +1,6 @@
 //! Centralized Event Types
 //!
 //! All events in the application flow through a single channel.
-//! This includes UI events, agent events, and system events.
 
 use serde::{Deserialize, Serialize};
 
@@ -19,11 +18,11 @@ pub enum Event {
     Quit,
     Reset,
     
-    // === Agent Events ===
-    AgentResponse { content: String },
-    AgentThinking,
-    AgentDone,
-    AgentError { message: String },
+    // === Agent Events (with composite ID like \"req.1\") ===
+    AgentThinking { id: String },
+    AgentResponse { id: String, content: String },
+    AgentDone { id: String },
+    AgentError { id: String, message: String },
     
     // === Internal Events ===
     SpawnAgent,  // Signal to spawn agent for next queued request
@@ -37,8 +36,8 @@ impl Event {
             Event::Input(_)
                 | Event::Backspace
                 | Event::AgentResponse { .. }
-                | Event::AgentThinking
-                | Event::AgentDone
+                | Event::AgentThinking { .. }
+                | Event::AgentDone { .. }
                 | Event::Reset
         )
     }

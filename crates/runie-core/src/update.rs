@@ -27,14 +27,15 @@ pub fn update(state: AppState, event: Event) -> AppState {
         Event::Reset => AppState::default(),
         
         // === Agent Events ===
-        Event::AgentThinking => {
+        Event::AgentThinking { id } => {
             let mut state = state;
             state.streaming = true;
+            state.current_request_id = Some(id);
             state.thinking_started_at = Some(std::time::Instant::now());
-            state.thought_duration_secs = None; // Reset
+            state.thought_duration_secs = None;
             state
         }
-        Event::AgentResponse { content } => {
+        Event::AgentResponse { id, content } => {
             let mut state = state;
             // Add thought message on first response (before assistant)
             if state.thinking_started_at.is_some() && state.thought_duration_secs.is_none() {
@@ -43,6 +44,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                     role: "thought".into(),
                     content: thought_with_time(duration),
                     timestamp: now(),
+                    id: id.clone(),  // Same ID for grouping
                 });
                 state.thought_duration_secs = Some(duration);
             }
@@ -51,22 +53,35 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 role: "assistant".into(),
                 content,
                 timestamp: now(),
+                id: id.clone(),
             });
+            // Track current request
+            state.current_request_id = Some(id);
             state
         }
-        Event::AgentDone => {
+        Event::AgentDone { id: _ } => {
             let mut state = state;
-            state.streaming = false;
-            state.thinking_started_at = None;
+            state.current_request_id = None;
+            // Keep streaming if queue has more requests
+            if state.request_queue.is_empty() {
+                state.streaming = false;
+                state.thinking_started_at = None;
+                state.thought_duration_secs = None;
+            } else {
+                state.streaming = true;
+                // Keep thinking_started_at to allow next response to create thought
+                state.thought_duration_secs = None;
+            }
             state
         }
-        Event::AgentError { message } => {
+        Event::AgentError { id, message } => {
             let mut state = state;
             state.streaming = false;
             state.messages.push(ChatMessage {
                 role: "assistant".into(),
                 content: format!("Error: {}", message),
                 timestamp: now(),
+                id: format!("error.{}", id),
             });
             state
         }
@@ -88,7 +103,7 @@ impl AppState {
         self
     }
     
-    /// Submit current input - adds to queue
+    /// Submit current input - adds to queue with ID
     fn submit(self) -> Self {
         if self.input.is_empty() {
             return self;
@@ -103,28 +118,30 @@ impl AppState {
             return AppState::default();
         }
         
-        // Add user message
+        // Generate ID
+        let id = state.next_id();
+        
+        // Add user message with ID
         state.messages.push(ChatMessage {
             role: "user".into(),
             content: content.clone(),
             timestamp: now(),
+            id: id.clone(),
         });
         
-        // Add to queue
-        state.request_queue.push(content);
-        
-        // Set streaming if not already
-        state.streaming = true;
+        // Add to queue with ID
+        state.request_queue.push((content, id));
+        // Don't set streaming=true here - it gets set when agent actually starts
         state
     }
     
     /// Get next request from queue without removing
-    pub fn peek_queue(&self) -> Option<String> {
+    pub fn peek_queue(&self) -> Option<(String, String)> {
         self.request_queue.first().cloned()
     }
     
     /// Remove first item from queue
-    pub fn pop_queue(&mut self) -> Option<String> {
+    pub fn pop_queue(&mut self) -> Option<(String, String)> {
         if !self.request_queue.is_empty() {
             Some(self.request_queue.remove(0))
         } else {
