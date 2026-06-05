@@ -64,6 +64,18 @@ async fn run_app(
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
+                        KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            app.quit = true;
+                        }
+                        KeyCode::Char('q') | KeyCode::Char('Q') => {
+                            app.quit = true;
+                        }
+                        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            app.quit = true;
+                        }
+                        KeyCode::Esc => {
+                            app.quit = true;
+                        }
                         KeyCode::Char(c) if !app.streaming => {
                             app.input.push(c);
                         }
@@ -83,15 +95,6 @@ async fn run_app(
                                     let _ = tx.send(event).await;
                                 }
                             });
-                        }
-                        KeyCode::Esc => {
-                            app.quit = true;
-                        }
-                        KeyCode::Char('q') | KeyCode::Char('Q') => {
-                            app.quit = true;
-                        }
-                        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            app.quit = true;
                         }
                         _ => {}
                     }
