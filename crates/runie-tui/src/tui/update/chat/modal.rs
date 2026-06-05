@@ -139,7 +139,6 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
             state.textarea.delete_line_by_end();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
-            state.session_starting = Some(Instant::now());
         }
         "Resume session" => {
             state.messages.clear();
@@ -155,7 +154,6 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
             state.textarea.delete_line_by_end();
             state.home_screen.hide();
             state.mode = TuiMode::Chat;
-            state.session_starting = Some(Instant::now());
         }
     }
     vec![]
@@ -164,7 +162,6 @@ pub(crate) fn home_screen_select(state: &mut AppState) -> Vec<ChatCmd> {
 fn home_screen_close(state: &mut AppState) -> Vec<ChatCmd> {
     state.home_screen.hide();
     state.mode = TuiMode::Chat;
-    state.session_starting = Some(Instant::now());
     state.textarea.select_all();
     state.textarea.delete_line_by_end();
     vec![]

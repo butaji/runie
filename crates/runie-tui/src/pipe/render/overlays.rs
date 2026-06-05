@@ -92,7 +92,7 @@ fn render_command_palette(
     theme_colors: &ThemeColors,
 ) {
     dim_background(buf, area, theme_colors);
-    let palette_area = right_aligned_rect(padded, 70, 20);
+    let palette_area = centered_rect(padded, 70, 20);
 
     // Clear the palette area before rendering to prevent overlap
     let bg_base: ratatui::style::Color = theme.color("bg.base").into();
