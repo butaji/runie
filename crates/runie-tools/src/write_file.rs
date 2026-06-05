@@ -10,7 +10,6 @@ pub struct WriteFileTool {
 impl WriteFileTool {
 
     #[must_use]
-    #[must_use]
     pub fn new(workspace: Workspace) -> Self {
         Self { workspace }
     }

@@ -2,7 +2,9 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::providers::ReplyProvider;
+    use crate::providers::reply::Scenario;
+    use runie_core::Event;
 
     #[test]
     fn test_scenario_routing() {

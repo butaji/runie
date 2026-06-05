@@ -68,6 +68,9 @@ mod tests {
     struct TempConfig {
         path: PathBuf,
         orig_runie_home: Option<String>,
+        orig_runie_model: Option<String>,
+        orig_runie_provider: Option<String>,
+        orig_runie_max_turns: Option<String>,
     }
 
     impl TempConfig {
@@ -75,8 +78,17 @@ mod tests {
             let temp_dir = std::env::temp_dir().join("runie_test_config");
             let config_path = temp_dir.join("config.toml");
             
-            // Save original RUNIE_HOME
+            // Save original env vars
             let orig_runie_home = std::env::var("RUNIE_HOME").ok();
+            let orig_runie_model = std::env::var("RUNIE_MODEL").ok();
+            let orig_runie_provider = std::env::var("RUNIE_PROVIDER").ok();
+            let orig_runie_max_turns = std::env::var("RUNIE_MAX_TURNS").ok();
+            
+            // Clear env vars that could interfere with config file test
+            std::env::remove_var("RUNIE_HOME");
+            std::env::remove_var("RUNIE_MODEL");
+            std::env::remove_var("RUNIE_PROVIDER");
+            std::env::remove_var("RUNIE_MAX_TURNS");
             
             // Create temp config with provider and model
             let config_content = r#"# Runie configuration
@@ -94,17 +106,35 @@ enable_thinking = true
             Self {
                 path: config_path,
                 orig_runie_home,
+                orig_runie_model,
+                orig_runie_provider,
+                orig_runie_max_turns,
             }
         }
     }
 
     impl Drop for TempConfig {
         fn drop(&mut self) {
-            // Restore original RUNIE_HOME
+            // Clear test env vars
             std::env::remove_var("RUNIE_HOME");
-            if let Some(orig) = &self.orig_runie_home {
+            std::env::remove_var("RUNIE_MODEL");
+            std::env::remove_var("RUNIE_PROVIDER");
+            std::env::remove_var("RUNIE_MAX_TURNS");
+            
+            // Restore original env vars
+            if let Some(orig) = self.orig_runie_home.clone() {
                 std::env::set_var("RUNIE_HOME", orig);
             }
+            if let Some(orig) = self.orig_runie_model.clone() {
+                std::env::set_var("RUNIE_MODEL", orig);
+            }
+            if let Some(orig) = self.orig_runie_provider.clone() {
+                std::env::set_var("RUNIE_PROVIDER", orig);
+            }
+            if let Some(orig) = self.orig_runie_max_turns.clone() {
+                std::env::set_var("RUNIE_MAX_TURNS", orig);
+            }
+            
             // Clean up temp dir
             if let Some(parent) = self.path.parent() {
                 let _ = fs::remove_dir_all(parent);
@@ -119,7 +149,7 @@ enable_thinking = true
         // Should NOT need onboarding
         let _temp = TempConfig::new();
         
-        // Clear any API key env vars that might interfere
+        // Clear any API key env vars that might interfere (not handled by TempConfig)
         std::env::remove_var("OPENAI_API_KEY");
         std::env::remove_var("ANTHROPIC_API_KEY");
         std::env::remove_var("GOOGLE_API_KEY");
@@ -129,8 +159,8 @@ enable_thinking = true
         let settings = Settings::load();
         
         // Verify settings were loaded from config
-        assert_eq!(settings.model, "gpt-4o");
-        assert_eq!(settings.provider, "openai");
+        assert_eq!(settings.model, "gpt-4o", "Model should be from config file, not env var");
+        assert_eq!(settings.provider, "openai", "Provider should be from config file");
         
         // Onboarding should NOT be needed since config has model and provider
         assert!(!needs_onboarding(&settings), "Onboarding should be skipped when config has model and provider");

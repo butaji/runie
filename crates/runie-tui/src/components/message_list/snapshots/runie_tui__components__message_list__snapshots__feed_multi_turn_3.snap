@@ -3,19 +3,24 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
- ❯ Hello                                                                        
+   ❯ Hello                                                           4:38 AM    
                                                                                 
                                                                                 
- Hi there!                                                                      
+                                                                                
+   Hi there!                                                                    
                                                                                 
                                                                                 
- ❯ How are you?                                                                 
+                                                                                
+   ❯ How are you?                                                    4:38 AM    
                                                                                 
                                                                                 
- I'm good, thanks!                                                              
+                                                                                
+   I'm good, thanks!                                                            
                                                                                 
                                                                                 
- ❯ What's for lunch?                                                            
+                                                                                
+   ❯ What's for lunch?                                               4:38 AM    
                                                                                 
                                                                                 
- How about pizza?
+                                                                                
+   How about pizza?

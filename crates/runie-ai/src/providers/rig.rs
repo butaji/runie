@@ -196,7 +196,6 @@ const PROVIDER_TABLE: &[(&str, ProviderCtor)] = &[
 impl RigProvider {
 
     #[must_use]
-    #[must_use]
     pub fn new(provider: &str, api_key: &str, model: &str) -> Result<Self, String> {
         let model = model.to_string();
         let provider_lower = provider.to_lowercase();

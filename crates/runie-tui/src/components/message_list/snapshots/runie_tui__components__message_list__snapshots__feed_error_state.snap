@@ -3,9 +3,9 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
- ❯ Delete the file                                                              
+   ❯ Delete the file                                                 4:38 AM    
                                                                                 
                                                                                 
- I couldn't delete the file.                                                    
                                                                                 
- • Tool execution failed: permission denied
+◆ bash rm important.txt                                                         
+   I couldn't delete the file.

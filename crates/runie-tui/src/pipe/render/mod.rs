@@ -197,7 +197,7 @@ mod tests {
             for x in 0..area.width {
                 if let Some(cell) = buf.cell_mut((x, y)) {
                     cell.set_char('⠋'); // braille spinner char
-                    cell.set_style(Style::default().fg(ratatui::style::Color::White));
+                    cell.set_style(ratatui::style::Style::default().fg(ratatui::style::Color::White));
                 }
             }
         }
@@ -218,9 +218,7 @@ mod tests {
         area: Rect,
         state: &AppState,
     ) -> (crate::tui::view_models::ViewModels, ThemeWrapper, ThemeColors, [Rect; 6]) {
-        let palette = crate::components::CommandPalette::new();
-        let wrap_cache = crate::components::message_list::render::WrapCache::new();
-        let vms = crate::tui::view_models::ViewModels::from_app_state(state, &palette, wrap_cache);
+        let vms = crate::tui::view_models::ViewModels::new(state);
         let theme = ThemeWrapper::default();
         let theme_colors = ThemeColors::from(&theme);
         let main_areas = RenderPipe::layout_main(area, true, 3);

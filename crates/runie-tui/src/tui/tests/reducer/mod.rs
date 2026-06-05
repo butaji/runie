@@ -10,43 +10,9 @@ use runie_agent::TokenUsage as AgentTokenUsage;
 use ratatui_textarea::{TextArea, Input, Key};
 
 pub fn make_state() -> AppState {
-    AppState {
-        messages: vec![], textarea: TextArea::default(),
-        input_right_info: String::new(), mode: TuiMode::Chat,
-        running: true, show_sidebar: false, agent_running: false,
-        current_model: None, context: ContextState::default(),
-        permission_modal: PermissionModalState::default(),
-        command_palette: CommandPaletteState::default(),
-        scroll: ScrollState::default(), animation: AnimationState::default(),
-        diff_viewer: None, token_usage: AiTokenUsage::default(),
-        session_token_usage: AiTokenUsage::default(),
-        session_tree: SessionTreeNavigator::new(),
-        background_jobs: Vec::new(), onboarding: None,
-        terminal_size: (0, 0), clear_input_confirm: ClearInputConfirm::default(),
-        model_picker: None, agent_start_time: None,
-        input_history: Vec::new(), input_history_index: None,
-        input_draft: String::new(),
-        status_header: None, status_details: None, status_start_time: None,
-        thinking: None, mock_mode: false,
-        top_bar: TopBarState::default(),
-        last_turn_duration_secs: None, last_turn_tokens: None,
-        last_turn_tool_calls: None, turn_success: None,
-        slash_menu: crate::components::SlashMenu::new(),
-        shortcuts_panel: crate::components::ShortcutsPanel::new(),
-        settings_modal: crate::components::SettingsModal::new(),
-        home_screen: crate::components::HomeScreen::new(),
-        file_picker: crate::components::FilePicker::new(),
-        show_thoughts: false,
-            history_search_query: String::new(),
-            history_search_matches: Vec::new(),
-            history_search_index: 0,
-            permission_mode: crate::tui::state::PermissionMode::Normal,
-            plan_modal: crate::components::PlanModal::new(),
-            allowed_tools: std::collections::HashSet::new(),
-            allowed_categories: std::collections::HashSet::new(),
-            context_usage_modal: crate::components::ContextUsageModal::new(),
-            current_theme: "crush_grok".to_string(),
-    }
+    let mut state = AppState::default();
+    state.mode = TuiMode::Chat;
+    state
 }
 
 pub fn make_state_with_text(text: &str) -> AppState {

@@ -1,7 +1,9 @@
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::settings::Settings;
+    use crate::settings::CliSettings;
+    use crate::settings::runie_dir;
 
     #[test]
     fn test_default_settings() {
@@ -46,16 +48,30 @@ mod tests {
 
     #[test]
     fn test_merge_env() {
-        let mut guard = EnvGuard::new();
-        guard.save_and_clear("RUNIE_MODEL");
-        guard.save_and_clear("RUNIE_MAX_TURNS");
-        guard.save_and_clear("RUNIE_HOME"); // Prevent reading external config
-        guard.set("RUNIE_MODEL", "claude-3-opus");
-        guard.set("RUNIE_MAX_TURNS", "20");
+        // Test merge_env directly on a default Settings instance
+        // This avoids issues with load() and external config files
+        
+        // Clear env vars and set test values
+        std::env::remove_var("RUNIE_MODEL");
+        std::env::remove_var("RUNIE_PROVIDER");
+        std::env::remove_var("RUNIE_MAX_TURNS");
+        std::env::remove_var("RUNIE_ENABLE_THINKING");
+        std::env::remove_var("RUNIE_SHELL");
+        
+        std::env::set_var("RUNIE_MODEL", "claude-3-opus");
+        std::env::set_var("RUNIE_MAX_TURNS", "20");
 
-        let settings = Settings::load();
-        assert_eq!(settings.model, "claude-3-opus");
-        assert_eq!(settings.max_turns, 20);
+        // Create settings from defaults and merge env
+        let mut settings = Settings::default();
+        settings.merge_env();
+        
+        // Verify env vars were applied
+        assert_eq!(settings.model, "claude-3-opus", "Model should be from RUNIE_MODEL env var");
+        assert_eq!(settings.max_turns, 20, "max_turns should be from RUNIE_MAX_TURNS env var");
+        
+        // Clean up - restore original behavior
+        std::env::remove_var("RUNIE_MODEL");
+        std::env::remove_var("RUNIE_MAX_TURNS");
     }
 
     #[test]

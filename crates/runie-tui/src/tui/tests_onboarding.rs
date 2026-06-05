@@ -43,6 +43,20 @@ mod tests {
             allowed_tools: std::collections::HashSet::new(),
             allowed_categories: std::collections::HashSet::new(),
             context_usage_modal: crate::components::ContextUsageModal::new(),
+            extension_registry: std::sync::Arc::new(runie_ext::ExtensionRegistry::new()),
+            questionnaire: None,
+            subagent_panel: crate::components::subagent_panel::SubagentPanel::new(),
+            extensions_modal: None,
+            fullscreen_content: None,
+            fullscreen_scroll_offset: 0,
+            layout_mode: crate::tui::state::LayoutMode::Fullscreen,
+            animation_config: crate::tui::state::AnimationConfig::default(),
+            compact_mode: false,
+            multiline_input: false,
+            current_theme: "crush_grok".to_string(),
+            replay_turn_duration_secs: None,
+            pending_thought_duration: None,
+            session_starting: None,
         }
     }
 

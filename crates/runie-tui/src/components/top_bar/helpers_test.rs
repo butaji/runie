@@ -257,14 +257,17 @@ mod tests {
 
         let spans = build_left_spans(&vm, bright, Color::DarkGray, &dim_style, bg);
 
-        let branch_span = spans.iter()
-            .find(|s| s.content.as_ref().contains("main"))
-            .expect("Should have branch span");
+        // Find the span that contains the combined branch+path
+        let combined_span = spans.iter()
+            .find(|s| s.content.as_ref().contains("main") && s.content.as_ref().contains("src"))
+            .expect("Should have combined span");
 
-        let content = branch_span.content.as_ref();
-        // There should be a space between branch and path
-        assert!(content.contains(" ~/") || content.ends_with("main"), 
-            "Should have space before path: {}", content);
+        let content = combined_span.content.as_ref();
+        // Should contain main and src
+        assert!(content.contains("main"), "Should contain branch name: {}", content);
+        assert!(content.contains("src"), "Should contain path: {}", content);
+        // Space between branch and path
+        assert!(content.contains(" "), "Should have space separator: {}", content);
     }
 
     #[test]
@@ -280,7 +283,8 @@ mod tests {
             mode: TuiMode::Chat,
         };
 
-        let spans = build_left_spans(&vm, Color::White, Color::DarkGray, &Style::new(), Color::Black);
+        let dim_style = Style::new().dim();
+        let spans = build_left_spans(&vm, Color::White, Color::DarkGray, &dim_style, Color::Black);
         assert!(spans.is_empty());
     }
 

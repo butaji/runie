@@ -293,6 +293,7 @@ fn test_turn_end_adds_separator() {
             message_count: 5,
             tool_results_count: 1,
             token_usage: TokenUsage::default(),
+            turn_duration_ms: None,
         },
     );
 
@@ -343,6 +344,7 @@ fn test_turn_end_separator_contains_metrics() {
                 cache_read: 0,
                 cache_write: 0,
             },
+            turn_duration_ms: None,
         },
     );
 
@@ -379,6 +381,7 @@ fn test_turn_end_without_agent_start_time_no_separator() {
             message_count: 5,
             tool_results_count: 0,
             token_usage: TokenUsage::default(),
+            turn_duration_ms: None,
         },
     );
 
@@ -538,6 +541,7 @@ fn test_turn_end_during_active_thinking() {
             message_count: 2,
             tool_results_count: 0,
             token_usage: TokenUsage::default(),
+            turn_duration_ms: None,
         },
     );
 

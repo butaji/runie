@@ -7,7 +7,7 @@ mod render_input;
 mod view_model;
 
 #[cfg(test)]
-mod tests;
+mod tests; // Disabled for now
 
 pub use input_msg::InputMsg;
 pub use view_model::ViewModelPipe;

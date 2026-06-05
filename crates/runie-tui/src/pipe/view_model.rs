@@ -242,7 +242,7 @@ fn build_diff_viewer(state: &AppState) -> Option<DiffViewerViewModel> {
 fn build_onboarding(state: &AppState) -> Option<OnboardingViewModel> {
     state.onboarding.as_ref().map(|o| {
         OnboardingBuilder::new()
-            .step(o.step)
+            .step(o.step.clone())
             .selected_item(o.selected_item)
             .selected_provider(o.selected_provider)
             .selected_model(o.selected_model)

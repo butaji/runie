@@ -137,7 +137,7 @@ fn main() -> ExitCode {
         // apply_ui_op returns terminal commands (we drop them, headless)
         // on_agent_event returns ()
         if let ScenarioAction::UiOp(op) = action {
-            drop(apply_ui_op(&mut tui, op));
+            let _ = apply_ui_op(&mut tui, op);
         } else if let ScenarioAction::Event(ev) = action {
             tui.on_agent_event(ev.clone());
         }

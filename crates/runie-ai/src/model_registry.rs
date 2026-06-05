@@ -26,7 +26,6 @@ impl Default for ModelRegistry {
 impl ModelRegistry {
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         let mut registry = Self {
             models: HashMap::new(),

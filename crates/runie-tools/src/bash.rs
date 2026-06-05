@@ -10,7 +10,6 @@ pub struct BashTool {
 impl BashTool {
 
     #[must_use]
-    #[must_use]
     pub fn new(workspace: Workspace) -> Self {
         Self { workspace }
     }

@@ -17,7 +17,6 @@ mod tests {
             &mut buf,
             Style::default(),
             Style::default(),
-            Style::default(),
         );
 
         let line = buf
@@ -39,7 +38,6 @@ mod tests {
             5,
             60,
             &mut buf,
-            Style::default(),
             Style::default(),
             Style::default(),
         );
@@ -65,7 +63,6 @@ mod tests {
             &mut buf,
             Style::default(),
             Style::default(),
-            Style::default(),
         );
 
         let line = buf
@@ -87,5 +84,27 @@ mod tests {
             .map(|c| c.symbol())
             .collect::<String>();
         assert!(line.contains('─'));
+    }
+
+    #[test]
+    fn test_tip_text_constant() {
+        // Verify the tip text constant matches the expected Grok spec
+        assert_eq!(TIP_TEXT, "Tip: Press Ctrl-W to start a parallel task in its own worktree.");
+    }
+
+    #[test]
+    fn test_tip_text_renders() {
+        let mut buf = Buffer::empty(Rect::new(0, 0, 120, 30));
+        // Render tip at position 0, 25 with full area width
+        render_tip(Rect::new(0, 0, 120, 30), 25, &mut buf, Style::default());
+
+        // Check that tip text is rendered
+        let content: String = buf
+            .content
+            .iter()
+            .map(|c| c.symbol())
+            .collect::<String>();
+        assert!(content.contains("Tip:"));
+        assert!(content.contains("Ctrl-W"));
     }
 }

@@ -60,6 +60,22 @@ pub struct StatusBarViewModel {
     pub input_has_text: bool,
 }
 
+impl Default for StatusBarViewModel {
+    fn default() -> Self {
+        Self {
+            mode: TuiMode::Chat,
+            current_model: None,
+            session_token_usage: runie_ai::TokenUsage::default(),
+            status_header: None,
+            status_details: None,
+            status_start_time: None,
+            mcp_status: McpStatus::None,
+            agent_running: false,
+            input_has_text: false,
+        }
+    }
+}
+
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
 #[derive(Debug, Clone)]
 pub struct AgentListViewModel {

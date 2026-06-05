@@ -35,7 +35,6 @@ impl<K: Eq + Hash + Clone, V: Clone> ScopedCache<K, V> {
     /// Create a new ScopedCache
 
     #[must_use]
-    #[must_use]
     pub fn new() -> Self {
         Self {
             cache: RwLock::new(HashMap::new()),

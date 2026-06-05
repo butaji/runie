@@ -258,25 +258,30 @@ pub fn render_assistant_msg(
 
         // If last line and timestamp provided, render on SAME line (Grok style: text left, timestamp right)
         let is_last_line = i == wrapped.len() - 1;
-        if is_last_line && timestamp.is_some() {
-            let ts = timestamp.unwrap();
-            let ts_len = ts.len() as u16;
-            let line_len = line_text.len() as u16;
+        if is_last_line {
+            if let Some(ts) = timestamp {
+                let ts_len = ts.len() as u16;
+                let line_len = line_text.len() as u16;
 
-            // Pad line with spaces so timestamp appears right-aligned
-            let padding = if line_len + ts_len + 1 < content_width {
-                content_width - line_len - ts_len - 1
+                // Pad line with spaces so timestamp appears right-aligned
+                let padding = if line_len + ts_len + 1 < content_width {
+                    content_width - line_len - ts_len - 1
+                } else {
+                    0
+                };
+
+                let line = Line::from(vec![
+                    Span::raw(line_text).style(base_style),
+                    Span::raw(" ".repeat(padding as usize)).style(base_style),
+                    Span::raw(ts).style(Style::default().fg(text_muted)),
+                ]);
+                buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+                rendered += 1;
             } else {
-                0
-            };
-
-            let line = Line::from(vec![
-                Span::raw(line_text).style(base_style),
-                Span::raw(" ".repeat(padding as usize)).style(base_style),
-                Span::raw(ts).style(Style::default().fg(text_muted)),
-            ]);
-            buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
-            rendered += 1;
+                let line = Line::raw(line_text).style(base_style);
+                buf.set_line(response_indent, area.y + row + rendered, &line, content_width);
+                rendered += 1;
+            }
         } else {
             let line = Line::raw(line_text).style(base_style);
             buf.set_line(response_indent, area.y + row + rendered, &line, content_width);

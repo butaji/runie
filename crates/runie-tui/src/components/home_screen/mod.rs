@@ -11,6 +11,9 @@ pub static HOME_MENU_ITEMS: &[(&str, &str, &str)] = &[
     ("Quit", "Exit runie", "ctrl-q"),
 ];
 
+/// Tip text displayed below the menu
+pub const TIP_TEXT: &str = "Tip: Press Ctrl-W to start a parallel task in its own worktree.";
+
 // Logo centered in 78 columns, each line padded to max width
 const LOGO_MAX_WIDTH: usize = 48;
 const LOGO: &[&str] = &[
@@ -64,6 +67,12 @@ fn render_menu(screen: &HomeScreen, content_x: u16, start_y: u16, content_width:
     }
 }
 
+fn render_tip(area: Rect, y: u16, buf: &mut Buffer, tip_style: Style) {
+    // Center the tip text across the full terminal width
+    let tip_x = (area.width.saturating_sub(TIP_TEXT.len() as u16)) / 2;
+    buf.set_string(tip_x, y, TIP_TEXT, tip_style);
+}
+
 fn render_logo(area: Rect, buf: &mut Buffer, theme: &ThemeWrapper, start_y: u16) -> u16 {
     let logo_height = LOGO.len() as u16;
     let logo_width = LOGO_MAX_WIDTH as u16;
@@ -84,15 +93,19 @@ pub fn render_home_screen(screen: &HomeScreen, area: Rect, buf: &mut Buffer, the
     use crate::style::layout::MENU_WIDTH;
     let content_width = MENU_WIDTH;
     let logo_lines = LOGO.len() as u16;
-    let menu_height = 4 + 3;
+    let menu_height = 4 + 3; // 4 menu items + 3 dividers
     let spacing = 3;
-    let total_height = logo_lines + spacing + menu_height;
+    let tip_height = 1;
+    let total_height = logo_lines + spacing + menu_height + spacing + tip_height;
     let top_margin = (area.height.saturating_sub(1).saturating_sub(total_height)) / 2;
     let content_start_y = area.y.saturating_add(top_margin);
     render_logo(area, buf, theme, content_start_y);
     let content_x = area.x.saturating_add(area.width.saturating_sub(content_width) / 2 + 2);
     render_menu(screen, content_x, content_start_y + logo_lines + spacing, content_width, buf,
         theme.menu_selected_style(), theme.menu_unselected_style(), theme.muted_style(), theme.divider_style());
+    // Render tip text below the menu - centered on full terminal width
+    let tip_y = content_start_y + logo_lines + spacing + menu_height + spacing;
+    render_tip(area, tip_y, buf, theme.muted_style());
 }
 
 #[cfg(test)] mod mod_test;

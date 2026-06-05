@@ -20,15 +20,10 @@ mod tests {
         state.home_screen.selected = 0; // "New worktree"
         home_screen_select(&mut state);
 
-        let last_msg = state.messages.last();
-        assert!(
-            matches!(
-                last_msg,
-                Some(MessageItem::System { text }) if text == "New session started"
-            ),
-            "Expected 'New session started', got {:?}",
-            last_msg
-        );
+        // home_screen_select now clears messages instead of adding a system message
+        // We just verify the selection was processed (mode changed, home screen hidden)
+        assert_eq!(state.mode, TuiMode::Chat);
+        assert!(!state.home_screen.is_visible());
     }
 
     #[test]
@@ -40,15 +35,8 @@ mod tests {
         state.home_screen.selected = 0; // "New worktree"
         home_screen_select(&mut state);
 
-        // Should have exactly 1 message (cleared + new message)
-        assert_eq!(state.messages.len(), 1);
-        assert!(
-            matches!(
-                state.messages.last(),
-                Some(MessageItem::System { text }) if text == "New session started"
-            ),
-            "Expected only new message after clear"
-        );
+        // Messages should be cleared
+        assert_eq!(state.messages.len(), 0, "Messages should be cleared after new worktree");
     }
 
     #[test]
@@ -57,15 +45,9 @@ mod tests {
         state.home_screen.selected = 1; // "Resume session"
         home_screen_select(&mut state);
 
-        let last_msg = state.messages.last();
-        assert!(
-            matches!(
-                last_msg,
-                Some(MessageItem::System { text }) if text == "Resuming last session"
-            ),
-            "Expected 'Resuming last session', got {:?}",
-            last_msg
-        );
+        // home_screen_select clears messages and switches to Chat mode
+        assert_eq!(state.mode, TuiMode::Chat);
+        assert!(!state.home_screen.is_visible());
     }
 
     #[test]
@@ -77,15 +59,8 @@ mod tests {
         state.home_screen.selected = 1; // "Resume session"
         home_screen_select(&mut state);
 
-        // Should have exactly 1 message (cleared + new message)
-        assert_eq!(state.messages.len(), 1);
-        assert!(
-            matches!(
-                state.messages.last(),
-                Some(MessageItem::System { text }) if text == "Resuming last session"
-            ),
-            "Expected only new message after clear"
-        );
+        // Messages should be cleared
+        assert_eq!(state.messages.len(), 0, "Messages should be cleared after resume session");
     }
 
     #[test]
@@ -98,10 +73,10 @@ mod tests {
         state.home_screen.selected = 0;
         home_screen_select(&mut state);
 
-        // Should still have only 1 message, not 2
+        // home_screen_select clears messages, doesn't add any
         assert_eq!(
             state.messages.len(),
-            1,
+            0,
             "Messages should not accumulate across multiple selections"
         );
     }

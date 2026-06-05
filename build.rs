@@ -30,11 +30,12 @@ fn walk_dir(path: &Path, violations: &mut Violations) {
                 continue;
             }
             walk_dir(&entry_path, violations);
-        } else if entry_path.extension().map_or(false, |ext| ext == "rs") {
+        } else if entry_path.extension().is_some_and(|ext| ext == "rs") {
             // Skip test fixture files — these are test inputs, not production code.
             // Convention: file name ends in `_tests.rs` or lives in a `tests*` dir.
             let stem = entry_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-            if stem.ends_with("_tests") || stem == "tests" || stem.ends_with("_test") {
+            // Skip test files: *_tests.rs, *_test.rs, tests_*.rs
+            if stem.ends_with("_tests") || stem == "tests" || stem.ends_with("_test") || stem.starts_with("tests_") {
                 continue;
             }
             check_file(&entry_path, violations);
@@ -105,11 +106,11 @@ fn find_function_body(lines: &[&str], fn_start: usize) -> Option<(usize, usize)>
 }
 
 fn locate_brace_start(lines: &[&str], fn_start: usize) -> Option<usize> {
-    for j in fn_start..lines.len().min(fn_start + 5) {
-        if lines[j].contains('{') {
+    for (j, line) in lines.iter().enumerate().take(lines.len().min(fn_start + 5)).skip(fn_start) {
+        if line.contains('{') {
             return Some(j);
         }
-        if lines[j].trim().ends_with(';') {
+        if line.trim().ends_with(';') {
             return None;
         }
     }
@@ -141,8 +142,8 @@ fn find_matching_brace(lines: &[&str], start: usize) -> (usize, bool) {
     let mut depth = 0;
     let mut found_first = false;
 
-    for i in start..lines.len() {
-        for ch in lines[i].chars() {
+    for (i, line) in lines.iter().enumerate().skip(start) {
+        for ch in line.chars() {
             if ch == '{' {
                 depth += 1;
                 found_first = true;

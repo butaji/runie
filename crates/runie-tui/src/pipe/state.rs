@@ -13,7 +13,6 @@ pub struct StatePipe {
 impl StatePipe {
 
     #[must_use]
-    #[must_use]
     pub fn new(state: AppState) -> Self {
         Self {
             state,

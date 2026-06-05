@@ -3,8 +3,9 @@ source: crates/runie-tui/src/components/message_list/snapshots.rs
 expression: rendered
 ---
                                                                                 
- ❯ Hello                                                                        
+   ❯ Hello                                                           4:38 AM    
                                                                                 
                                                                                 
- ◆ Thought for 0.2s                                                             
- Hey you too!
+                                                                                
+   ◆ Thought for 0.2s                                                           
+   Hey you too!

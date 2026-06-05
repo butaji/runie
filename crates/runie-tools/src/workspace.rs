@@ -14,7 +14,6 @@ pub struct FileLock {
 impl FileLock {
 
     #[must_use]
-    #[must_use]
     pub fn new(path: PathBuf) -> Self {
         Self {
             path,
@@ -36,7 +35,6 @@ pub struct Workspace {
 
 impl Workspace {
 
-    #[must_use]
     #[must_use]
     pub fn new(root: PathBuf) -> Self {
         Self {
