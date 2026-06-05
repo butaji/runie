@@ -26,6 +26,8 @@ pub struct AppState {
     pub animation_frame: u32,  // For animating spinners (0-11 cycles through braille chars)
     #[serde(skip)]
     pub turn_active: bool,  // True when a turn is in progress
+    #[serde(skip)]
+    pub current_action: Option<String>,  // Current action: "Thinking", "Running <tool>", etc.
 }
 
 impl AppState {

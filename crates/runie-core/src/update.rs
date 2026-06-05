@@ -30,6 +30,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.current_request_id = Some(id.clone());
             state.thinking_started_at = Some(std::time::Instant::now());
             state.turn_active = true;
+            state.current_action = Some("Thinking".to_string());
             
             if state.turn_started_at.is_none() {
                 state.turn_started_at = Some(std::time::Instant::now());
@@ -37,6 +38,9 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state
         }
         Event::AgentThoughtDone { id } => {
+            let mut state = state;
+            state.current_action = None;  // Clear action when thought done
+            state.thinking_started_at = None;
             let mut state = state;
             let duration = state.thinking_elapsed_secs().unwrap_or(0.0);
             state.thinking_started_at = None;
@@ -54,7 +58,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.current_request_id = Some(id.clone());
             state.current_tool_name = Some(name.clone());
             state.tool_started_at = Some(std::time::Instant::now());
-            state.has_intermediate_steps = true;  // Mark that this turn has intermediate steps
+            state.has_intermediate_steps = true;
+            state.current_action = Some(format!("Running {}", name));
             
             state.messages.push(ChatMessage {
                 role: "tool".into(),
@@ -65,6 +70,9 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state
         }
         Event::AgentToolEnd { duration_secs } => {
+            let mut state = state;
+            state.current_action = None;  // Clear action when tool done
+            state.tool_started_at = None;
             let mut state = state;
             // Replace "Running" with "Ran Xs" in the last tool message
             if let Some(name) = state.current_tool_name.take() {
