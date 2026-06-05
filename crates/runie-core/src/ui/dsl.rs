@@ -44,10 +44,22 @@ impl Dsl {
                     }
                     last_id = msg.id.clone();
                 }
-                "tool" | "tool_running" | "tool_done" => {
-                    feed.elements.push(Element::ToolRun { 
-                        content: msg.content.clone() 
-                    });
+                "tool" => {
+                    if msg.content.contains("Running") {
+                        let name = msg.content.trim_start_matches("⠋ Running ").trim_end_matches("...");
+                        let elapsed = state.tool_elapsed_secs().unwrap_or(0.0);
+                        feed.elements.push(Element::ToolRunning { 
+                            name: name.to_string(),
+                            elapsed,
+                        });
+                    } else {
+                        let name = msg.content.trim_start_matches("◆ Ran ").split(' ').next().unwrap_or("");
+                        let dur = msg.content.split_whitespace().last().map(|s| s.trim_end_matches('s').parse().unwrap_or(0.0)).unwrap_or(0.0);
+                        feed.elements.push(Element::ToolDone { 
+                            name: name.to_string(),
+                            duration_secs: dur,
+                        });
+                    }
                     feed.elements.push(Element::Spacer);
                     last_id = msg.id.clone();
                 }

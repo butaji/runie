@@ -137,7 +137,11 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
         id: cmd.id.clone(),
         name: "list_files".to_string(),
     }).await;
-    let _ = get_fake_file_list(); // Trigger tool (fake delay)
+    // Simulate tool execution time
+    if !FAST_MODE {
+        tokio::time::sleep(Duration::from_millis(500 + (rand_u32() % 1500) as u64)).await;
+    }
+    let _ = get_fake_file_list(); // Trigger tool
     let tool_duration = tool_start.elapsed().as_secs_f64();
     let _ = agent_tx.send(CoreEvent::AgentToolEnd {
         duration_secs: tool_duration,

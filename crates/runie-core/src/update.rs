@@ -52,6 +52,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.current_request_id = Some(id.clone());
             state.current_tool_name = Some(name.clone());
+            state.tool_started_at = Some(std::time::Instant::now());
             
             state.messages.push(ChatMessage {
                 role: "tool".into(),
