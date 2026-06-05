@@ -31,7 +31,7 @@ pub fn render_user_msg(
     theme: &ThemeWrapper,
     wrap_cache: &mut WrapCache,
 ) -> u16 {
-    let bg_color: ratatui::style::Color = theme.color("bg.base").into();
+    let bg_color: ratatui::style::Color = theme.color("feed.user.bg").into();
     let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
     let text_primary: ratatui::style::Color = theme.color("text.primary").into();
     // Resolve timestamp: use provided or generate current time
@@ -49,17 +49,18 @@ pub fn render_user_msg(
     let content_lines = if wrapped.is_empty() { 1 } else { wrapped.len() };
     let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
 
-    let bg_start = margin_x;
+    let bg_padding = 1u16;
+    let bg_start = margin_x + bg_padding;
+    let bg_end = area.right().saturating_sub(bg_padding);
 
-    // Render vertical padding ABOVE (1 line)
+    // Content starts after 1 line of vertical padding
     let content_start_y = area.y + row + 1;
-    if content_start_y > area.y {
-        let padding_y = content_start_y - 1;
-        for x in (bg_start as usize)..(area.right() as usize) {
-            if let Some(cell) = buf.cell_mut((x as u16, padding_y)) {
-                cell.set_char(' ');
-                cell.set_style(Style::default().bg(bg_color));
-            }
+    // Render vertical padding ABOVE (1 line)
+    let padding_above_y = area.y + row;
+    for x in bg_start..bg_end {
+        if let Some(cell) = buf.cell_mut((x, padding_above_y)) {
+            cell.set_char(' ');
+            cell.set_style(Style::default().bg(bg_color));
         }
     }
 
@@ -69,9 +70,9 @@ pub fn render_user_msg(
         if line_y >= area.bottom() {
             break;
         }
-        // Fill full-width gray background for the line (one symbol before chevron)
-        for x in (bg_start as usize)..(area.right() as usize) {
-            if let Some(cell) = buf.cell_mut((x as u16, line_y)) {
+        // Fill gray background with horizontal padding
+        for x in bg_start..bg_end {
+            if let Some(cell) = buf.cell_mut((x, line_y)) {
                 cell.set_char(' ');
                 cell.set_style(Style::default().bg(bg_color));
             }
@@ -91,7 +92,7 @@ pub fn render_user_msg(
 
             // Timestamp on first line for all messages
             let ts_len = ts_display.len() as u16;
-            let ts_x = area.right().saturating_sub(ts_len + 1);
+            let ts_x = bg_end.saturating_sub(ts_len + 3);
             if ts_x > text_x {
                 let ts_color: ratatui::style::Color = theme.color("text.muted").into();
                 let ts_line = ratatui::text::Line::raw(&ts_display)
@@ -109,12 +110,10 @@ pub fn render_user_msg(
 
     // Render vertical padding BELOW (1 line)
     let padding_below_y = content_start_y + content_lines as u16;
-    if padding_below_y < area.bottom() {
-        for x in (bg_start as usize)..(area.right() as usize) {
-            if let Some(cell) = buf.cell_mut((x as u16, padding_below_y)) {
-                cell.set_char(' ');
-                cell.set_style(Style::default().bg(bg_color));
-            }
+    for x in bg_start..bg_end {
+        if let Some(cell) = buf.cell_mut((x, padding_below_y)) {
+            cell.set_char(' ');
+            cell.set_style(Style::default().bg(bg_color));
         }
     }
 
