@@ -13,15 +13,18 @@ pub const PREFIX_USER: &str = "You: ";
 /// Agent message prefix
 pub const PREFIX_AGENT: &str = "Agent: ";
 
+/// Thinking spinner (animated in terminal)
+pub const THINKING_SPINNER: &str = "⠋";
+
 /// Thinking indicator (no time yet)
-pub const THINKING_LOADING: &str = "⏳ Thinking...";
+pub const THINKING_LOADING: &str = "⠋ Thinking...";
 
 /// Thinking indicator with time
 pub fn thinking_with_time(seconds: f64) -> String {
-    format!("⏳ Thinking... {:.1}s", seconds)
+    format!("⠋ Thinking... {:.1}s", seconds)
 }
 
 /// Thought duration (after completion)
 pub fn thought_with_time(seconds: f64) -> String {
-    format!("⏳ Thought {:.1}s", seconds)
+    format!("✓ Thought {:.1}s", seconds)
 }
