@@ -87,7 +87,10 @@ async fn run_app(
                         KeyCode::Esc => {
                             app.quit = true;
                         }
-                        KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        KeyCode::Char('q') | KeyCode::Char('Q') => {
+                            app.quit = true;
+                        }
+                        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             app.quit = true;
                         }
                         _ => {}
