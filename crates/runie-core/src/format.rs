@@ -2,7 +2,7 @@
 //! 
 //! Converts ChatMessage + state metadata into display lines.
 
-use crate::model::AppState;
+use crate::model::{AppState, ChatMessage};
 use crate::labels::{PREFIX_USER, PREFIX_AGENT};
 
 /// A formatted line ready for rendering
@@ -59,8 +59,9 @@ pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
         }
     }
     
-    // Show thinking indicator if agent is working
-    if state.streaming || !state.request_queue.is_empty() {
+    // Show thinking indicator only if no thought message yet (still streaming)
+    let has_thought = state.messages.iter().any(|m| m.role == "thought");
+    if !has_thought && (state.streaming || !state.request_queue.is_empty()) {
         lines.extend(thinking_indicator(state));
     }
     
