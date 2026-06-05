@@ -29,6 +29,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.streaming = true;
             state.current_request_id = Some(id.clone());
             state.thinking_started_at = Some(std::time::Instant::now());
+            state.turn_active = true;
             
             if state.turn_started_at.is_none() {
                 state.turn_started_at = Some(std::time::Instant::now());
@@ -102,7 +103,9 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.current_request_id = None;
             state.current_tool_name = None;
-            state.has_intermediate_steps = false;  // Reset for next turn
+            state.has_intermediate_steps = false;
+            state.turn_active = false;
+            state.turn_started_at = None;
             if state.request_queue.is_empty() {
                 state.streaming = false;
                 state.thinking_started_at = None;
