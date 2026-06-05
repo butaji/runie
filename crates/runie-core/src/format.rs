@@ -61,13 +61,6 @@ pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
         }
     }
     
-    // Show thinking indicator if agent is working
-    // - streaming=true (agent is currently running)
-    // - or queue has pending requests
-    if state.streaming || !state.request_queue.is_empty() {
-        lines.extend(thinking(state));
-    }
-    
     lines
 }
 
