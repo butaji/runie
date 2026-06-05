@@ -1,7 +1,8 @@
 //! PTY wrapper for TUI.
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::os::unix::process::CommandExt;
+use std::thread;
 
 fn main() {
     let (master_fd, slave_fd) = unsafe {
@@ -45,7 +46,23 @@ fn main() {
 
     unsafe { libc::close(slave_fd) };
 
-    // Forward output
+    // Spawn thread to forward stdin to PTY
+    let master_for_input = master_fd;
+    thread::spawn(move || {
+        let mut stdin = std::io::stdin();
+        let mut buf = [0u8; 256];
+        loop {
+            match stdin.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => {
+                    let written = unsafe { libc::write(master_for_input, buf.as_ptr() as *const libc::c_void, n) };
+                    if written < 0 { break; }
+                }
+            }
+        }
+    });
+
+    // Forward output from PTY to stdout
     let mut buf = [0u8; 4096];
     let timeout = std::time::Duration::from_secs(300);
     let start = std::time::Instant::now();
