@@ -58,7 +58,10 @@ async fn run_app(
     let (agent_tx, mut agent_rx) = mpsc::channel::<runie_agent::types::AgentEvent>(128);
 
     loop {
-        terminal.draw(|f| ui::draw(f, &app))?;
+        if app.needs_redraw {
+            terminal.draw(|f| ui::draw(f, &app))?;
+            app.needs_redraw = false;
+        }
 
         if crossterm::event::poll(std::time::Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
@@ -78,9 +81,11 @@ async fn run_app(
                         }
                         KeyCode::Char(c) if !app.streaming => {
                             app.input.push(c);
+                            app.needs_redraw = true;
                         }
                         KeyCode::Backspace if !app.streaming => {
                             app.input.pop();
+                            app.needs_redraw = true;
                         }
                         KeyCode::Enter if !app.streaming && !app.input.is_empty() => {
                             let _user_text = app.input.clone();
@@ -104,6 +109,11 @@ async fn run_app(
 
         while let Ok(event) = agent_rx.try_recv() {
             app.handle_event(&event);
+        }
+
+        // Keep redrawing during streaming to show updates
+        if app.streaming {
+            app.needs_redraw = true;
         }
 
         if app.quit {
