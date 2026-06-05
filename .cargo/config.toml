@@ -1,0 +1,4 @@
+[profile.dev]
+split-debuginfo = "unpacked"
+opt-level = 0
+debug = false

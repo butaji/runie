@@ -2,19 +2,21 @@
 name = "runie-tui"
 version.workspace = true
 edition.workspace = true
-build = "../../build.rs"
+
+[lib]
+name = "runie_tui_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "runie-tui"
+path = "src/main.rs"
 
 [dependencies]
-runie-app = { path = "../runie-app" }
 runie-agent = { path = "../runie-agent" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 tokio = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
+bincode = { workspace = true }
 futures = { workspace = true }
-chrono = "0.4"
-libloading = "0.8"
-
-[dependencies.libc]
-version = "0.2"
-package = "libc"

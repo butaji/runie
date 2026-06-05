@@ -1,0 +1,60 @@
+1780688466.524495 client started (53376): version 3.6b, socket /private/tmp/tmux-501/default, protocol 8
+1780688466.524528 on Darwin 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:41:26 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T8132
+1780688466.524532 using libevent 2.1.12-stable select
+1780688466.524536 using utf8proc 2.11.3
+1780688466.524539 using ncurses 6.6 20251230
+1780688466.524546 flags are 0x18010000
+1780688466.524548 socket is /private/tmp/tmux-501/default
+1780688466.524553 trying connect
+1780688466.524560 connect failed: Connection refused
+1780688466.524567 lock file is /private/tmp/tmux-501/default.lock
+1780688466.524604 flock succeeded
+1780688466.524607 got lock (6)
+1780688466.524610 trying connect
+1780688466.524614 connect failed: Connection refused
+1780688466.524863 add peer 0x104ff90d0: 7 (0x0)
+1780688466.524930 sending message 111 to peer 0x104ff90d0 (8 bytes)
+1780688466.524936 sending message 111 to peer 0x104ff90d0 (8 bytes)
+1780688466.524939 sending message 101 to peer 0x104ff90d0 (15 bytes)
+1780688466.524941 sending message 109 to peer 0x104ff90d0 (4 bytes)
+1780688466.524944 sending message 102 to peer 0x104ff90d0 (1 bytes)
+1780688466.524946 sending message 108 to peer 0x104ff90d0 (31 bytes)
+1780688466.524948 sending message 104 to peer 0x104ff90d0 (0 bytes)
+1780688466.524951 sending message 110 to peer 0x104ff90d0 (0 bytes)
+1780688466.524953 sending message 107 to peer 0x104ff90d0 (4 bytes)
+1780688466.524958 sending message 105 to peer 0x104ff90d0 (20 bytes)
+1780688466.524960 sending message 105 to peer 0x104ff90d0 (15 bytes)
+1780688466.524963 sending message 105 to peer 0x104ff90d0 (57 bytes)
+1780688466.524965 sending message 105 to peer 0x104ff90d0 (49 bytes)
+1780688466.524967 sending message 105 to peer 0x104ff90d0 (34 bytes)
+1780688466.524969 sending message 105 to peer 0x104ff90d0 (179 bytes)
+1780688466.524971 sending message 105 to peer 0x104ff90d0 (21 bytes)
+1780688466.524973 sending message 105 to peer 0x104ff90d0 (21 bytes)
+1780688466.524975 sending message 105 to peer 0x104ff90d0 (11 bytes)
+1780688466.524978 sending message 105 to peer 0x104ff90d0 (41 bytes)
+1780688466.524980 sending message 105 to peer 0x104ff90d0 (38 bytes)
+1780688466.524982 sending message 105 to peer 0x104ff90d0 (12 bytes)
+1780688466.524984 sending message 105 to peer 0x104ff90d0 (460 bytes)
+1780688466.524986 sending message 105 to peer 0x104ff90d0 (35 bytes)
+1780688466.524988 sending message 105 to peer 0x104ff90d0 (13 bytes)
+1780688466.524990 sending message 105 to peer 0x104ff90d0 (56 bytes)
+1780688466.524992 sending message 105 to peer 0x104ff90d0 (8 bytes)
+1780688466.524994 sending message 105 to peer 0x104ff90d0 (18 bytes)
+1780688466.524996 sending message 105 to peer 0x104ff90d0 (30 bytes)
+1780688466.524998 sending message 105 to peer 0x104ff90d0 (14 bytes)
+1780688466.525000 sending message 105 to peer 0x104ff90d0 (18 bytes)
+1780688466.525002 sending message 105 to peer 0x104ff90d0 (83 bytes)
+1780688466.525006 sending message 105 to peer 0x104ff90d0 (60 bytes)
+1780688466.525008 sending message 105 to peer 0x104ff90d0 (37 bytes)
+1780688466.525010 sending message 105 to peer 0x104ff90d0 (20 bytes)
+1780688466.525013 sending message 105 to peer 0x104ff90d0 (25 bytes)
+1780688466.525015 sending message 106 to peer 0x104ff90d0 (0 bytes)
+1780688466.525031 cmd_pack_argv: argv[0]=new-session
+1780688466.525034 cmd_pack_argv: argv[1]=-d
+1780688466.525036 cmd_pack_argv: argv[2]=-s
+1780688466.525038 cmd_pack_argv: argv[3]=test3
+1780688466.525040 sending message 200 to peer 0x104ff90d0 (28 bytes)
+1780688466.525042 client loop enter
+1780688466.525119 client_signal: Child exited: 20
+1780688466.557533 peer 0x104ff90d0 message 203
+1780688466.557542 client loop exit
