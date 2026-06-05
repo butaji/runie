@@ -1,6 +1,6 @@
 //! RenderPipe mode-specific rendering.
 
-use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+use ratatui::{buffer::Buffer, layout::Rect, style::Style, widgets::Widget};
 
 use crate::style::helpers::wireframe_box;
 use crate::tui::view_models::ViewModels;
@@ -70,32 +70,25 @@ pub fn render_home_screen_mode(
     };
     wireframe_box(buf, "home", home_area);
 
-    if state.home_screen.show_sessions {
+    // Don't show input bar in home screen mode (session list or welcome menu)
+    if !state.home_screen.show_sessions {
+        // Render welcome menu
+        crate::components::home_screen::render_home_screen(&state.home_screen, home_area, buf, theme);
+    } else {
         // Render session list view using SessionTreeNavigator
-        // Create a temporary clone with visible=true to bypass the visibility check
         let mut session_tree = state.session_tree.clone();
         session_tree.visible = true;
         session_tree.render_ref(home_area, buf, theme);
-    } else {
-        // Render welcome menu
-        crate::components::home_screen::render_home_screen(&state.home_screen, home_area, buf, theme);
     }
 
-    // Clear input_right_info in home screen mode to show "Grok Build" instead of "Grok Build ─ mock"
-    let clean_state = {
-        let mut s = state.clone();
-        s.input_right_info = String::new();
-        s
-    };
-    // Input bar uses the FULL screen width (not the padded width)
-    // so the box border aligns with the screen edge, matching Grok.
+    // Always hide the input bar in home screen mode
     let input_area = Rect {
         x: area.x,
         y: main_areas[3].y,
         width: area.width,
         height: main_areas[3].height,
     };
-    super::render_input::render_input(buf, &clean_state, input_area, theme, theme_colors);
+    clear_background(buf, input_area, theme_colors.bg_base);
 
     // Render version badge below version separator line, right-aligned
     let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));
@@ -143,7 +136,15 @@ pub fn render_normal_mode(
         };
         (&state.file_picker).render(picker_area, buf);
     }
-    super::render_input::render_input(buf, state, main_areas[3], theme, theme_colors);
+    // Input bar with horizontal padding
+    let input_padding = 2;
+    let input_area = Rect {
+        x: area.x + input_padding,
+        y: main_areas[3].y,
+        width: area.width.saturating_sub(input_padding * 2),
+        height: main_areas[3].height,
+    };
+    super::render_input::render_input(buf, state, input_area, theme, theme_colors);
 
     // Render version below version separator line, right-aligned
     let version_badge = format!("{} Beta", env!("CARGO_PKG_VERSION"));

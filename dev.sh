@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Dev runner for runie with hot-reload.
 # Usage: ./dev.sh
+# Press Ctrl+C to quit
 
 set -euo pipefail
 
@@ -16,4 +17,9 @@ fi
 export RUST_BACKTRACE=full
 
 # Run with cargo watch for hot-reload
-cargo watch -x "run -p runie-cli -- --dev-folder=./tmp_config"
+# -s: run shell command
+# -x: run cargo command
+cargo watch \
+    -w crates/runie-tui \
+    -w crates/runie-cli \
+    -s "cargo run -p runie-cli -- --dev-folder=./tmp_config"
