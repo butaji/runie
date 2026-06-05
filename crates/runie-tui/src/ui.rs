@@ -22,7 +22,11 @@ pub fn view(f: &mut Frame, state: &AppState) {
 }
 
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
-    let block = Block::default().borders(Borders::ALL).title(" Chat ");
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Chat ")
+        .border_style(Style::default().fg(Color::DarkGray))
+        .title_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -77,11 +81,8 @@ fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(" Input ")
-        .border_style(if state.streaming {
-            Style::default().fg(Color::DarkGray)
-        } else {
-            Style::default().fg(Color::White)
-        });
+        .border_style(Style::default().fg(Color::DarkGray))
+        .title_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
     let paragraph = Paragraph::new(state.input.as_str()).block(block);
     f.render_widget(paragraph, area);
