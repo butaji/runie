@@ -11,7 +11,7 @@ pub struct AppState {
     #[serde(skip)]
     pub thinking_started_at: Option<std::time::Instant>,
     #[serde(skip)]
-    pub thought_elapsed_at: Option<std::time::Instant>,  // When thinking finished
+    pub thought_duration_secs: Option<f64>,  // Duration of thinking (static)
 }
 
 impl AppState {
@@ -20,9 +20,9 @@ impl AppState {
         self.thinking_started_at.map(|start| start.elapsed().as_secs_f64())
     }
     
-    /// Get elapsed thought time in seconds (time since thinking finished)
-    pub fn thought_elapsed_secs(&self) -> Option<f64> {
-        self.thought_elapsed_at.map(|start| start.elapsed().as_secs_f64())
+    /// Get thought duration in seconds (static value)
+    pub fn thought_duration_secs(&self) -> Option<f64> {
+        self.thought_duration_secs
     }
 }
 

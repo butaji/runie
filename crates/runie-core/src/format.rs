@@ -40,26 +40,45 @@ pub fn format_message(msg: &ChatMessage) -> Vec<DisplayLine> {
 pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
     let mut lines = vec![];
     let mut saw_user = false;
-    let mut saw_thinking = false;
+    let mut saw_assistant = false;
     
     for msg in &state.messages {
-        // Add thinking indicator after user, before first assistant
-        if !saw_thinking && saw_user && msg.role == "assistant" && !msg.content.is_empty() {
-            if let Some(s) = state.thought_elapsed_secs() {
+        lines.extend(format_message(msg));
+        
+        if msg.role == "user" {
+            saw_user = true;
+        }
+        if msg.role == "assistant" {
+            saw_assistant = true;
+        }
+        
+        // Show thinking indicator between user and assistant
+        if saw_user && !saw_assistant && state.streaming {
+            // Still thinking - show live timer
+            let elapsed = state.thinking_elapsed_secs()
+                .map(|s| format!("⏳ Thinking... {:.1}s", s))
+                .unwrap_or_else(|| "⏳ Thinking...".to_string());
+            
+            lines.push(DisplayLine {
+                spans: vec![DisplaySpan {
+                    text: elapsed,
+                    color: Some(Color::DarkGray),
+                }],
+            });
+            lines.push(DisplayLine::empty());
+        }
+        
+        // Show thought time after assistant response starts
+        if msg.role == "assistant" && !msg.content.is_empty() {
+            if let Some(duration) = state.thought_duration_secs() {
                 lines.push(DisplayLine {
                     spans: vec![DisplaySpan {
-                        text: format!("⏳ Thought {:.1}s", s),
+                        text: format!("⏳ Thought {:.1}s", duration),
                         color: Some(Color::DarkGray),
                     }],
                 });
                 lines.push(DisplayLine::empty());
-                saw_thinking = true;
             }
-        }
-        
-        lines.extend(format_message(msg));
-        if msg.role == "user" {
-            saw_user = true;
         }
     }
     
