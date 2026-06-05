@@ -27,7 +27,7 @@ pub enum Color {
     White,
 }
 
-/// Format all messages for display, including thinking indicator
+/// Format all messages for display
 pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
     let mut lines = vec![];
     let mut last_was_assistant = false;
@@ -38,17 +38,17 @@ pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
                 lines.extend(user_message(&msg.content));
                 last_was_assistant = false;
             }
+            "thought" => {
+                lines.extend(thought_message(&msg.content));
+                last_was_assistant = false;
+            }
             "assistant" => {
-                // Add thought indicator before first assistant response
-                if !last_was_assistant && lines.iter().all(|l| !l.is_thought()) && !msg.content.is_empty() {
-                    lines.extend(thought_duration(state));
-                }
                 // Combine consecutive assistant messages
                 if last_was_assistant {
-                    // Append to last agent line instead of creating new one
+                    // Append to last agent line's content span (index 1)
                     if let Some(last) = lines.last_mut() {
-                        if let Some(span) = last.spans.last_mut() {
-                            span.text.push_str(&msg.content);
+                        if last.spans.len() > 1 {
+                            last.spans[1].text.push_str(&msg.content);
                         }
                     }
                 } else {
@@ -110,16 +110,11 @@ pub fn thinking(state: &AppState) -> Vec<DisplayLine> {
     ]
 }
 
-/// Thought duration (static): "⏳ Thought X.Xs"
-pub fn thought_duration(state: &AppState) -> Vec<DisplayLine> {
-    let duration = match state.thought_duration_secs() {
-        Some(s) => format!("⏳ Thought {:.1}s", s),
-        None => return vec![],
-    };
-    
+/// Thought message (stored): "⏳ Thought X.Xs"
+pub fn thought_message(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
-            spans: vec![DisplaySpan { text: duration, color: Some(Color::DarkGray) }],
+            spans: vec![DisplaySpan { text: content.to_string(), color: Some(Color::DarkGray) }],
         },
         DisplayLine::empty(),
     ]
@@ -132,13 +127,5 @@ impl DisplayLine {
     
     pub fn is_empty(&self) -> bool {
         self.spans.iter().all(|s| s.text.is_empty())
-    }
-    
-    pub fn is_thought(&self) -> bool {
-        self.spans.iter().any(|s| s.text.contains("Thought"))
-    }
-    
-    pub fn is_agent(&self) -> bool {
-        self.spans.iter().any(|s| s.text.contains("Agent:"))
     }
 }
