@@ -482,4 +482,38 @@ mod tests {
         assert!(state.messages[0].content.contains("list_files"));
         assert!(state.messages[1].content.contains("README.md"));
     }
+    
+    #[test]
+    fn test_formatted_labels_short_names() {
+        use crate::ui::format_messages;
+        
+        let mut state = fresh_state();
+        state.streaming = true;
+        
+        // Add tool events
+        state = update(state, Event::AgentToolStart { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string() 
+        });
+        state = update(state, Event::AgentToolEnd { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string(), 
+            output: "file.rs".to_string() 
+        });
+        
+        // Add turn complete
+        state = update(state, Event::AgentTurnComplete { 
+            id: "req.0".to_string(), 
+            duration_secs: 5.1 
+        });
+        
+        let lines = format_messages(&state);
+        let content: String = lines.iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
+            .collect();
+        
+        // Check short labels
+        assert!(content.contains("🔧 Ran"), "Should show 'Ran' not 'Running'");
+        assert!(content.contains("Turn completed in 5.1s"), "Should show turn complete with duration");
+    }
 }
