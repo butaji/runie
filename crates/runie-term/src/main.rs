@@ -55,7 +55,14 @@ async fn main() -> io::Result<()> {
     loop {
         tokio::select! {
             _ = render_interval.tick() => {
-                state.animation_frame = state.animation_frame.wrapping_add(1);
+                // Slower animation for ASMR vibes - advance frame every 6 ticks (300ms)
+                static mut TICK_COUNTER: u32 = 0;
+                unsafe {
+                    TICK_COUNTER += 1;
+                    if TICK_COUNTER % 6 == 0 {
+                        state.animation_frame = state.animation_frame.wrapping_add(1);
+                    }
+                }
                 terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
