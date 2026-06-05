@@ -33,6 +33,11 @@ pub struct ChatMessage {
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    // Set up panic handler to restore terminal
+    std::panic::set_hook(Box::new(|_| {
+        cleanup_terminal();
+    }));
+
     // Load state if exists
     let saved_state = load_state();
     
@@ -45,6 +50,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = io::stdout();
     execute!(&mut stdout, EnterAlternateScreen, EnableMouseCapture).ok();
 
+    // Set up Ctrl+C handler
+    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, std::sync::atomic::Ordering::SeqCst);
+    }).ok();
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -55,10 +67,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         AppState::default()
     };
 
-    let result = run_app(&mut terminal, state);
+    let result = run_app(&mut terminal, state, running);
 
-    disable_raw_mode().ok();
-    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).ok();
+    cleanup_terminal();
 
     match result {
         Ok(state) => {
@@ -67,6 +78,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => Err(e),
     }
+}
+
+fn cleanup_terminal() {
+    disable_raw_mode().ok();
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).ok();
 }
 
 fn load_state() -> Option<AppState> {
@@ -86,6 +102,7 @@ fn save_state(state: &AppState) {
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     mut state: AppState,
+    running: std::sync::Arc<std::sync::atomic::AtomicBool>,
 ) -> Result<AppState, Box<dyn std::error::Error>> {
     let provider = Arc::new(MockProvider);
     let agent = AgentLoop::new(provider);
@@ -93,7 +110,9 @@ fn run_app(
 
     let mut needs_redraw = true;
 
-    while !state.streaming || !state.input.is_empty() || !state.messages.is_empty() {
+    while running.load(std::sync::atomic::Ordering::SeqCst) 
+        && (!state.streaming || !state.input.is_empty() || !state.messages.is_empty()) 
+    {
         if needs_redraw {
             terminal.draw(|f| ui::draw(f, &state))?;
             needs_redraw = false;
