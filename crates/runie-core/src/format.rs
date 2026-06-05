@@ -30,23 +30,38 @@ pub enum Color {
 /// Format all messages for display, including thinking indicator
 pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
     let mut lines = vec![];
+    let mut last_was_assistant = false;
     
     for msg in &state.messages {
         match msg.role.as_str() {
-            "user" => lines.extend(user_message(&msg.content)),
+            "user" => {
+                lines.extend(user_message(&msg.content));
+                last_was_assistant = false;
+            }
             "assistant" => {
                 // Add thought indicator before first assistant response
-                if lines.iter().all(|l| !l.is_thought()) && !msg.content.is_empty() {
+                if !last_was_assistant && lines.iter().all(|l| !l.is_thought()) && !msg.content.is_empty() {
                     lines.extend(thought_duration(state));
                 }
-                lines.extend(agent_answer(&msg.content));
+                // Combine consecutive assistant messages
+                if last_was_assistant {
+                    // Append to last agent line instead of creating new one
+                    if let Some(last) = lines.last_mut() {
+                        if let Some(span) = last.spans.last_mut() {
+                            span.text.push_str(&msg.content);
+                        }
+                    }
+                } else {
+                    lines.extend(agent_answer(&msg.content));
+                }
+                last_was_assistant = true;
             }
             _ => {}
         }
     }
     
     // Show thinking indicator if streaming and no response yet
-    if state.streaming && !lines.iter().any(|l| l.is_agent()) {
+    if state.streaming && !last_was_assistant {
         lines.extend(thinking(state));
     }
     
