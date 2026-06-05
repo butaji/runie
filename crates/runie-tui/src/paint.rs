@@ -397,7 +397,7 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
             Rect { x, y: area.y, width: child_w.min(area.x.saturating_add(area.width).saturating_sub(x)), height: area.height }
         } else {
             // Complex child gets the remaining width.
-            let rem = area.x + area.width - x;
+            let rem = area.x.saturating_add(area.width).saturating_sub(x);
             Rect { x, y: area.y, width: rem, height: area.height }
         };
         paint(c, child_area, buf, theme);
@@ -410,11 +410,11 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     }
 
     // fill_trailing: paint background up to area.right().
-    if r.fill_trailing && last_x_end < area.x + area.width {
+    if r.fill_trailing && last_x_end < area.x.saturating_add(area.width) {
         let rem = Rect {
             x: last_x_end,
             y: area.y,
-            width: area.x + area.width - last_x_end,
+            width: area.x.saturating_add(area.width).saturating_sub(last_x_end),
             height: area.height,
         };
         paint_blank(rem, buf, r.bg.resolve(theme));
@@ -444,7 +444,9 @@ fn paint_col(c: &Col, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
             Node::Fill => fill_h as u16,
             _ => 1u16,
         };
-        let ca = Rect { x: area.x, y, width: area.width, height: h.min(area.y + area.height - y) };
+        // Clamp height to remaining space in the area
+        let remaining_height = area.y.saturating_add(area.height).saturating_sub(y);
+        let ca = Rect { x: area.x, y, width: area.width, height: h.min(remaining_height) };
         paint(child, ca, buf, theme);
         y += h;
     }

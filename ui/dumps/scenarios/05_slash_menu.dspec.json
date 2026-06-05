@@ -88,11 +88,16 @@
         "top": 0,
         "right": 2,
         "bottom": 0,
-        "left": 0,
+        "left": 5,
         "child": {
-          "type": "text",
-          "content": "     \u2022 src/ \u2014 Top-level source (lib.rs)",
-          "style": "primary"
+          "type": "row",
+          "children": [
+            {
+              "type": "text",
+              "content": "\u2022 src/ \u2014 Top-level source (lib.rs)",
+              "style": "primary"
+            }
+          ]
         }
       },
       {
@@ -100,11 +105,16 @@
         "top": 0,
         "right": 2,
         "bottom": 0,
-        "left": 0,
+        "left": 5,
         "child": {
-          "type": "text",
-          "content": "     \u2022 target/ \u2014 Build artifacts (debug)",
-          "style": "primary"
+          "type": "row",
+          "children": [
+            {
+              "type": "text",
+              "content": "\u2022 target/ \u2014 Build artifacts (debug)",
+              "style": "primary"
+            }
+          ]
         }
       },
       {
@@ -112,210 +122,155 @@
         "top": 0,
         "right": 2,
         "bottom": 0,
-        "left": 0,
+        "left": 5,
         "child": {
-          "type": "text",
-          "content": "     \u2022 tmp_config/ \u2014 Temporary config / runtime data",
-          "style": "primary"
+          "type": "row",
+          "children": [
+            {
+              "type": "text",
+              "content": "\u2022 tmp_config/ \u2014 Temporary config / runtime data",
+              "style": "primary"
+            }
+          ]
         }
       },
       {
         "type": "row",
-        "fill_trailing": true,
         "children": [
           {
             "type": "text",
-            "content": "  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250087\u2500"
+            "content": "  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250087\u2500"
+          }
+        ]
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 5,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "\u276f /quit                             Quit the application                \u2588",
+              "style": "primary"
+            }
+          ]
+        }
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 7,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "/home                             Return to the welcome screen",
+              "style": "primary"
+            }
+          ]
+        }
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 7,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "/new                              Start a new session                   \u2588",
+              "style": "primary"
+            }
+          ]
+        }
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 7,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "/fork                             Branch the current session into a     \u2588",
+              "style": "primary"
+            }
+          ]
+        }
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 43,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "peer agent                           \u2588",
+              "style": "primary"
+            }
+          ]
+        }
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 7,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "/compact                          Compact conversation history          \u2588",
+              "style": "primary"
+            }
+          ]
+        }
+      },
+      {
+        "type": "row",
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
           }
         ]
       },
       {
         "type": "row",
-        "fill_trailing": true,
         "children": [
           {
             "type": "text",
-            "content": "     \u276f /quit",
-            "style": "accent"
-          },
-          {
-            "type": "text",
-            "content": "                             "
-          },
-          {
-            "type": "text",
-            "content": "Quit the application",
-            "style": "primary"
-          },
-          {
-            "type": "right_gap",
-            "n": 17
-          },
-          {
-            "type": "text",
-            "content": "\u2588",
-            "style": "primary"
+            "content": "  \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e"
           }
         ]
       },
       {
         "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "       /home",
-            "style": "accent"
-          },
-          {
-            "type": "text",
-            "content": "                             "
-          },
-          {
-            "type": "text",
-            "content": "Return to the welcome screen",
-            "style": "primary"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "       /new",
-            "style": "accent"
-          },
-          {
-            "type": "text",
-            "content": "                              "
-          },
-          {
-            "type": "text",
-            "content": "Start a new session",
-            "style": "primary"
-          },
-          {
-            "type": "right_gap",
-            "n": 17
-          },
-          {
-            "type": "text",
-            "content": "\u2588",
-            "style": "primary"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "       /fork",
-            "style": "accent"
-          },
-          {
-            "type": "text",
-            "content": "                             "
-          },
-          {
-            "type": "text",
-            "content": "Branch the current session into a",
-            "style": "primary"
-          },
-          {
-            "type": "right_gap",
-            "n": 17
-          },
-          {
-            "type": "text",
-            "content": "\u2588",
-            "style": "primary"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": " "
-          },
-          {
-            "type": "text",
-            "content": "                                "
-          },
-          {
-            "type": "text",
-            "content": "peer agent",
-            "style": "primary"
-          },
-          {
-            "type": "right_gap",
-            "n": 17
-          },
-          {
-            "type": "text",
-            "content": "\u2588",
-            "style": "primary"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "       /compact",
-            "style": "accent"
-          },
-          {
-            "type": "text",
-            "content": "                          "
-          },
-          {
-            "type": "text",
-            "content": "Compact conversation history",
-            "style": "primary"
-          },
-          {
-            "type": "right_gap",
-            "n": 17
-          },
-          {
-            "type": "text",
-            "content": "\u2588",
-            "style": "primary"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
-        "children": [
-          {
-            "type": "text",
-            "content": "  \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e"
-          }
-        ]
-      },
-      {
-        "type": "row",
-        "fill_trailing": true,
         "children": [
           {
             "type": "text",
@@ -325,11 +280,10 @@
       },
       {
         "type": "row",
-        "fill_trailing": true,
         "children": [
           {
             "type": "text",
-            "content": "  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Grok Build \u2500\u256f"
+            "content": "  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Grok Build \u2500\u256f"
           }
         ]
       },
@@ -338,7 +292,6 @@
       },
       {
         "type": "row",
-        "fill_trailing": true,
         "children": [
           {
             "type": "text",
