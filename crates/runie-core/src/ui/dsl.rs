@@ -3,8 +3,6 @@
 use crate::model::AppState;
 use crate::ui::elements::{Element, Feed};
 
-const SPINNER_FRAMES: [&str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
-
 pub struct Dsl;
 
 impl Dsl {
@@ -46,8 +44,7 @@ impl Dsl {
                     }
                     last_id = msg.id.clone();
                 }
-                "tool" => {
-                    // Format: "🔧 Ran name Xs"
+                "tool" | "tool_running" | "tool_done" => {
                     feed.elements.push(Element::ToolRun { 
                         content: msg.content.clone() 
                     });
@@ -66,7 +63,6 @@ impl Dsl {
             }
         }
         
-        // Show Thinking spinner if thinking in progress
         if state.thinking_started_at.is_some() {
             let elapsed = state.thinking_elapsed_secs().unwrap_or(0.0);
             feed.elements.push(Element::Thinking { elapsed });
@@ -81,10 +77,5 @@ impl Dsl {
             .last()
             .and_then(|s| s.trim_end_matches('s').parse().ok())
             .unwrap_or(0.0)
-    }
-    
-    pub fn spinner(elapsed: f64) -> &'static str {
-        let frame_idx = ((elapsed * 10.0) as usize) % SPINNER_FRAMES.len();
-        SPINNER_FRAMES[frame_idx]
     }
 }

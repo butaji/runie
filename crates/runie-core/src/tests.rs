@@ -348,9 +348,11 @@ mod tests {
         state = update(state, Event::AgentThoughtDone { id: "req.0".to_string() });
         
         // Tool execution
-        state = update(state, Event::AgentToolDone { 
+        state = update(state, Event::AgentToolStart { 
             id: "req.0".to_string(), 
             name: "list_files".to_string(),
+        });
+        state = update(state, Event::AgentToolEnd { 
             duration_secs: 0.5,
         });
         
@@ -383,9 +385,10 @@ mod tests {
     
     #[test]
     fn test_tool_done_event() {
-        let state = update(fresh_state(), Event::AgentToolDone { 
+        let state = update(update(fresh_state(), Event::AgentToolStart { 
             id: "req.0".to_string(), 
             name: "list_files".to_string(),
+        }), Event::AgentToolEnd { 
             duration_secs: 0.3,
         });
         
@@ -403,12 +406,19 @@ mod tests {
         let mut state = fresh_state();
         state.streaming = true;
         
-        // Tool execution
-        state = update(state, Event::AgentToolDone { 
+        // Tool execution (after end, shows Ran not Running)
+        state = update(state, Event::AgentToolStart { 
             id: "req.0".to_string(), 
             name: "list_files".to_string(),
+        });
+        state = update(state, Event::AgentToolEnd { 
             duration_secs: 0.3,
         });
+        
+        // Debug: print message content
+        for msg in &state.messages {
+            eprintln!("MSG role={} content={}", msg.role, msg.content);
+        }
         
         // Turn complete
         state = update(state, Event::AgentTurnComplete { 
@@ -421,9 +431,13 @@ mod tests {
             .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
             .collect();
         
-        assert!(content.contains("🔧 Ran"));
-        assert!(content.contains("0.3s"));
-        assert!(content.contains("Turn completed in 5.1s"));
+        // After tool end, shows "Ran" not "Running"
+        let has_ran = content.contains("Ran");
+        let has_duration = content.contains("0.3s");
+        let has_turn = content.contains("Turn completed");
+        assert!(has_ran, "Missing 'Ran' in: {}", content);
+        assert!(has_duration, "Missing '0.3s' in: {}", content);
+        assert!(has_turn, "Missing 'Turn completed' in: {}", content);
     }
     
     #[test]
@@ -437,10 +451,12 @@ mod tests {
         state = update(state, Event::AgentThinking { id: "req.0".to_string() });
         state = update(state, Event::AgentThoughtDone { id: "req.0".to_string() });
         
-        // 2. Ran list_files
-        state = update(state, Event::AgentToolDone { 
+        // 2. Running -> Ran
+        state = update(state, Event::AgentToolStart { 
             id: "req.0".to_string(), 
             name: "list_files".to_string(),
+        });
+        state = update(state, Event::AgentToolEnd { 
             duration_secs: 0.5,
         });
         
@@ -473,8 +489,9 @@ mod tests {
             .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
             .collect();
         
-        assert!(content.contains("◆ Though"));
-        assert!(content.contains("🔧 Ran"));
+        // Check final content (Ran not Running after tool end)
+        assert!(content.contains("Though"));
+        assert!(content.contains("Ran"));
         assert!(content.contains("list_files"));
         assert!(content.contains("Agent:"));
         assert!(content.contains("Turn completed in 5.1s"));

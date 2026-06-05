@@ -1,5 +1,5 @@
 //! Update - State Transitions
-use crate::labels::thought_with_time;
+use crate::labels::{thought_with_time, tool_running, tool_done};
 use crate::model::{AppState, ChatMessage};
 use crate::Event;
 
@@ -48,14 +48,27 @@ pub fn update(state: AppState, event: Event) -> AppState {
             });
             state
         }
-        Event::AgentToolDone { id, name, duration_secs } => {
+        Event::AgentToolStart { id, name } => {
             let mut state = state;
+            state.current_request_id = Some(id.clone());
+            state.current_tool_name = Some(name.clone());
+            
             state.messages.push(ChatMessage {
                 role: "tool".into(),
-                content: format!("🔧 Ran {} {:.1}s", name, duration_secs),
+                content: tool_running(&name),
                 timestamp: now(),
                 id,
             });
+            state
+        }
+        Event::AgentToolEnd { duration_secs } => {
+            let mut state = state;
+            // Replace "Running" with "Ran Xs" in the last tool message
+            if let Some(name) = state.current_tool_name.take() {
+                if let Some(last_msg) = state.messages.iter_mut().rev().find(|m| m.role == "tool") {
+                    last_msg.content = tool_done(&name, duration_secs);
+                }
+            }
             state
         }
         Event::AgentResponse { id, content } => {
@@ -73,7 +86,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.messages.push(ChatMessage {
                 role: "turn_complete".into(),
-                content: format!("✓ Turn completed in {:.1}s", duration_secs),
+                content: format!("Turn completed in {:.1}s", duration_secs),
                 timestamp: now(),
                 id,
             });
@@ -83,6 +96,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
         Event::AgentDone { id: _ } => {
             let mut state = state;
             state.current_request_id = None;
+            state.current_tool_name = None;
             if state.request_queue.is_empty() {
                 state.streaming = false;
                 state.thinking_started_at = None;
