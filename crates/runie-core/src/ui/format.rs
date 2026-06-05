@@ -76,11 +76,23 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
             },
         ],
         
-        Element::ToolRun { content } => vec![
-            DisplayLine {
-                spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::DarkGray) }],
-            },
-        ],
+        Element::ToolRunning { name, elapsed } => {
+            let text = format!("Running {}... {:.1}s", name, elapsed);
+            vec![
+                DisplayLine {
+                    spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
+                },
+            ]
+        }
+        
+        Element::ToolDone { name, duration_secs } => {
+            let text = format!("Ran {} {:.1}s", name, duration_secs);
+            vec![
+                DisplayLine {
+                    spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
+                },
+            ]
+        },
         
         Element::TurnComplete { duration_secs } => vec![
             DisplayLine {

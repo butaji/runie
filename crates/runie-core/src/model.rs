@@ -19,7 +19,7 @@ pub struct AppState {
     #[serde(skip)]
     pub current_tool_name: Option<String>,
     #[serde(skip)]
-    pub tool_started_at: Option<std::time::Instant>,  // For animating "Running..."
+    pub tool_started_at: Option<std::time::Instant>,
 }
 
 impl AppState {
@@ -29,6 +29,10 @@ impl AppState {
     
     pub fn turn_elapsed_secs(&self) -> Option<f64> {
         self.turn_started_at.map(|start| start.elapsed().as_secs_f64())
+    }
+    
+    pub fn tool_elapsed_secs(&self) -> Option<f64> {
+        self.tool_started_at.map(|start| start.elapsed().as_secs_f64())
     }
     
     pub fn next_id(&mut self) -> String {
