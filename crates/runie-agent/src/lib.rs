@@ -1,32 +1,35 @@
-//! Runie Agent - Agent loop with mock provider
+//! Runie Agent - Agent loop with event-based communication
 //! 
-//! The agent processes messages and returns responses via a provider.
+//! The agent processes messages and sends responses via events to a channel.
+
+use runie_core::Event;
+use serde::{Deserialize, Serialize};
 
 /// Message types for agent communication
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Message {
     System { content: String },
     User { content: String },
     Assistant { content: String },
 }
 
-/// Response from provider
+/// Response chunk from provider
 #[derive(Debug, Clone)]
-pub struct Response {
+pub struct ResponseChunk {
     pub content: String,
 }
 
 /// Provider trait - implemented by LLM backends
 pub trait Provider {
-    fn generate(&self, messages: Vec<Message>) -> Response;
+    fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk>;
 }
 
-/// Mock provider - echoes back user messages
+/// Mock provider - echoes back user messages word by word
 #[derive(Default)]
 pub struct MockProvider;
 
 impl Provider for MockProvider {
-    fn generate(&self, messages: Vec<Message>) -> Response {
+    fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk> {
         // Get last user message
         let user_input = messages
             .iter()
@@ -37,13 +40,44 @@ impl Provider for MockProvider {
             })
             .unwrap_or_default();
 
-        Response {
-            content: format!("Echo: {}", user_input),
-        }
+        // Echo word by word for streaming effect
+        let echo = format!("Echo: {}", user_input);
+        echo.split_whitespace()
+            .scan(String::new(), |acc, word| {
+                if acc.is_empty() {
+                    *acc = word.to_string();
+                } else {
+                    *acc = format!("{} {}", acc, word);
+                }
+                Some(ResponseChunk {
+                    content: format!("{} ", word),
+                })
+            })
+            .collect()
     }
 }
 
-/// Run the agent loop with a provider
-pub fn run_agent<P: Provider>(provider: &P, messages: Vec<Message>) -> Response {
-    provider.generate(messages)
+/// Run the agent with a provider and send events to the channel
+pub fn run_agent<P, F>(provider: &P, messages: Vec<Message>, send_event: F)
+where
+    P: Provider,
+    F: Fn(Event),
+{
+    // Simulate thinking
+    send_event(Event::AgentThinking);
+    
+    // Get response chunks
+    let chunks = provider.generate(messages);
+    
+    // Send each chunk
+    for chunk in chunks {
+        send_event(Event::AgentResponse {
+            content: chunk.content,
+        });
+        // Small delay for streaming effect
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    
+    // Done
+    send_event(Event::AgentDone);
 }
