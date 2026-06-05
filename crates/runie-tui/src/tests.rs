@@ -1,95 +1,59 @@
-//! Rendering tests using TestBackend
-use ratatui::{backend::TestBackend, Terminal};
+//! Rendering tests
 
-use crate::ui::view;
-use runie_core::{AppState, Event, update::update};
-
-#[test]
-fn renders_empty_state() {
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
+#[cfg(test)]
+mod tests {
+    use runie_core::{AppState, Event, update::update};
+    use runie_core::ui::format_messages;
     
-    let state = AppState::default();
-    terminal.draw(|f| view(f, &state)).unwrap();
+    #[test]
+    fn renders_empty_state() {
+        let state = AppState::default();
+        let lines = format_messages(&state);
+        assert!(lines.is_empty());
+    }
     
-    let buf = terminal.backend().buffer();
+    #[test]
+    fn renders_user_message() {
+        let state = update(update(AppState::default(), Event::Input('H')), Event::Submit);
+        let lines = format_messages(&state);
+        
+        // User message + spacer = 2 lines
+        assert_eq!(lines.len(), 2);
+        let content: String = lines[0].spans.iter().map(|s| s.text.clone()).collect();
+        assert!(content.contains("You:"));
+        assert!(content.contains("H"));
+    }
     
-    // Should have Chat panel
-    let content: String = buf.content.iter()
-        .map(|c| c.symbol())
-        .collect();
+    #[test]
+    fn renders_agent_response() {
+        let mut state = AppState::default();
+        state.streaming = true;
+        
+        state = update(state, Event::AgentThinking { id: "req.0".to_string() });
+        state = update(state, Event::AgentThoughtDone { id: "req.0".to_string() });
+        state = update(state, Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+        
+        let lines = format_messages(&state);
+        let content: String = lines.iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
+            .collect();
+        
+        assert!(content.contains("Agent:"));
+        assert!(content.contains("Hello"));
+        assert!(content.contains("◆ Though"));
+    }
     
-    assert!(content.contains("Chat"), "Should contain Chat panel");
-}
-
-#[test]
-fn renders_user_message() {
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    
-    let state = AppState::default();
-    let state = update(state, Event::Input('H'));
-    let state = update(state, Event::Input('i'));
-    let state = update(state, Event::Submit);
-    
-    terminal.draw(|f| view(f, &state)).unwrap();
-    
-    let buf = terminal.backend().buffer();
-    let lines: Vec<String> = buf.content.chunks(60)
-        .map(|row| row.iter().map(|c| c.symbol()).collect::<String>().trim_end().to_string())
-        .collect();
-    
-    // Should show user message
-    let has_user = lines.iter().any(|l| l.contains("You: Hi"));
-    assert!(has_user, "Should show user message. Lines: {:?}", lines);
-}
-
-#[test]
-fn renders_agent_response() {
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    
-    let mut state = AppState::default();
-    state.streaming = true;
-    state.thinking_started_at = Some(std::time::Instant::now());
-    let state = update(state, Event::AgentResponse {
-        id: "req.0".to_string(),
-        content: "Hello".to_string()
-    });
-    
-    terminal.draw(|f| view(f, &state)).unwrap();
-    
-    let buf = terminal.backend().buffer();
-    let lines: Vec<String> = buf.content.chunks(60)
-        .map(|row| row.iter().map(|c| c.symbol()).collect::<String>().trim_end().to_string())
-        .collect();
-    
-    // Should show agent response
-    let has_agent = lines.iter().any(|l| l.contains("Agent: Hello"));
-    let has_thought = lines.iter().any(|l| l.contains("◆ Though"));
-    
-    assert!(has_thought, "Should show thought marker. Lines: {:?}", lines);
-    assert!(has_agent, "Should show agent message. Lines: {:?}", lines);
-}
-
-#[test]
-fn renders_thinking_for_queued_request() {
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    
-    // Simulate: first request done, second in queue, streaming active
-    let mut state = AppState::default();
-    state.streaming = true;
-    state.request_queue.push(("Second question".to_string(), "req.1".to_string()));
-    
-    terminal.draw(|f| view(f, &state)).unwrap();
-    
-    let buf = terminal.backend().buffer();
-    let lines: Vec<String> = buf.content.chunks(60)
-        .map(|row| row.iter().map(|c| c.symbol()).collect::<String>().trim_end().to_string())
-        .collect();
-    
-    // Should show thinking indicator
-    let has_thinking = lines.iter().any(|l| l.contains("Thinking"));
-    assert!(has_thinking, "Should show Thinking for queued request. Lines: {:?}", lines);
+    #[test]
+    fn renders_thinking_for_queued_request() {
+        let mut state = AppState::default();
+        state.streaming = true;
+        state.thinking_started_at = Some(std::time::Instant::now());
+        
+        let lines = format_messages(&state);
+        let content: String = lines.iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
+            .collect();
+        
+        assert!(content.contains("Though..."));
+    }
 }

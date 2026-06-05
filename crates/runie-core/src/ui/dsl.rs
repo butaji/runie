@@ -47,23 +47,14 @@ impl Dsl {
                     last_id = msg.id.clone();
                 }
                 "tool" => {
-                    if msg.content.starts_with("🔧") {
-                        // Tool start
-                        let name = msg.content.trim_start_matches("🔧 Running ").trim_end_matches("...");
-                        feed.elements.push(Element::ToolStart { 
-                            name: name.to_string() 
-                        });
-                    } else {
-                        // Tool output
-                        feed.elements.push(Element::ToolOutput { 
-                            content: msg.content.clone() 
-                        });
-                    }
+                    // Format: "🔧 Ran name Xs"
+                    feed.elements.push(Element::ToolRun { 
+                        content: msg.content.clone() 
+                    });
                     feed.elements.push(Element::Spacer);
                     last_id = msg.id.clone();
                 }
                 "turn_complete" => {
-                    // Parse duration from content like "✓ Turn completed in 5.1s"
                     let duration = Self::parse_duration(&msg.content);
                     feed.elements.push(Element::TurnComplete { 
                         duration_secs: duration 
@@ -75,12 +66,8 @@ impl Dsl {
             }
         }
         
-        let has_thought_for_current = state.current_request_id
-            .as_ref()
-            .map(|current_id| state.messages.iter().any(|m| m.role == "thought" && m.id == *current_id))
-            .unwrap_or(false);
-        
-        if state.streaming && !has_thought_for_current {
+        // Show Thinking spinner if thinking in progress
+        if state.thinking_started_at.is_some() {
             let elapsed = state.thinking_elapsed_secs().unwrap_or(0.0);
             feed.elements.push(Element::Thinking { elapsed });
             feed.elements.push(Element::Spacer);
@@ -90,7 +77,6 @@ impl Dsl {
     }
     
     fn parse_duration(content: &str) -> f64 {
-        // Extract "5.1s" from "✓ Turn completed in 5.1s"
         content.split_whitespace()
             .last()
             .and_then(|s| s.trim_end_matches('s').parse().ok())
