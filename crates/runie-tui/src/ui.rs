@@ -1,4 +1,4 @@
-//! UI rendering.
+//! View - Terminal Rendering
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
@@ -7,19 +7,21 @@ use ratatui::{
     Frame,
 };
 
-use crate::AppState;
+use crate::model::AppState;
 
-pub fn draw(f: &mut Frame, state: &AppState) {
+/// View function - renders state to terminal
+/// Takes immutable state, returns rendered UI
+pub fn view(f: &mut Frame, state: &AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(3)])
         .split(f.area());
 
-    draw_messages(f, state, chunks[0]);
-    draw_input(f, state, chunks[1]);
+    messages_view(f, state, chunks[0]);
+    input_view(f, state, chunks[1]);
 }
 
-fn draw_messages(f: &mut Frame, state: &AppState, area: Rect) {
+fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default().borders(Borders::ALL).title(" Chat ");
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -45,7 +47,7 @@ fn draw_messages(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(paragraph, inner);
 }
 
-fn message_to_lines(msg: &crate::ChatMessage) -> Vec<Line<'_>> {
+fn message_to_lines(msg: &crate::model::ChatMessage) -> Vec<Line<'_>> {
     let (prefix, color) = match msg.role.as_str() {
         "user" => ("You: ", Color::Cyan),
         "assistant" => ("Agent: ", Color::Green),
@@ -71,7 +73,7 @@ fn message_to_lines(msg: &crate::ChatMessage) -> Vec<Line<'_>> {
     lines
 }
 
-fn draw_input(f: &mut Frame, state: &AppState, area: Rect) {
+fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(" Input ")
