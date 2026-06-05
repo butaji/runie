@@ -2,7 +2,7 @@
 //! 
 //! Converts ChatMessage + state metadata into display lines.
 
-use crate::model::{AppState, ChatMessage};
+use crate::model::AppState;
 
 /// A formatted line ready for rendering
 #[derive(Debug, Clone)]
@@ -27,83 +27,84 @@ pub enum Color {
     White,
 }
 
-/// Format a single message into display lines
-pub fn format_message(msg: &ChatMessage) -> Vec<DisplayLine> {
-    match msg.role.as_str() {
-        "user" => format_user_message(msg),
-        "assistant" => format_assistant_message(msg),
-        _ => vec![],
-    }
-}
-
 /// Format all messages for display, including thinking indicator
 pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
     let mut lines = vec![];
-    let mut saw_user = false;
-    let mut saw_assistant = false;
     
     for msg in &state.messages {
-        lines.extend(format_message(msg));
-        
-        if msg.role == "user" {
-            saw_user = true;
-        }
-        if msg.role == "assistant" {
-            saw_assistant = true;
-        }
-        
-        // Show thinking indicator between user and assistant
-        if saw_user && !saw_assistant && state.streaming {
-            // Still thinking - show live timer
-            let elapsed = state.thinking_elapsed_secs()
-                .map(|s| format!("⏳ Thinking... {:.1}s", s))
-                .unwrap_or_else(|| "⏳ Thinking...".to_string());
-            
-            lines.push(DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: elapsed,
-                    color: Some(Color::DarkGray),
-                }],
-            });
-            lines.push(DisplayLine::empty());
-        }
-        
-        // Show thought time after assistant response starts
-        if msg.role == "assistant" && !msg.content.is_empty() {
-            if let Some(duration) = state.thought_duration_secs() {
-                lines.push(DisplayLine {
-                    spans: vec![DisplaySpan {
-                        text: format!("⏳ Thought {:.1}s", duration),
-                        color: Some(Color::DarkGray),
-                    }],
-                });
-                lines.push(DisplayLine::empty());
+        match msg.role.as_str() {
+            "user" => lines.extend(user_message(&msg.content)),
+            "assistant" => {
+                // Add thought indicator before first assistant response
+                if lines.iter().all(|l| !l.is_thought()) && !msg.content.is_empty() {
+                    lines.extend(thought_duration(state));
+                }
+                lines.extend(agent_answer(&msg.content));
             }
+            _ => {}
         }
+    }
+    
+    // Show thinking indicator if streaming and no response yet
+    if state.streaming && !lines.iter().any(|l| l.is_agent()) {
+        lines.extend(thinking(state));
     }
     
     lines
 }
 
-fn format_user_message(msg: &ChatMessage) -> Vec<DisplayLine> {
+// === Message Component Formatters ===
+
+/// User message: "You: <content>"
+pub fn user_message(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
             spans: vec![
                 DisplaySpan { text: "You: ".to_string(), color: Some(Color::Cyan) },
-                DisplaySpan { text: msg.content.clone(), color: None },
+                DisplaySpan { text: content.to_string(), color: None },
             ],
         },
         DisplayLine::empty(),
     ]
 }
 
-fn format_assistant_message(msg: &ChatMessage) -> Vec<DisplayLine> {
+/// Agent answer: "Agent: <content>"
+pub fn agent_answer(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
             spans: vec![
                 DisplaySpan { text: "Agent: ".to_string(), color: Some(Color::Green) },
-                DisplaySpan { text: msg.content.clone(), color: None },
+                DisplaySpan { text: content.to_string(), color: None },
             ],
+        },
+        DisplayLine::empty(),
+    ]
+}
+
+/// Thinking indicator (live timer): "⏳ Thinking... X.Xs"
+pub fn thinking(state: &AppState) -> Vec<DisplayLine> {
+    let elapsed = state.thinking_elapsed_secs()
+        .map(|s| format!("⏳ Thinking... {:.1}s", s))
+        .unwrap_or_else(|| "⏳ Thinking...".to_string());
+    
+    vec![
+        DisplayLine {
+            spans: vec![DisplaySpan { text: elapsed, color: Some(Color::DarkGray) }],
+        },
+        DisplayLine::empty(),
+    ]
+}
+
+/// Thought duration (static): "⏳ Thought X.Xs"
+pub fn thought_duration(state: &AppState) -> Vec<DisplayLine> {
+    let duration = match state.thought_duration_secs() {
+        Some(s) => format!("⏳ Thought {:.1}s", s),
+        None => return vec![],
+    };
+    
+    vec![
+        DisplayLine {
+            spans: vec![DisplaySpan { text: duration, color: Some(Color::DarkGray) }],
         },
         DisplayLine::empty(),
     ]
@@ -112,5 +113,17 @@ fn format_assistant_message(msg: &ChatMessage) -> Vec<DisplayLine> {
 impl DisplayLine {
     pub fn empty() -> Self {
         DisplayLine { spans: vec![] }
+    }
+    
+    pub fn is_empty(&self) -> bool {
+        self.spans.iter().all(|s| s.text.is_empty())
+    }
+    
+    pub fn is_thought(&self) -> bool {
+        self.spans.iter().any(|s| s.text.contains("Thought"))
+    }
+    
+    pub fn is_agent(&self) -> bool {
+        self.spans.iter().any(|s| s.text.contains("Agent:"))
     }
 }

@@ -13,4 +13,7 @@ pub mod format;
 
 pub use model::{AppState, ChatMessage};
 pub use event::Event;
-pub use format::{format_messages, DisplayLine, DisplaySpan, Color};
+pub use format::{
+    format_messages, user_message, agent_answer, thinking, thought_duration,
+    DisplayLine, DisplaySpan, Color,
+};
