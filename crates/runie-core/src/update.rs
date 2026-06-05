@@ -36,15 +36,9 @@ pub fn update(state: AppState, event: Event) -> AppState {
         }
         Event::AgentResponse { content } => {
             let mut state = state;
-            // Add thought message on first response
+            // Track thought duration on first response
             if state.thinking_started_at.is_some() && state.thought_duration_secs.is_none() {
-                let duration = state.thinking_elapsed_secs().unwrap_or(0.0);
-                state.messages.push(ChatMessage {
-                    role: "thought".into(),
-                    content: thought_with_time(duration),
-                    timestamp: now(),
-                });
-                state.thought_duration_secs = Some(duration);
+                state.thought_duration_secs = state.thinking_elapsed_secs();
             }
             // Create new assistant message
             state.messages.push(ChatMessage {
@@ -56,6 +50,14 @@ pub fn update(state: AppState, event: Event) -> AppState {
         }
         Event::AgentDone => {
             let mut state = state;
+            // Add thought message when done
+            if let Some(duration) = state.thought_duration_secs {
+                state.messages.push(ChatMessage {
+                    role: "thought".into(),
+                    content: thought_with_time(duration),
+                    timestamp: now(),
+                });
+            }
             state.streaming = false;
             state.thinking_started_at = None;
             state
