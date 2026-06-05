@@ -1280,6 +1280,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-pty"
+version = "0.1.0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "runie-tui"
 version = "0.1.0"
 dependencies = [
