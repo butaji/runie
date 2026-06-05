@@ -22,14 +22,32 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.streaming = true;
             state.thinking_started_at = Some(std::time::Instant::now());
+            // Add thinking indicator message
+            state.messages.push(ChatMessage {
+                role: "thinking".into(),
+                content: "Thinking...".into(),
+            });
             state
         }
         Event::AgentResponse { content } => {
             let mut state = state;
+            // Remove thinking message
+            state.messages.retain(|m| m.role != "thinking");
+            // Append to last assistant message or create new one
             if let Some(last) = state.messages.last_mut() {
                 if last.role == "assistant" {
                     last.content.push_str(&content);
+                } else {
+                    state.messages.push(ChatMessage {
+                        role: "assistant".into(),
+                        content,
+                    });
                 }
+            } else {
+                state.messages.push(ChatMessage {
+                    role: "assistant".into(),
+                    content,
+                });
             }
             state
         }
@@ -37,6 +55,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.streaming = false;
             state.thinking_started_at = None;
+            // Remove any remaining thinking message
+            state.messages.retain(|m| m.role != "thinking");
             state
         }
         Event::AgentError { message } => {
