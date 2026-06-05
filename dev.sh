@@ -4,7 +4,6 @@ cd "$(dirname "$0")"
 
 # Fast build settings
 export RUSTFLAGS="-C codegen-units=1 -C target-cpu=native"
-
 export PATH="$HOME/.cargo/bin:$PATH"
 
 # Check for watchexec
@@ -26,12 +25,13 @@ echo ""
 
 # Use watchexec to rebuild and restart on .rs/.toml changes
 # -r: restart mode (kills old process before starting new one)
-# -e rs,toml: only watch .rs and .toml files
+# -e: only watch .rs and .toml files
+# -i: ignore patterns for target and git directories
 # --debounce 0.5s: debounce file changes
 watchexec -r \
     -e rs,toml \
-    --ignore-glob '**/target/**' \
-    --ignore-glob '**/.git/**' \
+    -i 'target/**' \
+    -i '.git/**' \
     --debounce 0.5s \
     -q \
     -- cargo build -p runie-tui && ./target/debug/runie-tui
