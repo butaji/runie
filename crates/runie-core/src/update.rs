@@ -26,9 +26,9 @@ pub fn update(state: AppState, event: Event) -> AppState {
         }
         Event::AgentResponse { content } => {
             let mut state = state;
-            // Track when thinking finished
-            if state.thinking_started_at.is_some() && state.thought_elapsed_at.is_none() {
-                state.thought_elapsed_at = Some(std::time::Instant::now());
+            // Track thinking duration (only on first response)
+            if state.thinking_started_at.is_some() && state.thought_duration_secs.is_none() {
+                state.thought_duration_secs = state.thinking_elapsed_secs();
             }
             // Append to last assistant message or create new one
             if let Some(last) = state.messages.last_mut() {
