@@ -27,8 +27,7 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
     if state.turn_active {
         let spinner = state.spinner_frame();
         let elapsed = state.turn_elapsed_secs().unwrap_or(0.0);
-        let action = state.current_action.as_deref().unwrap_or("Thinking");
-        let text = format!(" {} {} {:.1}s", spinner, action, elapsed);
+        let text = format!(" {} Working {:.1}s", spinner, elapsed);
         
         let paragraph = Paragraph::new(text)
             .style(Style::default().fg(ratatui::style::Color::DarkGray));
