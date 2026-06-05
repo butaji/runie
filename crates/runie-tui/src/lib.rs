@@ -2,19 +2,14 @@
 mod ui;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_agent::{engine::AgentLoop, provider::MockProvider, types::Message};
 use serde::{Deserialize, Serialize};
-use bincode;
 use std::io;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc;
 
 const STATE_FILE: &str = "/tmp/runie_state.bin";
 
@@ -33,7 +28,6 @@ pub struct ChatMessage {
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("[TUI] Starting...");
     // Set up panic handler to restore terminal
     std::panic::set_hook(Box::new(|_| {
         cleanup_terminal();
@@ -43,15 +37,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let saved_state = load_state();
     
     // Enable raw mode
-    if let Err(e) = enable_raw_mode() {
-        eprintln!("[TUI] No terminal: {:?}", e);
-        return Ok(());
-    }
-    eprintln!("[TUI] Raw mode enabled");
-    eprintln!("[TUI] Entering main loop...");
+    enable_raw_mode()?;
+
 
     let mut stdout = io::stdout();
-    execute!(&mut stdout, EnterAlternateScreen, EnableMouseCapture).ok();
+    execute!(&mut stdout, EnterAlternateScreen).ok();
 
     // Set up Ctrl+C handler
     let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
@@ -65,11 +55,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Use saved state or default
-    let state = if let Some(s) = saved_state {
-        s
-    } else {
-        AppState::default()
-    };
+    let state = saved_state.unwrap_or_default();
 
     let result = run_app(&mut terminal, state, running);
 
@@ -86,15 +72,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 fn cleanup_terminal() {
     disable_raw_mode().ok();
-    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture).ok();
+    execute!(io::stdout(), LeaveAlternateScreen).ok();
 }
 
 fn load_state() -> Option<AppState> {
     let data = std::fs::read(STATE_FILE).ok()?;
-    bincode::deserialize(&data).ok().map(|s| {
-        let _ = std::fs::remove_file(STATE_FILE);
-        s
-    })
+    let state = bincode::deserialize(&data).ok()?;
+    let _ = std::fs::remove_file(STATE_FILE);
+    Some(state)
 }
 
 fn save_state(state: &AppState) {
@@ -117,59 +102,41 @@ fn run_app(
             needs_redraw = false;
         }
 
-        match event::poll(Duration::from_millis(50)) {
-            Ok(true) => {
-                if let Ok(Event::Key(key)) = event::read() {
-                    if key.kind == KeyEventKind::Press {
-                        match handle_key(&key) {
-                            KeyAction::Quit => break,
-                            KeyAction::Input(c) => {
-                                state.input.push(c);
-                                needs_redraw = true;
-                            }
-                            KeyAction::Backspace => {
-                                state.input.pop();
-                                needs_redraw = true;
-                            }
-                            KeyAction::Submit => {
-                                let content = state.input.clone();
-                                state.messages.push(ChatMessage {
-                                    role: "user".into(),
-                                    content: content.clone(),
-                                });
-                                state.input.clear();
-                                state.messages.push(ChatMessage {
-                                    role: "assistant".into(),
-                                    content: format!("Echo: {}", content),
-                                });
-                                state.streaming = false;
-                                needs_redraw = true;
-                            }
-                            KeyAction::None => {}
+        if let Ok(true) = event::poll(Duration::from_millis(50)) {
+            if let Ok(Event::Key(key)) = event::read() {
+                if key.kind == KeyEventKind::Press {
+                    match handle_key(&key) {
+                        KeyAction::Quit => break,
+                        KeyAction::Input(c) => {
+                            state.input.push(c);
+                            needs_redraw = true;
                         }
+                        KeyAction::Backspace => {
+                            state.input.pop();
+                            needs_redraw = true;
+                        }
+                        KeyAction::Submit => {
+                            let content = state.input.clone();
+                            state.messages.push(ChatMessage {
+                                role: "user".into(),
+                                content: content.clone(),
+                            });
+                            state.input.clear();
+                            state.messages.push(ChatMessage {
+                                role: "assistant".into(),
+                                content: format!("Echo: {}", content),
+                            });
+                            state.streaming = false;
+                            needs_redraw = true;
+                        }
+                        KeyAction::None => {}
                     }
                 }
             }
-            Ok(false) | Err(_) => {}
         }
     }
 
     Ok(state)
-}
-
-fn build_messages(state: &AppState) -> Vec<Message> {
-    let mut msgs = vec![Message::System {
-        content: "You are a helpful assistant.".into(),
-    }];
-    for m in &state.messages {
-        let msg = match m.role.as_str() {
-            "user" => Message::User { content: m.content.clone() },
-            "assistant" => Message::Assistant { content: m.content.clone(), tool_calls: vec![] },
-            _ => continue,
-        };
-        msgs.push(msg);
-    }
-    msgs
 }
 
 enum KeyAction {
