@@ -13,6 +13,7 @@ pub struct App {
     pub streaming: bool,
     pub stream_buffer: String,
     pub quit: bool,
+    pub needs_redraw: bool,
 }
 
 impl App {
@@ -27,6 +28,7 @@ impl App {
             streaming: false,
             stream_buffer: String::new(),
             quit: false,
+            needs_redraw: true,
         }
     }
 
@@ -38,10 +40,12 @@ impl App {
             });
             self.input.clear();
             self.scroll = self.messages.len().saturating_sub(1);
+            self.needs_redraw = true;
         }
     }
 
     pub fn handle_event(&mut self, event: &AgentEvent) {
+        self.needs_redraw = true;
         match event {
             AgentEvent::MessageStart { role } => {
                 self.streaming = true;
