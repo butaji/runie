@@ -80,6 +80,12 @@ fn draw_input(f: &mut Frame, state: &AppState, area: Rect) {
         } else {
             Style::default().fg(Color::White)
         });
+    let inner = block.inner(area);
     let paragraph = Paragraph::new(state.input.as_str()).block(block);
     f.render_widget(paragraph, area);
+    
+    // Position cursor at end of input
+    let cursor_x = (inner.x + state.input.len() as u16).min(inner.right() - 1);
+    let cursor_y = inner.y;
+    f.set_cursor(cursor_x, cursor_y);
 }
