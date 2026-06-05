@@ -1,0 +1,16 @@
+[package]
+name = "runie-term"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "runie"
+path = "src/main.rs"
+
+[dependencies]
+runie-core.workspace = true
+runie-tui.workspace = true
+crossterm.workspace = true
+ratatui.workspace = true
+ctrlc.workspace = true
+bincode.workspace = true

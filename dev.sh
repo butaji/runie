@@ -10,4 +10,4 @@ echo "Press Ctrl+Q or Ctrl+C to exit."
 echo ""
 
 # Use cargo watch for hot reload
-cargo watch -c -x 'run --bin runie-tui'
+cargo watch -c -x 'run --bin runie'

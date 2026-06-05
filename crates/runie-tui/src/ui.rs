@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::AppState;
+use runie_core::AppState;
 
 /// View function - renders state to terminal
 /// Takes immutable state, returns rendered UI
@@ -47,7 +47,7 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(paragraph, inner);
 }
 
-fn message_to_lines(msg: &crate::model::ChatMessage) -> Vec<Line<'_>> {
+fn message_to_lines(msg: &runie_core::ChatMessage) -> Vec<Line<'_>> {
     let (prefix, color) = match msg.role.as_str() {
         "user" => ("You: ", Color::Cyan),
         "assistant" => ("Agent: ", Color::Green),
