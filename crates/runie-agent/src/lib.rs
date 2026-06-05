@@ -45,7 +45,7 @@ impl Provider for MockProvider {
             .unwrap_or_default();
 
         // Echo word by word for streaming effect
-        let echo = format!("Echo: {}", user_input);
+        let echo = user_input;
         echo.split_whitespace()
             .scan(String::new(), |acc, word| {
                 if acc.is_empty() {
