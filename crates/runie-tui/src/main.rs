@@ -163,14 +163,11 @@ fn handle_key_events(
                     }
                 }
                 Ok(_) => Some(false),
-                Err(e) => {
-                    eprintln!("Event read error: {:?}", e);
-                    Some(false)
-                }
+                Err(_) => Some(false),
             }
         }
         Ok(false) => Some(false),
-        Err(e) => {
+        Err(_) => {
             // Don't spam errors in headless mode
             Some(false)
         }
