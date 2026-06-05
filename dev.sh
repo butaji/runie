@@ -5,8 +5,6 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_INCREMENTAL=1
 export RUSTFLAGS="-C codegen-units=16"
 
-APP_PID=""
-
 build_app() {
     cargo build -p runie-app 2>&1
 }
@@ -21,17 +19,9 @@ if ! build_app | tail -1 | grep -q "Finished"; then
 fi
 echo "App lib built"
 
-# Check if we're in a real TTY
-if [ -t 0 ]; then
-    # Real TTY - run directly
-    ./target/debug/runie-tui &
-    APP_PID=$!
-else
-    # No real TTY - use PTY wrapper
-    echo "No TTY detected, using PTY wrapper..."
-    python3 "$(dirname "$0")/run-tui" &
-    APP_PID=$!
-fi
+# Run TUI
+./target/debug/runie-tui &
+APP_PID=$!
 
 echo "TUI started (PID: $APP_PID)"
 echo ""
