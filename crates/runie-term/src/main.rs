@@ -9,6 +9,9 @@ use std::io;
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
 
+/// Flag to enable fast mode (for tests)
+const FAST_MODE: bool = cfg!(test);
+
 struct Cleanup;
 
 impl Drop for Cleanup {
@@ -89,23 +92,23 @@ async fn main() -> io::Result<()> {
 /// Agent loop: processes commands sequentially
 async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>, provider: MockProvider) {
     while let Some(cmd) = cmd_rx.recv().await {
-        // Check if this command needs tool execution
         if needs_tool_execution(&cmd.content) {
             run_tool_flow(&cmd, &agent_tx).await;
         } else {
             run_simple_flow(&cmd, &provider, &agent_tx).await;
         }
         
-        // Agent done
         let _ = agent_tx.send(CoreEvent::AgentDone { id: cmd.id }).await;
     }
 }
 
 /// Simple response flow: thinking -> response -> done
 async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: &mpsc::Sender<CoreEvent>) {
-    // Send thinking
+    // Send thinking first (so UI starts timing)
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    delay().await;
+    
+    // Thinking delay (this IS the thinking time shown in UI)
+    thinking_delay().await;
 
     // Get response chunks
     let messages = vec![runie_agent::Message::User { content: cmd.content.clone() }];
@@ -116,7 +119,7 @@ async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: 
             id: cmd.id.clone(),
             content: chunk.content,
         }).await;
-        delay().await;
+        chunk_delay().await;
     }
 }
 
@@ -128,14 +131,14 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     
     // First thinking phase
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    delay().await;
+    thinking_delay().await;
     
     // Tool execution
     let _ = agent_tx.send(CoreEvent::AgentToolStart {
         id: cmd.id.clone(),
         name: "list_files".to_string(),
     }).await;
-    delay().await;
+    chunk_delay().await;
     
     let file_list = get_fake_file_list();
     let _ = agent_tx.send(CoreEvent::AgentToolEnd {
@@ -146,14 +149,14 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     
     // Second thinking phase
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    delay().await;
+    thinking_delay().await;
     
     // Response
     let _ = agent_tx.send(CoreEvent::AgentResponse {
         id: cmd.id.clone(),
         content: "Here are the files in your project:\n".to_string(),
     }).await;
-    delay().await;
+    chunk_delay().await;
     
     // Turn complete
     let duration = turn_start.elapsed().as_secs_f64();
@@ -163,11 +166,27 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     }).await;
 }
 
-/// Delay helper - skips in tests
-async fn delay() {
-    if std::env::var("RUNIE_TEST").is_err() {
+/// Thinking phase delay (0.5-3s random for manual UI, instant in tests)
+async fn thinking_delay() {
+    if !FAST_MODE {
+        let delay_ms = 500 + (rand_u32() % 2500);
+        tokio::time::sleep(Duration::from_millis(delay_ms as u64)).await;
+    }
+}
+
+/// Small delay between chunks (50ms for manual UI, instant in tests)
+async fn chunk_delay() {
+    if !FAST_MODE {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
+}
+
+fn rand_u32() -> u32 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u32
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {
