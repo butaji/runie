@@ -92,13 +92,12 @@ fn run_loop(
 fn convert_event(event: &CrosstermEvent) -> Option<Event> {
     match event {
         CrosstermEvent::Key(key) if key.kind == KeyEventKind::Press => {
-            // IMPORTANT: Check Ctrl modifiers BEFORE checking Char
+            // Check Ctrl modifiers first
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 return match key.code {
                     KeyCode::Char('c') | KeyCode::Char('C') => Some(Event::Quit),
                     KeyCode::Char('q') | KeyCode::Char('Q') => Some(Event::Quit),
                     KeyCode::Char('d') | KeyCode::Char('D') => Some(Event::Quit),
-                    KeyCode::Char('r') | KeyCode::Char('R') => Some(Event::Reset),
                     _ => None,
                 };
             }

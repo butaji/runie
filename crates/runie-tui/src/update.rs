@@ -48,20 +48,25 @@ impl AppState {
             return self;
         }
         
-        let content = self.input.clone();
+        let content = self.input.trim().to_string();
         let mut state = self;
         state.input.clear();
+        
+        // Check for /reset command
+        if content == "/reset" {
+            return AppState::default();
+        }
         
         // Add user message
         state.messages.push(ChatMessage {
             role: "user".into(),
-            content: content.clone(),
+            content,
         });
         
         // Add echo response (placeholder for agent)
         state.messages.push(ChatMessage {
             role: "assistant".into(),
-            content: format!("Echo: {}", content),
+            content: "Echo: ...".into(),
         });
         
         state.streaming = false;
