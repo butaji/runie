@@ -39,10 +39,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
         }
         Event::AgentThoughtDone { id } => {
             let mut state = state;
-            state.current_action = None;  // Clear action when thought done
-            state.thinking_started_at = None;
-            let mut state = state;
             let duration = state.thinking_elapsed_secs().unwrap_or(0.0);
+            state.current_action = None;
             state.thinking_started_at = None;
             
             state.messages.push(ChatMessage {
