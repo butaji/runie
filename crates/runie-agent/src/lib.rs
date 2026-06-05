@@ -30,6 +30,10 @@ pub struct MockProvider;
 
 impl Provider for MockProvider {
     fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk> {
+        // Random delay between 0.5 and 3 seconds
+        let delay_ms = 500 + (rand_u32() % 2500);
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms as u64));
+        
         // Get last user message
         let user_input = messages
             .iter()
@@ -55,6 +59,15 @@ impl Provider for MockProvider {
             })
             .collect()
     }
+}
+
+/// Simple random u32 using system time
+fn rand_u32() -> u32 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u32
 }
 
 /// Run the agent with a provider and send events to the channel
