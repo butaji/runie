@@ -1,10 +1,7 @@
 //! Centralized Event Types
-//!
-//! All events in the application flow through a single channel.
 
 use serde::{Deserialize, Serialize};
 
-/// All events in the application
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Event {
     // === UI Events ===
@@ -18,11 +15,11 @@ pub enum Event {
     Quit,
     Reset,
     
-    // === Agent Events (with composite ID like "req.1") ===
+    // === Agent Events ===
     AgentThinking { id: String },
+    AgentThoughtDone { id: String },
+    AgentToolDone { id: String, name: String, duration_secs: f64 },
     AgentResponse { id: String, content: String },
-    AgentToolStart { id: String, name: String },
-    AgentToolEnd { id: String, name: String, output: String },
     AgentTurnComplete { id: String, duration_secs: f64 },
     AgentDone { id: String },
     AgentError { id: String, message: String },
@@ -32,7 +29,6 @@ pub enum Event {
 }
 
 impl Event {
-    /// Check if this event should cause a redraw
     pub fn needs_redraw(&self) -> bool {
         matches!(
             self,
@@ -40,8 +36,8 @@ impl Event {
                 | Event::Backspace
                 | Event::AgentResponse { .. }
                 | Event::AgentThinking { .. }
-                | Event::AgentToolStart { .. }
-                | Event::AgentToolEnd { .. }
+                | Event::AgentThoughtDone { .. }
+                | Event::AgentToolDone { .. }
                 | Event::AgentTurnComplete { .. }
                 | Event::AgentDone { .. }
                 | Event::Reset

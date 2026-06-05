@@ -29,61 +29,40 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.streaming = true;
             state.current_request_id = Some(id.clone());
             state.thinking_started_at = Some(std::time::Instant::now());
-            state.thought_duration_secs = None;
-            // Start turn timer if not already started
+            
             if state.turn_started_at.is_none() {
                 state.turn_started_at = Some(std::time::Instant::now());
             }
             state
         }
+        Event::AgentThoughtDone { id } => {
+            let mut state = state;
+            let duration = state.thinking_elapsed_secs().unwrap_or(0.0);
+            state.thinking_started_at = None;
+            
+            state.messages.push(ChatMessage {
+                role: "thought".into(),
+                content: thought_with_time(duration),
+                timestamp: now(),
+                id,
+            });
+            state
+        }
+        Event::AgentToolDone { id, name, duration_secs } => {
+            let mut state = state;
+            state.messages.push(ChatMessage {
+                role: "tool".into(),
+                content: format!("🔧 Ran {} {:.1}s", name, duration_secs),
+                timestamp: now(),
+                id,
+            });
+            state
+        }
         Event::AgentResponse { id, content } => {
             let mut state = state;
-            // Check if this request already has a thought (for tool flows with multiple thinking phases)
-            let has_existing_thought = state.messages.iter().any(|m| 
-                m.role == "thought" && m.id == id
-            );
-            
-            // Add thought message on first response if not already created
-            if state.thinking_started_at.is_some() 
-                && state.thought_duration_secs.is_none() 
-                && !has_existing_thought 
-            {
-                let duration = state.thinking_elapsed_secs().unwrap_or(0.0);
-                state.messages.push(ChatMessage {
-                    role: "thought".into(),
-                    content: thought_with_time(duration),
-                    timestamp: now(),
-                    id: id.clone(),
-                });
-                state.thought_duration_secs = Some(duration);
-            }
-            
-            // Add assistant message
             state.messages.push(ChatMessage {
                 role: "assistant".into(),
                 content,
-                timestamp: now(),
-                id: id.clone(),
-            });
-            state.current_request_id = Some(id);
-            state
-        }
-        Event::AgentToolStart { id, name } => {
-            let mut state = state;
-            state.current_request_id = Some(id.clone());
-            state.messages.push(ChatMessage {
-                role: "tool".into(),
-                content: format!("🔧 Running {}...", name),
-                timestamp: now(),
-                id: id.clone(),
-            });
-            state
-        }
-        Event::AgentToolEnd { id, name: _, output } => {
-            let mut state = state;
-            state.messages.push(ChatMessage {
-                role: "tool".into(),
-                content: output,
                 timestamp: now(),
                 id: id.clone(),
             });
@@ -96,9 +75,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 role: "turn_complete".into(),
                 content: format!("✓ Turn completed in {:.1}s", duration_secs),
                 timestamp: now(),
-                id: id.clone(),
+                id,
             });
-            state.current_request_id = Some(id);
             state.turn_started_at = None;
             state
         }
@@ -108,10 +86,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
             if state.request_queue.is_empty() {
                 state.streaming = false;
                 state.thinking_started_at = None;
-                state.thought_duration_secs = None;
             } else {
                 state.streaming = true;
-                state.thought_duration_secs = None;
             }
             state
         }

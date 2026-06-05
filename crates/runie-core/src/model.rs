@@ -1,7 +1,6 @@
 //! Model - Application State
 use serde::{Deserialize, Serialize};
 
-/// Main application state (immutable)
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct AppState {
     pub messages: Vec<ChatMessage>,
@@ -10,8 +9,6 @@ pub struct AppState {
     pub scroll: usize,
     #[serde(skip)]
     pub thinking_started_at: Option<std::time::Instant>,
-    #[serde(skip)]
-    pub thought_duration_secs: Option<f64>,
     pub request_queue: Vec<(String, String)>,
     #[serde(skip)]
     pub next_id: u64,
@@ -24,10 +21,6 @@ pub struct AppState {
 impl AppState {
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {
         self.thinking_started_at.map(|start| start.elapsed().as_secs_f64())
-    }
-    
-    pub fn thought_duration_secs(&self) -> Option<f64> {
-        self.thought_duration_secs
     }
     
     pub fn turn_elapsed_secs(&self) -> Option<f64> {

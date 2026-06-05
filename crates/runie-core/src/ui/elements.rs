@@ -7,8 +7,7 @@ pub enum Element {
     AgentMessage { content: String },
     Thinking { elapsed: f64 },
     ThoughtMarker { content: String },
-    ToolStart { name: String },
-    ToolOutput { content: String },
+    ToolRun { content: String },
     TurnComplete { duration_secs: f64 },
     Group { id: String, elements: Vec<Element> },
 }

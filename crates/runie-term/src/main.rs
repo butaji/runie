@@ -9,7 +9,6 @@ use std::io;
 use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
 
-/// Flag to enable fast mode (for tests)
 const FAST_MODE: bool = cfg!(test);
 
 struct Cleanup;
@@ -102,15 +101,13 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
     }
 }
 
-/// Simple response flow: thinking -> response -> done
+/// Simple response flow: Thinking -> Though -> Response
 async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: &mpsc::Sender<CoreEvent>) {
-    // Send thinking first (so UI starts timing)
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    
-    // Thinking delay (this IS the thinking time shown in UI)
     thinking_delay().await;
+    
+    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
 
-    // Get response chunks
     let messages = vec![runie_agent::Message::User { content: cmd.content.clone() }];
     let chunks = provider.generate(messages);
 
@@ -123,42 +120,41 @@ async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: 
     }
 }
 
-/// Tool execution flow: thinking -> tool -> thinking -> response -> turn_complete
+/// Tool execution flow: Though -> Ran -> Though -> Response -> Turn complete
 async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     use std::time::Instant;
     
     let turn_start = Instant::now();
+    let tool_start = Instant::now();
     
-    // First thinking phase
+    // 1. First thinking
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
     thinking_delay().await;
+    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
     
-    // Tool execution
-    let _ = agent_tx.send(CoreEvent::AgentToolStart {
+    // 2. Tool execution
+    let _ = get_fake_file_list(); // Trigger tool
+    let tool_duration = tool_start.elapsed().as_secs_f64();
+    let _ = agent_tx.send(CoreEvent::AgentToolDone {
         id: cmd.id.clone(),
         name: "list_files".to_string(),
+        duration_secs: tool_duration,
     }).await;
     chunk_delay().await;
     
-    let file_list = get_fake_file_list();
-    let _ = agent_tx.send(CoreEvent::AgentToolEnd {
-        id: cmd.id.clone(),
-        name: "list_files".to_string(),
-        output: file_list,
-    }).await;
-    
-    // Second thinking phase
+    // 3. Second thinking
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
     thinking_delay().await;
+    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
     
-    // Response
+    // 4. Response
     let _ = agent_tx.send(CoreEvent::AgentResponse {
         id: cmd.id.clone(),
         content: "Here are the files in your project:\n".to_string(),
     }).await;
     chunk_delay().await;
     
-    // Turn complete
+    // 5. Turn complete
     let duration = turn_start.elapsed().as_secs_f64();
     let _ = agent_tx.send(CoreEvent::AgentTurnComplete {
         id: cmd.id.clone(),
@@ -166,7 +162,6 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     }).await;
 }
 
-/// Thinking phase delay (0.5-3s random for manual UI, instant in tests)
 async fn thinking_delay() {
     if !FAST_MODE {
         let delay_ms = 500 + (rand_u32() % 2500);
@@ -174,7 +169,6 @@ async fn thinking_delay() {
     }
 }
 
-/// Small delay between chunks (50ms for manual UI, instant in tests)
 async fn chunk_delay() {
     if !FAST_MODE {
         tokio::time::sleep(Duration::from_millis(50)).await;

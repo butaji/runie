@@ -64,7 +64,7 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         
         Element::Thinking { elapsed } => {
             let spinner = Dsl::spinner(*elapsed);
-            let text = format!("{} Thinking... {:.1}s", spinner, elapsed);
+            let text = format!("{} Though... {:.1}s", spinner, elapsed);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
@@ -78,18 +78,9 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
             },
         ],
         
-        Element::ToolStart { name } => vec![
+        Element::ToolRun { content } => vec![
             DisplayLine {
-                spans: vec![
-                    DisplaySpan { text: "🔧 Ran ".to_string(), color: Some(Color::Yellow) },
-                    DisplaySpan { text: name.clone(), color: Some(Color::Yellow) },
-                ],
-            },
-        ],
-        
-        Element::ToolOutput { content } => vec![
-            DisplayLine {
-                spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::Magenta) }],
+                spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::Yellow) }],
             },
         ],
         
