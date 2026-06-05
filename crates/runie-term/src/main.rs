@@ -59,7 +59,7 @@ async fn main() -> io::Result<()> {
                 static mut TICK_COUNTER: u32 = 0;
                 unsafe {
                     TICK_COUNTER += 1;
-                    if TICK_COUNTER % 4 == 0 {
+                    if TICK_COUNTER % 3 == 0 {
                         state.animation_frame = state.animation_frame.wrapping_add(1);
                     }
                 }
