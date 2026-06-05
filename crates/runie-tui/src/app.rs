@@ -84,3 +84,50 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_new() {
+        let app = App::new();
+        assert_eq!(app.messages.len(), 1);
+        assert_eq!(app.messages[0].role, "system");
+        assert!(!app.quit);
+    }
+
+    #[test]
+    fn test_push_user_message() {
+        let mut app = App::new();
+        app.input = "hello".into();
+        app.push_user_message();
+        assert_eq!(app.messages.len(), 2);
+        assert_eq!(app.messages[1].role, "user");
+        assert_eq!(app.messages[1].content, "hello");
+        assert!(app.input.is_empty());
+    }
+
+    #[test]
+    fn test_handle_streaming_message() {
+        let mut app = App::new();
+        app.handle_event(&AgentEvent::MessageStart { role: "assistant".into() });
+        assert!(app.streaming);
+        assert_eq!(app.messages.len(), 2);
+
+        app.handle_event(&AgentEvent::MessageDelta { content: "Hi".into() });
+        assert_eq!(app.messages.last().unwrap().content, "Hi");
+
+        app.handle_event(&AgentEvent::MessageEnd);
+        assert!(!app.streaming);
+        assert_eq!(app.messages.last().unwrap().content, "Hi");
+    }
+
+    #[test]
+    fn test_handle_error() {
+        let mut app = App::new();
+        app.handle_event(&AgentEvent::Error { message: "fail".into() });
+        assert_eq!(app.messages.last().unwrap().role, "error");
+        assert!(!app.streaming);
+    }
+}
