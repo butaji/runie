@@ -13,11 +13,38 @@ use runie_core::{AppState, format_messages, PANEL_CHAT, PANEL_INPUT, Color as Co
 pub fn view(f: &mut Frame, state: &AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(3)])
+        .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3)])
         .split(f.area());
 
     messages_view(f, state, chunks[0]);
-    input_view(f, state, chunks[1]);
+    status_view(f, state, chunks[1]);
+    input_view(f, state, chunks[2]);
+}
+
+fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
+    use ratatui::widgets::Borders;
+    use ratatui::style::Style;
+    
+    let spinner = state.spinner_frame();
+    let elapsed = state.turn_elapsed_secs().unwrap_or(0.0);
+    
+    let text = if state.turn_active {
+        format!(" {} Working... {:.1}s ", spinner, elapsed)
+    } else {
+        "".to_string()
+    };
+    
+    let block = Block::default()
+        .borders(Borders::TOP | Borders::BOTTOM)
+        .border_style(Style::default().fg(ratatui::style::Color::DarkGray));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    
+    if !text.is_empty() {
+        let paragraph = Paragraph::new(text)
+            .style(Style::default().fg(ratatui::style::Color::DarkGray));
+        f.render_widget(paragraph, inner);
+    }
 }
 
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {

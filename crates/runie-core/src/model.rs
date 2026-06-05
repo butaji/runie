@@ -24,6 +24,8 @@ pub struct AppState {
     pub has_intermediate_steps: bool,  // True if tool or other steps occurred in this turn
     #[serde(skip)]
     pub animation_frame: u32,  // For animating spinners (0-11 cycles through braille chars)
+    #[serde(skip)]
+    pub turn_active: bool,  // True when a turn is in progress
 }
 
 impl AppState {
