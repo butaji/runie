@@ -110,15 +110,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "built"
-version = "0.7.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56ed6191a7e78c36abdb16ab65341eefd73d64d303fffccdbb00d51e4205967b"
-dependencies = [
- "chrono",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -760,6 +751,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
+
+[[package]]
 name = "libm"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1289,15 +1290,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-app"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "runie-agent",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "runie-tui"
 version = "0.1.0"
 dependencies = [
- "built",
  "chrono",
  "crossterm",
  "futures",
+ "libc",
+ "libloading",
  "ratatui",
  "runie-agent",
+ "runie-app",
  "serde_json",
  "tokio",
 ]

@@ -1,4 +1,3 @@
-use crate::app::{App, ChatMessage};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
@@ -6,17 +5,18 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
+use runie_app::AppState;
 
-pub fn draw(f: &mut Frame, app: &App) {
+pub fn draw(f: &mut Frame, state: &AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(3)])
         .split(f.area());
 
-    draw_messages(f, app, chunks[0]);
-    draw_input(f, app, chunks[1]);
+    draw_messages(f, state, chunks[0]);
+    draw_input(f, state, chunks[1]);
 
-    if app.streaming {
+    if state.streaming {
         let area = centered_rect(20, 3, f.area());
         f.render_widget(Clear, area);
         let block = Block::default()
@@ -27,16 +27,16 @@ pub fn draw(f: &mut Frame, app: &App) {
     }
 }
 
-fn draw_messages(f: &mut Frame, app: &App, area: Rect) {
+fn draw_messages(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default().borders(Borders::ALL).title(" Chat ");
     let inner = block.inner(area);
     f.render_widget(block, area);
 
     let visible_height = inner.height as usize;
-    let total = app.messages.len();
-    let start = app.scroll.saturating_sub(visible_height.saturating_sub(1));
+    let total = state.messages.len();
+    let start = state.scroll.saturating_sub(visible_height.saturating_sub(1));
     let end = (start + visible_height).min(total);
-    let visible = &app.messages[start..end];
+    let visible = &state.messages[start..end];
 
     let lines: Vec<Line> = visible
         .iter()
@@ -49,7 +49,7 @@ fn draw_messages(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(paragraph, inner);
 }
 
-fn message_to_lines(msg: &ChatMessage) -> Vec<Line<'_>> {
+fn message_to_lines(msg: &runie_app::ChatMessage) -> Vec<Line<'_>> {
     let (prefix, color) = match msg.role.as_str() {
         "user" => ("You: ", Color::Cyan),
         "assistant" => ("Agent: ", Color::Green),
@@ -79,21 +79,17 @@ fn message_to_lines(msg: &ChatMessage) -> Vec<Line<'_>> {
     lines
 }
 
-fn draw_input(f: &mut Frame, app: &App, area: Rect) {
+fn draw_input(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(format!(" Input  v{}", app.build_time))
-        .border_style(if app.streaming {
+        .title(format!(" Input  v{}", state.build_time))
+        .border_style(if state.streaming {
             Style::default().fg(Color::DarkGray)
         } else {
             Style::default().fg(Color::White)
         });
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-
-    // Show input text
-    let input_text = Paragraph::new(app.input.as_str());
-    f.render_widget(input_text, inner);
+    let paragraph = Paragraph::new(state.input.as_str()).block(block);
+    f.render_widget(paragraph, area);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
