@@ -1,4 +1,5 @@
 //! Update - State Transitions
+use crate::labels::thought_with_time;
 use crate::model::{AppState, ChatMessage};
 use crate::Event;
 
@@ -40,7 +41,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 let duration = state.thinking_elapsed_secs().unwrap_or(0.0);
                 state.messages.push(ChatMessage {
                     role: "thought".into(),
-                    content: format!("⏳ Thought {:.1}s", duration),
+                    content: thought_with_time(duration),
                     timestamp: now(),
                 });
                 state.thought_duration_secs = Some(duration);
