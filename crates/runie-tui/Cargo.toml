@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+runie-app = { path = "../runie-app" }
 runie-agent = { path = "../runie-agent" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
@@ -11,6 +12,8 @@ tokio = { workspace = true }
 serde_json = { workspace = true }
 futures = { workspace = true }
 chrono = "0.4"
+libloading = "0.8"
 
-[build-dependencies]
-built = { version = "0.7", features = ["chrono"] }
+[dependencies.libc]
+version = "0.2"
+package = "libc"

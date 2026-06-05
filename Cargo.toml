@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-agent", "crates/runie-tui"]
+members = ["crates/runie-agent", "crates/runie-tui", "crates/runie-app"]
 resolver = "2"
 
 [workspace.package]

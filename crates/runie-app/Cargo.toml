@@ -1,0 +1,15 @@
+[package]
+name = "runie-app"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+runie-agent = { path = "../runie-agent" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dependencies.libc]
+version = "0.2"
