@@ -7,12 +7,6 @@ export RUSTFLAGS="-C codegen-units=16"
 
 APP_PID=""
 
-# Detect OS for library extension
-case "$(uname -s)" in
-    Darwin*) LIB_EXT="dylib" ;;
-    *)       LIB_EXT="so" ;;
-esac
-
 build_app() {
     cargo build -p runie-app 2>&1
 }
@@ -27,9 +21,18 @@ if ! build_app | tail -1 | grep -q "Finished"; then
 fi
 echo "App lib built"
 
-# Start host (which loads the app lib)
-./target/debug/runie-tui &
-APP_PID=$!
+# Check if we're in a real TTY
+if [ -t 0 ]; then
+    # Real TTY - run directly
+    ./target/debug/runie-tui &
+    APP_PID=$!
+else
+    # No real TTY - use PTY wrapper
+    echo "No TTY detected, using PTY wrapper..."
+    python3 "$(dirname "$0")/run-tui" &
+    APP_PID=$!
+fi
+
 echo "TUI started (PID: $APP_PID)"
 echo ""
 echo "Hot reload enabled! Edit .rs files to rebuild automatically."
