@@ -92,25 +92,26 @@ fn run_loop(
 fn convert_event(event: &CrosstermEvent) -> Option<Event> {
     match event {
         CrosstermEvent::Key(key) if key.kind == KeyEventKind::Press => {
+            // IMPORTANT: Check Ctrl modifiers BEFORE checking Char
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                return match key.code {
+                    KeyCode::Char('c') | KeyCode::Char('C') => Some(Event::Quit),
+                    KeyCode::Char('q') | KeyCode::Char('Q') => Some(Event::Quit),
+                    KeyCode::Char('d') | KeyCode::Char('D') => Some(Event::Quit),
+                    KeyCode::Char('r') | KeyCode::Char('R') => Some(Event::Reset),
+                    _ => None,
+                };
+            }
+            // Non-Ctrl keys
             match key.code {
-                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
-                KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
-                KeyCode::Char('q') | KeyCode::Char('Q') => Some(Event::Quit),
-                KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
                 KeyCode::Esc => Some(Event::Quit),
                 KeyCode::Char(c) => Some(Event::Input(c)),
                 KeyCode::Backspace => Some(Event::Backspace),
                 KeyCode::Enter => Some(Event::Submit),
                 KeyCode::Up => Some(Event::ScrollUp),
                 KeyCode::Down => Some(Event::ScrollDown),
-                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
-                KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
-                KeyCode::Char('q') | KeyCode::Char('Q') => Some(Event::Quit),
-                KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
-                KeyCode::Esc => Some(Event::Quit),
-                KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Reset),
-                KeyCode::Home => Some(Event::Reset),   // Home key resets
-                KeyCode::End => Some(Event::Reset),    // End key resets
+                KeyCode::Home => Some(Event::Reset),
+                KeyCode::End => Some(Event::Reset),
                 _ => None,
             }
         }
