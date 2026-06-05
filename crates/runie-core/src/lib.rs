@@ -4,22 +4,25 @@
 //! - Model: AppState
 //! - Events: Event enum (centralized)
 //! - Update: State transitions
-//! - Format: Message formatting
+//! - UI: DSL for declarative UI construction
 //! - Labels: All static text constants
 
 pub mod model;
 pub mod event;
 pub mod update;
-pub mod format;
 pub mod labels;
+pub mod ui;
+
+#[cfg(test)]
+mod tests;
 
 pub use model::{AppState, ChatMessage};
 pub use event::Event;
-pub use format::{
-    format_messages, user_message, agent_answer, thought_message,
-    DisplayLine, DisplaySpan, Color,
-};
 pub use labels::{
     PANEL_CHAT, PANEL_INPUT, PREFIX_USER, PREFIX_AGENT,
     THINKING_LOADING, thinking_with_time, thought_with_time,
+};
+pub use ui::{
+    Element, Feed, Dsl,
+    format_messages, DisplayLine, DisplaySpan, Color,
 };

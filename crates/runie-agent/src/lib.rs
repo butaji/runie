@@ -1,11 +1,34 @@
 //! Runie Agent - Agent loop with event-based communication
 //! 
-//! The agent processes messages and sends responses via events to a channel.
+//! Works with std threads and channels.
+
+#[cfg(test)]
+mod tests;
 
 use runie_core::Event;
 use serde::{Deserialize, Serialize};
+use std::sync::mpsc;
 
-/// Message types for agent communication
+// === Event Types ===
+
+/// Events sent from agent to UI
+#[derive(Debug, Clone)]
+pub enum AgentEvent {
+    Thinking { id: String },
+    Response { id: String, content: String },
+    Done { id: String },
+    Error { id: String, message: String },
+}
+
+/// Command to start an agent
+#[derive(Debug, Clone)]
+pub struct AgentCommand {
+    pub content: String,
+    pub id: String,
+}
+
+// === Message Types ===
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Message {
     System { content: String },
@@ -13,28 +36,23 @@ pub enum Message {
     Assistant { content: String },
 }
 
-/// Response chunk from provider
-#[derive(Debug, Clone)]
 pub struct ResponseChunk {
     pub content: String,
 }
 
-/// Provider trait - implemented by LLM backends
-pub trait Provider {
+// === Provider Trait ===
+
+pub trait Provider: Send {
     fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk>;
 }
 
-/// Mock provider - echoes back user messages word by word
-#[derive(Default)]
+// === Mock Provider ===
+
+#[derive(Default, Clone)]
 pub struct MockProvider;
 
 impl Provider for MockProvider {
     fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk> {
-        // Random delay between 0.5 and 3 seconds
-        let delay_ms = 500 + (rand_u32() % 2500);
-        std::thread::sleep(std::time::Duration::from_millis(delay_ms as u64));
-        
-        // Get last user message
         let user_input = messages
             .iter()
             .rev()
@@ -44,53 +62,88 @@ impl Provider for MockProvider {
             })
             .unwrap_or_default();
 
-        // Echo word by word for streaming effect
-        let echo = user_input;
-        echo.split_whitespace()
-            .scan(String::new(), |acc, word| {
-                if acc.is_empty() {
-                    *acc = word.to_string();
-                } else {
-                    *acc = format!("{} {}", acc, word);
-                }
-                Some(ResponseChunk {
-                    content: format!("{} ", word),
-                })
+        user_input
+            .split_whitespace()
+            .map(|word| ResponseChunk {
+                content: format!("{} ", word),
             })
             .collect()
     }
 }
 
-/// Simple random u32 using system time
+// === Agent Actor (for tokio, not used in std thread version) ===
+
+#[cfg(feature = "tokio")]
+pub mod tokio_actor {
+    use super::*;
+    use tokio::sync::mpsc as tokio_mpsc;
+
+    /// Agent actor that processes commands from a tokio channel
+    pub async fn agent_actor<P>(
+        mut cmd_rx: tokio_mpsc::Receiver<AgentCommand>,
+        app_tx: tokio_mpsc::Sender<Event>,
+        provider: P,
+    ) where
+        P: Provider + Clone + Send + Sync + 'static,
+    {
+        while let Some(cmd) = cmd_rx.recv().await {
+            run_agent_async(&provider, cmd, &app_tx).await;
+        }
+    }
+
+    async fn run_agent_async<P>(
+        provider: &P,
+        cmd: AgentCommand,
+        app_tx: &tokio_mpsc::Sender<Event>,
+    ) where
+        P: Provider,
+    {
+        // Random delay for manual UI testing (skip in tests)
+        if std::env::var("RUNIE_TEST").is_err() {
+            let delay_ms = 500 + (rand_u32() % 2500);
+            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms as u64)).await;
+        }
+
+        // Send thinking
+        let _ = app_tx
+            .send(Event::AgentThinking { id: cmd.id.clone() })
+            .await;
+
+        // Get response chunks
+        let messages = vec![Message::User { content: cmd.content }];
+        let chunks = provider.generate(messages);
+
+        // Send each chunk
+        for chunk in chunks {
+            let _ = app_tx
+                .send(Event::AgentResponse {
+                    id: cmd.id.clone(),
+                    content: chunk.content,
+                })
+                .await;
+
+            if std::env::var("RUNIE_TEST").is_err() {
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+            }
+        }
+
+        // Done
+        let _ = app_tx.send(Event::AgentDone { id: cmd.id }).await;
+    }
+
+    fn rand_u32() -> u32 {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u32
+    }
+}
+
 fn rand_u32() -> u32 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos() as u32
-}
-
-/// Run the agent with a provider and send events to the channel
-pub fn run_agent<P, F>(provider: &P, messages: Vec<Message>, send_event: F)
-where
-    P: Provider,
-    F: Fn(Event),
-{
-    // Simulate thinking
-    send_event(Event::AgentThinking);
-    
-    // Get response chunks
-    let chunks = provider.generate(messages);
-    
-    // Send each chunk
-    for chunk in chunks {
-        send_event(Event::AgentResponse {
-            content: chunk.content,
-        });
-        // Small delay for streaming effect
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-    
-    // Done
-    send_event(Event::AgentDone);
 }
