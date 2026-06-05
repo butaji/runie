@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term", "crates/runie-agent"]
 resolver = "2"
 
 [workspace.package]
@@ -15,3 +15,4 @@ ctrlc = "3.0"
 
 runie-core = { path = "crates/runie-core" }
 runie-tui = { path = "crates/runie-tui" }
+runie-agent = { path = "crates/runie-agent" }

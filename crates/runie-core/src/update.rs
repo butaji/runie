@@ -1,5 +1,6 @@
 //! Update - State Transitions
 use crate::model::{AppState, ChatMessage};
+use runie_agent::{Message, MockProvider, run_agent};
 
 /// Events that can occur in the application
 #[derive(Debug, Clone)]
@@ -60,13 +61,28 @@ impl AppState {
         // Add user message
         state.messages.push(ChatMessage {
             role: "user".into(),
-            content,
+            content: content.clone(),
         });
         
-        // Add echo response (placeholder for agent)
+        // Convert messages to agent format
+        let agent_messages: Vec<Message> = state
+            .messages
+            .iter()
+            .map(|m| match m.role.as_str() {
+                "user" => Message::User { content: m.content.clone() },
+                "assistant" => Message::Assistant { content: m.content.clone() },
+                _ => Message::User { content: m.content.clone() },
+            })
+            .collect();
+        
+        // Run agent with mock provider
+        let provider = MockProvider;
+        let response = run_agent(&provider, agent_messages);
+        
+        // Add agent response
         state.messages.push(ChatMessage {
             role: "assistant".into(),
-            content: "Echo: ...".into(),
+            content: response.content,
         });
         
         state.streaming = false;
