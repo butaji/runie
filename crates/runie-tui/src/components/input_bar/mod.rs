@@ -42,11 +42,8 @@ pub fn render_input_bar(
     char_count: Option<usize>,
     is_focused: bool,
 ) {
-    let border_color = if is_focused {
-        colors.accent_primary
-    } else {
-        colors.border_unfocused
-    };
+    // Always use gray border (not orange) for cleaner look
+    let border_color = colors.border_unfocused;
 
     // Build mode indicator style
     let mode_style = if mode_indicator.contains("plan") {
