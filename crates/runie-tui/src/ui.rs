@@ -40,9 +40,12 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let end = (start + visible_height).min(total);
     let visible = &state.messages[start..end];
 
-    let lines: Vec<Line> = visible
+    // Get thinking elapsed time
+    let thinking_elapsed = state.thinking_elapsed_secs();
+
+    let lines: Vec<Line<'static>> = visible
         .iter()
-        .flat_map(message_to_lines)
+        .flat_map(|msg| message_to_lines(msg, thinking_elapsed))
         .collect();
 
     let paragraph = Paragraph::new(Text::from(lines))
@@ -51,19 +54,28 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(paragraph, inner);
 }
 
-fn message_to_lines(msg: &runie_core::ChatMessage) -> Vec<Line<'_>> {
+fn message_to_lines(msg: &runie_core::ChatMessage, thinking_elapsed: Option<f64>) -> Vec<Line<'static>> {
     let (prefix, color) = match msg.role.as_str() {
         "user" => ("You: ", Color::Cyan),
         "assistant" => ("Agent: ", Color::Green),
+        "thinking" => ("", Color::DarkGray),
         _ => ("", Color::White),
     };
 
+    let content = match msg.role.as_str() {
+        "thinking" => {
+            let time = thinking_elapsed.map(|s| format!("Thinking {:.1}s", s)).unwrap_or_else(|| "Thinking...".into());
+            format!("⏳ {}", time)
+        }
+        _ => msg.content.clone(),
+    };
+
     let mut lines = vec![];
-    for (i, line_text) in msg.content.lines().enumerate() {
+    for (i, line_text) in content.lines().enumerate() {
         if i == 0 && !prefix.is_empty() {
             lines.push(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(color)),
-                Span::raw(line_text),
+                Span::styled(prefix.to_string(), Style::default().fg(color)),
+                Span::raw(line_text.to_string()),
             ]));
         } else {
             let indent = " ".repeat(prefix.len());
@@ -78,29 +90,17 @@ fn message_to_lines(msg: &runie_core::ChatMessage) -> Vec<Line<'_>> {
 }
 
 fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
-    // Determine title and content based on state
-    let (title, content, border_style) = if state.streaming {
-        let elapsed = state.thinking_elapsed_secs()
-            .map(|s| format!(" Thinking... {:.1}s ", s))
-            .unwrap_or_else(|| " Thinking... ".to_string());
-        (elapsed, String::new(), Style::default().fg(Color::Yellow))
-    } else {
-        (" Input ".to_string(), state.input.clone(), Style::default().fg(Color::DarkGray))
-    };
-    
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(title)
-        .border_style(border_style)
+        .title(" Input ")
+        .border_style(Style::default().fg(Color::DarkGray))
         .title_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
-    let paragraph = Paragraph::new(content).block(block);
+    let paragraph = Paragraph::new(state.input.as_str()).block(block);
     f.render_widget(paragraph, area);
     
-    // Position cursor at end of input (only when not streaming)
-    if !state.streaming {
-        let cursor_x = (inner.x + state.input.len() as u16).min(inner.right() - 1);
-        let cursor_y = inner.y;
-        f.set_cursor_position((cursor_x, cursor_y));
-    }
+    // Position cursor at end of input
+    let cursor_x = (inner.x + state.input.len() as u16).min(inner.right() - 1);
+    let cursor_y = inner.y;
+    f.set_cursor_position((cursor_x, cursor_y));
 }

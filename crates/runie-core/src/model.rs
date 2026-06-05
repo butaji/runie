@@ -22,7 +22,7 @@ impl AppState {
 /// A chat message
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatMessage {
-    pub role: String,
+    pub role: String,  // "user", "assistant", "thinking"
     pub content: String,
 }
 
