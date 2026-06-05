@@ -10,12 +10,19 @@ pub struct AppState {
     pub scroll: usize,
     #[serde(skip)]
     pub thinking_started_at: Option<std::time::Instant>,
+    #[serde(skip)]
+    pub thought_elapsed_at: Option<std::time::Instant>,  // When thinking finished
 }
 
 impl AppState {
     /// Get elapsed thinking time in seconds
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {
         self.thinking_started_at.map(|start| start.elapsed().as_secs_f64())
+    }
+    
+    /// Get elapsed thought time in seconds (time since thinking finished)
+    pub fn thought_elapsed_secs(&self) -> Option<f64> {
+        self.thought_elapsed_at.map(|start| start.elapsed().as_secs_f64())
     }
 }
 
