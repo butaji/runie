@@ -137,7 +137,7 @@ fn test_render_agent_response() {
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     
     assert!(content.contains("Agent: Hello"), "Should show agent message");
-    assert!(content.contains("Thought"), "Should show thought");
+    assert!(content.contains("Though"), "Should show though");
 }
 
 /// Test: Render thinking indicator when agent starts but no response yet
@@ -189,7 +189,7 @@ fn test_thinking_indicator_hides_after_response() {
     // Should NOT show thinking indicator (thought exists)
     assert!(!content.contains("Thinking"), "Should not show thinking after thought created");
     // Should show the thought marker
-    assert!(content.contains("Thought"), "Should show thought marker");
+    assert!(content.contains("Though"), "Should show though marker");
 }
 
 /// Test: Multiple requests - both show thought
@@ -217,9 +217,9 @@ fn test_render_multiple_thoughts() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     
-    // Count "Thought" occurrences - should have A's and B's
-    let thought_count = content.matches("Thought").count();
-    assert_eq!(thought_count, 2, "Should show 2 thoughts: one for A, one for B");
+    // Count "Though" occurrences - should have A's and B's
+    let though_count = content.matches("Though").count();
+    assert_eq!(though_count, 2, "Should show 2 thoughs: one for A, one for B");
 }
 
 /// Test: Three sequential requests each get their own thought
@@ -253,15 +253,15 @@ fn test_three_sequential_requests_three_thoughts() {
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     
     // Should have 3 thoughts: one for each request
-    let thought_count = content.matches("Thought").count();
-    assert_eq!(thought_count, 3, "Should show 3 thoughts for 3 sequential requests");
+    let though_count = content.matches("Though").count();
+    assert_eq!(though_count, 3, "Should show 3 thoughs for 3 sequential requests");
     
     // Should have 3 responses
     let agent_count = content.matches("Agent:").count();
     assert_eq!(agent_count, 3, "Should show 3 agent responses");
 }
 
-/// Test: Thinking spinner shows before first response, Thought marker after
+/// Test: Though spinner shows before first response, Though marker after
 #[test]
 fn test_thinking_vs_thought_marker() {
     set_test_mode();
@@ -280,10 +280,10 @@ fn test_thinking_vs_thought_marker() {
             .collect();
         
         assert!(content.contains("Thinking") && !content.contains("◆"),
-            "Before response: should show 'Thinking', not '◆ Thought' marker");
+            "Before response: should show 'Though', not '◆ Though' marker");
     }
     
-    // === After first response: should show "◆ Thought" marker ===
+    // === After first response: should show "◆ Though" marker ===
     {
         let mut state = AppState::default();
         state.streaming = true;
@@ -296,7 +296,7 @@ fn test_thinking_vs_thought_marker() {
             .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
             .collect();
         
-        assert!(content.contains("◆ Thought"),
-            "After response: should show '◆ Thought' marker");
+        assert!(content.contains("◆ Though"),
+            "After response: should show '◆ Though' marker");
     }
 }

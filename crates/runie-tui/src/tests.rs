@@ -66,7 +66,7 @@ fn renders_agent_response() {
     
     // Should show agent response
     let has_agent = lines.iter().any(|l| l.contains("Agent: Hello"));
-    let has_thought = lines.iter().any(|l| l.contains("◆ Thought"));
+    let has_thought = lines.iter().any(|l| l.contains("◆ Though"));
     
     assert!(has_thought, "Should show thought marker. Lines: {:?}", lines);
     assert!(has_agent, "Should show agent message. Lines: {:?}", lines);

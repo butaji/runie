@@ -81,9 +81,8 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         Element::ToolStart { name } => vec![
             DisplayLine {
                 spans: vec![
-                    DisplaySpan { text: "🔧 Running ".to_string(), color: Some(Color::Yellow) },
+                    DisplaySpan { text: "🔧 Ran ".to_string(), color: Some(Color::Yellow) },
                     DisplaySpan { text: name.clone(), color: Some(Color::Yellow) },
-                    DisplaySpan { text: "...".to_string(), color: Some(Color::Yellow) },
                 ],
             },
         ],
