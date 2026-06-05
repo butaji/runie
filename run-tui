@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
-"""
-Run TUI in a PTY to allow hot reload testing without a real terminal.
-"""
+"""Run TUI in a PTY - keeps TTY open until child exits."""
 import os
 import sys
 import pty
 import select
-import signal
-import time
 import fcntl
 import struct
 import termios
 
-def run_in_pty(cmd, cwd):
-    # Create PTY pair
+def main():
+    cwd = os.getcwd()
+    cmd = ["./target/debug/runie-tui"]
+    
+    print("Starting TUI in PTY...", file=sys.stderr, flush=True)
+    
     master_fd, slave_fd = pty.openpty()
     slave_name = os.ttyname(slave_fd)
-    print(f"PTY: {slave_name}", file=sys.stderr)
+    print(f"PTY: {slave_name}", file=sys.stderr, flush=True)
     
     pid = os.fork()
     if pid == 0:
-        # Child
+        # Child process
         os.close(master_fd)
         
-        # Try to set as controlling terminal (may fail due to permissions)
+        # Set as controlling terminal
         try:
             fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
         except OSError:
@@ -39,57 +39,57 @@ def run_in_pty(cmd, cwd):
         try:
             winsize = struct.pack('HHHH', 24, 80, 0, 0)
             fcntl.ioctl(0, termios.TIOCSWINSZ, winsize)
-        except OSError:
+        except:
             pass
         
-        # Change directory
         os.chdir(cwd)
-        
-        # Execute
         os.execvp(cmd[0], cmd)
     else:
-        # Parent
+        # Parent process
         os.close(slave_fd)
         
-        # Set master to non-blocking
-        flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
-        fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-        
-        return pid, master_fd
-
-def main():
-    cwd = os.getcwd()
-    cmd = ["./target/debug/runie-tui"]
-    
-    print("Starting TUI in PTY...", file=sys.stderr)
-    
-    pid, master_fd = run_in_pty(cmd, cwd)
-    
-    # Wait for process to complete
-    try:
-        while True:
-            # Read from PTY
+        # Read output from PTY until child exits
+        try:
+            while True:
+                # Check if child is still alive
+                result = os.waitpid(pid, os.WNOHANG)
+                if result[0] != 0:
+                    break
+                
+                # Try to read from PTY
+                try:
+                    r, _, _ = select.select([master_fd], [], [], 0.5)
+                    if master_fd in r:
+                        data = os.read(master_fd, 4096)
+                        if data:
+                            sys.stdout.write(data.decode('utf-8', errors='replace'))
+                            sys.stdout.flush()
+                        else:
+                            break
+                except OSError:
+                    break
+        finally:
+            # Drain any remaining output
             try:
-                r, _, _ = select.select([master_fd], [], [], 1.0)
-                if master_fd in r:
-                    data = os.read(master_fd, 4096)
-                    if data:
-                        sys.stdout.write(data.decode('utf-8', errors='replace'))
-                        sys.stdout.flush()
+                import time
+                time.sleep(0.5)
+                while True:
+                    r, _, _ = select.select([master_fd], [], [], 0.1)
+                    if master_fd in r:
+                        try:
+                            data = os.read(master_fd, 4096)
+                            if data:
+                                sys.stdout.write(data.decode('utf-8', errors='replace'))
+                                sys.stdout.flush()
+                        except:
+                            break
                     else:
                         break
-            except OSError:
-                break
+            except:
+                pass
             
-            # Check if process is still alive
-            result = os.waitpid(pid, os.WNOHANG)
-            if result[0] != 0:
-                break
-                
-    finally:
-        os.close(master_fd)
-        os.waitpid(pid, 0)
-        print("TUI exited", file=sys.stderr)
+            os.close(master_fd)
+            print("TUI exited", file=sys.stderr, flush=True)
 
 if __name__ == "__main__":
     main()

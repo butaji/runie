@@ -41,75 +41,95 @@ impl AgentLoop {
         let (tx, rx) = mpsc::channel::<AgentEvent>(128);
 
         tokio::spawn(async move {
-            let mut msgs = messages;
-            for _turn in 0..max_turns {
-                match provider.chat(msgs.clone()).await {
-                    Ok((content, tool_calls)) => {
-                        let _ = tx.send(AgentEvent::MessageStart {
-                            role: "assistant".into(),
-                        }).await;
-
-                        for chunk in content.chars().collect::<Vec<_>>().chunks(8) {
-                            let s: String = chunk.iter().collect();
-                            let _ = tx
-                                .send(AgentEvent::MessageDelta { content: s })
-                                .await;
-                            tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-                        }
-
-                        let _ = tx.send(AgentEvent::MessageEnd).await;
-
-                        if tool_calls.is_empty() {
-                            msgs.push(Message::Assistant {
-                                content,
-                                tool_calls: vec![],
-                            });
-                            break;
-                        }
-
-                        msgs.push(Message::Assistant {
-                            content: content.clone(),
-                            tool_calls: tool_calls.clone(),
-                        });
-
-                        for tc in &tool_calls {
-                            let _ = tx.send(AgentEvent::ToolCallStart {
-                                id: tc.id.clone(),
-                                name: tc.name.clone(),
-                            }).await;
-
-                            let result = if let Some(tool) = tools.iter().find(|t| t.name() == tc.name) {
-                                match tool.execute(tc.arguments.clone()).await {
-                                    Ok(out) => out.content,
-                                    Err(e) => format!("Error: {}", e),
-                                }
-                            } else {
-                                format!("Tool '{}' not found", tc.name)
-                            };
-
-                            let _ = tx.send(AgentEvent::ToolCallEnd {
-                                id: tc.id.clone(),
-                                result: result.clone(),
-                            }).await;
-
-                            msgs.push(Message::ToolResult {
-                                tool_call_id: tc.id.clone(),
-                                content: result,
-                                is_error: false,
-                            });
-                        }
-                    }
-                    Err(e) => {
-                        let _ = tx
-                            .send(AgentEvent::Error { message: e.to_string() })
-                            .await;
-                        break;
-                    }
-                }
-            }
+            run_agent_loop(provider, tools, max_turns, messages, tx).await;
         });
 
         Box::pin(ReceiverStream::new(rx))
+    }
+}
+
+async fn run_agent_loop(
+    provider: Arc<dyn Provider>,
+    tools: Vec<Arc<dyn Tool>>,
+    max_turns: usize,
+    mut messages: Vec<Message>,
+    tx: mpsc::Sender<AgentEvent>,
+) {
+    for _ in 0..max_turns {
+        match provider.chat(messages.clone()).await {
+            Ok((content, tool_calls)) => {
+                if !send_message_events(&tx, &content).await {
+                    break;
+                }
+                
+                if tool_calls.is_empty() {
+                    messages.push(Message::Assistant { content, tool_calls: vec![] });
+                    break;
+                }
+
+                messages.push(Message::Assistant { content: content.clone(), tool_calls: tool_calls.clone() });
+                
+                if !execute_tools(&tx, &tools, &tool_calls, &mut messages).await {
+                    break;
+                }
+            }
+            Err(e) => {
+                let _ = tx.send(AgentEvent::Error { message: e.to_string() }).await;
+                break;
+            }
+        }
+    }
+}
+
+async fn send_message_events(tx: &mpsc::Sender<AgentEvent>, content: &str) -> bool {
+    let _ = tx.send(AgentEvent::MessageStart { role: "assistant".into() }).await;
+
+    for chunk in content.chars().collect::<Vec<_>>().chunks(8) {
+        let s: String = chunk.iter().collect();
+        let _ = tx.send(AgentEvent::MessageDelta { content: s }).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+    }
+
+    let _ = tx.send(AgentEvent::MessageEnd).await;
+    true
+}
+
+async fn execute_tools(
+    tx: &mpsc::Sender<AgentEvent>,
+    tools: &[Arc<dyn Tool>],
+    tool_calls: &[crate::types::ToolCall],
+    messages: &mut Vec<Message>,
+) -> bool {
+    for tc in tool_calls {
+        let _ = tx.send(AgentEvent::ToolCallStart {
+            id: tc.id.clone(),
+            name: tc.name.clone(),
+        }).await;
+
+        let result = execute_tool(tools, tc).await;
+
+        let _ = tx.send(AgentEvent::ToolCallEnd {
+            id: tc.id.clone(),
+            result: result.clone(),
+        }).await;
+
+        messages.push(Message::ToolResult {
+            tool_call_id: tc.id.clone(),
+            content: result,
+            is_error: false,
+        });
+    }
+    true
+}
+
+async fn execute_tool(tools: &[Arc<dyn Tool>], tc: &crate::types::ToolCall) -> String {
+    if let Some(tool) = tools.iter().find(|t| t.name() == tc.name) {
+        match tool.execute(tc.arguments.clone()).await {
+            Ok(out) => out.content,
+            Err(e) => format!("Error: {}", e),
+        }
+    } else {
+        format!("Tool '{}' not found", tc.name)
     }
 }
 
