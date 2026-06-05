@@ -1,3 +1,5 @@
+//! ViewModel types and helpers for the TUI.
+
 use crate::components::{
     MessageItem, GitChange,
     SessionTreeEntry, LineStatus,
@@ -10,7 +12,9 @@ use crate::components::top_bar::TopBarViewModel;
 pub use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::PlanStatus;
 use crate::tui::state::TuiMode;
-use runie_ai::TokenUsage;
+
+pub mod view_models_build;
+pub use view_models_build::*;
 
 // ─── InputBarViewModel ──────────────────────────────────────────────────────
 pub struct InputBarViewModel {
@@ -41,7 +45,7 @@ pub enum McpStatus {
 pub struct StatusBarViewModel {
     pub mode: TuiMode,
     pub current_model: Option<String>,
-    pub session_token_usage: TokenUsage,
+    pub session_token_usage: runie_ai::TokenUsage,
     // Live status indicator
     pub status_header: Option<String>,
     pub status_details: Option<String>,
@@ -51,23 +55,8 @@ pub struct StatusBarViewModel {
     pub input_has_text: bool,
 }
 
-impl Default for StatusBarViewModel {
-    fn default() -> Self {
-        Self {
-            mode: TuiMode::Chat,
-            current_model: None,
-            session_token_usage: TokenUsage::default(),
-            status_header: None,
-            status_details: None,
-            status_start_time: None,
-            mcp_status: McpStatus::None,
-            agent_running: false,
-            input_has_text: false,
-        }
-    }
-}
-
 // ─── AgentListViewModel ─────────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct AgentListViewModel {
     pub plan_steps: Vec<(usize, String, PlanStatus)>,
     pub running_jobs: Vec<BackgroundJob>,
@@ -75,42 +64,42 @@ pub struct AgentListViewModel {
     pub tokens: u64,
     pub cost: f64,
     pub agent_running: bool,
-    pub braille_frame: usize,
+    pub braille_frame: u8,
 }
 
 // ─── CommandPaletteViewModel ────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct CommandPaletteViewModel {
     pub show: bool,
 }
 
 // ─── PermissionModalViewModel ───────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct PermissionModalViewModel {
     pub tool: String,
     pub args: String,
     pub desc: String,
     pub selected: usize,
     pub visible: bool,
-    // P0-3 FIX: Add timeout countdown display
     pub timeout_secs: Option<u64>,
 }
 
 // ─── OverlayViewModel ───────────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct OverlayViewModel {
-    pub title: String,
-    pub content: Vec<String>,
-    pub tabs: Vec<String>,
-    pub active_tab: usize,
-    pub show_close: bool,
+    pub visible: bool,
 }
 
 // ─── SessionTreeViewModel ───────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct SessionTreeViewModel {
     pub entries: Vec<SessionTreeEntry>,
     pub selected: usize,
     pub visible: bool,
 }
 
-// ─── DiffViewerViewModel ────────────────────────────────────────────────────
+// ─── DiffViewerViewModel ───────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct DiffViewerViewModel {
     pub filename: String,
     pub diff_lines: Vec<DiffLine>,
@@ -119,6 +108,7 @@ pub struct DiffViewerViewModel {
 }
 
 // ─── OnboardingViewModel ───────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct OnboardingViewModel {
     pub step: OnboardingStep,
     pub selected_item: usize,
@@ -130,7 +120,7 @@ pub struct OnboardingViewModel {
     pub error_message: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OnboardingStep {
     Welcome,
     ProviderSelect,
@@ -140,72 +130,89 @@ pub enum OnboardingStep {
 }
 
 // ─── CodeBlockViewModel ─────────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct CodeBlockViewModel {
-    pub lines: Vec<CodeLineViewModel>,
-    pub start_line: usize,
-    pub language: Option<String>,
-}
-
-pub struct CodeLineViewModel {
-    pub number: usize,
-    pub text: String,
-    pub status: LineStatus,
+    pub lang: Option<String>,
+    pub code: String,
+    pub filename: Option<String>,
+    pub line_status: Vec<LineStatus>,
 }
 
 // ─── CollapsibleViewModel ───────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct CollapsibleViewModel {
     pub title: String,
     pub expanded: bool,
-    pub content_lines: Vec<String>,
+    pub children: Vec<CollapsibleViewModel>,
 }
 
 // ─── ContextPanelViewModel ─────────────────────────────────────────────────
+#[derive(Debug, Clone)]
 pub struct ContextPanelViewModel {
-    pub recent_files: Vec<String>,
-    pub git_changes: Vec<GitChange>,
-    pub active_tool: Option<String>,
-    pub model_name: String,
-    pub session_info: String,
+    pub panels: Vec<ContextPanelItem>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContextPanelItem {
+    pub title: String,
+    pub content: String,
+    pub pinned: bool,
 }
 
 // ─── ViewModels ─────────────────────────────────────────────────────────────
+
+/// Holds all view-models for a single render pass.
+/// Each field is `None` when that panel is hidden, so the renderer
+/// can simply `match` or `if let Some(vm) = vm.foo` without any
+/// extra booleans.
+#[derive(Debug, Default)]
 pub struct ViewModels {
-    pub global_tags: GlobalTagsViewModel,
-    pub message_list: MessageListViewModel,
-    pub input_bar: InputBarViewModel,
-    pub status_bar: StatusBarViewModel,
-    pub agent_list: AgentListViewModel,
+    pub top_bar: Option<TopBarViewModel>,
+    pub global_tags: Option<GlobalTagsViewModel>,
+    pub message_list: Option<MessageListViewModel>,
+    pub input_bar: Option<InputBarViewModel>,
+    pub status_bar: Option<StatusBarViewModel>,
+    pub agent_list: Option<AgentListViewModel>,
     pub command_palette: Option<CommandPaletteViewModel>,
     pub permission_modal: Option<PermissionModalViewModel>,
     pub overlay: Option<OverlayViewModel>,
     pub session_tree: Option<SessionTreeViewModel>,
     pub diff_viewer: Option<DiffViewerViewModel>,
     pub onboarding: Option<OnboardingViewModel>,
-    pub top_bar: TopBarViewModel,
+    pub code_blocks: Vec<CodeBlockViewModel>,
+    pub collapsibles: Vec<CollapsibleViewModel>,
+    pub context_panel: Option<ContextPanelViewModel>,
 }
 
+/// One-stop shop to rebuild all view-models from current AppState.
+/// Call this at the start of each render pass; the functions inside
+/// are cheap (mostly struct construction and hashmap lookups).
 impl ViewModels {
-    pub fn from_app_state(state: &crate::tui::state::AppState, palette: &CommandPalette, wrap_cache: crate::components::message_list::render::WrapCache) -> Self {
+    pub fn new(state: &crate::tui::state::AppState) -> Self {
         Self {
-            global_tags: build_global_tags_vm(state),
-            message_list: build_message_list_vm(state, wrap_cache),
-            input_bar: build_input_bar_vm(state),
-            status_bar: build_status_bar_vm(state),
-            agent_list: build_agent_list_vm(state),
-            command_palette: build_command_palette_vm(state, palette),
+            top_bar: Some(build_top_bar_vm(state)),
+            global_tags: Some(build_global_tags_vm(state)),
+            message_list: None, // Built separately with wrap_cache
+            input_bar: Some(build_input_bar_vm(state)),
+            status_bar: Some(build_status_bar_vm(state)),
+            agent_list: Some(build_agent_list_vm(state)),
+            command_palette: build_command_palette_vm(state, &state.command_palette),
             permission_modal: build_permission_modal_vm(state),
             overlay: build_overlay_vm(state),
             session_tree: build_session_tree_vm(state),
             diff_viewer: build_diff_viewer_vm(state),
             onboarding: build_onboarding_vm(state),
-            top_bar: build_top_bar_vm(state),
+            code_blocks: Vec::new(),
+            collapsibles: Vec::new(),
+            context_panel: None,
         }
     }
 }
 
-/// Strip thinking text from assistant messages.
-/// Models embed thinking as lines starting with markers like · • ◦ ▸.
-/// Also strips [thinking:...] wrappers and <think>...</think> blocks.
+// ─── Thinking Stripping ─────────────────────────────────────────────────────
+
+/// Strips <think>...</think> blocks and thinking bullet markers from
+/// assistant text for display when `show_thoughts` is false.
 ///
 /// Returns `Cow::Borrowed(text)` when no thinking markers were found
 /// so the common case (no thinking) avoids a per-message allocation.
@@ -270,256 +277,4 @@ fn process_strip_line(
     }
     let _ = line;
     false
-}
-
-// ─── Build Helper Functions ─────────────────────────────────────────────────
-
-fn build_top_bar_vm(state: &crate::tui::state::AppState) -> TopBarViewModel {
-    TopBarViewModel::from_state(&state.top_bar, state.agent_running, state.animation.braille_frame, state.mode)
-}
-
-fn build_global_tags_vm(state: &crate::tui::state::AppState) -> GlobalTagsViewModel {
-    if state.agent_running {
-        // Show spinner with status while agent is running
-        let status = state.status_header.as_deref().unwrap_or("thinking");
-        let elapsed = state.status_start_time
-            .map(|t| {
-                let dur = t.elapsed().as_secs();
-                format_duration_short(dur)
-            })
-            .unwrap_or_default();
-        let spinner = crate::glyphs::spinner_frame(state.animation.braille_frame);
-        GlobalTagsViewModel::running(
-            spinner, status, &elapsed, state.token_usage.total_tokens as u64,
-            state.last_turn_duration_secs,
-            state.last_turn_tokens,
-            state.last_turn_tool_calls,
-        )
-    } else if let Some(ref header) = state.status_header {
-        // Error state
-        GlobalTagsViewModel::error(header)
-    } else {
-        // Idle state - empty
-        GlobalTagsViewModel::idle()
-    }
-}
-
-fn build_message_list_vm(
-    state: &crate::tui::state::AppState,
-    wrap_cache: crate::components::message_list::render::WrapCache,
-) -> MessageListViewModel {
-    use crate::components::message_list::Feed;
-
-    // Only clone messages when we actually need to strip thinking from
-    // them. When show_thoughts is true, the Feed sees the original
-    // MessageItem slice and clones nothing on the hot path.
-    let feed = if state.show_thoughts {
-        Feed::from(&state.messages[..])
-    } else {
-        // Strip thinking from assistant messages when show_thoughts is false
-        let messages_stripped: Vec<MessageItem> = state
-            .messages
-            .iter()
-            .map(|msg| match msg {
-                MessageItem::Assistant {
-                    text,
-                    model,
-                    timestamp,
-                    expanded,
-                    thought_duration,
-                    turn_duration,
-                } => MessageItem::Assistant {
-                    text: strip_thinking_from_assistant(text).into_owned(),
-                    model: model.clone(),
-                    timestamp: timestamp.clone(),
-                    expanded: *expanded,
-                    thought_duration: *thought_duration,
-                    turn_duration: *turn_duration,
-                },
-                other => other.clone(),
-            })
-            .collect();
-        Feed::from(messages_stripped)
-    };
-
-    MessageListViewModel::new(
-        feed,
-        state.scroll.feed_offset,
-        state.agent_running,
-        state.animation.clone(),
-        wrap_cache,
-        state.session_starting,
-        state.thinking.as_ref().filter(|_| state.agent_running).map(|t| t.text.clone()),
-    )
-}
-
-fn build_input_bar_vm(state: &crate::tui::state::AppState) -> InputBarViewModel {
-    use crate::tui::state::PermissionMode;
-
-    // Build mode indicator
-    let mode_indicator = match state.permission_mode {
-        PermissionMode::Normal => "Grok Build".to_string(),
-        PermissionMode::Plan => "Grok Build · plan".to_string(),
-        PermissionMode::AutoApprove => "Grok Build · always-approve".to_string(),
-    };
-
-    // Calculate char count if text is long (>50% of context window)
-    let char_count = {
-        let text = state.textarea.lines().join("\n");
-        let text_len = text.len();
-        let ctx_window = state.top_bar.context_window.unwrap_or(512_000);
-        // Rough estimate: 1 token ≈ 4 chars, so divide to get token count.
-        // (text_len is in bytes, but for ASCII chat input ≈ chars.)
-        let estimated_tokens = text_len / 4;
-        if estimated_tokens > ctx_window / 2 {
-            Some(text_len)
-        } else {
-            None
-        }
-    };
-
-    // Attached files (placeholder - will be populated when attachments are supported)
-    let attached_files: Vec<String> = Vec::new();
-
-    InputBarViewModel {
-        textarea: state.textarea.clone(),
-        prompt: state.input_draft.clone(),
-        right_info: state.input_right_info.clone(),
-        placeholder: "Build anything...".to_string(),
-        mode_indicator,
-        attached_files,
-        char_count,
-        context_window: state.top_bar.context_window,
-    }
-}
-
-fn build_status_bar_vm(state: &crate::tui::state::AppState) -> StatusBarViewModel {
-    StatusBarViewModel {
-        mode: state.mode.clone(),
-        current_model: state.current_model.clone(),
-        session_token_usage: state.session_token_usage.clone(),
-        status_header: state.status_header.clone(),
-        status_details: state.status_details.clone(),
-        status_start_time: state.status_start_time,
-        mcp_status: McpStatus::None, // TODO: wire to actual MCP state
-        agent_running: state.agent_running,
-        input_has_text: !state.textarea.lines().join("").trim().is_empty(),
-    }
-}
-
-fn build_agent_list_vm(state: &crate::tui::state::AppState) -> AgentListViewModel {
-    AgentListViewModel {
-        plan_steps: extract_plan_steps(&state.messages),
-        running_jobs: state.background_jobs.clone(),
-        active_count: state.background_jobs.iter().filter(|j| matches!(j.status, crate::components::status_bar::JobStatus::Running)).count(),
-        tokens: state.session_token_usage.total_tokens as u64,
-        cost: 0.0, // Cost calculation requires pricing data
-        agent_running: state.agent_running,
-        braille_frame: state.animation.braille_frame,
-    }
-}
-
-fn build_command_palette_vm(
-    state: &crate::tui::state::AppState,
-    _palette: &CommandPalette,
-) -> Option<CommandPaletteViewModel> {
-    if state.command_palette.open {
-        Some(CommandPaletteViewModel {
-            show: true,
-        })
-    } else {
-        None
-    }
-}
-
-fn build_permission_modal_vm(state: &crate::tui::state::AppState) -> Option<PermissionModalViewModel> {
-    let pm = &state.permission_modal;
-    if pm.tool.is_some() {
-        Some(PermissionModalViewModel {
-            tool: pm.tool.clone().unwrap_or_default(),
-            args: pm.args.clone().unwrap_or_default(),
-            desc: pm.desc.clone().unwrap_or_default(),
-            selected: 0,
-            visible: true,
-            timeout_secs: pm.timeout_start.map(|t| {
-                // Calculate remaining seconds (60 second default timeout)
-                let elapsed = t.elapsed().as_secs();
-                if elapsed < 60 { 60 - elapsed } else { 0 }
-            }),
-        })
-    } else {
-        None
-    }
-}
-
-fn build_overlay_vm(_state: &crate::tui::state::AppState) -> Option<OverlayViewModel> {
-    // Overlay is shown when there's a context panel or similar
-    // For now, return None unless explicitly needed
-    None
-}
-
-fn build_session_tree_vm(state: &crate::tui::state::AppState) -> Option<SessionTreeViewModel> {
-    let nav = &state.session_tree;
-    if nav.visible && !nav.entries.is_empty() {
-        Some(SessionTreeViewModel {
-            entries: nav.entries.clone(),
-            selected: nav.selected,
-            visible: true,
-        })
-    } else {
-        None
-    }
-}
-
-fn build_diff_viewer_vm(state: &crate::tui::state::AppState) -> Option<DiffViewerViewModel> {
-    state.diff_viewer.as_ref().map(|dv| DiffViewerViewModel {
-        filename: dv.filename.clone(),
-        diff_lines: dv.compute_diff(),
-        scroll_offset: dv.scroll_offset,
-        visible: dv.visible,
-    })
-}
-
-fn build_onboarding_vm(state: &crate::tui::state::AppState) -> Option<OnboardingViewModel> {
-    state.onboarding.as_ref().map(|ob| OnboardingViewModel {
-        step: map_onboarding_step(&ob.step),
-        selected_item: ob.selected_item,
-        selected_provider: ob.selected_provider,
-        api_key_input: ob.api_key_input.clone(),
-        selected_model: ob.selected_model,
-        providers: ob.providers.iter().map(|p| p.name.clone()).collect(),
-        models: ob.models.iter().map(|m| m.name.clone()).collect(),
-        error_message: ob.error_message.clone().or(ob.fetch_error.clone()),
-    })
-}
-
-// ─── Helper Functions ───────────────────────────────────────────────────────
-
-fn format_duration_short(duration_secs: u64) -> String {
-    if duration_secs < 60 {
-        format!("{}s", duration_secs)
-    } else {
-        format!("{}m", duration_secs / 60)
-    }
-}
-
-fn extract_plan_steps(messages: &[MessageItem]) -> Vec<(usize, String, PlanStatus)> {
-    messages.iter().filter_map(|msg| {
-        if let MessageItem::PlanStep { step, text, status } = msg {
-            Some((*step, text.clone(), status.clone()))
-        } else {
-            None
-        }
-    }).collect()
-}
-
-fn map_onboarding_step(step: &crate::components::onboarding::OnboardingStep) -> OnboardingStep {
-    use crate::components::onboarding::OnboardingStep as Os;
-    match step {
-        Os::Welcome => OnboardingStep::Welcome,
-        Os::ProviderSelect => OnboardingStep::ProviderSelect,
-        Os::KeyInput => OnboardingStep::KeyInput,
-        Os::ModelSelect => OnboardingStep::ModelSelect,
-        Os::Complete => OnboardingStep::Complete,
-    }
 }

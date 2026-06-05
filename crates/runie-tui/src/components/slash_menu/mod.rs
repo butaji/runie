@@ -153,7 +153,12 @@ impl SlashMenu {
 }
 
 fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color, hidden_count: usize) {
-    // Clear background first to prevent content overlap
+    clear_background(area, buf, bg);
+    render_top_border(area, buf, border, hidden_count);
+    render_bottom_border(area, buf, border);
+}
+
+fn clear_background(area: Rect, buf: &mut Buffer, bg: Color) {
     for y in area.y..area.bottom() {
         for x in area.x..area.right() {
             if let Some(cell) = buf.cell_mut((x, y)) {
@@ -162,37 +167,13 @@ fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color, h
             }
         }
     }
-    // Top horizontal divider with trailing count (Grok spec: "─...─N─" right-aligned)
+}
+
+fn render_top_border(area: Rect, buf: &mut Buffer, border: Color, hidden_count: usize) {
     let right_col = area.right().saturating_sub(1);
     if hidden_count > 0 && area.width >= 6 {
-        // Reserve 2 columns for "<N>" (e.g. "87") and 1 trailing "─"
-        let count_str = hidden_count.to_string();
-        // Write "─" from left to (right_col - 3)
-        let left_end = right_col.saturating_sub(3);
-        for x in area.x..left_end {
-            if let Some(cell) = buf.cell_mut((x, area.y)) {
-                cell.set_char(box_chars::H);
-                cell.set_fg(border);
-            }
-        }
-        // Then "─", then count_str, then "─" at right_col
-        // Actually: we want "─...─" (left) + count + "─" (rightmost)
-        // So write count_str at left_end..left_end+count_str.len(), "─" at right_col
-        for (i, ch) in count_str.chars().enumerate() {
-            let x = left_end.saturating_add(i as u16);
-            if x <= right_col {
-                if let Some(cell) = buf.cell_mut((x, area.y)) {
-                    cell.set_char(ch);
-                    cell.set_fg(border);
-                }
-            }
-        }
-        if let Some(cell) = buf.cell_mut((right_col, area.y)) {
-            cell.set_char(box_chars::H);
-            cell.set_fg(border);
-        }
+        render_top_border_with_count(area, buf, border, hidden_count, right_col);
     } else {
-        // No count: pure "─" line
         for x in area.x..right_col {
             if let Some(cell) = buf.cell_mut((x, area.y)) {
                 cell.set_char(box_chars::H);
@@ -200,7 +181,33 @@ fn render_slash_border(area: Rect, buf: &mut Buffer, border: Color, bg: Color, h
             }
         }
     }
-    // Bottom horizontal divider
+}
+
+fn render_top_border_with_count(area: Rect, buf: &mut Buffer, border: Color, hidden_count: usize, right_col: u16) {
+    let count_str = hidden_count.to_string();
+    let left_end = right_col.saturating_sub(3);
+    for x in area.x..left_end {
+        if let Some(cell) = buf.cell_mut((x, area.y)) {
+            cell.set_char(box_chars::H);
+            cell.set_fg(border);
+        }
+    }
+    for (i, ch) in count_str.chars().enumerate() {
+        let x = left_end.saturating_add(i as u16);
+        if x <= right_col {
+            if let Some(cell) = buf.cell_mut((x, area.y)) {
+                cell.set_char(ch);
+                cell.set_fg(border);
+            }
+        }
+    }
+    if let Some(cell) = buf.cell_mut((right_col, area.y)) {
+        cell.set_char(box_chars::H);
+        cell.set_fg(border);
+    }
+}
+
+fn render_bottom_border(area: Rect, buf: &mut Buffer, border: Color) {
     for x in area.x..area.right() {
         if let Some(cell) = buf.cell_mut((x, area.bottom() - 1)) {
             cell.set_char(box_chars::H);

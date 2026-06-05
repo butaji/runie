@@ -50,20 +50,24 @@ pub enum StyleRef {
 
 impl StyleRef {
     pub fn resolve(self, theme: &ThemeColors) -> Style {
-        let mut s = match self {
-            StyleRef::Primary => Style::default().fg(theme.text_primary),
-            StyleRef::Secondary => Style::default().fg(theme.text_secondary),
-            StyleRef::Dim => Style::default().fg(theme.text_dim),
-            StyleRef::Muted => Style::default().fg(theme.text_muted),
-            StyleRef::Accent => Style::default().fg(theme.accent_primary),
-            StyleRef::BgPanel => Style::default().bg(theme.bg_panel),
-            StyleRef::BgBase => Style::default().bg(theme.bg_base),
-            StyleRef::Custom(s) => s,
-        };
+        let mut s = resolve_base_style(self, theme);
         if matches!(self, StyleRef::Dim) {
             s = s.add_modifier(Modifier::DIM);
         }
         s
+    }
+}
+
+fn resolve_base_style(style: StyleRef, theme: &ThemeColors) -> Style {
+    match style {
+        StyleRef::Primary => Style::default().fg(theme.text_primary),
+        StyleRef::Secondary => Style::default().fg(theme.text_secondary),
+        StyleRef::Dim => Style::default().fg(theme.text_dim),
+        StyleRef::Muted => Style::default().fg(theme.text_muted),
+        StyleRef::Accent => Style::default().fg(theme.accent_primary),
+        StyleRef::BgPanel => Style::default().bg(theme.bg_panel),
+        StyleRef::BgBase => Style::default().bg(theme.bg_base),
+        StyleRef::Custom(s) => s,
     }
 }
 
@@ -195,59 +199,8 @@ pub struct Pad {
 }
 
 // ─── Builders ─────────────────────────────────────────────────────────
-
-pub fn row(children: Vec<Node>) -> Row {
-    Row { children, gap: 0, bg: StyleRef::BgBase, fill_trailing: false }
-}
-pub fn col(children: Vec<Node>) -> Col {
-    Col { children, gap: 0, bg: StyleRef::BgBase }
-}
-
-impl Row {
-    pub fn gap(mut self, n: u16) -> Self { self.gap = n; self }
-    pub fn bg(mut self, s: StyleRef) -> Self { self.bg = s; self }
-    pub fn fill_trailing(mut self) -> Self { self.fill_trailing = true; self }
-    pub fn child(mut self, n: Node) -> Self { self.children.push(n); self }
-    pub fn children(mut self, mut cs: Vec<Node>) -> Self {
-        self.children.append(&mut cs);
-        self
-    }
-    pub fn build(self) -> Node { Node::Row(self) }
-}
-
-impl Col {
-    pub fn gap(mut self, n: u16) -> Self { self.gap = n; self }
-    pub fn bg(mut self, s: StyleRef) -> Self { self.bg = s; self }
-    pub fn child(mut self, n: Node) -> Self { self.children.push(n); self }
-    pub fn build(self) -> Node { Node::Col(self) }
-}
-
-pub fn border(child: Node) -> Border {
-    Border { child: Some(Box::new(child)), title: None, style: StyleRef::Dim }
-}
-impl Border {
-    pub fn title<T: Into<String>>(mut self, t: T) -> Self {
-        self.title = Some(Text::new(t));
-        self
-    }
-    pub fn style(mut self, s: StyleRef) -> Self { self.style = s; self }
-    pub fn build(self) -> Node { Node::Border(self) }
-}
-
-pub fn pad(child: Node) -> Pad {
-    Pad { child: Box::new(child), top: 0, right: 0, bottom: 0, left: 0 }
-}
-impl Pad {
-    pub fn all(mut self, n: u16) -> Self {
-        self.top = n; self.right = n; self.bottom = n; self.left = n;
-        self
-    }
-    pub fn xy(mut self, x: u16, y: u16) -> Self {
-        self.left = x; self.right = x; self.top = y; self.bottom = y;
-        self
-    }
-    pub fn build(self) -> Node { Node::Pad(self) }
-}
+mod builders;
+pub use builders::{row, col, border, pad};
 
 // ─── Paint (the render function) ──────────────────────────────────────
 
@@ -256,81 +209,95 @@ impl Pad {
 /// consumed). Returns `area` unchanged if the node is empty.
 pub fn paint(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     if area.width == 0 || area.height == 0 { return; }
-    match node {
-        Node::T(t) => paint_text(t, area, buf, theme),
-        Node::Row(r) => paint_row(r, area, buf, theme),
-        Node::Col(c) => paint_col(c, area, buf, theme),
-        Node::Border(b) => paint_border(b, area, buf, theme),
-        Node::Pad(p) => paint_pad(p, area, buf, theme),
-        Node::Fill => { /* parent already expanded the area */ },
-        Node::Blank { bg } => paint_blank(area, buf, bg.resolve(theme)),
-        Node::RightGap { n: _ } => {
-            // Reserved empty cells at the end of a row.
+    paint_node(node, area, buf, theme);
+}
+
+fn paint_node(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    paint_node_variant(node, area, buf, theme);
+}
+
+fn paint_node_variant(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    paint_node_simple(node, area, buf, theme);
+}
+
+fn paint_node_simple(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    if let Node::T(t) = node { paint_text(t, area, buf, theme); return; }
+    if let Node::Blank { bg } = node { paint_blank(area, buf, bg.resolve(theme)); return; }
+    if let Node::Fill = node { return; }
+    if let Node::RightGap { .. } = node { return; }
+    paint_node_container(node, area, buf, theme);
+}
+
+fn paint_node_container(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    if let Node::Row(r) = node { paint_row(r, area, buf, theme); return; }
+    if let Node::Col(c) = node { paint_col(c, area, buf, theme); return; }
+    if let Node::Border(b) = node { paint_border(b, area, buf, theme); return; }
+    if let Node::Pad(p) = node { paint_pad(p, area, buf, theme); return; }
+    if let Node::HFillText { text, gap } = node { paint_hfill_text(text, *gap, area, buf, theme); return; }
+    paint_node_conditional(node, area, buf, theme);
+}
+
+fn paint_node_conditional(node: &Node, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    if let Node::If { cond: true, then } = node { paint(then, area, buf, theme); return; }
+    if let Node::If { cond: false, .. } = node { paint_blank(area, buf, StyleRef::BgBase.resolve(theme)); return; }
+    if let Node::List(ns) = node { paint_list(ns, area, buf, theme); }
+}
+
+fn paint_hfill_text(text: &Text, gap: u16, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    let text_w = text.width() as u16;
+    let total = text_w + gap;
+    if total <= area.width {
+        let fill_w = area.width - total;
+        if fill_w > 0 {
+            let fill_area = Rect { x: area.x, y: area.y, width: fill_w, height: area.height };
+            paint_blank(fill_area, buf, StyleRef::BgBase.resolve(theme));
         }
-        Node::HFillText { text, gap } => {
-            // Fill remaining width, then place text at the right
-            // edge with `gap` cells of empty space before it.
-            let text_w = text.width() as u16;
-            let total = text_w + gap;
-            if total <= area.width {
-                let fill_w = area.width - total;
-                if fill_w > 0 {
-                    let fill_area = Rect { x: area.x, y: area.y, width: fill_w, height: area.height };
-                    paint_blank(fill_area, buf, StyleRef::BgBase.resolve(theme));
-                }
-                let text_area = Rect { x: area.x + fill_w + gap, y: area.y, width: text_w, height: area.height };
-                paint_text(text, text_area, buf, theme);
-            } else {
-                // Text wider than area — just paint at area.x
-                paint_text(text, area, buf, theme);
-            }
-        }
-        Node::If { cond: true, then } => paint(then, area, buf, theme),
-        Node::If { cond: false, .. } => paint_blank(area, buf, StyleRef::BgBase.resolve(theme)),
-        Node::List(ns) => {
-            // Lists are inlined by their parent. If we got here
-            // bare, treat as a row with 0 gap.
-            let r = Row { children: ns.to_vec(), gap: 0, bg: StyleRef::BgBase, fill_trailing: false };
-            paint_row(&r, area, buf, theme);
-        }
+        let text_area = Rect { x: area.x + fill_w + gap, y: area.y, width: text_w, height: area.height };
+        paint_text(text, text_area, buf, theme);
+    } else {
+        paint_text(text, area, buf, theme);
     }
+}
+
+fn paint_list(ns: &[Node], area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    let r = Row { children: ns.to_vec(), gap: 0, bg: StyleRef::BgBase, fill_trailing: false };
+    paint_row(&r, area, buf, theme);
 }
 
 fn paint_text(t: &Text, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     if area.width == 0 || area.height == 0 { return; }
     let style = t.style.resolve(theme);
     if t.wrap {
-        // Wrap: split content into lines by display width, then paint
-        // each on a new row, clipped to area.height.
-        let w = area.width as usize;
-        let chars: Vec<char> = t.content.chars().collect();
-        let mut y = area.y;
-        for line in chars.chunks(w) {
-            if y >= area.y + area.height { break; }
-            let line_s: String = line.iter().collect();
-            let line_obj = Line::from(Span::styled(line_s, style));
-            buf.set_line(area.x, y, &line_obj, w as u16);
-            y += 1;
-        }
+        paint_text_wrapped(t, area, style, buf);
     } else {
-        // Single line, clipped to area.width. Default placement
-        // starts at `area.x`. When `right_inset > 0`, the text is
-        // shifted right so its right edge sits `right_inset` cells
-        // before the area's right edge.
-        let text_w = if t.right_inset > 0 {
-            t.content.chars().count().min(area.width.saturating_sub(t.right_inset) as usize)
-        } else {
-            t.content.chars().count().min(area.width as usize)
-        };
-        // Default placement starts at `area.x`.
-        let x = area.x;
-        let clipped: String = t.content.chars().take(text_w).collect();
-        // Paint char-by-char to avoid set_line losing the leading
-        // cell when the text starts with a space.
-        for (i, c) in clipped.chars().enumerate() {
-            if let Some(cell) = buf.cell_mut((x + i as u16, area.y)) {
-                        cell.set_char(c).set_style(style);
-            }
+        paint_text_single(t, area, style, buf);
+    }
+}
+
+fn paint_text_wrapped(t: &Text, area: Rect, style: Style, buf: &mut Buffer) {
+    let w = area.width as usize;
+    let chars: Vec<char> = t.content.chars().collect();
+    let mut y = area.y;
+    for line in chars.chunks(w) {
+        if y >= area.y + area.height { break; }
+        let line_s: String = line.iter().collect();
+        let line_obj = Line::from(Span::styled(line_s, style));
+        buf.set_line(area.x, y, &line_obj, w as u16);
+        y += 1;
+    }
+}
+
+fn paint_text_single(t: &Text, area: Rect, style: Style, buf: &mut Buffer) {
+    let text_w = if t.right_inset > 0 {
+        t.content.chars().count().min(area.width.saturating_sub(t.right_inset) as usize)
+    } else {
+        t.content.chars().count().min(area.width as usize)
+    };
+    let x = area.x;
+    let clipped: String = t.content.chars().take(text_w).collect();
+    for (i, c) in clipped.chars().enumerate() {
+        if let Some(cell) = buf.cell_mut((x + i as u16, area.y)) {
+            cell.set_char(c).set_style(style);
         }
     }
 }
@@ -345,71 +312,16 @@ fn paint_blank(area: Rect, buf: &mut Buffer, style: Style) {
 }
 
 fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
-    // Background fill first.
     paint_blank(area, buf, r.bg.resolve(theme));
     if area.width == 0 || area.height == 0 { return; }
 
-    // First pass: measure non-Fill children.
-    let mut fixed_width: u32 = 0;
-    let mut n_fills = 0u32;
-    for (i, c) in r.children.iter().enumerate() {
-        match c {
-            Node::Fill => n_fills += 1,
-            Node::T(t) => fixed_width += t.width() as u32,
-            Node::RightGap { n } => fixed_width += *n as u32,
-            _ => {
-                // For non-trivial children, we measure by painting
-                // them and asking for the area used. For the
-                // single-row case, that's `area.width` minus
-                // trailing gap. Use a sentinel: measure via inner
-                // width and pass back later.
-                fixed_width += area.width as u32;
-                let _ = i;
-            }
-        }
-    }
+    let (fixed_width, n_fills) = measure_row_children(r, area.width);
     let gaps = r.children.len().saturating_sub(1) as u32 * r.gap as u32;
     let free = (area.width as u32).saturating_sub(fixed_width + gaps);
     let fill_w = if n_fills > 0 { free / n_fills as u32 } else { 0 };
 
-    // Second pass: paint children left-to-right.
-    let mut x = area.x;
-    let mut last_x_end = area.x;
-    for (i, c) in r.children.iter().enumerate() {
-        if i > 0 && r.gap > 0 {
-            x += r.gap;
-        }
-        let child_w = match c {
-            Node::Fill => fill_w as u16,
-            Node::T(t) => t.width(),
-            Node::RightGap { n } => *n,
-            _ => 0, // complex children: paint in remaining area below
-        };
-        // When the text has `right_inset > 0`, it wants to position
-        // itself relative to the row's right edge, not its own
-        // (possibly trimmed) child area. Give it the full row
-        // area so the right_inset calculation lands in the right
-        // place.
-        let needs_full_width = matches!(c, Node::T(t) if t.right_inset > 0);
-        let child_area = if needs_full_width {
-            Rect { x, y: area.y, width: (area.x + area.width).saturating_sub(x), height: area.height }
-        } else if matches!(c, Node::Fill) || matches!(c, Node::T(_)) {
-            Rect { x, y: area.y, width: child_w.min(area.x.saturating_add(area.width).saturating_sub(x)), height: area.height }
-        } else {
-            // Complex child gets the remaining width.
-            let rem = area.x.saturating_add(area.width).saturating_sub(x);
-            Rect { x, y: area.y, width: rem, height: area.height }
-        };
-        paint(c, child_area, buf, theme);
-        if matches!(c, Node::Fill) {
-            x += fill_w as u16;
-        } else {
-            x += child_w;
-        }
-        last_x_end = x;
-    }
+    let (last_x_end, x) = paint_row_children(r, area, fill_w, buf, theme);
 
-    // fill_trailing: paint background up to area.right().
     if r.fill_trailing && last_x_end < area.x.saturating_add(area.width) {
         let rem = Rect {
             x: last_x_end,
@@ -421,30 +333,90 @@ fn paint_row(r: &Row, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     }
 }
 
+fn measure_row_children(r: &Row, area_width: u16) -> (u32, u32) {
+    let mut fixed_width: u32 = 0;
+    let mut n_fills = 0u32;
+    for c in &r.children {
+        match c {
+            Node::Fill => n_fills += 1,
+            Node::T(t) => fixed_width += t.width() as u32,
+            Node::RightGap { n } => fixed_width += *n as u32,
+            _ => fixed_width += area_width as u32,
+        }
+    }
+    (fixed_width, n_fills)
+}
+
+fn paint_row_children(
+    r: &Row,
+    area: Rect,
+    fill_w: u32,
+    buf: &mut Buffer,
+    theme: &ThemeColors,
+) -> (u16, u16) {
+    let mut x = area.x;
+    let mut last_x_end = area.x;
+
+    for (i, c) in r.children.iter().enumerate() {
+        if i > 0 && r.gap > 0 { x += r.gap; }
+        let child_w = get_child_width(c, fill_w);
+        let child_area = calc_child_area(c, area, x, child_w);
+        paint(c, child_area, buf, theme);
+        x = advance_x(c, x, fill_w, child_w);
+        last_x_end = x;
+    }
+    (last_x_end, x)
+}
+
+fn get_child_width(c: &Node, fill_w: u32) -> u16 {
+    match c {
+        Node::Fill => fill_w as u16,
+        Node::T(t) => t.width(),
+        Node::RightGap { n } => *n,
+        _ => 0,
+    }
+}
+
+fn calc_child_area(c: &Node, area: Rect, x: u16, child_w: u16) -> Rect {
+    let needs_full = matches!(c, Node::T(t) if t.right_inset > 0);
+    if needs_full {
+        Rect { x, y: area.y, width: area.x.saturating_add(area.width).saturating_sub(x), height: area.height }
+    } else if matches!(c, Node::Fill) || matches!(c, Node::T(_)) {
+        Rect { x, y: area.y, width: child_w.min(area.x.saturating_add(area.width).saturating_sub(x)), height: area.height }
+    } else {
+        let rem = area.x.saturating_add(area.width).saturating_sub(x);
+        Rect { x, y: area.y, width: rem, height: area.height }
+    }
+}
+
+fn advance_x(c: &Node, x: u16, fill_w: u32, child_w: u16) -> u16 {
+    if matches!(c, Node::Fill) { x + fill_w as u16 } else { x + child_w }
+}
+
 fn paint_col(c: &Col, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     paint_blank(area, buf, c.bg.resolve(theme));
     if area.width == 0 || area.height == 0 { return; }
-    let mut fixed_h: u32 = 0;
-    let mut n_fills = 0u32;
-    for child in &c.children {
-        match child {
-            Node::Fill => n_fills += 1,
-            Node::T(_) => fixed_h += 1,
-            _ => fixed_h += 1, // rough — complex children get 1 row for now
-        }
-    }
+    let (fixed_h, n_fills) = measure_col_children(c);
     let gaps = c.children.len().saturating_sub(1) as u32 * c.gap as u32;
     let free = (area.height as u32).saturating_sub(fixed_h + gaps);
     let fill_h = if n_fills > 0 { free / n_fills as u32 } else { 0 };
+    paint_col_children(c, area, fill_h, buf, theme);
+}
 
+fn measure_col_children(c: &Col) -> (u32, u32) {
+    let mut fixed_h: u32 = 0;
+    let mut n_fills = 0u32;
+    for child in &c.children {
+        if matches!(child, Node::Fill) { n_fills += 1; } else { fixed_h += 1; }
+    }
+    (fixed_h, n_fills)
+}
+
+fn paint_col_children(c: &Col, area: Rect, fill_h: u32, buf: &mut Buffer, theme: &ThemeColors) {
     let mut y = area.y;
     for (i, child) in c.children.iter().enumerate() {
         if i > 0 && c.gap > 0 { y += c.gap; }
-        let h = match child {
-            Node::Fill => fill_h as u16,
-            _ => 1u16,
-        };
-        // Clamp height to remaining space in the area
+        let h = if matches!(child, Node::Fill) { fill_h as u16 } else { 1u16 };
         let remaining_height = area.y.saturating_add(area.height).saturating_sub(y);
         let ca = Rect { x: area.x, y, width: area.width, height: h.min(remaining_height) };
         paint(child, ca, buf, theme);
@@ -469,40 +441,27 @@ fn paint_border(b: &Border, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     if area.width < 2 || area.height < 2 { return; }
     let style = b.style.resolve(theme);
 
-    // Top edge
-    let mut top_str = String::with_capacity(area.width as usize);
-    top_str.push_str(ROUNDED.top_left);
-    for _ in 0..(area.width - 2) { top_str.push_str(ROUNDED.horizontal_top); }
-    top_str.push_str(ROUNDED.top_right);
-    let top_line = RL::from(Span::styled(top_str, style));
-    buf.set_line(area.x, area.y, &top_line, area.width);
+    paint_border_horizontal(area, style, buf, RL::from(Span::styled(
+        make_border_line(area.width, ROUNDED.top_left, ROUNDED.top_right, ROUNDED.horizontal_top),
+        style,
+    )));
+    paint_border_horizontal(
+        Rect { x: area.x, y: area.y + area.height - 1, width: area.width, height: 1 },
+        style, buf,
+        RL::from(Span::styled(
+            make_border_line(area.width, ROUNDED.bottom_left, ROUNDED.bottom_right, ROUNDED.horizontal_bottom),
+            style,
+        )),
+    );
+    paint_border_vertical_sides(area, style, buf);
 
-    // Bottom edge
-    let mut bot_str = String::with_capacity(area.width as usize);
-    bot_str.push_str(ROUNDED.bottom_left);
-    for _ in 0..(area.width - 2) { bot_str.push_str(ROUNDED.horizontal_bottom); }
-    bot_str.push_str(ROUNDED.bottom_right);
-    let bot_line = RL::from(Span::styled(bot_str, style));
-    buf.set_line(area.x, area.y + area.height - 1, &bot_line, area.width);
-
-    // Left + right edges
-    for y in (area.y + 1)..(area.y + area.height - 1) {
-        let left_line = RL::from(Span::styled(ROUNDED.vertical_left.to_string(), style));
-        buf.set_line(area.x, y, &left_line, 1);
-        let right_line = RL::from(Span::styled(ROUNDED.vertical_right.to_string(), style));
-        buf.set_line(area.x + area.width - 1, y, &right_line, 1);
-    }
-
-    // Optional title in the top edge
     if let Some(t) = &b.title {
         let t_str = format!(" {} ", t.content);
         let t_style = t.style.resolve(theme);
         let t_line = RL::from(Span::styled(t_str, t_style));
-        // Place at column 2 of the top edge
         buf.set_line(area.x + 2, area.y, &t_line, (area.width - 4).min(t.content.chars().count() as u16 + 2));
     }
 
-    // Child
     if let Some(child) = &b.child {
         let inner = Rect {
             x: area.x + 1,
@@ -514,67 +473,27 @@ fn paint_border(b: &Border, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
     }
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────
+fn make_border_line(width: u16, left: &str, right: &str, middle: &str) -> String {
+    let mut s = String::with_capacity(width as usize);
+    s.push_str(left);
+    for _ in 0..(width - 2) { s.push_str(middle); }
+    s.push_str(right);
+    s
+}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ratatui::backend::TestBackend;
-    use ratatui::Terminal;
+fn paint_border_horizontal(area: Rect, _style: Style, buf: &mut Buffer, line: Line) {
+    buf.set_line(area.x, area.y, &line, area.width);
+}
 
-    fn paint_to_text(node: &Node, w: u16, h: u16) -> String {
-        let backend = TestBackend::new(w, h);
-        let mut terminal = Terminal::new(backend).unwrap();
-        terminal.draw(|frame| {
-            paint(node, frame.area(), frame.buffer_mut(), &crate::theme::ThemeColors::default_for_test());
-        }).unwrap();
-        let mut s = String::new();
-        let buf = terminal.backend().buffer().clone();
-        for y in 0..buf.area.height {
-            for x in 0..buf.area.width {
-                s.push_str(buf.cell((x, y)).unwrap().symbol());
-            }
-            s.push('\n');
-        }
-        s
-    }
-
-    #[test]
-    fn paints_text() {
-        let s = paint_to_text(&text("hi").dim(), 5, 1);
-        assert!(s.starts_with("hi"));
-    }
-
-    #[test]
-    fn paints_row_with_gap() {
-        let s = paint_to_text(
-            &row(vec![Node::T(text("ab")), Node::T(text("cd"))])
-                .gap(1)
-                .build(),
-            6, 1,
-        );
-        // Expected: "ab cd "  (clip trailing)
-        assert!(s.contains("ab"));
-        assert!(s.contains("cd"));
-    }
-
-    #[test]
-    fn fill_takes_remaining() {
-        let s = paint_to_text(
-            &row(vec![Node::T(text("ab")), Node::Fill]).build(),
-            5, 1,
-        );
-        // Fill is 3 cells: cells 2,3,4 should be space
-        assert!(s.starts_with("ab"));
-    }
-
-    #[test]
-    fn col_stacks() {
-        let s = paint_to_text(
-            &col(vec![Node::T(text("a")), Node::T(text("b"))]).build(),
-            1, 2,
-        );
-        assert_eq!(s.lines().next().unwrap(), "a");
-        assert_eq!(s.lines().nth(1).unwrap(), "b");
+fn paint_border_vertical_sides(area: Rect, style: Style, buf: &mut Buffer) {
+    use ratatui::symbols::border::ROUNDED;
+    use ratatui::text::Line as RL;
+    for y in (area.y + 1)..(area.y + area.height - 1) {
+        let left_line = RL::from(Span::styled(ROUNDED.vertical_left.to_string(), style));
+        buf.set_line(area.x, y, &left_line, 1);
+        let right_line = RL::from(Span::styled(ROUNDED.vertical_right.to_string(), style));
+        buf.set_line(area.x + area.width - 1, y, &right_line, 1);
     }
 }
+
+// Tests moved to paint_tests.rs
