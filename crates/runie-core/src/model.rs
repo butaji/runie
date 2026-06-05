@@ -29,9 +29,9 @@ impl AppState {
 /// A chat message
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatMessage {
-    pub role: String,  // "user", "assistant"
+    pub role: String,      // "user", "assistant", "thought"
     pub content: String,
-    pub timestamp: f64,  // Unix timestamp for ordering
+    pub timestamp: f64,    // Unix timestamp for ordering
 }
 
 /// Messages for agent communication
