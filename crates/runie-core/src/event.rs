@@ -24,6 +24,9 @@ pub enum Event {
     AgentThinking,
     AgentDone,
     AgentError { message: String },
+    
+    // === Internal Events ===
+    SpawnAgent,  // Signal to spawn agent for next queued request
 }
 
 impl Event {

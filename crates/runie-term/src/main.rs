@@ -35,7 +35,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }));
 
     // Load saved state
-    let state = load_state().unwrap_or_default();
+    let mut state = load_state().unwrap_or_default();
     
     // Setup terminal
     enable_raw_mode()?;
@@ -56,46 +56,55 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    // Helper to spawn agent with specific content
+    let spawn_agent = |content: String, tx: mpsc::Sender<Event>| {
+        let agent_tx = tx.clone();
+        thread::spawn(move || {
+            let provider = MockProvider;
+            // Create single user message
+            let messages = vec![Message::User { content }];
+            run_agent(&provider, messages, |e| {
+                let _ = agent_tx.send(e);
+            });
+        });
+    };
+
     // Main event loop
-    let mut state = state;
-    
     while running.load(std::sync::atomic::Ordering::SeqCst) {
         // === 1. Process UI events ===
         if let Ok(true) = event::poll(Duration::from_millis(10)) {
             if let Ok(crossterm_event) = event::read() {
                 if let Some(evt) = convert_ui_event(&crossterm_event) {
-                    // Handle submit specially - spawn agent
-                    if matches!(evt, Event::Submit) {
-                        let content = state.input.clone();
-                        state = runie_core::update::update(state, evt);
-                        
-                        // Spawn agent in background
-                        if !content.is_empty() && content.trim() != "/reset" {
-                            let agent_tx = tx.clone();
-                            let messages = build_agent_messages(&state);
-                            thread::spawn(move || {
-                                let provider = MockProvider;
-                                run_agent(&provider, messages, |e| {
-                                    let _ = agent_tx.send(e);
-                                });
-                            });
+                    let was_streaming = state.streaming;
+                    state = runie_core::update::update(state, evt);
+                    
+                    // If submit added to queue and we weren't streaming, spawn agent
+                    if !was_streaming && !state.request_queue.is_empty() {
+                        if let Some(request) = state.pop_queue() {
+                            spawn_agent(request, tx.clone());
                         }
-                    } else {
-                        state = runie_core::update::update(state, evt);
                     }
                 }
             }
         }
 
-        // === 2. Process agent events ===
+        // === 3. Process agent events ===
+        let was_streaming = state.streaming;
         while let Ok(evt) = rx.try_recv() {
             state = runie_core::update::update(state, evt);
         }
+        
+        // === 4. Spawn next agent if one finished ===
+        if was_streaming && !state.streaming && !state.request_queue.is_empty() {
+            if let Some(request) = state.pop_queue() {
+                spawn_agent(request, tx.clone());
+            }
+        }
 
-        // === 3. Render ===
+        // === 4. Render ===
         terminal.draw(|f| runie_tui::ui::view(f, &state))?;
         
-        // === 4. Check for quit ===
+        // === 5. Check for quit ===
         if matches!(state.messages.last(), Some(ChatMessage { role, .. }) if role == "quit") {
             break;
         }
@@ -135,18 +144,6 @@ fn convert_ui_event(event: &CrosstermEvent) -> Option<Event> {
         }
         _ => None,
     }
-}
-
-fn build_agent_messages(state: &AppState) -> Vec<Message> {
-    state
-        .messages
-        .iter()
-        .filter_map(|m| match m.role.as_str() {
-            "user" => Some(Message::User { content: m.content.clone() }),
-            "assistant" if !m.content.is_empty() => Some(Message::Assistant { content: m.content.clone() }),
-            _ => None,
-        })
-        .collect()
 }
 
 fn load_state() -> Option<AppState> {

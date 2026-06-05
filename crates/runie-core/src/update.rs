@@ -69,6 +69,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
             });
             state
         }
+        // === Internal Events ===
+        Event::SpawnAgent => state,
     }
 }
 
@@ -85,7 +87,7 @@ impl AppState {
         self
     }
     
-    /// Submit current input - sends to agent channel
+    /// Submit current input - adds to queue
     fn submit(self) -> Self {
         if self.input.is_empty() {
             return self;
@@ -103,12 +105,30 @@ impl AppState {
         // Add user message
         state.messages.push(ChatMessage {
             role: "user".into(),
-            content,
+            content: content.clone(),
             timestamp: now(),
         });
         
+        // Add to queue
+        state.request_queue.push(content);
+        
+        // Set streaming if not already
         state.streaming = true;
         state
+    }
+    
+    /// Get next request from queue without removing
+    pub fn peek_queue(&self) -> Option<String> {
+        self.request_queue.first().cloned()
+    }
+    
+    /// Remove first item from queue
+    pub fn pop_queue(&mut self) -> Option<String> {
+        if !self.request_queue.is_empty() {
+            Some(self.request_queue.remove(0))
+        } else {
+            None
+        }
     }
     
     /// Scroll chat up
