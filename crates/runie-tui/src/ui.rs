@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame,
 };
 
@@ -53,8 +53,34 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
         })
         .collect();
 
-    let paragraph = Paragraph::new(Text::from(ratatui_lines));
+    let content_height = ratatui_lines.len() as u16;
+    let visible_height = inner.height;
+    
+    // Calculate scroll - show bottom if content overflows
+    let scroll_offset = if content_height > visible_height {
+        content_height.saturating_sub(visible_height) as usize
+    } else {
+        0
+    };
+
+    // Get visible lines (from scroll_offset to end)
+    let visible_lines: Vec<Line> = if scroll_offset > 0 {
+        ratatui_lines[scroll_offset..].to_vec()
+    } else {
+        ratatui_lines.clone()
+    };
+
+    let paragraph = Paragraph::new(Text::from(visible_lines));
     f.render_widget(paragraph, inner);
+
+    // Add scrollbar if content is scrollable
+    if content_height > visible_height {
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray));
+        let mut scrollbar_state = ScrollbarState::new(content_height as usize)
+            .position(scroll_offset);
+        f.render_stateful_widget(scrollbar, inner, &mut scrollbar_state);
+    }
 }
 
 fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
