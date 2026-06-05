@@ -3,6 +3,7 @@
 //! Converts ChatMessage + state metadata into display lines.
 
 use crate::model::AppState;
+use crate::labels::{PREFIX_USER, PREFIX_AGENT, THINKING_LOADING, thinking_with_time};
 
 /// A formatted line ready for rendering
 #[derive(Debug, Clone)]
@@ -75,7 +76,7 @@ pub fn user_message(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
             spans: vec![
-                DisplaySpan { text: "You: ".to_string(), color: Some(Color::Cyan) },
+                DisplaySpan { text: PREFIX_USER.to_string(), color: Some(Color::Cyan) },
                 DisplaySpan { text: content.to_string(), color: None },
             ],
         },
@@ -88,7 +89,7 @@ pub fn agent_answer(content: &str) -> Vec<DisplayLine> {
     vec![
         DisplayLine {
             spans: vec![
-                DisplaySpan { text: "Agent: ".to_string(), color: Some(Color::Green) },
+                DisplaySpan { text: PREFIX_AGENT.to_string(), color: Some(Color::Green) },
                 DisplaySpan { text: content.to_string(), color: None },
             ],
         },
@@ -99,8 +100,8 @@ pub fn agent_answer(content: &str) -> Vec<DisplayLine> {
 /// Thinking indicator (live timer): "⏳ Thinking... X.Xs"
 pub fn thinking(state: &AppState) -> Vec<DisplayLine> {
     let elapsed = state.thinking_elapsed_secs()
-        .map(|s| format!("⏳ Thinking... {:.1}s", s))
-        .unwrap_or_else(|| "⏳ Thinking...".to_string());
+        .map(thinking_with_time)
+        .unwrap_or_else(|| THINKING_LOADING.to_string());
     
     vec![
         DisplayLine {
