@@ -11,26 +11,29 @@ pub struct AppState {
     #[serde(skip)]
     pub thinking_started_at: Option<std::time::Instant>,
     #[serde(skip)]
-    pub thought_duration_secs: Option<f64>,  // Duration of thinking (static)
-    pub request_queue: Vec<(String, String)>,  // (content, id) pairs
+    pub thought_duration_secs: Option<f64>,
+    pub request_queue: Vec<(String, String)>,
     #[serde(skip)]
-    pub next_id: u64,  // Next ID to assign
+    pub next_id: u64,
     #[serde(skip)]
-    pub current_request_id: Option<String>,  // ID of currently processing request
+    pub current_request_id: Option<String>,
+    #[serde(skip)]
+    pub turn_started_at: Option<std::time::Instant>,
 }
 
 impl AppState {
-    /// Get elapsed thinking time in seconds
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {
         self.thinking_started_at.map(|start| start.elapsed().as_secs_f64())
     }
     
-    /// Get thought duration in seconds (static value)
     pub fn thought_duration_secs(&self) -> Option<f64> {
         self.thought_duration_secs
     }
     
-    /// Generate and return next ID
+    pub fn turn_elapsed_secs(&self) -> Option<f64> {
+        self.turn_started_at.map(|start| start.elapsed().as_secs_f64())
+    }
+    
     pub fn next_id(&mut self) -> String {
         let id = format!("req.{}", self.next_id);
         self.next_id += 1;
@@ -38,16 +41,14 @@ impl AppState {
     }
 }
 
-/// A chat message
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ChatMessage {
-    pub role: String,      // "user", "assistant", "thought"
+    pub role: String,
     pub content: String,
-    pub timestamp: f64,    // Unix timestamp for ordering
-    pub id: String,         // Composite ID with dot separator, e.g. "user.1", "thought.1", "agent.1"
+    pub timestamp: f64,
+    pub id: String,
 }
 
-/// Messages for agent communication
 #[derive(Debug, Clone)]
 pub enum Msg {
     User(String),
