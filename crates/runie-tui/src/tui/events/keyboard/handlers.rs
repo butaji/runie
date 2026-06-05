@@ -227,9 +227,6 @@ pub(super) fn key_to_chat_msg(key: crossterm::event::KeyEvent, state: &AppState)
     if let Some(msg) = chat_navigation_msg(key, state.scroll.scroll_focused) {
         return Some(msg);
     }
-    if matches!(key.code, KeyCode::Char('?')) {
-        return Some(Msg::OpenShortcutsPanel);
-    }
     Some(Msg::TextareaKey(key))
 }
 
