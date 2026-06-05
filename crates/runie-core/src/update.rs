@@ -2,6 +2,14 @@
 use crate::model::{AppState, ChatMessage};
 use crate::Event;
 
+/// Get current timestamp in seconds
+fn now() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64()
+}
+
 /// Updates the state based on an event
 /// Returns a new state (immutable update)
 pub fn update(state: AppState, event: Event) -> AppState {
@@ -22,6 +30,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             let mut state = state;
             state.streaming = true;
             state.thinking_started_at = Some(std::time::Instant::now());
+            state.thought_duration_secs = None; // Reset
             state
         }
         Event::AgentResponse { content } => {
@@ -30,30 +39,18 @@ pub fn update(state: AppState, event: Event) -> AppState {
             if state.thinking_started_at.is_some() && state.thought_duration_secs.is_none() {
                 state.thought_duration_secs = state.thinking_elapsed_secs();
             }
-            // Append to last assistant message or create new one
-            if let Some(last) = state.messages.last_mut() {
-                if last.role == "assistant" {
-                    last.content.push_str(&content);
-                } else {
-                    state.messages.push(ChatMessage {
-                        role: "assistant".into(),
-                        content,
-                    });
-                }
-            } else {
-                state.messages.push(ChatMessage {
-                    role: "assistant".into(),
-                    content,
-                });
-            }
+            // Create new assistant message
+            state.messages.push(ChatMessage {
+                role: "assistant".into(),
+                content,
+                timestamp: now(),
+            });
             state
         }
         Event::AgentDone => {
             let mut state = state;
             state.streaming = false;
             state.thinking_started_at = None;
-            // Remove any remaining thinking message
-            state.messages.retain(|m| m.role != "thinking");
             state
         }
         Event::AgentError { message } => {
@@ -62,6 +59,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.messages.push(ChatMessage {
                 role: "assistant".into(),
                 content: format!("Error: {}", message),
+                timestamp: now(),
             });
             state
         }
@@ -96,10 +94,11 @@ impl AppState {
             return AppState::default();
         }
         
-        // Add user message only - agent will add its response
+        // Add user message
         state.messages.push(ChatMessage {
             role: "user".into(),
-            content: content.clone(),
+            content,
+            timestamp: now(),
         });
         
         state.streaming = true;
