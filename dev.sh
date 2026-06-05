@@ -14,14 +14,17 @@ case "$(uname -s)" in
 esac
 
 build_app() {
-    cargo build -p runie-app 2>&1 | grep -q "^error" && return 1
+    cargo build -p runie-app 2>&1
 }
 
 echo "=== runie dev ==="
 echo ""
 
 # Initial build
-build_app || { echo "Build failed"; exit 1; }
+if ! build_app | tail -1 | grep -q "Finished"; then
+    echo "Build failed"
+    exit 1
+fi
 echo "App lib built"
 
 # Start host (which loads the app lib)
@@ -44,7 +47,7 @@ while kill -0 $APP_PID 2>/dev/null; do
         LAST_BUILD=$CURRENT
         echo ""
         echo ">>> Change detected, rebuilding app lib..."
-        if build_app; then
+        if build_app | tail -1 | grep -q "Finished"; then
             echo ">>> App lib built (hot reload automatic)"
         else
             echo ">>> Build failed"
