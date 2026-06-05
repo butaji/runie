@@ -1,18 +1,13 @@
 //! DSL - Domain Specific Language for UI construction
-//! 
-//! Provides declarative operations to build UI from state.
 
 use crate::model::AppState;
 use crate::ui::elements::{Element, Feed};
 
-/// Bailer spinner frames
 const SPINNER_FRAMES: [&str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
 
-/// DSL operations for building UI
 pub struct Dsl;
 
 impl Dsl {
-    /// Build feed from state
     pub fn feed(state: &AppState) -> Feed {
         let mut feed = Feed::new();
         let mut last_id = String::new();
@@ -34,13 +29,11 @@ impl Dsl {
                     last_id = msg.id.clone();
                 }
                 "assistant" => {
-                    // Check if we can combine with previous AgentMessage (penultimate element)
                     let len = feed.elements.len();
                     let prev_was_agent = len >= 2
                         && matches!(feed.elements[len - 2], Element::AgentMessage { .. });
                     
                     if last_id == msg.id && prev_was_agent {
-                        // Append to existing AgentMessage (penultimate)
                         let idx = len - 2;
                         if let Element::AgentMessage { content, .. } = &mut feed.elements[idx] {
                             content.push_str(&msg.content);
@@ -53,11 +46,35 @@ impl Dsl {
                     }
                     last_id = msg.id.clone();
                 }
+                "tool" => {
+                    if msg.content.starts_with("🔧") {
+                        // Tool start
+                        let name = msg.content.trim_start_matches("🔧 Running ").trim_end_matches("...");
+                        feed.elements.push(Element::ToolStart { 
+                            name: name.to_string() 
+                        });
+                    } else {
+                        // Tool output
+                        feed.elements.push(Element::ToolOutput { 
+                            content: msg.content.clone() 
+                        });
+                    }
+                    feed.elements.push(Element::Spacer);
+                    last_id = msg.id.clone();
+                }
+                "turn_complete" => {
+                    // Parse duration from content like "✓ Turn completed in 5.1s"
+                    let duration = Self::parse_duration(&msg.content);
+                    feed.elements.push(Element::TurnComplete { 
+                        duration_secs: duration 
+                    });
+                    feed.elements.push(Element::Spacer);
+                    last_id = msg.id.clone();
+                }
                 _ => {}
             }
         }
         
-        // Add thinking indicator if current request has no thought yet
         let has_thought_for_current = state.current_request_id
             .as_ref()
             .map(|current_id| state.messages.iter().any(|m| m.role == "thought" && m.id == *current_id))
@@ -72,7 +89,14 @@ impl Dsl {
         feed
     }
     
-    /// Get spinner character based on elapsed time
+    fn parse_duration(content: &str) -> f64 {
+        // Extract "5.1s" from "✓ Turn completed in 5.1s"
+        content.split_whitespace()
+            .last()
+            .and_then(|s| s.trim_end_matches('s').parse().ok())
+            .unwrap_or(0.0)
+    }
+    
     pub fn spinner(elapsed: f64) -> &'static str {
         let frame_idx = ((elapsed * 10.0) as usize) % SPINNER_FRAMES.len();
         SPINNER_FRAMES[frame_idx]

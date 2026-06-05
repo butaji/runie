@@ -1,10 +1,6 @@
 //! Runie Agent - Agent components
-//! 
-//! Provider trait and implementations.
 
 use serde::{Deserialize, Serialize};
-
-// === Message Types ===
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Message {
@@ -18,21 +14,15 @@ pub struct ResponseChunk {
     pub content: String,
 }
 
-// === Command ===
-
 #[derive(Debug, Clone)]
 pub struct AgentCommand {
     pub content: String,
     pub id: String,
 }
 
-// === Provider Trait ===
-
 pub trait Provider: Send {
     fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk>;
 }
-
-// === Mock Provider ===
 
 #[derive(Default, Clone)]
 pub struct MockProvider;
@@ -55,4 +45,22 @@ impl Provider for MockProvider {
             })
             .collect()
     }
+}
+
+/// Check if the content is a special command that needs tool execution
+pub fn needs_tool_execution(content: &str) -> bool {
+    content.to_lowercase().contains("list files")
+}
+
+/// Get fake file list for testing
+pub fn get_fake_file_list() -> String {
+    r#"src/
+  main.rs
+  lib.rs
+  Cargo.toml
+tests/
+  test_main.rs
+  test_lib.rs
+README.md
+Cargo.lock"#.to_string()
 }

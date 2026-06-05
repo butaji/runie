@@ -1,11 +1,9 @@
 //! Runie Terminal - Async Binary Entry Point
-//! 
-//! Uses tokio runtime with EventStream for clean async event handling.
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_agent::{AgentCommand, MockProvider, Provider};
+use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockProvider, Provider};
 use runie_core::{AppState, Event as CoreEvent};
 use std::io;
 use tokio::sync::mpsc;
@@ -28,16 +26,13 @@ async fn main() -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    // Channels
     let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(32);
     let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(32);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
 
-    // Spawn agent actor
     let provider = MockProvider;
     tokio::spawn(agent_loop(cmd_rx, agent_tx, provider));
 
-    // Spawn input reader
     let input_tx_clone = input_tx.clone();
     tokio::spawn(async move {
         let mut reader = EventStream::new();
@@ -50,7 +45,6 @@ async fn main() -> io::Result<()> {
         }
     });
 
-    // Main state
     let mut state = load_state().unwrap_or_default();
     let mut render_interval = interval(Duration::from_millis(50));
     let backend = CrosstermBackend::new(stdout);
@@ -58,12 +52,10 @@ async fn main() -> io::Result<()> {
 
     loop {
         tokio::select! {
-            // Render at ~20fps
             _ = render_interval.tick() => {
                 terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
-            // Process input events
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
 
@@ -80,13 +72,11 @@ async fn main() -> io::Result<()> {
                 }
             }
             
-            // Process agent events
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
             }
         }
 
-        // Check for quit message
         if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
             break;
         }
@@ -99,39 +89,85 @@ async fn main() -> io::Result<()> {
 /// Agent loop: processes commands sequentially
 async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>, provider: MockProvider) {
     while let Some(cmd) = cmd_rx.recv().await {
-        // Send thinking
-        let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-
-        // Delay for manual UI testing (this is the "thinking" time)
-        let delay_ms = 500 + (rand_u32() % 2500);
-        tokio::time::sleep(Duration::from_millis(delay_ms as u64)).await;
-
-        // Get response chunks
-        let messages = vec![runie_agent::Message::User { content: cmd.content }];
-        let chunks = provider.generate(messages);
-
-        // Send each chunk
-        for chunk in chunks {
-            let _ = agent_tx.send(CoreEvent::AgentResponse {
-                id: cmd.id.clone(),
-                content: chunk.content,
-            }).await;
-
-            // Small delay between chunks
-            tokio::time::sleep(Duration::from_millis(50)).await;
+        // Check if this command needs tool execution
+        if needs_tool_execution(&cmd.content) {
+            run_tool_flow(&cmd, &agent_tx).await;
+        } else {
+            run_simple_flow(&cmd, &provider, &agent_tx).await;
         }
-
-        // Done
+        
+        // Agent done
         let _ = agent_tx.send(CoreEvent::AgentDone { id: cmd.id }).await;
     }
 }
 
-fn rand_u32() -> u32 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u32
+/// Simple response flow: thinking -> response -> done
+async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: &mpsc::Sender<CoreEvent>) {
+    // Send thinking
+    let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
+    delay().await;
+
+    // Get response chunks
+    let messages = vec![runie_agent::Message::User { content: cmd.content.clone() }];
+    let chunks = provider.generate(messages);
+
+    for chunk in chunks {
+        let _ = agent_tx.send(CoreEvent::AgentResponse {
+            id: cmd.id.clone(),
+            content: chunk.content,
+        }).await;
+        delay().await;
+    }
+}
+
+/// Tool execution flow: thinking -> tool -> thinking -> response -> turn_complete
+async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
+    use std::time::Instant;
+    
+    let turn_start = Instant::now();
+    
+    // First thinking phase
+    let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
+    delay().await;
+    
+    // Tool execution
+    let _ = agent_tx.send(CoreEvent::AgentToolStart {
+        id: cmd.id.clone(),
+        name: "list_files".to_string(),
+    }).await;
+    delay().await;
+    
+    let file_list = get_fake_file_list();
+    let _ = agent_tx.send(CoreEvent::AgentToolEnd {
+        id: cmd.id.clone(),
+        name: "list_files".to_string(),
+        output: file_list,
+    }).await;
+    
+    // Second thinking phase
+    let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
+    delay().await;
+    
+    // Response
+    let _ = agent_tx.send(CoreEvent::AgentResponse {
+        id: cmd.id.clone(),
+        content: "Here are the files in your project:\n".to_string(),
+    }).await;
+    delay().await;
+    
+    // Turn complete
+    let duration = turn_start.elapsed().as_secs_f64();
+    let _ = agent_tx.send(CoreEvent::AgentTurnComplete {
+        id: cmd.id.clone(),
+        duration_secs: duration,
+    }).await;
+}
+
+/// Delay helper - skips in tests
+async fn delay() {
+    if std::env::var("RUNIE_TEST").is_err() {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {

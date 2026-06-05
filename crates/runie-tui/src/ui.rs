@@ -102,5 +102,6 @@ fn cratatui_color(c: CoreColor) -> ratatui::style::Color {
         CoreColor::Yellow => ratatui::style::Color::Yellow,
         CoreColor::DarkGray => ratatui::style::Color::DarkGray,
         CoreColor::White => ratatui::style::Color::White,
+        CoreColor::Magenta => ratatui::style::Color::Magenta,
     }
 }

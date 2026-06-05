@@ -18,14 +18,17 @@ pub enum Event {
     Quit,
     Reset,
     
-    // === Agent Events (with composite ID like \"req.1\") ===
+    // === Agent Events (with composite ID like "req.1") ===
     AgentThinking { id: String },
     AgentResponse { id: String, content: String },
+    AgentToolStart { id: String, name: String },
+    AgentToolEnd { id: String, name: String, output: String },
+    AgentTurnComplete { id: String, duration_secs: f64 },
     AgentDone { id: String },
     AgentError { id: String, message: String },
     
     // === Internal Events ===
-    SpawnAgent,  // Signal to spawn agent for next queued request
+    SpawnAgent,
 }
 
 impl Event {
@@ -37,6 +40,9 @@ impl Event {
                 | Event::Backspace
                 | Event::AgentResponse { .. }
                 | Event::AgentThinking { .. }
+                | Event::AgentToolStart { .. }
+                | Event::AgentToolEnd { .. }
+                | Event::AgentTurnComplete { .. }
                 | Event::AgentDone { .. }
                 | Event::Reset
         )

@@ -1,25 +1,20 @@
 //! Format - Rendering UI elements to display lines
-//! 
-//! This module converts the DSL elements into display lines for rendering.
 
 use crate::ui::elements::{Element, Feed};
 use crate::ui::dsl::Dsl;
 use crate::labels::{PREFIX_USER, PREFIX_AGENT};
 
-/// A formatted line ready for rendering
 #[derive(Debug, Clone)]
 pub struct DisplayLine {
     pub spans: Vec<DisplaySpan>,
 }
 
-/// A single styled span of text
 #[derive(Debug, Clone)]
 pub struct DisplaySpan {
     pub text: String,
     pub color: Option<Color>,
 }
 
-/// Terminal colors
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
     Cyan,
@@ -27,15 +22,14 @@ pub enum Color {
     Yellow,
     DarkGray,
     White,
+    Magenta,
 }
 
-/// Build feed from state and render to display lines
 pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
     let feed = Dsl::feed(state);
     render_feed(&feed)
 }
 
-/// Render feed to display lines
 pub fn render_feed(feed: &Feed) -> Vec<DisplayLine> {
     let mut lines = vec![];
     
@@ -46,10 +40,8 @@ pub fn render_feed(feed: &Feed) -> Vec<DisplayLine> {
     lines
 }
 
-/// Render single element to display lines
 fn render_element(element: &Element) -> Vec<DisplayLine> {
     match element {
-        // Spacer provides 1 empty line between elements
         Element::Spacer => vec![DisplayLine::empty()],
         
         Element::UserMessage { content } => vec![
@@ -83,6 +75,31 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         Element::ThoughtMarker { content } => vec![
             DisplayLine {
                 spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::DarkGray) }],
+            },
+        ],
+        
+        Element::ToolStart { name } => vec![
+            DisplayLine {
+                spans: vec![
+                    DisplaySpan { text: "🔧 Running ".to_string(), color: Some(Color::Yellow) },
+                    DisplaySpan { text: name.clone(), color: Some(Color::Yellow) },
+                    DisplaySpan { text: "...".to_string(), color: Some(Color::Yellow) },
+                ],
+            },
+        ],
+        
+        Element::ToolOutput { content } => vec![
+            DisplayLine {
+                spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::Magenta) }],
+            },
+        ],
+        
+        Element::TurnComplete { duration_secs } => vec![
+            DisplayLine {
+                spans: vec![
+                    DisplaySpan { text: "✓ Turn completed in ".to_string(), color: Some(Color::DarkGray) },
+                    DisplaySpan { text: format!("{:.1}s", duration_secs), color: Some(Color::DarkGray) },
+                ],
             },
         ],
         

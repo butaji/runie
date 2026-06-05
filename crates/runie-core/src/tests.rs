@@ -410,4 +410,76 @@ mod tests {
         
         assert!(content.contains("Thinking"), "Should show Thinking when streaming with no thought. Content: {}", content);
     }
+    
+    // === Tool Execution Tests ===
+    
+    #[test]
+    fn test_tool_flow_creates_single_thought() {
+        let mut state = fresh_state();
+        state.streaming = true;
+        state.thinking_started_at = Some(std::time::Instant::now());
+        
+        // First thinking phase
+        state = update(state, Event::AgentThinking { id: "req.0".to_string() });
+        
+        // Tool execution
+        state = update(state, Event::AgentToolStart { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string() 
+        });
+        state = update(state, Event::AgentToolEnd { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string(), 
+            output: "file1.rs\nfile2.rs".to_string() 
+        });
+        
+        // Second thinking phase (should NOT create another thought)
+        state = update(state, Event::AgentThinking { id: "req.0".to_string() });
+        
+        // Response
+        state = update(state, Event::AgentResponse { 
+            id: "req.0".to_string(), 
+            content: "Here are the files".to_string() 
+        });
+        
+        // Should have exactly one thought marker
+        let thought_count = state.messages.iter().filter(|m| m.role == "thought").count();
+        assert_eq!(thought_count, 1, "Should have exactly one thought marker for tool flow");
+    }
+    
+    #[test]
+    fn test_turn_complete_event() {
+        let state = update(fresh_state(), Event::AgentTurnComplete { 
+            id: "req.0".to_string(), 
+            duration_secs: 5.1 
+        });
+        
+        assert_eq!(state.messages.len(), 1);
+        let msg = &state.messages[0];
+        assert_eq!(msg.role, "turn_complete");
+        assert!(msg.content.contains("5.1s"));
+    }
+    
+    #[test]
+    fn test_tool_events_added_to_messages() {
+        let mut state = fresh_state();
+        state.streaming = true;
+        
+        // Tool start
+        state = update(state, Event::AgentToolStart { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string() 
+        });
+        
+        // Tool end
+        state = update(state, Event::AgentToolEnd { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string(), 
+            output: "README.md\nCargo.toml".to_string() 
+        });
+        
+        assert_eq!(state.messages.len(), 2);
+        assert!(state.messages[0].content.contains("list_files"));
+        assert!(state.messages[1].content.contains("README.md"));
+    }
 }
