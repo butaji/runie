@@ -516,4 +516,66 @@ mod tests {
         assert!(content.contains("🔧 Ran"), "Should show 'Ran' not 'Running'");
         assert!(content.contains("Turn completed in 5.1s"), "Should show turn complete with duration");
     }
+    
+    #[test]
+    fn test_list_files_full_tool_flow_sequence() {
+        use crate::ui::format_messages;
+        
+        let mut state = fresh_state();
+        state.streaming = true;
+        state.thinking_started_at = Some(std::time::Instant::now());
+        
+        // 1. First thinking
+        state = update(state, Event::AgentThinking { id: "req.0".to_string() });
+        
+        // 2. Tool start
+        state = update(state, Event::AgentToolStart { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string() 
+        });
+        
+        // 3. Tool output
+        state = update(state, Event::AgentToolEnd { 
+            id: "req.0".to_string(), 
+            name: "list_files".to_string(), 
+            output: "src/main.rs\nCargo.toml".to_string() 
+        });
+        
+        // 4. Second thinking
+        state = update(state, Event::AgentThinking { id: "req.0".to_string() });
+        
+        // 5. Response
+        state = update(state, Event::AgentResponse { 
+            id: "req.0".to_string(), 
+            content: "Here are the files:".to_string() 
+        });
+        
+        // 6. Turn complete
+        state = update(state, Event::AgentTurnComplete { 
+            id: "req.0".to_string(), 
+            duration_secs: 5.1 
+        });
+        
+        // Verify messages: tool_start, tool_output, thought, assistant, turn_complete = 5
+        assert_eq!(state.messages.len(), 5, "Should have 5 messages: tool_start, tool_output, thought, assistant, turn_complete");
+        assert_eq!(state.messages[0].role, "tool"); // Tool start
+        assert_eq!(state.messages[1].role, "tool"); // Tool output
+        assert_eq!(state.messages[2].role, "thought"); // Though from second thinking
+        assert_eq!(state.messages[3].role, "assistant"); // Response
+        assert_eq!(state.messages[4].role, "turn_complete");
+        
+        // Verify format output contains expected elements in order
+        let lines = format_messages(&state);
+        let content: String = lines.iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
+            .collect();
+        
+        // Check all elements present
+        assert!(content.contains("🔧 Ran"), "1. Should show 'Ran'");
+        assert!(content.contains("list_files"), "2. Should show tool name");
+        assert!(content.contains("src/main.rs"), "3. Should show tool output");
+        assert!(content.contains("◆ Though"), "4. Should show though (from first thinking)");
+        assert!(content.contains("Agent:"), "5. Should show agent response");
+        assert!(content.contains("Turn completed in 5.1s"), "6. Should show turn complete");
+    }
 }
