@@ -12,6 +12,7 @@ pub struct AppState {
     pub thinking_started_at: Option<std::time::Instant>,
     #[serde(skip)]
     pub thought_duration_secs: Option<f64>,  // Duration of thinking (static)
+    pub request_queue: Vec<String>,  // Pending requests waiting for agent
 }
 
 impl AppState {
