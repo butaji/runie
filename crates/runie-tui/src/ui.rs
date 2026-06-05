@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use runie_core::{AppState, format_messages, Color as CoreColor};
+use runie_core::{AppState, format_messages, PANEL_CHAT, PANEL_INPUT, Color as CoreColor};
 
 /// View function - renders state to terminal
 pub fn view(f: &mut Frame, state: &AppState) {
@@ -23,7 +23,7 @@ pub fn view(f: &mut Frame, state: &AppState) {
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Chat ")
+        .title(PANEL_CHAT)
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
     let inner = block.inner(area);
@@ -60,7 +60,7 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
 fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Input ")
+        .title(PANEL_INPUT)
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
     let inner = block.inner(area);
