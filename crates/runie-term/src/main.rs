@@ -55,6 +55,7 @@ async fn main() -> io::Result<()> {
     loop {
         tokio::select! {
             _ = render_interval.tick() => {
+                state.animation_frame = state.animation_frame.wrapping_add(1);
                 terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             

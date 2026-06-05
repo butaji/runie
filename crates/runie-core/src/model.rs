@@ -22,6 +22,8 @@ pub struct AppState {
     pub tool_started_at: Option<std::time::Instant>,
     #[serde(skip)]
     pub has_intermediate_steps: bool,  // True if tool or other steps occurred in this turn
+    #[serde(skip)]
+    pub animation_frame: u32,  // For animating spinners (0-11 cycles through braille chars)
 }
 
 impl AppState {
@@ -35,6 +37,12 @@ impl AppState {
     
     pub fn tool_elapsed_secs(&self) -> Option<f64> {
         self.tool_started_at.map(|start| start.elapsed().as_secs_f64())
+    }
+    
+    pub fn spinner_frame(&self) -> char {
+        // Braille spinner: ⠋⠙⠹⠸⠼⠴⠦⠧⠹⠸⠴⠼ (12 frames)
+        const SPINNERS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
+        SPINNERS[(self.animation_frame % 12) as usize]
     }
     
     pub fn next_id(&mut self) -> String {

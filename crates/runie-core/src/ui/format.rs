@@ -26,20 +26,20 @@ pub enum Color {
 
 pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
     let feed = crate::ui::Dsl::feed(state);
-    render_feed(&feed)
+    render_feed(&feed, state)
 }
 
-pub fn render_feed(feed: &Feed) -> Vec<DisplayLine> {
+pub fn render_feed(feed: &Feed, state: &crate::model::AppState) -> Vec<DisplayLine> {
     let mut lines = vec![];
     
     for element in &feed.elements {
-        lines.extend(render_element(element));
+        lines.extend(render_element(element, state));
     }
     
     lines
 }
 
-fn render_element(element: &Element) -> Vec<DisplayLine> {
+fn render_element(element: &Element, state: &crate::model::AppState) -> Vec<DisplayLine> {
     match element {
         Element::Spacer => vec![DisplayLine::empty()],
         
@@ -62,7 +62,8 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         ],
         
         Element::Thinking { elapsed } => {
-            let text = format!("⠋ Though... {:.1}s", elapsed);
+            let spinner = state.spinner_frame();
+            let text = format!("{} Though... {:.1}s", spinner, elapsed);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
@@ -77,7 +78,8 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         ],
         
         Element::ToolRunning { name, elapsed } => {
-            let text = format!("⠋ Running {}... {:.1}s", name, elapsed);
+            let spinner = state.spinner_frame();
+            let text = format!("{} Running {}... {:.1}s", spinner, name, elapsed);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
@@ -106,7 +108,7 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         Element::Group { elements, .. } => {
             let mut lines = vec![];
             for element in elements {
-                lines.extend(render_element(element));
+                lines.extend(render_element(element, state));
             }
             lines
         }
