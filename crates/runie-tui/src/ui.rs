@@ -22,28 +22,16 @@ pub fn view(f: &mut Frame, state: &AppState) {
 }
 
 fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
-    use ratatui::widgets::Borders;
     use ratatui::style::Style;
     
-    let spinner = state.spinner_frame();
-    let elapsed = state.turn_elapsed_secs().unwrap_or(0.0);
-    
-    let text = if state.turn_active {
-        format!(" {} Working... {:.1}s ", spinner, elapsed)
-    } else {
-        "".to_string()
-    };
-    
-    let block = Block::default()
-        .borders(Borders::TOP | Borders::BOTTOM)
-        .border_style(Style::default().fg(ratatui::style::Color::DarkGray));
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-    
-    if !text.is_empty() {
+    if state.turn_active {
+        let spinner = state.spinner_frame();
+        let elapsed = state.turn_elapsed_secs().unwrap_or(0.0);
+        let text = format!("{} Working... {:.1}s", spinner, elapsed);
+        
         let paragraph = Paragraph::new(text)
             .style(Style::default().fg(ratatui::style::Color::DarkGray));
-        f.render_widget(paragraph, inner);
+        f.render_widget(paragraph, area);
     }
 }
 
