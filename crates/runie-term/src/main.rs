@@ -1,157 +1,129 @@
-//! Runie Terminal - Binary Entry Point
+//! Runie Terminal - Async Binary Entry Point
 //! 
-//! UI on main thread, agent in background thread with channels.
+//! Uses tokio runtime with EventStream for clean async event handling.
 
-use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEventKind, KeyModifiers};
-use crossterm::execute;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
+use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, MockProvider, Provider};
-use runie_core::{AppState, Event};
-use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
+use runie_core::{AppState, Event as CoreEvent};
+use std::io;
+use tokio::sync::mpsc;
+use tokio::time::{interval, Duration};
 
-const STATE_FILE: &str = "/tmp/runie_state.bin";
+struct Cleanup;
 
-fn main() {
-    if let Err(e) = run() {
-        eprintln!("Error: {}", e);
-        std::process::exit(1);
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        let _ = crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+        let _ = crossterm::terminal::disable_raw_mode();
     }
 }
 
-fn run() -> Result<(), Box<dyn std::error::Error>> {
-    // Panic handler
-    std::panic::set_hook(Box::new(|_| {
-        disable_raw_mode().ok();
-        execute!(std::io::stdout(), LeaveAlternateScreen).ok();
-    }));
-
-    // Load saved state
-    let mut state = load_state().unwrap_or_default();
-
-    // Setup terminal
-    enable_raw_mode()?;
-    let mut stdout = std::io::stdout();
-    execute!(&mut stdout, EnterAlternateScreen).ok();
-
-    // Create channels
-    let (app_tx, app_rx) = mpsc::channel::<Event>();
-    let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>();
-
-    // Spawn agent thread
-    let provider = MockProvider;
-    thread::spawn(move || {
-        run_agent_thread(cmd_rx, app_tx, provider);
-    });
-
-    // Setup terminal backend
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-
-    // Flag for running
-    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
-    let r = running.clone();
+#[tokio::main]
+async fn main() -> io::Result<()> {
+    let _cleanup = Cleanup;
     
-    // Setup signal handler
-    let _ = thread::spawn(move || {
-        ctrlc::set_handler(move || {
-            r.store(false, std::sync::atomic::Ordering::SeqCst);
-        })
-        .ok();
-    });
+    let mut stdout = std::io::stdout();
+    crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    // Main UI loop (runs on main thread)
-    loop {
-        // === 1. Process UI events (blocking with timeout) ===
-        if let Ok(true) = event::poll(Duration::from_millis(50)) {
-            if let Ok(crossterm_event) = event::read() {
-                if let Some(evt) = convert_ui_event(&crossterm_event) {
-                    state = runie_core::update::update(state, evt.clone());
+    // Channels
+    let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(32);
+    let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(32);
+    let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
 
-                    if matches!(evt, Event::Submit) {
-                        if let Some((content, id)) = state.peek_queue() {
-                            state.pop_queue();
-                            state.streaming = true;
-                            // Send command to agent thread
-                            let _ = cmd_tx.send(AgentCommand { content, id });
-                        }
-                    }
+    // Spawn agent actor
+    let provider = MockProvider;
+    tokio::spawn(agent_loop(cmd_rx, agent_tx, provider));
+
+    // Spawn input reader
+    let input_tx_clone = input_tx.clone();
+    tokio::spawn(async move {
+        let mut reader = EventStream::new();
+        while let Some(Ok(event)) = reader.next().await {
+            if let Some(evt) = convert_event(&event) {
+                if input_tx_clone.send(evt).await.is_err() {
+                    break;
                 }
             }
         }
+    });
 
-        // === 2. Process agent events (non-blocking) ===
-        while let Ok(evt) = app_rx.try_recv() {
-            state = runie_core::update::update(state, evt);
+    // Main state
+    let mut state = load_state().unwrap_or_default();
+    let mut render_interval = interval(Duration::from_millis(50));
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    loop {
+        tokio::select! {
+            // Render at ~20fps
+            _ = render_interval.tick() => {
+                terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+            }
+            
+            // Process input events
+            Some(evt) = input_rx.recv() => {
+                state = runie_core::update::update(state, evt.clone());
+
+                if matches!(evt, CoreEvent::Submit) {
+                    if let Some((content, id)) = state.peek_queue() {
+                        state.pop_queue();
+                        state.streaming = true;
+                        let _ = cmd_tx.send(AgentCommand { content, id }).await;
+                    }
+                }
+
+                if matches!(evt, CoreEvent::Quit) {
+                    break;
+                }
+            }
+            
+            // Process agent events
+            Some(evt) = agent_rx.recv() => {
+                state = runie_core::update::update(state, evt);
+            }
         }
 
-        // === 3. Render ===
-        terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-
-        // === 4. Check for quit ===
+        // Check for quit message
         if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
             break;
         }
-        
-        if !running.load(std::sync::atomic::Ordering::SeqCst) {
-            break;
-        }
     }
 
-    // Cleanup
-    disable_raw_mode().ok();
-    execute!(std::io::stdout(), LeaveAlternateScreen).ok();
     save_state(&state);
-
     Ok(())
 }
 
-/// Agent thread: processes commands sequentially
-fn run_agent_thread(cmd_rx: mpsc::Receiver<AgentCommand>, app_tx: mpsc::Sender<Event>, provider: MockProvider) {
-    loop {
-        // Receive command (blocking)
-        let cmd = match cmd_rx.recv() {
-            Ok(cmd) => cmd,
-            Err(_) => break, // Channel closed
-        };
+/// Agent loop: processes commands sequentially
+async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>, provider: MockProvider) {
+    while let Some(cmd) = cmd_rx.recv().await {
+        // Send thinking
+        let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
 
-        // Run agent synchronously
-        run_agent_sync(&provider, cmd, &app_tx);
-    }
-}
-
-/// Run agent synchronously and send events
-fn run_agent_sync(provider: &MockProvider, cmd: AgentCommand, app_tx: &mpsc::Sender<Event>) {
-    // Send thinking FIRST (so UI starts timing)
-    let _ = app_tx.send(Event::AgentThinking { id: cmd.id.clone() });
-
-    // THEN delay for manual UI testing (this is the "thinking" time), skip in tests
-    if std::env::var("RUNIE_TEST").is_err() {
+        // Delay for manual UI testing (this is the "thinking" time)
         let delay_ms = 500 + (rand_u32() % 2500);
-        thread::sleep(Duration::from_millis(delay_ms as u64));
-    }
+        tokio::time::sleep(Duration::from_millis(delay_ms as u64)).await;
 
-    // Get response chunks
-    let messages = vec![runie_agent::Message::User { content: cmd.content }];
-    let chunks = provider.generate(messages);
+        // Get response chunks
+        let messages = vec![runie_agent::Message::User { content: cmd.content }];
+        let chunks = provider.generate(messages);
 
-    // Send each chunk
-    for chunk in chunks {
-        let _ = app_tx.send(Event::AgentResponse {
-            id: cmd.id.clone(),
-            content: chunk.content,
-        });
-        
-        // Small delay for streaming effect (skip in tests)
-        if std::env::var("RUNIE_TEST").is_err() {
-            thread::sleep(Duration::from_millis(50));
+        // Send each chunk
+        for chunk in chunks {
+            let _ = agent_tx.send(CoreEvent::AgentResponse {
+                id: cmd.id.clone(),
+                content: chunk.content,
+            }).await;
+
+            // Small delay between chunks
+            tokio::time::sleep(Duration::from_millis(50)).await;
         }
-    }
 
-    // Send done
-    let _ = app_tx.send(Event::AgentDone { id: cmd.id });
+        // Done
+        let _ = agent_tx.send(CoreEvent::AgentDone { id: cmd.id }).await;
+    }
 }
 
 fn rand_u32() -> u32 {
@@ -162,26 +134,27 @@ fn rand_u32() -> u32 {
         .as_nanos() as u32
 }
 
-fn convert_ui_event(event: &CrosstermEvent) -> Option<Event> {
+fn convert_event(event: &Event) -> Option<CoreEvent> {
     match event {
-        CrosstermEvent::Key(key) if key.kind == KeyEventKind::Press => {
-            if key.modifiers.contains(KeyModifiers::CONTROL) {
-                return match key.code {
+        Event::Key(key) if key.kind == KeyEventKind::Press => {
+            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
+                match key.code {
                     KeyCode::Char('c') | KeyCode::Char('C')
                     | KeyCode::Char('q') | KeyCode::Char('Q')
-                    | KeyCode::Char('d') | KeyCode::Char('D') => Some(Event::Quit),
+                    | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
                     _ => None,
-                };
-            }
-            match key.code {
-                KeyCode::Esc => Some(Event::Quit),
-                KeyCode::Char(c) => Some(Event::Input(c)),
-                KeyCode::Backspace => Some(Event::Backspace),
-                KeyCode::Enter => Some(Event::Submit),
-                KeyCode::Up => Some(Event::ScrollUp),
-                KeyCode::Down => Some(Event::ScrollDown),
-                KeyCode::Home | KeyCode::End => Some(Event::Reset),
-                _ => None,
+                }
+            } else {
+                match key.code {
+                    KeyCode::Esc => Some(CoreEvent::Quit),
+                    KeyCode::Char(c) => Some(CoreEvent::Input(c)),
+                    KeyCode::Backspace => Some(CoreEvent::Backspace),
+                    KeyCode::Enter => Some(CoreEvent::Submit),
+                    KeyCode::Up => Some(CoreEvent::ScrollUp),
+                    KeyCode::Down => Some(CoreEvent::ScrollDown),
+                    KeyCode::Home | KeyCode::End => Some(CoreEvent::Reset),
+                    _ => None,
+                }
             }
         }
         _ => None,
@@ -189,14 +162,14 @@ fn convert_ui_event(event: &CrosstermEvent) -> Option<Event> {
 }
 
 fn load_state() -> Option<AppState> {
-    let data = std::fs::read(STATE_FILE).ok()?;
+    let data = std::fs::read("/tmp/runie_state.bin").ok()?;
     let state = bincode::deserialize(&data).ok()?;
-    let _ = std::fs::remove_file(STATE_FILE);
+    let _ = std::fs::remove_file("/tmp/runie_state.bin");
     Some(state)
 }
 
 fn save_state(state: &AppState) {
     if let Ok(data) = bincode::serialize(state) {
-        let _ = std::fs::write(STATE_FILE, &data);
+        let _ = std::fs::write("/tmp/runie_state.bin", &data);
     }
 }
