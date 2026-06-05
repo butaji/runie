@@ -7,3 +7,5 @@ edition.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
+runie-core.workspace = true
+serde = { version = "1.0", features = ["derive"] }

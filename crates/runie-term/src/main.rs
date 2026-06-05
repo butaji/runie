@@ -1,16 +1,22 @@
 //! Runie Terminal - Binary Entry Point
-use std::sync::Arc;
+//! 
+//! Main event loop that:
+//! 1. Receives UI events (keyboard)
+//! 2. Receives agent events (from channel)
+//! 3. Updates state
+//! 4. Renders view
 
-use crossterm::{
-    event::{self, Event as CrosstermEvent, KeyCode, KeyEventKind, KeyModifiers},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_core::{AppState, Event as AppEvent};
-use runie_tui::ui;
-use std::io;
+use std::sync::mpsc;
+use std::thread;
 use std::time::Duration;
+
+use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::execute;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use ratatui::{backend::CrosstermBackend, Terminal};
+
+use runie_agent::{Message, MockProvider, run_agent};
+use runie_core::{AppState, ChatMessage, Event};
 
 const STATE_FILE: &str = "/tmp/runie_state.bin";
 
@@ -22,99 +28,125 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    // Panic handler to restore terminal
+    // Panic handler
     std::panic::set_hook(Box::new(|_| {
         disable_raw_mode().ok();
-        execute!(io::stdout(), LeaveAlternateScreen).ok();
+        execute!(std::io::stdout(), LeaveAlternateScreen).ok();
     }));
 
-    // Load saved state or use default
+    // Load saved state
     let state = load_state().unwrap_or_default();
     
     // Setup terminal
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
+    let mut stdout = std::io::stdout();
     execute!(&mut stdout, EnterAlternateScreen).ok();
 
     // Setup signal handler
-    let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
     let r = running.clone();
     ctrlc::set_handler(move || {
         r.store(false, std::sync::atomic::Ordering::SeqCst);
     }).ok();
 
-    // Run the event loop
+    // Create channel for agent events
+    let (tx, rx) = mpsc::channel::<Event>();
+
+    // Setup terminal
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let final_state = run_loop(&mut terminal, state, &running);
 
-    // Cleanup and save
-    disable_raw_mode().ok();
-    execute!(io::stdout(), LeaveAlternateScreen).ok();
-    
-    if let Ok(state) = final_state {
-        save_state(&state);
-    }
-    Ok(())
-}
-
-fn run_loop(
-    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-    state: AppState,
-    running: &Arc<std::sync::atomic::AtomicBool>,
-) -> Result<AppState, Box<dyn std::error::Error>> {
+    // Main event loop
     let mut state = state;
     
     while running.load(std::sync::atomic::Ordering::SeqCst) {
-        // View: render current state
-        terminal.draw(|f| ui::view(f, &state))?;
-        
-        // Process events
-        if let Ok(true) = event::poll(Duration::from_millis(50)) {
-            if let Ok(event) = event::read() {
-                // Convert crossterm event to our event
-                if let Some(evt) = convert_event(&event) {
-                    // Quit events break the loop directly
-                    if matches!(evt, AppEvent::Quit) {
-                        break;
+        // === 1. Process UI events ===
+        if let Ok(true) = event::poll(Duration::from_millis(10)) {
+            if let Ok(crossterm_event) = event::read() {
+                if let Some(evt) = convert_ui_event(&crossterm_event) {
+                    // Handle submit specially - spawn agent
+                    if matches!(evt, Event::Submit) {
+                        let content = state.input.clone();
+                        state = runie_core::update::update(state, evt);
+                        
+                        // Spawn agent in background
+                        if !content.is_empty() && content.trim() != "/reset" {
+                            let agent_tx = tx.clone();
+                            let messages = build_agent_messages(&state);
+                            thread::spawn(move || {
+                                let provider = MockProvider;
+                                run_agent(&provider, messages, |e| {
+                                    let _ = agent_tx.send(e);
+                                });
+                            });
+                        }
+                    } else {
+                        state = runie_core::update::update(state, evt);
                     }
-                    // Update: process event and get new state
-                    state = runie_core::update::update(state, evt);
                 }
             }
         }
+
+        // === 2. Process agent events ===
+        while let Ok(evt) = rx.try_recv() {
+            state = runie_core::update::update(state, evt);
+        }
+
+        // === 3. Render ===
+        terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+        
+        // === 4. Check for quit ===
+        if matches!(state.messages.last(), Some(ChatMessage { role, .. }) if role == "quit") {
+            break;
+        }
     }
+
+    // Cleanup
+    disable_raw_mode().ok();
+    execute!(std::io::stdout(), LeaveAlternateScreen).ok();
+    save_state(&state);
     
-    Ok(state)
+    Ok(())
 }
 
-fn convert_event(event: &CrosstermEvent) -> Option<AppEvent> {
+fn convert_ui_event(event: &CrosstermEvent) -> Option<Event> {
     match event {
         CrosstermEvent::Key(key) if key.kind == KeyEventKind::Press => {
             // Check Ctrl modifiers first
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 return match key.code {
-                    KeyCode::Char('c') | KeyCode::Char('C') => Some(AppEvent::Quit),
-                    KeyCode::Char('q') | KeyCode::Char('Q') => Some(AppEvent::Quit),
-                    KeyCode::Char('d') | KeyCode::Char('D') => Some(AppEvent::Quit),
+                    KeyCode::Char('c') | KeyCode::Char('C')
+                    | KeyCode::Char('q') | KeyCode::Char('Q')
+                    | KeyCode::Char('d') | KeyCode::Char('D') => Some(Event::Quit),
                     _ => None,
                 };
             }
             // Non-Ctrl keys
             match key.code {
-                KeyCode::Esc => Some(AppEvent::Quit),
-                KeyCode::Char(c) => Some(AppEvent::Input(c)),
-                KeyCode::Backspace => Some(AppEvent::Backspace),
-                KeyCode::Enter => Some(AppEvent::Submit),
-                KeyCode::Up => Some(AppEvent::ScrollUp),
-                KeyCode::Down => Some(AppEvent::ScrollDown),
-                KeyCode::Home => Some(AppEvent::Reset),
-                KeyCode::End => Some(AppEvent::Reset),
+                KeyCode::Esc => Some(Event::Quit),
+                KeyCode::Char(c) => Some(Event::Input(c)),
+                KeyCode::Backspace => Some(Event::Backspace),
+                KeyCode::Enter => Some(Event::Submit),
+                KeyCode::Up => Some(Event::ScrollUp),
+                KeyCode::Down => Some(Event::ScrollDown),
+                KeyCode::Home | KeyCode::End => Some(Event::Reset),
                 _ => None,
             }
         }
         _ => None,
     }
+}
+
+fn build_agent_messages(state: &AppState) -> Vec<Message> {
+    state
+        .messages
+        .iter()
+        .filter_map(|m| match m.role.as_str() {
+            "user" => Some(Message::User { content: m.content.clone() }),
+            "assistant" if !m.content.is_empty() => Some(Message::Assistant { content: m.content.clone() }),
+            _ => None,
+        })
+        .collect()
 }
 
 fn load_state() -> Option<AppState> {

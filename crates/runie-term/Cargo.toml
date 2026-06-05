@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 runie-core.workspace = true
 runie-tui.workspace = true
+runie-agent.workspace = true
 crossterm.workspace = true
 ratatui.workspace = true
 ctrlc.workspace = true

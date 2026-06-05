@@ -1,32 +1,51 @@
 //! Update - State Transitions
 use crate::model::{AppState, ChatMessage};
-use runie_agent::{Message, MockProvider, run_agent};
-
-/// Events that can occur in the application
-#[derive(Debug, Clone)]
-pub enum Event {
-    // Input events
-    Input(char),
-    Backspace,
-    Submit,
-    ScrollUp,
-    ScrollDown,
-    
-    // Control events
-    Quit,
-    Reset,
-}
+use crate::Event;
 
 /// Updates the state based on an event
 /// Returns a new state (immutable update)
 pub fn update(state: AppState, event: Event) -> AppState {
     match event {
+        // === UI Events ===
         Event::Input(c) => state.push_input(c),
         Event::Backspace => state.pop_input(),
         Event::Submit => state.submit(),
         Event::ScrollUp => state.scroll_up(),
         Event::ScrollDown => state.scroll_down(),
-        Event::Quit | Event::Reset => AppState::default(), // Reset returns default state
+        
+        // === System Events ===
+        Event::Quit => state,
+        Event::Reset => AppState::default(),
+        
+        // === Agent Events ===
+        Event::AgentThinking => {
+            let mut state = state;
+            state.streaming = true;
+            state
+        }
+        Event::AgentResponse { content } => {
+            let mut state = state;
+            if let Some(last) = state.messages.last_mut() {
+                if last.role == "assistant" {
+                    last.content.push_str(&content);
+                }
+            }
+            state
+        }
+        Event::AgentDone => {
+            let mut state = state;
+            state.streaming = false;
+            state
+        }
+        Event::AgentError { message } => {
+            let mut state = state;
+            state.streaming = false;
+            state.messages.push(ChatMessage {
+                role: "assistant".into(),
+                content: format!("Error: {}", message),
+            });
+            state
+        }
     }
 }
 
@@ -43,7 +62,7 @@ impl AppState {
         self
     }
     
-    /// Submit current input as user message
+    /// Submit current input - sends to agent channel
     fn submit(self) -> Self {
         if self.input.is_empty() {
             return self;
@@ -64,28 +83,13 @@ impl AppState {
             content: content.clone(),
         });
         
-        // Convert messages to agent format
-        let agent_messages: Vec<Message> = state
-            .messages
-            .iter()
-            .map(|m| match m.role.as_str() {
-                "user" => Message::User { content: m.content.clone() },
-                "assistant" => Message::Assistant { content: m.content.clone() },
-                _ => Message::User { content: m.content.clone() },
-            })
-            .collect();
-        
-        // Run agent with mock provider
-        let provider = MockProvider;
-        let response = run_agent(&provider, agent_messages);
-        
-        // Add agent response
+        // Add placeholder for agent response (will be updated by agent events)
         state.messages.push(ChatMessage {
             role: "assistant".into(),
-            content: response.content,
+            content: String::new(),
         });
         
-        state.streaming = false;
+        state.streaming = true;
         state
     }
     
