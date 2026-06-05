@@ -99,15 +99,20 @@ pub fn agent_answer(content: &str) -> Vec<DisplayLine> {
     ]
 }
 
-/// Thinking indicator (live timer): "⏳ Thinking... X.Xs"
+/// Bailer spinner characters (animation frames)
+const SPINNER_FRAMES: [&str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+
+/// Thinking indicator (animated spinner): "⠋ Thinking... X.Xs"
 pub fn thinking(state: &AppState) -> Vec<DisplayLine> {
-    let elapsed = state.thinking_elapsed_secs()
-        .map(thinking_with_time)
-        .unwrap_or_else(|| THINKING_LOADING.to_string());
+    let elapsed = state.thinking_elapsed_secs().unwrap_or(0.0);
+    // Animate spinner based on elapsed time (switch frame every 0.1s)
+    let frame_idx = ((elapsed * 10.0) as usize) % SPINNER_FRAMES.len();
+    let spinner = SPINNER_FRAMES[frame_idx];
+    let text = format!("{} Thinking... {:.1}s", spinner, elapsed);
     
     vec![
         DisplayLine {
-            spans: vec![DisplaySpan { text: elapsed, color: Some(Color::DarkGray) }],
+            spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
         },
         DisplayLine::empty(),
     ]
