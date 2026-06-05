@@ -15,3 +15,5 @@ crossterm.workspace = true
 ratatui.workspace = true
 ctrlc.workspace = true
 bincode.workspace = true
+tokio.workspace = true
+futures.workspace = true
