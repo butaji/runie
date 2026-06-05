@@ -69,40 +69,44 @@ fn handle_auto_approve_request(state: &mut AppState, tool_call_id: String, tool_
 fn handle_normal_permission_request(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
     const MAX_PENDING_PERMISSIONS: usize = 32;
     if is_blocking_mode(&state.mode) {
-        if state.permission_modal.pending_queue.len() >= MAX_PENDING_PERMISSIONS {
-            state.messages.push(MessageItem::System {
-                text: format!(
-                    "Permission queue full ({}); dropping '{}'",
-                    MAX_PENDING_PERMISSIONS, tool_name
-                ),
-            });
-            return vec![];
-        }
-        state.permission_modal.pending_queue.push(PendingPermission {
-            tool_call_id: tool_call_id.clone(),
-            tool_name: tool_name.clone(),
-            tool_args: tool_args.clone(),
-        });
-        state.messages.push(MessageItem::System {
-            text: format!("Permission for '{}' queued (waiting for current modal)", tool_name),
-        });
-        return vec![];
+        return handle_blocked_permission(state, tool_call_id, tool_name, tool_args, MAX_PENDING_PERMISSIONS);
     }
     if state.mode == TuiMode::Permission || state.permission_modal.tool.is_some() {
-        if state.permission_modal.pending_queue.len() >= MAX_PENDING_PERMISSIONS {
-            state.messages.push(MessageItem::System {
-                text: format!(
-                    "Permission queue full ({}); dropping '{}'",
-                    MAX_PENDING_PERMISSIONS, tool_name
-                ),
-            });
-            return vec![];
-        }
-        state.permission_modal.pending_queue.push(PendingPermission {
-            tool_call_id, tool_name, tool_args,
+        return handle_queued_permission(state, tool_call_id, tool_name, tool_args, MAX_PENDING_PERMISSIONS);
+    }
+    handle_immediate_permission(state, tool_call_id, tool_name, tool_args)
+}
+
+fn handle_blocked_permission(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String, max: usize) -> Vec<super::AgentCmd> {
+    if state.permission_modal.pending_queue.len() >= max {
+        state.messages.push(MessageItem::System {
+            text: format!("Permission queue full ({}); dropping '{}'", max, tool_name),
         });
         return vec![];
     }
+    state.permission_modal.pending_queue.push(PendingPermission {
+        tool_call_id, tool_name: tool_name.clone(), tool_args,
+    });
+    state.messages.push(MessageItem::System {
+        text: format!("Permission for '{}' queued (waiting for current modal)", tool_name),
+    });
+    vec![]
+}
+
+fn handle_queued_permission(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String, max: usize) -> Vec<super::AgentCmd> {
+    if state.permission_modal.pending_queue.len() >= max {
+        state.messages.push(MessageItem::System {
+            text: format!("Permission queue full ({}); dropping '{}'", max, tool_name),
+        });
+        return vec![];
+    }
+    state.permission_modal.pending_queue.push(PendingPermission {
+        tool_call_id, tool_name, tool_args,
+    });
+    vec![]
+}
+
+fn handle_immediate_permission(state: &mut AppState, tool_call_id: String, tool_name: String, tool_args: String) -> Vec<super::AgentCmd> {
     state.permission_modal.tool = Some(tool_name.clone());
     state.permission_modal.tool_call_id = Some(tool_call_id);
     state.permission_modal.args = Some(tool_args);

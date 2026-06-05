@@ -26,7 +26,7 @@ fn walk_dir(path: &Path, violations: &mut Violations) {
         let name = entry_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if entry_path.is_dir() {
             // Skip test directories, target, and vendored deps.
-            if matches!(name, "tests" | "test" | "target" | ".git" | "node_modules") {
+            if matches!(name, "tests" | "test" | "target" | ".git" | "node_modules" | "bin") {
                 continue;
             }
             walk_dir(&entry_path, violations);

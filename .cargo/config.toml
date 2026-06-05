@@ -5,3 +5,7 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 
 [target.aarch64-apple-darwin]
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Default to cranelift for all targets (disabled - cranelift not installed)
+[build]
+rustflags = []

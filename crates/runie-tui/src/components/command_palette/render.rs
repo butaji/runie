@@ -29,8 +29,14 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
     let inner_y = area.y + 1;
     let inner_w = area.width.saturating_sub(2);
     buf.set_string(inner_x, inner_y, crate::glyphs::CHEVRON_WITH_SPACE, Style::default().fg(accent_secondary));
+    render_query_prompt(palette, inner_x, inner_y, text_primary, text_muted, buf);
+    let sep_y = inner_y + 1;
+    draw_separator(inner_x, sep_y, inner_w, buf, text_muted);
+    render_command_items(palette, area, inner_x, inner_w, sep_y, text_primary, text_muted, text_secondary, buf);
+    render_footer_hint(area, inner_x, inner_w, text_muted, buf);
+}
 
-    // Determine the prompt text: show hint, or "No matching commands" when filtered list is empty
+fn render_query_prompt(palette: &CommandPalette, inner_x: u16, inner_y: u16, text_primary: Color, text_muted: Color, buf: &mut Buffer) {
     let prompt = if palette.filtered_commands.is_empty() {
         "no matches — clear filter to see all"
     } else {
@@ -38,10 +44,10 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
     };
     let query_style = if palette.filtered_commands.is_empty() { Style::default().fg(text_muted) } else { Style::default().fg(text_primary) };
     buf.set_string(inner_x + 2, inner_y, prompt, query_style);
-    let sep_y = inner_y + 1;
-    draw_separator(inner_x, sep_y, inner_w, buf, text_muted);
+}
+
+fn render_command_items(palette: &CommandPalette, area: Rect, inner_x: u16, inner_w: u16, sep_y: u16, text_primary: Color, text_muted: Color, text_secondary: Color, buf: &mut Buffer) {
     let list_y = sep_y + 1;
-    // No footer hint - status bar already shows hotkeys
     let list_h = area.height.saturating_sub(4);
     let visible_items = list_h as usize;
     let commands = &palette.filtered_commands;
@@ -58,8 +64,9 @@ fn render_command_list(palette: &CommandPalette, area: Rect, buf: &mut Buffer, a
         render_command_row(cmd, y, inner_x, inner_w, is_selected, text_primary, text_muted, text_secondary, buf);
         rendered += 1;
     }
-    // Grok spec: in-box footer hint strip ↑/↓ nav | Enter select | Esc close
-    // Rendered 1 row above the bottom border, with a "─" divider above it.
+}
+
+fn render_footer_hint(area: Rect, inner_x: u16, inner_w: u16, text_muted: Color, buf: &mut Buffer) {
     if area.height >= 4 {
         let footer_y = area.y + area.height - 2;
         draw_separator(inner_x, footer_y, inner_w, buf, text_muted);
