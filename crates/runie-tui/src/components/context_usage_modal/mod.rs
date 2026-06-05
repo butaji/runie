@@ -69,7 +69,9 @@ impl Widget for &ContextUsageModal {
 fn clear_modal_area(area: Rect, buf: &mut Buffer, styles: &StyleSet) {
     for y in area.top()..area.bottom() {
         for x in area.left()..area.right() {
-            buf.get_mut(x, y).set_bg(styles.muted.bg.unwrap_or(Color::Rgb(25, 25, 25)));
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_bg(styles.muted.bg.unwrap_or(Color::Rgb(25, 25, 25)));
+            }
         }
     }
 }
@@ -77,12 +79,20 @@ fn clear_modal_area(area: Rect, buf: &mut Buffer, styles: &StyleSet) {
 fn draw_modal_border(area: Rect, buf: &mut Buffer, styles: &StyleSet) {
     let border_color = styles.border.fg.unwrap_or(Color::DarkGray);
     for x in area.left()..area.right() {
-        buf.get_mut(x, area.top()).set_fg(border_color);
-        buf.get_mut(x, area.bottom().saturating_sub(1)).set_fg(border_color);
+        if let Some(cell) = buf.cell_mut((x, area.top())) {
+            cell.set_fg(border_color);
+        }
+        if let Some(cell) = buf.cell_mut((x, area.bottom().saturating_sub(1))) {
+            cell.set_fg(border_color);
+        }
     }
     for y in area.top()..area.bottom() {
-        buf.get_mut(area.left(), y).set_fg(border_color);
-        buf.get_mut(area.right().saturating_sub(1), y).set_fg(border_color);
+        if let Some(cell) = buf.cell_mut((area.left(), y)) {
+            cell.set_fg(border_color);
+        }
+        if let Some(cell) = buf.cell_mut((area.right().saturating_sub(1), y)) {
+            cell.set_fg(border_color);
+        }
     }
 }
 

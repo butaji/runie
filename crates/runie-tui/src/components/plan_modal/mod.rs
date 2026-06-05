@@ -185,25 +185,48 @@ impl PlanModal {
 
 /// Renders the plan frame with border.
 fn render_plan_frame(area: Rect, buf: &mut Buffer, bg: Color, border: Color) -> Rect {
+    fill_background(area, buf, bg);
+    draw_border_corners(area, buf, border);
+    draw_border_sides(area, buf, border);
+    inner_rect(area)
+}
+
+fn fill_background(area: Rect, buf: &mut Buffer, bg: Color) {
     for y in area.top()..area.bottom() {
         for x in area.left()..area.right() {
-            buf.get_mut(x, y).set_bg(bg);
+            if let Some(cell) = buf.cell_mut((x, y)) {
+                cell.set_bg(bg);
+            }
         }
     }
-    // Top border
-    buf.get_mut(area.left(), area.top()).set_fg(border);
-    buf.get_mut(area.right().saturating_sub(1), area.top()).set_fg(border);
-    // Bottom border
-    buf.get_mut(area.left(), area.bottom().saturating_sub(1)).set_fg(border);
-    buf.get_mut(area.right().saturating_sub(1), area.bottom().saturating_sub(1)).set_fg(border);
-    // Left border
-    for y in area.top()..area.bottom() {
-        buf.get_mut(area.left(), y).set_fg(border);
+}
+
+fn draw_border_corners(area: Rect, buf: &mut Buffer, border: Color) {
+    let corners = [
+        (area.left(), area.top()),
+        (area.right().saturating_sub(1), area.top()),
+        (area.left(), area.bottom().saturating_sub(1)),
+        (area.right().saturating_sub(1), area.bottom().saturating_sub(1)),
+    ];
+    for (x, y) in corners {
+        if let Some(cell) = buf.cell_mut((x, y)) {
+            cell.set_fg(border);
+        }
     }
-    // Right border
+}
+
+fn draw_border_sides(area: Rect, buf: &mut Buffer, border: Color) {
     for y in area.top()..area.bottom() {
-        buf.get_mut(area.right().saturating_sub(1), y).set_fg(border);
+        if let Some(cell) = buf.cell_mut((area.left(), y)) {
+            cell.set_fg(border);
+        }
+        if let Some(cell) = buf.cell_mut((area.right().saturating_sub(1), y)) {
+            cell.set_fg(border);
+        }
     }
+}
+
+fn inner_rect(area: Rect) -> Rect {
     Rect {
         x: area.x + 1,
         y: area.y + 1,

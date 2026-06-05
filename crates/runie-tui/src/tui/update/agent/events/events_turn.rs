@@ -4,7 +4,8 @@ use crate::components::MessageItem;
 use crate::messages::MessageRegistry;
 use runie_agent::ContentPart;
 
-use super::{extract_text_content, on_agent_end, AgentCmd, AppState};
+use super::super::AgentCmd;
+use super::{extract_text_content, on_agent_end, AppState};
 
 /// Handle turn end - add separator with runtime metrics
 pub fn on_turn_end(state: &mut AppState, turn_duration_ms: Option<u64>) {

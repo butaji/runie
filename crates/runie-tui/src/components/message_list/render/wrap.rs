@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 /// Cache for wrap_text results to avoid recomputing every frame.
 /// Key is (text_hash, width) -> value is Vec<String> of wrapped lines.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WrapCache {
     cache: HashMap<(u64, usize), Vec<String>>,
     access_order: Vec<(u64, usize)>,

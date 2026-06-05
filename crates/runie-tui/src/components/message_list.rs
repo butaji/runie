@@ -90,6 +90,7 @@ pub use render::{ThinkingBlock, render_thinking_block};
 pub use render::{ToolCallBlock, ToolStatus, render_tool_call_block};
 
 /// ViewModel for rendering MessageList
+#[derive(Debug)]
 pub struct MessageListViewModel {
     pub feed: Feed,
     pub scroll_offset: usize,

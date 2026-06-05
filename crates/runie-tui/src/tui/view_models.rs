@@ -13,10 +13,14 @@ pub use crate::components::message_list::MessageListViewModel;
 use crate::components::message_list::PlanStatus;
 use crate::tui::state::TuiMode;
 
-pub mod view_models_build;
-pub use view_models_build::*;
+// Re-export OnboardingStep from components to avoid duplication
+pub use crate::components::onboarding::OnboardingStep;
+
+// Build functions are in view_models_build module (declared in tui.rs)
+pub use super::view_models_build::*;
 
 // ─── InputBarViewModel ──────────────────────────────────────────────────────
+#[derive(Debug)]
 pub struct InputBarViewModel {
     pub textarea: ratatui_textarea::TextArea<'static>,
     pub prompt: String,
@@ -42,6 +46,7 @@ pub enum McpStatus {
 }
 
 // ─── StatusBarViewModel ─────────────────────────────────────────────────────
+#[derive(Debug)]
 pub struct StatusBarViewModel {
     pub mode: TuiMode,
     pub current_model: Option<String>,
@@ -118,15 +123,6 @@ pub struct OnboardingViewModel {
     pub providers: Vec<String>,
     pub models: Vec<String>,
     pub error_message: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum OnboardingStep {
-    Welcome,
-    ProviderSelect,
-    KeyInput,
-    ModelSelect,
-    Complete,
 }
 
 // ─── CodeBlockViewModel ─────────────────────────────────────────────────────

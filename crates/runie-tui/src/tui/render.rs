@@ -269,7 +269,7 @@ fn render_plan_content(
         return;
     }
 
-    let spinner = BRAILLE_FRAMES[vm.braille_frame % 10];
+    let spinner = BRAILLE_FRAMES[(vm.braille_frame % 10) as usize];
     for (step, text, status) in &vm.plan_steps {
         if y >= max_y - 1 {
             break;

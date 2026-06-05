@@ -62,7 +62,7 @@ impl ClearInputConfirm {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AnimationState {
     pub braille_frame: usize,
     pub rewind_braille_frame: usize,

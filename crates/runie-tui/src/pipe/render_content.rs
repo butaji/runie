@@ -37,10 +37,14 @@ pub fn render_content(
 
     let h_areas = Layout::horizontal(h_constraints.as_slice()).split(area);
     let feed_area = h_areas[0];
-    MessageList::render_ref(&vms.message_list, feed_area, buf, theme);
+    if let Some(ref msg_list) = vms.message_list {
+        MessageList::render_ref(msg_list, feed_area, buf, theme);
+    }
 
     if show_sidebar && area.width >= SIDEBAR_WIDTH + 20 {
-        crate::tui::render::render_agent_list(&vms.agent_list, h_areas[1], buf, theme_colors);
+        if let Some(ref agent_list) = vms.agent_list {
+            crate::tui::render::render_agent_list(agent_list, h_areas[1], buf, theme_colors);
+        }
     }
 
     // Render activity panel on the right

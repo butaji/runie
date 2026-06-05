@@ -319,32 +319,6 @@ impl Msg {
                 | Msg::ImportClaudeSettings | Msg::HomeScreenToggleSessions
         )
     }
-
-    fn eq_data_variant(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Msg::TextareaKey(a), Msg::TextareaKey(b)) => a == b,
-            (Msg::CommandPaletteFilter(a), Msg::CommandPaletteFilter(b)) => a == b,
-            (Msg::OnboardingSelectProvider(a), Msg::OnboardingSelectProvider(b)) => a == b,
-            (Msg::OnboardingSelectModel(a), Msg::OnboardingSelectModel(b)) => a == b,
-            (Msg::OnboardingKeyInput(a), Msg::OnboardingKeyInput(b)) => a == b,
-            (Msg::OnboardingSearchInput(a), Msg::OnboardingSearchInput(b)) => a == b,
-            (Msg::DirectCommand(a), Msg::DirectCommand(b)) => a == b,
-            (Msg::Paste(a), Msg::Paste(b)) => a == b,
-            (Msg::ModelsFetched(a), Msg::ModelsFetched(b)) => a == b,
-            (Msg::ModelsFetchFailed(a), Msg::ModelsFetchFailed(b)) => a == b,
-            (Msg::Resize(a_w, a_h), Msg::Resize(b_w, b_h)) => a_w == b_w && a_h == b_h,
-            (Msg::MouseClick { x: ax, y: ay, button: ab }, Msg::MouseClick { x: bx, y: by, button: bb }) => ax == bx && ay == by && ab == bb,
-            (Msg::SetGitInfo { .. }, Msg::SetGitInfo { .. }) => true,
-            (Msg::SetTopBarMockChecks { .. }, Msg::SetTopBarMockChecks { .. }) => true,
-            (Msg::SetTopBarRealChecks { .. }, Msg::SetTopBarRealChecks { .. }) => true,
-            (Msg::SetInputRightInfo(a), Msg::SetInputRightInfo(b)) => a == b,
-            (Msg::SetCurrentModel(a), Msg::SetCurrentModel(b)) => a == b,
-            (Msg::SetMockMode(a), Msg::SetMockMode(b)) => a == b,
-            (Msg::UpdateTopBarContext { .. }, Msg::UpdateTopBarContext { .. }) => true,
-            (Msg::ExtensionsModalSearchInput(a), Msg::ExtensionsModalSearchInput(b)) => a == b,
-            _ => false,
-        }
-    }
 }
 
 // ─── Cmd ────────────────────────────────────────────────────────────────────────

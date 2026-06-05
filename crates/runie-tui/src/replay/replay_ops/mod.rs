@@ -1,4 +1,7 @@
-//! Replay apply operations.
+//! Replay operations.
+
+pub mod parse;
+pub use parse::{load_scenario, parse_scenario, parse_ui_op, parse_mode};
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -38,25 +41,26 @@ pub fn apply_ui_op(tui: &mut Tui, op: &UiOp) {
 }
 
 fn apply_mode(tui: &mut Tui, op: &UiOp) { if let UiOp::SetMode(m) = op { tui.state.mode = m.clone(); } }
-fn apply_home_visible(tui: &mut Tui, op: &UiOp) { if let UiOp::SetHomeVisible(v) = op { tui.state.home_visible = *v; } }
-fn apply_home_selected(tui: &mut Tui, op: &UiOp) { if let UiOp::SetHomeSelected(i) = op { tui.state.home_selected = *i; } }
-fn apply_show_sessions(tui: &mut Tui, op: &UiOp) { if let UiOp::SetShowSessions(v) = op { tui.state.show_sessions = *v; } }
-fn apply_slash_open(tui: &mut Tui, op: &UiOp) { if let UiOp::SetSlashOpen(v) = op { tui.state.slash_open = *v; } }
-fn apply_slash_query(tui: &mut Tui, op: &UiOp) { if let UiOp::SetSlashQuery(q) = op { tui.state.slash_menu.query = q.to_string(); crate::components::slash_menu::rerank(&mut tui.state.slash_menu); } }
-fn apply_input(tui: &mut Tui, op: &UiOp) { if let UiOp::SetInput(s) = op { let mut ta = TextArea::default(); ta.move_cursor(ratatui_textarea::TextAreaBookmark::End); ta.insert_str(s); tui.state.textarea = ta; } }
-fn apply_git(tui: &mut Tui, op: &UiOp) { if let UiOp::SetGit { repo, branch, path } = op { tui.state.top_bar.git = Some(crate::components::top_bar::GitInfo { repo: repo.to_string(), branch: branch.to_string(), path: path.to_string() }); } }
-fn apply_context_window(tui: &mut Tui, op: &UiOp) { if let UiOp::SetContextWindow(n) = op { tui.state.top_bar.context_window = Some(*n); } }
+fn apply_home_visible(_tui: &mut Tui, _op: &UiOp) { /* home_visible not in AppState */ }
+fn apply_home_selected(_tui: &mut Tui, _op: &UiOp) { /* home_selected not in AppState */ }
+fn apply_show_sessions(_tui: &mut Tui, _op: &UiOp) { /* show_sessions not in AppState */ }
+fn apply_slash_open(_tui: &mut Tui, _op: &UiOp) { /* slash_open not in AppState */ }
+fn apply_slash_query(_tui: &mut Tui, _op: &UiOp) { /* slash_menu.query not accessible */ }
+fn apply_input(tui: &mut Tui, op: &UiOp) { if let UiOp::SetInput(s) = op { let mut ta = TextArea::default(); ta.move_cursor(ratatui_textarea::CursorMove::End); ta.insert_str(s); tui.state.textarea = ta; } }
+fn apply_git(tui: &mut Tui, op: &UiOp) { if let UiOp::SetGit { repo, branch, path } = op { tui.state.context.repo = repo.to_string(); tui.state.context.branch = branch.to_string(); tui.state.context.path = path.to_string(); } }
+fn apply_context_window(_tui: &mut Tui, _op: &UiOp) { /* context_window not in top_bar */ }
 fn apply_session_tokens(tui: &mut Tui, op: &UiOp) { if let UiOp::SetSessionTokens { total } = op { tui.state.session_token_usage.total_tokens = *total; } }
 fn apply_thought_duration(tui: &mut Tui, op: &UiOp) { if let UiOp::SetThoughtDuration(d) = op { tui.state.pending_thought_duration = Some(*d); } }
 fn apply_turn_complete(tui: &mut Tui, op: &UiOp) { if let UiOp::SetTurnComplete(d) = op { tui.state.replay_turn_duration_secs = Some(*d); } }
 fn apply_agent_running(tui: &mut Tui, op: &UiOp) { if let UiOp::SetAgentRunning(v) = op { tui.state.agent_running = *v; } }
 fn apply_tool(tui: &mut Tui, op: &UiOp) {
     if let UiOp::SetToolResult { name, result, is_error } = op {
-        let pos = tui.state.messages.iter().rposition(|m| matches!(m, MessageItem::ToolRunning { name: n, .. } if n == name));
-        if let Some(pos) = pos {
-            let msg = &mut tui.state.messages[pos];
-            if let MessageItem::ToolRunning { name: n, args: a, .. } = std::mem::take(msg) {
-                *msg = MessageItem::ToolCall { name: n, args: a, result: Some(result.to_string()), is_error: *is_error };
+        for msg in &mut tui.state.messages {
+            if let MessageItem::ToolRunning { name: n, args: a, .. } = msg {
+                if n == name {
+                    *msg = MessageItem::ToolCall { name: n.clone(), args: a.clone(), result: Some(result.to_string()), is_error: *is_error };
+                    break;
+                }
             }
         }
     }

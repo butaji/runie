@@ -14,6 +14,14 @@ pub use events_message::{on_message, on_message_end, on_message_start, on_messag
 pub use events_turn::{on_turn_end, update_last_assistant};
 use thinking::{ensure_thinking_placeholder, on_thinking_end, on_thinking_start, on_thinking_update};
 
+fn current_timestamp() -> Option<String> {
+    use chrono::Local;
+    if let Ok(mock) = std::env::var("RUNIE_MOCK_TIMESTAMP") {
+        if !mock.is_empty() { return Some(mock); }
+    }
+    Some(Local::now().format("%-I:%M %p").to_string())
+}
+
 /// Update agent domain: agent events, permissions.
 pub fn update(state: &mut AppState, msg: crate::tui::state::Msg) -> Vec<crate::tui::update::agent::AgentCmd> {
     match msg {

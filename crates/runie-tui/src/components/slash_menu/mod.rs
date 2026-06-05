@@ -113,7 +113,7 @@ impl SlashMenu {
         self.update_filtered();
     }
 
-    fn update_filtered(&mut self) {
+    pub fn update_filtered(&mut self) {
         let query = self.filter.to_lowercase();
         self.filtered_indices = SLASH_COMMANDS
             .iter()
