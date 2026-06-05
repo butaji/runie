@@ -104,14 +104,10 @@ fn run_app(
     mut state: AppState,
     running: std::sync::Arc<std::sync::atomic::AtomicBool>,
 ) -> Result<AppState, Box<dyn std::error::Error>> {
-    let provider = Arc::new(MockProvider);
-    let agent = AgentLoop::new(provider);
-    let (agent_tx, mut agent_rx) = mpsc::channel(128);
-
     let mut needs_redraw = true;
 
     while running.load(std::sync::atomic::Ordering::SeqCst) 
-        && (!state.streaming || !state.input.is_empty() || !state.messages.is_empty()) 
+        && (state.streaming || !state.input.is_empty()) 
     {
         if needs_redraw {
             terminal.draw(|f| ui::draw(f, &state))?;
@@ -133,23 +129,18 @@ fn run_app(
                                 needs_redraw = true;
                             }
                             KeyAction::Submit => {
-                                let msg = ChatMessage {
+                                let content = state.input.clone();
+                                state.messages.push(ChatMessage {
                                     role: "user".into(),
-                                    content: state.input.clone(),
-                                };
-                                state.messages.push(msg);
-                                state.input.clear();
-                                state.streaming = true;
-                                needs_redraw = true;
-                                
-                                let messages = build_messages(&state);
-                                let mut stream = agent.run(messages);
-                                let tx = agent_tx.clone();
-                                tokio::spawn(async move {
-                                    while let Some(evt) = stream.next().await {
-                                        let _ = tx.send(evt).await;
-                                    }
+                                    content: content.clone(),
                                 });
+                                state.input.clear();
+                                state.messages.push(ChatMessage {
+                                    role: "assistant".into(),
+                                    content: format!("Echo: {}", content),
+                                });
+                                state.streaming = false;
+                                needs_redraw = true;
                             }
                             KeyAction::None => {}
                         }
@@ -157,32 +148,6 @@ fn run_app(
                 }
             }
             Ok(false) | Err(_) => {}
-        }
-
-        // Process agent events
-        while let Ok(evt) = agent_rx.try_recv() {
-            match evt {
-                runie_agent::types::AgentEvent::MessageDelta { content } => {
-                    if let Some(last) = state.messages.last_mut() {
-                        if last.role == "assistant" {
-                            last.content.push_str(&content);
-                        }
-                    }
-                    needs_redraw = true;
-                }
-                runie_agent::types::AgentEvent::MessageStart { .. } => {
-                    state.messages.push(ChatMessage {
-                        role: "assistant".into(),
-                        content: String::new(),
-                    });
-                    needs_redraw = true;
-                }
-                runie_agent::types::AgentEvent::MessageEnd => {
-                    state.streaming = false;
-                    needs_redraw = true;
-                }
-                _ => {}
-            }
         }
     }
 
