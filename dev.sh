@@ -9,5 +9,11 @@ echo "Hot reload enabled! Edit files to rebuild automatically."
 echo "Press Ctrl+C to exit."
 echo ""
 
-# Hot reload with cargo watch
-exec cargo watch -c -x 'run --bin runie-tui'
+# Check if in tmux
+if [ -n "$TMUX" ]; then
+    echo "Running in tmux - using direct TUI"
+    cargo watch -c -x 'run --bin runie-tui'
+else
+    echo "Running in terminal - using PTY wrapper"
+    cargo watch -c -x 'run --bin runie-pty'
+fi

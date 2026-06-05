@@ -33,6 +33,7 @@ pub struct ChatMessage {
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("[TUI] Starting...");
     // Set up panic handler to restore terminal
     std::panic::set_hook(Box::new(|_| {
         cleanup_terminal();
@@ -43,9 +44,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     
     // Enable raw mode
     if let Err(e) = enable_raw_mode() {
-        eprintln!("No terminal: {:?}", e);
+        eprintln!("[TUI] No terminal: {:?}", e);
         return Ok(());
     }
+    eprintln!("[TUI] Raw mode enabled");
+    eprintln!("[TUI] Entering main loop...");
 
     let mut stdout = io::stdout();
     execute!(&mut stdout, EnterAlternateScreen, EnableMouseCapture).ok();
@@ -54,6 +57,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
     let r = running.clone();
     ctrlc::set_handler(move || {
+        
         r.store(false, std::sync::atomic::Ordering::SeqCst);
     }).ok();
 
@@ -107,7 +111,6 @@ fn run_app(
     let mut needs_redraw = true;
 
     while running.load(std::sync::atomic::Ordering::SeqCst) 
-        && (state.streaming || !state.input.is_empty()) 
     {
         if needs_redraw {
             terminal.draw(|f| ui::draw(f, &state))?;
@@ -179,6 +182,7 @@ enum KeyAction {
 
 fn handle_key(key: &crossterm::event::KeyEvent) -> KeyAction {
     match key.code {
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => KeyAction::Quit,
         KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => KeyAction::Quit,
         KeyCode::Char('q') | KeyCode::Char('Q') => KeyAction::Quit,
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => KeyAction::Quit,
