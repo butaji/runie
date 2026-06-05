@@ -59,9 +59,8 @@ pub fn format_messages(state: &AppState) -> Vec<DisplayLine> {
         }
     }
     
-    // Show thinking indicator only if no thought message yet (still streaming)
-    let has_thought = state.messages.iter().any(|m| m.role == "thought");
-    if !has_thought && (state.streaming || !state.request_queue.is_empty()) {
+    // Show thinking spinner for queued requests only
+    if !state.request_queue.is_empty() {
         lines.extend(thinking_indicator(state));
     }
     
