@@ -18,7 +18,8 @@ pub enum Event {
     // === Agent Events ===
     AgentThinking { id: String },
     AgentThoughtDone { id: String },
-    AgentToolDone { id: String, name: String, duration_secs: f64 },
+    AgentToolStart { id: String, name: String },
+    AgentToolEnd { duration_secs: f64 },
     AgentResponse { id: String, content: String },
     AgentTurnComplete { id: String, duration_secs: f64 },
     AgentDone { id: String },
@@ -37,7 +38,8 @@ impl Event {
                 | Event::AgentResponse { .. }
                 | Event::AgentThinking { .. }
                 | Event::AgentThoughtDone { .. }
-                | Event::AgentToolDone { .. }
+                | Event::AgentToolStart { .. }
+                | Event::AgentToolEnd { .. }
                 | Event::AgentTurnComplete { .. }
                 | Event::AgentDone { .. }
                 | Event::Reset

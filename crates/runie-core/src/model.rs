@@ -16,6 +16,10 @@ pub struct AppState {
     pub current_request_id: Option<String>,
     #[serde(skip)]
     pub turn_started_at: Option<std::time::Instant>,
+    #[serde(skip)]
+    pub current_tool_name: Option<String>,
+    #[serde(skip)]
+    pub tool_started_at: Option<std::time::Instant>,  // For animating "Running..."
 }
 
 impl AppState {

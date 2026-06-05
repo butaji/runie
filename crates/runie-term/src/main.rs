@@ -133,11 +133,13 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
     
     // 2. Tool execution
-    let _ = get_fake_file_list(); // Trigger tool
-    let tool_duration = tool_start.elapsed().as_secs_f64();
-    let _ = agent_tx.send(CoreEvent::AgentToolDone {
+    let _ = agent_tx.send(CoreEvent::AgentToolStart {
         id: cmd.id.clone(),
         name: "list_files".to_string(),
+    }).await;
+    let _ = get_fake_file_list(); // Trigger tool (fake delay)
+    let tool_duration = tool_start.elapsed().as_secs_f64();
+    let _ = agent_tx.send(CoreEvent::AgentToolEnd {
         duration_secs: tool_duration,
     }).await;
     chunk_delay().await;

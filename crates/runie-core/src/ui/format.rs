@@ -1,7 +1,6 @@
 //! Format - Rendering UI elements to display lines
 
 use crate::ui::elements::{Element, Feed};
-use crate::ui::dsl::Dsl;
 use crate::labels::{PREFIX_USER, PREFIX_AGENT};
 
 #[derive(Debug, Clone)]
@@ -26,7 +25,7 @@ pub enum Color {
 }
 
 pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
-    let feed = Dsl::feed(state);
+    let feed = crate::ui::Dsl::feed(state);
     render_feed(&feed)
 }
 
@@ -63,8 +62,7 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         ],
         
         Element::Thinking { elapsed } => {
-            let spinner = Dsl::spinner(*elapsed);
-            let text = format!("{} Though... {:.1}s", spinner, elapsed);
+            let text = format!("Though... {:.1}s", elapsed);
             vec![
                 DisplayLine {
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
@@ -80,14 +78,14 @@ fn render_element(element: &Element) -> Vec<DisplayLine> {
         
         Element::ToolRun { content } => vec![
             DisplayLine {
-                spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::Yellow) }],
+                spans: vec![DisplaySpan { text: content.clone(), color: Some(Color::DarkGray) }],
             },
         ],
         
         Element::TurnComplete { duration_secs } => vec![
             DisplayLine {
                 spans: vec![
-                    DisplaySpan { text: "✓ Turn completed in ".to_string(), color: Some(Color::DarkGray) },
+                    DisplaySpan { text: "Turn completed in ".to_string(), color: Some(Color::DarkGray) },
                     DisplaySpan { text: format!("{:.1}s", duration_secs), color: Some(Color::DarkGray) },
                 ],
             },
