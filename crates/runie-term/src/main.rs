@@ -55,11 +55,11 @@ async fn main() -> io::Result<()> {
     loop {
         tokio::select! {
             _ = render_interval.tick() => {
-                // Slower animation for ASMR vibes - advance frame every 6 ticks (300ms)
+                // Slower animation - advance frame every 4 ticks (200ms)
                 static mut TICK_COUNTER: u32 = 0;
                 unsafe {
                     TICK_COUNTER += 1;
-                    if TICK_COUNTER % 6 == 0 {
+                    if TICK_COUNTER % 4 == 0 {
                         state.animation_frame = state.animation_frame.wrapping_add(1);
                     }
                 }
