@@ -108,8 +108,9 @@ fn convert_event(event: &CrosstermEvent) -> Option<Event> {
                 KeyCode::Char('q') | KeyCode::Char('Q') => Some(Event::Quit),
                 KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Quit),
                 KeyCode::Esc => Some(Event::Quit),
+                KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Event::Reset),
                 KeyCode::Home => Some(Event::Reset),   // Home key resets
-                KeyCode::End => Some(Event::Reset),   // End key resets
+                KeyCode::End => Some(Event::Reset),    // End key resets
                 _ => None,
             }
         }
