@@ -1,6 +1,6 @@
 //! Update - State Transitions (mutable borrow pattern, no cloning)
 use crate::labels::{thought_with_time, tool_running, tool_done};
-use crate::model::{AppState, ChatMessage};
+use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
 fn now() -> f64 {
@@ -55,12 +55,12 @@ impl AppState {
         }
         let id = self.next_id();
         self.messages.push(ChatMessage {
-            role: "user".into(),
+            role: Role::User,
             content: content.clone(),
             timestamp: now(),
             id: id.clone(),
         });
-        self.request_queue.push((content, id));
+        self.request_queue.push_back((content, id));
         self.mark_dirty();
     }
 
@@ -79,7 +79,7 @@ impl AppState {
         self.current_action = None;
         self.thinking_started_at = None;
         self.messages.push(ChatMessage {
-            role: "thought".into(),
+            role: Role::Thought,
             content: thought_with_time(duration),
             timestamp: now(),
             id,
@@ -93,8 +93,9 @@ impl AppState {
         self.tool_started_at = Some(std::time::Instant::now());
         self.has_intermediate_steps = true;
         self.current_action = Some(format!("Running {}", name));
+        self.last_tool_index = Some(self.messages.len());
         self.messages.push(ChatMessage {
-            role: "tool".into(),
+            role: Role::Tool,
             content: tool_running(&name),
             timestamp: now(),
             id,
@@ -106,8 +107,12 @@ impl AppState {
         self.current_action = None;
         self.tool_started_at = None;
         if let Some(name) = self.current_tool_name.take() {
-            if let Some(last) = self.messages.iter_mut().rev().find(|m| m.role == "tool") {
-                last.content = tool_done(&name, duration_secs);
+            if let Some(idx) = self.last_tool_index.take() {
+                if let Some(last) = self.messages.get_mut(idx) {
+                    if last.role == Role::Tool {
+                        last.content = tool_done(&name, duration_secs);
+                    }
+                }
             }
         }
         self.mark_dirty();
@@ -115,14 +120,14 @@ impl AppState {
 
     fn append_response(&mut self, id: String, content: String) {
         if let Some(last) = self.messages.last_mut() {
-            if last.role == "assistant" && last.id == id {
+            if last.role == Role::Assistant && last.id == id {
                 last.content.push_str(&content);
                 self.mark_dirty();
                 return;
             }
         }
         self.messages.push(ChatMessage {
-            role: "assistant".into(),
+            role: Role::Assistant,
             content,
             timestamp: now(),
             id: id.clone(),
@@ -134,7 +139,7 @@ impl AppState {
     fn complete_turn(&mut self, id: String, duration_secs: f64) {
         if self.has_intermediate_steps {
             self.messages.push(ChatMessage {
-                role: "turn_complete".into(),
+                role: Role::TurnComplete,
                 content: format!("Turn completed in {:.1}s", duration_secs),
                 timestamp: now(),
                 id,
@@ -159,7 +164,7 @@ impl AppState {
     fn add_error(&mut self, id: String, message: String) {
         self.streaming = false;
         self.messages.push(ChatMessage {
-            role: "assistant".into(),
+            role: Role::Assistant,
             content: format!("Error: {}", message),
             timestamp: now(),
             id: format!("error.{}", id),
@@ -167,15 +172,11 @@ impl AppState {
         self.mark_dirty();
     }
 
-    pub fn peek_queue(&self) -> Option<(String, String)> {
-        self.request_queue.first().cloned()
+    pub fn peek_queue(&self) -> Option<&(String, String)> {
+        self.request_queue.front()
     }
 
     pub fn pop_queue(&mut self) -> Option<(String, String)> {
-        if !self.request_queue.is_empty() {
-            Some(self.request_queue.remove(0))
-        } else {
-            None
-        }
+        self.request_queue.pop_front()
     }
 }

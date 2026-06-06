@@ -1,5 +1,5 @@
 //! End-to-end tests for the terminal application
-use runie_core::{AppState, Event};
+use runie_core::{AppState, Event, Role};
 use runie_tui::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 
@@ -102,7 +102,7 @@ fn test_submit_adds_message_to_queue() {
     state.update(Event::Submit);
     assert_eq!(state.input, "");
     assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, "user");
+    assert_eq!(state.messages[0].role, Role::User);
     assert_eq!(state.request_queue.len(), 1);
 }
 
@@ -123,8 +123,8 @@ fn test_agent_response_creates_messages() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
     assert_eq!(state.messages.len(), 2);
-    assert_eq!(state.messages[0].role, "thought");
-    assert_eq!(state.messages[1].role, "assistant");
+    assert_eq!(state.messages[0].role, Role::Thought);
+    assert_eq!(state.messages[1].role, Role::Assistant);
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn test_sequential_fifo_a_then_b() {
     state.update(Event::AgentThinking { id: "req.1".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
     state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
-    let thoughts: Vec<_> = state.messages.iter().filter(|m| m.role == "thought").collect();
+    let thoughts: Vec<_> = state.messages.iter().filter(|m| m.role == Role::Thought).collect();
     assert_eq!(thoughts.len(), 2);
 }
 
@@ -195,13 +195,13 @@ fn test_render_performance_1000_messages() {
     let mut state = AppState::default();
     for i in 0..200 {
         state.messages.push(runie_core::ChatMessage {
-            role: "user".to_string(),
+            role: Role::User,
             content: format!("Message {} from user with some content here", i),
             timestamp: 0.0,
             id: format!("req.{}", i),
         });
         state.messages.push(runie_core::ChatMessage {
-            role: "assistant".to_string(),
+            role: Role::Assistant,
             content: format!("Response {} from agent with detailed explanation and more text", i),
             timestamp: 0.0,
             id: format!("resp.{}", i),
@@ -245,8 +245,8 @@ fn test_full_list_files_integration() {
     state.streaming = true;
     simulate_list_files_flow(&mut state, &files);
     
-    assert!(state.messages.iter().any(|m| m.role == "thought"));
-    assert!(state.messages.iter().any(|m| m.role == "tool"));
+    assert!(state.messages.iter().any(|m| m.role == Role::Thought));
+    assert!(state.messages.iter().any(|m| m.role == Role::Tool));
     assert!(!state.streaming, "Streaming should stop after Done");
 }
 
@@ -274,7 +274,7 @@ fn test_list_files_command_flow() {
     assert!(id.starts_with("req."), "Queue should have valid id");
     
     // Pop and verify
-    let (content, id) = state.pop_queue().expect("Should pop");
+    let (content, _id) = state.pop_queue().expect("Should pop");
     assert_eq!(content, "list files");
 }
 
@@ -295,7 +295,7 @@ fn test_list_files_message_content() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: format!("\n{}", file_list) });
     
     // Check message content
-    let assistant_msg = state.messages.iter().find(|m| m.role == "assistant").expect("Should have assistant message");
+    let assistant_msg = state.messages.iter().find(|m| m.role == Role::Assistant).expect("Should have assistant message");
     println!("Assistant message content: {:?}", assistant_msg.content);
     assert!(assistant_msg.content.contains("src/main.rs"), "Message should contain file list");
 }
@@ -310,7 +310,7 @@ fn test_list_files_full_sequence() {
     simulate_list_files_flow(&mut state, &file_list);
     
     // Verify message content
-    let msg = state.messages.iter().find(|m| m.role == "assistant").expect("Should have message");
+    let msg = state.messages.iter().find(|m| m.role == Role::Assistant).expect("Should have message");
     assert!(msg.content.contains("main.rs"), "Should contain file list");
     assert_eq!(state.messages.len(), 5, "Should have 5 messages");
 }

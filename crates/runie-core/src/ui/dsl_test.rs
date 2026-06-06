@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::model::ChatMessage;
+use crate::model::{ChatMessage, Role};
 #[cfg(test)]
 use crate::ui::transform::LazyCache;
 #[cfg(test)]
@@ -8,11 +8,11 @@ use crate::ui::elements::Element;
 #[test]
 fn test_every_message_has_spacer() {
     let mut state = crate::model::AppState::default();
-    state.messages.push(ChatMessage { role: "user".into(), content: "Hello".into(), timestamp: 0.0, id: "req.0".into() });
-    state.messages.push(ChatMessage { role: "thought".into(), content: "Thinking...".into(), timestamp: 0.0, id: "req.0".into() });
-    state.messages.push(ChatMessage { role: "assistant".into(), content: "Hi".into(), timestamp: 0.0, id: "req.0".into() });
-    state.messages.push(ChatMessage { role: "tool".into(), content: "◆ Ran test 1.0s".into(), timestamp: 0.0, id: "req.0".into() });
-    state.messages.push(ChatMessage { role: "turn_complete".into(), content: "Turn completed in 2.0s".into(), timestamp: 0.0, id: "req.0".into() });
+    state.messages.push(ChatMessage { role: Role::User, content: "Hello".into(), timestamp: 0.0, id: "req.0".into() });
+    state.messages.push(ChatMessage { role: Role::Thought, content: "Thinking...".into(), timestamp: 0.0, id: "req.0".into() });
+    state.messages.push(ChatMessage { role: Role::Assistant, content: "Hi".into(), timestamp: 0.0, id: "req.0".into() });
+    state.messages.push(ChatMessage { role: Role::Tool, content: "◆ Ran test 1.0s".into(), timestamp: 0.0, id: "req.0".into() });
+    state.messages.push(ChatMessage { role: Role::TurnComplete, content: "Turn completed in 2.0s".into(), timestamp: 0.0, id: "req.0".into() });
 
     let elements = LazyCache::rebuild(&state);
     for (i, elem) in elements.iter().enumerate().step_by(2) {
@@ -42,7 +42,7 @@ fn test_no_messages_no_elements() {
 fn test_visible_returns_correct_slice() {
     let mut state = crate::model::AppState::default();
     for i in 0..5 {
-        state.messages.push(ChatMessage { role: "user".into(), content: format!("msg{}", i), timestamp: 0.0, id: format!("req.{}", i) });
+        state.messages.push(ChatMessage { role: Role::User, content: format!("msg{}", i), timestamp: 0.0, id: format!("req.{}", i) });
     }
     state.ensure_fresh();
     assert_eq!(state.element_count(), 10);
@@ -58,7 +58,7 @@ fn test_visible_returns_correct_slice() {
 #[test]
 fn test_count_matches_cache_len() {
     let mut state = crate::model::AppState::default();
-    state.messages.push(ChatMessage { role: "user".into(), content: "test".into(), timestamp: 0.0, id: "req.0".into() });
+    state.messages.push(ChatMessage { role: Role::User, content: "test".into(), timestamp: 0.0, id: "req.0".into() });
     state.ensure_fresh();
     assert_eq!(state.element_count(), state.elements_cache().len());
 }

@@ -1,4 +1,4 @@
-use crate::model::AppState;
+use crate::model::{AppState, Role};
 use crate::event::Event;
 use crate::ui::format::format_messages;
 
@@ -32,16 +32,16 @@ fn test_dsl_combines_consecutive_agent_chunks() {
 fn test_thinking_indicator_shows_for_queued_request() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.request_queue.push(("B".to_string(), "req.1".to_string()));
+    state.request_queue.push_back(("B".to_string(), "req.1".to_string()));
     state.thinking_started_at = Some(std::time::Instant::now());
-    assert!(state.messages.iter().all(|m| m.role != "thought"));
+    assert!(state.messages.iter().all(|m| m.role != Role::Thought));
 }
 
 #[test]
 fn test_dsl_shows_thinking_when_streaming() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.request_queue.push(("B".to_string(), "req.1".to_string()));
+    state.request_queue.push_back(("B".to_string(), "req.1".to_string()));
     state.thinking_started_at = Some(std::time::Instant::now());
 
     let lines = format_messages(&state);
@@ -64,7 +64,7 @@ fn test_tool_flow_creates_two_thoughts() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are the files".to_string() });
 
-    let thought_count = state.messages.iter().filter(|m| m.role == "thought").count();
+    let thought_count = state.messages.iter().filter(|m| m.role == Role::Thought).count();
     assert_eq!(thought_count, 2);
 }
 
@@ -75,7 +75,7 @@ fn test_turn_complete_event() {
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
 
     assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, "turn_complete");
+    assert_eq!(state.messages[0].role, Role::TurnComplete);
     assert!(state.messages[0].content.contains("5.1s"));
 }
 
@@ -88,7 +88,7 @@ fn test_turn_complete_not_shown_for_simple_flow() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hi".to_string() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 1.0 });
 
-    let has_turn_complete = state.messages.iter().any(|m| m.role == "turn_complete");
+    let has_turn_complete = state.messages.iter().any(|m| m.role == Role::TurnComplete);
     assert!(!has_turn_complete);
 }
 
@@ -99,7 +99,7 @@ fn test_tool_done_event() {
     state.update(Event::AgentToolEnd { duration_secs: 0.3 });
 
     assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, "tool");
+    assert_eq!(state.messages[0].role, Role::Tool);
     assert!(state.messages[0].content.contains("list_files"));
     assert!(state.messages[0].content.contains("0.3s"));
 }
@@ -136,11 +136,11 @@ fn test_list_files_full_tool_flow_sequence() {
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
 
     assert_eq!(state.messages.len(), 5);
-    assert_eq!(state.messages[0].role, "thought");
-    assert_eq!(state.messages[1].role, "tool");
-    assert_eq!(state.messages[2].role, "thought");
-    assert_eq!(state.messages[3].role, "assistant");
-    assert_eq!(state.messages[4].role, "turn_complete");
+    assert_eq!(state.messages[0].role, Role::Thought);
+    assert_eq!(state.messages[1].role, Role::Tool);
+    assert_eq!(state.messages[2].role, Role::Thought);
+    assert_eq!(state.messages[3].role, Role::Assistant);
+    assert_eq!(state.messages[4].role, Role::TurnComplete);
 
     let lines = format_messages(&state);
     let content: String = lines.iter()

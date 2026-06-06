@@ -16,7 +16,7 @@ pub mod ui;
 #[cfg(test)]
 mod tests;
 
-pub use model::{AppState, ChatMessage, Color, PANEL_CHAT, PANEL_INPUT};
+pub use model::{AppState, ChatMessage, Color, Role, PANEL_CHAT, PANEL_INPUT};
 pub use event::Event;
 pub use labels::{
     PREFIX_USER, PREFIX_AGENT,

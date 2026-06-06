@@ -1,4 +1,4 @@
-use crate::model::AppState;
+use crate::model::{AppState, Role};
 use crate::event::Event;
 
 fn fresh_state() -> AppState {
@@ -11,7 +11,7 @@ fn test_complete_agent_flow() {
     state.update(Event::Input('H'));
     state.update(Event::Submit);
     assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, "user");
+    assert_eq!(state.messages[0].role, Role::User);
     assert!(!state.streaming);
     state.pop_queue();
     state.streaming = true;
@@ -20,8 +20,8 @@ fn test_complete_agent_flow() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
     assert_eq!(state.messages.len(), 3);
-    assert_eq!(state.messages[1].role, "thought");
-    assert_eq!(state.messages[2].role, "assistant");
+    assert_eq!(state.messages[1].role, Role::Thought);
+    assert_eq!(state.messages[2].role, Role::Assistant);
     state.update(Event::AgentDone { id: "req.0".to_string() });
     assert!(!state.streaming);
 }
@@ -44,7 +44,7 @@ fn test_submit_adds_message_to_queue() {
     state.update(Event::Input('H'));
     state.update(Event::Submit);
     assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, "user");
+    assert_eq!(state.messages[0].role, Role::User);
     assert_eq!(state.request_queue.len(), 1);
 }
 
@@ -59,6 +59,6 @@ fn test_multiple_thoughts_for_sequential_requests() {
     state.update(Event::AgentThinking { id: "req.1".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
     state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
-    let thoughts: Vec<_> = state.messages.iter().filter(|m| m.role == "thought").collect();
+    let thoughts: Vec<_> = state.messages.iter().filter(|m| m.role == Role::Thought).collect();
     assert_eq!(thoughts.len(), 2);
 }
