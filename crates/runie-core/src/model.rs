@@ -5,8 +5,8 @@ use crate::ui::elements::Element;
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
 
-pub const PANEL_CHAT: &str = "Chat";
-pub const PANEL_INPUT: &str = "Input";
+pub const PANEL_CHAT: &str = " Chat ";
+pub const PANEL_INPUT: &str = " Input ";
 
 #[derive(Clone)]
 pub struct AppState {
@@ -15,7 +15,7 @@ pub struct AppState {
     pub streaming: bool,
     pub scroll: usize,
     pub thinking_started_at: Option<std::time::Instant>,
-    pub request_queue: Vec<(String, String)>,
+    pub request_queue: std::collections::VecDeque<(String, String)>,
     pub next_id: u64,
     pub current_request_id: Option<String>,
     pub turn_started_at: Option<std::time::Instant>,
@@ -27,6 +27,12 @@ pub struct AppState {
     pub current_action: Option<String>,
     pub current_provider: String,
     pub current_model: String,
+    /// Index of last tool message — avoids O(n) reverse search in end_tool()
+    pub(crate) last_tool_index: Option<usize>,
+    /// Number of commands sent to agent but not yet completed
+    pub inflight: usize,
+    /// Monotonic counter — increments on every snapshot sent to render actor
+    pub render_generation: u64,
     element_count: usize,
     elements_cache: Vec<Element>,
     dirty: bool,
@@ -40,7 +46,7 @@ impl Default for AppState {
             streaming: false,
             scroll: 0,
             thinking_started_at: None,
-            request_queue: Vec::new(),
+            request_queue: std::collections::VecDeque::new(),
             next_id: 0,
             current_request_id: None,
             turn_started_at: None,
@@ -52,6 +58,9 @@ impl Default for AppState {
             current_action: None,
             current_provider: "mock".to_string(),
             current_model: "echo".to_string(),
+            last_tool_index: None,
+            inflight: 0,
+            render_generation: 0,
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
@@ -72,6 +81,7 @@ impl AppState {
         self.tool_started_at.map(|t| t.elapsed().as_secs_f64())
     }
 
+    /// Braille spinner frame (12-frame cycle)
     pub fn spinner_frame(&self) -> char {
         SPINNER_CHARS[(self.animation_frame % SPINNER_FRAMES) as usize]
     }
@@ -82,10 +92,11 @@ impl AppState {
         id
     }
 
-    pub fn mark_dirty(&mut self) {
+    pub(crate) fn mark_dirty(&mut self) {
         self.dirty = true;
     }
 
+    /// Rebuild cache only when dirty — O(n) but gated
     pub fn ensure_fresh(&mut self) {
         if self.dirty {
             self.elements_cache = crate::ui::LazyCache::rebuild(self);
@@ -94,6 +105,7 @@ impl AppState {
         }
     }
 
+    /// Visible elements slice — O(1), zero allocation
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
         if self.elements_cache.is_empty() {
             return &[];
@@ -121,11 +133,38 @@ impl AppState {
             self.dirty = true;
         }
     }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Role {
+    User,
+    Thought,
+    Assistant,
+    Tool,
+    TurnComplete,
+    System,
+}
+
+impl Role {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Role::User => "user",
+            Role::Thought => "thought",
+            Role::Assistant => "assistant",
+            Role::Tool => "tool",
+            Role::TurnComplete => "turn_complete",
+            Role::System => "system",
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct ChatMessage {
-    pub role: String,
+    pub role: Role,
     pub content: String,
     pub timestamp: f64,
     pub id: String,

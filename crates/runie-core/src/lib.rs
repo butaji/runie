@@ -1,11 +1,11 @@
-//! Runie Core - State, Events, and Update Logic
-//! 
-//! Following MVU (Model-View-Update) pattern:
-//! - Model: AppState
-//! - Events: Event enum (centralized)
-//! - Update: State transitions
-//! - UI: DSL for declarative UI construction
-//! - Labels: All static text constants
+//! Runie Core — State, Events, Update, UI Architecture
+//!
+//! Architecture (three layers):
+//!   model     :: AppState, ChatMessage (source of truth)
+//!   event     :: Event enum (all possible state transitions)
+//!   update    :: State transitions (pure functions)
+//!   ui        :: Elements, Transform (view layer)
+//!   labels    :: Static text constants
 
 pub mod model;
 pub mod event;
@@ -17,7 +17,7 @@ pub mod provider;
 #[cfg(test)]
 mod tests;
 
-pub use model::{AppState, ChatMessage, PANEL_CHAT, PANEL_INPUT};
+pub use model::{AppState, ChatMessage, Color, Role, PANEL_CHAT, PANEL_INPUT};
 pub use event::Event;
 pub use labels::{
     PREFIX_USER, PREFIX_AGENT,
@@ -25,6 +25,6 @@ pub use labels::{
 };
 pub use ui::{
     Element, Feed, LazyCache, StreamingMerge,
-    format_messages, DisplayLine, DisplaySpan, Color,
+    format_messages, DisplayLine, DisplaySpan,
 };
 pub use provider::{Message, Provider, ResponseChunk};
