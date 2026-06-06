@@ -1,5 +1,5 @@
 //! Runie Terminal - Async Binary Entry Point
-//! Architecture: Main = async runtime, UI = background thread
+//! Architecture: Main = async runtime, UI = background thread via channel
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use futures::StreamExt;
@@ -8,14 +8,11 @@ use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockPr
 use runie_core::{AppState, Event as CoreEvent};
 use std::{
     io,
-    sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}},
+    sync::{Arc, atomic::{AtomicBool, Ordering}},
     thread,
     time::Duration,
 };
 use tokio::sync::mpsc;
-
-// Shared state - RwLock allows concurrent reads
-type SharedState = Arc<RwLock<AppState>>;
 
 struct Cleanup;
 
@@ -33,13 +30,12 @@ fn main() -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    // Shared state - fresh start, no serialization
-    let state: SharedState = Arc::new(RwLock::new(AppState::default()));
-    let ui_state = state.clone();
+    // Channel: main thread sends state snapshots to UI thread
+    let (render_tx, render_rx) = std::sync::mpsc::channel::<AppState>();
     let running = Arc::new(AtomicBool::new(true));
     let ui_running = running.clone();
 
-    // UI thread - dedicated, never blocks main thread
+    // UI thread - renders snapshots from channel, no locks!
     let _ui_handle = thread::spawn(move || {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = match Terminal::new(backend) {
@@ -49,60 +45,65 @@ fn main() -> io::Result<()> {
                 return;
             }
         };
-        
-        // Initial render
-        if let Ok(s) = ui_state.read() {
-            let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
+
+        // Wait for first snapshot
+        match render_rx.recv() {
+            Ok(state) => {
+                let _ = terminal.draw(|f| runie_tui::ui::view(f, &state));
+            }
+            Err(_) => return,
         }
 
-        // Render loop - 10fps (reduce CrosstermBackend flush pressure)
         let mut frame_count = 0u64;
         let mut last_log = std::time::Instant::now();
-        
+        let mut last_state: Option<AppState> = None;
+
         while ui_running.load(Ordering::Relaxed) {
-            thread::sleep(Duration::from_millis(100));
-            frame_count += 1;
-            
-            // Try to get read lock - NEVER block, skip frame if contended
-            let start = std::time::Instant::now();
-            match ui_state.try_read() {
-                Ok(s) => {
-                    let lock_time = start.elapsed();
-                    let draw_start = std::time::Instant::now();
-                    match terminal.draw(|f| runie_tui::ui::view(f, &s)) {
-                        Ok(_) => {
-                            let draw_time = draw_start.elapsed();
-                            if draw_time > Duration::from_millis(50) {
-                                eprintln!("[UI] Slow draw: {:?} (msgs={}, lock={:?})", 
-                                    draw_time, s.messages.len(), lock_time);
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("[UI] Draw error: {}", e);
-                        }
-                    }
+            // Try non-blocking recv first
+            match render_rx.try_recv() {
+                Ok(state) => {
+                    last_state = Some(state);
                 }
-                Err(_) => {
-                    // Lock is contended, skip this frame
-                    continue;
+                Err(std::sync::mpsc::TryRecvError::Empty) => {
+                    // No new state, render last known if any
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    eprintln!("[UI] Channel disconnected");
+                    break;
                 }
             }
-            
-            // Log FPS every 10 seconds
+
+            // Render if we have state
+            if let Some(ref state) = last_state {
+                let draw_start = std::time::Instant::now();
+                match terminal.draw(|f| runie_tui::ui::view(f, state)) {
+                    Ok(_) => {
+                        frame_count += 1;
+                        let draw_time = draw_start.elapsed();
+                        if draw_time > Duration::from_millis(50) {
+                            eprintln!("[UI] Slow draw: {:?} (msgs={})", draw_time, state.messages.len());
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("[UI] Draw error: {}", e);
+                    }
+                }
+            }
+
+            thread::sleep(Duration::from_millis(50));
+
             if last_log.elapsed() > Duration::from_secs(10) {
-                eprintln!("[UI] Frames rendered: {}, msgs: {:?}", 
-                    frame_count, 
-                    ui_state.try_read().map(|s| s.messages.len()).unwrap_or(0));
+                eprintln!("[UI] {} frames rendered", frame_count);
                 last_log = std::time::Instant::now();
                 frame_count = 0;
             }
         }
-        
-        eprintln!("[UI] Shutdown signal received");
-        
-        // Final render before exit
-        if let Ok(s) = ui_state.read() {
-            let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
+
+        eprintln!("[UI] Shutdown");
+
+        // Final render
+        if let Some(state) = last_state {
+            let _ = terminal.draw(|f| runie_tui::ui::view(f, &state));
         }
     });
 
@@ -113,15 +114,20 @@ fn main() -> io::Result<()> {
         .unwrap();
 
     rt.block_on(async {
+        // State owned by main thread only
+        let mut state = AppState::default();
+
+        // Send initial state
+        let _ = render_tx.send(state.clone());
+
         // Channels
         let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(100);
         let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(100);
         let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
 
         // Agent loop - async
-        let agent_state = state.clone();
         tokio::spawn(async move {
-            agent_loop(cmd_rx, agent_tx, agent_state).await;
+            agent_loop(cmd_rx, agent_tx).await;
         });
 
         // Input reader - async
@@ -139,30 +145,19 @@ fn main() -> io::Result<()> {
 
         // Event loop
         let mut anim_interval = tokio::time::interval(Duration::from_millis(200));
-        
+        let mut last_render = std::time::Instant::now();
+
         loop {
             tokio::select! {
                 biased;
-                
+
                 Some(evt) = input_rx.recv() => {
-                    // Process event with write lock
-                    let start = std::time::Instant::now();
-                    let mut s = state.write().unwrap();
-                    *s = runie_core::update::update(std::mem::take(&mut *s), evt.clone());
-                    // Rebuild cache while holding write lock
-                    s.ensure_fresh();
-                    let msg_count = s.messages.len();
-                    drop(s);  // Release lock immediately
-                    let elapsed = start.elapsed();
-                    if elapsed > Duration::from_millis(10) {
-                        eprintln!("[MAIN] Slow input update: {:?} (msgs={})", elapsed, msg_count);
-                    }
+                    state = runie_core::update::update(state, evt.clone());
 
                     if matches!(evt, CoreEvent::Submit) {
-                        let mut s = state.write().unwrap();
-                        if let Some((content, id)) = s.peek_queue() {
-                            s.pop_queue();
-                            s.streaming = true;
+                        if let Some((content, id)) = state.peek_queue() {
+                            state.pop_queue();
+                            state.streaming = true;
                             let _ = cmd_tx.send(AgentCommand { content, id }).await;
                         }
                     }
@@ -171,40 +166,34 @@ fn main() -> io::Result<()> {
                         break;
                     }
                 }
-                
+
                 Some(evt) = agent_rx.recv() => {
-                    let start = std::time::Instant::now();
-                    let mut s = state.write().unwrap();
-                    *s = runie_core::update::update(std::mem::take(&mut *s), evt);
-                    s.ensure_fresh();
-                    let msg_count = s.messages.len();
-                    drop(s);
-                    let elapsed = start.elapsed();
-                    if elapsed > Duration::from_millis(10) {
-                        eprintln!("[MAIN] Slow agent update: {:?} (msgs={})", elapsed, msg_count);
-                    }
+                    state = runie_core::update::update(state, evt);
                 }
-                
+
                 _ = anim_interval.tick() => {
-                    let mut s = state.write().unwrap();
-                    if s.turn_active {
-                        s.animation_frame = s.animation_frame.wrapping_add(1);
-                        s.mark_dirty();
+                    if state.turn_active {
+                        state.animation_frame = state.animation_frame.wrapping_add(1);
                     }
                 }
             }
-            
+
+            // Send snapshot to UI thread (unbounded channel, never blocks)
+            // Rate limit: max 20fps
+            if last_render.elapsed() >= Duration::from_millis(50) {
+                if render_tx.send(state.clone()).is_err() {
+                    eprintln!("[MAIN] UI thread disconnected");
+                    break;
+                }
+                last_render = std::time::Instant::now();
+            }
+
             // Check quit
-            let should_quit = {
-                let s = state.read().unwrap();
-                matches!(s.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit")
-            };
-            if should_quit {
+            if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
                 break;
             }
         }
 
-        // Signal UI thread to shutdown
         running.store(false, Ordering::Relaxed);
     });
 
@@ -213,9 +202,8 @@ fn main() -> io::Result<()> {
 
 /// Agent loop
 async fn agent_loop(
-    mut cmd_rx: mpsc::Receiver<AgentCommand>, 
+    mut cmd_rx: mpsc::Receiver<AgentCommand>,
     agent_tx: mpsc::Sender<CoreEvent>,
-    _state: SharedState,
 ) {
     while let Some(cmd) = cmd_rx.recv().await {
         if needs_tool_execution(&cmd.content) {
