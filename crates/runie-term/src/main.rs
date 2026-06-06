@@ -7,11 +7,9 @@ use std::{io, time::Duration};
 use tokio::sync::{mpsc, watch};
 
 // ═══════════════════════════════════════════════════════════════════
-// CONSTANTS — Frame budget guarantees UI never blocks
+// CONSTANTS
 // ═══════════════════════════════════════════════════════════════════
-const ANIM_MS: u64 = 200;
-const RENDER_FPS: u64 = 30; // Render cadence — independent of event rate
-const RENDER_MS: u64 = 1000 / RENDER_FPS;
+const ANIM_MS: u64 = 200; // Spinner frame change interval
 
 struct Cleanup;
 
@@ -122,22 +120,19 @@ fn maybe_send_snapshot(state: &mut AppState, render_tx: &watch::Sender<AppState>
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RENDER ACTOR — Owns Terminal. Draws at fixed cadence.
-// Receives state snapshots via watch channel (always latest).
+// RENDER ACTOR — Owns Terminal. Draws ONLY when state changes.
+// Uses watch::changed() to sleep until UI sends a new snapshot.
+// Zero CPU waste on idle. Instant response to input.
 // CONTRACT: Never mutates state — pure drawing
 // ═══════════════════════════════════════════════════════════════════
 async fn render_actor(
-    render_rx: watch::Receiver<AppState>,
+    mut render_rx: watch::Receiver<AppState>,
     mut terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
 ) {
-    let mut interval = tokio::time::interval(Duration::from_millis(RENDER_MS));
-
     loop {
-        interval.tick().await;
+        // Sleep until UI sends a new snapshot. No polling, no timer drift.
+        if render_rx.changed().await.is_err() { break; }
 
-        // watch::Receiver::borrow() gives latest snapshot — no clone if we can avoid it,
-        // but view() needs &mut AppState for ensure_fresh(). Since cache is already
-        // fresh (rebuilt by UI actor), ensure_fresh() is a no-op check.
         let mut state = render_rx.borrow().clone();
         let _ = terminal.draw(|f| runie_tui::ui::view(f, &mut state));
     }
