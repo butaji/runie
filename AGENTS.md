@@ -1,5 +1,8 @@
 # Agent Guidelines
 
+Track tasks in tasks/index.json, details per each in tasks/xxx.md
+
+
 All features, fixes, and improvements must be implemented with coverage of automatic tests that are lightweight and run fast.
 No artificail delays in automatic tests!
 

@@ -1,5 +1,8 @@
 //! Runie Agent - Agent components
 
+#[cfg(test)]
+mod tests;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

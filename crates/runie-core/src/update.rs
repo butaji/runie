@@ -56,11 +56,11 @@ impl AppState {
         let id = self.next_id();
         self.messages.push(ChatMessage {
             role: "user".into(),
-            content,
+            content: content.clone(),
             timestamp: now(),
             id: id.clone(),
         });
-        self.request_queue.push(id);
+        self.request_queue.push((content, id));
         self.mark_dirty();
     }
 
@@ -167,11 +167,11 @@ impl AppState {
         self.mark_dirty();
     }
 
-    pub fn peek_queue(&self) -> Option<String> {
+    pub fn peek_queue(&self) -> Option<(String, String)> {
         self.request_queue.first().cloned()
     }
 
-    pub fn pop_queue(&mut self) -> Option<String> {
+    pub fn pop_queue(&mut self) -> Option<(String, String)> {
         if !self.request_queue.is_empty() {
             Some(self.request_queue.remove(0))
         } else {

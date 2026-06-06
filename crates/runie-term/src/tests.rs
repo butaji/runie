@@ -236,6 +236,35 @@ fn simulate_tool_call(state: &mut AppState, i: usize) {
 // === List Files Flow Test ===
 
 #[test]
+fn test_list_files_command_flow() {
+    // This test verifies the complete "list files" flow:
+    // 1. User types "list files"
+    // 2. Submit sends to queue with correct content
+    // 3. peek_queue returns (content, id) tuple
+    set_test_mode();
+    let mut state = AppState::default();
+    
+    // Type "list files"
+    for c in "list files".chars() {
+        state.update(Event::Input(c));
+    }
+    assert_eq!(state.input, "list files");
+    
+    // Submit
+    state.update(Event::Submit);
+    assert!(state.input.is_empty(), "Input should be cleared after submit");
+    
+    // Check queue has correct content
+    let (content, id) = state.peek_queue().expect("Should have queued request");
+    assert_eq!(content, "list files", "Queue should contain 'list files'");
+    assert!(id.starts_with("req."), "Queue should have valid id");
+    
+    // Pop and verify
+    let (content, id) = state.pop_queue().expect("Should pop");
+    assert_eq!(content, "list files");
+}
+
+#[test]
 fn test_list_files_message_content() {
     // Debug: verify message content is stored correctly
     let mut state = AppState::default();
