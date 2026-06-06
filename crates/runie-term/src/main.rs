@@ -7,7 +7,6 @@ use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockPr
 use runie_core::{AppState, Event as CoreEvent};
 use std::io;
 use tokio::sync::mpsc;
-use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::time::{interval, Duration};
 
 const FAST_MODE: bool = cfg!(test);
@@ -49,14 +48,15 @@ async fn main() -> io::Result<()> {
     });
 
     let mut state = load_state().unwrap_or_default();
-    let mut render_interval = interval(Duration::from_millis(50));
-    let tick_counter = AtomicU32::new(0);
+    let mut anim_interval = interval(Duration::from_millis(50));
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    
+    // Initial render
+    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
 
     loop {
         tokio::select! {
-            // Prioritize events over rendering
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
 
@@ -71,19 +71,28 @@ async fn main() -> io::Result<()> {
                 if matches!(evt, CoreEvent::Quit) {
                     break;
                 }
+                
+                // Redraw on state change
+                if state.needs_redraw {
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+                }
             }
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
+                
+                // Redraw on state change
+                if state.needs_redraw {
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+                }
             }
             
-            _ = render_interval.tick() => {
-                // Advance animation frame every 3 ticks (150ms)
-                let ticks = tick_counter.fetch_add(1, Ordering::Relaxed);
-                if ticks % 3 == 0 {
+            _ = anim_interval.tick() => {
+                // Update animation frame if turn is active
+                if state.turn_active {
                     state.animation_frame = state.animation_frame.wrapping_add(1);
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
                 }
-                let _ = terminal.draw(|f| runie_tui::ui::view(f, &state));
             }
         }
 

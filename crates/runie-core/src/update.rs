@@ -10,7 +10,8 @@ fn now() -> f64 {
         .as_secs_f64()
 }
 
-pub fn update(state: AppState, event: Event) -> AppState {
+pub fn update(mut state: AppState, event: Event) -> AppState {
+    state.needs_redraw = true;
     match event {
         // === UI Events ===
         Event::Input(c) => state.push_input(c),
