@@ -33,21 +33,29 @@ fn main() -> io::Result<()> {
     let running = Arc::new(AtomicBool::new(true));
     let ui_running = running.clone();
 
-    // UI thread — 60fps render loop
+    // UI thread — render ONLY when state changes
     let _ui_handle = thread::spawn(move || {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
         let mut last_state: Option<AppState> = None;
+        let mut dirty = true; // Force first render
 
         while ui_running.load(Ordering::Relaxed) {
             match render_rx.try_recv() {
-                Ok(state) => last_state = Some(state),
+                Ok(state) => {
+                    last_state = Some(state);
+                    dirty = true;
+                }
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
                 Err(std::sync::mpsc::TryRecvError::Empty) => {}
             }
 
-            if let Some(ref state) = last_state {
-                let _ = terminal.draw(|f| runie_tui::ui::view(f, state));
+            // Only draw when state changed — skip idle frames
+            if dirty {
+                if let Some(ref state) = last_state {
+                    let _ = terminal.draw(|f| runie_tui::ui::view(f, state));
+                }
+                dirty = false;
             }
 
             thread::sleep(Duration::from_millis(16));
