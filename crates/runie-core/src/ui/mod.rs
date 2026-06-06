@@ -1,14 +1,19 @@
-//! UI Module - DSL and Elements for declarative UI construction
-//! 
-//! Architecture:
-//! - elements.rs: Pure data structures representing UI components
-//! - dsl.rs: Operations to build UI from state
-//! - format.rs: Rendering elements to display lines
+//! UI Module — Three-layer architecture (core = elements + transform only)
+//!
+//! Layers:
+//!   elements  :: Pure data structures (Element, Feed)
+//!   transform :: State → Elements (pure, lazy, cached)
+//!   format    :: Legacy formatting (DisplayLine, DisplaySpan)
+//!
+//! Rendering (ratatui-dependent) lives in runie-tui crate
 
 pub mod elements;
-pub mod dsl;
+pub mod transform;
 pub mod format;
+pub mod dsl_test;
+pub mod view;
 
 pub use elements::{Element, Feed};
-pub use dsl::Dsl;
-pub use format::{format_messages, render_feed, DisplayLine, DisplaySpan, Color};
+pub use transform::{LazyCache, StreamingMerge};
+pub use format::{format_messages, DisplayLine, DisplaySpan, Color};
+pub use view::{View, Panel};

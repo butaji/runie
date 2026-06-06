@@ -88,8 +88,7 @@ impl AppState {
 
     pub fn ensure_fresh(&mut self) {
         if self.dirty {
-            use crate::ui::dsl::Dsl;
-            self.elements_cache = Dsl::build_elements(self);
+            self.elements_cache = crate::ui::LazyCache::rebuild(self);
             self.element_count = self.elements_cache.len();
             self.dirty = false;
         }

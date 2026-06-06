@@ -1,6 +1,6 @@
 use crate::model::AppState;
 use crate::event::Event;
-use crate::ui::Dsl;
+use crate::ui::LazyCache;
 use crate::ui::elements::Element;
 
 fn fresh_state() -> AppState {
@@ -23,7 +23,7 @@ fn test_dsl_combines_consecutive_agent_chunks() {
         content: "World!".to_string()
     });
 
-    let feed = Dsl::feed(&state);
+    let feed = LazyCache::feed(&state);
     assert_eq!(feed.elements.len(), 4);
 
     if let Element::AgentMessage { content, .. } = &feed.elements[2] {

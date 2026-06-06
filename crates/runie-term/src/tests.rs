@@ -84,8 +84,7 @@ fn test_render_user_message() {
     let mut state = AppState::default();
     state.update(Event::Input('H'));
     state.update(Event::Submit);
-    state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -104,8 +103,7 @@ fn test_render_agent_response() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
-    state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -141,7 +139,7 @@ fn test_render_performance_1000_messages() {
 
     let start = Instant::now();
     for _ in 0..100 {
-        terminal.draw(|f| view(f, &state)).unwrap();
+        terminal.draw(|f| view(f, &mut state)).unwrap();
     }
     let elapsed = start.elapsed();
 
@@ -178,13 +176,11 @@ fn test_stress_many_tool_calls() {
         state.update(Event::AgentDone { id: id.clone() });
 
         if i % 5 == 0 {
-            state.ensure_fresh();
-            terminal.draw(|f| view(f, &state)).unwrap();
+            terminal.draw(|f| view(f, &mut state)).unwrap();
         }
     }
 
-    state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
@@ -201,8 +197,7 @@ fn test_render_thinking_indicator() {
     let mut state = AppState::default();
     state.update(Event::Submit);
     state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();

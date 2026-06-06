@@ -1,10 +1,10 @@
-//! Runie Terminal - Single-threaded async event loop with batched events
+//! Runie Terminal — Single-threaded async event loop with batched events
 //!
 //! Architecture:
 //!   1. tokio::main runs everything on one thread (input + render + agent)
-//!   2. Events are batched: process up to 10 per frame, then draw once
-//!   3. Dirty flag: only redraw when state actually changes
-//!   4. No separate UI thread — terminal.draw() is called directly
+//!   2. Events are batched: process up to BATCH_SIZE per frame, then draw once
+//!   3. Cache rebuild (ensure_fresh) happens in render path, not per-event
+//!   4. Dirty flag: only redraw when state actually changes
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
@@ -13,6 +13,11 @@ use runie_agent::{AgentCommand, run_agent_turn};
 use runie_core::{AppState, Event as CoreEvent};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
+
+// Timing constants
+const ANIM_MS: u64 = 200;
+const THROTTLE_MS: u64 = 50;
+const BATCH_SIZE: usize = 10;
 
 struct Cleanup;
 
@@ -27,14 +32,14 @@ impl Drop for Cleanup {
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
     let mut terminal = setup_terminal()?;
-    let mut state = AppState::default();
+    let state = AppState::default();
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
-    tokio::spawn(input_reader(input_tx.clone()));
+    tokio::spawn(input_reader(input_tx));
 
     event_loop(&mut terminal, state, input_rx, agent_rx, cmd_tx).await
 }
@@ -42,17 +47,15 @@ async fn main() -> io::Result<()> {
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(std::io::stdout());
-    Terminal::new(backend)
+    Terminal::new(CrosstermBackend::new(std::io::stdout()))
 }
 
 async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
     let mut reader = EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
         if let Some(evt) = convert_event(&event) {
-            let is_quit = matches!(evt, CoreEvent::Quit);
-            if input_tx.send(evt).await.is_err() { break; }
-            if is_quit { break; }
+            if input_tx.send(evt.clone()).await.is_err() { break; }
+            if matches!(evt, CoreEvent::Quit | CoreEvent::Reset) { break; }
         }
     }
 }
@@ -64,7 +67,7 @@ async fn event_loop(
     mut agent_rx: mpsc::Receiver<CoreEvent>,
     cmd_tx: mpsc::Sender<AgentCommand>,
 ) -> io::Result<()> {
-    let mut anim = tokio::time::interval(Duration::from_millis(200));
+    let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
     let mut dirty = true;
 
     loop {
@@ -73,14 +76,11 @@ async fn event_loop(
             tokio::select! {
                 biased;
 
-                Some(evt) = input_rx.recv(), if events < 10 => {
+                Some(evt) = input_rx.recv(), if events < BATCH_SIZE => {
                     let was_submit = matches!(evt, CoreEvent::Submit);
                     state.update(evt.clone());
-                    state.ensure_fresh();
                     dirty = true; events += 1;
-
                     if matches!(evt, CoreEvent::Quit) { return Ok(()); }
-
                     if was_submit {
                         if let Some((content, id)) = state.peek_queue() {
                             state.pop_queue();
@@ -95,16 +95,14 @@ async fn event_loop(
                     }
                 }
 
-                Some(evt) = agent_rx.recv(), if events < 10 => {
+                Some(evt) = agent_rx.recv(), if events < BATCH_SIZE => {
                     state.update(evt);
-                    state.ensure_fresh();
                     dirty = true; events += 1;
                 }
 
-                _ = anim.tick(), if events < 10 => {
+                _ = anim.tick(), if events < BATCH_SIZE => {
                     if state.turn_active {
-                        state.animation_frame = state.animation_frame.wrapping_add(1);
-                        state.ensure_fresh();
+                        state.tick_animation();
                         dirty = true;
                     }
                     break;
@@ -115,12 +113,12 @@ async fn event_loop(
         }
 
         if dirty {
-            terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+            terminal.draw(|f| runie_tui::ui::view(f, &mut state))?;
             dirty = false;
         }
 
         if events == 0 {
-            tokio::time::sleep(Duration::from_millis(16)).await;
+            tokio::time::sleep(Duration::from_millis(THROTTLE_MS)).await;
         }
     }
 }
