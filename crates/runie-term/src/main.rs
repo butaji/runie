@@ -84,8 +84,10 @@ async fn main() -> io::Result<()> {
             }
             
             _ = cache_interval.tick() => {
-                // Single render path - rebuild cache and draw
-                state.formatted_cache = runie_core::format_messages(&state);
+                // Only rebuild cache if needed (streaming)
+                if state.streaming || state.turn_active {
+                    state.formatted_cache = runie_core::format_messages(&state);
+                }
                 terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
