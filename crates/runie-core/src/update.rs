@@ -155,7 +155,8 @@ impl AppState {
         self.has_intermediate_steps = false;
         self.turn_active = false;
         self.turn_started_at = None;
-        if self.request_queue.is_empty() {
+        self.inflight = self.inflight.saturating_sub(1);
+        if self.inflight == 0 && self.request_queue.is_empty() {
             self.streaming = false;
             self.thinking_started_at = None;
         }

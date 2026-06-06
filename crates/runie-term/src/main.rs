@@ -79,7 +79,8 @@ async fn event_loop(
                             let id = id.clone();
                             state.pop_queue();
                             state.streaming = true;
-                            let _ = cmd_tx.send(AgentCommand { content, id }).await;
+                            state.inflight += 1;
+                            let _ = cmd_tx.try_send(AgentCommand { content, id });
                         }
                     }
                     dirty = true; events += 1;

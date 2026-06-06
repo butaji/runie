@@ -27,6 +27,8 @@ pub struct AppState {
     pub current_action: Option<String>,
     /// Index of last tool message — avoids O(n) reverse search in end_tool()
     pub(crate) last_tool_index: Option<usize>,
+    /// Number of commands sent to agent but not yet completed
+    pub inflight: usize,
     /// Cached element count — O(1) access when not dirty
     element_count: usize,
     /// Cached elements — rebuilt lazily via ensure_fresh()
@@ -54,6 +56,7 @@ impl Default for AppState {
             turn_active: false,
             current_action: None,
             last_tool_index: None,
+            inflight: 0,
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
