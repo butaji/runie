@@ -8,7 +8,7 @@ pub struct Dsl;
 impl Dsl {
     /// Get total element count - O(1) from cache
     pub fn count(state: &AppState) -> usize {
-        state.element_count
+        state.element_count()
     }
     
     /// Get visible elements as slice - O(1), zero allocation

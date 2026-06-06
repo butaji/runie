@@ -1,5 +1,12 @@
-//! Model - Application State
+//! Model — Application State (mutable borrow, no cloning per event)
 use crate::ui::elements::Element;
+
+// Animation constants
+const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
+const SPINNER_FRAMES: u32 = 12;
+
+pub const PANEL_CHAT: &str = "Chat";
+pub const PANEL_INPUT: &str = "Input";
 
 #[derive(Clone)]
 pub struct AppState {
@@ -18,11 +25,11 @@ pub struct AppState {
     pub animation_frame: u32,
     pub turn_active: bool,
     pub current_action: Option<String>,
-    pub element_count: usize,
-    pub elements_cache: Vec<Element>,
-    pub dirty: bool,  // Cache needs rebuild
     pub current_provider: String,
     pub current_model: String,
+    element_count: usize,
+    elements_cache: Vec<Element>,
+    dirty: bool,
 }
 
 impl Default for AppState {
@@ -43,45 +50,42 @@ impl Default for AppState {
             animation_frame: 0,
             turn_active: false,
             current_action: None,
+            current_provider: "mock".to_string(),
+            current_model: "echo".to_string(),
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
-            current_provider: "mock".to_string(),
-            current_model: "echo".to_string(),
         }
     }
 }
 
 impl AppState {
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {
-        self.thinking_started_at.map(|start| start.elapsed().as_secs_f64())
+        self.thinking_started_at.map(|t| t.elapsed().as_secs_f64())
     }
-    
+
     pub fn turn_elapsed_secs(&self) -> Option<f64> {
-        self.turn_started_at.map(|start| start.elapsed().as_secs_f64())
+        self.turn_started_at.map(|t| t.elapsed().as_secs_f64())
     }
-    
+
     pub fn tool_elapsed_secs(&self) -> Option<f64> {
-        self.tool_started_at.map(|start| start.elapsed().as_secs_f64())
+        self.tool_started_at.map(|t| t.elapsed().as_secs_f64())
     }
-    
+
     pub fn spinner_frame(&self) -> char {
-        const SPINNERS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
-        SPINNERS[(self.animation_frame % 12) as usize]
+        SPINNER_CHARS[(self.animation_frame % SPINNER_FRAMES) as usize]
     }
-    
+
     pub fn next_id(&mut self) -> String {
         let id = format!("req.{}", self.next_id);
         self.next_id += 1;
         id
     }
-    
-    /// Mark dirty - cache will be rebuilt on next access
+
     pub fn mark_dirty(&mut self) {
         self.dirty = true;
     }
-    
-    /// Rebuild cache if dirty - O(n) but only when needed
+
     pub fn ensure_fresh(&mut self) {
         if self.dirty {
             use crate::ui::dsl::Dsl;
@@ -90,21 +94,33 @@ impl AppState {
             self.dirty = false;
         }
     }
-    
-    /// Get visible elements as slice - zero allocation, safe bounds
+
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        // Safety: if cache is stale, return empty
         if self.elements_cache.is_empty() {
             return &[];
         }
         let start = skip.min(self.element_count).min(self.elements_cache.len());
-        let end = (skip + take).min(self.element_count).min(self.elements_cache.len());
+        let end = (start + take).min(self.element_count).min(self.elements_cache.len());
         &self.elements_cache[start..end]
     }
-    
+
     pub fn count(&self) -> usize {
-        // Safety: if cache is stale, use actual cache len
         self.element_count.max(self.elements_cache.len())
+    }
+
+    pub fn element_count(&self) -> usize {
+        self.element_count
+    }
+
+    pub fn elements_cache(&self) -> &[Element] {
+        &self.elements_cache
+    }
+
+    pub fn tick_animation(&mut self) {
+        if self.turn_active {
+            self.animation_frame = self.animation_frame.wrapping_add(1);
+            self.dirty = true;
+        }
     }
 }
 
@@ -131,6 +147,3 @@ pub enum Color {
     White,
     Magenta,
 }
-
-pub const PANEL_CHAT: &str = "Chat";
-pub const PANEL_INPUT: &str = "Input";
