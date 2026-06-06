@@ -75,7 +75,7 @@ async fn event_loop(
 
                 Some(evt) = input_rx.recv(), if events < 10 => {
                     let was_submit = matches!(evt, CoreEvent::Submit);
-                    state = runie_core::update::update(state, evt.clone());
+                    state.update(evt.clone());
                     state.ensure_fresh();
                     dirty = true; events += 1;
 
@@ -96,7 +96,7 @@ async fn event_loop(
                 }
 
                 Some(evt) = agent_rx.recv(), if events < 10 => {
-                    state = runie_core::update::update(state, evt);
+                    state.update(evt);
                     state.ensure_fresh();
                     dirty = true; events += 1;
                 }
