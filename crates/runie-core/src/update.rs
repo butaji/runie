@@ -15,13 +15,22 @@ pub fn update(state: AppState, event: Event) -> AppState {
         // === UI Events ===
         Event::Input(c) => return state.push_input(c),
         Event::Backspace => return state.pop_input(),
-        Event::Submit => state.submit(),
+        Event::Submit => {
+            let state = state.submit();
+            let mut state = state;
+            state.update_element_count();
+            state
+        }
         Event::ScrollUp => return state.scroll_up(),
         Event::ScrollDown => return state.scroll_down(),
         
         // === System Events ===
         Event::Quit => return state,
-        Event::Reset => return AppState::default(),
+        Event::Reset => {
+            let mut state = AppState::default();
+            state.update_element_count();
+            return state;
+        }
         
         // === Agent Events ===
         Event::AgentThinking { id } => {
@@ -49,6 +58,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id,
             });
+            state.update_element_count();
             state
         }
         Event::AgentToolStart { id, name } => {
@@ -65,6 +75,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id,
             });
+            state.update_element_count();
             state
         }
         Event::AgentToolEnd { duration_secs } => {
@@ -97,6 +108,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id: id.clone(),
             });
+            state.update_element_count();
             state.current_request_id = Some(id);
             state
         }
@@ -110,6 +122,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                     timestamp: now(),
                     id,
                 });
+                state.update_element_count();
             }
             state.turn_started_at = None;
             state
@@ -138,6 +151,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id: format!("error.{}", id),
             });
+            state.update_element_count();
             state
         }
         Event::SpawnAgent => return state,

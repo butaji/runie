@@ -1,9 +1,13 @@
 //! Model - Application State
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+const MAX_MESSAGES: usize = 10_000;
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AppState {
     pub messages: Vec<ChatMessage>,
+    #[serde(skip)]
+    pub message_start: usize,  // Ring buffer start index
     pub input: String,
     pub streaming: bool,
     pub scroll: usize,
@@ -30,6 +34,33 @@ pub struct AppState {
     pub current_action: Option<String>,  // Current action: "Thinking", "Running <tool>", etc.
     #[serde(skip)]
     pub formatted_cache: Vec<crate::ui::DisplayLine>,  // Cached formatted messages
+    #[serde(skip)]
+    pub element_count: usize,  // Cached element count for virtual list
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            messages: Vec::with_capacity(MAX_MESSAGES),
+            message_start: 0,
+            input: String::new(),
+            streaming: false,
+            scroll: 0,
+            thinking_started_at: None,
+            request_queue: Vec::new(),
+            next_id: 0,
+            current_request_id: None,
+            turn_started_at: None,
+            current_tool_name: None,
+            tool_started_at: None,
+            has_intermediate_steps: false,
+            animation_frame: 0,
+            turn_active: false,
+            current_action: None,
+            formatted_cache: Vec::new(),
+            element_count: 0,
+        }
+    }
 }
 
 impl AppState {
@@ -55,6 +86,23 @@ impl AppState {
         let id = format!("req.{}", self.next_id);
         self.next_id += 1;
         id
+    }
+    
+    /// Update cached element count - O(n) but only when messages change
+    pub fn update_element_count(&mut self) {
+        let mut count = 0;
+        for msg in &self.messages {
+            match msg.role.as_str() {
+                "user" | "thought" | "assistant" | "tool" | "turn_complete" => {
+                    count += 2; // element + spacer
+                }
+                _ => {}
+            }
+        }
+        if self.thinking_started_at.is_some() {
+            count += 2;
+        }
+        self.element_count = count;
     }
 }
 
