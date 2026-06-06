@@ -1804,6 +1804,8 @@ dependencies = [
  "anyhow",
  "runie-core",
  "runie-provider",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 
