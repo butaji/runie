@@ -1,5 +1,5 @@
 //! Transform layer — State → elements (O(n) only when dirty)
-use crate::model::{AppState, ChatMessage};
+use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::{Element, Feed};
 
 pub struct LazyCache;
@@ -34,18 +34,17 @@ impl LazyCache {
     }
 
     fn is_renderable(msg: &ChatMessage) -> bool {
-        matches!(msg.role.as_str(), "user" | "thought" | "assistant" | "tool" | "turn_complete" | "system")
+        matches!(msg.role, Role::User | Role::Thought | Role::Assistant | Role::Tool | Role::TurnComplete | Role::System)
     }
 
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
-        match msg.role.as_str() {
-            "user" => Element::UserMessage { content: msg.content.clone() },
-            "thought" => Element::ThoughtMarker { content: msg.content.clone() },
-            "assistant" => Element::AgentMessage { content: msg.content.clone() },
-            "tool" => Self::tool_elem(msg, state),
-            "turn_complete" => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
-            "system" => Element::ThoughtMarker { content: msg.content.clone() },
-            _ => Element::Spacer,
+        match msg.role {
+            Role::User => Element::UserMessage { content: msg.content.clone() },
+            Role::Thought => Element::ThoughtMarker { content: msg.content.clone() },
+            Role::Assistant => Element::AgentMessage { content: msg.content.clone() },
+            Role::Tool => Self::tool_elem(msg, state),
+            Role::TurnComplete => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
+            Role::System => Element::ThoughtMarker { content: msg.content.clone() },
         }
     }
 
@@ -73,13 +72,12 @@ impl LazyCache {
         let mut last_id = String::new();
 
         for msg in &state.messages {
-            match msg.role.as_str() {
-                "user" => Self::push_user(&mut feed, msg, &mut last_id),
-                "thought" | "system" => Self::push_thought(&mut feed, msg, &mut last_id),
-                "assistant" => Self::push_agent(&mut feed, msg, &mut last_id),
-                "tool" => Self::push_tool(&mut feed, msg, state, &mut last_id),
-                "turn_complete" => Self::push_turn(&mut feed, msg, &mut last_id),
-                _ => {}
+            match msg.role {
+                Role::User => Self::push_user(&mut feed, msg, &mut last_id),
+                Role::Thought | Role::System => Self::push_thought(&mut feed, msg, &mut last_id),
+                Role::Assistant => Self::push_agent(&mut feed, msg, &mut last_id),
+                Role::Tool => Self::push_tool(&mut feed, msg, state, &mut last_id),
+                Role::TurnComplete => Self::push_turn(&mut feed, msg, &mut last_id),
             }
         }
         if let Some(elapsed) = state.thinking_started_at {

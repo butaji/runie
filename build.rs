@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::Path;
 
 const MAX_FILE_LINES: usize = 500;
 const MAX_FUNCTION_LINES: usize = 40;
@@ -23,7 +22,7 @@ fn walkdir(path: &Path) -> Vec<std::path::PathBuf> {
 fn main() {
     let mut errors = Vec::new();
 
-    for path in walkdir(Path::new("crates")) {
+    for path in walkdir(std::path::Path::new("crates")) {
         if path.to_string_lossy().contains("target/") {
             continue;
         }

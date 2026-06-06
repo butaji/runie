@@ -45,7 +45,7 @@ fn test_channel_based_rendering() {
     for i in 0..500 {
         thread::sleep(Duration::from_millis(10));
         state.messages.push(runie_core::ChatMessage {
-            role: "user".to_string(),
+            role: runie_core::Role::User,
             content: format!("Line {} with some content here to make it realistic", i),
             timestamp: 0.0,
             id: format!("req.{}", i),
