@@ -110,7 +110,7 @@ mod tests {
     
     #[test]
     fn test_dsl_combines_consecutive_agent_chunks() {
-        use crate::ui::Dsl;
+        use crate::ui::LazyCache;
         use crate::ui::elements::Element;
         
         let mut state = fresh_state();
@@ -127,7 +127,7 @@ mod tests {
             content: "World!".to_string() 
         });
         
-        let feed = Dsl::feed(&state);
+        let feed = LazyCache::feed(&state);
         
         assert_eq!(feed.elements.len(), 4);
         
@@ -302,7 +302,7 @@ mod tests {
     
     #[test]
     fn test_dsl_shows_thinking_when_streaming() {
-        use crate::ui::format_messages;
+        use crate::ui::format::format_messages;
         
         let mut state = fresh_state();
         state.streaming = true;
@@ -423,7 +423,7 @@ mod tests {
     
     #[test]
     fn test_formatted_labels_short_names() {
-        use crate::ui::format_messages;
+        use crate::ui::format::format_messages;
         
         let mut state = fresh_state();
         state.streaming = true;
@@ -464,7 +464,7 @@ mod tests {
     
     #[test]
     fn test_list_files_full_tool_flow_sequence() {
-        use crate::ui::format_messages;
+        use crate::ui::format::format_messages;
         
         let mut state = fresh_state();
         state.streaming = true;

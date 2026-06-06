@@ -1,4 +1,4 @@
-//! View — O(visible) rendering, auto-scroll to bottom
+//! View — renders AppState to terminal via ratatui
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use runie_core::{AppState, PANEL_CHAT, PANEL_INPUT};
+use runie_core::{AppState, Element, PANEL_CHAT, PANEL_INPUT};
 
 pub fn view(f: &mut Frame, state: &AppState) {
     let chunks = Layout::default()
@@ -15,12 +15,12 @@ pub fn view(f: &mut Frame, state: &AppState) {
         .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3)])
         .split(f.area());
 
-    messages_view(f, state, chunks[0]);
-    status_view(f, state, chunks[1]);
-    input_view(f, state, chunks[2]);
+    messages(f, state, chunks[0]);
+    status(f, state, chunks[1]);
+    input(f, state, chunks[2]);
 }
 
-fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
+fn status(f: &mut Frame, state: &AppState, area: Rect) {
     if !state.turn_active { return; }
     let text = format!(
         " {} Working {:.1}s",
@@ -33,8 +33,7 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
     );
 }
 
-/// O(visible) — only iterate messages that fit on screen, from bottom
-fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
+fn messages(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_CHAT)
@@ -43,42 +42,71 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(block, area);
 
     let height = inner.height as usize;
-    if height == 0 { return; }
+    if height == 0 || state.element_count == 0 { return; }
 
-    // Build lines from END, stop when screen is full
-    let mut lines: Vec<Line> = Vec::with_capacity(height);
+    let scroll = state.element_count.saturating_sub(height);
+    let visible = state.visible(scroll, height);
 
-    // Thinking indicator (at bottom during streaming)
-    if state.thinking_started_at.is_some() {
-        lines.push(Line::from(format!(
-            "{} Though... {:.1}s",
-            state.spinner_frame(),
-            state.thinking_elapsed_secs().unwrap_or(0.0)
-        )));
+    let mut lines = Vec::with_capacity(height);
+    for elem in visible {
+        lines.push(to_line(elem, state));
     }
 
-    // Iterate messages from end, stop when we have enough lines
-    for msg in state.messages.iter().rev() {
-        let line = match msg.role.as_str() {
-            "user" => format!("You: {}", msg.content),
-            "assistant" => format!("Agent: {}", msg.content),
-            "thought" | "tool" | "turn_complete" => msg.content.clone(),
-            _ => continue,
-        };
-        lines.push(Line::from(line));
-        lines.push(Line::from("")); // empty line spacer
-        if lines.len() >= height { break; }
-    }
-
-    lines.reverse(); // bottom-up → top-down
-
-    f.render_widget(
-        Paragraph::new(lines).style(Style::default().fg(Color::White)),
-        inner,
-    );
+    f.render_widget(Paragraph::new(lines), inner);
 }
 
-fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
+fn to_line<'a>(elem: &'a Element, state: &'a AppState) -> Line<'a> {
+    use runie_core::Element::*;
+
+    let gray = Style::default().fg(Color::DarkGray);
+    let white = Style::default().fg(Color::White);
+
+    match elem {
+        Spacer => Line::from(""),
+        UserMessage { content } => Line::from(
+            ratatui::text::Span::styled(format!("You: {}", content), white)
+        ),
+        AgentMessage { content } => Line::from(
+            ratatui::text::Span::styled(format!("Agent: {}", content), white)
+        ),
+        Thinking { elapsed } => Line::from(
+            ratatui::text::Span::styled(
+                format!("{} Though... {:.1}s", state.spinner_frame(), elapsed),
+                gray,
+            )
+        ),
+        ThoughtMarker { content } => Line::from(
+            ratatui::text::Span::styled(content.clone(), gray)
+        ),
+        ToolRunning { name, elapsed } => Line::from(
+            ratatui::text::Span::styled(
+                format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed),
+                gray,
+            )
+        ),
+        ToolDone { name, duration_secs } => Line::from(
+            ratatui::text::Span::styled(
+                format!("◆ Ran {} {:.1}s", name, duration_secs),
+                gray,
+            )
+        ),
+        TurnComplete { duration_secs } => Line::from(
+            ratatui::text::Span::styled(
+                format!("Turn completed in {:.1}s", duration_secs),
+                gray,
+            )
+        ),
+        Group { elements, .. } => {
+            let text: String = elements.iter()
+                .map(|e| to_line(e, state).to_string())
+                .collect::<Vec<_>>()
+                .join("\n");
+            Line::from(text)
+        }
+    }
+}
+
+fn input(f: &mut Frame, state: &AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_INPUT)
