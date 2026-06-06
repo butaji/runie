@@ -1246,12 +1246,22 @@ name = "runie-agent"
 version = "0.1.0"
 dependencies = [
  "runie-core",
- "serde",
+ "runie-provider",
 ]
 
 [[package]]
 name = "runie-core"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "runie-provider"
+version = "0.1.0"
+dependencies = [
+ "runie-core",
+]
 
 [[package]]
 name = "runie-term"
@@ -1263,6 +1273,7 @@ dependencies = [
  "ratatui",
  "runie-agent",
  "runie-core",
+ "runie-provider",
  "runie-tui",
  "tokio",
 ]

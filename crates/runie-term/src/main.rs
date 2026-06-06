@@ -4,7 +4,8 @@
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_agent::{AgentCommand, MockProvider, run_agent_turn};
+use runie_agent::{AgentCommand, run_agent_turn};
+use runie_provider::MockProvider;
 use runie_core::{AppState, Event as CoreEvent};
 use std::{
     io,

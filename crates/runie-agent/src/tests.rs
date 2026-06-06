@@ -2,9 +2,11 @@
 //! Layer 1: Pure state/logic tests (no ratatui)
 //! Layer 2: Event handling tests (agent loop with mock provider)
 
+use runie_core::provider::{Message, Provider, ResponseChunk};
+use runie_provider::MockProvider;
 use crate::{
-    parse_tool_calls, has_tool_calls, AgentCommand, AgentEvent, MockProvider, Provider,
-    Tool, ToolResult, Message, run_agent_turn,
+    parse_tool_calls, has_tool_calls, AgentCommand, AgentEvent,
+    Tool, ToolResult, run_agent_turn,
 };
 
 // ============================================================================
@@ -157,95 +159,6 @@ fn test_tool_result_structure() {
 }
 
 // ============================================================================
-// Layer 1: Mock Provider
-// ============================================================================
-
-#[test]
-fn test_mock_provider_generates_chunks() {
-    let provider = MockProvider;
-    let messages = vec![Message::User { content: "Hello World".to_string() }];
-    let chunks = provider.generate(messages);
-
-    assert_eq!(chunks.len(), 2);
-    assert_eq!(chunks[0].content, "Hello ");
-    assert_eq!(chunks[1].content, "World ");
-}
-
-#[test]
-fn test_mock_provider_empty_input() {
-    let provider = MockProvider;
-    let messages = vec![];
-    let chunks = provider.generate(messages);
-
-    assert!(chunks.is_empty());
-}
-
-#[test]
-fn test_mock_provider_single_word() {
-    let provider = MockProvider;
-    let messages = vec![Message::User { content: "Hello".to_string() }];
-    let chunks = provider.generate(messages);
-
-    assert_eq!(chunks.len(), 1);
-    assert_eq!(chunks[0].content, "Hello ");
-}
-
-#[test]
-fn test_mock_provider_triggers_list_files() {
-    let provider = MockProvider;
-    let messages = vec![Message::User { content: "list files".to_string() }];
-    let chunks = provider.generate(messages);
-
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:list_dir"));
-}
-
-#[test]
-fn test_mock_provider_triggers_read_file() {
-    let provider = MockProvider;
-    let messages = vec![Message::User { content: "read the readme".to_string() }];
-    let chunks = provider.generate(messages);
-
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:read_file"));
-}
-
-#[test]
-fn test_mock_provider_triggers_write_file() {
-    let provider = MockProvider;
-    let messages = vec![Message::User { content: "write something".to_string() }];
-    let chunks = provider.generate(messages);
-
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:write_file"));
-}
-
-#[test]
-fn test_mock_provider_triggers_bash() {
-    let provider = MockProvider;
-    let messages = vec![Message::User { content: "run command".to_string() }];
-    let chunks = provider.generate(messages);
-
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:bash"));
-}
-
-#[test]
-fn test_mock_provider_follows_up_after_tool_result() {
-    let provider = MockProvider;
-    let messages = vec![
-        Message::User { content: "list files".to_string() },
-        Message::Assistant { content: "TOOL:list_dir:.".to_string() },
-        Message::ToolResult { content: "file1.txt (file)".to_string() },
-    ];
-    let chunks = provider.generate(messages);
-
-    // After tool result, should give a final answer
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("Done"));
-}
-
-// ============================================================================
 // Layer 1: Agent Command Structure
 // ============================================================================
 
@@ -321,8 +234,8 @@ fn test_agent_loop_respects_max_iterations() {
     // Create a provider that always returns a tool call (infinite loop if unchecked)
     struct InfiniteLoopProvider;
     impl Provider for InfiniteLoopProvider {
-        fn generate(&self, _messages: Vec<Message>) -> Vec<crate::ResponseChunk> {
-            vec![crate::ResponseChunk {
+        fn generate(&self, _messages: Vec<Message>) -> Vec<ResponseChunk> {
+            vec![ResponseChunk {
                 content: "TOOL:bash:echo loop".to_string(),
             }]
         }

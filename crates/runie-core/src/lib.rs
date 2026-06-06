@@ -12,6 +12,7 @@ pub mod event;
 pub mod update;
 pub mod labels;
 pub mod ui;
+pub mod provider;
 
 #[cfg(test)]
 mod tests;
@@ -26,3 +27,4 @@ pub use ui::{
     Element, Feed, Dsl,
     format_messages, DisplayLine, DisplaySpan, Color,
 };
+pub use provider::{Message, Provider, ResponseChunk};

@@ -1,5 +1,5 @@
 [package]
-name = "runie-agent"
+name = "runie-provider"
 version.workspace = true
 edition.workspace = true
 
@@ -8,6 +8,3 @@ path = "src/lib.rs"
 
 [dependencies]
 runie-core.workspace = true
-
-[dev-dependencies]
-runie-provider.workspace = true
