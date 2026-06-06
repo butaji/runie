@@ -13,15 +13,15 @@ fn now() -> f64 {
 pub fn update(state: AppState, event: Event) -> AppState {
     let mut state = match event {
         // === UI Events ===
-        Event::Input(c) => state.push_input(c),
-        Event::Backspace => state.pop_input(),
+        Event::Input(c) => return state.push_input(c),
+        Event::Backspace => return state.pop_input(),
         Event::Submit => state.submit(),
-        Event::ScrollUp => state.scroll_up(),
-        Event::ScrollDown => state.scroll_down(),
+        Event::ScrollUp => return state.scroll_up(),
+        Event::ScrollDown => return state.scroll_down(),
         
         // === System Events ===
-        Event::Quit => state,
-        Event::Reset => AppState::default(),
+        Event::Quit => return state,
+        Event::Reset => return AppState::default(),
         
         // === Agent Events ===
         Event::AgentThinking { id } => {
