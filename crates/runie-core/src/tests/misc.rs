@@ -144,3 +144,47 @@ fn test_thinking_indicator_shows_for_queued_request() {
     let has_thought = state.messages.iter().any(|m| m.role == Role::Thought);
     assert!(!has_thought);
 }
+
+#[test]
+fn test_sessions_command_shows_system_message() {
+    let mut state = fresh_state();
+    for c in "/sessions".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert!(!sys_msgs.is_empty(), "Should show system message for /sessions");
+}
+
+#[test]
+fn test_save_and_load_session() {
+    use std::sync::Mutex;
+    static LOCK: Mutex<()> = Mutex::new(());
+    let _guard = LOCK.lock().unwrap();
+
+    let tmp = std::env::temp_dir().join("runie_session_cmd_test");
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::env::set_var("RUNIE_SESSIONS_DIR", &tmp);
+
+    // Save a session
+    let mut state = fresh_state();
+    state.update(Event::Input('h'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
+    for c in "/save test_session".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    assert!(state.messages.iter().any(|m| m.role == Role::System && m.content.contains("saved")));
+
+    // Load it into a fresh state
+    let mut state2 = fresh_state();
+    for c in "/load test_session".chars() {
+        state2.update(Event::Input(c));
+    }
+    state2.update(Event::Submit);
+    assert!(state2.messages.iter().any(|m| m.role == Role::System && m.content.contains("loaded")));
+    assert!(state2.messages.iter().any(|m| m.role == Role::User && m.content == "hi"));
+
+    std::env::remove_var("RUNIE_SESSIONS_DIR");
+}

@@ -68,6 +68,54 @@ impl AppState {
             }
             return;
         }
+        if content == "/sessions" {
+            match crate::session::list() {
+                Ok(sessions) => {
+                    if sessions.is_empty() {
+                        self.add_system_msg("No saved sessions.".to_string());
+                    } else {
+                        self.add_system_msg(format!("Sessions:\n{}", sessions.join("\n")));
+                    }
+                }
+                Err(e) => self.add_system_msg(format!("Error: {}", e)),
+            }
+            return;
+        }
+        if let Some(name) = content.strip_prefix("/save ") {
+            let session = crate::session::Session {
+                name: name.to_string(),
+                created_at: now(),
+                updated_at: now(),
+                messages: self.messages.clone(),
+                provider: self.current_provider.clone(),
+                model: self.current_model.clone(),
+            };
+            match crate::session::save(name, &session) {
+                Ok(()) => self.add_system_msg(format!("Session '{}' saved.", name)),
+                Err(e) => self.add_system_msg(format!("Error saving: {}", e)),
+            }
+            return;
+        }
+        if let Some(name) = content.strip_prefix("/load ") {
+            match crate::session::load(name) {
+                Ok(session) => {
+                    self.messages = session.messages;
+                    self.current_provider = session.provider;
+                    self.current_model = session.model;
+                    self.mark_dirty();
+                    self.add_system_msg(format!("Session '{}' loaded.", name));
+                }
+                Err(e) => self.add_system_msg(format!("Error loading: {}", e)),
+            }
+            return;
+        }
+        if let Some(name) = content.strip_prefix("/delete ") {
+            match crate::session::delete(name) {
+                Ok(()) => self.add_system_msg(format!("Session '{}' deleted.", name)),
+                Err(e) => self.add_system_msg(format!("Error deleting: {}", e)),
+            }
+            return;
+        }
         let id = self.next_id();
         self.messages.push(ChatMessage {
             role: Role::User,
@@ -196,7 +244,7 @@ impl AppState {
 
     fn show_help(&mut self) {
         self.add_system_msg(
-            "Commands:\n/model provider/model — switch model\n/reset — clear state\n/help — show this".to_string(),
+            "Commands:\n/model provider/model — switch model\n/save name — save session\n/load name — load session\n/sessions — list sessions\n/delete name — delete session\n/reset — clear state\n/help — show this".to_string(),
         );
     }
 

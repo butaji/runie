@@ -13,11 +13,13 @@ pub mod update;
 pub mod labels;
 pub mod ui;
 pub mod provider;
+pub mod session;
 
 #[cfg(test)]
 mod tests;
 
 pub use model::{AppState, ChatMessage, Color, Role, PANEL_CHAT, PANEL_INPUT};
+pub use session::{Session, save, load, list, delete};
 pub use event::Event;
 pub use labels::{
     PREFIX_USER, PREFIX_AGENT,
