@@ -7,6 +7,7 @@ use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockPr
 use runie_core::{AppState, Event as CoreEvent};
 use std::io;
 use tokio::sync::mpsc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::time::{interval, Duration};
 
 const FAST_MODE: bool = cfg!(test);
@@ -28,8 +29,8 @@ async fn main() -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(32);
-    let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(32);
+    let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(100);
+    let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
 
     let provider = MockProvider;
@@ -49,19 +50,17 @@ async fn main() -> io::Result<()> {
 
     let mut state = load_state().unwrap_or_default();
     let mut render_interval = interval(Duration::from_millis(50));
+    let tick_counter = AtomicU32::new(0);
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     loop {
         tokio::select! {
             _ = render_interval.tick() => {
-                // Slower animation - advance frame every 4 ticks (200ms)
-                static mut TICK_COUNTER: u32 = 0;
-                unsafe {
-                    TICK_COUNTER += 1;
-                    if TICK_COUNTER % 3 == 0 {
-                        state.animation_frame = state.animation_frame.wrapping_add(1);
-                    }
+                // Advance animation frame every 3 ticks (150ms)
+                let ticks = tick_counter.fetch_add(1, Ordering::Relaxed);
+                if ticks % 3 == 0 {
+                    state.animation_frame = state.animation_frame.wrapping_add(1);
                 }
                 terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
