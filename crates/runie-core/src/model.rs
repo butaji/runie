@@ -1,13 +1,10 @@
 //! Model - Application State
 use serde::{Deserialize, Serialize};
-
-const MAX_MESSAGES: usize = 10_000;
+use crate::ui::elements::Element;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppState {
     pub messages: Vec<ChatMessage>,
-    #[serde(skip)]
-    pub message_start: usize,  // Ring buffer start index
     pub input: String,
     pub streaming: bool,
     pub scroll: usize,
@@ -36,13 +33,14 @@ pub struct AppState {
     pub formatted_cache: Vec<crate::ui::DisplayLine>,  // Cached formatted messages
     #[serde(skip)]
     pub element_count: usize,  // Cached element count for virtual list
+    #[serde(skip)]
+    pub elements_cache: Vec<Element>,  // Cached elements for virtual list
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            messages: Vec::with_capacity(MAX_MESSAGES),
-            message_start: 0,
+            messages: Vec::new(),
             input: String::new(),
             streaming: false,
             scroll: 0,
@@ -59,6 +57,7 @@ impl Default for AppState {
             current_action: None,
             formatted_cache: Vec::new(),
             element_count: 0,
+            elements_cache: Vec::new(),
         }
     }
 }
@@ -88,21 +87,11 @@ impl AppState {
         id
     }
     
-    /// Update cached element count - O(n) but only when messages change
+    /// Update cached element count and elements - O(n) but only when messages change
     pub fn update_element_count(&mut self) {
-        let mut count = 0;
-        for msg in &self.messages {
-            match msg.role.as_str() {
-                "user" | "thought" | "assistant" | "tool" | "turn_complete" => {
-                    count += 2; // element + spacer
-                }
-                _ => {}
-            }
-        }
-        if self.thinking_started_at.is_some() {
-            count += 2;
-        }
-        self.element_count = count;
+        use crate::ui::dsl::Dsl;
+        self.elements_cache = Dsl::build_elements(self);
+        self.element_count = self.elements_cache.len();
     }
 }
 
