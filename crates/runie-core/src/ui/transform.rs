@@ -114,53 +114,42 @@ impl LazyCache {
         let mut last_id = String::new();
 
         for msg in &state.messages {
-            match msg.role.as_str() {
-                "user" => {
-                    feed.elements.push(Element::UserMessage {
-                        content: msg.content.clone(),
-                    });
-                    feed.elements.push(Element::Spacer);
-                    last_id = msg.id.clone();
-                }
-                "thought" => {
-                    feed.elements.push(Element::ThoughtMarker {
-                        content: msg.content.clone(),
-                    });
-                    feed.elements.push(Element::Spacer);
-                    last_id = msg.id.clone();
-                }
-                "assistant" => {
-                    if !StreamingMerge::merge(&mut feed.elements, msg, &last_id) {
-                        feed.elements.push(Element::AgentMessage {
-                            content: msg.content.clone(),
-                        });
-                        feed.elements.push(Element::Spacer);
-                    }
-                    last_id = msg.id.clone();
-                }
-                "tool" => {
-                    feed.elements.push(Self::message_to_element(msg, state));
-                    feed.elements.push(Element::Spacer);
-                    last_id = msg.id.clone();
-                }
-                "turn_complete" => {
-                    feed.elements.push(Element::TurnComplete {
-                        duration_secs: Self::parse_duration(&msg.content),
-                    });
-                    feed.elements.push(Element::Spacer);
-                    last_id = msg.id.clone();
-                }
-                _ => {}
-            }
+            Self::push_message(&mut feed, msg, state, &mut last_id);
         }
+        Self::push_thinking(&mut feed, state);
+        feed
+    }
 
-        if state.thinking_started_at.is_some() {
-            let elapsed = state.thinking_elapsed_secs().unwrap_or(0.0);
+    fn push_message(feed: &mut Feed, msg: &ChatMessage, state: &AppState, last_id: &mut String) {
+        match msg.role.as_str() {
+            "user" => Self::push_elem(feed, Element::UserMessage { content: msg.content.clone() }, last_id, msg),
+            "thought" => Self::push_elem(feed, Element::ThoughtMarker { content: msg.content.clone() }, last_id, msg),
+            "assistant" => Self::push_assistant(feed, msg, last_id),
+            "tool" => Self::push_elem(feed, Self::message_to_element(msg, state), last_id, msg),
+            "turn_complete" => Self::push_elem(feed, Element::TurnComplete { duration_secs: Self::parse_duration(&msg.content) }, last_id, msg),
+            _ => {}
+        }
+    }
+
+    fn push_elem(feed: &mut Feed, elem: Element, last_id: &mut String, msg: &ChatMessage) {
+        feed.elements.push(elem);
+        feed.elements.push(Element::Spacer);
+        *last_id = msg.id.clone();
+    }
+
+    fn push_assistant(feed: &mut Feed, msg: &ChatMessage, last_id: &mut String) {
+        if !StreamingMerge::merge(&mut feed.elements, msg, last_id) {
+            feed.elements.push(Element::AgentMessage { content: msg.content.clone() });
+            feed.elements.push(Element::Spacer);
+        }
+        *last_id = msg.id.clone();
+    }
+
+    fn push_thinking(feed: &mut Feed, state: &AppState) {
+        if let Some(elapsed) = state.thinking_started_at.map(|_| state.thinking_elapsed_secs().unwrap_or(0.0)) {
             feed.elements.push(Element::Thinking { elapsed });
             feed.elements.push(Element::Spacer);
         }
-
-        feed
     }
 }
 

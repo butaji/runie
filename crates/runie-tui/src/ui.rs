@@ -57,53 +57,29 @@ fn messages(f: &mut Frame, state: &AppState, area: Rect) {
 
 fn to_line<'a>(elem: &'a Element, state: &'a AppState) -> Line<'a> {
     use runie_core::Element::*;
-
-    let gray = Style::default().fg(Color::DarkGray);
-    let white = Style::default().fg(Color::White);
-
     match elem {
         Spacer => Line::from(""),
-        UserMessage { content } => Line::from(
-            ratatui::text::Span::styled(format!("You: {}", content), white)
-        ),
-        AgentMessage { content } => Line::from(
-            ratatui::text::Span::styled(format!("Agent: {}", content), white)
-        ),
-        Thinking { elapsed } => Line::from(
-            ratatui::text::Span::styled(
-                format!("{} Though... {:.1}s", state.spinner_frame(), elapsed),
-                gray,
-            )
-        ),
-        ThoughtMarker { content } => Line::from(
-            ratatui::text::Span::styled(content.clone(), gray)
-        ),
-        ToolRunning { name, elapsed } => Line::from(
-            ratatui::text::Span::styled(
-                format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed),
-                gray,
-            )
-        ),
-        ToolDone { name, duration_secs } => Line::from(
-            ratatui::text::Span::styled(
-                format!("◆ Ran {} {:.1}s", name, duration_secs),
-                gray,
-            )
-        ),
-        TurnComplete { duration_secs } => Line::from(
-            ratatui::text::Span::styled(
-                format!("Turn completed in {:.1}s", duration_secs),
-                gray,
-            )
-        ),
-        Group { elements, .. } => {
-            let text: String = elements.iter()
-                .map(|e| to_line(e, state).to_string())
-                .collect::<Vec<_>>()
-                .join("\n");
-            Line::from(text)
-        }
+        UserMessage { content } => Line::from(span(format!("You: {}", content), Color::White)),
+        AgentMessage { content } => Line::from(span(format!("Agent: {}", content), Color::White)),
+        Thinking { elapsed } => gray(thinking_text(state, *elapsed)),
+        ThoughtMarker { content } => gray(Line::from(content.clone())),
+        ToolRunning { name, elapsed } => gray(Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed))),
+        ToolDone { name, duration_secs } => gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs))),
+        TurnComplete { duration_secs } => gray(Line::from(format!("Turn completed in {:.1}s", duration_secs))),
+        Group { elements, .. } => Line::from(elements.iter().map(|e| to_line(e, state).to_string()).collect::<Vec<_>>().join("\n")),
     }
+}
+
+fn span(text: String, color: Color) -> ratatui::text::Span<'static> {
+    ratatui::text::Span::styled(text, Style::default().fg(color))
+}
+
+fn gray(line: Line<'static>) -> Line<'static> {
+    line.style(Style::default().fg(Color::DarkGray))
+}
+
+fn thinking_text(state: &AppState, elapsed: f64) -> Line<'static> {
+    Line::from(format!("{} Though... {:.1}s", state.spinner_frame(), elapsed))
 }
 
 fn input(f: &mut Frame, state: &AppState, area: Rect) {
