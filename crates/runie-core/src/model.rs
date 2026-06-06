@@ -29,13 +29,7 @@ pub struct AppState {
     #[serde(skip)]
     pub current_action: Option<String>,  // Current action: "Thinking", "Running <tool>", etc.
     #[serde(skip)]
-    pub needs_redraw: bool,  // True when view needs to update
-    #[serde(skip)]
-    pub messages_version: u64,  // Increments when messages change
-    #[serde(skip)]
-    pub formatted_cache: Option<Vec<crate::ui::DisplayLine>>,  // Cached formatted messages
-    #[serde(skip)]
-    pub cached_version: u64,  // Version the cache was built for
+    pub formatted_cache: Vec<crate::ui::DisplayLine>,  // Cached formatted messages
 }
 
 impl AppState {

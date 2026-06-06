@@ -23,7 +23,7 @@ impl Drop for Cleanup {
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
-    
+
     let mut stdout = std::io::stdout();
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
@@ -48,18 +48,19 @@ async fn main() -> io::Result<()> {
     });
 
     let mut state = load_state().unwrap_or_default();
+    // Initialize cache
+    state.formatted_cache = runie_core::format_messages(&state);
     let mut anim_interval = interval(Duration::from_millis(50));
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     
     // Initial render
     terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-
+    
     loop {
         tokio::select! {
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
-                runie_core::format_and_cache(&mut state);
 
                 if matches!(evt, CoreEvent::Submit) {
                     if let Some((content, id)) = state.peek_queue() {
@@ -72,24 +73,24 @@ async fn main() -> io::Result<()> {
                 if matches!(evt, CoreEvent::Quit) {
                     break;
                 }
+                
+                terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
-                runie_core::format_and_cache(&mut state);
+                terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
             _ = anim_interval.tick() => {
-                // Update animation frame if turn is active
+                // Animation only if turn is active
                 if state.turn_active {
                     state.animation_frame = state.animation_frame.wrapping_add(1);
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
                 }
             }
         }
         
-        // Always redraw - keeps TUI simple
-        terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-
         if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
             break;
         }
@@ -107,7 +108,7 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
         } else {
             run_simple_flow(&cmd, &provider, &agent_tx).await;
         }
-        
+
         let _ = agent_tx.send(CoreEvent::AgentDone { id: cmd.id }).await;
     }
 }
@@ -116,7 +117,7 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
 async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: &mpsc::Sender<CoreEvent>) {
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
     thinking_delay().await;
-    
+
     let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
 
     let messages = vec![runie_agent::Message::User { content: cmd.content.clone() }];
@@ -134,15 +135,15 @@ async fn run_simple_flow(cmd: &AgentCommand, provider: &MockProvider, agent_tx: 
 /// Tool execution flow: Though -> Ran -> Though -> Response -> Turn complete
 async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     use std::time::Instant;
-    
+
     let turn_start = Instant::now();
     let tool_start = Instant::now();
-    
+
     // 1. First thinking
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
     thinking_delay().await;
     let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
-    
+
     // 2. Tool execution
     let _ = agent_tx.send(CoreEvent::AgentToolStart {
         id: cmd.id.clone(),
@@ -158,19 +159,19 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
         duration_secs: tool_duration,
     }).await;
     chunk_delay().await;
-    
+
     // 3. Second thinking
     let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
     thinking_delay().await;
     let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
-    
+
     // 4. Response
     let _ = agent_tx.send(CoreEvent::AgentResponse {
         id: cmd.id.clone(),
         content: "Here are the files in your project:\n".to_string(),
     }).await;
     chunk_delay().await;
-    
+
     // 5. Turn complete
     let duration = turn_start.elapsed().as_secs_f64();
     let _ = agent_tx.send(CoreEvent::AgentTurnComplete {
