@@ -37,7 +37,9 @@ fn reset_clears_messages_and_input() {
     type_str(&mut state, "/reset");
     state.update(Event::Submit);
 
-    assert!(state.messages.is_empty(), "messages cleared");
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1, "reset adds confirmation");
+    assert!(sys_msgs[0].content.contains("State cleared"), "reset confirmation: {}", sys_msgs[0].content);
     assert!(state.input.is_empty(), "input cleared");
     assert!(!state.streaming, "streaming cleared");
     assert_eq!(state.scroll, 0, "scroll reset");
@@ -103,26 +105,53 @@ fn model_shows_confirmation_message() {
 }
 
 #[test]
-fn model_missing_separator_shows_usage() {
+fn model_just_model_name_keeps_provider() {
     let mut state = fresh_state();
     type_str(&mut state, "/model openai");
     state.update(Event::Submit);
 
+    assert_eq!(state.current_provider, "mock");
+    assert_eq!(state.current_model, "openai");
     let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
-    assert!(sys_msgs[0].content.contains("Usage:"));
-    assert!(sys_msgs[0].content.contains("provider/model"));
+    assert!(sys_msgs[0].content.contains("Switched to mock/openai"), "openai without provider keeps current provider: {}", sys_msgs[0].content);
 }
 
 #[test]
-fn model_empty_provider_or_model_shows_usage() {
+fn model_m3_just_model_name() {
+    let mut state = fresh_state();
+    type_str(&mut state, "/model m3");
+    state.update(Event::Submit);
+
+    assert_eq!(state.current_provider, "mock");
+    assert_eq!(state.current_model, "m3");
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1);
+    assert!(sys_msgs[0].content.contains("Switched to mock/m3"), "/model m3 should work: {}", sys_msgs[0].content);
+}
+
+#[test]
+fn model_leading_slash_ignored_for_model_name() {
     let mut state = fresh_state();
     type_str(&mut state, "/model /gpt");
     state.update(Event::Submit);
 
+    assert_eq!(state.current_provider, "mock");
+    assert_eq!(state.current_model, "gpt");
     let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
-    assert!(sys_msgs[0].content.contains("Usage:"), "empty provider should show usage: {}", sys_msgs[0].content);
+    assert!(sys_msgs[0].content.contains("Switched to mock/gpt"), "leading slash ignored: {}", sys_msgs[0].content);
+}
+
+#[test]
+fn model_only_slashes_shows_usage() {
+    let mut state = fresh_state();
+    type_str(&mut state, "/model /");
+    state.update(Event::Submit);
+
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1);
+    assert!(sys_msgs[0].content.contains("Current model:"), "only slashes shows usage: {}", sys_msgs[0].content);
 }
 
 #[test]
@@ -133,7 +162,7 @@ fn model_no_args_shows_usage() {
 
     let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1, "should show system message, got messages: {:?}", state.messages);
-    assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
+    assert!(sys_msgs[0].content.contains("Current model:"), "no args should show current model: {}", sys_msgs[0].content);
 }
 
 // === /save ===
@@ -246,7 +275,8 @@ fn load_missing_session_shows_error() {
 
     let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("Error"), "error shown: {}", last.content);
+    assert!(last.content.contains("not found"), "user-friendly not-found: {}", last.content);
+    assert!(last.content.contains("/sessions"), "should suggest /sessions: {}", last.content);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
@@ -350,7 +380,8 @@ fn delete_missing_session_shows_error() {
 
     let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("Error"), "error shown: {}", last.content);
+    assert!(last.content.contains("not found"), "user-friendly not-found: {}", last.content);
+    assert!(last.content.contains("/sessions"), "should suggest /sessions: {}", last.content);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
