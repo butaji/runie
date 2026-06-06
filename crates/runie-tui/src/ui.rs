@@ -9,7 +9,7 @@ use ratatui::{
 
 use runie_core::{AppState, Element, PANEL_CHAT, PANEL_INPUT};
 
-pub fn view(f: &mut Frame, state: &AppState) {
+pub fn view(f: &mut Frame, state: &mut AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3)])
@@ -33,13 +33,16 @@ fn status(f: &mut Frame, state: &AppState, area: Rect) {
     );
 }
 
-fn messages(f: &mut Frame, state: &AppState, area: Rect) {
+fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_CHAT)
         .border_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
     f.render_widget(block, area);
+
+    // CRITICAL: Must refresh cache before reading
+    state.ensure_fresh();
 
     let height = inner.height as usize;
     let count = state.count();
