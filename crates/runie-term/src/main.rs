@@ -129,6 +129,14 @@ async fn render_actor(
     mut render_rx: watch::Receiver<AppState>,
     mut terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
 ) {
+    // Draw initial state immediately — watch::changed() does NOT fire for the
+    // initial value, it waits for the NEXT send. Without this draw, the screen
+    // stays blank until the first event.
+    {
+        let mut state = render_rx.borrow().clone();
+        let _ = terminal.draw(|f| runie_tui::ui::view(f, &mut state));
+    }
+
     loop {
         // Sleep until UI sends a new snapshot. No polling, no timer drift.
         if render_rx.changed().await.is_err() { break; }

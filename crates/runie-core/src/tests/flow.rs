@@ -100,3 +100,15 @@ fn test_inflight_counter_prevents_premature_streaming_stop() {
     assert!(!state.streaming, "streaming should stop when all done");
     assert_eq!(state.inflight, 0);
 }
+
+#[test]
+fn test_agent_done_marks_dirty() {
+    // REGRESSION: finish_turn() did not call mark_dirty()
+    // In actor architecture, status bar disappearance was not rendered.
+    let mut state = fresh_state();
+    state.ensure_fresh();
+    assert!(!state.is_dirty());
+
+    state.update(Event::AgentDone { id: "req.0".to_string() });
+    assert!(state.is_dirty(), "AgentDone must mark dirty to hide status bar");
+}
