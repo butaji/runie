@@ -1,41 +1,25 @@
 //! Model - Application State
-use serde::{Deserialize, Serialize};
 use crate::ui::elements::Element;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     pub messages: Vec<ChatMessage>,
     pub input: String,
     pub streaming: bool,
     pub scroll: usize,
-    #[serde(skip)]
     pub thinking_started_at: Option<std::time::Instant>,
     pub request_queue: Vec<(String, String)>,
-    #[serde(skip)]
     pub next_id: u64,
-    #[serde(skip)]
     pub current_request_id: Option<String>,
-    #[serde(skip)]
     pub turn_started_at: Option<std::time::Instant>,
-    #[serde(skip)]
     pub current_tool_name: Option<String>,
-    #[serde(skip)]
     pub tool_started_at: Option<std::time::Instant>,
-    #[serde(skip)]
     pub has_intermediate_steps: bool,
-    #[serde(skip)]
     pub animation_frame: u32,
-    #[serde(skip)]
     pub turn_active: bool,
-    #[serde(skip)]
     pub current_action: Option<String>,
-    #[serde(skip)]
-    pub formatted_cache: Vec<crate::ui::DisplayLine>,
-    #[serde(skip)]
     pub element_count: usize,
-    #[serde(skip)]
     pub elements_cache: Vec<Element>,
-    #[serde(skip)]
     pub dirty: bool,  // Cache needs rebuild
 }
 
@@ -57,7 +41,6 @@ impl Default for AppState {
             animation_frame: 0,
             turn_active: false,
             current_action: None,
-            formatted_cache: Vec::new(),
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
@@ -104,19 +87,24 @@ impl AppState {
         }
     }
     
-    /// Get visible elements as slice - zero allocation
+    /// Get visible elements as slice - zero allocation, safe bounds
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        let start = skip.min(self.element_count);
-        let end = (skip + take).min(self.element_count);
+        // Safety: if cache is stale, return empty
+        if self.elements_cache.is_empty() {
+            return &[];
+        }
+        let start = skip.min(self.element_count).min(self.elements_cache.len());
+        let end = (skip + take).min(self.element_count).min(self.elements_cache.len());
         &self.elements_cache[start..end]
     }
     
     pub fn count(&self) -> usize {
-        self.element_count
+        // Safety: if cache is stale, use actual cache len
+        self.element_count.max(self.elements_cache.len())
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
@@ -130,7 +118,7 @@ pub enum Msg {
     Assistant(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     Cyan,
     Green,
