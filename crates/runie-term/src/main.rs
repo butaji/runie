@@ -94,7 +94,7 @@ async fn event_loop(
                 else => break,
             }
         }
-        if dirty { terminal.draw(|f| runie_tui::ui::view(f, &state)).expect("draw"); dirty = false; }
+        if dirty { terminal.draw(|f| runie_tui::ui::view(f, &mut state)).expect("draw"); dirty = false; }
         if events == 0 { tokio::time::sleep(Duration::from_millis(THROTTLE_MS)).await; }
     }
 }
@@ -124,8 +124,6 @@ async fn tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
     thinking(&cmd.id, agent_tx).await;
     tool_exec(&cmd.id, agent_tx).await;
     thinking(&cmd.id, agent_tx).await;
-    let _ = agent_tx.send(CoreEvent::AgentResponse { id: cmd.id.clone(), content: "Files:\n".to_string() }).await;
-    sleep(50).await;
     let _ = agent_tx.send(CoreEvent::AgentTurnComplete { id: cmd.id.clone(), duration_secs: start.elapsed().as_secs_f64() }).await;
 }
 
@@ -138,8 +136,10 @@ async fn thinking(id: &str, agent_tx: &mpsc::Sender<CoreEvent>) {
 async fn tool_exec(id: &str, agent_tx: &mpsc::Sender<CoreEvent>) {
     let _ = agent_tx.send(CoreEvent::AgentToolStart { id: id.to_string(), name: "list_files".to_string() }).await;
     sleep(1000).await;
-    let _ = get_fake_file_list();
+    let files = get_fake_file_list();
     let _ = agent_tx.send(CoreEvent::AgentToolEnd { duration_secs: 1.0 }).await;
+    // Send file list as part of response
+    let _ = agent_tx.send(CoreEvent::AgentResponse { id: id.to_string(), content: format!("\n{}", files) }).await;
     sleep(50).await;
 }
 

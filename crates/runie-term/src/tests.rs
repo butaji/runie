@@ -7,6 +7,87 @@ fn set_test_mode() {
     std::env::set_var("RUNIE_TEST", "1");
 }
 
+// === REGRESSION TEST: Chat must render content ===
+// This test verifies that view() calls ensure_fresh() internally.
+// WITHOUT the fix, this test FAILS because cache is never rebuilt.
+
+#[test]
+fn test_view_renders_user_message_without_manual_ensure_fresh() {
+    set_test_mode();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    
+    // Add a message - this sets dirty=true but doesn't rebuild cache
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
+    
+    // DO NOT call state.ensure_fresh() here!
+    // The view() function MUST call it internally.
+    
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    
+    // This assertion would FAIL if view() doesn't call ensure_fresh()
+    assert!(content.contains("You:"), "Chat must render 'You:' prefix. Got: {}", content);
+    assert!(content.contains("Hi"), "Chat must render message content. Got: {}", content);
+}
+
+#[test]
+fn test_view_renders_agent_message_without_manual_ensure_fresh() {
+    set_test_mode();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    
+    // DO NOT call state.ensure_fresh() here!
+    
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    
+    assert!(content.contains("Agent:"), "Chat must render 'Agent:' prefix. Got: {}", content);
+    assert!(content.contains("Hello"), "Chat must render agent response. Got: {}", content);
+}
+
+#[test]
+fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
+    set_test_mode();
+    let backend = TestBackend::new(60, 30);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    
+    // First message
+    state.update(Event::Input('A'));
+    state.update(Event::Submit);
+    
+    // Agent responds
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Response 1".to_string() });
+    state.update(Event::AgentDone { id: "req.0".to_string() });
+    
+    // Second message
+    state.update(Event::Input('B'));
+    state.update(Event::Submit);
+    
+    // DO NOT call state.ensure_fresh() here!
+    
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    
+    assert!(content.contains("You:"), "Must show user prefix");
+    assert!(content.contains("Agent:"), "Must show agent prefix");
+    assert!(content.contains("A") || content.contains("B"), "Must show message content");
+}
+
 #[test]
 fn test_submit_adds_message_to_queue() {
     set_test_mode();
@@ -83,7 +164,7 @@ fn test_render_user_message() {
     state.update(Event::Input('H'));
     state.update(Event::Submit);
     state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).expect("draw");
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("You:"));
@@ -100,7 +181,7 @@ fn test_render_agent_response() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
     state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).expect("draw");
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Agent:"));
@@ -130,7 +211,7 @@ fn test_render_performance_1000_messages() {
     state.ensure_fresh();
     let start = Instant::now();
     for _ in 0..100 {
-        terminal.draw(|f| view(f, &state)).expect("draw");
+        terminal.draw(|f| view(f, &mut state)).expect("draw");
     }
     let elapsed = start.elapsed();
     println!("100 renders with 1000 messages: {:?} ({} msg)", elapsed, state.messages.len());
@@ -152,6 +233,79 @@ fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.update(Event::AgentResponse { id, content: format!("Files for turn {}\n", i) });
 }
 
+// === List Files Flow Test ===
+
+#[test]
+fn test_list_files_message_content() {
+    // Debug: verify message content is stored correctly
+    let mut state = AppState::default();
+    state.streaming = true;
+    
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 1.0 });
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    
+    let file_list = "src/main.rs".to_string();
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: format!("\n{}", file_list) });
+    
+    // Check message content
+    let assistant_msg = state.messages.iter().find(|m| m.role == "assistant").expect("Should have assistant message");
+    println!("Assistant message content: {:?}", assistant_msg.content);
+    assert!(assistant_msg.content.contains("src/main.rs"), "Message should contain file list");
+}
+
+#[test]
+fn test_list_files_full_sequence() {
+    set_test_mode();
+    let backend = TestBackend::new(80, 40);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    state.streaming = true;
+    
+    // Simulate: list files command
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 1.0 });
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    // File list content from get_fake_file_list()
+    let file_list = r#"src/
+  main.rs
+  lib.rs
+  Cargo.toml
+tests/
+  test_main.rs
+README.md
+Cargo.lock"#.to_string();
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: format!("\n{}", file_list) });
+    state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 3.0 });
+    state.update(Event::AgentDone { id: "req.0".to_string() });
+    
+    // Render
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    
+    // Verify message content is stored correctly
+    let assistant_msg = state.messages.iter().find(|m| m.role == "assistant").expect("Should have assistant message");
+    assert!(assistant_msg.content.contains("src/"), "Message should contain file list from get_fake_file_list()");
+    assert!(assistant_msg.content.contains("main.rs") || assistant_msg.content.contains("Cargo.toml"), "Message should contain file names");
+    
+    // Verify sequence: Though -> Tool -> Though -> Files -> Turn complete
+    assert!(content.contains("Though"), "Should show thought");
+    assert!(content.contains("Ran") || content.contains("list_files"), "Should show tool execution");
+    assert!(content.contains("src/"), "Should show file list");
+    assert!(content.contains("main.rs") || content.contains("README"), "Should show file names");
+    assert!(content.contains("Turn completed"), "Should show turn complete");
+    
+    // Message count: 2 thoughts + 1 tool + 1 response + 1 turn_complete = 5
+    assert_eq!(state.messages.len(), 5, "Should have 5 messages");
+}
+
 #[test]
 fn test_stress_many_tool_calls() {
     set_test_mode();
@@ -164,11 +318,11 @@ fn test_stress_many_tool_calls() {
         state.update(Event::AgentDone { id: format!("req.{}", i) });
         if i % 5 == 0 {
             state.ensure_fresh();
-            terminal.draw(|f| view(f, &state)).expect("draw");
+            terminal.draw(|f| view(f, &mut state)).expect("draw");
         }
     }
     state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).expect("draw");
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Files for turn"));
@@ -184,7 +338,7 @@ fn test_render_thinking_indicator() {
     state.update(Event::Submit);
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.ensure_fresh();
-    terminal.draw(|f| view(f, &state)).expect("draw");
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Though"));
