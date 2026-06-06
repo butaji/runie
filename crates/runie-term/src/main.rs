@@ -81,7 +81,6 @@ async fn main() -> io::Result<()> {
             }
             
             _ = cache_interval.tick() => {
-                // Rebuild cache periodically, not on every event
                 state.formatted_cache = runie_core::format_messages(&state);
                 terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }

@@ -2,12 +2,11 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
-    text::Text,
     widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame,
 };
 
-use runie_core::{AppState, format_messages, PANEL_CHAT, PANEL_INPUT, Color as CoreColor};
+use runie_core::{AppState, Dsl, PANEL_CHAT, PANEL_INPUT, Color as CoreColor};
 
 /// View function - renders state to terminal
 pub fn view(f: &mut Frame, state: &AppState) {
@@ -22,8 +21,6 @@ pub fn view(f: &mut Frame, state: &AppState) {
 }
 
 fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
-    use ratatui::style::Style;
-    
     if state.turn_active {
         let spinner = state.spinner_frame();
         let elapsed = state.turn_elapsed_secs().unwrap_or(0.0);
@@ -37,13 +34,10 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
 
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     // Split content / scrollbar track
-    let chunks = Layout::default()
+    let [content_area, scroll_area] = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Fill(1), Constraint::Length(1)])
-        .split(area);
-    
-    let content_area = chunks[0];
-    let scroll_area = chunks[1];
+        .areas(area);
     
     let block = Block::default()
         .borders(Borders::ALL)
@@ -53,42 +47,63 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let inner = block.inner(content_area);
     f.render_widget(block, content_area);
 
-    // Get formatted lines from cache
-    let lines = format_messages(state);
-    let total_lines = lines.len();
     let visible_height = inner.height as usize;
+    let total_elements = Dsl::count(state);
     
-    // Calculate visible window - only render what's on screen
-    let max_scroll = total_lines.saturating_sub(visible_height);
-    let scroll_offset = if total_lines > visible_height {
-        max_scroll  // Auto-scroll to bottom
+    // Auto-scroll to bottom
+    let max_scroll = total_elements.saturating_sub(visible_height);
+    let scroll_offset = if total_elements > visible_height {
+        max_scroll
     } else {
         0
     };
 
-    // Create visible items using skip().take() - O(1) per item
-    let visible_lines: Vec<ListItem> = lines
-        .iter()
-        .skip(scroll_offset)
-        .take(visible_height)
-        .map(|dl| {
-            // Use raw text without complex styling for efficiency
-            let text = dl.spans.iter().map(|s| s.text.clone()).collect::<String>();
-            ListItem::new(text)
-        })
-        .collect();
+    // Get ONLY visible elements - O(visible) not O(n)
+    let visible_elements = Dsl::visible(state, scroll_offset, visible_height);
+    
+    // Convert elements to ListItems directly
+    let items: Vec<ListItem> = visible_elements.iter().map(|elem| {
+        let text = element_to_text(elem, state);
+        ListItem::new(text)
+    }).collect();
 
     // Render visible window only
-    let list = List::new(visible_lines);
+    let list = List::new(items);
     f.render_widget(list, inner);
 
-    // Render scrollbar - O(1) state
-    if total_lines > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(total_lines)
+    // Render scrollbar
+    if total_elements > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(total_elements)
             .position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray));
         f.render_stateful_widget(scrollbar, scroll_area, &mut scrollbar_state);
+    }
+}
+
+fn element_to_text(element: &runie_core::Element, state: &AppState) -> String {
+    use runie_core::Element;
+    
+    match element {
+        Element::Spacer => String::new(),
+        Element::UserMessage { content } => format!("You: {}", content),
+        Element::AgentMessage { content } => format!("Agent: {}", content),
+        Element::Thinking { elapsed } => {
+            format!("{} Though... {:.1}s", state.spinner_frame(), elapsed)
+        }
+        Element::ThoughtMarker { content } => content.clone(),
+        Element::ToolRunning { name, elapsed } => {
+            format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed)
+        }
+        Element::ToolDone { name, duration_secs } => {
+            format!("◆ Ran {} {:.1}s", name, duration_secs)
+        }
+        Element::TurnComplete { duration_secs } => {
+            format!("Turn completed in {:.1}s", duration_secs)
+        }
+        Element::Group { elements, .. } => {
+            elements.iter().map(|e| element_to_text(e, state)).collect::<Vec<_>>().join("\n")
+        }
     }
 }
 
