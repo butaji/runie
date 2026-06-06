@@ -139,7 +139,7 @@ impl AppState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Role {
     User,
     Thought,
@@ -162,7 +162,7 @@ impl Role {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
