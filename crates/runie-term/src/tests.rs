@@ -311,3 +311,118 @@ fn test_render_thinking_indicator() {
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Though"));
 }
+
+// === Slash command rendering ===
+
+#[test]
+fn test_render_sessions_list_on_separate_lines() {
+    use runie_core::session::Store;
+    use std::sync::Mutex;
+    static LOCK: Mutex<()> = Mutex::new(());
+    let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    let store = Store::new(std::env::temp_dir().join("runie_render_sessions_test"));
+    let _ = std::fs::remove_dir_all(&store.dir);
+    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+
+    store.save("alpha", &runie_core::Session {
+        name: "alpha".to_string(), created_at: 1.0, updated_at: 1.0,
+        messages: vec![], provider: "mock".into(), model: "echo".into(),
+    }).unwrap();
+    store.save("beta", &runie_core::Session {
+        name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
+        messages: vec![], provider: "mock".into(), model: "echo".into(),
+    }).unwrap();
+
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "/sessions".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let lines: Vec<String> = (0..buf.area().height)
+        .map(|y| (0..buf.area().width).map(|x| buf.get(x, y).symbol()).collect::<String>())
+        .collect();
+
+    let session_line_count = lines.iter().filter(|l| l.contains("alpha") || l.contains("beta")).count();
+    assert_eq!(session_line_count, 2, "Sessions should render on 2 separate lines, got: {:?}", lines);
+
+    std::env::remove_var("RUNIE_SESSIONS_DIR");
+}
+
+#[test]
+fn test_render_model_no_args_shows_usage_not_echoed() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "/model".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(!content.contains("You: /model"), "Should NOT echo /model as user message: {}", content);
+}
+
+#[test]
+fn test_render_save_no_args_shows_usage() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "/save".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(!content.contains("You: /save"), "Should NOT echo /save as user message: {}", content);
+}
+
+#[test]
+fn test_render_load_no_args_shows_usage() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "/load".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(!content.contains("You: /load"), "Should NOT echo /load as user message: {}", content);
+}
+
+#[test]
+fn test_render_delete_no_args_shows_usage() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "/delete".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(!content.contains("You: /delete"), "Should NOT echo /delete as user message: {}", content);
+}

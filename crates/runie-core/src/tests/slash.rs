@@ -125,6 +125,17 @@ fn model_empty_provider_or_model_shows_usage() {
     assert!(sys_msgs[0].content.contains("Usage:"), "empty provider should show usage: {}", sys_msgs[0].content);
 }
 
+#[test]
+fn model_no_args_shows_usage() {
+    let mut state = fresh_state();
+    type_str(&mut state, "/model");
+    state.update(Event::Submit);
+
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1, "should show system message, got messages: {:?}", state.messages);
+    assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
+}
+
 // === /save ===
 
 #[test]
@@ -172,6 +183,17 @@ fn save_preserves_messages_provider_model() {
     assert_eq!(loaded.messages[0].role, Role::User);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
+}
+
+#[test]
+fn save_no_args_shows_usage() {
+    let mut state = fresh_state();
+    type_str(&mut state, "/save");
+    state.update(Event::Submit);
+
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1, "should show system message");
+    assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
 }
 
 // === /load ===
@@ -227,6 +249,17 @@ fn load_missing_session_shows_error() {
     assert!(last.content.contains("Error"), "error shown: {}", last.content);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
+}
+
+#[test]
+fn load_no_args_shows_usage() {
+    let mut state = fresh_state();
+    type_str(&mut state, "/load");
+    state.update(Event::Submit);
+
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1, "should show system message");
+    assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
 }
 
 // === /sessions ===
@@ -320,6 +353,17 @@ fn delete_missing_session_shows_error() {
     assert!(last.content.contains("Error"), "error shown: {}", last.content);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
+}
+
+#[test]
+fn delete_no_args_shows_usage() {
+    let mut state = fresh_state();
+    type_str(&mut state, "/delete");
+    state.update(Event::Submit);
+
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1, "should show system message");
+    assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
 }
 
 // === Edge cases ===
