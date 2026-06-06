@@ -68,6 +68,22 @@ impl AppState {
             }
             return;
         }
+        if content == "/model" {
+            self.add_system_msg("Usage: /model provider/model".to_string());
+            return;
+        }
+        if content == "/save" {
+            self.add_system_msg("Usage: /save name".to_string());
+            return;
+        }
+        if content == "/load" {
+            self.add_system_msg("Usage: /load name".to_string());
+            return;
+        }
+        if content == "/delete" {
+            self.add_system_msg("Usage: /delete name".to_string());
+            return;
+        }
         if content == "/sessions" {
             match crate::session::list() {
                 Ok(sessions) => {

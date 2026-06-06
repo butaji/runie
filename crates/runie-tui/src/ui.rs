@@ -53,24 +53,24 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
 
     let mut lines = Vec::with_capacity(height);
     for elem in visible {
-        lines.push(to_line(elem, state));
+        lines.extend(to_lines(elem, state));
     }
 
     f.render_widget(Paragraph::new(lines), inner);
 }
 
-fn to_line<'a>(elem: &'a Element, state: &'a AppState) -> Line<'a> {
+fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
-        Spacer => Line::from(""),
-        UserMessage { content } => Line::from(span(format!("You: {}", content), Color::White)),
-        AgentMessage { content } => Line::from(span(format!("Agent: {}", content), Color::White)),
-        Thinking { elapsed } => gray(thinking_text(state, *elapsed)),
-        ThoughtMarker { content } => gray(Line::from(content.clone())),
-        ToolRunning { name, elapsed } => gray(Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed))),
-        ToolDone { name, duration_secs } => gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs))),
-        TurnComplete { duration_secs } => gray(Line::from(format!("Turn completed in {:.1}s", duration_secs))),
-        Group { elements, .. } => Line::from(elements.iter().map(|e| to_line(e, state).to_string()).collect::<Vec<_>>().join("\n")),
+        Spacer => vec![Line::from("")],
+        UserMessage { content } => vec![Line::from(span(format!("You: {}", content), Color::White))],
+        AgentMessage { content } => vec![Line::from(span(format!("Agent: {}", content), Color::White))],
+        Thinking { elapsed } => vec![gray(thinking_text(state, *elapsed))],
+        ThoughtMarker { content } => content.lines().map(|line| gray(Line::from(line.to_string()))).collect(),
+        ToolRunning { name, elapsed } => vec![gray(Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed)))],
+        ToolDone { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs)))],
+        TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
+        Group { elements, .. } => elements.iter().flat_map(|e| to_lines(e, state)).collect(),
     }
 }
 
