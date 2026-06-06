@@ -12,15 +12,17 @@ fn now() -> f64 {
 
 impl AppState {
     /// Update state with event - uses mutable borrow, no cloning
+    /// Pure MVU update — every state transition that affects rendering marks dirty.
+    /// No-op events (Quit, SpawnAgent) leave state unchanged.
     pub fn update(&mut self, event: Event) {
         match event {
             Event::Input(c) => self.push_input(c),
             Event::Backspace => self.pop_input(),
             Event::Submit => self.submit(),
-            Event::ScrollUp => self.scroll = self.scroll.saturating_add(1),
-            Event::ScrollDown => self.scroll = self.scroll.saturating_sub(1),
+            Event::ScrollUp => self.scroll_up(),
+            Event::ScrollDown => self.scroll_down(),
             Event::Quit => {}
-            Event::Reset => *self = AppState::default(),
+            Event::Reset => *self = AppState::default(), // default() sets dirty=true
             Event::AgentThinking { id } => self.set_thinking(id),
             Event::AgentThoughtDone { id } => self.add_thought(id),
             Event::AgentToolStart { id, name } => self.start_tool(id, name),
@@ -35,10 +37,22 @@ impl AppState {
 
     fn push_input(&mut self, c: char) {
         self.input.push(c);
+        self.mark_dirty();
     }
 
     fn pop_input(&mut self) {
         self.input.pop();
+        self.mark_dirty();
+    }
+
+    fn scroll_up(&mut self) {
+        self.scroll = self.scroll.saturating_add(1);
+        self.mark_dirty();
+    }
+
+    fn scroll_down(&mut self) {
+        self.scroll = self.scroll.saturating_sub(1);
+        self.mark_dirty();
     }
 
     fn submit(&mut self) {
@@ -160,6 +174,7 @@ impl AppState {
             self.streaming = false;
             self.thinking_started_at = None;
         }
+        self.mark_dirty();
     }
 
     fn add_error(&mut self, id: String, message: String) {

@@ -49,3 +49,34 @@ fn test_submit_reset_command() {
     assert_eq!(state.messages.len(), 0);
     assert_eq!(state.input, "");
 }
+
+#[test]
+fn test_input_events_mark_dirty_for_render() {
+    // REGRESSION: push_input/pop_input/scroll did not call mark_dirty()
+    // In actor architecture, maybe_send_snapshot gates on is_dirty().
+    // Without dirty, typing never triggered render — TUI stayed blank.
+    let mut state = fresh_state();
+    state.ensure_fresh(); // consume initial dirty
+    assert!(!state.is_dirty());
+
+    state.update(Event::Input('a'));
+    assert!(state.is_dirty(), "Input must mark dirty");
+
+    state.ensure_fresh();
+    assert!(!state.is_dirty());
+
+    state.update(Event::Backspace);
+    assert!(state.is_dirty(), "Backspace must mark dirty");
+
+    state.ensure_fresh();
+    assert!(!state.is_dirty());
+
+    state.update(Event::ScrollUp);
+    assert!(state.is_dirty(), "ScrollUp must mark dirty");
+
+    state.ensure_fresh();
+    assert!(!state.is_dirty());
+
+    state.update(Event::ScrollDown);
+    assert!(state.is_dirty(), "ScrollDown must mark dirty");
+}
