@@ -43,30 +43,44 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(block, area);
 
     let total = Dsl::count(state);
-    if total == 0 || inner.height == 0 {
+    let visible_height = inner.height as usize;
+    
+    if total == 0 || visible_height == 0 {
         return;
     }
 
-    // Get all elements
-    let elements = Dsl::visible(state, 0, total);
+    // Auto-scroll to bottom - only show last visible_height elements
+    let scroll = if total > visible_height {
+        total - visible_height
+    } else {
+        0
+    };
     
-    // Build wrapped lines
+    // Get only visible elements - O(visible) not O(total)
+    let elements = Dsl::visible(state, scroll, visible_height);
+    
+    // Build lines for visible only
     let width = inner.width as usize;
-    let mut lines: Vec<Line> = Vec::new();
+    let mut lines: Vec<Line> = Vec::with_capacity(visible_height);
     
     for elem in &elements {
         let text = element_to_text(elem, state);
         if text.is_empty() {
             lines.push(Line::from(""));
-            continue;
+        } else {
+            for line in wrap_text(&text, width) {
+                lines.push(Line::from(line));
+                if lines.len() >= visible_height {
+                    break;
+                }
+            }
         }
-        // Simple word wrap
-        for line in wrap_text(&text, width) {
-            lines.push(Line::from(line));
+        if lines.len() >= visible_height {
+            break;
         }
     }
     
-    // Render with Paragraph (auto-wrap)
+    // Render with Paragraph
     let paragraph = Paragraph::new(lines)
         .style(Style::default().fg(ratatui::style::Color::White));
     f.render_widget(paragraph, inner);
@@ -85,7 +99,6 @@ fn wrap_text(text: &str, width: usize) -> Vec<String> {
                 result.push(remaining.to_string());
                 break;
             }
-            // Find last space within width
             let cut = remaining[..width.min(remaining.len())]
                 .rfind(' ')
                 .map(|i| i)
