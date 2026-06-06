@@ -50,7 +50,7 @@ async fn main() -> io::Result<()> {
     let mut state = load_state().unwrap_or_default();
     // Initialize cache
     state.formatted_cache = runie_core::format_messages(&state);
-    let mut anim_interval = interval(Duration::from_millis(150)); // Slower spinner
+    let mut anim_interval = interval(Duration::from_millis(200)); // Spinner
     let mut cache_interval = interval(Duration::from_millis(100)); // Rebuild cache at 10fps max
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
