@@ -29,6 +29,8 @@ pub struct AppState {
     pub(crate) last_tool_index: Option<usize>,
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
+    /// Monotonic counter — increments on every snapshot sent to render actor
+    pub render_generation: u64,
     /// Cached element count — O(1) access when not dirty
     element_count: usize,
     /// Cached elements — rebuilt lazily via ensure_fresh()
@@ -57,6 +59,7 @@ impl Default for AppState {
             current_action: None,
             last_tool_index: None,
             inflight: 0,
+            render_generation: 0,
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
