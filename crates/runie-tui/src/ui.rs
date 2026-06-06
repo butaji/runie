@@ -2,8 +2,8 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
-    text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
+    text::Text,
+    widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame,
 };
 
@@ -36,7 +36,7 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
 }
 
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
-    // Split off 1 column for scrollbar track on the right
+    // Split content / scrollbar track
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Fill(1), Constraint::Length(1)])
@@ -53,54 +53,38 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let inner = block.inner(content_area);
     f.render_widget(block, content_area);
 
+    // Get formatted lines from cache
     let lines = format_messages(state);
+    let total_lines = lines.len();
+    let visible_height = inner.height as usize;
     
-    let ratatui_lines: Vec<Line> = lines
-        .into_iter()
-        .map(|dl| {
-            if dl.spans.is_empty() {
-                Line::raw("")
-            } else {
-                let spans: Vec<Span> = dl.spans
-                    .into_iter()
-                    .map(|s| {
-                        let color = s.color.map(cratatui_color);
-                        match color {
-                            Some(c) => Span::styled(s.text, Style::default().fg(c)),
-                            None => Span::raw(s.text),
-                        }
-                    })
-                    .collect();
-                Line::from(spans)
-            }
-        })
-        .collect();
-
-    let content_height = ratatui_lines.len() as u16;
-    let visible_height = inner.height;
-    
-    // Calculate scroll position (auto-scroll to bottom)
-    let max_scroll = content_height.saturating_sub(visible_height) as usize;
-    let scroll_offset = if content_height > visible_height {
-        max_scroll
+    // Calculate visible window - only render what's on screen
+    let max_scroll = total_lines.saturating_sub(visible_height);
+    let scroll_offset = if total_lines > visible_height {
+        max_scroll  // Auto-scroll to bottom
     } else {
         0
     };
 
-    // Render content with scroll offset applied
-    let visible_lines: Vec<Line> = if scroll_offset > 0 {
-        ratatui_lines[scroll_offset..].to_vec()
-    } else {
-        ratatui_lines
-    };
+    // Create visible items using skip().take() - O(1) per item
+    let visible_lines: Vec<ListItem> = lines
+        .iter()
+        .skip(scroll_offset)
+        .take(visible_height)
+        .map(|dl| {
+            // Use raw text without complex styling for efficiency
+            let text = dl.spans.iter().map(|s| s.text.clone()).collect::<String>();
+            ListItem::new(text)
+        })
+        .collect();
 
-    let paragraph = Paragraph::new(Text::from(visible_lines))
-        .wrap(Wrap { trim: true });
-    f.render_widget(paragraph, inner);
+    // Render visible window only
+    let list = List::new(visible_lines);
+    f.render_widget(list, inner);
 
-    // Render scrollbar in the track area
-    if content_height > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(content_height as usize)
+    // Render scrollbar - O(1) state
+    if total_lines > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(total_lines)
             .position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray));
