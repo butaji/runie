@@ -1,8 +1,6 @@
 //! Centralized Event Types
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum Event {
     // === UI Events ===
     Input(char),

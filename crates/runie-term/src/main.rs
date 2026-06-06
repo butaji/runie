@@ -33,8 +33,8 @@ fn main() -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    // Shared state
-    let state: SharedState = Arc::new(RwLock::new(load_state().unwrap_or_default()));
+    // Shared state - fresh start, no serialization
+    let state: SharedState = Arc::new(RwLock::new(AppState::default()));
     let ui_state = state.clone();
     let running = Arc::new(AtomicBool::new(true));
     let ui_running = running.clone();
@@ -55,19 +55,13 @@ fn main() -> io::Result<()> {
             let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
         }
 
-        // Render loop - 20fps, only when not shutting down
+        // Render loop - 20fps
         while ui_running.load(Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(50));
             
             // Try to get read lock - NEVER block, skip frame if contended
             match ui_state.try_read() {
                 Ok(s) => {
-                    // Only render if state changed
-                    if s.dirty || s.turn_active {
-                        // Rebuild cache inside read lock (safe since we're only reader)
-                        // Actually we can't mutate in read lock...
-                        // So we check dirty but don't rebuild here
-                    }
                     let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
                 }
                 Err(_) => {
@@ -298,11 +292,4 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
         }
         _ => None,
     }
-}
-
-fn load_state() -> Option<AppState> {
-    let data = std::fs::read("/tmp/runie_state.bin").ok()?;
-    let state = bincode::deserialize(&data).ok()?;
-    let _ = std::fs::remove_file("/tmp/runie_state.bin");
-    Some(state)
 }
