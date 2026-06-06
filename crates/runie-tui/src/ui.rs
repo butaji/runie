@@ -47,37 +47,36 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let inner = block.inner(content_area);
     f.render_widget(block, content_area);
 
-    let visible_height = inner.height as usize;
+    let visible_height = inner.height.saturating_sub(2) as usize; // account for borders
     let total_elements = Dsl::count(state);
     
     // Auto-scroll to bottom
-    let max_scroll = total_elements.saturating_sub(visible_height);
     let scroll_offset = if total_elements > visible_height {
-        max_scroll
+        total_elements.saturating_sub(visible_height)
     } else {
         0
     };
 
-    // Get ONLY visible elements - O(visible) not O(n)
+    // Get visible elements - O(skip + take)
     let visible_elements = Dsl::visible(state, scroll_offset, visible_height);
     
-    // Convert elements to ListItems directly
+    // Convert to ListItems
     let items: Vec<ListItem> = visible_elements.iter().map(|elem| {
-        let text = element_to_text(elem, state);
-        ListItem::new(text)
+        ListItem::new(element_to_text(elem, state))
     }).collect();
 
-    // Render visible window only
-    let list = List::new(items);
-    f.render_widget(list, inner);
+    // Render list
+    f.render_widget(List::new(items), inner);
 
-    // Render scrollbar
+    // Render scrollbar if needed
     if total_elements > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(total_elements)
-            .position(scroll_offset);
-        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray));
-        f.render_stateful_widget(scrollbar, scroll_area, &mut scrollbar_state);
+        let mut scrollbar_state = ScrollbarState::new(total_elements).position(scroll_offset);
+        f.render_stateful_widget(
+            Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray)),
+            scroll_area,
+            &mut scrollbar_state,
+        );
     }
 }
 
