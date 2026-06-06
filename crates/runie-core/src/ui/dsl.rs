@@ -11,100 +11,45 @@ impl Dsl {
         state.element_count
     }
     
-    /// Get visible elements only (virtual list) - O(visible + skip) not O(n)
+    /// Get visible elements - simple forward iteration
     pub fn visible(state: &AppState, skip: usize, take: usize) -> Vec<Element> {
         let mut elements = Vec::with_capacity(take);
-        let total = state.element_count;
-        
-        // If near the end, iterate backwards from messages
-        if skip > total / 2 {
-            return Self::visible_from_end(state, skip, take, total);
-        }
-        
-        // Forward iteration
         let mut consumed = 0;
+        
+        // Track which messages contribute which element positions
         for msg in &state.messages {
-            match msg.role.as_str() {
-                "user" | "thought" | "assistant" | "tool" | "turn_complete" => {
-                    if consumed >= skip && elements.len() < take {
-                        elements.push(Self::msg_to_element(msg, state));
-                    }
-                    consumed += 1;
-                    
-                    if consumed >= skip && elements.len() < take {
-                        elements.push(Element::Spacer);
-                    }
-                    consumed += 1;
-                }
-                _ => {}
+            let role = msg.role.as_str();
+            if !matches!(role, "user" | "thought" | "assistant" | "tool" | "turn_complete") {
+                continue;
+            }
+            
+            // Element position before this message's content
+            let content_pos = consumed;
+            consumed += 1;
+            
+            // Spacer position
+            let spacer_pos = consumed;
+            consumed += 1;
+            
+            // If in visible range, add element
+            if content_pos >= skip && elements.len() < take {
+                elements.push(Self::msg_to_element(msg, state));
+            }
+            if spacer_pos >= skip && elements.len() < take {
+                elements.push(Element::Spacer);
             }
         }
         
+        // Add thinking element if present
         if state.thinking_started_at.is_some() {
-            if consumed >= skip && elements.len() < take {
+            let pos = consumed;
+            if pos >= skip && elements.len() < take {
                 elements.push(Element::Thinking { 
                     elapsed: state.thinking_elapsed_secs().unwrap_or(0.0) 
                 });
             }
         }
         
-        elements
-    }
-    
-    /// Iterate backwards from the end - for auto-scroll at bottom
-    fn visible_from_end(state: &AppState, skip: usize, take: usize, total: usize) -> Vec<Element> {
-        let mut elements = Vec::with_capacity(take);
-        let mut target_start = total.saturating_sub(skip);
-        let mut target_end = target_start + take;
-        
-        // Clamp
-        target_start = target_start.min(total);
-        target_end = target_end.min(total);
-        
-        // Build element list and iterate from end
-        let mut cur_pos = 0;
-        let msgs_len = state.messages.len();
-        
-        // Iterate messages in reverse
-        for i in (0..msgs_len).rev() {
-            let msg = &state.messages[i];
-            match msg.role.as_str() {
-                "user" | "thought" | "assistant" | "tool" | "turn_complete" => {
-                    // This message contributes 2 elements (content + spacer)
-                    let msg_end = cur_pos + 2;
-                    let msg_start = cur_pos;
-                    
-                    // Check overlap with target range
-                    if msg_end > target_start && msg_start < target_end {
-                        // Spacer (if not first element we're collecting)
-                        if elements.len() < take && msg_end > target_start {
-                            if elements.len() < take {
-                                elements.push(Element::Spacer);
-                            }
-                        }
-                        // Content
-                        if elements.len() < take && msg_end > target_start {
-                            elements.push(Self::msg_to_element(msg, state));
-                        }
-                    }
-                    
-                    cur_pos = msg_end;
-                }
-                _ => {}
-            }
-        }
-        
-        // Handle thinking element at the very end
-        if state.thinking_started_at.is_some() {
-            let thinking_pos = cur_pos;
-            if thinking_pos >= target_start && elements.len() < take {
-                elements.push(Element::Thinking { 
-                    elapsed: state.thinking_elapsed_secs().unwrap_or(0.0) 
-                });
-            }
-        }
-        
-        elements.reverse();
         elements
     }
     
