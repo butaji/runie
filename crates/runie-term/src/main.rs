@@ -4,7 +4,7 @@
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockProvider, Provider};
+use runie_agent::{AgentCommand, MockProvider, run_agent_turn};
 use runie_core::{AppState, Event as CoreEvent};
 use std::{
     io,
@@ -154,50 +154,30 @@ fn main() -> io::Result<()> {
 
 async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>) {
     while let Some(cmd) = cmd_rx.recv().await {
-        if needs_tool_execution(&cmd.content) {
-            run_tool_flow(&cmd, &agent_tx).await;
-        } else {
-            run_simple_flow(&cmd, &agent_tx).await;
+        let provider = MockProvider;
+        let agent_tx_clone = agent_tx.clone();
+        let cmd_id = cmd.id.clone();
+
+        // Run the agent turn in a blocking task since provider.generate is sync
+        let result = tokio::task::spawn_blocking(move || {
+            run_agent_turn(
+                &provider,
+                &cmd,
+                |evt| {
+                    let core_evt = evt.to_core_event();
+                    let _ = agent_tx_clone.blocking_send(core_evt);
+                },
+                5,
+            );
+        }).await;
+
+        if let Err(e) = result {
+            let _ = agent_tx.send(CoreEvent::AgentError {
+                id: cmd_id,
+                message: format!("Agent loop panicked: {}", e),
+            }).await;
         }
-        let _ = agent_tx.send(CoreEvent::AgentDone { id: cmd.id }).await;
     }
-}
-
-async fn run_simple_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
-    let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(500)).await; }
-    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
-
-    let provider = MockProvider;
-    let messages = vec![runie_agent::Message::User { content: cmd.content.clone() }];
-    for chunk in provider.generate(messages) {
-        let _ = agent_tx.send(CoreEvent::AgentResponse { id: cmd.id.clone(), content: chunk.content }).await;
-        if !cfg!(test) { tokio::time::sleep(Duration::from_millis(50)).await; }
-    }
-}
-
-async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
-    use std::time::Instant;
-    let turn_start = Instant::now();
-
-    let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(500)).await; }
-    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
-
-    let _ = agent_tx.send(CoreEvent::AgentToolStart { id: cmd.id.clone(), name: "list_files".to_string() }).await;
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(1000)).await; }
-    let _ = get_fake_file_list();
-    let _ = agent_tx.send(CoreEvent::AgentToolEnd { duration_secs: 1.0 }).await;
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(50)).await; }
-
-    let _ = agent_tx.send(CoreEvent::AgentThinking { id: cmd.id.clone() }).await;
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(500)).await; }
-    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: cmd.id.clone() }).await;
-
-    let _ = agent_tx.send(CoreEvent::AgentResponse { id: cmd.id.clone(), content: "Files:\n".to_string() }).await;
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(50)).await; }
-
-    let _ = agent_tx.send(CoreEvent::AgentTurnComplete { id: cmd.id.clone(), duration_secs: turn_start.elapsed().as_secs_f64() }).await;
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {
