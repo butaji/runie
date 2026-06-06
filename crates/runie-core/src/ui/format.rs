@@ -99,7 +99,7 @@ fn render_element(element: &Element, state: &crate::model::AppState) -> Vec<Disp
                     spans: vec![DisplaySpan { text, color: Some(Color::DarkGray) }],
                 },
             ]
-        },
+        }
         
         Element::TurnComplete { duration_secs } => vec![
             DisplayLine {
@@ -127,5 +127,10 @@ impl DisplayLine {
     
     pub fn is_empty(&self) -> bool {
         self.spans.iter().all(|s| s.text.is_empty())
+    }
+    
+    /// Convert to raw text line (for efficient List rendering)
+    pub fn to_text(&self) -> String {
+        self.spans.iter().map(|s| s.text.clone()).collect()
     }
 }
