@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term", "crates/runie-agent"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term", "crates/runie-agent", "crates/runie-provider"]
 resolver = "2"
 
 [workspace.package]
@@ -16,3 +16,4 @@ futures = "0.3"
 runie-core = { path = "crates/runie-core" }
 runie-tui = { path = "crates/runie-tui" }
 runie-agent = { path = "crates/runie-agent" }
+runie-provider = { path = "crates/runie-provider" }
