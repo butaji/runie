@@ -86,7 +86,7 @@ mod tests {
     }
     
     #[test]
-    fn test_agent_response_creates_multiple_messages() {
+    fn test_agent_response_appends_to_existing() {
         let mut state = fresh_state();
         state.streaming = true;
         
@@ -101,10 +101,11 @@ mod tests {
             content: "World".to_string() 
         });
         
-        assert_eq!(state.messages.len(), 3);
+        // Chunks are appended to same message
+        assert_eq!(state.messages.len(), 2);
         assert_eq!(state.messages[0].role, "thought");
         assert_eq!(state.messages[1].role, "assistant");
-        assert_eq!(state.messages[2].role, "assistant");
+        assert_eq!(state.messages[1].content, "Hello World");
     }
     
     #[test]

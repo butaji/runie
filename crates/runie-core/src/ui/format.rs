@@ -25,13 +25,9 @@ pub enum Color {
 }
 
 pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
-    if state.formatted_cache.is_empty() {
-        // Compute fresh if cache not populated (for tests)
-        let feed = crate::ui::Dsl::feed(state);
-        render_feed(&feed, state)
-    } else {
-        state.formatted_cache.clone()
-    }
+    // Always compute fresh - cache is updated periodically by main loop
+    let feed = crate::ui::Dsl::feed(state);
+    render_feed(&feed, state)
 }
 
 pub fn render_feed(feed: &Feed, state: &crate::model::AppState) -> Vec<DisplayLine> {
