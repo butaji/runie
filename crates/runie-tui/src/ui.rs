@@ -2,11 +2,12 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
-    widgets::{Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    text::Line,
+    widgets::Paragraph,
     Frame,
 };
 
-use runie_core::{AppState, Dsl, PANEL_CHAT, PANEL_INPUT, Color as CoreColor};
+use runie_core::{AppState, Dsl, PANEL_CHAT, PANEL_INPUT, Element};
 
 /// View function - renders state to terminal
 pub fn view(f: &mut Frame, state: &AppState) {
@@ -33,54 +34,76 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
 }
 
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
-    // Split content / scrollbar track
-    let [content_area, scroll_area] = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Fill(1), Constraint::Length(1)])
-        .areas(area);
-    
-    let block = Block::default()
-        .borders(Borders::ALL)
+    let block = ratatui::widgets::Block::default()
+        .borders(ratatui::widgets::Borders::ALL)
         .title(PANEL_CHAT)
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
-    let inner = block.inner(content_area);
-    f.render_widget(block, content_area);
+    let inner = block.inner(area);
+    f.render_widget(block, area);
 
-    let visible_height = inner.height.saturating_sub(2) as usize; // account for borders
-    let total_elements = Dsl::count(state);
+    let height = inner.height as usize;
+    let total = Dsl::count(state);
     
-    // Auto-scroll to bottom
-    let scroll_offset = if total_elements > visible_height {
-        total_elements.saturating_sub(visible_height)
-    } else {
-        0
-    };
+    // Scroll position (auto-scroll to bottom)
+    let scroll = if total > height { total - height } else { 0 };
 
-    // Get visible elements - O(skip + take)
-    let visible_elements = Dsl::visible(state, scroll_offset, visible_height);
+    // Get visible elements - O(take)
+    let visible = Dsl::visible(state, scroll, height);
     
-    // Convert to ListItems
-    let items: Vec<ListItem> = visible_elements.iter().map(|elem| {
-        ListItem::new(element_to_text(elem, state))
-    }).collect();
-
-    // Render list
-    f.render_widget(List::new(items), inner);
-
-    // Render scrollbar if needed
-    if total_elements > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(total_elements).position(scroll_offset);
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray)),
-            scroll_area,
-            &mut scrollbar_state,
-        );
+    // Render directly to buffer - skip scroll_index lines
+    let buf = f.buffer_mut();
+    let mut line_idx = 0usize;
+    
+    for elem in &visible {
+        let text = element_to_line(elem, state);
+        // Each element = one line
+        if line_idx >= scroll && (line_idx - scroll) < height {
+            buf.set_line(
+                inner.x, 
+                ((line_idx - scroll) as u16) + inner.y, 
+                &text, 
+                inner.width
+            );
+        }
+        line_idx += 1;
+        if line_idx - scroll >= height {
+            return;
+        }
     }
 }
 
-fn element_to_text(element: &runie_core::Element, state: &AppState) -> String {
+fn element_to_line<'a>(element: &'a Element, state: &'a AppState) -> Line<'a> {
+    use runie_core::Element;
+    
+    match element {
+        Element::Spacer => Line::from(""),
+        Element::UserMessage { content } => Line::from(format!("You: {}", content)),
+        Element::AgentMessage { content } => Line::from(format!("Agent: {}", content)),
+        Element::Thinking { elapsed } => {
+            Line::from(format!("{} Though... {:.1}s", state.spinner_frame(), elapsed))
+        }
+        Element::ThoughtMarker { content } => Line::from(content.as_str()),
+        Element::ToolRunning { name, elapsed } => {
+            Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed))
+        }
+        Element::ToolDone { name, duration_secs } => {
+            Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs))
+        }
+        Element::TurnComplete { duration_secs } => {
+            Line::from(format!("Turn completed in {:.1}s", duration_secs))
+        }
+        Element::Group { elements, .. } => {
+            let text = elements.iter()
+                .map(|e| element_to_text(e, state))
+                .collect::<Vec<_>>()
+                .join("\n");
+            Line::from(text)
+        }
+    }
+}
+
+fn element_to_text(element: &Element, state: &AppState) -> String {
     use runie_core::Element;
     
     match element {
@@ -101,14 +124,17 @@ fn element_to_text(element: &runie_core::Element, state: &AppState) -> String {
             format!("Turn completed in {:.1}s", duration_secs)
         }
         Element::Group { elements, .. } => {
-            elements.iter().map(|e| element_to_text(e, state)).collect::<Vec<_>>().join("\n")
+            elements.iter()
+                .map(|e| element_to_text(e, state))
+                .collect::<Vec<_>>()
+                .join("\n")
         }
     }
 }
 
 fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
-    let block = Block::default()
-        .borders(Borders::ALL)
+    let block = ratatui::widgets::Block::default()
+        .borders(ratatui::widgets::Borders::ALL)
         .title(PANEL_INPUT)
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
@@ -119,15 +145,4 @@ fn input_view(f: &mut Frame, state: &AppState, area: Rect) {
     let cursor_x = (inner.x + state.input.len() as u16).min(inner.right() - 1);
     let cursor_y = inner.y;
     f.set_cursor_position((cursor_x, cursor_y));
-}
-
-fn cratatui_color(c: CoreColor) -> ratatui::style::Color {
-    match c {
-        CoreColor::Cyan => ratatui::style::Color::Cyan,
-        CoreColor::Green => ratatui::style::Color::Green,
-        CoreColor::Yellow => ratatui::style::Color::Yellow,
-        CoreColor::DarkGray => ratatui::style::Color::DarkGray,
-        CoreColor::White => ratatui::style::Color::White,
-        CoreColor::Magenta => ratatui::style::Color::Magenta,
-    }
 }
