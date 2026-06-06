@@ -59,6 +59,7 @@ async fn main() -> io::Result<()> {
         tokio::select! {
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
+                runie_core::format_and_cache(&mut state);
 
                 if matches!(evt, CoreEvent::Submit) {
                     if let Some((content, id)) = state.peek_queue() {
@@ -75,6 +76,7 @@ async fn main() -> io::Result<()> {
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
+                runie_core::format_and_cache(&mut state);
             }
             
             _ = anim_interval.tick() => {

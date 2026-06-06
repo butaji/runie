@@ -12,6 +12,8 @@ fn now() -> f64 {
 
 pub fn update(mut state: AppState, event: Event) -> AppState {
     state.needs_redraw = true;
+    // Invalidate cache on any event
+    state.formatted_cache = None;
     match event {
         // === UI Events ===
         Event::Input(c) => state.push_input(c),

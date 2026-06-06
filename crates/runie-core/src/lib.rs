@@ -24,5 +24,5 @@ pub use labels::{
 };
 pub use ui::{
     Element, Feed, Dsl,
-    format_messages, DisplayLine, DisplaySpan, Color,
+    format_messages, format_and_cache, DisplayLine, DisplaySpan, Color,
 };

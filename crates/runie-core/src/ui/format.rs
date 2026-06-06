@@ -25,8 +25,19 @@ pub enum Color {
 }
 
 pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
+    // Return cached if valid
+    if let Some(ref cache) = state.formatted_cache {
+        return cache.clone();
+    }
     let feed = crate::ui::Dsl::feed(state);
     render_feed(&feed, state)
+}
+
+pub fn format_and_cache(state: &mut crate::model::AppState) {
+    if state.formatted_cache.is_none() {
+        let feed = crate::ui::Dsl::feed(state);
+        state.formatted_cache = Some(render_feed(&feed, state));
+    }
 }
 
 pub fn render_feed(feed: &Feed, state: &crate::model::AppState) -> Vec<DisplayLine> {
