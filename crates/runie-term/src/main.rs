@@ -79,7 +79,11 @@ fn main() -> io::Result<()> {
             }
         });
 
-        let mut anim_interval = tokio::time::interval(Duration::from_millis(16));
+        let mut anim_interval = tokio::time::interval(Duration::from_millis(200));
+        let mut last_sent_frame = state.animation_frame;
+        let mut pending_send = false;
+        let mut debounce = tokio::time::interval(Duration::from_millis(50));
+        debounce.tick().await; // clear initial tick
 
         loop {
             tokio::select! {
@@ -87,32 +91,55 @@ fn main() -> io::Result<()> {
 
                 Some(evt) = input_rx.recv() => {
                     state = runie_core::update::update(state, evt.clone());
-                    state.ensure_fresh();
 
                     if matches!(evt, CoreEvent::Submit) {
+                        state.ensure_fresh();
+                        pending_send = true;
                         if let Some((content, id)) = state.peek_queue() {
                             state.pop_queue();
                             state.streaming = true;
                             let _ = cmd_tx.send(AgentCommand { content, id }).await;
                         }
+                    } else if matches!(evt, CoreEvent::Input(_) | CoreEvent::Backspace) {
+                        // Input changes only — debounce, don't rebuild cache
+                        pending_send = true;
+                    } else {
+                        state.ensure_fresh();
+                        pending_send = true;
                     }
+
                     if matches!(evt, CoreEvent::Quit) { break; }
                 }
 
                 Some(evt) = agent_rx.recv() => {
                     state = runie_core::update::update(state, evt);
                     state.ensure_fresh();
+                    pending_send = true;
                 }
 
                 _ = anim_interval.tick() => {
                     if state.turn_active {
                         state.animation_frame = state.animation_frame.wrapping_add(1);
-                        state.ensure_fresh();
+                        pending_send = true;
+                    }
+                }
+
+                _ = debounce.tick() => {
+                    // Send on debounce timer if pending
+                    if pending_send {
+                        if render_tx.send(state.clone()).is_err() { break; }
+                        last_sent_frame = state.animation_frame;
+                        pending_send = false;
                     }
                 }
             }
 
-            if render_tx.send(state.clone()).is_err() { break; }
+            // Immediate send for agent events (not input)
+            if pending_send && last_sent_frame != state.animation_frame {
+                if render_tx.send(state.clone()).is_err() { break; }
+                last_sent_frame = state.animation_frame;
+                pending_send = false;
+            }
 
             if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
                 break;
