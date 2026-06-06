@@ -1,15 +1,24 @@
-//! Runie Terminal - Async Binary Entry Point
-//! Main thread owns state, UI thread renders snapshots via channel
+//! Runie Terminal — Single-threaded event loop (ratatui best practice)
+//!
+//! Architecture:
+//!   - Main thread: event loop + terminal.draw() (synchronous)
+//!   - Agent: tokio task on worker thread
+//!   - Input: async EventStream
+//!
+//! Key perf choices:
+//!   - No UI thread (no state cloning)
+//!   - No RwLock (no contention)
+//!   - Batch process events, draw between batches
+//!   - Only render visible viewport (not all messages)
+//!   - Skip draw when nothing changed
 
-use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockProvider, Provider};
 use runie_core::{AppState, Event as CoreEvent};
 use std::{
     io,
-    sync::{Arc, atomic::{AtomicBool, Ordering}},
-    thread,
     time::Duration,
 };
 use tokio::sync::mpsc;
@@ -23,141 +32,100 @@ impl Drop for Cleanup {
     }
 }
 
-fn main() -> io::Result<()> {
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
+
     let mut stdout = std::io::stdout();
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    let (render_tx, render_rx) = std::sync::mpsc::channel::<AppState>();
-    let running = Arc::new(AtomicBool::new(true));
-    let ui_running = running.clone();
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
-    // UI thread — render ONLY when state changes
-    let _ui_handle = thread::spawn(move || {
-        let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
-        let mut last_state: Option<AppState> = None;
-        let mut dirty = true; // Force first render
+    let mut state = AppState::default();
 
-        while ui_running.load(Ordering::Relaxed) {
-            match render_rx.try_recv() {
-                Ok(state) => {
-                    last_state = Some(state);
-                    dirty = true;
-                }
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
-                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+    // Async channels (bounded to prevent unbounded growth)
+    let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(100);
+    let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(100);
+    let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
+
+    // Agent on worker thread
+    tokio::spawn(agent_loop(cmd_rx, agent_tx));
+
+    // Input reader — async EventStream, non-blocking
+    let input_tx_clone = input_tx.clone();
+    tokio::spawn(async move {
+        let mut reader = EventStream::new();
+        while let Some(Ok(event)) = reader.next().await {
+            if let Some(evt) = convert_event(&event) {
+                let is_quit = matches!(evt, CoreEvent::Quit);
+                if input_tx_clone.send(evt).await.is_err() { break; }
+                if is_quit { break; }
             }
-
-            // Only draw when state changed — skip idle frames
-            if dirty {
-                if let Some(ref state) = last_state {
-                    let _ = terminal.draw(|f| runie_tui::ui::view(f, state));
-                }
-                dirty = false;
-            }
-
-            thread::sleep(Duration::from_millis(16));
         }
     });
 
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+    let mut anim_interval = tokio::time::interval(Duration::from_millis(200));
+    let mut dirty = true; // force first draw
 
-    rt.block_on(async {
-        let mut state = AppState::default();
-        let _ = render_tx.send(state.clone());
+    loop {
+        // ── Phase 1: collect events (with timeout) ──
+        let mut events_processed = 0usize;
+        const BATCH_SIZE: usize = 10;
 
-        let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(100);
-        let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(100);
-        let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
-
-        tokio::spawn(agent_loop(cmd_rx, agent_tx));
-
-        let input_tx_clone = input_tx.clone();
-        tokio::spawn(async move {
-            let mut reader = EventStream::new();
-            while let Some(Ok(event)) = reader.next().await {
-                if let Some(evt) = convert_event(&event) {
-                    if input_tx_clone.send(evt).await.is_err() { break; }
-                }
-            }
-        });
-
-        let mut anim_interval = tokio::time::interval(Duration::from_millis(200));
-        let mut last_sent_frame = state.animation_frame;
-        let mut pending_send = false;
-        let mut debounce = tokio::time::interval(Duration::from_millis(50));
-        debounce.tick().await; // clear initial tick
-
+        // Process up to BATCH_SIZE events before drawing
+        // This prevents blocking on a flood of agent chunks
         loop {
             tokio::select! {
                 biased;
 
-                Some(evt) = input_rx.recv() => {
+                Some(evt) = input_rx.recv(), if events_processed < BATCH_SIZE => {
                     state = runie_core::update::update(state, evt.clone());
-
+                    dirty = true;
+                    events_processed += 1;
+                    if matches!(evt, CoreEvent::Quit) {
+                        return Ok(());
+                    }
                     if matches!(evt, CoreEvent::Submit) {
-                        state.ensure_fresh();
-                        pending_send = true;
                         if let Some((content, id)) = state.peek_queue() {
                             state.pop_queue();
                             state.streaming = true;
                             let _ = cmd_tx.send(AgentCommand { content, id }).await;
                         }
-                    } else if matches!(evt, CoreEvent::Input(_) | CoreEvent::Backspace) {
-                        // Input changes only — debounce, don't rebuild cache
-                        pending_send = true;
-                    } else {
-                        state.ensure_fresh();
-                        pending_send = true;
                     }
-
-                    if matches!(evt, CoreEvent::Quit) { break; }
                 }
 
-                Some(evt) = agent_rx.recv() => {
+                Some(evt) = agent_rx.recv(), if events_processed < BATCH_SIZE => {
                     state = runie_core::update::update(state, evt);
-                    state.ensure_fresh();
-                    pending_send = true;
+                    dirty = true;
+                    events_processed += 1;
                 }
 
-                _ = anim_interval.tick() => {
+                _ = anim_interval.tick(), if events_processed < BATCH_SIZE => {
                     if state.turn_active {
                         state.animation_frame = state.animation_frame.wrapping_add(1);
-                        pending_send = true;
+                        dirty = true;
                     }
+                    break; // animation tick = natural break point
                 }
 
-                _ = debounce.tick() => {
-                    // Send on debounce timer if pending
-                    if pending_send {
-                        if render_tx.send(state.clone()).is_err() { break; }
-                        last_sent_frame = state.animation_frame;
-                        pending_send = false;
-                    }
-                }
-            }
-
-            // Immediate send for agent events (not input)
-            if pending_send && last_sent_frame != state.animation_frame {
-                if render_tx.send(state.clone()).is_err() { break; }
-                last_sent_frame = state.animation_frame;
-                pending_send = false;
-            }
-
-            if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
-                break;
+                else => break, // no more events, go to draw
             }
         }
 
-        running.store(false, Ordering::Relaxed);
-    });
+        // ── Phase 2: draw if anything changed ──
+        if dirty {
+            terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+            dirty = false;
+        }
 
-    Ok(())
+        // ── Phase 3: throttle when truly idle ──
+        // Only sleep if we processed nothing AND nothing is pending
+        if events_processed == 0 {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
 }
 
 async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>) {
@@ -209,7 +177,6 @@ async fn run_tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {
-    use crossterm::event::KeyModifiers;
     match event {
         Event::Key(key) if key.kind == KeyEventKind::Press => {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
