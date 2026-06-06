@@ -51,7 +51,7 @@ async fn main() -> io::Result<()> {
     // Initialize cache
     state.formatted_cache = runie_core::format_messages(&state);
     let mut anim_interval = interval(Duration::from_millis(200)); // Spinner
-    let mut cache_interval = interval(Duration::from_millis(100)); // Rebuild cache at 10fps max
+    let mut cache_interval = interval(Duration::from_millis(50)); // Render at 20fps
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     
@@ -63,10 +63,8 @@ async fn main() -> io::Result<()> {
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
 
-                // Immediate redraw for scroll - essential for responsiveness
-                if matches!(evt, CoreEvent::ScrollUp | CoreEvent::ScrollDown) {
-                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-                }
+                // Don't redraw on scroll - let cache_interval handle it
+                // This prevents blocking on rapid scroll events
 
                 if matches!(evt, CoreEvent::Submit) {
                     if let Some((content, id)) = state.peek_queue() {
