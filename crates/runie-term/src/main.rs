@@ -63,6 +63,11 @@ async fn main() -> io::Result<()> {
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
 
+                // Immediate redraw for scroll - essential for responsiveness
+                if matches!(evt, CoreEvent::ScrollUp | CoreEvent::ScrollDown) {
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+                }
+
                 if matches!(evt, CoreEvent::Submit) {
                     if let Some((content, id)) = state.peek_queue() {
                         state.pop_queue();

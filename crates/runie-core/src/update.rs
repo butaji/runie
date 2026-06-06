@@ -44,6 +44,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             if state.turn_started_at.is_none() {
                 state.turn_started_at = Some(std::time::Instant::now());
             }
+            state.update_element_count();
             state
         }
         Event::AgentThoughtDone { id } => {

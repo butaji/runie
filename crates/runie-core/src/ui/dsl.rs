@@ -6,48 +6,37 @@ use crate::ui::elements::{Element, Feed};
 pub struct Dsl;
 
 impl Dsl {
-    /// Get total element count (for scrollbar) - O(1) from cache
+    /// Get total element count - O(1) from cache
     pub fn count(state: &AppState) -> usize {
         state.element_count
     }
     
-    /// Get visible elements - simple forward iteration
+    /// Get visible elements - O(take) by slicing cached elements
     pub fn visible(state: &AppState, skip: usize, take: usize) -> Vec<Element> {
-        let mut elements = Vec::with_capacity(take);
-        let mut consumed = 0;
+        let cache = &state.elements_cache;
+        let start = skip.min(cache.len());
+        let end = (skip + take).min(cache.len());
+        cache[start..end].to_vec()
+    }
+    
+    /// Build elements cache - O(n), called only when messages change
+    pub fn build_elements(state: &AppState) -> Vec<Element> {
+        let mut elements = Vec::new();
         
-        // Track which messages contribute which element positions
         for msg in &state.messages {
             let role = msg.role.as_str();
             if !matches!(role, "user" | "thought" | "assistant" | "tool" | "turn_complete") {
                 continue;
             }
-            
-            // Element position before this message's content
-            let content_pos = consumed;
-            consumed += 1;
-            
-            // Spacer position
-            let spacer_pos = consumed;
-            consumed += 1;
-            
-            // If in visible range, add element
-            if content_pos >= skip && elements.len() < take {
-                elements.push(Self::msg_to_element(msg, state));
-            }
-            if spacer_pos >= skip && elements.len() < take {
-                elements.push(Element::Spacer);
-            }
+            elements.push(Self::msg_to_element(msg, state));
+            elements.push(Element::Spacer);
         }
         
-        // Add thinking element if present
         if state.thinking_started_at.is_some() {
-            let pos = consumed;
-            if pos >= skip && elements.len() < take {
-                elements.push(Element::Thinking { 
-                    elapsed: state.thinking_elapsed_secs().unwrap_or(0.0) 
-                });
-            }
+            elements.push(Element::Thinking { 
+                elapsed: state.thinking_elapsed_secs().unwrap_or(0.0) 
+            });
+            elements.push(Element::Spacer);
         }
         
         elements
