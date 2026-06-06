@@ -9,3 +9,4 @@ path = "src/lib.rs"
 [dependencies]
 runie-core.workspace = true
 ratatui.workspace = true
+tui-scrollview = "0.6"

@@ -2,10 +2,10 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
-    text::Line,
     widgets::Paragraph,
     Frame,
 };
+use tui_scrollview::{ScrollView, ScrollViewState};
 
 use runie_core::{AppState, Dsl, PANEL_CHAT, PANEL_INPUT, Element};
 
@@ -40,58 +40,30 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
     let inner = block.inner(area);
-    f.render_widget(&block, area);
+    f.render_widget(block, area);
 
-    // Skip rendering if nothing to show
     let total = Dsl::count(state);
-    if total == 0 || inner.height == 0 {
+    if total == 0 {
         return;
     }
 
-    // Get visible elements - O(take)
-    let height = inner.height as usize;
-    let scroll = total.saturating_sub(height);
-    let visible = Dsl::visible(state, scroll, height);
+    // Get all elements
+    let elements = Dsl::visible(state, 0, total);
+    let height = elements.len() as u16;
     
-    // Render directly to buffer
-    let buf = f.buffer_mut();
-    for (i, elem) in visible.iter().enumerate() {
-        if i >= height {
-            break;
-        }
-        let text = element_to_line(elem, state);
-        buf.set_line(inner.x, inner.y + i as u16, &text, inner.width);
-    }
-}
-
-fn element_to_line<'a>(element: &'a Element, state: &'a AppState) -> Line<'a> {
-    use runie_core::Element;
+    // Create scrollview
+    let mut scroll_view = ScrollView::new(ratatui::layout::Size::new(inner.width, height.max(1)));
     
-    match element {
-        Element::Spacer => Line::from(""),
-        Element::UserMessage { content } => Line::from(format!("You: {}", content)),
-        Element::AgentMessage { content } => Line::from(format!("Agent: {}", content)),
-        Element::Thinking { elapsed } => {
-            Line::from(format!("{} Though... {:.1}s", state.spinner_frame(), elapsed))
-        }
-        Element::ThoughtMarker { content } => Line::from(content.as_str()),
-        Element::ToolRunning { name, elapsed } => {
-            Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed))
-        }
-        Element::ToolDone { name, duration_secs } => {
-            Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs))
-        }
-        Element::TurnComplete { duration_secs } => {
-            Line::from(format!("Turn completed in {:.1}s", duration_secs))
-        }
-        Element::Group { elements, .. } => {
-            let text = elements.iter()
-                .map(|e| element_to_text(e, state))
-                .collect::<Vec<_>>()
-                .join("\n");
-            Line::from(text)
-        }
+    // Render elements into scrollview buffer
+    for elem in &elements {
+        let text = element_to_text(elem, state);
+        let paragraph = Paragraph::new(text);
+        scroll_view.render_widget(paragraph, inner);
     }
+    
+    // Need to manage ScrollViewState - use a default for now
+    let mut scroll_state = ScrollViewState::default();
+    f.render_stateful_widget(scroll_view, inner, &mut scroll_state);
 }
 
 fn element_to_text(element: &Element, state: &AppState) -> String {
