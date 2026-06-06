@@ -38,11 +38,8 @@ fn main() -> io::Result<()> {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend).unwrap();
         let mut last_state: Option<AppState> = None;
-        let mut frames = 0u64;
-        let mut last_log = std::time::Instant::now();
 
         while ui_running.load(Ordering::Relaxed) {
-            // Non-blocking recv
             match render_rx.try_recv() {
                 Ok(state) => last_state = Some(state),
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
@@ -51,16 +48,9 @@ fn main() -> io::Result<()> {
 
             if let Some(ref state) = last_state {
                 let _ = terminal.draw(|f| runie_tui::ui::view(f, state));
-                frames += 1;
             }
 
-            thread::sleep(Duration::from_millis(16)); // ~60fps
-
-            if last_log.elapsed() > Duration::from_secs(10) {
-                eprintln!("[UI] {} frames", frames);
-                frames = 0;
-                last_log = std::time::Instant::now();
-            }
+            thread::sleep(Duration::from_millis(16));
         }
     });
 
@@ -89,8 +79,7 @@ fn main() -> io::Result<()> {
             }
         });
 
-        let mut anim_interval = tokio::time::interval(Duration::from_millis(200));
-        let mut last_render = std::time::Instant::now();
+        let mut anim_interval = tokio::time::interval(Duration::from_millis(16));
 
         loop {
             tokio::select! {
@@ -123,11 +112,7 @@ fn main() -> io::Result<()> {
                 }
             }
 
-            // Send snapshot at 20fps max
-            if last_render.elapsed() >= Duration::from_millis(50) {
-                if render_tx.send(state.clone()).is_err() { break; }
-                last_render = std::time::Instant::now();
-            }
+            if render_tx.send(state.clone()).is_err() { break; }
 
             if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
                 break;
