@@ -1,5 +1,8 @@
+#[cfg(test)]
 use crate::model::ChatMessage;
+#[cfg(test)]
 use crate::ui::transform::LazyCache;
+#[cfg(test)]
 use crate::ui::elements::Element;
 
 #[test]

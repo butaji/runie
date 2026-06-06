@@ -5,8 +5,8 @@ use crate::ui::elements::Element;
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
 
-pub const PANEL_CHAT: &str = "Chat";
-pub const PANEL_INPUT: &str = "Input";
+pub const PANEL_CHAT: &str = " Chat ";
+pub const PANEL_INPUT: &str = " Input ";
 
 #[derive(Clone)]
 pub struct AppState {

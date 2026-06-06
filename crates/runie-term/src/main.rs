@@ -24,7 +24,7 @@ impl Drop for Cleanup {
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
     let mut terminal = setup_terminal()?;
-    let mut state = AppState::default();
+    let state = AppState::default();
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
