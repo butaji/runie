@@ -72,6 +72,7 @@ pub enum Tool {
     ReadFile { path: String },
     ListDir { path: String },
     WriteFile { path: String, content: String },
+    EditFile { path: String, search: String, replace: String },
     Bash { command: String },
 }
 
@@ -88,6 +89,7 @@ impl Tool {
             Tool::ReadFile { .. } => "read_file",
             Tool::ListDir { .. } => "list_dir",
             Tool::WriteFile { .. } => "write_file",
+            Tool::EditFile { .. } => "edit_file",
             Tool::Bash { .. } => "bash",
         }
     }
@@ -99,6 +101,7 @@ impl Tool {
             Tool::ReadFile { path } => read_file(path),
             Tool::ListDir { path } => list_dir(path),
             Tool::WriteFile { path, content } => write_file(path, content),
+            Tool::EditFile { path, search, replace } => edit_file(path, search, replace),
             Tool::Bash { command } => run_bash(command),
         };
         let _elapsed = start.elapsed();
@@ -164,6 +167,29 @@ fn write_file(path: &str, content: &str) -> (String, bool) {
     }
 }
 
+fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
+    if search.is_empty() {
+        return ("Error: search text cannot be empty".to_string(), false);
+    }
+    match std::fs::read_to_string(path) {
+        Ok(content) => {
+            let count = content.matches(search).count();
+            if count == 0 {
+                return (format!("Error: search text not found in {}", path), false);
+            }
+            if count > 1 {
+                return (format!("Error: search text appears {} times in {}. Be more specific.", count, path), false);
+            }
+            let new_content = content.replacen(search, replace, 1);
+            match std::fs::write(path, new_content) {
+                Ok(()) => (format!("Edited {}", path), true),
+                Err(e) => (format!("Error writing {}: {}", path, e), false),
+            }
+        }
+        Err(e) => (format!("Error reading {}: {}", path, e), false),
+    }
+}
+
 fn run_bash(command: &str) -> (String, bool) {
     if let Some(reason) = check_bash_safety(command) {
         return (format!("Blocked: {}", reason), false);
@@ -203,38 +229,68 @@ fn run_bash(command: &str) -> (String, bool) {
 // Tool Parser
 // ============================================================================
 
-/// Parse a tool call from assistant response text.
-/// Format: `TOOL:tool_name:arg1:arg2:...`
+#[derive(Debug, serde::Deserialize)]
+struct ToolCall {
+    name: String,
+    arguments: serde_json::Map<String, serde_json::Value>,
+}
+
+fn arg_str(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
+    args.get(key).and_then(|v| v.as_str()).unwrap_or("").to_string()
+}
+
+fn parse_legacy_tool(payload: &str) -> Option<Tool> {
+    let parts: Vec<&str> = payload.splitn(3, ':').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let tool_name = parts[0];
+    let arg1 = parts.get(1).unwrap_or(&"");
+    let arg2 = parts.get(2).unwrap_or(&"");
+    Some(match tool_name {
+        "read_file" => Tool::ReadFile { path: arg1.to_string() },
+        "list_dir" => Tool::ListDir { path: arg1.to_string() },
+        "write_file" => Tool::WriteFile { path: arg1.to_string(), content: arg2.to_string() },
+        "bash" => Tool::Bash { command: arg1.to_string() },
+        _ => return None,
+    })
+}
+
+fn parse_structured_tool(line: &str) -> Option<Tool> {
+    let call: ToolCall = serde_json::from_str(line).ok()?;
+    let args = &call.arguments;
+    Some(match call.name.as_str() {
+        "read_file" => Tool::ReadFile { path: arg_str(args, "path") },
+        "list_dir" => Tool::ListDir { path: arg_str(args, "path") },
+        "write_file" => Tool::WriteFile { path: arg_str(args, "path"), content: arg_str(args, "content") },
+        "edit_file" => Tool::EditFile {
+            path: arg_str(args, "path"),
+            search: arg_str(args, "search"),
+            replace: arg_str(args, "replace"),
+        },
+        "bash" => Tool::Bash { command: arg_str(args, "command") },
+        _ => return None,
+    })
+}
+
+/// Parse tool calls from assistant response text.
+/// Supports both legacy `TOOL:name:args` and structured JSON formats.
 pub fn parse_tool_calls(text: &str) -> Vec<Tool> {
     let mut tools = Vec::new();
     for line in text.lines() {
         let line = line.trim();
-        if let Some(payload) = line.strip_prefix("TOOL:") {
-            let parts: Vec<&str> = payload.splitn(3, ':').collect();
-            if parts.len() < 2 {
-                continue;
-            }
-            let tool_name = parts[0];
-            let arg1 = parts.get(1).unwrap_or(&"");
-            let arg2 = parts.get(2).unwrap_or(&"");
-
-            let tool = match tool_name {
-                "read_file" => Tool::ReadFile {
-                    path: arg1.to_string(),
-                },
-                "list_dir" => Tool::ListDir {
-                    path: arg1.to_string(),
-                },
-                "write_file" => Tool::WriteFile {
-                    path: arg1.to_string(),
-                    content: arg2.to_string(),
-                },
-                "bash" => Tool::Bash {
-                    command: arg1.to_string(),
-                },
-                _ => continue,
-            };
-            tools.push(tool);
+        if line.is_empty() {
+            continue;
+        }
+        let tool = if line.starts_with("TOOL:") {
+            parse_legacy_tool(line.strip_prefix("TOOL:").unwrap_or(""))
+        } else if line.starts_with('{') {
+            parse_structured_tool(line)
+        } else {
+            None
+        };
+        if let Some(t) = tool {
+            tools.push(t);
         }
     }
     tools
@@ -242,7 +298,7 @@ pub fn parse_tool_calls(text: &str) -> Vec<Tool> {
 
 /// Check if text contains any tool calls
 pub fn has_tool_calls(text: &str) -> bool {
-    parse_tool_calls(text).len() > 0
+    !parse_tool_calls(text).is_empty()
 }
 
 // ============================================================================
@@ -262,8 +318,9 @@ where
     let mut messages = vec![
         Message::System {
             content: "You are a helpful assistant with access to tools. \
-                Use TOOL:tool_name:args format to call tools. \
-                Available tools: read_file, list_dir, write_file, bash.".to_string(),
+                Use structured JSON format: {\"name\": \"tool_name\", \"arguments\": {...}}. \
+                Available tools: read_file, list_dir, write_file, edit_file, bash. \
+                Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.".to_string(),
         },
         Message::User {
             content: command.content.clone(),

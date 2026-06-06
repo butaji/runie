@@ -138,6 +138,119 @@ fn test_parse_tool_with_extra_colons_in_content() {
 }
 
 // ============================================================================
+// Layer 1: Structured Tool Parsing (JSON format)
+// ============================================================================
+
+#[test]
+fn test_parse_structured_edit_tool() {
+    let text = r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert!(matches!(&tools[0], Tool::EditFile { path, search, replace } if path == "src/main.rs" && search == "old" && replace == "new"));
+}
+
+#[test]
+fn test_parse_structured_bash_tool() {
+    let text = r#"{"name": "bash", "arguments": {"command": "echo hello"}}"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert!(matches!(&tools[0], Tool::Bash { command } if command == "echo hello"));
+}
+
+#[test]
+fn test_parse_structured_read_file() {
+    let text = r#"{"name": "read_file", "arguments": {"path": "Cargo.toml"}}"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert!(matches!(&tools[0], Tool::ReadFile { path } if path == "Cargo.toml"));
+}
+
+#[test]
+fn test_parse_mixed_formats() {
+    let text = "TOOL:bash:echo hi\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"Cargo.toml\"}}";
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 2);
+}
+
+#[test]
+fn test_parse_invalid_json_ignored() {
+    let text = "{\"name\": \"edit_file\", \"arguments\": {broken";
+    let tools = parse_tool_calls(text);
+    assert!(tools.is_empty());
+}
+
+#[test]
+fn test_parse_unknown_structured_tool_ignored() {
+    let text = r#"{"name": "magic", "arguments": {}}"#;
+    let tools = parse_tool_calls(text);
+    assert!(tools.is_empty());
+}
+
+// ============================================================================
+// Layer 1: Diff-based Editing
+// ============================================================================
+
+#[test]
+fn test_edit_file_success() {
+    let path = "/tmp/runie_test_edit.txt";
+    std::fs::write(path, "line1\nold\nline3").unwrap();
+    let tool = Tool::EditFile {
+        path: path.to_string(),
+        search: "old".to_string(),
+        replace: "new".to_string(),
+    };
+    let result = tool.execute();
+    assert!(result.success);
+    let content = std::fs::read_to_string(path).unwrap();
+    assert_eq!(content, "line1\nnew\nline3");
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn test_edit_file_search_not_found() {
+    let path = "/tmp/runie_test_edit2.txt";
+    std::fs::write(path, "line1\nline2").unwrap();
+    let tool = Tool::EditFile {
+        path: path.to_string(),
+        search: "missing".to_string(),
+        replace: "new".to_string(),
+    };
+    let result = tool.execute();
+    assert!(!result.success);
+    assert!(result.output.contains("not found"));
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn test_edit_file_multiple_matches() {
+    let path = "/tmp/runie_test_edit3.txt";
+    std::fs::write(path, "old\nold\nold").unwrap();
+    let tool = Tool::EditFile {
+        path: path.to_string(),
+        search: "old".to_string(),
+        replace: "new".to_string(),
+    };
+    let result = tool.execute();
+    assert!(!result.success);
+    assert!(result.output.contains("appears"));
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn test_edit_file_empty_search() {
+    let path = "/tmp/runie_test_edit4.txt";
+    std::fs::write(path, "content").unwrap();
+    let tool = Tool::EditFile {
+        path: path.to_string(),
+        search: "".to_string(),
+        replace: "x".to_string(),
+    };
+    let result = tool.execute();
+    assert!(!result.success);
+    let _ = std::fs::remove_file(path);
+}
+
+// ============================================================================
 // Layer 1: Tool Execution (Pure Functions / IO)
 // ============================================================================
 

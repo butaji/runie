@@ -59,6 +59,13 @@ impl Provider for MockProvider {
             return Ok(());
         }
 
+        if user_input.to_lowercase().contains("edit") {
+            on_chunk(ResponseChunk {
+                content: r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_string(),
+            });
+            return Ok(());
+        }
+
         if user_input.to_lowercase().contains("run") || user_input.to_lowercase().contains("cmd")
         {
             on_chunk(ResponseChunk {
