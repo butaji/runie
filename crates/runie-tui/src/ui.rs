@@ -40,40 +40,27 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
     let inner = block.inner(area);
-    f.render_widget(block, area);
+    f.render_widget(&block, area);
 
-    // Safety check
-    if inner.height == 0 || inner.width == 0 {
+    // Skip rendering if nothing to show
+    let total = Dsl::count(state);
+    if total == 0 || inner.height == 0 {
         return;
     }
-
-    let height = inner.height as usize;
-    let total = Dsl::count(state);
-    
-    // Scroll position (auto-scroll to bottom)
-    let scroll = if total > height { total - height } else { 0 };
 
     // Get visible elements - O(take)
+    let height = inner.height as usize;
+    let scroll = total.saturating_sub(height);
     let visible = Dsl::visible(state, scroll, height);
-    if visible.is_empty() {
-        return;
-    }
     
     // Render directly to buffer
     let buf = f.buffer_mut();
-    let mut line_idx = scroll;
-    
-    for elem in &visible {
-        let text = element_to_line(elem, state);
-        // Each element = one line
-        let row = (line_idx - scroll) as u16;
-        if row < inner.height {
-            buf.set_line(inner.x, inner.y + row, &text, inner.width);
-        }
-        line_idx += 1;
-        if line_idx - scroll >= height {
+    for (i, elem) in visible.iter().enumerate() {
+        if i >= height {
             break;
         }
+        let text = element_to_line(elem, state);
+        buf.set_line(inner.x, inner.y + i as u16, &text, inner.width);
     }
 }
 
