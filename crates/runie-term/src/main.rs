@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
         let mut terminal = match Terminal::new(backend) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("Failed to create terminal: {}", e);
+                eprintln!("[UI] Failed to create terminal: {}", e);
                 return;
             }
         };
@@ -55,21 +55,50 @@ fn main() -> io::Result<()> {
             let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
         }
 
-        // Render loop - 20fps
+        // Render loop - 10fps (reduce CrosstermBackend flush pressure)
+        let mut frame_count = 0u64;
+        let mut last_log = std::time::Instant::now();
+        
         while ui_running.load(Ordering::Relaxed) {
-            thread::sleep(Duration::from_millis(50));
+            thread::sleep(Duration::from_millis(100));
+            frame_count += 1;
             
             // Try to get read lock - NEVER block, skip frame if contended
+            let start = std::time::Instant::now();
             match ui_state.try_read() {
                 Ok(s) => {
-                    let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
+                    let lock_time = start.elapsed();
+                    let draw_start = std::time::Instant::now();
+                    match terminal.draw(|f| runie_tui::ui::view(f, &s)) {
+                        Ok(_) => {
+                            let draw_time = draw_start.elapsed();
+                            if draw_time > Duration::from_millis(50) {
+                                eprintln!("[UI] Slow draw: {:?} (msgs={}, lock={:?})", 
+                                    draw_time, s.messages.len(), lock_time);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("[UI] Draw error: {}", e);
+                        }
+                    }
                 }
                 Err(_) => {
                     // Lock is contended, skip this frame
                     continue;
                 }
             }
+            
+            // Log FPS every 10 seconds
+            if last_log.elapsed() > Duration::from_secs(10) {
+                eprintln!("[UI] Frames rendered: {}, msgs: {:?}", 
+                    frame_count, 
+                    ui_state.try_read().map(|s| s.messages.len()).unwrap_or(0));
+                last_log = std::time::Instant::now();
+                frame_count = 0;
+            }
         }
+        
+        eprintln!("[UI] Shutdown signal received");
         
         // Final render before exit
         if let Ok(s) = ui_state.read() {
@@ -117,11 +146,17 @@ fn main() -> io::Result<()> {
                 
                 Some(evt) = input_rx.recv() => {
                     // Process event with write lock
+                    let start = std::time::Instant::now();
                     let mut s = state.write().unwrap();
                     *s = runie_core::update::update(std::mem::take(&mut *s), evt.clone());
                     // Rebuild cache while holding write lock
                     s.ensure_fresh();
+                    let msg_count = s.messages.len();
                     drop(s);  // Release lock immediately
+                    let elapsed = start.elapsed();
+                    if elapsed > Duration::from_millis(10) {
+                        eprintln!("[MAIN] Slow input update: {:?} (msgs={})", elapsed, msg_count);
+                    }
 
                     if matches!(evt, CoreEvent::Submit) {
                         let mut s = state.write().unwrap();
@@ -138,9 +173,16 @@ fn main() -> io::Result<()> {
                 }
                 
                 Some(evt) = agent_rx.recv() => {
+                    let start = std::time::Instant::now();
                     let mut s = state.write().unwrap();
                     *s = runie_core::update::update(std::mem::take(&mut *s), evt);
                     s.ensure_fresh();
+                    let msg_count = s.messages.len();
+                    drop(s);
+                    let elapsed = start.elapsed();
+                    if elapsed > Duration::from_millis(10) {
+                        eprintln!("[MAIN] Slow agent update: {:?} (msgs={})", elapsed, msg_count);
+                    }
                 }
                 
                 _ = anim_interval.tick() => {
