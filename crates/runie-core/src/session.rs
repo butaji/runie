@@ -18,7 +18,7 @@ pub struct Session {
 /// Session store — handles save/load/list/delete
 #[derive(Debug, Clone)]
 pub struct Store {
-    dir: PathBuf,
+    pub dir: PathBuf,
 }
 
 impl Store {
@@ -32,7 +32,7 @@ impl Store {
         Self { dir }
     }
 
-    fn path(&self, name: &str) -> PathBuf {
+    pub fn path(&self, name: &str) -> PathBuf {
         self.dir.join(format!("{}.json", name))
     }
 
