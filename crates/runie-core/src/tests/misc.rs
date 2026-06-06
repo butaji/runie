@@ -158,9 +158,8 @@ fn test_sessions_command_shows_system_message() {
 
 #[test]
 fn test_save_and_load_session() {
-    use std::sync::Mutex;
-    static LOCK: Mutex<()> = Mutex::new(());
-    let _guard = LOCK.lock().unwrap();
+    use crate::tests::slash::ENV_LOCK;
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     let tmp = std::env::temp_dir().join("runie_session_cmd_test");
     let _ = std::fs::remove_dir_all(&tmp);
