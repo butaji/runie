@@ -3,85 +3,93 @@
 use runie_core::provider::{Message, Provider};
 use crate::{MockProvider, model::{ModelId, ModelRegistry, builtin_providers, ProviderMeta}};
 
-#[test]
-fn test_mock_provider_generates_chunks() {
+#[tokio::test]
+async fn test_mock_provider_generates_chunks() {
     let provider = MockProvider;
     let messages = vec![Message::User { content: "Hello World".to_string() }];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 2);
     assert_eq!(chunks[0].content, "Hello ");
     assert_eq!(chunks[1].content, "World ");
 }
 
-#[test]
-fn test_mock_provider_empty_input() {
+#[tokio::test]
+async fn test_mock_provider_empty_input() {
     let provider = MockProvider;
     let messages = vec![];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert!(chunks.is_empty());
 }
 
-#[test]
-fn test_mock_provider_single_word() {
+#[tokio::test]
+async fn test_mock_provider_single_word() {
     let provider = MockProvider;
     let messages = vec![Message::User { content: "Hello".to_string() }];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].content, "Hello ");
 }
 
-#[test]
-fn test_mock_provider_triggers_list_files() {
+#[tokio::test]
+async fn test_mock_provider_triggers_list_files() {
     let provider = MockProvider;
     let messages = vec![Message::User { content: "list files".to_string() }];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("TOOL:list_dir"));
 }
 
-#[test]
-fn test_mock_provider_triggers_read_file() {
+#[tokio::test]
+async fn test_mock_provider_triggers_read_file() {
     let provider = MockProvider;
     let messages = vec![Message::User { content: "read the readme".to_string() }];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("TOOL:read_file"));
 }
 
-#[test]
-fn test_mock_provider_triggers_write_file() {
+#[tokio::test]
+async fn test_mock_provider_triggers_write_file() {
     let provider = MockProvider;
     let messages = vec![Message::User { content: "write something".to_string() }];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("TOOL:write_file"));
 }
 
-#[test]
-fn test_mock_provider_triggers_bash() {
+#[tokio::test]
+async fn test_mock_provider_triggers_bash() {
     let provider = MockProvider;
     let messages = vec![Message::User { content: "run command".to_string() }];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("TOOL:bash"));
 }
 
-#[test]
-fn test_mock_provider_follows_up_after_tool_result() {
+#[tokio::test]
+async fn test_mock_provider_follows_up_after_tool_result() {
     let provider = MockProvider;
     let messages = vec![
         Message::User { content: "list files".to_string() },
         Message::Assistant { content: "TOOL:list_dir:.".to_string() },
         Message::ToolResult { content: "file1.txt (file)".to_string() },
     ];
-    let chunks = provider.generate(messages);
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("Done"));

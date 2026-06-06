@@ -1,6 +1,8 @@
-//! Runie Agent - Agentic loop with 4 basic tools
+//! Runie Agent - Agentic loop with 4 basic tools + safety checks
 
+use anyhow::Result;
 use runie_core::provider::{Message, Provider};
+use runie_provider::{AnyProvider, MockProvider, OpenAiProvider};
 use std::path::Path;
 use std::time::Instant;
 
@@ -12,6 +14,53 @@ use std::time::Instant;
 pub struct AgentCommand {
     pub content: String,
     pub id: String,
+    pub provider: String,
+    pub model: String,
+}
+
+// ============================================================================
+// Bash Safety
+// ============================================================================
+
+/// Check if a bash command is dangerous.
+/// Returns Some(reason) if blocked, None if safe.
+pub fn check_bash_safety(command: &str) -> Option<&'static str> {
+    let cmd = command.trim().to_lowercase();
+
+    // Destructive rm patterns
+    if cmd.contains("rm -rf /") || cmd.contains("rm -rf /*") || cmd.contains("rm -rf ~") {
+        return Some("rm -rf on system directories or home is blocked");
+    }
+
+    // Disk destruction
+    if cmd.starts_with("dd ") && cmd.contains("of=/dev/") {
+        return Some("dd writing to block devices is blocked");
+    }
+    if cmd.contains("> /dev/sda") || cmd.contains("> /dev/nvme") || cmd.contains("> /dev/hd") {
+        return Some("writing directly to block devices is blocked");
+    }
+
+    // Filesystem format
+    if cmd.starts_with("mkfs") || cmd.starts_with("mkfs.") {
+        return Some("mkfs is blocked");
+    }
+
+    // Fork bomb
+    if cmd.contains(":|:") && cmd.contains("};") {
+        return Some("fork bombs are blocked");
+    }
+
+    // Dangerous chmod
+    if cmd.contains("chmod -r 777 /") || cmd.contains("chmod -r 000 /") {
+        return Some("recursive chmod on root is blocked");
+    }
+
+    // sudo with destructive commands
+    if cmd.starts_with("sudo ") && (cmd.contains(" rm ") || cmd.contains(" dd ")) {
+        return Some("sudo with destructive commands is blocked");
+    }
+
+    None
 }
 
 // ============================================================================
@@ -61,6 +110,22 @@ impl Tool {
     }
 }
 
+/// Build a provider from provider/model strings.
+pub fn build_provider(provider: &str, model: &str) -> AnyProvider {
+    match provider {
+        "openai" => {
+            let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
+            if key.is_empty() {
+                eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
+                AnyProvider::Mock(MockProvider)
+            } else {
+                AnyProvider::OpenAi(OpenAiProvider::new(key, model))
+            }
+        }
+        _ => AnyProvider::Mock(MockProvider),
+    }
+}
+
 fn read_file(path: &str) -> (String, bool) {
     match std::fs::read_to_string(path) {
         Ok(content) => (content, true),
@@ -100,6 +165,10 @@ fn write_file(path: &str, content: &str) -> (String, bool) {
 }
 
 fn run_bash(command: &str) -> (String, bool) {
+    if let Some(reason) = check_bash_safety(command) {
+        return (format!("Blocked: {}", reason), false);
+    }
+
     match std::process::Command::new("bash")
         .arg("-c")
         .arg(command)
@@ -182,19 +251,19 @@ pub fn has_tool_calls(text: &str) -> bool {
 
 /// Run a single agent turn with the provider, emitting events via the callback.
 /// The loop continues until the assistant no longer requests tools or max_iterations is reached.
-pub fn run_agent_turn<P, F>(
-    provider: &P,
+pub async fn run_agent_turn<F>(
     command: &AgentCommand,
     mut emit: F,
     max_iterations: usize,
-) where
-    P: Provider,
-    F: FnMut(AgentEvent),
+) -> Result<()>
+where
+    F: FnMut(AgentEvent) + Send,
 {
     let mut messages = vec![
         Message::System {
             content: "You are a helpful assistant with access to tools. \
-                Use TOOL:tool_name:args format to call tools.".to_string(),
+                Use TOOL:tool_name:args format to call tools. \
+                Available tools: read_file, list_dir, write_file, bash.".to_string(),
         },
         Message::User {
             content: command.content.clone(),
@@ -210,8 +279,17 @@ pub fn run_agent_turn<P, F>(
             id: command.id.clone(),
         });
 
-        let chunks = provider.generate(messages.clone());
-        let response_text: String = chunks.iter().map(|c| &c.content as &str).collect();
+        let mut response_text = String::new();
+        let provider = build_provider(&command.provider, &command.model);
+        provider
+            .generate(messages.clone(), |chunk| {
+                response_text.push_str(&chunk.content);
+                emit(AgentEvent::Response {
+                    id: command.id.clone(),
+                    content: chunk.content,
+                });
+            })
+            .await?;
 
         emit(AgentEvent::ThoughtDone {
             id: command.id.clone(),
@@ -220,13 +298,6 @@ pub fn run_agent_turn<P, F>(
         let tools = parse_tool_calls(&response_text);
 
         if tools.is_empty() {
-            // No tools — stream the response
-            for chunk in chunks {
-                emit(AgentEvent::Response {
-                    id: command.id.clone(),
-                    content: chunk.content,
-                });
-            }
             break;
         }
 
@@ -267,6 +338,8 @@ pub fn run_agent_turn<P, F>(
     emit(AgentEvent::Done {
         id: command.id.clone(),
     });
+
+    Ok(())
 }
 
 // ============================================================================

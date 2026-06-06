@@ -11,7 +11,7 @@ fn now() -> f64 {
 }
 
 pub fn update(state: AppState, event: Event) -> AppState {
-    let mut state = match event {
+    let state = match event {
         // === UI Events ===
         Event::Input(c) => return state.push_input(c),
         Event::Backspace => return state.pop_input(),
@@ -153,6 +153,30 @@ pub fn update(state: AppState, event: Event) -> AppState {
             state.mark_dirty();
             state
         }
+        Event::SwitchModel { provider, model } => {
+            let mut state = state;
+            state.current_provider = provider.clone();
+            state.current_model = model.clone();
+            state.messages.push(ChatMessage {
+                role: "system".into(),
+                content: format!("Switched to {}/{}", provider, model),
+                timestamp: now(),
+                id: "switch".to_string(),
+            });
+            state.mark_dirty();
+            state
+        }
+        Event::ShowHelp => {
+            let mut state = state;
+            state.messages.push(ChatMessage {
+                role: "system".into(),
+                content: "Commands:\n/model provider/model — switch model\n/reset — clear state\n/help — show this".to_string(),
+                timestamp: now(),
+                id: "help".to_string(),
+            });
+            state.mark_dirty();
+            state
+        }
         Event::SpawnAgent => return state,
     };
     
@@ -179,8 +203,29 @@ impl AppState {
         let mut state = self;
         state.input.clear();
         
+        // Slash commands
         if content == "/reset" {
             return AppState::default();
+        }
+        if content == "/help" {
+            return update(state, Event::ShowHelp);
+        }
+        if let Some(rest) = content.strip_prefix("/model ") {
+            let parts: Vec<&str> = rest.splitn(2, '/').collect();
+            if parts.len() == 2 {
+                return update(state, Event::SwitchModel {
+                    provider: parts[0].to_string(),
+                    model: parts[1].to_string(),
+                });
+            } else {
+                state.messages.push(ChatMessage {
+                    role: "system".into(),
+                    content: "Usage: /model provider/model".to_string(),
+                    timestamp: now(),
+                    id: "err".to_string(),
+                });
+                return state;
+            }
         }
         
         let id = state.next_id();

@@ -8,6 +8,9 @@ path = "src/lib.rs"
 
 [dependencies]
 runie-core.workspace = true
+runie-provider.workspace = true
+anyhow.workspace = true
 
 [dev-dependencies]
 runie-provider.workspace = true
+tokio = { workspace = true, features = ["rt", "macros"] }

@@ -5,7 +5,7 @@ use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
-use runie_provider::MockProvider;
+use runie_provider::Config;
 use runie_core::{AppState, Event as CoreEvent};
 use std::{
     io,
@@ -61,7 +61,17 @@ fn main() -> io::Result<()> {
         .unwrap();
 
     rt.block_on(async {
+        let config = Config::load();
         let mut state = AppState::default();
+
+        // Set initial provider/model from config
+        if let Some(ref provider) = config.provider {
+            state.current_provider = provider.clone();
+        }
+        if let Some(ref model) = config.model {
+            state.current_model = model.clone();
+        }
+
         let _ = render_tx.send(state.clone());
 
         let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(100);
@@ -91,18 +101,23 @@ fn main() -> io::Result<()> {
                 biased;
 
                 Some(evt) = input_rx.recv() => {
+                    let was_submit = matches!(evt, CoreEvent::Submit);
                     state = runie_core::update::update(state, evt.clone());
 
-                    if matches!(evt, CoreEvent::Submit) {
+                    if was_submit {
                         state.ensure_fresh();
                         pending_send = true;
                         if let Some((content, id)) = state.peek_queue() {
                             state.pop_queue();
                             state.streaming = true;
-                            let _ = cmd_tx.send(AgentCommand { content, id }).await;
+                            let _ = cmd_tx.send(AgentCommand {
+                                content,
+                                id,
+                                provider: state.current_provider.clone(),
+                                model: state.current_model.clone(),
+                            }).await;
                         }
                     } else if matches!(evt, CoreEvent::Input(_) | CoreEvent::Backspace) {
-                        // Input changes only — debounce, don't rebuild cache
                         pending_send = true;
                     } else {
                         state.ensure_fresh();
@@ -126,7 +141,6 @@ fn main() -> io::Result<()> {
                 }
 
                 _ = debounce.tick() => {
-                    // Send on debounce timer if pending
                     if pending_send {
                         if render_tx.send(state.clone()).is_err() { break; }
                         last_sent_frame = state.animation_frame;
@@ -141,10 +155,6 @@ fn main() -> io::Result<()> {
                 last_sent_frame = state.animation_frame;
                 pending_send = false;
             }
-
-            if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
-                break;
-            }
         }
 
         running.store(false, Ordering::Relaxed);
@@ -155,27 +165,22 @@ fn main() -> io::Result<()> {
 
 async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>) {
     while let Some(cmd) = cmd_rx.recv().await {
-        let provider = MockProvider;
         let agent_tx_clone = agent_tx.clone();
         let cmd_id = cmd.id.clone();
 
-        // Run the agent turn in a blocking task since provider.generate is sync
-        let result = tokio::task::spawn_blocking(move || {
-            run_agent_turn(
-                &provider,
-                &cmd,
-                |evt| {
-                    let core_evt = evt.to_core_event();
-                    let _ = agent_tx_clone.blocking_send(core_evt);
-                },
-                5,
-            );
-        }).await;
+        let result = run_agent_turn(
+            &cmd,
+            |evt| {
+                let core_evt = evt.to_core_event();
+                let _ = agent_tx_clone.try_send(core_evt);
+            },
+            5,
+        ).await;
 
         if let Err(e) = result {
             let _ = agent_tx.send(CoreEvent::AgentError {
                 id: cmd_id,
-                message: format!("Agent loop panicked: {}", e),
+                message: format!("Agent error: {}", e),
             }).await;
         }
     }

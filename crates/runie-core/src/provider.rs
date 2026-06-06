@@ -1,5 +1,7 @@
 //! Provider trait and message types
 
+use anyhow::Result;
+
 /// Message roles for LLM conversations
 #[derive(Debug, Clone, PartialEq)]
 pub enum Message {
@@ -35,7 +37,11 @@ pub struct ResponseChunk {
     pub content: String,
 }
 
-/// Provider trait — implemented by LLM backends
-pub trait Provider: Send {
-    fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk>;
+/// Provider trait — implemented by LLM backends.
+/// Streams chunks via the `on_chunk` callback as they arrive from the API.
+pub trait Provider: Send + Sync {
+    #[allow(async_fn_in_trait)]
+    async fn generate<F>(&self, messages: Vec<Message>, on_chunk: F) -> Result<()>
+    where
+        F: FnMut(ResponseChunk) + Send;
 }

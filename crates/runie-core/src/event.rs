@@ -23,6 +23,10 @@ pub enum Event {
     AgentDone { id: String },
     AgentError { id: String, message: String },
     
+    // === Model Switching ===
+    SwitchModel { provider: String, model: String },
+    ShowHelp,
+    
     // === Internal Events ===
     SpawnAgent,
 }
@@ -41,6 +45,8 @@ impl Event {
                 | Event::AgentTurnComplete { .. }
                 | Event::AgentDone { .. }
                 | Event::Reset
+                | Event::SwitchModel { .. }
+                | Event::ShowHelp
         )
     }
 }

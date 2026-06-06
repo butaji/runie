@@ -21,6 +21,8 @@ pub struct AppState {
     pub element_count: usize,
     pub elements_cache: Vec<Element>,
     pub dirty: bool,  // Cache needs rebuild
+    pub current_provider: String,
+    pub current_model: String,
 }
 
 impl Default for AppState {
@@ -44,6 +46,8 @@ impl Default for AppState {
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
+            current_provider: "mock".to_string(),
+            current_model: "echo".to_string(),
         }
     }
 }
