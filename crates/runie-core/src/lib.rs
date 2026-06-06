@@ -16,10 +16,10 @@ pub mod ui;
 #[cfg(test)]
 mod tests;
 
-pub use model::{AppState, ChatMessage, Color};
+pub use model::{AppState, ChatMessage, Color, PANEL_CHAT, PANEL_INPUT};
 pub use event::Event;
 pub use labels::{
-    PANEL_CHAT, PANEL_INPUT, PREFIX_USER, PREFIX_AGENT,
+    PREFIX_USER, PREFIX_AGENT,
     THINKING_LOADING, thinking_with_time, thought_with_time,
 };
 pub use ui::{Element, Feed, LazyCache, StreamingMerge};

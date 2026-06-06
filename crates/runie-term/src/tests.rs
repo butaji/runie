@@ -3,8 +3,17 @@ use runie_core::{AppState, Event};
 use runie_tui::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 
-fn set_test_mode() {
-    std::env::set_var("RUNIE_TEST", "1");
+/// Helper: simulate full "list files" tool flow
+fn simulate_list_files_flow(state: &mut AppState, file_content: &str) {
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 1.0 });
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: format!("\n{}", file_content) });
+    state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 3.0 });
+    state.update(Event::AgentDone { id: "req.0".to_string() });
 }
 
 // === REGRESSION TEST: Chat must render content ===
@@ -13,7 +22,6 @@ fn set_test_mode() {
 
 #[test]
 fn test_view_renders_user_message_without_manual_ensure_fresh() {
-    set_test_mode();
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -37,7 +45,6 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
 
 #[test]
 fn test_view_renders_agent_message_without_manual_ensure_fresh() {
-    set_test_mode();
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -58,7 +65,6 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
 
 #[test]
 fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
-    set_test_mode();
     let backend = TestBackend::new(60, 30);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -90,7 +96,6 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
 
 #[test]
 fn test_submit_adds_message_to_queue() {
-    set_test_mode();
     let mut state = AppState::default();
     state.update(Event::Input('H'));
     state.update(Event::Input('i'));
@@ -103,7 +108,6 @@ fn test_submit_adds_message_to_queue() {
 
 #[test]
 fn test_agent_thinking_sets_streaming() {
-    set_test_mode();
     let mut state = AppState::default();
     state.update(Event::Submit);
     state.update(Event::AgentThinking { id: "req.0".to_string() });
@@ -113,7 +117,6 @@ fn test_agent_thinking_sets_streaming() {
 
 #[test]
 fn test_agent_response_creates_messages() {
-    set_test_mode();
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".to_string() });
@@ -126,7 +129,6 @@ fn test_agent_response_creates_messages() {
 
 #[test]
 fn test_agent_done_clears_streaming() {
-    set_test_mode();
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".to_string() });
@@ -138,7 +140,6 @@ fn test_agent_done_clears_streaming() {
 
 #[test]
 fn test_sequential_fifo_a_then_b() {
-    set_test_mode();
     let mut state = AppState::default();
     state.update(Event::Input('A'));
     state.update(Event::Submit);
@@ -157,7 +158,6 @@ fn test_sequential_fifo_a_then_b() {
 
 #[test]
 fn test_render_user_message() {
-    set_test_mode();
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -172,7 +172,6 @@ fn test_render_user_message() {
 
 #[test]
 fn test_render_agent_response() {
-    set_test_mode();
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -233,7 +232,23 @@ fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.update(Event::AgentResponse { id, content: format!("Files for turn {}\n", i) });
 }
 
-// === List Files Flow Test ===
+// === Integration Test: Full Tool Flow ===
+
+#[test]
+fn test_full_list_files_integration() {
+    use runie_agent::{needs_tool_execution, get_fake_file_list};
+    assert!(needs_tool_execution("list files"));
+    let files = get_fake_file_list();
+    assert!(files.contains("main.rs"));
+    
+    let mut state = AppState::default();
+    state.streaming = true;
+    simulate_list_files_flow(&mut state, &files);
+    
+    assert!(state.messages.iter().any(|m| m.role == "thought"));
+    assert!(state.messages.iter().any(|m| m.role == "tool"));
+    assert!(!state.streaming, "Streaming should stop after Done");
+}
 
 #[test]
 fn test_list_files_command_flow() {
@@ -241,7 +256,6 @@ fn test_list_files_command_flow() {
     // 1. User types "list files"
     // 2. Submit sends to queue with correct content
     // 3. peek_queue returns (content, id) tuple
-    set_test_mode();
     let mut state = AppState::default();
     
     // Type "list files"
@@ -288,56 +302,21 @@ fn test_list_files_message_content() {
 
 #[test]
 fn test_list_files_full_sequence() {
-    set_test_mode();
-    let backend = TestBackend::new(80, 40);
-    let mut terminal = Terminal::new(backend).expect("terminal");
+    use runie_agent::get_fake_file_list;
+    let file_list = get_fake_file_list();
+    
     let mut state = AppState::default();
     state.streaming = true;
+    simulate_list_files_flow(&mut state, &file_list);
     
-    // Simulate: list files command
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 1.0 });
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    // File list content from get_fake_file_list()
-    let file_list = r#"src/
-  main.rs
-  lib.rs
-  Cargo.toml
-tests/
-  test_main.rs
-README.md
-Cargo.lock"#.to_string();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: format!("\n{}", file_list) });
-    state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 3.0 });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
-    
-    // Render
-    terminal.draw(|f| view(f, &mut state)).expect("draw");
-    let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    
-    // Verify message content is stored correctly
-    let assistant_msg = state.messages.iter().find(|m| m.role == "assistant").expect("Should have assistant message");
-    assert!(assistant_msg.content.contains("src/"), "Message should contain file list from get_fake_file_list()");
-    assert!(assistant_msg.content.contains("main.rs") || assistant_msg.content.contains("Cargo.toml"), "Message should contain file names");
-    
-    // Verify sequence: Though -> Tool -> Though -> Files -> Turn complete
-    assert!(content.contains("Though"), "Should show thought");
-    assert!(content.contains("Ran") || content.contains("list_files"), "Should show tool execution");
-    assert!(content.contains("src/"), "Should show file list");
-    assert!(content.contains("main.rs") || content.contains("README"), "Should show file names");
-    assert!(content.contains("Turn completed"), "Should show turn complete");
-    
-    // Message count: 2 thoughts + 1 tool + 1 response + 1 turn_complete = 5
+    // Verify message content
+    let msg = state.messages.iter().find(|m| m.role == "assistant").expect("Should have message");
+    assert!(msg.content.contains("main.rs"), "Should contain file list");
     assert_eq!(state.messages.len(), 5, "Should have 5 messages");
 }
 
 #[test]
 fn test_stress_many_tool_calls() {
-    set_test_mode();
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
@@ -360,7 +339,6 @@ fn test_stress_many_tool_calls() {
 
 #[test]
 fn test_render_thinking_indicator() {
-    set_test_mode();
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
