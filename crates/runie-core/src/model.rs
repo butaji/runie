@@ -28,6 +28,8 @@ pub struct AppState {
     pub turn_active: bool,  // True when a turn is in progress
     #[serde(skip)]
     pub current_action: Option<String>,  // Current action: "Thinking", "Running <tool>", etc.
+    #[serde(skip)]
+    pub needs_redraw: bool,  // True when view needs to update
 }
 
 impl AppState {
