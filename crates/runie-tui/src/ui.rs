@@ -66,6 +66,7 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
             _ => continue,
         };
         lines.push(Line::from(line));
+        lines.push(Line::from("")); // empty line spacer
         if lines.len() >= height { break; }
     }
 
