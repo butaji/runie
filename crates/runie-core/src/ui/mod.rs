@@ -11,4 +11,4 @@ pub mod format;
 
 pub use elements::{Element, Feed};
 pub use dsl::Dsl;
-pub use format::{format_messages, format_and_cache, render_feed, DisplayLine, DisplaySpan, Color};
+pub use format::{format_messages, render_feed, DisplayLine, DisplaySpan, Color};

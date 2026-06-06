@@ -10,11 +10,8 @@ fn now() -> f64 {
         .as_secs_f64()
 }
 
-pub fn update(mut state: AppState, event: Event) -> AppState {
-    state.needs_redraw = true;
-    // Invalidate cache on any event
-    state.formatted_cache = None;
-    match event {
+pub fn update(state: AppState, event: Event) -> AppState {
+    let mut state = match event {
         // === UI Events ===
         Event::Input(c) => state.push_input(c),
         Event::Backspace => state.pop_input(),
@@ -135,7 +132,12 @@ pub fn update(mut state: AppState, event: Event) -> AppState {
             state
         }
         Event::SpawnAgent => state,
-    }
+    };
+    
+    // Refresh cache - compute feed and render
+    let feed = crate::ui::Dsl::feed(&state);
+    state.formatted_cache = crate::ui::render_feed(&feed, &state);
+    state
 }
 
 impl AppState {
