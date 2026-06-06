@@ -14,7 +14,7 @@ use runie_core::{AppState, Event as CoreEvent};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
 
-// Timing constants
+
 const ANIM_MS: u64 = 200;
 const THROTTLE_MS: u64 = 50;
 const BATCH_SIZE: usize = 10;
@@ -54,8 +54,9 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
     let mut reader = EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
         if let Some(evt) = convert_event(&event) {
-            if input_tx.send(evt.clone()).await.is_err() { break; }
-            if matches!(evt, CoreEvent::Quit | CoreEvent::Reset) { break; }
+            let is_quit = matches!(&evt, CoreEvent::Quit | CoreEvent::Reset);
+            if input_tx.send(evt).await.is_err() { break; }
+            if is_quit { break; }
         }
     }
 }
@@ -81,25 +82,18 @@ async fn event_loop(
                     state.update(evt.clone());
                     dirty = true; events += 1;
                     if matches!(evt, CoreEvent::Quit) { return Ok(()); }
-                    if was_submit {
-                        if let Some((content, id)) = state.peek_queue() {
-                            let content = content.clone();
-                            let id = id.clone();
-                            state.pop_queue();
-                            state.streaming = true;
-                            let _ = cmd_tx.send(AgentCommand {
-                                content,
-                                id,
-                                provider: state.current_provider.clone(),
-                                model: state.current_model.clone(),
-                            }).await;
-                        }
+                    if was_submit || matches!(evt, CoreEvent::FollowUp) {
+                        spawn_if_queued(&mut state, &cmd_tx).await;
                     }
                 }
 
                 Some(evt) = agent_rx.recv(), if events < BATCH_SIZE => {
+                    let was_done = matches!(evt, CoreEvent::AgentDone { .. } | CoreEvent::AgentError { .. });
                     state.update(evt);
                     dirty = true; events += 1;
+                    if was_done {
+                        spawn_if_queued(&mut state, &cmd_tx).await;
+                    }
                 }
 
                 _ = anim.tick(), if events < BATCH_SIZE => {
@@ -134,7 +128,8 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
             &cmd,
             |evt| {
                 let core_evt = evt.to_core_event();
-                let _ = agent_tx_clone.try_send(core_evt);
+                let tx = agent_tx_clone.clone();
+                tokio::spawn(async move { let _ = tx.send(core_evt).await; });
             },
             5,
         ).await;
@@ -148,7 +143,32 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
     }
 }
 
+async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
+    if let Some((content, id)) = state.peek_queue() {
+        let content = content.clone();
+        let id = id.clone();
+        state.pop_queue();
+        state.streaming = true;
+        let _ = cmd_tx.send(AgentCommand {
+            content,
+            id,
+            provider: state.current_provider.clone(),
+            model: state.current_model.clone(),
+        }).await;
+    }
+}
+
 fn convert_event(event: &Event) -> Option<CoreEvent> {
+    if let Event::Key(key) = event {
+        if std::env::var("RUNIE_DEBUG").is_ok() {
+            use std::io::Write;
+            let _ = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("/tmp/runie_keys.log")
+                .and_then(|mut f| writeln!(f, "{:?}", key));
+        }
+    }
     match event {
         Event::Key(key) if key.kind == KeyEventKind::Press => {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -156,11 +176,18 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
                     KeyCode::Char('c') | KeyCode::Char('C')
                     | KeyCode::Char('q') | KeyCode::Char('Q')
                     | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
+                    KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
+                    _ => None,
+                }
+            } else if key.modifiers.contains(KeyModifiers::ALT) {
+                match key.code {
+                    KeyCode::Enter => Some(CoreEvent::FollowUp),
                     _ => None,
                 }
             } else {
                 match key.code {
-                    KeyCode::Esc => Some(CoreEvent::Quit),
+                    KeyCode::Esc => Some(CoreEvent::Abort),
+                    KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
                     KeyCode::Char(c) => Some(CoreEvent::Input(c)),
                     KeyCode::Backspace => Some(CoreEvent::Backspace),
                     KeyCode::Enter => Some(CoreEvent::Submit),

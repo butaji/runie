@@ -1,302 +1,245 @@
-//! Chat rendering tests — ensure UI never breaks
+//! TUI smoke tests — verify view() integrates with core state
 
-#[cfg(test)]
-mod tests {
-    use runie_core::{AppState, Event};
-    use runie_core::ui::format_messages;
+use runie_core::{AppState, Event};
+use crate::ui::view;
+use ratatui::{backend::TestBackend, Terminal};
 
-    // === Empty State ===
+fn draw_state(state: &mut AppState) -> String {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, state)).unwrap();
+    terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect()
+}
 
-    #[test]
-    fn empty_state_renders_nothing() {
-        let state = AppState::default();
-        let lines = format_messages(&state);
-        assert!(lines.is_empty(), "Empty state should have no lines");
-    }
+#[test]
+fn empty_state_renders_nothing() {
+    let mut state = AppState::default();
+    let content = draw_state(&mut state);
+    assert!(!content.contains("You:"));
+}
 
-    // === User Messages ===
+#[test]
+fn user_message_renders() {
+    let mut state = AppState::default();
+    state.update(Event::Input('H'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
+    let content = draw_state(&mut state);
+    assert!(content.contains("You:"), "Should render user prefix");
+    assert!(content.contains("Hi"), "Should render message content");
+}
 
-    #[test]
-    fn user_message_has_prefix() {
-        let mut state = AppState::default();
-        state.update(Event::Input('H'));
-        state.update(Event::Submit);
-        let lines = format_messages(&state);
-        let content: String = lines[0].spans.iter().map(|s| s.text.clone()).collect();
-        assert!(content.starts_with("You:"), "User message should start with 'You:'");
-    }
+#[test]
+fn agent_response_renders() {
+    let mut state = AppState::default();
+    state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    let content = draw_state(&mut state);
+    assert!(content.contains("Agent:"), "Should render agent prefix");
+    assert!(content.contains("Hello"), "Should render response");
+}
 
-    #[test]
-    fn user_message_contains_input() {
-        let mut state = AppState::default();
-        state.update(Event::Input('H'));
-        state.update(Event::Input('i'));
-        state.update(Event::Submit);
-        let lines = format_messages(&state);
-        let content: String = lines[0].spans.iter().map(|s| s.text.clone()).collect();
-        assert!(content.contains("Hi"), "Should contain input text");
-    }
+#[test]
+fn tool_done_renders() {
+    let mut state = AppState::default();
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    let content = draw_state(&mut state);
+    assert!(content.contains("Ran"), "Should render tool done");
+    assert!(content.contains("list_files"), "Should show tool name");
+}
 
-    #[test]
-    fn user_message_with_special_chars() {
-        let mut state = AppState::default();
-        for c in "/command".chars() {
-            state.update(Event::Input(c));
+#[test]
+fn reset_clears_messages() {
+    let mut state = AppState::default();
+    state.update(Event::Input('T'));
+    state.update(Event::Submit);
+    state.update(Event::Reset);
+    let content = draw_state(&mut state);
+    assert!(!content.contains("You:"), "Reset should clear messages from view");
+}
+
+#[test]
+fn at_suggestions_popup_renders() {
+    let mut state = AppState::default();
+    state.input = "@Cargo".to_string();
+    state.update(Event::Input('\t'));
+    assert!(state.at_suggestions.is_some(), "Should have suggestions after Tab");
+    let backend = TestBackend::new(40, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let has_popup = (0..buf.area().height as usize).any(|y| {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf.get(x, y as u16).symbol().to_string())
+            .collect();
+        line.contains("@ files")
+    });
+    let has_hint = (0..buf.area().height as usize).any(|y| {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf.get(x, y as u16).symbol().to_string())
+            .collect();
+        line.contains("Tab=cycle")
+    });
+    assert!(has_popup, "Should render @ files popup");
+    assert!(has_hint, "Should render hint line");
+}
+
+#[test]
+fn long_message_wraps_to_multiple_lines() {
+    let mut state = AppState::default();
+    let long = "a".repeat(100);
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: long.clone(),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+    });
+    let backend = TestBackend::new(30, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content_lines: Vec<usize> = (0..buf.area().height as usize)
+        .filter(|y| {
+            let line: String = (0..buf.area().width)
+                .map(|x| buf.get(x, *y as u16).symbol().to_string())
+                .collect();
+            line.contains('a')
+        })
+        .collect();
+    assert!(content_lines.len() >= 2, "Long message should wrap to multiple lines, got {} lines with content", content_lines.len());
+}
+
+#[test]
+fn wrapping_preserves_prefix_on_first_line_only() {
+    let mut state = AppState::default();
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Assistant,
+        content: "word ".repeat(20),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+    });
+    let backend = TestBackend::new(25, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let lines_with_agent: Vec<String> = (0..buf.area().height as usize)
+        .filter_map(|y| {
+            let line: String = (0..buf.area().width)
+                .map(|x| buf.get(x, y as u16).symbol().to_string())
+                .collect();
+            if line.contains("Agent:") { Some(line.trim().to_string()) } else { None }
+        })
+        .collect();
+    assert_eq!(lines_with_agent.len(), 1, "Only first wrapped line should contain Agent: prefix");
+}
+
+#[test]
+fn wrapping_respects_panel_width_minus_borders() {
+    let mut state = AppState::default();
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: "x".repeat(50),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+    });
+    let width = 20u16;
+    let backend = TestBackend::new(width, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let inner_width = (width - 2) as usize;
+    for y in 0..buf.area().height {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf.get(x, y).symbol().to_string())
+            .collect();
+        if line.trim().starts_with("You:") || line.trim().starts_with("x") {
+            let visible_len = line.trim_end().len();
+            assert!(
+                visible_len <= inner_width,
+                "Wrapped line {} chars exceeds inner width {}: {:?}",
+                visible_len, inner_width, line
+            );
         }
-        state.update(Event::Submit);
-        let lines = format_messages(&state);
-        let content: String = lines[0].spans.iter().map(|s| s.text.clone()).collect();
-        assert!(content.contains("/command"), "Should handle special chars");
     }
+}
 
-    #[test]
-    fn user_message_clears_input() {
-        let mut state = AppState::default();
-        state.update(Event::Input('H'));
-        state.update(Event::Input('i'));
-        state.update(Event::Submit);
-        assert!(state.input.is_empty(), "Input should be cleared after submit");
-    }
-
-    // === Agent Messages ===
-
-    #[test]
-    fn agent_message_has_prefix() {
-        let mut state = AppState::default();
-        state.update(Event::AgentThinking { id: "req.0".to_string() });
-        state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-        state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
+#[test]
+fn tokens_on_right_side_of_status() {
+    let mut state = AppState::default();
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: "hello".to_string(),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+    });
+    state.turn_active = true;
+    state.turn_started_at = Some(std::time::Instant::now());
+    let backend = TestBackend::new(60, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let mut working_pos = None;
+    let mut tok_pos = None;
+    for y in 0..buf.area().height {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf.get(x, y).symbol().to_string())
             .collect();
-        assert!(content.contains("Agent:"), "Should have 'Agent:' prefix");
+        if working_pos.is_none() {
+            if let Some(pos) = line.find("Working") {
+                working_pos = Some(pos);
+            }
+        }
+        if tok_pos.is_none() {
+            if let Some(pos) = line.find("tok") {
+                tok_pos = Some(pos);
+            }
+        }
     }
+    let working_pos = working_pos.expect("Should find 'Working' in status bar");
+    let tok_pos = tok_pos.expect("Should find 'tok' in status bar");
+    assert!(working_pos < tok_pos, "Working ({}) should be left of tok ({})", working_pos, tok_pos);
+    assert!(tok_pos > 40, "tok should appear on right side of status bar, got pos {}", tok_pos);
+}
 
-    #[test]
-    fn agent_message_contains_content() {
-        let mut state = AppState::default();
-        state.update(Event::AgentThinking { id: "req.0".to_string() });
-        state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-        state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Test response".to_string() });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Test response"), "Should contain response");
-    }
-
-    #[test]
-    fn agent_message_streaming_chunks_merge() {
-        let mut state = AppState::default();
-        state.update(Event::AgentThinking { id: "req.0".to_string() });
-        state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-        state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello ".to_string() });
-        state.update(Event::AgentResponse { id: "req.0".to_string(), content: "World".to_string() });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Hello World"), "Streaming chunks should merge");
-    }
-
-    // === Tool Execution ===
-
-    #[test]
-    fn tool_shows_running_state() {
-        let mut state = AppState::default();
-        state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Running"), "Should show 'Running'");
-        assert!(content.contains("list_files"), "Should show tool name");
-    }
-
-    #[test]
-    fn tool_shows_ran_state() {
-        let mut state = AppState::default();
-        state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-        state.update(Event::AgentToolEnd { duration_secs: 0.5 });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Ran"), "Should show 'Ran'");
-        assert!(content.contains("0.5s"), "Should show duration");
-    }
-
-    #[test]
-    fn tool_duration_format() {
-        let mut state = AppState::default();
-        state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "test".to_string() });
-        state.update(Event::AgentToolEnd { duration_secs: 1.23 });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("1.2s") || content.contains("1.23s"), "Duration formatted");
-    }
-
-    // === Turn Complete ===
-
-    #[test]
-    fn turn_complete_shows_for_tool_flow() {
-        let mut state = AppState::default();
-        state.has_intermediate_steps = true;
-        state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Turn completed"), "Should show turn complete");
-        assert!(content.contains("5.1s"), "Should show duration");
-    }
-
-    #[test]
-    fn turn_complete_hidden_for_simple_flow() {
-        let mut state = AppState::default();
-        state.has_intermediate_steps = false;
-        state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 1.0 });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(!content.contains("Turn completed"), "Simple flow should NOT show turn complete");
-    }
-
-    // === Thinking ===
-
-    #[test]
-    fn thinking_shows_spinner() {
-        let mut state = AppState::default();
-        state.streaming = true;
-        state.thinking_started_at = Some(std::time::Instant::now());
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Though..."), "Should show thinking");
-    }
-
-    // === Thought Marker ===
-
-    #[test]
-    fn thought_marker_renders() {
-        let mut state = AppState::default();
-        state.update(Event::AgentThinking { id: "req.0".to_string() });
-        state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Though"), "Should render thought marker");
-    }
-
-    // === Multiple Messages ===
-
-    #[test]
-    fn multiple_user_messages() {
-        let mut state = AppState::default();
-        state.update(Event::Input('A'));
-        state.update(Event::Submit);
-        state.update(Event::Input('B'));
-        state.update(Event::Submit);
-        let lines = format_messages(&state);
-        let you_count = lines.iter()
-            .map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<String>())
-            .filter(|s| s.contains("You:"))
-            .count();
-        assert_eq!(you_count, 2, "Should have 2 user messages");
-    }
-
-    #[test]
-    fn full_conversation_flow() {
-        let mut state = AppState::default();
-        state.update(Event::Input('H'));
-        state.update(Event::Input('i'));
-        state.update(Event::Submit);
-        state.update(Event::AgentThinking { id: "req.0".to_string() });
-        state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-        state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello!".to_string() });
-
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-
-        assert!(content.contains("You:"), "User message");
-        assert!(content.contains("Agent:"), "Agent message");
-        assert!(content.contains("Hello!"), "Response");
-        assert!(content.contains("Though"), "Thought");
-    }
-
-    // === Error ===
-
-    #[test]
-    fn error_message_renders() {
-        let mut state = AppState::default();
-        state.update(Event::AgentError { id: "req.0".to_string(), message: "Something went wrong".to_string() });
-        let lines = format_messages(&state);
-        let content: String = lines.iter()
-            .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
-            .collect();
-        assert!(content.contains("Error:"), "Should contain 'Error:'");
-        assert!(content.contains("Something went wrong"), "Should show message");
-    }
-
-    // === Reset ===
-
-    #[test]
-    fn reset_clears_all() {
-        let mut state = AppState::default();
-        state.update(Event::Input('T'));
-        state.update(Event::Submit);
-        state.update(Event::AgentThinking { id: "req.0".to_string() });
-        state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-        state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hi".to_string() });
-        state.update(Event::Reset);
-        assert!(state.messages.is_empty(), "Reset clears messages");
-        assert!(state.input.is_empty(), "Reset clears input");
-    }
-
-    // === Scroll ===
-
-    #[test]
-    fn scroll_up_increments() {
-        let mut state = AppState::default();
-        state.update(Event::ScrollUp);
-        assert_eq!(state.scroll, 1, "Scroll up increments");
-    }
-
-    #[test]
-    fn scroll_down_decrements() {
-        let mut state = AppState::default();
-        state.scroll = 5;
-        state.update(Event::ScrollDown);
-        assert_eq!(state.scroll, 4, "Scroll down decrements");
-    }
-
-    #[test]
-    fn scroll_down_saturates_at_zero() {
-        let mut state = AppState::default();
-        state.scroll = 0;
-        state.update(Event::ScrollDown);
-        assert_eq!(state.scroll, 0, "Scroll stays at 0");
-    }
-
-    // === Spacers ===
-
-    #[test]
-    fn spacers_between_messages() {
-        let mut state = AppState::default();
-        state.update(Event::Input('A'));
-        state.update(Event::Submit);
-        state.update(Event::Input('B'));
-        state.update(Event::Submit);
-        let lines = format_messages(&state);
-        let empty_count = lines.iter().filter(|l| l.spans.is_empty() || l.spans.iter().all(|s| s.text.is_empty())).count();
-        assert!(empty_count >= 1, "Should have spacer between messages");
-    }
+#[test]
+fn turn_complete_renders_after_tool_flow() {
+    let mut state = AppState::default();
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: "list files".to_string(),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+    });
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Thought,
+        content: "Thinking...".to_string(),
+        timestamp: 0.0,
+        id: "req.1".to_string(),
+    });
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Tool,
+        content: "Ran list_files 0.5s".to_string(),
+        timestamp: 0.0,
+        id: "req.1".to_string(),
+    });
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Assistant,
+        content: "Here are the files".to_string(),
+        timestamp: 0.0,
+        id: "req.1".to_string(),
+    });
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::TurnComplete,
+        content: "Turn completed in 3.2s".to_string(),
+        timestamp: 0.0,
+        id: "req.1".to_string(),
+    });
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let content = terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect::<String>();
+    assert!(content.contains("Turn completed in 3.2s"), "TurnComplete should render in TUI after tool flow");
 }

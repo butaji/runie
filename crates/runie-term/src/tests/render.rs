@@ -4,7 +4,7 @@ use std::time::Instant;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
-// === REGRESSION: view() must call ensure_fresh() internally ===
+
 
 #[test]
 fn test_view_renders_user_message_without_manual_ensure_fresh() {
@@ -16,7 +16,7 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
     state.update(Event::Input('i'));
     state.update(Event::Submit);
 
-    // DO NOT call state.ensure_fresh() here!
+
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
@@ -35,7 +35,7 @@ fn test_view_renders_agent_message_without_manual_ensure_fresh() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
 
-    // DO NOT call state.ensure_fresh() here!
+
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
@@ -59,7 +59,7 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     state.update(Event::Input('B'));
     state.update(Event::Submit);
 
-    // DO NOT call state.ensure_fresh() here!
+
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let buf = terminal.backend().buffer();
@@ -68,7 +68,7 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
     assert!(content.contains("Agent:"), "Must show agent prefix");
 }
 
-// === Render Tests ===
+
 
 #[test]
 fn test_render_user_message() {
@@ -137,7 +137,7 @@ fn test_render_thinking_indicator() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("Though"));
+    assert!(content.contains("Thinking"));
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn test_stress_many_tool_calls() {
     assert!(state.messages.len() >= 100, "many messages, got {}", state.messages.len());
 }
 
-// === Slash command rendering ===
+
 
 fn render_slash(input: &str) -> String {
     let backend = TestBackend::new(60, 20);
@@ -292,4 +292,54 @@ fn test_render_sessions_empty_shows_create_hint() {
     assert!(content.contains("/save"), "Should suggest /save: {}", content);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
+}
+
+#[test]
+fn test_render_at_lookup_popup_shows_on_tab() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "@Car".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Input('\t'));
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("@ files"), "Popup title must render. Buffer:\n{}", content);
+    assert!(content.contains("Cargo") || content.contains("cargo"), "Must show Cargo files. Buffer:\n{}", content);
+}
+
+#[test]
+fn test_render_at_lookup_popup_shows_immediately() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    state.update(Event::Input('@'));
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("@ files"), "Popup must show immediately on @. Buffer:\n{}", content);
+}
+
+#[test]
+fn test_render_at_lookup_tab_cycles_and_enter_inserts() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "@Car".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Input('\t'));
+    state.update(Event::Input('\t'));
+    state.update(Event::Submit);
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    assert!(!state.input.contains('@'), "@ should be replaced. Got: {}", state.input);
+    assert!(state.input.contains('[') && state.input.contains(']'), "Should be inserted as [path]. Got: {}", state.input);
 }

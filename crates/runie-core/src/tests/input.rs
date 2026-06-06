@@ -51,3 +51,23 @@ fn test_submit_reset_command() {
     assert!(state.messages[0].content.contains("State cleared"), "reset confirmation: {}", state.messages[0].content);
     assert_eq!(state.input, "");
 }
+
+#[test]
+fn at_ref_tracks_last_query() {
+    let mut state = fresh_state();
+    state.update(Event::Input('@'));
+    assert_eq!(state.last_at_query, Some("".to_string()), "Empty query after @");
+
+    state.update(Event::Input('C'));
+    assert_eq!(state.last_at_query, Some("C".to_string()), "Query should be 'C'");
+}
+
+#[test]
+fn typing_without_at_clears_query_tracker() {
+    let mut state = fresh_state();
+    for c in "hello".chars() {
+        state.update(Event::Input(c));
+    }
+    assert!(state.at_suggestions.is_none(), "Typing without @ should not trigger suggestions");
+    assert!(state.last_at_query.is_none());
+}

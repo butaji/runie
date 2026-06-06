@@ -1,12 +1,24 @@
 //! Model — Application State (mutable borrow, no cloning per event)
 use crate::ui::elements::Element;
 
-// Animation constants
+
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
 
 pub const PANEL_CHAT: &str = " Chat ";
 pub const PANEL_INPUT: &str = " Input ";
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum QueuedMessageKind {
+    Steering,
+    FollowUp,
+}
+
+#[derive(Clone, Debug)]
+pub struct QueuedMessage {
+    pub content: String,
+    pub kind: QueuedMessageKind,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -16,12 +28,13 @@ pub struct AppState {
     pub scroll: usize,
     pub thinking_started_at: Option<std::time::Instant>,
     pub request_queue: std::collections::VecDeque<(String, String)>,
+    pub message_queue: Vec<QueuedMessage>,
     pub next_id: u64,
     pub current_request_id: Option<String>,
     pub turn_started_at: Option<std::time::Instant>,
     pub current_tool_name: Option<String>,
     pub tool_started_at: Option<std::time::Instant>,
-    pub has_intermediate_steps: bool,
+    pub intermediate_step_count: usize,
     pub animation_frame: u32,
     pub turn_active: bool,
     pub current_action: Option<String>,
@@ -33,6 +46,12 @@ pub struct AppState {
     pub inflight: usize,
     /// Monotonic counter — increments on every snapshot sent to render actor
     pub render_generation: u64,
+    /// @-ref file lookup suggestions
+    pub at_suggestions: Option<Vec<String>>,
+    /// Selected index in @-ref suggestions
+    pub at_selected: Option<usize>,
+    /// Last @-ref query to avoid redundant filesystem calls
+    pub last_at_query: Option<String>,
     element_count: usize,
     elements_cache: Vec<Element>,
     dirty: bool,
@@ -47,12 +66,13 @@ impl Default for AppState {
             scroll: 0,
             thinking_started_at: None,
             request_queue: std::collections::VecDeque::new(),
+            message_queue: Vec::new(),
             next_id: 0,
             current_request_id: None,
             turn_started_at: None,
             current_tool_name: None,
             tool_started_at: None,
-            has_intermediate_steps: false,
+            intermediate_step_count: 0,
             animation_frame: 0,
             turn_active: false,
             current_action: None,
@@ -61,6 +81,9 @@ impl Default for AppState {
             last_tool_index: None,
             inflight: 0,
             render_generation: 0,
+            at_suggestions: None,
+            at_selected: None,
+            last_at_query: None,
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
@@ -137,6 +160,53 @@ impl AppState {
     pub fn is_dirty(&self) -> bool {
         self.dirty
     }
+
+    pub fn total_tokens(&self) -> usize {
+        self.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum()
+    }
+
+    pub fn compact(&mut self, keep_recent_tokens: usize) -> String {
+        let total = self.total_tokens();
+        if total <= keep_recent_tokens {
+            return format!("Session has {} tokens, no compaction needed", total);
+        }
+        let mut accumulated = 0usize;
+        let mut cut_idx = 0usize;
+        for (i, msg) in self.messages.iter().enumerate().rev() {
+            accumulated += crate::tokens::estimate_tokens(&msg.content);
+            if accumulated >= keep_recent_tokens {
+                cut_idx = i;
+                break;
+            }
+        }
+        while cut_idx < self.messages.len() {
+            match self.messages[cut_idx].role {
+                Role::User | Role::Assistant => break,
+                _ => cut_idx += 1,
+            }
+        }
+        if cut_idx == 0 {
+            return "Cannot compact: all messages are recent".to_string();
+        }
+        let removed_count = cut_idx;
+        self.messages.drain(..cut_idx);
+        let summary = format!("[Compacted: {} earlier messages removed, keeping ~{} tokens]", removed_count, keep_recent_tokens);
+        self.messages.insert(0, ChatMessage {
+            role: Role::System,
+            content: summary.clone(),
+            timestamp: now(),
+            id: "compaction".to_string(),
+        });
+        self.mark_dirty();
+        summary
+    }
+}
+
+fn now() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs_f64())
+        .unwrap_or(0.0)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

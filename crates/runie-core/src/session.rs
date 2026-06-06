@@ -79,7 +79,7 @@ impl Store {
     }
 }
 
-// Free functions that delegate to default store
+
 
 pub fn default_store() -> Option<Store> {
     if let Ok(dir) = std::env::var("RUNIE_SESSIONS_DIR") {
@@ -112,9 +112,9 @@ pub fn delete(name: &str) -> anyhow::Result<()> {
         .delete(name)
 }
 
-// ============================================================================
-// Tests — pure functions, no ratatui, lightweight, no env vars
-// ============================================================================
+
+
+
 
 #[cfg(test)]
 mod tests {

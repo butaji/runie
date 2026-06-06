@@ -3,17 +3,17 @@
 //! Layers:
 //!   elements  :: Pure data structures (Element, Feed)
 //!   transform :: State → Elements (pure, lazy, cached)
-//!   format    :: Legacy formatting (DisplayLine, DisplaySpan)
 //!
 //! Rendering (ratatui-dependent) lives in runie-tui crate
 
 pub mod elements;
 pub mod transform;
-pub mod format;
 pub mod dsl_test;
-pub mod view;
 
 pub use elements::{Element, Feed};
-pub use transform::{LazyCache, StreamingMerge};
-pub use format::{format_messages, DisplayLine, DisplaySpan, Color};
-pub use view::{View, Panel};
+pub use transform::LazyCache;
+
+#[cfg(test)]
+pub mod format_test {
+    pub use super::transform::format_test::*;
+}

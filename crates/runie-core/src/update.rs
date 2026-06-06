@@ -10,6 +10,28 @@ fn now() -> f64 {
         .unwrap_or(0.0)
 }
 
+pub(crate) fn strip_tool_markers(content: &str) -> String {
+    let mut result = String::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("TOOL:") {
+            continue;
+        }
+        if trimmed.starts_with('{') {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
+                if val.get("name").is_some() && val.get("arguments").is_some() {
+                    continue;
+                }
+            }
+        }
+        if !result.is_empty() {
+            result.push('\n');
+        }
+        result.push_str(line);
+    }
+    result
+}
+
 impl AppState {
     /// Update state with event - uses mutable borrow, no cloning
     pub fn update(&mut self, event: Event) {
@@ -30,16 +52,47 @@ impl AppState {
             Event::AgentDone { .. } => self.finish_turn(),
             Event::AgentError { id, message } => self.add_error(id, message),
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
-            Event::ShowHelp => {
-                let text = self.help_text();
-                self.add_system_msg(text);
-            }
+            Event::FollowUp => self.queue_follow_up(),
+            Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
         }
     }
 
     fn push_input(&mut self, c: char) {
+        if c == '\t' {
+            if self.input.contains('@') || self.at_suggestions.is_some() {
+                self.cycle_at_suggestions();
+            }
+            return;
+        }
         self.input.push(c);
+        if self.input.contains('@') {
+            let query = self.input.split('@').last().unwrap_or("").to_string();
+            let should_refresh = self.last_at_query.as_ref() != Some(&query);
+            if should_refresh {
+                self.last_at_query = Some(query);
+                self.refresh_at_suggestions();
+            }
+        } else {
+            self.at_suggestions = None;
+            self.at_selected = None;
+            self.last_at_query = None;
+        }
+    }
+
+    fn refresh_at_suggestions(&mut self) {
+        let mut suggestions = crate::file_refs::complete_at_ref(&self.input, ".", 10);
+        if suggestions.is_empty() {
+            suggestions = crate::file_refs::find_files("", ".", 10);
+        }
+        if suggestions.is_empty() {
+            self.at_suggestions = None;
+            self.at_selected = None;
+            return;
+        }
+        self.at_selected = self.at_selected.map(|i| i.min(suggestions.len() - 1)).or(Some(0));
+        self.at_suggestions = Some(suggestions);
+        self.mark_dirty();
     }
 
     fn pop_input(&mut self) {
@@ -47,6 +100,10 @@ impl AppState {
     }
 
     fn submit(&mut self) {
+        if self.at_suggestions.is_some() {
+            self.insert_at_suggestion();
+            return;
+        }
         if self.input.is_empty() {
             return;
         }
@@ -56,6 +113,14 @@ impl AppState {
         }
         if let Some(response) = self.handle_slash(&content) {
             self.add_system_msg(response);
+            return;
+        }
+        if self.turn_active {
+            self.message_queue.push(crate::model::QueuedMessage {
+                content,
+                kind: crate::model::QueuedMessageKind::Steering,
+            });
+            self.mark_dirty();
             return;
         }
         let id = self.next_id();
@@ -83,12 +148,17 @@ impl AppState {
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
         self.current_action = None;
         self.thinking_started_at = None;
-        self.messages.push(ChatMessage {
+        let thought = ChatMessage {
             role: Role::Thought,
             content: thought_with_time(duration),
             timestamp: now(),
-            id,
-        });
+            id: id.clone(),
+        };
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
+            self.messages.insert(idx, thought);
+        } else {
+            self.messages.push(thought);
+        }
         self.mark_dirty();
     }
 
@@ -96,7 +166,7 @@ impl AppState {
         self.current_request_id = Some(id.clone());
         self.current_tool_name = Some(name.clone());
         self.tool_started_at = Some(std::time::Instant::now());
-        self.has_intermediate_steps = true;
+        self.intermediate_step_count += 1;
         self.current_action = Some(format!("Running {}", name));
         self.last_tool_index = Some(self.messages.len());
         self.messages.push(ChatMessage {
@@ -116,6 +186,7 @@ impl AppState {
                 if let Some(last) = self.messages.get_mut(idx) {
                     if last.role == Role::Tool {
                         last.content = tool_done(&name, duration_secs);
+                        last.timestamp = now();
                     }
                 }
             }
@@ -124,9 +195,20 @@ impl AppState {
     }
 
     fn append_response(&mut self, id: String, content: String) {
+        let content = strip_tool_markers(&content);
+        if content.is_empty() {
+            if let Some(last) = self.messages.last_mut() {
+                if last.role == Role::Assistant && last.id == id {
+                    last.timestamp = now();
+                }
+            }
+            self.mark_dirty();
+            return;
+        }
         if let Some(last) = self.messages.last_mut() {
             if last.role == Role::Assistant && last.id == id {
                 last.content.push_str(&content);
+                last.timestamp = now();
                 self.mark_dirty();
                 return;
             }
@@ -142,25 +224,32 @@ impl AppState {
     }
 
     fn complete_turn(&mut self, id: String, duration_secs: f64) {
-        if self.has_intermediate_steps {
-            self.messages.push(ChatMessage {
-                role: Role::TurnComplete,
-                content: format!("Turn completed in {:.1}s", duration_secs),
-                timestamp: now(),
-                id,
-            });
-            self.mark_dirty();
-        }
+        self.messages.push(ChatMessage {
+            role: Role::TurnComplete,
+            content: format!("Turn completed in {:.1}s", duration_secs),
+            timestamp: now(),
+            id,
+        });
+        self.mark_dirty();
         self.turn_started_at = None;
     }
 
     fn finish_turn(&mut self) {
+        for msg in self.messages.iter_mut() {
+            if msg.role == Role::Assistant {
+                msg.content = strip_tool_markers(&msg.content);
+            }
+        }
+        self.messages.retain(|msg| {
+            !(msg.role == Role::Assistant && msg.content.trim().is_empty())
+        });
         self.current_request_id = None;
         self.current_tool_name = None;
-        self.has_intermediate_steps = false;
+        self.intermediate_step_count = 0;
         self.turn_active = false;
         self.turn_started_at = None;
         self.inflight = self.inflight.saturating_sub(1);
+        self.deliver_queued();
         if self.inflight == 0 && self.request_queue.is_empty() {
             self.streaming = false;
             self.thinking_started_at = None;
@@ -196,6 +285,7 @@ impl AppState {
             "/load" => Some("Usage: /load name".to_string()),
             "/delete" => Some("Usage: /delete name".to_string()),
             "/sessions" => Some(self.sessions_list()),
+            "/compact" => Some(self.handle_compact(None)),
             _ => self.handle_slash_with_arg(content),
         }
     }
@@ -212,6 +302,9 @@ impl AppState {
         }
         if let Some(name) = content.strip_prefix("/delete ") {
             return Some(self.handle_delete(name));
+        }
+        if let Some(rest) = content.strip_prefix("/compact ") {
+            return Some(self.handle_compact(Some(rest)));
         }
         None
     }
@@ -297,6 +390,16 @@ impl AppState {
         }
     }
 
+    fn handle_compact(&mut self, custom: Option<&str>) -> String {
+        let keep = 2000usize;
+        let msg = self.compact(keep);
+        if let Some(instruction) = custom {
+            format!("{} (focus: {})", msg, instruction)
+        } else {
+            msg
+        }
+    }
+
     fn help_text(&self) -> String {
         format!(
             "Commands:\n\
@@ -305,8 +408,10 @@ impl AppState {
             /load name — load a saved session\n\
             /sessions — list saved sessions\n\
             /delete name — delete a saved session\n\
+            /compact [prompt] — compact older messages\n\
             /reset — clear all state\n\
-            /help — show this help",
+            /help — show this help\n\
+            Enter — send | Alt+Enter — follow-up | Esc — abort | Ctrl+S — steer",
             self.current_provider, self.current_model
         )
     }
@@ -327,5 +432,105 @@ impl AppState {
 
     pub fn pop_queue(&mut self) -> Option<(String, String)> {
         self.request_queue.pop_front()
+    }
+
+    fn queue_follow_up(&mut self) {
+        if self.input.is_empty() {
+            return;
+        }
+        let content = std::mem::take(&mut self.input).trim().to_string();
+        if content.is_empty() {
+            return;
+        }
+        self.message_queue.push(crate::model::QueuedMessage {
+            content,
+            kind: crate::model::QueuedMessageKind::FollowUp,
+        });
+        self.mark_dirty();
+    }
+
+    fn abort_queue(&mut self) {
+        if self.at_suggestions.take().is_some() {
+            self.at_selected = None;
+            self.last_at_query = None;
+            self.mark_dirty();
+            return;
+        }
+        for msg in self.message_queue.drain(..).rev() {
+            if !self.input.is_empty() {
+                self.input.push('\n');
+            }
+            self.input.push_str(&msg.content);
+        }
+        self.mark_dirty();
+    }
+
+    fn cycle_at_suggestions(&mut self) {
+        let suggestions = match self.at_suggestions.as_mut() {
+            Some(s) => s,
+            None => {
+                self.refresh_at_suggestions();
+                return;
+            }
+        };
+        let idx = self.at_selected.map(|i| (i + 1) % suggestions.len()).unwrap_or(0);
+        self.at_selected = Some(idx);
+        self.mark_dirty();
+    }
+
+    fn insert_at_suggestion(&mut self) {
+        if let Some(idx) = self.at_selected {
+            if let Some(suggestions) = self.at_suggestions.take() {
+                if let Some(selected) = suggestions.get(idx) {
+                    self.input = crate::file_refs::insert_at_ref(&self.input, selected);
+                }
+            }
+            self.at_selected = None;
+            self.last_at_query = None;
+            self.mark_dirty();
+        }
+    }
+
+    fn deliver_queued(&mut self) {
+        if self.message_queue.is_empty() {
+            return;
+        }
+        let steering: Vec<_> = self.message_queue.iter().enumerate()
+            .filter(|(_, m)| m.kind == crate::model::QueuedMessageKind::Steering)
+            .map(|(i, _)| i)
+            .collect();
+        if !steering.is_empty() {
+            let idx = steering[0];
+            let msg = self.message_queue.remove(idx);
+            let id = self.next_id();
+            self.messages.push(ChatMessage {
+                role: Role::User,
+                content: msg.content.clone(),
+                timestamp: now(),
+                id: id.clone(),
+            });
+            self.request_queue.push_back((msg.content, id));
+            self.turn_active = true;
+            self.inflight += 1;
+            return;
+        }
+        let follow_up: Vec<_> = self.message_queue.iter().enumerate()
+            .filter(|(_, m)| m.kind == crate::model::QueuedMessageKind::FollowUp)
+            .map(|(i, _)| i)
+            .collect();
+        if !follow_up.is_empty() {
+            let idx = follow_up[0];
+            let msg = self.message_queue.remove(idx);
+            let id = self.next_id();
+            self.messages.push(ChatMessage {
+                role: Role::User,
+                content: msg.content.clone(),
+                timestamp: now(),
+                id: id.clone(),
+            });
+            self.request_queue.push_back((msg.content, id));
+            self.turn_active = true;
+            self.inflight += 1;
+        }
     }
 }

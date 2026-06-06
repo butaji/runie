@@ -2,13 +2,13 @@
 
 use anyhow::Result;
 use runie_core::provider::{Message, Provider};
-use runie_provider::{AnyProvider, MockProvider, OpenAiProvider};
+use runie_provider::{AnyProvider, MockProvider};
 use std::path::Path;
 use std::time::Instant;
 
-// ============================================================================
-// Agent Command
-// ============================================================================
+
+
+
 
 #[derive(Debug, Clone)]
 pub struct AgentCommand {
@@ -18,21 +18,21 @@ pub struct AgentCommand {
     pub model: String,
 }
 
-// ============================================================================
-// Bash Safety
-// ============================================================================
+
+
+
 
 /// Check if a bash command is dangerous.
 /// Returns Some(reason) if blocked, None if safe.
 pub fn check_bash_safety(command: &str) -> Option<&'static str> {
     let cmd = command.trim().to_lowercase();
 
-    // Destructive rm patterns
+
     if cmd.contains("rm -rf /") || cmd.contains("rm -rf /*") || cmd.contains("rm -rf ~") {
         return Some("rm -rf on system directories or home is blocked");
     }
 
-    // Disk destruction
+
     if cmd.starts_with("dd ") && cmd.contains("of=/dev/") {
         return Some("dd writing to block devices is blocked");
     }
@@ -40,22 +40,22 @@ pub fn check_bash_safety(command: &str) -> Option<&'static str> {
         return Some("writing directly to block devices is blocked");
     }
 
-    // Filesystem format
+
     if cmd.starts_with("mkfs") || cmd.starts_with("mkfs.") {
         return Some("mkfs is blocked");
     }
 
-    // Fork bomb
+
     if cmd.contains(":|:") && cmd.contains("};") {
         return Some("fork bombs are blocked");
     }
 
-    // Dangerous chmod
+
     if cmd.contains("chmod -r 777 /") || cmd.contains("chmod -r 000 /") {
         return Some("recursive chmod on root is blocked");
     }
 
-    // sudo with destructive commands
+
     if cmd.starts_with("sudo ") && (cmd.contains(" rm ") || cmd.contains(" dd ")) {
         return Some("sudo with destructive commands is blocked");
     }
@@ -63,9 +63,9 @@ pub fn check_bash_safety(command: &str) -> Option<&'static str> {
     None
 }
 
-// ============================================================================
-// Tools
-// ============================================================================
+
+
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tool {
@@ -74,6 +74,20 @@ pub enum Tool {
     WriteFile { path: String, content: String },
     EditFile { path: String, search: String, replace: String },
     Bash { command: String },
+    Grep {
+        pattern: String,
+        path: String,
+        glob: Option<String>,
+        ignore_case: bool,
+        literal: bool,
+        context: usize,
+        limit: usize,
+    },
+    Find {
+        pattern: String,
+        path: String,
+        limit: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +105,8 @@ impl Tool {
             Tool::WriteFile { .. } => "write_file",
             Tool::EditFile { .. } => "edit_file",
             Tool::Bash { .. } => "bash",
+            Tool::Grep { .. } => "grep",
+            Tool::Find { .. } => "find",
         }
     }
 
@@ -103,6 +119,10 @@ impl Tool {
             Tool::WriteFile { path, content } => write_file(path, content),
             Tool::EditFile { path, search, replace } => edit_file(path, search, replace),
             Tool::Bash { command } => run_bash(command),
+            Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => {
+                run_grep(pattern, path, glob.as_deref(), *ignore_case, *literal, *context, *limit)
+            }
+            Tool::Find { pattern, path, limit } => run_find(pattern, path, *limit),
         };
         let _elapsed = start.elapsed();
         ToolResult {
@@ -115,18 +135,7 @@ impl Tool {
 
 /// Build a provider from provider/model strings.
 pub fn build_provider(provider: &str, model: &str) -> AnyProvider {
-    match provider {
-        "openai" => {
-            let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-            if key.is_empty() {
-                eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
-                AnyProvider::Mock(MockProvider)
-            } else {
-                AnyProvider::OpenAi(OpenAiProvider::new(key, model))
-            }
-        }
-        _ => AnyProvider::Mock(MockProvider),
-    }
+    AnyProvider::new(provider, model)
 }
 
 fn read_file(path: &str) -> (String, bool) {
@@ -225,9 +234,111 @@ fn run_bash(command: &str) -> (String, bool) {
     }
 }
 
-// ============================================================================
-// Tool Parser
-// ============================================================================
+fn run_grep(
+    pattern: &str,
+    path: &str,
+    glob: Option<&str>,
+    ignore_case: bool,
+    literal: bool,
+    context: usize,
+    limit: usize,
+) -> (String, bool) {
+    let mut args: Vec<String> = vec![
+        "--line-number".into(),
+        "--color=never".into(),
+        "--hidden".into(),
+    ];
+    if ignore_case { args.push("--ignore-case".into()); }
+    if literal { args.push("--fixed-strings".into()); }
+    if let Some(g) = glob { args.push("--glob".into()); args.push(g.into()); }
+    if context > 0 {
+        args.push("--context".into());
+        args.push(context.to_string());
+    }
+    args.push("--max-count".into());
+    args.push(limit.to_string());
+    args.push("--".into());
+    args.push(pattern.into());
+    args.push(path.into());
+
+    let tool = if which_tool("rg").is_some() { "rg" } else { "grep" };
+    match std::process::Command::new(tool).args(&args).output() {
+        Ok(output) => {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let err = String::from_utf8_lossy(&output.stderr);
+            if text.trim().is_empty() {
+                if output.status.code() == Some(1) {
+                    return ("No matches found".to_string(), true);
+                }
+                return (format!("Error: {}", err.trim()), false);
+            }
+            let mut result = text.to_string();
+            let lines: Vec<&str> = text.lines().collect();
+            if lines.len() >= limit {
+                result.push_str(&format!("\n\n[{} matches limit reached]", limit));
+            }
+            (result, true)
+        }
+        Err(e) => (format!("Error running grep: {}", e), false),
+    }
+}
+
+fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
+    let tool = if which_tool("fd").is_some() { "fd" } else { "find" };
+    let result = if tool == "fd" {
+        let mut args: Vec<String> = vec![
+            "--glob".into(), "--color=never".into(), "--hidden".into(), "--no-require-git".into(),
+        ];
+        if pattern.contains("/") {
+            args.push("--full-path".into());
+        }
+        args.push("--max-results".into());
+        args.push(limit.to_string());
+        args.push("--".into());
+        args.push(pattern.into());
+        args.push(path.into());
+        std::process::Command::new("fd").args(&args).output()
+    } else {
+        let mut args: Vec<String> = vec![path.into(), "-maxdepth".into(), "10".into()];
+        if pattern.contains("*") || pattern.contains("?") {
+            args.push("-name".into());
+            args.push(pattern.into());
+        } else {
+            args.push("-path".into());
+            args.push(format!("*/{}", pattern));
+        }
+        std::process::Command::new("find").args(&args).output()
+    };
+
+    match result {
+        Ok(output) => {
+            let text = String::from_utf8_lossy(&output.stdout);
+            if text.trim().is_empty() {
+                return ("No files found matching pattern".to_string(), true);
+            }
+            let lines: Vec<&str> = text.lines().collect();
+            let mut out = lines[..limit.min(lines.len())].join("\n");
+            if lines.len() > limit {
+                out.push_str(&format!("\n\n[{} results limit reached]", limit));
+            }
+            (out, true)
+        }
+        Err(e) => (format!("Error running find: {}", e), false),
+    }
+}
+
+fn which_tool(name: &str) -> Option<String> {
+    std::process::Command::new("which")
+        .arg(name)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+}
+
+
+
+
 
 #[derive(Debug, serde::Deserialize)]
 struct ToolCall {
@@ -237,6 +348,18 @@ struct ToolCall {
 
 fn arg_str(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
     args.get(key).and_then(|v| v.as_str()).unwrap_or("").to_string()
+}
+
+fn arg_opt_str(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<String> {
+    args.get(key).and_then(|v| v.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string())
+}
+
+fn arg_bool(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> bool {
+    args.get(key).and_then(|v| v.as_bool()).unwrap_or(false)
+}
+
+fn arg_usize(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> usize {
+    args.get(key).and_then(|v| v.as_u64()).unwrap_or(0) as usize
 }
 
 fn parse_legacy_tool(payload: &str) -> Option<Tool> {
@@ -269,6 +392,20 @@ fn parse_structured_tool(line: &str) -> Option<Tool> {
             replace: arg_str(args, "replace"),
         },
         "bash" => Tool::Bash { command: arg_str(args, "command") },
+        "grep" => Tool::Grep {
+            pattern: arg_str(args, "pattern"),
+            path: arg_str(args, "path"),
+            glob: arg_opt_str(args, "glob"),
+            ignore_case: arg_bool(args, "ignore_case"),
+            literal: arg_bool(args, "literal"),
+            context: arg_usize(args, "context"),
+            limit: arg_usize(args, "limit").max(1),
+        },
+        "find" => Tool::Find {
+            pattern: arg_str(args, "pattern"),
+            path: arg_str(args, "path"),
+            limit: arg_usize(args, "limit").max(1),
+        },
         _ => return None,
     })
 }
@@ -301,9 +438,9 @@ pub fn has_tool_calls(text: &str) -> bool {
     !parse_tool_calls(text).is_empty()
 }
 
-// ============================================================================
-// Agent Loop
-// ============================================================================
+
+
+
 
 /// Run a single agent turn with the provider, emitting events via the callback.
 /// The loop continues until the assistant no longer requests tools or max_iterations is reached.
@@ -319,8 +456,10 @@ where
         Message::System {
             content: "You are a helpful assistant with access to tools. \
                 Use structured JSON format: {\"name\": \"tool_name\", \"arguments\": {...}}. \
-                Available tools: read_file, list_dir, write_file, edit_file, bash. \
-                Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.".to_string(),
+                Available tools: read_file, list_dir, write_file, edit_file, bash, grep, find. \
+                Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}. \
+                Use grep to search file contents: {\"name\": \"grep\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}. \
+                Use find to list files by pattern: {\"name\": \"find\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}.".to_string(),
         },
         Message::User {
             content: command.content.clone(),
@@ -331,7 +470,7 @@ where
     let mut has_intermediate_steps = false;
 
     for _iteration in 0..max_iterations {
-        // Thinking phase
+
         emit(AgentEvent::Thinking {
             id: command.id.clone(),
         });
@@ -358,23 +497,25 @@ where
             break;
         }
 
-        // Execute tools
+
         has_intermediate_steps = true;
+        messages.push(Message::Assistant {
+            content: response_text.clone(),
+        });
         for tool in tools {
             emit(AgentEvent::ToolStart {
                 id: command.id.clone(),
                 name: tool.name().to_string(),
             });
 
+            let tool_start = Instant::now();
             let result = tool.execute();
+            let tool_elapsed = tool_start.elapsed().as_secs_f64();
 
             emit(AgentEvent::ToolEnd {
-                duration_secs: 0.0, // simplified
+                duration_secs: tool_elapsed,
             });
 
-            messages.push(Message::Assistant {
-                content: response_text.clone(),
-            });
             messages.push(Message::ToolResult {
                 content: format!(
                     "{} result:\n{}",
@@ -399,9 +540,9 @@ where
     Ok(())
 }
 
-// ============================================================================
-// Agent Events
-// ============================================================================
+
+
+
 
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -442,3 +583,5 @@ impl AgentEvent {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod grep_find;

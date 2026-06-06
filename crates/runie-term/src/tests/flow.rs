@@ -1,6 +1,6 @@
 use super::*;
 
-// === Basic Flow ===
+
 
 #[test]
 fn test_submit_adds_message_to_queue() {
@@ -64,7 +64,7 @@ fn test_sequential_fifo_a_then_b() {
     assert_eq!(thoughts.len(), 2);
 }
 
-// === Integration: Full Tool Flow ===
+
 
 #[test]
 fn test_full_list_files_integration() {

@@ -24,7 +24,7 @@ fn tmp_store() -> Store {
     Store::new(dir)
 }
 
-// === /reset ===
+
 
 #[test]
 fn reset_clears_messages_and_input() {
@@ -54,7 +54,7 @@ fn reset_keeps_default_provider() {
     assert_eq!(state.current_model, "echo");
 }
 
-// === /help ===
+
 
 #[test]
 fn help_shows_system_message() {
@@ -81,7 +81,7 @@ fn help_clears_input() {
     assert!(state.input.is_empty());
 }
 
-// === /model ===
+
 
 #[test]
 fn model_switches_provider_and_model() {
@@ -165,7 +165,7 @@ fn model_no_args_shows_usage() {
     assert!(sys_msgs[0].content.contains("Current model:"), "no args should show current model: {}", sys_msgs[0].content);
 }
 
-// === /save ===
+
 
 #[test]
 fn save_creates_session_file() {
@@ -225,7 +225,7 @@ fn save_no_args_shows_usage() {
     assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
 }
 
-// === /load ===
+
 
 #[test]
 fn load_restores_conversation() {
@@ -292,7 +292,7 @@ fn load_no_args_shows_usage() {
     assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
 }
 
-// === /sessions ===
+
 
 #[test]
 fn sessions_lists_saved_sessions() {
@@ -340,7 +340,7 @@ fn sessions_empty_shows_no_sessions() {
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
 
-// === /delete ===
+
 
 #[test]
 fn delete_removes_session_file() {
@@ -397,7 +397,7 @@ fn delete_no_args_shows_usage() {
     assert!(sys_msgs[0].content.contains("Usage:"), "no args should show usage: {}", sys_msgs[0].content);
 }
 
-// === Edge cases ===
+
 
 #[test]
 fn slash_command_does_not_queue() {
@@ -439,7 +439,7 @@ fn save_with_whitespace_name_uses_name_as_is() {
     type_str(&mut state, "/save  spaced");
     state.update(Event::Submit);
 
-    // strip_prefix("/save ") gives " spaced" which gets saved
+
     assert!(store.path(" spaced").exists(), "name with leading space saved as-is");
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");

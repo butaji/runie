@@ -20,38 +20,58 @@ pub enum AnyProvider {
 }
 
 impl AnyProvider {
-    pub fn from_env() -> Self {
+    fn build(provider: &str, model: &str) -> Self {
         let config = Config::load();
-        let provider = config.provider.as_deref().unwrap_or("mock");
-        let model = config.model.as_deref().unwrap_or("echo");
+        Self::build_with_config(provider, model, &config)
+    }
 
+    fn build_with_config(provider: &str, model: &str, config: &Config) -> Self {
+        if let Some(custom) = config.model_providers.get(provider) {
+            return Self::OpenAi(OpenAiProvider::new(
+                custom.api_key.clone(),
+                model,
+            ).with_base_url(custom.base_url.clone()));
+        }
         match provider {
             "openai" => {
                 let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
                 if key.is_empty() {
                     eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
-                    Self::Mock(MockProvider)
+                    Self::Mock(MockProvider::default())
                 } else {
                     Self::OpenAi(OpenAiProvider::new(key, model))
                 }
             }
-            _ => Self::Mock(MockProvider),
+            _ => {
+                if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
+                    Self::Mock(MockProvider::with_delay(500, 3000))
+                } else {
+                    Self::Mock(MockProvider::default())
+                }
+            }
         }
     }
 
-    pub fn switch(&mut self, provider: &str, model: &str) {
-        *self = match provider {
-            "openai" => {
-                let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-                if key.is_empty() {
-                    eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
-                    Self::Mock(MockProvider)
-                } else {
-                    Self::OpenAi(OpenAiProvider::new(key, model))
-                }
-            }
-            _ => Self::Mock(MockProvider),
+    pub fn new(provider: &str, model: &str) -> Self {
+        Self::build(provider, model)
+    }
+
+    pub fn from_env() -> Self {
+        let config = Config::load();
+        Self::from_config(&config, config.default_model().unwrap_or("echo"))
+    }
+
+    pub fn from_config(config: &Config, model: &str) -> Self {
+        let provider = if model.contains('/') {
+            model.split('/').next().unwrap_or("mock")
+        } else {
+            config.provider.as_deref().unwrap_or("mock")
         };
+        Self::build_with_config(provider, model, config)
+    }
+
+    pub fn switch(&mut self, provider: &str, model: &str) {
+        *self = Self::build(provider, model);
     }
 
     pub fn name(&self) -> &'static str {
@@ -64,7 +84,7 @@ impl AnyProvider {
     pub fn model(&self) -> String {
         match self {
             AnyProvider::Mock(_) => "echo".to_string(),
-            AnyProvider::OpenAi(_) => "gpt-4o".to_string(), // TODO: store model in provider
+            AnyProvider::OpenAi(p) => p.model().to_string(),
         }
     }
 }
@@ -83,3 +103,5 @@ impl Provider for AnyProvider {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod config_tests;
