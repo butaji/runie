@@ -63,6 +63,11 @@ async fn main() -> io::Result<()> {
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
 
+                // Redraw immediately for scroll/input events
+                if matches!(evt, CoreEvent::ScrollUp | CoreEvent::ScrollDown) {
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
+                }
+
                 if matches!(evt, CoreEvent::Submit) {
                     if let Some((content, id)) = state.peek_queue() {
                         state.pop_queue();
@@ -78,6 +83,7 @@ async fn main() -> io::Result<()> {
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
+                terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
             _ = cache_interval.tick() => {
@@ -88,6 +94,7 @@ async fn main() -> io::Result<()> {
             _ = anim_interval.tick() => {
                 if state.turn_active {
                     state.animation_frame = state.animation_frame.wrapping_add(1);
+                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
                 }
             }
         }
