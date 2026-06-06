@@ -56,15 +56,7 @@ async fn main() -> io::Result<()> {
 
     loop {
         tokio::select! {
-            _ = render_interval.tick() => {
-                // Advance animation frame every 3 ticks (150ms)
-                let ticks = tick_counter.fetch_add(1, Ordering::Relaxed);
-                if ticks % 3 == 0 {
-                    state.animation_frame = state.animation_frame.wrapping_add(1);
-                }
-                terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-            }
-            
+            // Prioritize events over rendering
             Some(evt) = input_rx.recv() => {
                 state = runie_core::update::update(state, evt.clone());
 
@@ -83,6 +75,15 @@ async fn main() -> io::Result<()> {
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
+            }
+            
+            _ = render_interval.tick() => {
+                // Advance animation frame every 3 ticks (150ms)
+                let ticks = tick_counter.fetch_add(1, Ordering::Relaxed);
+                if ticks % 3 == 0 {
+                    state.animation_frame = state.animation_frame.wrapping_add(1);
+                }
+                let _ = terminal.draw(|f| runie_tui::ui::view(f, &state));
             }
         }
 
