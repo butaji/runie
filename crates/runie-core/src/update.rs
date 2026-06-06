@@ -82,6 +82,15 @@ pub fn update(state: AppState, event: Event) -> AppState {
         }
         Event::AgentResponse { id, content } => {
             let mut state = state;
+            
+            // Append to last assistant message if exists, else create new
+            if let Some(last) = state.messages.last_mut() {
+                if last.role == "assistant" && last.id == id {
+                    last.content.push_str(&content);
+                    return state;
+                }
+            }
+            
             state.messages.push(ChatMessage {
                 role: "assistant".into(),
                 content,
@@ -131,12 +140,9 @@ pub fn update(state: AppState, event: Event) -> AppState {
             });
             state
         }
-        Event::SpawnAgent => state,
+        Event::SpawnAgent => return state,
     };
     
-    // Refresh cache - compute feed and render
-    let feed = crate::ui::Dsl::feed(&state);
-    state.formatted_cache = crate::ui::render_feed(&feed, &state);
     state
 }
 

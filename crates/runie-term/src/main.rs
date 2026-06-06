@@ -51,10 +51,9 @@ async fn main() -> io::Result<()> {
     // Initialize cache
     state.formatted_cache = runie_core::format_messages(&state);
     let mut anim_interval = interval(Duration::from_millis(50));
-    let mut draw_interval = interval(Duration::from_millis(16)); // 60fps max
+    let mut cache_interval = interval(Duration::from_millis(100)); // Rebuild cache at 10fps max
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let mut pending_draw = false;
     
     // Initial render
     terminal.draw(|f| runie_tui::ui::view(f, &state))?;
@@ -75,27 +74,21 @@ async fn main() -> io::Result<()> {
                 if matches!(evt, CoreEvent::Quit) {
                     break;
                 }
-                
-                pending_draw = true;
             }
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
-                pending_draw = true;
             }
             
-            _ = draw_interval.tick() => {
-                if pending_draw || state.turn_active {
-                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-                    pending_draw = false;
-                }
+            _ = cache_interval.tick() => {
+                // Rebuild cache periodically, not on every event
+                state.formatted_cache = runie_core::format_messages(&state);
+                terminal.draw(|f| runie_tui::ui::view(f, &state))?;
             }
             
             _ = anim_interval.tick() => {
-                // Animation only if turn is active
                 if state.turn_active {
                     state.animation_frame = state.animation_frame.wrapping_add(1);
-                    pending_draw = true; // Will be drawn on next draw_interval tick
                 }
             }
         }
