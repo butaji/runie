@@ -26,7 +26,7 @@ pub enum Color {
 
 pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
     // Always compute fresh - cache is updated periodically by main loop
-    let feed = crate::ui::Dsl::feed(state);
+    let feed = crate::ui::LazyCache::feed(state);
     render_feed(&feed, state)
 }
 

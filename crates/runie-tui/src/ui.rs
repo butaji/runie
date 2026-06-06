@@ -10,7 +10,7 @@ use ratatui::{
 use runie_core::{AppState, PANEL_CHAT, PANEL_INPUT, Element};
 
 /// View function - renders state to terminal
-pub fn view(f: &mut Frame, state: &AppState) {
+pub fn view(f: &mut Frame, state: &mut AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3)])
@@ -33,7 +33,7 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
     }
 }
 
-fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
+fn messages_view(f: &mut Frame, state: &mut AppState, area: Rect) {
     let block = ratatui::widgets::Block::default()
         .borders(ratatui::widgets::Borders::ALL)
         .title(PANEL_CHAT)
@@ -42,9 +42,12 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
+    // CRITICAL: rebuild cache once per frame, only when dirty
+    state.ensure_fresh();
+
     let total = state.count();
     let visible_height = inner.height as usize;
-    
+
     if total == 0 || visible_height == 0 {
         return;
     }

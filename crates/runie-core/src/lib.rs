@@ -24,7 +24,7 @@ pub use labels::{
     THINKING_LOADING, thinking_with_time, thought_with_time,
 };
 pub use ui::{
-    Element, Feed, Dsl,
+    Element, Feed, LazyCache, StreamingMerge,
     format_messages, DisplayLine, DisplaySpan, Color,
 };
 pub use provider::{Message, Provider, ResponseChunk};
