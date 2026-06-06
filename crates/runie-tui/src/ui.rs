@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
 
@@ -36,13 +36,22 @@ fn status_view(f: &mut Frame, state: &AppState, area: Rect) {
 }
 
 fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
+    // Split off 1 column for scrollbar track on the right
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Fill(1), Constraint::Length(1)])
+        .split(area);
+    
+    let content_area = chunks[0];
+    let scroll_area = chunks[1];
+    
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_CHAT)
         .border_style(Style::default().fg(ratatui::style::Color::DarkGray))
         .title_style(Style::default().fg(ratatui::style::Color::DarkGray));
-    let inner = block.inner(area);
-    f.render_widget(block, area);
+    let inner = block.inner(content_area);
+    f.render_widget(block, content_area);
 
     let lines = format_messages(state);
     
@@ -70,28 +79,32 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let content_height = ratatui_lines.len() as u16;
     let visible_height = inner.height;
     
-    // Auto-scroll to bottom
+    // Calculate scroll position (auto-scroll to bottom)
+    let max_scroll = content_height.saturating_sub(visible_height) as usize;
     let scroll_offset = if content_height > visible_height {
-        content_height.saturating_sub(visible_height) as usize
+        max_scroll
     } else {
         0
     };
 
+    // Render content with scroll offset applied
     let visible_lines: Vec<Line> = if scroll_offset > 0 {
         ratatui_lines[scroll_offset..].to_vec()
     } else {
         ratatui_lines
     };
 
-    let paragraph = Paragraph::new(Text::from(visible_lines));
+    let paragraph = Paragraph::new(Text::from(visible_lines))
+        .wrap(Wrap { trim: true });
     f.render_widget(paragraph, inner);
 
+    // Render scrollbar in the track area
     if content_height > visible_height {
-        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray));
         let mut scrollbar_state = ScrollbarState::new(content_height as usize)
             .position(scroll_offset);
-        f.render_stateful_widget(scrollbar, inner, &mut scrollbar_state);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .thumb_style(Style::default().fg(ratatui::style::Color::DarkGray));
+        f.render_stateful_widget(scrollbar, scroll_area, &mut scrollbar_state);
     }
 }
 

@@ -71,30 +71,22 @@ async fn main() -> io::Result<()> {
                 if matches!(evt, CoreEvent::Quit) {
                     break;
                 }
-                
-                // Redraw on state change
-                if state.needs_redraw {
-                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-                }
             }
             
             Some(evt) = agent_rx.recv() => {
                 state = runie_core::update::update(state, evt);
-                
-                // Redraw on state change
-                if state.needs_redraw {
-                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
-                }
             }
             
             _ = anim_interval.tick() => {
                 // Update animation frame if turn is active
                 if state.turn_active {
                     state.animation_frame = state.animation_frame.wrapping_add(1);
-                    terminal.draw(|f| runie_tui::ui::view(f, &state))?;
                 }
             }
         }
+        
+        // Always redraw - keeps TUI simple
+        terminal.draw(|f| runie_tui::ui::view(f, &state))?;
 
         if matches!(state.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit") {
             break;
