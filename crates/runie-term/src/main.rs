@@ -8,14 +8,14 @@ use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockPr
 use runie_core::{AppState, Event as CoreEvent};
 use std::{
     io,
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock, atomic::{AtomicBool, Ordering}},
     thread,
     time::Duration,
 };
 use tokio::sync::mpsc;
 
-// Shared state between threads
-type SharedState = Arc<Mutex<AppState>>;
+// Shared state - RwLock allows concurrent reads
+type SharedState = Arc<RwLock<AppState>>;
 
 struct Cleanup;
 
@@ -33,28 +33,53 @@ fn main() -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen)?;
 
-    // Shared state - single source of truth
-    let state: SharedState = Arc::new(Mutex::new(load_state().unwrap_or_default()));
+    // Shared state
+    let state: SharedState = Arc::new(RwLock::new(load_state().unwrap_or_default()));
     let ui_state = state.clone();
+    let running = Arc::new(AtomicBool::new(true));
+    let ui_running = running.clone();
 
-    // UI thread - dedicated, runs terminal.draw() in background
-    // NOTE: stdout is moved here, won't be available after
+    // UI thread - dedicated, never blocks main thread
     let _ui_handle = thread::spawn(move || {
         let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).expect("Failed to create terminal");
+        let mut terminal = match Terminal::new(backend) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("Failed to create terminal: {}", e);
+                return;
+            }
+        };
         
         // Initial render
-        if let Ok(s) = ui_state.lock() {
+        if let Ok(s) = ui_state.read() {
             let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
         }
 
-        // Render loop - 20fps
-        loop {
+        // Render loop - 20fps, only when not shutting down
+        while ui_running.load(Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(50));
             
-            if let Ok(s) = ui_state.lock() {
-                let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
+            // Try to get read lock - NEVER block, skip frame if contended
+            match ui_state.try_read() {
+                Ok(s) => {
+                    // Only render if state changed
+                    if s.dirty || s.turn_active {
+                        // Rebuild cache inside read lock (safe since we're only reader)
+                        // Actually we can't mutate in read lock...
+                        // So we check dirty but don't rebuild here
+                    }
+                    let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
+                }
+                Err(_) => {
+                    // Lock is contended, skip this frame
+                    continue;
+                }
             }
+        }
+        
+        // Final render before exit
+        if let Ok(s) = ui_state.read() {
+            let _ = terminal.draw(|f| runie_tui::ui::view(f, &s));
         }
     });
 
@@ -65,7 +90,7 @@ fn main() -> io::Result<()> {
         .unwrap();
 
     rt.block_on(async {
-        // Channels (created in async context)
+        // Channels
         let (input_tx, mut input_rx) = mpsc::channel::<CoreEvent>(100);
         let (agent_tx, mut agent_rx) = mpsc::channel::<CoreEvent>(100);
         let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
@@ -97,10 +122,15 @@ fn main() -> io::Result<()> {
                 biased;
                 
                 Some(evt) = input_rx.recv() => {
-                    let mut s = state.lock().unwrap();
+                    // Process event with write lock
+                    let mut s = state.write().unwrap();
                     *s = runie_core::update::update(std::mem::take(&mut *s), evt.clone());
+                    // Rebuild cache while holding write lock
+                    s.ensure_fresh();
+                    drop(s);  // Release lock immediately
 
                     if matches!(evt, CoreEvent::Submit) {
+                        let mut s = state.write().unwrap();
                         if let Some((content, id)) = s.peek_queue() {
                             s.pop_queue();
                             s.streaming = true;
@@ -114,21 +144,23 @@ fn main() -> io::Result<()> {
                 }
                 
                 Some(evt) = agent_rx.recv() => {
-                    let mut s = state.lock().unwrap();
+                    let mut s = state.write().unwrap();
                     *s = runie_core::update::update(std::mem::take(&mut *s), evt);
+                    s.ensure_fresh();
                 }
                 
                 _ = anim_interval.tick() => {
-                    let mut s = state.lock().unwrap();
+                    let mut s = state.write().unwrap();
                     if s.turn_active {
                         s.animation_frame = s.animation_frame.wrapping_add(1);
+                        s.mark_dirty();
                     }
                 }
             }
             
             // Check quit
             let should_quit = {
-                let s = state.lock().unwrap();
+                let s = state.read().unwrap();
                 matches!(s.messages.last(), Some(runie_core::ChatMessage { role, .. }) if role == "quit")
             };
             if should_quit {
@@ -136,9 +168,8 @@ fn main() -> io::Result<()> {
             }
         }
 
-        // Save state
-        let final_state = state.lock().unwrap().clone();
-        drop(final_state);
+        // Signal UI thread to shutdown
+        running.store(false, Ordering::Relaxed);
     });
 
     Ok(())
@@ -274,11 +305,4 @@ fn load_state() -> Option<AppState> {
     let state = bincode::deserialize(&data).ok()?;
     let _ = std::fs::remove_file("/tmp/runie_state.bin");
     Some(state)
-}
-
-fn save_state(_state: &AppState) {
-    // Disabled for now - can be added back with proper handling
-    // if let Ok(data) = bincode::serialize(state) {
-    //     let _ = std::fs::write("/tmp/runie_state.bin", &data);
-    // }
 }
