@@ -42,6 +42,11 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
+    // Safety check
+    if inner.height == 0 || inner.width == 0 {
+        return;
+    }
+
     let height = inner.height as usize;
     let total = Dsl::count(state);
     
@@ -50,25 +55,24 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
 
     // Get visible elements - O(take)
     let visible = Dsl::visible(state, scroll, height);
+    if visible.is_empty() {
+        return;
+    }
     
-    // Render directly to buffer - skip scroll_index lines
+    // Render directly to buffer
     let buf = f.buffer_mut();
-    let mut line_idx = 0usize;
+    let mut line_idx = scroll;
     
     for elem in &visible {
         let text = element_to_line(elem, state);
         // Each element = one line
-        if line_idx >= scroll && (line_idx - scroll) < height {
-            buf.set_line(
-                inner.x, 
-                ((line_idx - scroll) as u16) + inner.y, 
-                &text, 
-                inner.width
-            );
+        let row = (line_idx - scroll) as u16;
+        if row < inner.height {
+            buf.set_line(inner.x, inner.y + row, &text, inner.width);
         }
         line_idx += 1;
         if line_idx - scroll >= height {
-            return;
+            break;
         }
     }
 }
