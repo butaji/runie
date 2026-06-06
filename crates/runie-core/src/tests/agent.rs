@@ -1,4 +1,4 @@
-use crate::model::AppState;
+use crate::model::{AppState, Role};
 use crate::event::Event;
 
 fn fresh_state() -> AppState {
@@ -22,7 +22,7 @@ fn test_agent_response_creates_message() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
     assert_eq!(state.messages.len(), 2);
-    assert_eq!(state.messages[1].role, "assistant");
+    assert_eq!(state.messages[1].role, Role::Assistant);
     assert_eq!(state.messages[1].content, "Hello");
 }
 
@@ -55,6 +55,6 @@ fn test_agent_error_creates_error_message() {
     state.update(Event::AgentError { id: "req.0".to_string(), message: "Something went wrong".to_string() });
     assert!(!state.streaming);
     assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, "assistant");
+    assert_eq!(state.messages[0].role, Role::Assistant);
     assert!(state.messages[0].content.contains("Error"));
 }

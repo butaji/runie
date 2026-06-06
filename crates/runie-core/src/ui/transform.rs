@@ -34,17 +34,18 @@ impl LazyCache {
     }
 
     fn is_renderable(msg: &ChatMessage) -> bool {
-        matches!(msg.role.as_str(), "user" | "thought" | "assistant" | "tool" | "turn_complete")
+        use crate::model::Role::*;
+        matches!(msg.role, User | Thought | Assistant | Tool | TurnComplete)
     }
 
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
-        match msg.role.as_str() {
-            "user" => Element::UserMessage { content: msg.content.clone() },
-            "thought" => Element::ThoughtMarker { content: msg.content.clone() },
-            "assistant" => Element::AgentMessage { content: msg.content.clone() },
-            "tool" => Self::tool_elem(msg, state),
-            "turn_complete" => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
-            _ => Element::Spacer,
+        use crate::model::Role::*;
+        match msg.role {
+            User => Element::UserMessage { content: msg.content.clone() },
+            Thought => Element::ThoughtMarker { content: msg.content.clone() },
+            Assistant => Element::AgentMessage { content: msg.content.clone() },
+            Tool => Self::tool_elem(msg, state),
+            TurnComplete => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
         }
     }
 
@@ -72,13 +73,13 @@ impl LazyCache {
         let mut last_id = String::new();
 
         for msg in &state.messages {
-            match msg.role.as_str() {
-                "user" => Self::push_user(&mut feed, msg, &mut last_id),
-                "thought" => Self::push_thought(&mut feed, msg, &mut last_id),
-                "assistant" => Self::push_agent(&mut feed, msg, &mut last_id),
-                "tool" => Self::push_tool(&mut feed, msg, state, &mut last_id),
-                "turn_complete" => Self::push_turn(&mut feed, msg, &mut last_id),
-                _ => {}
+            use crate::model::Role::*;
+            match msg.role {
+                User => Self::push_user(&mut feed, msg, &mut last_id),
+                Thought => Self::push_thought(&mut feed, msg, &mut last_id),
+                Assistant => Self::push_agent(&mut feed, msg, &mut last_id),
+                Tool => Self::push_tool(&mut feed, msg, state, &mut last_id),
+                TurnComplete => Self::push_turn(&mut feed, msg, &mut last_id),
             }
         }
         if let Some(elapsed) = state.thinking_started_at {

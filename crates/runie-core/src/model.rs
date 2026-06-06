@@ -15,7 +15,7 @@ pub struct AppState {
     pub streaming: bool,
     pub scroll: usize,
     pub thinking_started_at: Option<std::time::Instant>,
-    pub request_queue: Vec<(String, String)>,  // (content, id)
+    pub request_queue: std::collections::VecDeque<(String, String)>,  // (content, id)
     pub next_id: u64,
     pub current_request_id: Option<String>,
     pub turn_started_at: Option<std::time::Instant>,
@@ -25,6 +25,8 @@ pub struct AppState {
     pub animation_frame: u32,
     pub turn_active: bool,
     pub current_action: Option<String>,
+    /// Index of last tool message — avoids O(n) reverse search in end_tool()
+    pub(crate) last_tool_index: Option<usize>,
     /// Cached element count — O(1) access when not dirty
     element_count: usize,
     /// Cached elements — rebuilt lazily via ensure_fresh()
@@ -41,7 +43,7 @@ impl Default for AppState {
             streaming: false,
             scroll: 0,
             thinking_started_at: None,
-            request_queue: Vec::new(),
+            request_queue: std::collections::VecDeque::new(),
             next_id: 0,
             current_request_id: None,
             turn_started_at: None,
@@ -51,6 +53,7 @@ impl Default for AppState {
             animation_frame: 0,
             turn_active: false,
             current_action: None,
+            last_tool_index: None,
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
@@ -82,7 +85,7 @@ impl AppState {
         id
     }
 
-    pub fn mark_dirty(&mut self) {
+    pub(crate) fn mark_dirty(&mut self) {
         self.dirty = true;
     }
 
@@ -126,9 +129,30 @@ impl AppState {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Role {
+    User,
+    Thought,
+    Assistant,
+    Tool,
+    TurnComplete,
+}
+
+impl Role {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Role::User => "user",
+            Role::Thought => "thought",
+            Role::Assistant => "assistant",
+            Role::Tool => "tool",
+            Role::TurnComplete => "turn_complete",
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ChatMessage {
-    pub role: String,
+    pub role: Role,
     pub content: String,
     pub timestamp: f64,
     pub id: String,

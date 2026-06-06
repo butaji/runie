@@ -46,8 +46,9 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
     let mut reader = EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
         if let Some(evt) = convert_event(&event) {
-            if input_tx.send(evt.clone()).await.is_err() { break; }
-            if matches!(evt, CoreEvent::Quit | CoreEvent::Reset) { break; }
+            let should_break = matches!(evt, CoreEvent::Quit | CoreEvent::Reset);
+            if input_tx.send(evt).await.is_err() { break; }
+            if should_break { break; }
         }
     }
 }
@@ -68,10 +69,14 @@ async fn event_loop(
             tokio::select! {
                 biased;
                 Some(evt) = input_rx.recv(), if events < BATCH_SIZE => {
-                    state.update(evt.clone());
-                    if matches!(evt, CoreEvent::Quit) { return Ok(()); }
-                    if matches!(evt, CoreEvent::Submit) {
+                    let is_quit = matches!(evt, CoreEvent::Quit);
+                    let is_submit = matches!(evt, CoreEvent::Submit);
+                    state.update(evt);
+                    if is_quit { return Ok(()); }
+                    if is_submit {
                         if let Some((content, id)) = state.peek_queue() {
+                            let content = content.clone();
+                            let id = id.clone();
                             state.pop_queue();
                             state.streaming = true;
                             let _ = cmd_tx.send(AgentCommand { content, id }).await;
