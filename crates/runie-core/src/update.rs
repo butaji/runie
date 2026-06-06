@@ -30,7 +30,10 @@ impl AppState {
             Event::AgentDone { .. } => self.finish_turn(),
             Event::AgentError { id, message } => self.add_error(id, message),
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
-            Event::ShowHelp => self.show_help(),
+            Event::ShowHelp => {
+                let text = self.help_text();
+                self.add_system_msg(text);
+            }
             Event::SpawnAgent => {}
         }
     }
@@ -51,85 +54,8 @@ impl AppState {
         if content.is_empty() {
             return;
         }
-        if content == "/reset" {
-            *self = AppState::default();
-            return;
-        }
-        if content == "/help" {
-            self.show_help();
-            return;
-        }
-        if let Some(rest) = content.strip_prefix("/model ") {
-            let parts: Vec<&str> = rest.splitn(2, '/').collect();
-            if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
-                self.switch_model(parts[0].to_string(), parts[1].to_string());
-            } else {
-                self.add_system_msg("Usage: /model provider/model".to_string());
-            }
-            return;
-        }
-        if content == "/model" {
-            self.add_system_msg("Usage: /model provider/model".to_string());
-            return;
-        }
-        if content == "/save" {
-            self.add_system_msg("Usage: /save name".to_string());
-            return;
-        }
-        if content == "/load" {
-            self.add_system_msg("Usage: /load name".to_string());
-            return;
-        }
-        if content == "/delete" {
-            self.add_system_msg("Usage: /delete name".to_string());
-            return;
-        }
-        if content == "/sessions" {
-            match crate::session::list() {
-                Ok(sessions) => {
-                    if sessions.is_empty() {
-                        self.add_system_msg("No saved sessions.".to_string());
-                    } else {
-                        self.add_system_msg(format!("Sessions:\n{}", sessions.join("\n")));
-                    }
-                }
-                Err(e) => self.add_system_msg(format!("Error: {}", e)),
-            }
-            return;
-        }
-        if let Some(name) = content.strip_prefix("/save ") {
-            let session = crate::session::Session {
-                name: name.to_string(),
-                created_at: now(),
-                updated_at: now(),
-                messages: self.messages.clone(),
-                provider: self.current_provider.clone(),
-                model: self.current_model.clone(),
-            };
-            match crate::session::save(name, &session) {
-                Ok(()) => self.add_system_msg(format!("Session '{}' saved.", name)),
-                Err(e) => self.add_system_msg(format!("Error saving: {}", e)),
-            }
-            return;
-        }
-        if let Some(name) = content.strip_prefix("/load ") {
-            match crate::session::load(name) {
-                Ok(session) => {
-                    self.messages = session.messages;
-                    self.current_provider = session.provider;
-                    self.current_model = session.model;
-                    self.mark_dirty();
-                    self.add_system_msg(format!("Session '{}' loaded.", name));
-                }
-                Err(e) => self.add_system_msg(format!("Error loading: {}", e)),
-            }
-            return;
-        }
-        if let Some(name) = content.strip_prefix("/delete ") {
-            match crate::session::delete(name) {
-                Ok(()) => self.add_system_msg(format!("Session '{}' deleted.", name)),
-                Err(e) => self.add_system_msg(format!("Error deleting: {}", e)),
-            }
+        if let Some(response) = self.handle_slash(&content) {
+            self.add_system_msg(response);
             return;
         }
         let id = self.next_id();
@@ -258,10 +184,131 @@ impl AppState {
         self.add_system_msg(format!("Switched to {}/{}", provider, model));
     }
 
-    fn show_help(&mut self) {
-        self.add_system_msg(
-            "Commands:\n/model provider/model — switch model\n/save name — save session\n/load name — load session\n/sessions — list sessions\n/delete name — delete session\n/reset — clear state\n/help — show this".to_string(),
-        );
+    fn handle_slash(&mut self, content: &str) -> Option<String> {
+        match content {
+            "/reset" => {
+                *self = AppState::default();
+                Some("State cleared.".to_string())
+            }
+            "/help" => Some(self.help_text()),
+            "/model" => Some(self.model_usage()),
+            "/save" => Some("Usage: /save name".to_string()),
+            "/load" => Some("Usage: /load name".to_string()),
+            "/delete" => Some("Usage: /delete name".to_string()),
+            "/sessions" => Some(self.sessions_list()),
+            _ => self.handle_slash_with_arg(content),
+        }
+    }
+
+    fn handle_slash_with_arg(&mut self, content: &str) -> Option<String> {
+        if let Some(rest) = content.strip_prefix("/model ") {
+            return Some(self.handle_model(rest));
+        }
+        if let Some(name) = content.strip_prefix("/save ") {
+            return Some(self.handle_save(name));
+        }
+        if let Some(name) = content.strip_prefix("/load ") {
+            return Some(self.handle_load(name));
+        }
+        if let Some(name) = content.strip_prefix("/delete ") {
+            return Some(self.handle_delete(name));
+        }
+        None
+    }
+
+    fn model_usage(&self) -> String {
+        format!(
+            "Current model: {}/{}. Usage: /model provider/model or /model model",
+            self.current_provider, self.current_model
+        )
+    }
+
+    fn handle_model(&mut self, rest: &str) -> String {
+        let rest = rest.trim();
+        if rest.is_empty() {
+            return self.model_usage();
+        }
+        let parts: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
+        match parts.len() {
+            2 => {
+                self.current_provider = parts[0].to_string();
+                self.current_model = parts[1].to_string();
+                format!("Switched to {}/{}", self.current_provider, self.current_model)
+            }
+            1 => {
+                self.current_model = parts[0].to_string();
+                format!("Switched to {}/{}", self.current_provider, self.current_model)
+            }
+            _ => self.model_usage(),
+        }
+    }
+
+    fn handle_save(&self, name: &str) -> String {
+        let session = crate::session::Session {
+            name: name.to_string(),
+            created_at: now(),
+            updated_at: now(),
+            messages: self.messages.clone(),
+            provider: self.current_provider.clone(),
+            model: self.current_model.clone(),
+        };
+        match crate::session::save(name, &session) {
+            Ok(()) => format!("Session '{}' saved.", name),
+            Err(e) => format!("Could not save '{}': {}", name, e),
+        }
+    }
+
+    fn handle_load(&mut self, name: &str) -> String {
+        match crate::session::load(name) {
+            Ok(session) => {
+                self.messages = session.messages;
+                self.current_provider = session.provider;
+                self.current_model = session.model;
+                self.mark_dirty();
+                format!("Session '{}' loaded.", name)
+            }
+            Err(_) => format!(
+                "Session '{}' not found. Use /sessions to list saved sessions.",
+                name
+            ),
+        }
+    }
+
+    fn handle_delete(&self, name: &str) -> String {
+        match crate::session::delete(name) {
+            Ok(()) => format!("Session '{}' deleted.", name),
+            Err(_) => format!(
+                "Session '{}' not found. Use /sessions to list saved sessions.",
+                name
+            ),
+        }
+    }
+
+    fn sessions_list(&self) -> String {
+        match crate::session::list() {
+            Ok(sessions) => {
+                if sessions.is_empty() {
+                    "No saved sessions. Use /save name to create one.".to_string()
+                } else {
+                    format!("Saved sessions:\n{}", sessions.join("\n"))
+                }
+            }
+            Err(e) => format!("Could not list sessions: {}", e),
+        }
+    }
+
+    fn help_text(&self) -> String {
+        format!(
+            "Commands:\n\
+            /model [provider/model|model] — switch model (current: {}/{})\n\
+            /save name — save current session\n\
+            /load name — load a saved session\n\
+            /sessions — list saved sessions\n\
+            /delete name — delete a saved session\n\
+            /reset — clear all state\n\
+            /help — show this help",
+            self.current_provider, self.current_model
+        )
     }
 
     fn add_system_msg(&mut self, content: String) {

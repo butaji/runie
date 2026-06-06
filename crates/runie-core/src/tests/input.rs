@@ -47,6 +47,7 @@ fn test_submit_reset_command() {
     state.update(Event::Input('t'));
     state.update(Event::Submit);
 
-    assert_eq!(state.messages.len(), 0);
+    assert_eq!(state.messages.len(), 1);
+    assert!(state.messages[0].content.contains("State cleared"), "reset confirmation: {}", state.messages[0].content);
     assert_eq!(state.input, "");
 }
