@@ -1,10 +1,10 @@
-use crate::model::{AppState, ChatMessage};
+use crate::model::ChatMessage;
 use crate::ui::transform::LazyCache;
 use crate::ui::elements::Element;
 
 #[test]
 fn test_every_message_has_spacer() {
-    let mut state = AppState::default();
+    let mut state = crate::model::AppState::default();
     state.messages.push(ChatMessage { role: "user".into(), content: "Hello".into(), timestamp: 0.0, id: "req.0".into() });
     state.messages.push(ChatMessage { role: "thought".into(), content: "Thinking...".into(), timestamp: 0.0, id: "req.0".into() });
     state.messages.push(ChatMessage { role: "assistant".into(), content: "Hi".into(), timestamp: 0.0, id: "req.0".into() });
@@ -22,7 +22,7 @@ fn test_every_message_has_spacer() {
 
 #[test]
 fn test_thinking_has_spacer() {
-    let mut state = AppState::default();
+    let mut state = crate::model::AppState::default();
     state.thinking_started_at = Some(std::time::Instant::now());
     let elements = LazyCache::rebuild(&state);
     assert!(matches!(elements[0], Element::Thinking { .. }));
@@ -31,23 +31,21 @@ fn test_thinking_has_spacer() {
 
 #[test]
 fn test_no_messages_no_elements() {
-    let state = AppState::default();
+    let state = crate::model::AppState::default();
     assert_eq!(LazyCache::rebuild(&state).len(), 0);
 }
 
 #[test]
 fn test_visible_returns_correct_slice() {
-    let mut state = AppState::default();
+    let mut state = crate::model::AppState::default();
     for i in 0..5 {
         state.messages.push(ChatMessage { role: "user".into(), content: format!("msg{}", i), timestamp: 0.0, id: format!("req.{}", i) });
     }
     state.ensure_fresh();
-    assert_eq!(state.element_count, 10);
+    assert_eq!(state.element_count(), 10);
 
-    let visible = LazyCache::visible(&state.elements_cache, 4, 4);
+    let visible = LazyCache::visible(state.elements_cache(), 4, 4);
     assert_eq!(visible.len(), 4);
-    // [msg0, sp, msg1, sp, msg2, sp, msg3, sp, msg4, sp]
-    // skip 4, take 4 = [msg2, sp, msg3, sp]
     assert!(matches!(visible[0], Element::UserMessage { .. }));
     assert!(matches!(visible[1], Element::Spacer));
     assert!(matches!(visible[2], Element::UserMessage { .. }));
@@ -56,8 +54,8 @@ fn test_visible_returns_correct_slice() {
 
 #[test]
 fn test_count_matches_cache_len() {
-    let mut state = AppState::default();
+    let mut state = crate::model::AppState::default();
     state.messages.push(ChatMessage { role: "user".into(), content: "test".into(), timestamp: 0.0, id: "req.0".into() });
     state.ensure_fresh();
-    assert_eq!(state.element_count, state.elements_cache.len());
+    assert_eq!(state.element_count(), state.elements_cache().len());
 }

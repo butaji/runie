@@ -1,4 +1,4 @@
-//! Update - State Transitions
+//! Update - State Transitions (mutable borrow pattern, no cloning)
 use crate::labels::{thought_with_time, tool_running, tool_done};
 use crate::model::{AppState, ChatMessage};
 use crate::Event;
@@ -6,59 +6,75 @@ use crate::Event;
 fn now() -> f64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs_f64()
-}
-
-pub fn update(state: AppState, event: Event) -> AppState {
-    match event {
-        Event::Input(c) => state.push_input(c),
-        Event::Backspace => state.pop_input(),
-        Event::Submit => state.submit().marking_dirty(),
-        Event::ScrollUp => state.scroll_up(),
-        Event::ScrollDown => state.scroll_down(),
-        Event::Quit => state,
-        Event::Reset => AppState::default().marking_dirty(),
-        Event::AgentThinking { id } => state.agent_thinking(id),
-        Event::AgentThoughtDone { id } => state.agent_thought_done(id),
-        Event::AgentToolStart { id, name } => state.agent_tool_start(id, name),
-        Event::AgentToolEnd { duration_secs } => state.agent_tool_end(duration_secs),
-        Event::AgentResponse { id, content } => state.agent_response(id, content),
-        Event::AgentTurnComplete { id, duration_secs } => {
-            state.agent_turn_complete(id, duration_secs)
-        }
-        Event::AgentDone { id: _ } => state.agent_done(),
-        Event::AgentError { id, message } => state.agent_error(id, message),
-        Event::SpawnAgent => state,
-    }
-}
-
-trait DirtyMark {
-    fn marking_dirty(self) -> Self;
-}
-
-impl DirtyMark for AppState {
-    fn marking_dirty(mut self) -> Self {
-        self.mark_dirty();
-        self
-    }
+        .map(|d| d.as_secs_f64())
+        .unwrap_or(0.0)
 }
 
 impl AppState {
-    fn agent_thinking(mut self, id: String) -> Self {
+    /// Update state with event - uses mutable borrow, no cloning
+    pub fn update(&mut self, event: Event) {
+        match event {
+            Event::Input(c) => self.push_input(c),
+            Event::Backspace => self.pop_input(),
+            Event::Submit => self.submit(),
+            Event::ScrollUp => self.scroll = self.scroll.saturating_add(1),
+            Event::ScrollDown => self.scroll = self.scroll.saturating_sub(1),
+            Event::Quit => {}
+            Event::Reset => *self = AppState::default(),
+            Event::AgentThinking { id } => self.set_thinking(id),
+            Event::AgentThoughtDone { id } => self.add_thought(id),
+            Event::AgentToolStart { id, name } => self.start_tool(id, name),
+            Event::AgentToolEnd { duration_secs } => self.end_tool(duration_secs),
+            Event::AgentResponse { id, content } => self.append_response(id, content),
+            Event::AgentTurnComplete { id, duration_secs } => self.complete_turn(id, duration_secs),
+            Event::AgentDone { .. } => self.finish_turn(),
+            Event::AgentError { id, message } => self.add_error(id, message),
+            Event::SpawnAgent => {}
+        }
+    }
+
+    fn push_input(&mut self, c: char) {
+        self.input.push(c);
+    }
+
+    fn pop_input(&mut self) {
+        self.input.pop();
+    }
+
+    fn submit(&mut self) {
+        if self.input.is_empty() {
+            return;
+        }
+        let content = std::mem::take(&mut self.input).trim().to_string();
+        if content.is_empty() {
+            return;
+        }
+        if content == "/reset" {
+            *self = AppState::default();
+            return;
+        }
+        let id = self.next_id();
+        self.messages.push(ChatMessage {
+            role: "user".into(),
+            content,
+            timestamp: now(),
+            id: id.clone(),
+        });
+        self.request_queue.push(id);
+        self.mark_dirty();
+    }
+
+    fn set_thinking(&mut self, id: String) {
         self.streaming = true;
         self.current_request_id = Some(id);
         self.thinking_started_at = Some(std::time::Instant::now());
         self.turn_active = true;
         self.current_action = Some("Thinking".to_string());
-        if self.turn_started_at.is_none() {
-            self.turn_started_at = Some(std::time::Instant::now());
-        }
+        self.turn_started_at.get_or_insert_with(std::time::Instant::now);
         self.mark_dirty();
-        self
     }
 
-    fn agent_thought_done(mut self, id: String) -> Self {
+    fn add_thought(&mut self, id: String) {
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
         self.current_action = None;
         self.thinking_started_at = None;
@@ -69,10 +85,9 @@ impl AppState {
             id,
         });
         self.mark_dirty();
-        self
     }
 
-    fn agent_tool_start(mut self, id: String, name: String) -> Self {
+    fn start_tool(&mut self, id: String, name: String) {
         self.current_request_id = Some(id.clone());
         self.current_tool_name = Some(name.clone());
         self.tool_started_at = Some(std::time::Instant::now());
@@ -85,10 +100,9 @@ impl AppState {
             id,
         });
         self.mark_dirty();
-        self
     }
 
-    fn agent_tool_end(mut self, duration_secs: f64) -> Self {
+    fn end_tool(&mut self, duration_secs: f64) {
         self.current_action = None;
         self.tool_started_at = None;
         if let Some(name) = self.current_tool_name.take() {
@@ -97,15 +111,14 @@ impl AppState {
             }
         }
         self.mark_dirty();
-        self
     }
 
-    fn agent_response(mut self, id: String, content: String) -> Self {
+    fn append_response(&mut self, id: String, content: String) {
         if let Some(last) = self.messages.last_mut() {
             if last.role == "assistant" && last.id == id {
                 last.content.push_str(&content);
                 self.mark_dirty();
-                return self;
+                return;
             }
         }
         self.messages.push(ChatMessage {
@@ -116,10 +129,9 @@ impl AppState {
         });
         self.current_request_id = Some(id);
         self.mark_dirty();
-        self
     }
 
-    fn agent_turn_complete(mut self, id: String, duration_secs: f64) -> Self {
+    fn complete_turn(&mut self, id: String, duration_secs: f64) {
         if self.has_intermediate_steps {
             self.messages.push(ChatMessage {
                 role: "turn_complete".into(),
@@ -130,10 +142,9 @@ impl AppState {
             self.mark_dirty();
         }
         self.turn_started_at = None;
-        self
     }
 
-    fn agent_done(mut self) -> Self {
+    fn finish_turn(&mut self) {
         self.current_request_id = None;
         self.current_tool_name = None;
         self.has_intermediate_steps = false;
@@ -142,13 +153,10 @@ impl AppState {
         if self.request_queue.is_empty() {
             self.streaming = false;
             self.thinking_started_at = None;
-        } else {
-            self.streaming = true;
         }
-        self
     }
 
-    fn agent_error(mut self, id: String, message: String) -> Self {
+    fn add_error(&mut self, id: String, message: String) {
         self.streaming = false;
         self.messages.push(ChatMessage {
             role: "assistant".into(),
@@ -157,58 +165,17 @@ impl AppState {
             id: format!("error.{}", id),
         });
         self.mark_dirty();
-        self
     }
 
-    fn push_input(mut self, c: char) -> Self {
-        self.input.push(c);
-        self
-    }
-
-    fn pop_input(mut self) -> Self {
-        self.input.pop();
-        self
-    }
-
-    fn submit(mut self) -> Self {
-        if self.input.is_empty() {
-            return self;
-        }
-        let content = self.input.trim().to_string();
-        self.input.clear();
-        if content == "/reset" {
-            return AppState::default();
-        }
-        let id = self.next_id();
-        self.messages.push(ChatMessage {
-            role: "user".into(),
-            content: content.clone(),
-            timestamp: now(),
-            id: id.clone(),
-        });
-        self.request_queue.push((content, id));
-        self
-    }
-
-    pub fn peek_queue(&self) -> Option<(String, String)> {
+    pub fn peek_queue(&self) -> Option<String> {
         self.request_queue.first().cloned()
     }
 
-    pub fn pop_queue(&mut self) -> Option<(String, String)> {
-        if self.request_queue.is_empty() {
-            None
-        } else {
+    pub fn pop_queue(&mut self) -> Option<String> {
+        if !self.request_queue.is_empty() {
             Some(self.request_queue.remove(0))
+        } else {
+            None
         }
-    }
-
-    fn scroll_up(mut self) -> Self {
-        self.scroll = self.scroll.saturating_add(1);
-        self
-    }
-
-    fn scroll_down(mut self) -> Self {
-        self.scroll = self.scroll.saturating_sub(1);
-        self
     }
 }

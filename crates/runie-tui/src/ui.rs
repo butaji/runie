@@ -42,9 +42,10 @@ fn messages(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(block, area);
 
     let height = inner.height as usize;
-    if height == 0 || state.element_count == 0 { return; }
+    let count = state.count();
+    if height == 0 || count == 0 { return; }
 
-    let scroll = state.element_count.saturating_sub(height);
+    let scroll = count.saturating_sub(height);
     let visible = state.visible(scroll, height);
 
     let mut lines = Vec::with_capacity(height);
