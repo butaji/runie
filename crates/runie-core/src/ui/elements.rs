@@ -10,17 +10,9 @@ pub enum Element {
     ToolRunning { name: String, elapsed: f64 },
     ToolDone { name: String, duration_secs: f64 },
     TurnComplete { duration_secs: f64 },
-    Group { id: String, elements: Vec<Element> },
 }
 
 impl Element {
-    pub fn id(&self) -> Option<&str> {
-        match self {
-            Element::Group { id, .. } => Some(id),
-            _ => None,
-        }
-    }
-    
     pub fn is_thought(&self) -> bool {
         matches!(self, Element::ThoughtMarker { .. })
     }

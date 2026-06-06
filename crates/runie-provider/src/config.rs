@@ -1,12 +1,30 @@
 //! Global TOML config (~/.runie/config.toml)
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ModelsSection {
+    pub default: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelProvider {
+    #[serde(rename = "type")]
+    pub provider_type: Option<String>,
+    pub base_url: String,
+    pub api_key: String,
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     pub provider: Option<String>,
     pub model: Option<String>,
+    #[serde(default)]
+    pub models: ModelsSection,
+    #[serde(default)]
+    pub model_providers: HashMap<String, ModelProvider>,
 }
 
 impl Config {
@@ -35,5 +53,14 @@ impl Config {
             .unwrap_or_else(|| PathBuf::from("."))
             .join(".runie")
             .join("config.toml")
+    }
+
+    pub fn default_model(&self) -> Option<&str> {
+        self.models.default.as_deref().or(self.model.as_deref())
+    }
+
+    pub fn provider_for_model(&self, full_model: &str) -> Option<&ModelProvider> {
+        let prefix = full_model.split('/').next().unwrap_or(full_model);
+        self.model_providers.get(prefix)
     }
 }

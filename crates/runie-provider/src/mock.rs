@@ -1,11 +1,27 @@
-//! Mock provider for testing
-
+use std::time::Duration;
 use anyhow::Result;
 use runie_core::provider::{Message, Provider, ResponseChunk};
 
-/// A mock provider that simulates LLM responses for testing.
 #[derive(Default, Clone)]
-pub struct MockProvider;
+pub struct MockProvider {
+    delay_ms: Option<(u64, u64)>,
+}
+
+impl MockProvider {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_delay(min_ms: u64, max_ms: u64) -> Self {
+        Self {
+            delay_ms: Some((min_ms, max_ms)),
+        }
+    }
+
+    pub fn delay_ms(&self) -> Option<(u64, u64)> {
+        self.delay_ms
+    }
+}
 
 impl Provider for MockProvider {
     async fn generate<F>(
@@ -16,9 +32,13 @@ impl Provider for MockProvider {
     where
         F: FnMut(ResponseChunk) + Send,
     {
+        if let Some((min, max)) = self.delay_ms {
+            let delay = rand::random::<u64>() % (max - min + 1) + min;
+            tokio::time::sleep(Duration::from_millis(delay)).await;
+        }
+
         let last = messages.last();
 
-        // If last message is a tool result, respond with a final answer
         if matches!(last, Some(Message::ToolResult { .. })) {
             on_chunk(ResponseChunk {
                 content: "Done. I have the information you requested.".to_string(),
@@ -26,7 +46,6 @@ impl Provider for MockProvider {
             return Ok(());
         }
 
-        // If user asks for files, use the list_files tool
         let user_input = messages
             .iter()
             .rev()
@@ -74,7 +93,22 @@ impl Provider for MockProvider {
             return Ok(());
         }
 
-        // Default: echo back the input word by word
+        if user_input.to_lowercase().contains("grep") || user_input.to_lowercase().contains("search")
+        {
+            on_chunk(ResponseChunk {
+                content: r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_string(),
+            });
+            return Ok(());
+        }
+
+        if user_input.to_lowercase().contains("find") || user_input.to_lowercase().contains("glob")
+        {
+            on_chunk(ResponseChunk {
+                content: r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
+            });
+            return Ok(());
+        }
+
         for word in user_input.split_whitespace() {
             on_chunk(ResponseChunk {
                 content: format!("{} ", word),

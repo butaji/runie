@@ -8,9 +8,9 @@ use crate::{
     Tool, run_agent_turn,
 };
 
-// ============================================================================
-// Layer 1: Bash Safety
-// ============================================================================
+
+
+
 
 #[test]
 fn test_bash_safety_rm_rf_root() {
@@ -56,9 +56,9 @@ fn test_bash_safety_safe_commands() {
     assert!(check_bash_safety("git status").is_none());
 }
 
-// ============================================================================
-// Layer 1: Tool Parsing (Pure Functions)
-// ============================================================================
+
+
+
 
 #[test]
 fn test_parse_read_file_tool() {
@@ -137,9 +137,9 @@ fn test_parse_tool_with_extra_colons_in_content() {
     });
 }
 
-// ============================================================================
-// Layer 1: Structured Tool Parsing (JSON format)
-// ============================================================================
+
+
+
 
 #[test]
 fn test_parse_structured_edit_tool() {
@@ -186,9 +186,9 @@ fn test_parse_unknown_structured_tool_ignored() {
     assert!(tools.is_empty());
 }
 
-// ============================================================================
-// Layer 1: Diff-based Editing
-// ============================================================================
+
+
+
 
 #[test]
 fn test_edit_file_success() {
@@ -250,9 +250,9 @@ fn test_edit_file_empty_search() {
     let _ = std::fs::remove_file(path);
 }
 
-// ============================================================================
-// Layer 1: Tool Execution (Pure Functions / IO)
-// ============================================================================
+
+
+
 
 #[test]
 fn test_tool_read_file_exists() {
@@ -326,9 +326,9 @@ fn test_tool_result_structure() {
     assert!(result.success);
 }
 
-// ============================================================================
-// Layer 1: Agent Command Structure
-// ============================================================================
+
+
+
 
 #[test]
 fn test_agent_command_structure() {
@@ -343,9 +343,9 @@ fn test_agent_command_structure() {
     assert_eq!(cmd.id, "req.0");
 }
 
-// ============================================================================
-// Layer 2: Agent Loop (Event Handling)
-// ============================================================================
+
+
+
 
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
@@ -413,7 +413,7 @@ async fn test_agent_loop_respects_max_iterations() {
         3,
     ).await.unwrap();
 
-    // Mock provider echoes words, doesn't infinite loop
+
     assert!(!events.is_empty());
 }
 

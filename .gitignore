@@ -1,1 +1,4 @@
 target/
+/SuperAGI
+/autogen
+/crewAI

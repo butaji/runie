@@ -10,3 +10,11 @@ mod flow;
 mod misc;
 #[cfg(test)]
 pub mod slash;
+#[cfg(test)]
+mod tokens;
+#[cfg(test)]
+mod queue;
+#[cfg(test)]
+mod compaction;
+#[cfg(test)]
+mod file_refs;

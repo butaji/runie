@@ -5,14 +5,14 @@ pub const PREFIX_USER: &str = "You: ";
 pub const PREFIX_AGENT: &str = "Agent: ";
 
 pub const SPINNER: &str = "⠋";
-pub const THINKING_LOADING: &str = "Though...";
+pub const THINKING_LOADING: &str = "Thinking...";
 
 pub fn thinking_with_time(seconds: f64) -> String {
-    format!("{} Though... {:.1}s", SPINNER, seconds)
+    format!("{} Thinking... {:.1}s", SPINNER, seconds)
 }
 
 pub fn thought_with_time(seconds: f64) -> String {
-    format!("◆ Though {:.1}s", seconds)
+    format!("◆ Thought {:.1}s", seconds)
 }
 
 pub fn tool_running(name: &str) -> String {

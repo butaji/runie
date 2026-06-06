@@ -5,7 +5,7 @@ use crate::{MockProvider, model::{ModelId, ModelRegistry, builtin_providers, Pro
 
 #[tokio::test]
 async fn test_mock_provider_generates_chunks() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![Message::User { content: "Hello World".to_string() }];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -17,7 +17,7 @@ async fn test_mock_provider_generates_chunks() {
 
 #[tokio::test]
 async fn test_mock_provider_empty_input() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -27,7 +27,7 @@ async fn test_mock_provider_empty_input() {
 
 #[tokio::test]
 async fn test_mock_provider_single_word() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![Message::User { content: "Hello".to_string() }];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -38,7 +38,7 @@ async fn test_mock_provider_single_word() {
 
 #[tokio::test]
 async fn test_mock_provider_triggers_list_files() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![Message::User { content: "list files".to_string() }];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -49,7 +49,7 @@ async fn test_mock_provider_triggers_list_files() {
 
 #[tokio::test]
 async fn test_mock_provider_triggers_read_file() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![Message::User { content: "read the readme".to_string() }];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -60,7 +60,7 @@ async fn test_mock_provider_triggers_read_file() {
 
 #[tokio::test]
 async fn test_mock_provider_triggers_write_file() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![Message::User { content: "write something".to_string() }];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -71,7 +71,7 @@ async fn test_mock_provider_triggers_write_file() {
 
 #[tokio::test]
 async fn test_mock_provider_triggers_bash() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![Message::User { content: "run command".to_string() }];
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
@@ -82,7 +82,7 @@ async fn test_mock_provider_triggers_bash() {
 
 #[tokio::test]
 async fn test_mock_provider_follows_up_after_tool_result() {
-    let provider = MockProvider;
+    let provider = MockProvider::default();
     let messages = vec![
         Message::User { content: "list files".to_string() },
         Message::Assistant { content: "TOOL:list_dir:.".to_string() },
@@ -180,4 +180,20 @@ fn test_registry_has_bedrock_models() {
     let registry = ModelRegistry::default();
     let bedrock = registry.by_provider("amazon-bedrock");
     assert!(!bedrock.is_empty());
+}
+
+#[tokio::test]
+async fn mock_provider_default_no_delay() {
+    let p = MockProvider::default();
+    let start = std::time::Instant::now();
+    let mut chunks = Vec::new();
+    p.generate(vec![Message::User { content: "test".to_string() }], |c| chunks.push(c)).await.unwrap();
+    assert!(start.elapsed() < std::time::Duration::from_millis(50));
+    assert!(!chunks.is_empty());
+}
+
+#[test]
+fn mock_provider_with_delay_configured() {
+    let p = MockProvider::with_delay(500, 3000);
+    assert_eq!(p.delay_ms(), Some((500, 3000)));
 }

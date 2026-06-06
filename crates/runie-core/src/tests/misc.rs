@@ -1,6 +1,7 @@
 use crate::model::{AppState, Role};
 use crate::event::Event;
-use crate::ui::format_messages;
+#[cfg(test)]
+use crate::ui::format_test::format_messages;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -58,7 +59,7 @@ fn test_tool_flow_creates_two_thoughts() {
 #[test]
 fn test_turn_complete_event() {
     let mut state = fresh_state();
-    state.has_intermediate_steps = true;
+    state.intermediate_step_count = 1;
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
     assert_eq!(state.messages.len(), 1);
     let msg = &state.messages[0];
@@ -67,7 +68,7 @@ fn test_turn_complete_event() {
 }
 
 #[test]
-fn test_turn_complete_not_shown_for_simple_flow() {
+fn test_turn_complete_always_added_when_event_received() {
     let mut state = fresh_state();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".to_string() });
@@ -75,7 +76,7 @@ fn test_turn_complete_not_shown_for_simple_flow() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hi".to_string() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 1.0 });
     let has_turn_complete = state.messages.iter().any(|m| m.role == Role::TurnComplete);
-    assert!(!has_turn_complete, "Simple flow should not show turn complete");
+    assert!(has_turn_complete, "Core should always add TurnComplete when event is received; agent decides whether to emit it");
 }
 
 #[test]
@@ -128,11 +129,26 @@ fn test_list_files_full_tool_flow_sequence() {
     let content: String = lines.iter()
         .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
         .collect();
-    assert!(content.contains("Though"));
+    assert!(content.contains("Thought"));
     assert!(content.contains("Ran"));
     assert!(content.contains("list_files"));
     assert!(content.contains("Agent:"));
     assert!(content.contains("Turn completed in 5.1s"));
+}
+
+#[test]
+fn test_turn_complete_shows_even_if_done_arrives_first() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are files".to_string() });
+    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 3.2 });
+    let has_turn_complete = state.messages.iter().any(|m| m.role == Role::TurnComplete);
+    assert!(has_turn_complete, "TurnComplete should show even if Done event arrives before TurnComplete");
 }
 
 #[test]
@@ -165,7 +181,7 @@ fn test_save_and_load_session() {
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::set_var("RUNIE_SESSIONS_DIR", &tmp);
 
-    // Save a session
+
     let mut state = fresh_state();
     state.update(Event::Input('h'));
     state.update(Event::Input('i'));
@@ -176,7 +192,7 @@ fn test_save_and_load_session() {
     state.update(Event::Submit);
     assert!(state.messages.iter().any(|m| m.role == Role::System && m.content.contains("saved")));
 
-    // Load it into a fresh state
+
     let mut state2 = fresh_state();
     for c in "/load test_session".chars() {
         state2.update(Event::Input(c));
