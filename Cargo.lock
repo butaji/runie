@@ -1287,7 +1287,6 @@ version = "0.1.0"
 dependencies = [
  "ratatui",
  "runie-core",
- "tui-scrollview",
 ]
 
 [[package]]
@@ -1637,17 +1636,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "tui-scrollview"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94a94f467c7ac7c291039b0733e3b2d379c77884e34fc27d167921fc1ab4842f"
-dependencies = [
- "indoc",
- "ratatui-core",
- "ratatui-widgets",
 ]
 
 [[package]]

@@ -2,10 +2,10 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
+    text::Line,
     widgets::Paragraph,
     Frame,
 };
-use tui_scrollview::{ScrollView, ScrollViewState};
 
 use runie_core::{AppState, Dsl, PANEL_CHAT, PANEL_INPUT, Element};
 
@@ -43,27 +43,58 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     f.render_widget(block, area);
 
     let total = Dsl::count(state);
-    if total == 0 {
+    if total == 0 || inner.height == 0 {
         return;
     }
 
     // Get all elements
     let elements = Dsl::visible(state, 0, total);
-    let height = elements.len() as u16;
     
-    // Create scrollview
-    let mut scroll_view = ScrollView::new(ratatui::layout::Size::new(inner.width, height.max(1)));
+    // Build wrapped lines
+    let width = inner.width as usize;
+    let mut lines: Vec<Line> = Vec::new();
     
-    // Render elements into scrollview buffer
     for elem in &elements {
         let text = element_to_text(elem, state);
-        let paragraph = Paragraph::new(text);
-        scroll_view.render_widget(paragraph, inner);
+        if text.is_empty() {
+            lines.push(Line::from(""));
+            continue;
+        }
+        // Simple word wrap
+        for line in wrap_text(&text, width) {
+            lines.push(Line::from(line));
+        }
     }
     
-    // Need to manage ScrollViewState - use a default for now
-    let mut scroll_state = ScrollViewState::default();
-    f.render_stateful_widget(scroll_view, inner, &mut scroll_state);
+    // Render with Paragraph (auto-wrap)
+    let paragraph = Paragraph::new(lines)
+        .style(Style::default().fg(ratatui::style::Color::White));
+    f.render_widget(paragraph, inner);
+}
+
+fn wrap_text(text: &str, width: usize) -> Vec<String> {
+    if width == 0 {
+        return vec![text.to_string()];
+    }
+    
+    let mut result = Vec::new();
+    for paragraph in text.lines() {
+        let mut remaining = paragraph;
+        while !remaining.is_empty() {
+            if remaining.len() <= width {
+                result.push(remaining.to_string());
+                break;
+            }
+            // Find last space within width
+            let cut = remaining[..width.min(remaining.len())]
+                .rfind(' ')
+                .map(|i| i)
+                .unwrap_or(width.min(remaining.len()));
+            result.push(remaining[..cut].to_string());
+            remaining = remaining[cut..].trim_start();
+        }
+    }
+    result
 }
 
 fn element_to_text(element: &Element, state: &AppState) -> String {
