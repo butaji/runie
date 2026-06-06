@@ -130,6 +130,10 @@ impl AppState {
             self.dirty = true;
         }
     }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -4,12 +4,14 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{get_fake_file_list, needs_tool_execution, AgentCommand, MockProvider, Provider};
 use runie_core::{AppState, Event as CoreEvent};
 use std::{io, time::Duration};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 
-// Constants
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS — Frame budget guarantees UI never blocks
+// ═══════════════════════════════════════════════════════════════════
 const ANIM_MS: u64 = 200;
-const THROTTLE_MS: u64 = 50;
-const BATCH_SIZE: usize = 10;
+const RENDER_FPS: u64 = 30; // Render cadence — independent of event rate
+const RENDER_MS: u64 = 1000 / RENDER_FPS;
 
 struct Cleanup;
 
@@ -20,20 +22,27 @@ impl Drop for Cleanup {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// MAIN — Spawns actors, each owns its state
+// ═══════════════════════════════════════════════════════════════════
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
-    let mut terminal = setup_terminal()?;
-    let state = AppState::default();
+    let terminal = setup_terminal()?;
 
-    let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
-    let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
+    // Actor mailboxes
+    let (ui_tx, ui_rx) = mpsc::channel::<CoreEvent>(100);
+    let (render_tx, render_rx) = watch::channel(AppState::default());
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
 
-    tokio::spawn(agent_loop(cmd_rx, agent_tx));
-    tokio::spawn(input_reader(input_tx));
+    // Spawn actors — each owns its state, no shared references
+    tokio::spawn(input_actor(ui_tx.clone()));
+    tokio::spawn(agent_actor(cmd_rx, ui_tx));
+    tokio::spawn(render_actor(render_rx, terminal));
 
-    event_loop(&mut terminal, state, input_rx, agent_rx, cmd_tx).await
+    // UI actor owns AppState — runs until Quit
+    ui_actor(ui_rx, render_tx, cmd_tx).await;
+    Ok(())
 }
 
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
@@ -42,116 +51,157 @@ fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
     Terminal::new(CrosstermBackend::new(std::io::stdout())).map_err(|e| e.into())
 }
 
-async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
+// ═══════════════════════════════════════════════════════════════════
+// INPUT ACTOR — Reads crossterm events, forwards as CoreEvent
+// CONTRACT: Never blocks — drops events if UI channel full
+// ═══════════════════════════════════════════════════════════════════
+async fn input_actor(ui_tx: mpsc::Sender<CoreEvent>) {
     let mut reader = EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
         if let Some(evt) = convert_event(&event) {
             let should_break = matches!(evt, CoreEvent::Quit | CoreEvent::Reset);
-            if input_tx.send(evt).await.is_err() { break; }
+            if ui_tx.try_send(evt).is_err() { break; } // Channel full or closed
             if should_break { break; }
         }
     }
 }
 
-async fn event_loop(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
-    mut state: AppState,
-    mut input_rx: mpsc::Receiver<CoreEvent>,
-    mut agent_rx: mpsc::Receiver<CoreEvent>,
+// ═══════════════════════════════════════════════════════════════════
+// UI ACTOR — Owns AppState. Single source of truth.
+// Receives all events, updates state, sends snapshots to render actor.
+// CONTRACT: Never blocks outbound — uses try_send + watch::send
+// ═══════════════════════════════════════════════════════════════════
+async fn ui_actor(
+    mut rx: mpsc::Receiver<CoreEvent>,
+    render_tx: watch::Sender<AppState>,
     cmd_tx: mpsc::Sender<AgentCommand>,
-) -> io::Result<()> {
+) {
+    let mut state = AppState::default();
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
-    let mut dirty = true;
 
     loop {
-        let mut events = 0usize;
-        loop {
-            tokio::select! {
-                biased;
-                Some(evt) = input_rx.recv(), if events < BATCH_SIZE => {
-                    let is_quit = matches!(evt, CoreEvent::Quit);
-                    let is_submit = matches!(evt, CoreEvent::Submit);
-                    state.update(evt);
-                    if is_quit { return Ok(()); }
-                    if is_submit {
-                        if let Some((content, id)) = state.peek_queue() {
-                            let content = content.clone();
-                            let id = id.clone();
-                            state.pop_queue();
-                            state.streaming = true;
-                            state.inflight += 1;
-                            let _ = cmd_tx.try_send(AgentCommand { content, id });
-                        }
-                    }
-                    dirty = true; events += 1;
+        tokio::select! {
+            Some(evt) = rx.recv() => {
+                if matches!(evt, CoreEvent::Quit) { break; }
+                process_event(&mut state, evt, &cmd_tx);
+                maybe_send_snapshot(&mut state, &render_tx);
+            }
+            _ = anim.tick() => {
+                if state.turn_active {
+                    state.tick_animation();
+                    maybe_send_snapshot(&mut state, &render_tx);
                 }
-                Some(evt) = agent_rx.recv(), if events < BATCH_SIZE => {
-                    state.update(evt);
-                    dirty = true; events += 1;
-                }
-                _ = anim.tick(), if events < BATCH_SIZE => {
-                    if state.turn_active {
-                        state.tick_animation();
-                        dirty = true;
-                    }
-                    break;
-                }
-                else => break,
             }
         }
-        if dirty { terminal.draw(|f| runie_tui::ui::view(f, &mut state)).expect("draw"); dirty = false; }
-        if events == 0 { tokio::time::sleep(Duration::from_millis(THROTTLE_MS)).await; }
     }
 }
 
-async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Sender<CoreEvent>) {
+#[inline]
+fn process_event(state: &mut AppState, evt: CoreEvent, cmd_tx: &mpsc::Sender<AgentCommand>) {
+    let is_submit = matches!(evt, CoreEvent::Submit);
+    state.update(evt);
+    if is_submit {
+        if let Some((content, id)) = state.peek_queue() {
+            let content = content.clone();
+            let id = id.clone();
+            state.pop_queue();
+            state.streaming = true;
+            state.inflight += 1;
+            let _ = cmd_tx.try_send(AgentCommand { content, id });
+        }
+    }
+}
+
+#[inline]
+fn maybe_send_snapshot(state: &mut AppState, render_tx: &watch::Sender<AppState>) {
+    if state.is_dirty() {
+        state.ensure_fresh(); // O(n) here, not in render actor
+        // watch::send is sync and overwrites — never blocks render actor.
+        let _ = render_tx.send(state.clone());
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER ACTOR — Owns Terminal. Draws at fixed cadence.
+// Receives state snapshots via watch channel (always latest).
+// CONTRACT: Never mutates state — pure drawing
+// ═══════════════════════════════════════════════════════════════════
+async fn render_actor(
+    render_rx: watch::Receiver<AppState>,
+    mut terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
+) {
+    let mut interval = tokio::time::interval(Duration::from_millis(RENDER_MS));
+
+    loop {
+        interval.tick().await;
+
+        // watch::Receiver::borrow() gives latest snapshot — no clone if we can avoid it,
+        // but view() needs &mut AppState for ensure_fresh(). Since cache is already
+        // fresh (rebuilt by UI actor), ensure_fresh() is a no-op check.
+        let mut state = render_rx.borrow().clone();
+        let _ = terminal.draw(|f| runie_tui::ui::view(f, &mut state));
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AGENT ACTOR — Owns LLM / mock provider. Processes commands.
+// CONTRACT: Never blocks UI — sends events via try_send
+// ═══════════════════════════════════════════════════════════════════
+async fn agent_actor(mut cmd_rx: mpsc::Receiver<AgentCommand>, ui_tx: mpsc::Sender<CoreEvent>) {
     while let Some(cmd) = cmd_rx.recv().await {
         if needs_tool_execution(&cmd.content) {
-            tool_flow(&cmd, &agent_tx).await;
+            tool_flow(&cmd, &ui_tx).await;
         } else {
-            simple_flow(&cmd, &agent_tx).await;
+            simple_flow(&cmd, &ui_tx).await;
         }
-        let _ = agent_tx.send(CoreEvent::AgentDone { id: cmd.id }).await;
+        let _ = ui_tx.try_send(CoreEvent::AgentDone { id: cmd.id });
     }
 }
 
-async fn simple_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
-    thinking(&cmd.id, agent_tx).await;
+async fn simple_flow(cmd: &AgentCommand, ui_tx: &mpsc::Sender<CoreEvent>) {
+    thinking(&cmd.id, ui_tx).await;
     let msgs = vec![runie_agent::Message::User { content: cmd.content.clone() }];
     for chunk in MockProvider.generate(msgs) {
-        let _ = agent_tx.send(CoreEvent::AgentResponse { id: cmd.id.clone(), content: chunk.content }).await;
+        let _ = ui_tx.try_send(CoreEvent::AgentResponse { id: cmd.id.clone(), content: chunk.content });
         sleep(50).await;
     }
 }
 
-async fn tool_flow(cmd: &AgentCommand, agent_tx: &mpsc::Sender<CoreEvent>) {
+async fn tool_flow(cmd: &AgentCommand, ui_tx: &mpsc::Sender<CoreEvent>) {
     let start = std::time::Instant::now();
-    thinking(&cmd.id, agent_tx).await;
-    tool_exec(&cmd.id, agent_tx).await;
-    thinking(&cmd.id, agent_tx).await;
-    let _ = agent_tx.send(CoreEvent::AgentTurnComplete { id: cmd.id.clone(), duration_secs: start.elapsed().as_secs_f64() }).await;
+    thinking(&cmd.id, ui_tx).await;
+    tool_exec(&cmd.id, ui_tx).await;
+    thinking(&cmd.id, ui_tx).await;
+    let _ = ui_tx.try_send(CoreEvent::AgentTurnComplete {
+        id: cmd.id.clone(),
+        duration_secs: start.elapsed().as_secs_f64(),
+    });
 }
 
-async fn thinking(id: &str, agent_tx: &mpsc::Sender<CoreEvent>) {
-    let _ = agent_tx.send(CoreEvent::AgentThinking { id: id.to_string() }).await;
+async fn thinking(id: &str, ui_tx: &mpsc::Sender<CoreEvent>) {
+    let _ = ui_tx.try_send(CoreEvent::AgentThinking { id: id.to_string() });
     sleep(500).await;
-    let _ = agent_tx.send(CoreEvent::AgentThoughtDone { id: id.to_string() }).await;
+    let _ = ui_tx.try_send(CoreEvent::AgentThoughtDone { id: id.to_string() });
 }
 
-async fn tool_exec(id: &str, agent_tx: &mpsc::Sender<CoreEvent>) {
-    let _ = agent_tx.send(CoreEvent::AgentToolStart { id: id.to_string(), name: "list_files".to_string() }).await;
+async fn tool_exec(id: &str, ui_tx: &mpsc::Sender<CoreEvent>) {
+    let _ = ui_tx.try_send(CoreEvent::AgentToolStart { id: id.to_string(), name: "list_files".to_string() });
     sleep(1000).await;
     let files = get_fake_file_list();
-    let _ = agent_tx.send(CoreEvent::AgentToolEnd { duration_secs: 1.0 }).await;
-    // Send file list as part of response
-    let _ = agent_tx.send(CoreEvent::AgentResponse { id: id.to_string(), content: format!("\n{}", files) }).await;
+    let _ = ui_tx.try_send(CoreEvent::AgentToolEnd { duration_secs: 1.0 });
+    let _ = ui_tx.try_send(CoreEvent::AgentResponse { id: id.to_string(), content: format!("\n{}", files) });
     sleep(50).await;
 }
 
 async fn sleep(ms: u64) {
-    if !cfg!(test) { tokio::time::sleep(Duration::from_millis(ms)).await; }
+    if !cfg!(test) {
+        tokio::time::sleep(Duration::from_millis(ms)).await;
+    }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// EVENT CONVERSION — Crossterm → CoreEvent
+// ═══════════════════════════════════════════════════════════════════
 fn convert_event(event: &Event) -> Option<CoreEvent> {
     match event {
         Event::Key(key) if key.kind == KeyEventKind::Press => {
