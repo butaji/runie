@@ -104,7 +104,7 @@ fn test_model_registry_default_not_empty() {
 fn test_model_registry_find_exists() {
     let registry = ModelRegistry::default();
     assert!(registry.find("openai/gpt-4o").is_some());
-    assert!(registry.find("anthropic/claude-sonnet-4").is_some());
+    assert!(registry.find("anthropic/claude-sonnet-4-6").is_some());
     assert!(registry.find("mock/echo").is_some());
 }
 
