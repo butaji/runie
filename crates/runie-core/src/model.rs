@@ -15,7 +15,7 @@ pub struct AppState {
     pub streaming: bool,
     pub scroll: usize,
     pub thinking_started_at: Option<std::time::Instant>,
-    pub request_queue: Vec<String>,
+    pub request_queue: Vec<(String, String)>,  // (content, id)
     pub next_id: u64,
     pub current_request_id: Option<String>,
     pub turn_started_at: Option<std::time::Instant>,

@@ -32,7 +32,7 @@ fn test_dsl_combines_consecutive_agent_chunks() {
 fn test_thinking_indicator_shows_for_queued_request() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.request_queue.push("B".to_string());
+    state.request_queue.push(("B".to_string(), "req.1".to_string()));
     state.thinking_started_at = Some(std::time::Instant::now());
     assert!(state.messages.iter().all(|m| m.role != "thought"));
 }
@@ -41,7 +41,7 @@ fn test_thinking_indicator_shows_for_queued_request() {
 fn test_dsl_shows_thinking_when_streaming() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.request_queue.push("B".to_string());
+    state.request_queue.push(("B".to_string(), "req.1".to_string()));
     state.thinking_started_at = Some(std::time::Instant::now());
 
     let lines = format_messages(&state);

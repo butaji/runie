@@ -71,8 +71,7 @@ async fn event_loop(
                     state.update(evt.clone());
                     if matches!(evt, CoreEvent::Quit) { return Ok(()); }
                     if matches!(evt, CoreEvent::Submit) {
-                        if let Some(content) = state.peek_queue() {
-                            let id = state.next_id();
+                        if let Some((content, id)) = state.peek_queue() {
                             state.pop_queue();
                             state.streaming = true;
                             let _ = cmd_tx.send(AgentCommand { content, id }).await;
