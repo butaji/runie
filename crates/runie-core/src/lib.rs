@@ -17,10 +17,10 @@ pub mod provider;
 #[cfg(test)]
 mod tests;
 
-pub use model::{AppState, ChatMessage};
+pub use model::{AppState, ChatMessage, PANEL_CHAT, PANEL_INPUT};
 pub use event::Event;
 pub use labels::{
-    PANEL_CHAT, PANEL_INPUT, PREFIX_USER, PREFIX_AGENT,
+    PREFIX_USER, PREFIX_AGENT,
     THINKING_LOADING, thinking_with_time, thought_with_time,
 };
 pub use ui::{

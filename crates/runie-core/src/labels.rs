@@ -1,7 +1,6 @@
 //! All static labels and text constants
+//! PANEL_CHAT and PANEL_INPUT are defined in model.rs
 
-pub const PANEL_CHAT: &str = " Chat ";
-pub const PANEL_INPUT: &str = " Input ";
 pub const PREFIX_USER: &str = "You: ";
 pub const PREFIX_AGENT: &str = "Agent: ";
 
