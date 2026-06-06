@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use runie_core::{AppState, Dsl, PANEL_CHAT, PANEL_INPUT, Element};
+use runie_core::{AppState, PANEL_CHAT, PANEL_INPUT, Element};
 
 /// View function - renders state to terminal
 pub fn view(f: &mut Frame, state: &AppState) {
@@ -42,28 +42,28 @@ fn messages_view(f: &mut Frame, state: &AppState, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    let total = Dsl::count(state);
+    let total = state.count();
     let visible_height = inner.height as usize;
     
     if total == 0 || visible_height == 0 {
         return;
     }
 
-    // Auto-scroll to bottom - only show last visible_height elements
+    // Auto-scroll to bottom
     let scroll = if total > visible_height {
         total - visible_height
     } else {
         0
     };
     
-    // Get only visible elements - O(visible) not O(total)
-    let elements = Dsl::visible(state, scroll, visible_height);
+    // Get visible elements as slice - zero allocation
+    let elements = state.visible(scroll, visible_height);
     
     // Build lines for visible only
     let width = inner.width as usize;
     let mut lines: Vec<Line> = Vec::with_capacity(visible_height);
     
-    for elem in &elements {
+    for elem in elements {
         let text = element_to_text(elem, state);
         if text.is_empty() {
             lines.push(Line::from(""));

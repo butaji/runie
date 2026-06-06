@@ -86,7 +86,8 @@ fn test_render_user_message() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     
-    let state = update(update(AppState::default(), Event::Input('H')), Event::Submit);
+    let mut state = update(update(AppState::default(), Event::Input('H')), Event::Submit);
+    state.ensure_fresh();
     terminal.draw(|f| view(f, &state)).unwrap();
     
     let buf = terminal.backend().buffer();
@@ -107,7 +108,7 @@ fn test_render_agent_response() {
     state = update(state, Event::AgentThinking { id: "req.0".to_string() });
     state = update(state, Event::AgentThoughtDone { id: "req.0".to_string() });
     state = update(state, Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
-    
+    state.ensure_fresh();
     terminal.draw(|f| view(f, &state)).unwrap();
     
     let buf = terminal.backend().buffer();
@@ -123,11 +124,11 @@ fn test_render_thinking_indicator() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     
-    let state = update(
+    let mut state = update(
         update(AppState::default(), Event::Submit),
         Event::AgentThinking { id: "req.0".to_string() }
     );
-    
+    state.ensure_fresh();
     terminal.draw(|f| view(f, &state)).unwrap();
     
     let buf = terminal.backend().buffer();

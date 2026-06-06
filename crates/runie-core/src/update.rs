@@ -16,9 +16,8 @@ pub fn update(state: AppState, event: Event) -> AppState {
         Event::Input(c) => return state.push_input(c),
         Event::Backspace => return state.pop_input(),
         Event::Submit => {
-            let state = state.submit();
-            let mut state = state;
-            state.update_element_count();
+            let mut state = state.submit();
+            state.mark_dirty();
             state
         }
         Event::ScrollUp => return state.scroll_up(),
@@ -28,7 +27,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
         Event::Quit => return state,
         Event::Reset => {
             let mut state = AppState::default();
-            state.update_element_count();
+            state.mark_dirty();
             return state;
         }
         
@@ -44,7 +43,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             if state.turn_started_at.is_none() {
                 state.turn_started_at = Some(std::time::Instant::now());
             }
-            state.update_element_count();
+            state.mark_dirty();
             state
         }
         Event::AgentThoughtDone { id } => {
@@ -59,7 +58,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id,
             });
-            state.update_element_count();
+            state.mark_dirty();
             state
         }
         Event::AgentToolStart { id, name } => {
@@ -76,20 +75,19 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id,
             });
-            state.update_element_count();
+            state.mark_dirty();
             state
         }
         Event::AgentToolEnd { duration_secs } => {
             let mut state = state;
-            state.current_action = None;  // Clear action when tool done
+            state.current_action = None;
             state.tool_started_at = None;
-            let mut state = state;
-            // Replace "Running" with "Ran Xs" in the last tool message
             if let Some(name) = state.current_tool_name.take() {
                 if let Some(last_msg) = state.messages.iter_mut().rev().find(|m| m.role == "tool") {
                     last_msg.content = tool_done(&name, duration_secs);
                 }
             }
+            state.mark_dirty();
             state
         }
         Event::AgentResponse { id, content } => {
@@ -99,6 +97,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
             if let Some(last) = state.messages.last_mut() {
                 if last.role == "assistant" && last.id == id {
                     last.content.push_str(&content);
+                    state.mark_dirty();
                     return state;
                 }
             }
@@ -109,13 +108,12 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id: id.clone(),
             });
-            state.update_element_count();
+            state.mark_dirty();
             state.current_request_id = Some(id);
             state
         }
         Event::AgentTurnComplete { id, duration_secs } => {
             let mut state = state;
-            // Only show "Turn completed" if there were intermediate steps
             if state.has_intermediate_steps {
                 state.messages.push(ChatMessage {
                     role: "turn_complete".into(),
@@ -123,7 +121,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                     timestamp: now(),
                     id,
                 });
-                state.update_element_count();
+                state.mark_dirty();
             }
             state.turn_started_at = None;
             state
@@ -152,7 +150,7 @@ pub fn update(state: AppState, event: Event) -> AppState {
                 timestamp: now(),
                 id: format!("error.{}", id),
             });
-            state.update_element_count();
+            state.mark_dirty();
             state
         }
         Event::SpawnAgent => return state,

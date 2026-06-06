@@ -11,17 +11,14 @@ impl Dsl {
         state.element_count
     }
     
-    /// Get visible elements - O(take) by slicing cached elements
-    pub fn visible(state: &AppState, skip: usize, take: usize) -> Vec<Element> {
-        let cache = &state.elements_cache;
-        let start = skip.min(cache.len());
-        let end = (skip + take).min(cache.len());
-        cache[start..end].to_vec()
+    /// Get visible elements as slice - O(1), zero allocation
+    pub fn visible(state: &AppState, skip: usize, take: usize) -> &[Element] {
+        state.visible(skip, take)
     }
     
-    /// Build elements cache - O(n), called only when messages change
+    /// Build elements cache - O(n), called lazily
     pub fn build_elements(state: &AppState) -> Vec<Element> {
-        let mut elements = Vec::new();
+        let mut elements = Vec::with_capacity(state.messages.len() * 2);
         
         for msg in &state.messages {
             let role = msg.role.as_str();
