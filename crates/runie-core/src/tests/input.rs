@@ -71,3 +71,34 @@ fn typing_without_at_clears_query_tracker() {
     assert!(state.at_suggestions.is_none(), "Typing without @ should not trigger suggestions");
     assert!(state.last_at_query.is_none());
 }
+
+#[test]
+fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
+    let mut state = fresh_state();
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.ensure_fresh();
+    let gen_before = state.cache_generation();
+    state.update(Event::Input('x'));
+    assert!(state.is_dirty(), "Input change should mark dirty for render");
+    assert_eq!(state.cache_generation(), gen_before, "Input change must NOT bump cache generation");
+}
+
+#[test]
+fn message_change_bumps_cache_gen() {
+    let mut state = fresh_state();
+    state.ensure_fresh();
+    let gen_before = state.cache_generation();
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    assert!(state.cache_generation() > gen_before, "Message change must bump cache generation");
+}
+
+#[test]
+fn ensure_fresh_skips_rebuild_when_only_input_changed() {
+    let mut state = fresh_state();
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.ensure_fresh();
+    let cache_before = state.elements_cache().len();
+    state.update(Event::Input('x'));
+    state.ensure_fresh();
+    assert_eq!(state.elements_cache().len(), cache_before, "Only input change should skip cache rebuild");
+}

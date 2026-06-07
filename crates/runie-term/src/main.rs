@@ -15,8 +15,9 @@ use std::{io, time::Duration};
 use tokio::sync::mpsc;
 
 
-const ANIM_MS: u64 = 200;
-const THROTTLE_MS: u64 = 50;
+
+
+const ANIM_MS: u64 = 16;
 const BATCH_SIZE: usize = 10;
 
 struct Cleanup;
@@ -113,9 +114,7 @@ async fn event_loop(
             dirty = false;
         }
 
-        if events == 0 {
-            tokio::time::sleep(Duration::from_millis(THROTTLE_MS)).await;
-        }
+
     }
 }
 
@@ -155,6 +154,14 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
             provider: state.current_provider.clone(),
             model: state.current_model.clone(),
         }).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn animation_interval_supports_60fps() {
+        assert!(super::ANIM_MS <= 17, "ANIM_MS must be <= 17ms for 60fps, got {}", super::ANIM_MS);
     }
 }
 
