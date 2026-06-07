@@ -70,7 +70,7 @@ impl AppState {
                     } else {
                         self.collapsed_thoughts.insert(msg.id.clone());
                     }
-                    self.mark_dirty();
+                    self.messages_changed();
                 }
                 Role::Tool => {
                     if self.collapsed_tools.contains(&msg.id) {
@@ -78,7 +78,7 @@ impl AppState {
                     } else {
                         self.collapsed_tools.insert(msg.id.clone());
                     }
-                    self.mark_dirty();
+                    self.messages_changed();
                 }
                 _ => {}
             }
@@ -93,7 +93,7 @@ impl AppState {
             } else {
                 self.collapsed_thoughts.insert(id);
             }
-            self.mark_dirty();
+            self.messages_changed();
         }
     }
 
@@ -105,7 +105,7 @@ impl AppState {
             } else {
                 self.collapsed_tools.insert(id);
             }
-            self.mark_dirty();
+            self.messages_changed();
         }
     }
 
