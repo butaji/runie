@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use runie_core::provider::{Message, Provider};
-use runie_provider::{AnyProvider, MockProvider};
+use runie_provider::AnyProvider;
 use std::path::Path;
 use std::time::Instant;
 
