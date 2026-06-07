@@ -59,12 +59,18 @@ impl Provider for MockProvider {
             || user_input.to_lowercase().contains("files")
         {
             on_chunk(ResponseChunk {
+                content: "I'll list the files in the current directory.\n".to_string(),
+            });
+            on_chunk(ResponseChunk {
                 content: "TOOL:list_dir:.".to_string(),
             });
             return Ok(());
         }
 
         if user_input.to_lowercase().contains("read") {
+            on_chunk(ResponseChunk {
+                content: "Let me read that file for you.\n".to_string(),
+            });
             on_chunk(ResponseChunk {
                 content: "TOOL:read_file:README.md".to_string(),
             });
@@ -73,12 +79,18 @@ impl Provider for MockProvider {
 
         if user_input.to_lowercase().contains("write") {
             on_chunk(ResponseChunk {
+                content: "I'll create that file for you.\n".to_string(),
+            });
+            on_chunk(ResponseChunk {
                 content: "TOOL:write_file:hello.txt:Hello World".to_string(),
             });
             return Ok(());
         }
 
         if user_input.to_lowercase().contains("edit") {
+            on_chunk(ResponseChunk {
+                content: "I'll make that edit for you.\n".to_string(),
+            });
             on_chunk(ResponseChunk {
                 content: r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_string(),
             });
@@ -88,6 +100,9 @@ impl Provider for MockProvider {
         if user_input.to_lowercase().contains("run") || user_input.to_lowercase().contains("cmd")
         {
             on_chunk(ResponseChunk {
+                content: "I'll run that command for you.\n".to_string(),
+            });
+            on_chunk(ResponseChunk {
                 content: "TOOL:bash:echo hello".to_string(),
             });
             return Ok(());
@@ -96,6 +111,9 @@ impl Provider for MockProvider {
         if user_input.to_lowercase().contains("grep") || user_input.to_lowercase().contains("search")
         {
             on_chunk(ResponseChunk {
+                content: "I'll search for that pattern.\n".to_string(),
+            });
+            on_chunk(ResponseChunk {
                 content: r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_string(),
             });
             return Ok(());
@@ -103,6 +121,9 @@ impl Provider for MockProvider {
 
         if user_input.to_lowercase().contains("find") || user_input.to_lowercase().contains("glob")
         {
+            on_chunk(ResponseChunk {
+                content: "I'll find those files for you.\n".to_string(),
+            });
             on_chunk(ResponseChunk {
                 content: r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
             });

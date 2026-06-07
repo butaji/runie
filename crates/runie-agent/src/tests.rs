@@ -456,7 +456,7 @@ fn test_agent_event_to_core_event_mapping() {
         AgentEvent::Thinking { id: "req.0".to_string() },
         AgentEvent::ThoughtDone { id: "req.0".to_string() },
         AgentEvent::ToolStart { id: "req.0".to_string(), name: "test".to_string() },
-        AgentEvent::ToolEnd { duration_secs: 1.0 },
+        AgentEvent::ToolEnd { duration_secs: 1.0, output: String::new() },
         AgentEvent::Response { id: "req.0".to_string(), content: "hi".to_string() },
         AgentEvent::TurnComplete { id: "req.0".to_string(), duration_secs: 2.0 },
         AgentEvent::Done { id: "req.0".to_string() },
@@ -476,8 +476,9 @@ fn test_agent_event_to_core_event_mapping() {
                 assert_eq!(id, &core_id);
                 assert_eq!(name, &core_name);
             }
-            (AgentEvent::ToolEnd { duration_secs }, Event::AgentToolEnd { duration_secs: core_dur }) => {
+            (AgentEvent::ToolEnd { duration_secs, output }, Event::AgentToolEnd { duration_secs: core_dur, output: core_out }) => {
                 assert_eq!(duration_secs, &core_dur);
+                assert_eq!(output, &core_out);
             }
             (AgentEvent::Response { id, content }, Event::AgentResponse { id: core_id, content: core_content }) => {
                 assert_eq!(id, &core_id);

@@ -46,7 +46,7 @@ impl AppState {
             Event::AgentThinking { id } => self.set_thinking(id),
             Event::AgentThoughtDone { id } => self.add_thought(id),
             Event::AgentToolStart { id, name } => self.start_tool(id, name),
-            Event::AgentToolEnd { duration_secs } => self.end_tool(duration_secs),
+            Event::AgentToolEnd { duration_secs, output } => self.end_tool(duration_secs, output),
             Event::AgentResponse { id, content } => self.append_response(id, content),
             Event::AgentTurnComplete { id, duration_secs } => self.complete_turn(id, duration_secs),
             Event::AgentDone { .. } => self.finish_turn(),
@@ -201,17 +201,29 @@ impl AppState {
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
         self.current_action = None;
         self.thinking_started_at = None;
+        let mut insert_idx = self.messages.len();
+        let thought_content = if let Some(idx) = self.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
+            let assistant = &self.messages[idx];
+            let stripped = strip_tool_markers(&assistant.content);
+            let has_tools = stripped != assistant.content;
+            if has_tools && !stripped.trim().is_empty() {
+                self.messages.remove(idx);
+                insert_idx = idx;
+                format!("{}\n{}", thought_with_time(duration), stripped)
+            } else {
+                insert_idx = idx;
+                thought_with_time(duration)
+            }
+        } else {
+            thought_with_time(duration)
+        };
         let thought = ChatMessage {
             role: Role::Thought,
-            content: thought_with_time(duration),
+            content: thought_content,
             timestamp: now(),
             id: id.clone(),
         };
-        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
-            self.messages.insert(idx, thought);
-        } else {
-            self.messages.push(thought);
-        }
+        self.messages.insert(insert_idx, thought);
         self.messages_changed();
     }
 
@@ -231,14 +243,18 @@ impl AppState {
         self.messages_changed();
     }
 
-    fn end_tool(&mut self, duration_secs: f64) {
+    fn end_tool(&mut self, duration_secs: f64, output: String) {
         self.current_action = None;
         self.tool_started_at = None;
         if let Some(name) = self.current_tool_name.take() {
             if let Some(idx) = self.last_tool_index.take() {
                 if let Some(last) = self.messages.get_mut(idx) {
                     if last.role == Role::Tool {
-                        last.content = tool_done(&name, duration_secs);
+                        last.content = if output.trim().is_empty() {
+                            tool_done(&name, duration_secs)
+                        } else {
+                            format!("{}\n{}", tool_done(&name, duration_secs), output)
+                        };
                         last.timestamp = now();
                     }
                 }
@@ -248,7 +264,6 @@ impl AppState {
     }
 
     fn append_response(&mut self, id: String, content: String) {
-        let content = strip_tool_markers(&content);
         if content.is_empty() {
             if let Some(last) = self.messages.last_mut() {
                 if last.role == Role::Assistant && last.id == id {

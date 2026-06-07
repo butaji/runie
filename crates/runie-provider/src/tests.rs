@@ -43,8 +43,8 @@ async fn test_mock_provider_triggers_list_files() {
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:list_dir"));
+    assert_eq!(chunks.len(), 2);
+    assert!(chunks[1].content.contains("TOOL:list_dir"));
 }
 
 #[tokio::test]
@@ -54,8 +54,8 @@ async fn test_mock_provider_triggers_read_file() {
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:read_file"));
+    assert_eq!(chunks.len(), 2);
+    assert!(chunks[1].content.contains("TOOL:read_file"));
 }
 
 #[tokio::test]
@@ -65,8 +65,8 @@ async fn test_mock_provider_triggers_write_file() {
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:write_file"));
+    assert_eq!(chunks.len(), 2);
+    assert!(chunks[1].content.contains("TOOL:write_file"));
 }
 
 #[tokio::test]
@@ -76,8 +76,8 @@ async fn test_mock_provider_triggers_bash() {
     let mut chunks = Vec::new();
     provider.generate(messages, |c| chunks.push(c)).await.unwrap();
 
-    assert_eq!(chunks.len(), 1);
-    assert!(chunks[0].content.contains("TOOL:bash"));
+    assert_eq!(chunks.len(), 2);
+    assert!(chunks[1].content.contains("TOOL:bash"));
 }
 
 #[tokio::test]

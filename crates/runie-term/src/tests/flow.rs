@@ -104,7 +104,7 @@ fn test_list_files_message_content() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 1.0 });
+    state.update(Event::AgentToolEnd { duration_secs: 1.0, output: String::new() });
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "\nsrc/main.rs".to_string() });
