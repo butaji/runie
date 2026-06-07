@@ -179,6 +179,34 @@ impl AppState {
         self.dirty
     }
 
+    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
+        let total = self.count();
+        if total <= visible_height || visible_height == 0 {
+            return (0, 0);
+        }
+        let max_scroll = total.saturating_sub(visible_height);
+        let scroll = self.scroll.min(max_scroll);
+        let track = visible_height;
+        let thumb = (visible_height * visible_height / total).max(1);
+        let thumb_offset = if max_scroll > 0 {
+            (max_scroll - scroll) * (track - thumb) / max_scroll
+        } else {
+            0
+        };
+        (thumb, thumb_offset)
+    }
+
+    pub fn visible_scroll(&self, visible_height: usize) -> &[Element] {
+        let total = self.count();
+        if total == 0 || visible_height == 0 {
+            return &[];
+        }
+        let max_scroll = total.saturating_sub(visible_height);
+        let scroll = self.scroll.min(max_scroll);
+        let start = max_scroll.saturating_sub(scroll);
+        self.visible(start, visible_height)
+    }
+
     pub fn total_tokens(&self) -> usize {
         self.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum()
     }

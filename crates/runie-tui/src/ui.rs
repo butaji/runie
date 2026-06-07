@@ -62,22 +62,33 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-
     state.ensure_fresh();
 
     let height = inner.height as usize;
     let count = state.count();
     if height == 0 || count == 0 { return; }
 
-    let scroll = count.saturating_sub(height);
-    let visible = state.visible(scroll, height);
+    let show_bar = count > height;
+    let content_width = if show_bar { inner.width.saturating_sub(1) } else { inner.width };
 
+    let hchunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Length(content_width), Constraint::Min(0)])
+        .split(inner);
+
+    let visible = state.visible_scroll(height);
     let mut lines = Vec::with_capacity(height);
     for elem in visible {
         lines.extend(to_lines(elem, state));
     }
 
-    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
+    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), hchunks[0]);
+
+    if show_bar {
+        let (thumb, thumb_offset) = state.scrollbar_metrics(height);
+        let bar = render_scrollbar(height, thumb, thumb_offset);
+        f.render_widget(Paragraph::new(bar).style(Style::default().fg(Color::DarkGray)), hchunks[1]);
+    }
 }
 
 fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
@@ -105,6 +116,19 @@ fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
         TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
     }
 
+}
+
+fn render_scrollbar(height: usize, thumb: usize, thumb_offset: usize) -> Vec<Line<'static>> {
+    let mut lines = Vec::with_capacity(height);
+    for row in 0..height {
+        let ch = if row >= thumb_offset && row < thumb_offset + thumb {
+            '█'
+        } else {
+            '│'
+        };
+        lines.push(Line::from(ch.to_string()));
+    }
+    lines
 }
 
 fn span(text: String, color: Color) -> ratatui::text::Span<'static> {
