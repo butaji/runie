@@ -421,8 +421,15 @@ fn test_scrollbar_shows_when_content_overflows() {
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
-    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains('│') || content.contains('█'), "Scrollbar should render with track or thumb chars: {}", content);
+    let area = buf.area();
+    let scrollbar_col = 38; // inner x=1, content_width=37, scrollbar at x=38
+    let bar_chars: Vec<String> = (1..area.height - 1)
+        .map(|y| buf.get(scrollbar_col, y).symbol().to_string())
+        .collect();
+    assert!(
+        bar_chars.iter().any(|s| s == "▐"),
+        "Scrollbar thumb should render at col 38. Got: {:?}", bar_chars
+    );
 }
 
 #[test]
@@ -449,7 +456,7 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
         .map(|y| buf.get(scrollbar_col, y).symbol().to_string())
         .collect();
     assert!(
-        bar_chars.iter().any(|s| s == "█"),
+        bar_chars.iter().any(|s| s == "▐"),
         "Thumb should be visible when content overflows. Bar chars: {:?}",
         bar_chars
     );
@@ -486,10 +493,10 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let right_col = area.width - 2;
 
     let bottom_thumb_y = (0..area.height)
-        .find(|y| buf_bottom.get(right_col, *y).symbol() == "█")
+        .find(|y| buf_bottom.get(right_col, *y).symbol() == "▐")
         .expect("thumb at bottom");
     let scrolled_thumb_y = (0..area.height)
-        .find(|y| buf_scrolled.get(right_col, *y).symbol() == "█")
+        .find(|y| buf_scrolled.get(right_col, *y).symbol() == "▐")
         .expect("thumb when scrolled");
 
     assert!(
@@ -518,7 +525,7 @@ fn test_no_scrollbar_when_content_fits() {
     let scrollbar_col = 38;
     let area = buf.area();
     let has_thumb = (1..area.height - 1)
-        .any(|y| buf.get(scrollbar_col, y).symbol() == "█");
+        .any(|y| buf.get(scrollbar_col, y).symbol() == "▐");
     assert!(
         !has_thumb,
         "No scrollbar thumb when content fits"

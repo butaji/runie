@@ -87,7 +87,10 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
     if show_bar {
         let (thumb, thumb_offset) = state.scrollbar_metrics(height);
         let bar = render_scrollbar(height, thumb, thumb_offset);
-        f.render_widget(Paragraph::new(bar).style(Style::default().fg(Color::DarkGray)), hchunks[1]);
+        f.render_widget(
+            Paragraph::new(bar).style(Style::default().fg(Color::White).bg(Color::Black)),
+            hchunks[1]
+        );
     }
 }
 
@@ -121,12 +124,12 @@ fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
 fn render_scrollbar(height: usize, thumb: usize, thumb_offset: usize) -> Vec<Line<'static>> {
     let mut lines = Vec::with_capacity(height);
     for row in 0..height {
-        let ch = if row >= thumb_offset && row < thumb_offset + thumb {
-            '█'
+        let text = if row >= thumb_offset && row < thumb_offset + thumb {
+            "▐"
         } else {
-            '│'
+            " "
         };
-        lines.push(Line::from(ch.to_string()));
+        lines.push(Line::from(text));
     }
     lines
 }
