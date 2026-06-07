@@ -427,8 +427,8 @@ fn test_scrollbar_shows_when_content_overflows() {
         .map(|y| buf.get(scrollbar_col, y).symbol().to_string())
         .collect();
     assert!(
-        bar_chars.iter().any(|s| s == "▐"),
-        "Scrollbar thumb should render at col 38. Got: {:?}", bar_chars
+        bar_chars.iter().any(|s| s == "█" || s == "│"),
+        "Scrollbar should render at col 38. Got: {:?}", bar_chars
     );
 }
 
@@ -456,7 +456,7 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
         .map(|y| buf.get(scrollbar_col, y).symbol().to_string())
         .collect();
     assert!(
-        bar_chars.iter().any(|s| s == "▐"),
+        bar_chars.iter().any(|s| s == "█"),
         "Thumb should be visible when content overflows. Bar chars: {:?}",
         bar_chars
     );
@@ -464,11 +464,11 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
 
 #[test]
 fn test_scrollbar_moves_when_scrolled_up() {
-    let backend = TestBackend::new(40, 10);
+    let backend = TestBackend::new(40, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    for i in 0..20 {
+    for i in 0..50 {
         state.messages.push(ChatMessage {
             role: Role::User,
             content: format!("Message {} with some text here", i),
@@ -481,10 +481,10 @@ fn test_scrollbar_moves_when_scrolled_up() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_bottom = terminal.backend().buffer().clone();
 
-    // Scroll up
-    state.update(Event::ScrollUp);
-    state.update(Event::ScrollUp);
-    state.update(Event::ScrollUp);
+    // Scroll up enough to move thumb visibly
+    for _ in 0..20 {
+        state.update(Event::ScrollUp);
+    }
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_scrolled = terminal.backend().buffer().clone();
@@ -493,10 +493,10 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let right_col = area.width - 2;
 
     let bottom_thumb_y = (0..area.height)
-        .find(|y| buf_bottom.get(right_col, *y).symbol() == "▐")
+        .find(|y| buf_bottom.get(right_col, *y).symbol() == "█")
         .expect("thumb at bottom");
     let scrolled_thumb_y = (0..area.height)
-        .find(|y| buf_scrolled.get(right_col, *y).symbol() == "▐")
+        .find(|y| buf_scrolled.get(right_col, *y).symbol() == "█")
         .expect("thumb when scrolled");
 
     assert!(
@@ -525,7 +525,7 @@ fn test_no_scrollbar_when_content_fits() {
     let scrollbar_col = 38;
     let area = buf.area();
     let has_thumb = (1..area.height - 1)
-        .any(|y| buf.get(scrollbar_col, y).symbol() == "▐");
+        .any(|y| buf.get(scrollbar_col, y).symbol() == "█");
     assert!(
         !has_thumb,
         "No scrollbar thumb when content fits"

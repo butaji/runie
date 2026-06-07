@@ -205,6 +205,22 @@ mod tests {
         let result = super::convert_event(&event);
         assert!(!matches!(result, Some(super::CoreEvent::Quit)), "Ctrl+E should NOT map to Quit");
     }
+
+    #[test]
+    fn ctrl_shift_e_on_repeat_kind_still_works() {
+        let key = KeyEvent::new_with_kind(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT, KeyEventKind::Repeat);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+Shift+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_e_on_repeat_kind_still_works() {
+        let key = KeyEvent::new_with_kind(KeyCode::Char('e'), KeyModifiers::CONTROL, KeyEventKind::Repeat);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
+    }
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {
@@ -219,7 +235,7 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
         }
     }
     match event {
-        Event::Key(key) if key.kind == KeyEventKind::Press => {
+        Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
