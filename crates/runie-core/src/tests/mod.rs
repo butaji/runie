@@ -24,3 +24,5 @@ mod collapse;
 mod hints;
 #[cfg(test)]
 mod scrollbar;
+#[cfg(test)]
+mod collapse_new_items;

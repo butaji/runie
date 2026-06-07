@@ -17,7 +17,7 @@ use tokio::sync::mpsc;
 
 
 
-const ANIM_MS: u64 = 16;
+const ANIM_MS: u64 = 200;
 const BATCH_SIZE: usize = 10;
 
 struct Cleanup;
@@ -164,8 +164,8 @@ mod tests {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, KeyEventKind};
 
     #[test]
-    fn animation_interval_supports_60fps() {
-        assert!(super::ANIM_MS <= 17, "ANIM_MS must be <= 17ms for 60fps, got {}", super::ANIM_MS);
+    fn animation_interval_is_200ms() {
+        assert_eq!(super::ANIM_MS, 200, "ANIM_MS must be 200ms for visible braille spinner, got {}", super::ANIM_MS);
     }
 
     #[test]
