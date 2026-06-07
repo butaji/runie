@@ -61,17 +61,18 @@
 | Sort by last update | ✓ | ✓ | Elements float to bottom on update |
 | Token count in footer | ✓ | ✓ | Shows total tokens |
 | Queue count in footer | ✓ | ✓ | Shows queued messages |
-| **Tool output collapse** | ✓ | ✗ | pi: Ctrl+O toggles tool visibility |
-| **Thinking block collapse** | ✓ | ✗ | pi: Ctrl+T toggles thinking visibility |
+| **Tool output collapse** | ✓ | ✓ | Both Ctrl+O toggles tool visibility |
+| **Thinking block collapse** | ✓ | ✓ | Both Ctrl+T toggles thinking visibility |
 | **Thinking levels** | ✓ | ✗ | pi: Shift+Tab cycles low/medium/high |
+| **Thinking level cycle** | ✓ | ✗ | pi: Shift+Tab |
 | File references (@) | ✓ | ✓ | runie: `@` detection in input title |
 | **Path completion** | ✓ | ✗ | pi: Tab completion for paths |
 | **Multi-line input** | ✓ | ✗ | pi: Shift+Enter for newlines |
 | **Image paste** | ✓ | ✗ | pi: Ctrl+V / drag from clipboard |
 | Token / cost tracking | ✓ | ✓ | TokenTracker with $/1M token costs |
 | **Read-only tool mode** | ✓ | ✗ | pi: can restrict to read/grep/find/ls only |
-| **Tool output truncation** | ✓ | ✗ | pi: truncates large outputs with head/tail |
-| **Output accumulator / guard** | ✓ | ✗ | pi: output-accumulator.ts manages tool result size |
+| **Tool output truncation** | ✓ | ✓ | Both: head for reads/grep/find/ls, tail for bash |
+| **Output accumulator / guard** | ✓ | ~ | pi: output-accumulator.ts; runie: truncate.rs module |
 
 ---
 
@@ -125,8 +126,8 @@
 | **Model cycling** | ✓ | ✗ | pi: Ctrl+P / Shift+Ctrl+P |
 | **Model selector** | ✓ | ✗ | pi: Ctrl+L |
 | **Thinking level cycle** | ✓ | ✗ | pi: Shift+Tab |
-| **Tool expand toggle** | ✓ | ✗ | pi: Ctrl+O |
-| **Thinking toggle** | ✓ | ✗ | pi: Ctrl+T |
+| **Tool expand toggle** | ✓ | ✓ | pi: Ctrl+O; runie: Ctrl+O |
+| **Thinking toggle** | ✓ | ✓ | pi: Ctrl+T; runie: Ctrl+T |
 | **External editor** | ✓ | ✗ | pi: Ctrl+G |
 | **Paste image** | ✓ | ✗ | pi: Ctrl+V (Alt+V on Win) |
 | **Suspend to background** | ✓ | ✗ | pi: Ctrl+Z |
@@ -166,9 +167,9 @@
 1. **Extensions ecosystem** — no plugins, skills, themes, or packages
 2. **Session tree** — no branching, forking, or visual tree navigation
 3. **Keybindings** — all hardcoded, no user customization
-4. **Advanced TUI** — no collapse, thinking levels, model selector, multi-line input
+4. **Advanced TUI** — thinking/tool collapse ✓; no thinking levels, model selector, multi-line input
 5. **Export/import** — no HTML, JSONL, gist sharing
 6. **Authentication** — no OAuth/login flow
 7. **Modes** — no print, JSON, or RPC modes
 8. **Configuration** — no settings UI, theme system, or migrations
-9. **Output management** — no truncation, accumulation, or diff preview
+9. **Output management** — truncation ✓; no accumulation or diff preview
