@@ -22,3 +22,5 @@ mod file_refs;
 mod collapse;
 #[cfg(test)]
 mod hints;
+#[cfg(test)]
+mod scrollbar;
