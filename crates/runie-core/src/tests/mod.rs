@@ -20,3 +20,5 @@ mod compaction;
 mod file_refs;
 #[cfg(test)]
 mod collapse;
+#[cfg(test)]
+mod hints;
