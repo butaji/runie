@@ -7,8 +7,10 @@ pub enum Element {
     AgentMessage { content: String },
     Thinking { started: std::time::Instant },
     ThoughtMarker { content: String },
+    ThoughtSummary { content: String, duration_secs: f64 },
     ToolRunning { name: String, started: std::time::Instant },
     ToolDone { name: String, duration_secs: f64 },
+    ToolSummary { name: String, duration_secs: f64 },
     TurnComplete { duration_secs: f64 },
 }
 

@@ -55,6 +55,57 @@ impl AppState {
             Event::FollowUp => self.queue_follow_up(),
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
+            Event::ToggleCollapse { index } => self.toggle_collapse(index),
+            Event::ToggleThought => self.toggle_last_thought(),
+            Event::ToggleTool => self.toggle_last_tool(),
+        }
+    }
+
+    fn toggle_collapse(&mut self, index: usize) {
+        if let Some(msg) = self.messages.get(index) {
+            match msg.role {
+                Role::Thought => {
+                    if self.collapsed_thoughts.contains(&msg.id) {
+                        self.collapsed_thoughts.remove(&msg.id);
+                    } else {
+                        self.collapsed_thoughts.insert(msg.id.clone());
+                    }
+                    self.mark_dirty();
+                }
+                Role::Tool => {
+                    if self.collapsed_tools.contains(&msg.id) {
+                        self.collapsed_tools.remove(&msg.id);
+                    } else {
+                        self.collapsed_tools.insert(msg.id.clone());
+                    }
+                    self.mark_dirty();
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn toggle_last_thought(&mut self) {
+        if let Some(msg) = self.messages.iter().rfind(|m| m.role == Role::Thought) {
+            let id = msg.id.clone();
+            if self.collapsed_thoughts.contains(&id) {
+                self.collapsed_thoughts.remove(&id);
+            } else {
+                self.collapsed_thoughts.insert(id);
+            }
+            self.mark_dirty();
+        }
+    }
+
+    fn toggle_last_tool(&mut self) {
+        if let Some(msg) = self.messages.iter().rfind(|m| m.role == Role::Tool && !m.content.contains("Running")) {
+            let id = msg.id.clone();
+            if self.collapsed_tools.contains(&id) {
+                self.collapsed_tools.remove(&id);
+            } else {
+                self.collapsed_tools.insert(id);
+            }
+            self.mark_dirty();
         }
     }
 

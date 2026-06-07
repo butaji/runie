@@ -184,6 +184,8 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
                     | KeyCode::Char('q') | KeyCode::Char('Q')
                     | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
                     KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
+                    KeyCode::Char('t') | KeyCode::Char('T') => Some(CoreEvent::ToggleThought),
+                    KeyCode::Char('o') | KeyCode::Char('O') => Some(CoreEvent::ToggleTool),
                     _ => None,
                 }
             } else if key.modifiers.contains(KeyModifiers::ALT) {

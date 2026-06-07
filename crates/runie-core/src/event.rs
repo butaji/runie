@@ -30,4 +30,7 @@ pub enum Event {
 
 
     SpawnAgent,
+    ToggleCollapse { index: usize },
+    ToggleThought,
+    ToggleTool,
 }

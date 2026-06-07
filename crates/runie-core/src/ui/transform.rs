@@ -75,12 +75,25 @@ impl LazyCache {
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
         match msg.role {
             Role::User => Element::UserMessage { content: msg.content.clone() },
-            Role::Thought => Element::ThoughtMarker { content: msg.content.clone() },
+            Role::Thought => {
+                if state.collapsed_thoughts.contains(&msg.id) {
+                    let dur = Self::parse_thought_dur(&msg.content);
+                    Element::ThoughtSummary { content: msg.content.clone(), duration_secs: dur }
+                } else {
+                    Element::ThoughtMarker { content: msg.content.clone() }
+                }
+            }
             Role::Assistant => Element::AgentMessage { content: crate::update::strip_tool_markers(&msg.content) },
             Role::Tool => Self::tool_elem(msg, state),
             Role::TurnComplete => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
             Role::System => Element::ThoughtMarker { content: msg.content.clone() },
         }
+    }
+
+    fn parse_thought_dur(content: &str) -> f64 {
+        content.split_whitespace().last()
+            .and_then(|s| s.trim_end_matches('s').parse().ok())
+            .unwrap_or(0.0)
     }
 
     fn tool_elem(msg: &ChatMessage, state: &AppState) -> Element {
@@ -91,7 +104,11 @@ impl LazyCache {
             let parts: Vec<&str> = msg.content.split_whitespace().collect();
             let name = parts.get(2).unwrap_or(&"");
             let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
-            Element::ToolDone { name: name.to_string(), duration_secs: dur }
+            if state.collapsed_tools.contains(&msg.id) {
+                Element::ToolSummary { name: name.to_string(), duration_secs: dur }
+            } else {
+                Element::ToolDone { name: name.to_string(), duration_secs: dur }
+            }
         }
     }
 
@@ -145,6 +162,11 @@ pub mod format_test {
             Element::ThoughtMarker { content } => vec![DisplayLine {
                 spans: vec![DisplaySpan { text: content.clone() }],
             }],
+            Element::ThoughtSummary { content, .. } => vec![DisplayLine {
+                spans: vec![DisplaySpan {
+                    text: format!("{} [+]", content.lines().next().unwrap_or(content)),
+                }],
+            }],
             Element::ToolRunning { name, started } => vec![DisplayLine {
                 spans: vec![DisplaySpan {
                     text: format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64()),
@@ -153,6 +175,11 @@ pub mod format_test {
             Element::ToolDone { name, duration_secs } => vec![DisplayLine {
                 spans: vec![DisplaySpan {
                     text: format!("◆ Ran {} {:.1}s", name, duration_secs),
+                }],
+            }],
+            Element::ToolSummary { name, duration_secs } => vec![DisplayLine {
+                spans: vec![DisplaySpan {
+                    text: format!("◆ Ran {} {:.1}s [+]", name, duration_secs),
                 }],
             }],
             Element::TurnComplete { duration_secs } => vec![DisplayLine {
