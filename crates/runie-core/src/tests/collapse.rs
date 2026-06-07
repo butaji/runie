@@ -149,3 +149,106 @@ fn toggle_collapse_out_of_range_is_noop() {
     assert!(state.collapsed_thoughts.is_empty());
     assert!(state.collapsed_tools.is_empty());
 }
+
+#[test]
+fn toggle_thought_rebuilds_cache() {
+    let mut state = fresh_state();
+    state.messages.push(ChatMessage {
+        role: Role::Thought,
+        content: "Deep reasoning\nline two".into(),
+        timestamp: 0.0,
+        id: "t1".into(),
+    });
+    state.ensure_fresh();
+    let before = state.elements_cache().to_vec();
+    assert!(before.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })));
+
+    state.update(Event::ToggleThought);
+    state.ensure_fresh();
+    let after = state.elements_cache().to_vec();
+    assert!(
+        after.iter().any(|e| matches!(e, Element::ThoughtSummary { .. })),
+        "Cache should rebuild to ThoughtSummary after toggle"
+    );
+}
+
+#[test]
+fn toggle_thought_twice_restores_cache() {
+    let mut state = fresh_state();
+    state.messages.push(ChatMessage {
+        role: Role::Thought,
+        content: "Deep reasoning".into(),
+        timestamp: 0.0,
+        id: "t1".into(),
+    });
+    state.update(Event::ToggleThought);
+    state.ensure_fresh();
+    state.update(Event::ToggleThought);
+    state.ensure_fresh();
+    let cache = state.elements_cache().to_vec();
+    assert!(
+        cache.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })),
+        "Cache should restore ThoughtMarker after second toggle"
+    );
+}
+
+#[test]
+fn toggle_tool_rebuilds_cache() {
+    let mut state = fresh_state();
+    state.messages.push(ChatMessage {
+        role: Role::Tool,
+        content: "◆ Ran list_files 0.5s".into(),
+        timestamp: 0.0,
+        id: "t1".into(),
+    });
+    state.ensure_fresh();
+    let before = state.elements_cache().to_vec();
+    assert!(before.iter().any(|e| matches!(e, Element::ToolDone { .. })));
+
+    state.update(Event::ToggleTool);
+    state.ensure_fresh();
+    let after = state.elements_cache().to_vec();
+    assert!(
+        after.iter().any(|e| matches!(e, Element::ToolSummary { .. })),
+        "Cache should rebuild to ToolSummary after toggle"
+    );
+}
+
+#[test]
+fn toggle_tool_twice_restores_cache() {
+    let mut state = fresh_state();
+    state.messages.push(ChatMessage {
+        role: Role::Tool,
+        content: "◆ Ran list_files 0.5s".into(),
+        timestamp: 0.0,
+        id: "t1".into(),
+    });
+    state.update(Event::ToggleTool);
+    state.ensure_fresh();
+    state.update(Event::ToggleTool);
+    state.ensure_fresh();
+    let cache = state.elements_cache().to_vec();
+    assert!(
+        cache.iter().any(|e| matches!(e, Element::ToolDone { .. })),
+        "Cache should restore ToolDone after second toggle"
+    );
+}
+
+#[test]
+fn toggle_collapse_by_index_rebuilds_cache() {
+    let mut state = fresh_state();
+    state.messages.push(ChatMessage {
+        role: Role::Thought,
+        content: "Deep reasoning".into(),
+        timestamp: 0.0,
+        id: "t1".into(),
+    });
+    state.ensure_fresh();
+    state.update(Event::ToggleCollapse { index: 0 });
+    state.ensure_fresh();
+    let cache = state.elements_cache().to_vec();
+    assert!(
+        cache.iter().any(|e| matches!(e, Element::ThoughtSummary { .. })),
+        "ToggleCollapse should rebuild cache"
+    );
+}
