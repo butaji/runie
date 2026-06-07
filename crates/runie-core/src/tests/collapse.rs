@@ -8,6 +8,59 @@ fn fresh_state() -> AppState {
 }
 
 #[test]
+fn thought_created_via_pipeline_is_collapsed() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+
+    let thought = state.messages.iter().find(|m| m.role == Role::Thought).unwrap();
+    assert!(state.collapsed.contains(&thought.id), "Thought created via pipeline should be collapsed by default");
+}
+
+#[test]
+fn tool_created_via_pipeline_is_collapsed() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
+
+    let tool = state.messages.iter().find(|m| m.role == Role::Tool).unwrap();
+    assert!(state.collapsed.contains(&tool.id), "Tool created via pipeline should be collapsed by default");
+}
+
+#[test]
+fn toggle_expand_expands_collapsed_thought() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+
+    let thought_id = state.messages.iter().find(|m| m.role == Role::Thought).unwrap().id.clone();
+    assert!(state.collapsed.contains(&thought_id), "Should start collapsed");
+
+    state.update(Event::ToggleExpand);
+    assert!(!state.collapsed.contains(&thought_id), "ToggleExpand should expand the thought");
+}
+
+#[test]
+fn toggle_expand_expands_collapsed_tool() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
+
+    let tool_id = state.messages.iter().find(|m| m.role == Role::Tool).unwrap().id.clone();
+    assert!(state.collapsed.contains(&tool_id), "Should start collapsed");
+
+    state.update(Event::ToggleExpand);
+    assert!(!state.collapsed.contains(&tool_id), "ToggleExpand should expand the tool");
+}
+
+#[test]
 fn thought_expanded_by_default() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {

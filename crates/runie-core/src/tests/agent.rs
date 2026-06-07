@@ -138,7 +138,7 @@ fn thought_marker_comes_before_response_in_feed() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     let feed = LazyCache::feed(&state);
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
-        crate::ui::Element::ThoughtMarker { .. } => "T",
+        crate::ui::Element::ThoughtMarker { .. } | crate::ui::Element::ThoughtSummary { .. } => "T",
         crate::ui::Element::AgentMessage { .. } => "A",
         crate::ui::Element::Spacer => "S",
         _ => "?",
