@@ -178,14 +178,17 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
     }
     match event {
         Event::Key(key) if key.kind == KeyEventKind::Press => {
-            if key.modifiers.contains(KeyModifiers::CONTROL) {
+            if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) {
+                match key.code {
+                    KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
+                    _ => None,
+                }
+            } else if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('c') | KeyCode::Char('C')
                     | KeyCode::Char('q') | KeyCode::Char('Q')
                     | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
                     KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
-                    KeyCode::Char('t') | KeyCode::Char('T') => Some(CoreEvent::ToggleThought),
-                    KeyCode::Char('o') | KeyCode::Char('O') => Some(CoreEvent::ToggleTool),
                     _ => None,
                 }
             } else if key.modifiers.contains(KeyModifiers::ALT) {

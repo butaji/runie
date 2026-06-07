@@ -76,7 +76,7 @@ impl LazyCache {
         match msg.role {
             Role::User => Element::UserMessage { content: msg.content.clone() },
             Role::Thought => {
-                if state.collapsed_thoughts.contains(&msg.id) {
+                if state.collapsed.contains(&msg.id) {
                     let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
                     let dur = Self::parse_thought_dur(&msg.content);
                     Element::ThoughtSummary { content: first_line, duration_secs: dur }
@@ -108,7 +108,7 @@ impl LazyCache {
             let parts: Vec<&str> = header.split_whitespace().collect();
             let name = parts.get(2).unwrap_or(&"").to_string();
             let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
-            if state.collapsed_tools.contains(&msg.id) {
+            if state.collapsed.contains(&msg.id) {
                 Element::ToolSummary { name, duration_secs: dur }
             } else {
                 Element::ToolDone { name, duration_secs: dur, output }

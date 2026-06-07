@@ -55,58 +55,45 @@ impl AppState {
             Event::FollowUp => self.queue_follow_up(),
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
-            Event::ToggleCollapse { index } => self.toggle_collapse(index),
-            Event::ToggleThought => self.toggle_last_thought(),
-            Event::ToggleTool => self.toggle_last_tool(),
+            Event::ToggleExpand => self.toggle_last_expand(),
         }
     }
 
-    fn toggle_collapse(&mut self, index: usize) {
-        if let Some(msg) = self.messages.get(index) {
-            match msg.role {
-                Role::Thought => {
-                    if self.collapsed_thoughts.contains(&msg.id) {
-                        self.collapsed_thoughts.remove(&msg.id);
-                    } else {
-                        self.collapsed_thoughts.insert(msg.id.clone());
-                    }
-                    self.messages_changed();
-                }
-                Role::Tool => {
-                    if self.collapsed_tools.contains(&msg.id) {
-                        self.collapsed_tools.remove(&msg.id);
-                    } else {
-                        self.collapsed_tools.insert(msg.id.clone());
-                    }
-                    self.messages_changed();
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn toggle_last_thought(&mut self) {
-        if let Some(msg) = self.messages.iter().rfind(|m| m.role == Role::Thought) {
+    fn toggle_last_expand(&mut self) {
+        if let Some(msg) = self.messages.iter().rfind(|m| {
+            (m.role == Role::Thought) || (m.role == Role::Tool && !m.content.contains("Running"))
+        }) {
             let id = msg.id.clone();
-            if self.collapsed_thoughts.contains(&id) {
-                self.collapsed_thoughts.remove(&id);
+            if self.collapsed.contains(&id) {
+                self.collapsed.remove(&id);
             } else {
-                self.collapsed_thoughts.insert(id);
+                self.collapsed.insert(id);
             }
             self.messages_changed();
         }
     }
 
-    fn toggle_last_tool(&mut self) {
-        if let Some(msg) = self.messages.iter().rfind(|m| m.role == Role::Tool && !m.content.contains("Running")) {
-            let id = msg.id.clone();
-            if self.collapsed_tools.contains(&id) {
-                self.collapsed_tools.remove(&id);
-            } else {
-                self.collapsed_tools.insert(id);
-            }
-            self.messages_changed();
+    pub fn hint_text(&self) -> String {
+        let mut parts = Vec::new();
+        parts.push("Ctrl+Shift+E=expand/collapse".to_string());
+        if self.at_suggestions.is_some() {
+            parts.push("Tab=cycle".to_string());
+            parts.push("Enter=insert".to_string());
+            parts.push("Esc=close".to_string());
+        } else if self.turn_active {
+            parts.push("Enter=steer".to_string());
+            parts.push("Alt+Enter=follow-up".to_string());
+            parts.push("Esc=abort".to_string());
+        } else if !self.input.is_empty() {
+            parts.push("Enter=send".to_string());
+            parts.push("Alt+Enter=follow-up".to_string());
+            parts.push("Esc=clear".to_string());
+        } else {
+            parts.push("Alt+Enter=follow-up".to_string());
+            parts.push("Esc=clear".to_string());
         }
+        parts.push("Ctrl+C=quit".to_string());
+        parts.join(" | ")
     }
 
     fn push_input(&mut self, c: char) {

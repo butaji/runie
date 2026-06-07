@@ -22,7 +22,7 @@ fn thought_expanded_by_default() {
 }
 
 #[test]
-fn toggle_thought_hides_content() {
+fn toggle_expand_hides_thought() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -30,12 +30,12 @@ fn toggle_thought_hides_content() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.update(Event::ToggleThought);
-    assert!(state.collapsed_thoughts.contains("t1"), "Thought id should be in collapsed set");
+    state.update(Event::ToggleExpand);
+    assert!(state.collapsed.contains("t1"), "Thought id should be in collapsed set");
 }
 
 #[test]
-fn toggle_thought_restores_content() {
+fn toggle_expand_restores_thought() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -43,9 +43,9 @@ fn toggle_thought_restores_content() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.update(Event::ToggleThought);
-    state.update(Event::ToggleThought);
-    assert!(!state.collapsed_thoughts.contains("t1"), "Thought id should be removed from collapsed set");
+    state.update(Event::ToggleExpand);
+    state.update(Event::ToggleExpand);
+    assert!(!state.collapsed.contains("t1"), "Thought id should be removed from collapsed set");
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn collapsed_thought_renders_one_line_summary() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed_thoughts.insert("t1".into());
+    state.collapsed.insert("t1".into());
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ThoughtSummary { content, .. } => Some(content.as_str()),
@@ -76,12 +76,12 @@ fn tool_collapsed_by_toggle() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.update(Event::ToggleTool);
-    assert!(state.collapsed_tools.contains("t1"), "Tool id should be in collapsed set");
+    state.update(Event::ToggleExpand);
+    assert!(state.collapsed.contains("t1"), "Tool id should be in collapsed set");
 }
 
 #[test]
-fn toggle_tool_restores_content() {
+fn toggle_expand_restores_tool() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
@@ -89,9 +89,9 @@ fn toggle_tool_restores_content() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.update(Event::ToggleTool);
-    state.update(Event::ToggleTool);
-    assert!(!state.collapsed_tools.contains("t1"), "Tool id should be removed from collapsed set");
+    state.update(Event::ToggleExpand);
+    state.update(Event::ToggleExpand);
+    assert!(!state.collapsed.contains("t1"), "Tool id should be removed from collapsed set");
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn collapsed_tool_renders_one_line_summary() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed_tools.insert("t1".into());
+    state.collapsed.insert("t1".into());
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ToolSummary { name, .. } => Some(name.as_str()),
@@ -114,40 +114,30 @@ fn collapsed_tool_renders_one_line_summary() {
 }
 
 #[test]
-fn toggle_thought_noop_when_no_thoughts() {
+fn toggle_expand_noop_when_empty() {
     let mut state = fresh_state();
-    state.update(Event::ToggleThought);
-    assert!(state.collapsed_thoughts.is_empty());
+    state.update(Event::ToggleExpand);
+    assert!(state.collapsed.is_empty());
 }
 
 #[test]
-fn toggle_tool_noop_when_no_tools() {
-    let mut state = fresh_state();
-    state.update(Event::ToggleTool);
-    assert!(state.collapsed_tools.is_empty());
-}
-
-#[test]
-fn toggle_collapse_by_index_works() {
+fn toggle_expand_prefers_most_recent() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
-        content: "Deep reasoning".into(),
+        content: "older thought".into(),
         timestamp: 0.0,
-        id: "t1".into(),
+        id: "old".into(),
     });
-    state.update(Event::ToggleCollapse { index: 0 });
-    assert!(state.collapsed_thoughts.contains("t1"));
-    state.update(Event::ToggleCollapse { index: 0 });
-    assert!(!state.collapsed_thoughts.contains("t1"));
-}
-
-#[test]
-fn toggle_collapse_out_of_range_is_noop() {
-    let mut state = fresh_state();
-    state.update(Event::ToggleCollapse { index: 999 });
-    assert!(state.collapsed_thoughts.is_empty());
-    assert!(state.collapsed_tools.is_empty());
+    state.messages.push(ChatMessage {
+        role: Role::Tool,
+        content: "◆ Ran list_files 0.5s".into(),
+        timestamp: 1.0,
+        id: "new".into(),
+    });
+    state.update(Event::ToggleExpand);
+    assert!(!state.collapsed.contains("old"), "Should not toggle older thought");
+    assert!(state.collapsed.contains("new"), "Should toggle most recent tool");
 }
 
 #[test]
@@ -163,7 +153,7 @@ fn toggle_thought_rebuilds_cache() {
     let before = state.elements_cache().to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })));
 
-    state.update(Event::ToggleThought);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let after = state.elements_cache().to_vec();
     assert!(
@@ -181,9 +171,9 @@ fn toggle_thought_twice_restores_cache() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.update(Event::ToggleThought);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    state.update(Event::ToggleThought);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let cache = state.elements_cache().to_vec();
     assert!(
@@ -205,7 +195,7 @@ fn toggle_tool_rebuilds_cache() {
     let before = state.elements_cache().to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ToolDone { .. })));
 
-    state.update(Event::ToggleTool);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let after = state.elements_cache().to_vec();
     assert!(
@@ -223,33 +213,14 @@ fn toggle_tool_twice_restores_cache() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.update(Event::ToggleTool);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    state.update(Event::ToggleTool);
+    state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let cache = state.elements_cache().to_vec();
     assert!(
         cache.iter().any(|e| matches!(e, Element::ToolDone { .. })),
         "Cache should restore ToolDone after second toggle"
-    );
-}
-
-#[test]
-fn toggle_collapse_by_index_rebuilds_cache() {
-    let mut state = fresh_state();
-    state.messages.push(ChatMessage {
-        role: Role::Thought,
-        content: "Deep reasoning".into(),
-        timestamp: 0.0,
-        id: "t1".into(),
-    });
-    state.ensure_fresh();
-    state.update(Event::ToggleCollapse { index: 0 });
-    state.ensure_fresh();
-    let cache = state.elements_cache().to_vec();
-    assert!(
-        cache.iter().any(|e| matches!(e, Element::ThoughtSummary { .. })),
-        "ToggleCollapse should rebuild cache"
     );
 }
 
@@ -301,7 +272,7 @@ fn collapsed_thought_hides_reasoning() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed_thoughts.insert("t1".into());
+    state.collapsed.insert("t1".into());
     let feed = LazyCache::feed(&state);
 
     let summary = feed.elements.iter().find_map(|e| match e {
@@ -340,7 +311,7 @@ fn collapsed_tool_hides_output() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed_tools.insert("t1".into());
+    state.collapsed.insert("t1".into());
     let feed = LazyCache::feed(&state);
 
     let has_tool_done = feed.elements.iter().any(|e| matches!(e, Element::ToolDone { .. }));

@@ -12,12 +12,13 @@ use runie_core::{AppState, Element, PANEL_CHAT, PANEL_INPUT};
 pub fn view(f: &mut Frame, state: &mut AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3)])
+        .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3), Constraint::Length(1)])
         .split(f.area());
 
     messages(f, state, chunks[0]);
     status(f, state, chunks[1]);
     input(f, state, chunks[2]);
+    hints(f, state, chunks[3]);
     at_suggestions(f, state);
 }
 
@@ -119,18 +120,20 @@ fn thinking_text(state: &AppState, elapsed: f64) -> Line<'static> {
 }
 
 fn input(f: &mut Frame, state: &AppState, area: Rect) {
-    let title = if state.input.contains('@') || state.at_suggestions.is_some() {
-        format!("{} @ref (Tab=cycle Enter=insert Esc=close)", PANEL_INPUT)
-    } else {
-        PANEL_INPUT.to_string()
-    };
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(title)
+        .title(PANEL_INPUT)
         .border_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
     f.render_widget(Paragraph::new(state.input.as_str()).block(block), area);
     f.set_cursor_position((inner.x + state.input.len() as u16, inner.y));
+}
+
+fn hints(f: &mut Frame, state: &AppState, area: Rect) {
+    f.render_widget(
+        Paragraph::new(state.hint_text()).style(Style::default().fg(Color::DarkGray)),
+        area,
+    );
 }
 
 fn at_suggestions(f: &mut Frame, state: &AppState) {
