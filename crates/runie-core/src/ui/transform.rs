@@ -22,8 +22,7 @@ impl LazyCache {
 
         let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
         if let Some(started) = state.thinking_started_at {
-            let elapsed = started.elapsed().as_secs_f64();
-            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { elapsed }, String::new()));
+            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { started }, String::new()));
         }
 
         entries.sort_by(|a, b| {
@@ -87,7 +86,7 @@ impl LazyCache {
     fn tool_elem(msg: &ChatMessage, state: &AppState) -> Element {
         if msg.content.contains("Running") {
             let name = msg.content.trim_start_matches("⠋ Running ").trim_end_matches("...");
-            Element::ToolRunning { name: name.to_string(), elapsed: state.tool_elapsed_secs().unwrap_or(0.0) }
+            Element::ToolRunning { name: name.to_string(), started: state.tool_started_at.unwrap_or_else(std::time::Instant::now) }
         } else {
             let parts: Vec<&str> = msg.content.split_whitespace().collect();
             let name = parts.get(2).unwrap_or(&"");
@@ -138,17 +137,17 @@ pub mod format_test {
                     DisplaySpan { text: content.clone() },
                 ],
             }],
-            Element::Thinking { elapsed } => vec![DisplayLine {
+            Element::Thinking { started } => vec![DisplayLine {
                 spans: vec![DisplaySpan {
-                    text: format!("{} Thinking... {:.1}s", state.spinner_frame(), elapsed),
+                    text: format!("{} Thinking... {:.1}s", state.spinner_frame(), started.elapsed().as_secs_f64()),
                 }],
             }],
             Element::ThoughtMarker { content } => vec![DisplayLine {
                 spans: vec![DisplaySpan { text: content.clone() }],
             }],
-            Element::ToolRunning { name, elapsed } => vec![DisplayLine {
+            Element::ToolRunning { name, started } => vec![DisplayLine {
                 spans: vec![DisplaySpan {
-                    text: format!("{} Running {}... {:.1}s", state.spinner_frame(), name, elapsed),
+                    text: format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64()),
                 }],
             }],
             Element::ToolDone { name, duration_secs } => vec![DisplayLine {
