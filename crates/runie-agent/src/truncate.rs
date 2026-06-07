@@ -88,7 +88,7 @@ pub fn truncate_tail(content: &str, policy: &TruncationPolicy) -> TruncatedOutpu
     let mut output = Vec::new();
     let mut output_bytes = 0;
 
-    for (i, line) in lines.iter().enumerate().rev() {
+    for (_i, line) in lines.iter().enumerate().rev() {
         if output.len() >= policy.max_lines {
             break;
         }
