@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
 
@@ -85,12 +85,21 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
     f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), hchunks[0]);
 
     if show_bar {
-        let (thumb, thumb_offset) = state.scrollbar_metrics(height);
-        let bar = render_scrollbar(height, thumb, thumb_offset);
-        f.render_widget(
-            Paragraph::new(bar).style(Style::default().fg(Color::White).bg(Color::Black)),
-            hchunks[1]
-        );
+        let max_scroll = count.saturating_sub(height);
+        let scroll = state.scroll.min(max_scroll);
+        let position = max_scroll.saturating_sub(scroll);
+
+        let scrollbar = Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_symbol(Some("│"))
+            .thumb_symbol("█");
+
+        let mut scrollbar_state = ScrollbarState::new(count)
+            .position(position);
+
+        f.render_stateful_widget(scrollbar, inner, &mut scrollbar_state);
     }
 }
 
@@ -119,19 +128,6 @@ fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
         TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
     }
 
-}
-
-fn render_scrollbar(height: usize, thumb: usize, thumb_offset: usize) -> Vec<Line<'static>> {
-    let mut lines = Vec::with_capacity(height);
-    for row in 0..height {
-        let text = if row >= thumb_offset && row < thumb_offset + thumb {
-            "▐"
-        } else {
-            " "
-        };
-        lines.push(Line::from(text));
-    }
-    lines
 }
 
 fn span(text: String, color: Color) -> ratatui::text::Span<'static> {
