@@ -102,3 +102,65 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     state.ensure_fresh();
     assert_eq!(state.elements_cache().len(), cache_before, "Only input change should skip cache rebuild");
 }
+
+#[test]
+fn thinking_element_stores_instant_not_elapsed() {
+    use crate::ui::Element;
+    let mut state = fresh_state();
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
+    state.turn_active = true;
+    state.messages_changed();
+    state.ensure_fresh();
+
+    let started = state.elements_cache().iter().find_map(|e| match e {
+        Element::Thinking { started } => Some(*started),
+        _ => None,
+    }).expect("Should have Thinking element");
+
+    let elapsed = started.elapsed().as_secs_f64();
+    assert!(elapsed >= 2.9, "Timer should compute elapsed at render time: {:.1}s", elapsed);
+}
+
+#[test]
+fn tool_running_element_stores_instant_not_elapsed() {
+    use crate::ui::Element;
+    let mut state = fresh_state();
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::Tool, content: "⠋ Running list_files...".into(), timestamp: 0.0, id: "t1".into() });
+    state.tool_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
+    state.turn_active = true;
+    state.messages_changed();
+    state.ensure_fresh();
+
+    let started = state.elements_cache().iter().find_map(|e| match e {
+        Element::ToolRunning { started, .. } => Some(*started),
+        _ => None,
+    }).expect("Should have ToolRunning element");
+
+    let elapsed = started.elapsed().as_secs_f64();
+    assert!(elapsed >= 1.9, "Tool timer should compute elapsed at render time: {:.1}s", elapsed);
+}
+
+#[test]
+fn timer_advances_without_cache_rebuild() {
+    use crate::ui::Element;
+    let mut state = fresh_state();
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
+    state.turn_active = true;
+    state.messages_changed();
+    state.ensure_fresh();
+
+    let gen_before = state.cache_generation();
+    state.tick_animation();
+    assert_eq!(state.cache_generation(), gen_before, "tick_animation must not bump cache gen");
+    assert!(state.is_dirty(), "tick_animation must mark dirty for render");
+
+    let started = state.elements_cache().iter().find_map(|e| match e {
+        Element::Thinking { started } => Some(*started),
+        _ => None,
+    }).expect("Should have Thinking element");
+
+    let elapsed = started.elapsed().as_secs_f64();
+    assert!(elapsed >= 4.9, "Timer should advance without cache rebuild: {:.1}s", elapsed);
+}

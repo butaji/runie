@@ -5,9 +5,9 @@ pub enum Element {
     Spacer,
     UserMessage { content: String },
     AgentMessage { content: String },
-    Thinking { elapsed: f64 },
+    Thinking { started: std::time::Instant },
     ThoughtMarker { content: String },
-    ToolRunning { name: String, elapsed: f64 },
+    ToolRunning { name: String, started: std::time::Instant },
     ToolDone { name: String, duration_secs: f64 },
     TurnComplete { duration_secs: f64 },
 }
