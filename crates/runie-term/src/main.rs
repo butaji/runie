@@ -159,9 +159,51 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
 
 #[cfg(test)]
 mod tests {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, KeyEventKind};
+
     #[test]
     fn animation_interval_supports_60fps() {
         assert!(super::ANIM_MS <= 17, "ANIM_MS must be <= 17ms for 60fps, got {}", super::ANIM_MS);
+    }
+
+    #[test]
+    fn ctrl_shift_e_converts_to_toggle_expand() {
+        let key = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+Shift+E should map to ToggleExpand, got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_e_converts_to_toggle_expand_for_terminals_without_shift() {
+        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+E should map to ToggleExpand (terminal fallback), got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_c_converts_to_quit() {
+        let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::Quit)), "Ctrl+C should map to Quit");
+    }
+
+    #[test]
+    fn plain_e_not_converted() {
+        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::empty());
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::Input('e'))), "Plain e should map to Input");
+    }
+
+    #[test]
+    fn ctrl_e_does_not_conflict_with_quit() {
+        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(!matches!(result, Some(super::CoreEvent::Quit)), "Ctrl+E should NOT map to Quit");
     }
 }
 
@@ -178,13 +220,9 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
     }
     match event {
         Event::Key(key) if key.kind == KeyEventKind::Press => {
-            if key.modifiers.contains(KeyModifiers::CONTROL | KeyModifiers::SHIFT) {
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
-                    _ => None,
-                }
-            } else if key.modifiers.contains(KeyModifiers::CONTROL) {
-                match key.code {
                     KeyCode::Char('c') | KeyCode::Char('C')
                     | KeyCode::Char('q') | KeyCode::Char('Q')
                     | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
