@@ -66,6 +66,7 @@ impl AppState {
             return;
         }
         self.input.push(c);
+        self.mark_dirty();
         if self.input.contains('@') {
             let query = self.input.split('@').last().unwrap_or("").to_string();
             let should_refresh = self.last_at_query.as_ref() != Some(&query);
@@ -97,6 +98,7 @@ impl AppState {
 
     fn pop_input(&mut self) {
         self.input.pop();
+        self.mark_dirty();
     }
 
     fn submit(&mut self) {
@@ -131,7 +133,7 @@ impl AppState {
             id: id.clone(),
         });
         self.request_queue.push_back((content, id));
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn set_thinking(&mut self, id: String) {
@@ -141,7 +143,7 @@ impl AppState {
         self.turn_active = true;
         self.current_action = Some("Thinking".to_string());
         self.turn_started_at.get_or_insert_with(std::time::Instant::now);
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn add_thought(&mut self, id: String) {
@@ -159,7 +161,7 @@ impl AppState {
         } else {
             self.messages.push(thought);
         }
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn start_tool(&mut self, id: String, name: String) {
@@ -175,7 +177,7 @@ impl AppState {
             timestamp: now(),
             id,
         });
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn end_tool(&mut self, duration_secs: f64) {
@@ -191,7 +193,7 @@ impl AppState {
                 }
             }
         }
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn append_response(&mut self, id: String, content: String) {
@@ -202,14 +204,14 @@ impl AppState {
                     last.timestamp = now();
                 }
             }
-            self.mark_dirty();
+            self.messages_changed();
             return;
         }
         if let Some(last) = self.messages.last_mut() {
             if last.role == Role::Assistant && last.id == id {
                 last.content.push_str(&content);
                 last.timestamp = now();
-                self.mark_dirty();
+                self.messages_changed();
                 return;
             }
         }
@@ -220,7 +222,7 @@ impl AppState {
             id: id.clone(),
         });
         self.current_request_id = Some(id);
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn complete_turn(&mut self, id: String, duration_secs: f64) {
@@ -230,7 +232,7 @@ impl AppState {
             timestamp: now(),
             id,
         });
-        self.mark_dirty();
+        self.messages_changed();
         self.turn_started_at = None;
     }
 
@@ -254,6 +256,7 @@ impl AppState {
             self.streaming = false;
             self.thinking_started_at = None;
         }
+        self.messages_changed();
     }
 
     fn add_error(&mut self, id: String, message: String) {
@@ -264,7 +267,7 @@ impl AppState {
             timestamp: now(),
             id: format!("error.{}", id),
         });
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     fn switch_model(&mut self, provider: String, model: String) {
@@ -357,7 +360,7 @@ impl AppState {
                 self.messages = session.messages;
                 self.current_provider = session.provider;
                 self.current_model = session.model;
-                self.mark_dirty();
+                self.messages_changed();
                 format!("Session '{}' loaded.", name)
             }
             Err(_) => format!(
@@ -423,7 +426,7 @@ impl AppState {
             timestamp: now(),
             id: "system".to_string(),
         });
-        self.mark_dirty();
+        self.messages_changed();
     }
 
     pub fn peek_queue(&self) -> Option<&(String, String)> {
@@ -512,6 +515,7 @@ impl AppState {
             self.request_queue.push_back((msg.content, id));
             self.turn_active = true;
             self.inflight += 1;
+            self.messages_changed();
             return;
         }
         let follow_up: Vec<_> = self.message_queue.iter().enumerate()
@@ -531,6 +535,7 @@ impl AppState {
             self.request_queue.push_back((msg.content, id));
             self.turn_active = true;
             self.inflight += 1;
+            self.messages_changed();
         }
     }
 }

@@ -55,6 +55,8 @@ pub struct AppState {
     element_count: usize,
     elements_cache: Vec<Element>,
     dirty: bool,
+    message_gen: u64,
+    cached_gen: u64,
 }
 
 impl Default for AppState {
@@ -87,6 +89,8 @@ impl Default for AppState {
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
+            message_gen: 1,
+            cached_gen: 0,
         }
     }
 }
@@ -119,13 +123,23 @@ impl AppState {
         self.dirty = true;
     }
 
-    /// Rebuild cache only when dirty — O(n) but gated
+    pub(crate) fn messages_changed(&mut self) {
+        self.message_gen = self.message_gen.wrapping_add(1);
+        self.dirty = true;
+    }
+
+    pub fn cache_generation(&self) -> u64 {
+        self.message_gen
+    }
+
+    /// Rebuild cache only when messages changed — O(n) but gated
     pub fn ensure_fresh(&mut self) {
-        if self.dirty {
+        if self.dirty && self.message_gen != self.cached_gen {
             self.elements_cache = crate::ui::LazyCache::rebuild(self);
             self.element_count = self.elements_cache.len();
-            self.dirty = false;
+            self.cached_gen = self.message_gen;
         }
+        self.dirty = false;
     }
 
     /// Visible elements slice — O(1), zero allocation
@@ -197,7 +211,7 @@ impl AppState {
             timestamp: now(),
             id: "compaction".to_string(),
         });
-        self.mark_dirty();
+        self.messages_changed();
         summary
     }
 }
