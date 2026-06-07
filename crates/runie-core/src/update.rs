@@ -566,8 +566,6 @@ impl AppState {
                 id: id.clone(),
             });
             self.request_queue.push_back((msg.content, id));
-            self.turn_active = true;
-            self.inflight += 1;
             self.messages_changed();
             return;
         }
@@ -586,8 +584,6 @@ impl AppState {
                 id: id.clone(),
             });
             self.request_queue.push_back((msg.content, id));
-            self.turn_active = true;
-            self.inflight += 1;
             self.messages_changed();
         }
     }

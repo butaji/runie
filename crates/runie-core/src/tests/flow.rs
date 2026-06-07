@@ -39,6 +39,85 @@ fn test_queue_processing() {
 }
 
 #[test]
+fn test_second_submit_while_turn_active_queues_message() {
+    let mut state = fresh_state();
+    // First message submitted and sent to agent
+    state.update(Event::Input('A'));
+    state.update(Event::Submit);
+    assert_eq!(state.messages.len(), 1);
+    assert_eq!(state.messages[0].content, "A");
+
+    // Simulate what spawn_if_queued should do: set turn_active
+    state.turn_active = true;
+
+    // Second message while turn is active
+    state.update(Event::Input('B'));
+    state.update(Event::Submit);
+
+    // Message B should NOT appear in chat yet — queued for next turn
+    assert_eq!(state.messages.len(), 1, "Message B should not appear until its turn starts");
+    assert_eq!(state.message_queue.len(), 1, "Message B should be in message_queue");
+    assert_eq!(state.message_queue[0].content, "B");
+}
+
+#[test]
+fn test_queued_message_appears_after_turn_completes() {
+    let mut state = fresh_state();
+    // Submit first message and simulate agent start
+    state.update(Event::Input('A'));
+    state.update(Event::Submit);
+    state.turn_active = true;
+
+    // Submit second message while agent is working
+    state.update(Event::Input('B'));
+    state.update(Event::Submit);
+    assert_eq!(state.messages.len(), 1, "Only message A visible during turn");
+
+    // Agent finishes turn
+    state.update(Event::AgentDone { id: "req.0".to_string() });
+
+    // Now message B should appear and be ready for its turn
+    assert!(state.messages.iter().any(|m| m.role == Role::User && m.content == "B"),
+        "Message B should appear in chat after previous turn completes");
+}
+
+#[test]
+fn test_three_messages_one_at_a_time() {
+    let mut state = fresh_state();
+    // Message 1
+    state.update(Event::Input('1'));
+    state.update(Event::Submit);
+    state.turn_active = true;
+
+    // Messages 2 and 3 queued while message 1 is processing
+    state.update(Event::Input('2'));
+    state.update(Event::Submit);
+    state.update(Event::Input('3'));
+    state.update(Event::Submit);
+
+    // Only message 1 in chat
+    let user_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::User).collect();
+    assert_eq!(user_msgs.len(), 1, "Only first message visible during active turn");
+    assert_eq!(state.message_queue.len(), 2, "Messages 2 and 3 queued");
+
+    // Agent done with message 1
+    state.update(Event::AgentDone { id: "req.0".to_string() });
+
+    // Message 2 appears, message 3 still queued
+    let user_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::User).collect();
+    assert_eq!(user_msgs.len(), 2, "Message 2 appears after turn 1 completes");
+    assert_eq!(state.message_queue.len(), 1, "Message 3 still queued");
+
+    // Agent done with message 2
+    state.update(Event::AgentDone { id: "req.1".to_string() });
+
+    // Message 3 appears
+    let user_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::User).collect();
+    assert_eq!(user_msgs.len(), 3, "Message 3 appears after turn 2 completes");
+    assert!(state.message_queue.is_empty(), "Queue empty after all delivered");
+}
+
+#[test]
 fn test_submit_adds_message_to_queue() {
     let mut state = fresh_state();
     state.update(Event::Input('H'));

@@ -148,6 +148,8 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
         let id = id.clone();
         state.pop_queue();
         state.streaming = true;
+        state.turn_active = true;
+        state.inflight += 1;
         let _ = cmd_tx.send(AgentCommand {
             content,
             id,
@@ -204,6 +206,36 @@ mod tests {
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event);
         assert!(!matches!(result, Some(super::CoreEvent::Quit)), "Ctrl+E should NOT map to Quit");
+    }
+
+    #[tokio::test]
+    async fn spawn_if_queued_sets_turn_active_and_inflight() {
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<super::AgentCommand>(10);
+        let mut state = super::AppState::default();
+        state.request_queue.push_back(("hello".to_string(), "req.0".to_string()));
+
+        assert!(!state.turn_active);
+        assert_eq!(state.inflight, 0);
+
+        super::spawn_if_queued(&mut state, &tx).await;
+
+        assert!(state.turn_active, "spawn_if_queued must set turn_active");
+        assert_eq!(state.inflight, 1, "spawn_if_queued must increment inflight");
+        assert!(state.request_queue.is_empty(), "Message should be popped from request_queue");
+
+        let cmd = rx.try_recv().expect("Command should be sent to agent");
+        assert_eq!(cmd.content, "hello");
+    }
+
+    #[tokio::test]
+    async fn spawn_if_queued_noop_when_queue_empty() {
+        let (tx, _rx) = tokio::sync::mpsc::channel::<super::AgentCommand>(10);
+        let mut state = super::AppState::default();
+
+        super::spawn_if_queued(&mut state, &tx).await;
+
+        assert!(!state.turn_active);
+        assert_eq!(state.inflight, 0);
     }
 
     #[test]
