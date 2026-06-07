@@ -86,9 +86,13 @@ fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
         UserMessage { content } => vec![Line::from(span(format!("You: {}", content), Color::White))],
         AgentMessage { content } => vec![Line::from(span(format!("Agent: {}", content), Color::White))],
         Thinking { started } => vec![gray(thinking_text(state, started.elapsed().as_secs_f64()))],
+        ThoughtSummary { content, .. } => vec![gray(Line::from(
+            format!("{} [+]", content.lines().next().unwrap_or(content))
+        ))],
         ThoughtMarker { content } => content.lines().map(|line| gray(Line::from(line.to_string()))).collect(),
         ToolRunning { name, started } => vec![gray(Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64())))],
         ToolDone { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs)))],
+        ToolSummary { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s [+]", name, duration_secs)))],
         TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
     }
 

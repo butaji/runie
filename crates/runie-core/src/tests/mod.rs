@@ -18,3 +18,5 @@ mod queue;
 mod compaction;
 #[cfg(test)]
 mod file_refs;
+#[cfg(test)]
+mod collapse;

@@ -6,6 +6,8 @@ use runie_provider::{AnyProvider, MockProvider};
 use std::path::Path;
 use std::time::Instant;
 
+pub mod truncate;
+
 
 
 
@@ -138,9 +140,28 @@ pub fn build_provider(provider: &str, model: &str) -> AnyProvider {
     AnyProvider::new(provider, model)
 }
 
+fn apply_truncation(output: String, use_tail: bool) -> String {
+    let policy = truncate::TruncationPolicy::default();
+    let result = if use_tail {
+        truncate::truncate_tail(&output, &policy)
+    } else {
+        truncate::truncate_head(&output, &policy)
+    };
+    if result.was_truncated {
+        format!(
+            "[Output truncated: {} of {} lines, {} of {} bytes]\n{}",
+            result.output_lines, result.total_lines,
+            result.output_bytes, result.total_bytes,
+            result.content
+        )
+    } else {
+        result.content
+    }
+}
+
 fn read_file(path: &str) -> (String, bool) {
     match std::fs::read_to_string(path) {
-        Ok(content) => (content, true),
+        Ok(content) => (apply_truncation(content, false), true),
         Err(e) => (format!("Error reading {}: {}", path, e), false),
     }
 }
@@ -159,11 +180,12 @@ fn list_dir(path: &str) -> (String, bool) {
                 };
                 lines.push(format!("{} ({})", name, typ));
             }
-            if lines.is_empty() {
-                ("(empty directory)".to_string(), true)
+            let output = if lines.is_empty() {
+                "(empty directory)".to_string()
             } else {
-                (lines.join("\n"), true)
-            }
+                lines.join("\n")
+            };
+            (apply_truncation(output, false), true)
         }
         Err(e) => (format!("Error listing {}: {}", path, e), false),
     }
@@ -228,7 +250,7 @@ fn run_bash(command: &str) -> (String, bool) {
                     "(command failed)".to_string()
                 };
             }
-            (result, success)
+            (apply_truncation(result, true), success)
         }
         Err(e) => (format!("Error executing '{}': {}", command, e), false),
     }
@@ -277,7 +299,7 @@ fn run_grep(
             if lines.len() >= limit {
                 result.push_str(&format!("\n\n[{} matches limit reached]", limit));
             }
-            (result, true)
+            (apply_truncation(result, false), true)
         }
         Err(e) => (format!("Error running grep: {}", e), false),
     }
@@ -321,7 +343,7 @@ fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
             if lines.len() > limit {
                 out.push_str(&format!("\n\n[{} results limit reached]", limit));
             }
-            (out, true)
+            (apply_truncation(out, false), true)
         }
         Err(e) => (format!("Error running find: {}", e), false),
     }
@@ -585,3 +607,5 @@ impl AgentEvent {
 mod tests;
 #[cfg(test)]
 mod grep_find;
+#[cfg(test)]
+mod truncate_tests;

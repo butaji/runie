@@ -1,5 +1,6 @@
 //! Model — Application State (mutable borrow, no cloning per event)
 use crate::ui::elements::Element;
+use std::collections::HashSet;
 
 
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
@@ -52,6 +53,10 @@ pub struct AppState {
     pub at_selected: Option<usize>,
     /// Last @-ref query to avoid redundant filesystem calls
     pub last_at_query: Option<String>,
+    /// Collapsed thought ids (hidden in TUI)
+    pub collapsed_thoughts: HashSet<String>,
+    /// Collapsed tool ids (hidden in TUI)
+    pub collapsed_tools: HashSet<String>,
     element_count: usize,
     elements_cache: Vec<Element>,
     dirty: bool,
@@ -86,6 +91,8 @@ impl Default for AppState {
             at_suggestions: None,
             at_selected: None,
             last_at_query: None,
+            collapsed_thoughts: HashSet::new(),
+            collapsed_tools: HashSet::new(),
             element_count: 0,
             elements_cache: Vec::new(),
             dirty: true,
