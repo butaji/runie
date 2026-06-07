@@ -91,8 +91,16 @@ fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
         ))],
         ThoughtMarker { content } => content.lines().map(|line| gray(Line::from(line.to_string()))).collect(),
         ToolRunning { name, started } => vec![gray(Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64())))],
-        ToolDone { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs)))],
-        ToolSummary { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s [+]", name, duration_secs)))],
+        ToolDone { name, duration_secs, output } => {
+            let mut lines = vec![gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs)))];
+            if !output.is_empty() {
+                for line in output.lines() {
+                    lines.push(gray(Line::from(line.to_string())));
+                }
+            }
+            lines
+        }
+        ToolSummary { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s [+]", name, duration_secs)))],   
         TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
     }
 

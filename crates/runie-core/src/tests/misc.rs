@@ -48,7 +48,7 @@ fn test_tool_flow_creates_two_thoughts() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are the files".to_string() });
@@ -83,7 +83,7 @@ fn test_turn_complete_always_added_when_event_received() {
 fn test_tool_done_event() {
     let mut state = fresh_state();
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.3 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.3, output: String::new() });
     assert_eq!(state.messages.len(), 1);
     let msg = &state.messages[0];
     assert_eq!(msg.role, Role::Tool);
@@ -96,7 +96,7 @@ fn test_formatted_labels_short_names() {
     let mut state = fresh_state();
     state.streaming = true;
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.3 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.3, output: String::new() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
     let lines = format_messages(&state);
     let content: String = lines.iter()
@@ -114,7 +114,7 @@ fn test_list_files_full_tool_flow_sequence() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are the files:".to_string() });
@@ -143,7 +143,7 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are files".to_string() });
     state.update(Event::AgentDone { id: "req.0".to_string() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 3.2 });

@@ -17,7 +17,7 @@ pub enum Event {
     AgentThinking { id: String },
     AgentThoughtDone { id: String },
     AgentToolStart { id: String, name: String },
-    AgentToolEnd { duration_secs: f64 },
+    AgentToolEnd { duration_secs: f64, output: String },
     AgentResponse { id: String, content: String },
     AgentTurnComplete { id: String, duration_secs: f64 },
     AgentDone { id: String },

@@ -77,8 +77,9 @@ impl LazyCache {
             Role::User => Element::UserMessage { content: msg.content.clone() },
             Role::Thought => {
                 if state.collapsed_thoughts.contains(&msg.id) {
+                    let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
                     let dur = Self::parse_thought_dur(&msg.content);
-                    Element::ThoughtSummary { content: msg.content.clone(), duration_secs: dur }
+                    Element::ThoughtSummary { content: first_line, duration_secs: dur }
                 } else {
                     Element::ThoughtMarker { content: msg.content.clone() }
                 }
@@ -101,13 +102,16 @@ impl LazyCache {
             let name = msg.content.trim_start_matches("⠋ Running ").trim_end_matches("...");
             Element::ToolRunning { name: name.to_string(), started: state.tool_started_at.unwrap_or_else(std::time::Instant::now) }
         } else {
-            let parts: Vec<&str> = msg.content.split_whitespace().collect();
-            let name = parts.get(2).unwrap_or(&"");
+            let lines: Vec<&str> = msg.content.lines().collect();
+            let header = lines.first().copied().unwrap_or("");
+            let output = lines.get(1..).map(|rest| rest.join("\n")).unwrap_or_default();
+            let parts: Vec<&str> = header.split_whitespace().collect();
+            let name = parts.get(2).unwrap_or(&"").to_string();
             let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
             if state.collapsed_tools.contains(&msg.id) {
-                Element::ToolSummary { name: name.to_string(), duration_secs: dur }
+                Element::ToolSummary { name, duration_secs: dur }
             } else {
-                Element::ToolDone { name: name.to_string(), duration_secs: dur }
+                Element::ToolDone { name, duration_secs: dur, output }
             }
         }
     }
@@ -172,11 +176,21 @@ pub mod format_test {
                     text: format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64()),
                 }],
             }],
-            Element::ToolDone { name, duration_secs } => vec![DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: format!("◆ Ran {} {:.1}s", name, duration_secs),
-                }],
-            }],
+            Element::ToolDone { name, duration_secs, output } => {
+                let mut lines = vec![DisplayLine {
+                    spans: vec![DisplaySpan {
+                        text: format!("◆ Ran {} {:.1}s", name, duration_secs),
+                    }],
+                }];
+                if !output.is_empty() {
+                    for line in output.lines() {
+                        lines.push(DisplayLine {
+                            spans: vec![DisplaySpan { text: line.to_string() }],
+                        });
+                    }
+                }
+                lines
+            }
             Element::ToolSummary { name, duration_secs } => vec![DisplayLine {
                 spans: vec![DisplaySpan {
                     text: format!("◆ Ran {} {:.1}s [+]", name, duration_secs),

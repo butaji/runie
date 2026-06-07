@@ -112,7 +112,7 @@ fn tool_end_updates_timestamp() {
     let mut state = fresh_state();
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
     let t1 = state.messages[0].timestamp;
-    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     let t2 = state.messages[0].timestamp;
     assert!(t2 > t1, "Timestamp should update on tool end, got t1={} t2={}", t1, t2);
 }
@@ -164,28 +164,40 @@ fn thinking_indicator_comes_before_response() {
 }
 
 #[test]
-fn streaming_tool_marker_not_visible() {
+fn streaming_tool_marker_stored_for_thought_capture() {
     let mut state = fresh_state();
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir.".to_string() });
-    let has_tool = state.messages.iter().any(|m| m.role == Role::Assistant && m.content.contains("TOOL:"));
-    assert!(!has_tool, "TOOL: marker should never appear in assistant message during streaming");
+    let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
+    assert!(msg.content.contains("TOOL:"), "Tool markers stored for thought capture, stripped at render time");
+    let feed = crate::ui::LazyCache::feed(&state);
+    let has_tool = feed.elements.iter().any(|e| match e {
+        crate::ui::Element::AgentMessage { content } => content.contains("TOOL:"),
+        _ => false,
+    });
+    assert!(!has_tool, "TOOL: marker should never appear in rendered feed");
 }
 
 #[test]
-fn streaming_mixed_text_and_tool_keeps_only_text() {
+fn streaming_mixed_text_and_tool_keeps_both_for_capture() {
     let mut state = fresh_state();
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Let me check files.\nTOOL:list_dir.".to_string() });
     let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
-    assert_eq!(msg.content, "Let me check files.");
-    assert!(!msg.content.contains("TOOL:"));
+    assert!(msg.content.contains("Let me check files."));
+    assert!(msg.content.contains("TOOL:list_dir."), "Both stored for thought capture");
 }
 
 #[test]
-fn streaming_structured_tool_not_visible() {
+fn streaming_structured_tool_stored_for_capture() {
     let mut state = fresh_state();
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#.to_string() });
-    let has_tool = state.messages.iter().any(|m| m.role == Role::Assistant && m.content.contains("edit_file"));
-    assert!(!has_tool, "Structured tool call should never appear in assistant message during streaming");
+    let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
+    assert!(msg.content.contains("edit_file"), "Structured tool stored for thought capture, stripped at render time");
+    let feed = crate::ui::LazyCache::feed(&state);
+    let has_tool = feed.elements.iter().any(|e| match e {
+        crate::ui::Element::AgentMessage { content } => content.contains("edit_file"),
+        _ => false,
+    });
+    assert!(!has_tool, "Structured tool call should never appear in rendered feed");
 }
 
 #[test]

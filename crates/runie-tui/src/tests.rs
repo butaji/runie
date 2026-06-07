@@ -45,7 +45,7 @@ fn agent_response_renders() {
 fn tool_done_renders() {
     let mut state = AppState::default();
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     let content = draw_state(&mut state);
     assert!(content.contains("Ran"), "Should render tool done");
     assert!(content.contains("list_files"), "Should show tool name");

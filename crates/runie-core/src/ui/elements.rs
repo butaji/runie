@@ -9,7 +9,7 @@ pub enum Element {
     ThoughtMarker { content: String },
     ThoughtSummary { content: String, duration_secs: f64 },
     ToolRunning { name: String, started: std::time::Instant },
-    ToolDone { name: String, duration_secs: f64 },
+    ToolDone { name: String, duration_secs: f64, output: String },
     ToolSummary { name: String, duration_secs: f64 },
     TurnComplete { duration_secs: f64 },
 }

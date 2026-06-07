@@ -536,6 +536,7 @@ where
 
             emit(AgentEvent::ToolEnd {
                 duration_secs: tool_elapsed,
+                output: result.output.clone(),
             });
 
             messages.push(Message::ToolResult {
@@ -571,7 +572,7 @@ pub enum AgentEvent {
     Thinking { id: String },
     ThoughtDone { id: String },
     ToolStart { id: String, name: String },
-    ToolEnd { duration_secs: f64 },
+    ToolEnd { duration_secs: f64, output: String },
     Response { id: String, content: String },
     TurnComplete { id: String, duration_secs: f64 },
     Done { id: String },
@@ -586,8 +587,8 @@ impl AgentEvent {
             AgentEvent::ToolStart { id, name } => {
                 runie_core::Event::AgentToolStart { id, name }
             }
-            AgentEvent::ToolEnd { duration_secs } => {
-                runie_core::Event::AgentToolEnd { duration_secs }
+            AgentEvent::ToolEnd { duration_secs, output } => {
+                runie_core::Event::AgentToolEnd { duration_secs, output }
             }
             AgentEvent::Response { id, content } => {
                 runie_core::Event::AgentResponse { id, content }

@@ -14,7 +14,7 @@ pub fn simulate_list_files_flow(state: &mut AppState) {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 1.0 });
+    state.update(Event::AgentToolEnd { duration_secs: 1.0, output: String::new() });
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "src/main.rs\nlib.rs".to_string() });
@@ -32,7 +32,7 @@ pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.update(Event::AgentThinking { id: id.clone() });
     state.update(Event::AgentThoughtDone { id: id.clone() });
     state.update(Event::AgentToolStart { id: id.clone(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5 });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     state.update(Event::AgentThinking { id: id.clone() });
     state.update(Event::AgentThoughtDone { id: id.clone() });
     state.update(Event::AgentResponse { id, content: format!("Files for turn {}\n", i) });
