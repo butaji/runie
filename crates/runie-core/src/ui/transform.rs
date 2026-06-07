@@ -32,7 +32,7 @@ impl LazyCache {
 
         let mut moves = Vec::new();
         for (i, (_, _, elem, id)) in entries.iter().enumerate() {
-            if matches!(elem, Element::ThoughtMarker { .. }) {
+            if matches!(elem, Element::ThoughtMarker { .. } | Element::ThoughtSummary { .. }) {
                 if let Some(target) = (0..i).position(|j| {
                     matches!(entries[j].2, Element::AgentMessage { .. }) && entries[j].3 == *id
                 }) {

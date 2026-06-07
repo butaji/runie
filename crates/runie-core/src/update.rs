@@ -211,6 +211,7 @@ impl AppState {
             id: id.clone(),
         };
         self.messages.insert(insert_idx, thought);
+        self.collapsed.insert(id);
         self.messages_changed();
     }
 
@@ -243,6 +244,7 @@ impl AppState {
                             format!("{}\n{}", tool_done(&name, duration_secs), output)
                         };
                         last.timestamp = now();
+                        self.collapsed.insert(last.id.clone());
                     }
                 }
             }
