@@ -1,27 +1,21 @@
 //! All static labels and text constants
 //! PANEL_CHAT and PANEL_INPUT are defined in model.rs
 
-pub const PREFIX_USER: &str = "You: ";
-pub const PREFIX_AGENT: &str = "Agent: ";
+/// Format timestamp from f64 (unix seconds) to HH:MM
+pub fn format_timestamp(unix_secs: f64) -> String {
+    let secs = unix_secs as i64;
+    let hours = (secs / 3600) % 24;
+    let mins = (secs / 60) % 60;
+    format!("{:02}:{:02}", hours, mins)
+}
 
-pub const SPINNER: &str = "⠋";
+// tui1-style prefixes (deprecated, use $ / → directly)
+pub const PREFIX_USER: &str = "$ ";
+pub const PREFIX_AGENT: &str = "→ ";
+
+// Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
-
-pub fn thinking_with_time(seconds: f64) -> String {
-    format!("{} Thinking... {:.1}s", SPINNER, seconds)
-}
-
-pub fn thought_with_time(seconds: f64) -> String {
-    format!("◆ Thought {:.1}s", seconds)
-}
-
-pub fn tool_running(name: &str) -> String {
-    format!("{} Running {}...", SPINNER, name)
-}
-
-pub fn tool_done(name: &str, seconds: f64) -> String {
-    format!("◆ Ran {} {:.1}s", name, seconds)
-}
+pub const SPINNER: char = '⠋';
 
 /// Unified action text: spinner + tag + timer.
 /// Tags ending with "ing" (ongoing actions) automatically get "...".
@@ -32,3 +26,36 @@ pub fn action_text(spinner: char, tag: &str, elapsed: f64) -> String {
         format!("{} {} {:.1}s", spinner, tag, elapsed)
     }
 }
+
+/// tui1-style thinking indicator
+pub fn thinking_with_time(seconds: f64) -> String {
+    format!("◐ Thinking... {:.1}s", seconds)
+}
+
+/// tui1-style thought indicator
+pub fn thought_with_time(seconds: f64) -> String {
+    format!("◆ Thought {:.1}s", seconds)
+}
+
+/// tui1-style tool running
+pub fn tool_running(name: &str) -> String {
+    format!("⠋ Running {}...", name)
+}
+
+/// tui1-style tool done
+pub fn tool_done(name: &str, seconds: f64) -> String {
+    format!("✓ {} {:.1}s", name, seconds)
+}
+
+/// tui1-style thinking indicator (new)
+pub fn thinking_text(elapsed: f64) -> String {
+    format!("{} ◐ {:.1}s", SPINNER_THINKING, elapsed)
+}
+
+/// tui1-style working indicator (new)
+pub fn working_text(elapsed: f64) -> String {
+    format!("{} ◐ {:.1}s", SPINNER_WORKING, elapsed)
+}
+
+pub const SPINNER_THINKING: char = '◐';
+pub const SPINNER_WORKING: char = '◐';

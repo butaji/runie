@@ -1,3 +1,4 @@
+use crate::labels::format_timestamp;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::{Element, Feed};
 
@@ -68,8 +69,9 @@ impl LazyCache {
     }
 
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
+        let ts = format_timestamp(msg.timestamp);
         match msg.role {
-            Role::User => Element::UserMessage { content: msg.content.clone() },
+            Role::User => Element::UserMessage { content: msg.content.clone(), timestamp: ts },
             Role::Thought => {
                 if state.all_collapsed {
                     let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
@@ -79,7 +81,7 @@ impl LazyCache {
                     Element::ThoughtMarker { content: msg.content.clone() }
                 }
             }
-            Role::Assistant => Element::AgentMessage { content: crate::update::strip_tool_markers(&msg.content) },
+            Role::Assistant => Element::AgentMessage { content: crate::update::strip_tool_markers(&msg.content), timestamp: ts },
             Role::Tool => Self::tool_elem(msg, state),
             Role::TurnComplete => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
             Role::System => Element::ThoughtMarker { content: msg.content.clone() },
@@ -101,7 +103,9 @@ impl LazyCache {
             let header = lines.first().copied().unwrap_or("");
             let output = lines.get(1..).map(|rest| rest.join("\n")).unwrap_or_default();
             let parts: Vec<&str> = header.split_whitespace().collect();
-            let name = parts.get(2).unwrap_or(&"").to_string();
+            // Old format: "Ran {name} {duration}s" -> name at index 1
+            // New format: "✓ {name} {duration}s" -> name at index 1
+            let name = parts.get(1).unwrap_or(&"").to_string();
             let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
             if state.all_collapsed {
                 Element::ToolSummary { name, duration_secs: dur }
@@ -120,8 +124,8 @@ impl LazyCache {
 
 #[cfg(test)]
 pub mod format_test {
+    use crate::labels::format_timestamp;
     use crate::ui::elements::{Element, Feed};
-    use crate::labels::{PREFIX_USER, PREFIX_AGENT};
 
     #[derive(Debug, Clone)]
     pub struct DisplayLine { pub spans: Vec<DisplaySpan> }
@@ -141,8 +145,8 @@ pub mod format_test {
     fn render_element(element: &Element, state: &crate::model::AppState) -> Vec<DisplayLine> {
         match element {
             Element::Spacer => vec![DisplayLine { spans: vec![] }],
-            Element::UserMessage { content } => render_user(content),
-            Element::AgentMessage { content } => render_agent(content),
+            Element::UserMessage { content, .. } => render_user(content),
+            Element::AgentMessage { content, .. } => render_agent(content),
             Element::Thinking { started } => render_thinking(state, *started),
             Element::ThoughtMarker { content } => render_thought_marker(content),
             Element::ThoughtSummary { content, .. } => render_thought_summary(content),
@@ -154,16 +158,22 @@ pub mod format_test {
     }
 
     fn render_user(content: &str) -> Vec<DisplayLine> {
+        let ts = format_timestamp(0.0);
         vec![DisplayLine { spans: vec![
-            DisplaySpan { text: PREFIX_USER.to_string() },
+            DisplaySpan { text: "$".to_string() },
+            DisplaySpan { text: " ".to_string() },
             DisplaySpan { text: content.to_string() },
+            DisplaySpan { text: format!(" {}", ts) },
         ]}]
     }
 
     fn render_agent(content: &str) -> Vec<DisplayLine> {
+        let ts = format_timestamp(0.0);
         vec![DisplayLine { spans: vec![
-            DisplaySpan { text: PREFIX_AGENT.to_string() },
+            DisplaySpan { text: "→".to_string() },
+            DisplaySpan { text: " ".to_string() },
             DisplaySpan { text: content.to_string() },
+            DisplaySpan { text: format!(" {}", ts) },
         ]}]
     }
 
@@ -191,7 +201,7 @@ pub mod format_test {
 
     fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<DisplayLine> {
         let mut lines = vec![DisplayLine { spans: vec![DisplaySpan {
-            text: format!("◆ Ran {} {:.1}s", name, duration_secs),
+            text: format!("✓ {} {:.1}s", name, duration_secs),
         }]}];
         if !output.is_empty() {
             for line in output.lines() {
@@ -203,7 +213,7 @@ pub mod format_test {
 
     fn render_tool_summary(name: &str, duration_secs: f64) -> Vec<DisplayLine> {
         vec![DisplayLine { spans: vec![DisplaySpan {
-            text: format!("◆ Ran {} {:.1}s [+]", name, duration_secs),
+            text: format!("✓ {} {:.1}s [+]", name, duration_secs),
         }]}]
     }
 

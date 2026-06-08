@@ -97,7 +97,7 @@ fn test_render_thinking_indicator() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("Thinking"));
+    assert!(content.contains("◐"), "Thinking should show spinner ◐. Got: {}", content);
 }
 
 #[test]

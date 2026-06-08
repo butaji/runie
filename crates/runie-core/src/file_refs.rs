@@ -1,3 +1,4 @@
+use base64::Engine;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
@@ -118,7 +119,7 @@ pub fn read_file_ref(path: &str) -> Result<FileRef, String> {
     if is_image {
         match std::fs::read(path) {
             Ok(bytes) => {
-                let b64 = base64::encode(&bytes);
+                let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
                 Ok(FileRef {
                     path: path.to_string(),
                     text: b64,

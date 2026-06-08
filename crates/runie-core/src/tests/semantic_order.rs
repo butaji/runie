@@ -24,7 +24,7 @@ fn final_agent_after_tools_when_turn_completes() {
 
     // Find positions of Agent and Tool in element feed
     let feed = crate::ui::LazyCache::feed(&state);
-    let agent_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::AgentMessage { content } if content == "Done!"));
+    let agent_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"));
     let tool_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::ToolDone { .. }));
 
     assert!(agent_pos.is_some(), "Agent message must exist");
@@ -53,7 +53,7 @@ fn final_agent_visible_when_tool_overflows() {
     // Viewport of 5 lines — tool is 21 lines + spacer = 22, agent is 1 + spacer = 2
     // Total ~30 lines. With agent AFTER tool, bottom 5 lines should include agent.
     let region = state.visible_scroll(5);
-    let has_agent = region.elements.iter().any(|e| matches!(e, crate::ui::Element::AgentMessage { content } if content == "Done!"));
+    let has_agent = region.elements.iter().any(|e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"));
     assert!(has_agent, "Final agent 'Done!' must be visible at bottom");
 }
 
@@ -114,7 +114,7 @@ fn thought_stays_before_tool_after_reorder() {
     let feed = crate::ui::LazyCache::feed(&state);
     let thought_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }));
     let tool_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::ToolDone { .. }));
-    let agent_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::AgentMessage { content } if content == "Done!"));
+    let agent_pos = feed.elements.iter().position(|e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"));
 
     assert!(thought_pos.unwrap() < tool_pos.unwrap(), "Thought must be before tool");
     assert!(tool_pos.unwrap() < agent_pos.unwrap(), "Agent must be after tool");

@@ -12,10 +12,11 @@ fn draw_state(state: &mut AppState) -> String {
 }
 
 #[test]
-fn empty_state_renders_nothing() {
+fn empty_state_renders_input_prompt() {
     let mut state = AppState::default();
     let content = draw_state(&mut state);
-    assert!(!content.contains("$ "));
+    // Empty state should show input prompt with $
+    assert!(content.contains("$ "), "Empty state should show input prompt");
 }
 
 #[test]
@@ -57,7 +58,10 @@ fn reset_clears_messages() {
     state.update(Event::Submit);
     state.update(Event::Reset);
     let content = draw_state(&mut state);
-    assert!(!content.contains("$ "), "Reset should clear messages from view");
+    // After reset, should only show input prompt, no user messages
+    // Count occurrences of "$ " - should be exactly 1 (input prompt)
+    let count = content.matches("$ ").count();
+    assert_eq!(count, 1, "Reset should clear messages, keep only input prompt");
 }
 
 #[test]

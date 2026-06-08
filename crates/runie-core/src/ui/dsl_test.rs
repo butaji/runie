@@ -23,9 +23,9 @@ mod tests {
     #[test]
     fn test_visible_slices_correctly() {
         let cache = vec![
-            Element::UserMessage { content: "a".to_string() },
+            Element::UserMessage { content: "a".to_string(), timestamp: "00:00".to_string() },
             Element::Spacer,
-            Element::UserMessage { content: "b".to_string() },
+            Element::UserMessage { content: "b".to_string(), timestamp: "00:01".to_string() },
         ];
         let visible = LazyCache::visible(&cache, 0, 2);
         assert_eq!(visible.len(), 2);
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn test_visible_bounds_check() {
-        let cache = vec![Element::UserMessage { content: "a".to_string() }];
+        let cache = vec![Element::UserMessage { content: "a".to_string(), timestamp: "00:00".to_string() }];
         let visible = LazyCache::visible(&cache, 10, 5);
         assert!(visible.is_empty());
     }
@@ -125,7 +125,7 @@ mod tests {
         state.messages.push(ChatMessage { role: Role::User, content: "Second".into(), timestamp: 1.0, id: "u2".into() });
         let feed = LazyCache::feed(&state);
         let texts: Vec<String> = feed.elements.iter().filter_map(|e| match e {
-            Element::UserMessage { content } => Some(content.clone()),
+            Element::UserMessage { content, .. } => Some(content.clone()),
             _ => None,
         }).collect();
         assert_eq!(texts, vec!["First", "Second"]);

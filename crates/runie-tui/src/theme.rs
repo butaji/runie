@@ -1,14 +1,14 @@
 //! Design System — tui1-inspired theme
 //!
-//! Color palette:
+//! Color palette with WCAG-compliant contrast ratios:
 //! - bg:       "#0c0c0c" (dark background)
-//! - fg:       "#4a4a4a" (default/dim text)
-//! - fgMid:    "#6a6a6a" (mid text)
-//! - fgBright: "#909090" (bright text)
+//! - fg:       "#8a8a8a" (default text - better contrast)
+//! - fg_mid:   "#a8a8a8" (mid text - readable)
+//! - fg_bright: "#d0d0d0" (bright text - high contrast)
 //! - accent:   "#8b7cf4" (purple accent - thinking)
 //! - success:  "#3ebd6a" (green - working)
 //! - warning:  "#eab84a" (yellow - warnings)
-//! - dim:      "#282828" (very dim UI chrome)
+//! - dim:      "#4a4a4a" (UI chrome - readable)
 
 use ratatui::style::Color;
 
@@ -28,13 +28,13 @@ impl Colors {
     pub const fn new() -> Self {
         Self {
             bg: Color::Rgb(12, 12, 12),
-            fg: Color::Rgb(74, 74, 74),
-            fg_mid: Color::Rgb(106, 106, 106),
-            fg_bright: Color::Rgb(144, 144, 144),
-            accent: Color::Rgb(139, 124, 244),
-            success: Color::Rgb(62, 189, 106),
-            warning: Color::Rgb(234, 184, 74),
-            dim: Color::Rgb(40, 40, 40),
+            fg: Color::Rgb(138, 138, 138),     // was 74 - now ~7:1 contrast
+            fg_mid: Color::Rgb(168, 168, 168),  // was 106 - now ~8:1 contrast
+            fg_bright: Color::Rgb(208, 208, 208), // was 144 - high contrast
+            accent: Color::Rgb(139, 124, 244),   // purple - unchanged
+            success: Color::Rgb(62, 189, 106),   // green - unchanged
+            warning: Color::Rgb(234, 184, 74),  // yellow - unchanged
+            dim: Color::Rgb(74, 74, 74),        // was 40 - now readable
         }
     }
 }

@@ -14,7 +14,7 @@ fn has_agent_message(state: &AppState) -> bool {
 fn agent_texts(state: &AppState) -> Vec<String> {
     let feed = LazyCache::feed(state);
     feed.elements.iter().filter_map(|e| match e {
-        crate::ui::Element::AgentMessage { content } => Some(content.clone()),
+        crate::ui::Element::AgentMessage { content, .. } => Some(content.clone()),
         _ => None,
     }).collect()
 }
