@@ -40,15 +40,22 @@ pub fn find_files_deep(pattern: &str, base: &str, limit: usize) -> Vec<String> {
     }
     let is_glob = pattern.contains('*') || pattern.contains('?');
     if is_glob {
-        collect_glob(base, pattern, &mut results, limit);
+        collect_deep(base, &mut results, limit, &|name, path| {
+            glob_matches(name, pattern) || glob_matches(path, pattern)
+        });
     } else {
         let pat_lower = pattern.to_lowercase();
-        collect_matches(base, &pat_lower, &mut results, limit);
+        collect_deep(base, &mut results, limit, &|name, path| {
+            name.to_lowercase().contains(&pat_lower) || path.to_lowercase().contains(&pat_lower)
+        });
     }
     results
 }
 
-fn collect_glob(dir: &str, pattern: &str, out: &mut Vec<String>, limit: usize) {
+fn collect_deep<F>(dir: &str, out: &mut Vec<String>, limit: usize, matches: &F)
+where
+    F: Fn(&str, &str) -> bool,
+{
     if out.len() >= limit {
         return;
     }
@@ -61,11 +68,11 @@ fn collect_glob(dir: &str, pattern: &str, out: &mut Vec<String>, limit: usize) {
         let path = entry.path().to_string_lossy().to_string();
         let meta = entry.metadata();
         let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(false);
-        if glob_matches(&name, pattern) || glob_matches(&path, pattern) {
+        if matches(&name, &path) {
             out.push(path.clone());
         }
         if is_dir && !name.starts_with('.') && name != "target" {
-            collect_glob(&path, pattern, out, limit);
+            collect_deep(&path, out, limit, matches);
         }
     }
 }
@@ -83,28 +90,6 @@ fn glob_matches(name: &str, pattern: &str) -> bool {
     }
 }
 
-fn collect_matches(dir: &str, pat: &str, out: &mut Vec<String>, limit: usize) {
-    if out.len() >= limit {
-        return;
-    }
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
-    for entry in entries.flatten() {
-        if out.len() >= limit {
-            break;
-        }
-        let name = entry.file_name().to_string_lossy().to_string();
-        let path = entry.path().to_string_lossy().to_string();
-        let meta = entry.metadata();
-        let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(false);
-        if name.to_lowercase().contains(pat) || path.to_lowercase().contains(pat) {
-            out.push(path.clone());
-        }
-        if is_dir && !name.starts_with('.') && name != "target" {
-            collect_matches(&path, pat, out, limit);
-        }
-    }
-}
-
 pub fn is_image_file(path: &str) -> bool {
     let ext = Path::new(path)
         .extension()
@@ -116,28 +101,16 @@ pub fn is_image_file(path: &str) -> bool {
 
 pub fn read_file_ref(path: &str) -> Result<FileRef, String> {
     let is_image = is_image_file(path);
-    if is_image {
-        match std::fs::read(path) {
-            Ok(bytes) => {
-                let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                Ok(FileRef {
-                    path: path.to_string(),
-                    text: b64,
-                    is_image: true,
-                })
-            }
-            Err(e) => Err(format!("Error reading {}: {}", path, e)),
-        }
+    let (text, is_image) = if is_image {
+        let bytes = std::fs::read(path)
+            .map_err(|e| format!("Error reading {}: {}", path, e))?;
+        (base64::engine::general_purpose::STANDARD.encode(&bytes), true)
     } else {
-        match std::fs::read_to_string(path) {
-            Ok(text) => Ok(FileRef {
-                path: path.to_string(),
-                text,
-                is_image: false,
-            }),
-            Err(e) => Err(format!("Error reading {}: {}", path, e)),
-        }
-    }
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("Error reading {}: {}", path, e))?;
+        (text, false)
+    };
+    Ok(FileRef { path: path.to_string(), text, is_image })
 }
 
 pub fn complete_at_ref(input: &str, base: &str, limit: usize) -> Vec<String> {

@@ -339,7 +339,7 @@ fn expanded_thought_shows_reasoning() {
     let feed = LazyCache::feed(&state);
 
     let marker = feed.elements.iter().find_map(|e| match e {
-        Element::ThoughtMarker { content } => Some(content.as_str()),
+        Element::ThoughtMarker { content, .. } => Some(content.as_str()),
         _ => None,
     });
     assert!(marker.is_some());

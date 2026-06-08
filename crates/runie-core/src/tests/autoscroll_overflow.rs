@@ -50,7 +50,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
 
     let region = state.visible_scroll(height);
     assert!(!region.elements.is_empty(), "Visible region must not be empty");
-    let last_elem = region.elements.iter().rev().find(|e| !matches!(e, crate::ui::Element::Spacer));
+    let last_elem = region.elements.iter().rev().find(|e| !matches!(e, crate::ui::Element::Spacer { .. }));
     assert!(last_elem.is_some(), "Last visible element must exist");
 }
 

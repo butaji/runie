@@ -90,7 +90,7 @@ fn no_reorder_when_no_tools() {
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
         crate::ui::Element::AgentMessage { .. } => "A",
         crate::ui::Element::TurnComplete { .. } => "T",
-        crate::ui::Element::Spacer => "S",
+        crate::ui::Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
     assert_eq!(kinds, vec!["A", "S", "T", "S"], "No tools: agent before turn complete");

@@ -114,7 +114,7 @@ fn thinking_element_stores_instant_not_elapsed() {
     state.ensure_fresh();
 
     let started = state.elements_cache().iter().find_map(|e| match e {
-        Element::Thinking { started } => Some(*started),
+        Element::Thinking { started, .. } => Some(*started),
         _ => None,
     }).expect("Should have Thinking element");
 
@@ -157,7 +157,7 @@ fn timer_advances_without_cache_rebuild() {
     assert!(state.is_dirty(), "tick_animation must mark dirty for render");
 
     let started = state.elements_cache().iter().find_map(|e| match e {
-        Element::Thinking { started } => Some(*started),
+        Element::Thinking { started, .. } => Some(*started),
         _ => None,
     }).expect("Should have Thinking element");
 

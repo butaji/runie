@@ -65,17 +65,15 @@ impl AppState {
     pub(crate) fn end_tool(&mut self, duration_secs: f64, output: String) {
         self.current_action = None;
         self.tool_started_at = None;
-        if let Some(name) = self.current_tool_name.take() {
-            if let Some(idx) = self.last_tool_index.take() {
-                if let Some(last) = self.messages.get_mut(idx) {
-                    if last.role == Role::Tool {
-                        last.content = if output.trim().is_empty() {
-                            tool_done(&name, duration_secs)
-                        } else {
-                            format!("{}\n{}", tool_done(&name, duration_secs), output)
-                        };
-                        last.timestamp = now();
-                    }
+        if let (Some(name), Some(idx)) = (self.current_tool_name.take(), self.last_tool_index.take()) {
+            if let Some(last) = self.messages.get_mut(idx) {
+                if last.role == Role::Tool {
+                    last.content = if output.trim().is_empty() {
+                        tool_done(&name, duration_secs)
+                    } else {
+                        format!("{}\n{}", tool_done(&name, duration_secs), output)
+                    };
+                    last.timestamp = now();
                 }
             }
         }
@@ -83,27 +81,24 @@ impl AppState {
     }
 
     pub(crate) fn append_response(&mut self, id: String, content: String) {
-        if content.is_empty() {
-            if let Some(msg) = self.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == id) {
-                msg.timestamp = now();
-            }
-            self.messages_changed();
-            return;
-        }
         if let Some(msg) = self.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == id) {
-            msg.content.push_str(&content);
+            if !content.is_empty() {
+                msg.content.push_str(&content);
+            }
             msg.timestamp = now();
             self.messages_changed();
             return;
         }
-        self.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content,
-            timestamp: now(),
-            id: id.clone(),
-        });
-        self.current_request_id = Some(id);
-        self.messages_changed();
+        if !content.is_empty() {
+            self.messages.push(ChatMessage {
+                role: Role::Assistant,
+                content,
+                timestamp: now(),
+                id: id.clone(),
+            });
+            self.current_request_id = Some(id);
+            self.messages_changed();
+        }
     }
 
     pub(crate) fn complete_turn(&mut self, id: String, duration_secs: f64) {
@@ -125,10 +120,10 @@ impl AppState {
         self.turn_started_at = None;
     }
 
-    pub(crate) fn finish_turn(&mut self) {
+    pub(crate) fn finish_turn(&mut self, id: String) {
         self.strip_tools_from_assistant();
         self.remove_empty_assistant();
-        self.clear_turn_state();
+        self.clear_turn_state(&id);
         self.deliver_queued();
         self.maybe_end_streaming();
         self.reorder_agent_after_tools();
@@ -150,8 +145,10 @@ impl AppState {
         });
     }
 
-    fn clear_turn_state(&mut self) {
-        self.current_request_id = None;
+    fn clear_turn_state(&mut self, id: &str) {
+        if self.current_request_id.as_deref() == Some(id) {
+            self.current_request_id = None;
+        }
         self.current_tool_name = None;
         self.intermediate_step_count = 0;
         self.thought_seq = 0;
@@ -163,7 +160,9 @@ impl AppState {
     fn maybe_end_streaming(&mut self) {
         if self.inflight == 0 && self.request_queue.is_empty() {
             self.streaming = false;
-            self.thinking_started_at = None;
+            if self.current_request_id.is_none() {
+                self.thinking_started_at = None;
+            }
         }
     }
 

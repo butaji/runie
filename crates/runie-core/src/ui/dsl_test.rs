@@ -23,9 +23,9 @@ mod tests {
     #[test]
     fn test_visible_slices_correctly() {
         let cache = vec![
-            Element::UserMessage { content: "a".to_string(), timestamp: "00:00".to_string() },
-            Element::Spacer,
-            Element::UserMessage { content: "b".to_string(), timestamp: "00:01".to_string() },
+            Element::UserMessage { content: "a".to_string(), timestamp: 0.0 },
+            Element::Spacer { timestamp: 0.0 },
+            Element::UserMessage { content: "b".to_string(), timestamp: 1.0 },
         ];
         let visible = LazyCache::visible(&cache, 0, 2);
         assert_eq!(visible.len(), 2);
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn test_visible_bounds_check() {
-        let cache = vec![Element::UserMessage { content: "a".to_string(), timestamp: "00:00".to_string() }];
+        let cache = vec![Element::UserMessage { content: "a".to_string(), timestamp: 0.0 }];
         let visible = LazyCache::visible(&cache, 10, 5);
         assert!(visible.is_empty());
     }
@@ -63,10 +63,10 @@ mod tests {
 
         let elements = LazyCache::rebuild(&state);
         for (i, elem) in elements.iter().enumerate().step_by(2) {
-            assert!(!matches!(elem, Element::Spacer), "idx {} should be message", i);
+            assert!(!matches!(elem, Element::Spacer { .. }), "idx {} should be message", i);
         }
         for (i, elem) in elements.iter().enumerate().skip(1).step_by(2) {
-            assert!(matches!(elem, Element::Spacer), "idx {} should be Spacer", i);
+            assert!(matches!(elem, Element::Spacer { .. }), "idx {} should be Spacer", i);
         }
     }
 
@@ -76,7 +76,7 @@ mod tests {
         state.thinking_started_at = Some(std::time::Instant::now());
         let elements = LazyCache::rebuild(&state);
         assert!(matches!(elements[0], Element::Thinking { .. }));
-        assert!(matches!(elements[1], Element::Spacer));
+        assert!(matches!(elements[1], Element::Spacer { .. }));
     }
 
     #[test]
@@ -97,7 +97,7 @@ mod tests {
         let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
             Element::UserMessage { .. } => "U",
             Element::AgentMessage { .. } => "A",
-            Element::Spacer => "S",
+            Element::Spacer { .. } => "S",
             _ => "?",
         }).collect();
         assert_eq!(kinds, vec!["U", "S", "U", "S", "A", "S"], "A1 updated to t=4 should float to bottom");
@@ -112,7 +112,7 @@ mod tests {
         let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
             Element::ThoughtMarker { .. } => "T",
             Element::AgentMessage { .. } => "A",
-            Element::Spacer => "S",
+            Element::Spacer { .. } => "S",
             _ => "?",
         }).collect();
         assert_eq!(kinds, vec!["A", "S", "T", "S"], "Elements ordered by last update timestamp");
@@ -143,7 +143,7 @@ mod tests {
             Element::UserMessage { .. } => "U",
             Element::AgentMessage { .. } => "A",
             Element::Thinking { .. } => "I",
-            Element::Spacer => "S",
+            Element::Spacer { .. } => "S",
             _ => "?",
         }).collect();
         assert_eq!(kinds, vec!["U", "S", "A", "S", "U", "S", "I", "S"], "Thinking must be at bottom after current user msg, not before old assistant msg");
@@ -163,7 +163,7 @@ mod tests {
             Element::UserMessage { .. } => "U",
             Element::AgentMessage { .. } => "A",
             Element::Thinking { .. } => "I",
-            Element::Spacer => "S",
+            Element::Spacer { .. } => "S",
             _ => "?",
         }).collect();
         // A2 is skipped during thinking (id=t2 matches current_request_id), Thinking at max_ts+1

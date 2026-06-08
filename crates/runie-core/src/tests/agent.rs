@@ -140,7 +140,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
         crate::ui::Element::ThoughtMarker { .. } | crate::ui::Element::ThoughtSummary { .. } => "T",
         crate::ui::Element::AgentMessage { .. } => "A",
-        crate::ui::Element::Spacer => "S",
+        crate::ui::Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
     // Assistant created at T=1, Thought at T=2 — strict timestamp order: Agent before Thought
@@ -158,7 +158,7 @@ fn thinking_indicator_ordered_by_timestamp() {
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
         crate::ui::Element::Thinking { .. } => "I",
         crate::ui::Element::AgentMessage { .. } => "A",
-        crate::ui::Element::Spacer => "S",
+        crate::ui::Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
     // During thinking, assistant is NOT rendered — content captured for thought

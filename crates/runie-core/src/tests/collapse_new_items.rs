@@ -255,7 +255,7 @@ fn verify_collapsed_elements(state: &AppState) {
         Element::ToolSummary { .. } => "XS",
         Element::ToolDone { .. } => "XD",
         Element::AgentMessage { .. } => "AM",
-        Element::Spacer => "S",
+        Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
 

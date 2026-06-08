@@ -367,18 +367,4 @@ pub struct ChatMessage {
     pub id: String,
 }
 
-#[derive(Debug, Clone)]
-pub enum Msg {
-    User(String),
-    Assistant(String),
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Color {
-    Cyan,
-    Green,
-    Yellow,
-    DarkGray,
-    White,
-    Magenta,
-}

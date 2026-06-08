@@ -99,6 +99,13 @@ pub enum CodeBlock {
 
 /// Extract code blocks (``` fenced) from text.
 /// Returns vec of Text/Code segments in order.
+fn flush_text(lines: &mut Vec<&str>, blocks: &mut Vec<CodeBlock>) {
+    if !lines.is_empty() {
+        blocks.push(CodeBlock::Text(lines.join("\n")));
+        lines.clear();
+    }
+}
+
 pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
     let mut blocks = Vec::new();
     let mut in_code = false;
@@ -108,27 +115,17 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
 
     for line in text.lines() {
         if line.starts_with("```") {
+            flush_text(&mut text_lines, &mut blocks);
             if in_code {
-                // End of code block
-                if !text_lines.is_empty() {
-                    blocks.push(CodeBlock::Text(text_lines.join("\n")));
-                    text_lines.clear();
-                }
                 blocks.push(CodeBlock::Code {
                     lang: std::mem::take(&mut lang),
                     content: code_lines.join("\n"),
                 });
                 code_lines.clear();
-                in_code = false;
             } else {
-                // Start of code block
-                if !text_lines.is_empty() {
-                    blocks.push(CodeBlock::Text(text_lines.join("\n")));
-                    text_lines.clear();
-                }
                 lang = line[3..].trim().to_string();
-                in_code = true;
             }
+            in_code = !in_code;
         } else if in_code {
             code_lines.push(line);
         } else {
@@ -136,16 +133,11 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
         }
     }
 
-    // Handle remaining lines
     if in_code {
-        // Unclosed code block — treat as text
         text_lines.push("```");
         text_lines.extend(code_lines);
-        blocks.push(CodeBlock::Text(text_lines.join("\n")));
-    } else if !text_lines.is_empty() {
-        blocks.push(CodeBlock::Text(text_lines.join("\n")));
     }
-
+    flush_text(&mut text_lines, &mut blocks);
     blocks
 }
 
