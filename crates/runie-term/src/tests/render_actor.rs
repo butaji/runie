@@ -15,7 +15,6 @@ fn snapshot_renders_empty_state() {
     state.ensure_fresh();
     let snap = state.snapshot();
     let out = render_snapshot(&snap);
-    assert!(out.contains("Chat"), "Should render chat panel title");
     assert!(out.contains("Input"), "Should render input panel title");
 }
 

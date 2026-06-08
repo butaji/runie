@@ -42,7 +42,7 @@ fn user_message_is_one_line() {
     state.messages_changed();
     state.ensure_fresh();
 
-    assert_eq!(state.total_lines(), 1, "UserMessage (1) + Spacer (0) = 1 line");
+    assert_eq!(state.total_lines(), 2, "UserMessage (1) + Spacer (1) = 2 lines");
 }
 
 #[test]
@@ -54,8 +54,8 @@ fn thought_line_count_matches_content() {
     state.ensure_fresh();
 
     let total = state.total_lines();
-    // ThoughtMarker has 6 lines (header + 5), + Spacer = 6
-    assert_eq!(total, 6, "Thought with 5 content lines should be 6+0=6 lines total");
+    // ThoughtMarker has 6 lines (header + 5), + Spacer = 7
+    assert_eq!(total, 7, "Thought with 5 content lines should be 6+1=7 lines total");
 }
 
 #[test]
@@ -66,8 +66,8 @@ fn tool_line_count_matches_output() {
     state.ensure_fresh();
 
     let total = state.total_lines();
-    // ToolDone: header (1) + output (3) = 4, + Spacer = 4
-    assert_eq!(total, 4, "Tool with 3 output lines should be 4+0=4 lines total");
+    // ToolDone: header (1) + output (3) = 4, + Spacer = 5
+    assert_eq!(total, 5, "Tool with 3 output lines should be 4+1=5 lines total");
 }
 
 // ── Visible region: latest at bottom ──────────────────────────────────
@@ -89,8 +89,7 @@ fn visible_shows_latest_element_at_bottom() {
 
     let region = state.visible_scroll(3); // 3 lines viewport
     // 3 messages = 3 UserMessage + 3 Spacer = 6 lines total
-    // Viewport of 3 lines at bottom should show: msg2 + spacer + msg1 (partial? no, all fit)
-    // Actually with 3 lines we can fit: msg2 (1) + spacer (1) + msg1 (1) = 3 lines exactly
+    // Viewport of 3 lines at bottom shows: msg2 (1) + spacer (1) + msg1 (1) = 3 lines exactly
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
         "Latest message (msg2) must be in visible region"
@@ -118,6 +117,9 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     state.scroll = 0;
 
     // Total: msg0(1)+spacer(1) + thought(11)+spacer(1) + msg2(1)+spacer(1) = 17 lines
+    // Wait: thought_msg header "◆ Thought 1.0s" + 5 lines = 6 lines, not 11
+    // Actually thought_msg("t1", 5) = "◆ Thought 1.0s" + line1..line5 = 6 lines
+    // So total: msg0(1)+spacer(1) + thought(6)+spacer(1) + msg2(1)+spacer(1) = 11 lines
     // Viewport of 5 lines at bottom:
     // Bottom-up: msg2(1) + spacer(1) = 2 lines used, 3 remaining
     //            thought: need 3 lines from bottom of thought
@@ -149,16 +151,14 @@ fn scroll_up_shows_older_content() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 5 messages = 5 lines total (no spacers). Viewport of 3 lines.
-    // scroll=0 (bottom): shows msg2, msg3, msg4 = 3 lines
-    // scroll=2: shift up 2 lines → shows msg0, msg1, msg2 = 3 lines
-    //
-    // Lines: 0:msg0, 1:msg1, 2:msg2, 3:msg3, 4:msg4
-    // Total 5 lines. viewport=3.
-    // scroll=0: viewport [2, 5) → msg2, msg3, msg4 — msg4 visible
-    // scroll=2: viewport [0, 3) → msg0, msg1, msg2 — msg2 visible, msg3/msg4 hidden
+    // 5 messages = 10 lines total (5 messages + 5 spacers). Viewport of 3 lines.
+    // Lines: 0:msg0, 1:spacer, 2:msg1, 3:spacer, 4:msg2, 5:spacer, 6:msg3, 7:spacer, 8:msg4, 9:spacer
+    // Total 10 lines. viewport=3.
+    // scroll=0: viewport [7, 10) → lines 7,8,9 = spacer(msg3), msg4, spacer(msg4) — msg4 visible
+    // scroll=2: viewport [5, 8) → lines 5,6,7 = msg2, spacer, msg3 — msg2 visible, msg4 hidden
 
-    state.scroll = 2;
+    // scroll=5: viewport [2, 5) → msg1, spacer, msg2 — msg2 visible, msg4 hidden
+    state.scroll = 5;
     let region = state.visible_scroll(3);
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
@@ -368,8 +368,6 @@ fn scroll_preserved_when_not_at_bottom() {
     state.messages_changed();
     state.ensure_fresh();
 
-    // scroll should be increased by the new message's line count (2) to keep same view
-    // But in current behavior, scroll stays the same (user is reading history)
-    // Actually in autoscroll tests, scroll is preserved when not at bottom
+    // scroll preserved when not at bottom
     assert_eq!(state.scroll, 5, "Scroll position should be preserved when not at bottom");
 }

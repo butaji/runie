@@ -97,18 +97,11 @@ fn build_status_text(snap: &Snapshot) -> String {
 }
 
 fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(PANEL_CHAT)
-        .border_style(style_border());
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-
     if snap.elements.is_empty() {
-        render_empty_state(f, inner);
+        render_empty_state(f, area);
         return;
     }
-    render_message_content(f, snap, inner);
+    render_message_content(f, snap, area);
 }
 
 fn render_empty_state(f: &mut Frame, area: Rect) {
@@ -174,7 +167,7 @@ fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height
 fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
-        Spacer => vec![],
+        Spacer => vec![Line::from("")],
         UserMessage { content, timestamp } => render_user_message(content, timestamp),
         AgentMessage { content, timestamp } => render_agent_message(content, timestamp),
         Thinking { started } => vec![Line::from(

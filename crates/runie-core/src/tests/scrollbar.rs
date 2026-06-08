@@ -88,11 +88,11 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 30 messages = 30 lines (no spacers)
-    // max_scroll = 20, thumb = max(1, 10*10/30) = 3
-    state.scroll = 10; // halfway
+    // 30 messages = 60 lines (30 messages + 30 spacers)
+    // max_scroll = 50, thumb = max(1, 10*10/60) = 1
+    state.scroll = 25; // halfway
     let (thumb, offset) = state.scrollbar_metrics(10);
-    let expected_offset = (20 - 10) * (10 - thumb) / 20;
+    let expected_offset = (50 - 25) * (10 - thumb) / 50;
     assert_eq!(offset, expected_offset, "Thumb should be in middle");
 }
 
@@ -127,14 +127,14 @@ fn visible_uses_scroll_offset() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 10 messages = 10 lines (no spacers), max_scroll = 5
+    // 10 messages = 20 lines (10 messages + 10 spacers), max_scroll = 15
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
     let visible_bottom = state.visible_scroll(5);
     assert!(visible_bottom.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
-    // At scroll=5 (top), we see oldest: first is msg0
-    state.scroll = 5;
+    // At scroll=15 (top), we see oldest: first is msg0
+    state.scroll = 15;
     let visible_top = state.visible_scroll(5);
     assert!(visible_top.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }

@@ -55,6 +55,8 @@ mod semantic_order;
 #[cfg(test)]
 mod action_text;
 #[cfg(test)]
+mod element_spacing;
+#[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
 mod input_undo;
