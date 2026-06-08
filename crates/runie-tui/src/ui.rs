@@ -6,7 +6,7 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style::Style,
     text::Line,
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
@@ -14,11 +14,18 @@ use ratatui::{
 
 use runie_core::{Element, Snapshot, PANEL_CHAT, PANEL_INPUT};
 
+use crate::theme::C;
+
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3), Constraint::Length(1)])
+        .constraints([
+            Constraint::Min(3),
+            Constraint::Length(1),
+            Constraint::Length(3),
+            Constraint::Length(1),
+        ])
         .split(f.area());
 
     messages(f, snap, chunks[0]);
@@ -40,12 +47,20 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let mut left_parts = Vec::new();
     if snap.turn_active {
         if let Some(elapsed) = snap.turn_elapsed_secs {
-            left_parts.push(runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed));
+            left_parts.push(runie_core::labels::action_text(
+                snap.spinner_frame,
+                "Working",
+                elapsed,
+            ));
         } else {
             left_parts.push(format!("{} Working...", snap.spinner_frame));
         }
     }
-    let left_text = left_parts.join(" | ");
+    let left_text = if left_parts.is_empty() {
+        "ready".to_string()
+    } else {
+        left_parts.join(" | ")
+    };
     let right_text = format!("{} tok", tokens);
 
     let hchunks = Layout::default()
@@ -53,12 +68,15 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
         .constraints([Constraint::Min(0), Constraint::Length(right_text.len() as u16)])
         .split(area);
 
+    let status_style = if snap.turn_active {
+        Style::default().fg(C.success)
+    } else {
+        Style::default().fg(C.dim)
+    };
+
+    f.render_widget(Paragraph::new(left_text).style(status_style), hchunks[0]);
     f.render_widget(
-        Paragraph::new(left_text).style(Style::default().fg(Color::DarkGray)),
-        hchunks[0],
-    );
-    f.render_widget(
-        Paragraph::new(right_text).style(Style::default().fg(Color::DarkGray)),
+        Paragraph::new(right_text).style(Style::default().fg(C.dim)),
         hchunks[1],
     );
 }
@@ -67,16 +85,22 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_CHAT)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(Style::default().fg(C.dim));
     let inner = block.inner(area);
     f.render_widget(block, area);
 
     let height = inner.height as usize;
     let total_lines = snap.total_lines;
-    if height == 0 || total_lines == 0 { return; }
+    if height == 0 || total_lines == 0 {
+        return;
+    }
 
     let show_bar = total_lines > height;
-    let content_width = if show_bar { inner.width.saturating_sub(1) } else { inner.width };
+    let content_width = if show_bar {
+        inner.width.saturating_sub(1)
+    } else {
+        inner.width
+    };
 
     let hchunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -123,51 +147,77 @@ fn to_lines<'a>(elem: &'a Element, spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer => vec![Line::from("")],
-        UserMessage { content } => vec![Line::from(span(format!("You: {}", content), Color::White))],
-        AgentMessage { content } => vec![Line::from(span(format!("Agent: {}", content), Color::White))],
-        Thinking { started } => vec![gray(Line::from(runie_core::labels::action_text(spinner_frame, "Thinking", started.elapsed().as_secs_f64())))],
-        ThoughtSummary { content, .. } => vec![gray(Line::from(
-            format!("{} [+]", content.lines().next().unwrap_or(content))
-        ))],
-        ThoughtMarker { content } => content.lines().map(|line| gray(Line::from(line.to_string()))).collect(),
-        ToolRunning { name, started } => vec![gray(Line::from(format!("{} Running {}... {:.1}s", spinner_frame, name, started.elapsed().as_secs_f64())))],
-        ToolDone { name, duration_secs, output } => {
-            let mut lines = vec![gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs)))];
+        UserMessage { content } => vec![Line::from(format!("$ {}", content)).style(Style::default().fg(C.fg_mid))],
+        AgentMessage { content } => vec![Line::from(format!("→ {}", content)).style(Style::default().fg(C.fg_mid))],
+        Thinking { started } => vec![Line::from(runie_core::labels::action_text(
+            spinner_frame,
+            "Thinking",
+            started.elapsed().as_secs_f64(),
+        ))
+        .style(Style::default().fg(C.accent))],
+        ThoughtSummary { content, .. } => vec![Line::from(format!(
+            "{} [+]",
+            content.lines().next().unwrap_or(content)
+        ))
+        .style(Style::default().fg(C.dim))],
+        ThoughtMarker { content } => content
+            .lines()
+            .map(|line| Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)))
+            .collect(),
+        ToolRunning { name, started } => vec![Line::from(format!(
+            "{} Running {}... {:.1}s",
+            spinner_frame,
+            name,
+            started.elapsed().as_secs_f64()
+        ))
+        .style(Style::default().fg(C.fg_mid))],
+        ToolDone {
+            name,
+            duration_secs,
+            output,
+        } => {
+            let mut lines = vec![Line::from(format!("✓ {} {:.1}s", name, duration_secs))
+                .style(Style::default().fg(C.success))];
             if !output.is_empty() {
                 for line in output.lines() {
-                    lines.push(gray(Line::from(line.to_string())));
+                    lines.push(
+                        Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)),
+                    );
                 }
             }
             lines
         }
-        ToolSummary { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s [+]", name, duration_secs)))],
-        TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
+        ToolSummary {
+            name,
+            duration_secs,
+        } => vec![Line::from(format!("✓ {} {:.1}s [+]", name, duration_secs))
+            .style(Style::default().fg(C.dim))],
+        TurnComplete { duration_secs } => vec![Line::from(format!(
+            "Turn completed in {:.1}s",
+            duration_secs
+        ))
+        .style(Style::default().fg(C.dim))],
     }
 }
-
-fn span(text: String, color: Color) -> ratatui::text::Span<'static> {
-    ratatui::text::Span::styled(text, Style::default().fg(color))
-}
-
-fn gray(line: Line<'static>) -> Line<'static> {
-    line.style(Style::default().fg(Color::DarkGray))
-}
-
-
 
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_INPUT)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(Style::default().fg(C.dim));
     let inner = block.inner(area);
-    f.render_widget(Paragraph::new(snap.input.as_str()).block(block), area);
+    f.render_widget(
+        Paragraph::new(snap.input.as_str())
+            .style(Style::default().fg(C.fg_mid))
+            .block(block),
+        area,
+    );
     f.set_cursor_position((inner.x + snap.input.len() as u16, inner.y));
 }
 
 fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {
     f.render_widget(
-        Paragraph::new(snap.hint_text.as_str()).style(Style::default().fg(Color::DarkGray)),
+        Paragraph::new(snap.hint_text.as_str()).style(Style::default().fg(C.dim)),
         area,
     );
 }
@@ -187,29 +237,42 @@ fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
         width: area.width.saturating_sub(2).max(20),
         height: max_height,
     };
-    let mut lines: Vec<Line> = suggestions.iter().take(8).enumerate().map(|(i, s)| {
-        let prefix = if i == selected { "▸ " } else { "  " };
-        let style = if i == selected {
-            Style::default().fg(Color::Black).bg(Color::Yellow)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        Line::from(format!("{}{}", prefix, s)).style(style)
-    }).collect();
+    let mut lines: Vec<Line> = suggestions
+        .iter()
+        .take(8)
+        .enumerate()
+        .map(|(i, s)| {
+            let prefix = if i == selected { "▸ " } else { "  " };
+            let style = if i == selected {
+                Style::default().fg(C.dim).bg(C.fg_mid)
+            } else {
+                Style::default().fg(C.fg_mid)
+            };
+            Line::from(format!("{}{}", prefix, s)).style(style)
+        })
+        .collect();
     lines.push(Line::from(""));
-    lines.push(Line::from("Tab=cycle Enter=insert Esc=close").style(Style::default().fg(Color::DarkGray)));
+    lines.push(
+        Line::from("Tab=cycle Enter=insert Esc=close")
+            .style(Style::default().fg(C.dim)),
+    );
     let block = Block::default()
         .borders(Borders::ALL)
         .title(format!(" @ files ({}) ", suggestions.len()))
-        .border_style(Style::default().fg(Color::Magenta));
+        .border_style(Style::default().fg(C.accent));
     f.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 
 fn estimate_element_tokens(elem: &Element) -> usize {
     use runie_core::Element::*;
     match elem {
-        UserMessage { content } | AgentMessage { content } | ThoughtMarker { content } => content.len() / 4,
-        Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
+        UserMessage { content }
+        | AgentMessage { content }
+        | ThoughtMarker { content } => content.len() / 4,
+        Thinking { .. }
+        | ThoughtSummary { .. }
+        | ToolSummary { .. }
+        | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
         Spacer => 0,

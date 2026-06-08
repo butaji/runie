@@ -15,7 +15,7 @@ fn draw_state(state: &mut AppState) -> String {
 fn empty_state_renders_nothing() {
     let mut state = AppState::default();
     let content = draw_state(&mut state);
-    assert!(!content.contains("You:"));
+    assert!(!content.contains("$ "));
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn user_message_renders() {
     state.update(Event::Input('i'));
     state.update(Event::Submit);
     let content = draw_state(&mut state);
-    assert!(content.contains("You:"), "Should render user prefix");
+    assert!(content.contains("$ Hi"), "Should render user prefix");
     assert!(content.contains("Hi"), "Should render message content");
 }
 
@@ -37,8 +37,7 @@ fn agent_response_renders() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
     let content = draw_state(&mut state);
-    assert!(content.contains("Agent:"), "Should render agent prefix");
-    assert!(content.contains("Hello"), "Should render response");
+    assert!(content.contains("→ Hello"), "Should render agent prefix");
 }
 
 #[test]
@@ -47,7 +46,7 @@ fn tool_done_renders() {
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     let content = draw_state(&mut state);
-    assert!(content.contains("Ran"), "Should render tool done");
+    assert!(content.contains("✓"), "Should render tool done");
     assert!(content.contains("list_files"), "Should show tool name");
 }
 
@@ -58,7 +57,7 @@ fn reset_clears_messages() {
     state.update(Event::Submit);
     state.update(Event::Reset);
     let content = draw_state(&mut state);
-    assert!(!content.contains("You:"), "Reset should clear messages from view");
+    assert!(!content.contains("$ "), "Reset should clear messages from view");
 }
 
 #[test]
@@ -130,10 +129,10 @@ fn wrapping_preserves_prefix_on_first_line_only() {
             let line: String = (0..buf.area().width)
                 .map(|x| buf.get(x, y as u16).symbol().to_string())
                 .collect();
-            if line.contains("Agent:") { Some(line.trim().to_string()) } else { None }
+            if line.contains("→ ") { Some(line.trim().to_string()) } else { None }
         })
         .collect();
-    assert_eq!(lines_with_agent.len(), 1, "Only first wrapped line should contain Agent: prefix");
+    assert_eq!(lines_with_agent.len(), 1, "Only first wrapped line should contain → prefix");
 }
 
 #[test]
@@ -155,7 +154,7 @@ fn wrapping_respects_panel_width_minus_borders() {
         let line: String = (0..buf.area().width)
             .map(|x| buf.get(x, y).symbol().to_string())
             .collect();
-        if line.trim().starts_with("You:") || line.trim().starts_with("x") {
+        if line.trim().starts_with("$") || line.trim().starts_with("x") {
             let visible_len = line.trim_end().len();
             assert!(
                 visible_len <= inner_width,
