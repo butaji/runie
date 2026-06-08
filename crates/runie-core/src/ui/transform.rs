@@ -58,7 +58,13 @@ impl LazyCache {
     fn add_thinking_if_active(state: &AppState, entries: &mut Vec<(f64, usize, Element, String, String)>) {
         if let Some(started) = state.thinking_started_at {
             let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
-            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { started }, String::new(), String::new()));
+            let turn_ts = state.messages.iter()
+                .find(|m| m.role == Role::TurnComplete)
+                .map(|m| m.timestamp);
+            // If TurnComplete exists, Thinking must sort before it.
+            // Use TurnComplete's timestamp with a lower index as tie-breaker.
+            let ts = turn_ts.map(|t| t).unwrap_or(max_ts + 1.0);
+            entries.push((ts, 0, Element::Thinking { started }, String::new(), String::new()));
         }
     }
 

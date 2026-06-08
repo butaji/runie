@@ -86,14 +86,35 @@ impl AppState {
             }
             Event::Quit => {}
             Event::Reset => *self = AppState::default(),
-            Event::AgentThinking { id } => self.set_thinking(id),
-            Event::AgentThoughtDone { id } => self.add_thought(id),
-            Event::AgentToolStart { id, name } => self.start_tool(id, name),
-            Event::AgentToolEnd { duration_secs, output } => self.end_tool(duration_secs, output),
-            Event::AgentResponse { id, content } => self.append_response(id, content),
-            Event::AgentTurnComplete { id, duration_secs } => self.complete_turn(id, duration_secs),
+            Event::AgentThinking { id } => {
+                self.set_thinking(id);
+                self.ensure_turn_complete_last();
+            }
+            Event::AgentThoughtDone { id } => {
+                self.add_thought(id);
+                self.ensure_turn_complete_last();
+            }
+            Event::AgentToolStart { id, name } => {
+                self.start_tool(id, name);
+                self.ensure_turn_complete_last();
+            }
+            Event::AgentToolEnd { duration_secs, output } => {
+                self.end_tool(duration_secs, output);
+                self.ensure_turn_complete_last();
+            }
+            Event::AgentResponse { id, content } => {
+                self.append_response(id, content);
+                self.ensure_turn_complete_last();
+            }
+            Event::AgentTurnComplete { id, duration_secs } => {
+                self.complete_turn(id, duration_secs);
+                self.ensure_turn_complete_last();
+            }
             Event::AgentDone { .. } => self.finish_turn(),
-            Event::AgentError { id, message } => self.add_error(id, message),
+            Event::AgentError { id, message } => {
+                self.add_error(id, message);
+                self.ensure_turn_complete_last();
+            }
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
             Event::FollowUp => self.queue_follow_up(),
             Event::Abort => self.abort_queue(),
@@ -129,5 +150,16 @@ impl AppState {
             id: "system".to_string(),
         });
         self.messages_changed();
+    }
+
+    /// Move TurnComplete to the end of messages and bump its timestamp.
+    /// Called after every agent event to ensure TurnComplete remains last.
+    fn ensure_turn_complete_last(&mut self) {
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
+            let mut tc = self.messages.remove(idx);
+            tc.timestamp = now();
+            self.messages.push(tc);
+            self.messages_changed();
+        }
     }
 }

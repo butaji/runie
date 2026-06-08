@@ -203,3 +203,37 @@ fn turn_complete_is_last_when_error_after_turn_complete() {
     assert_eq!(kinds.last(), Some(&"Turn".to_string()),
         "TurnComplete must remain last even when error arrives after it: got {:?}", kinds);
 }
+
+#[test]
+fn turn_complete_is_last_when_response_after_done() {
+    // Delayed response chunk arrives AFTER AgentDone
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello".into() });
+    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentDone { id: "req.0".into() });
+    // Delayed chunk arrives after done
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "world".into() });
+    state.ensure_fresh();
+
+    let kinds = element_kinds_no_spacer(&state);
+    assert_eq!(kinds.last(), Some(&"Turn".to_string()),
+        "TurnComplete must remain last even when response arrives after AgentDone: got {:?}", kinds);
+}
+
+#[test]
+fn turn_complete_is_last_when_thinking_after_done() {
+    // Delayed thinking start arrives AFTER AgentDone
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello".into() });
+    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentDone { id: "req.0".into() });
+    // Delayed thinking event
+    state.update(Event::AgentThinking { id: "req.0".into() });
+    state.ensure_fresh();
+
+    let kinds = element_kinds_no_spacer(&state);
+    assert_eq!(kinds.last(), Some(&"Turn".to_string()),
+        "TurnComplete must remain last even when thinking arrives after AgentDone: got {:?}", kinds);
+}
