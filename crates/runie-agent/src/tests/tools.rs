@@ -2,14 +2,14 @@ use crate::Tool;
 
 #[test]
 fn test_tool_read_file_exists() {
-    let result = Tool::ReadFile { path: "Cargo.toml".to_string() }.execute();
+    let result = Tool::ReadFile { path: "Cargo.toml".to_string(), offset: None, limit: None }.execute();
     assert!(result.success);
     assert!(result.output.contains("runie-agent"));
 }
 
 #[test]
 fn test_tool_read_file_missing() {
-    let result = Tool::ReadFile { path: "nonexistent_file_12345.txt".to_string() }.execute();
+    let result = Tool::ReadFile { path: "nonexistent_file_12345.txt".to_string(), offset: None, limit: None }.execute();
     assert!(!result.success);
     assert!(result.output.contains("Error"));
 }
@@ -30,10 +30,21 @@ fn test_tool_write_file_roundtrip() {
     }.execute();
     assert!(write_result.success);
 
-    let read_result = Tool::ReadFile { path: path.to_string() }.execute();
+    let read_result = Tool::ReadFile { path: path.to_string(), offset: None, limit: None }.execute();
     assert!(read_result.success);
     assert_eq!(read_result.output, "test content 42");
     let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn test_tool_read_file_with_offset_and_limit() {
+    let result = Tool::ReadFile {
+        path: "Cargo.toml".to_string(),
+        offset: Some(0),
+        limit: Some(5),
+    }.execute();
+    assert!(result.success);
+    assert!(result.output.contains("[Lines"));
 }
 
 #[test]

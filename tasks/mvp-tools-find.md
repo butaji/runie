@@ -1,6 +1,6 @@
 # find tool
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,7 +12,7 @@ Glob-based file finding with .gitignore support.
 
 ## Acceptance Criteria
 
-- [ ] Pattern matching (glob)
-- [ ] Path constraints
-- [ ] Max results limit
-- [ ] .gitignore awareness
+- [x] Pattern matching (glob)
+- [x] Path constraints
+- [x] Max results limit
+- [x] .gitignore awareness

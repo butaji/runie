@@ -1,6 +1,6 @@
 # read tool
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,7 +12,7 @@ Read file contents with line limits.
 
 ## Acceptance Criteria
 
-- [ ] Read file contents
-- [ ] Line limits (start/end offsets)
-- [ ] Binary file detection
-- [ ] Error handling for missing/inaccessible files
+- [x] Read file contents
+- [x] Line limits (start/end offsets)
+- [x] Binary file detection (via read_file_ref for images)
+- [x] Error handling for missing/inaccessible files
