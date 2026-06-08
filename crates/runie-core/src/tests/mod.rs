@@ -26,3 +26,27 @@ mod hints;
 mod scrollbar;
 #[cfg(test)]
 mod collapse_new_items;
+#[cfg(test)]
+mod toggle_stress;
+#[cfg(test)]
+mod toggle_all;
+#[cfg(test)]
+mod element_order;
+#[cfg(test)]
+mod line_scroll;
+#[cfg(test)]
+mod turn_complete_order;
+#[cfg(test)]
+mod no_ghost_agent;
+#[cfg(test)]
+mod status_timer;
+#[cfg(test)]
+mod autoscroll_overflow;
+#[cfg(test)]
+mod autoscroll_bug;
+#[cfg(test)]
+mod paragraph_scroll;
+#[cfg(test)]
+mod semantic_order;
+#[cfg(test)]
+mod action_text;

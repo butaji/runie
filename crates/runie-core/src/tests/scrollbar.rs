@@ -131,13 +131,13 @@ fn visible_uses_scroll_offset() {
 
     // At scroll=0 (bottom), we see newest: elements 15..20
     let visible_bottom = state.visible_scroll(5);
-    assert_eq!(visible_bottom.len(), 5);
+    assert_eq!(visible_bottom.elements.len(), 5);
 
     // At scroll=15 (top), we see oldest: elements 0..5, first is msg0
     state.scroll = 15;
     let visible_top = state.visible_scroll(5);
-    assert_eq!(visible_top.len(), 5);
-    let first = visible_top.first().unwrap();
+    assert_eq!(visible_top.elements.len(), 5);
+    let first = visible_top.elements.first().unwrap();
     match first {
         crate::ui::elements::Element::UserMessage { content } => {
             assert!(content.contains("msg0"), "Top scroll should show oldest first, got: {}", content);

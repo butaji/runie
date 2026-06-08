@@ -11,12 +11,15 @@ fn now() -> f64 {
 }
 
 pub(crate) fn strip_tool_markers(content: &str) -> String {
+    // Inline TOOL: marker — truncate before first occurrence
+    if let Some(pos) = content.find("TOOL:") {
+        let before = &content[..pos];
+        return before.trim_end().to_string();
+    }
+
     let mut result = String::new();
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("TOOL:") {
-            continue;
-        }
         if trimmed.starts_with('{') {
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
                 if val.get("name").is_some() && val.get("arguments").is_some() {
@@ -30,6 +33,21 @@ pub(crate) fn strip_tool_markers(content: &str) -> String {
         result.push_str(line);
     }
     result
+}
+
+pub(crate) fn content_has_tool_markers(content: &str) -> bool {
+    if content.contains("TOOL:") {
+        return true;
+    }
+    content.lines().any(|line| {
+        let trimmed = line.trim();
+        if !trimmed.starts_with('{') {
+            return false;
+        }
+        serde_json::from_str::<serde_json::Value>(trimmed)
+            .map(|v| v.get("name").is_some() && v.get("arguments").is_some())
+            .unwrap_or(false)
+    })
 }
 
 impl AppState {
@@ -55,22 +73,13 @@ impl AppState {
             Event::FollowUp => self.queue_follow_up(),
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
-            Event::ToggleExpand => self.toggle_last_expand(),
+            Event::ToggleExpand => self.toggle_expand_all(),
         }
     }
 
-    fn toggle_last_expand(&mut self) {
-        if let Some(msg) = self.messages.iter().rfind(|m| {
-            (m.role == Role::Thought) || (m.role == Role::Tool && !m.content.contains("Running"))
-        }) {
-            let id = msg.id.clone();
-            if self.collapsed.contains(&id) {
-                self.collapsed.remove(&id);
-            } else {
-                self.collapsed.insert(id);
-            }
-            self.messages_changed();
-        }
+    fn toggle_expand_all(&mut self) {
+        self.all_collapsed = !self.all_collapsed;
+        self.messages_changed();
     }
 
     pub fn hint_text(&self) -> String {
@@ -160,6 +169,7 @@ impl AppState {
                 content,
                 kind: crate::model::QueuedMessageKind::Steering,
             });
+            self.scroll = 0;
             self.mark_dirty();
             return;
         }
@@ -171,6 +181,7 @@ impl AppState {
             id: id.clone(),
         });
         self.request_queue.push_back((content, id));
+        self.scroll = 0;
         self.messages_changed();
     }
 
@@ -191,8 +202,8 @@ impl AppState {
         let mut insert_idx = self.messages.len();
         let thought_content = if let Some(idx) = self.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
             let assistant = &self.messages[idx];
+            let has_tools = content_has_tool_markers(&assistant.content);
             let stripped = strip_tool_markers(&assistant.content);
-            let has_tools = stripped != assistant.content;
             if has_tools && !stripped.trim().is_empty() {
                 self.messages.remove(idx);
                 insert_idx = idx;
@@ -204,11 +215,13 @@ impl AppState {
         } else {
             thought_with_time(duration)
         };
+        let thought_id = format!("{}#thought.{}", id, self.thought_seq);
+        self.thought_seq += 1;
         let thought = ChatMessage {
             role: Role::Thought,
             content: thought_content,
             timestamp: now(),
-            id: id.clone(),
+            id: thought_id,
         };
         self.messages.insert(insert_idx, thought);
         self.messages_changed();
@@ -221,11 +234,12 @@ impl AppState {
         self.intermediate_step_count += 1;
         self.current_action = Some(format!("Running {}", name));
         self.last_tool_index = Some(self.messages.len());
+        let tool_id = format!("tool.{}.{}", id, self.intermediate_step_count);
         self.messages.push(ChatMessage {
             role: Role::Tool,
             content: tool_running(&name),
             timestamp: now(),
-            id,
+            id: tool_id,
         });
         self.messages_changed();
     }
@@ -252,21 +266,17 @@ impl AppState {
 
     fn append_response(&mut self, id: String, content: String) {
         if content.is_empty() {
-            if let Some(last) = self.messages.last_mut() {
-                if last.role == Role::Assistant && last.id == id {
-                    last.timestamp = now();
-                }
+            if let Some(msg) = self.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == id) {
+                msg.timestamp = now();
             }
             self.messages_changed();
             return;
         }
-        if let Some(last) = self.messages.last_mut() {
-            if last.role == Role::Assistant && last.id == id {
-                last.content.push_str(&content);
-                last.timestamp = now();
-                self.messages_changed();
-                return;
-            }
+        if let Some(msg) = self.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == id) {
+            msg.content.push_str(&content);
+            msg.timestamp = now();
+            self.messages_changed();
+            return;
         }
         self.messages.push(ChatMessage {
             role: Role::Assistant,
@@ -301,6 +311,7 @@ impl AppState {
         self.current_request_id = None;
         self.current_tool_name = None;
         self.intermediate_step_count = 0;
+        self.thought_seq = 0;
         self.turn_active = false;
         self.turn_started_at = None;
         self.inflight = self.inflight.saturating_sub(1);
@@ -308,6 +319,25 @@ impl AppState {
         if self.inflight == 0 && self.request_queue.is_empty() {
             self.streaming = false;
             self.thinking_started_at = None;
+        }
+        // Semantic reorder: final assistant response must come after all tools.
+        // The mock provider (and some real providers) send the final response
+        // before the tool end event. When the tool output is >1 page, this
+        // pushes the agent response above the viewport. Move it after tools.
+        let last_assistant = self.messages.iter().rposition(|m| m.role == Role::Assistant);
+        let last_tool = self.messages.iter().rposition(|m| m.role == Role::Tool);
+        if let (Some(a_idx), Some(t_idx)) = (last_assistant, last_tool) {
+            if a_idx < t_idx {
+                let mut agent = self.messages.remove(a_idx);
+                agent.timestamp = now();
+                self.messages.insert(t_idx, agent);
+            }
+        }
+        // Seal TurnComplete as the last message of the turn.
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
+            let mut turn_complete = self.messages.remove(idx);
+            turn_complete.timestamp = now();
+            self.messages.push(turn_complete);
         }
         self.messages_changed();
     }
@@ -502,6 +532,7 @@ impl AppState {
             content,
             kind: crate::model::QueuedMessageKind::FollowUp,
         });
+        self.scroll = 0;
         self.mark_dirty();
     }
 
@@ -566,6 +597,7 @@ impl AppState {
                 id: id.clone(),
             });
             self.request_queue.push_back((msg.content, id));
+            self.scroll = 0;
             self.messages_changed();
             return;
         }
@@ -584,6 +616,7 @@ impl AppState {
                 id: id.clone(),
             });
             self.request_queue.push_back((msg.content, id));
+            self.scroll = 0;
             self.messages_changed();
         }
     }

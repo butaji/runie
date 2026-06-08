@@ -22,7 +22,7 @@ mod tests;
 #[cfg(test)]
 mod file_refs_lookup_tests;
 
-pub use model::{AppState, ChatMessage, Color, Role, PANEL_CHAT, PANEL_INPUT};
+pub use model::{AppState, ChatMessage, Color, Role, Snapshot, PANEL_CHAT, PANEL_INPUT};
 pub use session::{Session, save, load, list, delete};
 pub use event::Event;
 pub use labels::{

@@ -15,9 +15,7 @@ fn thought_created_via_pipeline_is_expanded() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-
-    let thought = state.messages.iter().find(|m| m.role == Role::Thought).unwrap();
-    assert!(!state.collapsed.contains(&thought.id), "Thought should be expanded by default, only hotkey toggles");
+    assert!(!state.all_collapsed, "Thoughts should be expanded by default");
 }
 
 #[test]
@@ -26,38 +24,32 @@ fn tool_created_via_pipeline_is_expanded() {
     state.streaming = true;
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
-
-    let tool = state.messages.iter().find(|m| m.role == Role::Tool).unwrap();
-    assert!(!state.collapsed.contains(&tool.id), "Tool should be expanded by default, only hotkey toggles");
+    assert!(!state.all_collapsed, "Tools should be expanded by default");
 }
 
 #[test]
-fn toggle_expand_collapses_expanded_thought() {
+fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    let thought_id = state.messages.iter().find(|m| m.role == Role::Thought).unwrap().id.clone();
-    assert!(!state.collapsed.contains(&thought_id), "Should start expanded");
-
+    assert!(!state.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains(&thought_id), "ToggleExpand should collapse the thought");
+    assert!(state.all_collapsed, "ToggleExpand should collapse all thoughts/tools");
 }
 
 #[test]
-fn toggle_expand_collapses_expanded_tool() {
+fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
     state.streaming = true;
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
 
-    let tool_id = state.messages.iter().find(|m| m.role == Role::Tool).unwrap().id.clone();
-    assert!(!state.collapsed.contains(&tool_id), "Should start expanded");
-
+    assert!(!state.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains(&tool_id), "ToggleExpand should collapse the tool");
+    assert!(state.all_collapsed, "ToggleExpand should collapse all thoughts/tools");
 }
 
 #[test]
@@ -84,7 +76,7 @@ fn toggle_expand_hides_thought() {
         id: "t1".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains("t1"), "Thought id should be in collapsed set");
+    assert!(state.all_collapsed, "Toggle should set all_collapsed");
 }
 
 #[test]
@@ -98,7 +90,7 @@ fn toggle_expand_restores_thought() {
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
-    assert!(!state.collapsed.contains("t1"), "Thought id should be removed from collapsed set");
+    assert!(!state.all_collapsed, "Second toggle should expand all");
 }
 
 #[test]
@@ -110,7 +102,7 @@ fn collapsed_thought_renders_one_line_summary() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed.insert("t1".into());
+    state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ThoughtSummary { content, .. } => Some(content.as_str()),
@@ -130,7 +122,7 @@ fn tool_collapsed_by_toggle() {
         id: "t1".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains("t1"), "Tool id should be in collapsed set");
+    assert!(state.all_collapsed, "Toggle should set all_collapsed");
 }
 
 #[test]
@@ -144,7 +136,7 @@ fn toggle_expand_restores_tool() {
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
-    assert!(!state.collapsed.contains("t1"), "Tool id should be removed from collapsed set");
+    assert!(!state.all_collapsed, "Second toggle should expand all");
 }
 
 #[test]
@@ -156,7 +148,7 @@ fn collapsed_tool_renders_one_line_summary() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed.insert("t1".into());
+    state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ToolSummary { name, .. } => Some(name.as_str()),
@@ -170,11 +162,11 @@ fn collapsed_tool_renders_one_line_summary() {
 fn toggle_expand_noop_when_empty() {
     let mut state = fresh_state();
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.is_empty());
+    assert!(state.all_collapsed, "Toggle on empty state should still flip flag");
 }
 
 #[test]
-fn toggle_expand_prefers_most_recent() {
+fn toggle_expand_affects_all_items() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -189,8 +181,7 @@ fn toggle_expand_prefers_most_recent() {
         id: "new".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(!state.collapsed.contains("old"), "Should not toggle older thought");
-    assert!(state.collapsed.contains("new"), "Should toggle most recent tool");
+    assert!(state.all_collapsed, "Toggle should collapse ALL thoughts and tools globally");
 }
 
 #[test]
@@ -325,7 +316,7 @@ fn collapsed_thought_hides_reasoning() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed.insert("t1".into());
+    state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
 
     let summary = feed.elements.iter().find_map(|e| match e {
@@ -364,7 +355,7 @@ fn collapsed_tool_hides_output() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.collapsed.insert("t1".into());
+    state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
 
     let has_tool_done = feed.elements.iter().any(|e| matches!(e, Element::ToolDone { .. }));

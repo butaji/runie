@@ -164,3 +164,25 @@ fn timer_advances_without_cache_rebuild() {
     let elapsed = started.elapsed().as_secs_f64();
     assert!(elapsed >= 4.9, "Timer should advance without cache rebuild: {:.1}s", elapsed);
 }
+
+#[test]
+fn input_not_delayed_by_animation_when_idle() {
+    let mut state = fresh_state();
+    state.turn_active = false;
+    state.update(Event::Input('x'));
+    assert!(state.is_dirty(), "Input must mark dirty immediately");
+    assert!(!state.turn_active, "Idle state must not require animation timer");
+}
+
+#[test]
+fn tick_animation_noop_when_not_turn_active() {
+    let mut state = fresh_state();
+    state.turn_active = false;
+    state.update(Event::Input('x'));
+    state.ensure_fresh();
+    let was_dirty = state.is_dirty();
+
+    state.tick_animation();
+    assert!(!state.is_dirty(), "tick_animation must be noop when !turn_active");
+    assert_eq!(was_dirty, false, "State should remain clean after noop tick");
+}

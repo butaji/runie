@@ -1,6 +1,5 @@
 //! Model — Application State (mutable borrow, no cloning per event)
 use crate::ui::elements::Element;
-use std::collections::HashSet;
 
 
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
@@ -8,6 +7,14 @@ const SPINNER_FRAMES: u32 = 12;
 
 pub const PANEL_CHAT: &str = " Chat ";
 pub const PANEL_INPUT: &str = " Input ";
+
+/// A viewport into the element cache — elements plus how many
+/// lines to skip from the top of the first element.
+#[derive(Clone, Copy)]
+pub struct VisibleRegion<'a> {
+    pub elements: &'a [Element],
+    pub skip_lines: usize,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QueuedMessageKind {
@@ -53,10 +60,15 @@ pub struct AppState {
     pub at_selected: Option<usize>,
     /// Last @-ref query to avoid redundant filesystem calls
     pub last_at_query: Option<String>,
-    /// Collapsed element ids (hidden in TUI) — thoughts, tools, etc.
-    pub collapsed: HashSet<String>,
+    /// Global collapse flag — when true, ALL thoughts/tools render collapsed.
+    /// New elements automatically respect this setting.
+    pub all_collapsed: bool,
+    /// Monotonic counter for unique thought ids within a turn
+    pub(crate) thought_seq: u64,
     element_count: usize,
     elements_cache: Vec<Element>,
+    line_counts: Vec<usize>,
+    total_lines: usize,
     dirty: bool,
     message_gen: u64,
     cached_gen: u64,
@@ -89,9 +101,12 @@ impl Default for AppState {
             at_suggestions: None,
             at_selected: None,
             last_at_query: None,
-            collapsed: HashSet::new(),
+            all_collapsed: false,
+            thought_seq: 0,
             element_count: 0,
             elements_cache: Vec::new(),
+            line_counts: Vec::new(),
+            total_lines: 0,
             dirty: true,
             message_gen: 1,
             cached_gen: 0,
@@ -141,6 +156,8 @@ impl AppState {
         if self.dirty && self.message_gen != self.cached_gen {
             self.elements_cache = crate::ui::LazyCache::rebuild(self);
             self.element_count = self.elements_cache.len();
+            self.line_counts = self.elements_cache.iter().map(|e| e.line_count()).collect();
+            self.total_lines = self.line_counts.iter().sum();
             self.cached_gen = self.message_gen;
         }
         self.dirty = false;
@@ -164,6 +181,10 @@ impl AppState {
         self.element_count
     }
 
+    pub fn total_lines(&self) -> usize {
+        self.total_lines
+    }
+
     pub fn elements_cache(&self) -> &[Element] {
         &self.elements_cache
     }
@@ -175,36 +196,93 @@ impl AppState {
         }
     }
 
+    /// Build an immutable Snapshot for the render actor.
+    /// The event loop calls this after ensure_fresh(); the render
+    /// actor receives it via channel and draws without touching state.
+    pub fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            elements: self.elements_cache.clone(),
+            line_counts: self.line_counts.clone(),
+            total_lines: self.total_lines,
+            input: self.input.clone(),
+            hint_text: self.hint_text(),
+            at_suggestions: self.at_suggestions.clone(),
+            at_selected: self.at_selected,
+            turn_active: self.turn_active,
+            spinner_frame: self.spinner_frame(),
+            scroll: self.scroll,
+            turn_elapsed_secs: self.turn_elapsed_secs(),
+        }
+    }
+
     pub fn is_dirty(&self) -> bool {
         self.dirty
     }
 
+    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
+        let max_scroll = self.total_lines.saturating_sub(visible_height);
+        let scroll = self.scroll.min(max_scroll);
+        max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
+    }
+
     pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
-        let total = self.count();
+        let total = self.total_lines;
         if total <= visible_height || visible_height == 0 {
             return (0, 0);
         }
         let max_scroll = total.saturating_sub(visible_height);
         let scroll = self.scroll.min(max_scroll);
+        let position = max_scroll.saturating_sub(scroll);
         let track = visible_height;
         let thumb = (visible_height * visible_height / total).max(1);
         let thumb_offset = if max_scroll > 0 {
-            (max_scroll - scroll) * (track - thumb) / max_scroll
+            position * (track - thumb) / max_scroll
         } else {
             0
         };
         (thumb, thumb_offset)
     }
 
-    pub fn visible_scroll(&self, visible_height: usize) -> &[Element] {
-        let total = self.count();
-        if total == 0 || visible_height == 0 {
-            return &[];
+    pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
+        if self.elements_cache.is_empty() || visible_height == 0 {
+            return VisibleRegion { elements: &[], skip_lines: 0 };
         }
+
+        let total = self.total_lines;
         let max_scroll = total.saturating_sub(visible_height);
         let scroll = self.scroll.min(max_scroll);
-        let start = max_scroll.saturating_sub(scroll);
-        self.visible(start, visible_height)
+
+        let viewport_end = total.saturating_sub(scroll);
+        let viewport_start = viewport_end.saturating_sub(visible_height);
+
+        let mut cum = 0usize;
+        let mut start_idx = 0;
+        let mut skip_lines = 0;
+
+        for (i, count) in self.line_counts.iter().enumerate() {
+            let next_cum = cum + count;
+            if next_cum > viewport_start {
+                start_idx = i;
+                skip_lines = viewport_start.saturating_sub(cum);
+                break;
+            }
+            cum = next_cum;
+        }
+
+        let mut end_idx = self.elements_cache.len();
+        cum = 0;
+        for (i, count) in self.line_counts.iter().enumerate() {
+            cum += count;
+            if cum >= viewport_end {
+                end_idx = i + 1;
+                break;
+            }
+        }
+
+        VisibleRegion {
+            elements: &self.elements_cache[start_idx..end_idx.min(self.elements_cache.len())],
+            skip_lines,
+        }
     }
 
     pub fn total_tokens(&self) -> usize {
@@ -248,7 +326,7 @@ impl AppState {
     }
 }
 
-fn now() -> f64 {
+pub fn now() -> f64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs_f64())
@@ -300,4 +378,101 @@ pub enum Color {
     DarkGray,
     White,
     Magenta,
+}
+
+/// Immutable frame description — the UI DSL.
+/// The event loop builds snapshots; the render actor draws them.
+/// Zero blocking I/O in the event loop by design.
+#[derive(Clone)]
+pub struct Snapshot {
+    pub elements: Vec<Element>,
+    pub line_counts: Vec<usize>,
+    pub total_lines: usize,
+    pub input: String,
+    pub hint_text: String,
+    pub at_suggestions: Option<Vec<String>>,
+    pub at_selected: Option<usize>,
+    pub turn_active: bool,
+    pub spinner_frame: char,
+    pub scroll: usize,
+    /// Elapsed seconds since turn started. Captured at snapshot creation time.
+    pub turn_elapsed_secs: Option<f64>,
+}
+
+impl Snapshot {
+    pub fn element_count(&self) -> usize {
+        self.elements.len()
+    }
+
+    pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
+        let start = skip.min(self.elements.len());
+        let end = (start + take).min(self.elements.len());
+        &self.elements[start..end]
+    }
+
+    pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
+        if self.elements.is_empty() || visible_height == 0 {
+            return VisibleRegion { elements: &[], skip_lines: 0 };
+        }
+
+        let total = self.total_lines;
+        let max_scroll = total.saturating_sub(visible_height);
+        let scroll = self.scroll.min(max_scroll);
+
+        let viewport_end = total.saturating_sub(scroll);
+        let viewport_start = viewport_end.saturating_sub(visible_height);
+
+        let mut cum = 0usize;
+        let mut start_idx = 0;
+        let mut skip_lines = 0;
+
+        for (i, count) in self.line_counts.iter().enumerate() {
+            let next_cum = cum + count;
+            if next_cum > viewport_start {
+                start_idx = i;
+                skip_lines = viewport_start.saturating_sub(cum);
+                break;
+            }
+            cum = next_cum;
+        }
+
+        let mut end_idx = self.elements.len();
+        cum = 0;
+        for (i, count) in self.line_counts.iter().enumerate() {
+            cum += count;
+            if cum >= viewport_end {
+                end_idx = i + 1;
+                break;
+            }
+        }
+
+        VisibleRegion {
+            elements: &self.elements[start_idx..end_idx.min(self.elements.len())],
+            skip_lines,
+        }
+    }
+
+    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
+        let max_scroll = self.total_lines.saturating_sub(visible_height);
+        let scroll = self.scroll.min(max_scroll);
+        max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
+    }
+
+    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
+        let total = self.total_lines;
+        if total <= visible_height || visible_height == 0 {
+            return (0, 0);
+        }
+        let max_scroll = total.saturating_sub(visible_height);
+        let scroll = self.scroll.min(max_scroll);
+        let position = max_scroll.saturating_sub(scroll);
+        let track = visible_height;
+        let thumb = (visible_height * visible_height / total).max(1);
+        let thumb_offset = if max_scroll > 0 {
+            position * (track - thumb) / max_scroll
+        } else {
+            0
+        };
+        (thumb, thumb_offset)
+    }
 }

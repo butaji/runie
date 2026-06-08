@@ -22,3 +22,13 @@ pub fn tool_running(name: &str) -> String {
 pub fn tool_done(name: &str, seconds: f64) -> String {
     format!("◆ Ran {} {:.1}s", name, seconds)
 }
+
+/// Unified action text: spinner + tag + timer.
+/// Tags ending with "ing" (ongoing actions) automatically get "...".
+pub fn action_text(spinner: char, tag: &str, elapsed: f64) -> String {
+    if tag.ends_with("ing") {
+        format!("{} {}... {:.1}s", spinner, tag, elapsed)
+    } else {
+        format!("{} {} {:.1}s", spinner, tag, elapsed)
+    }
+}
