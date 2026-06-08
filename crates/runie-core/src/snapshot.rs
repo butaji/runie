@@ -26,6 +26,8 @@ pub struct Snapshot {
     pub input_flash: u8,
     /// Placeholder text shown when input is empty.
     pub placeholder: String,
+    /// Queue count (pending messages in queue)
+    pub queue_count: usize,
 }
 
 impl Snapshot {

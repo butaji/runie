@@ -66,7 +66,12 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let tokens: usize = snap.elements.iter().map(|e| estimate_element_tokens(e)).sum();
     let left_text = build_status_text(snap);
-    let right_text = format!("{} tok", tokens);
+    let queue_part = if snap.queue_count > 0 {
+        format!(" · {} queued", snap.queue_count)
+    } else {
+        String::new()
+    };
+    let right_text = format!("{} tok{}", tokens, queue_part);
 
     let h = hstack(area, &[
         Constraint::Min(0),
