@@ -1,4 +1,5 @@
 //! Runie TUI - Terminal UI Rendering
+pub mod markdown;
 pub mod theme;
 pub mod ui;
 

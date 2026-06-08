@@ -54,3 +54,17 @@ mod paragraph_scroll;
 mod semantic_order;
 #[cfg(test)]
 mod action_text;
+#[cfg(test)]
+mod input_grapheme;
+#[cfg(test)]
+mod input_undo;
+#[cfg(test)]
+mod input_word_nav;
+#[cfg(test)]
+mod input_flash;
+#[cfg(test)]
+mod placeholder;
+#[cfg(test)]
+mod paste;
+#[cfg(test)]
+mod fuzzy;

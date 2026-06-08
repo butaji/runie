@@ -1,5 +1,10 @@
 //! TUI smoke tests — verify view() integrates with core state
 
+#[cfg(test)]
+mod markdown;
+#[cfg(test)]
+mod code_blocks;
+
 use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};

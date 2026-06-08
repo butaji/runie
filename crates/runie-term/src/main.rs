@@ -46,7 +46,11 @@ async fn main() -> io::Result<()> {
 
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
     crossterm::terminal::enable_raw_mode()?;
-    crossterm::execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
+    crossterm::execute!(
+        std::io::stdout(),
+        crossterm::terminal::EnterAlternateScreen,
+        crossterm::event::EnableBracketedPaste,
+    )?;
     Terminal::new(CrosstermBackend::new(std::io::stdout()))
 }
 
@@ -109,7 +113,7 @@ async fn event_loop(
                 }
             }
 
-            _ = anim.tick(), if state.turn_active => {
+            _ = anim.tick() => {
                 state.tick_animation();
             }
         }
@@ -257,11 +261,53 @@ mod tests {
         let result = super::convert_event(&event);
         assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
     }
+
+    #[test]
+    fn ctrl_z_converts_to_undo() {
+        let key = KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::Undo)), "Ctrl+Z should map to Undo");
+    }
+
+    #[test]
+    fn ctrl_y_converts_to_redo() {
+        let key = KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::Redo)), "Ctrl+Y should map to Redo");
+    }
+
+    #[test]
+    fn alt_b_converts_to_word_left() {
+        let key = KeyEvent::new(KeyCode::Char('b'), KeyModifiers::ALT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::CursorWordLeft)), "Alt+B should map to CursorWordLeft");
+    }
+
+    #[test]
+    fn alt_f_converts_to_word_right() {
+        let key = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::ALT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::CursorWordRight)), "Alt+F should map to CursorWordRight");
+    }
+
+    #[test]
+    fn bracketed_paste_converts_to_paste_event() {
+        let event = crossterm::event::Event::Paste("hello world".to_string());
+        let result = super::convert_event(&event);
+        assert!(matches!(result, Some(super::CoreEvent::Paste(s)) if s == "hello world"), "Paste event should map to CoreEvent::Paste");
+    }
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {
     log_key_event(event);
     match event {
+        Event::Paste(data) => {
+            Some(CoreEvent::Paste(data.clone()))
+        }
         Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
             map_key_event(key)
         }
@@ -298,9 +344,9 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
         // Ctrl+A: move cursor to start (Emacs)
         KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
-        // Ctrl+E: move cursor to end (Emacs)
+        // Ctrl+B: move cursor backward (Emacs)
         KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
-        // Ctrl+F: move cursor forward (Emacs) - also Ctrl+Right
+        // Ctrl+F: move cursor forward (Emacs)
         KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorRight),
         // Ctrl+W: delete word (Emacs)
         KeyCode::Char('w') | KeyCode::Char('W') => Some(CoreEvent::DeleteWord),
@@ -310,6 +356,10 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::DeleteToStart),
         // Ctrl+D: delete char at cursor (Emacs)
         KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::KillChar),
+        // Ctrl+Z: undo
+        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Undo),
+        // Ctrl+Y: redo
+        KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
         // Ctrl+C: quit
         KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
         // Ctrl+S: abort
@@ -321,6 +371,10 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
 fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
         KeyCode::Enter => Some(CoreEvent::FollowUp),
+        // Alt+B: word backward
+        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorWordLeft),
+        // Alt+F: word forward
+        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorWordRight),
         _ => None,
     }
 }
