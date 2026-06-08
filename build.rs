@@ -1,8 +1,12 @@
 use std::fs;
+use std::path::Path;
 
 const MAX_FILE_LINES: usize = 500;
 const MAX_FUNCTION_LINES: usize = 40;
 const MAX_COMPLEXITY: usize = 10;
+
+const ALLOWED_FILES_OVER: &[&str] = &[];
+const ALLOWED_FUNCS_OVER: &[&str] = &[];
 
 fn walkdir(path: &Path) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
@@ -21,8 +25,9 @@ fn walkdir(path: &Path) -> Vec<std::path::PathBuf> {
 
 fn main() {
     let mut errors = Vec::new();
-
-    for path in walkdir(std::path::Path::new("crates")) {
+    let paths: Vec<_> = walkdir(std::path::Path::new("crates"));
+    eprintln!("Linting {} files...", paths.len());
+    for path in paths {
         if path.to_string_lossy().contains("target/") {
             continue;
         }

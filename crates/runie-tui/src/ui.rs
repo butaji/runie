@@ -83,12 +83,7 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
         .constraints([Constraint::Length(content_width), Constraint::Min(0)])
         .split(inner);
 
-    // Build ALL lines — let ratatui Paragraph::scroll() handle the viewport.
-    let mut lines = Vec::with_capacity(total_lines);
-    for elem in &snap.elements {
-        lines.extend(to_lines(elem, snap.spinner_frame));
-    }
-
+    let lines = build_lines(snap);
     let offset = snap.scroll_offset(height);
     f.render_widget(
         Paragraph::new(lines)
@@ -98,18 +93,30 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     );
 
     if show_bar {
-        let scrollbar = Scrollbar::default()
-            .orientation(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(None)
-            .end_symbol(None)
-            .track_symbol(Some("│"))
-            .thumb_symbol("█");
-
-        let mut scrollbar_state = ScrollbarState::new(total_lines)
-            .position(offset as usize)
-            .viewport_content_length(height);
-        f.render_stateful_widget(scrollbar, inner, &mut scrollbar_state);
+        render_scrollbar(f, inner, total_lines, offset, height);
     }
+}
+
+fn build_lines(snap: &Snapshot) -> Vec<Line<'_>> {
+    let mut lines = Vec::with_capacity(snap.total_lines);
+    for elem in &snap.elements {
+        lines.extend(to_lines(elem, snap.spinner_frame));
+    }
+    lines
+}
+
+fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {
+    let scrollbar = Scrollbar::default()
+        .orientation(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(None)
+        .end_symbol(None)
+        .track_symbol(Some("│"))
+        .thumb_symbol("█");
+
+    let mut state = ScrollbarState::new(total)
+        .position(offset as usize)
+        .viewport_content_length(height);
+    f.render_stateful_widget(scrollbar, area, &mut state);
 }
 
 fn to_lines<'a>(elem: &'a Element, spinner_frame: char) -> Vec<Line<'a>> {

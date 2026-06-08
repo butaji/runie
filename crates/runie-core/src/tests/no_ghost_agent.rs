@@ -134,47 +134,58 @@ fn full_turn_no_ghost_agent_messages() {
     let mut state = fresh_state();
     state.streaming = true;
 
-    // User submits
+    verify_no_agent_before_response(&mut state);
+    verify_no_agent_during_thinking(&mut state);
+    verify_no_agent_with_tool_response(&mut state);
+    verify_no_agent_after_thought_done(&mut state);
+    verify_no_agent_during_tool(&mut state);
+    verify_final_response_shows(&mut state);
+    verify_response_persists_after_turn(&mut state);
+}
+
+fn verify_no_agent_before_response(state: &mut AppState) {
     state.input = "list files".into();
     state.update(Event::Submit);
     state.ensure_fresh();
-    assert!(agent_texts(&state).is_empty(), "No agent msg before agent responds");
+    assert!(agent_texts(state).is_empty(), "No agent msg before agent responds");
+}
 
-    // Agent thinks
+fn verify_no_agent_during_thinking(state: &mut AppState) {
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.ensure_fresh();
-    assert!(agent_texts(&state).is_empty(), "No agent msg during thinking");
+    assert!(agent_texts(state).is_empty(), "No agent msg during thinking");
+}
 
-    // Agent sends response with tool
+fn verify_no_agent_with_tool_response(state: &mut AppState) {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "I'll list the files.\nTOOL:list_dir:.".into() });
     state.ensure_fresh();
-    assert!(agent_texts(&state).is_empty(),
-        "Must NOT see 'Agent: I'll list the files' — it will be captured in thought");
+    assert!(agent_texts(state).is_empty(), "Must NOT see ghost agent with tool");
+}
 
-    // Thought done
+fn verify_no_agent_after_thought_done(state: &mut AppState) {
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
-    assert!(agent_texts(&state).is_empty(),
-        "No ghost agent after thought_done captures the text");
+    assert!(agent_texts(state).is_empty(), "No ghost agent after thought_done");
+}
 
-    // Tool runs
+fn verify_no_agent_during_tool(state: &mut AppState) {
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "list_dir".into() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a\nb\nc".into() });
     state.ensure_fresh();
-    assert!(agent_texts(&state).is_empty(), "No agent msg during tool execution");
+    assert!(agent_texts(state).is_empty(), "No agent msg during tool execution");
+}
 
-    // Final response
+fn verify_final_response_shows(state: &mut AppState) {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Here are your files.".into() });
     state.ensure_fresh();
-    assert_eq!(agent_texts(&state), vec!["Here are your files."],
-        "Final response must render as AgentMessage");
+    assert_eq!(agent_texts(state), vec!["Here are your files."], "Final response must render");
+}
 
-    // Turn complete
+fn verify_response_persists_after_turn(state: &mut AppState) {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    assert_eq!(agent_texts(&state), vec!["Here are your files."],
-        "Final response must persist after turn completes");
+    assert_eq!(agent_texts(state), vec!["Here are your files."], "Response persists after turn");
 }
 
 // ── Streaming chunks: no flicker ─────────────────────────────────────

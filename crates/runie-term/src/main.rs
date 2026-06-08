@@ -7,7 +7,7 @@
 //!   4. Render actor: owns Terminal, receives Snapshots via channel
 //!   5. If render is slow, old Snapshots are dropped — event loop never waits
 
-use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
@@ -260,6 +260,16 @@ mod tests {
 }
 
 fn convert_event(event: &Event) -> Option<CoreEvent> {
+    log_key_event(event);
+    match event {
+        Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
+            map_key_event(key)
+        }
+        _ => None,
+    }
+}
+
+fn log_key_event(event: &Event) {
     if let Event::Key(key) = event {
         if std::env::var("RUNIE_DEBUG").is_ok() {
             use std::io::Write;
@@ -270,35 +280,45 @@ fn convert_event(event: &Event) -> Option<CoreEvent> {
                 .and_then(|mut f| writeln!(f, "{:?}", key));
         }
     }
-    match event {
-        Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
-            if key.modifiers.contains(KeyModifiers::CONTROL) {
-                match key.code {
-                    KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
-                    KeyCode::Char('c') | KeyCode::Char('C')
-                    | KeyCode::Char('q') | KeyCode::Char('Q')
-                    | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
-                    KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
-                    _ => None,
-                }
-            } else if key.modifiers.contains(KeyModifiers::ALT) {
-                match key.code {
-                    KeyCode::Enter => Some(CoreEvent::FollowUp),
-                    _ => None,
-                }
-            } else {
-                match key.code {
-                    KeyCode::Esc => Some(CoreEvent::Abort),
-                    KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
-                    KeyCode::Char(c) => Some(CoreEvent::Input(c)),
-                    KeyCode::Backspace => Some(CoreEvent::Backspace),
-                    KeyCode::Enter => Some(CoreEvent::Submit),
-                    KeyCode::Up => Some(CoreEvent::ScrollUp),
-                    KeyCode::Down => Some(CoreEvent::ScrollDown),
-                    _ => None,
-                }
-            }
-        }
+}
+
+fn map_key_event(key: &KeyEvent) -> Option<CoreEvent> {
+    if key.modifiers.contains(KeyModifiers::CONTROL) {
+        map_ctrl_key(key.code)
+    } else if key.modifiers.contains(KeyModifiers::ALT) {
+        map_alt_key(key.code)
+    } else {
+        map_plain_key(key.code)
+    }
+}
+
+fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
+    match code {
+        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
+        KeyCode::Char('c') | KeyCode::Char('C')
+        | KeyCode::Char('q') | KeyCode::Char('Q')
+        | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
+        KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
+        _ => None,
+    }
+}
+
+fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
+    match code {
+        KeyCode::Enter => Some(CoreEvent::FollowUp),
+        _ => None,
+    }
+}
+
+fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
+    match code {
+        KeyCode::Esc => Some(CoreEvent::Abort),
+        KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
+        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
+        KeyCode::Backspace => Some(CoreEvent::Backspace),
+        KeyCode::Enter => Some(CoreEvent::Submit),
+        KeyCode::Up => Some(CoreEvent::ScrollUp),
+        KeyCode::Down => Some(CoreEvent::ScrollDown),
         _ => None,
     }
 }

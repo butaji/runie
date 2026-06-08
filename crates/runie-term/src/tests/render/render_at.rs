@@ -1,0 +1,51 @@
+use super::super::*;
+
+#[test]
+fn test_render_at_lookup_popup_shows_on_tab() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "@Car".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Input('\t'));
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("@ files"), "Popup title must render. Buffer:\n{}", content);
+    assert!(content.contains("Cargo") || content.contains("cargo"), "Must show Cargo files. Buffer:\n{}", content);
+}
+
+#[test]
+fn test_render_at_lookup_popup_shows_immediately() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    state.update(Event::Input('@'));
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    assert!(content.contains("@ files"), "Popup must show immediately on @. Buffer:\n{}", content);
+}
+
+#[test]
+fn test_render_at_lookup_tab_cycles_and_enter_inserts() {
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+
+    for c in "@Car".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Input('\t'));
+    state.update(Event::Input('\t'));
+    state.update(Event::Submit);
+
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    assert!(!state.input.contains('@'), "@ should be replaced. Got: {}", state.input);
+    assert!(state.input.contains('[') && state.input.contains(']'), "Should be inserted as [path]. Got: {}", state.input);
+}
