@@ -107,12 +107,20 @@ impl AppState {
     }
 
     pub(crate) fn complete_turn(&mut self, id: String, duration_secs: f64) {
-        self.messages.push(ChatMessage {
-            role: Role::TurnComplete,
-            content: format!("Turn completed in {:.1}s", duration_secs),
-            timestamp: now(),
-            id,
-        });
+        let content = format!("Turn completed in {:.1}s", duration_secs);
+        let ts = now();
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
+            self.messages[idx].content = content;
+            self.messages[idx].timestamp = ts;
+            self.messages[idx].id = id;
+        } else {
+            self.messages.push(ChatMessage {
+                role: Role::TurnComplete,
+                content,
+                timestamp: ts,
+                id,
+            });
+        }
         self.messages_changed();
         self.turn_started_at = None;
     }
@@ -181,12 +189,18 @@ impl AppState {
 
     pub(crate) fn add_error(&mut self, id: String, message: String) {
         self.streaming = false;
-        self.messages.push(ChatMessage {
+        let mut error = ChatMessage {
             role: Role::Assistant,
             content: format!("Error: {}", message),
             timestamp: now(),
             id: format!("error.{}", id),
-        });
+        };
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
+            error.timestamp = self.messages[idx].timestamp;
+            self.messages.insert(idx, error);
+        } else {
+            self.messages.push(error);
+        }
         self.messages_changed();
     }
 }

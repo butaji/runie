@@ -154,3 +154,52 @@ fn turn_complete_timestamp_is_max_after_done() {
         "TurnComplete timestamp ({}) must be strictly greater than all other messages ({}) after finish_turn",
         turn_ts, max_other_ts);
 }
+
+#[test]
+fn turn_complete_deduplicated_on_duplicate_events() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello".into() });
+    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 }); // duplicate
+    state.update(Event::AgentDone { id: "req.0".into() });
+    state.ensure_fresh();
+
+    let turn_count = state.messages.iter().filter(|m| m.role == Role::TurnComplete).count();
+    assert_eq!(turn_count, 1, "Should have exactly one TurnComplete, got {}", turn_count);
+
+    let kinds = element_kinds_no_spacer(&state);
+    assert_eq!(kinds.last(), Some(&"Turn".to_string()));
+}
+
+#[test]
+fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
+    // Simulates a delayed response chunk with a different id arriving after turn complete
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello".into() });
+    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    // New assistant message (different id, not an append) arrives after turn complete
+    state.update(Event::AgentResponse { id: "req.1".into(), content: "Delayed".into() });
+    state.update(Event::AgentDone { id: "req.0".into() });
+    state.ensure_fresh();
+
+    let kinds = element_kinds_no_spacer(&state);
+    assert_eq!(kinds.last(), Some(&"Turn".to_string()),
+        "TurnComplete must remain last even when new assistant message arrives after it: got {:?}", kinds);
+}
+
+#[test]
+fn turn_complete_is_last_when_error_after_turn_complete() {
+    let mut state = fresh_state();
+    state.streaming = true;
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello".into() });
+    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    // Error arrives after turn complete (but before/during done)
+    state.update(Event::AgentError { id: "req.0".into(), message: "Oops".into() });
+    state.ensure_fresh();
+
+    let kinds = element_kinds_no_spacer(&state);
+    assert_eq!(kinds.last(), Some(&"Turn".to_string()),
+        "TurnComplete must remain last even when error arrives after it: got {:?}", kinds);
+}
