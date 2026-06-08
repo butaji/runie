@@ -62,6 +62,8 @@ pub struct AppState {
     /// Global collapse flag — when true, ALL thoughts/tools render collapsed.
     /// New elements automatically respect this setting.
     pub all_collapsed: bool,
+    /// Cached index of last assistant message — O(1) lookup for append_response
+    pub(crate) last_assistant_index: Option<usize>,
     pub(crate) thought_seq: u64,
     pub(crate) input_history: Vec<String>,
     pub(crate) history_pos: Option<usize>,
@@ -92,7 +94,7 @@ impl Default for AppState {
             current_provider: "mock".into(), current_model: "echo".into(),
             inflight: 0, render_generation: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
-            all_collapsed: false, thought_seq: 0,
+            all_collapsed: false, last_assistant_index: None, thought_seq: 0,
             input_history: Vec::new(), history_pos: None,
             undo_stack: Vec::new(), redo_stack: Vec::new(),
             input_flash: 0, placeholder: "Type a message to start...".into(),

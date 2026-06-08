@@ -29,7 +29,7 @@ use crate::session_jsonl as jsonl;
 /// Run the session manager actor loop.
 /// Returns when shutdown flag is set or channel closes.
 pub fn run_session_manager(
-    bus: EventBus,
+    _bus: EventBus,
     channel: ActorChannel<BusEventEnvelope>,
     shutdown: Arc<AtomicBool>,
     snapshot_interval: Duration,

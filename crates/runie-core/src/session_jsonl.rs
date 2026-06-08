@@ -103,7 +103,7 @@ impl JsonlReader {
     /// Read the next domain event, or Ok(None) on EOF.
     pub fn read_event(&mut self) -> Result<Option<DomainEvent>> {
         let mut line = String::new();
-        match self.reader.read_line(&mut line)? as usize {
+        match self.reader.read_line(&mut line)? {
             0 => Ok(None),
             _ => {
                 self.line_no += 1;

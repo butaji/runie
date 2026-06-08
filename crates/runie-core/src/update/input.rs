@@ -250,8 +250,7 @@ impl AppState {
     pub(crate) fn paste(&mut self, text: &str) {
         let clean = text
             .replace("\r\n", "")
-            .replace('\r', "")
-            .replace('\n', "")
+            .replace(['\r', '\n'], "")
             .replace('\t', "    ");
         if clean.is_empty() {
             return;
@@ -365,7 +364,7 @@ impl AppState {
 
     fn handle_at_trigger(&mut self) {
         if self.input.contains('@') {
-            let query = self.input.split('@').last().unwrap_or("").to_string();
+            let query = self.input.split('@').next_back().unwrap_or("").to_string();
             let needs_refresh = self.last_at_query.as_ref() != Some(&query)
                 || self.at_suggestions.is_none();
             if needs_refresh {
@@ -380,7 +379,7 @@ impl AppState {
     }
 
     fn refresh_at_suggestions(&mut self) {
-        let query = self.input.split('@').last().unwrap_or("").to_string();
+        let query = self.input.split('@').next_back().unwrap_or("").to_string();
         let mut suggestions = crate::file_refs::complete_at_ref(&self.input, ".", 50);
         if suggestions.len() > 1 && !query.is_empty() {
             let refs: Vec<&str> = suggestions.iter().map(|s| s.as_str()).collect();

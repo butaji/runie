@@ -236,8 +236,7 @@ fn run_command_with_timeout(
             ))
         }
         Err(mpsc::RecvTimeoutError::Disconnected) => {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            Err(std::io::Error::other(
                 "Channel disconnected unexpectedly"
             ))
         }
