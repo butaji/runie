@@ -23,7 +23,7 @@ impl Element {
     /// Must stay in sync with `to_lines()` in `runie-tui/src/ui.rs`.
     pub fn line_count(&self) -> usize {
         match self {
-            Element::Spacer => 0,
+            Element::Spacer => 1,
             Element::UserMessage { content, .. } => content.lines().count().max(1),
             Element::AgentMessage { content, .. } => content.lines().count().max(1),
             Element::Thinking { .. } => 1,

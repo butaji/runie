@@ -21,13 +21,13 @@ fn test_scrollbar_shows_when_content_overflows() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let area = buf.area();
-    let scrollbar_col = 38;
-    let bar_chars: Vec<String> = (1..area.height - 1)
+    let scrollbar_col = area.width - 1;
+    let bar_chars: Vec<String> = (0..area.height)
         .map(|y| buf[(scrollbar_col, y)].symbol().to_string())
         .collect();
     assert!(
         bar_chars.iter().any(|s| s == "█" || s == "│"),
-        "Scrollbar should render at col 38. Got: {:?}", bar_chars
+        "Scrollbar should render at col {}. Got: {:?}", scrollbar_col, bar_chars
     );
 }
 
@@ -40,9 +40,9 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
-    let scrollbar_col = 38;
     let area = buf.area();
-    let bar_chars: Vec<String> = (1..area.height - 1)
+    let scrollbar_col = area.width - 1;
+    let bar_chars: Vec<String> = (0..area.height)
         .map(|y| buf[(scrollbar_col, y)].symbol().to_string())
         .collect();
     assert!(
@@ -72,7 +72,7 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let buf_scrolled = terminal.backend().buffer().clone();
 
     let area = buf_bottom.area();
-    let right_col = area.width - 2;
+    let right_col = area.width - 1;
 
     let bottom_thumb_y = (0..area.height)
         .find(|y| buf_bottom[(right_col, *y)].symbol() == "█")
@@ -103,9 +103,9 @@ fn test_no_scrollbar_when_content_fits() {
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
-    let scrollbar_col = 38;
     let area = buf.area();
-    let has_thumb = (1..area.height - 1)
+    let scrollbar_col = area.width - 1;
+    let has_thumb = (0..area.height)
         .any(|y| buf[(scrollbar_col, y)].symbol() == "█");
     assert!(!has_thumb, "No scrollbar thumb when content fits");
 }

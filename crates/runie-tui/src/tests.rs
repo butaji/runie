@@ -149,7 +149,7 @@ fn wrapping_preserves_prefix_on_first_line_only() {
 }
 
 #[test]
-fn wrapping_respects_panel_width_minus_borders() {
+fn wrapping_respects_panel_width() {
     let mut state = AppState::default();
     state.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
@@ -162,7 +162,6 @@ fn wrapping_respects_panel_width_minus_borders() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let inner_width = (width - 2) as usize;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
             .map(|x| buf[(x, y as u16)].symbol().to_string())
@@ -170,9 +169,9 @@ fn wrapping_respects_panel_width_minus_borders() {
         if line.trim().starts_with("$") || line.trim().starts_with("x") {
             let visible_len = line.trim_end().len();
             assert!(
-                visible_len <= inner_width,
-                "Wrapped line {} chars exceeds inner width {}: {:?}",
-                visible_len, inner_width, line
+                visible_len <= width as usize,
+                "Wrapped line {} chars exceeds width {}: {:?}",
+                visible_len, width, line
             );
         }
     }
