@@ -81,87 +81,87 @@ pub fn style_user() -> Style {
     Style::default().fg(C.fg_bright)
 }
 
-/// Agent message (bright, high-contrast — primary content)
+/// Agent message — low-contrast, secondary to user content
 pub fn style_agent() -> Style {
-    Style::default().fg(C.fg_bright)
+    Style::default().fg(C.fg)
 }
 
-/// Thought / reasoning marker (accent purple — internal reasoning)
+/// Thought / reasoning — low-contrast, same whether expanded or collapsed
 pub fn style_thought() -> Style {
-    Style::default().fg(C.accent)
-}
-
-/// Thinking indicator (accent purple — spinner + time)
-pub fn style_thinking() -> Style {
-    Style::default().fg(C.accent)
-}
-
-/// Thought summary when collapsed (dim)
-pub fn style_thought_summary() -> Style {
     Style::default().fg(C.dim)
 }
 
-/// Tool running (mid — less prominent than done)
+/// Thinking indicator — low-contrast
+pub fn style_thinking() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Thought summary (collapsed) — same as expanded
+pub fn style_thought_summary() -> Style {
+    style_thought()
+}
+
+/// Tool running — low-contrast
 pub fn style_tool_running() -> Style {
-    Style::default().fg(C.fg_mid)
+    Style::default().fg(C.dim)
 }
 
-/// Tool done header (success green)
+/// Tool done header — low-contrast, same whether expanded or collapsed
 pub fn style_tool_header() -> Style {
-    Style::default().fg(C.success)
+    Style::default().fg(C.dim)
 }
 
-/// Tool done output (regular fg — factual content deserves clarity)
+/// Tool done output — readable but not prominent
 pub fn style_tool_output() -> Style {
     Style::default().fg(C.fg)
 }
 
-/// Tool summary when collapsed (dim)
+/// Tool summary (collapsed) — same as expanded header
 pub fn style_tool_summary() -> Style {
+    style_tool_header()
+}
+
+/// Turn complete boundary marker — low-contrast
+pub fn style_turn_complete() -> Style {
     Style::default().fg(C.dim)
 }
 
-/// Turn complete boundary marker (fg — readable boundary)
-pub fn style_turn_complete() -> Style {
-    Style::default().fg(C.fg)
-}
-
-/// Empty state hint (fg_mid — inviting but not shouting)
+/// Empty state hint — low-contrast
 pub fn style_empty_state() -> Style {
-    Style::default().fg(C.fg_mid)
+    Style::default().fg(C.dim)
 }
 
-/// Timestamp suffix (dim — secondary info)
+/// Timestamp suffix — low-contrast
 pub fn style_timestamp() -> Style {
     Style::default().fg(C.dim)
 }
 
-/// Status bar when idle (fg — readable)
+/// Status bar when idle — low-contrast
 pub fn style_status_idle() -> Style {
-    Style::default().fg(C.fg)
+    Style::default().fg(C.dim)
 }
 
-/// Status bar when active (success green)
+/// Status bar when active — success green (important: work is happening)
 pub fn style_status_active() -> Style {
     Style::default().fg(C.success)
 }
 
-/// Panel border (dim — chrome)
+/// Panel border — low-contrast chrome
 pub fn style_border() -> Style {
     Style::default().fg(C.dim)
 }
 
-/// Panel border when flashing validation error (warning yellow)
+/// Panel border when flashing validation error — warning (important feedback)
 pub fn style_border_flash() -> Style {
     Style::default().fg(C.warning)
 }
 
-/// Code block content
+/// Code block content — functional, kept distinct
 pub fn style_code_block() -> Style {
     Style::default().fg(C.code).bg(C.code_bg)
 }
 
-/// Code block header label
+/// Code block header label — low-contrast
 pub fn style_code_header() -> Style {
     Style::default().fg(C.dim)
 }
@@ -171,14 +171,14 @@ pub fn style_input_cursor() -> Style {
     Style::default().bg(C.fg_bright).fg(C.bg)
 }
 
-/// Input placeholder text
+/// Input placeholder text — low-contrast
 pub fn style_placeholder() -> Style {
     Style::default().fg(C.dim)
 }
 
-/// Bottom hints bar
+/// Bottom hints bar — low-contrast
 pub fn style_hint() -> Style {
-    Style::default().fg(C.fg)
+    Style::default().fg(C.dim)
 }
 
 /// @-ref popup selected item
@@ -191,7 +191,7 @@ pub fn style_popup_unselected() -> Style {
     Style::default().fg(C.fg_mid)
 }
 
-/// @-ref popup border
+/// @-ref popup border — accent for visibility
 pub fn style_popup_border() -> Style {
     Style::default().fg(C.accent)
 }

@@ -6,6 +6,8 @@ mod markdown;
 mod code_blocks;
 #[cfg(test)]
 mod colors;
+#[cfg(test)]
+mod color_restraint;
 
 use runie_core::{AppState, Event};
 use crate::ui::view;

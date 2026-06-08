@@ -55,22 +55,22 @@ fn line_colors(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -
 }
 
 #[test]
-fn agent_message_uses_fg_bright_not_fg() {
+fn agent_message_uses_fg_not_bright() {
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello agent".into() });
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Hello agent"));
-    let bright = Color::Rgb(208, 208, 208);
+    let fg = Color::Rgb(138, 138, 138);
     assert!(
-        colors.iter().any(|c| *c == bright),
-        "Agent message should use fg_bright (#d0d0d0), got colors: {:?}", colors
+        colors.iter().any(|c| *c == fg),
+        "Agent message should use fg (#8a8a8a), got colors: {:?}", colors
     );
 }
 
 #[test]
-fn turn_complete_uses_fg_mid_not_dim() {
+fn turn_complete_uses_dim() {
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done".into() });
@@ -78,24 +78,24 @@ fn turn_complete_uses_fg_mid_not_dim() {
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Turn completed"));
-    let fg = Color::Rgb(138, 138, 138);
+    let dim = Color::Rgb(74, 74, 74);
     assert!(
-        colors.iter().any(|c| *c == fg),
-        "TurnComplete should use fg (#8a8a8a) for readability, got colors: {:?}", colors
+        colors.iter().any(|c| *c == dim),
+        "TurnComplete should use dim (#4a4a4a), got colors: {:?}", colors
     );
 }
 
 #[test]
-fn status_idle_uses_fg_not_dim() {
+fn status_idle_uses_dim() {
     let mut state = AppState::default();
     state.current_provider = "openai".into();
     state.current_model = "gpt-4".into();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("openai/gpt-4"));
-    let fg = Color::Rgb(138, 138, 138);
+    let dim = Color::Rgb(74, 74, 74);
     assert!(
-        colors.iter().any(|c| *c == fg),
-        "Idle status should use fg (#8a8a8a) for readability, got colors: {:?}", colors
+        colors.iter().any(|c| *c == dim),
+        "Idle status should use dim (#4a4a4a), got colors: {:?}", colors
     );
 }
 
@@ -115,7 +115,7 @@ fn tool_done_output_uses_fg_not_fg_mid() {
 }
 
 #[test]
-fn thought_uses_accent_not_fg_mid() {
+fn thought_uses_dim() {
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
@@ -123,22 +123,22 @@ fn thought_uses_accent_not_fg_mid() {
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Thought"));
-    let accent = Color::Rgb(139, 124, 244);
+    let dim = Color::Rgb(74, 74, 74);
     assert!(
-        colors.iter().any(|c| *c == accent),
-        "Thought marker should use accent (#8b7cf4) to distinguish from tools, got colors: {:?}", colors
+        colors.iter().any(|c| *c == dim),
+        "Thought marker should use dim (#4a4a4a), got colors: {:?}", colors
     );
 }
 
 #[test]
-fn empty_state_uses_fg_mid_not_dim() {
+fn empty_state_uses_dim() {
     let mut state = AppState::default();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Type a message"));
-    let fg_mid = Color::Rgb(168, 168, 168);
+    let dim = Color::Rgb(74, 74, 74);
     assert!(
-        colors.iter().any(|c| *c == fg_mid),
-        "Empty state hint should use fg_mid (#a8a8a8), got colors: {:?}", colors
+        colors.iter().any(|c| *c == dim),
+        "Empty state hint should use dim (#4a4a4a), got colors: {:?}", colors
     );
 }
 

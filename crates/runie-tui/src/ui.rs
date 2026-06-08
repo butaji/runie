@@ -17,7 +17,7 @@ use ratatui::{
 
 use runie_core::{Element, Snapshot};
 
-use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown, CodeBlock};
+use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown, parse_inline_markdown_with_color, CodeBlock};
 use crate::theme::{
     C, GLYPH_USER, GLYPH_AGENT, GLYPH_TOOL, GLYPH_INDENT,
     GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_CHAT, PANEL_INPUT,
@@ -203,7 +203,7 @@ fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
         let ts = format!(" {:>5}", timestamp);
         let prefix = if i == 0 { GLYPH_USER } else { GLYPH_INDENT };
         let mut spans = vec![Span::styled(prefix, style_user())];
-        spans.extend(md_to_spans(&parse_inline_markdown(line)));
+        spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg_bright)));
         spans.push(Span::styled(ts, style_timestamp()));
         lines.push(Line::from(spans));
     }
@@ -222,8 +222,8 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
         match block {
             CodeBlock::Text(text) => {
                 for line in text.lines() {
-                    lines.push(render_markdown_line(
-                        line, timestamp, is_first, GLYPH_AGENT, GLYPH_INDENT, style_agent()
+                    lines.push(render_agent_markdown_line(
+                        line, timestamp, is_first
                     ));
                     is_first = false;
                 }
@@ -247,6 +247,19 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
 fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
     Line::from(code_header_label(prefix, lang)).style(style_code_header())
+}
+
+fn render_agent_markdown_line(
+    line: &str,
+    timestamp: &str,
+    is_first: bool,
+) -> Line<'static> {
+    let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
+    let ts = format!(" {:>5}", timestamp);
+    let mut spans = vec![Span::styled(prefix.to_string(), style_agent())];
+    spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg)));
+    spans.push(Span::styled(ts, style_timestamp()));
+    Line::from(spans)
 }
 
 fn render_markdown_line(
