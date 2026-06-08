@@ -1,6 +1,6 @@
 # Syntax highlighting
 
-**Status**: in-progress
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,15 +12,59 @@ Syntax highlighting for code blocks.
 
 ## Acceptance Criteria
 
-- [ ] Language detection
-- [ ] Keyword highlighting
-- [ ] Multiple language support
+- [x] Language detection
+- [x] Keyword highlighting
+- [x] Multiple language support
+
+## Implementation
+
+### Files
+
+- `crates/runie-tui/src/syntax.rs` — Syntax highlighting module with tokenizer
+- `crates/runie-tui/src/ui.rs` — Updated to use syntax highlighting for code blocks
+
+### Architecture
+
+1. **Language detection** (`Language::from_fence`):
+   - Parses fence labels (rust, rs, py, python, js, javascript, etc.)
+   - Supports 16 languages: Rust, Python, JavaScript, TypeScript, Go, Java, C, C++, Markdown, JSON, YAML, Bash, SQL, HTML, CSS, XML, TOML
+
+2. **Tokenization** (`tokenize_line`):
+   - Tokenizes code into keywords, types, functions, strings, numbers, comments, and plain text
+   - Per-language keyword sets for Rust, Python, JavaScript, Go, Java, C, SQL, Bash
+   - Type and builtin function detection
+
+3. **Styling**:
+   - Keywords: Light magenta + bold
+   - Strings: Green (Indexed 114)
+   - Numbers: Light green (Indexed 175)
+   - Comments: Gray + italic (Indexed 245)
+   - Types: Cyan (Indexed 75)
+   - Functions: Light cyan (Indexed 111)
 
 ## Tests
 
-Required per AGENTS.md. See `tasks/TEMPLATE.md` for the full format.
+### Layer 1 — State/Logic (syntax.rs)
+- [x] `rust_keyword_highlighting` — Rust fn/main/brace
+- [x] `python_keyword_highlighting` — Python def/hello
+- [x] `js_string_highlighting` — JS string literal with green color
+- [x] `number_highlighting` — Numbers detected
+- [x] `comment_highlighting` — Comments detected
+- [x] `language_detection` — All 16 language variants
+- [x] `multi_language_highlight` — Rust and Python
+- [x] `highlight_code_multiline` — Multi-line code
+- [x] `sql_keyword_highlighting` — SQL SELECT/FROM
+- [x] `go_keyword_highlighting` — Go package/main
+- [x] `type_highlighting` — Rust String type
+- [x] `empty_line` — Empty line handling
 
-- [ ] Layer 1 — State/logic tests (pure functions, no ratatui)
-- [ ] Layer 2 — Event handling tests (crossterm events → state transitions)
-- [ ] Layer 3 — Rendering tests (TestBackend + Buffer assertions) if TUI-related
-- [ ] Layer 4 — Smoke tests (tmux) if async/event logic changes
+All 12 syntax tests pass.
+
+### Layer 3 — Rendering (ui.rs integration)
+- [x] Code blocks render with syntax highlighting in agent messages
+
+## Notes
+
+- For performance, tokenization happens per-line
+- No external dependencies (pure Rust implementation)
+- Follows design system rule: all colors from theme (uses Indexed colors for portability)

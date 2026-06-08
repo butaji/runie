@@ -1,6 +1,7 @@
 //! Runie TUI - Terminal UI Rendering
 pub mod diff;
 pub mod markdown;
+pub mod syntax;
 pub mod theme;
 pub mod ui;
 

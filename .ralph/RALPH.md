@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 3 of 100
+- Iteration: 4 of 100
 - Prompt file: /Users/admin/.herdr/worktrees/runie/agent-impl/EXECUTE.md
-- Updated: 2026-06-08T23:37:05.198Z
+- Updated: 2026-06-08T23:46:39.530Z
 
 ## Iteration progression
 
@@ -115,4 +115,45 @@ I've completed the r1-core-refactor task with the following achievements:
 ### Commit
 
 The changes have been committed with the message: `r1-core-refactor: O(1) append_response with last_assistant_index cache`
+```
+
+### Iteration 4
+
+```text
+**Execution Loop Summary**
+
+Completed the following tasks in this iteration:
+
+## Tasks Completed
+
+### 1. `mvp-tui-diff` ✅
+**Diff rendering for file edits**
+- Created unified diff generation in `runie-agent/src/diff.rs` (LCS algorithm)
+- Created diff parsing and styled rendering in `runie-tui/src/diff.rs`
+- Updated `edit_file` to produce diff output
+- Updated `render_tool_done` to detect and highlight diffs
+- Added/removed line highlighting (green/red)
+- **18 tests** added across Layer 1 (state/logic) and Layer 3 (rendering)
+
+### 2. `mvp-session-persistence` ✅
+**Documented existing implementation**
+- Confirmed JSONL persistence, session load/save/delete work correctly
+- Documented existing tests (9 session_manager tests + JSONL tests)
+- Updated task file with test coverage
+
+### 3. `mvp-input-multiline` ⏳ (In Progress)
+**Multi-line input support**
+- Added `Event::Newline` to core events
+- Added `insert_newline()` method to AppState
+- Added Shift+Enter and Ctrl+J key mappings
+- **3 new tests** for multiline input
+- Still needs: Backspace at line start handling
+
+## Test Results
+All **695 tests** pass:
+- runie-core: 446 tests
+- runie-agent: 74 tests  
+- runie-term: 82 tests
+- runie-tui: 64 tests
+- runie-provider: 29 tests
 ```

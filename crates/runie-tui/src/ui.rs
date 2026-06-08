@@ -26,6 +26,7 @@ fn hstack(area: Rect, widths: &[Constraint]) -> Vec<Rect> {
 use runie_core::{Element, Snapshot};
 
 use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown_with_color, CodeBlock};
+use crate::syntax::highlight_code;
 use runie_core::format_timestamp;
 use crate::theme::{
     C, GLYPH_USER, GLYPH_AGENT, GLYPH_INDENT,
@@ -36,7 +37,7 @@ use crate::theme::{
     style_user, style_agent, style_thought, style_thinking, style_thought_summary,
     style_tool_running, style_tool_header, style_tool_output, style_tool_summary,
     style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
-    style_status_active, style_border, style_border_flash, style_code_block,
+    style_status_active, style_border, style_border_flash,
     style_code_header, style_input_cursor, style_placeholder, style_hint,
     style_popup_selected, style_popup_unselected, style_popup_border,
 };
@@ -232,9 +233,18 @@ fn render_list_item(item: &str, ordered: bool, idx: usize, is_first: bool, ts_st
     Line::from(text).style(style_agent())
 }
 
-fn render_code_block_lines(content: &str, ts_str: &str) -> Vec<Line<'static>> {
-    content.lines()
-        .map(|line| Line::from(format!("{}{} {:>5}", GLYPH_INDENT, line, ts_str)).style(style_code_block()))
+fn render_code_block_lines(content: &str, lang: &str, ts_str: &str) -> Vec<Line<'static>> {
+    let highlighted = highlight_code(content, lang);
+    highlighted
+        .into_iter()
+        .map(|tokens| {
+            let mut spans = vec![Span::raw(GLYPH_INDENT.to_string())];
+            for token in tokens {
+                spans.push(Span::styled(token.content, token.style));
+            }
+            spans.push(Span::raw(format!(" {:>5}", ts_str)));
+            Line::from(spans)
+        })
         .collect()
 }
 
@@ -261,7 +271,7 @@ fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
             CodeBlock::Code { lang, content } => {
                 lines.push(render_code_header(&lang, is_first));
                 is_first = false;
-                lines.extend(render_code_block_lines(&content, &ts_str));
+                lines.extend(render_code_block_lines(&content, &lang, &ts_str));
             }
             CodeBlock::List { ordered, items } => {
                 for (i, item) in items.iter().enumerate() {
