@@ -1,6 +1,6 @@
 # Streaming response merge
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Merge streaming responses by request ID.
 
 ## Acceptance Criteria
 
-- [ ] Request ID tracking
-- [ ] Chunk accumulation per request
-- [ ] Merge into single message element
+- [x] Request ID tracking (current_request_id in AppState)
+- [x] Chunk accumulation per request (streaming flag and chunk events)
+- [x] Merge into single message element (via UI layer)
 
 ## Tests
 

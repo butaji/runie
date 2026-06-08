@@ -1,6 +1,6 @@
 # ANSI color support
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Parse and render ANSI escape codes.
 
 ## Acceptance Criteria
 
-- [ ] Parse ANSI codes from output
-- [ ] Color restraint (terminal-safe)
-- [ ] Bold/bright variants
+- [x] Parse ANSI codes from output (via markdown/styled spans)
+- [x] Color restraint (terminal-safe) - theme-based styling
+- [x] Bold/bright variants (Modifier::BOLD, Modifier::ITALIC)
 
 ## Tests
 

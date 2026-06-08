@@ -1,6 +1,6 @@
 # Scrollbar
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Scrollbar for message area.
 
 ## Acceptance Criteria
 
-- [ ] Thumb position based on scroll
-- [ ] Track/thumb rendering
-- [ ] Handle dynamic content height
+- [x] Thumb position based on scroll (scrollbar_metrics)
+- [x] Track/thumb rendering (render_scrollbar function)
+- [x] Handle dynamic content height (total_lines, offset)
 
 ## Tests
 

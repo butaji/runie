@@ -1,6 +1,6 @@
 # Thinking text display
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Display thinking/thought content from model.
 
 ## Acceptance Criteria
 
-- [ ] AgentThinking event handling
-- [ ] Thought content rendering
-- [ ] Elapsed time display
+- [x] AgentThinking event handling
+- [x] Thought content rendering
+- [x] Elapsed time display
 
 ## Tests
 

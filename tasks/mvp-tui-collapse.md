@@ -1,6 +1,6 @@
 # Collapse to single-line summary
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Thinking and tool output collapse to single-line summary.
 
 ## Acceptance Criteria
 
-- [ ] Thinking collapse to summary
-- [ ] Tool output collapse to summary
-- [ ] Expand on user interaction
+- [x] Thinking collapse to summary
+- [x] Tool output collapse to summary (all_collapsed flag)
+- [x] Expand on user interaction (ToggleExpand event)
 
 ## Tests
 

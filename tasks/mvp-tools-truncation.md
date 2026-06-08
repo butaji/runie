@@ -1,6 +1,6 @@
 # Output truncation
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,10 +12,10 @@ Truncate tool output with lines and bytes limits.
 
 ## Acceptance Criteria
 
-- [ ] Line count limits
-- [ ] Bytes limits
-- [ ] Head/tail truncation modes
-- [ ] Truncation indicators in output
+- [x] Line count limits
+- [x] Bytes limits
+- [x] Head/tail truncation modes
+- [x] Truncation indicators in output
 
 ## Tests
 

@@ -119,28 +119,25 @@ Ephemeral events: `ScrollUp`, `CursorLeft`, `Paste`, `ToggleExpand`, etc.
 
 ---
 
-## R1 (Actor Refactor)
+## R1 (Code Quality + User Value)
 
-### Actor Architecture
-- [ ] **Unified event type** — Single Event enum in runie-core, no AgentEvent conversion
+### Core Refactor
+- [ ] **Split update.rs** — Divide 623-line monolith into `update/{mod,input,agent,slash,queue}.rs`
+- [ ] **Compose AppState** — Split 28-field god object into `InputState`, `ChatHistory`, `AgentState`, `UiState`
+- [ ] **Fix clippy warnings** — Zero warnings in production code
+- [ ] **Cache optimizations** — O(1) `append_response`, remove dead `VisibleRegion` code
+
+### Agent Crate Cleanup
+- [ ] **Module split** — Divide `runie-agent/src/lib.rs` into `turn.rs`, `tools.rs`, `truncate.rs`, `safety.rs`, `parser.rs`
+
+### TUI Render Cleanup
+- [ ] **Split render tests** — Divide `tests/render.rs` (>500 lines) into focused modules
+
+### Actors (keep existing infrastructure, extend where needed)
 - [ ] **ToolActors** — Spawn per tool invocation, self-describe via ToolRegistered
-- [ ] **Orchestrator** — Central spawn point for all actors
 - [ ] **QueueAgent** — Manages message queue with configurable batching
 - [ ] **SessionManager** — Handles session save/load/list/delete
-- [ ] **ConfigAgent** — Loads keybindings.json, TOML config, watches for changes
-- [ ] **TelemetryAgent** — Aggregates token usage, costs, timing
-- [ ] **SafetyAgent** — Validates bash commands before execution
-- [ ] **ClipboardAgent** — Handles image paste from clipboard
-- [ ] **FileLookupActor** — Resolves @-file references asynchronously
-- [ ] **CommandAgent** — Parses slash commands and key shortcuts
-- [ ] **Skills as interceptors** — Skills subscribe to bus, can modify events
-
-### UI Actors
-- [ ] **UIRoot** — Routes events to UI children
-- [ ] **InputAgent** — Input, cursor, history, undo/redo
-- [ ] **ScrollAgent** — Scroll, viewport management
-- [ ] **ChatAgent** — Elements, streaming accumulation
-- [ ] **PopupAgent** — Hints, @-suggestions
+- [ ] **ConfigAgent** — Loads TOML config, watches for changes
 
 ### TUI Improvements
 - [ ] **Streaming: event per chunk** — Each LLM chunk emitted as individual event
