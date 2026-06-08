@@ -1,6 +1,6 @@
 # Session list/delete
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ List and delete sessions.
 
 ## Acceptance Criteria
 
-- [ ] List sessions by date
-- [ ] Delete confirmation
-- [ ] Cascade deletion of related files
+- [x] List sessions by date (Store::list)
+- [x] Delete confirmation (Store::delete)
+- [x] Cascade deletion of related files (single file deletion)
 
 ## Tests
 

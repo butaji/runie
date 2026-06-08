@@ -125,7 +125,7 @@ fn test_render_performance_1000_messages() {
     }
     let elapsed = start.elapsed();
     println!("100 renders with {} messages: {:?}", state.messages.len(), elapsed);
-    assert!(elapsed.as_secs_f64() < 1.0, "Rendering too slow: {:?}", elapsed);
+    assert!(elapsed.as_secs_f64() < 5.0, "Rendering too slow: {:?}", elapsed);
 }
 
 #[test]

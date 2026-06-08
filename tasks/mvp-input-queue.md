@@ -1,6 +1,6 @@
 # Message queue
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,10 +12,10 @@ Message queue with steering and follow-up modes.
 
 ## Acceptance Criteria
 
-- [ ] Enter - steering (queues message)
-- [ ] Alt+Enter - follow-up (delivered after turn ends)
-- [ ] Esc - abort and restore
-- [ ] QueueAgent manages delivery timing
+- [x] Enter - steering (queues message) - via message_queue
+- [x] Alt+Enter - follow-up (delivered after turn ends)
+- [x] Esc - abort and restore (abort_queue function)
+- [x] QueueAgent manages delivery timing (deliver_queued)
 
 ## Tests
 

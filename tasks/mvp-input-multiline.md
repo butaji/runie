@@ -1,6 +1,6 @@
 # Multi-line input
 
-**Status**: todo
+**Status**: blocked (needs Shift+Enter and Ctrl+J event handlers)
 
 **Milestone**: MVP
 

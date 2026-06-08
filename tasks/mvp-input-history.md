@@ -1,6 +1,6 @@
 # Input history
 
-**Status**: todo
+**Status**: in-progress
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Command history navigation.
 
 ## Acceptance Criteria
 
-- [ ] Up/Down arrows for history
-- [ ] Persistent history across sessions
-- [ ] Search/filter history
+- [x] Up/Down arrows for history (history_prev/history_next)
+- [ ] Persistent history across sessions (not implemented)
+- [ ] Search/filter history (not implemented)
 
 ## Tests
 
