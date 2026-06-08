@@ -182,12 +182,9 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
         ToolSummary { name, duration_secs } => vec![Line::from(format!(
             "✓ {} {:.1}s [+]", name, duration_secs
         )).style(Style::default().fg(C.dim))],
-        // High #5: Turn visualization — dim separator
-        TurnComplete { duration_secs } => vec![Line::from(vec![
-            Span::styled("─".repeat(20), Style::default().fg(C.dim)),
-            Span::styled(format!(" Turn completed in {:.1}s ", duration_secs), Style::default().fg(C.dim)),
-            Span::styled("─".repeat(20), Style::default().fg(C.dim)),
-        ])],
+        TurnComplete { duration_secs } => vec![Line::from(format!(
+            "Turn completed in {:.1}s", duration_secs
+        )).style(Style::default().fg(C.dim))],
     }
 }
 
