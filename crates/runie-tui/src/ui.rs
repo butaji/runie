@@ -233,6 +233,27 @@ fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
                     lines.push(Line::from(text).style(style_code_block()));
                 }
             }
+            CodeBlock::List { ordered, items } => {
+                for (i, item) in items.iter().enumerate() {
+                    let bullet = if ordered { format!("{}.", i + 1) } else { "•".to_string() };
+                    for (j, line) in item.lines().enumerate() {
+                        let prefix = if j == 0 {
+                            if is_first { format!("{} {}", GLYPH_AGENT, bullet) } else { format!("{} {}", GLYPH_INDENT, bullet) }
+                        } else {
+                            format!("{}   ", GLYPH_INDENT)
+                        };
+                        let ts = if j == 0 { format!(" {:>5}", ts_str) } else { "      ".to_string() };
+                        lines.push(Line::from(format!("{}{}{}", prefix, line, ts)).style(style_agent()));
+                        is_first = false;
+                    }
+                }
+            }
+            CodeBlock::Blockquote(text) => {
+                for line in text.lines() {
+                    lines.push(Line::from(format!("{}│ {}", GLYPH_INDENT, line)).style(style_agent()));
+                    is_first = false;
+                }
+            }
         }
     }
     if lines.is_empty() {
