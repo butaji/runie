@@ -1,6 +1,6 @@
 # @-file reference detection
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,10 +12,10 @@ Detect and resolve @-file references.
 
 ## Acceptance Criteria
 
-- [ ] @-prefix detection
-- [ ] File path completion
-- [ ] File content insertion
-- [ ] Popup suggestion UI
+- [x] @-prefix detection
+- [x] File path completion (complete_at_ref)
+- [x] File content insertion (insert_at_ref)
+- [x] Popup suggestion UI (at_suggestions in Snapshot, TUI popup)
 
 ## Tests
 

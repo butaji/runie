@@ -1,6 +1,6 @@
 # Bash blacklist
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,10 +12,10 @@ Block dangerous bash commands.
 
 ## Acceptance Criteria
 
-- [ ] Block rm -rf /
-- [ ] Block dd, mkfs, fork bombs
-- [ ] Pattern matching for variations
-- [ ] SafetyAgent integration
+- [x] Block rm -rf /
+- [x] Block dd, mkfs, fork bombs
+- [x] Pattern matching for variations
+- [x] SafetyAgent integration (check_bash_safety called in run_bash)
 
 ## Tests
 

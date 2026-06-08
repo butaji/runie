@@ -1,6 +1,6 @@
 # TOML configuration
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,10 +12,10 @@ Load configuration from TOML files.
 
 ## Acceptance Criteria
 
-- [ ] Parse ~/.runie/config.toml
-- [ ] Provider settings
-- [ ] Model preferences
-- [ ] Default values
+- [x] Parse ~/.runie/config.toml (Config::load)
+- [x] Provider settings (model_providers)
+- [x] Model preferences (provider, model, models.default)
+- [x] Default values (Config::default)
 
 ## Tests
 

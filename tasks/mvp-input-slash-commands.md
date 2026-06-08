@@ -1,6 +1,6 @@
 # Slash commands
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,12 +12,12 @@ Implement slash commands: /model, /save, /load, /sessions, /delete, /reset, /hel
 
 ## Acceptance Criteria
 
-- [ ] Command parsing
-- [ ] /model - switch model
-- [ ] /save, /load, /sessions, /delete - session management
-- [ ] /reset - clear conversation
-- [ ] /compact - context compaction
-- [ ] /help - show available commands
+- [x] Command parsing (handle_slash function)
+- [x] /model - switch model
+- [x] /save, /load, /sessions, /delete - session management
+- [x] /reset - clear conversation
+- [x] /compact - context compaction
+- [x] /help - show available commands
 
 ## Tests
 

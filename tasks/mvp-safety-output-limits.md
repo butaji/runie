@@ -1,6 +1,6 @@
 # Output size limits
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,10 +12,10 @@ Limit tool output sizes.
 
 ## Acceptance Criteria
 
-- [ ] Max bytes limit
-- [ ] Max lines limit
-- [ ] Truncation with indicator
-- [ ] Per-tool limits
+- [x] Max bytes limit (DEFAULT_MAX_BYTES: 50KB)
+- [x] Max lines limit (DEFAULT_MAX_LINES: 2000)
+- [x] Truncation with indicator (TruncatedOutput::was_truncated)
+- [x] Per-tool limits (TruncationPolicy configurable)
 
 ## Tests
 
