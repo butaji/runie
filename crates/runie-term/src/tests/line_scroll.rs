@@ -94,7 +94,7 @@ fn tool_output_latest_lines_visible() {
 
     let out = render_with_height(&mut state, 30);
     assert!(out.contains("file10"), "Latest tool output (file10) must be visible");
-    assert!(out.contains("Ran ls"), "Tool header must be visible");
+    assert!(out.contains("✓ ls"), "Tool header must be visible");
 }
 
 #[test]
