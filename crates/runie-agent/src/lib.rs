@@ -1,3 +1,4 @@
+pub mod diff;
 pub mod parser;
 pub mod safety;
 pub mod tools;
