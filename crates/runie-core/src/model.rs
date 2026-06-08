@@ -216,6 +216,8 @@ impl AppState {
             spinner_frame: self.spinner_frame(),
             scroll: self.scroll,
             turn_elapsed_secs: self.turn_elapsed_secs(),
+            provider: self.current_provider.clone(),
+            model: self.current_model.clone(),
         }
     }
 
@@ -402,6 +404,8 @@ pub struct Snapshot {
     pub scroll: usize,
     /// Elapsed seconds since turn started. Captured at snapshot creation time.
     pub turn_elapsed_secs: Option<f64>,
+    pub provider: String,
+    pub model: String,
 }
 
 impl Snapshot {

@@ -7,7 +7,7 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
@@ -44,23 +44,7 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let tokens: usize = snap.elements.iter().map(|e| estimate_element_tokens(e)).sum();
-    let mut left_parts = Vec::new();
-    if snap.turn_active {
-        if let Some(elapsed) = snap.turn_elapsed_secs {
-            left_parts.push(runie_core::labels::action_text(
-                snap.spinner_frame,
-                "Working",
-                elapsed,
-            ));
-        } else {
-            left_parts.push(format!("{} Working...", snap.spinner_frame));
-        }
-    }
-    let left_text = if left_parts.is_empty() {
-        "ready".to_string()
-    } else {
-        left_parts.join(" | ")
-    };
+    let left_text = build_status_text(snap);
     let right_text = format!("{} tok", tokens);
 
     let hchunks = Layout::default()
@@ -81,6 +65,21 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     );
 }
 
+fn build_status_text(snap: &Snapshot) -> String {
+    let mut parts = Vec::new();
+    parts.push(format!("{}/{}", snap.provider, snap.model));
+    if snap.turn_active {
+        if let Some(elapsed) = snap.turn_elapsed_secs {
+            parts.push(runie_core::labels::action_text(
+                snap.spinner_frame, "Working", elapsed,
+            ));
+        } else {
+            parts.push(format!("{} Working...", snap.spinner_frame));
+        }
+    }
+    parts.join(" · ")
+}
+
 fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
@@ -89,7 +88,24 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    let height = inner.height as usize;
+    if snap.elements.is_empty() {
+        render_empty_state(f, inner);
+        return;
+    }
+    render_message_content(f, snap, inner);
+}
+
+fn render_empty_state(f: &mut Frame, area: Rect) {
+    let hint = Line::from("Type a message to start...")
+        .style(Style::default().fg(C.dim));
+    f.render_widget(
+        Paragraph::new(hint).alignment(ratatui::layout::Alignment::Center),
+        area,
+    );
+}
+
+fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    let height = area.height as usize;
     let total_lines = snap.total_lines;
     if height == 0 || total_lines == 0 {
         return;
@@ -97,15 +113,15 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
     let show_bar = total_lines > height;
     let content_width = if show_bar {
-        inner.width.saturating_sub(1)
+        area.width.saturating_sub(1)
     } else {
-        inner.width
+        area.width
     };
 
     let hchunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Length(content_width), Constraint::Min(0)])
-        .split(inner);
+        .split(area);
 
     let lines = build_lines(snap);
     let offset = snap.scroll_offset(height);
@@ -117,7 +133,7 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     );
 
     if show_bar {
-        render_scrollbar(f, inner, total_lines, offset, height);
+        render_scrollbar(f, area, total_lines, offset, height);
     }
 }
 
@@ -147,10 +163,8 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer => vec![],
-        // DS-02: Timestamps on messages
-        UserMessage { content, timestamp } => vec![Line::from(format!(
-            "{} {} {:>5}", "$", content, timestamp
-        )).style(Style::default().fg(C.fg_bright))],
+        // Critical #2: Wrapped line indentation with "$ " prefix
+        UserMessage { content, timestamp } => render_user_message(content, timestamp),
         AgentMessage { content, timestamp } => render_agent_message(content, timestamp),
         // DS-04: tui1-style thinking indicator
         Thinking { started } => vec![Line::from(format!(
@@ -168,24 +182,49 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
         ToolSummary { name, duration_secs } => vec![Line::from(format!(
             "✓ {} {:.1}s [+]", name, duration_secs
         )).style(Style::default().fg(C.dim))],
-        TurnComplete { duration_secs } => vec![Line::from(format!(
-            "Turn completed in {:.1}s", duration_secs
-        )).style(Style::default().fg(C.dim))],
+        // High #5: Turn visualization — dim separator
+        TurnComplete { duration_secs } => vec![Line::from(vec![
+            Span::styled("─".repeat(20), Style::default().fg(C.dim)),
+            Span::styled(format!(" Turn completed in {:.1}s ", duration_secs), Style::default().fg(C.dim)),
+            Span::styled("─".repeat(20), Style::default().fg(C.dim)),
+        ])],
     }
+}
+
+fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    let prefix = "$ ";
+    for (i, line) in content.lines().enumerate() {
+        let text = if i == 0 {
+            format!("{}{} {:>5}", prefix, line, timestamp)
+        } else {
+            // Critical #2: indent continuation lines
+            format!("  {} {:>5}", line, timestamp)
+        };
+        lines.push(Line::from(text).style(Style::default().fg(C.fg_bright)));
+    }
+    if lines.is_empty() {
+        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
+            .style(Style::default().fg(C.fg_bright)));
+    }
+    lines
 }
 
 fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
+    let prefix = "→ ";
     for (i, line) in content.lines().enumerate() {
         let text = if i == 0 {
-            format!("{} {} {:>5}", "→", line, timestamp)
+            format!("{}{} {:>5}", prefix, line, timestamp)
         } else {
+            // Critical #2: indent continuation lines
             format!("  {} {:>5}", line, timestamp)
         };
         lines.push(Line::from(text).style(Style::default().fg(C.fg)));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("→  {:>5}", timestamp)).style(Style::default().fg(C.fg)));
+        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
+            .style(Style::default().fg(C.fg)));
     }
     lines
 }
@@ -219,16 +258,35 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let input_len = snap.input.len();
     let cursor_pos = snap.cursor_pos.min(input_len);
     
-    let input_display = format!("{}{}", prefix, snap.input);
+    // Critical #1: Visible cursor — render char at cursor with inverted colors
+    let before = &snap.input[..cursor_pos];
+    let (at_cursor, after) = if cursor_pos < snap.input.len() {
+        let c = snap.input[cursor_pos..].chars().next().unwrap();
+        let char_len = c.len_utf8();
+        (c, &snap.input[cursor_pos + char_len..])
+    } else {
+        (' ', "")
+    };
+    
+    let mut spans: Vec<Span> = vec![
+        Span::styled(prefix, Style::default().fg(C.fg_bright)),
+        Span::styled(before, Style::default().fg(C.fg_bright)),
+    ];
+    
+    // Cursor character with inverted colors (block cursor)
+    spans.push(Span::styled(
+        at_cursor.to_string(),
+        Style::default().bg(C.fg_bright).fg(C.bg),
+    ));
+    
+    spans.push(Span::styled(after, Style::default().fg(C.fg_bright)));
     
     f.render_widget(
-        Paragraph::new(input_display.as_str())
-            .style(Style::default().fg(C.fg_bright))
-            .block(block),
+        Paragraph::new(Line::from(spans)).block(block),
         area,
     );
     
-    // Position cursor at the cursor position
+    // Position cursor (terminal cursor, for TTY visibility)
     let cursor_x = inner.x + (prefix.len() + cursor_pos) as u16;
     f.set_cursor_position((cursor_x, inner.y));
 }

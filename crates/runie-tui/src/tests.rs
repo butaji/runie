@@ -208,6 +208,57 @@ fn tokens_on_right_side_of_status() {
 }
 
 #[test]
+fn empty_state_shows_hint() {
+    let mut state = AppState::default();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect::<String>())
+        .collect();
+    assert!(content.contains("Type a message"), "Empty state should show hint text");
+}
+
+#[test]
+fn input_cursor_renders_at_position() {
+    let mut state = AppState::default();
+    state.input = "hello".to_string();
+    state.cursor_pos = 2;
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    // Find the input line — it has "$ he" visible, cursor should be on 'l'
+    // The input is at y ~ 17, inner x starts at 1 (after border)
+    // Cursor should be at x = 1 + 2 ("$ ") + 2 = 5, which is 'l' in "$ hello"
+    let cursor_cell = buf[(5, 17)].clone(); // input line, cursor at position 5
+    assert_eq!(cursor_cell.symbol(), "l", "Cursor should be on 'l' at position 2");
+    // Verify the cursor has inverted colors (bg set)
+    assert!(cursor_cell.style().bg.is_some(), "Cursor should have background color set");
+}
+
+#[test]
+fn status_shows_provider_model() {
+    let mut state = AppState::default();
+    state.current_provider = "openai".to_string();
+    state.current_model = "gpt-4".to_string();
+    let backend = TestBackend::new(60, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect::<String>())
+        .collect();
+    assert!(content.contains("openai"), "Status should show provider");
+    assert!(content.contains("gpt-4"), "Status should show model");
+}
+
+#[test]
 fn turn_complete_renders_after_tool_flow() {
     let mut state = AppState::default();
     state.messages.push(runie_core::ChatMessage {
