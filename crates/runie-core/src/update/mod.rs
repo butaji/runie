@@ -64,6 +64,8 @@ impl AppState {
             Event::DeleteToEnd => self.delete_to_end(),
             Event::DeleteToStart => self.delete_to_start(),
             Event::KillChar => self.kill_char(),
+            Event::HistoryPrev => self.history_prev(),
+            Event::HistoryNext => self.history_next(),
             Event::Submit => self.submit(),
             Event::ScrollUp => self.scroll = self.scroll.saturating_add(1),
             Event::ScrollDown => self.scroll = self.scroll.saturating_sub(1),

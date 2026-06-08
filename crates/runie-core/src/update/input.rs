@@ -168,9 +168,12 @@ impl AppState {
         }
         let content = std::mem::take(&mut self.input).trim().to_string();
         self.cursor_pos = 0;
+        self.history_pos = None;
         if content.is_empty() {
             return;
         }
+        // Save to history
+        self.input_history.push(content.clone());
         if let Some(response) = self.handle_slash(&content) {
             self.add_system_msg(response);
             return;
@@ -194,6 +197,40 @@ impl AppState {
         self.request_queue.push_back((content, id));
         self.scroll = 0;
         self.messages_changed();
+    }
+
+    // === Input History ===
+
+    pub(crate) fn history_prev(&mut self) {
+        if self.input_history.is_empty() {
+            return;
+        }
+        let pos = match self.history_pos {
+            Some(p) if p > 0 => p - 1,
+            Some(p) => p,
+            None => self.input_history.len() - 1,
+        };
+        self.history_pos = Some(pos);
+        self.input = self.input_history[pos].clone();
+        self.cursor_pos = self.input.len();
+        self.mark_dirty();
+    }
+
+    pub(crate) fn history_next(&mut self) {
+        let pos = match self.history_pos {
+            Some(p) => p + 1,
+            None => return,
+        };
+        if pos >= self.input_history.len() {
+            self.history_pos = None;
+            self.input.clear();
+            self.cursor_pos = 0;
+        } else {
+            self.history_pos = Some(pos);
+            self.input = self.input_history[pos].clone();
+            self.cursor_pos = self.input.len();
+        }
+        self.mark_dirty();
     }
 
     // === @-ref suggestions ===
