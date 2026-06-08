@@ -147,6 +147,7 @@ impl JsonlReader {
 // ---------------------------------------------------------------------------
 
 /// Streaming JSONL writer — appends events one line at a time.
+#[derive(Debug)]
 pub struct JsonlWriter {
     writer: File,
     path: PathBuf,

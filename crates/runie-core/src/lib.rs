@@ -17,6 +17,7 @@ pub mod ui;
 pub mod provider;
 pub mod session;
 pub mod session_jsonl;
+pub mod session_manager;
 pub mod tokens;
 pub mod file_refs;
 pub mod fuzzy;
