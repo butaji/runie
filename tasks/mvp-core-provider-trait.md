@@ -1,6 +1,6 @@
 # Provider trait and trait objects
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 

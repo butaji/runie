@@ -1,6 +1,6 @@
 # Footer with token/queue count
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,7 +12,7 @@ Show token count and queue count in footer.
 
 ## Acceptance Criteria
 
-- [ ] Token count display
-- [ ] Queue count display
-- [ ] Provider/model in status
-- [ ] Working indicator during streaming
+- [x] Token count display
+- [x] Queue count display
+- [x] Provider/model in status
+- [x] Working indicator during streaming

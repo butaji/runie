@@ -214,6 +214,7 @@ impl AppState {
             turn_elapsed_secs: self.turn_elapsed_secs(),
             provider: self.current_provider.clone(),
             model: self.current_model.clone(),
+            queue_count: self.message_queue.len() + self.request_queue.len(),
         }
     }
 
