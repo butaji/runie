@@ -156,4 +156,50 @@ mod tests {
         // Should only remove the newline before 'c', not the one before 'b'
         assert_eq!(state.input, "a\nbc");
     }
+
+    #[test]
+    fn bash_prefix_runs_command() {
+        let mut state = AppState::default();
+        state.update(Event::Input('!'));
+        state.update(Event::Input('e'));
+        state.update(Event::Input('c'));
+        state.update(Event::Input('h'));
+        state.update(Event::Input('o'));
+        state.update(Event::Input(' '));
+        state.update(Event::Input('h'));
+        state.update(Event::Input('e'));
+        state.update(Event::Input('l'));
+        state.update(Event::Input('l'));
+        state.update(Event::Input('o'));
+        state.update(Event::Submit);
+        // Command should have run and added output
+        assert!(state.messages.iter().any(|m| m.content.contains("hello")),
+            "Should have hello in output");
+    }
+
+    #[test]
+    fn bash_prefix_not_sent_to_agent() {
+        let mut state = AppState::default();
+        state.update(Event::Input('!'));
+        state.update(Event::Input('p'));
+        state.update(Event::Input('w'));
+        state.update(Event::Input('d'));
+        state.update(Event::Submit);
+        // Should not add to request queue
+        assert!(state.request_queue.is_empty(), "Bash command should not be queued for agent");
+    }
+
+    #[test]
+    fn regular_submit_still_works() {
+        let mut state = AppState::default();
+        state.update(Event::Input('h'));
+        state.update(Event::Input('e'));
+        state.update(Event::Input('l'));
+        state.update(Event::Input('l'));
+        state.update(Event::Input('o'));
+        state.update(Event::Submit);
+        // Should add user message and queue for agent
+        assert!(!state.request_queue.is_empty(), "Regular submit should queue for agent");
+        assert_eq!(state.messages.len(), 1, "Should have one message");
+    }
 }
