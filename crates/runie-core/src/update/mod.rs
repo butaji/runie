@@ -66,9 +66,24 @@ impl AppState {
             Event::KillChar => self.kill_char(),
             Event::HistoryPrev => self.history_prev(),
             Event::HistoryNext => self.history_next(),
+            Event::Undo => self.undo(),
+            Event::Redo => self.redo(),
+            Event::CursorWordLeft => self.cursor_word_left(),
+            Event::CursorWordRight => self.cursor_word_right(),
+            Event::Paste(text) => self.paste(&text),
             Event::Submit => self.submit(),
-            Event::ScrollUp => self.scroll = self.scroll.saturating_add(1),
-            Event::ScrollDown => self.scroll = self.scroll.saturating_sub(1),
+            Event::ScrollUp => {
+                if self.messages.is_empty() && !self.turn_active {
+                    self.input_flash = 3;
+                }
+                self.scroll = self.scroll.saturating_add(1);
+            }
+            Event::ScrollDown => {
+                if self.scroll == 0 {
+                    self.input_flash = 3;
+                }
+                self.scroll = self.scroll.saturating_sub(1);
+            }
             Event::Quit => {}
             Event::Reset => *self = AppState::default(),
             Event::AgentThinking { id } => self.set_thinking(id),

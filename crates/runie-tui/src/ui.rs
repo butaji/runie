@@ -14,6 +14,7 @@ use ratatui::{
 
 use runie_core::{Element, Snapshot, PANEL_CHAT, PANEL_INPUT};
 
+use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown, CodeBlock};
 use crate::theme::C;
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
@@ -98,10 +99,7 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
 fn render_empty_state(f: &mut Frame, area: Rect) {
     let hint = Line::from("Type a message to start...")
         .style(Style::default().fg(C.dim));
-    f.render_widget(
-        Paragraph::new(hint),
-        area,
-    );
+    f.render_widget(Paragraph::new(hint), area);
 }
 
 fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
@@ -163,10 +161,8 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer => vec![],
-        // Critical #2: Wrapped line indentation with "$ " prefix
         UserMessage { content, timestamp } => render_user_message(content, timestamp),
         AgentMessage { content, timestamp } => render_agent_message(content, timestamp),
-        // DS-04: tui1-style thinking indicator
         Thinking { started } => vec![Line::from(format!(
             "{} ◐ {:.1}s", "→", started.elapsed().as_secs_f64()
         )).style(Style::default().fg(C.accent))],
@@ -174,7 +170,6 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
             "{} [+]", content.lines().next().unwrap_or(content)
         )).style(Style::default().fg(C.dim))],
         ThoughtMarker { content } => render_thought_marker(content),
-        // DS-06: Tool calls inline as feed items
         ToolRunning { name, started } => vec![Line::from(format!(
             "✓ Running {}... {:.1}s", name, started.elapsed().as_secs_f64()
         )).style(Style::default().fg(C.fg_mid))],
@@ -192,12 +187,18 @@ fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let prefix = "$ ";
     for (i, line) in content.lines().enumerate() {
-        let text = if i == 0 {
-            format!("{}{} {:>5}", prefix, line, timestamp)
+        let ts = format!(" {:>5}", timestamp);
+        if i == 0 {
+            let mut spans = vec![Span::styled(prefix, Style::default().fg(C.fg_bright))];
+            spans.extend(md_to_spans(&parse_inline_markdown(line)));
+            spans.push(Span::styled(ts, Style::default().fg(C.dim)));
+            lines.push(Line::from(spans));
         } else {
-            format!("  {} {:>5}", line, timestamp)
-        };
-        lines.push(Line::from(text).style(Style::default().fg(C.fg_bright)));
+            let mut spans = vec![Span::styled("  ", Style::default().fg(C.fg_bright))];
+            spans.extend(md_to_spans(&parse_inline_markdown(line)));
+            spans.push(Span::styled(ts, Style::default().fg(C.dim)));
+            lines.push(Line::from(spans));
+        }
     }
     if lines.is_empty() {
         lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
@@ -207,21 +208,60 @@ fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
 }
 
 fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
+    let blocks = extract_code_blocks(content);
     let mut lines = Vec::new();
-    let prefix = "→ ";
-    for (i, line) in content.lines().enumerate() {
-        let text = if i == 0 {
-            format!("{}{} {:>5}", prefix, line, timestamp)
-        } else {
-            format!("  {} {:>5}", line, timestamp)
-        };
-        lines.push(Line::from(text).style(Style::default().fg(C.fg)));
+    let mut is_first = true;
+
+    for block in blocks {
+        match block {
+            CodeBlock::Text(text) => {
+                for line in text.lines() {
+                    lines.push(render_markdown_line(line, timestamp, is_first, "→ ", "  ", C.fg));
+                    is_first = false;
+                }
+            }
+            CodeBlock::Code { lang, content } => {
+                lines.push(render_code_header(&lang, is_first));
+                is_first = false;
+                for line in content.lines() {
+                    let text = format!("  {} {:>5}", line, timestamp);
+                    lines.push(Line::from(text)
+                        .style(Style::default().fg(C.code).bg(C.code_bg)));
+                }
+            }
+        }
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
+        lines.push(Line::from(format!("→ {:>5}", timestamp))
             .style(Style::default().fg(C.fg)));
     }
     lines
+}
+
+fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
+    let prefix = if is_first { "→ " } else { "  " };
+    let text = if lang.is_empty() {
+        format!("{}[code]", prefix)
+    } else {
+        format!("{}[code:{}]", prefix, lang)
+    };
+    Line::from(text).style(Style::default().fg(C.dim))
+}
+
+fn render_markdown_line(
+    line: &str,
+    timestamp: &str,
+    is_first: bool,
+    first_prefix: &str,
+    rest_prefix: &str,
+    color: ratatui::style::Color,
+) -> Line<'static> {
+    let prefix = if is_first { first_prefix } else { rest_prefix };
+    let ts = format!(" {:>5}", timestamp);
+    let mut spans = vec![Span::styled(prefix.to_string(), Style::default().fg(color))];
+    spans.extend(md_to_spans(&parse_inline_markdown(line)));
+    spans.push(Span::styled(ts, Style::default().fg(C.dim)));
+    Line::from(spans)
 }
 
 fn render_thought_marker(content: &str) -> Vec<Line<'static>> {
@@ -242,22 +282,28 @@ fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'s
 }
 
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    let border_color = if snap.input_flash > 0 { C.warning } else { C.dim };
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_INPUT)
-        .border_style(Style::default().fg(C.dim));
+        .border_style(Style::default().fg(border_color));
     let inner = block.inner(area);
-    
+
     let spans = build_input_spans(snap);
     f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
-    
-    // Position cursor (terminal cursor, for TTY visibility)
+
     let cursor_x = inner.x + ("$ ".len() + snap.cursor_pos.min(snap.input.len())) as u16;
     f.set_cursor_position((cursor_x, inner.y));
 }
 
-fn build_input_spans(snap: &Snapshot) -> Vec<Span> {
+fn build_input_spans(snap: &Snapshot) -> Vec<Span<'_>> {
     let prefix = "$ ";
+    if snap.input.is_empty() && !snap.placeholder.is_empty() {
+        return vec![
+            Span::styled(prefix, Style::default().fg(C.fg_bright)),
+            Span::styled(snap.placeholder.clone(), Style::default().fg(C.dim)),
+        ];
+    }
     let cursor_pos = snap.cursor_pos.min(snap.input.len());
     let before = &snap.input[..cursor_pos];
     let (at_cursor, after) = if cursor_pos < snap.input.len() {

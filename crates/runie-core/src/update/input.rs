@@ -1,4 +1,71 @@
+use unicode_segmentation::UnicodeSegmentation;
 use super::*;
+
+// === Grapheme helpers ===
+
+fn prev_grapheme_boundary(s: &str, pos: usize) -> usize {
+    let mut last = 0;
+    for (i, _) in s.grapheme_indices(true) {
+        if i >= pos { break; }
+        last = i;
+    }
+    last
+}
+
+fn next_grapheme_boundary(s: &str, pos: usize) -> usize {
+    for (i, _) in s.grapheme_indices(true) {
+        if i > pos { return i; }
+    }
+    s.len()
+}
+
+// === Word boundary helpers ===
+
+fn find_word_start(s: &str, pos: usize) -> usize {
+    let mut pos = pos;
+    while pos > 0 {
+        let prev = prev_grapheme_boundary(s, pos);
+        if &s[prev..pos] != " " { break; }
+        pos = prev;
+    }
+    while pos > 0 {
+        let prev = prev_grapheme_boundary(s, pos);
+        if &s[prev..pos] == " " { break; }
+        pos = prev;
+    }
+    pos
+}
+
+fn find_word_boundary_left(s: &str, pos: usize) -> usize {
+    let mut pos = pos;
+    while pos > 0 {
+        let prev = prev_grapheme_boundary(s, pos);
+        if &s[prev..pos] != " " { break; }
+        pos = prev;
+    }
+    while pos > 0 {
+        let prev = prev_grapheme_boundary(s, pos);
+        if &s[prev..pos] == " " { break; }
+        pos = prev;
+    }
+    pos
+}
+
+fn find_word_boundary_right(s: &str, pos: usize) -> usize {
+    let mut pos = pos;
+    let len = s.len();
+    while pos < len {
+        let next = next_grapheme_boundary(s, pos);
+        if &s[pos..next] == " " { break; }
+        pos = next;
+    }
+    while pos < len {
+        let next = next_grapheme_boundary(s, pos);
+        if &s[pos..next] != " " { break; }
+        pos = next;
+    }
+    pos
+}
 
 impl AppState {
     pub fn hint_text(&self) -> String {
@@ -24,19 +91,23 @@ impl AppState {
         parts.join(" | ")
     }
 
-    // === Cursor Movement ===
+    // === Cursor Movement (grapheme-aware) ===
 
     pub(crate) fn cursor_left(&mut self) {
         if self.cursor_pos > 0 {
-            self.cursor_pos -= 1;
+            self.cursor_pos = prev_grapheme_boundary(&self.input, self.cursor_pos);
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
     pub(crate) fn cursor_right(&mut self) {
         if self.cursor_pos < self.input.len() {
-            self.cursor_pos += 1;
+            self.cursor_pos = next_grapheme_boundary(&self.input, self.cursor_pos);
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
@@ -44,6 +115,8 @@ impl AppState {
         if self.cursor_pos != 0 {
             self.cursor_pos = 0;
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
@@ -51,100 +124,164 @@ impl AppState {
         if self.cursor_pos != self.input.len() {
             self.cursor_pos = self.input.len();
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
+        }
+    }
+
+    // === Word Navigation ===
+
+    pub(crate) fn cursor_word_left(&mut self) {
+        if self.cursor_pos > 0 {
+            self.cursor_pos = find_word_boundary_left(&self.input, self.cursor_pos);
+            self.mark_dirty();
+        } else {
+            self.input_flash = 3;
+        }
+    }
+
+    pub(crate) fn cursor_word_right(&mut self) {
+        if self.cursor_pos < self.input.len() {
+            self.cursor_pos = find_word_boundary_right(&self.input, self.cursor_pos);
+            self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
     // === Text Editing ===
 
-    /// Insert character at cursor position
     pub(crate) fn insert_char(&mut self, c: char) {
+        self.push_undo();
         if self.cursor_pos == self.input.len() {
             self.input.push(c);
         } else {
             self.input.insert(self.cursor_pos, c);
         }
-        self.cursor_pos += 1;
+        self.cursor_pos += c.len_utf8();
+        self.clear_redo();
         self.handle_at_trigger();
         self.mark_dirty();
     }
 
-    /// Delete character before cursor
     pub(crate) fn delete_before_cursor(&mut self) {
         if self.cursor_pos > 0 {
-            self.cursor_pos -= 1;
-            self.input.remove(self.cursor_pos);
+            self.push_undo();
+            let new_pos = prev_grapheme_boundary(&self.input, self.cursor_pos);
+            self.input.drain(new_pos..self.cursor_pos);
+            self.cursor_pos = new_pos;
+            self.clear_redo();
             self.handle_at_trigger();
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
-    /// Delete word before cursor (Emacs Ctrl+W)
-    /// Standard Emacs behavior: delete the word BEFORE cursor
     pub(crate) fn delete_word(&mut self) {
         if self.cursor_pos == 0 {
+            self.input_flash = 3;
             return;
         }
-        let pos = self.cursor_pos;
-        let bytes = self.input.as_bytes();
-        
-        // Find start of word to delete (going backwards from cursor)
-        let mut delete_start = pos;
-        
-        // Skip trailing spaces before cursor
-        while delete_start > 0 && bytes[delete_start - 1] == b' ' {
-            delete_start -= 1;
-        }
-        
-        // Skip word characters
-        while delete_start > 0 {
-            let prev = delete_start - 1;
-            if bytes[prev] == b' ' {
-                break;
-            }
-            delete_start -= 1;
-        }
-        
-        // Delete from delete_start to pos
-        if delete_start < pos {
-            self.input.drain(delete_start..pos);
-            self.cursor_pos = delete_start;
-            self.handle_at_trigger();
-            self.mark_dirty();
-        }
+        self.push_undo();
+        let start = find_word_start(&self.input, self.cursor_pos);
+        self.input.drain(start..self.cursor_pos);
+        self.cursor_pos = start;
+        self.clear_redo();
+        self.handle_at_trigger();
+        self.mark_dirty();
     }
 
-    /// Delete from cursor to end of line (Emacs Ctrl+K)
     pub(crate) fn delete_to_end(&mut self) {
         if self.cursor_pos < self.input.len() {
+            self.push_undo();
             self.input.truncate(self.cursor_pos);
+            self.clear_redo();
             self.handle_at_trigger();
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
-    /// Delete from start to cursor (Emacs Ctrl+U)
     pub(crate) fn delete_to_start(&mut self) {
         if self.cursor_pos > 0 {
+            self.push_undo();
             self.input.drain(..self.cursor_pos);
             self.cursor_pos = 0;
+            self.clear_redo();
             self.handle_at_trigger();
             self.mark_dirty();
+        } else {
+            self.input_flash = 3;
         }
     }
 
-    /// Delete character at cursor (Emacs Ctrl+D)
     pub(crate) fn kill_char(&mut self) {
         if self.cursor_pos < self.input.len() {
-            self.input.remove(self.cursor_pos);
+            self.push_undo();
+            let end = next_grapheme_boundary(&self.input, self.cursor_pos);
+            self.input.drain(self.cursor_pos..end);
+            self.clear_redo();
+            self.handle_at_trigger();
+            self.mark_dirty();
+        } else {
+            self.input_flash = 3;
+        }
+    }
+
+    // === Undo / Redo ===
+
+    fn push_undo(&mut self) {
+        self.undo_stack.push((self.input.clone(), self.cursor_pos));
+    }
+
+    fn clear_redo(&mut self) {
+        self.redo_stack.clear();
+    }
+
+    pub(crate) fn undo(&mut self) {
+        if let Some((text, pos)) = self.undo_stack.pop() {
+            self.redo_stack.push((self.input.clone(), self.cursor_pos));
+            self.input = text;
+            self.cursor_pos = pos;
             self.handle_at_trigger();
             self.mark_dirty();
         }
     }
 
-    // === Legacy methods (for backward compatibility) ===
+    pub(crate) fn redo(&mut self) {
+        if let Some((text, pos)) = self.redo_stack.pop() {
+            self.undo_stack.push((self.input.clone(), self.cursor_pos));
+            self.input = text;
+            self.cursor_pos = pos;
+            self.handle_at_trigger();
+            self.mark_dirty();
+        }
+    }
+
+    // === Paste ===
+
+    pub(crate) fn paste(&mut self, text: &str) {
+        let clean = text
+            .replace("\r\n", "")
+            .replace('\r', "")
+            .replace('\n', "")
+            .replace('\t', "    ");
+        if clean.is_empty() {
+            return;
+        }
+        self.push_undo();
+        self.input.insert_str(self.cursor_pos, &clean);
+        self.cursor_pos += clean.len();
+        self.clear_redo();
+        self.handle_at_trigger();
+        self.mark_dirty();
+    }
+
+    // === Legacy methods ===
 
     pub(crate) fn push_input(&mut self, c: char) {
-        // Tab cycles @-suggestions if active, otherwise inserts tab
         if c == '\t' {
             if self.input.contains('@') || self.at_suggestions.is_some() {
                 self.cycle_at_suggestions();
@@ -164,15 +301,17 @@ impl AppState {
             return;
         }
         if self.input.is_empty() {
+            self.input_flash = 3;
             return;
         }
         let content = std::mem::take(&mut self.input).trim().to_string();
         self.cursor_pos = 0;
         self.history_pos = None;
+        self.undo_stack.clear();
+        self.redo_stack.clear();
         if content.is_empty() {
             return;
         }
-        // Save to history
         self.input_history.push(content.clone());
         if let Some(response) = self.handle_slash(&content) {
             self.add_system_msg(response);
@@ -203,6 +342,7 @@ impl AppState {
 
     pub(crate) fn history_prev(&mut self) {
         if self.input_history.is_empty() {
+            self.input_flash = 3;
             return;
         }
         let pos = match self.history_pos {
@@ -219,7 +359,10 @@ impl AppState {
     pub(crate) fn history_next(&mut self) {
         let pos = match self.history_pos {
             Some(p) => p + 1,
-            None => return,
+            None => {
+                self.input_flash = 3;
+                return;
+            }
         };
         if pos >= self.input_history.len() {
             self.history_pos = None;
@@ -238,10 +381,8 @@ impl AppState {
     fn handle_at_trigger(&mut self) {
         if self.input.contains('@') {
             let query = self.input.split('@').last().unwrap_or("").to_string();
-            // Refresh if query changed OR if suggestions not yet populated
-            let needs_refresh = self.last_at_query.as_ref() != Some(&query) 
+            let needs_refresh = self.last_at_query.as_ref() != Some(&query)
                 || self.at_suggestions.is_none();
-            eprintln!("DEBUG handle_at_trigger: input={:?}, query={:?}, needs_refresh={}", self.input, query, needs_refresh);
             if needs_refresh {
                 self.last_at_query = Some(query.clone());
                 self.refresh_at_suggestions();
@@ -254,7 +395,15 @@ impl AppState {
     }
 
     fn refresh_at_suggestions(&mut self) {
-        let mut suggestions = crate::file_refs::complete_at_ref(&self.input, ".", 10);
+        let query = self.input.split('@').last().unwrap_or("").to_string();
+        let mut suggestions = crate::file_refs::complete_at_ref(&self.input, ".", 50);
+        if suggestions.len() > 1 && !query.is_empty() {
+            let refs: Vec<&str> = suggestions.iter().map(|s| s.as_str()).collect();
+            suggestions = crate::fuzzy::fuzzy_filter(&query, &refs, 10)
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect();
+        }
         if suggestions.is_empty() {
             suggestions = crate::file_refs::find_files("", ".", 10);
         }

@@ -1,4 +1,5 @@
 //! Model — Application State (mutable borrow, no cloning per event)
+use crate::snapshot::Snapshot;
 use crate::ui::elements::Element;
 
 
@@ -65,12 +66,13 @@ pub struct AppState {
     /// Global collapse flag — when true, ALL thoughts/tools render collapsed.
     /// New elements automatically respect this setting.
     pub all_collapsed: bool,
-    /// Monotonic counter for unique thought ids within a turn
     pub(crate) thought_seq: u64,
-    /// Input history ring buffer
     pub(crate) input_history: Vec<String>,
-    /// Current position in input history (0 = newest submitted)
     pub(crate) history_pos: Option<usize>,
+    pub(crate) undo_stack: Vec<(String, usize)>,
+    pub(crate) redo_stack: Vec<(String, usize)>,
+    pub input_flash: u8,
+    pub placeholder: String,
     element_count: usize,
     elements_cache: Vec<Element>,
     line_counts: Vec<usize>,
@@ -83,42 +85,24 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            messages: Vec::new(),
-            input: String::new(),
-            cursor_pos: 0,
-            streaming: false,
-            scroll: 0,
-            thinking_started_at: None,
+            messages: Vec::new(), input: String::new(), cursor_pos: 0,
+            streaming: false, scroll: 0, thinking_started_at: None,
             request_queue: std::collections::VecDeque::new(),
-            message_queue: Vec::new(),
-            next_id: 0,
-            current_request_id: None,
-            turn_started_at: None,
-            current_tool_name: None,
-            tool_started_at: None,
-            intermediate_step_count: 0,
-            animation_frame: 0,
-            turn_active: false,
-            current_action: None,
-            current_provider: "mock".to_string(),
-            current_model: "echo".to_string(),
-            last_tool_index: None,
-            inflight: 0,
-            render_generation: 0,
-            at_suggestions: None,
-            at_selected: None,
-            last_at_query: None,
-            all_collapsed: false,
-            thought_seq: 0,
-            input_history: Vec::new(),
-            history_pos: None,
-            element_count: 0,
-            elements_cache: Vec::new(),
-            line_counts: Vec::new(),
-            total_lines: 0,
-            dirty: true,
-            message_gen: 1,
-            cached_gen: 0,
+            message_queue: Vec::new(), next_id: 0,
+            current_request_id: None, turn_started_at: None,
+            current_tool_name: None, tool_started_at: None,
+            intermediate_step_count: 0, animation_frame: 0,
+            turn_active: false, current_action: None,
+            current_provider: "mock".into(), current_model: "echo".into(),
+            last_tool_index: None, inflight: 0, render_generation: 0,
+            at_suggestions: None, at_selected: None, last_at_query: None,
+            all_collapsed: false, thought_seq: 0,
+            input_history: Vec::new(), history_pos: None,
+            undo_stack: Vec::new(), redo_stack: Vec::new(),
+            input_flash: 0, placeholder: "Type a message to start...".into(),
+            element_count: 0, elements_cache: Vec::new(),
+            line_counts: Vec::new(), total_lines: 0,
+            dirty: true, message_gen: 1, cached_gen: 0,
         }
     }
 }
@@ -199,8 +183,16 @@ impl AppState {
     }
 
     pub fn tick_animation(&mut self) {
+        let mut changed = false;
         if self.turn_active {
             self.animation_frame = self.animation_frame.wrapping_add(1);
+            changed = true;
+        }
+        if self.input_flash > 0 {
+            self.input_flash -= 1;
+            changed = true;
+        }
+        if changed {
             self.dirty = true;
         }
     }
@@ -219,6 +211,8 @@ impl AppState {
             at_suggestions: self.at_suggestions.clone(),
             at_selected: self.at_selected,
             turn_active: self.turn_active,
+            input_flash: self.input_flash,
+            placeholder: self.placeholder.clone(),
             spinner_frame: self.spinner_frame(),
             scroll: self.scroll,
             turn_elapsed_secs: self.turn_elapsed_secs(),
@@ -390,104 +384,4 @@ pub enum Color {
     DarkGray,
     White,
     Magenta,
-}
-
-/// Immutable frame description — the UI DSL.
-/// The event loop builds snapshots; the render actor draws them.
-/// Zero blocking I/O in the event loop by design.
-#[derive(Clone)]
-pub struct Snapshot {
-    pub elements: Vec<Element>,
-    pub line_counts: Vec<usize>,
-    pub total_lines: usize,
-    pub input: String,
-    pub cursor_pos: usize,
-    pub hint_text: String,
-    pub at_suggestions: Option<Vec<String>>,
-    pub at_selected: Option<usize>,
-    pub turn_active: bool,
-    pub spinner_frame: char,
-    pub scroll: usize,
-    /// Elapsed seconds since turn started. Captured at snapshot creation time.
-    pub turn_elapsed_secs: Option<f64>,
-    pub provider: String,
-    pub model: String,
-}
-
-impl Snapshot {
-    pub fn element_count(&self) -> usize {
-        self.elements.len()
-    }
-
-    pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        let start = skip.min(self.elements.len());
-        let end = (start + take).min(self.elements.len());
-        &self.elements[start..end]
-    }
-
-    pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
-        if self.elements.is_empty() || visible_height == 0 {
-            return VisibleRegion { elements: &[], skip_lines: 0 };
-        }
-
-        let total = self.total_lines;
-        let max_scroll = total.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-
-        let viewport_end = total.saturating_sub(scroll);
-        let viewport_start = viewport_end.saturating_sub(visible_height);
-
-        let mut cum = 0usize;
-        let mut start_idx = 0;
-        let mut skip_lines = 0;
-
-        for (i, count) in self.line_counts.iter().enumerate() {
-            let next_cum = cum + count;
-            if next_cum > viewport_start {
-                start_idx = i;
-                skip_lines = viewport_start.saturating_sub(cum);
-                break;
-            }
-            cum = next_cum;
-        }
-
-        let mut end_idx = self.elements.len();
-        cum = 0;
-        for (i, count) in self.line_counts.iter().enumerate() {
-            cum += count;
-            if cum >= viewport_end {
-                end_idx = i + 1;
-                break;
-            }
-        }
-
-        VisibleRegion {
-            elements: &self.elements[start_idx..end_idx.min(self.elements.len())],
-            skip_lines,
-        }
-    }
-
-    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
-        let max_scroll = self.total_lines.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-        max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
-    }
-
-    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
-        let total = self.total_lines;
-        if total <= visible_height || visible_height == 0 {
-            return (0, 0);
-        }
-        let max_scroll = total.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-        let position = max_scroll.saturating_sub(scroll);
-        let track = visible_height;
-        let thumb = (visible_height * visible_height / total).max(1);
-        let thumb_offset = if max_scroll > 0 {
-            position * (track - thumb) / max_scroll
-        } else {
-            0
-        };
-        (thumb, thumb_offset)
-    }
 }

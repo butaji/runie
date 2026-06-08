@@ -22,6 +22,8 @@ pub struct Colors {
     pub success: Color,
     pub warning: Color,
     pub dim: Color,
+    pub code: Color,
+    pub code_bg: Color,
 }
 
 impl Colors {
@@ -35,6 +37,8 @@ impl Colors {
             success: Color::Rgb(62, 189, 106),   // green - unchanged
             warning: Color::Rgb(234, 184, 74),  // yellow - unchanged
             dim: Color::Rgb(74, 74, 74),        // was 40 - now readable
+            code: Color::Rgb(180, 180, 200),      // light blue-grey for code
+            code_bg: Color::Rgb(30, 30, 40),      // subtle dark background for code
         }
     }
 }
