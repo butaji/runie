@@ -279,6 +279,18 @@ impl AppState {
         self.delete_before_cursor();
     }
 
+    pub(crate) fn insert_newline(&mut self) {
+        self.push_undo();
+        if self.cursor_pos == self.input.len() {
+            self.input.push('\n');
+        } else {
+            self.input.insert(self.cursor_pos, '\n');
+        }
+        self.cursor_pos += 1;
+        self.clear_redo();
+        self.mark_dirty();
+    }
+
     pub(crate) fn submit(&mut self) {
         if self.at_suggestions.is_some() {
             self.insert_at_suggestion();

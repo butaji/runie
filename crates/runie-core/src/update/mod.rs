@@ -56,6 +56,7 @@ impl AppState {
         match event {
             Event::Input(c) => self.push_input(c),
             Event::Backspace => self.pop_input(),
+            Event::Newline => self.insert_newline(),
             Event::CursorLeft => self.cursor_left(),
             Event::CursorRight => self.cursor_right(),
             Event::CursorStart => self.cursor_start(),

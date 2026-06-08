@@ -70,4 +70,43 @@ mod tests {
         state.update(Event::CursorLeft);
         assert_eq!(state.cursor_pos, 0);
     }
+
+    #[test]
+    fn insert_newline_at_end() {
+        let mut state = AppState::default();
+        state.update(Event::Input('a'));
+        state.update(Event::Input('b'));
+        state.update(Event::Newline);
+        state.update(Event::Input('c'));
+        assert_eq!(state.input, "ab\nc");
+        assert_eq!(state.cursor_pos, 4);
+    }
+
+    #[test]
+    fn insert_newline_in_middle() {
+        let mut state = AppState::default();
+        state.update(Event::Input('a'));
+        state.update(Event::Input('b'));
+        state.update(Event::Input('c'));
+        state.cursor_pos = 1; // after 'a'
+        state.update(Event::Newline);
+        assert_eq!(state.input, "a\nbc");
+        assert_eq!(state.cursor_pos, 2);
+    }
+
+    #[test]
+    fn multiline_input_supported() {
+        let mut state = AppState::default();
+        state.update(Event::Input('f'));
+        state.update(Event::Input('i'));
+        state.update(Event::Input('r'));
+        state.update(Event::Input('s'));
+        state.update(Event::Input('t'));
+        state.update(Event::Newline);
+        state.update(Event::Input('l'));
+        state.update(Event::Input('i'));
+        state.update(Event::Input('n'));
+        state.update(Event::Input('e'));
+        assert_eq!(state.input, "first\nline");
+    }
 }
