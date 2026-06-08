@@ -1,6 +1,6 @@
 # Syntax highlighting
 
-**Status**: todo
+**Status**: in-progress
 
 **Milestone**: MVP
 

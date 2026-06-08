@@ -1,6 +1,6 @@
 # Sort by last update
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,9 +12,9 @@ Elements float to bottom on update.
 
 ## Acceptance Criteria
 
-- [ ] Timestamp tracking per element
-- [ ] Re-sort on update
-- [ ] Maintain stable order for same-timestamp items
+- [x] Timestamp tracking per element (timestamp on ChatMessage)
+- [x] Re-sort on update (messages_changed triggers rebuild)
+- [x] Maintain stable order for same-timestamp items (tests verify this)
 
 ## Tests
 

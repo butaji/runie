@@ -1,12 +1,20 @@
-# Dedicated actors for cross-cutting concerns
+# Cross-cutting concerns: actors vs functions
 
-Several cross-cutting concerns are isolated into dedicated actors:
+Only concerns with **async lifecycle or persistent state** become actors.
+Everything else is a pure function or module.
 
-- **TelemetryAgent**: Aggregates token usage, costs, timing from all relevant events.
-- **SafetyAgent**: Validates dangerous operations (bash commands) before execution. Other actors consult it.
-- **ClipboardAgent**: Handles clipboard interactions, including image paste.
-- **FileLookupActor**: Resolves @-file references asynchronously.
-- **CommandAgent**: Parses slash commands and key shortcuts, emits corresponding events.
-- **ConfigAgent**: Loads and watches configuration, emits ConfigChanged events.
+| Concern | Form | Rationale |
+|---------|------|-----------|
+| **ConfigAgent** | Actor | File watcher has async lifecycle |
+| **QueueAgent** | Actor | Holds queue state, emits on timer |
+| **SessionManager** | Actor | File I/O, async lifecycle |
+| **ToolActors** | Actor | Per-invocation async execution |
+| **Telemetry** | Function | Stateless accumulator; no async needed |
+| **SafetyAgent** | Function | Pure validation; call before bash execution |
+| **Clipboard** | Function | One-shot async utility |
+| **FileLookup** | Function | One-shot async resolution |
+| **Command parsing** | Function | Synchronous parser |
 
-This keeps core logic clean and makes cross-cutting concerns testable in isolation.
+This keeps core logic clean while avoiding actor boilerplate for stateless
+operations. Testability is achieved via pure functions (Layer 1) rather than
+mock actor topologies.
