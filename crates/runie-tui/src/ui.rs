@@ -253,12 +253,17 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
         .border_style(Style::default().fg(C.dim));
     let inner = block.inner(area);
     
-    // Build input display: "$ text"
-    let prefix = "$ ";
-    let input_len = snap.input.len();
-    let cursor_pos = snap.cursor_pos.min(input_len);
+    let spans = build_input_spans(snap);
+    f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
     
-    // Critical #1: Visible cursor — render char at cursor with inverted colors
+    // Position cursor (terminal cursor, for TTY visibility)
+    let cursor_x = inner.x + ("$ ".len() + snap.cursor_pos.min(snap.input.len())) as u16;
+    f.set_cursor_position((cursor_x, inner.y));
+}
+
+fn build_input_spans(snap: &Snapshot) -> Vec<Span> {
+    let prefix = "$ ";
+    let cursor_pos = snap.cursor_pos.min(snap.input.len());
     let before = &snap.input[..cursor_pos];
     let (at_cursor, after) = if cursor_pos < snap.input.len() {
         let c = snap.input[cursor_pos..].chars().next().unwrap();
@@ -267,28 +272,12 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     } else {
         (' ', "")
     };
-    
-    let mut spans: Vec<Span> = vec![
+    vec![
         Span::styled(prefix, Style::default().fg(C.fg_bright)),
         Span::styled(before, Style::default().fg(C.fg_bright)),
-    ];
-    
-    // Cursor character with inverted colors (block cursor)
-    spans.push(Span::styled(
-        at_cursor.to_string(),
-        Style::default().bg(C.fg_bright).fg(C.bg),
-    ));
-    
-    spans.push(Span::styled(after, Style::default().fg(C.fg_bright)));
-    
-    f.render_widget(
-        Paragraph::new(Line::from(spans)).block(block),
-        area,
-    );
-    
-    // Position cursor (terminal cursor, for TTY visibility)
-    let cursor_x = inner.x + (prefix.len() + cursor_pos) as u16;
-    f.set_cursor_position((cursor_x, inner.y));
+        Span::styled(at_cursor.to_string(), Style::default().bg(C.fg_bright).fg(C.bg)),
+        Span::styled(after, Style::default().fg(C.fg_bright)),
+    ]
 }
 
 fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {

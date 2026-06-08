@@ -3,6 +3,8 @@ mod input;
 #[cfg(test)]
 mod input_cursor;
 #[cfg(test)]
+mod input_history;
+#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod dsl;

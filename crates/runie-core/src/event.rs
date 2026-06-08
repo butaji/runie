@@ -21,6 +21,10 @@ pub enum Event {
     DeleteToStart,   // Ctrl+U - delete from start to cursor
     KillChar,        // Ctrl+D - delete char at cursor (if not empty)
 
+    // Input history
+    HistoryPrev,     // Up arrow - previous history item
+    HistoryNext,     // Down arrow - next history item
+
     Quit,
     Reset,
 

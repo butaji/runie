@@ -67,6 +67,10 @@ pub struct AppState {
     pub all_collapsed: bool,
     /// Monotonic counter for unique thought ids within a turn
     pub(crate) thought_seq: u64,
+    /// Input history ring buffer
+    pub(crate) input_history: Vec<String>,
+    /// Current position in input history (0 = newest submitted)
+    pub(crate) history_pos: Option<usize>,
     element_count: usize,
     elements_cache: Vec<Element>,
     line_counts: Vec<usize>,
@@ -106,6 +110,8 @@ impl Default for AppState {
             last_at_query: None,
             all_collapsed: false,
             thought_seq: 0,
+            input_history: Vec::new(),
+            history_pos: None,
             element_count: 0,
             elements_cache: Vec::new(),
             line_counts: Vec::new(),
