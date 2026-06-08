@@ -80,8 +80,7 @@ where
 fn glob_matches(name: &str, pattern: &str) -> bool {
     let name_lower = name.to_lowercase();
     let pat_lower = pattern.to_lowercase();
-    if pat_lower.starts_with("*.") {
-        let ext = &pat_lower[2..];
+    if let Some(ext) = pat_lower.strip_prefix("*.") {
         name_lower.ends_with(&format!(".{}", ext))
     } else if pat_lower.contains('*') || pat_lower.contains('?') {
         name_lower.contains(&pat_lower.replace("*", "").replace("?", ""))
@@ -114,7 +113,7 @@ pub fn read_file_ref(path: &str) -> Result<FileRef, String> {
 }
 
 pub fn complete_at_ref(input: &str, base: &str, limit: usize) -> Vec<String> {
-    let query = input.split('@').last().unwrap_or("");
+    let query = input.split('@').next_back().unwrap_or("");
     find_files_shallow(query, base, limit)
 }
 

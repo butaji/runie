@@ -9,7 +9,7 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style::Color,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
@@ -25,12 +25,12 @@ fn hstack(area: Rect, widths: &[Constraint]) -> Vec<Rect> {
 
 use runie_core::{Element, Snapshot};
 
-use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown, parse_inline_markdown_with_color, CodeBlock};
+use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown_with_color, CodeBlock};
 use runie_core::format_timestamp;
 use crate::theme::{
-    C, GLYPH_USER, GLYPH_AGENT, GLYPH_TOOL, GLYPH_INDENT,
-    GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_CHAT, PANEL_INPUT,
-    SCROLLBAR_TRACK, SCROLLBAR_THUMB, INDICATOR_COLLAPSED,
+    C, GLYPH_USER, GLYPH_AGENT, GLYPH_INDENT,
+    GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_INPUT,
+    SCROLLBAR_TRACK, SCROLLBAR_THUMB,
     code_header_label, thinking_line, tool_running_line, tool_done_header,
     tool_summary_line, turn_complete_line, thought_summary_line,
     style_user, style_agent, style_thought, style_thinking, style_thought_summary,
@@ -64,7 +64,7 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 }
 
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let tokens: usize = snap.elements.iter().map(|e| estimate_element_tokens(e)).sum();
+    let tokens: usize = snap.elements.iter().map(estimate_element_tokens).sum();
     let left_text = build_status_text(snap);
     let queue_part = if snap.queue_count > 0 {
         format!(" · {} queued", snap.queue_count)

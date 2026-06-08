@@ -82,15 +82,34 @@ impl AppState {
     }
 
     pub(crate) fn append_response(&mut self, id: String, content: String) {
-        if let Some(msg) = self.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == id) {
-            if !content.is_empty() {
-                msg.content.push_str(&content);
+        // O(1) lookup using cached last_assistant_index
+        if let Some(idx) = self.last_assistant_index {
+            if let Some(msg) = self.messages.get_mut(idx) {
+                if msg.role == Role::Assistant && msg.id == id {
+                    if !content.is_empty() {
+                        msg.content.push_str(&content);
+                    }
+                    msg.timestamp = now();
+                    self.messages_changed();
+                    return;
+                }
             }
-            msg.timestamp = now();
-            self.messages_changed();
-            return;
         }
+        // Fallback: search for existing message
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
+            if let Some(msg) = self.messages.get_mut(idx) {
+                if !content.is_empty() {
+                    msg.content.push_str(&content);
+                }
+                msg.timestamp = now();
+                self.last_assistant_index = Some(idx);
+                self.messages_changed();
+                return;
+            }
+        }
+        // New message
         if !content.is_empty() {
+            let idx = self.messages.len();
             self.messages.push(ChatMessage {
                 role: Role::Assistant,
                 content,
@@ -98,6 +117,7 @@ impl AppState {
                 id: id.clone(),
             });
             self.current_request_id = Some(id);
+            self.last_assistant_index = Some(idx);
             self.messages_changed();
         }
     }
@@ -175,6 +195,10 @@ impl AppState {
                 let mut agent = self.messages.remove(a_idx);
                 agent.timestamp = now();
                 self.messages.insert(t_idx, agent);
+                // Update cached index if it was affected
+                if self.last_assistant_index == Some(a_idx) {
+                    self.last_assistant_index = Some(t_idx);
+                }
             }
         }
     }
@@ -184,6 +208,12 @@ impl AppState {
             let mut turn_complete = self.messages.remove(idx);
             turn_complete.timestamp = now();
             self.messages.push(turn_complete);
+            // Update cached index if it was affected
+            if let Some(last_idx) = self.last_assistant_index {
+                if last_idx >= idx {
+                    self.last_assistant_index = Some(last_idx.saturating_sub(1));
+                }
+            }
         }
     }
 

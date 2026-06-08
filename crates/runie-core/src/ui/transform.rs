@@ -1,4 +1,3 @@
-use crate::labels::format_timestamp;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::{Element, Feed};
 

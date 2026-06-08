@@ -1,6 +1,6 @@
 pub fn estimate_tokens(text: &str) -> usize {
     let chars = text.chars().count();
-    (chars + 3) / 4
+    chars.div_ceil(4)
 }
 
 #[derive(Debug, Clone, Copy, Default)]

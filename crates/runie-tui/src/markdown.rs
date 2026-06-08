@@ -38,7 +38,7 @@ pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<Md
         } else if c == '`' {
             flush_plain(&mut current, &mut spans, base);
             let mut code_text = String::new();
-            while let Some(cc) = chars.next() {
+            for cc in chars.by_ref() {
                 if cc == '`' {
                     break;
                 }
@@ -212,7 +212,7 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
                 // Check if this looks like continuation (indented)
                 let leading_spaces = line.len() - line.trim_start().len();
                 if leading_spaces >= 2 {
-                    current_list_item.push_str(" ");
+                    current_list_item.push(' ');
                     current_list_item.push_str(trimmed);
                     continue;
                 }

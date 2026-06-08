@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 /// Session manager state — mutable only within the actor loop
 #[derive(Debug)]
+#[derive(Default)]
 pub struct SessionState {
     /// Current session name (if any)
     pub session_name: Option<String>,
@@ -20,17 +21,6 @@ pub struct SessionState {
     is_dirty: bool,
 }
 
-impl Default for SessionState {
-    fn default() -> Self {
-        Self {
-            session_name: None,
-            writer: None,
-            pending_events: VecDeque::new(),
-            last_snapshot: None,
-            is_dirty: false,
-        }
-    }
-}
 
 impl SessionState {
     /// Start a new session
