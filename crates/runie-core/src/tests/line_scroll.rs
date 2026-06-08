@@ -42,7 +42,7 @@ fn user_message_is_one_line() {
     state.messages_changed();
     state.ensure_fresh();
 
-    assert_eq!(state.total_lines(), 2, "UserMessage (1) + Spacer (1) = 2 lines");
+    assert_eq!(state.total_lines(), 1, "UserMessage (1) + Spacer (0) = 1 line");
 }
 
 #[test]
@@ -54,8 +54,8 @@ fn thought_line_count_matches_content() {
     state.ensure_fresh();
 
     let total = state.total_lines();
-    // ThoughtMarker has 6 lines (header + 5), + Spacer = 7
-    assert_eq!(total, 7, "Thought with 5 content lines should be 6+1=7 lines total");
+    // ThoughtMarker has 6 lines (header + 5), + Spacer = 6
+    assert_eq!(total, 6, "Thought with 5 content lines should be 6+0=6 lines total");
 }
 
 #[test]
@@ -66,8 +66,8 @@ fn tool_line_count_matches_output() {
     state.ensure_fresh();
 
     let total = state.total_lines();
-    // ToolDone: header (1) + output (3) = 4, + Spacer = 5
-    assert_eq!(total, 5, "Tool with 3 output lines should be 4+1=5 lines total");
+    // ToolDone: header (1) + output (3) = 4, + Spacer = 4
+    assert_eq!(total, 4, "Tool with 3 output lines should be 4+0=4 lines total");
 }
 
 // ── Visible region: latest at bottom ──────────────────────────────────
@@ -149,28 +149,20 @@ fn scroll_up_shows_older_content() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 5 messages = 10 lines total. Viewport of 3 lines.
-    // scroll=0 (bottom): shows msg4+spacer+msg3 = 3 lines
-    // scroll=2: shift up 2 lines → shows msg3+spacer+msg2 = 3 lines? 
-    // Actually shift by lines: bottom moves from line 10 to line 8
-    // Viewport [5, 8): msg2(1 line at idx 4-5? let me trace)
+    // 5 messages = 5 lines total (no spacers). Viewport of 3 lines.
+    // scroll=0 (bottom): shows msg2, msg3, msg4 = 3 lines
+    // scroll=2: shift up 2 lines → shows msg0, msg1, msg2 = 3 lines
     //
-    // Lines: 0:msg0, 1:spacer, 2:msg1, 3:spacer, 4:msg2, 5:spacer, 6:msg3, 7:spacer, 8:msg4, 9:spacer
-    // Total 10 lines. viewport=3.
-    // scroll=0: viewport [7, 10) → msg3(6-7)? no, line 7 is spacer after msg3, line 8 is msg4, line 9 is spacer
-    // Hmm, let me re-trace. The bottom should be msg4.
-    // scroll=0: show lines [7, 10): line7=spacer(after msg3), line8=msg4, line9=spacer(after msg4)
-    // That's msg4 visible but with spacer on either side. 
-    // 
-    // Actually with 3-line viewport, starting from bottom:
-    // Bottom 3 lines: line9(spacer), line8(msg4), line7(spacer) — msg4 visible
-    // scroll=2: shift up 2 lines: show lines [5, 8): line5=spacer, line6=msg3, line7=spacer — msg3 visible
+    // Lines: 0:msg0, 1:msg1, 2:msg2, 3:msg3, 4:msg4
+    // Total 5 lines. viewport=3.
+    // scroll=0: viewport [2, 5) → msg2, msg3, msg4 — msg4 visible
+    // scroll=2: viewport [0, 3) → msg0, msg1, msg2 — msg2 visible, msg3/msg4 hidden
 
     state.scroll = 2;
     let region = state.visible_scroll(3);
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg3")),
-        "Scroll up should show older message (msg3)"
+        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
+        "Scroll up should show older message (msg2)"
     );
     assert!(
         !region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg4")),
