@@ -127,6 +127,29 @@ src/
 
 **Rule**: Your App should compile without ratatui if you strip rendering.
 
+## Task Authoring Rules
+
+Every task in `tasks/<id>.md` must include a `## Tests` section with acceptance
+criteria that reference the 4 testing layers. A task is **not done** until all
+listed tests pass.
+
+**Template:** See `tasks/TEMPLATE.md`.
+
+**Required test coverage per category:**
+
+| Category | Required Layers |
+|----------|-----------------|
+| Core / State | Layer 1 + Layer 2 |
+| Tools | Layer 1 |
+| TUI / Rendering | Layer 1 + Layer 2 + Layer 3 |
+| Input / Commands | Layer 1 + Layer 2 |
+| Sessions | Layer 1 + Layer 2 |
+| Configuration | Layer 1 + Layer 2 |
+| Architecture / Actors | Layer 1 + Layer 2 |
+
+**Anti-pattern:** Tasks with only functional ACs ("Implement X", "Support Y")
+and no test ACs. Every feature must be verifiable by `cargo test`.
+
 ## Linter Rules
 
 - File max: 500 lines

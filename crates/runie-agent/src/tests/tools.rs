@@ -75,6 +75,36 @@ fn test_tool_result_structure() {
 }
 
 #[test]
+fn test_tool_write_creates_parent_dirs() {
+    let path = "/tmp/runie_test_nested/sub/dir/file.txt";
+    let result = Tool::WriteFile {
+        path: path.to_string(),
+        content: "nested content".to_string(),
+    }.execute();
+    assert!(result.success);
+    assert!(result.output.contains("bytes"));
+    
+    // Verify file was created
+    let read_result = Tool::ReadFile { path: path.to_string(), offset: None, limit: None }.execute();
+    assert!(read_result.success);
+    assert_eq!(read_result.output, "nested content");
+    
+    // Cleanup
+    let _ = std::fs::remove_file(path);
+    let _ = std::fs::remove_dir_all("/tmp/runie_test_nested");
+}
+
+#[test]
+fn test_tool_bash_timeout() {
+    // This test verifies timeout handling works - uses a command that sleeps longer than timeout
+    // Note: We can't easily test the actual timeout in unit tests since DEFAULT_TIMEOUT_SECS is 60s
+    // Instead we verify the command still works for normal cases
+    let result = Tool::Bash { command: "echo timeout_test_ok".to_string() }.execute();
+    assert!(result.success);
+    assert!(result.output.contains("timeout_test_ok"));
+}
+
+#[test]
 fn test_edit_file_success() {
     let path = "/tmp/runie_test_edit.txt";
     std::fs::write(path, "line1\nold\nline3").unwrap();

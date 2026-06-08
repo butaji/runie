@@ -1,7 +1,10 @@
 use std::path::Path;
-use std::time::Instant;
+use std::time::{Duration, Instant};
+use std::process::Command;
 use crate::safety::check_bash_safety;
 use crate::truncate;
+
+const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tool {
@@ -141,6 +144,14 @@ fn list_dir(path: &str) -> (String, bool) {
 }
 
 fn write_file(path: &str, content: &str) -> (String, bool) {
+    // Create parent directories if needed
+    if let Some(parent) = Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                return (format!("Error creating parent directories: {}", e), false);
+            }
+        }
+    }
     match std::fs::write(path, content) {
         Ok(()) => (format!("Wrote {} bytes to {}", content.len(), path), true),
         Err(e) => (format!("Error writing {}: {}", path, e), false),
@@ -174,23 +185,62 @@ fn run_bash(command: &str) -> (String, bool) {
     if let Some(reason) = check_bash_safety(command) {
         return (format!("Blocked: {}", reason), false);
     }
-    match std::process::Command::new("bash").arg("-c").arg(command).output() {
-        Ok(output) => {
-            let mut result = String::new();
-            if !output.stdout.is_empty() {
-                result.push_str(&String::from_utf8_lossy(&output.stdout));
-            }
-            if !output.stderr.is_empty() {
-                if !result.is_empty() { result.push('\n'); }
-                result.push_str(&String::from_utf8_lossy(&output.stderr));
-            }
-            let success = output.status.success();
-            if result.is_empty() {
-                result = if success { "(no output)".to_string() } else { "(command failed)".to_string() };
-            }
-            (apply_truncation(result, true), success)
+    
+    let output = match run_command_with_timeout(
+        "bash".to_string(),
+        vec!["-c".to_string(), command.to_string()],
+        Duration::from_secs(DEFAULT_TIMEOUT_SECS),
+    ) {
+        Ok(output) => output,
+        Err(e) => return (format!("Error executing '{}': {}", command, e), false),
+    };
+    
+    let mut result = String::new();
+    if !output.stdout.is_empty() {
+        result.push_str(&String::from_utf8_lossy(&output.stdout));
+    }
+    if !output.stderr.is_empty() {
+        if !result.is_empty() { result.push('\n'); }
+        result.push_str(&String::from_utf8_lossy(&output.stderr));
+    }
+    let success = output.status.success();
+    if result.is_empty() {
+        result = if success { "(no output)".to_string() } else { "(command failed)".to_string() };
+    }
+    (apply_truncation(result, true), success)
+}
+
+fn run_command_with_timeout(
+    program: String,
+    args: Vec<String>,
+    timeout: Duration,
+) -> Result<std::process::Output, std::io::Error> {
+    use std::thread;
+    use std::sync::mpsc;
+    
+    let (tx, rx) = mpsc::channel();
+    
+    thread::spawn(move || {
+        match Command::new(&program).args(&args).output() {
+            Ok(output) => { let _ = tx.send(Ok(output)); }
+            Err(e) => { let _ = tx.send(Err(e)); }
         }
-        Err(e) => (format!("Error executing '{}': {}", command, e), false),
+    });
+    
+    match rx.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                format!("Command timed out after {:?}", timeout)
+            ))
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Channel disconnected unexpectedly"
+            ))
+        }
     }
 }
 
