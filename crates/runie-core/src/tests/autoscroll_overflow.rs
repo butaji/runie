@@ -24,7 +24,7 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
     state.scroll = 0;
 
     let region = state.visible_scroll(height);
-    assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content } if content == "list files")),
+    assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content, .. } if content == "list files")),
         "User message must be visible after submit");
 }
 
@@ -60,7 +60,7 @@ fn verify_final_done_visible(state: &mut AppState, height: usize) {
     state.scroll = 0;
 
     let region = state.visible_scroll(height);
-    assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::AgentMessage { content } if content == "Done!")),
+    assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!")),
         "Final 'Done!' must be visible at bottom");
 }
 
@@ -137,7 +137,7 @@ fn scroll_zero_always_shows_latest() {
 
     let region = state.visible_scroll(height);
     // Latest message (msg2) should be visible
-    let has_latest = region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content } if content == "msg2"));
+    let has_latest = region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content, .. } if content == "msg2"));
     assert!(has_latest, "Latest message must be visible when scroll=0");
 }
 

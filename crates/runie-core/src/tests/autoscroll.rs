@@ -107,7 +107,7 @@ fn at_bottom_shows_new_agent_response() {
     let visible = state.visible_scroll(5);
     let last = visible.elements.last().unwrap();
     match last {
-        crate::ui::elements::Element::AgentMessage { content } => {
+        crate::ui::elements::Element::AgentMessage { content, .. } => {
             assert_eq!(content, "hi", "New agent response should be visible at bottom");
         }
         _ => panic!("Expected AgentMessage at bottom, got: {:?}", last),

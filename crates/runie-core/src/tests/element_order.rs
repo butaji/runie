@@ -27,7 +27,7 @@ fn elements_ordered_by_timestamp_strict() {
     let mut state = AppState::default();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.5s\noutput".into(),
+        content: "✓ ls 0.5s\noutput".into(),
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
     });
@@ -149,7 +149,7 @@ fn tool_end_bump_moves_tool_after_later_messages() {
     // Tool completes — bump to 5.0
     if let Some(msg) = state.messages.iter_mut().find(|m| m.role == Role::Tool) {
         msg.timestamp = 5.0;
-        msg.content = "◆ Ran ls 0.5s\noutput".into();
+        msg.content = "✓ ls 0.5s\noutput".into();
     }
     state.messages_changed();
     state.ensure_fresh();
@@ -164,19 +164,19 @@ fn multiple_tools_ordered_by_completion_time() {
     let mut state = AppState::default();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran cat 0.1s".into(),
+        content: "✓ cat 0.1s".into(),
         timestamp: 5.0,
         id: "t1".into(),
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran ls 0.2s".into(),
+        content: "✓ ls 0.2s".into(),
         timestamp: 2.0,
         id: "t2".into(),
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran grep 0.3s".into(),
+        content: "✓ grep 0.3s".into(),
         timestamp: 8.0,
         id: "t3".into(),
     });

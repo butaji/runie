@@ -92,7 +92,7 @@ fn visible_shows_latest_element_at_bottom() {
     // Viewport of 3 lines at bottom should show: msg2 + spacer + msg1 (partial? no, all fit)
     // Actually with 3 lines we can fit: msg2 (1) + spacer (1) + msg1 (1) = 3 lines exactly
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content } if content == "msg2")),
+        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
         "Latest message (msg2) must be in visible region"
     );
 }
@@ -125,7 +125,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     let region = state.visible_scroll(5);
 
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content } if content == "latest")),
+        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "latest")),
         "Latest message must be visible"
     );
     assert!(
@@ -169,11 +169,11 @@ fn scroll_up_shows_older_content() {
     state.scroll = 2;
     let region = state.visible_scroll(3);
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content } if content == "msg3")),
+        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg3")),
         "Scroll up should show older message (msg3)"
     );
     assert!(
-        !region.elements.iter().any(|e| matches!(e, Element::UserMessage { content } if content == "msg4")),
+        !region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg4")),
         "Scroll up should hide msg4"
     );
 }
@@ -282,7 +282,7 @@ fn large_thought_overflows_viewport() {
     let region = state.visible_scroll(5);
 
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content } if content == "after")),
+        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "after")),
         "Latest message must be visible"
     );
     // skip_lines should be large since we're deep into the thought
@@ -347,7 +347,7 @@ fn new_message_at_bottom_auto_shows() {
 
     let region = state.visible_scroll(5);
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content } if content == "newest")),
+        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "newest")),
         "Newest message must be visible when at bottom"
     );
 }

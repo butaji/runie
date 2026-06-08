@@ -143,23 +143,28 @@ fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height
     f.render_stateful_widget(scrollbar, area, &mut state);
 }
 
-fn to_lines<'a>(elem: &'a Element, spinner_frame: char) -> Vec<Line<'a>> {
+fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
-        Spacer => vec![Line::from("")],
-        UserMessage { content } => vec![Line::from(format!("$ {}", content)).style(Style::default().fg(C.fg_mid))],
-        AgentMessage { content } => vec![Line::from(format!("→ {}", content)).style(Style::default().fg(C.fg_mid))],
-        Thinking { started } => vec![Line::from(runie_core::labels::action_text(
-            spinner_frame,
-            "Thinking",
-            started.elapsed().as_secs_f64(),
+        Spacer => vec![],
+        // DS-02: Timestamps on messages
+        UserMessage { content, timestamp } => vec![Line::from(format!(
+            "{} {} {:>5}", "$", content, timestamp
+        )).style(Style::default().fg(C.fg_bright))],
+        AgentMessage { content, timestamp } => vec![Line::from(format!(
+            "{} {} {:>5}", "→", content, timestamp
+        )).style(Style::default().fg(C.fg))],
+        // DS-04: tui1-style thinking indicator
+        Thinking { started } => vec![Line::from(format!(
+            "{} ◐ {:.1}s", "→", started.elapsed().as_secs_f64()
         )).style(Style::default().fg(C.accent))],
         ThoughtSummary { content, .. } => vec![Line::from(format!(
             "{} [+]", content.lines().next().unwrap_or(content)
         )).style(Style::default().fg(C.dim))],
         ThoughtMarker { content } => render_thought_marker(content),
+        // DS-06: Tool calls inline as feed items
         ToolRunning { name, started } => vec![Line::from(format!(
-            "{} Running {}... {:.1}s", spinner_frame, name, started.elapsed().as_secs_f64()
+            "✓ {} {:.1}s", name, started.elapsed().as_secs_f64()
         )).style(Style::default().fg(C.fg_mid))],
         ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
         ToolSummary { name, duration_secs } => vec![Line::from(format!(
@@ -194,18 +199,33 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
         .title(PANEL_INPUT)
         .border_style(Style::default().fg(C.dim));
     let inner = block.inner(area);
+    
+    // DS-05: Input prompt prefix and suffix
+    let input_display = if snap.input.is_empty() {
+        "$ ".to_string()
+    } else {
+        format!("{} ", snap.input)
+    };
+    
     f.render_widget(
-        Paragraph::new(snap.input.as_str())
-            .style(Style::default().fg(C.fg_mid))
+        Paragraph::new(input_display.as_str())
+            .style(Style::default().fg(C.fg_bright))
             .block(block),
         area,
     );
-    f.set_cursor_position((inner.x + snap.input.len() as u16, inner.y));
+    // DS-01: Cursor at end of input text
+    let cursor_x = inner.x + snap.input.len() as u16;
+    f.set_cursor_position((cursor_x, inner.y));
 }
 
 fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    let hints_text = if snap.turn_active {
+        "Ctrl+Shift+E=expand/collapse | Enter=steer | Alt+Enter=follow-up | Esc=abort | Ctrl+C=quit"
+    } else {
+        "Ctrl+Shift+E=expand/collapse | Alt+Enter=follow-up | Esc=clear | Ctrl+C=quit"
+    };
     f.render_widget(
-        Paragraph::new(snap.hint_text.as_str()).style(Style::default().fg(C.dim)),
+        Paragraph::new(hints_text).style(Style::default().fg(C.fg)),
         area,
     );
 }
@@ -254,8 +274,8 @@ fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
 fn estimate_element_tokens(elem: &Element) -> usize {
     use runie_core::Element::*;
     match elem {
-        UserMessage { content }
-        | AgentMessage { content }
+        UserMessage { content, .. }
+        | AgentMessage { content, .. }
         | ThoughtMarker { content } => content.len() / 4,
         Thinking { .. }
         | ThoughtSummary { .. }

@@ -139,7 +139,7 @@ fn visible_uses_scroll_offset() {
     assert_eq!(visible_top.elements.len(), 5);
     let first = visible_top.elements.first().unwrap();
     match first {
-        crate::ui::elements::Element::UserMessage { content } => {
+        crate::ui::elements::Element::UserMessage { content, .. } => {
             assert!(content.contains("msg0"), "Top scroll should show oldest first, got: {}", content);
         }
         _ => panic!("Expected UserMessage, got: {:?}", first),

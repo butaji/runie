@@ -117,7 +117,7 @@ fn tool_collapsed_by_toggle() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s".into(),
+        content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });
@@ -130,7 +130,7 @@ fn toggle_expand_restores_tool() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s".into(),
+        content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });
@@ -144,7 +144,7 @@ fn collapsed_tool_renders_one_line_summary() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s".into(),
+        content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });
@@ -176,7 +176,7 @@ fn toggle_expand_affects_all_items() {
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s".into(),
+        content: "✓ list_files 0.5s".into(),
         timestamp: 1.0,
         id: "new".into(),
     });
@@ -231,7 +231,7 @@ fn toggle_tool_rebuilds_cache() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s".into(),
+        content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });
@@ -253,7 +253,7 @@ fn toggle_tool_twice_restores_cache() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s".into(),
+        content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });
@@ -351,7 +351,7 @@ fn collapsed_tool_hides_output() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s\nfile1\nfile2".into(),
+        content: "✓ list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });
@@ -373,7 +373,7 @@ fn expanded_tool_shows_output() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
-        content: "◆ Ran list_files 0.5s\nfile1\nfile2".into(),
+        content: "✓ list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,
         id: "t1".into(),
     });

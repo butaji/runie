@@ -102,7 +102,7 @@ fn test_formatted_labels_short_names() {
     let content: String = lines.iter()
         .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
         .collect();
-    assert!(content.contains("Ran"), "Missing 'Ran' in: {}", content);
+    assert!(content.contains("✓"), "Missing '✓' in: {}", content);
     assert!(content.contains("0.3s"), "Missing '0.3s' in: {}", content);
     assert!(content.contains("Turn completed"), "Missing 'Turn completed' in: {}", content);
 }
@@ -130,9 +130,9 @@ fn test_list_files_full_tool_flow_sequence() {
         .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
         .collect();
     assert!(content.contains("Thought"));
-    assert!(content.contains("Ran"));
+    assert!(content.contains("✓"));
     assert!(content.contains("list_files"));
-    assert!(content.contains("Agent:"));
+    assert!(content.contains("→"));
     assert!(content.contains("Turn completed in 5.1s"));
 }
 

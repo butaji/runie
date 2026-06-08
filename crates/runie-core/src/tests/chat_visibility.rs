@@ -224,7 +224,7 @@ fn user_message_visible_after_submit_clears_input() {
 
     let region = state.visible_scroll(height);
     let has_user = region.elements.iter().any(|e| match e {
-        crate::ui::Element::UserMessage { content } => content == "list files",
+        crate::ui::Element::UserMessage { content, .. } => content == "list files",
         _ => false,
     });
     assert!(has_user, "Submitted user message must be visible");

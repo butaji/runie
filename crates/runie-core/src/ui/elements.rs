@@ -3,8 +3,8 @@
 #[derive(Debug, Clone)]
 pub enum Element {
     Spacer,
-    UserMessage { content: String },
-    AgentMessage { content: String },
+    UserMessage { content: String, timestamp: String },
+    AgentMessage { content: String, timestamp: String },
     Thinking { started: std::time::Instant },
     ThoughtMarker { content: String },
     ThoughtSummary { content: String, duration_secs: f64 },
@@ -24,8 +24,7 @@ impl Element {
     pub fn line_count(&self) -> usize {
         match self {
             Element::Spacer => 1,
-            Element::UserMessage { .. } => 1,
-            Element::AgentMessage { .. } => 1,
+            Element::UserMessage { .. } | Element::AgentMessage { .. } => 1,
             Element::Thinking { .. } => 1,
             Element::ThoughtMarker { content } => content.lines().count().max(1),
             Element::ThoughtSummary { .. } => 1,

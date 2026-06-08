@@ -173,7 +173,7 @@ fn streaming_tool_marker_stored_for_thought_capture() {
     assert!(msg.content.contains("TOOL:"), "Tool markers stored for thought capture, stripped at render time");
     let feed = crate::ui::LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content } => content.contains("TOOL:"),
+        crate::ui::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
         _ => false,
     });
     assert!(!has_tool, "TOOL: marker should never appear in rendered feed");
@@ -196,7 +196,7 @@ fn streaming_structured_tool_stored_for_capture() {
     assert!(msg.content.contains("edit_file"), "Structured tool stored for thought capture, stripped at render time");
     let feed = crate::ui::LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content } => content.contains("edit_file"),
+        crate::ui::Element::AgentMessage { content, .. } => content.contains("edit_file"),
         _ => false,
     });
     assert!(!has_tool, "Structured tool call should never appear in rendered feed");
@@ -209,7 +209,7 @@ fn feed_does_not_render_tool_markers() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir.".to_string() });
     let feed = LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
-        crate::ui::Element::AgentMessage { content } => content.contains("TOOL:"),
+        crate::ui::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
         _ => false,
     });
     assert!(!has_tool, "Feed should never render TOOL: markers");
