@@ -14,7 +14,61 @@ pub enum Element {
     TurnComplete { duration_secs: f64, timestamp: f64 },
 }
 
+/// Builder for attaching a timestamp to an Element.
+pub struct ElementBuilder(pub(crate) Element);
+
+impl ElementBuilder {
+    pub fn at(self, timestamp: f64) -> Element {
+        let mut e = self.0;
+        match &mut e {
+            Element::Spacer { timestamp: ts } => *ts = timestamp,
+            Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
+            Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
+            Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolRunning { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
+            Element::TurnComplete { timestamp: ts, .. } => *ts = timestamp,
+        }
+        e
+    }
+}
+
 impl Element {
+    pub fn user(content: impl Into<String>) -> ElementBuilder {
+        ElementBuilder(Element::UserMessage { content: content.into(), timestamp: 0.0 })
+    }
+    pub fn agent(content: impl Into<String>) -> ElementBuilder {
+        ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0 })
+    }
+    pub fn thinking(started: std::time::Instant) -> ElementBuilder {
+        ElementBuilder(Element::Thinking { started, timestamp: 0.0 })
+    }
+    pub fn thought(content: impl Into<String>) -> ElementBuilder {
+        ElementBuilder(Element::ThoughtMarker { content: content.into(), timestamp: 0.0 })
+    }
+    pub fn thought_summary(content: impl Into<String>, duration_secs: f64) -> ElementBuilder {
+        ElementBuilder(Element::ThoughtSummary { content: content.into(), duration_secs, timestamp: 0.0 })
+    }
+    pub fn tool_running(name: impl Into<String>, started: std::time::Instant) -> ElementBuilder {
+        ElementBuilder(Element::ToolRunning { name: name.into(), started, timestamp: 0.0 })
+    }
+    pub fn tool_done(name: impl Into<String>, duration_secs: f64, output: impl Into<String>) -> ElementBuilder {
+        ElementBuilder(Element::ToolDone { name: name.into(), duration_secs, output: output.into(), timestamp: 0.0 })
+    }
+    pub fn tool_summary(name: impl Into<String>, duration_secs: f64) -> ElementBuilder {
+        ElementBuilder(Element::ToolSummary { name: name.into(), duration_secs, timestamp: 0.0 })
+    }
+    pub fn turn_complete(duration_secs: f64) -> ElementBuilder {
+        ElementBuilder(Element::TurnComplete { duration_secs, timestamp: 0.0 })
+    }
+    pub fn spacer() -> ElementBuilder {
+        ElementBuilder(Element::Spacer { timestamp: 0.0 })
+    }
+
+
     pub fn is_thought(&self) -> bool {
         matches!(self, Element::ThoughtMarker { .. })
     }

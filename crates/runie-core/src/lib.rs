@@ -18,6 +18,8 @@ pub mod tokens;
 pub mod file_refs;
 pub mod fuzzy;
 pub mod snapshot;
+#[cfg(test)]
+pub mod dsl;
 
 #[cfg(test)]
 mod tests;
