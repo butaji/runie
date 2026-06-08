@@ -1,6 +1,6 @@
 # grep tool
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,8 +12,8 @@ Search with regex/literal/glob support.
 
 ## Acceptance Criteria
 
-- [ ] Regex pattern matching
-- [ ] Literal search mode
-- [ ] Glob filtering
-- [ ] Context lines
-- [ ] Line number output
+- [x] Regex pattern matching
+- [x] Literal search mode
+- [x] Glob filtering
+- [x] Context lines
+- [x] Line number output

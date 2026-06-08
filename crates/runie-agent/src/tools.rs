@@ -5,7 +5,7 @@ use crate::truncate;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tool {
-    ReadFile { path: String },
+    ReadFile { path: String, offset: Option<usize>, limit: Option<usize> },
     ListDir { path: String },
     WriteFile { path: String, content: String },
     EditFile { path: String, search: String, replace: String },
@@ -59,7 +59,7 @@ impl Tool {
 
     fn run_inner(&self) -> (String, bool) {
         match self {
-            Tool::ReadFile { path } => read_file(path),
+            Tool::ReadFile { path, offset, limit } => read_file(path, *offset, *limit),
             Tool::ListDir { path } => list_dir(path),
             Tool::WriteFile { path, content } => write_file(path, content),
             Tool::EditFile { path, search, replace } => edit_file(path, search, replace),
@@ -89,9 +89,32 @@ fn apply_truncation(output: String, use_tail: bool) -> String {
     }
 }
 
-fn read_file(path: &str) -> (String, bool) {
+fn read_file(path: &str, offset: Option<usize>, limit: Option<usize>) -> (String, bool) {
     match std::fs::read_to_string(path) {
-        Ok(content) => (apply_truncation(content, false), true),
+        Ok(content) => {
+            let lines: Vec<&str> = content.lines().collect();
+            let total_lines = lines.len();
+            let start = offset.unwrap_or(0).min(total_lines);
+            let end = limit.map(|l| (start + l).min(total_lines)).unwrap_or(total_lines);
+            
+            if start >= total_lines {
+                return ("(end of file)".to_string(), true);
+            }
+            
+            let selected: String = lines[start..end].join("\n");
+            let _lines_read = end - start;
+            let output = if offset.is_some() || limit.is_some() {
+                format!("[Lines {}-{} of {}]\n{}", start + 1, end, total_lines, selected)
+            } else {
+                selected
+            };
+            
+            if end < total_lines {
+                (format!("{}\n[{} more lines]", output, total_lines - end), true)
+            } else {
+                (output, true)
+            }
+        }
         Err(e) => (format!("Error reading {}: {}", path, e), false),
     }
 }

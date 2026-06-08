@@ -20,6 +20,11 @@ fn arg_usize(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> us
     args.get(key).and_then(|v| v.as_u64()).unwrap_or(0) as usize
 }
 
+fn arg_opt_usize(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<usize> {
+    let v = args.get(key)?;
+    v.as_u64().map(|n| n as usize)
+}
+
 fn parse_legacy_tool(payload: &str) -> Option<crate::Tool> {
     let parts: Vec<&str> = payload.splitn(3, ':').collect();
     if parts.len() < 2 {
@@ -29,7 +34,7 @@ fn parse_legacy_tool(payload: &str) -> Option<crate::Tool> {
     let arg1 = parts.get(1).unwrap_or(&"");
     let arg2 = parts.get(2).unwrap_or(&"");
     Some(match tool_name {
-        "read_file" => crate::Tool::ReadFile { path: arg1.to_string() },
+        "read_file" => crate::Tool::ReadFile { path: arg1.to_string(), offset: None, limit: None },
         "list_dir" => crate::Tool::ListDir { path: arg1.to_string() },
         "write_file" => crate::Tool::WriteFile { path: arg1.to_string(), content: arg2.to_string() },
         "bash" => crate::Tool::Bash { command: arg1.to_string() },
@@ -41,7 +46,13 @@ fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
     let call: ToolCall = serde_json::from_str(line).ok()?;
     let args = &call.arguments;
     Some(match call.name.as_str() {
-        "read_file" => crate::Tool::ReadFile { path: arg_str(args, "path") },
+        "read_file" => {
+            crate::Tool::ReadFile {
+                path: arg_str(args, "path"),
+                offset: arg_opt_usize(args, "offset"),
+                limit: arg_opt_usize(args, "limit"),
+            }
+        }
         "list_dir" => crate::Tool::ListDir { path: arg_str(args, "path") },
         "write_file" => crate::Tool::WriteFile { path: arg_str(args, "path"), content: arg_str(args, "content") },
         "edit_file" => crate::Tool::EditFile {

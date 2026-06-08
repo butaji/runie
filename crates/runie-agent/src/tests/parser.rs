@@ -4,7 +4,7 @@ use crate::{Tool, parser::{parse_tool_calls, has_tool_calls}};
 fn test_parse_read_file_tool() {
     let tools = parse_tool_calls("TOOL:read_file:Cargo.toml");
     assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0], Tool::ReadFile { path: "Cargo.toml".to_string() });
+    assert_eq!(tools[0], Tool::ReadFile { path: "Cargo.toml".to_string(), offset: None, limit: None });
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn test_parse_structured_read_file() {
     let text = r#"{"name": "read_file", "arguments": {"path": "Cargo.toml"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
-    assert!(matches!(&tools[0], Tool::ReadFile { path } if path == "Cargo.toml"
+    assert!(matches!(&tools[0], Tool::ReadFile { path, .. } if path == "Cargo.toml"
     ));
 }
 
