@@ -45,7 +45,7 @@ fn hint_always_shows_quit() {
 }
 
 #[test]
-fn toggle_expand_toggles_most_recent_thought() {
+fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -54,11 +54,11 @@ fn toggle_expand_toggles_most_recent_thought() {
         id: "t1".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains("t1"), "ToggleExpand should collapse most recent thought");
+    assert!(state.all_collapsed, "ToggleExpand should set global collapse");
 }
 
 #[test]
-fn toggle_expand_toggles_most_recent_tool() {
+fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Tool,
@@ -67,11 +67,11 @@ fn toggle_expand_toggles_most_recent_tool() {
         id: "x1".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains("x1"), "ToggleExpand should collapse most recent tool");
+    assert!(state.all_collapsed, "ToggleExpand should set global collapse");
 }
 
 #[test]
-fn toggle_expand_prefers_most_recent_element() {
+fn toggle_expand_affects_all_elements() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -86,8 +86,7 @@ fn toggle_expand_prefers_most_recent_element() {
         id: "new".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(!state.collapsed.contains("old"), "Should not toggle older thought");
-    assert!(state.collapsed.contains("new"), "Should toggle most recent tool");
+    assert!(state.all_collapsed, "Toggle should collapse ALL thoughts and tools globally");
 }
 
 #[test]
@@ -100,7 +99,7 @@ fn toggle_expand_noop_when_no_collapsible() {
         id: "u1".into(),
     });
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.is_empty());
+    assert!(state.all_collapsed, "Toggle should still flip global flag even with no thoughts/tools");
 }
 
 #[test]
@@ -133,5 +132,5 @@ fn toggle_expand_twice_restores() {
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
-    assert!(!state.collapsed.contains("t1"));
+    assert!(!state.all_collapsed, "Second toggle should expand all");
 }

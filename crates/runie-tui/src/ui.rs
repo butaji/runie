@@ -1,4 +1,9 @@
-//! View — renders AppState to terminal via ratatui
+//! View — renders Snapshot to terminal via ratatui
+//!
+//! Architecture: the event loop builds immutable Snapshots;
+//! the render actor draws them. No state mutations, no blocking
+//! I/O, no caching — pure functions from Snapshot to Frame.
+
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
@@ -7,34 +12,38 @@ use ratatui::{
     Frame,
 };
 
-use runie_core::{AppState, Element, PANEL_CHAT, PANEL_INPUT};
+use runie_core::{Element, Snapshot, PANEL_CHAT, PANEL_INPUT};
 
-pub fn view(f: &mut Frame, state: &mut AppState) {
+/// Draw a Snapshot to the terminal. Pure function — no mutable state.
+pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(3), Constraint::Length(1), Constraint::Length(3), Constraint::Length(1)])
         .split(f.area());
 
-    messages(f, state, chunks[0]);
-    status(f, state, chunks[1]);
-    input(f, state, chunks[2]);
-    hints(f, state, chunks[3]);
-    at_suggestions(f, state);
+    messages(f, snap, chunks[0]);
+    status(f, snap, chunks[1]);
+    input(f, snap, chunks[2]);
+    hints(f, snap, chunks[3]);
+    at_suggestions(f, snap);
 }
 
-fn status(f: &mut Frame, state: &AppState, area: Rect) {
-    let tokens = state.total_tokens();
-    let queue_len = state.message_queue.len();
+/// Legacy entry point for code that still builds AppState directly.
+pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
+    state.ensure_fresh();
+    let snap = state.snapshot();
+    draw_snapshot(f, &snap);
+}
+
+fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    let tokens: usize = snap.elements.iter().map(|e| estimate_element_tokens(e)).sum();
     let mut left_parts = Vec::new();
-    if state.turn_active {
-        left_parts.push(format!(
-            "{} Working {:.1}s",
-            state.spinner_frame(),
-            state.turn_elapsed_secs().unwrap_or(0.0)
-        ));
-    }
-    if queue_len > 0 {
-        left_parts.push(format!("Queue: {}", queue_len));
+    if snap.turn_active {
+        if let Some(elapsed) = snap.turn_elapsed_secs {
+            left_parts.push(runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed));
+        } else {
+            left_parts.push(format!("{} Working...", snap.spinner_frame));
+        }
     }
     let left_text = left_parts.join(" | ");
     let right_text = format!("{} tok", tokens);
@@ -54,7 +63,7 @@ fn status(f: &mut Frame, state: &AppState, area: Rect) {
     );
 }
 
-fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
+fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_CHAT)
@@ -62,13 +71,11 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    state.ensure_fresh();
-
     let height = inner.height as usize;
-    let count = state.count();
-    if height == 0 || count == 0 { return; }
+    let total_lines = snap.total_lines;
+    if height == 0 || total_lines == 0 { return; }
 
-    let show_bar = count > height;
+    let show_bar = total_lines > height;
     let content_width = if show_bar { inner.width.saturating_sub(1) } else { inner.width };
 
     let hchunks = Layout::default()
@@ -76,19 +83,21 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
         .constraints([Constraint::Length(content_width), Constraint::Min(0)])
         .split(inner);
 
-    let visible = state.visible_scroll(height);
-    let mut lines = Vec::with_capacity(height);
-    for elem in visible {
-        lines.extend(to_lines(elem, state));
+    // Build ALL lines — let ratatui Paragraph::scroll() handle the viewport.
+    let mut lines = Vec::with_capacity(total_lines);
+    for elem in &snap.elements {
+        lines.extend(to_lines(elem, snap.spinner_frame));
     }
 
-    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), hchunks[0]);
+    let offset = snap.scroll_offset(height);
+    f.render_widget(
+        Paragraph::new(lines)
+            .scroll((offset, 0))
+            .wrap(Wrap { trim: false }),
+        hchunks[0],
+    );
 
     if show_bar {
-        let max_scroll = count.saturating_sub(height);
-        let scroll = state.scroll.min(max_scroll);
-        let position = max_scroll.saturating_sub(scroll);
-
         let scrollbar = Scrollbar::default()
             .orientation(ScrollbarOrientation::VerticalRight)
             .begin_symbol(None)
@@ -96,25 +105,25 @@ fn messages(f: &mut Frame, state: &mut AppState, area: Rect) {
             .track_symbol(Some("│"))
             .thumb_symbol("█");
 
-        let mut scrollbar_state = ScrollbarState::new(count)
-            .position(position);
-
+        let mut scrollbar_state = ScrollbarState::new(total_lines)
+            .position(offset as usize)
+            .viewport_content_length(height);
         f.render_stateful_widget(scrollbar, inner, &mut scrollbar_state);
     }
 }
 
-fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
+fn to_lines<'a>(elem: &'a Element, spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer => vec![Line::from("")],
         UserMessage { content } => vec![Line::from(span(format!("You: {}", content), Color::White))],
         AgentMessage { content } => vec![Line::from(span(format!("Agent: {}", content), Color::White))],
-        Thinking { started } => vec![gray(thinking_text(state, started.elapsed().as_secs_f64()))],
+        Thinking { started } => vec![gray(Line::from(runie_core::labels::action_text(spinner_frame, "Thinking", started.elapsed().as_secs_f64())))],
         ThoughtSummary { content, .. } => vec![gray(Line::from(
             format!("{} [+]", content.lines().next().unwrap_or(content))
         ))],
         ThoughtMarker { content } => content.lines().map(|line| gray(Line::from(line.to_string()))).collect(),
-        ToolRunning { name, started } => vec![gray(Line::from(format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64())))],
+        ToolRunning { name, started } => vec![gray(Line::from(format!("{} Running {}... {:.1}s", spinner_frame, name, started.elapsed().as_secs_f64())))],
         ToolDone { name, duration_secs, output } => {
             let mut lines = vec![gray(Line::from(format!("◆ Ran {} {:.1}s", name, duration_secs)))];
             if !output.is_empty() {
@@ -124,10 +133,9 @@ fn to_lines<'a>(elem: &'a Element, state: &'a AppState) -> Vec<Line<'a>> {
             }
             lines
         }
-        ToolSummary { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s [+]", name, duration_secs)))],   
+        ToolSummary { name, duration_secs } => vec![gray(Line::from(format!("◆ Ran {} {:.1}s [+]", name, duration_secs)))],
         TurnComplete { duration_secs } => vec![gray(Line::from(format!("Turn completed in {:.1}s", duration_secs)))],
     }
-
 }
 
 fn span(text: String, color: Color) -> ratatui::text::Span<'static> {
@@ -138,33 +146,31 @@ fn gray(line: Line<'static>) -> Line<'static> {
     line.style(Style::default().fg(Color::DarkGray))
 }
 
-fn thinking_text(state: &AppState, elapsed: f64) -> Line<'static> {
-    Line::from(format!("{} Thinking... {:.1}s", state.spinner_frame(), elapsed))
-}
 
-fn input(f: &mut Frame, state: &AppState, area: Rect) {
+
+fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_INPUT)
         .border_style(Style::default().fg(Color::DarkGray));
     let inner = block.inner(area);
-    f.render_widget(Paragraph::new(state.input.as_str()).block(block), area);
-    f.set_cursor_position((inner.x + state.input.len() as u16, inner.y));
+    f.render_widget(Paragraph::new(snap.input.as_str()).block(block), area);
+    f.set_cursor_position((inner.x + snap.input.len() as u16, inner.y));
 }
 
-fn hints(f: &mut Frame, state: &AppState, area: Rect) {
+fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {
     f.render_widget(
-        Paragraph::new(state.hint_text()).style(Style::default().fg(Color::DarkGray)),
+        Paragraph::new(snap.hint_text.as_str()).style(Style::default().fg(Color::DarkGray)),
         area,
     );
 }
 
-fn at_suggestions(f: &mut Frame, state: &AppState) {
-    let suggestions = match &state.at_suggestions {
+fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
+    let suggestions = match &snap.at_suggestions {
         Some(s) if !s.is_empty() => s,
         _ => return,
     };
-    let selected = state.at_selected.unwrap_or(0).min(suggestions.len().saturating_sub(1));
+    let selected = snap.at_selected.unwrap_or(0).min(suggestions.len().saturating_sub(1));
     let area = f.area();
     let display_count = suggestions.len().min(8) as u16;
     let max_height = display_count + 4;
@@ -190,4 +196,15 @@ fn at_suggestions(f: &mut Frame, state: &AppState) {
         .title(format!(" @ files ({}) ", suggestions.len()))
         .border_style(Style::default().fg(Color::Magenta));
     f.render_widget(Paragraph::new(lines).block(block), popup_area);
+}
+
+fn estimate_element_tokens(elem: &Element) -> usize {
+    use runie_core::Element::*;
+    match elem {
+        UserMessage { content } | AgentMessage { content } | ThoughtMarker { content } => content.len() / 4,
+        Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
+        ToolRunning { .. } => 10,
+        ToolDone { output, .. } => output.len() / 4 + 10,
+        Spacer => 0,
+    }
 }

@@ -1,24 +1,21 @@
-//! Runie Terminal — Single-threaded async event loop with batched events
+//! Runie Terminal — Non-blocking event loop with render actor
 //!
-//! Architecture:
-//!   1. tokio::main runs everything on one thread (input + render + agent)
-//!   2. Events are batched: process up to BATCH_SIZE per frame, then draw once
-//!   3. Cache rebuild (ensure_fresh) happens in render path, not per-event
-//!   4. Dirty flag: only redraw when state actually changes
+//! Architecture (impossible to block by design):
+//!   1. Event loop: single-threaded async, only async ops
+//!   2. State: owned by event loop, mutable borrow per event
+//!   3. Snapshot: immutable frame description (the UI DSL)
+//!   4. Render actor: owns Terminal, receives Snapshots via channel
+//!   5. If render is slow, old Snapshots are dropped — event loop never waits
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
-use runie_core::{AppState, Event as CoreEvent};
+use runie_core::{AppState, Event as CoreEvent, Snapshot};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
 
-
-
-
 const ANIM_MS: u64 = 200;
-const BATCH_SIZE: usize = 10;
 
 struct Cleanup;
 
@@ -32,23 +29,34 @@ impl Drop for Cleanup {
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
-    let mut terminal = setup_terminal()?;
+    let terminal = setup_terminal()?;
     let state = AppState::default();
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
+    let (render_tx, render_rx) = mpsc::channel::<Snapshot>(1);
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
     tokio::spawn(input_reader(input_tx));
+    tokio::spawn(render_task(terminal, render_rx));
 
-    event_loop(&mut terminal, state, input_rx, agent_rx, cmd_tx).await
+    event_loop(state, input_rx, agent_rx, cmd_tx, render_tx).await
 }
 
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
     crossterm::terminal::enable_raw_mode()?;
     crossterm::execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen)?;
     Terminal::new(CrosstermBackend::new(std::io::stdout()))
+}
+
+async fn render_task(
+    mut terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
+    mut render_rx: mpsc::Receiver<Snapshot>,
+) {
+    while let Some(snap) = render_rx.recv().await {
+        let _ = terminal.draw(|f| runie_tui::ui::draw_snapshot(f, &snap));
+    }
 }
 
 async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
@@ -63,58 +71,54 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
 }
 
 async fn event_loop(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
     mut state: AppState,
     mut input_rx: mpsc::Receiver<CoreEvent>,
     mut agent_rx: mpsc::Receiver<CoreEvent>,
     cmd_tx: mpsc::Sender<AgentCommand>,
+    render_tx: mpsc::Sender<Snapshot>,
 ) -> io::Result<()> {
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
-    let mut dirty = true;
+
+    // Initial draw so the user sees the app immediately, without waiting
+    // for the first keyboard event.
+    state.ensure_fresh();
+    let _ = render_tx.try_send(state.snapshot());
 
     loop {
-        let mut events = 0usize;
-        loop {
-            tokio::select! {
-                biased;
+        tokio::select! {
+            biased;
 
-                Some(evt) = input_rx.recv(), if events < BATCH_SIZE => {
-                    let was_submit = matches!(evt, CoreEvent::Submit);
-                    state.update(evt.clone());
-                    dirty = true; events += 1;
-                    if matches!(evt, CoreEvent::Quit) { return Ok(()); }
-                    if was_submit || matches!(evt, CoreEvent::FollowUp) {
-                        spawn_if_queued(&mut state, &cmd_tx).await;
-                    }
+            Some(evt) = input_rx.recv() => {
+                let was_submit = matches!(evt, CoreEvent::Submit);
+                let was_followup = matches!(evt, CoreEvent::FollowUp);
+                let was_quit = matches!(evt, CoreEvent::Quit | CoreEvent::Reset);
+                state.update(evt);
+                if was_submit || was_followup {
+                    spawn_if_queued(&mut state, &cmd_tx).await;
                 }
-
-                Some(evt) = agent_rx.recv(), if events < BATCH_SIZE => {
-                    let was_done = matches!(evt, CoreEvent::AgentDone { .. } | CoreEvent::AgentError { .. });
-                    state.update(evt);
-                    dirty = true; events += 1;
-                    if was_done {
-                        spawn_if_queued(&mut state, &cmd_tx).await;
-                    }
+                if was_quit {
+                    return Ok(());
                 }
+            }
 
-                _ = anim.tick(), if events < BATCH_SIZE => {
-                    if state.turn_active {
-                        state.tick_animation();
-                        dirty = true;
-                    }
-                    break;
+            Some(evt) = agent_rx.recv() => {
+                let was_done = matches!(evt, CoreEvent::AgentDone { .. } | CoreEvent::AgentError { .. });
+                state.update(evt);
+                if was_done {
+                    spawn_if_queued(&mut state, &cmd_tx).await;
                 }
+            }
 
-                else => break,
+            _ = anim.tick(), if state.turn_active => {
+                state.tick_animation();
             }
         }
 
-        if dirty {
-            terminal.draw(|f| runie_tui::ui::view(f, &mut state))?;
-            dirty = false;
+        state.ensure_fresh();
+        let snap = state.snapshot();
+        if render_tx.try_send(snap).is_err() {
+            // Render task is behind — old snapshot dropped, latest will draw
         }
-
-
     }
 }
 

@@ -8,17 +8,16 @@ fn fresh_state() -> AppState {
 }
 
 #[test]
-fn collapsed_thought_stays_collapsed_after_agent_response() {
+fn global_collapse_persists_after_agent_response() {
     let mut state = fresh_state();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    // Collapse the thought
+    // Collapse all
     state.update(Event::ToggleExpand);
-    let thought_id = state.messages.iter().find(|m| m.role == Role::Thought).unwrap().id.clone();
-    assert!(state.collapsed.contains(&thought_id));
+    assert!(state.all_collapsed);
 
     // New agent response arrives
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here they are.".to_string() });
@@ -28,34 +27,11 @@ fn collapsed_thought_stays_collapsed_after_agent_response() {
     let has_summary = feed.elements.iter().any(|e| matches!(e, Element::ThoughtSummary { .. }));
     assert!(has_summary, "Thought should stay collapsed after new response arrives");
     let has_marker = feed.elements.iter().any(|e| matches!(e, Element::ThoughtMarker { .. }));
-    assert!(!has_marker, "ThoughtMarker should not appear when collapsed");
+    assert!(!has_marker, "ThoughtMarker should not appear when globally collapsed");
 }
 
 #[test]
-fn collapsed_tool_stays_collapsed_after_agent_response() {
-    let mut state = fresh_state();
-    state.streaming = true;
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
-
-    // Collapse the tool
-    state.update(Event::ToggleExpand);
-    let tool_id = state.messages.iter().find(|m| m.role == Role::Tool).unwrap().id.clone();
-    assert!(state.collapsed.contains(&tool_id));
-
-    // New agent response arrives
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Done.".to_string() });
-    state.ensure_fresh();
-
-    let feed = LazyCache::feed(&state);
-    let has_summary = feed.elements.iter().any(|e| matches!(e, Element::ToolSummary { .. }));
-    assert!(has_summary, "Tool should stay collapsed after new response arrives");
-    let has_done = feed.elements.iter().any(|e| matches!(e, Element::ToolDone { .. }));
-    assert!(!has_done, "ToolDone should not appear when collapsed");
-}
-
-#[test]
-fn collapsed_thought_stays_collapsed_after_second_thought() {
+fn global_collapse_persists_after_second_thought() {
     let mut state = fresh_state();
     state.streaming = true;
 
@@ -64,12 +40,11 @@ fn collapsed_thought_stays_collapsed_after_second_thought() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "A".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    // Collapse first thought
+    // Collapse all
     state.update(Event::ToggleExpand);
-    let first_id = state.messages.iter().find(|m| m.role == Role::Thought).unwrap().id.clone();
-    assert!(state.collapsed.contains(&first_id));
+    assert!(state.all_collapsed);
 
-    // Second thought
+    // Second thought arrives — should ALSO be collapsed
     state.update(Event::AgentThinking { id: "req.1".to_string() });
     state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
@@ -77,13 +52,13 @@ fn collapsed_thought_stays_collapsed_after_second_thought() {
 
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtSummary { .. })).collect();
-    assert_eq!(summaries.len(), 1, "Only first thought should be collapsed");
+    assert_eq!(summaries.len(), 2, "BOTH thoughts should be collapsed with global flag");
     let markers: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtMarker { .. })).collect();
-    assert_eq!(markers.len(), 1, "Second thought should be expanded");
+    assert_eq!(markers.len(), 0, "No thoughts should be expanded");
 }
 
 #[test]
-fn collapsed_tool_stays_collapsed_after_second_tool() {
+fn global_collapse_persists_after_second_tool() {
     let mut state = fresh_state();
     state.streaming = true;
 
@@ -91,25 +66,24 @@ fn collapsed_tool_stays_collapsed_after_second_tool() {
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".to_string() });
 
-    // Collapse first tool
+    // Collapse all
     state.update(Event::ToggleExpand);
-    let first_id = state.messages.iter().find(|m| m.role == Role::Tool).unwrap().id.clone();
-    assert!(state.collapsed.contains(&first_id));
+    assert!(state.all_collapsed);
 
-    // Second tool
+    // Second tool arrives — should ALSO be collapsed
     state.update(Event::AgentToolStart { id: "req.1".to_string(), name: "cat".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.3, output: "b".to_string() });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ToolSummary { .. })).collect();
-    assert_eq!(summaries.len(), 1, "Only first tool should be collapsed");
+    assert_eq!(summaries.len(), 2, "BOTH tools should be collapsed with global flag");
     let dones: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ToolDone { .. })).collect();
-    assert_eq!(dones.len(), 1, "Second tool should be expanded");
+    assert_eq!(dones.len(), 0, "No tools should be expanded");
 }
 
 #[test]
-fn toggle_most_recent_after_new_items() {
+fn new_thought_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.streaming = true;
 
@@ -117,25 +91,45 @@ fn toggle_most_recent_after_new_items() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "A".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    // Toggle collapses first thought
+    // Collapse all
     state.update(Event::ToggleExpand);
-    let first_id = state.messages.iter().find(|m| m.role == Role::Thought).unwrap().id.clone();
-    assert!(state.collapsed.contains(&first_id));
+    assert!(state.all_collapsed);
 
-    // New thought arrives (expanded by default)
+    // New thought arrives while globally collapsed
     state.update(Event::AgentThinking { id: "req.1".to_string() });
     state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
+    state.ensure_fresh();
 
-    // Toggle again — should toggle the NEWEST thought (second one)
-    state.update(Event::ToggleExpand);
-    let second_id = state.messages.iter().rfind(|m| m.role == Role::Thought).unwrap().id.clone();
-    assert!(state.collapsed.contains(&second_id), "Toggle should collapse most recent thought");
-    assert!(state.collapsed.contains(&first_id), "First thought should stay collapsed");
+    let feed = LazyCache::feed(&state);
+    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtSummary { .. })).collect();
+    assert_eq!(summaries.len(), 2, "New thought should respect global collapse");
 }
 
 #[test]
-fn expand_then_collapse_then_expand_same_thought() {
+fn new_tool_respects_global_collapse_flag() {
+    let mut state = fresh_state();
+    state.streaming = true;
+
+    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".to_string() });
+
+    // Collapse all
+    state.update(Event::ToggleExpand);
+    assert!(state.all_collapsed);
+
+    // New tool arrives while globally collapsed
+    state.update(Event::AgentToolStart { id: "req.1".to_string(), name: "cat".to_string() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.3, output: "b".to_string() });
+    state.ensure_fresh();
+
+    let feed = LazyCache::feed(&state);
+    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ToolSummary { .. })).collect();
+    assert_eq!(summaries.len(), 2, "New tool should respect global collapse");
+}
+
+#[test]
+fn expand_then_collapse_then_expand_same_state() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -144,17 +138,17 @@ fn expand_then_collapse_then_expand_same_thought() {
         id: "t1".into(),
     });
 
-    // Toggle 1: collapse
+    // Toggle 1: collapse all
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains("t1"));
+    assert!(state.all_collapsed);
 
-    // Toggle 2: expand
+    // Toggle 2: expand all
     state.update(Event::ToggleExpand);
-    assert!(!state.collapsed.contains("t1"));
+    assert!(!state.all_collapsed);
 
-    // Toggle 3: collapse again
+    // Toggle 3: collapse all again
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.contains("t1"));
+    assert!(state.all_collapsed);
 
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
@@ -166,18 +160,24 @@ fn expand_then_collapse_then_expand_same_thought() {
 }
 
 #[test]
-fn running_tool_ignored_by_toggle() {
+fn running_tool_ignored_by_global_toggle() {
     let mut state = fresh_state();
     state.streaming = true;
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
 
-    // Try to toggle while tool is still running
+    // Toggle while tool is still running
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.is_empty(), "Running tool should be ignored by toggle");
+    assert!(state.all_collapsed, "Toggle should still flip global flag");
+
+    // But running tool renders as ToolRunning, not ToolSummary
+    state.ensure_fresh();
+    let feed = LazyCache::feed(&state);
+    let has_running = feed.elements.iter().any(|e| matches!(e, Element::ToolRunning { .. }));
+    assert!(has_running, "Running tool should still show as running regardless of global flag");
 }
 
 #[test]
-fn reset_clears_all_collapsed() {
+fn reset_clears_global_collapse() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -185,21 +185,14 @@ fn reset_clears_all_collapsed() {
         timestamp: 0.0,
         id: "t1".into(),
     });
-    state.messages.push(ChatMessage {
-        role: Role::Tool,
-        content: "◆ Ran ls 0.5s".into(),
-        timestamp: 0.0,
-        id: "x1".into(),
-    });
-    state.collapsed.insert("t1".into());
-    state.collapsed.insert("x1".into());
+    state.all_collapsed = true;
 
     state.update(Event::Reset);
-    assert!(state.collapsed.is_empty(), "Reset should clear collapsed set");
+    assert!(!state.all_collapsed, "Reset should clear global collapse flag");
 }
 
 #[test]
-fn toggle_does_not_affect_user_or_assistant_messages() {
+fn global_toggle_does_not_affect_user_or_assistant_messages() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::User,
@@ -215,11 +208,11 @@ fn toggle_does_not_affect_user_or_assistant_messages() {
     });
 
     state.update(Event::ToggleExpand);
-    assert!(state.collapsed.is_empty(), "Toggle should not affect user/assistant messages");
+    assert!(state.all_collapsed, "Global flag should flip even with no thoughts/tools");
 }
 
 #[test]
-fn cache_rebuilds_correctly_after_toggle_and_new_items() {
+fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     let mut state = fresh_state();
     state.messages.push(ChatMessage {
         role: Role::Thought,
@@ -235,13 +228,9 @@ fn cache_rebuilds_correctly_after_toggle_and_new_items() {
     });
     state.ensure_fresh();
 
-    // Collapse both
-    state.update(Event::ToggleExpand); // toggles x1 (most recent)
-    state.update(Event::ToggleExpand); // toggles x1 again (expands)
-    state.update(Event::ToggleExpand); // toggles x1 again (collapses)
-    // Now x1 is collapsed, but how to collapse t1?
-    // t1 is older, so toggle always picks most recent. We need to manually insert.
-    state.collapsed.insert("t1".into());
+    // Collapse all
+    state.update(Event::ToggleExpand);
+    assert!(state.all_collapsed);
 
     state.messages.push(ChatMessage {
         role: Role::Assistant,

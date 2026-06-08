@@ -8,6 +8,22 @@ pub use ratatui::{backend::TestBackend, Terminal};
 mod flow;
 #[cfg(test)]
 mod render;
+#[cfg(test)]
+mod toggle_e2e;
+#[cfg(test)]
+mod dev_sh;
+#[cfg(test)]
+mod render_actor;
+#[cfg(test)]
+mod sticky_bottom;
+#[cfg(test)]
+mod line_scroll;
+#[cfg(test)]
+mod status_timer;
+#[cfg(test)]
+mod autoscroll_render;
+#[cfg(test)]
+mod semantic_render;
 
 /// Helper: simulate full tool flow
 pub fn simulate_list_files_flow(state: &mut AppState) {

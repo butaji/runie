@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn test_thought_comes_before_response_same_id() {
+    fn test_thought_ordered_by_timestamp() {
         let mut state = AppState::default();
         state.messages.push(ChatMessage { role: Role::Assistant, content: "Hello".into(), timestamp: 1.0, id: "same".into() });
         state.messages.push(ChatMessage { role: Role::Thought, content: "Thinking...".into(), timestamp: 2.0, id: "same".into() });
@@ -115,7 +115,7 @@ mod tests {
             Element::Spacer => "S",
             _ => "?",
         }).collect();
-        assert_eq!(kinds, vec!["T", "S", "A", "S"], "Thought must be fixed up before Assistant with same id");
+        assert_eq!(kinds, vec!["A", "S", "T", "S"], "Elements ordered by last update timestamp");
     }
 
     #[test]
@@ -150,7 +150,7 @@ mod tests {
     }
 
     #[test]
-    fn thinking_indicator_sorts_before_current_response() {
+    fn thinking_indicator_ordered_by_timestamp() {
         let mut state = AppState::default();
         state.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 0.0, id: "t1".into() });
         state.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 1.0, id: "t1".into() });
@@ -166,6 +166,8 @@ mod tests {
             Element::Spacer => "S",
             _ => "?",
         }).collect();
-        assert_eq!(kinds, vec!["U", "S", "A", "S", "U", "S", "I", "S", "A", "S"], "Thinking must sort before current assistant response");
+        // A2 is skipped during thinking (id=t2 matches current_request_id), Thinking at max_ts+1
+        assert_eq!(kinds, vec!["U", "S", "A", "S", "U", "S", "I", "S"],
+            "A2 hidden during thinking, Thinking indicator at bottom");
     }
 }

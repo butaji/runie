@@ -13,16 +13,27 @@ impl LazyCache {
     }
 
     fn build(state: &AppState) -> Feed {
-        let mut entries: Vec<(f64, usize, Element, String)> = Vec::new();
+        let mut entries: Vec<(f64, usize, Element, String, String)> = Vec::new();
 
         for (idx, msg) in state.messages.iter().enumerate() {
+            if msg.role == Role::Assistant {
+                if crate::update::content_has_tool_markers(&msg.content) {
+                    continue;
+                }
+                if state.thinking_started_at.is_some()
+                    && state.current_request_id.as_deref() == Some(&msg.id)
+                {
+                    continue;
+                }
+            }
             let elem = Self::msg_to_elem(msg, state);
-            entries.push((msg.timestamp, idx, elem, msg.id.clone()));
+            let request_id = msg.id.split('#').next().unwrap_or(&msg.id).to_string();
+            entries.push((msg.timestamp, idx, elem, msg.id.clone(), request_id));
         }
 
         let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
         if let Some(started) = state.thinking_started_at {
-            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { started }, String::new()));
+            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { started }, String::new(), String::new()));
         }
 
         entries.sort_by(|a, b| {
@@ -30,36 +41,8 @@ impl LazyCache {
                 .then(a.1.cmp(&b.1))
         });
 
-        let mut moves = Vec::new();
-        for (i, (_, _, elem, id)) in entries.iter().enumerate() {
-            if matches!(elem, Element::ThoughtMarker { .. } | Element::ThoughtSummary { .. }) {
-                if let Some(target) = (0..i).position(|j| {
-                    matches!(entries[j].2, Element::AgentMessage { .. }) && entries[j].3 == *id
-                }) {
-                    moves.push((i, target));
-                }
-            }
-        }
-        for (from, to) in moves.into_iter().rev() {
-            let entry = entries.remove(from);
-            entries.insert(to, entry);
-        }
-
-        if let Some(current_id) = state.current_request_id.as_ref() {
-            if let Some(thinking_idx) = entries.iter().position(|(_, _, elem, _)| matches!(elem, Element::Thinking { .. })) {
-                if let Some(agent_idx) = entries.iter().position(|(_, _, elem, id)| {
-                    matches!(elem, Element::AgentMessage { .. }) && *id == *current_id
-                }) {
-                    if thinking_idx > agent_idx {
-                        let entry = entries.remove(thinking_idx);
-                        entries.insert(agent_idx, entry);
-                    }
-                }
-            }
-        }
-
         let mut feed = Feed::new();
-        for (_, _, elem, _) in entries {
+        for (_, _, elem, _, _) in entries {
             feed.elements.push(elem);
             feed.elements.push(Element::Spacer);
         }
@@ -76,7 +59,7 @@ impl LazyCache {
         match msg.role {
             Role::User => Element::UserMessage { content: msg.content.clone() },
             Role::Thought => {
-                if state.collapsed.contains(&msg.id) {
+                if state.all_collapsed {
                     let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
                     let dur = Self::parse_thought_dur(&msg.content);
                     Element::ThoughtSummary { content: first_line, duration_secs: dur }
@@ -108,7 +91,7 @@ impl LazyCache {
             let parts: Vec<&str> = header.split_whitespace().collect();
             let name = parts.get(2).unwrap_or(&"").to_string();
             let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
-            if state.collapsed.contains(&msg.id) {
+            if state.all_collapsed {
                 Element::ToolSummary { name, duration_secs: dur }
             } else {
                 Element::ToolDone { name, duration_secs: dur, output }
@@ -160,7 +143,7 @@ pub mod format_test {
             }],
             Element::Thinking { started } => vec![DisplayLine {
                 spans: vec![DisplaySpan {
-                    text: format!("{} Thinking... {:.1}s", state.spinner_frame(), started.elapsed().as_secs_f64()),
+                    text: crate::labels::action_text(state.spinner_frame(), "Thinking", started.elapsed().as_secs_f64()),
                 }],
             }],
             Element::ThoughtMarker { content } => vec![DisplayLine {
