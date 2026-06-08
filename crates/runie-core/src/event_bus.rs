@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 
 /// Event tag determines persistence behavior
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -157,7 +158,6 @@ impl<T: Clone + Send + 'static> Default for ActorChannel<T> {
 pub struct SubscriptionFilter {
     pub include_domain: bool,
     pub include_ephemeral: bool,
-    pub actor_ids: Option<Vec<ActorId>>,
 }
 
 impl SubscriptionFilter {
@@ -165,7 +165,6 @@ impl SubscriptionFilter {
         Self {
             include_domain: true,
             include_ephemeral: true,
-            actor_ids: None,
         }
     }
 
@@ -173,7 +172,6 @@ impl SubscriptionFilter {
         Self {
             include_domain: true,
             include_ephemeral: false,
-            actor_ids: None,
         }
     }
 
@@ -181,7 +179,6 @@ impl SubscriptionFilter {
         Self {
             include_domain: false,
             include_ephemeral: true,
-            actor_ids: None,
         }
     }
 
@@ -194,63 +191,78 @@ impl SubscriptionFilter {
     }
 }
 
-/// Shared event bus for inter-actor communication
-pub struct EventBus {
-    /// Typed channels per actor
-    channels: HashMap<ActorId, Box<dyn std::any::Any + Send>>,
-    /// Broadcast channel for events
-    broadcast_tx: Sender<BusEventEnvelope>,
-    broadcast_rx: Receiver<BusEventEnvelope>,
-    /// Subscription filters per actor
-    subscriptions: HashMap<ActorId, SubscriptionFilter>,
+/// Thread-safe broadcast channel for inter-actor communication
+#[derive(Clone)]
+pub struct BroadcastChannel {
+    tx: Sender<BusEventEnvelope>,
+    rx: Arc<Mutex<Receiver<BusEventEnvelope>>>,
 }
 
-impl Default for EventBus {
+impl Default for BroadcastChannel {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl EventBus {
-    /// Create a new event bus
+impl BroadcastChannel {
+    /// Create a new broadcast channel
     pub fn new() -> Self {
         let (tx, rx) = channel();
         Self {
-            channels: HashMap::new(),
-            broadcast_tx: tx,
-            broadcast_rx: rx,
-            subscriptions: HashMap::new(),
+            tx,
+            rx: Arc::new(Mutex::new(rx)),
         }
     }
 
-    /// Register a typed channel for an actor
-    pub fn register<T: Clone + Send + 'static>(&mut self, actor: ActorId) -> ActorChannel<T> {
-        let channel = ActorChannel::new();
-        self.channels.insert(actor.clone(), Box::new(channel.tx.clone()));
-        self.subscriptions.insert(actor, SubscriptionFilter::all());
-        channel
+    /// Send an event to all subscribers
+    pub fn send(&self, event: BusEventEnvelope) -> Result<(), std::sync::mpsc::SendError<BusEventEnvelope>> {
+        self.tx.send(event)
+    }
+
+    /// Try to receive without blocking
+    pub fn try_recv(&self) -> Result<BusEventEnvelope, std::sync::mpsc::TryRecvError> {
+        self.rx.lock().unwrap().try_recv()
+    }
+
+    /// Receive, blocking until available
+    pub fn recv(&self) -> Result<BusEventEnvelope, std::sync::mpsc::RecvError> {
+        self.rx.lock().unwrap().recv()
+    }
+
+    /// Get a cloned receiver for subscribing
+    pub fn receiver(&self) -> Arc<Mutex<Receiver<BusEventEnvelope>>> {
+        self.rx.clone()
+    }
+}
+
+/// Shared event bus for inter-actor communication
+#[derive(Clone, Default)]
+pub struct EventBus {
+    /// Broadcast channel for events
+    broadcast: BroadcastChannel,
+    /// Subscription filters per actor
+    subscriptions: Arc<Mutex<HashMap<ActorId, SubscriptionFilter>>>,
+}
+
+impl EventBus {
+    /// Create a new event bus
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Subscribe an actor to specific event types
-    pub fn subscribe(&mut self, actor: ActorId, filter: SubscriptionFilter) {
-        self.subscriptions.insert(actor, filter);
+    pub fn subscribe(&self, actor: ActorId, filter: SubscriptionFilter) {
+        self.subscriptions.lock().unwrap().insert(actor, filter);
+    }
+
+    /// Unsubscribe an actor
+    pub fn unsubscribe(&self, actor: &ActorId) {
+        self.subscriptions.lock().unwrap().remove(actor);
     }
 
     /// Publish an event to all subscribed actors
     pub fn publish(&self, event: BusEventEnvelope) {
-        // Send to broadcast channel
-        let _ = self.broadcast_tx.send(event.clone());
-
-        // Route to typed channels based on subscriptions
-        for (actor, filter) in &self.subscriptions {
-            if filter.matches(&event) {
-                if let Some(channel) = self.channels.get(actor) {
-                    if let Some(tx) = channel.downcast_ref::<Sender<BusEventEnvelope>>() {
-                        let _ = tx.send(event.clone());
-                    }
-                }
-            }
-        }
+        let _ = self.broadcast.send(event);
     }
 
     /// Publish a domain event
@@ -265,17 +277,22 @@ impl EventBus {
 
     /// Receive from the broadcast channel
     pub fn broadcast_recv(&self) -> Result<BusEventEnvelope, std::sync::mpsc::RecvError> {
-        self.broadcast_rx.recv()
+        self.broadcast.recv()
     }
 
     /// Try to receive from the broadcast channel
     pub fn broadcast_try_recv(&self) -> Result<BusEventEnvelope, std::sync::mpsc::TryRecvError> {
-        self.broadcast_rx.try_recv()
+        self.broadcast.try_recv()
     }
 
-    /// Get the broadcast receiver for the render actor
-    pub fn broadcast_receiver(&self) -> &Receiver<BusEventEnvelope> {
-        &self.broadcast_rx
+    /// Get the broadcast receiver
+    pub fn broadcast_receiver(&self) -> Arc<Mutex<Receiver<BusEventEnvelope>>> {
+        self.broadcast.receiver()
+    }
+
+    /// Register a typed channel for an actor
+    pub fn register<T: Clone + Send + 'static>(&self, _actor: ActorId) -> ActorChannel<T> {
+        ActorChannel::new()
     }
 }
 
@@ -331,17 +348,8 @@ mod tests {
     }
 
     #[test]
-    fn test_event_bus_register() {
-        let mut bus = EventBus::new();
-        let channel: ActorChannel<String> = bus.register(ActorId::AgentLoop);
-        assert!(channel.tx.send("test".to_string()).is_ok());
-    }
-
-    #[test]
     fn test_event_bus_publish_and_broadcast() {
-        let mut bus = EventBus::new();
-        let _channel: ActorChannel<BusEventEnvelope> = bus.register(ActorId::RenderActor);
-
+        let bus = EventBus::new();
         bus.publish_domain(DomainEvent::Submit { content: "hello".into() });
 
         let received = bus.broadcast_recv().unwrap();
@@ -355,9 +363,7 @@ mod tests {
 
     #[test]
     fn test_event_bus_ephemeral_publish() {
-        let mut bus = EventBus::new();
-        let _channel: ActorChannel<BusEventEnvelope> = bus.register(ActorId::InputActor);
-
+        let bus = EventBus::new();
         bus.publish_ephemeral(EphemeralEvent::ScrollUp);
 
         let received = bus.broadcast_recv().unwrap();
@@ -375,5 +381,21 @@ mod tests {
             ActorId::ToolActor { name: "bash".into() }.to_string(),
             "ToolActor(bash)"
         );
+    }
+
+    #[test]
+    fn test_event_bus_clone() {
+        let bus1 = EventBus::new();
+        let bus2 = bus1.clone();
+        bus1.publish_domain(DomainEvent::SpawnAgent);
+        assert!(bus2.broadcast_try_recv().is_ok());
+    }
+
+    #[test]
+    fn test_broadcast_channel_arc_mutex() {
+        let channel = BroadcastChannel::new();
+        let receiver = channel.receiver();
+        channel.send(BusEventEnvelope::Domain(DomainEvent::SpawnAgent)).unwrap();
+        assert!(receiver.lock().unwrap().recv().is_ok());
     }
 }

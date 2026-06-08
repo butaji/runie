@@ -1,6 +1,6 @@
 use anyhow::Result;
+use runie_core::event::Event;
 use runie_core::provider::{Message, Provider};
-use crate::events::AgentEvent;
 use crate::parser::parse_tool_calls;
 use crate::tools::Tool;
 use crate::AgentCommand;
@@ -12,28 +12,28 @@ pub async fn run_agent_turn<F>(
     max_iterations: usize,
 ) -> Result<()>
 where
-    F: FnMut(AgentEvent) + Send,
+    F: FnMut(Event) + Send,
 {
     let mut messages = build_initial_messages(command);
     let turn_start = Instant::now();
     let mut has_intermediate_steps = false;
 
     for _ in 0..max_iterations {
-        emit(AgentEvent::Thinking { id: command.id.clone() });
+        emit(Event::AgentThinking { id: command.id.clone() });
 
         let mut response_text = String::new();
         let provider = crate::build_provider(&command.provider, &command.model);
         provider
             .generate(messages.clone(), |chunk| {
                 response_text.push_str(&chunk.content);
-                emit(AgentEvent::Response {
+                emit(Event::AgentResponse {
                     id: command.id.clone(),
                     content: chunk.content,
                 });
             })
             .await?;
 
-        emit(AgentEvent::ThoughtDone { id: command.id.clone() });
+        emit(Event::AgentThoughtDone { id: command.id.clone() });
 
         let tools = parse_tool_calls(&response_text);
         if tools.is_empty() {
@@ -48,13 +48,13 @@ where
     }
 
     if has_intermediate_steps {
-        emit(AgentEvent::TurnComplete {
+        emit(Event::AgentTurnComplete {
             id: command.id.clone(),
             duration_secs: turn_start.elapsed().as_secs_f64(),
         });
     }
 
-    emit(AgentEvent::Done { id: command.id.clone() });
+    emit(Event::AgentDone { id: command.id.clone() });
     Ok(())
 }
 
@@ -77,11 +77,11 @@ fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
 fn execute_tools(
     cmd_id: &str,
     tools: &[Tool],
-    emit: &mut dyn FnMut(AgentEvent),
+    emit: &mut dyn FnMut(Event),
     messages: &mut Vec<Message>,
 ) {
     for tool in tools {
-        emit(AgentEvent::ToolStart {
+        emit(Event::AgentToolStart {
             id: cmd_id.to_string(),
             name: tool.name().to_string(),
         });
@@ -90,7 +90,7 @@ fn execute_tools(
         let result = tool.execute();
         let tool_elapsed = tool_start.elapsed().as_secs_f64();
 
-        emit(AgentEvent::ToolEnd {
+        emit(Event::AgentToolEnd {
             duration_secs: tool_elapsed,
             output: result.output.clone(),
         });

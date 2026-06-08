@@ -134,9 +134,8 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
         let result = run_agent_turn(
             &cmd,
             |evt| {
-                let core_evt = evt.to_core_event();
                 let tx = agent_tx_clone.clone();
-                let _ = tx.try_send(core_evt);
+                let _ = tx.try_send(evt);
             },
             5,
         ).await;
