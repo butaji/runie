@@ -1,6 +1,6 @@
 # Multi-line input
 
-**Status**: in-progress (was blocked - Shift+Enter and Ctrl+J handlers implemented)
+**Status**: done
 
 **Milestone**: MVP
 
@@ -14,20 +14,21 @@ Support multi-line input editing.
 
 - [x] Shift+Enter for newlines
 - [x] Ctrl+J for newlines
-- [ ] Cursor positioning across lines
-- [ ] Backspace at line start
+- [x] Cursor positioning across lines (works with existing cursor movement)
+- [x] Backspace at line start (removes newline and joins lines)
 
 ## Implementation
 
 ### Files Modified
 - `crates/runie-core/src/event.rs` — Added `Event::Newline`
 - `crates/runie-core/src/update/mod.rs` — Added `Event::Newline` handling
-- `crates/runie-core/src/update/input.rs` — Added `insert_newline()` method
+- `crates/runie-core/src/update/input.rs` — Added `insert_newline()` and updated `delete_before_cursor()` for multi-line support
 - `crates/runie-term/src/main.rs` — Added Shift+Enter and Ctrl+J key mappings
 
 ### Key Bindings
 - **Shift+Enter**: Insert newline
 - **Ctrl+J**: Insert newline (line feed)
+- **Backspace at line start**: Join current line with previous line by removing newline
 
 ## Tests
 
@@ -35,6 +36,9 @@ Support multi-line input editing.
 - [x] `insert_newline_at_end` — Newline appended at cursor position
 - [x] `insert_newline_in_middle` — Newline inserted at cursor position
 - [x] `multiline_input_supported` — Multiple lines can be typed
+- [x] `backspace_at_line_start_removes_newline` — Backspace removes newline at cursor position
+- [x] `backspace_at_first_line_start_flashes` — Flash on backspace at absolute start
+- [x] `backspace_removes_only_first_newline` — Correctly handles multiple newlines
 
 ### Layer 2 — Event Handling
 - [x] Shift+Enter key mapping (in runie-term tests)
@@ -45,8 +49,3 @@ N/A (text editing, no TUI rendering)
 
 ### Layer 4 — Smoke
 N/A (simple input handling)
-
-## Remaining Work
-
-- Cursor positioning across lines (already works with existing cursor movement)
-- Backspace at line start (needs special handling to join lines)
