@@ -51,7 +51,6 @@ impl AppState {
         self.tool_started_at = Some(std::time::Instant::now());
         self.intermediate_step_count += 1;
         self.current_action = Some(format!("Running {}", name));
-        self.last_tool_index = Some(self.messages.len());
         let tool_id = format!("tool.{}.{}", id, self.intermediate_step_count);
         self.messages.push(ChatMessage {
             role: Role::Tool,
@@ -65,9 +64,11 @@ impl AppState {
     pub(crate) fn end_tool(&mut self, duration_secs: f64, output: String) {
         self.current_action = None;
         self.tool_started_at = None;
-        if let (Some(name), Some(idx)) = (self.current_tool_name.take(), self.last_tool_index.take()) {
-            if let Some(last) = self.messages.get_mut(idx) {
-                if last.role == Role::Tool {
+        if let Some(name) = self.current_tool_name.take() {
+            if let Some(idx) = self.messages.iter().rposition(|m| {
+                m.role == Role::Tool && m.content.contains("⠋ Running ")
+            }) {
+                if let Some(last) = self.messages.get_mut(idx) {
                     last.content = if output.trim().is_empty() {
                         tool_done(&name, duration_secs)
                     } else {
@@ -104,10 +105,9 @@ impl AppState {
     pub(crate) fn complete_turn(&mut self, id: String, duration_secs: f64) {
         let content = format!("Turn completed in {:.1}s", duration_secs);
         let ts = now();
-        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
+        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == id) {
             self.messages[idx].content = content;
             self.messages[idx].timestamp = ts;
-            self.messages[idx].id = id;
         } else {
             self.messages.push(ChatMessage {
                 role: Role::TurnComplete,
@@ -150,6 +150,7 @@ impl AppState {
             self.current_request_id = None;
         }
         self.current_tool_name = None;
+        self.current_action = None;
         self.intermediate_step_count = 0;
         self.thought_seq = 0;
         self.turn_active = false;

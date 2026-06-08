@@ -136,7 +136,7 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
             |evt| {
                 let core_evt = evt.to_core_event();
                 let tx = agent_tx_clone.clone();
-                tokio::spawn(async move { let _ = tx.send(core_evt).await; });
+                let _ = tx.try_send(core_evt);
             },
             5,
         ).await;

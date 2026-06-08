@@ -61,6 +61,8 @@ mod element_spacing;
 #[cfg(test)]
 mod timer_bugs;
 #[cfg(test)]
+mod rapid_submit;
+#[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
 mod input_undo;
