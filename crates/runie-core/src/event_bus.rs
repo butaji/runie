@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 
 /// Event tag determines persistence behavior
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,7 +26,7 @@ pub trait BusEvent: Clone + Send + 'static {
 }
 
 /// Domain events — persisted to session
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DomainEvent {
     Submit { content: String },
     SpawnAgent,

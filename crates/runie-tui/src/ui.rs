@@ -211,6 +211,39 @@ fn render_message(content: &str, timestamp: f64, first_prefix: &'static str, bas
     lines
 }
 
+fn render_list_item(item: &str, ordered: bool, idx: usize, is_first: bool, ts_str: &str) -> Line<'static> {
+    let bullet = if ordered { format!("{}.", idx + 1) } else { "•".to_string() };
+    let first_line_prefix = if is_first { format!("{} {}", GLYPH_AGENT, bullet) } else { format!("{} {}", GLYPH_INDENT, bullet) };
+    let rest_prefix = format!("{}   ", GLYPH_INDENT);
+    let first_ts = format!(" {:>5}", ts_str);
+    let rest_ts = "      ".to_string();
+    let lines: Vec<&str> = item.lines().collect();
+    let mut text = String::new();
+    for (j, line) in lines.iter().enumerate() {
+        let prefix = if j == 0 { &first_line_prefix } else { &rest_prefix };
+        let ts = if j == 0 { &first_ts } else { &rest_ts };
+        text.push_str(prefix);
+        text.push_str(line);
+        text.push_str(ts);
+        if j + 1 < lines.len() {
+            text.push('\n');
+        }
+    }
+    Line::from(text).style(style_agent())
+}
+
+fn render_code_block_lines(content: &str, ts_str: &str) -> Vec<Line<'static>> {
+    content.lines()
+        .map(|line| Line::from(format!("{}{} {:>5}", GLYPH_INDENT, line, ts_str)).style(style_code_block()))
+        .collect()
+}
+
+fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {
+    text.lines()
+        .map(|line| Line::from(format!("{}│ {}", GLYPH_INDENT, line)).style(style_agent()))
+        .collect()
+}
+
 fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let mut lines = Vec::new();
@@ -228,31 +261,18 @@ fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
             CodeBlock::Code { lang, content } => {
                 lines.push(render_code_header(&lang, is_first));
                 is_first = false;
-                for line in content.lines() {
-                    let text = format!("{}{} {:>5}", GLYPH_INDENT, line, ts_str);
-                    lines.push(Line::from(text).style(style_code_block()));
-                }
+                lines.extend(render_code_block_lines(&content, &ts_str));
             }
             CodeBlock::List { ordered, items } => {
                 for (i, item) in items.iter().enumerate() {
-                    let bullet = if ordered { format!("{}.", i + 1) } else { "•".to_string() };
-                    for (j, line) in item.lines().enumerate() {
-                        let prefix = if j == 0 {
-                            if is_first { format!("{} {}", GLYPH_AGENT, bullet) } else { format!("{} {}", GLYPH_INDENT, bullet) }
-                        } else {
-                            format!("{}   ", GLYPH_INDENT)
-                        };
-                        let ts = if j == 0 { format!(" {:>5}", ts_str) } else { "      ".to_string() };
-                        lines.push(Line::from(format!("{}{}{}", prefix, line, ts)).style(style_agent()));
-                        is_first = false;
-                    }
+                    let rendered = render_list_item(item, ordered, i, is_first, &ts_str);
+                    lines.push(rendered);
+                    is_first = false;
                 }
             }
             CodeBlock::Blockquote(text) => {
-                for line in text.lines() {
-                    lines.push(Line::from(format!("{}│ {}", GLYPH_INDENT, line)).style(style_agent()));
-                    is_first = false;
-                }
+                lines.extend(render_blockquote_lines(&text));
+                is_first = false;
             }
         }
     }
