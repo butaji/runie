@@ -9,11 +9,19 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::Style,
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
+
+fn vstack(area: Rect, heights: &[Constraint]) -> Vec<Rect> {
+    Layout::default().direction(Direction::Vertical).constraints(heights).split(area).to_vec()
+}
+
+fn hstack(area: Rect, widths: &[Constraint]) -> Vec<Rect> {
+    Layout::default().direction(Direction::Horizontal).constraints(widths).split(area).to_vec()
+}
 
 use runie_core::{Element, Snapshot};
 
@@ -35,20 +43,16 @@ use crate::theme::{
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(3),
-            Constraint::Length(1),
-            Constraint::Length(3),
-            Constraint::Length(1),
-        ])
-        .split(f.area());
-
-    messages(f, snap, chunks[0]);
-    status(f, snap, chunks[1]);
-    input(f, snap, chunks[2]);
-    hints(f, snap, chunks[3]);
+    let c = vstack(f.area(), &[
+        Constraint::Min(3),
+        Constraint::Length(1),
+        Constraint::Length(3),
+        Constraint::Length(1),
+    ]);
+    messages(f, snap, c[0]);
+    status(f, snap, c[1]);
+    input(f, snap, c[2]);
+    hints(f, snap, c[3]);
     at_suggestions(f, snap);
 }
 
@@ -64,10 +68,10 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let left_text = build_status_text(snap);
     let right_text = format!("{} tok", tokens);
 
-    let hchunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(0), Constraint::Length(right_text.len() as u16)])
-        .split(area);
+    let h = hstack(area, &[
+        Constraint::Min(0),
+        Constraint::Length(right_text.len() as u16),
+    ]);
 
     let status_style = if snap.turn_active {
         style_status_active()
@@ -75,11 +79,8 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
         style_status_idle()
     };
 
-    f.render_widget(Paragraph::new(left_text).style(status_style), hchunks[0]);
-    f.render_widget(
-        Paragraph::new(right_text).style(style_timestamp()),
-        hchunks[1],
-    );
+    f.render_widget(Paragraph::new(left_text).style(status_style), h[0]);
+    f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
 }
 
 fn build_status_text(snap: &Snapshot) -> String {
@@ -124,18 +125,14 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
         area.width
     };
 
-    let hchunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(content_width), Constraint::Min(0)])
-        .split(area);
-
+    let h = hstack(area, &[Constraint::Length(content_width), Constraint::Min(0)]);
     let lines = build_lines(snap);
     let offset = snap.scroll_offset(height);
     f.render_widget(
         Paragraph::new(lines)
             .scroll((offset, 0))
             .wrap(Wrap { trim: false }),
-        hchunks[0],
+        h[0],
     );
 
     if show_bar {
@@ -169,7 +166,7 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
-        UserMessage { content, timestamp } => render_user_message(content, *timestamp),
+        UserMessage { content, timestamp } => render_message(content, *timestamp, GLYPH_USER, C.fg_bright),
         AgentMessage { content, timestamp } => render_agent_message(content, *timestamp),
         Thinking { started, .. } => vec![Line::from(
             thinking_line(started.elapsed().as_secs_f64())
@@ -191,19 +188,20 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     }
 }
 
-fn render_user_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
+fn render_message(content: &str, timestamp: f64, first_prefix: &'static str, base_color: Color) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let ts_str = format_timestamp(timestamp);
+    let base_style = if base_color == C.fg_bright { style_user() } else { style_agent() };
     for (i, line) in content.lines().enumerate() {
+        let prefix = if i == 0 { first_prefix } else { GLYPH_INDENT };
         let ts = format!(" {:>5}", ts_str);
-        let prefix = if i == 0 { GLYPH_USER } else { GLYPH_INDENT };
-        let mut spans = vec![Span::styled(prefix, style_user())];
-        spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg_bright)));
+        let mut spans = vec![Span::styled(prefix, base_style)];
+        spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, base_color)));
         spans.push(Span::styled(ts, style_timestamp()));
         lines.push(Line::from(spans));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{}{:>5}", GLYPH_USER, ts_str)).style(style_user()));
+        lines.push(Line::from(format!("{}{:>5}", first_prefix, ts_str)).style(base_style));
     }
     lines
 }
@@ -212,15 +210,13 @@ fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let mut lines = Vec::new();
     let mut is_first = true;
-
     let ts_str = format_timestamp(timestamp);
+
     for block in blocks {
         match block {
             CodeBlock::Text(text) => {
                 for line in text.lines() {
-                    lines.push(render_agent_markdown_line(
-                        line, timestamp, is_first
-                    ));
+                    lines.push(render_msg_line(line, timestamp, is_first));
                     is_first = false;
                 }
             }
@@ -245,31 +241,11 @@ fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
     Line::from(code_header_label(prefix, lang)).style(style_code_header())
 }
 
-fn render_agent_markdown_line(
-    line: &str,
-    timestamp: f64,
-    is_first: bool,
-) -> Line<'static> {
+fn render_msg_line(line: &str, timestamp: f64, is_first: bool) -> Line<'static> {
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
     let ts = format!(" {:>5}", format_timestamp(timestamp));
     let mut spans = vec![Span::styled(prefix.to_string(), style_agent())];
     spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg)));
-    spans.push(Span::styled(ts, style_timestamp()));
-    Line::from(spans)
-}
-
-fn render_markdown_line(
-    line: &str,
-    timestamp: f64,
-    is_first: bool,
-    first_prefix: &str,
-    rest_prefix: &str,
-    base_style: Style,
-) -> Line<'static> {
-    let prefix = if is_first { first_prefix } else { rest_prefix };
-    let ts = format!(" {:>5}", format_timestamp(timestamp));
-    let mut spans = vec![Span::styled(prefix.to_string(), base_style)];
-    spans.extend(md_to_spans(&parse_inline_markdown(line)));
     spans.push(Span::styled(ts, style_timestamp()));
     Line::from(spans)
 }
