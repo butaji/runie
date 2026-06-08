@@ -24,7 +24,7 @@ impl LazyCache {
         for elem in entries {
             let ts = elem.timestamp();
             feed.elements.push(elem);
-            feed.elements.push(Element::Spacer { timestamp: ts });
+            feed.elements.push(Element::spacer().at(ts));
         }
         feed
     }
@@ -54,7 +54,7 @@ impl LazyCache {
             } else {
                 turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6)
             };
-            entries.push(Element::Thinking { started, timestamp: ts });
+            entries.push(Element::thinking(started).at(ts));
         }
 
         entries
@@ -80,39 +80,21 @@ impl LazyCache {
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
         let ts = msg.timestamp;
         match msg.role {
-            Role::User => Element::UserMessage {
-                content: msg.content.clone(),
-                timestamp: ts,
-            },
-            Role::Thought => {
-                if state.all_collapsed {
-                    let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
-                    let dur = Self::parse_thought_dur(&msg.content);
-                    Element::ThoughtSummary {
-                        content: first_line,
-                        duration_secs: dur,
-                        timestamp: ts,
-                    }
-                } else {
-                    Element::ThoughtMarker {
-                        content: msg.content.clone(),
-                        timestamp: ts,
-                    }
-                }
-            }
-            Role::Assistant => Element::AgentMessage {
-                content: crate::update::strip_tool_markers(&msg.content),
-                timestamp: ts,
-            },
+            Role::User => Element::user(msg.content.clone()).at(ts),
+            Role::Thought => Self::thought_elem(msg, state, ts),
+            Role::Assistant => Element::agent(crate::update::strip_tool_markers(&msg.content)).at(ts),
             Role::Tool => Self::tool_elem(msg, state, ts),
-            Role::TurnComplete => Element::TurnComplete {
-                duration_secs: Self::parse_dur(&msg.content),
-                timestamp: ts,
-            },
-            Role::System => Element::ThoughtMarker {
-                content: msg.content.clone(),
-                timestamp: ts,
-            },
+            Role::TurnComplete => Element::turn_complete(Self::parse_dur(&msg.content)).at(ts),
+            Role::System => Element::thought(msg.content.clone()).at(ts),
+        }
+    }
+
+    fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
+        if state.all_collapsed {
+            let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
+            Element::thought_summary(first_line, Self::parse_thought_dur(&msg.content)).at(ts)
+        } else {
+            Element::thought(msg.content.clone()).at(ts)
         }
     }
 
@@ -125,33 +107,24 @@ impl LazyCache {
     fn tool_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
         if msg.content.contains("⠋ Running ") {
             let name = msg.content.trim_start_matches("⠋ Running ").trim_end_matches("...");
-            Element::ToolRunning {
-                name: name.to_string(),
-                started: state.tool_started_at.unwrap_or_else(std::time::Instant::now),
-                timestamp: ts,
-            }
-        } else {
-            let lines: Vec<&str> = msg.content.lines().collect();
-            let header = lines.first().copied().unwrap_or("");
-            let output = lines.get(1..).map(|rest| rest.join("\n")).unwrap_or_default();
-            let parts: Vec<&str> = header.split_whitespace().collect();
-            let name = parts.get(1).unwrap_or(&"").to_string();
-            let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
-            if state.all_collapsed {
-                Element::ToolSummary {
-                    name,
-                    duration_secs: dur,
-                    timestamp: ts,
-                }
-            } else {
-                Element::ToolDone {
-                    name,
-                    duration_secs: dur,
-                    output,
-                    timestamp: ts,
-                }
-            }
+            return Element::tool_running(name, state.tool_started_at.unwrap_or_else(std::time::Instant::now)).at(ts);
         }
+        let (name, dur, output) = Self::parse_tool_content(&msg.content);
+        if state.all_collapsed {
+            Element::tool_summary(name, dur).at(ts)
+        } else {
+            Element::tool_done(name, dur, output).at(ts)
+        }
+    }
+
+    fn parse_tool_content(content: &str) -> (String, f64, String) {
+        let lines: Vec<&str> = content.lines().collect();
+        let header = lines.first().copied().unwrap_or("");
+        let output = lines.get(1..).map(|rest| rest.join("\n")).unwrap_or_default();
+        let parts: Vec<&str> = header.split_whitespace().collect();
+        let name = parts.get(1).unwrap_or(&"").to_string();
+        let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
+        (name, dur, output)
     }
 
     fn parse_dur(content: &str) -> f64 {

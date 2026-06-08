@@ -1,4 +1,5 @@
 use crate::model::{AppState, Role};
+use crate::dsl::AppStateDsl;
 use crate::event::Event;
 
 fn fresh_state() -> AppState {
@@ -9,7 +10,7 @@ fn fresh_state() -> AppState {
 fn test_agent_thinking_sets_streaming() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.agent("req.0").think();
     assert!(state.streaming);
     assert!(state.thinking_started_at.is_some());
 }
@@ -18,9 +19,7 @@ fn test_agent_thinking_sets_streaming() {
 fn test_agent_response_creates_message() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    state.agent("req.0").think().thought_done().respond("Hello");
     assert_eq!(state.messages.len(), 2);
     assert_eq!(state.messages[1].role, Role::Assistant);
     assert_eq!(state.messages[1].content, "Hello");
@@ -30,10 +29,9 @@ fn test_agent_response_creates_message() {
 fn test_agent_response_appends_to_existing() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello ".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "World".to_string() });
+    state.agent("req.0").think().thought_done();
+    state.agent("req.0").respond("Hello ");
+    state.agent("req.0").respond("World");
     assert_eq!(state.messages.len(), 2);
     assert_eq!(state.messages[0].role, Role::Thought);
     assert_eq!(state.messages[1].role, Role::Assistant);
@@ -45,7 +43,7 @@ fn test_agent_done_clears_streaming() {
     let mut state = fresh_state();
     state.streaming = true;
     state.thinking_started_at = Some(std::time::Instant::now());
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.agent("req.0").done();
     assert!(!state.streaming);
     assert!(state.thinking_started_at.is_none());
 }
@@ -54,7 +52,7 @@ fn test_agent_done_clears_streaming() {
 fn test_agent_error_creates_error_message() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentError { id: "req.0".to_string(), message: "Something went wrong".to_string() });
+    state.agent("req.0").error("Something went wrong");
     assert!(!state.streaming);
     assert_eq!(state.messages.len(), 1);
     assert_eq!(state.messages[0].role, Role::Assistant);
@@ -64,8 +62,7 @@ fn test_agent_error_creates_error_message() {
 #[test]
 fn agent_message_strips_tool_markers_on_done() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir.".to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.agent("req.0").respond("TOOL:list_dir.").done();
     let has_tool = state.messages.iter().any(|m| m.role == Role::Assistant && m.content.contains("TOOL:"));
     assert!(!has_tool);
 }
@@ -73,8 +70,7 @@ fn agent_message_strips_tool_markers_on_done() {
 #[test]
 fn agent_message_keeps_natural_language() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Let me check.\nTOOL:list_dir.".to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.agent("req.0").respond("Let me check.\nTOOL:list_dir.").done();
     let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
     assert_eq!(msg.content, "Let me check.");
 }
@@ -82,8 +78,7 @@ fn agent_message_keeps_natural_language() {
 #[test]
 fn agent_message_removes_empty_after_strip() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir.".to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.agent("req.0").respond("TOOL:list_dir.").done();
     let count = state.messages.iter().filter(|m| m.role == Role::Assistant).count();
     assert_eq!(count, 0);
 }
@@ -91,8 +86,7 @@ fn agent_message_removes_empty_after_strip() {
 #[test]
 fn agent_message_strips_structured_tool() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#.to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.agent("req.0").respond(r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#).done();
     let count = state.messages.iter().filter(|m| m.role == Role::Assistant).count();
     assert_eq!(count, 0);
 }
@@ -100,32 +94,30 @@ fn agent_message_strips_structured_tool() {
 #[test]
 fn streaming_append_updates_timestamp() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello ".to_string() });
+    state.agent("req.0").respond("Hello ");
     let t1 = state.messages[0].timestamp;
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "World".to_string() });
+    state.agent("req.0").respond("World");
     let t2 = state.messages[0].timestamp;
-    assert!(t2 >= t1, "Timestamp should not go backwards on streaming merge, got t1={} t2={}", t1, t2);
+    assert!(t2 >= t1, "Timestamp should not go backwards, got t1={} t2={}", t1, t2);
 }
 
 #[test]
 fn tool_end_updates_timestamp() {
     let mut state = fresh_state();
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
+    state.agent("req.0").tool_start("list_files");
     let t1 = state.messages[0].timestamp;
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
     let t2 = state.messages[0].timestamp;
-    assert!(t2 >= t1, "Timestamp should not go backwards on tool end, got t1={} t2={}", t1, t2);
+    assert!(t2 >= t1, "Timestamp should not go backwards, got t1={} t2={}", t1, t2);
 }
 
 #[test]
 fn thought_marker_comes_before_response_in_event_order() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.agent("req.0").think().respond("Hello").thought_done();
     let roles: Vec<&str> = state.messages.iter().map(|m| m.role.as_str()).collect();
-    assert_eq!(roles, vec!["thought", "assistant"], "Thought marker must come before response even when response chunks arrive earlier");
+    assert_eq!(roles, vec!["thought", "assistant"]);
 }
 
 #[test]
@@ -133,9 +125,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
     use crate::ui::LazyCache;
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.agent("req.0").think().respond("Hello").thought_done();
     let feed = LazyCache::feed(&state);
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
         crate::ui::Element::ThoughtMarker { .. } | crate::ui::Element::ThoughtSummary { .. } => "T",
@@ -143,8 +133,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
         crate::ui::Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
-    // Assistant created at T=1, Thought at T=2 — strict timestamp order: Agent before Thought
-    assert_eq!(kinds, vec!["A", "S", "T", "S"], "Feed ordered by last update timestamp");
+    assert_eq!(kinds, vec!["A", "S", "T", "S"]);
 }
 
 #[test]
@@ -152,8 +141,7 @@ fn thinking_indicator_ordered_by_timestamp() {
     use crate::ui::LazyCache;
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    state.agent("req.0").think().respond("Hello");
     let feed = LazyCache::feed(&state);
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
         crate::ui::Element::Thinking { .. } => "I",
@@ -161,16 +149,15 @@ fn thinking_indicator_ordered_by_timestamp() {
         crate::ui::Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
-    // During thinking, assistant is NOT rendered — content captured for thought
-    assert_eq!(kinds, vec!["I", "S"], "Only thinking indicator visible during thinking phase");
+    assert_eq!(kinds, vec!["I", "S"], "Only thinking indicator visible during thinking");
 }
 
 #[test]
 fn streaming_tool_marker_stored_for_thought_capture() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir.".to_string() });
+    state.agent("req.0").respond("TOOL:list_dir.");
     let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
-    assert!(msg.content.contains("TOOL:"), "Tool markers stored for thought capture, stripped at render time");
+    assert!(msg.content.contains("TOOL:"), "Tool markers stored for thought capture");
     let feed = crate::ui::LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
         crate::ui::Element::AgentMessage { content, .. } => content.contains("TOOL:"),
@@ -182,7 +169,7 @@ fn streaming_tool_marker_stored_for_thought_capture() {
 #[test]
 fn streaming_mixed_text_and_tool_keeps_both_for_capture() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Let me check files.\nTOOL:list_dir.".to_string() });
+    state.agent("req.0").respond("Let me check files.\nTOOL:list_dir.");
     let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
     assert!(msg.content.contains("Let me check files."));
     assert!(msg.content.contains("TOOL:list_dir."), "Both stored for thought capture");
@@ -191,9 +178,9 @@ fn streaming_mixed_text_and_tool_keeps_both_for_capture() {
 #[test]
 fn streaming_structured_tool_stored_for_capture() {
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#.to_string() });
+    state.agent("req.0").respond(r#"{"name": "edit_file", "arguments": {"path": "x", "search": "a", "replace": "b"}}"#);
     let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
-    assert!(msg.content.contains("edit_file"), "Structured tool stored for thought capture, stripped at render time");
+    assert!(msg.content.contains("edit_file"), "Structured tool stored for thought capture");
     let feed = crate::ui::LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
         crate::ui::Element::AgentMessage { content, .. } => content.contains("edit_file"),
@@ -206,7 +193,7 @@ fn streaming_structured_tool_stored_for_capture() {
 fn feed_does_not_render_tool_markers() {
     use crate::ui::LazyCache;
     let mut state = fresh_state();
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir.".to_string() });
+    state.agent("req.0").respond("TOOL:list_dir.");
     let feed = LazyCache::feed(&state);
     let has_tool = feed.elements.iter().any(|e| match e {
         crate::ui::Element::AgentMessage { content, .. } => content.contains("TOOL:"),

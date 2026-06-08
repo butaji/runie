@@ -63,6 +63,8 @@ mod timer_bugs;
 #[cfg(test)]
 mod rapid_submit;
 #[cfg(test)]
+mod element_dsl;
+#[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
 mod input_undo;
