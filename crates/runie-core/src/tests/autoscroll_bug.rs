@@ -81,14 +81,21 @@ fn last_element_lines_clipped_to_fit_viewport() {
     let mut state = fresh_state();
     state.scroll = 0;
 
-    // Small element first
+    add_user_and_huge_thought(&mut state);
+    state.ensure_fresh();
+
+    let region = state.visible_scroll(5);
+    let total_visible = count_visible_lines(&region);
+    assert_eq!(total_visible, 5, "Visible lines must exactly equal viewport height");
+}
+
+fn add_user_and_huge_thought(state: &mut AppState) {
     state.messages.push(ChatMessage {
         role: Role::User,
         content: "hi".into(),
         timestamp: 0.0,
         id: "u0".into(),
     });
-    // HUGE element second: 30 lines
     let mut thought = "◆ Thought 1.0s\n".to_string();
     for i in 1..=30 {
         thought.push_str(&format!("line{}\n", i));
@@ -100,33 +107,19 @@ fn last_element_lines_clipped_to_fit_viewport() {
         id: "t1".into(),
     });
     state.messages_changed();
-    state.ensure_fresh();
+}
 
-    // Total = 2 + 31 + 1 = 34 lines. Viewport = 5.
-    // max_scroll = 29. viewport [29, 34)
-    // Elements: User(1), Spacer(1), Thought(31), Spacer(1)
-    // Line positions: User[0], Spacer[1], Thought[2..32], Spacer[33]
-    // [29,34) = lines 29,30,31,32,33
-    // = Thought lines 27,28,29,30 (indices 27-30) + Spacer[33]
-    // But Thought has 31 lines (header + 30). Line 32 is the last line.
-    // Wait: Thought[2..32] = 30 lines (indices 2-31). Line 33 = Spacer.
-    // [29,34): line29=Thought[27], line30=Thought[28], line31=Thought[29], line32=Thought[30], line33=Spacer
-    // That's 4 thought lines + 1 spacer = 5 lines ✓
-
-    let region = state.visible_scroll(5);
-
-    // Count exact visible lines
-    let mut total_visible = 0usize;
+fn count_visible_lines(region: &crate::model::VisibleRegion) -> usize {
+    let mut total = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
         let count = elem.line_count();
         if i == 0 && region.skip_lines > 0 {
-            total_visible += count.saturating_sub(region.skip_lines);
+            total += count.saturating_sub(region.skip_lines);
         } else {
-            total_visible += count;
+            total += count;
         }
     }
-
-    assert_eq!(total_visible, 5, "Visible lines must exactly equal viewport height");
+    total
 }
 
 #[test]

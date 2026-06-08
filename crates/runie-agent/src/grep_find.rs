@@ -1,4 +1,4 @@
-use crate::{Tool, parse_tool_calls};
+use crate::{Tool, parser::parse_tool_calls};
 
 #[test]
 fn parse_grep_tool_json() {

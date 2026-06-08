@@ -214,21 +214,9 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
 #[test]
 fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
-        role: Role::Thought,
-        content: "◆ Thought 1.0s\nReasoning".into(),
-        timestamp: 0.0,
-        id: "t1".into(),
-    });
-    state.messages.push(ChatMessage {
-        role: Role::Tool,
-        content: "◆ Ran ls 0.5s\nfile1".into(),
-        timestamp: 1.0,
-        id: "x1".into(),
-    });
+    add_thought_and_tool(&mut state);
     state.ensure_fresh();
 
-    // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
@@ -241,7 +229,26 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     state.messages_changed();
     state.ensure_fresh();
 
-    let feed = LazyCache::feed(&state);
+    verify_collapsed_elements(&state);
+}
+
+fn add_thought_and_tool(state: &mut AppState) {
+    state.messages.push(ChatMessage {
+        role: Role::Thought,
+        content: "◆ Thought 1.0s\nReasoning".into(),
+        timestamp: 0.0,
+        id: "t1".into(),
+    });
+    state.messages.push(ChatMessage {
+        role: Role::Tool,
+        content: "◆ Ran ls 0.5s\nfile1".into(),
+        timestamp: 1.0,
+        id: "x1".into(),
+    });
+}
+
+fn verify_collapsed_elements(state: &AppState) {
+    let feed = LazyCache::feed(state);
     let elements: Vec<_> = feed.elements.iter().map(|e| match e {
         Element::ThoughtSummary { .. } => "TS",
         Element::ThoughtMarker { .. } => "TM",

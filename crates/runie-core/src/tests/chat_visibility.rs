@@ -38,63 +38,59 @@ fn latest_is_visible(state: &AppState, height: usize) -> bool {
 #[test]
 fn list_files_full_turn_latest_always_visible() {
     let mut state = fresh_state();
-    let height = 5; // Small viewport like the real chat panel
+    let height = 5;
+    verify_user_visible(&mut state, height);
+    verify_thinking_visible(&mut state, height);
+    verify_agent_response_visible(&mut state, height);
+    verify_tool_output_visible(&mut state, height);
+    verify_final_response_visible(&mut state, height);
+    verify_turn_complete_last(&mut state, height);
+}
 
-    // 1. User submits "list files"
+fn verify_user_visible(state: &mut AppState, height: usize) {
     state.input = "list files".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
-    assert!(latest_is_visible(&state, height), "User message must be visible after submit");
+    assert!(latest_is_visible(state, height), "User message must be visible after submit");
+}
 
-    // 2. Agent starts thinking
+fn verify_thinking_visible(state: &mut AppState, height: usize) {
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.ensure_fresh();
-    assert!(latest_is_visible(&state, height), "Thinking indicator must be visible");
+    assert!(latest_is_visible(state, height), "Thinking indicator must be visible");
+}
 
-    // 3. Agent sends response with tool
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "I'll list the files.\nTOOL:list_dir:.".into() });
+fn verify_agent_response_visible(state: &mut AppState, height: usize) {
+    state.update(Event::AgentResponse { id: "req.0".into(), content: "I'll list the files.".into() });
     state.ensure_fresh();
-    assert!(latest_is_visible(&state, height), "Agent response must be visible during streaming");
+    assert!(latest_is_visible(state, height), "Agent response must be visible during streaming");
+}
 
-    // 4. Thought done
-    state.update(Event::AgentThoughtDone { id: "req.0".into() });
-    state.ensure_fresh();
-    assert!(latest_is_visible(&state, height), "Thought must be visible after thought_done");
-
-    // 5. Tool starts
+fn verify_tool_output_visible(state: &mut AppState, height: usize) {
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "list_dir".into() });
     state.ensure_fresh();
-    assert!(latest_is_visible(&state, height), "Tool running must be visible");
-
-    // 6. Tool ends with LARGE output (>1 page)
+    assert!(latest_is_visible(state, height), "Tool running must be visible");
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
     state.ensure_fresh();
-    let kinds = visible_kinds(&state, height);
-    assert!(
-        kinds.contains(&"ToolDone".to_string()),
-        "Tool result must be visible after tool end. Got: {:?}", kinds
-    );
+    let kinds = visible_kinds(state, height);
+    assert!(kinds.contains(&"ToolDone".to_string()), "Tool result must be visible. Got: {:?}", kinds);
+}
 
-    // 7. Agent final response
+fn verify_final_response_visible(state: &mut AppState, height: usize) {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done!".into() });
     state.ensure_fresh();
-    let kinds = visible_kinds(&state, height);
-    assert!(
-        kinds.contains(&"Agent".to_string()),
-        "Final agent response must be visible. Got: {:?}", kinds
-    );
+    let kinds = visible_kinds(state, height);
+    assert!(kinds.contains(&"Agent".to_string()), "Final response must be visible. Got: {:?}", kinds);
+}
 
-    // 8. Turn complete
+fn verify_turn_complete_last(state: &mut AppState, height: usize) {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    let kinds = visible_kinds(&state, height);
-    assert!(
-        kinds.last() == Some(&"Turn".to_string()),
-        "TurnComplete must be last visible element. Got: {:?}", kinds
-    );
+    let kinds = visible_kinds(state, height);
+    assert!(kinds.last() == Some(&"Turn".to_string()), "TurnComplete must be last. Got: {:?}", kinds);
 }
 
 #[test]
@@ -127,7 +123,21 @@ fn viewport_at_bottom_shows_latest_after_overflow() {
     let mut state = fresh_state();
     let height = 5;
 
-    // Fill with small messages first (fit in viewport)
+    add_small_messages(&mut state);
+    state.ensure_fresh();
+    state.scroll = 0;
+
+    let before = visible_kinds(&state, height);
+    assert!(before.contains(&"User".to_string()), "User messages visible before overflow");
+
+    add_huge_thought(&mut state);
+    state.ensure_fresh();
+    state.scroll = 0;
+
+    verify_thought_visible(&state, height);
+}
+
+fn add_small_messages(state: &mut AppState) {
     for i in 0..3 {
         state.messages.push(ChatMessage {
             role: Role::User,
@@ -137,15 +147,9 @@ fn viewport_at_bottom_shows_latest_after_overflow() {
         });
     }
     state.messages_changed();
-    state.ensure_fresh();
-    state.scroll = 0;
+}
 
-    // At this point total_lines = 6 (3 users + 3 spacers), viewport = 5
-    // scroll=0 → shows bottom 5 lines: msg2 + spacer + msg1 + spacer + msg0 (partial)
-    let before = visible_kinds(&state, height);
-    assert!(before.contains(&"User".to_string()), "User messages visible before overflow");
-
-    // Now add a HUGE message that pushes everything off-screen
+fn add_huge_thought(state: &mut AppState) {
     let mut huge = "◆ Thought 1.0s\n".to_string();
     for i in 1..=30 {
         huge.push_str(&format!("line{}\n", i));
@@ -157,25 +161,19 @@ fn viewport_at_bottom_shows_latest_after_overflow() {
         id: "t1".into(),
     });
     state.messages_changed();
-    state.ensure_fresh();
-    state.scroll = 0;
+}
 
-    // Total lines now > 35. Viewport = 5 lines at bottom.
-    // The thought's bottom lines should be visible.
+fn verify_thought_visible(state: &AppState, height: usize) {
     let region = state.visible_scroll(height);
     let has_thought = region.elements.iter().any(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }));
     assert!(has_thought, "Thought must be visible after overflow");
 
-    // The LAST line of the thought should be visible
     let thought_texts: Vec<String> = region.elements.iter().filter_map(|e| match e {
         crate::ui::Element::ThoughtMarker { content } => Some(content.clone()),
         _ => None,
     }).collect();
     if !thought_texts.is_empty() {
-        assert!(
-            thought_texts[0].contains("line30"),
-            "Latest thought line (line30) must be visible. Got: {:?}", thought_texts
-        );
+        assert!(thought_texts[0].contains("line30"), "Latest line must be visible. Got: {:?}", thought_texts);
     }
 }
 

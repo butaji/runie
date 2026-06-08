@@ -13,40 +13,52 @@ impl LazyCache {
     }
 
     fn build(state: &AppState) -> Feed {
-        let mut entries: Vec<(f64, usize, Element, String, String)> = Vec::new();
-
-        for (idx, msg) in state.messages.iter().enumerate() {
-            if msg.role == Role::Assistant {
-                if crate::update::content_has_tool_markers(&msg.content) {
-                    continue;
-                }
-                if state.thinking_started_at.is_some()
-                    && state.current_request_id.as_deref() == Some(&msg.id)
-                {
-                    continue;
-                }
-            }
-            let elem = Self::msg_to_elem(msg, state);
-            let request_id = msg.id.split('#').next().unwrap_or(&msg.id).to_string();
-            entries.push((msg.timestamp, idx, elem, msg.id.clone(), request_id));
-        }
-
-        let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
-        if let Some(started) = state.thinking_started_at {
-            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { started }, String::new(), String::new()));
-        }
-
-        entries.sort_by(|a, b| {
-            a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-                .then(a.1.cmp(&b.1))
-        });
-
+        let entries = Self::collect_entries(state);
         let mut feed = Feed::new();
         for (_, _, elem, _, _) in entries {
             feed.elements.push(elem);
             feed.elements.push(Element::Spacer);
         }
         feed
+    }
+
+    fn collect_entries(state: &AppState) -> Vec<(f64, usize, Element, String, String)> {
+        let mut entries: Vec<(f64, usize, Element, String, String)> = Vec::new();
+
+        for (idx, msg) in state.messages.iter().enumerate() {
+            if Self::should_skip_msg(msg, state) {
+                continue;
+            }
+            let elem = Self::msg_to_elem(msg, state);
+            let request_id = msg.id.split('#').next().unwrap_or(&msg.id).to_string();
+            entries.push((msg.timestamp, idx, elem, msg.id.clone(), request_id));
+        }
+
+        Self::add_thinking_if_active(state, &mut entries);
+
+        entries.sort_by(|a, b| {
+            a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.1.cmp(&b.1))
+        });
+        entries
+    }
+
+    fn should_skip_msg(msg: &ChatMessage, state: &AppState) -> bool {
+        if msg.role != Role::Assistant {
+            return false;
+        }
+        if crate::update::content_has_tool_markers(&msg.content) {
+            return true;
+        }
+        state.thinking_started_at.is_some()
+            && state.current_request_id.as_deref() == Some(&msg.id)
+    }
+
+    fn add_thinking_if_active(state: &AppState, entries: &mut Vec<(f64, usize, Element, String, String)>) {
+        if let Some(started) = state.thinking_started_at {
+            let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
+            entries.push((max_ts + 1.0, usize::MAX, Element::Thinking { started }, String::new(), String::new()));
+        }
     }
 
     pub fn visible(cache: &[Element], skip: usize, take: usize) -> &[Element] {
@@ -129,61 +141,75 @@ pub mod format_test {
     fn render_element(element: &Element, state: &crate::model::AppState) -> Vec<DisplayLine> {
         match element {
             Element::Spacer => vec![DisplayLine { spans: vec![] }],
-            Element::UserMessage { content } => vec![DisplayLine {
-                spans: vec![
-                    DisplaySpan { text: PREFIX_USER.to_string() },
-                    DisplaySpan { text: content.clone() },
-                ],
-            }],
-            Element::AgentMessage { content } => vec![DisplayLine {
-                spans: vec![
-                    DisplaySpan { text: PREFIX_AGENT.to_string() },
-                    DisplaySpan { text: content.clone() },
-                ],
-            }],
-            Element::Thinking { started } => vec![DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: crate::labels::action_text(state.spinner_frame(), "Thinking", started.elapsed().as_secs_f64()),
-                }],
-            }],
-            Element::ThoughtMarker { content } => vec![DisplayLine {
-                spans: vec![DisplaySpan { text: content.clone() }],
-            }],
-            Element::ThoughtSummary { content, .. } => vec![DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: format!("{} [+]", content.lines().next().unwrap_or(content)),
-                }],
-            }],
-            Element::ToolRunning { name, started } => vec![DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64()),
-                }],
-            }],
-            Element::ToolDone { name, duration_secs, output } => {
-                let mut lines = vec![DisplayLine {
-                    spans: vec![DisplaySpan {
-                        text: format!("◆ Ran {} {:.1}s", name, duration_secs),
-                    }],
-                }];
-                if !output.is_empty() {
-                    for line in output.lines() {
-                        lines.push(DisplayLine {
-                            spans: vec![DisplaySpan { text: line.to_string() }],
-                        });
-                    }
-                }
-                lines
-            }
-            Element::ToolSummary { name, duration_secs } => vec![DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: format!("◆ Ran {} {:.1}s [+]", name, duration_secs),
-                }],
-            }],
-            Element::TurnComplete { duration_secs } => vec![DisplayLine {
-                spans: vec![DisplaySpan {
-                    text: format!("Turn completed in {:.1}s", duration_secs),
-                }],
-            }],
+            Element::UserMessage { content } => render_user(content),
+            Element::AgentMessage { content } => render_agent(content),
+            Element::Thinking { started } => render_thinking(state, *started),
+            Element::ThoughtMarker { content } => render_thought_marker(content),
+            Element::ThoughtSummary { content, .. } => render_thought_summary(content),
+            Element::ToolRunning { name, started } => render_tool_running(state, name, *started),
+            Element::ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
+            Element::ToolSummary { name, duration_secs } => render_tool_summary(name, *duration_secs),
+            Element::TurnComplete { duration_secs } => render_turn_complete(*duration_secs),
         }
+    }
+
+    fn render_user(content: &str) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![
+            DisplaySpan { text: PREFIX_USER.to_string() },
+            DisplaySpan { text: content.to_string() },
+        ]}]
+    }
+
+    fn render_agent(content: &str) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![
+            DisplaySpan { text: PREFIX_AGENT.to_string() },
+            DisplaySpan { text: content.to_string() },
+        ]}]
+    }
+
+    fn render_thinking(state: &crate::model::AppState, started: std::time::Instant) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![DisplaySpan {
+            text: crate::labels::action_text(state.spinner_frame(), "Thinking", started.elapsed().as_secs_f64()),
+        }]}]
+    }
+
+    fn render_thought_marker(content: &str) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![DisplaySpan { text: content.to_string() }]}]
+    }
+
+    fn render_thought_summary(content: &str) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![DisplaySpan {
+            text: format!("{} [+]", content.lines().next().unwrap_or(content)),
+        }]}]
+    }
+
+    fn render_tool_running(state: &crate::model::AppState, name: &str, started: std::time::Instant) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![DisplaySpan {
+            text: format!("{} Running {}... {:.1}s", state.spinner_frame(), name, started.elapsed().as_secs_f64()),
+        }]}]
+    }
+
+    fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<DisplayLine> {
+        let mut lines = vec![DisplayLine { spans: vec![DisplaySpan {
+            text: format!("◆ Ran {} {:.1}s", name, duration_secs),
+        }]}];
+        if !output.is_empty() {
+            for line in output.lines() {
+                lines.push(DisplayLine { spans: vec![DisplaySpan { text: line.to_string() }]});
+            }
+        }
+        lines
+    }
+
+    fn render_tool_summary(name: &str, duration_secs: f64) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![DisplaySpan {
+            text: format!("◆ Ran {} {:.1}s [+]", name, duration_secs),
+        }]}]
+    }
+
+    fn render_turn_complete(duration_secs: f64) -> Vec<DisplayLine> {
+        vec![DisplayLine { spans: vec![DisplaySpan {
+            text: format!("Turn completed in {:.1}s", duration_secs),
+        }]}]
     }
 }
