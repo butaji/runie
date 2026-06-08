@@ -332,6 +332,8 @@ fn map_key_event(key: &KeyEvent) -> Option<CoreEvent> {
         map_ctrl_key(key.code)
     } else if key.modifiers.contains(KeyModifiers::ALT) {
         map_alt_key(key.code)
+    } else if key.modifiers.contains(KeyModifiers::SHIFT) {
+        map_shift_key(key.code)
     } else {
         map_plain_key(key.code)
     }
@@ -341,6 +343,8 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
         // Ctrl+E: toggle expand (also Ctrl+Shift+E on terminals with proper modifier)
         KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
+        // Ctrl+J: newline (line feed)
+        KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Newline),
         // Ctrl+A: move cursor to start (Emacs)
         KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
         // Ctrl+B: move cursor backward (Emacs)
@@ -374,6 +378,14 @@ fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorWordLeft),
         // Alt+F: word forward
         KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorWordRight),
+        _ => None,
+    }
+}
+
+fn map_shift_key(code: KeyCode) -> Option<CoreEvent> {
+    match code {
+        // Shift+Enter: newline
+        KeyCode::Enter => Some(CoreEvent::Newline),
         _ => None,
     }
 }

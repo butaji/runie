@@ -94,103 +94,122 @@ fn longest_common_subsequence<'a>(old: &[&'a str], new: &[&'a str]) -> Vec<(usiz
 
 fn build_hunks(old_lines: &[&str], new_lines: &[&str], lcs: &[(usize, usize)]) -> Vec<DiffHunk> {
     if lcs.is_empty() {
-        // Complete replacement
-        return vec![DiffHunk {
-            header: format!("@@ -1,{} +1,{} @@", old_lines.len(), new_lines.len()),
-            lines: {
-                let mut lines = Vec::new();
-                for line in old_lines {
-                    lines.push(DiffLine::Removed((*line).to_string()));
-                }
-                for line in new_lines {
-                    lines.push(DiffLine::Added((*line).to_string()));
-                }
-                lines
-            },
-        }];
+        return vec![build_complete_replacement_hunk(old_lines, new_lines)];
     }
     
     let mut hunks = Vec::new();
     let mut old_idx = 0;
     let mut new_idx = 0;
     
-    // Process each LCS entry to create hunks
     for (lcs_old, lcs_new) in lcs {
-        // Find changes before this LCS entry
         if *lcs_old > old_idx || *lcs_new > new_idx {
-            let mut hunk_lines = Vec::new();
-            
-            // Collect removed and added lines between positions
-            while old_idx < *lcs_old {
-                hunk_lines.push(DiffLine::Removed(old_lines[old_idx].to_string()));
-                old_idx += 1;
+            let hunk = collect_changes_between(old_lines, new_lines, *lcs_old, *lcs_new, &mut old_idx, &mut new_idx);
+            if let Some(h) = hunk {
+                hunks.push(h);
             }
-            while new_idx < *lcs_new {
-                hunk_lines.push(DiffLine::Added(new_lines[new_idx].to_string()));
-                new_idx += 1;
-            }
-            
-            if !hunk_lines.is_empty() {
-                // Calculate hunk header positions
-                let hunk_start_old = (old_idx - hunk_lines.iter().filter(|l| matches!(l, DiffLine::Removed(_))).count()).max(1);
-                let hunk_start_new = (new_idx - hunk_lines.iter().filter(|l| matches!(l, DiffLine::Added(_))).count()).max(1);
-                let removed_count = hunk_lines.iter().filter(|l| matches!(l, DiffLine::Removed(_))).count();
-                let added_count = hunk_lines.iter().filter(|l| matches!(l, DiffLine::Added(_))).count();
-                
-                let header = format!(
-                    "@@ -{},{} +{},{} @@",
-                    hunk_start_old,
-                    removed_count,
-                    hunk_start_new,
-                    added_count
-                );
-                
-                hunks.push(DiffHunk {
-                    header,
-                    lines: hunk_lines,
-                });
-            }
-            
+        } else {
             old_idx = *lcs_old;
             new_idx = *lcs_new;
         }
     }
     
-    // Handle any remaining lines at the end
+    // Handle trailing changes
     if old_idx < old_lines.len() || new_idx < new_lines.len() {
-        let mut hunk_lines = Vec::new();
-        
-        while old_idx < old_lines.len() {
-            hunk_lines.push(DiffLine::Removed(old_lines[old_idx].to_string()));
-            old_idx += 1;
-        }
-        while new_idx < new_lines.len() {
-            hunk_lines.push(DiffLine::Added(new_lines[new_idx].to_string()));
-            new_idx += 1;
-        }
-        
-        if !hunk_lines.is_empty() {
-            let hunk_start_old = (old_idx - hunk_lines.iter().filter(|l| matches!(l, DiffLine::Removed(_))).count()).max(1);
-            let hunk_start_new = (new_idx - hunk_lines.iter().filter(|l| matches!(l, DiffLine::Added(_))).count()).max(1);
-            let removed_count = hunk_lines.iter().filter(|l| matches!(l, DiffLine::Removed(_))).count();
-            let added_count = hunk_lines.iter().filter(|l| matches!(l, DiffLine::Added(_))).count();
-            
-            let header = format!(
-                "@@ -{},{} +{},{} @@",
-                hunk_start_old,
-                removed_count,
-                hunk_start_new,
-                added_count
-            );
-            
-            hunks.push(DiffHunk {
-                header,
-                lines: hunk_lines,
-            });
+        let hunk = build_trailing_hunk(old_lines, new_lines, &mut old_idx, &mut new_idx);
+        if let Some(h) = hunk {
+            hunks.push(h);
         }
     }
     
     hunks
+}
+
+fn build_complete_replacement_hunk(old_lines: &[&str], new_lines: &[&str]) -> DiffHunk {
+    let mut lines = Vec::new();
+    for line in old_lines {
+        lines.push(DiffLine::Removed((*line).to_string()));
+    }
+    for line in new_lines {
+        lines.push(DiffLine::Added((*line).to_string()));
+    }
+    DiffHunk {
+        header: format!("@@ -1,{} +1,{} @@", old_lines.len(), new_lines.len()),
+        lines,
+    }
+}
+
+fn count_removed(lines: &[DiffLine]) -> usize {
+    lines.iter().filter(|l| matches!(l, DiffLine::Removed(_))).count()
+}
+
+fn count_added(lines: &[DiffLine]) -> usize {
+    lines.iter().filter(|l| matches!(l, DiffLine::Added(_))).count()
+}
+
+fn collect_changes_between(
+    old_lines: &[&str],
+    new_lines: &[&str],
+    lcs_old: usize,
+    lcs_new: usize,
+    old_idx: &mut usize,
+    new_idx: &mut usize,
+) -> Option<DiffHunk> {
+    let mut hunk_lines = Vec::new();
+    
+    while *old_idx < lcs_old {
+        hunk_lines.push(DiffLine::Removed(old_lines[*old_idx].to_string()));
+        *old_idx += 1;
+    }
+    while *new_idx < lcs_new {
+        hunk_lines.push(DiffLine::Added(new_lines[*new_idx].to_string()));
+        *new_idx += 1;
+    }
+    
+    if hunk_lines.is_empty() {
+        return None;
+    }
+    
+    let removed = count_removed(&hunk_lines);
+    let added = count_added(&hunk_lines);
+    let start_old = (*old_idx - removed).max(1);
+    let start_new = (*new_idx - added).max(1);
+    
+    Some(DiffHunk {
+        header: format!("@@ -{},{} +{},{} @@", start_old, removed, start_new, added),
+        lines: hunk_lines,
+    })
+}
+
+fn build_trailing_hunk(
+    old_lines: &[&str],
+    new_lines: &[&str],
+    old_idx: &mut usize,
+    new_idx: &mut usize,
+) -> Option<DiffHunk> {
+    let mut hunk_lines = Vec::new();
+    
+    while *old_idx < old_lines.len() {
+        hunk_lines.push(DiffLine::Removed(old_lines[*old_idx].to_string()));
+        *old_idx += 1;
+    }
+    while *new_idx < new_lines.len() {
+        hunk_lines.push(DiffLine::Added(new_lines[*new_idx].to_string()));
+        *new_idx += 1;
+    }
+    
+    if hunk_lines.is_empty() {
+        return None;
+    }
+    
+    let removed = count_removed(&hunk_lines);
+    let added = count_added(&hunk_lines);
+    let start_old = (*old_idx - removed).max(1);
+    let start_new = (*new_idx - added).max(1);
+    
+    Some(DiffHunk {
+        header: format!("@@ -{},{} +{},{} @@", start_old, removed, start_new, added),
+        lines: hunk_lines,
+    })
 }
 
 /// Renders a unified diff to string format

@@ -5,6 +5,7 @@ pub enum Event {
 
     Input(char),
     Backspace,
+    Newline,      // Shift+Enter or Ctrl+J for multi-line input
     Submit,
     ScrollUp,
     ScrollDown,
