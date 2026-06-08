@@ -63,6 +63,15 @@ All 12 syntax tests pass.
 ### Layer 3 — Rendering (ui.rs integration)
 - [x] Code blocks render with syntax highlighting in agent messages
 
+## Lint Note
+
+`syntax.rs` is currently **582 lines** (limit: 500). This is the only file in the
+codebase exceeding the lint limit. The excess comes from keyword/type tables for
+8 languages. Options:
+1. Move keyword tables to a separate `syntax/keywords.rs` module
+2. Generate tables at compile time via `build.rs`
+3. Accept exemption for data-heavy modules
+
 ## Notes
 
 - For performance, tokenization happens per-line

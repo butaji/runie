@@ -151,13 +151,38 @@ impl AppState {
 
     pub(crate) fn delete_before_cursor(&mut self) {
         if self.cursor_pos > 0 {
-            self.push_undo();
-            let new_pos = prev_grapheme_boundary(&self.input, self.cursor_pos);
-            self.input.drain(new_pos..self.cursor_pos);
-            self.cursor_pos = new_pos;
-            self.clear_redo();
-            self.handle_at_trigger();
-            self.mark_dirty();
+            // Check if the character before cursor is a newline
+            let char_before_cursor = self.input[..self.cursor_pos].chars().last();
+            if char_before_cursor == Some('\n') {
+                // Remove the newline character (join lines)
+                self.push_undo();
+                let new_pos = self.cursor_pos - 1; // Position after removing newline
+                self.input.remove(self.cursor_pos - 1);
+                self.cursor_pos = new_pos;
+                self.clear_redo();
+                self.handle_at_trigger();
+                self.mark_dirty();
+            } else {
+                // Normal delete - remove grapheme before cursor
+                self.push_undo();
+                let new_pos = prev_grapheme_boundary(&self.input, self.cursor_pos);
+                self.input.drain(new_pos..self.cursor_pos);
+                self.cursor_pos = new_pos;
+                self.clear_redo();
+                self.handle_at_trigger();
+                self.mark_dirty();
+            }
+        } else if self.cursor_pos == 0 && !self.input.is_empty() {
+            // Cursor at absolute start - check if there's a newline
+            if self.input.starts_with('\n') {
+                self.push_undo();
+                self.input.remove(0);
+                self.clear_redo();
+                self.handle_at_trigger();
+                self.mark_dirty();
+            } else {
+                self.input_flash = 3;
+            }
         } else {
             self.input_flash = 3;
         }

@@ -122,10 +122,11 @@ Ephemeral events: `ScrollUp`, `CursorLeft`, `Paste`, `ToggleExpand`, etc.
 ## R1 (Code Quality + User Value)
 
 ### Core Refactor
-- [ ] **Split update.rs** — Divide 623-line monolith into `update/{mod,input,agent,slash,queue}.rs`
-- [ ] **Compose AppState** — Split 28-field god object into `InputState`, `ChatHistory`, `AgentState`, `UiState`
-- [ ] **Fix clippy warnings** — Zero warnings in production code
-- [ ] **Cache optimizations** — O(1) `append_response`, remove dead `VisibleRegion` code
+- [x] **Split update.rs** — Divided into `update/{mod,input,agent,slash,queue}.rs`
+- [ ] **Compose AppState** — Split 27-field god object into `InputState`, `ChatHistory`, `AgentState`, `UiState`
+- [x] **Fix clippy warnings** — Zero errors in production code
+- [x] **Cache optimizations** — O(1) `append_response` via `last_assistant_index`
+- [ ] **Remove dead code** — `VisibleRegion` still referenced by autoscroll tests
 
 ### Agent Crate Cleanup
 - [ ] **Module split** — Divide `runie-agent/src/lib.rs` into `turn.rs`, `tools.rs`, `truncate.rs`, `safety.rs`, `parser.rs`

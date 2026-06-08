@@ -1,26 +1,21 @@
 # Hot reload on config change
 
 **Status**: todo
-
-**Milestone**: MVP
-
+**Milestone**: R1
 **Category**: Configuration
 
 ## Description
 
-Reload configuration when files change.
+Reload configuration when files change. Moved from MVP to R1 because TOML config parsing is done; hot reload is infrastructure, not MVP-critical.
 
 ## Acceptance Criteria
 
-- [ ] File watcher
-- [ ] ConfigChanged events
-- [ ] Apply changes without restart
+- [ ] File watcher (notify crate or polling)
+- [ ] ConfigChanged events emitted to bus
+- [ ] Actors apply changes without restart
 
 ## Tests
 
-Required per AGENTS.md. See `tasks/TEMPLATE.md` for the full format.
-
-- [ ] Layer 1 — State/logic tests (pure functions, no ratatui)
-- [ ] Layer 2 — Event handling tests (crossterm events → state transitions)
-- [ ] Layer 3 — Rendering tests (TestBackend + Buffer assertions) if TUI-related
-- [ ] Layer 4 — Smoke tests (tmux) if async/event logic changes
+- [ ] Layer 1 — `config_reload_parses_new_values` — parse updated TOML
+- [ ] Layer 2 — `config_changed_event_emitted_on_file_change` — bus integration
+- [ ] Layer 4 — Smoke: modify config, verify behavior changes without restart

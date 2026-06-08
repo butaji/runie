@@ -109,4 +109,51 @@ mod tests {
         state.update(Event::Input('e'));
         assert_eq!(state.input, "first\nline");
     }
+
+    #[test]
+    fn backspace_at_line_start_removes_newline() {
+        let mut state = AppState::default();
+        state.update(Event::Input('a'));
+        state.update(Event::Newline);
+        state.update(Event::Input('b'));
+        // Now at end of "a\nb" (cursor after 'b')
+        assert_eq!(state.input, "a\nb");
+        assert_eq!(state.cursor_pos, 3); // After 'a\n' (2 chars) + 'b' (1 char)
+        // Move cursor back to after the newline (start of second line)
+        state.update(Event::CursorLeft);
+        assert_eq!(state.cursor_pos, 2); // After 'a\n'
+        // Backspace should remove the newline and join lines
+        state.update(Event::Backspace);
+        assert_eq!(state.input, "ab");
+        assert_eq!(state.cursor_pos, 1); // Cursor at position 1 (after removing newline and 'a')
+    }
+
+    #[test]
+    fn backspace_at_first_line_start_flashes() {
+        let mut state = AppState::default();
+        state.update(Event::Input('a'));
+        state.update(Event::CursorLeft);
+        assert_eq!(state.cursor_pos, 0);
+        state.update(Event::Backspace);
+        // Should flash, not delete
+        assert_eq!(state.input, "a");
+        assert!(state.input_flash > 0);
+    }
+
+    #[test]
+    fn backspace_removes_only_first_newline() {
+        let mut state = AppState::default();
+        state.update(Event::Input('a'));
+        state.update(Event::Newline);
+        state.update(Event::Input('b'));
+        state.update(Event::Newline);
+        state.update(Event::Input('c'));
+        assert_eq!(state.input, "a\nb\nc");
+        // Cursor is at end (after 'c')
+        // Move to start of third line
+        state.cursor_pos = 4;
+        state.update(Event::Backspace);
+        // Should only remove the newline before 'c', not the one before 'b'
+        assert_eq!(state.input, "a\nbc");
+    }
 }
