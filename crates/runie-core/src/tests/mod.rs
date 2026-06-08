@@ -59,6 +59,8 @@ mod element_sorting;
 #[cfg(test)]
 mod element_spacing;
 #[cfg(test)]
+mod timer_bugs;
+#[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
 mod input_undo;

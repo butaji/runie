@@ -21,21 +21,6 @@ fn next_grapheme_boundary(s: &str, pos: usize) -> usize {
 
 // === Word boundary helpers ===
 
-fn find_word_start(s: &str, pos: usize) -> usize {
-    let mut pos = pos;
-    while pos > 0 {
-        let prev = prev_grapheme_boundary(s, pos);
-        if &s[prev..pos] != " " { break; }
-        pos = prev;
-    }
-    while pos > 0 {
-        let prev = prev_grapheme_boundary(s, pos);
-        if &s[prev..pos] == " " { break; }
-        pos = prev;
-    }
-    pos
-}
-
 fn find_word_boundary_left(s: &str, pos: usize) -> usize {
     let mut pos = pos;
     while pos > 0 {
@@ -184,7 +169,7 @@ impl AppState {
             return;
         }
         self.push_undo();
-        let start = find_word_start(&self.input, self.cursor_pos);
+        let start = find_word_boundary_left(&self.input, self.cursor_pos);
         self.input.drain(start..self.cursor_pos);
         self.cursor_pos = start;
         self.clear_redo();

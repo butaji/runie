@@ -2,16 +2,16 @@
 
 #[derive(Debug, Clone)]
 pub enum Element {
-    Spacer,
-    UserMessage { content: String, timestamp: String },
-    AgentMessage { content: String, timestamp: String },
-    Thinking { started: std::time::Instant },
-    ThoughtMarker { content: String },
-    ThoughtSummary { content: String, duration_secs: f64 },
-    ToolRunning { name: String, started: std::time::Instant },
-    ToolDone { name: String, duration_secs: f64, output: String },
-    ToolSummary { name: String, duration_secs: f64 },
-    TurnComplete { duration_secs: f64 },
+    Spacer { timestamp: f64 },
+    UserMessage { content: String, timestamp: f64 },
+    AgentMessage { content: String, timestamp: f64 },
+    Thinking { started: std::time::Instant, timestamp: f64 },
+    ThoughtMarker { content: String, timestamp: f64 },
+    ThoughtSummary { content: String, duration_secs: f64, timestamp: f64 },
+    ToolRunning { name: String, started: std::time::Instant, timestamp: f64 },
+    ToolDone { name: String, duration_secs: f64, output: String, timestamp: f64 },
+    ToolSummary { name: String, duration_secs: f64, timestamp: f64 },
+    TurnComplete { duration_secs: f64, timestamp: f64 },
 }
 
 impl Element {
@@ -19,15 +19,31 @@ impl Element {
         matches!(self, Element::ThoughtMarker { .. })
     }
 
+    /// Sort key for ordering elements in the feed.
+    pub fn timestamp(&self) -> f64 {
+        match self {
+            Element::Spacer { timestamp } => *timestamp,
+            Element::UserMessage { timestamp, .. } => *timestamp,
+            Element::AgentMessage { timestamp, .. } => *timestamp,
+            Element::Thinking { timestamp, .. } => *timestamp,
+            Element::ThoughtMarker { timestamp, .. } => *timestamp,
+            Element::ThoughtSummary { timestamp, .. } => *timestamp,
+            Element::ToolRunning { timestamp, .. } => *timestamp,
+            Element::ToolDone { timestamp, .. } => *timestamp,
+            Element::ToolSummary { timestamp, .. } => *timestamp,
+            Element::TurnComplete { timestamp, .. } => *timestamp,
+        }
+    }
+
     /// Number of terminal lines this element renders to.
     /// Must stay in sync with `to_lines()` in `runie-tui/src/ui.rs`.
     pub fn line_count(&self) -> usize {
         match self {
-            Element::Spacer => 1,
+            Element::Spacer { .. } => 1,
             Element::UserMessage { content, .. } => content.lines().count().max(1),
             Element::AgentMessage { content, .. } => content.lines().count().max(1),
             Element::Thinking { .. } => 1,
-            Element::ThoughtMarker { content } => content.lines().count().max(1),
+            Element::ThoughtMarker { content, .. } => content.lines().count().max(1),
             Element::ThoughtSummary { .. } => 1,
             Element::ToolRunning { .. } => 1,
             Element::ToolDone { output, .. } => {

@@ -65,7 +65,7 @@ fn feed_sorted_by_last_update_timestamp() {
     let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
         Element::UserMessage { .. } => "U",
         Element::AgentMessage { .. } => "A",
-        Element::Spacer => "S",
+        Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
     assert_eq!(kinds, vec!["U", "S", "U", "S", "A", "S", "A", "S"], "Most recently updated element (A1 @ t=5) must be at bottom");
@@ -83,7 +83,7 @@ fn thought_before_assistant_even_when_assistant_updated_later() {
         Element::UserMessage { .. } => "U",
         Element::ThoughtMarker { .. } => "T",
         Element::AgentMessage { .. } => "A",
-        Element::Spacer => "S",
+        Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
     assert_eq!(kinds, vec!["U", "S", "T", "S", "A", "S"], "Thought must appear before Assistant even when Assistant has later timestamp");
@@ -103,7 +103,7 @@ fn tool_floats_with_turns_latest_update() {
         Element::ThoughtMarker { .. } => "T",
         Element::ToolDone { .. } => "D",
         Element::AgentMessage { .. } => "A",
-        Element::Spacer => "S",
+        Element::Spacer { .. } => "S",
         _ => "?",
     }).collect();
     assert_eq!(kinds, vec!["U", "S", "T", "S", "A", "S", "D", "S"], "Tool (updated t=6) should float to bottom of its turn");

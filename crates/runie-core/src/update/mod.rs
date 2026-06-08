@@ -110,7 +110,7 @@ impl AppState {
                 self.complete_turn(id, duration_secs);
                 self.ensure_turn_complete_last();
             }
-            Event::AgentDone { .. } => self.finish_turn(),
+            Event::AgentDone { id } => self.finish_turn(id),
             Event::AgentError { id, message } => {
                 self.add_error(id, message);
                 self.ensure_turn_complete_last();

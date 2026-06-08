@@ -14,33 +14,49 @@ impl LazyCache {
     }
 
     fn build(state: &AppState) -> Feed {
-        let entries = Self::collect_entries(state);
+        let mut entries = Self::collect_entries(state);
+        entries.sort_by(|a, b| {
+            a.timestamp().partial_cmp(&b.timestamp())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         let mut feed = Feed::new();
-        for (_, _, elem, _, _) in entries {
+        for elem in entries {
+            let ts = elem.timestamp();
             feed.elements.push(elem);
-            feed.elements.push(Element::Spacer);
+            feed.elements.push(Element::Spacer { timestamp: ts });
         }
         feed
     }
 
-    fn collect_entries(state: &AppState) -> Vec<(f64, usize, Element, String, String)> {
-        let mut entries: Vec<(f64, usize, Element, String, String)> = Vec::new();
+    fn collect_entries(state: &AppState) -> Vec<Element> {
+        let mut entries: Vec<Element> = Vec::new();
 
-        for (idx, msg) in state.messages.iter().enumerate() {
+        for msg in state.messages.iter() {
             if Self::should_skip_msg(msg, state) {
                 continue;
             }
-            let elem = Self::msg_to_elem(msg, state);
-            let request_id = msg.id.split('#').next().unwrap_or(&msg.id).to_string();
-            entries.push((msg.timestamp, idx, elem, msg.id.clone(), request_id));
+            entries.push(Self::msg_to_elem(msg, state));
         }
 
-        Self::add_thinking_if_active(state, &mut entries);
+        if let Some(started) = state.thinking_started_at {
+            let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
+            let turn_ts = state.messages.iter()
+                .find(|m| m.role == Role::TurnComplete)
+                .map(|m| m.timestamp);
+            let turn_complete_for_current = state.current_request_id.as_ref().and_then(|id| {
+                state.messages.iter()
+                    .find(|m| m.role == Role::TurnComplete && m.id == *id)
+                    .map(|m| m.timestamp)
+            });
+            let ts = if let Some(tc_ts) = turn_complete_for_current {
+                tc_ts - 1e-6
+            } else {
+                turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6)
+            };
+            entries.push(Element::Thinking { started, timestamp: ts });
+        }
 
-        entries.sort_by(|a, b| {
-            a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-                .then(a.1.cmp(&b.1))
-        });
         entries
     }
 
@@ -55,19 +71,6 @@ impl LazyCache {
             && state.current_request_id.as_deref() == Some(&msg.id)
     }
 
-    fn add_thinking_if_active(state: &AppState, entries: &mut Vec<(f64, usize, Element, String, String)>) {
-        if let Some(started) = state.thinking_started_at {
-            let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
-            let turn_ts = state.messages.iter()
-                .find(|m| m.role == Role::TurnComplete)
-                .map(|m| m.timestamp);
-            // If TurnComplete exists, Thinking must sort before it.
-            // Use TurnComplete's timestamp with a lower index as tie-breaker.
-            let ts = turn_ts.map(|t| t).unwrap_or(max_ts + 1.0);
-            entries.push((ts, 0, Element::Thinking { started }, String::new(), String::new()));
-        }
-    }
-
     pub fn visible(cache: &[Element], skip: usize, take: usize) -> &[Element] {
         let start = skip.min(cache.len());
         let end = (start + take).min(cache.len());
@@ -75,22 +78,41 @@ impl LazyCache {
     }
 
     fn msg_to_elem(msg: &ChatMessage, state: &AppState) -> Element {
-        let ts = format_timestamp(msg.timestamp);
+        let ts = msg.timestamp;
         match msg.role {
-            Role::User => Element::UserMessage { content: msg.content.clone(), timestamp: ts },
+            Role::User => Element::UserMessage {
+                content: msg.content.clone(),
+                timestamp: ts,
+            },
             Role::Thought => {
                 if state.all_collapsed {
                     let first_line = msg.content.lines().next().unwrap_or(&msg.content).to_string();
                     let dur = Self::parse_thought_dur(&msg.content);
-                    Element::ThoughtSummary { content: first_line, duration_secs: dur }
+                    Element::ThoughtSummary {
+                        content: first_line,
+                        duration_secs: dur,
+                        timestamp: ts,
+                    }
                 } else {
-                    Element::ThoughtMarker { content: msg.content.clone() }
+                    Element::ThoughtMarker {
+                        content: msg.content.clone(),
+                        timestamp: ts,
+                    }
                 }
             }
-            Role::Assistant => Element::AgentMessage { content: crate::update::strip_tool_markers(&msg.content), timestamp: ts },
-            Role::Tool => Self::tool_elem(msg, state),
-            Role::TurnComplete => Element::TurnComplete { duration_secs: Self::parse_dur(&msg.content) },
-            Role::System => Element::ThoughtMarker { content: msg.content.clone() },
+            Role::Assistant => Element::AgentMessage {
+                content: crate::update::strip_tool_markers(&msg.content),
+                timestamp: ts,
+            },
+            Role::Tool => Self::tool_elem(msg, state, ts),
+            Role::TurnComplete => Element::TurnComplete {
+                duration_secs: Self::parse_dur(&msg.content),
+                timestamp: ts,
+            },
+            Role::System => Element::ThoughtMarker {
+                content: msg.content.clone(),
+                timestamp: ts,
+            },
         }
     }
 
@@ -100,23 +122,34 @@ impl LazyCache {
             .unwrap_or(0.0)
     }
 
-    fn tool_elem(msg: &ChatMessage, state: &AppState) -> Element {
-        if msg.content.contains("Running") {
+    fn tool_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
+        if msg.content.contains("⠋ Running ") {
             let name = msg.content.trim_start_matches("⠋ Running ").trim_end_matches("...");
-            Element::ToolRunning { name: name.to_string(), started: state.tool_started_at.unwrap_or_else(std::time::Instant::now) }
+            Element::ToolRunning {
+                name: name.to_string(),
+                started: state.tool_started_at.unwrap_or_else(std::time::Instant::now),
+                timestamp: ts,
+            }
         } else {
             let lines: Vec<&str> = msg.content.lines().collect();
             let header = lines.first().copied().unwrap_or("");
             let output = lines.get(1..).map(|rest| rest.join("\n")).unwrap_or_default();
             let parts: Vec<&str> = header.split_whitespace().collect();
-            // Old format: "Ran {name} {duration}s" -> name at index 1
-            // New format: "✓ {name} {duration}s" -> name at index 1
             let name = parts.get(1).unwrap_or(&"").to_string();
             let dur = parts.last().and_then(|s| s.trim_end_matches('s').parse().ok()).unwrap_or(0.0);
             if state.all_collapsed {
-                Element::ToolSummary { name, duration_secs: dur }
+                Element::ToolSummary {
+                    name,
+                    duration_secs: dur,
+                    timestamp: ts,
+                }
             } else {
-                Element::ToolDone { name, duration_secs: dur, output }
+                Element::ToolDone {
+                    name,
+                    duration_secs: dur,
+                    output,
+                    timestamp: ts,
+                }
             }
         }
     }
@@ -150,16 +183,16 @@ pub mod format_test {
 
     fn render_element(element: &Element, state: &crate::model::AppState) -> Vec<DisplayLine> {
         match element {
-            Element::Spacer => vec![DisplayLine { spans: vec![] }],
+            Element::Spacer { .. } => vec![DisplayLine { spans: vec![] }],
             Element::UserMessage { content, .. } => render_user(content),
             Element::AgentMessage { content, .. } => render_agent(content),
-            Element::Thinking { started } => render_thinking(state, *started),
-            Element::ThoughtMarker { content } => render_thought_marker(content),
+            Element::Thinking { started, .. } => render_thinking(state, *started),
+            Element::ThoughtMarker { content, .. } => render_thought_marker(content),
             Element::ThoughtSummary { content, .. } => render_thought_summary(content),
-            Element::ToolRunning { name, started } => render_tool_running(state, name, *started),
-            Element::ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
-            Element::ToolSummary { name, duration_secs } => render_tool_summary(name, *duration_secs),
-            Element::TurnComplete { duration_secs } => render_turn_complete(*duration_secs),
+            Element::ToolRunning { name, started, .. } => render_tool_running(state, name, *started),
+            Element::ToolDone { name, duration_secs, output, .. } => render_tool_done(name, *duration_secs, output),
+            Element::ToolSummary { name, duration_secs, .. } => render_tool_summary(name, *duration_secs),
+            Element::TurnComplete { duration_secs, .. } => render_turn_complete(*duration_secs),
         }
     }
 

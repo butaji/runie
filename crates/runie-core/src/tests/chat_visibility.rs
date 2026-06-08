@@ -18,7 +18,7 @@ fn visible_kinds(state: &AppState, height: usize) -> Vec<String> {
         crate::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
         crate::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
         crate::ui::Element::TurnComplete { .. } => "Turn".to_string(),
-        crate::ui::Element::Spacer => "Spacer".to_string(),
+        crate::ui::Element::Spacer { .. } => "Spacer".to_string(),
     }).filter(|k| k != "Spacer").collect()
 }
 
@@ -29,7 +29,7 @@ fn latest_is_visible(state: &AppState, height: usize) -> bool {
         return false;
     }
     // The last non-spacer element should be visible
-    let last = region.elements.iter().rev().find(|e| !matches!(e, crate::ui::Element::Spacer));
+    let last = region.elements.iter().rev().find(|e| !matches!(e, crate::ui::Element::Spacer { .. }));
     last.is_some()
 }
 

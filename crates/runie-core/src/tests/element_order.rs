@@ -14,7 +14,7 @@ fn element_kinds(state: &AppState) -> Vec<String> {
         crate::ui::Element::ToolDone { .. } => "ToolDone".to_string(),
         crate::ui::Element::ToolSummary { .. } => "ToolSum".to_string(),
         crate::ui::Element::TurnComplete { .. } => "Turn".to_string(),
-        crate::ui::Element::Spacer => "Spacer".to_string(),
+        crate::ui::Element::Spacer { .. } => "Spacer".to_string(),
     }).collect()
 }
 

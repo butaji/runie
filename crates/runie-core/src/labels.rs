@@ -43,15 +43,4 @@ pub fn tool_done(name: &str, seconds: f64) -> String {
     format!("✓ {} {:.1}s", name, seconds)
 }
 
-/// tui1-style thinking indicator (new)
-pub fn thinking_text(elapsed: f64) -> String {
-    format!("{} ◐ {:.1}s", SPINNER_THINKING, elapsed)
-}
-
-/// tui1-style working indicator (new)
-pub fn working_text(elapsed: f64) -> String {
-    format!("{} ◐ {:.1}s", SPINNER_WORKING, elapsed)
-}
-
 pub const SPINNER_THINKING: char = '◐';
-pub const SPINNER_WORKING: char = '◐';

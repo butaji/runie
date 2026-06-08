@@ -18,6 +18,7 @@ use ratatui::{
 use runie_core::{Element, Snapshot};
 
 use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown, parse_inline_markdown_with_color, CodeBlock};
+use runie_core::format_timestamp;
 use crate::theme::{
     C, GLYPH_USER, GLYPH_AGENT, GLYPH_TOOL, GLYPH_INDENT,
     GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_CHAT, PANEL_INPUT,
@@ -167,33 +168,34 @@ fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height
 fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
-        Spacer => vec![Line::from("")],
-        UserMessage { content, timestamp } => render_user_message(content, timestamp),
-        AgentMessage { content, timestamp } => render_agent_message(content, timestamp),
-        Thinking { started } => vec![Line::from(
+        Spacer { .. } => vec![Line::from("")],
+        UserMessage { content, timestamp } => render_user_message(content, *timestamp),
+        AgentMessage { content, timestamp } => render_agent_message(content, *timestamp),
+        Thinking { started, .. } => vec![Line::from(
             thinking_line(started.elapsed().as_secs_f64())
         ).style(style_thinking())],
         ThoughtSummary { content, .. } => vec![Line::from(
             thought_summary_line(content.lines().next().unwrap_or(content))
         ).style(style_thought_summary())],
-        ThoughtMarker { content } => render_thought_marker(content),
-        ToolRunning { name, started } => vec![Line::from(
+        ThoughtMarker { content, .. } => render_thought_marker(content),
+        ToolRunning { name, started, .. } => vec![Line::from(
             tool_running_line(name, started.elapsed().as_secs_f64())
         ).style(style_tool_running())],
-        ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
-        ToolSummary { name, duration_secs } => vec![Line::from(
+        ToolDone { name, duration_secs, output, .. } => render_tool_done(name, *duration_secs, output),
+        ToolSummary { name, duration_secs, .. } => vec![Line::from(
             tool_summary_line(name, *duration_secs)
         ).style(style_tool_summary())],
-        TurnComplete { duration_secs } => vec![Line::from(
+        TurnComplete { duration_secs, .. } => vec![Line::from(
             turn_complete_line(*duration_secs)
         ).style(style_turn_complete())],
     }
 }
 
-fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
+fn render_user_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
+    let ts_str = format_timestamp(timestamp);
     for (i, line) in content.lines().enumerate() {
-        let ts = format!(" {:>5}", timestamp);
+        let ts = format!(" {:>5}", ts_str);
         let prefix = if i == 0 { GLYPH_USER } else { GLYPH_INDENT };
         let mut spans = vec![Span::styled(prefix, style_user())];
         spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg_bright)));
@@ -201,16 +203,17 @@ fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
         lines.push(Line::from(spans));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{}{:>5}", GLYPH_USER, timestamp)).style(style_user()));
+        lines.push(Line::from(format!("{}{:>5}", GLYPH_USER, ts_str)).style(style_user()));
     }
     lines
 }
 
-fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
+fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let mut lines = Vec::new();
     let mut is_first = true;
 
+    let ts_str = format_timestamp(timestamp);
     for block in blocks {
         match block {
             CodeBlock::Text(text) => {
@@ -225,14 +228,14 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
                 lines.push(render_code_header(&lang, is_first));
                 is_first = false;
                 for line in content.lines() {
-                    let text = format!("{}{} {:>5}", GLYPH_INDENT, line, timestamp);
+                    let text = format!("{}{} {:>5}", GLYPH_INDENT, line, ts_str);
                     lines.push(Line::from(text).style(style_code_block()));
                 }
             }
         }
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{}{:>5}", GLYPH_AGENT, timestamp)).style(style_agent()));
+        lines.push(Line::from(format!("{}{:>5}", GLYPH_AGENT, ts_str)).style(style_agent()));
     }
     lines
 }
@@ -244,11 +247,11 @@ fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
 
 fn render_agent_markdown_line(
     line: &str,
-    timestamp: &str,
+    timestamp: f64,
     is_first: bool,
 ) -> Line<'static> {
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
-    let ts = format!(" {:>5}", timestamp);
+    let ts = format!(" {:>5}", format_timestamp(timestamp));
     let mut spans = vec![Span::styled(prefix.to_string(), style_agent())];
     spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg)));
     spans.push(Span::styled(ts, style_timestamp()));
@@ -257,14 +260,14 @@ fn render_agent_markdown_line(
 
 fn render_markdown_line(
     line: &str,
-    timestamp: &str,
+    timestamp: f64,
     is_first: bool,
     first_prefix: &str,
     rest_prefix: &str,
     base_style: Style,
 ) -> Line<'static> {
     let prefix = if is_first { first_prefix } else { rest_prefix };
-    let ts = format!(" {:>5}", timestamp);
+    let ts = format!(" {:>5}", format_timestamp(timestamp));
     let mut spans = vec![Span::styled(prefix.to_string(), base_style)];
     spans.extend(md_to_spans(&parse_inline_markdown(line)));
     spans.push(Span::styled(ts, style_timestamp()));
@@ -377,13 +380,13 @@ fn estimate_element_tokens(elem: &Element) -> usize {
     match elem {
         UserMessage { content, .. }
         | AgentMessage { content, .. }
-        | ThoughtMarker { content } => content.len() / 4,
+        | ThoughtMarker { content, .. } => content.len() / 4,
         Thinking { .. }
         | ThoughtSummary { .. }
         | ToolSummary { .. }
         | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
-        Spacer => 0,
+        Spacer { .. } => 0,
     }
 }

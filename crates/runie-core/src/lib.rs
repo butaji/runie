@@ -24,12 +24,12 @@ mod tests;
 #[cfg(test)]
 mod file_refs_lookup_tests;
 
-pub use model::{AppState, ChatMessage, Color, Role};
+pub use model::{AppState, ChatMessage, Role};
 pub use snapshot::Snapshot;
 pub use session::{Session, save, load, list, delete};
 pub use event::Event;
 pub use labels::{
-    THINKING_LOADING, thinking_with_time, thought_with_time,
+    THINKING_LOADING, thinking_with_time, thought_with_time, format_timestamp,
 };
 pub use ui::{Element, Feed, LazyCache};
 pub use provider::{Message, Provider, ResponseChunk};

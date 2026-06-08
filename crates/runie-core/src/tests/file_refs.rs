@@ -20,6 +20,14 @@ fn find_files_empty_pattern() {
 }
 
 #[test]
+fn find_files_substring_match() {
+    let files = find_files("toml", ".", 10);
+    assert!(!files.is_empty());
+    assert!(files.iter().any(|f| f.contains("toml") || f.contains("TOML")),
+        "Should find files matching substring 'toml'. Got: {:?}", files);
+}
+
+#[test]
 fn is_image_file_detects_png() {
     assert!(is_image_file("photo.png"));
     assert!(is_image_file("image.jpg"));
