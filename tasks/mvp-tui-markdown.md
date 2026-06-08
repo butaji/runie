@@ -1,6 +1,6 @@
 # Markdown rendering
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: MVP
 
@@ -12,6 +12,6 @@ Render markdown in agent messages.
 
 ## Acceptance Criteria
 
-- [ ] Inline formatting (bold, italic, code)
-- [ ] Code blocks with language detection
-- [ ] Lists and blockquotes
+- [x] Inline formatting (bold, italic, code)
+- [x] Code blocks with language detection
+- [x] Lists and blockquotes

@@ -95,6 +95,8 @@ fn flush_plain(current: &mut String, spans: &mut Vec<MdSpan>, style: Style) {
 pub enum CodeBlock {
     Text(String),
     Code { lang: String, content: String },
+    List { ordered: bool, items: Vec<String> },
+    Blockquote(String),
 }
 
 /// Extract code blocks (``` fenced) from text.
@@ -112,10 +114,32 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
     let mut lang = String::new();
     let mut code_lines: Vec<&str> = Vec::new();
     let mut text_lines: Vec<&str> = Vec::new();
+    let mut in_list = false;
+    let mut list_ordered = false;
+    let mut list_items: Vec<String> = Vec::new();
+    let mut current_list_item = String::new();
+    let mut in_blockquote = false;
+    let mut blockquote_lines: Vec<&str> = Vec::new();
+
+    fn flush_list(items: &mut Vec<String>, blocks: &mut Vec<CodeBlock>, ordered: bool) {
+        if !items.is_empty() {
+            blocks.push(CodeBlock::List { ordered, items: std::mem::take(items) });
+        }
+    }
+
+    fn flush_blockquote(lines: &mut Vec<&str>, blocks: &mut Vec<CodeBlock>) {
+        if !lines.is_empty() {
+            blocks.push(CodeBlock::Blockquote(lines.join("\n")));
+            lines.clear();
+        }
+    }
 
     for line in text.lines() {
+        // Code blocks (``` fenced)
         if line.starts_with("```") {
             flush_text(&mut text_lines, &mut blocks);
+            flush_list(&mut list_items, &mut blocks, list_ordered);
+            flush_blockquote(&mut blockquote_lines, &mut blocks);
             if in_code {
                 blocks.push(CodeBlock::Code {
                     lang: std::mem::take(&mut lang),
@@ -126,16 +150,97 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
                 lang = line[3..].trim().to_string();
             }
             in_code = !in_code;
-        } else if in_code {
-            code_lines.push(line);
-        } else {
-            text_lines.push(line);
+            continue;
         }
+
+        if in_code {
+            code_lines.push(line);
+            continue;
+        }
+
+        // Blockquotes (> )
+        if line.starts_with("> ") {
+            flush_text(&mut text_lines, &mut blocks);
+            flush_list(&mut list_items, &mut blocks, list_ordered);
+            blockquote_lines.push(&line[2..]);
+            in_blockquote = true;
+            continue;
+        } else if in_blockquote && line.starts_with(">") {
+            blockquote_lines.push(line.trim_start_matches('>').trim_start());
+            continue;
+        } else if in_blockquote {
+            flush_blockquote(&mut blockquote_lines, &mut blocks);
+            in_blockquote = false;
+        }
+
+        // Lists (- item, * item, 1. item, 2. item)
+        let is_unordered = line.starts_with("- ") || line.starts_with("* ");
+        let is_ordered = line.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+            && line.contains('.');
+
+        if is_unordered || is_ordered {
+            flush_text(&mut text_lines, &mut blocks);
+            flush_blockquote(&mut blockquote_lines, &mut blocks);
+            
+            // Check if this continues a list
+            let item_text = if is_unordered {
+                line[2..].trim().to_string()
+            } else {
+                // "1. item" -> "item"
+                line.split_once('.').map(|(_, rest)| rest.trim().to_string()).unwrap_or_default()
+            };
+            let this_ordered = is_ordered;
+            
+            if in_list && list_ordered == this_ordered {
+                // Continue current list
+                if !current_list_item.is_empty() {
+                    list_items.push(std::mem::take(&mut current_list_item));
+                }
+                current_list_item = item_text;
+            } else {
+                // Start new list
+                flush_list(&mut list_items, &mut blocks, list_ordered);
+                list_ordered = this_ordered;
+                current_list_item = item_text;
+                in_list = true;
+            }
+            continue;
+        } else if in_list {
+            // Non-list line - check if it's a continuation of the current item
+            let trimmed = line.trim_start();
+            if !trimmed.is_empty() && !trimmed.starts_with("> ") {
+                // Check if this looks like continuation (indented)
+                let leading_spaces = line.len() - line.trim_start().len();
+                if leading_spaces >= 2 {
+                    current_list_item.push_str(" ");
+                    current_list_item.push_str(trimmed);
+                    continue;
+                }
+            }
+            // End of list
+            if !current_list_item.is_empty() {
+                list_items.push(std::mem::take(&mut current_list_item));
+            }
+            flush_list(&mut list_items, &mut blocks, list_ordered);
+            in_list = false;
+        }
+
+        text_lines.push(line);
     }
 
+    // Flush remaining content
     if in_code {
         text_lines.push("```");
         text_lines.extend(code_lines);
+    }
+    if in_list {
+        if !current_list_item.is_empty() {
+            list_items.push(current_list_item);
+        }
+        flush_list(&mut list_items, &mut blocks, list_ordered);
+    }
+    if in_blockquote {
+        flush_blockquote(&mut blockquote_lines, &mut blocks);
     }
     flush_text(&mut text_lines, &mut blocks);
     blocks
