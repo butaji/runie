@@ -333,6 +333,16 @@ impl AppState {
         if content.is_empty() {
             return;
         }
+
+        // Handle bash prefix (!)
+        if content.starts_with('!') {
+            let command = content[1..].trim().to_string();
+            if !command.is_empty() {
+                self.run_bash_command(&command);
+            }
+            return;
+        }
+
         self.input_history.push(content.clone());
         if let Some(response) = self.handle_slash(&content) {
             self.add_system_msg(response);
@@ -355,6 +365,15 @@ impl AppState {
             id: id.clone(),
         });
         self.request_queue.push_back((content, id));
+        self.scroll = 0;
+        self.messages_changed();
+    }
+
+    /// Run a bash command and display output
+    fn run_bash_command(&mut self, command: &str) {
+        let result = bash::execute_bash(command);
+        let output_msg = format!("$ {}\n{}", command, result);
+        self.add_system_msg(output_msg);
         self.scroll = 0;
         self.messages_changed();
     }

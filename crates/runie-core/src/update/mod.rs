@@ -2,6 +2,7 @@ use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
 mod agent;
+mod bash;
 mod input;
 mod queue;
 mod slash;

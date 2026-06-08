@@ -41,6 +41,8 @@ pub enum DomainEvent {
     SwitchModel { provider: String, model: String },
     FollowUp { content: String },
     ToolRegistered { name: String },
+    /// Bash command output (from ! prefix) — not sent to agent
+    BashOutput { command: String, output: String },
 }
 
 impl BusEvent for DomainEvent {
