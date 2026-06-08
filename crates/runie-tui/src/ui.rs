@@ -99,7 +99,7 @@ fn render_empty_state(f: &mut Frame, area: Rect) {
     let hint = Line::from("Type a message to start...")
         .style(Style::default().fg(C.dim));
     f.render_widget(
-        Paragraph::new(hint).alignment(ratatui::layout::Alignment::Center),
+        Paragraph::new(hint),
         area,
     );
 }
@@ -193,14 +193,14 @@ fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let prefix = "$ ";
     for (i, line) in content.lines().enumerate() {
         let text = if i == 0 {
-            format!("{}{} {}", prefix, line, timestamp)
+            format!("{}{} {:>5}", prefix, line, timestamp)
         } else {
-            format!("  {} {}", line, timestamp)
+            format!("  {} {:>5}", line, timestamp)
         };
         lines.push(Line::from(text).style(Style::default().fg(C.fg_bright)));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{} {}", prefix, timestamp))
+        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
             .style(Style::default().fg(C.fg_bright)));
     }
     lines
@@ -211,14 +211,14 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let prefix = "→ ";
     for (i, line) in content.lines().enumerate() {
         let text = if i == 0 {
-            format!("{}{} {}", prefix, line, timestamp)
+            format!("{}{} {:>5}", prefix, line, timestamp)
         } else {
-            format!("  {} {}", line, timestamp)
+            format!("  {} {:>5}", line, timestamp)
         };
         lines.push(Line::from(text).style(Style::default().fg(C.fg)));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{} {}", prefix, timestamp))
+        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
             .style(Style::default().fg(C.fg)));
     }
     lines
