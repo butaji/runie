@@ -294,10 +294,25 @@ fn map_key_event(key: &KeyEvent) -> Option<CoreEvent> {
 
 fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
+        // Ctrl+E: toggle expand (also Ctrl+Shift+E on terminals with proper modifier)
         KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
-        KeyCode::Char('c') | KeyCode::Char('C')
-        | KeyCode::Char('q') | KeyCode::Char('Q')
-        | KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::Quit),
+        // Ctrl+A: move cursor to start (Emacs)
+        KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
+        // Ctrl+E: move cursor to end (Emacs)
+        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
+        // Ctrl+F: move cursor forward (Emacs) - also Ctrl+Right
+        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorRight),
+        // Ctrl+W: delete word (Emacs)
+        KeyCode::Char('w') | KeyCode::Char('W') => Some(CoreEvent::DeleteWord),
+        // Ctrl+K: delete to end (Emacs)
+        KeyCode::Char('k') | KeyCode::Char('K') => Some(CoreEvent::DeleteToEnd),
+        // Ctrl+U: delete to start (Emacs)
+        KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::DeleteToStart),
+        // Ctrl+D: delete char at cursor (Emacs)
+        KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::KillChar),
+        // Ctrl+C: quit
+        KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
+        // Ctrl+S: abort
         KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
         _ => None,
     }
@@ -319,6 +334,11 @@ fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Enter => Some(CoreEvent::Submit),
         KeyCode::Up => Some(CoreEvent::ScrollUp),
         KeyCode::Down => Some(CoreEvent::ScrollDown),
+        KeyCode::Left => Some(CoreEvent::CursorLeft),
+        KeyCode::Right => Some(CoreEvent::CursorRight),
+        KeyCode::Home => Some(CoreEvent::CursorStart),
+        KeyCode::End => Some(CoreEvent::CursorEnd),
+        KeyCode::Delete => Some(CoreEvent::KillChar),
         _ => None,
     }
 }

@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod input;
 #[cfg(test)]
+mod input_cursor;
+#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod dsl;
