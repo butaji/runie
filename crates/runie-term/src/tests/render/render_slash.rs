@@ -46,7 +46,7 @@ fn test_render_sessions_list_on_separate_lines() {
 
     let buf = terminal.backend().buffer();
     let lines: Vec<String> = (0..buf.area().height)
-        .map(|y| (0..buf.area().width).map(|x| buf.get(x, y).symbol()).collect::<String>())
+        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
         .collect();
 
     let session_line_count = lines.iter().filter(|l| l.contains("alpha") || l.contains("beta")).count();

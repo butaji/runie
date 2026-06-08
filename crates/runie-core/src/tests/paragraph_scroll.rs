@@ -19,7 +19,7 @@ fn scroll_offset_zero_when_at_bottom() {
     state.scroll = 0; // at bottom
 
     let snap = state.snapshot();
-    // total_lines = 2 (user + spacer), height = 5
+    // total_lines = 1 (user + spacer=0), height = 5
     // max_scroll = 0 (fits), offset = 0 - 0 = 0
     assert_eq!(snap.scroll_offset(5), 0, "When content fits, offset is 0");
 }
@@ -40,8 +40,8 @@ fn scroll_offset_max_when_fully_scrolled() {
     state.scroll = 100; // fully scrolled up (clamped)
 
     let snap = state.snapshot();
-    // total_lines = 20, height = 5, max_scroll = 15
-    // offset = 15 - 15 = 0 (top)
+    // total_lines = 10, height = 5, max_scroll = 5
+    // offset = 5 - 5 = 0 (top)
     assert_eq!(snap.scroll_offset(5), 0, "Fully scrolled up shows from top");
 }
 
@@ -61,9 +61,9 @@ fn scroll_offset_shows_bottom_when_zero() {
     state.scroll = 0; // at bottom
 
     let snap = state.snapshot();
-    // total_lines = 20, height = 5, max_scroll = 15
-    // offset = 15 - 0 = 15 (from top = bottom)
-    assert_eq!(snap.scroll_offset(5), 15, "At bottom, offset = max_scroll");
+    // total_lines = 10, height = 5, max_scroll = 5
+    // offset = 5 - 0 = 5 (from top = bottom)
+    assert_eq!(snap.scroll_offset(5), 5, "At bottom, offset = max_scroll");
 }
 
 #[test]
@@ -82,9 +82,9 @@ fn scroll_offset_halfway() {
     state.scroll = 7; // halfway up
 
     let snap = state.snapshot();
-    // total_lines = 20, height = 5, max_scroll = 15
-    // offset = 15 - 7 = 8
-    assert_eq!(snap.scroll_offset(5), 8, "Halfway scroll gives correct offset");
+    // total_lines = 10, height = 5, max_scroll = 5
+    // offset = 5 - 7 = 0 (clamped)
+    assert_eq!(snap.scroll_offset(5), 0, "Halfway scroll gives correct offset");
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn scrollbar_state_has_viewport_content_length() {
     let snap = state.snapshot();
     let (thumb, _offset) = snap.scrollbar_metrics(5);
     // With viewport_content_length, thumb should reflect viewport ratio
-    // total = 20, viewport = 5, thumb = max(1, 5*5/20) = max(1, 1) = 1... but with
+    // total = 10, viewport = 5, thumb = max(1, 5*5/10) = max(1, 2) = 2... but with
     // proper viewport_content_length set, ratatui computes it internally
     // We just check thumb > 0 when content overflows
     assert!(thumb > 0 || snap.total_lines <= 5, "Thumb should be visible when content overflows");

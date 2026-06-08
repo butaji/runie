@@ -76,13 +76,13 @@ fn at_suggestions_popup_renders() {
     let buf = terminal.backend().buffer();
     let has_popup = (0..buf.area().height as usize).any(|y| {
         let line: String = (0..buf.area().width)
-            .map(|x| buf.get(x, y as u16).symbol().to_string())
+            .map(|x| buf[(x, y as u16)].symbol().to_string())
             .collect();
         line.contains("@ files")
     });
     let has_hint = (0..buf.area().height as usize).any(|y| {
         let line: String = (0..buf.area().width)
-            .map(|x| buf.get(x, y as u16).symbol().to_string())
+            .map(|x| buf[(x, y as u16)].symbol().to_string())
             .collect();
         line.contains("Tab=cycle")
     });
@@ -107,7 +107,7 @@ fn long_message_wraps_to_multiple_lines() {
     let content_lines: Vec<usize> = (0..buf.area().height as usize)
         .filter(|y| {
             let line: String = (0..buf.area().width)
-                .map(|x| buf.get(x, *y as u16).symbol().to_string())
+                .map(|x| buf[(x, *y as u16)].symbol().to_string())
                 .collect();
             line.contains('a')
         })
@@ -131,7 +131,7 @@ fn wrapping_preserves_prefix_on_first_line_only() {
     let lines_with_agent: Vec<String> = (0..buf.area().height as usize)
         .filter_map(|y| {
             let line: String = (0..buf.area().width)
-                .map(|x| buf.get(x, y as u16).symbol().to_string())
+                .map(|x| buf[(x, y as u16)].symbol().to_string())
                 .collect();
             if line.contains("→ ") { Some(line.trim().to_string()) } else { None }
         })
@@ -156,7 +156,7 @@ fn wrapping_respects_panel_width_minus_borders() {
     let inner_width = (width - 2) as usize;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
-            .map(|x| buf.get(x, y).symbol().to_string())
+            .map(|x| buf[(x, y as u16)].symbol().to_string())
             .collect();
         if line.trim().starts_with("$") || line.trim().starts_with("x") {
             let visible_len = line.trim_end().len();
@@ -188,7 +188,7 @@ fn tokens_on_right_side_of_status() {
     let mut tok_pos = None;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
-            .map(|x| buf.get(x, y).symbol().to_string())
+            .map(|x| buf[(x, y as u16)].symbol().to_string())
             .collect();
         if working_pos.is_none() {
             if let Some(pos) = line.find("Working") {

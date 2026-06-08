@@ -151,9 +151,7 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
         UserMessage { content, timestamp } => vec![Line::from(format!(
             "{} {} {:>5}", "$", content, timestamp
         )).style(Style::default().fg(C.fg_bright))],
-        AgentMessage { content, timestamp } => vec![Line::from(format!(
-            "{} {} {:>5}", "→", content, timestamp
-        )).style(Style::default().fg(C.fg))],
+        AgentMessage { content, timestamp } => render_agent_message(content, timestamp),
         // DS-04: tui1-style thinking indicator
         Thinking { started } => vec![Line::from(format!(
             "{} ◐ {:.1}s", "→", started.elapsed().as_secs_f64()
@@ -164,7 +162,7 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
         ThoughtMarker { content } => render_thought_marker(content),
         // DS-06: Tool calls inline as feed items
         ToolRunning { name, started } => vec![Line::from(format!(
-            "✓ {} {:.1}s", name, started.elapsed().as_secs_f64()
+            "✓ Running {}... {:.1}s", name, started.elapsed().as_secs_f64()
         )).style(Style::default().fg(C.fg_mid))],
         ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
         ToolSummary { name, duration_secs } => vec![Line::from(format!(
@@ -174,6 +172,22 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
             "Turn completed in {:.1}s", duration_secs
         )).style(Style::default().fg(C.dim))],
     }
+}
+
+fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    for (i, line) in content.lines().enumerate() {
+        let text = if i == 0 {
+            format!("{} {} {:>5}", "→", line, timestamp)
+        } else {
+            format!("  {} {:>5}", line, timestamp)
+        };
+        lines.push(Line::from(text).style(Style::default().fg(C.fg)));
+    }
+    if lines.is_empty() {
+        lines.push(Line::from(format!("→  {:>5}", timestamp)).style(Style::default().fg(C.fg)));
+    }
+    lines
 }
 
 fn render_thought_marker(content: &str) -> Vec<Line<'static>> {
