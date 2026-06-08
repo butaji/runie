@@ -3,6 +3,9 @@
 //! Architecture: the event loop builds immutable Snapshots;
 //! the render actor draws them. No state mutations, no blocking
 //! I/O, no caching — pure functions from Snapshot to Frame.
+//!
+//! DESIGN SYSTEM RULE: all colors, glyphs, and styles come from
+//! crate::theme only. No literals, no hardcoded values.
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -12,10 +15,22 @@ use ratatui::{
     Frame,
 };
 
-use runie_core::{Element, Snapshot, PANEL_CHAT, PANEL_INPUT};
+use runie_core::{Element, Snapshot};
 
 use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown, CodeBlock};
-use crate::theme::C;
+use crate::theme::{
+    C, GLYPH_USER, GLYPH_AGENT, GLYPH_TOOL, GLYPH_INDENT,
+    GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_CHAT, PANEL_INPUT,
+    SCROLLBAR_TRACK, SCROLLBAR_THUMB, INDICATOR_COLLAPSED,
+    code_header_label, thinking_line, tool_running_line, tool_done_header,
+    tool_summary_line, turn_complete_line, thought_summary_line,
+    style_user, style_agent, style_thought, style_thinking, style_thought_summary,
+    style_tool_running, style_tool_header, style_tool_output, style_tool_summary,
+    style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
+    style_status_active, style_border, style_border_flash, style_code_block,
+    style_code_header, style_input_cursor, style_placeholder, style_hint,
+    style_popup_selected, style_popup_unselected, style_popup_border,
+};
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
@@ -54,14 +69,14 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
         .split(area);
 
     let status_style = if snap.turn_active {
-        Style::default().fg(C.success)
+        style_status_active()
     } else {
-        Style::default().fg(C.dim)
+        style_status_idle()
     };
 
     f.render_widget(Paragraph::new(left_text).style(status_style), hchunks[0]);
     f.render_widget(
-        Paragraph::new(right_text).style(Style::default().fg(C.dim)),
+        Paragraph::new(right_text).style(style_timestamp()),
         hchunks[1],
     );
 }
@@ -85,7 +100,7 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_CHAT)
-        .border_style(Style::default().fg(C.dim));
+        .border_style(style_border());
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -97,8 +112,7 @@ fn messages(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 fn render_empty_state(f: &mut Frame, area: Rect) {
-    let hint = Line::from("Type a message to start...")
-        .style(Style::default().fg(C.dim));
+    let hint = Line::from("Type a message to start...").style(style_empty_state());
     f.render_widget(Paragraph::new(hint), area);
 }
 
@@ -148,8 +162,8 @@ fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height
         .orientation(ScrollbarOrientation::VerticalRight)
         .begin_symbol(None)
         .end_symbol(None)
-        .track_symbol(Some("│"))
-        .thumb_symbol("█");
+        .track_symbol(Some(SCROLLBAR_TRACK))
+        .thumb_symbol(SCROLLBAR_THUMB);
 
     let mut state = ScrollbarState::new(total)
         .position(offset as usize)
@@ -163,46 +177,38 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
         Spacer => vec![],
         UserMessage { content, timestamp } => render_user_message(content, timestamp),
         AgentMessage { content, timestamp } => render_agent_message(content, timestamp),
-        Thinking { started } => vec![Line::from(format!(
-            "{} ◐ {:.1}s", "→", started.elapsed().as_secs_f64()
-        )).style(Style::default().fg(C.accent))],
-        ThoughtSummary { content, .. } => vec![Line::from(format!(
-            "{} [+]", content.lines().next().unwrap_or(content)
-        )).style(Style::default().fg(C.dim))],
+        Thinking { started } => vec![Line::from(
+            thinking_line(started.elapsed().as_secs_f64())
+        ).style(style_thinking())],
+        ThoughtSummary { content, .. } => vec![Line::from(
+            thought_summary_line(content.lines().next().unwrap_or(content))
+        ).style(style_thought_summary())],
         ThoughtMarker { content } => render_thought_marker(content),
-        ToolRunning { name, started } => vec![Line::from(format!(
-            "✓ Running {}... {:.1}s", name, started.elapsed().as_secs_f64()
-        )).style(Style::default().fg(C.fg_mid))],
+        ToolRunning { name, started } => vec![Line::from(
+            tool_running_line(name, started.elapsed().as_secs_f64())
+        ).style(style_tool_running())],
         ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
-        ToolSummary { name, duration_secs } => vec![Line::from(format!(
-            "✓ {} {:.1}s [+]", name, duration_secs
-        )).style(Style::default().fg(C.dim))],
-        TurnComplete { duration_secs } => vec![Line::from(format!(
-            "Turn completed in {:.1}s", duration_secs
-        )).style(Style::default().fg(C.dim))],
+        ToolSummary { name, duration_secs } => vec![Line::from(
+            tool_summary_line(name, *duration_secs)
+        ).style(style_tool_summary())],
+        TurnComplete { duration_secs } => vec![Line::from(
+            turn_complete_line(*duration_secs)
+        ).style(style_turn_complete())],
     }
 }
 
 fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
-    let prefix = "$ ";
     for (i, line) in content.lines().enumerate() {
         let ts = format!(" {:>5}", timestamp);
-        if i == 0 {
-            let mut spans = vec![Span::styled(prefix, Style::default().fg(C.fg_bright))];
-            spans.extend(md_to_spans(&parse_inline_markdown(line)));
-            spans.push(Span::styled(ts, Style::default().fg(C.dim)));
-            lines.push(Line::from(spans));
-        } else {
-            let mut spans = vec![Span::styled("  ", Style::default().fg(C.fg_bright))];
-            spans.extend(md_to_spans(&parse_inline_markdown(line)));
-            spans.push(Span::styled(ts, Style::default().fg(C.dim)));
-            lines.push(Line::from(spans));
-        }
+        let prefix = if i == 0 { GLYPH_USER } else { GLYPH_INDENT };
+        let mut spans = vec![Span::styled(prefix, style_user())];
+        spans.extend(md_to_spans(&parse_inline_markdown(line)));
+        spans.push(Span::styled(ts, style_timestamp()));
+        lines.push(Line::from(spans));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
-            .style(Style::default().fg(C.fg_bright)));
+        lines.push(Line::from(format!("{}{:>5}", GLYPH_USER, timestamp)).style(style_user()));
     }
     lines
 }
@@ -216,7 +222,9 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
         match block {
             CodeBlock::Text(text) => {
                 for line in text.lines() {
-                    lines.push(render_markdown_line(line, timestamp, is_first, "→ ", "  ", C.fg));
+                    lines.push(render_markdown_line(
+                        line, timestamp, is_first, GLYPH_AGENT, GLYPH_INDENT, style_agent()
+                    ));
                     is_first = false;
                 }
             }
@@ -224,28 +232,21 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
                 lines.push(render_code_header(&lang, is_first));
                 is_first = false;
                 for line in content.lines() {
-                    let text = format!("  {} {:>5}", line, timestamp);
-                    lines.push(Line::from(text)
-                        .style(Style::default().fg(C.code).bg(C.code_bg)));
+                    let text = format!("{}{} {:>5}", GLYPH_INDENT, line, timestamp);
+                    lines.push(Line::from(text).style(style_code_block()));
                 }
             }
         }
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("→ {:>5}", timestamp))
-            .style(Style::default().fg(C.fg)));
+        lines.push(Line::from(format!("{}{:>5}", GLYPH_AGENT, timestamp)).style(style_agent()));
     }
     lines
 }
 
 fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
-    let prefix = if is_first { "→ " } else { "  " };
-    let text = if lang.is_empty() {
-        format!("{}[code]", prefix)
-    } else {
-        format!("{}[code:{}]", prefix, lang)
-    };
-    Line::from(text).style(Style::default().fg(C.dim))
+    let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
+    Line::from(code_header_label(prefix, lang)).style(style_code_header())
 }
 
 fn render_markdown_line(
@@ -254,54 +255,57 @@ fn render_markdown_line(
     is_first: bool,
     first_prefix: &str,
     rest_prefix: &str,
-    color: ratatui::style::Color,
+    base_style: Style,
 ) -> Line<'static> {
     let prefix = if is_first { first_prefix } else { rest_prefix };
     let ts = format!(" {:>5}", timestamp);
-    let mut spans = vec![Span::styled(prefix.to_string(), Style::default().fg(color))];
+    let mut spans = vec![Span::styled(prefix.to_string(), base_style)];
     spans.extend(md_to_spans(&parse_inline_markdown(line)));
-    spans.push(Span::styled(ts, Style::default().fg(C.dim)));
+    spans.push(Span::styled(ts, style_timestamp()));
     Line::from(spans)
 }
 
 fn render_thought_marker(content: &str) -> Vec<Line<'static>> {
     content.lines()
-        .map(|line| Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)))
+        .map(|line| Line::from(line.to_string()).style(style_thought()))
         .collect()
 }
 
 fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'static>> {
-    let mut lines = vec![Line::from(format!("✓ {} {:.1}s", name, duration_secs))
-        .style(Style::default().fg(C.success))];
+    let mut lines = vec![Line::from(tool_done_header(name, duration_secs))
+        .style(style_tool_header())];
     if !output.is_empty() {
         for line in output.lines() {
-            lines.push(Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)));
+            lines.push(Line::from(line.to_string()).style(style_tool_output()));
         }
     }
     lines
 }
 
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let border_color = if snap.input_flash > 0 { C.warning } else { C.dim };
+    let border_style = if snap.input_flash > 0 {
+        style_border_flash()
+    } else {
+        style_border()
+    };
     let block = Block::default()
         .borders(Borders::ALL)
         .title(PANEL_INPUT)
-        .border_style(Style::default().fg(border_color));
+        .border_style(border_style);
     let inner = block.inner(area);
 
     let spans = build_input_spans(snap);
     f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
 
-    let cursor_x = inner.x + ("$ ".len() + snap.cursor_pos.min(snap.input.len())) as u16;
+    let cursor_x = inner.x + (GLYPH_USER.len() + snap.cursor_pos.min(snap.input.len())) as u16;
     f.set_cursor_position((cursor_x, inner.y));
 }
 
 fn build_input_spans(snap: &Snapshot) -> Vec<Span<'_>> {
-    let prefix = "$ ";
     if snap.input.is_empty() && !snap.placeholder.is_empty() {
         return vec![
-            Span::styled(prefix, Style::default().fg(C.fg_bright)),
-            Span::styled(snap.placeholder.clone(), Style::default().fg(C.dim)),
+            Span::styled(GLYPH_USER, style_user()),
+            Span::styled(snap.placeholder.clone(), style_placeholder()),
         ];
     }
     let cursor_pos = snap.cursor_pos.min(snap.input.len());
@@ -314,23 +318,16 @@ fn build_input_spans(snap: &Snapshot) -> Vec<Span<'_>> {
         (' ', "")
     };
     vec![
-        Span::styled(prefix, Style::default().fg(C.fg_bright)),
-        Span::styled(before, Style::default().fg(C.fg_bright)),
-        Span::styled(at_cursor.to_string(), Style::default().bg(C.fg_bright).fg(C.bg)),
-        Span::styled(after, Style::default().fg(C.fg_bright)),
+        Span::styled(GLYPH_USER, style_user()),
+        Span::styled(before, style_user()),
+        Span::styled(at_cursor.to_string(), style_input_cursor()),
+        Span::styled(after, style_user()),
     ]
 }
 
-fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let hints_text = if snap.turn_active {
-        "Ctrl+Shift+E=expand/collapse | Enter=steer | Alt+Enter=follow-up | Esc=abort | Ctrl+C=quit"
-    } else {
-        "Ctrl+Shift+E=expand/collapse | Alt+Enter=follow-up | Esc=clear | Ctrl+C=quit"
-    };
-    f.render_widget(
-        Paragraph::new(hints_text).style(Style::default().fg(C.fg)),
-        area,
-    );
+fn hints(f: &mut Frame, _snap: &Snapshot, area: Rect) {
+    let hints_text = "Ctrl+Shift+E=expand/collapse | Alt+Enter=follow-up | Esc=clear | Ctrl+C=quit";
+    f.render_widget(Paragraph::new(hints_text).style(style_hint()), area);
 }
 
 fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
@@ -353,24 +350,19 @@ fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
         .take(8)
         .enumerate()
         .map(|(i, s)| {
-            let prefix = if i == selected { "▸ " } else { "  " };
-            let style = if i == selected {
-                Style::default().fg(C.dim).bg(C.fg_mid)
-            } else {
-                Style::default().fg(C.fg_mid)
-            };
+            let prefix = if i == selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
+            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
             Line::from(format!("{}{}", prefix, s)).style(style)
         })
         .collect();
     lines.push(Line::from(""));
     lines.push(
-        Line::from("Tab=cycle Enter=insert Esc=close")
-            .style(Style::default().fg(C.dim)),
+        Line::from("Tab=cycle Enter=insert Esc=close").style(style_hint()),
     );
     let block = Block::default()
         .borders(Borders::ALL)
         .title(format!(" @ files ({}) ", suggestions.len()))
-        .border_style(Style::default().fg(C.accent));
+        .border_style(style_popup_border());
     f.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 

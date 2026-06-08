@@ -1,5 +1,5 @@
 //! All static labels and text constants
-//! PANEL_CHAT and PANEL_INPUT are defined in model.rs
+//! Design system (colors, glyphs, borders) lives in runie-tui::theme.
 
 /// Format timestamp from f64 (unix seconds) to HH:MM
 pub fn format_timestamp(unix_secs: f64) -> String {
@@ -8,10 +8,6 @@ pub fn format_timestamp(unix_secs: f64) -> String {
     let mins = (secs / 60) % 60;
     format!("{:02}:{:02}", hours, mins)
 }
-
-// tui1-style prefixes (deprecated, use $ / → directly)
-pub const PREFIX_USER: &str = "$ ";
-pub const PREFIX_AGENT: &str = "→ ";
 
 // Legacy labels (deprecated)
 pub const THINKING_LOADING: &str = "Thinking...";
