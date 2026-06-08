@@ -193,15 +193,14 @@ fn render_user_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let prefix = "$ ";
     for (i, line) in content.lines().enumerate() {
         let text = if i == 0 {
-            format!("{}{} {:>5}", prefix, line, timestamp)
+            format!("{}{} {}", prefix, line, timestamp)
         } else {
-            // Critical #2: indent continuation lines
-            format!("  {} {:>5}", line, timestamp)
+            format!("  {} {}", line, timestamp)
         };
         lines.push(Line::from(text).style(Style::default().fg(C.fg_bright)));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
+        lines.push(Line::from(format!("{} {}", prefix, timestamp))
             .style(Style::default().fg(C.fg_bright)));
     }
     lines
@@ -212,15 +211,14 @@ fn render_agent_message(content: &str, timestamp: &str) -> Vec<Line<'static>> {
     let prefix = "→ ";
     for (i, line) in content.lines().enumerate() {
         let text = if i == 0 {
-            format!("{}{} {:>5}", prefix, line, timestamp)
+            format!("{}{} {}", prefix, line, timestamp)
         } else {
-            // Critical #2: indent continuation lines
-            format!("  {} {:>5}", line, timestamp)
+            format!("  {} {}", line, timestamp)
         };
         lines.push(Line::from(text).style(Style::default().fg(C.fg)));
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{} {:>5}", prefix, timestamp))
+        lines.push(Line::from(format!("{} {}", prefix, timestamp))
             .style(Style::default().fg(C.fg)));
     }
     lines
