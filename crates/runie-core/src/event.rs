@@ -8,11 +8,21 @@ pub enum Event {
     Submit,
     ScrollUp,
     ScrollDown,
-    
+
+    // Cursor movement (Emacs-style)
+    CursorLeft,
+    CursorRight,
+    CursorStart,
+    CursorEnd,
+
+    // Text editing (Emacs-style)
+    DeleteWord,      // Ctrl+W - delete word before cursor
+    DeleteToEnd,     // Ctrl+K - delete from cursor to end
+    DeleteToStart,   // Ctrl+U - delete from start to cursor
+    KillChar,        // Ctrl+D - delete char at cursor (if not empty)
 
     Quit,
     Reset,
-    
 
     AgentThinking { id: String },
     AgentThoughtDone { id: String },
@@ -22,12 +32,10 @@ pub enum Event {
     AgentTurnComplete { id: String, duration_secs: f64 },
     AgentDone { id: String },
     AgentError { id: String, message: String },
-    
 
     SwitchModel { provider: String, model: String },
     FollowUp,
     Abort,
-
 
     SpawnAgent,
     ToggleExpand,

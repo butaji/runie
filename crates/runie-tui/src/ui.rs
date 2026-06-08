@@ -200,12 +200,12 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
         .border_style(Style::default().fg(C.dim));
     let inner = block.inner(area);
     
-    // DS-05: Input prompt prefix and suffix
-    let input_display = if snap.input.is_empty() {
-        "$ ".to_string()
-    } else {
-        format!("{} ", snap.input)
-    };
+    // Build input display: "$ text"
+    let prefix = "$ ";
+    let input_len = snap.input.len();
+    let cursor_pos = snap.cursor_pos.min(input_len);
+    
+    let input_display = format!("{}{}", prefix, snap.input);
     
     f.render_widget(
         Paragraph::new(input_display.as_str())
@@ -213,8 +213,9 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
             .block(block),
         area,
     );
-    // DS-01: Cursor at end of input text
-    let cursor_x = inner.x + snap.input.len() as u16;
+    
+    // Position cursor at the cursor position
+    let cursor_x = inner.x + (prefix.len() + cursor_pos) as u16;
     f.set_cursor_position((cursor_x, inner.y));
 }
 

@@ -32,6 +32,8 @@ pub struct QueuedMessage {
 pub struct AppState {
     pub messages: Vec<ChatMessage>,
     pub input: String,
+    /// Cursor position in input (0 = before first char)
+    pub cursor_pos: usize,
     pub streaming: bool,
     pub scroll: usize,
     pub thinking_started_at: Option<std::time::Instant>,
@@ -79,6 +81,7 @@ impl Default for AppState {
         Self {
             messages: Vec::new(),
             input: String::new(),
+            cursor_pos: 0,
             streaming: false,
             scroll: 0,
             thinking_started_at: None,
@@ -205,6 +208,7 @@ impl AppState {
             line_counts: self.line_counts.clone(),
             total_lines: self.total_lines,
             input: self.input.clone(),
+            cursor_pos: self.cursor_pos,
             hint_text: self.hint_text(),
             at_suggestions: self.at_suggestions.clone(),
             at_selected: self.at_selected,
@@ -389,6 +393,7 @@ pub struct Snapshot {
     pub line_counts: Vec<usize>,
     pub total_lines: usize,
     pub input: String,
+    pub cursor_pos: usize,
     pub hint_text: String,
     pub at_suggestions: Option<Vec<String>>,
     pub at_selected: Option<usize>,
