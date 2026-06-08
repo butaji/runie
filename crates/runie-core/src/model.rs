@@ -48,8 +48,7 @@ pub struct AppState {
     pub current_action: Option<String>,
     pub current_provider: String,
     pub current_model: String,
-    /// Index of last tool message — avoids O(n) reverse search in end_tool()
-    pub(crate) last_tool_index: Option<usize>,
+
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
     /// Monotonic counter — increments on every snapshot sent to render actor
@@ -91,7 +90,7 @@ impl Default for AppState {
             intermediate_step_count: 0, animation_frame: 0,
             turn_active: false, current_action: None,
             current_provider: "mock".into(), current_model: "echo".into(),
-            last_tool_index: None, inflight: 0, render_generation: 0,
+            inflight: 0, render_generation: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             all_collapsed: false, thought_seq: 0,
             input_history: Vec::new(), history_pos: None,
