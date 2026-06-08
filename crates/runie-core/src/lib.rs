@@ -10,6 +10,7 @@
 pub mod model;
 pub mod event;
 pub mod event_bus;
+pub mod orchestrator;
 pub mod update;
 pub mod labels;
 pub mod ui;
