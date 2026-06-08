@@ -153,51 +153,39 @@ fn to_lines<'a>(elem: &'a Element, spinner_frame: char) -> Vec<Line<'a>> {
             spinner_frame,
             "Thinking",
             started.elapsed().as_secs_f64(),
-        ))
-        .style(Style::default().fg(C.accent))],
+        )).style(Style::default().fg(C.accent))],
         ThoughtSummary { content, .. } => vec![Line::from(format!(
-            "{} [+]",
-            content.lines().next().unwrap_or(content)
-        ))
-        .style(Style::default().fg(C.dim))],
-        ThoughtMarker { content } => content
-            .lines()
-            .map(|line| Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)))
-            .collect(),
+            "{} [+]", content.lines().next().unwrap_or(content)
+        )).style(Style::default().fg(C.dim))],
+        ThoughtMarker { content } => render_thought_marker(content),
         ToolRunning { name, started } => vec![Line::from(format!(
-            "{} Running {}... {:.1}s",
-            spinner_frame,
-            name,
-            started.elapsed().as_secs_f64()
-        ))
-        .style(Style::default().fg(C.fg_mid))],
-        ToolDone {
-            name,
-            duration_secs,
-            output,
-        } => {
-            let mut lines = vec![Line::from(format!("✓ {} {:.1}s", name, duration_secs))
-                .style(Style::default().fg(C.success))];
-            if !output.is_empty() {
-                for line in output.lines() {
-                    lines.push(
-                        Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)),
-                    );
-                }
-            }
-            lines
-        }
-        ToolSummary {
-            name,
-            duration_secs,
-        } => vec![Line::from(format!("✓ {} {:.1}s [+]", name, duration_secs))
-            .style(Style::default().fg(C.dim))],
+            "{} Running {}... {:.1}s", spinner_frame, name, started.elapsed().as_secs_f64()
+        )).style(Style::default().fg(C.fg_mid))],
+        ToolDone { name, duration_secs, output } => render_tool_done(name, *duration_secs, output),
+        ToolSummary { name, duration_secs } => vec![Line::from(format!(
+            "✓ {} {:.1}s [+]", name, duration_secs
+        )).style(Style::default().fg(C.dim))],
         TurnComplete { duration_secs } => vec![Line::from(format!(
-            "Turn completed in {:.1}s",
-            duration_secs
-        ))
-        .style(Style::default().fg(C.dim))],
+            "Turn completed in {:.1}s", duration_secs
+        )).style(Style::default().fg(C.dim))],
     }
+}
+
+fn render_thought_marker(content: &str) -> Vec<Line<'static>> {
+    content.lines()
+        .map(|line| Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)))
+        .collect()
+}
+
+fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'static>> {
+    let mut lines = vec![Line::from(format!("✓ {} {:.1}s", name, duration_secs))
+        .style(Style::default().fg(C.success))];
+    if !output.is_empty() {
+        for line in output.lines() {
+            lines.push(Line::from(line.to_string()).style(Style::default().fg(C.fg_mid)));
+        }
+    }
+    lines
 }
 
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
