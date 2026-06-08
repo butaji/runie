@@ -1,71 +1,83 @@
-use crate::AgentEvent;
+//! Tests for event types - now uses runie_core::Event directly
 use runie_core::Event;
 
-fn assert_converts(evt: AgentEvent, matcher: fn(&Event) -> bool) {
-    let core = evt.to_core_event();
-    assert!(matcher(&core), "Event conversion mismatch");
+#[test]
+fn test_agent_thinking_event() {
+    let evt = Event::AgentThinking { id: "req.0".to_string() };
+    match evt {
+        Event::AgentThinking { id } => assert_eq!(id, "req.0"),
+        _ => panic!("Expected AgentThinking"),
+    }
 }
 
 #[test]
-fn test_thinking_to_core() {
-    assert_converts(
-        AgentEvent::Thinking { id: "req.0".to_string() },
-        |e| matches!(e, Event::AgentThinking { id } if id == "req.0"),
-    );
+fn test_agent_response_event() {
+    let evt = Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "hello".to_string(),
+    };
+    match evt {
+        Event::AgentResponse { id, content } => {
+            assert_eq!(id, "req.0");
+            assert_eq!(content, "hello");
+        }
+        _ => panic!("Expected AgentResponse"),
+    }
 }
 
 #[test]
-fn test_thought_done_to_core() {
-    assert_converts(
-        AgentEvent::ThoughtDone { id: "req.0".to_string() },
-        |e| matches!(e, Event::AgentThoughtDone { id } if id == "req.0"),
-    );
+fn test_agent_tool_start_event() {
+    let evt = Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "bash".to_string(),
+    };
+    match evt {
+        Event::AgentToolStart { id, name } => {
+            assert_eq!(id, "req.0");
+            assert_eq!(name, "bash");
+        }
+        _ => panic!("Expected AgentToolStart"),
+    }
 }
 
 #[test]
-fn test_tool_start_to_core() {
-    assert_converts(
-        AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string() },
-        |e| matches!(e, Event::AgentToolStart { id, name } if id == "req.0" && name == "ls"),
-    );
+fn test_agent_tool_end_event() {
+    let evt = Event::AgentToolEnd {
+        duration_secs: 1.5,
+        output: "result".to_string(),
+    };
+    match evt {
+        Event::AgentToolEnd {
+            duration_secs,
+            output,
+        } => {
+            assert!((duration_secs - 1.5).abs() < 0.001);
+            assert_eq!(output, "result");
+        }
+        _ => panic!("Expected AgentToolEnd"),
+    }
 }
 
 #[test]
-fn test_tool_end_to_core() {
-    assert_converts(
-        AgentEvent::ToolEnd { duration_secs: 1.0, output: "out".to_string() },
-        |e| matches!(e, Event::AgentToolEnd { duration_secs, output } if *duration_secs == 1.0 && output == "out"),
-    );
+fn test_agent_done_event() {
+    let evt = Event::AgentDone { id: "req.0".to_string() };
+    match evt {
+        Event::AgentDone { id } => assert_eq!(id, "req.0"),
+        _ => panic!("Expected AgentDone"),
+    }
 }
 
 #[test]
-fn test_response_to_core() {
-    assert_converts(
-        AgentEvent::Response { id: "req.0".to_string(), content: "hi".to_string() },
-        |e| matches!(e, Event::AgentResponse { id, content } if id == "req.0" && content == "hi"),
-    );
-}
-
-#[test]
-fn test_turn_complete_to_core() {
-    assert_converts(
-        AgentEvent::TurnComplete { id: "req.0".to_string(), duration_secs: 2.0 },
-        |e| matches!(e, Event::AgentTurnComplete { id, duration_secs } if id == "req.0" && *duration_secs == 2.0),
-    );
-}
-
-#[test]
-fn test_done_to_core() {
-    assert_converts(
-        AgentEvent::Done { id: "req.0".to_string() },
-        |e| matches!(e, Event::AgentDone { id } if id == "req.0"),
-    );
-}
-
-#[test]
-fn test_error_to_core() {
-    assert_converts(
-        AgentEvent::Error { id: "req.0".to_string(), message: "oops".to_string() },
-        |e| matches!(e, Event::AgentError { id, message } if id == "req.0" && message == "oops"),
-    );
+fn test_agent_turn_complete_event() {
+    let evt = Event::AgentTurnComplete {
+        id: "req.0".to_string(),
+        duration_secs: 2.5,
+    };
+    match evt {
+        Event::AgentTurnComplete { id, duration_secs } => {
+            assert_eq!(id, "req.0");
+            assert!((duration_secs - 2.5).abs() < 0.001);
+        }
+        _ => panic!("Expected AgentTurnComplete"),
+    }
 }

@@ -1,11 +1,9 @@
-pub mod events;
 pub mod parser;
 pub mod safety;
 pub mod tools;
 pub mod truncate;
 pub mod turn;
 
-pub use events::{AgentEvent};
 pub use tools::{Tool, ToolResult};
 pub use turn::run_agent_turn;
 
