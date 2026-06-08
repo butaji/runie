@@ -6,9 +6,6 @@ use crate::ui::elements::Element;
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
 
-pub const PANEL_CHAT: &str = " Chat ";
-pub const PANEL_INPUT: &str = " Input ";
-
 /// A viewport into the element cache — elements plus how many
 /// lines to skip from the top of the first element.
 #[derive(Clone, Copy)]

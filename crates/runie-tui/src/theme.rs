@@ -1,18 +1,15 @@
-//! Design System — tui1-inspired theme
+//! Design System — Single source of truth for all visual design tokens.
 //!
-//! Color palette with WCAG-compliant contrast ratios:
-//! - bg:       "#0c0c0c" (dark background)
-//! - fg:       "#8a8a8a" (default text - better contrast)
-//! - fg_mid:   "#a8a8a8" (mid text - readable)
-//! - fg_bright: "#d0d0d0" (bright text - high contrast)
-//! - accent:   "#8b7cf4" (purple accent - thinking)
-//! - success:  "#3ebd6a" (green - working)
-//! - warning:  "#eab84a" (yellow - warnings)
-//! - dim:      "#4a4a4a" (UI chrome - readable)
+//! Rule: no color literals, glyphs, or style presets outside this file.
+//! Consumers import from here only; never hardcode values.
 
-use ratatui::style::Color;
+use ratatui::style::{Color, Style};
 
-/// Design system colors
+// ═════════════════════════════════════════════════════════════════════════════
+// COLOR PALETTE
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// WCAG-compliant color palette.
 pub struct Colors {
     pub bg: Color,
     pub fg: Color,
@@ -30,15 +27,15 @@ impl Colors {
     pub const fn new() -> Self {
         Self {
             bg: Color::Rgb(12, 12, 12),
-            fg: Color::Rgb(138, 138, 138),     // was 74 - now ~7:1 contrast
-            fg_mid: Color::Rgb(168, 168, 168),  // was 106 - now ~8:1 contrast
-            fg_bright: Color::Rgb(208, 208, 208), // was 144 - high contrast
-            accent: Color::Rgb(139, 124, 244),   // purple - unchanged
-            success: Color::Rgb(62, 189, 106),   // green - unchanged
-            warning: Color::Rgb(234, 184, 74),  // yellow - unchanged
-            dim: Color::Rgb(74, 74, 74),        // was 40 - now readable
-            code: Color::Rgb(180, 180, 200),      // light blue-grey for code
-            code_bg: Color::Rgb(30, 30, 40),      // subtle dark background for code
+            fg: Color::Rgb(138, 138, 138),
+            fg_mid: Color::Rgb(168, 168, 168),
+            fg_bright: Color::Rgb(208, 208, 208),
+            accent: Color::Rgb(139, 124, 244),
+            success: Color::Rgb(62, 189, 106),
+            warning: Color::Rgb(234, 184, 74),
+            dim: Color::Rgb(74, 74, 74),
+            code: Color::Rgb(180, 180, 200),
+            code_bg: Color::Rgb(30, 30, 40),
         }
     }
 }
@@ -51,20 +48,193 @@ impl Default for Colors {
 
 pub const C: Colors = Colors::new();
 
-/// Status variants for coloring
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Ready,
-    Thinking,
-    Working,
+// ═════════════════════════════════════════════════════════════════════════════
+// GLYPHS
+// ═════════════════════════════════════════════════════════════════════════════
+
+pub const GLYPH_USER: &str = "$ ";
+pub const GLYPH_AGENT: &str = "→ ";
+pub const GLYPH_TOOL: &str = "✓ ";
+pub const GLYPH_INDENT: &str = "  ";
+pub const GLYPH_SELECTED: &str = "▸ ";
+pub const GLYPH_UNSELECTED: &str = "  ";
+pub const GLYPH_THINKING: char = '◐';
+pub const GLYPH_SPINNER: char = '⠋';
+
+// Scrollbar
+pub const SCROLLBAR_TRACK: &str = "│";
+pub const SCROLLBAR_THUMB: &str = "█";
+
+// Collapse indicator
+pub const INDICATOR_COLLAPSED: &str = " [+]";
+
+// Panel titles
+pub const PANEL_CHAT: &str = " Chat ";
+pub const PANEL_INPUT: &str = " Input ";
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SEMANTIC STYLES — single source of truth for every visual element
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// User message (bright, high-contrast)
+pub fn style_user() -> Style {
+    Style::default().fg(C.fg_bright)
 }
 
-impl Status {
-    pub fn color(&self) -> Color {
-        match self {
-            Status::Ready => C.fg,
-            Status::Thinking => C.accent,
-            Status::Working => C.success,
-        }
+/// Agent message (bright, high-contrast — primary content)
+pub fn style_agent() -> Style {
+    Style::default().fg(C.fg_bright)
+}
+
+/// Thought / reasoning marker (accent purple — internal reasoning)
+pub fn style_thought() -> Style {
+    Style::default().fg(C.accent)
+}
+
+/// Thinking indicator (accent purple — spinner + time)
+pub fn style_thinking() -> Style {
+    Style::default().fg(C.accent)
+}
+
+/// Thought summary when collapsed (dim)
+pub fn style_thought_summary() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Tool running (mid — less prominent than done)
+pub fn style_tool_running() -> Style {
+    Style::default().fg(C.fg_mid)
+}
+
+/// Tool done header (success green)
+pub fn style_tool_header() -> Style {
+    Style::default().fg(C.success)
+}
+
+/// Tool done output (regular fg — factual content deserves clarity)
+pub fn style_tool_output() -> Style {
+    Style::default().fg(C.fg)
+}
+
+/// Tool summary when collapsed (dim)
+pub fn style_tool_summary() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Turn complete boundary marker (fg — readable boundary)
+pub fn style_turn_complete() -> Style {
+    Style::default().fg(C.fg)
+}
+
+/// Empty state hint (fg_mid — inviting but not shouting)
+pub fn style_empty_state() -> Style {
+    Style::default().fg(C.fg_mid)
+}
+
+/// Timestamp suffix (dim — secondary info)
+pub fn style_timestamp() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Status bar when idle (fg — readable)
+pub fn style_status_idle() -> Style {
+    Style::default().fg(C.fg)
+}
+
+/// Status bar when active (success green)
+pub fn style_status_active() -> Style {
+    Style::default().fg(C.success)
+}
+
+/// Panel border (dim — chrome)
+pub fn style_border() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Panel border when flashing validation error (warning yellow)
+pub fn style_border_flash() -> Style {
+    Style::default().fg(C.warning)
+}
+
+/// Code block content
+pub fn style_code_block() -> Style {
+    Style::default().fg(C.code).bg(C.code_bg)
+}
+
+/// Code block header label
+pub fn style_code_header() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Input cursor block (inverted)
+pub fn style_input_cursor() -> Style {
+    Style::default().bg(C.fg_bright).fg(C.bg)
+}
+
+/// Input placeholder text
+pub fn style_placeholder() -> Style {
+    Style::default().fg(C.dim)
+}
+
+/// Bottom hints bar
+pub fn style_hint() -> Style {
+    Style::default().fg(C.fg)
+}
+
+/// @-ref popup selected item
+pub fn style_popup_selected() -> Style {
+    Style::default().fg(C.dim).bg(C.fg_mid)
+}
+
+/// @-ref popup unselected item
+pub fn style_popup_unselected() -> Style {
+    Style::default().fg(C.fg_mid)
+}
+
+/// @-ref popup border
+pub fn style_popup_border() -> Style {
+    Style::default().fg(C.accent)
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Format a code block header label: "→ [code:rust]" or "→ [code]"
+pub fn code_header_label(prefix: &str, lang: &str) -> String {
+    if lang.is_empty() {
+        format!("{}[code]", prefix)
+    } else {
+        format!("{}[code:{}]", prefix, lang)
     }
+}
+
+/// Format a thinking indicator line: "→ ◐ 1.2s"
+pub fn thinking_line(elapsed_secs: f64) -> String {
+    format!("{} {} {:.1}s", GLYPH_AGENT, GLYPH_THINKING, elapsed_secs)
+}
+
+/// Format a tool running line: "✓ Running name... 1.2s"
+pub fn tool_running_line(name: &str, elapsed_secs: f64) -> String {
+    format!("{}Running {}... {:.1}s", GLYPH_TOOL, name, elapsed_secs)
+}
+
+/// Format a tool done header: "✓ name 1.2s"
+pub fn tool_done_header(name: &str, duration_secs: f64) -> String {
+    format!("{}{} {:.1}s", GLYPH_TOOL, name, duration_secs)
+}
+
+/// Format a tool summary when collapsed
+pub fn tool_summary_line(name: &str, duration_secs: f64) -> String {
+    format!("{}{} {:.1}s{}", GLYPH_TOOL, name, duration_secs, INDICATOR_COLLAPSED)
+}
+
+/// Format a turn complete line
+pub fn turn_complete_line(duration_secs: f64) -> String {
+    format!("Turn completed in {:.1}s", duration_secs)
+}
+
+/// Format a thought summary when collapsed
+pub fn thought_summary_line(first_line: &str) -> String {
+    format!("{}{}", first_line, INDICATOR_COLLAPSED)
 }

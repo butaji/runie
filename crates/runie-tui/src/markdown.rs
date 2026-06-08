@@ -1,6 +1,6 @@
 //! Markdown parsing for agent messages
 
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
 use crate::theme::C;
 
@@ -11,12 +11,17 @@ pub struct MdSpan {
     pub style: Style,
 }
 
-/// Parse inline markdown bold (**text**) and italic (*text*) into styled spans.
+/// Parse inline markdown bold (**text**), italic (*text*), and code (`text`) into styled spans.
 pub fn parse_inline_markdown(text: &str) -> Vec<MdSpan> {
+    parse_inline_markdown_with_color(text, C.fg_bright)
+}
+
+/// Parse inline markdown with a custom base foreground color.
+pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<MdSpan> {
     let mut spans = Vec::new();
     let mut chars = text.chars().peekable();
     let mut current = String::new();
-    let base = Style::default().fg(C.fg);
+    let base = Style::default().fg(base_color);
 
     while let Some(c) = chars.next() {
         if c == '*' && chars.peek() == Some(&'*') {
@@ -30,6 +35,19 @@ pub fn parse_inline_markdown(text: &str) -> Vec<MdSpan> {
                     current.push_str(&inner);
                 }
             }
+        } else if c == '`' {
+            flush_plain(&mut current, &mut spans, base);
+            let mut code_text = String::new();
+            while let Some(cc) = chars.next() {
+                if cc == '`' {
+                    break;
+                }
+                code_text.push(cc);
+            }
+            spans.push(MdSpan {
+                content: code_text,
+                style: Style::default().fg(C.accent).bg(C.code_bg),
+            });
         } else if c == '*' {
             flush_plain(&mut current, &mut spans, base);
             if let Some((found, inner)) = parse_delimited(&mut chars, "*") {
@@ -142,6 +160,15 @@ pub fn md_to_spans(md_spans: &[MdSpan]) -> Vec<Span<'static>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inline_code_parsed() {
+        let spans = parse_inline_markdown("use `cargo test` to run");
+        let code = spans.iter().find(|s| s.content == "cargo test");
+        assert!(code.is_some(), "Should have code span 'cargo test'");
+        assert_eq!(code.unwrap().style.fg, Some(C.accent));
+        assert!(code.unwrap().style.bg.is_some(), "Code should have bg");
+    }
 
     #[test]
     fn bold_text_parsed() {
