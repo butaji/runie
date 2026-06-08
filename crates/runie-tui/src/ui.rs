@@ -306,8 +306,13 @@ fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'s
     let mut lines = vec![Line::from(tool_done_header(name, duration_secs))
         .style(style_tool_header())];
     if !output.is_empty() {
-        for line in output.lines() {
-            lines.push(Line::from(line.to_string()).style(style_tool_output()));
+        // Check if output is a diff and render with highlighting
+        if crate::diff::is_diff_output(output) {
+            lines.extend(crate::diff::render_diff_text(output));
+        } else {
+            for line in output.lines() {
+                lines.push(Line::from(line.to_string()).style(style_tool_output()));
+            }
         }
     }
     lines

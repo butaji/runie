@@ -172,8 +172,13 @@ fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
                 return (format!("Error: search text appears {} times in {}. Be more specific.", count, path), false);
             }
             let new_content = content.replacen(search, replace, 1);
-            match std::fs::write(path, new_content) {
-                Ok(()) => (format!("Edited {}", path), true),
+            match std::fs::write(path, &new_content) {
+                Ok(()) => {
+                    // Generate diff output for display
+                    let diff = crate::diff::generate_unified_diff(&content, &new_content);
+                    let diff_output = crate::diff::render_diff_to_string(&diff, path);
+                    (diff_output, true)
+                }
                 Err(e) => (format!("Error writing {}: {}", path, e), false),
             }
         }
