@@ -59,6 +59,8 @@ pub struct Snapshot {
     pub session_tree_items: Vec<(usize, String)>,
     /// Base64 image attachments pending in the input field.
     pub image_attachments: Vec<String>,
+    /// Authenticated providers for status display.
+    pub auth_providers: Vec<String>,
 }
 
 impl Snapshot {

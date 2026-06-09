@@ -38,6 +38,7 @@ pub mod path_complete;
 pub mod skills;
 pub mod model_scroll;
 pub mod session_tree;
+pub mod auth;
 #[cfg(test)]
 pub mod dsl;
 
@@ -66,3 +67,4 @@ pub use prompts::{PromptTemplate, PromptSource, load_prompts, build_system_promp
 pub use clipboard_image::read_clipboard_image;
 pub use skills::{Skill, build_skills_context, load_all, load_from_dir};
 pub use session_tree::{SessionTree, TreeNode, SessionTreeFilter};
+pub use auth::{AuthStorage, AuthToken};

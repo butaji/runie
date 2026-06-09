@@ -116,6 +116,9 @@ fn build_status_text(snap: &Snapshot) -> String {
     if snap.read_only {
         parts.push("🔒 RO".to_string());
     }
+    if !snap.auth_providers.is_empty() {
+        parts.push(format!("🔑 {}", snap.auth_providers.join(", ")));
+    }
     parts.join(" · ")
 }
 

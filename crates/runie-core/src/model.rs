@@ -420,6 +420,10 @@ impl AppState {
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
+            auth_providers: {
+                let auth = crate::auth::AuthStorage::load();
+                auth.tokens.keys().cloned().collect()
+            },
         }
     }
 

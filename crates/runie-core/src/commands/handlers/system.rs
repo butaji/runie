@@ -15,6 +15,8 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("skills", "List loaded skills", &[], CommandCategory::System, handle_skills));
     registry.register(cmd("skill", "Invoke a skill by name", &[], CommandCategory::System, handle_skill));
     registry.register(cmd("prompt", "Switch prompt template", &[], CommandCategory::System, handle_prompt));
+    registry.register(cmd("login", "Store API key for a provider", &[], CommandCategory::System, handle_login));
+    registry.register(cmd("logout", "Remove stored token for a provider", &[], CommandCategory::System, handle_logout));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -105,6 +107,34 @@ fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
         CommandResult::Message(format!("Prompt switched to '{}'", name))
     } else {
         CommandResult::Message(format!("Prompt '{}' not found.", name))
+    }
+}
+
+fn handle_login(_state: &mut AppState, args: &str) -> CommandResult {
+    let parts: Vec<&str> = args.trim().splitn(2, ' ').collect();
+    if parts.len() < 2 || parts[0].is_empty() || parts[1].is_empty() {
+        return CommandResult::Message("Usage: /login <provider> <token>".into());
+    }
+    let provider = parts[0];
+    let token = parts[1];
+    let mut storage = crate::auth::AuthStorage::load();
+    storage.set(provider, token, None);
+    match storage.save() {
+        Ok(()) => CommandResult::Message(format!("Logged in to '{}'.", provider)),
+        Err(e) => CommandResult::Message(format!("Could not save token: {}", e)),
+    }
+}
+
+fn handle_logout(_state: &mut AppState, args: &str) -> CommandResult {
+    let provider = args.trim();
+    if provider.is_empty() {
+        return CommandResult::Message("Usage: /logout <provider>".into());
+    }
+    let mut storage = crate::auth::AuthStorage::load();
+    storage.remove(provider);
+    match storage.save() {
+        Ok(()) => CommandResult::Message(format!("Logged out from '{}'.", provider)),
+        Err(e) => CommandResult::Message(format!("Could not remove token: {}", e)),
     }
 }
 
