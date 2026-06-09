@@ -279,6 +279,14 @@ mod tests {
     }
 
     #[test]
+    fn ctrl_g_emits_open_external_editor() {
+        let key = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::OpenExternalEditor)), "Ctrl+G should map to OpenExternalEditor, got {:?}", result);
+    }
+
+    #[test]
     fn key_event_to_combo_shift_enter() {
         let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT);
         assert_eq!(super::key_event_to_combo(&key), "shift+enter");

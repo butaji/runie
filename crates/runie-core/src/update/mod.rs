@@ -133,6 +133,12 @@ impl AppState {
             Event::SwitchTheme { name } => self.switch_theme(name),
             Event::FollowUp => self.queue_follow_up(),
             Event::Dequeue => self.dequeue(),
+            Event::OpenExternalEditor => {}
+            Event::ExternalEditorDone { content } => {
+                self.input = content;
+                self.cursor_pos = self.input.len();
+                self.mark_dirty();
+            }
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
             Event::ToggleExpand => self.toggle_expand_all(),

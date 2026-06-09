@@ -1891,6 +1891,7 @@ dependencies = [
  "runie-core",
  "runie-provider",
  "runie-tui",
+ "tempfile",
  "tokio",
 ]
 

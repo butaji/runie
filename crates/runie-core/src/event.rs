@@ -57,4 +57,6 @@ pub enum Event {
     SpawnAgent,
     ToggleExpand,
     Dequeue,
+    OpenExternalEditor,
+    ExternalEditorDone { content: String },
 }

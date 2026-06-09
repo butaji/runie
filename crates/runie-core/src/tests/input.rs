@@ -186,3 +186,17 @@ fn tick_animation_noop_when_not_turn_active() {
     assert!(!state.is_dirty(), "tick_animation must be noop when !turn_active");
     assert!(!was_dirty, "State should remain clean after noop tick");
 }
+
+#[test]
+fn external_editor_done_updates_input() {
+    let mut state = fresh_state();
+    state.update(Event::Input('o'));
+    state.update(Event::Input('l'));
+    state.update(Event::Input('d'));
+    assert_eq!(state.input, "old");
+    assert_eq!(state.cursor_pos, 3);
+
+    state.update(Event::ExternalEditorDone { content: "new text".to_string() });
+    assert_eq!(state.input, "new text");
+    assert_eq!(state.cursor_pos, 8);
+}
