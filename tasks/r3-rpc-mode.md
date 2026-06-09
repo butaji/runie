@@ -1,6 +1,6 @@
 # RPC / Server Mode
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Modes
 
@@ -36,16 +36,16 @@ async fn main() {
 
 ## Acceptance Criteria
 
-- [ ] `runie-server` starts RPC server
-- [ ] JSON-RPC 2.0 protocol
-- [ ] Methods: initialize, chat, complete, listModels, listSessions
-- [ ] TCP or stdio transport
-- [ ] SDK clients for common languages (TypeScript, Python)
-- [ ] Graceful shutdown
+- [x] `runie-server` starts RPC server
+- [x] JSON-RPC 2.0 protocol
+- [x] Methods: initialize, chat, complete, listModels, listSessions
+- [x] TCP or stdio transport
+- [x] SDK clients for common languages (TypeScript, Python)
+- [x] Graceful shutdown
 
 ## Tests
 
 ### Layer 1
-- [ ] `rpc_parses_request` — valid JSON-RPC parsed
-- [ ] `rpc_returns_response` — response is valid JSON-RPC
-- [ ] `rpc_list_models` — returns model catalog
+- [x] `rpc_parses_request` — valid JSON-RPC parsed
+- [x] `rpc_returns_response` — response is valid JSON-RPC
+- [x] `rpc_list_models` — returns model catalog

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term", "crates/runie-agent", "crates/runie-provider", "crates/runie-print", "crates/runie-json"]
+members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term", "crates/runie-agent", "crates/runie-provider", "crates/runie-print", "crates/runie-json", "crates/runie-server"]
 resolver = "2"
 
 [workspace.package]
