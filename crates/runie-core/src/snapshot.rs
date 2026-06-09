@@ -57,6 +57,8 @@ pub struct Snapshot {
     pub settings_items: Vec<crate::settings::SettingItem>,
     /// Session tree items for dialog rendering (depth, content preview).
     pub session_tree_items: Vec<(usize, String)>,
+    /// Base64 image attachments pending in the input field.
+    pub image_attachments: Vec<String>,
 }
 
 impl Snapshot {

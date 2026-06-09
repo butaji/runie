@@ -384,12 +384,21 @@ fn build_input_spans(snap: &Snapshot) -> Vec<Span<'_>> {
     } else {
         (' ', "")
     };
-    vec![
+    let mut spans = vec![
         Span::styled(GLYPH_USER, style_user()),
         Span::styled(before, style_user()),
         Span::styled(at_cursor.to_string(), style_input_cursor()),
         Span::styled(after, style_user()),
-    ]
+    ];
+    if !snap.image_attachments.is_empty() {
+        let label = if snap.image_attachments.len() == 1 {
+            " 📎 1 image".to_string()
+        } else {
+            format!(" 📎 {} images", snap.image_attachments.len())
+        };
+        spans.push(Span::styled(label, style_hint()));
+    }
+    spans
 }
 
 fn hints(f: &mut Frame, _snap: &Snapshot, area: Rect) {

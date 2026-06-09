@@ -323,4 +323,22 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
         assert_eq!(super::key_event_to_combo(&key), "escape");
     }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn ctrl_v_emits_paste_image() {
+        let key = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::PasteImage)), "Ctrl+V should map to PasteImage, got {:?}", result);
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn alt_v_emits_paste_image() {
+        let key = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::ALT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::PasteImage)), "Alt+V should map to PasteImage, got {:?}", result);
+    }
 }
