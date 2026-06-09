@@ -33,9 +33,11 @@ pub mod commands;
 pub mod trust;
 pub mod telemetry;
 pub mod prompts;
+pub mod clipboard_image;
 pub mod path_complete;
 pub mod skills;
 pub mod model_scroll;
+pub mod session_tree;
 #[cfg(test)]
 pub mod dsl;
 
@@ -61,4 +63,6 @@ pub use keybindings::{load_keybindings, default_keybindings, parse_keybindings_j
 pub use trust::{TrustManager, TrustDecision};
 pub use telemetry::Telemetry;
 pub use prompts::{PromptTemplate, PromptSource, load_prompts, build_system_prompt, DEFAULT_PROMPT};
+pub use clipboard_image::read_clipboard_image;
 pub use skills::{Skill, build_skills_context, load_all, load_from_dir};
+pub use session_tree::{SessionTree, TreeNode, SessionTreeFilter};

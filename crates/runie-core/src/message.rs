@@ -31,7 +31,7 @@ impl Role {
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,

@@ -249,6 +249,7 @@ fn load_restores_conversation() {
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
+        session_tree: None,
     }).unwrap();
 
     let mut state = fresh_state();
@@ -313,6 +314,7 @@ fn sessions_lists_saved_sessions() {
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
+        session_tree: None,
     }).unwrap();
     store.save("beta", &crate::session::Session {
         name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
@@ -321,6 +323,7 @@ fn sessions_lists_saved_sessions() {
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
+        session_tree: None,
     }).unwrap();
 
     let mut state = fresh_state();
@@ -369,6 +372,7 @@ fn delete_removes_session_file() {
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
+        session_tree: None,
     }).unwrap();
 
     let mut state = fresh_state();

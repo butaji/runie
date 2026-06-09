@@ -24,6 +24,7 @@ fn save_test_session(store: &runie_core::session::Store, name: &str) {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
+        session_tree: None,
     }).unwrap();
 }
 

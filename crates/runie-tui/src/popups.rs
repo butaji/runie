@@ -223,6 +223,38 @@ pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
     f.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 
+pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
+    let (filter, selected) = match &snap.dialog {
+        Some(runie_core::commands::DialogState::SessionTree { filter, selected }) => (*filter, *selected),
+        _ => return,
+    };
+    let popup_area = palette_popup_rect(f.area());
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(format!("Session Tree — filter: {}", filter.as_str())).style(style_tool_header()));
+    lines.push(Line::from(""));
+
+    let tree_items: Vec<(usize, String)> = snap.session_tree_items.clone();
+    if tree_items.is_empty() {
+        lines.push(Line::from("No session tree. Use /fork or /clone to create branches.").style(style_hint()));
+    } else {
+        for (i, (depth, content)) in tree_items.iter().enumerate() {
+            let indent = "  ".repeat(*depth);
+            let prefix = if i == selected { "> " } else { "  " };
+            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
+            let truncated: String = content.chars().take(50).collect();
+            lines.push(Line::from(format!("{}{}{}{}", indent, prefix, truncated, if content.len() > 50 { "…" } else { "" })).style(style));
+        }
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from("↑/↓=nav Enter=select f=cycle-filter Esc=close").style(style_hint()));
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Session Tree ")
+        .border_style(style_popup_border());
+    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+}
+
 fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::from(format!("> {}", filter)).style(style_user()));

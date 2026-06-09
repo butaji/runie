@@ -100,3 +100,5 @@ mod thinking;
 mod safety;
 #[cfg(test)]
 mod session_extra;
+#[cfg(test)]
+mod session_tree;

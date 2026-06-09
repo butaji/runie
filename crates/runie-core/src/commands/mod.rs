@@ -33,6 +33,10 @@ pub enum DialogState {
     ScopedModels {
         selected: usize,
     },
+    SessionTree {
+        filter: crate::session_tree::SessionTreeFilter,
+        selected: usize,
+    },
 }
 
 /// Result of executing a slash command

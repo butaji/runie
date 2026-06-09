@@ -146,6 +146,10 @@ pub struct AppState {
     pub prompts: Vec<crate::prompts::PromptTemplate>,
     /// Active prompt template name (empty = default)
     pub current_prompt: String,
+    /// Base64 image attachments pending in the input field
+    pub image_attachments: Vec<String>,
+    /// Session tree for branching conversation history
+    pub session_tree: Option<crate::session_tree::SessionTree>,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -207,6 +211,8 @@ impl Default for AppState {
             skills: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
             prompts: Vec::new(), current_prompt: String::new(),
+            image_attachments: Vec::new(),
+            session_tree: None,
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,
@@ -275,6 +281,23 @@ impl AppState {
             }
         }
         items
+    }
+
+    fn session_tree_items(&self) -> Vec<(usize, String)> {
+        let filter = match &self.open_dialog {
+            Some(crate::commands::DialogState::SessionTree { filter, .. }) => *filter,
+            _ => return Vec::new(),
+        };
+        match self.session_tree.as_ref() {
+            Some(tree) => tree.filtered_walk(filter)
+                .into_iter()
+                .map(|(depth, node)| {
+                    let preview = format!("[{}] {}", node.message.role.as_str(), node.message.content.chars().take(60).collect::<String>());
+                    (depth, preview)
+                })
+                .collect(),
+            None => Vec::new(),
+        }
     }
 
     fn model_selector_items(&self) -> Vec<(String, String, String, bool, bool)> {
@@ -395,6 +418,7 @@ impl AppState {
             pending_edits: self.pending_edits.clone(),
             scoped_models: self.scoped_models.clone(),
             settings_items: crate::update::settings_dialog::build_setting_items(self),
+            session_tree_items: self.session_tree_items(),
         }
     }
 
