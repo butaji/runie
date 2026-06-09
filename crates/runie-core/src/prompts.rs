@@ -1,6 +1,6 @@
 //! Custom prompt templates — user-defined system prompt overrides.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// Source of a prompt template.
 #[derive(Clone, Debug, PartialEq, Eq)]
