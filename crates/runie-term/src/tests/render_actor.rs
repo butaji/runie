@@ -27,7 +27,7 @@ fn snapshot_renders_user_message() {
     state.ensure_fresh();
     let snap = state.snapshot();
     let out = render_snapshot(&snap);
-    assert!(out.contains("$ Hi"), "Should render user message in snapshot");
+    assert!(out.contains("❯ Hi"), "Should render user message in snapshot");
 }
 
 #[test]
@@ -45,8 +45,8 @@ fn snapshot_is_immutable_after_creation() {
 
     // Snapshot should still show old state
     let out = render_snapshot(&snap);
-    assert!(out.contains("$ A"), "Snapshot should be immutable");
-    assert!(!out.contains("$ B"), "Snapshot should not reflect later changes");
+    assert!(out.contains("❯ A"), "Snapshot should be immutable");
+    assert!(!out.contains("❯ B"), "Snapshot should not reflect later changes");
 }
 
 #[test]
