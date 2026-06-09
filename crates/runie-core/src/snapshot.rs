@@ -55,6 +55,8 @@ pub struct Snapshot {
     pub scoped_models: Vec<crate::scoped_model::ScopedModel>,
     /// Settings items for dialog rendering.
     pub settings_items: Vec<crate::settings::SettingItem>,
+    /// Session tree items for dialog rendering (depth, content preview).
+    pub session_tree_items: Vec<(usize, String)>,
 }
 
 impl Snapshot {

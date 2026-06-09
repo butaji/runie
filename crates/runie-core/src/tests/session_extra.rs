@@ -86,6 +86,7 @@ fn import_loads_file() {
         theme_name: "tokyo-night".into(),
         thinking_level: crate::model::ThinkingLevel::Medium,
         read_only: true,
+        session_tree: None,
     };
     std::fs::write(&tmp, serde_json::to_string_pretty(&session).unwrap()).unwrap();
 
@@ -122,6 +123,7 @@ fn roundtrip_save_load_preserves_display_name() {
         theme_name: "default".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
+        session_tree: None,
     };
     store.save("roundtrip", &session).unwrap();
     let loaded = store.load("roundtrip").unwrap();

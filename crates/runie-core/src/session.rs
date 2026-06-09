@@ -18,6 +18,8 @@ pub struct Session {
     pub theme_name: String,
     pub thinking_level: crate::model::ThinkingLevel,
     pub read_only: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_tree: Option<crate::session_tree::SessionTree>,
 }
 
 /// Session store — handles save/load/list/delete
@@ -151,6 +153,7 @@ mod tests {
             theme_name: "silkcircuit-neon".into(),
             thinking_level: crate::model::ThinkingLevel::Off,
             read_only: false,
+            session_tree: None,
         }
     }
 

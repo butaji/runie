@@ -101,6 +101,7 @@ impl AppState {
             Event::CursorWordLeft => self.cursor_word_left(),
             Event::CursorWordRight => self.cursor_word_right(),
             Event::Paste(text) => self.paste(&text),
+            Event::PasteImage => self.paste_image(),
             Event::Submit => self.submit(),
             Event::ScrollUp => {
                 if self.messages.is_empty() && !self.turn_active {
@@ -201,6 +202,45 @@ impl AppState {
             Event::ScopedModelEnableAll => scoped_models::enable_all(self),
             Event::ScopedModelDisableAll => scoped_models::disable_all(self),
             Event::ScopedModelToggleProvider { provider } => scoped_models::toggle_provider(self, &provider),
+            Event::ToggleSessionTree => {
+                if matches!(self.open_dialog, Some(crate::commands::DialogState::SessionTree { .. })) {
+                    self.open_dialog = None;
+                } else {
+                    self.open_dialog = Some(crate::commands::DialogState::SessionTree {
+                        filter: crate::session_tree::SessionTreeFilter::All,
+                        selected: 0,
+                    });
+                }
+                self.mark_dirty();
+            }
+            Event::SessionTreeFilterCycle => {
+                if let Some(crate::commands::DialogState::SessionTree { ref mut filter, .. }) = self.open_dialog {
+                    *filter = filter.cycle();
+                    self.mark_dirty();
+                }
+            }
+            Event::ForkSession { message_index } => {
+                if let Some(ref mut tree) = self.session_tree {
+                    if let Some(path) = tree.fork_at(message_index) {
+                        tree.navigate_to(&path);
+                        self.add_system_msg(format!("Forked at message {}.", message_index));
+                    }
+                } else {
+                    let mut tree = crate::session_tree::SessionTree::from_messages(&self.messages);
+                    if let Some(path) = tree.fork_at(message_index) {
+                        tree.navigate_to(&path);
+                        self.session_tree = Some(tree);
+                        self.add_system_msg(format!("Forked at message {}.", message_index));
+                    }
+                }
+            }
+            Event::CloneSession => {
+                let tree = self.session_tree.clone().unwrap_or_else(|| {
+                    crate::session_tree::SessionTree::from_messages(&self.messages)
+                });
+                self.session_tree = Some(tree);
+                self.add_system_msg("Session cloned at current position.".into());
+            }
             Event::ToggleSettingsDialog => {
                 if matches!(self.open_dialog, Some(crate::commands::DialogState::Settings { .. })) {
                     self.open_dialog = None;
@@ -266,6 +306,9 @@ impl AppState {
             }
             crate::commands::DialogState::ModelSelector { filter, selected } => {
                 self.update_model_selector(event, filter, selected);
+            }
+            crate::commands::DialogState::SessionTree { filter, selected } => {
+                self.update_session_tree(event, filter, selected);
             }
         }
     }
@@ -406,6 +449,48 @@ impl AppState {
             tc.timestamp = now();
             self.messages.push(tc);
             self.messages_changed();
+        }
+    }
+
+    fn update_session_tree(&mut self, event: Event, filter: crate::session_tree::SessionTreeFilter, selected: usize) {
+        let tree = match self.session_tree.as_ref() {
+            Some(t) => t,
+            None => {
+                self.open_dialog = Some(crate::commands::DialogState::SessionTree { filter, selected });
+                return;
+            }
+        };
+        let visible = tree.filtered_walk(filter);
+        let count = visible.len();
+        if let Some(next) = Self::session_tree_next_state(event, filter, selected, count) {
+            self.open_dialog = Some(next);
+            self.mark_dirty();
+        } else {
+            self.open_dialog = None;
+            self.mark_dirty();
+        }
+    }
+
+    fn session_tree_next_state(
+        event: Event,
+        filter: crate::session_tree::SessionTreeFilter,
+        selected: usize,
+        count: usize,
+    ) -> Option<crate::commands::DialogState> {
+        match event {
+            Event::HistoryPrev => Some(crate::commands::DialogState::SessionTree {
+                filter,
+                selected: selected.saturating_sub(1),
+            }),
+            Event::HistoryNext => Some(crate::commands::DialogState::SessionTree {
+                filter,
+                selected: (selected + 1).min(count.saturating_sub(1)),
+            }),
+            Event::SessionTreeFilterCycle => Some(crate::commands::DialogState::SessionTree {
+                filter: filter.cycle(),
+                selected,
+            }),
+            _ => None,
         }
     }
 }

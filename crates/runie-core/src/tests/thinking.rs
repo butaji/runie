@@ -44,6 +44,7 @@ fn session_persists_thinking_level() {
         thinking_level: ThinkingLevel::Medium,
         read_only: false,
         display_name: None,
+        session_tree: None,
     };
 
     store.save("think_test", &session).unwrap();

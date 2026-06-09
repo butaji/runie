@@ -15,6 +15,9 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("reset", "Clear all state", &[], CommandCategory::Session, handle_reset));
     registry.register(cmd("history", "Show recent history", &[], CommandCategory::Session, handle_history));
     registry.register(cmd("session", "Show session info", &[], CommandCategory::Session, handle_session));
+    registry.register(cmd("fork", "Fork session from a message", &[], CommandCategory::Session, handle_fork));
+    registry.register(cmd("clone", "Clone current session position", &[], CommandCategory::Session, handle_clone));
+    registry.register(cmd("tree", "Open session tree dialog", &[], CommandCategory::Session, handle_tree));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -45,6 +48,7 @@ fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
         theme_name: state.theme_name.clone(),
         thinking_level: state.thinking_level,
         read_only: state.read_only,
+        session_tree: state.session_tree.clone(),
     };
     match crate::session::save(name, &session) {
         Ok(()) => {
@@ -71,6 +75,7 @@ fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
             state.session_display_name = session.display_name.or(Some(session.name));
             state.session_created_at = session.created_at;
             state.session_updated_at = session.updated_at;
+            state.session_tree = session.session_tree;
             state.messages_changed();
             CommandResult::Message(format!("Session '{}' loaded.", name))
         }
@@ -145,6 +150,7 @@ fn handle_export(state: &mut AppState, args: &str) -> CommandResult {
         theme_name: state.theme_name.clone(),
         thinking_level: state.thinking_level,
         read_only: state.read_only,
+        session_tree: state.session_tree.clone(),
     };
     match std::fs::write(&path, serde_json::to_string_pretty(&session).unwrap_or_default()) {
         Ok(()) => CommandResult::Message(format!("Session exported to '{}'", path)),
@@ -169,6 +175,7 @@ fn handle_import(state: &mut AppState, args: &str) -> CommandResult {
                 state.session_display_name = session.display_name.or(Some(session.name));
                 state.session_created_at = session.created_at;
                 state.session_updated_at = session.updated_at;
+                state.session_tree = session.session_tree;
                 state.messages_changed();
                 CommandResult::Message(format!("Session imported from '{}'", path))
             }
@@ -282,4 +289,38 @@ fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
         crate::labels::format_timestamp(state.session_updated_at),
     );
     CommandResult::Message(info)
+}
+
+fn handle_fork(state: &mut AppState, args: &str) -> CommandResult {
+    let index = args.trim().parse::<usize>().unwrap_or_else(|_| {
+        // Default to last user message if no index given
+        state.messages.iter().enumerate().rfind(|(_, m)| m.role == crate::model::Role::User).map(|(i, _)| i).unwrap_or(0)
+    });
+    if index >= state.messages.len() {
+        return CommandResult::Message(format!("Message index {} out of range (0–{})", index, state.messages.len().saturating_sub(1)));
+    }
+    // Initialize or update session tree
+    let mut tree = state.session_tree.take().unwrap_or_else(|| {
+        crate::session_tree::SessionTree::from_messages(&state.messages)
+    });
+    match tree.fork_at(index) {
+        Some(path) => {
+            tree.navigate_to(&path);
+            state.session_tree = Some(tree);
+            CommandResult::Message(format!("Forked at message {}. New branch created.", index))
+        }
+        None => CommandResult::Message("Could not fork at that message.".into()),
+    }
+}
+
+fn handle_clone(state: &mut AppState, _args: &str) -> CommandResult {
+    let tree = state.session_tree.clone().unwrap_or_else(|| {
+        crate::session_tree::SessionTree::from_messages(&state.messages)
+    });
+    state.session_tree = Some(tree);
+    CommandResult::Message("Session cloned at current position.".into())
+}
+
+fn handle_tree(_state: &mut AppState, _args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::ToggleSessionTree)
 }

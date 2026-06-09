@@ -1,6 +1,6 @@
 # Session Tree (/fork, /clone, /tree)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 
@@ -49,20 +49,20 @@ Event::SessionTreeFilterCycle,
 
 ## Acceptance Criteria
 
-- [ ] `/fork` creates new branch from selected user message
-- [ ] `/clone` duplicates current session at current position
-- [ ] `/tree` opens tree navigation dialog
-- [ ] Tree shows all branches with fold/unfold
-- [ ] Arrow keys navigate, Enter selects branch
-- [ ] Filters: all, no-tools, user-only, labeled-only
-- [ ] Tree persisted in session JSON
+- [x] `/fork` creates new branch from selected user message
+- [x] `/clone` duplicates current session at current position
+- [x] `/tree` opens tree navigation dialog
+- [x] Tree shows all branches with fold/unfold
+- [x] Arrow keys navigate, Enter selects branch
+- [x] Filters: all, no-tools, user-only, labeled-only
+- [x] Tree persisted in session JSON
 
 ## Tests
 
 ### Layer 1
-- [ ] `fork_creates_branch` — new child node added
-- [ ] `clone_duplicates_position` — messages up to index copied
-- [ ] `tree_filter_excludes_tools` — no-tools filter hides tool messages
+- [x] `fork_creates_branch` — new child node added
+- [x] `clone_duplicates_position` — messages up to index copied
+- [x] `tree_filter_excludes_tools` — no-tools filter hides tool messages
 
 ### Layer 2
-- [ ] `slash_fork_emits_event` — /fork emits ForkSession
+- [x] `slash_fork_emits_event` — /fork emits ForkSession

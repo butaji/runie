@@ -36,6 +36,7 @@ pub enum Event {
 
     // Bracketed paste
     Paste(String),   // Terminal paste event
+    PasteImage,      // Ctrl+V paste image from clipboard
 
     Quit,
     Reset,
@@ -107,6 +108,12 @@ pub enum Event {
 
     // Diagnostics
     ShowDiagnostics,
+
+    // Session tree
+    ForkSession { message_index: usize },
+    CloneSession,
+    ToggleSessionTree,
+    SessionTreeFilterCycle,
 
     // Suspend to background (Unix only)
     Suspend,
