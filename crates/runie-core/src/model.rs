@@ -75,6 +75,12 @@ pub struct AppState {
     pub config_provider: String,
     /// Default model from config (for /new reset)
     pub config_model: String,
+    /// Optional display name for the current session
+    pub session_display_name: Option<String>,
+    /// Session creation timestamp (unix seconds)
+    pub session_created_at: f64,
+    /// Session last-updated timestamp (unix seconds)
+    pub session_updated_at: f64,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -126,6 +132,9 @@ impl Default for AppState {
             open_dialog: None,
             config_provider: "mock".into(),
             config_model: "echo".into(),
+            session_display_name: None,
+            session_created_at: now(),
+            session_updated_at: now(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             all_collapsed: false, last_assistant_index: None, thought_seq: 0,
@@ -169,6 +178,7 @@ impl AppState {
 
     pub(crate) fn messages_changed(&mut self) {
         self.message_gen = self.message_gen.wrapping_add(1);
+        self.session_updated_at = now();
         self.dirty = true;
     }
 
