@@ -84,7 +84,25 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, bindings: HashMap<Strin
 fn init_scoped_models(state: &mut AppState) {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     if let Some(scoped) = config.scoped_models() {
-        state.scoped_models = scoped.clone();
+        state.scoped_models = scoped
+            .iter()
+            .map(|s| {
+                let parts: Vec<&str> = s.split('/').collect();
+                if parts.len() == 2 {
+                    runie_core::model::ScopedModel {
+                        provider: parts[0].to_string(),
+                        name: parts[1].to_string(),
+                        enabled: true,
+                    }
+                } else {
+                    runie_core::model::ScopedModel {
+                        provider: state.current_provider.clone(),
+                        name: s.clone(),
+                        enabled: true,
+                    }
+                }
+            })
+            .collect();
     } else {
         // Default: first 10 models from catalog
         let registry = runie_provider::model::ModelRegistry::default();
@@ -92,7 +110,11 @@ fn init_scoped_models(state: &mut AppState) {
             .list()
             .iter()
             .take(10)
-            .map(|m| m.full())
+            .map(|m| runie_core::model::ScopedModel {
+                provider: m.provider.clone(),
+                name: m.name.clone(),
+                enabled: true,
+            })
             .collect();
     }
 }

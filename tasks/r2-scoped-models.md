@@ -1,6 +1,6 @@
 # Scoped Model Filtering (/scoped-models)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Input & Commands
 

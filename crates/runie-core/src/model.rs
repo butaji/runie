@@ -62,19 +62,15 @@ impl ThinkingLevel {
 
 impl std::str::FromStr for ThinkingLevel {
     type Err = String;
-
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "off" => Ok(Self::Off),
-            "low" => Ok(Self::Low),
-            "medium" => Ok(Self::Medium),
-            "high" => Ok(Self::High),
+            "off" => Ok(Self::Off), "low" => Ok(Self::Low),
+            "medium" => Ok(Self::Medium), "high" => Ok(Self::High),
             _ => Err(format!("Unknown thinking level: {s}")),
         }
     }
 }
-
-
+pub use crate::scoped_model::ScopedModel;
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
     pub content: String,
@@ -130,7 +126,7 @@ pub struct AppState {
     /// Read-only mode — when true, only safe tools are exposed to the LLM
     pub read_only: bool,
     /// Scoped models for Ctrl+P cycling (defaults to first 10 from catalog)
-    pub scoped_models: Vec<String>,
+    pub scoped_models: Vec<ScopedModel>,
     /// Current index in scoped_models cycling
     pub scoped_index: usize,
 
@@ -340,6 +336,7 @@ impl AppState {
             queue_count: self.message_queue.len() + self.request_queue.len(),
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),
+            scoped_models: self.scoped_models.clone(),
         }
     }
 

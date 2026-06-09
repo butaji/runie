@@ -8,6 +8,7 @@ mod input;
 mod line_nav;
 mod path_complete;
 mod queue;
+mod scoped_models;
 
 pub(crate) fn now() -> f64 {
     std::time::SystemTime::now()
@@ -172,6 +173,18 @@ impl AppState {
                 });
                 self.mark_dirty();
             }
+            Event::ToggleScopedModelsDialog => {
+                if matches!(self.open_dialog, Some(crate::commands::DialogState::ScopedModels { .. })) {
+                    self.open_dialog = None;
+                } else {
+                    self.open_dialog = Some(crate::commands::DialogState::ScopedModels { selected: 0 });
+                }
+                self.mark_dirty();
+            }
+            Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(self, &name),
+            Event::ScopedModelEnableAll => scoped_models::enable_all(self),
+            Event::ScopedModelDisableAll => scoped_models::disable_all(self),
+            Event::ScopedModelToggleProvider { provider } => scoped_models::toggle_provider(self, &provider),
             Event::PaletteFilter(_) |
             Event::PaletteBackspace |
             Event::PaletteUp |
@@ -191,6 +204,9 @@ impl AppState {
         match dialog {
             crate::commands::DialogState::CommandPalette { filter, selected } => {
                 self.update_palette(event, filter, selected);
+            }
+            crate::commands::DialogState::ScopedModels { selected } => {
+                scoped_models::update_scoped_models(self, event, selected);
             }
             other => {
                 self.open_dialog = Some(other);
@@ -292,6 +308,9 @@ impl AppState {
                         }
                     }
                     crate::commands::Dialog::Settings => crate::commands::DialogState::Settings,
+                    crate::commands::Dialog::ScopedModels => {
+                        crate::commands::DialogState::ScopedModels { selected: 0 }
+                    }
                 });
                 self.mark_dirty();
             }
@@ -316,18 +335,20 @@ impl AppState {
     }
 
     fn cycle_model(&mut self, delta: isize) {
-        if self.scoped_models.is_empty() { return; }
-        let len = self.scoped_models.len() as isize;
-        self.scoped_index = ((self.scoped_index as isize + delta).rem_euclid(len)) as usize;
-        let name = self.scoped_models[self.scoped_index].clone();
-        // Resolve name to provider/model
-        let parts: Vec<&str> = name.split('/').collect();
-        let (provider, model) = if parts.len() == 2 {
-            (parts[0].to_string(), parts[1].to_string())
-        } else {
-            (self.current_provider.clone(), name)
-        };
-        self.switch_model(provider, model);
+        let enabled: Vec<usize> = self
+            .scoped_models
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.enabled)
+            .map(|(i, _)| i)
+            .collect();
+        if enabled.is_empty() { return; }
+        let current_pos = enabled.iter().position(|&i| i == self.scoped_index).unwrap_or(0);
+        let len = enabled.len() as isize;
+        let new_pos = ((current_pos as isize + delta).rem_euclid(len)) as usize;
+        self.scoped_index = enabled[new_pos];
+        let model = &self.scoped_models[self.scoped_index];
+        self.switch_model(model.provider.clone(), model.name.clone());
     }
 
     fn cycle_thinking_level(&mut self) {

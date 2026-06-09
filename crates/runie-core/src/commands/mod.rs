@@ -12,6 +12,7 @@ pub enum Dialog {
     CommandPalette,
     ModelSelector,
     Settings,
+    ScopedModels,
 }
 
 /// Active dialog state with per-dialog data.
@@ -26,6 +27,9 @@ pub enum DialogState {
         selected: usize,
     },
     Settings,
+    ScopedModels {
+        selected: usize,
+    },
 }
 
 /// Result of executing a slash command

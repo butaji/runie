@@ -57,6 +57,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     crate::popups::at_suggestions(f, snap);
     crate::popups::path_suggestions(f, snap);
     crate::popups::command_palette(f, snap);
+    crate::popups::scoped_models_dialog(f, snap);
 }
 
 /// Legacy entry point for code that still builds AppState directly.

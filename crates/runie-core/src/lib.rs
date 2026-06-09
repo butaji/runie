@@ -10,6 +10,7 @@
 //!   labels    :: Static text constants
 
 pub mod model;
+pub mod scoped_model;
 pub mod event;
 pub mod update;
 pub mod labels;

@@ -8,7 +8,7 @@ use runie_core::Snapshot;
 
 use crate::theme::{
     GLYPH_SELECTED, GLYPH_UNSELECTED, style_popup_border, style_popup_selected,
-    style_popup_unselected, style_hint, style_thinking, style_user,
+    style_popup_unselected, style_hint, style_thinking, style_user, style_tool_header,
 };
 
 fn hstack(area: Rect, widths: &[Constraint]) -> Vec<Rect> {
@@ -107,6 +107,41 @@ fn palette_popup_rect(area: Rect) -> Rect {
         width: popup_width,
         height: popup_height,
     }
+}
+
+pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
+    let selected = match &snap.dialog {
+        Some(runie_core::commands::DialogState::ScopedModels { selected }) => *selected,
+        _ => return,
+    };
+    let popup_area = palette_popup_rect(f.area());
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from("Scoped Models — Space=toggle a/x=all/none p=provider").style(style_tool_header()));
+    lines.push(Line::from(""));
+
+    if snap.scoped_models.is_empty() {
+        lines.push(Line::from("No models configured.").style(style_hint()));
+    } else {
+        let mut last_provider = String::new();
+        for (i, model) in snap.scoped_models.iter().enumerate() {
+            if model.provider != last_provider {
+                if !last_provider.is_empty() {
+                    lines.push(Line::from(""));
+                }
+                lines.push(Line::from(format!("  {}", model.provider)).style(style_thinking()));
+                last_provider = model.provider.clone();
+            }
+            let checkbox = if model.enabled { "[x]" } else { "[ ]" };
+            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
+            lines.push(Line::from(format!("    {} {}", checkbox, model.name)).style(style));
+        }
+    }
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Scoped Models ")
+        .border_style(style_popup_border());
+    f.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 
 fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
