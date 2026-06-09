@@ -99,6 +99,7 @@ impl Snapshot {
         let position = max_scroll.saturating_sub(scroll);
         let track = visible_height;
         let thumb = (visible_height * visible_height / total).max(1);
+        #[allow(clippy::manual_checked_ops)]
         let thumb_offset = if max_scroll > 0 {
             position * (track - thumb) / max_scroll
         } else {

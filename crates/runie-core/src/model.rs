@@ -21,18 +21,15 @@ pub enum QueuedMessageKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Default)]
 pub enum DeliveryMode {
     /// Each message triggers a separate LLM call
+    #[default]
     OneAtATime,
     /// All queued messages delivered together in one LLM call
     All,
 }
 
-impl Default for DeliveryMode {
-    fn default() -> Self {
-        DeliveryMode::OneAtATime
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
@@ -259,6 +256,7 @@ impl AppState {
         let position = max_scroll.saturating_sub(scroll);
         let track = visible_height;
         let thumb = (visible_height * visible_height / total).max(1);
+        #[allow(clippy::manual_checked_ops)]
         let thumb_offset = if max_scroll > 0 {
             position * (track - thumb) / max_scroll
         } else {
