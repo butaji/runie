@@ -22,7 +22,10 @@ where
         emit(Event::AgentThinking { id: command.id.clone() });
 
         let mut response_text = String::new();
-        let provider = crate::build_provider(&command.provider, &command.model);
+        let (provider, warning) = crate::build_provider_with_warning(&command.provider, &command.model);
+        if let Some(msg) = warning {
+            emit(Event::TransientMessage { content: msg, level: runie_core::event::TransientLevel::Warning });
+        }
         provider
             .generate(messages.clone(), |chunk| {
                 response_text.push_str(&chunk.content);

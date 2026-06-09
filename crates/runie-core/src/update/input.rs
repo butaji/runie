@@ -54,25 +54,25 @@ fn find_word_boundary_right(s: &str, pos: usize) -> usize {
 impl AppState {
     pub fn hint_text(&self) -> String {
         let mut parts = Vec::new();
-        parts.push("Ctrl+Shift+E=expand/collapse".to_string());
+        parts.push("ctrl+shift+e expand/collapse".to_string());
         if self.completion.at_suggestions.is_some() {
-            parts.push("Tab=cycle".to_string());
-            parts.push("Enter=insert".to_string());
-            parts.push("Esc=close".to_string());
+            parts.push("tab cycle".to_string());
+            parts.push("enter insert".to_string());
+            parts.push("esc close".to_string());
         } else if self.agent.turn_active {
-            parts.push("Enter=steer".to_string());
-            parts.push("Alt+Enter=follow-up".to_string());
-            parts.push("Esc=abort".to_string());
+            parts.push("enter steer".to_string());
+            parts.push("alt+enter follow-up".to_string());
+            parts.push("esc abort".to_string());
         } else if !self.input.input.is_empty() {
-            parts.push("Enter=send".to_string());
-            parts.push("Alt+Enter=follow-up".to_string());
-            parts.push("Esc=clear".to_string());
+            parts.push("enter send".to_string());
+            parts.push("alt+enter follow-up".to_string());
+            parts.push("esc clear".to_string());
         } else {
-            parts.push("Alt+Enter=follow-up".to_string());
-            parts.push("Esc=clear".to_string());
+            parts.push("alt+enter follow-up".to_string());
+            parts.push("esc clear".to_string());
         }
-        parts.push("Ctrl+C=quit".to_string());
-        parts.join(" | ")
+        parts.push("ctrl+c quit".to_string());
+        parts.join(" · ")
     }
 
     // === Cursor Movement (grapheme-aware) ===

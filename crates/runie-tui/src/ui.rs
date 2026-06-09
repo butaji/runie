@@ -11,7 +11,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
+    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
 
@@ -30,14 +30,15 @@ use crate::syntax::highlight_code;
 use runie_core::format_timestamp;
 use crate::theme::{
     GLYPH_USER, GLYPH_AGENT, GLYPH_INDENT,
-    PANEL_INPUT, SCROLLBAR_TRACK, SCROLLBAR_THUMB,
+    SCROLLBAR_TRACK, SCROLLBAR_THUMB,
     code_header_label, thinking_line, tool_running_line, tool_done_header,
     tool_summary_line, turn_complete_line, thought_summary_line,
     style_user, style_agent, style_thought, style_thinking, style_thought_summary,
     style_tool_running, style_tool_header, style_tool_output, style_tool_summary,
     style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
     style_status_active, style_code_header, style_input_cursor, style_placeholder, style_hint,
-    color_fg_bright, color_fg, set_current_theme, block_input, style_chevron,
+    style_hint_key, color_fg_bright, color_fg, color_success, color_warning, color_error, color_bg,
+    darken, set_current_theme, block_input, style_chevron,
 };
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
@@ -53,16 +54,20 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
         Margin::new(0, 0)
     };
     let area = full_area.inner(margin);
+    // Calculate input height based on content (min 3, max 10 for scrolling)
+    let input_lines = count_input_lines(&snap.input);
+    let input_height = (input_lines + 2).min(10) as u16;  // +2 for block borders
     let c = vstack(area, &[
         Constraint::Min(3),
         Constraint::Length(1),
-        Constraint::Length(3),
+        Constraint::Length(input_height),
+        Constraint::Length(1),
         Constraint::Length(1),
     ]);
     messages(f, snap, c[0]);
     status(f, snap, c[1]);
     input(f, snap, c[2]);
-    hints(f, snap, c[3]);
+    hints(f, snap, c[4]);
     crate::popups::at_suggestions(f, snap);
     crate::popups::path_suggestions(f, snap);
     crate::popups::command_palette(f, snap);
@@ -70,6 +75,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     crate::popups::scoped_models_dialog(f, snap);
     crate::popups::settings_dialog(f, snap);
     crate::popups::session_tree_dialog(f, snap);
+    crate::popups::panel::panel_dialog(f, snap);
 }
 
 /// Legacy entry point for code that still builds AppState directly.
@@ -106,7 +112,6 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
 fn build_status_text(snap: &Snapshot) -> String {
     let mut parts = Vec::new();
-    parts.push(format!("{}/{}", snap.provider, snap.model));
     if snap.turn_active {
         if let Some(elapsed) = snap.turn_elapsed_secs {
             parts.push(runie_core::labels::action_text(
@@ -181,13 +186,14 @@ fn build_lines(snap: &Snapshot) -> Vec<Line<'_>> {
     lines
 }
 
-fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {
+pub fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {
     let scrollbar = Scrollbar::default()
         .orientation(ScrollbarOrientation::VerticalRight)
         .begin_symbol(None)
         .end_symbol(None)
         .track_symbol(Some(SCROLLBAR_TRACK))
-        .thumb_symbol(SCROLLBAR_THUMB);
+        .thumb_symbol(SCROLLBAR_THUMB)
+        .style(style_hint());
 
     let mut state = ScrollbarState::new(total)
         .position(offset as usize)
@@ -361,55 +367,151 @@ fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'s
     lines
 }
 
+fn count_input_lines(input: &str) -> usize {
+    if input.is_empty() {
+        return 1;
+    }
+    let mut lines = input.lines().count().max(1);
+    if input.ends_with('\n') {
+        lines += 1;  // Account for trailing empty line where cursor sits
+    }
+    lines
+}
+
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let block = block_input(PANEL_INPUT, snap.input_flash > 0);
-    let inner = block.inner(area);
+    let title = format!(" {}/{} ", snap.provider, snap.model);
+    let block = block_input(&title, snap.input_flash > 0);
     let token_held = snap.dialog.is_none();
 
-    let spans = build_input_spans(snap, token_held);
-    f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
-
-    let cursor_x = inner.x + (GLYPH_USER.len() + snap.cursor_pos.min(snap.input.len())) as u16;
-    f.set_cursor_position((cursor_x, inner.y));
+    let lines = build_input_lines(snap, token_held);
+    f.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-fn build_input_spans(snap: &Snapshot, token_held: bool) -> Vec<Span<'_>> {
+fn build_input_lines(snap: &Snapshot, token_held: bool) -> Vec<Line<'_>> {
     let chevron_style = style_chevron(token_held);
     if snap.input.is_empty() && !snap.placeholder.is_empty() {
-        return vec![
-            Span::styled(GLYPH_USER, chevron_style),
-            Span::styled(snap.placeholder.clone(), style_placeholder()),
-        ];
+        let mut spans = vec![Span::styled(GLYPH_USER, chevron_style)];
+        if token_held { spans.push(Span::styled(" ".to_string(), style_input_cursor())); }
+        spans.push(Span::styled(snap.placeholder.clone(), style_placeholder()));
+        return vec![Line::from(spans)];
     }
+
+    // Calculate cursor position in terms of line and column
     let cursor_pos = snap.cursor_pos.min(snap.input.len());
-    let before = &snap.input[..cursor_pos];
-    let (at_cursor, after) = if cursor_pos < snap.input.len() {
-        let c = snap.input[cursor_pos..].chars().next().unwrap();
-        let char_len = c.len_utf8();
-        (c, &snap.input[cursor_pos + char_len..])
-    } else {
-        (' ', "")
-    };
-    let mut spans = vec![
-        Span::styled(GLYPH_USER, chevron_style),
-        Span::styled(before, style_user()),
-        Span::styled(at_cursor.to_string(), style_input_cursor()),
-        Span::styled(after, style_user()),
-    ];
-    if !snap.image_attachments.is_empty() {
-        let label = if snap.image_attachments.len() == 1 {
-            " 📎 1 image".to_string()
+    let cursor_line_idx = snap.input[..cursor_pos].chars().filter(|&c| c == '\n').count();
+    let cursor_col_in_line = cursor_pos
+        - snap.input.lines().take(cursor_line_idx).map(|l| l.len() + 1).sum::<usize>();
+
+    let indent = "  ";
+    let mut result = Vec::new();
+    let input_lines: Vec<&str> = snap.input.lines().collect();
+
+    for (line_idx, line_content) in input_lines.iter().enumerate() {
+        let prefix = if line_idx == 0 { GLYPH_USER } else { indent };
+        let mut spans = vec![Span::styled(prefix, chevron_style)];
+
+        if line_idx == cursor_line_idx {
+            spans.extend(render_cursor_spans(line_content, cursor_col_in_line, token_held));
         } else {
-            format!(" 📎 {} images", snap.image_attachments.len())
-        };
-        spans.push(Span::styled(label, style_hint()));
+            spans.push(Span::styled(*line_content, style_agent()));
+        }
+
+        if line_idx == 0 {
+            if let Some(label) = image_attachment_label(snap) {
+                spans.push(Span::styled(label, style_hint()));
+            }
+        }
+
+        result.push(Line::from(spans));
     }
-    spans
+
+    // Cursor is on a trailing empty line after a newline (e.g. after Ctrl+J/Shift+Enter)
+    if cursor_line_idx >= input_lines.len() {
+        let prefix = if input_lines.is_empty() { GLYPH_USER } else { indent };
+        let mut spans = vec![Span::styled(prefix, chevron_style)];
+        let cursor_style = if token_held { style_input_cursor() } else { style_agent() };
+        spans.push(Span::styled(" ", cursor_style));
+        result.push(Line::from(spans));
+    }
+
+    result
 }
 
-fn hints(f: &mut Frame, _snap: &Snapshot, area: Rect) {
-    let hints_text = "Ctrl+Shift+E=expand/collapse | Alt+Enter=follow-up | Esc=clear | Ctrl+C=quit";
-    f.render_widget(Paragraph::new(hints_text).style(style_hint()), area);
+fn render_cursor_spans(line_content: &str, cursor_col_in_line: usize, token_held: bool) -> Vec<Span<'_>> {
+    let cursor_style = if token_held { style_input_cursor() } else { style_agent() };
+    let before = &line_content[..cursor_col_in_line.min(line_content.len())];
+    let (at_cursor, after) = if cursor_col_in_line < line_content.len() {
+        let c = line_content[cursor_col_in_line..].chars().next().unwrap();
+        let char_len = c.len_utf8();
+        (c.to_string(), &line_content[cursor_col_in_line + char_len..])
+    } else {
+        (" ".to_string(), "")
+    };
+    vec![
+        Span::styled(before, style_agent()),
+        Span::styled(at_cursor, cursor_style),
+        Span::styled(after, style_agent()),
+    ]
+}
+
+fn image_attachment_label(snap: &Snapshot) -> Option<String> {
+    match snap.image_attachments.len() {
+        0 => None,
+        1 => Some(" 📎 1 image".to_string()),
+        n => Some(format!(" 📎 {} images", n)),
+    }
+}
+
+fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {
+    if let Some(ref msg) = snap.transient_message {
+        let (label, bg) = match snap.transient_level {
+            Some(runie_core::event::TransientLevel::Success) => ("\\ok\\", color_success()),
+            Some(runie_core::event::TransientLevel::Warning) => ("\\warn\\", color_warning()),
+            Some(runie_core::event::TransientLevel::Error) => ("\\err\\", color_error()),
+            _ => ("", crate::theme::color_bg_panel()),
+        };
+        let badge_bg = darken(bg, 0.8);
+        let margin_bg = darken(bg, 0.85);
+        let dark_text = color_bg();
+        let margin_style = Style::default().fg(dark_text).bg(margin_bg);
+        let msg_style = Style::default().fg(dark_text).bg(bg);
+        let badge_style = Style::default().fg(dark_text).bg(badge_bg).bold();
+        // Build spans: left_margin | badge | space (darker) | space | msg | fill (bg til end)
+        let content_len = label.len() + 2 + msg.len();  // badge + 2 spaces + msg
+        let fill_len = (area.width as usize).saturating_sub(content_len + 1);  // +1 for left margin
+        let fill = " ".repeat(fill_len.max(1));
+        let line_spans = vec![
+            Span::styled(" ", margin_style),
+            Span::styled(label, badge_style),
+            Span::styled(" ", margin_style),  // space after badge is darker
+            Span::styled(format!(" {}", msg), msg_style),  // space before message
+            Span::styled(&fill, msg_style),
+        ];
+        let block = Block::default().borders(Borders::NONE).style(margin_style);
+        f.render_widget(Paragraph::new(Line::from(line_spans)).block(block), area);
+    } else {
+        let line = Line::from(parse_hint_spans(&snap.hint_text));
+        f.render_widget(Paragraph::new(line), area);
+    }
+}
+
+pub(crate) fn parse_hint_spans(text: &str) -> Vec<Span<'_>> {
+    let mut spans = Vec::new();
+    let segments: Vec<&str> = text.split(" · ").collect();
+    for (i, segment) in segments.iter().enumerate() {
+        if let Some(space_idx) = segment.find(' ') {
+            let key = &segment[..space_idx];
+            let desc = &segment[space_idx..];
+            spans.push(Span::styled(key.to_string(), style_hint_key()));
+            spans.push(Span::styled(desc.to_string(), style_hint()));
+        } else {
+            spans.push(Span::styled(segment.to_string(), style_hint()));
+        }
+        if i + 1 < segments.len() {
+            spans.push(Span::styled(" · ".to_string(), style_hint()));
+        }
+    }
+    spans
 }
 
 

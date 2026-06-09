@@ -91,16 +91,8 @@ fn cycle_emits_switch_model() {
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
 
-    let sys_msgs: Vec<_> = state
-        .session.messages
-        .iter()
-        .filter(|m| m.role == Role::System)
-        .collect();
-    assert!(
-        sys_msgs.iter().any(|m| m.content.contains("Switched to openai/gpt-4o")),
-        "Should add system message on model switch, got: {:?}",
-        sys_msgs
-    );
+    assert_eq!(state.transient_message, Some("Switched to openai/gpt-4o".into()));
+    assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
 }
 
 #[test]

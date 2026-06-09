@@ -211,12 +211,9 @@ mod tests {
         assert_eq!(state.config.current_provider, "anthropic");
         assert_eq!(state.config.current_model, "claude-3-sonnet");
         
-        // Verify a system message was added to indicate the change
-        let has_switch_msg = state.session.messages.iter().any(|m| {
-            m.role == crate::model::Role::System &&
-            m.content.contains("Switched to anthropic/claude-3-sonnet")
-        });
-        assert!(has_switch_msg, "Should add system message on model switch");
+        // Verify a transient notification was emitted
+        assert_eq!(state.transient_message, Some("Switched to anthropic/claude-3-sonnet".into()));
+        assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
     }
 
     #[test]
@@ -229,11 +226,8 @@ mod tests {
         });
 
         assert_eq!(state.config.theme_name, "dracula");
-        let has_theme_msg = state.session.messages.iter().any(|m| {
-            m.role == crate::model::Role::System &&
-            m.content.contains("Theme switched to 'dracula'")
-        });
-        assert!(has_theme_msg, "Should add system message on theme switch");
+        assert_eq!(state.transient_message, Some("Theme switched to 'dracula'".into()));
+        assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
     }
 
     #[tokio::test]

@@ -144,5 +144,5 @@ fn empty_chat_shows_panels() {
     state.ensure_fresh();
 
     let out = render_content(&mut state);
-    assert!(out.contains("Input"), "Input panel title should be visible");
+    assert!(out.contains("mock/echo"), "Input panel title should show provider/model");
 }

@@ -71,6 +71,9 @@ impl AppState {
             | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect 
             | Event::PathCompletionClose => self.edit_event(event),
             Event::SystemMessage { content } => self.add_system_msg(content),
+            Event::TransientMessage { content, level } => self.set_transient(content, level),
+            Event::TransientError { content } => self.set_transient(content, crate::event::TransientLevel::Error),
+            Event::ClearTransient => self.clear_transient(),
         }
     }
 
@@ -279,8 +282,18 @@ impl AppState {
         }
     }
 
-    /// Handles dialog-specific events based on current dialog state.
+    /// Handles dialog-specific events.
+    /// Esc (Abort) always closes any dialog. Global events pass through.
     fn update_dialog(&mut self, event: Event) {
+        if matches!(event, Event::Abort) { self.open_dialog = None; self.mark_dirty(); return; }
+        if matches!(event, Event::SwitchTheme { .. } | Event::SwitchModel { .. }
+            | Event::CycleModelNext | Event::CycleModelPrev
+            | Event::CycleThinkingLevel | Event::SetThinkingLevel(_)
+            | Event::ToggleReadOnly | Event::TrustProject | Event::UntrustProject) {
+            self.model_config_event(event); return;
+        }
+        if matches!(event, Event::Quit) { self.should_quit = true; return; }
+
         let Some(dialog) = self.open_dialog.take() else { return };
         match dialog {
             crate::commands::DialogState::CommandPalette { filter, selected } => {
@@ -298,6 +311,112 @@ impl AppState {
             crate::commands::DialogState::SessionTree { filter, selected } => {
                 self.update_session_tree(event, filter, selected);
             }
+            crate::commands::DialogState::PanelStack(mut stack) => {
+                self.update_panel_stack(event, &mut stack);
+            }
+        }
+    }
+
+    fn update_panel_stack(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) {
+        use Event::*;
+        match event {
+            SettingsClose => { self.open_dialog = None; self.mark_dirty(); return; }
+            HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => stack.select_up(),
+            HistoryNext | SettingsDown | PaletteDown | ModelSelectorDown => stack.select_down(),
+            CursorLeft | SettingsLeft => { stack.pop(); }
+            Submit | SettingsSelect | PaletteSelect => {
+                if self.try_activate_panel(stack) { return; }
+            }
+            PaletteFilter(c) | ModelSelectorFilter(c) | Input(c) => stack.push_filter(c),
+            PaletteBackspace | ModelSelectorBackspace | Backspace => stack.pop_filter(),
+            _ => {}
+        }
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
+        self.mark_dirty();
+    }
+
+    fn try_activate_panel(&mut self, stack: &mut crate::dialog::PanelStack) -> bool {
+        if let Some(action) = stack.activate() {
+            if self.handle_panel_action(action, stack) { return true; }
+        }
+        false
+    }
+
+    /// Handle a panel item action. Returns `true` if the dialog was closed.
+    fn handle_panel_action(
+        &mut self,
+        action: crate::dialog::ItemAction,
+        stack: &mut crate::dialog::PanelStack,
+    ) -> bool {
+        use crate::dialog::ItemAction;
+        match action {
+            ItemAction::Push(_) | ItemAction::Pop => {
+                stack.pop();
+                false
+            }
+            ItemAction::Close => {
+                self.open_dialog = None;
+                self.mark_dirty();
+                true
+            }
+            ItemAction::Emit(evt) => {
+                self.update(evt);
+                false
+            }
+            ItemAction::Toggle(key) => {
+                self.panel_toggle_item(stack, &key);
+                false
+            }
+            ItemAction::Cycle(key) => {
+                self.panel_cycle_item(stack, &key);
+                false
+            }
+        }
+    }
+
+    fn panel_toggle_item(&mut self, stack: &mut crate::dialog::PanelStack, key: &str) {
+        use crate::dialog::PanelItem;
+        if let Some(PanelItem::Toggle { value, .. }) =
+            stack.current_mut().and_then(|p| p.selected_item_mut())
+        {
+            *value = !*value;
+        }
+        self.apply_panel_setting(key);
+    }
+
+    fn panel_cycle_item(&mut self, stack: &mut crate::dialog::PanelStack, key: &str) {
+        use crate::dialog::PanelItem;
+        if let Some(PanelItem::Select { current, options, .. }) =
+            stack.current_mut().and_then(|p| p.selected_item_mut())
+        {
+            if let Some(idx) = options.iter().position(|o| o == current) {
+                let next = (idx + 1) % options.len();
+                *current = options[next].clone();
+            }
+        }
+        self.apply_panel_setting(key);
+    }
+
+    fn apply_panel_setting(&mut self, key: &str) {
+        match key {
+            "read_only" => {
+                self.config.read_only = !self.config.read_only;
+                let status = if self.config.read_only { "enabled" } else { "disabled" };
+                self.notify(format!("Read-only mode {}", status), crate::event::TransientLevel::Warning);
+            }
+            "steering_mode" => {
+                self.steering_mode = match self.steering_mode {
+                    crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
+                    crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
+                };
+            }
+            "follow_up_mode" => {
+                self.follow_up_mode = match self.follow_up_mode {
+                    crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
+                    crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
+                };
+            }
+            _ => {}
         }
     }
 
@@ -351,12 +470,12 @@ impl AppState {
                 m
             },
         );
-        self.add_system_msg(format!("Switched to {}/{}", provider, model));
+        self.notify(format!("Switched to {}/{}", provider, model), crate::event::TransientLevel::Success);
     }
 
     fn switch_theme(&mut self, name: String) {
         self.config.theme_name = name.clone();
-        self.add_system_msg(format!("Theme switched to '{}'", name));
+        self.notify(format!("Theme switched to '{}'", name), crate::event::TransientLevel::Success);
     }
 
     fn cycle_model(&mut self, delta: isize) {
@@ -378,18 +497,18 @@ impl AppState {
 
     fn cycle_thinking_level(&mut self) {
         self.config.thinking_level = self.config.thinking_level.cycle();
-        self.add_system_msg(format!("Thinking level: {}", self.config.thinking_level.as_str()));
+        self.notify(format!("Thinking level: {}", self.config.thinking_level.as_str()), crate::event::TransientLevel::Info);
     }
 
     fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
         self.config.thinking_level = level;
-        self.add_system_msg(format!("Thinking level set to: {}", self.config.thinking_level.as_str()));
+        self.notify(format!("Thinking level set to: {}", self.config.thinking_level.as_str()), crate::event::TransientLevel::Info);
     }
 
     fn toggle_read_only(&mut self) {
         self.config.read_only = !self.config.read_only;
         let status = if self.config.read_only { "enabled" } else { "disabled" };
-        self.add_system_msg(format!("Read-only mode {}", status));
+        self.notify(format!("Read-only mode {}", status), crate::event::TransientLevel::Warning);
     }
 
     fn trust_project(&mut self) {
@@ -398,7 +517,7 @@ impl AppState {
         tm.set(&cwd, crate::trust::TrustDecision::Trusted);
         let _ = tm.save();
         self.config.read_only = false;
-        self.add_system_msg(format!("Project '{}' trusted. Read-only disabled.", cwd.display()));
+        self.notify(format!("Project '{}' trusted. Read-only disabled.", cwd.display()), crate::event::TransientLevel::Success);
     }
 
     fn untrust_project(&mut self) {
@@ -407,7 +526,7 @@ impl AppState {
         tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
         let _ = tm.save();
         self.config.read_only = true;
-        self.add_system_msg(format!("Project '{}' untrusted. Read-only enabled.", cwd.display()));
+        self.notify(format!("Project '{}' untrusted. Read-only enabled.", cwd.display()), crate::event::TransientLevel::Warning);
     }
 
     pub fn peek_queue(&self) -> Option<&(String, String)> {
@@ -416,6 +535,23 @@ impl AppState {
 
     pub fn pop_queue(&mut self) -> Option<(String, String)> {
         self.agent.request_queue.pop_front()
+    }
+
+    fn set_transient(&mut self, content: String, level: crate::event::TransientLevel) {
+        self.transient_message = Some(content);
+        self.transient_level = Some(level);
+        self.transient_until = match level {
+            crate::event::TransientLevel::Error => None,
+            _ => Some(std::time::Instant::now() + std::time::Duration::from_secs(5)),
+        };
+        self.mark_dirty();
+    }
+
+    fn clear_transient(&mut self) {
+        self.transient_message = None;
+        self.transient_until = None;
+        self.transient_level = None;
+        self.mark_dirty();
     }
 
     pub(crate) fn add_system_msg(&mut self, content: String) {
@@ -427,6 +563,11 @@ impl AppState {
             ..Default::default()
         });
         self.messages_changed();
+    }
+
+    /// Emit a transient notification in the hints line (not in the feed).
+    pub(crate) fn notify(&mut self, content: String, level: crate::event::TransientLevel) {
+        self.set_transient(content, level);
     }
 
     /// Move TurnComplete to the end of messages and bump its timestamp.

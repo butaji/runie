@@ -32,6 +32,10 @@ pub fn build_provider(provider: &str, model: &str) -> AnyProvider {
     AnyProvider::new(provider, model)
 }
 
+pub fn build_provider_with_warning(provider: &str, model: &str) -> (AnyProvider, Option<String>) {
+    AnyProvider::new_with_warning(provider, model)
+}
+
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

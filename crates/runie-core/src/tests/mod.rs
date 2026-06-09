@@ -104,3 +104,5 @@ mod safety;
 mod session_extra;
 #[cfg(test)]
 mod session_tree;
+#[cfg(test)]
+mod dialog_theme_switch;

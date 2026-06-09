@@ -62,6 +62,10 @@ pub struct Snapshot {
     pub image_attachments: Vec<String>,
     /// Authenticated providers for status display.
     pub auth_providers: Vec<String>,
+    /// Transient notification message shown in hints line.
+    pub transient_message: Option<String>,
+    /// Severity level of the transient notification.
+    pub transient_level: Option<crate::event::TransientLevel>,
 }
 
 impl Snapshot {

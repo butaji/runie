@@ -9,10 +9,30 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
     match event {
         Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
         Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
+            // Handle Ctrl+J - ASCII 10 (LF) is often sent as just a char
+            if let KeyCode::Char(c) = key.code {
+                if key.modifiers.is_empty() && c == '\n' {
+                    return Some(CoreEvent::Newline);
+                }
+            }
+            // Broad Shift+Enter detection for various terminals (tmux, Warp, iTerm, etc.)
+            if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
+                return Some(CoreEvent::Newline);
+            }
             map_key_event(key, bindings)
         }
         _ => None,
     }
+}
+
+fn is_enter_like(code: KeyCode) -> bool {
+    matches!(code,
+        KeyCode::Enter
+        | KeyCode::F(3)      // tmux sends \e[13;2~ for Shift+Enter
+        | KeyCode::F(13)     // some terminals use F13
+        | KeyCode::Char('\n')
+        | KeyCode::Char('\r')
+    )
 }
 
 fn log_key_event(event: &Event) {
@@ -28,6 +48,8 @@ fn log_key_event(event: &Event) {
     }
 }
 
+/// Handle escape sequences that crossterm doesn't parse as KeyEvent.
+/// Many terminals send different sequences for modified keys.
 pub fn key_event_to_combo(key: &KeyEvent) -> String {
     let mut parts = Vec::new();
     if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -116,6 +138,10 @@ fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
 fn map_shift_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
         KeyCode::Enter => Some(CoreEvent::Newline),
+        // Shift+F3 is what some terminals send for Shift+Enter (via \e[13;2~ escape sequence)
+        KeyCode::F(3) => Some(CoreEvent::Newline),
+        // Shift+symbol: pass through as regular input (crossterm already provides the shifted char)
+        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
         _ => None,
     }
 }
@@ -356,5 +382,82 @@ mod tests {
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
         assert!(matches!(result, Some(runie_core::Event::PasteImage)), "Alt+V should map to PasteImage, got {:?}", result);
+    }
+
+    // ─── Shift+symbol input ─────────────────────────────────────────────────────
+
+    #[test]
+    fn shift_exclamation_converts_to_input_exclamation() {
+        let key = KeyEvent::new(KeyCode::Char('!'), KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Input('!'))), "Shift+! should map to Input('!'), got {:?}", result);
+    }
+
+    #[test]
+    fn shift_question_converts_to_input_question() {
+        let key = KeyEvent::new(KeyCode::Char('?'), KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Input('?'))), "Shift+? should map to Input('?'), got {:?}", result);
+    }
+
+    #[test]
+    fn shift_parenthesis_open_converts_to_input() {
+        let key = KeyEvent::new(KeyCode::Char('('), KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Input('('))), "Shift+( should map to Input('('), got {:?}", result);
+    }
+
+    #[test]
+    fn shift_at_converts_to_input_at() {
+        let key = KeyEvent::new(KeyCode::Char('@'), KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Input('@'))), "Shift+@ should map to Input('@'), got {:?}", result);
+    }
+
+    #[test]
+    fn shift_enter_converts_to_newline() {
+        let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Newline)), "Shift+Enter should map to Newline, got {:?}", result);
+    }
+
+    #[test]
+    fn shift_f3_converts_to_newline_for_tmux_shift_enter() {
+        // tmux sends \e[13;2~ for Shift+Enter, which crossterm interprets as F(3)+SHIFT
+        let key = KeyEvent::new(KeyCode::F(3), KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Newline)), "Shift+F3 should map to Newline for tmux Shift+Enter, got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_j_converts_to_newline() {
+        let key = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Newline)), "Ctrl+J should map to Newline, got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_j_as_lf_converts_to_newline() {
+        // Some terminals send Ctrl+J as just LF (\n) without CONTROL modifier
+        let key = KeyEvent::new(KeyCode::Char('\n'), KeyModifiers::empty());
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Newline)), "LF char should map to Newline, got {:?}", result);
+    }
+
+    #[test]
+    fn shift_up_converts_to_history_prev() {
+        let key = KeyEvent::new(KeyCode::Up, KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        // Shift+arrow is not a binding, falls through to None
+        assert!(result.is_none(), "Shift+Up should not map (falls through), got {:?}", result);
     }
 }
