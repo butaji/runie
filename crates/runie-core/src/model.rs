@@ -118,6 +118,8 @@ pub struct AppState {
     pub config_provider: String,
     /// Default model from config (for /new reset)
     pub config_model: String,
+    /// Current keybindings (reloadable)
+    pub keybindings: std::collections::HashMap<String, String>,
     /// Optional display name for the current session
     pub session_display_name: Option<String>,
     /// Session creation timestamp (unix seconds)
@@ -189,6 +191,7 @@ impl Default for AppState {
             registry: crate::commands::CommandRegistry::new(),
             should_quit: false, open_dialog: None,
             config_provider: "mock".into(), config_model: "echo".into(),
+            keybindings: crate::keybindings::default_keybindings(),
             session_display_name: None,
             session_created_at: now(), session_updated_at: now(),
             thinking_level: ThinkingLevel::Off,

@@ -20,9 +20,9 @@ pub struct ModelsSection {
 
 #[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct Config {
-    provider: Option<String>,
+    pub provider: Option<String>,
     model: Option<String>,
-    theme: Option<String>,
+    pub theme: Option<String>,
     #[serde(default)]
     models: ModelsSection,
     #[serde(default)]

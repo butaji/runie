@@ -239,6 +239,7 @@ impl AppState {
             }
             Event::ApproveEdit => self.approve_edits(),
             Event::RejectEdit => self.reject_edits(),
+            Event::ReloadAll => self.reload_all(),
             Event::TogglePathCompletion => self.toggle_path_completion(),
             Event::PathCompletionUp => self.path_completion_up(),
             Event::PathCompletionDown => self.path_completion_down(),
@@ -446,6 +447,21 @@ impl AppState {
 
     pub fn pop_queue(&mut self) -> Option<(String, String)> {
         self.request_queue.pop_front()
+    }
+
+    fn reload_all(&mut self) {
+        let config = crate::config_reload::Config::load_from(
+            &crate::config_reload::config_path());
+        if let Some(provider) = &config.provider {
+            self.config_provider = provider.clone();
+        }
+        if let Some(model) = config.default_model() {
+            self.config_model = model.to_string();
+        }
+        if let Some(theme) = &config.theme {
+            self.theme_name = theme.clone();
+        }
+        self.add_system_msg("Reloaded config, keybindings, and theme.".to_string());
     }
 
     fn add_system_msg(&mut self, content: String) {

@@ -15,7 +15,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
 use runie_core::{AppState, Event as CoreEvent, Snapshot, keybindings, config_reload};
 use std::{collections::HashMap, io, io::Write, time::Duration};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 
 const ANIM_MS: u64 = 200;
 
@@ -40,15 +40,14 @@ async fn main() -> io::Result<()> {
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
     let (render_tx, render_rx) = mpsc::channel::<Snapshot>(1);
-
-    let keybindings = keybindings::load_keybindings(&None);
+    let (kb_tx, kb_rx) = watch::channel(state.keybindings.clone());
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
-    tokio::spawn(input_reader(input_tx.clone(), keybindings));
+    tokio::spawn(input_reader(input_tx.clone(), kb_rx));
     tokio::spawn(render_task(terminal, render_rx));
     tokio::spawn(config_reload::spawn_config_watcher(input_tx.clone(), config_reload::config_path()));
 
-    event_loop(state, input_rx, agent_rx, cmd_tx, render_tx, input_tx).await
+    event_loop(state, input_rx, agent_rx, cmd_tx, render_tx, input_tx, kb_tx).await
 }
 
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
@@ -70,9 +69,10 @@ async fn render_task(
     }
 }
 
-async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, bindings: HashMap<String, String>) {
+async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, mut kb_rx: watch::Receiver<HashMap<String, String>>) {
     let mut reader = EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
+        let bindings = kb_rx.borrow_and_update().clone();
         if let Some(evt) = keymap::convert_event(&event, &bindings) {
             let is_quit = matches!(&evt, CoreEvent::Quit | CoreEvent::Reset);
             if input_tx.send(evt).await.is_err() { break; }
@@ -157,6 +157,7 @@ async fn event_loop(
     cmd_tx: mpsc::Sender<AgentCommand>,
     render_tx: mpsc::Sender<Snapshot>,
     input_tx: mpsc::Sender<CoreEvent>,
+    kb_tx: watch::Sender<HashMap<String, String>>,
 ) -> io::Result<()> {
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
 
@@ -179,9 +180,13 @@ async fn event_loop(
                 } else {
                     let was_submit = matches!(evt, CoreEvent::Submit);
                     let was_followup = matches!(evt, CoreEvent::FollowUp);
+                    let was_reload = matches!(evt, CoreEvent::ReloadAll);
                     state.update(evt);
                     if state.should_quit {
                         return Ok(());
+                    }
+                    if was_reload {
+                        let _ = kb_tx.send(state.keybindings.clone());
                     }
                     if was_submit || was_followup {
                         spawn_if_queued(&mut state, &cmd_tx).await;

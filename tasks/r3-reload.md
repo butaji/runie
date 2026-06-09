@@ -1,6 +1,6 @@
 # Reload (/reload)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 
@@ -29,14 +29,14 @@ fn update_reload(state: &mut AppState) -> String {
 
 ## Acceptance Criteria
 
-- [ ] `/reload` reloads keybindings from file
-- [ ] Reloads theme from file
-- [ ] Reloads config.toml
-- [ ] No restart required
-- [ ] Shows confirmation message
+- [x] `/reload` reloads keybindings from file
+- [x] Reloads theme from file
+- [x] Reloads config.toml
+- [x] No restart required
+- [x] Shows confirmation message
 
 ## Tests
 
 ### Layer 2
-- [ ] `reload_emits_event` — /reload triggers ReloadAll
-- [ ] `reload_updates_keybindings` — new bindings take effect
+- [x] `reload_emits_event` — /reload triggers ReloadAll
+- [x] `reload_updates_keybindings` — new bindings take effect

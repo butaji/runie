@@ -21,6 +21,8 @@ mod tokens;
 #[cfg(test)]
 mod queue;
 #[cfg(test)]
+mod reload;
+#[cfg(test)]
 mod compaction;
 #[cfg(test)]
 mod file_refs;
