@@ -9,11 +9,11 @@
 
 mod keymap;
 
-use crossterm::event::{EventStream, KeyModifiers};
+use crossterm::event::EventStream;
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
-use runie_core::{AppState, Event as CoreEvent, Snapshot, keybindings};
+use runie_core::{AppState, Event as CoreEvent, Snapshot, keybindings, config_reload};
 use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::mpsc;
 
@@ -42,8 +42,9 @@ async fn main() -> io::Result<()> {
     let keybindings = keybindings::load_keybindings(&None);
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
-    tokio::spawn(input_reader(input_tx, keybindings));
+    tokio::spawn(input_reader(input_tx.clone(), keybindings));
     tokio::spawn(render_task(terminal, render_rx));
+    tokio::spawn(config_reload::spawn_config_watcher(input_tx, config_reload::config_path()));
 
     event_loop(state, input_rx, agent_rx, cmd_tx, render_tx).await
 }
@@ -172,7 +173,7 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, KeyEventKind};
+    use crossterm::event::KeyCode;
 
     #[test]
     fn animation_interval_is_200ms() {

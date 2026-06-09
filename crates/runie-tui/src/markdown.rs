@@ -147,7 +147,9 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
                 });
                 code_lines.clear();
             } else {
-                lang = line[3..].trim().to_string();
+                // Safe because we checked starts_with("```") above
+                let rest = line.strip_prefix("```").expect("already checked starts_with");
+                lang = rest.trim().to_string();
             }
             in_code = !in_code;
             continue;
@@ -159,10 +161,10 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
         }
 
         // Blockquotes (> )
-        if line.starts_with("> ") {
+        if let Some(stripped) = line.strip_prefix("> ") {
             flush_text(&mut text_lines, &mut blocks);
             flush_list(&mut list_items, &mut blocks, list_ordered);
-            blockquote_lines.push(&line[2..]);
+            blockquote_lines.push(stripped);
             in_blockquote = true;
             continue;
         } else if in_blockquote && line.starts_with(">") {
