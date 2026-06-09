@@ -337,6 +337,7 @@ impl AppState {
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),
             scoped_models: self.scoped_models.clone(),
+            settings_items: crate::update::settings_dialog::build_setting_items(self),
         }
     }
 

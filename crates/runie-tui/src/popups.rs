@@ -109,6 +109,47 @@ fn palette_popup_rect(area: Rect) -> Rect {
     }
 }
 
+pub fn settings_dialog(f: &mut Frame, snap: &Snapshot) {
+    let (category, selected) = match &snap.dialog {
+        Some(runie_core::commands::DialogState::Settings { category, selected }) => (*category, *selected),
+        _ => return,
+    };
+    let popup_area = palette_popup_rect(f.area());
+    let mut lines: Vec<Line> = Vec::new();
+    let cats = runie_core::settings::SettingsCategory::all();
+    let cat_labels: Vec<String> = cats
+        .iter()
+        .map(|c| {
+            let label = c.as_str();
+            if *c == category { format!("[{}]", label) } else { label.to_string() }
+        })
+        .collect();
+    lines.push(Line::from(cat_labels.join(" | ")).style(style_thinking()));
+    lines.push(Line::from(""));
+
+    let category_items: Vec<_> = snap.settings_items.iter().filter(|i| i.category == category).collect();
+    if category_items.is_empty() {
+        lines.push(Line::from("No settings in this category.").style(style_hint()));
+    } else {
+        for (i, item) in category_items.iter().enumerate() {
+            let value_str = match &item.value {
+                runie_core::settings::SettingValue::Bool(v) => if *v { "on".to_string() } else { "off".to_string() },
+                runie_core::settings::SettingValue::Enum { current, .. } => current.clone(),
+            };
+            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
+            lines.push(Line::from(format!("    {:20} {}", item.label, value_str)).style(style));
+        }
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from("←/→=tab ↑/↓=nav Enter=toggle Esc=close").style(style_hint()));
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Settings ")
+        .border_style(style_popup_border());
+    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+}
+
 pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
     let selected = match &snap.dialog {
         Some(runie_core::commands::DialogState::ScopedModels { selected }) => *selected,
