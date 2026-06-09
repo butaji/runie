@@ -12,6 +12,7 @@ fn scroll_offset_zero_when_at_bottom() {
         content: "hello".into(),
         timestamp: 0.0,
         id: "u0".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -32,6 +33,7 @@ fn scroll_offset_max_when_fully_scrolled() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -53,6 +55,7 @@ fn scroll_offset_shows_bottom_when_zero() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -74,6 +77,7 @@ fn scroll_offset_halfway() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -95,6 +99,7 @@ fn scrollbar_state_has_viewport_content_length() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();

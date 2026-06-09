@@ -12,6 +12,7 @@ fn add_messages(state: &mut AppState, count: usize) {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -209,6 +210,7 @@ fn single_message_visible() {
         content: "hello".into(),
         timestamp: 0.0,
         id: "u1".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();

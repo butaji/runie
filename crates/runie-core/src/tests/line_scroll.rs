@@ -16,6 +16,7 @@ fn thought_msg(id: &str, n_lines: usize) -> ChatMessage {
         content,
         timestamp: 1.0,
         id: id.to_string(),
+        ..Default::default()
     }
 }
 
@@ -28,6 +29,7 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
         content,
         timestamp: 1.0,
         id: id.to_string(),
+        ..Default::default()
     }
 }
 
@@ -35,7 +37,7 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
 
 #[test]
 fn user_message_is_one_line() {
-    let msg = ChatMessage { role: Role::User, content: "hello".into(), timestamp: 0.0, id: "u".into() };
+    let msg = ChatMessage { role: Role::User, content: "hello".into(), timestamp: 0.0, id: "u".into(), ..Default::default()};
     let mut state = fresh_state();
     state.messages.push(msg);
     state.messages_changed();
@@ -80,6 +82,7 @@ fn visible_shows_latest_element_at_bottom() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -103,6 +106,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
         content: "first".into(),
         timestamp: 0.0,
         id: "u0".into(),
+        ..Default::default()
     });
     state.messages.push(thought_msg("t1", 10)); // 11 lines of thought
     state.messages.push(ChatMessage {
@@ -110,19 +114,11 @@ fn visible_skips_lines_from_first_element_when_overflow() {
         content: "latest".into(),
         timestamp: 2.0,
         id: "u2".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
     state.scroll = 0;
-
-    // Total: msg0(1)+spacer(1) + thought(11)+spacer(1) + msg2(1)+spacer(1) = 17 lines
-    // Wait: thought_msg header "◆ Thought 1.0s" + 5 lines = 6 lines, not 11
-    // Actually thought_msg("t1", 5) = "◆ Thought 1.0s" + line1..line5 = 6 lines
-    // So total: msg0(1)+spacer(1) + thought(6)+spacer(1) + msg2(1)+spacer(1) = 11 lines
-    // Viewport of 5 lines at bottom:
-    // Bottom-up: msg2(1) + spacer(1) = 2 lines used, 3 remaining
-    //            thought: need 3 lines from bottom of thought
-    //            thought has 11 lines, so skip 11-3 = 8 lines from top
     let region = state.visible_scroll(5);
 
     assert!(
@@ -146,6 +142,7 @@ fn scroll_up_shows_older_content() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -174,7 +171,7 @@ fn scroll_up_shows_older_content() {
 #[test]
 fn scrollbar_no_scrollbar_when_lines_fit() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage { role: Role::User, content: "hi".into(), timestamp: 0.0, id: "u".into() });
+    state.messages.push(ChatMessage { role: Role::User, content: "hi".into(), timestamp: 0.0, id: "u".into(), ..Default::default()});
     state.messages_changed();
     state.ensure_fresh();
 
@@ -193,6 +190,7 @@ fn scrollbar_shows_when_lines_overflow() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -211,6 +209,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -233,6 +232,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -253,6 +253,7 @@ fn large_thought_overflows_viewport() {
         content: "before".into(),
         timestamp: 0.0,
         id: "u0".into(),
+        ..Default::default()
     });
     // Thought with 20 lines of content
     state.messages.push(thought_msg("t1", 20));
@@ -261,6 +262,7 @@ fn large_thought_overflows_viewport() {
         content: "after".into(),
         timestamp: 2.0,
         id: "u2".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -289,6 +291,7 @@ fn multi_line_tool_at_bottom_visible() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages.push(tool_msg("t1", 5));
@@ -320,6 +323,7 @@ fn new_message_at_bottom_auto_shows() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -332,6 +336,7 @@ fn new_message_at_bottom_auto_shows() {
         content: "newest".into(),
         timestamp: 100.0,
         id: "u99".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -352,6 +357,7 @@ fn scroll_preserved_when_not_at_bottom() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -363,6 +369,7 @@ fn scroll_preserved_when_not_at_bottom() {
         content: "newest".into(),
         timestamp: 100.0,
         id: "u99".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();

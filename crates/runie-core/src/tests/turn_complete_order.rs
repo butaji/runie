@@ -122,6 +122,7 @@ fn turn_complete_before_next_turn_user_message() {
         content: "Next turn".into(),
         timestamp: crate::model::now(),
         id: "u1".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();

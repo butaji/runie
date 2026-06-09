@@ -384,6 +384,7 @@ impl AppState {
             content: summary.clone(),
             timestamp: now(),
             id: "compaction".to_string(),
+            ..Default::default()
         });
         self.messages_changed();
         summary
@@ -397,8 +398,9 @@ pub fn now() -> f64 {
         .unwrap_or(0.0)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Role {
+    #[default]
     User,
     Thought,
     Assistant,
@@ -420,12 +422,14 @@ impl Role {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
     pub timestamp: f64,
     pub id: String,
+    #[serde(default)]
+    pub provider: String,
 }
 
 

@@ -79,6 +79,7 @@ fn large_thought_bottom_lines_visible() {
         content: thought,
         timestamp: 1.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -107,6 +108,7 @@ fn viewport_never_empty_when_content_exists() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -129,6 +131,7 @@ fn scroll_zero_always_shows_latest() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();

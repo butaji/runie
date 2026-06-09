@@ -112,6 +112,7 @@ fn long_message_wraps_to_multiple_lines() {
         content: long.clone(),
         timestamp: 0.0,
         id: "req.0".to_string(),
+        ..Default::default()
     });
     let backend = TestBackend::new(30, 20);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -136,6 +137,7 @@ fn wrapping_preserves_prefix_on_first_line_only() {
         content: "word ".repeat(20),
         timestamp: 0.0,
         id: "req.0".to_string(),
+        ..Default::default()
     });
     let backend = TestBackend::new(25, 20);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -160,6 +162,7 @@ fn wrapping_respects_panel_width() {
         content: "x".repeat(50),
         timestamp: 0.0,
         id: "req.0".to_string(),
+        ..Default::default()
     });
     let width = 20u16;
     let backend = TestBackend::new(width, 10);
@@ -189,6 +192,7 @@ fn tokens_on_right_side_of_status() {
         content: "hello".to_string(),
         timestamp: 0.0,
         id: "req.0".to_string(),
+        ..Default::default()
     });
     state.turn_active = true;
     state.turn_started_at = Some(std::time::Instant::now());
@@ -331,34 +335,51 @@ fn turn_complete_renders_after_tool_flow() {
         content: "list files".to_string(),
         timestamp: 0.0,
         id: "req.0".to_string(),
+        ..Default::default()
     });
     state.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Thought,
         content: "Thinking...".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
+        ..Default::default()
     });
     state.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Tool,
         content: "Ran list_files 0.5s".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
+        ..Default::default()
     });
     state.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Assistant,
         content: "Here are the files".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
+        ..Default::default()
     });
     state.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::TurnComplete,
         content: "Turn completed in 3.2s".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
+        ..Default::default()
     });
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let content = terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect::<String>();
+    let content = draw_state(&mut state);
     assert!(content.contains("Turn completed in 3.2s"), "TurnComplete should render in TUI after tool flow");
+}
+
+#[test]
+fn message_shows_provider() {
+    let mut state = AppState::default();
+    state.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Assistant,
+        content: "Hello".to_string(),
+        timestamp: 0.0,
+        id: "resp.0".to_string(),
+        provider: "anthropic".to_string(),
+        ..Default::default()
+    });
+    let content = draw_state(&mut state);
+    assert!(content.contains("anthropic"), "Agent message header should show provider");
 }

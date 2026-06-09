@@ -13,12 +13,14 @@ fn collapse_all_when_some_expanded() {
         content: "◆ Thought 1.0s\nreasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\noutput".into(),
         timestamp: 1.0,
         id: "x1".into(),
+        ..Default::default()
     });
 
     assert!(!state.all_collapsed, "Should start expanded");
@@ -34,12 +36,14 @@ fn expand_all_when_all_collapsed() {
         content: "◆ Thought 1.0s\nreasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\noutput".into(),
         timestamp: 1.0,
         id: "x1".into(),
+        ..Default::default()
     });
     state.all_collapsed = true;
 
@@ -55,12 +59,14 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
         content: "◆ Thought 1.0s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "⠋ Running ls...".into(),
         timestamp: 1.0,
         id: "x1".into(),
+        ..Default::default()
     });
 
     state.update(Event::ToggleExpand);
@@ -83,6 +89,7 @@ fn toggle_all_twice_restores_expanded() {
         content: "◆ Thought 1.0s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
 
     state.update(Event::ToggleExpand);
@@ -104,6 +111,7 @@ fn toggle_all_with_many_items() {
             content: format!("◆ Thought {}", i),
             timestamp: i as f64,
             id: format!("t{}", i),
+            ..Default::default()
         });
     }
 

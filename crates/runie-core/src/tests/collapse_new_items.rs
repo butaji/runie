@@ -136,6 +136,7 @@ fn expand_then_collapse_then_expand_same_state() {
         content: "◆ Thought 1.2s\nline1\nline2".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
 
     // Toggle 1: collapse all
@@ -184,6 +185,7 @@ fn reset_clears_global_collapse() {
         content: "Thought".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.all_collapsed = true;
 
@@ -199,12 +201,14 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
         content: "Hello".into(),
         timestamp: 0.0,
         id: "u1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "Hi".into(),
         timestamp: 0.0,
         id: "a1".into(),
+        ..Default::default()
     });
 
     state.update(Event::ToggleExpand);
@@ -225,6 +229,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
         content: "Done".into(),
         timestamp: 2.0,
         id: "a1".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -238,12 +243,14 @@ fn add_thought_and_tool(state: &mut AppState) {
         content: "◆ Thought 1.0s\nReasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\nfile1".into(),
         timestamp: 1.0,
         id: "x1".into(),
+        ..Default::default()
     });
 }
 

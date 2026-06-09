@@ -83,6 +83,7 @@ impl AppState {
             content: content.clone(),
             timestamp: now(),
             id: id.clone(),
+            ..Default::default()
         });
         self.request_queue.push_back((content, id));
     }

@@ -138,8 +138,8 @@ mod tests {
             created_at: 1.0,
             updated_at: 2.0,
             messages: vec![
-                ChatMessage { role: Role::User, content: "hi".into(), timestamp: 1.0, id: "req.0".into() },
-                ChatMessage { role: Role::Assistant, content: "hello".into(), timestamp: 2.0, id: "resp.0".into() },
+                ChatMessage { role: Role::User, content: "hi".into(), timestamp: 1.0, id: "req.0".into(), ..Default::default()},
+                ChatMessage { role: Role::Assistant, content: "hello".into(), timestamp: 2.0, id: "resp.0".into(), ..Default::default()},
             ],
             provider: "mock".into(),
             model: "echo".into(),
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn serialize_chat_message_roundtrip() {
-        let msg = ChatMessage { role: Role::User, content: "test".into(), timestamp: 1.5, id: "req.1".into() };
+        let msg = ChatMessage { role: Role::User, content: "test".into(), timestamp: 1.5, id: "req.1".into(), ..Default::default()};
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: ChatMessage = serde_json::from_str(&json).unwrap();
         assert_eq!(msg.role, decoded.role);
@@ -229,5 +229,15 @@ mod tests {
         assert_eq!(session.name, decoded.name);
         assert_eq!(session.messages.len(), decoded.messages.len());
         assert_eq!(session.theme_name, decoded.theme_name);
+    }
+
+    #[test]
+    fn session_persists_provider() {
+        let mut session = sample_session("provider_test");
+        session.messages[1].provider = "openai".to_string();
+        let store = tmp_store();
+        store.save("provider_test", &session).unwrap();
+        let loaded = store.load("provider_test").unwrap();
+        assert_eq!(loaded.messages[1].provider, "openai");
     }
 }

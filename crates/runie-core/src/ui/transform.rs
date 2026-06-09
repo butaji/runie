@@ -81,7 +81,7 @@ impl LazyCache {
         match msg.role {
             Role::User => Element::user(msg.content.clone()).at(ts),
             Role::Thought => Self::thought_elem(msg, state, ts),
-            Role::Assistant => Element::agent(crate::update::strip_tool_markers(&msg.content)).at(ts),
+            Role::Assistant => Element::AgentMessage { content: crate::update::strip_tool_markers(&msg.content), timestamp: ts, provider: msg.provider.clone() },
             Role::Tool => Self::tool_elem(msg, state, ts),
             Role::TurnComplete => Element::turn_complete(Self::parse_dur(&msg.content)).at(ts),
             Role::System => Element::thought(msg.content.clone()).at(ts),

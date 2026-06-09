@@ -13,6 +13,7 @@ fn scrollbar_no_scrollbar_when_content_fits() {
             content: format!("msg{}", i),
             timestamp: 0.0,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -31,6 +32,7 @@ fn scrollbar_shows_when_content_overflows() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -48,6 +50,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -66,6 +69,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -84,6 +88,7 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -105,6 +110,7 @@ fn scroll_clamped_to_max() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -123,6 +129,7 @@ fn visible_uses_scroll_offset() {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();

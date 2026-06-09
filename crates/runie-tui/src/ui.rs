@@ -176,7 +176,7 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     match elem {
         Spacer { .. } => vec![Line::from("")],
         UserMessage { content, timestamp } => render_message(content, *timestamp, GLYPH_USER, color_fg_bright()),
-        AgentMessage { content, timestamp } => render_agent_message(content, *timestamp),
+        AgentMessage { content, timestamp, provider } => render_agent_message(content, *timestamp, provider),
         Thinking { started, .. } => vec![Line::from(
             thinking_line(started.elapsed().as_secs_f64())
         ).style(style_thinking())],
@@ -257,17 +257,16 @@ fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {
         .collect()
 }
 
-fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
+fn render_agent_message(content: &str, timestamp: f64, provider: &str) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let mut lines = Vec::new();
     let mut is_first = true;
     let ts_str = format_timestamp(timestamp);
-
     for block in blocks {
         match block {
             CodeBlock::Text(text) => {
                 for line in text.lines() {
-                    lines.push(render_msg_line(line, timestamp, is_first));
+                    lines.push(render_msg_line(line, timestamp, is_first, provider));
                     is_first = false;
                 }
             }
@@ -290,7 +289,11 @@ fn render_agent_message(content: &str, timestamp: f64) -> Vec<Line<'static>> {
         }
     }
     if lines.is_empty() {
-        lines.push(Line::from(format!("{}{:>5}", GLYPH_AGENT, ts_str)).style(style_agent()));
+        if provider.is_empty() {
+            lines.push(Line::from(format!("{}{:>5}", GLYPH_AGENT, ts_str)).style(style_agent()));
+        } else {
+            lines.push(Line::from(format!("{} {} {:>5}", GLYPH_AGENT, provider, ts_str)).style(style_agent()));
+        }
     }
     lines
 }
@@ -300,11 +303,14 @@ fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
     Line::from(code_header_label(prefix, lang)).style(style_code_header())
 }
 
-fn render_msg_line(line: &str, timestamp: f64, is_first: bool) -> Line<'static> {
+fn render_msg_line(line: &str, timestamp: f64, is_first: bool, provider: &str) -> Line<'static> {
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
     let ts = format!(" {:>5}", format_timestamp(timestamp));
     let mut spans = vec![Span::styled(prefix.to_string(), style_agent())];
     spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, color_fg())));
+    if is_first && !provider.is_empty() {
+        spans.push(Span::styled(format!(" · {}", provider), style_timestamp()));
+    }
     spans.push(Span::styled(ts, style_timestamp()));
     Line::from(spans)
 }
