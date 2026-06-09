@@ -114,7 +114,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     state.messages_changed();
 }
 
-fn count_visible_lines(region: &crate::model::VisibleRegion) -> usize {
+fn count_visible_lines(region: &crate::snapshot::VisibleRegion) -> usize {
     let mut total = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
         let count = elem.line_count();

@@ -25,6 +25,7 @@ pub mod snapshot;
 pub mod config_reload;
 pub mod commands;
 pub mod trust;
+pub mod path_complete;
 #[cfg(test)]
 pub mod dsl;
 

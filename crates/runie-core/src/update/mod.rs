@@ -2,9 +2,11 @@ use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
 mod agent;
+mod at_refs;
 mod bash;
 mod input;
 mod line_nav;
+mod path_complete;
 mod queue;
 
 pub(crate) fn now() -> f64 {
@@ -71,14 +73,18 @@ impl AppState {
             Event::DeleteToStart => self.delete_to_start(),
             Event::KillChar => self.kill_char(),
             Event::HistoryPrev => {
-                if self.input.contains('\n') {
+                if self.path_suggestions.is_some() {
+                    self.path_completion_up();
+                } else if self.input.contains('\n') {
                     self.move_cursor_up();
                 } else {
                     self.history_prev();
                 }
             }
             Event::HistoryNext => {
-                if self.input.contains('\n') {
+                if self.path_suggestions.is_some() {
+                    self.path_completion_down();
+                } else if self.input.contains('\n') {
                     self.move_cursor_down();
                 } else {
                     self.history_next();
@@ -148,7 +154,13 @@ impl AppState {
                 self.cursor_pos = self.input.len();
                 self.mark_dirty();
             }
-            Event::Abort => self.abort_queue(),
+            Event::Abort => {
+                if self.path_suggestions.is_some() {
+                    self.path_completion_close();
+                } else {
+                    self.abort_queue();
+                }
+            }
             Event::SpawnAgent => {}
             Event::ToggleExpand => self.toggle_expand_all(),
             Event::ToggleCommandPalette => {
@@ -164,6 +176,11 @@ impl AppState {
             Event::PaletteDown |
             Event::PaletteSelect |
             Event::PaletteClose => {}
+            Event::TogglePathCompletion => self.toggle_path_completion(),
+            Event::PathCompletionUp => self.path_completion_up(),
+            Event::PathCompletionDown => self.path_completion_down(),
+            Event::PathCompletionSelect => self.path_completion_select(),
+            Event::PathCompletionClose => self.path_completion_close(),
         }
     }
 

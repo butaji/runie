@@ -73,4 +73,11 @@ pub enum Event {
     PaletteDown,
     PaletteSelect,
     PaletteClose,
+
+    // Path completion
+    TogglePathCompletion,
+    PathCompletionUp,
+    PathCompletionDown,
+    PathCompletionSelect,
+    PathCompletionClose,
 }

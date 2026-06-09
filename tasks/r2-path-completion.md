@@ -1,6 +1,6 @@
 # Path Completion
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Input & Commands
 
@@ -38,19 +38,19 @@ pub struct PathCompletion {
 
 ## Acceptance Criteria
 
-- [ ] Tab triggers path completion popup
-- [ ] Shows files and directories matching prefix
-- [ ] Directories marked with `/`
-- [ ] Arrow keys navigate, Enter selects
-- [ ] Works after `@` and bare paths
-- [ ] Hidden files excluded unless prefix starts with `.`
+- [x] Tab triggers path completion popup
+- [x] Shows files and directories matching prefix
+- [x] Directories marked with `/`
+- [x] Arrow keys navigate, Enter selects
+- [x] Works after `@` and bare paths
+- [x] Hidden files excluded unless prefix starts with `.`
 
 ## Tests
 
 ### Layer 1
-- [ ] `complete_empty_returns_cwd` — tab with empty shows cwd
-- [ ] `complete_filters_prefix` — "src/" filters children
-- [ ] `complete_excludes_hidden` — dotfiles hidden
+- [x] `complete_empty_returns_cwd` — tab with empty shows cwd
+- [x] `complete_filters_prefix` — "src/" filters children
+- [x] `complete_excludes_hidden` — dotfiles hidden
 
 ### Layer 2
-- [ ] `tab_triggers_completion` — Tab key opens popup
+- [x] `tab_triggers_completion` — Tab key opens popup
