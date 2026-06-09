@@ -97,7 +97,9 @@ impl AppState {
     }
 
     pub(crate) fn cursor_start(&mut self) {
-        if self.cursor_pos != 0 {
+        if self.input.contains('\n') {
+            self.move_cursor_to_line_start();
+        } else if self.cursor_pos != 0 {
             self.cursor_pos = 0;
             self.mark_dirty();
         } else {
@@ -106,7 +108,9 @@ impl AppState {
     }
 
     pub(crate) fn cursor_end(&mut self) {
-        if self.cursor_pos != self.input.len() {
+        if self.input.contains('\n') {
+            self.move_cursor_to_line_end();
+        } else if self.cursor_pos != self.input.len() {
             self.cursor_pos = self.input.len();
             self.mark_dirty();
         } else {
