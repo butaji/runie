@@ -5,6 +5,43 @@ use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 use crate::Event;
 use crate::commands::DialogState;
 
+impl AppState {
+    pub(crate) fn settings_event(&mut self, event: Event) {
+        match event {
+            Event::ToggleSettingsDialog => {
+                if matches!(self.open_dialog, Some(DialogState::Settings { .. })) {
+                    self.open_dialog = None;
+                } else {
+                    self.open_dialog = Some(DialogState::Settings {
+                        category: crate::settings::SettingsCategory::Models,
+                        selected: 0,
+                    });
+                }
+                self.mark_dirty();
+            }
+            Event::SettingsUp |
+            Event::SettingsDown |
+            Event::SettingsLeft |
+            Event::SettingsRight |
+            Event::SettingsSelect |
+            Event::SettingsClose => {}
+            Event::PaletteFilter(_) |
+            Event::PaletteBackspace |
+            Event::PaletteUp |
+            Event::PaletteDown |
+            Event::PaletteSelect |
+            Event::PaletteClose => {}
+            Event::ModelSelectorFilter(_) |
+            Event::ModelSelectorBackspace |
+            Event::ModelSelectorUp |
+            Event::ModelSelectorDown |
+            Event::ModelSelectorSelect |
+            Event::ModelSelectorClose => {}
+            _ => {}
+        }
+    }
+}
+
 pub fn update_settings_dialog(state: &mut AppState, event: Event, category: SettingsCategory, selected: usize) {
     let items = build_setting_items(state);
     let category_items: Vec<_> = items.iter().filter(|i| i.category == category).collect();
