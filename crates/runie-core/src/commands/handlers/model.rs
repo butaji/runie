@@ -1,4 +1,4 @@
-use crate::commands::{CommandCategory, CommandDef, CommandHandler, CommandRegistry, CommandResult};
+use crate::commands::{CommandCategory, CommandDef, CommandHandler, CommandRegistry, CommandResult, Dialog};
 use crate::model::AppState;
 
 pub fn register(registry: &mut CommandRegistry) {
@@ -67,6 +67,9 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_scoped_models(_state: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Message("Scoped models: not yet implemented".into())
+fn handle_scoped_models(state: &mut AppState, _args: &str) -> CommandResult {
+    if state.scoped_models.is_empty() {
+        return CommandResult::Message("No scoped models configured. Add [models.scoped] to config.toml.".into());
+    }
+    CommandResult::OpenDialog(Dialog::ScopedModels)
 }

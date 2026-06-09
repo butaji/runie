@@ -47,6 +47,8 @@ pub struct Snapshot {
     pub dialog: Option<crate::commands::DialogState>,
     /// Filtered command list for palette rendering (name, description, category).
     pub palette_items: Vec<(String, String, String)>,
+    /// Scoped models for dialog rendering.
+    pub scoped_models: Vec<crate::scoped_model::ScopedModel>,
 }
 
 impl Snapshot {
