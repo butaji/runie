@@ -14,6 +14,7 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("compact", "Compact context", &[], CommandCategory::Session, handle_compact));
     registry.register(cmd("reset", "Clear all state", &[], CommandCategory::Session, handle_reset));
     registry.register(cmd("history", "Show recent history", &[], CommandCategory::Session, handle_history));
+    registry.register(cmd("session", "Show session info", &[], CommandCategory::Session, handle_session));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -32,17 +33,21 @@ fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message("Usage: /save name".into());
     }
+    let now = crate::update::now();
     let session = crate::session::Session {
         name: name.to_string(),
-        created_at: crate::update::now(),
-        updated_at: crate::update::now(),
+        created_at: state.session_created_at,
+        updated_at: now,
         messages: state.messages.clone(),
         provider: state.current_provider.clone(),
         model: state.current_model.clone(),
         theme_name: state.theme_name.clone(),
     };
     match crate::session::save(name, &session) {
-        Ok(()) => CommandResult::Message(format!("Session '{}' saved.", name)),
+        Ok(()) => {
+            state.session_updated_at = now;
+            CommandResult::Message(format!("Session '{}' saved.", name))
+        }
         Err(e) => CommandResult::Message(format!("Could not save '{}': {}", name, e)),
     }
 }
@@ -58,6 +63,9 @@ fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
             state.current_provider = session.provider;
             state.current_model = session.model;
             state.theme_name = session.theme_name;
+            state.session_display_name = Some(session.name);
+            state.session_created_at = session.created_at;
+            state.session_updated_at = session.updated_at;
             state.messages_changed();
             CommandResult::Message(format!("Session '{}' loaded.", name))
         }
@@ -95,11 +103,12 @@ fn handle_delete(_state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_name(_state: &mut AppState, args: &str) -> CommandResult {
+fn handle_name(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
         return CommandResult::Message("Usage: /name display_name".into());
     }
+    state.session_display_name = Some(name.to_string());
     CommandResult::Message(format!("Session name set to '{}'", name))
 }
 
@@ -127,6 +136,10 @@ fn handle_new(state: &mut AppState, _args: &str) -> CommandResult {
     state.request_queue.clear();
     state.current_provider = state.config_provider.clone();
     state.current_model = state.config_model.clone();
+    state.session_display_name = None;
+    let now = crate::update::now();
+    state.session_created_at = now;
+    state.session_updated_at = now;
     state.messages_changed();
     CommandResult::Message("New session started".into())
 }
@@ -186,4 +199,30 @@ fn handle_history(state: &mut AppState, _args: &str) -> CommandResult {
         count,
         entries.join("\n")
     ))
+}
+
+fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
+    let total_tokens: usize = state.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum();
+    let msg_count = state.messages.len();
+    let user_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::User).count();
+    let assistant_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::Assistant).count();
+    let tool_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::Tool).count();
+
+    let info = format!(
+        "Session: {}\n\
+         Messages: {} total ({} user, {} assistant, {} tool)\n\
+         Tokens: {} estimated\n\
+         Provider: {}\n\
+         Model: {}\n\
+         Created: {}\n\
+         Updated: {}",
+        state.session_display_name.as_deref().unwrap_or("unnamed"),
+        msg_count, user_msgs, assistant_msgs, tool_msgs,
+        total_tokens,
+        state.current_provider,
+        state.current_model,
+        crate::labels::format_timestamp(state.session_created_at),
+        crate::labels::format_timestamp(state.session_updated_at),
+    );
+    CommandResult::Message(info)
 }

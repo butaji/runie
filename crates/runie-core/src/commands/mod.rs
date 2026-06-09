@@ -358,4 +358,50 @@ mod tests {
             state.update(Event::Input(c));
         }
     }
+
+    // Session info tests (Layer 1)
+
+    #[test]
+    fn session_info_counts_messages() {
+        let mut state = AppState::default();
+        state.messages = vec![
+            crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "u1".into() },
+            crate::model::ChatMessage { role: crate::model::Role::Assistant, content: "hello".into(), timestamp: 0.0, id: "a1".into() },
+            crate::model::ChatMessage { role: crate::model::Role::Tool, content: "tool out".into(), timestamp: 0.0, id: "t1".into() },
+            crate::model::ChatMessage { role: crate::model::Role::User, content: "again".into(), timestamp: 0.0, id: "u2".into() },
+        ];
+        let cmd = state.registry.get("session").unwrap();
+        let result = (cmd.handler)(&mut state, "");
+        if let CommandResult::Message(msg) = result {
+            assert!(msg.contains("Messages: 4 total (2 user, 1 assistant, 1 tool)"), "got: {}", msg);
+        } else {
+            panic!("session should return Message, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn session_info_shows_tokens() {
+        let mut state = AppState::default();
+        state.messages = vec![
+            crate::model::ChatMessage { role: crate::model::Role::User, content: "hello world".into(), timestamp: 0.0, id: "u1".into() },
+        ];
+        let cmd = state.registry.get("session").unwrap();
+        let result = (cmd.handler)(&mut state, "");
+        if let CommandResult::Message(msg) = result {
+            assert!(msg.contains("Tokens:"), "Token estimate should be present, got: {}", msg);
+        } else {
+            panic!("session should return Message, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn slash_session_dispatches() {
+        let mut state = AppState::default();
+        state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "test".into(), timestamp: 0.0, id: "u1".into() });
+        type_str(&mut state, "/session");
+        state.update(Event::Submit);
+        let last = state.messages.last().unwrap();
+        assert_eq!(last.role, crate::model::Role::System);
+        assert!(last.content.contains("Messages:"));
+    }
 }
