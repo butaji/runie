@@ -79,6 +79,13 @@
     "r3-print-mode",
     "r3-json-mode",
     "r3-rpc-mode",
-    "r3-context7-docs"
+    "r3-context7-docs",
+    "refactor-update-god-function",
+    "refactor-model-god-struct",
+    "fix-test-count-verification",
+    "refactor-tool-parsing",
+    "optimize-snapshot-cloning",
+    "refactor-session-tree-indexing",
+    "add-smoke-tests"
   ]
 }

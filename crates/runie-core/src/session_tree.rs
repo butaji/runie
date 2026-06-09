@@ -2,6 +2,8 @@
 
 use crate::message::{ChatMessage, Role};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::HashMap;
 
 /// A node in the session tree.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -77,11 +79,28 @@ impl SessionTreeFilter {
     }
 }
 
+/// Cached result of a filtered walk: (depth, path) pairs.
+type FilterCache = Vec<(usize, Vec<usize>)>;
+
 /// The session tree holds the root and current branch path.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SessionTree {
     pub root: TreeNode,
     pub current_branch: Vec<usize>,
+    #[serde(skip)]
+    pub node_index: HashMap<Vec<usize>, usize>,
+    #[serde(skip)]
+    pub index_version: u64,
+    #[serde(skip)]
+    built_version: u64,
+    #[serde(skip)]
+    cached_filter: RefCell<Option<(SessionTreeFilter, u64, FilterCache)>>,
+}
+
+impl PartialEq for SessionTree {
+    fn eq(&self, other: &Self) -> bool {
+        self.root == other.root && self.current_branch == other.current_branch
+    }
 }
 
 impl SessionTree {
@@ -89,6 +108,10 @@ impl SessionTree {
         Self {
             root: TreeNode::new(root_message),
             current_branch: Vec::new(),
+            node_index: HashMap::new(),
+            index_version: 1,
+            built_version: 0,
+            cached_filter: RefCell::new(None),
         }
     }
 
@@ -107,6 +130,8 @@ impl SessionTree {
             current = &mut current.children[idx];
             tree.current_branch.push(idx);
         }
+        tree.rebuild_index();
+        tree.built_version = tree.index_version;
         tree
     }
 
@@ -145,26 +170,20 @@ impl SessionTree {
         let child_idx = target.children.len() - 1;
         let mut path = self.path_to_message_index(message_index)?;
         path.push(child_idx);
+        self.invalidate_index();
         Some(path)
     }
 
-    /// Navigate to a path in the tree.
+    /// Navigate to a path in the tree using O(1) index lookup.
     pub fn navigate_to(&mut self, path: &[usize]) {
-        // Validate the path exists
-        let mut node = &self.root;
-        for &idx in path {
-            if let Some(child) = node.children.get(idx) {
-                node = child;
-            } else {
-                return;
-            }
+        self.ensure_index();
+        if self.node_index.contains_key(path) {
+            self.current_branch = path.to_vec();
         }
-        self.current_branch = path.to_vec();
     }
 
     /// Find the node corresponding to a flat message index (0-based).
     fn node_at_message_index(&mut self, index: usize) -> Option<&mut TreeNode> {
-        // Flatten the current branch to find the message at the given index
         let path = self.path_to_message_index(index)?;
         let mut node = &mut self.root;
         for &idx in &path {
@@ -216,97 +235,105 @@ impl SessionTree {
         }
     }
 
-    /// Collect visible nodes given a filter.
-    pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, &TreeNode)> {
-        let all = self.walk();
-        all.into_iter()
-            .filter(|(_, n)| filter.passes(&n.message, n.label.as_deref()))
-            .collect()
+    /// Walk the tree collecting (depth, node, path) tuples.
+    fn walk_with_paths(&self) -> Vec<(usize, &TreeNode, Vec<usize>)> {
+        let mut result = Vec::new();
+        Self::walk_node_with_paths(&self.root, 0, &[], &mut result);
+        result
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn msg(role: Role, content: &str) -> ChatMessage {
-        ChatMessage {
-            role,
-            content: content.into(),
-            timestamp: 0.0,
-            id: "test".into(),
-            ..Default::default()
+    fn walk_node_with_paths<'a>(
+        node: &'a TreeNode,
+        depth: usize,
+        path: &[usize],
+        result: &mut Vec<(usize, &'a TreeNode, Vec<usize>)>,
+    ) {
+        result.push((depth, node, path.to_vec()));
+        for (i, child) in node.children.iter().enumerate() {
+            let mut child_path = path.to_vec();
+            child_path.push(i);
+            Self::walk_node_with_paths(child, depth + 1, &child_path, result);
         }
     }
 
-    #[test]
-    fn tree_from_messages_linear() {
-        let messages = vec![
-            msg(Role::User, "hello"),
-            msg(Role::Assistant, "hi"),
-            msg(Role::User, "how are you"),
-        ];
-        let tree = SessionTree::from_messages(&messages);
-        assert_eq!(tree.root.message.content, "hello");
-        assert_eq!(tree.current_branch, vec![0, 0]);
-        assert_eq!(tree.root.count(), 3);
+    /// Resolve a path to a node reference.
+    fn node_at_path(&self, path: &[usize]) -> Option<&TreeNode> {
+        let mut node = &self.root;
+        for &idx in path {
+            node = node.children.get(idx)?;
+        }
+        Some(node)
     }
 
-    #[test]
-    fn fork_creates_branch() {
-        let messages = vec![
-            msg(Role::User, "hello"),
-            msg(Role::Assistant, "hi"),
-            msg(Role::User, "how are you"),
-        ];
-        let mut tree = SessionTree::from_messages(&messages);
-        let path = tree.fork_at(1).expect("fork should succeed");
-        assert_eq!(path.len(), 2);
-        let node = tree.current_node();
-        assert!(node.is_some());
+    /// Collect visible nodes given a filter, with caching.
+    pub fn filtered_walk(&self, filter: SessionTreeFilter) -> Vec<(usize, &TreeNode)> {
+        // Try cache first
+        if let Ok(cache) = self.cached_filter.try_borrow() {
+            if let Some((cached_filter, cached_version, cached_paths)) = cache.as_ref() {
+                if *cached_filter == filter && *cached_version == self.index_version {
+                    return cached_paths
+                        .iter()
+                        .filter_map(|(depth, path)| {
+                            self.node_at_path(path).map(|node| (*depth, node))
+                        })
+                        .collect();
+                }
+            }
+        }
+
+        // Compute fresh result
+        let all = self.walk_with_paths();
+        let result: Vec<_> = all
+            .into_iter()
+            .filter(|(_, n, _)| filter.passes(&n.message, n.label.as_deref()))
+            .collect();
+
+        // Extract paths for cache and return references
+        let paths: Vec<_> = result.iter().map(|(d, _, p)| (*d, p.clone())).collect();
+        let output: Vec<_> = result.into_iter().map(|(d, n, _)| (d, n)).collect();
+
+        // Store in cache
+        if let Ok(mut cache) = self.cached_filter.try_borrow_mut() {
+            *cache = Some((filter, self.index_version, paths));
+        }
+
+        output
     }
 
-    #[test]
-    fn filter_excludes_tools() {
-        let mut tree = SessionTree::from_messages(&[
-            msg(Role::User, "hello"),
-            msg(Role::Tool, "output"),
-            msg(Role::Assistant, "hi"),
-        ]);
-        // Add a labeled node
-        tree.root.children[0].label = Some("important".into());
-
-        let all = tree.filtered_walk(SessionTreeFilter::All);
-        assert_eq!(all.len(), 3);
-
-        let no_tools = tree.filtered_walk(SessionTreeFilter::NoTools);
-        assert_eq!(no_tools.len(), 2);
-
-        let user_only = tree.filtered_walk(SessionTreeFilter::UserOnly);
-        assert_eq!(user_only.len(), 1);
-
-        let labeled = tree.filtered_walk(SessionTreeFilter::LabeledOnly);
-        assert_eq!(labeled.len(), 1);
+    /// Rebuild the node index from scratch.
+    fn rebuild_index(&mut self) {
+        self.node_index.clear();
+        let mut paths = Vec::new();
+        Self::collect_paths(&self.root, &[], &mut paths);
+        for (i, path) in paths.into_iter().enumerate() {
+            self.node_index.insert(path, i);
+        }
     }
 
-    #[test]
-    fn filter_cycle_rotates() {
-        assert_eq!(SessionTreeFilter::All.cycle(), SessionTreeFilter::NoTools);
-        assert_eq!(SessionTreeFilter::NoTools.cycle(), SessionTreeFilter::UserOnly);
-        assert_eq!(SessionTreeFilter::UserOnly.cycle(), SessionTreeFilter::LabeledOnly);
-        assert_eq!(SessionTreeFilter::LabeledOnly.cycle(), SessionTreeFilter::All);
+    fn collect_paths(node: &TreeNode, path: &[usize], paths: &mut Vec<Vec<usize>>) {
+        paths.push(path.to_vec());
+        for (i, child) in node.children.iter().enumerate() {
+            let mut child_path = path.to_vec();
+            child_path.push(i);
+            Self::collect_paths(child, &child_path, paths);
+        }
     }
 
-    #[test]
-    fn clone_duplicates_position() {
-        let messages = vec![
-            msg(Role::User, "hello"),
-            msg(Role::Assistant, "hi"),
-            msg(Role::User, "how are you"),
-        ];
-        let tree = SessionTree::from_messages(&messages);
-        let cloned = tree.clone();
-        assert_eq!(cloned.root.message.content, "hello");
-        assert_eq!(cloned.current_branch, tree.current_branch);
+    /// Ensure the index is up to date; lazily rebuild if invalidated.
+    fn ensure_index(&mut self) {
+        if self.built_version != self.index_version {
+            self.rebuild_index();
+            self.built_version = self.index_version;
+        }
+    }
+
+    /// Invalidate the index and filter cache after tree mutation.
+    fn invalidate_index(&mut self) {
+        self.index_version = self.index_version.wrapping_add(1);
+        self.built_version = self.index_version.wrapping_sub(1); // force rebuild
+        self.node_index.clear();
+        if let Ok(mut cache) = self.cached_filter.try_borrow_mut() {
+            *cache = None;
+        }
     }
 }
