@@ -12,6 +12,7 @@
 pub mod model;
 pub mod model_catalog;
 pub mod message;
+pub mod edit_preview;
 pub mod scoped_model;
 pub mod settings;
 pub mod event;
@@ -39,6 +40,7 @@ mod tests;
 mod file_refs_lookup_tests;
 
 pub use model::{AppState, ChatMessage, Role, now};
+pub use edit_preview::EditPreview;
 pub use snapshot::Snapshot;
 pub use session::{Session, save, load, list, delete};
 pub use event::Event;

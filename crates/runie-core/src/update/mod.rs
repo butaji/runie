@@ -4,6 +4,7 @@ use crate::Event;
 mod agent;
 mod at_refs;
 mod bash;
+mod edit_approval;
 mod input;
 mod line_nav;
 mod model_selector;
@@ -227,6 +228,17 @@ impl AppState {
             Event::ModelSelectorDown |
             Event::ModelSelectorSelect |
             Event::ModelSelectorClose => {}
+            Event::PendingEdit { path, original, proposed, diff } => {
+                self.pending_edits.push(crate::edit_preview::EditPreview::new(
+                    std::path::PathBuf::from(path),
+                    original,
+                    proposed,
+                    diff,
+                ));
+                self.mark_dirty();
+            }
+            Event::ApproveEdit => self.approve_edits(),
+            Event::RejectEdit => self.reject_edits(),
             Event::TogglePathCompletion => self.toggle_path_completion(),
             Event::PathCompletionUp => self.path_completion_up(),
             Event::PathCompletionDown => self.path_completion_down(),

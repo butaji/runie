@@ -134,6 +134,8 @@ pub struct AppState {
     pub scoped_index: usize,
     /// Recently used models (last 5) for the model selector dialog
     pub recent_models: Vec<String>,
+    /// Pending file edits awaiting user approval
+    pub pending_edits: Vec<crate::edit_preview::EditPreview>,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -185,18 +187,14 @@ impl Default for AppState {
             current_provider: "mock".into(), current_model: "echo".into(),
             theme_name: "silkcircuit-neon".into(),
             registry: crate::commands::CommandRegistry::new(),
-            should_quit: false,
-            open_dialog: None,
-            config_provider: "mock".into(),
-            config_model: "echo".into(),
+            should_quit: false, open_dialog: None,
+            config_provider: "mock".into(), config_model: "echo".into(),
             session_display_name: None,
-            session_created_at: now(),
-            session_updated_at: now(),
+            session_created_at: now(), session_updated_at: now(),
             thinking_level: ThinkingLevel::Off,
             read_only: false,
-            scoped_models: Vec::new(),
-            scoped_index: 0,
-            recent_models: Vec::new(),
+            scoped_models: Vec::new(), scoped_index: 0,
+            recent_models: Vec::new(), pending_edits: Vec::new(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,
@@ -367,6 +365,7 @@ impl AppState {
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),
             model_selector_items: self.model_selector_items(),
+            pending_edits: self.pending_edits.clone(),
             scoped_models: self.scoped_models.clone(),
             settings_items: crate::update::settings_dialog::build_setting_items(self),
         }
