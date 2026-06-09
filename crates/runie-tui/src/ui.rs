@@ -166,7 +166,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
 fn build_lines(snap: &Snapshot) -> Vec<Line<'_>> {
     let mut lines = Vec::with_capacity(snap.total_lines);
-    for elem in &snap.elements {
+    for elem in snap.elements.iter() {
         lines.extend(to_lines(elem, snap.spinner_frame));
     }
     lines

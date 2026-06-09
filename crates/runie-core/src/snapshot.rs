@@ -2,6 +2,7 @@
 //! The event loop builds snapshots; the render actor draws them.
 //! Zero blocking I/O in the event loop by design.
 
+use std::sync::Arc;
 use crate::ui::elements::Element;
 
 /// A viewport into the element cache — elements plus how many
@@ -14,8 +15,8 @@ pub struct VisibleRegion<'a> {
 
 #[derive(Clone)]
 pub struct Snapshot {
-    pub elements: Vec<Element>,
-    pub line_counts: Vec<usize>,
+    pub elements: Arc<[Element]>,
+    pub line_counts: Arc<[usize]>,
     pub total_lines: usize,
     pub input: String,
     pub cursor_pos: usize,

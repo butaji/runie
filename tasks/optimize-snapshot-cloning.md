@@ -1,6 +1,6 @@
 # Optimize: Reduce Snapshot Cloning Overhead
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core Architecture
 
@@ -17,26 +17,26 @@ With long conversations (100+ messages), this causes unnecessary allocation/GC p
 
 ## Acceptance Criteria
 
-- [ ] Option A: Use `Arc<[Element]>` for snapshot's elements (no Arc<Vec> to avoid atomic refcount on every write)
-- [ ] Option B: Implement per-field dirty flags, only clone dirty fields
-- [ ] `palette_items` and `model_selector_items` cached with dirty invalidation
-- [ ] Benchmark before/after: `cargo bench` for snapshot creation time
-- [ ] No visible regression in UI responsiveness
+- [x] Option A: Use `Arc<[Element]>` for snapshot's elements (no Arc<Vec> to avoid atomic refcount on every write)
+- [x] Option B: Implement per-field dirty flags, only clone dirty fields
+- [x] `palette_items` and `model_selector_items` cached with dirty invalidation
+- [x] Benchmark before/after: `cargo bench` for snapshot creation time
+- [x] No visible regression in UI responsiveness
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `test_snapshot_contains_expected_fields` — verify all fields present
-- [ ] `test_snapshot_is_send_sync` — required for channel transfer
+- [x] `test_snapshot_contains_expected_fields` — verify all fields present
+- [x] `test_snapshot_is_send_sync` — required for channel transfer
 
 ### Layer 2 — Event Handling
-- [ ] `test_event_triggers_snapshot_update` — verify snapshot refreshed on events
+- [x] `test_event_triggers_snapshot_update` — verify snapshot refreshed on events
 
 ### Layer 3 — Rendering
-- [ ] `test_render_receives_valid_snapshot` — verify render sees consistent data
+- [x] `test_render_receives_valid_snapshot` — verify render sees consistent data
 
 ### Layer 4 — Smoke
-- [ ] `smoke_long_conversation.sh` — 50+ messages, verify no slowdown
+- [x] `smoke_long_conversation.sh` — 50+ messages, verify no slowdown
 
 ## Notes
 
