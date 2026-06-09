@@ -8,8 +8,8 @@
 //! crate::theme only. No literals, no hardcoded values.
 
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::Color,
+    layout::{Constraint, Direction, Layout, Margin, Rect},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
@@ -37,13 +37,23 @@ use crate::theme::{
     style_tool_running, style_tool_header, style_tool_output, style_tool_summary,
     style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
     style_status_active, style_code_header, style_input_cursor, style_placeholder, style_hint,
-    color_fg_bright, color_fg, set_current_theme, block_input,
+    color_fg_bright, color_fg, set_current_theme, block_input, style_chevron,
 };
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     set_current_theme(&snap.theme_name);
-    let c = vstack(f.area(), &[
+    // Fill the entire frame background with the theme bg color
+    let full_area = f.area();
+    f.buffer_mut().set_style(full_area, Style::default().bg(crate::theme::color_bg()));
+    // Apply margin only when the terminal is large enough
+    let margin = if full_area.width > 20 && full_area.height > 10 {
+        Margin::new(1, 1)
+    } else {
+        Margin::new(0, 0)
+    };
+    let area = full_area.inner(margin);
+    let c = vstack(area, &[
         Constraint::Min(3),
         Constraint::Length(1),
         Constraint::Length(3),
@@ -354,18 +364,20 @@ fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'s
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = block_input(PANEL_INPUT, snap.input_flash > 0);
     let inner = block.inner(area);
+    let token_held = snap.dialog.is_none();
 
-    let spans = build_input_spans(snap);
+    let spans = build_input_spans(snap, token_held);
     f.render_widget(Paragraph::new(Line::from(spans)).block(block), area);
 
     let cursor_x = inner.x + (GLYPH_USER.len() + snap.cursor_pos.min(snap.input.len())) as u16;
     f.set_cursor_position((cursor_x, inner.y));
 }
 
-fn build_input_spans(snap: &Snapshot) -> Vec<Span<'_>> {
+fn build_input_spans(snap: &Snapshot, token_held: bool) -> Vec<Span<'_>> {
+    let chevron_style = style_chevron(token_held);
     if snap.input.is_empty() && !snap.placeholder.is_empty() {
         return vec![
-            Span::styled(GLYPH_USER, style_user()),
+            Span::styled(GLYPH_USER, chevron_style),
             Span::styled(snap.placeholder.clone(), style_placeholder()),
         ];
     }
@@ -379,7 +391,7 @@ fn build_input_spans(snap: &Snapshot) -> Vec<Span<'_>> {
         (' ', "")
     };
     let mut spans = vec![
-        Span::styled(GLYPH_USER, style_user()),
+        Span::styled(GLYPH_USER, chevron_style),
         Span::styled(before, style_user()),
         Span::styled(at_cursor.to_string(), style_input_cursor()),
         Span::styled(after, style_user()),

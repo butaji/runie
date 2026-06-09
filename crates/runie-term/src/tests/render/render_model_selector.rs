@@ -52,5 +52,5 @@ fn filter_shows_matching_models() {
         .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
         .collect();
     let content = lines.join("\n");
-    assert!(content.contains("> gpt"), "Should show filter prompt: {}", content);
+    assert!(content.contains("❯ gpt"), "Should show filter prompt: {}", content);
 }
