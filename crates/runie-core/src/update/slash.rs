@@ -14,6 +14,7 @@ impl AppState {
             "/delete" => Some("Usage: /delete name".to_string()),
             "/sessions" => Some(self.sessions_list()),
             "/compact" => Some(self.handle_compact(None)),
+            "/history" => Some(self.handle_history_cmd()),
             _ => self.handle_slash_with_arg(content),
         }
     }
@@ -128,6 +129,24 @@ impl AppState {
         }
     }
 
+    fn handle_history_cmd(&self) -> String {
+        if self.input_history.is_empty() {
+            return "No history. Commands you send become part of your history.".to_string();
+        }
+        let count = self.input_history.len();
+        let last = self.input_history.iter().rev().take(10).collect::<Vec<_>>();
+        let entries: Vec<String> = last
+            .iter()
+            .enumerate()
+            .map(|(i, e)| format!("{}: {}", i + 1, e))
+            .collect();
+        format!(
+            "History ({} total, showing last 10). Use ↑/↓ to navigate.\n{}",
+            count,
+            entries.join("\n")
+        )
+    }
+
     pub fn help_text(&self) -> String {
         format!(
             "Commands:\n\
@@ -139,6 +158,8 @@ impl AppState {
             /compact [prompt] — compact older messages\n\
             /reset — clear all state\n\
             /help — show this help\n\
+            /history — show recent history\n\
+            Use Up/Down to navigate history.\n\
             Enter — send | Alt+Enter — follow-up | Esc — abort | Ctrl+S — steer",
             self.current_provider, self.current_model
         )

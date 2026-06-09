@@ -347,7 +347,8 @@ impl AppState {
             return;
         }
 
-        self.input_history.push(content.clone());
+        // Add to history and persist
+        self.add_to_input_history(content.clone());
         if let Some(response) = self.handle_slash(&content) {
             self.add_system_msg(response);
             return;
