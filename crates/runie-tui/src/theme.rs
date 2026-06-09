@@ -4,6 +4,7 @@
 //! The current theme is cached in a global lock; `draw_snapshot` sets it at frame start.
 
 use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Borders, BorderType};
 use std::sync::{Arc, RwLock};
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
@@ -246,6 +247,27 @@ style_fn!(style_popup_selected, "runie.popup.selected");
 style_fn!(style_popup_unselected, "runie.popup.unselected");
 style_fn!(style_popup_border, "runie.popup.border");
 style_fn!(style_thought_summary, "runie.thought.summary");
+
+// ── Block helpers — centralized border styling ─────────────────────────
+
+/// Build the input panel block with rounded borders.
+pub fn block_input(title: &str, flash: bool) -> Block {
+    let border_style = if flash { style_border_flash() } else { style_border() };
+    Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .border_style(border_style)
+}
+
+/// Build a popup dialog block with rounded borders.
+pub fn block_popup(title: &str) -> Block {
+    Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .border_style(style_popup_border())
+}
 
 // ── Glyphs and formatting helpers (unchanged) ──────────────────────────
 
