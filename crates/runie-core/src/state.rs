@@ -135,7 +135,7 @@ impl Default for ConfigState {
             config_provider: "mock".into(),
             config_model: "echo".into(),
             keybindings: default_keybindings(),
-            theme_name: "silkcircuit-neon".into(),
+            theme_name: "runie".into(),
             thinking_level: ThinkingLevel::Off,
             read_only: false,
             scoped_models: Vec::new(),

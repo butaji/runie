@@ -4,13 +4,14 @@ use ratatui::style::Style;
 use crate::theme::{
     set_current_theme, current_theme, list_builtin_themes,
     style_user, style_code_block, style_border, style_status_active,
-    color_accent, color_success,
+    color_accent, color_success, TEST_LOCK,
 };
 
 // ─── Layer 1: State/Logic ───────────────────────────────────────────────
 
 #[test]
 fn theme_loads_builtin_by_name() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("dracula");
     let theme = current_theme();
     assert!(!theme.meta.name.is_empty(), "Theme should have a name");
@@ -18,11 +19,12 @@ fn theme_loads_builtin_by_name() {
 
 #[test]
 fn theme_fallback_on_invalid_name() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("definitely-not-a-real-theme-12345");
     let theme = current_theme();
-    // Should fall back to default (silkcircuit-neon)
+    // Should fall back to default (runie)
     assert!(
-        theme.meta.name.to_lowercase().contains("silkcircuit") || theme.meta.name.to_lowercase().contains("neon"),
+        theme.meta.name.to_lowercase().contains("runie"),
         "Invalid theme should fall back to default, got: {}",
         theme.meta.name
     );
@@ -30,6 +32,7 @@ fn theme_fallback_on_invalid_name() {
 
 #[test]
 fn theme_registers_runie_styles() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let theme = current_theme();
     assert!(
@@ -52,6 +55,7 @@ fn theme_registers_runie_styles() {
 
 #[test]
 fn theme_style_returns_ratatui_style() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let theme = current_theme();
     let opaline_style = theme.style("runie.user");
@@ -69,6 +73,7 @@ fn theme_builtin_list_is_nonempty() {
 
 #[test]
 fn theme_changes_colors_between_themes() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let neon_accent = color_accent();
 
@@ -88,6 +93,7 @@ fn theme_changes_colors_between_themes() {
 
 #[test]
 fn theme_changes_user_message_color() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let user_style = style_user();
     assert!(user_style.fg.is_some(), "User style should have a color");
@@ -95,6 +101,7 @@ fn theme_changes_user_message_color() {
 
 #[test]
 fn theme_changes_code_block_bg() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let code_style = style_code_block();
     assert!(code_style.bg.is_some(), "Code block style should have background");
@@ -102,6 +109,7 @@ fn theme_changes_code_block_bg() {
 
 #[test]
 fn theme_changes_border_color() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let border_style = style_border();
     assert!(border_style.fg.is_some(), "Border style should have a color");
@@ -109,6 +117,7 @@ fn theme_changes_border_color() {
 
 #[test]
 fn theme_status_active_has_success_color() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let active = style_status_active();
     let success = color_success();
@@ -117,4 +126,3 @@ fn theme_status_active_has_success_color() {
         "Active status should use success color"
     );
 }
-

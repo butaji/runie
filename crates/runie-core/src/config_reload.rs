@@ -125,7 +125,7 @@ pub fn spawn_config_watcher(
             // Extract provider, model, and theme from config
             let current_provider = config.provider.clone().unwrap_or_else(|| "mock".to_string());
             let current_model = config.default_model().unwrap_or("echo").to_string();
-            let current_theme = config.theme.clone().unwrap_or_else(|| "silkcircuit-neon".to_string());
+            let current_theme = config.theme.clone().unwrap_or_else(|| "runie".to_string());
 
             // Check if provider changed
             let provider_changed = match &last_provider {
@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn config_theme_change_applies_theme() {
         let mut state = AppState::default();
-        assert_eq!(state.config.theme_name, "silkcircuit-neon");
+        assert_eq!(state.config.theme_name, "runie");
 
         state.update(Event::SwitchTheme {
             name: "dracula".to_string(),

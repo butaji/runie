@@ -20,7 +20,7 @@ fn save_test_session(store: &runie_core::session::Store, name: &str) {
     store.save(name, &runie_core::Session {
         name: name.to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
-        theme_name: "silkcircuit-neon".into(),
+        theme_name: "runie".into(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,

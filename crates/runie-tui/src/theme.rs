@@ -8,6 +8,9 @@ use std::sync::{Arc, RwLock};
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
 
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Set the active theme by name. Called by `draw_snapshot` at frame start.
 pub fn set_current_theme(name: &str) {
     let theme = load_theme(name);
@@ -15,10 +18,12 @@ pub fn set_current_theme(name: &str) {
     *guard = Some(Arc::new(theme));
 }
 
+pub const DEFAULT_THEME_NAME: &str = "runie";
+
 /// Get the currently active theme (falls back to default).
 pub fn current_theme() -> Arc<opaline::Theme> {
     let guard = CURRENT_THEME.read().unwrap_or_else(|e| e.into_inner());
-    guard.clone().unwrap_or_else(|| Arc::new(opaline::Theme::default()))
+    guard.clone().unwrap_or_else(|| Arc::new(default_theme()))
 }
 
 /// Load a theme by name: builtin → custom file → default fallback.
@@ -34,7 +39,7 @@ fn load_theme(name: &str) -> opaline::Theme {
     if let Ok(theme) = opaline::load_from_file(&custom_path) {
         return register_runie_styles(theme);
     }
-    register_runie_styles(opaline::Theme::default())
+    register_runie_styles(default_theme())
 }
 
 /// List all available builtin theme names.
@@ -48,6 +53,97 @@ pub fn list_builtin_themes() -> Vec<&'static str> {
         "one-dark", "one-light", "github-dark-dimmed", "github-light", "night-owl", "light-owl",
         "monokai-pro", "palenight", "solarized-dark", "solarized-light", "flexoki-dark", "flexoki-light",
     ]
+}
+
+const DEFAULT_THEME_TOML: &str = r##"
+[meta]
+name = "Runie"
+author = "runie"
+variant = "dark"
+version = "1.0"
+description = "Dark base with vibrant orange accents"
+
+[palette]
+orange_500 = "#EE6902"
+orange_400 = "#F5853F"
+orange_600 = "#D45A00"
+orange_300 = "#F9A85F"
+amber_400 = "#F5A623"
+amber_300 = "#F9C846"
+coral_400 = "#E85577"
+green_400 = "#4ADE80"
+red_400 = "#EF4444"
+blue_400 = "#60A5FA"
+lime_400 = "#A3E635"
+
+bg_base = "#100C13"
+bg_panel = "#1A151C"
+bg_code = "#1E1920"
+bg_highlight = "#2A202E"
+bg_elevated = "#201820"
+bg_active = "#302830"
+bg_selection = "#3A2E38"
+
+text_primary = "#EDE8E3"
+text_secondary = "#C4BEB7"
+text_muted = "#8A8580"
+text_dim = "#5C5854"
+
+[tokens]
+"text.primary" = "text_primary"
+"text.secondary" = "text_secondary"
+"text.muted" = "text_muted"
+"text.dim" = "text_dim"
+
+"bg.base" = "bg_base"
+"bg.panel" = "bg_panel"
+"bg.code" = "bg_code"
+"bg.highlight" = "bg_highlight"
+"bg.elevated" = "bg_elevated"
+"bg.active" = "bg_active"
+"bg.selection" = "bg_selection"
+
+"accent.primary" = "orange_500"
+"accent.secondary" = "amber_400"
+"accent.tertiary" = "coral_400"
+"accent.deep" = "orange_600"
+
+success = "green_400"
+error = "red_400"
+warning = "amber_400"
+info = "blue_400"
+
+"border.focused" = "orange_500"
+"border.unfocused" = "text_dim"
+
+"code.keyword" = "amber_400"
+"code.function" = "orange_500"
+"code.string" = "lime_400"
+"code.number" = "amber_300"
+"code.comment" = "text_dim"
+"code.type" = "blue_400"
+"code.line_number" = "text_dim"
+
+[styles]
+keyword = { fg = "accent.primary", bold = true }
+line_number = { fg = "code.line_number" }
+cursor_line = { bg = "bg.highlight" }
+selected = { fg = "accent.secondary", bg = "bg.highlight" }
+active_selected = { fg = "accent.primary", bg = "bg.active", bold = true }
+focused_border = { fg = "border.focused" }
+unfocused_border = { fg = "border.unfocused" }
+success_style = { fg = "success" }
+error_style = { fg = "error" }
+warning_style = { fg = "warning" }
+info_style = { fg = "info" }
+dimmed = { fg = "text.dim" }
+muted = { fg = "text.muted" }
+inline_code = { fg = "success", bg = "bg.code" }
+"##;
+
+fn default_theme() -> opaline::Theme {
+    opaline::load_from_str(DEFAULT_THEME_TOML, None)
+        .expect("embedded default theme must be valid")
 }
 
 fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme {

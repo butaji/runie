@@ -25,7 +25,7 @@ fn theme_invalid_shows_fallback_warning() {
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(sys_msgs[0].content.contains("not found"), "should warn about fallback: {}", sys_msgs[0].content);
-    assert!(sys_msgs[0].content.contains("silkcircuit-neon"), "should mention fallback: {}", sys_msgs[0].content);
+    assert!(sys_msgs[0].content.contains("runie"), "should mention fallback: {}", sys_msgs[0].content);
 }
 
 #[test]

@@ -150,7 +150,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Theme",
             SettingValue::Enum {
                 current: state.config.theme_name.clone(),
-                options: vec!["silkcircuit-neon".into(), "dracula".into(), "nord".into()],
+                options: vec!["runie".into(), "silkcircuit-neon".into(), "dracula".into(), "nord".into()],
             },
             "UI theme",
             SettingsCategory::Appearance,

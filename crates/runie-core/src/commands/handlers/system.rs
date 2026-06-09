@@ -159,7 +159,7 @@ fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     if builtin_themes().contains(&name) {
         CommandResult::Message(format!("Theme switched to '{}'", name))
     } else {
-        CommandResult::Message(format!("Theme '{}' not found. Using fallback 'silkcircuit-neon'. Use /theme to list available themes.", name))
+        CommandResult::Message(format!("Theme '{}' not found. Using fallback 'runie'. Use /theme to list available themes.", name))
     }
 }
 
@@ -173,6 +173,7 @@ fn handle_reject(_state: &mut AppState, _args: &str) -> CommandResult {
 
 fn builtin_themes() -> &'static [&'static str] {
     &[
+        "runie",
         "silkcircuit-neon", "silkcircuit-glow", "silkcircuit-soft", "silkcircuit-vibrant", "silkcircuit-dawn",
         "catppuccin-mocha", "catppuccin-macchiato", "catppuccin-frappe", "catppuccin-latte",
         "dracula", "nord", "gruvbox-dark", "gruvbox-light", "tokyo-night", "tokyo-night-storm", "tokyo-night-moon",

@@ -4,36 +4,13 @@ use ratatui::style::Color;
 use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use crate::theme::{set_current_theme, color_fg, color_dim, color_accent};
-
-fn setup() {
-    set_current_theme("silkcircuit-neon");
-}
+use crate::theme::{color_fg, color_dim, color_accent, TEST_LOCK};
 
 fn draw_state(state: &mut AppState) -> Terminal<TestBackend> {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, state)).unwrap();
     terminal
-}
-
-/// Get the fg color of the first cell matching the predicate.
-fn _first_cell_color(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -> Option<Color> {
-    let buf = term.backend().buffer();
-    for y in 0..buf.area().height {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol().to_string())
-            .collect();
-        if predicate(&line) {
-            for x in 0..buf.area().width {
-                let cell = &buf[(x, y)];
-                if cell.symbol() != " " {
-                    return cell.style().fg;
-                }
-            }
-        }
-    }
-    None
 }
 
 /// Collect all non-space fg colors on a line matching the predicate.
@@ -61,7 +38,7 @@ fn line_colors(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -
 
 #[test]
 fn agent_message_uses_fg() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello agent".into() });
@@ -77,7 +54,7 @@ fn agent_message_uses_fg() {
 
 #[test]
 fn turn_complete_uses_dim() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done".into() });
@@ -94,7 +71,7 @@ fn turn_complete_uses_dim() {
 
 #[test]
 fn status_idle_uses_dim() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4".into();
@@ -109,7 +86,7 @@ fn status_idle_uses_dim() {
 
 #[test]
 fn tool_done_output_uses_fg() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1.txt".into() });
@@ -124,7 +101,7 @@ fn tool_done_output_uses_fg() {
 
 #[test]
 fn thought_uses_dim() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
@@ -141,7 +118,7 @@ fn thought_uses_dim() {
 
 #[test]
 fn empty_state_uses_dim() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Type a message"));
@@ -154,7 +131,7 @@ fn empty_state_uses_dim() {
 
 #[test]
 fn inline_code_parsed_in_markdown() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     use crate::markdown::parse_inline_markdown;
     let spans = parse_inline_markdown("use `cargo test` to run");
     let code_span = spans.iter().find(|s| s.content == "cargo test");
@@ -169,7 +146,7 @@ fn inline_code_parsed_in_markdown() {
 
 #[test]
 fn inline_code_with_bg_highlight() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     use crate::markdown::parse_inline_markdown;
     let spans = parse_inline_markdown("`hello`");
     let code_span = spans.iter().find(|s| s.content == "hello").expect("code span");
