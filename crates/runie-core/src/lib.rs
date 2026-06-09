@@ -10,6 +10,8 @@
 //!   labels    :: Static text constants
 
 pub mod model;
+pub mod model_catalog;
+pub mod message;
 pub mod scoped_model;
 pub mod settings;
 pub mod event;
@@ -36,7 +38,7 @@ mod tests;
 #[cfg(test)]
 mod file_refs_lookup_tests;
 
-pub use model::{AppState, ChatMessage, Role};
+pub use model::{AppState, ChatMessage, Role, now};
 pub use snapshot::Snapshot;
 pub use session::{Session, save, load, list, delete};
 pub use event::Event;

@@ -1,6 +1,7 @@
 //! Model — Application State (mutable borrow, no cloning per event)
 use crate::snapshot::{Snapshot, VisibleRegion};
 use crate::ui::elements::Element;
+pub use crate::message::{ChatMessage, Role, now};
 
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
@@ -71,6 +72,8 @@ impl std::str::FromStr for ThinkingLevel {
     }
 }
 pub use crate::scoped_model::ScopedModel;
+
+pub use crate::model_catalog::{ModelInfo, model_catalog, filter_models, build_model_selector_items};
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
     pub content: String,
@@ -129,6 +132,8 @@ pub struct AppState {
     pub scoped_models: Vec<ScopedModel>,
     /// Current index in scoped_models cycling
     pub scoped_index: usize,
+    /// Recently used models (last 5) for the model selector dialog
+    pub recent_models: Vec<String>,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -191,6 +196,7 @@ impl Default for AppState {
             read_only: false,
             scoped_models: Vec::new(),
             scoped_index: 0,
+            recent_models: Vec::new(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,
@@ -248,6 +254,30 @@ impl AppState {
             .into_iter()
             .map(|cmd| (cmd.name.clone(), cmd.description.clone(), cmd.category.as_str().to_string()))
             .collect()
+    }
+
+    fn model_selector_items(&self) -> Vec<(String, String, String, bool, bool)> {
+        let (filter, _) = match &self.open_dialog {
+            Some(crate::commands::DialogState::ModelSelector { filter, .. }) => (filter.clone(), 0),
+            _ => return Vec::new(),
+        };
+        build_model_selector_items(
+            &model_catalog(),
+            &self.recent_models,
+            &filter,
+            &self.current_provider,
+            &self.current_model,
+        )
+    }
+
+    /// Record a model selection in recent history (max 5, no duplicates).
+    pub fn record_model_usage(&mut self, provider: &str, model: &str) {
+        let full = format!("{}/{}", provider, model);
+        self.recent_models.retain(|m| m != &full);
+        self.recent_models.push(full);
+        if self.recent_models.len() > 5 {
+            self.recent_models.remove(0);
+        }
     }
 
     pub fn cache_generation(&self) -> u64 {
@@ -336,6 +366,7 @@ impl AppState {
             queue_count: self.message_queue.len() + self.request_queue.len(),
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),
+            model_selector_items: self.model_selector_items(),
             scoped_models: self.scoped_models.clone(),
             settings_items: crate::update::settings_dialog::build_setting_items(self),
         }
@@ -452,47 +483,6 @@ impl AppState {
         self.messages_changed();
         summary
     }
-}
-
-pub fn now() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs_f64())
-        .unwrap_or(0.0)
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-pub enum Role {
-    #[default]
-    User,
-    Thought,
-    Assistant,
-    Tool,
-    TurnComplete,
-    System,
-}
-
-impl Role {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Role::User => "user",
-            Role::Thought => "thought",
-            Role::Assistant => "assistant",
-            Role::Tool => "tool",
-            Role::TurnComplete => "turn_complete",
-            Role::System => "system",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct ChatMessage {
-    pub role: Role,
-    pub content: String,
-    pub timestamp: f64,
-    pub id: String,
-    #[serde(default)]
-    pub provider: String,
 }
 
 

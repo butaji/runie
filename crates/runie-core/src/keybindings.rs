@@ -155,6 +155,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "Dequeue" => Some(Event::Dequeue),
         "OpenExternalEditor" => Some(Event::OpenExternalEditor),
         "ToggleCommandPalette" => Some(Event::ToggleCommandPalette),
+        "ToggleModelSelector" => Some(Event::ToggleModelSelector),
         "CycleModelNext" => Some(Event::CycleModelNext),
         "CycleModelPrev" => Some(Event::CycleModelPrev),
         _ => None,

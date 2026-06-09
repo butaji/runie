@@ -21,10 +21,7 @@ fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, hand
 fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
-        return CommandResult::Message(format!(
-            "Current model: {}/{}. Usage: /model provider/model or /model model",
-            state.current_provider, state.current_model
-        ));
+        return CommandResult::OpenDialog(Dialog::ModelSelector);
     }
     let parts: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
     match parts.len() {

@@ -155,14 +155,15 @@ fn model_only_slashes_shows_usage() {
 }
 
 #[test]
-fn model_no_args_shows_usage() {
+fn model_no_args_opens_selector() {
     let mut state = fresh_state();
     type_str(&mut state, "/model");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
-    assert_eq!(sys_msgs.len(), 1, "should show system message, got messages: {:?}", state.messages);
-    assert!(sys_msgs[0].content.contains("Current model:"), "no args should show current model: {}", sys_msgs[0].content);
+    assert!(
+        matches!(state.open_dialog, Some(crate::commands::DialogState::ModelSelector { .. })),
+        "no args should open model selector dialog"
+    );
 }
 
 

@@ -61,10 +61,9 @@ fn test_render_sessions_list_on_separate_lines() {
 }
 
 #[test]
-fn test_render_model_no_args_shows_usage_not_echoed() {
+fn test_render_model_no_args_opens_selector() {
     let content = render_slash("/model");
-    assert!(content.contains("Current model:"), "Should show current model: {}", content);
-    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(content.contains("Select Model"), "Should open model selector dialog: {}", content);
     assert!(!content.contains("$ /model"), "Should NOT echo /model as user message: {}", content);
 }
 

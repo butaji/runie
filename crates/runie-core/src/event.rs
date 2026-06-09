@@ -88,6 +88,15 @@ pub enum Event {
     PaletteSelect,
     PaletteClose,
 
+    // Model selector
+    ToggleModelSelector,
+    ModelSelectorFilter(char),
+    ModelSelectorBackspace,
+    ModelSelectorUp,
+    ModelSelectorDown,
+    ModelSelectorSelect,
+    ModelSelectorClose,
+
     // Path completion
     TogglePathCompletion,
     PathCompletionUp,
