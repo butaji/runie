@@ -30,11 +30,16 @@ tmux send-keys -t "$SESSION" "C-c"
 
 sleep 0.5
 
-# Capture output
-tmux capture-pane -t "$SESSION" -p > "$LOG"
+# Capture output (session may already be gone if app exited)
+tmux capture-pane -t "$SESSION" -p > "$LOG" 2>/dev/null || true
 
 # Verify session is gone (app exited gracefully)
-if ! tmux has-session -t "$SESSION" 2>/dev/null; then
+SESSION_EXISTS=false
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+    SESSION_EXISTS=true
+fi
+
+if [ "$SESSION_EXISTS" = "false" ]; then
     echo "INFO: App exited gracefully after Ctrl+C"
 else
     # If still running, kill it
