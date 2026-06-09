@@ -25,11 +25,17 @@ pub struct Context7Client {
     client: reqwest::blocking::Client,
 }
 
-impl Context7Client {
-    pub fn new() -> Self {
+impl Default for Context7Client {
+    fn default() -> Self {
         Self {
             client: reqwest::blocking::Client::new(),
         }
+    }
+}
+
+impl Context7Client {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Fetch documentation for a library query.

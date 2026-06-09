@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Layout, Rect},
+    layout::Rect,
     text::Line,
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -10,10 +10,6 @@ use crate::theme::{
     GLYPH_SELECTED, GLYPH_UNSELECTED, style_popup_border, style_popup_selected,
     style_popup_unselected, style_hint, style_thinking, style_user, style_tool_header,
 };
-
-fn hstack(area: Rect, widths: &[Constraint]) -> Vec<Rect> {
-    Layout::default().direction(ratatui::layout::Direction::Horizontal).constraints(widths).split(area).to_vec()
-}
 
 pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
     let suggestions = match &snap.at_suggestions {

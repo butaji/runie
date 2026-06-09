@@ -149,7 +149,6 @@ fn write_result(path: &std::path::Path, content: &str) -> MutationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
 
     #[test]
     fn queue_executes_in_order() {

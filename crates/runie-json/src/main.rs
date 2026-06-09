@@ -230,7 +230,7 @@ mod tests {
     #[tokio::test]
     async fn json_mode_returns_tool_calls() {
         let provider = runie_provider::MockProvider::default();
-        let mut messages = vec![
+        let messages = vec![
             Message::System {
                 content: "You are helpful.".into(),
             },
@@ -245,7 +245,7 @@ mod tests {
             })
             .await
             .unwrap();
-        let tools = parse_tool_calls(&response_text);
+        let _tools = parse_tool_calls(&response_text);
         // MockProvider returns deterministic response; may or may not have tools
         // We just verify the pipeline works
         assert!(!response_text.is_empty());
