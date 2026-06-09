@@ -10,6 +10,7 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("theme", "Switch theme or list available themes", &[], CommandCategory::System, handle_theme));
     registry.register(cmd("approve", "Apply pending file edits", &[], CommandCategory::System, handle_approve));
     registry.register(cmd("reject", "Cancel pending file edits", &[], CommandCategory::System, handle_reject));
+    registry.register(cmd("reload", "Reload config, keybindings, and themes", &[], CommandCategory::System, handle_reload));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -38,8 +39,9 @@ fn handle_settings(_state: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::OpenDialog(Dialog::Settings)
 }
 
-fn handle_reload(_state: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Message("Config reloaded".into())
+fn handle_reload(state: &mut AppState, _args: &str) -> CommandResult {
+    state.keybindings = crate::keybindings::load_keybindings(&None);
+    CommandResult::Event(crate::Event::ReloadAll)
 }
 
 fn handle_changelog(_state: &mut AppState, _args: &str) -> CommandResult {

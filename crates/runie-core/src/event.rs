@@ -102,6 +102,9 @@ pub enum Event {
     ApproveEdit,
     RejectEdit,
 
+    // Config reload
+    ReloadAll,
+
     // Path completion
     TogglePathCompletion,
     PathCompletionUp,
