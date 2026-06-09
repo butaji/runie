@@ -14,7 +14,7 @@ use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
 use runie_core::{AppState, Event as CoreEvent, Snapshot, keybindings, config_reload};
-use std::{collections::HashMap, io, time::Duration};
+use std::{collections::HashMap, io, io::Write, time::Duration};
 use tokio::sync::mpsc;
 
 const ANIM_MS: u64 = 200;
@@ -44,9 +44,9 @@ async fn main() -> io::Result<()> {
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
     tokio::spawn(input_reader(input_tx.clone(), keybindings));
     tokio::spawn(render_task(terminal, render_rx));
-    tokio::spawn(config_reload::spawn_config_watcher(input_tx, config_reload::config_path()));
+    tokio::spawn(config_reload::spawn_config_watcher(input_tx.clone(), config_reload::config_path()));
 
-    event_loop(state, input_rx, agent_rx, cmd_tx, render_tx).await
+    event_loop(state, input_rx, agent_rx, cmd_tx, render_tx, input_tx).await
 }
 
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
@@ -85,6 +85,7 @@ async fn event_loop(
     mut agent_rx: mpsc::Receiver<CoreEvent>,
     cmd_tx: mpsc::Sender<AgentCommand>,
     render_tx: mpsc::Sender<Snapshot>,
+    input_tx: mpsc::Sender<CoreEvent>,
 ) -> io::Result<()> {
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
 
@@ -98,14 +99,22 @@ async fn event_loop(
             biased;
 
             Some(evt) = input_rx.recv() => {
-                let was_submit = matches!(evt, CoreEvent::Submit);
-                let was_followup = matches!(evt, CoreEvent::FollowUp);
-                state.update(evt);
-                if state.should_quit {
-                    return Ok(());
-                }
-                if was_submit || was_followup {
-                    spawn_if_queued(&mut state, &cmd_tx).await;
+                if matches!(evt, CoreEvent::OpenExternalEditor) {
+                    let text = state.input.clone();
+                    let tx = input_tx.clone();
+                    tokio::task::spawn_blocking(move || {
+                        let _ = spawn_external_editor_sync(text, tx);
+                    });
+                } else {
+                    let was_submit = matches!(evt, CoreEvent::Submit);
+                    let was_followup = matches!(evt, CoreEvent::FollowUp);
+                    state.update(evt);
+                    if state.should_quit {
+                        return Ok(());
+                    }
+                    if was_submit || was_followup {
+                        spawn_if_queued(&mut state, &cmd_tx).await;
+                    }
                 }
             }
 
@@ -151,6 +160,34 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
             }).await;
         }
     }
+}
+
+fn spawn_external_editor_sync(
+    text: String,
+    tx: mpsc::Sender<CoreEvent>,
+) -> io::Result<()> {
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+        if cfg!(windows) { "notepad" } else { "vi" }.to_string()
+    });
+
+    let mut tmp = tempfile::NamedTempFile::new()?;
+    tmp.write_all(text.as_bytes())?;
+    tmp.flush()?;
+    let path = tmp.into_temp_path();
+
+    let status = std::process::Command::new(&editor)
+        .arg(&path)
+        .status()?;
+
+    if status.success() {
+        let content = std::fs::read_to_string(&path).unwrap_or_default();
+        let rt = tokio::runtime::Handle::try_current();
+        if let Ok(handle) = rt {
+            let _ = handle.block_on(tx.send(CoreEvent::ExternalEditorDone { content }));
+        }
+    }
+
+    Ok(())
 }
 
 async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
