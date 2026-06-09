@@ -81,6 +81,8 @@ mod paste;
 #[cfg(test)]
 mod fuzzy;
 #[cfg(test)]
+mod model_cycle;
+#[cfg(test)]
 mod palette;
 #[cfg(test)]
 mod thinking;

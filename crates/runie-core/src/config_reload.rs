@@ -13,12 +13,13 @@ use crate::event::Event;
 
 // Duplicated from runie_provider::Config to avoid circular dependency
 #[derive(Debug, Clone, Default, serde::Deserialize)]
-struct ModelsSection {
+pub struct ModelsSection {
     default: Option<String>,
+    scoped: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize)]
-struct Config {
+pub struct Config {
     provider: Option<String>,
     model: Option<String>,
     theme: Option<String>,
@@ -31,7 +32,7 @@ struct Config {
 
 impl Config {
     /// Load config from a specific path
-    fn load_from(path: &PathBuf) -> Self {
+    pub fn load_from(path: &PathBuf) -> Self {
         if !path.exists() {
             return Self::default();
         }
@@ -41,8 +42,12 @@ impl Config {
         }
     }
 
-    fn default_model(&self) -> Option<&str> {
+    pub fn default_model(&self) -> Option<&str> {
         self.models.default.as_deref().or(self.model.as_deref())
+    }
+
+    pub fn scoped_models(&self) -> Option<&Vec<String>> {
+        self.models.scoped.as_ref()
     }
 }
 
@@ -327,6 +332,40 @@ theme = "dracula"
 
         let config = Config::load_from(&config_path);
         assert_eq!(config.theme, Some("dracula".to_string()));
+    }
+
+    #[test]
+    fn config_load_parses_scoped_models() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+
+        fs::write(&config_path, r#"
+provider = "openai"
+
+[models]
+scoped = ["gpt-4o", "claude-3-sonnet", "gemini-1.5-pro"]
+"#).unwrap();
+
+        let config = Config::load_from(&config_path);
+        let scoped = config.scoped_models().expect("should have scoped models");
+        assert_eq!(scoped.len(), 3);
+        assert_eq!(scoped[0], "gpt-4o");
+        assert_eq!(scoped[1], "claude-3-sonnet");
+        assert_eq!(scoped[2], "gemini-1.5-pro");
+    }
+
+    #[test]
+    fn config_load_scoped_models_missing_is_none() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+
+        fs::write(&config_path, r#"
+provider = "openai"
+model = "gpt-4"
+"#).unwrap();
+
+        let config = Config::load_from(&config_path);
+        assert!(config.scoped_models().is_none());
     }
 
     #[test]

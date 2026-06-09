@@ -34,6 +34,7 @@ async fn main() -> io::Result<()> {
     let terminal = setup_terminal()?;
     let mut state = AppState::default();
     apply_trust_on_startup(&mut state);
+    init_scoped_models(&mut state);
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
@@ -77,6 +78,22 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, bindings: HashMap<Strin
             if input_tx.send(evt).await.is_err() { break; }
             if is_quit { break; }
         }
+    }
+}
+
+fn init_scoped_models(state: &mut AppState) {
+    let config = config_reload::Config::load_from(&config_reload::config_path());
+    if let Some(scoped) = config.scoped_models() {
+        state.scoped_models = scoped.clone();
+    } else {
+        // Default: first 10 models from catalog
+        let registry = runie_provider::model::ModelRegistry::default();
+        state.scoped_models = registry
+            .list()
+            .iter()
+            .take(10)
+            .map(|m| m.full())
+            .collect();
     }
 }
 
