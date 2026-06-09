@@ -30,6 +30,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+c".to_string(), "Quit".to_string());
     map.insert("ctrl+s".to_string(), "Abort".to_string());
     map.insert("ctrl+g".to_string(), "OpenExternalEditor".to_string());
+    map.insert("ctrl+p".to_string(), "ToggleCommandPalette".to_string());
 
     // Alt key combinations
     map.insert("alt+enter".to_string(), "FollowUp".to_string());
@@ -150,6 +151,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "ToggleExpand" => Some(Event::ToggleExpand),
         "Dequeue" => Some(Event::Dequeue),
         "OpenExternalEditor" => Some(Event::OpenExternalEditor),
+        "ToggleCommandPalette" => Some(Event::ToggleCommandPalette),
         _ => None,
     }
 }

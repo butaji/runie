@@ -271,6 +271,59 @@ fn status_shows_provider_model() {
 }
 
 #[test]
+fn palette_renders_centered() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let has_title = (0..buf.area().height)
+        .any(|y| {
+            let line: String = (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol().to_string())
+                .collect();
+            line.contains("Commands")
+        });
+    assert!(has_title, "Palette should render with 'Commands' title");
+}
+
+#[test]
+fn palette_shows_categories() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let has_category = (0..buf.area().height)
+        .any(|y| {
+            let line: String = (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol().to_string())
+                .collect();
+            line.contains("Session") || line.contains("Model") || line.contains("System")
+        });
+    assert!(has_category, "Palette should show category headers");
+}
+
+#[test]
+fn palette_highlights_selected() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    // The first item should be selected; check that some cell has bg set
+    let has_selected_bg = (0..buf.area().height)
+        .any(|y| {
+            (0..buf.area().width)
+                .any(|x| buf[(x, y)].style().bg.is_some())
+        });
+    assert!(has_selected_bg, "Selected palette item should have background color");
+}
+
+#[test]
 fn turn_complete_renders_after_tool_flow() {
     let mut state = AppState::default();
     state.messages.push(runie_core::ChatMessage {

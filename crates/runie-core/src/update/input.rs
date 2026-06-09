@@ -354,7 +354,11 @@ impl AppState {
                 crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
                 crate::commands::CommandResult::Event(evt) => self.update(evt),
                 crate::commands::CommandResult::OpenDialog(d) => {
-                    self.open_dialog = Some(d);
+                    self.open_dialog = Some(match d {
+                        crate::commands::Dialog::CommandPalette => crate::commands::DialogState::CommandPalette { filter: String::new(), selected: 0 },
+                        crate::commands::Dialog::ModelSelector => crate::commands::DialogState::ModelSelector { filter: String::new(), selected: 0 },
+                        crate::commands::Dialog::Settings => crate::commands::DialogState::Settings,
+                    });
                     self.mark_dirty();
                 }
                 crate::commands::CommandResult::None => {}

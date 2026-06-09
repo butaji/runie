@@ -57,6 +57,7 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     input(f, snap, c[2]);
     hints(f, snap, c[3]);
     at_suggestions(f, snap);
+    command_palette(f, snap);
 }
 
 /// Legacy entry point for code that still builds AppState directly.
@@ -412,6 +413,56 @@ fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
         .title(format!(" @ files ({}) ", suggestions.len()))
         .border_style(style_popup_border());
     f.render_widget(Paragraph::new(lines).block(block), popup_area);
+}
+
+fn command_palette(f: &mut Frame, snap: &Snapshot) {
+    let (filter, selected) = match &snap.dialog {
+        Some(runie_core::commands::DialogState::CommandPalette { filter, selected }) => (filter.clone(), *selected),
+        _ => return,
+    };
+    let popup_area = palette_popup_rect(f.area());
+    let lines = build_palette_lines(snap, &filter, selected);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Commands ")
+        .border_style(style_popup_border());
+    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+}
+
+fn palette_popup_rect(area: Rect) -> Rect {
+    let popup_width = 60u16.min(area.width.saturating_sub(4)).max(20);
+    let popup_height = 18u16.min(area.height.saturating_sub(4)).max(6);
+    Rect {
+        x: area.x + (area.width.saturating_sub(popup_width)) / 2,
+        y: area.y + (area.height.saturating_sub(popup_height)) / 2,
+        width: popup_width,
+        height: popup_height,
+    }
+}
+
+fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(format!("> {}", filter)).style(style_user()));
+    lines.push(Line::from(""));
+
+    if snap.palette_items.is_empty() {
+        lines.push(Line::from("No commands found").style(style_hint()));
+        return lines;
+    }
+
+    let mut last_category = String::new();
+    for (i, (name, desc, category)) in snap.palette_items.iter().enumerate() {
+        if category != &last_category {
+            if !last_category.is_empty() {
+                lines.push(Line::from(""));
+            }
+            lines.push(Line::from(format!("  {}", category)).style(style_thinking()));
+            last_category = category.clone();
+        }
+        let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
+        lines.push(Line::from(format!("    {:12} {}", name, desc)).style(style));
+    }
+    lines
 }
 
 fn estimate_element_tokens(elem: &Element) -> usize {
