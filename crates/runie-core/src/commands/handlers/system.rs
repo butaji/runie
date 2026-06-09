@@ -12,6 +12,8 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("reject", "Cancel pending file edits", &[], CommandCategory::System, handle_reject));
     registry.register(cmd("reload", "Reload config, keybindings, and themes", &[], CommandCategory::System, handle_reload));
     registry.register(cmd("diagnostics", "Show resource loading diagnostics", &[], CommandCategory::System, handle_diagnostics));
+    registry.register(cmd("skills", "List loaded skills", &[], CommandCategory::System, handle_skills));
+    registry.register(cmd("skill", "Invoke a skill by name", &[], CommandCategory::System, handle_skill));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -47,6 +49,37 @@ fn handle_reload(state: &mut AppState, _args: &str) -> CommandResult {
 
 fn handle_diagnostics(_state: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ShowDiagnostics)
+}
+
+fn handle_skills(state: &mut AppState, _args: &str) -> CommandResult {
+    if state.skills.is_empty() {
+        return CommandResult::Message("No skills loaded.".into());
+    }
+    let mut lines = vec!["Loaded skills:".to_string()];
+    for skill in &state.skills {
+        lines.push(format!("  {}", skill.summary()));
+    }
+    CommandResult::Message(lines.join("\n"))
+}
+
+fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
+    let name = args.trim();
+    if name.is_empty() {
+        return CommandResult::Message("Usage: /skill <name>".into());
+    }
+    match state.skills.iter().find(|s| s.name == name) {
+        Some(skill) => {
+            let mut lines = vec![format!("Skill: {}", skill.name)];
+            if !skill.description.is_empty() {
+                lines.push(format!("Description: {}", skill.description));
+            }
+            if !skill.context.is_empty() {
+                lines.push(format!("Context: {}", skill.context));
+            }
+            CommandResult::Message(lines.join("\n"))
+        }
+        None => CommandResult::Message(format!("Skill '{}' not found. Use /skills to list loaded skills.", name)),
+    }
 }
 
 fn handle_changelog(_state: &mut AppState, _args: &str) -> CommandResult {

@@ -13,7 +13,8 @@ impl AppState {
         if let Some(theme) = &config.theme {
             self.theme_name = theme.clone();
         }
-        self.add_system_msg("Reloaded config, keybindings, and theme.".to_string());
+        self.skills = crate::skills::load_all();
+        self.add_system_msg("Reloaded config, keybindings, theme, and skills.".to_string());
     }
 
     pub(crate) fn show_diagnostics(&mut self) {
@@ -44,5 +45,29 @@ impl AppState {
         lines.push(format!("  Read-only: {}", self.read_only));
         lines.push(format!("  Scoped models: {}", self.scoped_models.len()));
         self.add_system_msg(lines.join("\n"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reload_all_reloads_skills() {
+        let mut state = AppState::default();
+        state.skills = vec![
+            crate::skills::Skill {
+                name: "dummy".into(),
+                description: "dummy".into(),
+                context: "".into(),
+                user_invocable: false,
+                file_path: std::path::PathBuf::from("dummy.md"),
+            }
+        ];
+        state.reload_all();
+        // In test environment load_all returns empty (no skill dirs exist)
+        assert!(state.skills.is_empty(), "reload_all should reload skills from disk");
+        let last = state.messages.last().unwrap();
+        assert!(last.content.contains("Reloaded"), "Should confirm reload: {}", last.content);
     }
 }
