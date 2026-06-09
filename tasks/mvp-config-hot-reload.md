@@ -6,42 +6,33 @@
 
 ## Description
 
-Reload configuration when files change. Moved from MVP to R1 because TOML
-config parsing is done; hot reload is infrastructure, not MVP-critical.
+Reload configuration when files change.
+
+## Current State
+
+**Implemented.** `crates/runie-core/src/config_reload.rs` (276 lines) provides a
+polling-based file watcher. Wired into `main.rs` via
+`config_reload::spawn_config_watcher()`. Polls `~/.runie/config.toml` every 2
+seconds and emits `SwitchModel` events when provider or model changes.
 
 ## Acceptance Criteria
 
-- [x] File watcher (polling-based via ConfigFileState)
-- [x] ConfigChanged events emitted to bus
+- [x] File watcher (polling-based, 2-second interval)
 - [x] Re-parse config on change
-- [x] Actors apply changes without restart (via ConfigChanged events)
-
-## Implementation
-
-### Files
-- `crates/runie-core/src/actors/config_agent.rs` — ConfigAgent actor
-- `crates/runie-core/src/event_bus.rs` — ConfigChanged event and ConfigValue types
-
-### Architecture
-
-1. **ConfigFileState** tracks file path, mtime, and content hash
-2. **check_and_update()** polls file for changes (mtime + content hash)
-3. **ConfigChanged** event emitted with path and parsed HashMap<String, ConfigValue>
-4. **run_config_agent()** runs actor loop with configurable poll interval
-
-### ConfigValue Types
-- String, Integer, Float, Boolean
-- Array (nested arrays)
-- Object (nested tables)
+- [x] Apply provider/model changes without restart (via `SwitchModel` event)
 
 ## Tests
 
-### Layer 1 — State/Logic
-- [x] `parse_config_file` — parse TOML and extract values
-- [x] `config_file_state_detects_change` — mtime + hash change detection
-- [x] Helper functions: `get_string`, `get_bool`, `get_integer`, `get_nested`
+- [x] Layer 1 — `config_load_parses_toml` — parse TOML config
+- [x] Layer 1 — `config_load_defaults_when_missing` — fallback behavior
+- [x] Layer 1 — `config_load_uses_default_model_from_models_section` — models.default precedence
+- [x] Layer 1 — `config_path_returns_expected_path` — path construction
+- [x] Layer 2 — `config_watcher_detects_initial_change` — emits SwitchModel on startup
+- [x] Layer 2 — `config_watcher_parses_toml_changes` — detects provider/model changes
+- [x] Layer 2 — `config_changed_applies_provider` — SwitchModel event updates state
 
-### Layer 2 — Event Handling
-- [x] `test_spawn_config_agent` — actor spawning
+## Notes
 
-All 10 config tests pass.
+- Uses polling (2-second interval) instead of `notify` crate to avoid extra dependency.
+- `Config` struct duplicates `runie_provider::Config` fields to avoid circular dependency.
+- See `docs/SHIP_REVIEW_3.md`.
