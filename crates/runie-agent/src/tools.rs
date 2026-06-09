@@ -93,7 +93,8 @@ fn apply_truncation(output: String, use_tail: bool) -> String {
 }
 
 fn read_file(path: &str, offset: Option<usize>, limit: Option<usize>) -> (String, bool) {
-    match std::fs::read_to_string(path) {
+    let path = crate::path_utils::resolve_path(path);
+    match std::fs::read_to_string(&path) {
         Ok(content) => {
             let lines: Vec<&str> = content.lines().collect();
             let total_lines = lines.len();
@@ -118,12 +119,13 @@ fn read_file(path: &str, offset: Option<usize>, limit: Option<usize>) -> (String
                 (output, true)
             }
         }
-        Err(e) => (format!("Error reading {}: {}", path, e), false),
+        Err(e) => (format!("Error reading {}: {}", path.display(), e), false),
     }
 }
 
 fn list_dir(path: &str) -> (String, bool) {
-    let p = Path::new(path);
+    let path = crate::path_utils::resolve_path(path);
+    let p = Path::new(&path);
     match std::fs::read_dir(p) {
         Ok(entries) => {
             let mut lines = Vec::new();
@@ -139,50 +141,52 @@ fn list_dir(path: &str) -> (String, bool) {
             };
             (apply_truncation(output, false), true)
         }
-        Err(e) => (format!("Error listing {}: {}", path, e), false),
+        Err(e) => (format!("Error listing {}: {}", path.display(), e), false),
     }
 }
 
 fn write_file(path: &str, content: &str) -> (String, bool) {
+    let path = crate::path_utils::resolve_path(path);
     // Create parent directories if needed
-    if let Some(parent) = Path::new(path).parent() {
+    if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {
             if let Err(e) = std::fs::create_dir_all(parent) {
                 return (format!("Error creating parent directories: {}", e), false);
             }
         }
     }
-    match std::fs::write(path, content) {
-        Ok(()) => (format!("Wrote {} bytes to {}", content.len(), path), true),
-        Err(e) => (format!("Error writing {}: {}", path, e), false),
+    match std::fs::write(&path, content) {
+        Ok(()) => (format!("Wrote {} bytes to {}", content.len(), path.display()), true),
+        Err(e) => (format!("Error writing {}: {}", path.display(), e), false),
     }
 }
 
 fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
+    let path = crate::path_utils::resolve_path(path);
     if search.is_empty() {
         return ("Error: search text cannot be empty".to_string(), false);
     }
-    match std::fs::read_to_string(path) {
+    match std::fs::read_to_string(&path) {
         Ok(content) => {
             let count = content.matches(search).count();
             if count == 0 {
-                return (format!("Error: search text not found in {}", path), false);
+                return (format!("Error: search text not found in {}", path.display()), false);
             }
             if count > 1 {
-                return (format!("Error: search text appears {} times in {}. Be more specific.", count, path), false);
+                return (format!("Error: search text appears {} times in {}. Be more specific.", count, path.display()), false);
             }
             let new_content = content.replacen(search, replace, 1);
-            match std::fs::write(path, &new_content) {
+            match std::fs::write(&path, &new_content) {
                 Ok(()) => {
                     // Generate diff output for display
                     let diff = crate::diff::generate_unified_diff(&content, &new_content);
-                    let diff_output = crate::diff::render_diff_to_string(&diff, path);
+                    let diff_output = crate::diff::render_diff_to_string(&diff, &path.to_string_lossy());
                     (diff_output, true)
                 }
-                Err(e) => (format!("Error writing {}: {}", path, e), false),
+                Err(e) => (format!("Error writing {}: {}", path.display(), e), false),
             }
         }
-        Err(e) => (format!("Error reading {}: {}", path, e), false),
+        Err(e) => (format!("Error reading {}: {}", path.display(), e), false),
     }
 }
 
@@ -312,7 +316,8 @@ fn run_grep(
     context: usize,
     limit: usize,
 ) -> (String, bool) {
-    let args = build_grep_args(pattern, path, glob, ignore_case, literal, context, limit);
+    let path = crate::path_utils::resolve_path(path);
+    let args = build_grep_args(pattern, &path.to_string_lossy(), glob, ignore_case, literal, context, limit);
     let tool = if which_tool("rg").is_some() { "rg" } else { "grep" };
     match std::process::Command::new(tool).args(&args).output() {
         Ok(output) => parse_grep_output(output, limit),
@@ -359,11 +364,13 @@ fn parse_find_output(output: std::process::Output, limit: usize) -> (String, boo
 }
 
 fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
+    let path = crate::path_utils::resolve_path(path);
     let tool = if which_tool("fd").is_some() { "fd" } else { "find" };
+    let path_str = path.to_string_lossy();
     let result = if tool == "fd" {
-        std::process::Command::new("fd").args(build_fd_args(pattern, path, limit)).output()
+        std::process::Command::new("fd").args(build_fd_args(pattern, &path_str, limit)).output()
     } else {
-        std::process::Command::new("find").args(build_find_args(pattern, path)).output()
+        std::process::Command::new("find").args(build_find_args(pattern, &path_str)).output()
     };
 
     match result {
