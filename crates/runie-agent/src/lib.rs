@@ -1,6 +1,7 @@
 #![warn(clippy::all)]
 
 pub mod diff;
+pub mod path_utils;
 pub mod parser;
 pub mod safety;
 pub mod tools;
