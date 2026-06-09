@@ -117,7 +117,7 @@ These should be removed from SPEC.md. The ConfigAgent is not needed for keybindi
 let crates_path = workspace_root.join("crates");  // but only called from runie-core/build.rs
 ```
 
-The build script lives in `runie-core/build.rs`. It lints `crates/runie-core/src/` and all subdirs. But `runie-tui/src/syntax.rs` (582 lines, over 500 limit) is **never checked** because runie-tui has no build.rs.
+The build script lives in `runie-core/build.rs`. It lints `crates/runie-core/src/` and all subdirs. It does **not** check `runie-tui` or other crates. The syntax module was already split into `syntax/` (max file 249 lines), so there are currently no file-size violations in the checked crates.
 
 ### 2. Build Gate Prevents Incremental Development
 
@@ -171,7 +171,7 @@ Wait — `mvp-core-event-unification` built the `Event` enum in `event.rs`, whic
 ### Short-Term (Next Sprint)
 
 5. **Implement `r1-config-keybindings`** — Highest user-value remaining feature. No dependencies.
-6. **Fix `syntax.rs` to <500 lines** — Either trim keyword tables or move to sub-module. Currently the only lint violation.
+6. ~~**Fix `syntax.rs` to <500 lines**~~ — **Already done.** Split into `syntax/{mod,tokenize,keywords}.rs` (max 249 lines).
 
 ### Do Not Do
 

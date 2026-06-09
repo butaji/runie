@@ -129,10 +129,10 @@ through the same channel and reducer.
 - [x] **!command** — Bash prefix (run bash, don't send to agent)
 
 ### Remaining (Prioritized)
-- [ ] **Configurable keybindings** — Load from `keybindings.json`, dispatch via map
-- [ ] **Streaming: event per chunk** — Each LLM chunk emitted as individual event
-- [ ] **Hot reload** — File watcher for config changes
-- [ ] **Input history persistence** — Save history across sessions
+- [x] **Configurable keybindings** — Load from `keybindings.json`, dispatch via `keymap::convert_event()`
+- [x] **Streaming: event per chunk** — Each LLM chunk emits `AgentResponse` event to the loop
+- [x] **Hot reload** — Polling watcher (2s interval) emits `SwitchModel` on config change
+- [x] **Input history persistence** — Load on init, save on submit
 
 ### Deferred (Not Blocking)
 - [ ] **Compose AppState** — Nice-to-have; 27 fields work fine

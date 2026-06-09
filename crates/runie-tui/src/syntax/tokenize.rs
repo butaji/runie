@@ -58,7 +58,7 @@ pub fn tokenize_line(line: &str, lang: Language) -> Vec<SyntaxToken> {
     let mut chars = line.chars().peekable();
     let mut current = String::new();
     let mut in_string = None; // Some(char) for quote char
-    let mut in_comment = false;
+    let in_comment = false;
     let mut in_block_comment = false;
 
     macro_rules! flush_and_add {
@@ -107,7 +107,7 @@ pub fn tokenize_line(line: &str, lang: Language) -> Vec<SyntaxToken> {
                 current.push(c);
                 current.push(chars.next().unwrap());
                 flush_and_add!(highlight_styles::comment());
-                while let Some(cc) = chars.next() {
+                for cc in chars.by_ref() {
                     current.push(cc);
                 }
                 flush_and_add!(highlight_styles::comment());
