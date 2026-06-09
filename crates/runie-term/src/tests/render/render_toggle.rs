@@ -11,6 +11,7 @@ fn test_toggle_expand_changes_rendered_output() {
         content: "◆ Thought 1.2s\nI'll list the files.".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
 
     // Render expanded
@@ -41,6 +42,7 @@ fn test_toggle_expand_changes_tool_render() {
         content: "◆ Ran list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,
         id: "x1".into(),
+        ..Default::default()
     });
 
     // Render expanded

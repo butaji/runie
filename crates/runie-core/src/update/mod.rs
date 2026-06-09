@@ -305,6 +305,7 @@ impl AppState {
             content,
             timestamp: now(),
             id: "system".to_string(),
+            ..Default::default()
         });
         self.messages_changed();
     }

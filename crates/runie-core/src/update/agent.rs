@@ -40,6 +40,7 @@ impl AppState {
             content: thought_content,
             timestamp: now(),
             id: thought_id,
+            ..Default::default()
         };
         self.messages.insert(insert_idx, thought);
         self.messages_changed();
@@ -57,6 +58,7 @@ impl AppState {
             content: tool_running(&name),
             timestamp: now(),
             id: tool_id,
+            ..Default::default()
         });
         self.messages_changed();
     }
@@ -115,6 +117,7 @@ impl AppState {
                 content,
                 timestamp: now(),
                 id: id.clone(),
+                provider: self.current_provider.clone(),
             });
             self.current_request_id = Some(id);
             self.last_assistant_index = Some(idx);
@@ -134,6 +137,7 @@ impl AppState {
                 content,
                 timestamp: ts,
                 id,
+                ..Default::default()
             });
         }
         self.messages_changed();
@@ -224,6 +228,7 @@ impl AppState {
             content: format!("Error: {}", message),
             timestamp: now(),
             id: format!("error.{}", id),
+            provider: self.current_provider.clone(),
         };
         if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
             error.timestamp = self.messages[idx].timestamp;

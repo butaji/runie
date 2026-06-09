@@ -52,6 +52,7 @@ fn toggle_expand_collapses_all_thoughts() {
         content: "Deep reasoning\nline two".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "ToggleExpand should set global collapse");
@@ -65,6 +66,7 @@ fn toggle_expand_collapses_all_tools() {
         content: "◆ Ran list_files 0.5s\nfile1".into(),
         timestamp: 0.0,
         id: "x1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "ToggleExpand should set global collapse");
@@ -78,12 +80,14 @@ fn toggle_expand_affects_all_elements() {
         content: "older thought".into(),
         timestamp: 0.0,
         id: "old".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran list_files 0.5s".into(),
         timestamp: 1.0,
         id: "new".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "Toggle should collapse ALL thoughts and tools globally");
@@ -97,6 +101,7 @@ fn toggle_expand_noop_when_no_collapsible() {
         content: "hello".into(),
         timestamp: 0.0,
         id: "u1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "Toggle should still flip global flag even with no thoughts/tools");
@@ -110,6 +115,7 @@ fn toggle_expand_rebuilds_cache() {
         content: "Deep reasoning\nline two".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
@@ -129,6 +135,7 @@ fn toggle_expand_twice_restores() {
         content: "Deep reasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);

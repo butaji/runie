@@ -18,6 +18,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
         content: "list files".into(),
         timestamp: 0.0,
         id: "u0".into(),
+        ..Default::default()
     });
     // Tool with 20 output lines: header(1) + output(20) = 21 lines + spacer = 22
     state.messages.push(ChatMessage {
@@ -25,6 +26,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
         content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5\nfile6\nfile7\nfile8\nfile9\nfile10\nfile11\nfile12\nfile13\nfile14\nfile15\nfile16\nfile17\nfile18\nfile19\nfile20".into(),
         timestamp: 1.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -54,6 +56,7 @@ fn viewport_never_exceeds_height() {
         content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into(),
         timestamp: 1.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -95,6 +98,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
         content: "hi".into(),
         timestamp: 0.0,
         id: "u0".into(),
+        ..Default::default()
     });
     let mut thought = "◆ Thought 1.0s\n".to_string();
     for i in 1..=30 {
@@ -105,6 +109,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
         content: thought,
         timestamp: 1.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages_changed();
 }

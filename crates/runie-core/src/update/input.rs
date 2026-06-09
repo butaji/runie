@@ -1,6 +1,5 @@
 use unicode_segmentation::UnicodeSegmentation;
 use super::*;
-
 // === Grapheme helpers ===
 
 fn prev_grapheme_boundary(s: &str, pos: usize) -> usize {
@@ -380,6 +379,7 @@ impl AppState {
             content: content.clone(),
             timestamp: now(),
             id: id.clone(),
+            ..Default::default()
         });
         self.request_queue.push_back((content, id));
         self.scroll = 0;

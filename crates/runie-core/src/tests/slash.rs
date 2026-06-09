@@ -239,8 +239,8 @@ fn load_restores_conversation() {
         created_at: 1.0,
         updated_at: 2.0,
         messages: vec![
-            ChatMessage { role: Role::User, content: "hi".into(), timestamp: 1.0, id: "req.0".into() },
-            ChatMessage { role: Role::Assistant, content: "hello there".into(), timestamp: 2.0, id: "resp.0".into() },
+            ChatMessage { role: Role::User, content: "hi".into(), timestamp: 1.0, id: "req.0".into(), ..Default::default()},
+            ChatMessage { role: Role::Assistant, content: "hello there".into(), timestamp: 2.0, id: "resp.0".into(), ..Default::default()},
         ],
         provider: "anthropic".into(),
         model: "claude-3".into(),

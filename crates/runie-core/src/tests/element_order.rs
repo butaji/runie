@@ -30,18 +30,21 @@ fn elements_ordered_by_timestamp_strict() {
         content: "✓ ls 0.5s\noutput".into(),
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "world".into(),
         timestamp: 3.0,
         id: "req.0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s\nhello".into(),
         timestamp: 4.0,
         id: "req.0#thought.0".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -59,12 +62,14 @@ fn newer_assistant_appears_after_older_thought() {
         content: "◆ Thought 1.0s".into(),
         timestamp: 1.0,
         id: "req.0#thought.0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "updated later".into(),
         timestamp: 5.0,
         id: "req.0".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -82,12 +87,14 @@ fn thinking_indicator_is_always_last_when_newest() {
         content: "hello".into(),
         timestamp: 1.0,
         id: "u0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "hi".into(),
         timestamp: 2.0,
         id: "req.0".into(),
+        ..Default::default()
     });
     state.thinking_started_at = Some(std::time::Instant::now());
     state.messages_changed();
@@ -106,18 +113,21 @@ fn streaming_bump_moves_assistant_to_end() {
         content: "Q1".into(),
         timestamp: 1.0,
         id: "u0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "A1".into(),
         timestamp: 2.0,
         id: "req.0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::User,
         content: "Q2".into(),
         timestamp: 3.0,
         id: "u1".into(),
+        ..Default::default()
     });
     // Now bump assistant timestamp to 4.0 — simulating streaming update
     if let Some(msg) = state.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == "req.0") {
@@ -139,12 +149,14 @@ fn tool_end_bump_moves_tool_after_later_messages() {
         content: "Running ls...".into(),
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::User,
         content: "next".into(),
         timestamp: 3.0,
         id: "u1".into(),
+        ..Default::default()
     });
     // Tool completes — bump to 5.0
     if let Some(msg) = state.messages.iter_mut().find(|m| m.role == Role::Tool) {
@@ -167,18 +179,21 @@ fn multiple_tools_ordered_by_completion_time() {
         content: "✓ cat 0.1s".into(),
         timestamp: 5.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ ls 0.2s".into(),
         timestamp: 2.0,
         id: "t2".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ grep 0.3s".into(),
         timestamp: 8.0,
         id: "t3".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -204,12 +219,14 @@ fn thought_before_agent_when_older_timestamp() {
         content: "◆ Thought 1.0s\nreasoning".into(),
         timestamp: 2.0,
         id: "req.0#thought.0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "response".into(),
         timestamp: 3.0,
         id: "req.0".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();
@@ -227,12 +244,14 @@ fn agent_before_thought_when_agent_newer() {
         content: "◆ Thought 1.0s".into(),
         timestamp: 5.0,
         id: "req.0#thought.0".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "response".into(),
         timestamp: 3.0,
         id: "req.0".into(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();

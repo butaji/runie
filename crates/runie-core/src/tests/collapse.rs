@@ -60,6 +60,7 @@ fn thought_expanded_by_default() {
         content: "Thinking...".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     let feed = LazyCache::feed(&state);
     let has_full = feed.elements.iter().any(|e| matches!(e, Element::ThoughtMarker { .. }));
@@ -74,6 +75,7 @@ fn toggle_expand_hides_thought() {
         content: "Deep reasoning here\nline two".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "Toggle should set all_collapsed");
@@ -87,6 +89,7 @@ fn toggle_expand_restores_thought() {
         content: "Deep reasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
@@ -101,6 +104,7 @@ fn collapsed_thought_renders_one_line_summary() {
         content: "Deep reasoning\nline two\nline three".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
@@ -120,6 +124,7 @@ fn tool_collapsed_by_toggle() {
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "Toggle should set all_collapsed");
@@ -133,6 +138,7 @@ fn toggle_expand_restores_tool() {
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
@@ -147,6 +153,7 @@ fn collapsed_tool_renders_one_line_summary() {
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
@@ -173,12 +180,14 @@ fn toggle_expand_affects_all_items() {
         content: "older thought".into(),
         timestamp: 0.0,
         id: "old".into(),
+        ..Default::default()
     });
     state.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 1.0,
         id: "new".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "Toggle should collapse ALL thoughts and tools globally");
@@ -192,6 +201,7 @@ fn toggle_thought_rebuilds_cache() {
         content: "Deep reasoning\nline two".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.ensure_fresh();
     let before = state.elements_cache().to_vec();
@@ -214,6 +224,7 @@ fn toggle_thought_twice_restores_cache() {
         content: "Deep reasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
@@ -234,6 +245,7 @@ fn toggle_tool_rebuilds_cache() {
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.ensure_fresh();
     let before = state.elements_cache().to_vec();
@@ -256,6 +268,7 @@ fn toggle_tool_twice_restores_cache() {
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
@@ -315,6 +328,7 @@ fn collapsed_thought_hides_reasoning() {
         content: "◆ Thought 1.2s\nI'll list the files.".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
@@ -335,6 +349,7 @@ fn expanded_thought_shows_reasoning() {
         content: "◆ Thought 1.2s\nI'll list the files.".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     let feed = LazyCache::feed(&state);
 
@@ -354,6 +369,7 @@ fn collapsed_tool_hides_output() {
         content: "✓ list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
@@ -376,6 +392,7 @@ fn expanded_tool_shows_output() {
         content: "✓ list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,
         id: "t1".into(),
+        ..Default::default()
     });
     let feed = LazyCache::feed(&state);
 

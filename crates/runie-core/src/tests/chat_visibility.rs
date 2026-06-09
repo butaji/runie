@@ -144,6 +144,7 @@ fn add_small_messages(state: &mut AppState) {
             content: format!("msg{}", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         });
     }
     state.messages_changed();
@@ -159,6 +160,7 @@ fn add_huge_thought(state: &mut AppState) {
         content: huge,
         timestamp: 10.0,
         id: "t1".into(),
+        ..Default::default()
     });
     state.messages_changed();
 }

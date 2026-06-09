@@ -4,7 +4,7 @@
 pub enum Element {
     Spacer { timestamp: f64 },
     UserMessage { content: String, timestamp: f64 },
-    AgentMessage { content: String, timestamp: f64 },
+    AgentMessage { content: String, timestamp: f64, provider: String },
     Thinking { started: std::time::Instant, timestamp: f64 },
     ThoughtMarker { content: String, timestamp: f64 },
     ThoughtSummary { content: String, duration_secs: f64, timestamp: f64 },
@@ -41,7 +41,7 @@ impl Element {
         ElementBuilder(Element::UserMessage { content: content.into(), timestamp: 0.0 })
     }
     pub fn agent(content: impl Into<String>) -> ElementBuilder {
-        ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0 })
+        ElementBuilder(Element::AgentMessage { content: content.into(), timestamp: 0.0, provider: String::new() })
     }
     pub fn thinking(started: std::time::Instant) -> ElementBuilder {
         ElementBuilder(Element::Thinking { started, timestamp: 0.0 })

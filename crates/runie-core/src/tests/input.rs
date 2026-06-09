@@ -75,7 +75,7 @@ fn typing_without_at_clears_query_tracker() {
 #[test]
 fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
     let mut state = fresh_state();
-    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
     state.ensure_fresh();
     let gen_before = state.cache_generation();
     state.update(Event::Input('x'));
@@ -95,7 +95,7 @@ fn message_change_bumps_cache_gen() {
 #[test]
 fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     let mut state = fresh_state();
-    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
     state.ensure_fresh();
     let cache_before = state.elements_cache().len();
     state.update(Event::Input('x'));
@@ -107,7 +107,7 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
 fn thinking_element_stores_instant_not_elapsed() {
     use crate::ui::Element;
     let mut state = fresh_state();
-    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
     state.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
     state.turn_active = true;
     state.messages_changed();
@@ -126,7 +126,7 @@ fn thinking_element_stores_instant_not_elapsed() {
 fn tool_running_element_stores_instant_not_elapsed() {
     use crate::ui::Element;
     let mut state = fresh_state();
-    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::Tool, content: "⠋ Running list_files...".into(), timestamp: 0.0, id: "t1".into() });
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::Tool, content: "⠋ Running list_files...".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
     state.tool_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
     state.turn_active = true;
     state.messages_changed();
@@ -145,7 +145,7 @@ fn tool_running_element_stores_instant_not_elapsed() {
 fn timer_advances_without_cache_rebuild() {
     use crate::ui::Element;
     let mut state = fresh_state();
-    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into() });
+    state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
     state.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
     state.turn_active = true;
     state.messages_changed();

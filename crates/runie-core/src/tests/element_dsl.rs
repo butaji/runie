@@ -9,7 +9,7 @@ fn user_message_builder() {
 #[test]
 fn agent_message_builder() {
     let e = Element::agent("world").at(2.0);
-    assert!(matches!(e, Element::AgentMessage { content, timestamp } if content == "world" && timestamp == 2.0));
+    assert!(matches!(e, Element::AgentMessage { content, timestamp, .. } if content == "world" && timestamp == 2.0));
 }
 
 #[test]

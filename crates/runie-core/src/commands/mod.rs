@@ -365,10 +365,10 @@ mod tests {
     fn session_info_counts_messages() {
         let mut state = AppState::default();
         state.messages = vec![
-            crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "u1".into() },
-            crate::model::ChatMessage { role: crate::model::Role::Assistant, content: "hello".into(), timestamp: 0.0, id: "a1".into() },
-            crate::model::ChatMessage { role: crate::model::Role::Tool, content: "tool out".into(), timestamp: 0.0, id: "t1".into() },
-            crate::model::ChatMessage { role: crate::model::Role::User, content: "again".into(), timestamp: 0.0, id: "u2".into() },
+            crate::model::ChatMessage { role: crate::model::Role::User, content: "hi".into(), timestamp: 0.0, id: "u1".into(), ..Default::default()},
+            crate::model::ChatMessage { role: crate::model::Role::Assistant, content: "hello".into(), timestamp: 0.0, id: "a1".into(), ..Default::default()},
+            crate::model::ChatMessage { role: crate::model::Role::Tool, content: "tool out".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()},
+            crate::model::ChatMessage { role: crate::model::Role::User, content: "again".into(), timestamp: 0.0, id: "u2".into(), ..Default::default()},
         ];
         let cmd = state.registry.get("session").unwrap();
         let result = (cmd.handler)(&mut state, "");
@@ -383,7 +383,7 @@ mod tests {
     fn session_info_shows_tokens() {
         let mut state = AppState::default();
         state.messages = vec![
-            crate::model::ChatMessage { role: crate::model::Role::User, content: "hello world".into(), timestamp: 0.0, id: "u1".into() },
+            crate::model::ChatMessage { role: crate::model::Role::User, content: "hello world".into(), timestamp: 0.0, id: "u1".into(), ..Default::default()},
         ];
         let cmd = state.registry.get("session").unwrap();
         let result = (cmd.handler)(&mut state, "");
@@ -397,7 +397,7 @@ mod tests {
     #[test]
     fn slash_session_dispatches() {
         let mut state = AppState::default();
-        state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "test".into(), timestamp: 0.0, id: "u1".into() });
+        state.messages.push(crate::model::ChatMessage { role: crate::model::Role::User, content: "test".into(), timestamp: 0.0, id: "u1".into(), ..Default::default()});
         type_str(&mut state, "/session");
         state.update(Event::Submit);
         let last = state.messages.last().unwrap();

@@ -111,12 +111,14 @@ fn test_render_performance_1000_messages() {
             content: format!("Message {} from user with some content here", i),
             timestamp: 0.0,
             id: format!("req.{}", i),
+            ..Default::default()
         });
         state.messages.push(ChatMessage {
             role: Role::Assistant,
             content: format!("Response {} from agent with detailed explanation", i),
             timestamp: 0.0,
             id: format!("resp.{}", i),
+            ..Default::default()
         });
     }
     let start = Instant::now();

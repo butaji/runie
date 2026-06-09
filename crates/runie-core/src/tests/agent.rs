@@ -201,3 +201,12 @@ fn feed_does_not_render_tool_markers() {
     });
     assert!(!has_tool, "Feed should never render TOOL: markers");
 }
+
+#[test]
+fn message_stores_provider() {
+    let mut state = fresh_state();
+    state.current_provider = "anthropic".to_string();
+    state.agent("req.0").respond("Hello");
+    let msg = state.messages.iter().find(|m| m.role == Role::Assistant).unwrap();
+    assert_eq!(msg.provider, "anthropic");
+}

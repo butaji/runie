@@ -7,6 +7,7 @@ fn make_messages(count: usize) -> Vec<ChatMessage> {
             content: format!("Message {} with some text here", i),
             timestamp: i as f64,
             id: format!("u{}", i),
+            ..Default::default()
         })
         .collect()
 }
@@ -99,6 +100,7 @@ fn test_no_scrollbar_when_content_fits() {
         content: "Hello".into(),
         timestamp: 0.0,
         id: "u1".into(),
+        ..Default::default()
     });
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
