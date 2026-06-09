@@ -97,6 +97,11 @@ pub enum Event {
     ModelSelectorSelect,
     ModelSelectorClose,
 
+    // Edit preview / approval
+    PendingEdit { path: String, original: String, proposed: String, diff: String },
+    ApproveEdit,
+    RejectEdit,
+
     // Path completion
     TogglePathCompletion,
     PathCompletionUp,

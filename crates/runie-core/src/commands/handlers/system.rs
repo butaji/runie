@@ -8,6 +8,8 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("changelog", "Show changelog", &[], CommandCategory::System, handle_changelog));
     registry.register(cmd("hotkeys", "Show all keyboard shortcuts", &[], CommandCategory::System, handle_hotkeys));
     registry.register(cmd("theme", "Switch theme or list available themes", &[], CommandCategory::System, handle_theme));
+    registry.register(cmd("approve", "Apply pending file edits", &[], CommandCategory::System, handle_approve));
+    registry.register(cmd("reject", "Cancel pending file edits", &[], CommandCategory::System, handle_reject));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -63,6 +65,14 @@ fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     } else {
         CommandResult::Message(format!("Theme '{}' not found. Using fallback 'silkcircuit-neon'. Use /theme to list available themes.", name))
     }
+}
+
+fn handle_approve(_state: &mut AppState, _args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::ApproveEdit)
+}
+
+fn handle_reject(_state: &mut AppState, _args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::RejectEdit)
 }
 
 fn builtin_themes() -> &'static [&'static str] {

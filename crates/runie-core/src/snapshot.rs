@@ -49,6 +49,8 @@ pub struct Snapshot {
     pub palette_items: Vec<(String, String, String)>,
     /// Model selector items (provider_header, full_name, cost_str, is_selected, is_current).
     pub model_selector_items: Vec<(String, String, String, bool, bool)>,
+    /// Pending file edits awaiting approval.
+    pub pending_edits: Vec<crate::edit_preview::EditPreview>,
     /// Scoped models for dialog rendering.
     pub scoped_models: Vec<crate::scoped_model::ScopedModel>,
     /// Settings items for dialog rendering.

@@ -1,6 +1,6 @@
 # Edit Diff Preview
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Tools
 
@@ -31,14 +31,14 @@ The preview is shown in the chat as a collapsible diff block. The user can appro
 
 ## Acceptance Criteria
 
-- [ ] `edit_file` tool generates preview before applying
-- [ ] Preview shows unified diff with line numbers
-- [ ] User can approve (apply) or reject (cancel)
-- [ ] Preview rendered with green/red highlighting
-- [ ] Works with the file mutation queue
+- [x] `edit_file` tool generates preview before applying
+- [x] Preview shows unified diff with line numbers
+- [x] User can approve (apply) or reject (cancel)
+- [x] Preview rendered with green/red highlighting
+- [x] Works with the file mutation queue
 
 ## Tests
 
 ### Layer 1
-- [ ] `preview_generates_diff` — diff output is valid unified diff
-- [ ] `preview_shows_line_numbers` — hunks have line numbers
+- [x] `preview_generates_diff` — diff output is valid unified diff
+- [x] `preview_shows_line_numbers` — hunks have line numbers

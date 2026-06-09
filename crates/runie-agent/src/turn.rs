@@ -102,7 +102,7 @@ fn execute_tools(
         });
 
         let tool_start = Instant::now();
-        let result = tool.execute();
+        let result = run_tool_with_preview(tool, emit);
         let tool_elapsed = tool_start.elapsed().as_secs_f64();
 
         emit(Event::AgentToolEnd {
@@ -113,5 +113,34 @@ fn execute_tools(
         messages.push(Message::ToolResult {
             content: format!("{} result:\n{}", result.tool.name(), result.output),
         });
+    }
+}
+
+fn run_tool_with_preview(tool: &Tool, emit: &mut dyn FnMut(Event)) -> crate::tools::ToolResult {
+    match tool {
+        Tool::EditFile { path, search, replace } => {
+            let resolved = crate::path_utils::resolve_path(path);
+            match crate::diff::preview_edit(&resolved, search, replace) {
+                Ok(preview) => {
+                    emit(Event::PendingEdit {
+                        path: path.clone(),
+                        original: preview.original,
+                        proposed: preview.proposed,
+                        diff: preview.diff.clone(),
+                    });
+                    crate::tools::ToolResult {
+                        tool: tool.clone(),
+                        output: preview.diff,
+                        success: true,
+                    }
+                }
+                Err(e) => crate::tools::ToolResult {
+                    tool: tool.clone(),
+                    output: format!("Error generating preview: {}", e),
+                    success: false,
+                },
+            }
+        }
+        _ => tool.execute(),
     }
 }

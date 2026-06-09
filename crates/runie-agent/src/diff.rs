@@ -212,6 +212,20 @@ fn build_trailing_hunk(
     })
 }
 
+/// Generate a preview of an edit without applying it.
+pub fn preview_edit(path: &std::path::Path, old: &str, new: &str) -> anyhow::Result<runie_core::EditPreview> {
+    let original = std::fs::read_to_string(path)?;
+    let proposed = original.replacen(old, new, 1);
+    let diff = generate_unified_diff(&original, &proposed);
+    let diff_str = render_diff_to_string(&diff, &path.to_string_lossy());
+    Ok(runie_core::EditPreview::new(
+        path.to_path_buf(),
+        original,
+        proposed,
+        diff_str,
+    ))
+}
+
 /// Renders a unified diff to string format
 pub fn render_diff_to_string(diff: &UnifiedDiff, path: &str) -> String {
     let mut output = Vec::new();
@@ -329,5 +343,30 @@ mod tests {
         
         assert!(output.contains("+line2"));
         assert!(output.contains("+line3"));
+    }
+
+    #[test]
+    fn preview_generates_diff() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.txt");
+        std::fs::write(&path, "hello world").unwrap();
+
+        let preview = preview_edit(&path, "world", "universe").unwrap();
+        assert!(preview.diff.contains("---"), "diff should have file header");
+        assert!(preview.diff.contains("+++"), "diff should have file header");
+        assert!(preview.diff.contains("-hello world"), "diff should show removed line");
+        assert!(preview.diff.contains("+hello universe"), "diff should show added line");
+        assert_eq!(preview.original, "hello world");
+        assert_eq!(preview.proposed, "hello universe");
+    }
+
+    #[test]
+    fn preview_shows_line_numbers() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.txt");
+        std::fs::write(&path, "line1\nline2\nline3").unwrap();
+
+        let preview = preview_edit(&path, "line2", "modified").unwrap();
+        assert!(preview.diff.contains("@@"), "diff should have hunk header with line numbers");
     }
 }

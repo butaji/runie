@@ -109,6 +109,9 @@ fn build_status_text(snap: &Snapshot) -> String {
     if snap.thinking_level != runie_core::model::ThinkingLevel::Off {
         parts.push(format!("Think: {}", snap.thinking_level.as_str()));
     }
+    if !snap.pending_edits.is_empty() {
+        parts.push(format!("{} pending", snap.pending_edits.len()));
+    }
     if snap.read_only {
         parts.push("🔒 RO".to_string());
     }
