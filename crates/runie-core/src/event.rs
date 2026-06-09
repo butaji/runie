@@ -1,6 +1,6 @@
 //! Centralized Event Types
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Event {
 
     Input(char),
