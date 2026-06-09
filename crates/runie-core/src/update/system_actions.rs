@@ -75,7 +75,7 @@ mod tests {
         let last = state.messages.last().unwrap();
         assert!(last.content.contains("Reloaded"), "Should confirm reload: {}", last.content);
         // Prompts should also be reloaded (empty in test env)
-        assert!(state.prompts.len() >= 1, "reload_all should reload prompts");
+        assert!(!state.prompts.is_empty(), "reload_all should reload prompts");
         assert_eq!(state.prompts[0].name, "default");
     }
 }

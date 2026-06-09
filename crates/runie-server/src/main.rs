@@ -26,6 +26,7 @@ use tokio::net::{TcpListener, TcpStream};
 /// JSON-RPC 2.0 request.
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
+    #[allow(dead_code)]
     jsonrpc: String,
     id: Option<Value>,
     method: String,
