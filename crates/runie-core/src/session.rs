@@ -8,6 +8,8 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Session {
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
     pub created_at: f64,
     pub updated_at: f64,
     pub messages: Vec<ChatMessage>,
@@ -137,6 +139,7 @@ mod tests {
     fn sample_session(name: &str) -> Session {
         Session {
             name: name.to_string(),
+            display_name: None,
             created_at: 1.0,
             updated_at: 2.0,
             messages: vec![

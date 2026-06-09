@@ -43,6 +43,7 @@ fn session_persists_thinking_level() {
         theme_name: "default".into(),
         thinking_level: ThinkingLevel::Medium,
         read_only: false,
+        display_name: None,
     };
 
     store.save("think_test", &session).unwrap();

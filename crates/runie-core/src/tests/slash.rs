@@ -247,6 +247,7 @@ fn load_restores_conversation() {
         theme_name: "silkcircuit-neon".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
+        display_name: None,
     }).unwrap();
 
     let mut state = fresh_state();
@@ -310,6 +311,7 @@ fn sessions_lists_saved_sessions() {
         theme_name: "silkcircuit-neon".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
+        display_name: None,
     }).unwrap();
     store.save("beta", &crate::session::Session {
         name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
@@ -317,6 +319,7 @@ fn sessions_lists_saved_sessions() {
         theme_name: "silkcircuit-neon".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
+        display_name: None,
     }).unwrap();
 
     let mut state = fresh_state();
@@ -364,6 +367,7 @@ fn delete_removes_session_file() {
         theme_name: "silkcircuit-neon".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
+        display_name: None,
     }).unwrap();
 
     let mut state = fresh_state();
