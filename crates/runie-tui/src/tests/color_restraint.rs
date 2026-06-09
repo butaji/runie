@@ -4,11 +4,7 @@ use ratatui::style::Color;
 use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use crate::theme::{set_current_theme, color_fg_bright, color_accent, color_success, color_dim, color_fg, style_user};
-
-fn setup() {
-    set_current_theme("silkcircuit-neon");
-}
+use crate::theme::{color_fg_bright, color_accent, color_success, color_dim, color_fg, style_user, TEST_LOCK};
 
 fn draw_state(state: &mut AppState) -> Terminal<TestBackend> {
     let backend = TestBackend::new(60, 20);
@@ -43,7 +39,7 @@ fn line_colors(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -
 
 #[test]
 fn agent_message_is_low_contrast_not_bright() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello agent".into() });
@@ -59,7 +55,7 @@ fn agent_message_is_low_contrast_not_bright() {
 
 #[test]
 fn thought_is_low_contrast_not_accent() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
@@ -76,7 +72,7 @@ fn thought_is_low_contrast_not_accent() {
 
 #[test]
 fn tool_header_is_low_contrast_not_success() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1.txt".into() });
@@ -91,7 +87,7 @@ fn tool_header_is_low_contrast_not_success() {
 
 #[test]
 fn turn_complete_is_low_contrast() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done".into() });
@@ -109,7 +105,7 @@ fn turn_complete_is_low_contrast() {
 
 #[test]
 fn user_message_is_bright() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.update(Event::Input('H'));
     state.update(Event::Input('i'));
@@ -125,7 +121,7 @@ fn user_message_is_bright() {
 
 #[test]
 fn status_active_is_success() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
@@ -140,7 +136,7 @@ fn status_active_is_success() {
 
 #[test]
 fn status_idle_is_dim() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.config.current_provider = "openai".into();
     state.config.current_model = "gpt-4".into();
@@ -158,7 +154,7 @@ fn status_idle_is_dim() {
 
 #[test]
 fn thought_expanded_and_collapsed_same_style() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     // Expanded thought
     let mut state_exp = AppState::default();
     state_exp.streaming = true;
@@ -176,7 +172,7 @@ fn thought_expanded_and_collapsed_same_style() {
     state_col.update(Event::AgentDone { id: "req.0".into() });
     state_col.update(Event::ToggleExpand);
     let term_col = draw_state(&mut state_col);
-    let colors_col = line_colors(&term_col, |l| l.contains("Thought") || l.contains("[+]]"));
+    let colors_col = line_colors(&term_col, |l| l.contains("Thought") || l.contains("[+]"));
 
     // Both should use the same non-accent, non-bright palette
     let accent = color_accent();
@@ -193,7 +189,7 @@ fn thought_expanded_and_collapsed_same_style() {
 
 #[test]
 fn tool_expanded_and_collapsed_same_style() {
-    setup();
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     // Expanded tool
     let mut state_exp = AppState::default();
     state_exp.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
@@ -207,7 +203,7 @@ fn tool_expanded_and_collapsed_same_style() {
     state_col.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file.txt".into() });
     state_col.update(Event::ToggleExpand);
     let term_col = draw_state(&mut state_col);
-    let colors_col = line_colors(&term_col, |l| l.contains("ls") || l.contains("[+]]"));
+    let colors_col = line_colors(&term_col, |l| l.contains("ls") || l.contains("[+]"));
 
     let success = color_success();
     let bright = color_fg_bright();

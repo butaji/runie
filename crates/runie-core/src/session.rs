@@ -169,7 +169,7 @@ mod tests {
             ],
             provider: "mock".into(),
             model: "echo".into(),
-            theme_name: "silkcircuit-neon".into(),
+            theme_name: "runie".into(),
             thinking_level: crate::model::ThinkingLevel::Off,
             read_only: false,
             session_tree: None,

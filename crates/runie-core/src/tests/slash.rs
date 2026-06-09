@@ -245,7 +245,7 @@ fn load_restores_conversation() {
         ],
         provider: "anthropic".into(),
         model: "claude-3".into(),
-        theme_name: "silkcircuit-neon".into(),
+        theme_name: "runie".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
@@ -310,7 +310,7 @@ fn sessions_lists_saved_sessions() {
     store.save("alpha", &crate::session::Session {
         name: "alpha".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
-        theme_name: "silkcircuit-neon".into(),
+        theme_name: "runie".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
@@ -319,7 +319,7 @@ fn sessions_lists_saved_sessions() {
     store.save("beta", &crate::session::Session {
         name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
-        theme_name: "silkcircuit-neon".into(),
+        theme_name: "runie".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
@@ -368,7 +368,7 @@ fn delete_removes_session_file() {
     store.save("gone", &crate::session::Session {
         name: "gone".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
-        theme_name: "silkcircuit-neon".into(),
+        theme_name: "runie".into(),
         thinking_level: crate::model::ThinkingLevel::Off,
         read_only: false,
         display_name: None,
