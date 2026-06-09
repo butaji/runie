@@ -28,6 +28,7 @@ pub mod file_refs;
 pub mod fuzzy;
 pub mod snapshot;
 pub mod config_reload;
+pub mod config_migrate;
 pub mod commands;
 pub mod trust;
 pub mod path_complete;
