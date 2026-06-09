@@ -111,7 +111,7 @@ pub fn parse_diff(text: &str) -> ParsedDiff {
             });
         } else if line.starts_with(' ') {
             let num = match (&old_line_num, &new_line_num) {
-                (Some(o), Some(n)) => Some(*o),
+                (Some(o), Some(_n)) => Some(*o),
                 (Some(o), None) => Some(*o),
                 (None, Some(n)) => Some(*n),
                 (None, None) => None,
@@ -124,7 +124,7 @@ pub fn parse_diff(text: &str) -> ParsedDiff {
             }
             lines.push(ParsedDiffLine {
                 line_type: DiffLineType::Context,
-                content: line[1..].to_string(),
+                content: line.strip_prefix(' ').unwrap_or(line).to_string(),
                 line_number: num,
             });
         } else if line.is_empty() {

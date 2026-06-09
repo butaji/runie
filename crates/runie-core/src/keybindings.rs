@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 
 use crate::event::Event;
-use crate::labels;
 
 /// Default keybindings map (key combo string → event name)
 pub fn default_keybindings() -> HashMap<String, String> {
@@ -57,6 +56,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
 
 /// Parse a key combination string to components
 /// Examples: "ctrl+c", "alt+enter", "shift+up"
+#[allow(dead_code)]
 fn parse_key_combo(combo: &str) -> (Vec<String>, String) {
     let lower = combo.to_lowercase();
     let parts: Vec<&str> = lower.split('+').collect();

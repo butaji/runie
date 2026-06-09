@@ -339,8 +339,8 @@ impl AppState {
         }
 
         // Handle bash prefix (!)
-        if content.starts_with('!') {
-            let command = content[1..].trim().to_string();
+        if let Some(stripped) = content.strip_prefix('!') {
+            let command = stripped.trim().to_string();
             if !command.is_empty() {
                 self.run_bash_command(&command);
             }

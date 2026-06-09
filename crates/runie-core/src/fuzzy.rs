@@ -48,7 +48,7 @@ pub fn fuzzy_filter<'a>(query: &str, candidates: &[&'a str], limit: usize) -> Ve
         .iter()
         .filter_map(|c| fuzzy_match(query, c).map(|s| (s, *c)))
         .collect();
-    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    scored.sort_by_key(|b| std::cmp::Reverse(b.0));
     scored.into_iter().take(limit).map(|(_, c)| c).collect()
 }
 
