@@ -6,33 +6,32 @@ Terminal coding agent harness in Rust, inspired by [pi](https://pi.dev).
 
 See [ADR documentation](./adr/) for architectural decisions.
 
-### Actor Hierarchy
+### Runtime Architecture
 
 ```
-Event Bus
-    │
-    ├── Orchestrator (spawns all actors, routes messages)
-    │   │
-    │   ├── AgentLoop ────→ ToolActors
-    │   ├── QueueAgent ────→ message queue, batching
-    │   ├── SessionManager ────→ session persistence
-    │   ├── ConfigAgent ────→ TOML loading, hot reload
-    │   ├── TelemetryAgent ────→ token/cost tracking
-    │   ├── SafetyAgent ────→ bash validation
-    │   ├── ClipboardAgent ────→ image paste
-    │   ├── FileLookupActor ────→ @-file resolution
-    │   ├── CommandAgent ────→ slash commands, key shortcuts
-    │   └── Skills (interceptors on bus)
-    │
-    └── UIRoot (routes UI events to children)
-        │
-        ├── InputAgent ────→ input, cursor, history
-        ├── ScrollAgent ────→ scroll, viewport
-        ├── ChatAgent ────→ elements, streaming
-        └── PopupAgent ────→ hints, @-suggestions
-
-View (runie-tui) ────→ pure function: UIAgent state → Frame
+┌─────────────────┐     CoreEvent      ┌─────────────────┐
+│  input_reader   │ ──────────────────>│                 │
+│  (crossterm)    │                    │   event_loop    │
+└─────────────────┘                    │   (owns state)  │
+                                       │                 │
+┌─────────────────┐     CoreEvent      │  ┌───────────┐  │
+│   agent_loop    │ ──────────────────>│  │ AppState  │  │
+│ (run_agent_turn)│                    │  └─────┬─────┘  │
+└─────────────────┘                    │        │        │
+                                       │   snapshot()    │
+┌─────────────────┐     Snapshot       │        │        │
+│  render_task    │ <──────────────────│  ┌─────┴─────┐  │
+│   (ratatui)     │                    │  │ render_tx │  │
+└─────────────────┘                    │  └───────────┘  │
+                                       └─────────────────┘
 ```
+
+Three tokio tasks + one event loop. State is owned by the event loop, mutated
+per event. Snapshots are sent to the render task via `mpsc::channel`.
+
+Historical note: An actor system (EventBus, Orchestrator, typed channels) was
+built during MVP but is not used by the runtime. It has been identified as dead
+code. See `docs/SHIP_REVIEW_2.md`.
 
 ### Crate Responsibilities
 
@@ -46,11 +45,12 @@ View (runie-tui) ────→ pure function: UIAgent state → Frame
 
 ### Event Model
 
-Events are tagged as **domain** (persisted) or **ephemeral** (not persisted).
+All UI and agent events are unified into a single `Event` enum in
+`runie-core/src/event.rs`. Events are handled by `AppState::update()` which
+mutates state directly (logically pure, mechanically mutable for zero-copy).
 
-Domain events: `Submit`, `SpawnAgent`, `AgentThinking`, `AgentResponse`, `ToolStart`, `ToolEnd`, `Done`, `SwitchModel`, `ToolRegistered`
-
-Ephemeral events: `ScrollUp`, `CursorLeft`, `Paste`, `ToggleExpand`, etc.
+There is no separate domain/ephemeral split at the type level — all events flow
+through the same channel and reducer.
 
 ---
 
@@ -115,38 +115,28 @@ Ephemeral events: `ScrollUp`, `CursorLeft`, `Paste`, `ToggleExpand`, etc.
 
 ### Configuration
 - [x] TOML configuration (`~/.runie/config.toml`)
-- [x] Hot reload on config change
+- [ ] Hot reload on config change (deferred to R1)
 
 ---
 
-## R1 (Code Quality + User Value)
+## R1 (User Value)
 
-### Core Refactor
+### Already Done
 - [x] **Split update.rs** — Divided into `update/{mod,input,agent,slash,queue}.rs`
-- [ ] **Compose AppState** — Split 27-field god object into `InputState`, `ChatHistory`, `AgentState`, `UiState`
 - [x] **Fix clippy warnings** — Zero errors in production code
 - [x] **Cache optimizations** — O(1) `append_response` via `last_assistant_index`
-- [ ] **Remove dead code** — `VisibleRegion` still referenced by autoscroll tests
+- [x] **Ctrl+Shift+E** — Collapse/expand feed elements
+- [x] **!command** — Bash prefix (run bash, don't send to agent)
 
-### Agent Crate Cleanup
-- [ ] **Module split** — Divide `runie-agent/src/lib.rs` into `turn.rs`, `tools.rs`, `truncate.rs`, `safety.rs`, `parser.rs`
-
-### TUI Render Cleanup
-- [ ] **Split render tests** — Divide `tests/render.rs` (>500 lines) into focused modules
-
-### Actors (keep existing infrastructure, extend where needed)
-- [ ] **ToolActors** — Spawn per tool invocation, self-describe via ToolRegistered
-- [ ] **QueueAgent** — Manages message queue with configurable batching
-- [ ] **SessionManager** — Handles session save/load/list/delete
-- [ ] **ConfigAgent** — Loads TOML config, watches for changes
-
-### TUI Improvements
+### Remaining (Prioritized)
+- [ ] **Configurable keybindings** — Load from `keybindings.json`, dispatch via map
 - [ ] **Streaming: event per chunk** — Each LLM chunk emitted as individual event
-- [ ] **Ctrl+Shift+E** — Collapse/expand feed elements
-- [ ] **!command** — Bash prefix (run bash, don't send to agent)
+- [ ] **Hot reload** — File watcher for config changes
+- [ ] **Input history persistence** — Save history across sessions
 
-### Configuration
-- [ ] **Configurable keybindings** — Loaded from `keybindings.json` via ConfigAgent
+### Deferred (Not Blocking)
+- [ ] **Compose AppState** — Nice-to-have; 27 fields work fine
+- [ ] **Remove dead code** — `VisibleRegion` cleanup when tests are rewritten
 
 ---
 
@@ -272,27 +262,30 @@ crates/
 │   └── src/
 │       ├── event.rs      # Unified Event type
 │       ├── model.rs      # AppState, ChatMessage
-│       ├── session.rs     # Session persistence
+│       ├── update/        # State transitions (mod, input, agent, slash, queue)
+│       ├── ui/            # Element enum, transforms, lazy cache
+│       ├── session.rs     # Session persistence (simple JSON)
 │       ├── snapshot.rs    # View state snapshot
-│       └── provider.rs    # Provider trait
+│       ├── provider.rs    # Provider trait
+│       └── labels.rs      # Static text constants
 │
 ├── runie-agent/           # Tool implementations
 │   └── src/
 │       ├── tools.rs       # Tool enum, execution
+│       ├── turn.rs        # Agent turn loop
 │       ├── truncate.rs    # Output truncation
 │       ├── safety.rs      # Bash validation
-│       └── parser.rs      # Tool call parsing
+│       ├── parser.rs      # Tool call parsing
+│       ├── diff.rs        # Edit diff logic
+│       └── grep_find.rs   # Grep/find utilities
 │
-├── runie-tui/             # UI actors + rendering
+├── runie-tui/             # Ratatui rendering
 │   └── src/
-│       ├── ui.rs          # Ratatui rendering
-│       ├── markdown.rs     # Markdown parsing
-│       ├── theme.rs       # Color/theme definitions
-│       └── ui/
-│           ├── input_agent.rs
-│           ├── scroll_agent.rs
-│           ├── chat_agent.rs
-│           └── popup_agent.rs
+│       ├── ui.rs          # Widget rendering, draw_snapshot
+│       ├── markdown.rs     # Markdown → styled spans
+│       ├── syntax.rs       # Syntax highlighting
+│       ├── theme.rs       # Color definitions
+│       └── diff.rs        # Diff rendering
 │
 ├── runie-provider/         # LLM provider implementations
 │   └── src/
@@ -303,11 +296,8 @@ crates/
 │
 └── runie-term/            # CLI entry point
     └── src/
-        ├── main.rs        # Binary entry
-        ├── bus.rs         # EventBus implementation
-        ├── orchestrator.rs # Actor orchestration
-        ├── queue_agent.rs  # Queue management
-        └── commands.rs     # Slash command parsing
+        ├── main.rs        # Event loop, key mapping, render task
+        └── tests/         # Integration/render tests
 ```
 
 ---
@@ -329,8 +319,9 @@ crates/
 
 ## Notes
 
-- Architecture follows actor model with shared event bus
-- Event log is source of truth for session persistence
-- UI is pure MVU projection from event stream
-- Skills are lightweight interceptors, not full actors
-- Non-interactive modes (print, json) bypass actor system entirely
+- Runtime uses three tokio tasks + single-threaded event loop
+- State is owned by the event loop; snapshots are MVU projections
+- Sessions use simple JSON files (~/.runie/sessions/)
+- An unused actor system exists in the codebase (event_bus, orchestrator, actors/)
+  but is not wired into the runtime. See `docs/SHIP_REVIEW_2.md`.
+- Non-interactive modes (print, json) are future work
