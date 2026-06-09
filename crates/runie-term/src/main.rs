@@ -35,6 +35,7 @@ async fn main() -> io::Result<()> {
     let mut state = AppState::default();
     apply_trust_on_startup(&mut state);
     init_scoped_models(&mut state);
+    init_skills(&mut state);
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
@@ -294,6 +295,10 @@ fn spawn_external_editor_sync(
     Ok(())
 }
 
+fn init_skills(state: &mut AppState) {
+    state.skills = runie_core::skills::load_all();
+}
+
 async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
     if let Some((content, id)) = state.peek_queue() {
         let content = content.clone();
@@ -302,6 +307,7 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
         state.streaming = true;
         state.turn_active = true;
         state.inflight += 1;
+        let skills_context = runie_core::skills::build_skills_context(&state.skills);
         let _ = cmd_tx.send(AgentCommand {
             content,
             id,
@@ -309,6 +315,7 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
             model: state.current_model.clone(),
             thinking_level: state.thinking_level,
             read_only: state.read_only,
+            skills_context,
         }).await;
     }
 }

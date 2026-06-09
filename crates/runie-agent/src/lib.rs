@@ -23,6 +23,7 @@ pub struct AgentCommand {
     pub model: String,
     pub thinking_level: runie_core::model::ThinkingLevel,
     pub read_only: bool,
+    pub skills_context: String,
 }
 
 pub fn build_provider(provider: &str, model: &str) -> AnyProvider {

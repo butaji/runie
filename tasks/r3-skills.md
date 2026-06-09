@@ -1,6 +1,6 @@
 # Skills System
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core Architecture
 
@@ -57,16 +57,16 @@ Additional system prompt context injected when active.
 
 ## Acceptance Criteria
 
-- [ ] Load skills from `~/.runie/skills/*.md`
-- [ ] Load skills from `./.runie/skills/*.md`
-- [ ] Skills inject context into system prompt
-- [ ] User-invocable skills available in command palette
-- [ ] `/skills` lists loaded skills
-- [ ] Skills reload with `/reload`
+- [x] Load skills from `~/.runie/skills/*.md`
+- [x] Load skills from `./.runie/skills/*.md`
+- [x] Skills inject context into system prompt
+- [x] User-invocable skills available in command palette
+- [x] `/skills` lists loaded skills
+- [x] Skills reload with `/reload`
 
 ## Tests
 
 ### Layer 1
-- [ ] `load_skills_from_dir` — parses SKILL.md files
-- [ ] `skill_injects_context` — context added to system prompt
-- [ ] `user_invocable_shown_in_palette` — appears in commands
+- [x] `load_skills_from_dir` — parses SKILL.md files
+- [x] `skill_injects_context` — context added to system prompt
+- [x] `user_invocable_shown_in_palette` — appears in commands

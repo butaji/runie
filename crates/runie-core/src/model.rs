@@ -1,5 +1,5 @@
 //! Model — Application State (mutable borrow, no cloning per event)
-use crate::snapshot::{Snapshot, VisibleRegion};
+use crate::snapshot::Snapshot;
 use crate::ui::elements::Element;
 pub use crate::message::{ChatMessage, Role, now};
 
@@ -138,6 +138,8 @@ pub struct AppState {
     pub recent_models: Vec<String>,
     /// Pending file edits awaiting user approval
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
+    /// Loaded skills from ~/.runie/skills/ and ./.runie/skills/
+    pub skills: Vec<crate::skills::Skill>,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -198,6 +200,7 @@ impl Default for AppState {
             read_only: false,
             scoped_models: Vec::new(), scoped_index: 0,
             recent_models: Vec::new(), pending_edits: Vec::new(),
+            skills: Vec::new(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,
@@ -251,10 +254,21 @@ impl AppState {
             Some(crate::commands::DialogState::CommandPalette { filter, .. }) => filter.clone(),
             _ => return Vec::new(),
         };
-        crate::commands::filter_commands(&self.registry, &filter)
+        let mut items: Vec<_> = crate::commands::filter_commands(&self.registry, &filter)
             .into_iter()
             .map(|cmd| (cmd.name.clone(), cmd.description.clone(), cmd.category.as_str().to_string()))
-            .collect()
+            .collect();
+        let f = filter.to_lowercase();
+        for skill in &self.skills {
+            if skill.user_invocable
+                && (f.is_empty()
+                    || skill.name.to_lowercase().contains(&f)
+                    || skill.description.to_lowercase().contains(&f))
+            {
+                items.push((skill.name.clone(), skill.description.clone(), "Skill".to_string()));
+            }
+        }
+        items
     }
 
     fn model_selector_items(&self) -> Vec<(String, String, String, bool, bool)> {
@@ -323,6 +337,10 @@ impl AppState {
         &self.elements_cache
     }
 
+    pub(crate) fn line_counts(&self) -> &[usize] {
+        &self.line_counts
+    }
+
     pub fn tick_animation(&mut self) {
         let mut changed = false;
         if self.turn_active {
@@ -376,73 +394,6 @@ impl AppState {
 
     pub fn is_dirty(&self) -> bool {
         self.dirty
-    }
-
-    pub fn scroll_offset(&self, visible_height: usize) -> u16 {
-        let max_scroll = self.total_lines.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-        max_scroll.saturating_sub(scroll).min(u16::MAX as usize) as u16
-    }
-
-    pub fn scrollbar_metrics(&self, visible_height: usize) -> (usize, usize) {
-        let total = self.total_lines;
-        if total <= visible_height || visible_height == 0 {
-            return (0, 0);
-        }
-        let max_scroll = total.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-        let position = max_scroll.saturating_sub(scroll);
-        let track = visible_height;
-        let thumb = (visible_height * visible_height / total).max(1);
-        #[allow(clippy::manual_checked_ops)]
-        let thumb_offset = if max_scroll > 0 {
-            position * (track - thumb) / max_scroll
-        } else {
-            0
-        };
-        (thumb, thumb_offset)
-    }
-
-    pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
-        if self.elements_cache.is_empty() || visible_height == 0 {
-            return VisibleRegion { elements: &[], skip_lines: 0 };
-        }
-
-        let total = self.total_lines;
-        let max_scroll = total.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-
-        let viewport_end = total.saturating_sub(scroll);
-        let viewport_start = viewport_end.saturating_sub(visible_height);
-
-        let mut cum = 0usize;
-        let mut start_idx = 0;
-        let mut skip_lines = 0;
-
-        for (i, count) in self.line_counts.iter().enumerate() {
-            let next_cum = cum + count;
-            if next_cum > viewport_start {
-                start_idx = i;
-                skip_lines = viewport_start.saturating_sub(cum);
-                break;
-            }
-            cum = next_cum;
-        }
-
-        let mut end_idx = self.elements_cache.len();
-        cum = 0;
-        for (i, count) in self.line_counts.iter().enumerate() {
-            cum += count;
-            if cum >= viewport_end {
-                end_idx = i + 1;
-                break;
-            }
-        }
-
-        VisibleRegion {
-            elements: &self.elements_cache[start_idx..end_idx.min(self.elements_cache.len())],
-            skip_lines,
-        }
     }
 
     pub fn total_tokens(&self) -> usize {

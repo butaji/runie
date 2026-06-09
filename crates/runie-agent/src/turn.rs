@@ -81,6 +81,9 @@ pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
     if !suffix.is_empty() {
         system.push_str(suffix);
     }
+    if !command.skills_context.is_empty() {
+        system.push_str(&command.skills_context);
+    }
     vec![
         Message::System { content: system },
         Message::User {

@@ -11,6 +11,7 @@ async fn test_agent_loop_simple_response() {
         model: "echo".to_string(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
+        skills_context: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -42,6 +43,7 @@ async fn test_agent_loop_with_tool_call() {
         model: "echo".to_string(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
+        skills_context: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -73,6 +75,7 @@ async fn test_agent_loop_respects_max_iterations() {
         model: "echo".to_string(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
+        skills_context: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 3)
@@ -90,6 +93,7 @@ async fn test_agent_loop_events_have_correct_id() {
         model: "echo".to_string(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
+        skills_context: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -110,42 +114,47 @@ async fn test_agent_loop_events_have_correct_id() {
 }
 
 #[test]
-fn read_only_filters_tools() {
-    let cmd_ro = AgentCommand {
+fn read_only_excludes_write_tools() {
+    let cmd = AgentCommand {
         content: "test".to_string(),
         id: "req.0".to_string(),
         provider: "mock".to_string(),
         model: "echo".to_string(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: true,
+        skills_context: String::new(),
     };
-    let msgs_ro = build_initial_messages(&cmd_ro);
-    let system_ro = match &msgs_ro[0] {
+    let msgs = build_initial_messages(&cmd);
+    let system = match &msgs[0] {
         runie_core::Message::System { content } => content.clone(),
         _ => panic!("expected system message"),
     };
-    assert!(system_ro.contains("read_file"), "read-only includes read_file");
-    assert!(system_ro.contains("list_dir"), "read-only includes list_dir");
-    assert!(system_ro.contains("grep"), "read-only includes grep");
-    assert!(system_ro.contains("find"), "read-only includes find");
-    assert!(!system_ro.contains("write_file"), "read-only excludes write_file");
-    assert!(!system_ro.contains("edit_file"), "read-only excludes edit_file");
-    assert!(!system_ro.contains("bash"), "read-only excludes bash");
+    assert!(system.contains("read_file"), "read-only includes read_file");
+    assert!(system.contains("list_dir"), "read-only includes list_dir");
+    assert!(system.contains("grep"), "read-only includes grep");
+    assert!(system.contains("find"), "read-only includes find");
+    assert!(!system.contains("write_file"), "read-only excludes write_file");
+    assert!(!system.contains("edit_file"), "read-only excludes edit_file");
+    assert!(!system.contains("bash"), "read-only excludes bash");
+}
 
-    let cmd_rw = AgentCommand {
+#[test]
+fn read_write_includes_all_tools() {
+    let cmd = AgentCommand {
         content: "test".to_string(),
         id: "req.1".to_string(),
         provider: "mock".to_string(),
         model: "echo".to_string(),
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
+        skills_context: String::new(),
     };
-    let msgs_rw = build_initial_messages(&cmd_rw);
-    let system_rw = match &msgs_rw[0] {
+    let msgs = build_initial_messages(&cmd);
+    let system = match &msgs[0] {
         runie_core::Message::System { content } => content.clone(),
         _ => panic!("expected system message"),
     };
-    assert!(system_rw.contains("write_file"), "read-write includes write_file");
-    assert!(system_rw.contains("edit_file"), "read-write includes edit_file");
-    assert!(system_rw.contains("bash"), "read-write includes bash");
+    assert!(system.contains("write_file"), "read-write includes write_file");
+    assert!(system.contains("edit_file"), "read-write includes edit_file");
+    assert!(system.contains("bash"), "read-write includes bash");
 }
