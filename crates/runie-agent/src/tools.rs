@@ -28,6 +28,7 @@ pub enum Tool {
         path: String,
         limit: usize,
     },
+    FetchDocs { library: String },
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +48,7 @@ impl Tool {
             Tool::Bash { .. } => "bash",
             Tool::Grep { .. } => "grep",
             Tool::Find { .. } => "find",
+            Tool::FetchDocs { .. } => "fetch_docs",
         }
     }
 
@@ -70,6 +72,7 @@ impl Tool {
             Tool::Bash { command } => run_bash(command),
             Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => run_grep(pattern, path, glob.as_deref(), *ignore_case, *literal, *context, *limit),
             Tool::Find { pattern, path, limit } => run_find(pattern, path, *limit),
+            Tool::FetchDocs { library } => run_fetch_docs(library),
         }
     }
 }
@@ -375,5 +378,13 @@ fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
     match result {
         Ok(output) => parse_find_output(output, limit),
         Err(e) => (format!("Error running find: {}", e), false),
+    }
+}
+
+fn run_fetch_docs(library: &str) -> (String, bool) {
+    let client = crate::context7::Context7Client::new();
+    match client.fetch(library) {
+        Ok(output) => (output, true),
+        Err(e) => (format!("Error fetching docs for '{}': {}", library, e), false),
     }
 }

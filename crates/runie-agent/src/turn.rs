@@ -60,9 +60,9 @@ where
 
 pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
     let tools_list = if command.read_only {
-        "read_file, list_dir, grep, find"
+        "read_file, list_dir, grep, find, fetch_docs"
     } else {
-        "read_file, list_dir, write_file, edit_file, bash, grep, find"
+        "read_file, list_dir, write_file, edit_file, bash, grep, find, fetch_docs"
     };
     let base = if command.system_prompt.is_empty() {
         runie_core::prompts::DEFAULT_PROMPT

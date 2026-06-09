@@ -75,6 +75,9 @@ fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
             path: arg_str(args, "path"),
             limit: arg_usize(args, "limit").max(1),
         },
+        "fetch_docs" => crate::Tool::FetchDocs {
+            library: arg_str(args, "library"),
+        },
         _ => return None,
     })
 }

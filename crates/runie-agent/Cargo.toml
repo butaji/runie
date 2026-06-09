@@ -12,6 +12,7 @@ runie-provider.workspace = true
 anyhow.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json.workspace = true
+reqwest = { workspace = true, features = ["blocking"] }
 dirs.workspace = true
 tempfile = "3"
 

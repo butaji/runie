@@ -108,3 +108,11 @@ fn test_parse_unknown_structured_tool_ignored() {
     let tools = parse_tool_calls(r#"{"name": "magic", "arguments": {}}"#);
     assert!(tools.is_empty());
 }
+
+#[test]
+fn test_parse_structured_fetch_docs() {
+    let text = r#"{"name": "fetch_docs", "arguments": {"library": "tokio"}}"#;
+    let tools = parse_tool_calls(text);
+    assert_eq!(tools.len(), 1);
+    assert!(matches!(&tools[0], Tool::FetchDocs { library } if library == "tokio"));
+}

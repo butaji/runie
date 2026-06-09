@@ -1786,6 +1786,7 @@ dependencies = [
  "base64",
  "bytes",
  "encoding_rs",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "h2",
@@ -1840,6 +1841,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dirs",
+ "reqwest",
  "runie-core",
  "runie-provider",
  "serde",
@@ -1864,6 +1866,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "runie-json"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "runie-agent",
+ "runie-core",
+ "runie-provider",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "runie-print"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "runie-agent",
+ "runie-core",
+ "runie-provider",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "runie-provider"
 version = "0.1.0"
 dependencies = [
@@ -1877,6 +1905,20 @@ dependencies = [
  "serde_json",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "runie-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ctrlc",
+ "runie-agent",
+ "runie-core",
+ "runie-provider",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -2423,6 +2465,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",
