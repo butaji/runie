@@ -20,3 +20,5 @@ futures.workspace = true
 anyhow.workspace = true
 nix.workspace = true
 tempfile = "3"
+reqwest.workspace = true
+serde_json.workspace = true

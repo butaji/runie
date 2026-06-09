@@ -49,7 +49,7 @@ mod file_refs_lookup_tests;
 pub use model::{AppState, ChatMessage, Role, now};
 pub use edit_preview::EditPreview;
 pub use snapshot::Snapshot;
-pub use session::{Session, save, load, list, delete};
+pub use session::{Session, save, load, list, delete, format_as_markdown};
 pub use event::Event;
 pub use labels::{
     THINKING_LOADING, thinking_with_time, thought_with_time, format_timestamp,

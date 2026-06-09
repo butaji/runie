@@ -124,4 +124,8 @@ pub enum Event {
     PathCompletionDown,
     PathCompletionSelect,
     PathCompletionClose,
+
+    // Session sharing
+    ShareSession,
+    SystemMessage { content: String },
 }

@@ -1931,10 +1931,12 @@ dependencies = [
  "futures",
  "nix 0.31.3",
  "ratatui",
+ "reqwest",
  "runie-agent",
  "runie-core",
  "runie-provider",
  "runie-tui",
+ "serde_json",
  "tempfile",
  "tokio",
 ]
