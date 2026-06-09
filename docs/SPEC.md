@@ -38,7 +38,7 @@ code. See `docs/SHIP_REVIEW_2.md`.
 | Crate | Responsibility |
 |-------|---------------|
 | `runie-core` | Domain events, AppState, session persistence, Provider trait |
-| `runie-tui` | UI actors, ratatui rendering, Element enum |
+| `runie-tui` | Ratatui rendering, Element enum, theme |
 | `runie-agent` | Tool implementations, truncation |
 | `runie-provider` | OpenAI, Anthropic, model registry |
 | `runie-term` | CLI entry point, crossterm input |
@@ -61,9 +61,9 @@ through the same channel and reducer.
 ## MVP
 
 ### Core Architecture
-- [x] Actor-based event-driven architecture
+- [x] Event-driven architecture (tokio async, mpsc channels)
 - [x] Shared event bus with typed channels
-- [x] Orchestrator spawning all actors
+- [x] Async runtime with non-blocking render
 - [x] Async/await runtime (tokio)
 
 ### Providers & Models
