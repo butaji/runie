@@ -28,48 +28,55 @@ pub(crate) fn now() -> f64 {
 }
 
 impl AppState {
+    /// Main event dispatcher - delegates to specialized handlers based on event type.
     pub fn update(&mut self, event: Event) {
+        // Dialog events are handled separately
         if self.open_dialog.is_some() {
             self.update_dialog(event);
             return;
         }
+        
+        // Dispatch to specialized handlers
         match event {
-            Event::Input(c) => self.push_input(c),
-            Event::Backspace => self.pop_input(),
-            Event::Newline => self.insert_newline(),
-            Event::CursorLeft => self.cursor_left(),
-            Event::CursorRight => self.cursor_right(),
-            Event::CursorStart => self.cursor_start(),
-            Event::CursorEnd => self.cursor_end(),
-            Event::DeleteWord => self.delete_word(),
-            Event::DeleteToEnd => self.delete_to_end(),
-            Event::DeleteToStart => self.delete_to_start(),
-            Event::KillChar => self.kill_char(),
-            Event::HistoryPrev => {
-                if self.path_suggestions.is_some() {
-                    self.path_completion_up();
-                } else if self.input.contains('\n') {
-                    self.move_cursor_up();
-                } else {
-                    self.history_prev();
-                }
-            }
-            Event::HistoryNext => {
-                if self.path_suggestions.is_some() {
-                    self.path_completion_down();
-                } else if self.input.contains('\n') {
-                    self.move_cursor_down();
-                } else {
-                    self.history_next();
-                }
-            }
-            Event::Undo => self.undo(),
-            Event::Redo => self.redo(),
-            Event::CursorWordLeft => self.cursor_word_left(),
-            Event::CursorWordRight => self.cursor_word_right(),
-            Event::Paste(text) => self.paste(&text),
-            Event::PasteImage => self.paste_image(),
-            Event::Submit => self.submit(),
+            Event::Input(_) | Event::Backspace | Event::Newline | Event::CursorLeft 
+            | Event::CursorRight | Event::CursorStart | Event::CursorEnd 
+            | Event::DeleteWord | Event::DeleteToEnd | Event::DeleteToStart 
+            | Event::KillChar | Event::Undo | Event::Redo | Event::CursorWordLeft 
+            | Event::CursorWordRight | Event::Paste(_) | Event::PasteImage | Event::Submit
+            | Event::HistoryPrev | Event::HistoryNext => self.input_event(event),
+            Event::AgentThinking { .. } | Event::AgentThoughtDone { .. } 
+            | Event::AgentToolStart { .. } | Event::AgentToolEnd { .. } 
+            | Event::AgentResponse { .. } | Event::AgentTurnComplete { .. } 
+            | Event::AgentDone { .. } | Event::AgentError { .. } => self.agent_event(event),
+            Event::ScrollUp | Event::ScrollDown => self.scroll_event(event),
+            Event::Quit | Event::Reset | Event::Abort | Event::ExternalEditorDone { .. } 
+            | Event::SpawnAgent | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => self.control_event(event),
+            Event::SwitchModel { .. } | Event::SwitchTheme { .. } | Event::CycleModelNext 
+            | Event::CycleModelPrev | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) 
+            | Event::ToggleReadOnly | Event::TrustProject | Event::UntrustProject 
+            | Event::FollowUp | Event::Dequeue => self.model_config_event(event),
+            Event::ToggleExpand | Event::ToggleSessionTree | Event::SessionTreeFilterCycle 
+            | Event::ForkSession { .. } | Event::CloneSession => self.session_event(event),
+            Event::ToggleCommandPalette | Event::ToggleModelSelector | Event::ToggleScopedModelsDialog 
+            | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll 
+            | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. } => self.dialog_toggle_event(event),
+            Event::ToggleSettingsDialog | Event::SettingsUp | Event::SettingsDown 
+            | Event::SettingsLeft | Event::SettingsRight | Event::SettingsSelect | Event::SettingsClose 
+            | Event::PaletteFilter(_) | Event::PaletteBackspace | Event::PaletteUp 
+            | Event::PaletteDown | Event::PaletteSelect | Event::PaletteClose 
+            | Event::ModelSelectorFilter(_) | Event::ModelSelectorBackspace | Event::ModelSelectorUp 
+            | Event::ModelSelectorDown | Event::ModelSelectorSelect | Event::ModelSelectorClose => self.settings_event(event),
+            Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit 
+            | Event::ReloadAll | Event::ShowDiagnostics | Event::TogglePathCompletion 
+            | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect 
+            | Event::PathCompletionClose => self.edit_event(event),
+            Event::SystemMessage { content } => self.add_system_msg(content),
+        }
+    }
+
+    // === Scroll Event Handler ===
+    fn scroll_event(&mut self, event: Event) {
+        match event {
             Event::ScrollUp => {
                 if self.messages.is_empty() && !self.turn_active {
                     self.input_flash = 3;
@@ -82,8 +89,82 @@ impl AppState {
                 }
                 self.scroll = self.scroll.saturating_sub(1);
             }
+            _ => {}
+        }
+    }
+
+    // === Control Event Handler ===
+    fn control_event(&mut self, event: Event) {
+        match event {
             Event::Quit => self.should_quit = true,
             Event::Reset => *self = AppState::default(),
+            Event::Abort => {
+                if self.path_suggestions.is_some() {
+                    self.path_completion_close();
+                } else {
+                    self.abort_queue();
+                }
+            }
+            Event::SpawnAgent | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
+            Event::ExternalEditorDone { content } => {
+                self.input = content;
+                self.cursor_pos = self.input.len();
+                self.mark_dirty();
+            }
+            _ => {}
+        }
+    }
+
+    // === Input Event Handler ===
+    fn input_event(&mut self, event: Event) {
+        match event {
+            Event::Input(c) => self.push_input(c),
+            Event::Backspace => self.pop_input(),
+            Event::Newline => self.insert_newline(),
+            Event::CursorLeft => self.cursor_left(),
+            Event::CursorRight => self.cursor_right(),
+            Event::CursorStart => self.cursor_start(),
+            Event::CursorEnd => self.cursor_end(),
+            Event::DeleteWord => self.delete_word(),
+            Event::DeleteToEnd => self.delete_to_end(),
+            Event::DeleteToStart => self.delete_to_start(),
+            Event::KillChar => self.kill_char(),
+            Event::Undo => self.undo(),
+            Event::Redo => self.redo(),
+            Event::CursorWordLeft => self.cursor_word_left(),
+            Event::CursorWordRight => self.cursor_word_right(),
+            Event::Paste(text) => self.paste(&text),
+            Event::PasteImage => self.paste_image(),
+            Event::Submit => self.submit(),
+            Event::HistoryPrev => self.handle_history_prev(),
+            Event::HistoryNext => self.handle_history_next(),
+            _ => {}
+        }
+    }
+
+    fn handle_history_prev(&mut self) {
+        if self.path_suggestions.is_some() {
+            self.path_completion_up();
+        } else if self.input.contains('\n') {
+            self.move_cursor_up();
+        } else {
+            self.history_prev();
+        }
+    }
+
+    fn handle_history_next(&mut self) {
+        if self.path_suggestions.is_some() {
+            self.path_completion_down();
+        } else if self.input.contains('\n') {
+            self.move_cursor_down();
+        } else {
+            self.history_next();
+        }
+    }
+
+    // === Agent Event Handler ===
+    fn agent_event(&mut self, event: Event) {
+        match event {
             Event::AgentThinking { id } => {
                 self.set_thinking(id);
                 self.ensure_turn_complete_last();
@@ -113,6 +194,13 @@ impl AppState {
                 self.add_error(id, message);
                 self.ensure_turn_complete_last();
             }
+            _ => {}
+        }
+    }
+
+    // === Model & Config Event Handler ===
+    fn model_config_event(&mut self, event: Event) {
+        match event {
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
             Event::SwitchTheme { name } => self.switch_theme(name),
             Event::CycleModelNext => self.cycle_model(1),
@@ -124,21 +212,68 @@ impl AppState {
             Event::UntrustProject => self.untrust_project(),
             Event::FollowUp => self.queue_follow_up(),
             Event::Dequeue => self.dequeue(),
-            Event::OpenExternalEditor => {}
-            Event::ExternalEditorDone { content } => {
-                self.input = content;
-                self.cursor_pos = self.input.len();
-                self.mark_dirty();
-            }
-            Event::Abort => {
-                if self.path_suggestions.is_some() {
-                    self.path_completion_close();
-                } else {
-                    self.abort_queue();
-                }
-            }
-            Event::SpawnAgent => {}
+            _ => {}
+        }
+    }
+
+    // === Session Event Handler ===
+    fn session_event(&mut self, event: Event) {
+        match event {
             Event::ToggleExpand => self.toggle_expand_all(),
+            Event::ToggleSessionTree => self.toggle_session_tree_dialog(),
+            Event::SessionTreeFilterCycle => self.cycle_session_tree_filter(),
+            Event::ForkSession { message_index } => self.fork_session_at(message_index),
+            Event::CloneSession => self.clone_session(),
+            _ => {}
+        }
+    }
+
+    fn toggle_session_tree_dialog(&mut self) {
+        if matches!(self.open_dialog, Some(crate::commands::DialogState::SessionTree { .. })) {
+            self.open_dialog = None;
+        } else {
+            self.open_dialog = Some(crate::commands::DialogState::SessionTree {
+                filter: crate::session_tree::SessionTreeFilter::All,
+                selected: 0,
+            });
+        }
+        self.mark_dirty();
+    }
+
+    fn cycle_session_tree_filter(&mut self) {
+        if let Some(crate::commands::DialogState::SessionTree { ref mut filter, .. }) = self.open_dialog {
+            *filter = filter.cycle();
+            self.mark_dirty();
+        }
+    }
+
+    fn fork_session_at(&mut self, message_index: usize) {
+        if let Some(ref mut tree) = self.session_tree {
+            if let Some(path) = tree.fork_at(message_index) {
+                tree.navigate_to(&path);
+                self.add_system_msg(format!("Forked at message {}.", message_index));
+            }
+        } else {
+            let mut tree = crate::session_tree::SessionTree::from_messages(&self.messages);
+            if let Some(path) = tree.fork_at(message_index) {
+                tree.navigate_to(&path);
+                self.session_tree = Some(tree);
+                self.add_system_msg(format!("Forked at message {}.", message_index));
+            }
+        }
+    }
+
+    fn clone_session(&mut self) {
+        let tree = self.session_tree.clone().unwrap_or_else(|| {
+            crate::session_tree::SessionTree::from_messages(&self.messages)
+        });
+        self.session_tree = Some(tree);
+        self.add_system_msg("Session cloned at current position.".into());
+    }
+
+    // === Dialog Toggle Event Handler ===
+    fn dialog_toggle_event(&mut self, event: Event) {
+        match event {
             Event::ToggleCommandPalette => {
                 self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
                     filter: String::new(),
@@ -169,45 +304,13 @@ impl AppState {
             Event::ScopedModelEnableAll => scoped_models::enable_all(self),
             Event::ScopedModelDisableAll => scoped_models::disable_all(self),
             Event::ScopedModelToggleProvider { provider } => scoped_models::toggle_provider(self, &provider),
-            Event::ToggleSessionTree => {
-                if matches!(self.open_dialog, Some(crate::commands::DialogState::SessionTree { .. })) {
-                    self.open_dialog = None;
-                } else {
-                    self.open_dialog = Some(crate::commands::DialogState::SessionTree {
-                        filter: crate::session_tree::SessionTreeFilter::All,
-                        selected: 0,
-                    });
-                }
-                self.mark_dirty();
-            }
-            Event::SessionTreeFilterCycle => {
-                if let Some(crate::commands::DialogState::SessionTree { ref mut filter, .. }) = self.open_dialog {
-                    *filter = filter.cycle();
-                    self.mark_dirty();
-                }
-            }
-            Event::ForkSession { message_index } => {
-                if let Some(ref mut tree) = self.session_tree {
-                    if let Some(path) = tree.fork_at(message_index) {
-                        tree.navigate_to(&path);
-                        self.add_system_msg(format!("Forked at message {}.", message_index));
-                    }
-                } else {
-                    let mut tree = crate::session_tree::SessionTree::from_messages(&self.messages);
-                    if let Some(path) = tree.fork_at(message_index) {
-                        tree.navigate_to(&path);
-                        self.session_tree = Some(tree);
-                        self.add_system_msg(format!("Forked at message {}.", message_index));
-                    }
-                }
-            }
-            Event::CloneSession => {
-                let tree = self.session_tree.clone().unwrap_or_else(|| {
-                    crate::session_tree::SessionTree::from_messages(&self.messages)
-                });
-                self.session_tree = Some(tree);
-                self.add_system_msg("Session cloned at current position.".into());
-            }
+            _ => {}
+        }
+    }
+
+    // === Settings Event Handler ===
+    fn settings_event(&mut self, event: Event) {
+        match event {
             Event::ToggleSettingsDialog => {
                 if matches!(self.open_dialog, Some(crate::commands::DialogState::Settings { .. })) {
                     self.open_dialog = None;
@@ -224,7 +327,7 @@ impl AppState {
             Event::SettingsLeft |
             Event::SettingsRight |
             Event::SettingsSelect |
-            Event::SettingsClose => {},
+            Event::SettingsClose => {}
             Event::PaletteFilter(_) |
             Event::PaletteBackspace |
             Event::PaletteUp |
@@ -237,6 +340,13 @@ impl AppState {
             Event::ModelSelectorDown |
             Event::ModelSelectorSelect |
             Event::ModelSelectorClose => {}
+            _ => {}
+        }
+    }
+
+    // === Edit Event Handler ===
+    fn edit_event(&mut self, event: Event) {
+        match event {
             Event::PendingEdit { path, original, proposed, diff } => {
                 self.pending_edits.push(crate::edit_preview::EditPreview::new(
                     std::path::PathBuf::from(path),
@@ -255,12 +365,11 @@ impl AppState {
             Event::PathCompletionDown => self.path_completion_down(),
             Event::PathCompletionSelect => self.path_completion_select(),
             Event::PathCompletionClose => self.path_completion_close(),
-            Event::Suspend => {} // Handled in main event loop
-            Event::ShareSession => {} // Handled in main event loop
-            Event::SystemMessage { content } => self.add_system_msg(content),
+            _ => {}
         }
     }
 
+    /// Handles dialog-specific events based on current dialog state.
     fn update_dialog(&mut self, event: Event) {
         let Some(dialog) = self.open_dialog.take() else { return };
         match dialog {
