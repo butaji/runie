@@ -18,7 +18,7 @@ fn draw_state(state: &mut AppState) -> Terminal<TestBackend> {
 }
 
 /// Get the fg color of the first cell matching the predicate.
-fn first_cell_color(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -> Option<Color> {
+fn _first_cell_color(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -> Option<Color> {
     let buf = term.backend().buffer();
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
@@ -70,7 +70,7 @@ fn agent_message_uses_fg() {
     let colors = line_colors(&term, |l| l.contains("Hello agent"));
     let fg = color_fg();
     assert!(
-        colors.iter().any(|c| *c == fg),
+        colors.contains(&fg),
         "Agent message should use fg color, got colors: {:?}", colors
     );
 }
@@ -87,7 +87,7 @@ fn turn_complete_uses_dim() {
     let colors = line_colors(&term, |l| l.contains("Turn completed"));
     let dim = color_dim();
     assert!(
-        colors.iter().any(|c| *c == dim),
+        colors.contains(&dim),
         "TurnComplete should use dim color, got colors: {:?}", colors
     );
 }
@@ -102,7 +102,7 @@ fn status_idle_uses_dim() {
     let colors = line_colors(&term, |l| l.contains("openai/gpt-4"));
     let dim = color_dim();
     assert!(
-        colors.iter().any(|c| *c == dim),
+        colors.contains(&dim),
         "Idle status should use dim color, got colors: {:?}", colors
     );
 }
@@ -117,7 +117,7 @@ fn tool_done_output_uses_fg() {
     let colors = line_colors(&term, |l| l.contains("file1.txt"));
     let fg = color_fg();
     assert!(
-        colors.iter().any(|c| *c == fg),
+        colors.contains(&fg),
         "Tool output should use fg color, got colors: {:?}", colors
     );
 }
@@ -134,7 +134,7 @@ fn thought_uses_dim() {
     let colors = line_colors(&term, |l| l.contains("Thought"));
     let dim = color_dim();
     assert!(
-        colors.iter().any(|c| *c == dim),
+        colors.contains(&dim),
         "Thought marker should use dim color, got colors: {:?}", colors
     );
 }
@@ -147,7 +147,7 @@ fn empty_state_uses_dim() {
     let colors = line_colors(&term, |l| l.contains("Type a message"));
     let dim = color_dim();
     assert!(
-        colors.iter().any(|c| *c == dim),
+        colors.contains(&dim),
         "Empty state hint should use dim color, got colors: {:?}", colors
     );
 }

@@ -1,7 +1,6 @@
 //! Theme slash command tests
-use crate::model::{AppState, Role};
+use crate::model::Role;
 use crate::event::Event;
-use crate::session::Store;
 use super::slash::{ENV_LOCK, fresh_state, type_str, tmp_store};
 
 #[test]

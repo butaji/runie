@@ -22,7 +22,7 @@ mod tests {
     fn placeholder_cleared_after_typing() {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
-        let snap = state.snapshot();
+        let _snap = state.snapshot();
         // Placeholder is still in state, but input is no longer empty
         assert_eq!(state.input, "a");
     }

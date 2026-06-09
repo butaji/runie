@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 //! Runie TUI - Terminal UI Rendering
 pub mod diff;
 pub mod markdown;

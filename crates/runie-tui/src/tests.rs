@@ -168,7 +168,7 @@ fn wrapping_respects_panel_width() {
     let buf = terminal.backend().buffer();
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y as u16)].symbol().to_string())
+            .map(|x| buf[(x, y)].symbol().to_string())
             .collect();
         if line.trim().starts_with("$") || line.trim().starts_with("x") {
             let visible_len = line.trim_end().len();
@@ -200,7 +200,7 @@ fn tokens_on_right_side_of_status() {
     let mut tok_pos = None;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y as u16)].symbol().to_string())
+            .map(|x| buf[(x, y)].symbol().to_string())
             .collect();
         if working_pos.is_none() {
             if let Some(pos) = line.find("Working") {

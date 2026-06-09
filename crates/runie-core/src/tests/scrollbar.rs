@@ -71,7 +71,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     state.messages_changed();
     state.ensure_fresh();
     state.scroll = 100; // way up
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top when fully scrolled");
 }
 
@@ -110,7 +110,7 @@ fn scroll_clamped_to_max() {
     state.messages_changed();
     state.ensure_fresh();
     state.scroll = 500;
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Scroll should be clamped to max");
 }
 

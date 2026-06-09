@@ -1,6 +1,5 @@
 use crate::model::AppState;
 use crate::event::Event;
-use crate::file_refs::complete_at_ref;
 
 #[test]
 fn at_ref_shows_suggestions() {

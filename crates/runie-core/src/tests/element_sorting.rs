@@ -25,9 +25,9 @@ fn element_kinds(state: &AppState) -> Vec<String> {
 }
 
 /// Every element (including spacers) should have non-decreasing timestamps.
-fn timestamps_are_monotonic(state: &AppState) -> Result<(), String> {
+fn _timestamps_are_monotonic(state: &AppState) -> Result<(), String> {
     let feed = LazyCache::feed(state);
-    let mut last_ts = 0.0f64;
+    let last_ts = 0.0f64;
     for (i, entry) in feed.elements.iter().enumerate() {
         // We can't directly read timestamp from Element, but we can infer from the source
         // messages. Instead, we'll use a different approach: verify sort order by checking
@@ -148,13 +148,13 @@ fn previous_turn_complete_before_next_turn_user() {
 
     let kinds: Vec<_> = element_kinds(&state).into_iter().filter(|k| k != "Spacer").collect();
     let turn_pos = kinds.iter().position(|k| k == "Turn").expect("TurnComplete");
-    let user2_pos = kinds.iter().position(|k| k == "User" && *k != "User").unwrap_or(0);
+    let _user2_pos = kinds.iter().position(|k| k == "User" && *k != "User").unwrap_or(0);
     // Find the SECOND user (turn 2)
     let user_positions: Vec<_> = kinds.iter().enumerate()
         .filter(|(_, k)| *k == "User")
         .map(|(i, _)| i)
         .collect();
-    assert!(user_positions.len() >= 1);
+    assert!(!user_positions.is_empty());
     // TurnComplete should be before the last user message
     assert!(turn_pos < *user_positions.last().unwrap(),
         "TurnComplete of turn 1 should be before user message of turn 2: got {:?}", kinds);
@@ -183,7 +183,7 @@ fn elements_sorted_by_timestamp_not_index() {
 
     let kinds: Vec<_> = element_kinds(&state).into_iter().filter(|k| k != "Spacer").collect();
     // Should be sorted by timestamp: Second (1.0) then First (3.0)
-    let first_pos = kinds.iter().position(|k| k == "User").unwrap();
+    let _first_pos = kinds.iter().position(|k| k == "User").unwrap();
     // We need to check the actual content, not just the kind
     let feed = LazyCache::feed(&state);
     let user_contents: Vec<_> = feed.elements.iter()

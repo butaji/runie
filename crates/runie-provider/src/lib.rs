@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 //! Runie Provider - Concrete LLM provider implementations
 
 pub mod mock;

@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn number_highlighting() {
-        use ratatui::style::Color;
+        
         let line = "let x = 42;";
         let tokens = tokenize::tokenize_line(line, Language::JavaScript);
         let num_token = tokens.iter().find(|t| t.content == "42");
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn comment_highlighting() {
-        use ratatui::style::Color;
+        
         let line = "// this is a comment";
         let tokens = tokenize::tokenize_line(line, Language::Rust);
         let comment_token = tokens.iter().find(|t| t.content.contains("this is a comment"));

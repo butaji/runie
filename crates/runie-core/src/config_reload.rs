@@ -262,7 +262,7 @@ api_key = "test"
         let evt = tokio::time::timeout(Duration::from_secs(1), rx.recv()).await;
         assert!(evt.is_ok(), "Should receive SwitchModel event");
 
-        if let Some(Some(Event::SwitchModel { provider, model })) = evt.ok() {
+        if let Ok(Some(Event::SwitchModel { provider, model })) = evt {
             assert_eq!(provider, "anthropic");
             assert_eq!(model, "claude-3");
         } else {
@@ -276,7 +276,7 @@ api_key = "test"
     fn config_path_returns_expected_path() {
         let path = config_path();
         assert!(path.components().next().is_some(), "Path should not be empty");
-        assert!(path.file_name().map_or(false, |n| n == "config.toml"), 
+        assert!(path.file_name().is_some_and(|n| n == "config.toml"), 
                 "Path should end with config.toml");
     }
 

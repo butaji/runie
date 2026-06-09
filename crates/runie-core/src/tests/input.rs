@@ -184,5 +184,5 @@ fn tick_animation_noop_when_not_turn_active() {
 
     state.tick_animation();
     assert!(!state.is_dirty(), "tick_animation must be noop when !turn_active");
-    assert_eq!(was_dirty, false, "State should remain clean after noop tick");
+    assert!(!was_dirty, "State should remain clean after noop tick");
 }

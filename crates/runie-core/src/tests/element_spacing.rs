@@ -8,7 +8,7 @@ fn fresh_state() -> AppState {
     AppState::default()
 }
 
-fn feed_lines(state: &AppState) -> usize {
+fn _feed_lines(state: &AppState) -> usize {
     let feed = LazyCache::feed(state);
     feed.elements.iter().map(|e| e.line_count()).sum()
 }

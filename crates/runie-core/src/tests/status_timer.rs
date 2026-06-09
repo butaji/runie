@@ -1,5 +1,4 @@
 use crate::model::AppState;
-use crate::event::Event;
 
 #[test]
 fn snapshot_has_turn_elapsed_when_active() {
@@ -46,7 +45,7 @@ fn snapshot_turn_elapsed_increases_over_time() {
 
 #[test]
 fn status_text_contains_timer_when_turn_active() {
-    use crate::ui::LazyCache;
+    
     let mut state = AppState::default();
     state.turn_active = true;
     state.turn_started_at = Some(std::time::Instant::now());

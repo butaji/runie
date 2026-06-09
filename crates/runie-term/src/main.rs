@@ -172,7 +172,7 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::KeyCode;
+    
 
     #[test]
     fn animation_interval_is_200ms() {

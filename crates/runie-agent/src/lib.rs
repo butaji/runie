@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 pub mod diff;
 pub mod parser;
 pub mod safety;
