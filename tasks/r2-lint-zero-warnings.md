@@ -22,9 +22,9 @@ warning: this `map_or` can be simplified
 
 ## Acceptance Criteria
 
-- [ ] `cargo clippy --all-targets` produces zero warnings
-- [ ] Add `#[warn(clippy::all)]` to lib.rs files
-- [ ] CI runs `cargo clippy --all-targets -- -D warnings`
+- [x] `cargo clippy --all-targets` produces zero warnings
+- [x] Add `#[warn(clippy::all)]` to lib.rs files
+- [x] CI runs `cargo clippy --all-targets -- -D warnings`
 
 ## Notes
 

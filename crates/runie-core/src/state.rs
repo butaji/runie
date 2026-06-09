@@ -1,16 +1,12 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::commands::CommandRegistry;
-use crate::edit_preview::EditPreview;
 use crate::keybindings::default_keybindings;
 use crate::message::{ChatMessage, now};
-use crate::model::{DeliveryMode, QueuedMessage, ThinkingLevel};
+use crate::model::{QueuedMessage, ThinkingLevel};
 use crate::path_complete::PathCompletion;
 use crate::scoped_model::ScopedModel;
 use crate::session_tree::SessionTree;
-use crate::skills::Skill;
-use crate::telemetry::Telemetry;
 use crate::ui::elements::Element;
 
 #[derive(Clone)]
@@ -38,7 +34,7 @@ impl Default for InputState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct AgentState {
     pub request_queue: VecDeque<(String, String)>,
     pub message_queue: Vec<QueuedMessage>,
@@ -48,21 +44,6 @@ pub struct AgentState {
     pub inflight: usize,
     pub current_tool_name: Option<String>,
     pub tool_started_at: Option<std::time::Instant>,
-}
-
-impl Default for AgentState {
-    fn default() -> Self {
-        Self {
-            request_queue: VecDeque::new(),
-            message_queue: Vec::new(),
-            current_request_id: None,
-            turn_started_at: None,
-            turn_active: false,
-            inflight: 0,
-            current_tool_name: None,
-            tool_started_at: None,
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -163,7 +144,7 @@ impl Default for ConfigState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct CompletionState {
     pub path_suggestions: Option<Vec<PathCompletion>>,
     pub path_selected: Option<usize>,
@@ -172,14 +153,4 @@ pub struct CompletionState {
     pub last_at_query: Option<String>,
 }
 
-impl Default for CompletionState {
-    fn default() -> Self {
-        Self {
-            path_suggestions: None,
-            path_selected: None,
-            at_suggestions: None,
-            at_selected: None,
-            last_at_query: None,
-        }
-    }
-}
+

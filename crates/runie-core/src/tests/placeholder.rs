@@ -7,7 +7,7 @@ mod tests {
 
     #[test]
     fn default_placeholder_is_set() {
-        let mut state = AppState::default();
+        let state = AppState::default();
         assert!(!state.input.placeholder.is_empty(), "Default placeholder should not be empty");
     }
 

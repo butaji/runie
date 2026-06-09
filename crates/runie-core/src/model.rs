@@ -314,10 +314,6 @@ impl AppState {
         self.view.elements_cache.as_ref()
     }
 
-    pub(crate) fn line_counts(&self) -> &[usize] {
-        self.view.line_counts.as_ref()
-    }
-
     pub fn tick_animation(&mut self) {
         let mut changed = false;
         if self.agent.turn_active {
