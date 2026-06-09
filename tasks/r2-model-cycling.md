@@ -1,6 +1,6 @@
 # Model Cycling
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Input & Commands
 

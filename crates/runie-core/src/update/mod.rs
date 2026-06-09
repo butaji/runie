@@ -141,6 +141,8 @@ impl AppState {
             }
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
             Event::SwitchTheme { name } => self.switch_theme(name),
+            Event::CycleModelNext => self.cycle_model(1),
+            Event::CycleModelPrev => self.cycle_model(-1),
             Event::CycleThinkingLevel => self.cycle_thinking_level(),
             Event::SetThinkingLevel(level) => self.set_thinking_level(level),
             Event::ToggleReadOnly => self.toggle_read_only(),
@@ -311,6 +313,21 @@ impl AppState {
     fn switch_theme(&mut self, name: String) {
         self.theme_name = name.clone();
         self.add_system_msg(format!("Theme switched to '{}'", name));
+    }
+
+    fn cycle_model(&mut self, delta: isize) {
+        if self.scoped_models.is_empty() { return; }
+        let len = self.scoped_models.len() as isize;
+        self.scoped_index = ((self.scoped_index as isize + delta).rem_euclid(len)) as usize;
+        let name = self.scoped_models[self.scoped_index].clone();
+        // Resolve name to provider/model
+        let parts: Vec<&str> = name.split('/').collect();
+        let (provider, model) = if parts.len() == 2 {
+            (parts[0].to_string(), parts[1].to_string())
+        } else {
+            (self.current_provider.clone(), name)
+        };
+        self.switch_model(provider, model);
     }
 
     fn cycle_thinking_level(&mut self) {

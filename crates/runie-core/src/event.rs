@@ -51,6 +51,8 @@ pub enum Event {
 
     SwitchModel { provider: String, model: String },
     SwitchTheme { name: String },
+    CycleModelNext,
+    CycleModelPrev,
     CycleThinkingLevel,
     SetThinkingLevel(crate::model::ThinkingLevel),
     ToggleReadOnly,

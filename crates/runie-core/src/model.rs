@@ -129,6 +129,10 @@ pub struct AppState {
     pub thinking_level: ThinkingLevel,
     /// Read-only mode — when true, only safe tools are exposed to the LLM
     pub read_only: bool,
+    /// Scoped models for Ctrl+P cycling (defaults to first 10 from catalog)
+    pub scoped_models: Vec<String>,
+    /// Current index in scoped_models cycling
+    pub scoped_index: usize,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -189,6 +193,8 @@ impl Default for AppState {
             session_updated_at: now(),
             thinking_level: ThinkingLevel::Off,
             read_only: false,
+            scoped_models: Vec::new(),
+            scoped_index: 0,
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,

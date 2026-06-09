@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 19 of 100
+- Iteration: 20 of 100
 - Prompt file: /Users/admin/.herdr/worktrees/runie/agent-impl/EXECUTE.md
-- Updated: 2026-06-09T03:43:44.165Z
+- Updated: 2026-06-09T04:35:51.825Z
 
 ## Iteration progression
 
@@ -572,4 +572,28 @@ Implemented thinking levels (off → low → medium → high) with full test cov
 - Layer 3: `status_shows_thinking_badge_when_active`, `status_hides_thinking_badge_when_off`
 
 **Results:** 738 tests pass, zero clippy warnings.
+```
+
+### Iteration 20
+
+```text
+I've completed **four R2 tasks** in this execution loop:
+
+| Task | What was done |
+|------|---------------|
+| **`r2-safety-commands`** | Read-only mode (`/readonly`), trust system (`/trust`, `/untrust`), `~/.runie/trust.json` persistence, tool schema filtering, `🔒 RO` status badge, first-run welcome message |
+| **`r2-session-commands`** | `display_name` in Session struct, `/export` and `/import` implementations, `/name` without args shows current name, 64-char truncation |
+| **`r2-output-accumulator`** | `OutputAccumulator` with rolling tail buffer (2×max_bytes), temp file fallback, Head/Tail strategies, replaces static truncation in all tools |
+| **`r2-path-completion`** | Tab-triggered path completion popup, prefix filtering, directory `/` suffix, hidden file exclusion, arrow navigation |
+
+**Test results:** 846 tests pass, 0 failures, clippy clean.
+
+**Remaining R2 `todo` tasks:**
+- `r2-edit-diff-preview` — approval flow before applying edits
+- `r2-file-mutation-queue` — serialize mutations with validation
+- `r2-model-cycling` / `r2-scoped-models` / `r2-model-selector` — model switching dialogs
+- `r2-settings-dialog` — interactive settings menu
+- `r2-theme-system` — opaline theme integration
+
+The next tasks are more complex and may need architectural decisions (e.g., model cycling conflicts with Ctrl+P palette, diff preview requires async approval flow). Want me to continue with a specific one, or pause here?
 ```
