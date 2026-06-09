@@ -2,6 +2,7 @@
 
 pub mod accumulator;
 pub mod diff;
+pub mod mutation_queue;
 pub mod path_utils;
 pub mod parser;
 pub mod safety;
