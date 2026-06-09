@@ -291,6 +291,12 @@ impl AppState {
         self.mark_dirty();
     }
 
+    pub(crate) fn paste_image(&mut self) {
+        // Image paste from clipboard is planned for a future release.
+        // For now, flash the input border to indicate the key was recognized.
+        self.input_flash = 3;
+    }
+
     // === Legacy methods ===
 
     pub(crate) fn push_input(&mut self, c: char) {

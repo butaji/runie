@@ -76,7 +76,7 @@ impl Telemetry {
 /// Install a panic hook that reports crashes via telemetry.
 /// The hook captures a backtrace and forwards it to the provided
 /// telemetry sender. The original hook is still invoked.
-pub fn install_panic_hook(mut tx: tokio::sync::mpsc::Sender<TelemetryEvent>) {
+pub fn install_panic_hook(tx: tokio::sync::mpsc::Sender<TelemetryEvent>) {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let payload = if let Some(s) = info.payload().downcast_ref::<&str>() {
