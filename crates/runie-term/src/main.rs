@@ -13,7 +13,7 @@ use crossterm::event::EventStream;
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
-use runie_core::{AppState, Event as CoreEvent, Snapshot, keybindings, config_reload};
+use runie_core::{AppState, Event as CoreEvent, Snapshot, config_reload};
 use std::{collections::HashMap, io, io::Write, time::Duration};
 use tokio::sync::{mpsc, watch};
 
