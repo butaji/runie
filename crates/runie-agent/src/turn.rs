@@ -58,16 +58,31 @@ where
     Ok(())
 }
 
-fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
+pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
+    let tools_list = if command.read_only {
+        "read_file, list_dir, grep, find"
+    } else {
+        "read_file, list_dir, write_file, edit_file, bash, grep, find"
+    };
+    let mut system = format!(
+        "You are a helpful assistant with access to tools. \
+        Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
+        Available tools: {}.",
+        tools_list
+    );
+    if !command.read_only {
+        system.push_str(" \
+            Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.");
+    }
+    system.push_str(" \
+        Use grep to search file contents: {\"name\": \"grep\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}. \
+        Use find to list files by pattern: {\"name\": \"find\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}.");
+    let suffix = command.thinking_level.prompt_suffix();
+    if !suffix.is_empty() {
+        system.push_str(suffix);
+    }
     vec![
-        Message::System {
-            content: "You are a helpful assistant with access to tools. \
-                Use structured JSON format: {\"name\": \"tool_name\", \"arguments\": {...}}. \
-                Available tools: read_file, list_dir, write_file, edit_file, bash, grep, find. \
-                Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}. \
-                Use grep to search file contents: {\"name\": \"grep\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}. \
-                Use find to list files by pattern: {\"name\": \"find\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}.".to_string(),
-        },
+        Message::System { content: system },
         Message::User {
             content: command.content.clone(),
         },

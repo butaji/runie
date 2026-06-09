@@ -245,6 +245,8 @@ fn load_restores_conversation() {
         provider: "anthropic".into(),
         model: "claude-3".into(),
         theme_name: "silkcircuit-neon".into(),
+        thinking_level: crate::model::ThinkingLevel::Off,
+        read_only: false,
     }).unwrap();
 
     let mut state = fresh_state();
@@ -306,11 +308,15 @@ fn sessions_lists_saved_sessions() {
         name: "alpha".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
         theme_name: "silkcircuit-neon".into(),
+        thinking_level: crate::model::ThinkingLevel::Off,
+        read_only: false,
     }).unwrap();
     store.save("beta", &crate::session::Session {
         name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
         theme_name: "silkcircuit-neon".into(),
+        thinking_level: crate::model::ThinkingLevel::Off,
+        read_only: false,
     }).unwrap();
 
     let mut state = fresh_state();
@@ -356,6 +362,8 @@ fn delete_removes_session_file() {
         name: "gone".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
         theme_name: "silkcircuit-neon".into(),
+        thinking_level: crate::model::ThinkingLevel::Off,
+        read_only: false,
     }).unwrap();
 
     let mut state = fresh_state();

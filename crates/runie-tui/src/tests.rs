@@ -275,6 +275,38 @@ fn status_shows_provider_model() {
 }
 
 #[test]
+fn status_shows_thinking_badge_when_active() {
+    let mut state = AppState::default();
+    state.thinking_level = runie_core::model::ThinkingLevel::Medium;
+    let backend = TestBackend::new(60, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect::<String>())
+        .collect();
+    assert!(content.contains("Think: medium"), "Status should show thinking level badge: {}", content);
+}
+
+#[test]
+fn status_hides_thinking_badge_when_off() {
+    let mut state = AppState::default();
+    state.thinking_level = runie_core::model::ThinkingLevel::Off;
+    let backend = TestBackend::new(60, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect::<String>())
+        .collect();
+    assert!(!content.contains("Think:"), "Status should NOT show thinking badge when off: {}", content);
+}
+
+#[test]
 fn palette_renders_centered() {
     let mut state = AppState::default();
     state.update(Event::ToggleCommandPalette);
@@ -378,7 +410,6 @@ fn message_shows_provider() {
         timestamp: 0.0,
         id: "resp.0".to_string(),
         provider: "anthropic".to_string(),
-        ..Default::default()
     });
     let content = draw_state(&mut state);
     assert!(content.contains("anthropic"), "Agent message header should show provider");

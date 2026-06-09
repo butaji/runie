@@ -53,6 +53,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
 
     // Shift combinations (handled specially)
     map.insert("shift+enter".to_string(), "Newline".to_string());
+    map.insert("shift+tab".to_string(), "CycleThinkingLevel".to_string());
 
     map
 }
@@ -149,6 +150,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "CursorWordRight" => Some(Event::CursorWordRight),
         "FollowUp" => Some(Event::FollowUp),
         "ToggleExpand" => Some(Event::ToggleExpand),
+        "CycleThinkingLevel" => Some(Event::CycleThinkingLevel),
         "Dequeue" => Some(Event::Dequeue),
         "OpenExternalEditor" => Some(Event::OpenExternalEditor),
         "ToggleCommandPalette" => Some(Event::ToggleCommandPalette),

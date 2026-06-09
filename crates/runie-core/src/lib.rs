@@ -24,6 +24,7 @@ pub mod fuzzy;
 pub mod snapshot;
 pub mod config_reload;
 pub mod commands;
+pub mod trust;
 #[cfg(test)]
 pub mod dsl;
 
@@ -45,3 +46,4 @@ pub use tokens::{estimate_tokens, TokenTracker};
 pub use file_refs::{FileRef, find_files, is_image_file, read_file_ref};
 pub use input_history::{load_history, save_history, filter_history, search_history};
 pub use keybindings::{load_keybindings, default_keybindings, parse_keybindings_json, event_from_name};
+pub use trust::{TrustManager, TrustDecision};

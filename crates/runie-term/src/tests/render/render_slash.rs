@@ -16,6 +16,16 @@ fn render_slash(input: &str) -> String {
     buf.content.iter().map(|c| c.symbol()).collect()
 }
 
+fn save_test_session(store: &runie_core::session::Store, name: &str) {
+    store.save(name, &runie_core::Session {
+        name: name.to_string(), created_at: 1.0, updated_at: 1.0,
+        messages: vec![], provider: "mock".into(), model: "echo".into(),
+        theme_name: "silkcircuit-neon".into(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+    }).unwrap();
+}
+
 #[test]
 fn test_render_sessions_list_on_separate_lines() {
     use runie_core::session::Store;
@@ -25,16 +35,8 @@ fn test_render_sessions_list_on_separate_lines() {
     let _ = std::fs::remove_dir_all(&store.dir);
     std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
 
-    store.save("alpha", &runie_core::Session {
-        name: "alpha".to_string(), created_at: 1.0, updated_at: 1.0,
-        messages: vec![], provider: "mock".into(), model: "echo".into(),
-        theme_name: "silkcircuit-neon".into(),
-    }).unwrap();
-    store.save("beta", &runie_core::Session {
-        name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
-        messages: vec![], provider: "mock".into(), model: "echo".into(),
-        theme_name: "silkcircuit-neon".into(),
-    }).unwrap();
+    save_test_session(&store, "alpha");
+    save_test_session(&store, "beta");
 
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");

@@ -1,6 +1,6 @@
 # Safety Commands
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Safety
 
@@ -76,14 +76,14 @@ First-run flow:
 
 ## Acceptance Criteria
 
-- [ ] `/readonly` toggles read-only mode
-- [ ] Read-only restricts tool schemas sent to LLM
-- [ ] Status bar shows `🔒 RO` when active
-- [ ] `/trust` marks current project as trusted
-- [ ] `/untrust` marks current project as untrusted
-- [ ] First-run prompt for unknown projects
-- [ ] Trust decisions persisted in `~/.runie/trust.json`
-- [ ] Untrusted projects default to read-only
+- [x] `/readonly` toggles read-only mode
+- [x] Read-only restricts tool schemas sent to LLM
+- [x] Status bar shows `🔒 RO` when active
+- [x] `/trust` marks current project as trusted
+- [x] `/untrust` marks current project as untrusted
+- [x] First-run prompt for unknown projects
+- [x] Trust decisions persisted in `~/.runie/trust.json`
+- [x] Untrusted projects default to read-only
 
 ## Files
 
@@ -99,12 +99,12 @@ First-run flow:
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `toggle_flips_read_only` — bool inverts
-- [ ] `read_only_filters_tools` — write/edit/bash excluded from schemas
-- [ ] `trust_manager_loads` — JSON roundtrip
-- [ ] `trust_sets_decision` — decision updated
-- [ ] `untrusted_defaults_readonly` — untrusted → read_only true
+- [x] `toggle_flips_read_only` — bool inverts
+- [x] `read_only_filters_tools` — write/edit/bash excluded from schemas
+- [x] `trust_manager_loads` — JSON roundtrip
+- [x] `trust_sets_decision` — decision updated
+- [x] `untrusted_defaults_readonly` — untrusted → read_only true
 
 ### Layer 2 — Event Handling
-- [ ] `slash_readonly_toggles` — event updates state
-- [ ] `slash_trust_sets` — event updates TrustManager
+- [x] `slash_readonly_toggles` — event updates state
+- [x] `slash_trust_sets` — event updates TrustManager

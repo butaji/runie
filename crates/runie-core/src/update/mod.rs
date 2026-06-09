@@ -135,6 +135,11 @@ impl AppState {
             }
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
             Event::SwitchTheme { name } => self.switch_theme(name),
+            Event::CycleThinkingLevel => self.cycle_thinking_level(),
+            Event::SetThinkingLevel(level) => self.set_thinking_level(level),
+            Event::ToggleReadOnly => self.toggle_read_only(),
+            Event::TrustProject => self.trust_project(),
+            Event::UntrustProject => self.untrust_project(),
             Event::FollowUp => self.queue_follow_up(),
             Event::Dequeue => self.dequeue(),
             Event::OpenExternalEditor => {}
@@ -289,6 +294,40 @@ impl AppState {
     fn switch_theme(&mut self, name: String) {
         self.theme_name = name.clone();
         self.add_system_msg(format!("Theme switched to '{}'", name));
+    }
+
+    fn cycle_thinking_level(&mut self) {
+        self.thinking_level = self.thinking_level.cycle();
+        self.add_system_msg(format!("Thinking level: {}", self.thinking_level.as_str()));
+    }
+
+    fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
+        self.thinking_level = level;
+        self.add_system_msg(format!("Thinking level set to: {}", self.thinking_level.as_str()));
+    }
+
+    fn toggle_read_only(&mut self) {
+        self.read_only = !self.read_only;
+        let status = if self.read_only { "enabled" } else { "disabled" };
+        self.add_system_msg(format!("Read-only mode {}", status));
+    }
+
+    fn trust_project(&mut self) {
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let mut tm = crate::trust::TrustManager::load();
+        tm.set(&cwd, crate::trust::TrustDecision::Trusted);
+        let _ = tm.save();
+        self.read_only = false;
+        self.add_system_msg(format!("Project '{}' trusted. Read-only disabled.", cwd.display()));
+    }
+
+    fn untrust_project(&mut self) {
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let mut tm = crate::trust::TrustManager::load();
+        tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
+        let _ = tm.save();
+        self.read_only = true;
+        self.add_system_msg(format!("Project '{}' untrusted. Read-only enabled.", cwd.display()));
     }
 
     pub fn peek_queue(&self) -> Option<&(String, String)> {
