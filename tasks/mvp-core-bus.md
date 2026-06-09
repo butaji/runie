@@ -1,5 +1,7 @@
 # Shared event bus with typed channels
 
+
+**⚠️ NOTE:** This task built code that is unused by the runtime. See `docs/SHIP_REVIEW.md`.
 **Status**: done
 
 **Milestone**: MVP

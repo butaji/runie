@@ -4,6 +4,7 @@ use crate::Event;
 mod agent;
 mod bash;
 mod input;
+mod line_nav;
 mod queue;
 mod slash;
 
@@ -66,8 +67,20 @@ impl AppState {
             Event::DeleteToEnd => self.delete_to_end(),
             Event::DeleteToStart => self.delete_to_start(),
             Event::KillChar => self.kill_char(),
-            Event::HistoryPrev => self.history_prev(),
-            Event::HistoryNext => self.history_next(),
+            Event::HistoryPrev => {
+                if self.input.contains('\n') {
+                    self.move_cursor_up();
+                } else {
+                    self.history_prev();
+                }
+            }
+            Event::HistoryNext => {
+                if self.input.contains('\n') {
+                    self.move_cursor_down();
+                } else {
+                    self.history_next();
+                }
+            }
             Event::Undo => self.undo(),
             Event::Redo => self.redo(),
             Event::CursorWordLeft => self.cursor_word_left(),

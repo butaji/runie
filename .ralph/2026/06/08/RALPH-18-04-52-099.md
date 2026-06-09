@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 4 of 100
+- Iteration: 6 of 100
 - Prompt file: /Users/admin/.herdr/worktrees/runie/agent-impl/EXECUTE.md
-- Updated: 2026-06-08T23:46:39.530Z
+- Updated: 2026-06-09T00:19:00.589Z
 
 ## Iteration progression
 
@@ -156,4 +156,47 @@ All **695 tests** pass:
 - runie-term: 82 tests
 - runie-tui: 64 tests
 - runie-provider: 29 tests
+```
+
+### Iteration 5
+
+```text
+## Summary
+
+I've completed 3 tasks in this execution session:
+
+### 1. `mvp-tui-syntax` - Syntax Highlighting for Code Blocks (DONE)
+- Implemented language detection from fence labels (16 languages)
+- Added keyword, type, function, string, number, comment tokenization
+- Split into modules (`syntax/mod.rs`, `syntax/keywords.rs`, `syntax/tokenize.rs`) to fix lint violations
+- 12 tests added for syntax highlighting
+
+### 2. `mvp-input-multiline` - Multi-line Input (COMPLETED)
+- Implemented backspace at line start to remove newlines and join lines
+- Added 3 new tests for the behavior:
+  - `backspace_at_line_start_removes_newline`
+  - `backspace_at_first_line_start_flashes`
+  - `backspace_removes_only_first_newline`
+
+### 3. `r1-tui-bash-prefix` - !command Bash Prefix (DONE)
+- Commands starting with `!` run directly without sending to agent
+- Output displayed as system message with command echo
+- Works with stdin/stderr separation and exit codes
+- Created `bash.rs` module to satisfy lint limits
+- 9 tests added
+
+### Test Results
+All **735 tests** pass across all packages:
+- runie-core: 459 tests
+- runie-tui: 76 tests  
+- runie-term: 82 tests
+- runie-agent: 74 tests
+- runie-provider: 29 tests
+- Doc tests: 15 tests
+```
+
+### Iteration 6
+
+```text
+All 504 tests pass. Let me update the task file:
 ```

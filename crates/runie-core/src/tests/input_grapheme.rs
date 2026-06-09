@@ -202,4 +202,37 @@ mod tests {
         assert!(!state.request_queue.is_empty(), "Regular submit should queue for agent");
         assert_eq!(state.messages.len(), 1, "Should have one message");
     }
+
+    // === Layer 2: Event handling tests (crossterm-style event → state) ===
+
+    #[test]
+    fn backspace_key_joins_lines() {
+        // Test that Event::Backspace joins lines when cursor is at start of a line
+        let mut state = AppState::default();
+        // Build: "line1\nline2"
+        state.update(Event::Input('l'));
+        state.update(Event::Input('i'));
+        state.update(Event::Input('n'));
+        state.update(Event::Input('e'));
+        state.update(Event::Input('1'));
+        state.update(Event::Newline);
+        state.update(Event::Input('l'));
+        state.update(Event::Input('i'));
+        state.update(Event::Input('n'));
+        state.update(Event::Input('e'));
+        state.update(Event::Input('2'));
+
+        // Cursor is at end (position 11)
+        assert_eq!(state.input, "line1\nline2");
+        assert_eq!(state.cursor_pos, 11);
+
+        // Move cursor back to position 6 (start of "line2")
+        state.cursor_pos = 6;
+
+        // Press Backspace - should remove newline and join lines
+        state.update(Event::Backspace);
+        assert_eq!(state.input, "line1line2");
+        // Cursor should be at position 5 (after "line1")
+        assert_eq!(state.cursor_pos, 5);
+    }
 }

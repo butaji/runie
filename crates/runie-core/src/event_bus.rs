@@ -43,6 +43,43 @@ pub enum DomainEvent {
     ToolRegistered { name: String },
     /// Bash command output (from ! prefix) — not sent to agent
     BashOutput { command: String, output: String },
+    /// Configuration file changed
+    ConfigChanged { path: std::path::PathBuf, changes: std::collections::HashMap<String, ConfigValue> },
+}
+
+/// Configuration value types for ConfigChanged events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ConfigValue {
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+    Array(Vec<ConfigValue>),
+    Object(std::collections::HashMap<String, ConfigValue>),
+}
+
+impl ConfigValue {
+    /// Parse a TOML value into ConfigValue
+    pub fn from_toml(value: &toml::Value) -> Self {
+        match value {
+            toml::Value::String(s) => ConfigValue::String(s.clone()),
+            toml::Value::Integer(i) => ConfigValue::Integer(*i),
+            toml::Value::Float(f) => ConfigValue::Float(*f),
+            toml::Value::Boolean(b) => ConfigValue::Boolean(*b),
+            toml::Value::Datetime(dt) => ConfigValue::String(dt.to_string()),
+            toml::Value::Array(arr) => {
+                ConfigValue::Array(arr.iter().map(ConfigValue::from_toml).collect())
+            }
+            toml::Value::Table(table) => {
+                let mut map = std::collections::HashMap::new();
+                for (k, v) in table {
+                    map.insert(k.clone(), ConfigValue::from_toml(v));
+                }
+                ConfigValue::Object(map)
+            }
+        }
+    }
 }
 
 impl BusEvent for DomainEvent {
