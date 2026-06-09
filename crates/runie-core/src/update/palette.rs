@@ -75,12 +75,24 @@ impl AppState {
     }
 
     fn palette_select(&mut self, filter: String, selected: usize) {
+        // Parse filter as "command args" to support typing commands with arguments
+        let (cmd_part, args) = filter.split_once(' ').unwrap_or((&filter, ""));
+
+        // Try exact match by name or alias first
+        if let Some(cmd) = self.registry.get(cmd_part) {
+            let result = (cmd.handler)(self, args);
+            self.process_command_result(result);
+            self.mark_dirty();
+            return;
+        }
+
+        // Fall back to selection-based execution from filtered list
         let cmd_items = crate::commands::filter_commands(&self.registry, &filter);
         let skill_items = self.filtered_skills(&filter);
 
         if selected < cmd_items.len() {
             if let Some(cmd) = cmd_items.get(selected) {
-                let result = (cmd.handler)(self, "");
+                let result = (cmd.handler)(self, args);
                 self.process_command_result(result);
             }
         } else if let Some(skill) = skill_items.get(selected - cmd_items.len()) {
@@ -88,8 +100,9 @@ impl AppState {
                 "Skill: {}\nDescription: {}\nContext: {}",
                 skill.name, skill.description, skill.context
             ));
+        } else {
+            self.add_system_msg(format!("Unknown command: /{}. Try /help.", filter));
         }
-        self.open_dialog = None;
         self.mark_dirty();
     }
 

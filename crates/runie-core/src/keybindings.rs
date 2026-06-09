@@ -30,8 +30,10 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+c".to_string(), "Quit".to_string());
     map.insert("ctrl+s".to_string(), "Abort".to_string());
     map.insert("ctrl+g".to_string(), "OpenExternalEditor".to_string());
-    map.insert("ctrl+p".to_string(), "CycleModelNext".to_string());
-    map.insert("ctrl+shift+p".to_string(), "CycleModelPrev".to_string());
+    map.insert("ctrl+p".to_string(), "ToggleCommandPalette".to_string());
+    map.insert("ctrl+shift+p".to_string(), "ToggleCommandPalette".to_string());
+    map.insert("ctrl+m".to_string(), "CycleModelNext".to_string());
+    map.insert("ctrl+shift+m".to_string(), "CycleModelPrev".to_string());
 
     #[cfg(not(target_os = "windows"))]
     map.insert("ctrl+v".to_string(), "PasteImage".to_string());
