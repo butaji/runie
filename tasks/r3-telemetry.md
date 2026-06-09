@@ -1,6 +1,6 @@
 # Telemetry
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 
@@ -24,16 +24,16 @@ impl Telemetry {
 
 ## Acceptance Criteria
 
-- [ ] Opt-in only — disabled by default
-- [ ] Config setting: `telemetry.enabled = true`
-- [ ] Tracks: startup, model switches, tool usage (anonymized)
-- [ ] Crash reports with stack trace
-- [ ] No messages/content ever sent
-- [ ] User can disable at any time
+- [x] Opt-in only — disabled by default
+- [x] Config setting: `telemetry.enabled = true`
+- [x] Tracks: startup, model switches, tool usage (anonymized)
+- [x] Crash reports with stack trace
+- [x] No messages/content ever sent
+- [x] User can disable at any time
 
 ## Tests
 
 ### Layer 1
-- [ ] `telemetry_disabled_by_default` — no events sent
-- [ ] `telemetry_respects_opt_in` — only sends when enabled
-- [ ] `telemetry_never_sends_content` — messages not included
+- [x] `telemetry_disabled_by_default` — no events sent
+- [x] `telemetry_respects_opt_in` — only sends when enabled
+- [x] `telemetry_never_sends_content` — messages not included

@@ -60,6 +60,14 @@ impl AppState {
             id: tool_id,
             ..Default::default()
         });
+        self.telemetry.track_event(
+            "tool_usage",
+            {
+                let mut m = std::collections::HashMap::new();
+                m.insert("tool".into(), name);
+                m
+            },
+        );
         self.messages_changed();
     }
 
