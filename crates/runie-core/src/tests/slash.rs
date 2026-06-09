@@ -6,17 +6,17 @@ use std::sync::Mutex;
 
 pub static ENV_LOCK: Mutex<()> = Mutex::new(());
 
-fn fresh_state() -> AppState {
+pub fn fresh_state() -> AppState {
     AppState::default()
 }
 
-fn type_str(state: &mut AppState, text: &str) {
+pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
         state.update(Event::Input(c));
     }
 }
 
-fn tmp_store() -> Store {
+pub fn tmp_store() -> Store {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let dir = std::env::temp_dir().join(format!("runie_slash_test_{}_{}", std::process::id(), n));
@@ -244,6 +244,7 @@ fn load_restores_conversation() {
         ],
         provider: "anthropic".into(),
         model: "claude-3".into(),
+        theme_name: "silkcircuit-neon".into(),
     }).unwrap();
 
     let mut state = fresh_state();
@@ -304,10 +305,12 @@ fn sessions_lists_saved_sessions() {
     store.save("alpha", &crate::session::Session {
         name: "alpha".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
+        theme_name: "silkcircuit-neon".into(),
     }).unwrap();
     store.save("beta", &crate::session::Session {
         name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
+        theme_name: "silkcircuit-neon".into(),
     }).unwrap();
 
     let mut state = fresh_state();
@@ -352,6 +355,7 @@ fn delete_removes_session_file() {
     store.save("gone", &crate::session::Session {
         name: "gone".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
+        theme_name: "silkcircuit-neon".into(),
     }).unwrap();
 
     let mut state = fresh_state();
@@ -444,3 +448,5 @@ fn save_with_whitespace_name_uses_name_as_is() {
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
+
+

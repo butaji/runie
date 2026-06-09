@@ -10,6 +10,8 @@ mod colors;
 mod color_restraint;
 #[cfg(test)]
 mod style_dsl;
+#[cfg(test)]
+mod theme;
 
 use runie_core::{AppState, Event};
 use crate::ui::view;

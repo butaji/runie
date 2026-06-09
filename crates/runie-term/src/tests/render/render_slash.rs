@@ -28,10 +28,12 @@ fn test_render_sessions_list_on_separate_lines() {
     store.save("alpha", &runie_core::Session {
         name: "alpha".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
+        theme_name: "silkcircuit-neon".into(),
     }).unwrap();
     store.save("beta", &runie_core::Session {
         name: "beta".to_string(), created_at: 1.0, updated_at: 1.0,
         messages: vec![], provider: "mock".into(), model: "echo".into(),
+        theme_name: "silkcircuit-neon".into(),
     }).unwrap();
 
     let backend = TestBackend::new(60, 20);

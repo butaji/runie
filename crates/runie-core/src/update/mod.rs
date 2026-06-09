@@ -131,6 +131,7 @@ impl AppState {
                 self.ensure_turn_complete_last();
             }
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
+            Event::SwitchTheme { name } => self.switch_theme(name),
             Event::FollowUp => self.queue_follow_up(),
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
@@ -147,6 +148,11 @@ impl AppState {
         self.current_provider = provider.clone();
         self.current_model = model.clone();
         self.add_system_msg(format!("Switched to {}/{}", provider, model));
+    }
+
+    fn switch_theme(&mut self, name: String) {
+        self.theme_name = name.clone();
+        self.add_system_msg(format!("Theme switched to '{}'", name));
     }
 
     pub fn peek_queue(&self) -> Option<&(String, String)> {

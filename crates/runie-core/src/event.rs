@@ -50,6 +50,7 @@ pub enum Event {
     AgentError { id: String, message: String },
 
     SwitchModel { provider: String, model: String },
+    SwitchTheme { name: String },
     FollowUp,
     Abort,
 

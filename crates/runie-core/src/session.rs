@@ -13,6 +13,7 @@ pub struct Session {
     pub messages: Vec<ChatMessage>,
     pub provider: String,
     pub model: String,
+    pub theme_name: String,
 }
 
 /// Session store — handles save/load/list/delete
@@ -142,6 +143,7 @@ mod tests {
             ],
             provider: "mock".into(),
             model: "echo".into(),
+            theme_name: "silkcircuit-neon".into(),
         }
     }
 
@@ -226,5 +228,6 @@ mod tests {
         let decoded: Session = serde_json::from_str(&json).unwrap();
         assert_eq!(session.name, decoded.name);
         assert_eq!(session.messages.len(), decoded.messages.len());
+        assert_eq!(session.theme_name, decoded.theme_name);
     }
 }

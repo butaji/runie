@@ -63,6 +63,8 @@ pub struct AppState {
     pub current_action: Option<String>,
     pub current_provider: String,
     pub current_model: String,
+    /// Active theme name (resolved by runie-tui)
+    pub theme_name: String,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -108,6 +110,7 @@ impl Default for AppState {
             intermediate_step_count: 0, animation_frame: 0,
             turn_active: false, current_action: None,
             current_provider: "mock".into(), current_model: "echo".into(),
+            theme_name: "silkcircuit-neon".into(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             all_collapsed: false, last_assistant_index: None, thought_seq: 0,
@@ -232,6 +235,7 @@ impl AppState {
             turn_elapsed_secs: self.turn_elapsed_secs(),
             provider: self.current_provider.clone(),
             model: self.current_model.clone(),
+            theme_name: self.theme_name.clone(),
             queue_count: self.message_queue.len() + self.request_queue.len(),
         }
     }

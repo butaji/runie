@@ -21,6 +21,7 @@ struct ModelsSection {
 struct Config {
     provider: Option<String>,
     model: Option<String>,
+    theme: Option<String>,
     #[serde(default)]
     models: ModelsSection,
     #[serde(default)]
@@ -58,9 +59,10 @@ pub fn spawn_config_watcher(
     config_path: PathBuf,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        // Track last known provider/model to detect changes
+        // Track last known provider/model/theme to detect changes
         let mut last_provider: Option<String> = None;
         let mut last_model: Option<String> = None;
+        let mut last_theme: Option<String> = None;
 
         let mut poll_interval = interval(Duration::from_secs(2));
 
@@ -70,9 +72,10 @@ pub fn spawn_config_watcher(
             // Load current config from the specified path
             let config = Config::load_from(&config_path);
 
-            // Extract provider and model from config
+            // Extract provider, model, and theme from config
             let current_provider = config.provider.clone().unwrap_or_else(|| "mock".to_string());
             let current_model = config.default_model().unwrap_or("echo").to_string();
+            let current_theme = config.theme.clone().unwrap_or_else(|| "silkcircuit-neon".to_string());
 
             // Check if provider changed
             let provider_changed = match &last_provider {
@@ -83,6 +86,12 @@ pub fn spawn_config_watcher(
             // Check if model changed
             let model_changed = match &last_model {
                 Some(prev) => prev != &current_model,
+                None => true, // First run, always report change
+            };
+
+            // Check if theme changed
+            let theme_changed = match &last_theme {
+                Some(prev) => prev != &current_theme,
                 None => true, // First run, always report change
             };
 
@@ -98,9 +107,21 @@ pub fn spawn_config_watcher(
                 }
             }
 
+            // Emit when theme changes
+            if theme_changed {
+                let evt = Event::SwitchTheme {
+                    name: current_theme.clone(),
+                };
+                if event_tx.send(evt).await.is_err() {
+                    // Channel closed, exit watcher
+                    break;
+                }
+            }
+
             // Update tracking
             last_provider = Some(current_provider);
             last_model = Some(current_model);
+            last_theme = Some(current_theme);
         }
     })
 }
@@ -146,6 +167,23 @@ mod tests {
             m.content.contains("Switched to anthropic/claude-3-sonnet")
         });
         assert!(has_switch_msg, "Should add system message on model switch");
+    }
+
+    #[test]
+    fn config_theme_change_applies_theme() {
+        let mut state = AppState::default();
+        assert_eq!(state.theme_name, "silkcircuit-neon");
+
+        state.update(Event::SwitchTheme {
+            name: "dracula".to_string(),
+        });
+
+        assert_eq!(state.theme_name, "dracula");
+        let has_theme_msg = state.messages.iter().any(|m| {
+            m.role == crate::model::Role::System &&
+            m.content.contains("Theme switched to 'dracula'")
+        });
+        assert!(has_theme_msg, "Should add system message on theme switch");
     }
 
     #[tokio::test]
@@ -276,6 +314,19 @@ api_key = "secret"
         assert_eq!(config.provider, None);
         assert_eq!(config.model, None);
         assert_eq!(config.default_model(), None);
+    }
+
+    #[test]
+    fn config_theme_field_emits_switch_theme() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+
+        fs::write(&config_path, r#"
+theme = "dracula"
+"#).unwrap();
+
+        let config = Config::load_from(&config_path);
+        assert_eq!(config.theme, Some("dracula".to_string()));
     }
 
     #[test]

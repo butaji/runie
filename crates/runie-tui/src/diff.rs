@@ -9,7 +9,7 @@
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 
-use crate::theme::C;
+use crate::theme::{color_success, color_accent, color_dim, color_fg};
 
 /// A parsed line from a unified diff
 #[derive(Debug, Clone, PartialEq)]
@@ -144,11 +144,11 @@ pub fn parse_diff(text: &str) -> ParsedDiff {
 /// Style for a diff line based on its type
 pub fn diff_line_style(line_type: &DiffLineType) -> Style {
     match line_type {
-        DiffLineType::Added => Style::default().fg(C.success),
+        DiffLineType::Added => Style::default().fg(color_success()),
         DiffLineType::Removed => Style::default().fg(Color::Red),
-        DiffLineType::HunkHeader => Style::default().fg(C.accent).add_modifier(Modifier::BOLD),
-        DiffLineType::FileHeader => Style::default().fg(C.dim),
-        DiffLineType::Context => Style::default().fg(C.fg),
+        DiffLineType::HunkHeader => Style::default().fg(color_accent()).add_modifier(Modifier::BOLD),
+        DiffLineType::FileHeader => Style::default().fg(color_dim()),
+        DiffLineType::Context => Style::default().fg(color_fg()),
     }
 }
 
@@ -177,7 +177,7 @@ pub fn render_diff(diff: &ParsedDiff, gutter_width: usize) -> Vec<Line<'static>>
         };
         
         let spans: Vec<Span<'static>> = vec![
-            Span::styled(line_num_str, Style::default().fg(C.dim)),
+            Span::styled(line_num_str, Style::default().fg(color_dim())),
             Span::styled(prefix, style),
             Span::styled(parsed.content.clone(), style),
         ];
@@ -249,9 +249,9 @@ mod tests {
 
     #[test]
     fn diff_line_styles() {
-        assert_eq!(diff_line_style(&DiffLineType::Added).fg, Some(C.success));
+        assert_eq!(diff_line_style(&DiffLineType::Added).fg, Some(color_success()));
         assert_eq!(diff_line_style(&DiffLineType::Removed).fg, Some(Color::Red));
-        assert_eq!(diff_line_style(&DiffLineType::Context).fg, Some(C.fg));
+        assert_eq!(diff_line_style(&DiffLineType::Context).fg, Some(color_fg()));
     }
 
     #[test]

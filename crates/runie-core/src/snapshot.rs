@@ -22,6 +22,8 @@ pub struct Snapshot {
     pub turn_elapsed_secs: Option<f64>,
     pub provider: String,
     pub model: String,
+    /// Active theme name for the render actor
+    pub theme_name: String,
     /// Flash countdown for invalid input feedback.
     pub input_flash: u8,
     /// Placeholder text shown when input is empty.

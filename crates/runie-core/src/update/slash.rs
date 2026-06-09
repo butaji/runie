@@ -15,6 +15,7 @@ impl AppState {
             "/sessions" => Some(self.sessions_list()),
             "/compact" => Some(self.handle_compact(None)),
             "/history" => Some(self.handle_history_cmd()),
+            "/theme" => Some(self.handle_theme_cmd(None)),
             _ => self.handle_slash_with_arg(content),
         }
     }
@@ -34,6 +35,9 @@ impl AppState {
         }
         if let Some(rest) = content.strip_prefix("/compact ") {
             return Some(self.handle_compact(Some(rest)));
+        }
+        if let Some(name) = content.strip_prefix("/theme ") {
+            return Some(self.handle_theme_cmd(Some(name)));
         }
         None
     }
@@ -73,6 +77,7 @@ impl AppState {
             messages: self.messages.clone(),
             provider: self.current_provider.clone(),
             model: self.current_model.clone(),
+            theme_name: self.theme_name.clone(),
         };
         match crate::session::save(name, &session) {
             Ok(()) => format!("Session '{}' saved.", name),
@@ -86,6 +91,7 @@ impl AppState {
                 self.messages = session.messages;
                 self.current_provider = session.provider;
                 self.current_model = session.model;
+                self.theme_name = session.theme_name;
                 self.messages_changed();
                 format!("Session '{}' loaded.", name)
             }
@@ -147,10 +153,42 @@ impl AppState {
         )
     }
 
+    fn handle_theme_cmd(&mut self, name: Option<&str>) -> String {
+        match name {
+            Some(n) => {
+                let n = n.trim();
+                self.theme_name = n.to_string();
+                if Self::builtin_themes().contains(&n) {
+                    format!("Theme switched to '{}'", n)
+                } else {
+                    format!("Theme '{}' not found. Using fallback 'silkcircuit-neon'. Use /theme to list available themes.", n)
+                }
+            }
+            None => {
+                format!("Current theme: {}\n\nAvailable themes:\n{}",
+                    self.theme_name,
+                    Self::builtin_themes().join(", "))
+            }
+        }
+    }
+
+    fn builtin_themes() -> &'static [&'static str] {
+        &[
+            "silkcircuit-neon", "silkcircuit-glow", "silkcircuit-soft", "silkcircuit-vibrant", "silkcircuit-dawn",
+            "catppuccin-mocha", "catppuccin-macchiato", "catppuccin-frappe", "catppuccin-latte",
+            "dracula", "nord", "gruvbox-dark", "gruvbox-light", "tokyo-night", "tokyo-night-storm", "tokyo-night-moon",
+            "rose-pine", "rose-pine-moon", "rose-pine-dawn", "kanagawa-wave", "kanagawa-dragon", "kanagawa-lotus",
+            "everforest-dark", "everforest-light", "ayu-dark", "ayu-light", "ayu-mirage",
+            "one-dark", "one-light", "github-dark-dimmed", "github-light", "night-owl", "light-owl",
+            "monokai-pro", "palenight", "solarized-dark", "solarized-light", "flexoki-dark", "flexoki-light",
+        ]
+    }
+
     pub fn help_text(&self) -> String {
         format!(
             "Commands:\n\
             /model [provider/model|model] — switch model (current: {}/{})\n\
+            /theme [name] — switch theme or list available themes\n\
             /save name — save current session\n\
             /load name — load a saved session\n\
             /sessions — list saved sessions\n\

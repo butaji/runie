@@ -2,7 +2,7 @@
 
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
-use crate::theme::C;
+use crate::theme::{color_fg_bright, color_accent, color_code_bg};
 
 /// Parsed inline markdown span for styling.
 #[derive(Debug, Clone, PartialEq)]
@@ -13,7 +13,7 @@ pub struct MdSpan {
 
 /// Parse inline markdown bold (**text**), italic (*text*), and code (`text`) into styled spans.
 pub fn parse_inline_markdown(text: &str) -> Vec<MdSpan> {
-    parse_inline_markdown_with_color(text, C.fg_bright)
+    parse_inline_markdown_with_color(text, color_fg_bright())
 }
 
 /// Parse inline markdown with a custom base foreground color.
@@ -46,7 +46,7 @@ pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<Md
             }
             spans.push(MdSpan {
                 content: code_text,
-                style: Style::default().fg(C.accent).bg(C.code_bg),
+                style: Style::default().fg(color_accent()).bg(color_code_bg()),
             });
         } else if c == '*' {
             flush_plain(&mut current, &mut spans, base);
@@ -265,7 +265,7 @@ mod tests {
         let spans = parse_inline_markdown("use `cargo test` to run");
         let code = spans.iter().find(|s| s.content == "cargo test");
         assert!(code.is_some(), "Should have code span 'cargo test'");
-        assert_eq!(code.unwrap().style.fg, Some(C.accent));
+        assert_eq!(code.unwrap().style.fg, Some(color_accent()));
         assert!(code.unwrap().style.bg.is_some(), "Code should have bg");
     }
 

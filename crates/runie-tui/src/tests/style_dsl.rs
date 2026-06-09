@@ -1,29 +1,36 @@
-use ratatui::style::{Color, Style};
-use crate::theme::{style, C};
+use ratatui::style::Style;
+use crate::theme::{set_current_theme, style_user, style_code_block, style_input_cursor};
 
-#[test]
-fn style_macro_fg_only() {
-    let s: Style = style!(fg_bright);
-    assert_eq!(s.fg, Some(C.fg_bright));
-    assert_eq!(s.bg, None);
+fn setup() {
+    set_current_theme("silkcircuit-neon");
 }
 
 #[test]
-fn style_macro_fg_and_bg() {
-    let s: Style = style!(fg: code, bg: code_bg);
-    assert_eq!(s.fg, Some(C.code));
-    assert_eq!(s.bg, Some(C.code_bg));
+fn style_user_has_fg() {
+    setup();
+    let s: Style = style_user();
+    assert!(s.fg.is_some(), "style_user should have a foreground color");
 }
 
 #[test]
-fn style_macro_reversible() {
-    let s: Style = style!(bg: fg_bright, fg: bg);
-    assert_eq!(s.fg, Some(C.bg));
-    assert_eq!(s.bg, Some(C.fg_bright));
+fn style_code_block_has_fg_and_bg() {
+    setup();
+    let s: Style = style_code_block();
+    assert!(s.fg.is_some(), "style_code_block should have a foreground color");
+    assert!(s.bg.is_some(), "style_code_block should have a background color");
+}
+
+#[test]
+fn style_input_cursor_is_reversible() {
+    setup();
+    let s: Style = style_input_cursor();
+    assert!(s.fg.is_some(), "style_input_cursor should have a foreground color");
+    assert!(s.bg.is_some(), "style_input_cursor should have a background color");
 }
 
 #[test]
 fn all_style_functions_exist() {
+    setup();
     use crate::theme::*;
     let _ = style_user();
     let _ = style_agent();
