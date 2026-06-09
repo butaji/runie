@@ -9,16 +9,11 @@
 
 pub mod model;
 pub mod event;
-pub mod event_bus;
-pub mod orchestrator;
-pub mod actors;
 pub mod update;
 pub mod labels;
 pub mod ui;
 pub mod provider;
 pub mod session;
-pub mod session_jsonl;
-pub mod session_manager;
 pub mod input_history;
 pub mod keybindings;
 pub mod tokens;
@@ -36,10 +31,6 @@ mod file_refs_lookup_tests;
 pub use model::{AppState, ChatMessage, Role};
 pub use snapshot::Snapshot;
 pub use session::{Session, save, load, list, delete};
-pub use session_jsonl::{
-    SessionMeta, JsonlReader, JsonlWriter,
-    list_session_names, delete_session, load_session, save_session,
-};
 pub use event::Event;
 pub use labels::{
     THINKING_LOADING, thinking_with_time, thought_with_time, format_timestamp,

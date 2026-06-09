@@ -43,5 +43,6 @@
     "r1-input-history-persistence",
     "mvp-config-hot-reload",
     "r2-queue-delivery-mode"
+    "cleanup-dead-code"
   ]
 }
