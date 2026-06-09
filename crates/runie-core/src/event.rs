@@ -108,6 +108,9 @@ pub enum Event {
     // Diagnostics
     ShowDiagnostics,
 
+    // Suspend to background (Unix only)
+    Suspend,
+
     // Path completion
     TogglePathCompletion,
     PathCompletionUp,

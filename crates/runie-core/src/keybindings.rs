@@ -25,7 +25,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+k".to_string(), "DeleteToEnd".to_string());
     map.insert("ctrl+u".to_string(), "DeleteToStart".to_string());
     map.insert("ctrl+d".to_string(), "KillChar".to_string());
-    map.insert("ctrl+z".to_string(), "Undo".to_string());
+    map.insert("ctrl+z".to_string(), "Suspend".to_string());
     map.insert("ctrl+y".to_string(), "Redo".to_string());
     map.insert("ctrl+c".to_string(), "Quit".to_string());
     map.insert("ctrl+s".to_string(), "Abort".to_string());
@@ -158,6 +158,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "ToggleModelSelector" => Some(Event::ToggleModelSelector),
         "CycleModelNext" => Some(Event::CycleModelNext),
         "CycleModelPrev" => Some(Event::CycleModelPrev),
+        "Suspend" => Some(Event::Suspend),
         _ => None,
     }
 }
@@ -193,7 +194,7 @@ mod tests {
     fn default_keybindings_has_common_keys() {
         let bindings = default_keybindings();
         assert_eq!(bindings.get("ctrl+c"), Some(&"Quit".to_string()));
-        assert_eq!(bindings.get("ctrl+z"), Some(&"Undo".to_string()));
+        assert_eq!(bindings.get("ctrl+z"), Some(&"Suspend".to_string()));
         assert_eq!(bindings.get("enter"), Some(&"Submit".to_string()));
         assert_eq!(bindings.get("up"), Some(&"HistoryPrev".to_string()));
     }
@@ -247,7 +248,7 @@ mod tests {
         assert_eq!(bindings.get("ctrl+q"), Some(&"Undo".to_string()));
 
         // Still has defaults
-        assert_eq!(bindings.get("ctrl+z"), Some(&"Undo".to_string()));
+        assert_eq!(bindings.get("ctrl+z"), Some(&"Suspend".to_string()));
     }
 
     #[test]
@@ -331,6 +332,7 @@ mod tests {
             ("CursorWordRight", Event::CursorWordRight),
             ("FollowUp", Event::FollowUp),
             ("ToggleExpand", Event::ToggleExpand),
+            ("Suspend", Event::Suspend),
         ];
         for (name, expected) in variants {
             let actual = event_from_name(name).expect(name);

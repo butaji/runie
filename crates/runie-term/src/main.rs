@@ -177,6 +177,34 @@ async fn event_loop(
                     tokio::task::spawn_blocking(move || {
                         let _ = spawn_external_editor_sync(text, tx);
                     });
+                } else if matches!(evt, CoreEvent::Suspend) {
+                    #[cfg(unix)]
+                    {
+                        // Restore terminal to normal before suspending
+                        let _ = crossterm::terminal::disable_raw_mode();
+                        let _ = crossterm::execute!(
+                            std::io::stdout(),
+                            crossterm::terminal::LeaveAlternateScreen,
+                        );
+
+                        // Send SIGTSTP to ourselves
+                        let _ = nix::sys::signal::kill(
+                            nix::unistd::Pid::this(),
+                            nix::sys::signal::Signal::SIGTSTP,
+                        );
+
+                        // After resume, restore terminal
+                        let _ = crossterm::terminal::enable_raw_mode();
+                        let _ = crossterm::execute!(
+                            std::io::stdout(),
+                            crossterm::terminal::EnterAlternateScreen,
+                            crossterm::event::EnableBracketedPaste,
+                        );
+
+                        // Force redraw
+                        state.ensure_fresh();
+                        let _ = render_tx.try_send(state.snapshot());
+                    }
                 } else {
                     let was_submit = matches!(evt, CoreEvent::Submit);
                     let was_followup = matches!(evt, CoreEvent::FollowUp);

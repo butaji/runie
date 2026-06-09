@@ -1887,6 +1887,7 @@ dependencies = [
  "crossterm",
  "ctrlc",
  "futures",
+ "nix 0.31.3",
  "ratatui",
  "runie-agent",
  "runie-core",
