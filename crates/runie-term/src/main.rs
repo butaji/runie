@@ -36,6 +36,7 @@ async fn main() -> io::Result<()> {
     apply_trust_on_startup(&mut state);
     init_scoped_models(&mut state);
     init_skills(&mut state);
+    init_telemetry(&mut state);
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
@@ -297,6 +298,14 @@ fn spawn_external_editor_sync(
 
 fn init_skills(state: &mut AppState) {
     state.skills = runie_core::skills::load_all();
+}
+
+fn init_telemetry(state: &mut AppState) {
+    let config = config_reload::Config::load_from(&config_reload::config_path());
+    state.telemetry = runie_core::Telemetry::new(config.telemetry_enabled());
+    if state.telemetry.is_enabled() {
+        state.telemetry.track_event("startup", std::collections::HashMap::new());
+    }
 }
 
 async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {

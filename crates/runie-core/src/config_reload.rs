@@ -19,6 +19,12 @@ pub struct ModelsSection {
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize)]
+pub struct TelemetrySection {
+    #[serde(default)]
+    enabled: bool,
+}
+
+#[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct Config {
     pub provider: Option<String>,
     model: Option<String>,
@@ -28,6 +34,8 @@ pub struct Config {
     #[serde(default)]
     #[allow(dead_code)]
     model_providers: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    telemetry: TelemetrySection,
 }
 
 impl Config {
@@ -67,6 +75,10 @@ impl Config {
 
     pub fn scoped_models(&self) -> Option<&Vec<String>> {
         self.models.scoped.as_ref()
+    }
+
+    pub fn telemetry_enabled(&self) -> bool {
+        self.telemetry.enabled
     }
 }
 

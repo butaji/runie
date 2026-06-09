@@ -140,6 +140,8 @@ pub struct AppState {
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
     /// Loaded skills from ~/.runie/skills/ and ./.runie/skills/
     pub skills: Vec<crate::skills::Skill>,
+    /// Opt-in telemetry collector
+    pub telemetry: crate::telemetry::Telemetry,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -201,6 +203,7 @@ impl Default for AppState {
             scoped_models: Vec::new(), scoped_index: 0,
             recent_models: Vec::new(), pending_edits: Vec::new(),
             skills: Vec::new(),
+            telemetry: crate::telemetry::Telemetry::new(false),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,
