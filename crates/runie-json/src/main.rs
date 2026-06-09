@@ -196,6 +196,9 @@ fn tool_to_json(tool: &Tool) -> serde_json::Value {
         Tool::Find { pattern, path, limit } => {
             serde_json::json!({"pattern": pattern, "path": path, "limit": limit})
         }
+        Tool::FetchDocs { library } => {
+            serde_json::json!({"library": library})
+        }
     }
 }
 

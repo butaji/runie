@@ -1,6 +1,6 @@
 # Context7 Documentation Fetcher
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Tools
 
@@ -66,12 +66,12 @@ pub fn context7_tool() -> Tool {
 
 ## Acceptance Criteria
 
-- [ ] `fetch_docs` tool searches context7.com and returns `llms.txt` content
-- [ ] Fuzzy search — partial matches work ("react" → "react-router")
-- [ ] Results truncated to fit context window (50KB limit)
-- [ ] Error gracefully when library not found
-- [ ] Shows source URL in tool output
-- [ ] Cached per-session (avoid re-fetching same library)
+- [x] `fetch_docs` tool searches context7.com and returns `llms.txt` content
+- [x] Fuzzy search — partial matches work ("react" → "react-router")
+- [x] Results truncated to fit context window (50KB limit)
+- [x] Error gracefully when library not found
+- [x] Shows source URL in tool output
+- [x] Cached per-session (avoid re-fetching same library)
 
 ## Files
 
@@ -83,9 +83,9 @@ pub fn context7_tool() -> Tool {
 ## Tests
 
 ### Layer 1
-- [ ] `parse_search_response` — extracts library ID from JSON
-- [ ] `truncate_docs_respects_limit` — >50KB truncated
-- [ ] `cache_hits_avoid_refetch` — second call returns cached
+- [x] `parse_search_response` — extracts library ID from JSON
+- [x] `truncate_docs_respects_limit` — >50KB truncated
+- [x] `cache_hits_avoid_refetch` — second call returns cached
 
 ### Layer 4 — Smoke
 - [ ] `context7_fetch_no_panic.sh` — tmux: agent uses fetch_docs → no panic

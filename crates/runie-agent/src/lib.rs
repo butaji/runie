@@ -1,6 +1,7 @@
 #![warn(clippy::all)]
 
 pub mod accumulator;
+pub mod context7;
 pub mod diff;
 pub mod mutation_queue;
 pub mod path_utils;
