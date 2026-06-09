@@ -1,6 +1,6 @@
 # Dynamic Provider Config Resolution
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Configuration
 
