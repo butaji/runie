@@ -69,8 +69,6 @@ pub struct AppState {
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
-    /// Monotonic counter — increments on every snapshot sent to render actor
-    pub render_generation: u64,
     /// @-ref file lookup suggestions
     pub at_suggestions: Option<Vec<String>>,
     /// Selected index in @-ref suggestions
@@ -113,7 +111,7 @@ impl Default for AppState {
             intermediate_step_count: 0, animation_frame: 0,
             turn_active: false, current_action: None,
             current_provider: "mock".into(), current_model: "echo".into(),
-            inflight: 0, render_generation: 0,
+            inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             all_collapsed: false, last_assistant_index: None, thought_seq: 0,
             input_history: Vec::new(), history_pos: None,
