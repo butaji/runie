@@ -23,7 +23,7 @@ pub struct Store {
 
 impl Store {
     /// Default store — uses OS data dir (~/.local/share/runie/sessions on Linux)
-    pub fn default() -> Option<Self> {
+    pub fn default_store() -> Option<Self> {
         dirs::data_dir().map(|d| Self::new(d.join("runie").join("sessions")))
     }
 
@@ -85,7 +85,7 @@ pub fn default_store() -> Option<Store> {
     if let Ok(dir) = std::env::var("RUNIE_SESSIONS_DIR") {
         return Some(Store::new(PathBuf::from(dir)));
     }
-    Store::default()
+    Store::default_store()
 }
 
 pub fn save(name: &str, session: &Session) -> anyhow::Result<()> {

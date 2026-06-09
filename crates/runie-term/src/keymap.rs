@@ -40,7 +40,7 @@ pub fn key_event_to_combo(key: &KeyEvent) -> String {
         parts.push("shift");
     }
     let key_name = match key.code {
-        KeyCode::Char(c) if c == '\t' => "tab".to_string(),
+        KeyCode::Char('\t') => "tab".to_string(),
         KeyCode::Char(c) => c.to_lowercase().to_string(),
         KeyCode::Enter => "enter".to_string(),
         KeyCode::Esc => "escape".to_string(),
