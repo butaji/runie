@@ -1,0 +1,20 @@
+[package]
+name = "runie-json"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "runie-json"
+path = "src/main.rs"
+
+[dependencies]
+runie-core.workspace = true
+runie-agent.workspace = true
+runie-provider.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+serde_json.workspace = true
+anyhow.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "io-std", "io-util"] }
+
+[dev-dependencies]
+tempfile = "3"

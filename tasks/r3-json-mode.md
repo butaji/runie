@@ -1,6 +1,6 @@
 # JSON Mode
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Modes
 
@@ -33,16 +33,16 @@ pub struct JsonResponse {
 
 ## Acceptance Criteria
 
-- [ ] `runie-json` reads JSON from stdin
-- [ ] Writes JSON response to stdout
-- [ ] Supports streaming via JSONL (one object per chunk)
-- [ ] Tool calls returned as structured JSON
-- [ ] Exit code 0 on success, 1 on error
-- [ ] Schema documented
+- [x] `runie-json` reads JSON from stdin
+- [x] Writes JSON response to stdout
+- [x] Supports streaming via JSONL (one object per chunk)
+- [x] Tool calls returned as structured JSON
+- [x] Exit code 0 on success, 1 on error
+- [x] Schema documented
 
 ## Tests
 
 ### Layer 1
-- [ ] `json_mode_parses_request` — valid JSON parsed
-- [ ] `json_mode_outputs_valid_json` — stdout is valid JSON
-- [ ] `json_mode_returns_tool_calls` — tool calls in output
+- [x] `json_mode_parses_request` — valid JSON parsed
+- [x] `json_mode_outputs_valid_json` — stdout is valid JSON
+- [x] `json_mode_returns_tool_calls` — tool calls in output
