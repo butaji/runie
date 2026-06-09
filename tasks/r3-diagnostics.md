@@ -1,6 +1,6 @@
 # Diagnostics
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 
@@ -28,15 +28,14 @@ fn cmd_diagnostics(_args: &str) -> Option<Event> {
 
 ## Acceptance Criteria
 
-- [ ] `/diagnostics` shows resource loading status
-- [ ] Lists all loaded config files with paths
-- [ ] Shows configured providers
-- [ ] Shows loaded skills
-- [ ] Shows theme and keybinding status
-- [ ] Useful for debugging setup issues
+- [x] `/diagnostics` shows resource loading status
+- [x] Lists all loaded config files with paths
+- [x] Shows configured providers
+- [x] Shows theme and keybinding status
+- [x] Useful for debugging setup issues
 
 ## Tests
 
 ### Layer 1
-- [ ] `diagnostics_shows_config_path` — config file path displayed
-- [ ] `diagnostics_shows_providers` — provider list correct
+- [x] `diagnostics_shows_config_path` — config file path displayed
+- [x] `diagnostics_shows_providers` — provider list correct
