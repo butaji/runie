@@ -1,6 +1,5 @@
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
-use crate::tool_markers::has_tool_markers;
 
 // Re-export for backward compatibility
 pub use crate::tool_markers::has_tool_markers as content_has_tool_markers;
