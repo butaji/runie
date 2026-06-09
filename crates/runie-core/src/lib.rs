@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 //! Runie Core — State, Events, Update, UI Architecture
 //!
 //! Architecture (three layers):

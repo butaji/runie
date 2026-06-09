@@ -52,13 +52,13 @@ fn status_timer_updates_over_time() {
     state.ensure_fresh();
 
     let out1 = render_status(&mut state);
-    let timer_pos1 = out1.find("Working").unwrap_or(0);
+    let _timer_pos1 = out1.find("Working").unwrap_or(0);
 
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     state.ensure_fresh();
     let out2 = render_status(&mut state);
-    let timer_pos2 = out2.find("Working").unwrap_or(0);
+    let _timer_pos2 = out2.find("Working").unwrap_or(0);
 
     // Both should show Working with a timer
     assert!(out1.contains("Working"));

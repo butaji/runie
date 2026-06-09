@@ -48,12 +48,12 @@ mod tests {
 
     #[test]
     fn fuzzy_filters_candidates() {
-        let candidates = vec!["main.rs", "lib.rs", "README.md", "Cargo.toml"];
+        let candidates = ["main.rs", "lib.rs", "README.md", "Cargo.toml"];
         let query = "mr";
         let mut results: Vec<_> = candidates.iter()
             .filter_map(|c| fuzzy_match(query, c).map(|s| (c, s)))
             .collect();
-        results.sort_by(|a, b| b.1.cmp(&a.1));
+        results.sort_by_key(|b| std::cmp::Reverse(b.1));
         assert_eq!(results[0].0, &"main.rs", "Should match main.rs best");
     }
 }

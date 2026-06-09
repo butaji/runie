@@ -1,4 +1,4 @@
-use crate::model::{AppState, Role};
+use crate::model::AppState;
 use crate::event::Event;
 use crate::ui::LazyCache;
 

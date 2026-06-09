@@ -1,5 +1,4 @@
 use crate::model::{AppState, ChatMessage, Role};
-use crate::event::Event;
 use crate::ui::Element;
 
 fn fresh_state() -> AppState {

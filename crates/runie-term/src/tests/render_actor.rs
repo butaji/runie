@@ -1,4 +1,4 @@
-use runie_core::{AppState, Event, Role, Snapshot};
+use runie_core::{AppState, Event, Snapshot};
 use ratatui::{backend::TestBackend, Terminal};
 use runie_tui::ui::draw_snapshot;
 

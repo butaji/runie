@@ -52,7 +52,7 @@ fn agent_message_is_low_contrast_not_bright() {
     let colors = line_colors(&term, |l| l.contains("Hello agent"));
     let bright = color_fg_bright();
     assert!(
-        !colors.iter().any(|c| *c == bright),
+        !colors.contains(&bright),
         "Agent message should NOT use fg_bright color, got: {:?}", colors
     );
 }
@@ -69,7 +69,7 @@ fn thought_is_low_contrast_not_accent() {
     let colors = line_colors(&term, |l| l.contains("Thought"));
     let accent = color_accent();
     assert!(
-        !colors.iter().any(|c| *c == accent),
+        !colors.contains(&accent),
         "Thought should NOT use accent color, got: {:?}", colors
     );
 }
@@ -84,7 +84,7 @@ fn tool_header_is_low_contrast_not_success() {
     let colors = line_colors(&term, |l| l.contains("ls") && l.contains("✓"));
     let success = color_success();
     assert!(
-        !colors.iter().any(|c| *c == success),
+        !colors.contains(&success),
         "Tool header should NOT use success color, got: {:?}", colors
     );
 }
@@ -118,7 +118,7 @@ fn user_message_is_bright() {
     let colors = line_colors(&term, |l| l.contains("Hi"));
     let user_color = style_user().fg.unwrap();
     assert!(
-        colors.iter().any(|c| *c == user_color),
+        colors.contains(&user_color),
         "User message SHOULD use user style color, got: {:?}", colors
     );
 }
@@ -133,7 +133,7 @@ fn status_active_is_success() {
     let colors = line_colors(&term, |l| l.contains("Working"));
     let success = color_success();
     assert!(
-        colors.iter().any(|c| *c == success),
+        colors.contains(&success),
         "Active status SHOULD use success color, got: {:?}", colors
     );
 }
@@ -149,7 +149,7 @@ fn status_idle_is_dim() {
     let _dim = color_dim();
     let fg = color_fg();
     assert!(
-        !colors.iter().any(|c| *c == fg),
+        !colors.contains(&fg),
         "Idle status should NOT use fg color, got: {:?}", colors
     );
 }

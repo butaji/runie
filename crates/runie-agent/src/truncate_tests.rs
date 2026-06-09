@@ -1,4 +1,4 @@
-use crate::truncate::{truncate_head, truncate_tail, TruncationPolicy, TruncatedOutput};
+use crate::truncate::{truncate_head, truncate_tail, TruncationPolicy};
 
 fn policy(lines: usize, bytes: usize) -> TruncationPolicy {
     TruncationPolicy { max_lines: lines, max_bytes: bytes }
