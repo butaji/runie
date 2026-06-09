@@ -28,21 +28,23 @@ impl AnyProvider {
     }
 
     fn build_with_config(provider: &str, model: &str, config: &Config) -> Self {
-        if let Some(custom) = config.model_providers.get(provider) {
-            return Self::OpenAi(OpenAiProvider::new(
-                custom.api_key.clone(),
-                model,
-            ).with_base_url(custom.base_url.clone()));
+        let resolver = crate::config::ProviderConfigResolver::from_config(config);
+
+        if let Some(api_key) = resolver.resolve_api_key(provider) {
+            if !api_key.is_empty() {
+                let base_url = resolver.resolve_base_url(provider);
+                let mut p = OpenAiProvider::new(api_key, model);
+                if let Some(url) = base_url {
+                    p = p.with_base_url(url);
+                }
+                return Self::OpenAi(p);
+            }
         }
+
         match provider {
             "openai" => {
-                let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-                if key.is_empty() {
-                    eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
-                    Self::Mock(MockProvider::default())
-                } else {
-                    Self::OpenAi(OpenAiProvider::new(key, model))
-                }
+                eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
+                Self::Mock(MockProvider::default())
             }
             _ => {
                 if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
