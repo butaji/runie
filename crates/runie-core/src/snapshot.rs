@@ -2,8 +2,15 @@
 //! The event loop builds snapshots; the render actor draws them.
 //! Zero blocking I/O in the event loop by design.
 
-use crate::model::VisibleRegion;
 use crate::ui::elements::Element;
+
+/// A viewport into the element cache — elements plus how many
+/// lines to skip from the top of the first element.
+#[derive(Clone, Copy)]
+pub struct VisibleRegion<'a> {
+    pub elements: &'a [Element],
+    pub skip_lines: usize,
+}
 
 #[derive(Clone)]
 pub struct Snapshot {
@@ -15,6 +22,8 @@ pub struct Snapshot {
     pub hint_text: String,
     pub at_suggestions: Option<Vec<String>>,
     pub at_selected: Option<usize>,
+    pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
+    pub path_selected: Option<usize>,
     pub turn_active: bool,
     pub spinner_frame: char,
     pub scroll: usize,

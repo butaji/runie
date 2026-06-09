@@ -30,8 +30,7 @@ use crate::syntax::highlight_code;
 use runie_core::format_timestamp;
 use crate::theme::{
     GLYPH_USER, GLYPH_AGENT, GLYPH_INDENT,
-    GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_INPUT,
-    SCROLLBAR_TRACK, SCROLLBAR_THUMB,
+    PANEL_INPUT, SCROLLBAR_TRACK, SCROLLBAR_THUMB,
     code_header_label, thinking_line, tool_running_line, tool_done_header,
     tool_summary_line, turn_complete_line, thought_summary_line,
     style_user, style_agent, style_thought, style_thinking, style_thought_summary,
@@ -39,7 +38,6 @@ use crate::theme::{
     style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
     style_status_active, style_border, style_border_flash,
     style_code_header, style_input_cursor, style_placeholder, style_hint,
-    style_popup_selected, style_popup_unselected, style_popup_border,
     color_fg_bright, color_fg, set_current_theme,
 };
 
@@ -56,8 +54,9 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     status(f, snap, c[1]);
     input(f, snap, c[2]);
     hints(f, snap, c[3]);
-    at_suggestions(f, snap);
-    command_palette(f, snap);
+    crate::popups::at_suggestions(f, snap);
+    crate::popups::path_suggestions(f, snap);
+    crate::popups::command_palette(f, snap);
 }
 
 /// Legacy entry point for code that still builds AppState directly.
@@ -391,91 +390,7 @@ fn hints(f: &mut Frame, _snap: &Snapshot, area: Rect) {
     f.render_widget(Paragraph::new(hints_text).style(style_hint()), area);
 }
 
-fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
-    let suggestions = match &snap.at_suggestions {
-        Some(s) if !s.is_empty() => s,
-        _ => return,
-    };
-    let selected = snap.at_selected.unwrap_or(0).min(suggestions.len().saturating_sub(1));
-    let area = f.area();
-    let display_count = suggestions.len().min(8) as u16;
-    let max_height = display_count + 4;
-    let popup_area = Rect {
-        x: area.x + 1,
-        y: area.y + area.height.saturating_sub(4 + max_height),
-        width: area.width.saturating_sub(2).max(20),
-        height: max_height,
-    };
-    let mut lines: Vec<Line> = suggestions
-        .iter()
-        .take(8)
-        .enumerate()
-        .map(|(i, s)| {
-            let prefix = if i == selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
-            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
-            Line::from(format!("{}{}", prefix, s)).style(style)
-        })
-        .collect();
-    lines.push(Line::from(""));
-    lines.push(
-        Line::from("Tab=cycle Enter=insert Esc=close").style(style_hint()),
-    );
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(format!(" @ files ({}) ", suggestions.len()))
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
-}
 
-fn command_palette(f: &mut Frame, snap: &Snapshot) {
-    let (filter, selected) = match &snap.dialog {
-        Some(runie_core::commands::DialogState::CommandPalette { filter, selected }) => (filter.clone(), *selected),
-        _ => return,
-    };
-    let popup_area = palette_popup_rect(f.area());
-    let lines = build_palette_lines(snap, &filter, selected);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Commands ")
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
-}
-
-fn palette_popup_rect(area: Rect) -> Rect {
-    let popup_width = 60u16.min(area.width.saturating_sub(4)).max(20);
-    let popup_height = 18u16.min(area.height.saturating_sub(4)).max(6);
-    Rect {
-        x: area.x + (area.width.saturating_sub(popup_width)) / 2,
-        y: area.y + (area.height.saturating_sub(popup_height)) / 2,
-        width: popup_width,
-        height: popup_height,
-    }
-}
-
-fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
-    let mut lines: Vec<Line> = Vec::new();
-    lines.push(Line::from(format!("> {}", filter)).style(style_user()));
-    lines.push(Line::from(""));
-
-    if snap.palette_items.is_empty() {
-        lines.push(Line::from("No commands found").style(style_hint()));
-        return lines;
-    }
-
-    let mut last_category = String::new();
-    for (i, (name, desc, category)) in snap.palette_items.iter().enumerate() {
-        if category != &last_category {
-            if !last_category.is_empty() {
-                lines.push(Line::from(""));
-            }
-            lines.push(Line::from(format!("  {}", category)).style(style_thinking()));
-            last_category = category.clone();
-        }
-        let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
-        lines.push(Line::from(format!("    {:12} {}", name, desc)).style(style));
-    }
-    lines
-}
 
 fn estimate_element_tokens(elem: &Element) -> usize {
     use runie_core::Element::*;

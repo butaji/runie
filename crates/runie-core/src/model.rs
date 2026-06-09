@@ -1,18 +1,9 @@
 //! Model — Application State (mutable borrow, no cloning per event)
-use crate::snapshot::Snapshot;
+use crate::snapshot::{Snapshot, VisibleRegion};
 use crate::ui::elements::Element;
-
 
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
-
-/// A viewport into the element cache — elements plus how many
-/// lines to skip from the top of the first element.
-#[derive(Clone, Copy)]
-pub struct VisibleRegion<'a> {
-    pub elements: &'a [Element],
-    pub skip_lines: usize,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QueuedMessageKind {
@@ -147,6 +138,10 @@ pub struct AppState {
     pub at_selected: Option<usize>,
     /// Last @-ref query to avoid redundant filesystem calls
     pub last_at_query: Option<String>,
+    /// Path completion suggestions (Tab-triggered)
+    pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
+    /// Selected index in path completion suggestions
+    pub path_selected: Option<usize>,
     /// Global collapse flag — when true, ALL thoughts/tools render collapsed.
     /// New elements automatically respect this setting.
     pub all_collapsed: bool,
@@ -196,6 +191,7 @@ impl Default for AppState {
             read_only: false,
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
+            path_suggestions: None, path_selected: None,
             all_collapsed: false, last_assistant_index: None, thought_seq: 0,
             input_history: Vec::new(), history_pos: None,
             undo_stack: Vec::new(), redo_stack: Vec::new(),
@@ -322,6 +318,8 @@ impl AppState {
             hint_text: self.hint_text(),
             at_suggestions: self.at_suggestions.clone(),
             at_selected: self.at_selected,
+            path_suggestions: self.path_suggestions.clone(),
+            path_selected: self.path_selected,
             turn_active: self.turn_active,
             input_flash: self.input_flash,
             placeholder: self.placeholder.clone(),
