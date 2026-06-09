@@ -56,4 +56,5 @@ pub enum Event {
 
     SpawnAgent,
     ToggleExpand,
+    Dequeue,
 }

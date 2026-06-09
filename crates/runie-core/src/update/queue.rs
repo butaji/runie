@@ -118,6 +118,17 @@ impl AppState {
         }
     }
 
+    pub(crate) fn dequeue(&mut self) {
+        if let Some(msg) = self.message_queue.pop() {
+            self.input = msg.content;
+            self.cursor_pos = self.input.len();
+            self.mark_dirty();
+        } else {
+            self.input_flash = 3;
+            self.mark_dirty();
+        }
+    }
+
     fn try_deliver_follow_up(&mut self) {
         if let Some(idx) = self.message_queue.iter().position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp) {
             let content = self.message_queue.remove(idx).content;
