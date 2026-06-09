@@ -1,9 +1,14 @@
 //! Tests for chat feed color assignments
 
 use ratatui::style::Color;
-use runie_core::{AppState, ChatMessage, Event, Role};
+use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use crate::theme::{set_current_theme, color_fg, color_dim, color_accent};
+
+fn setup() {
+    set_current_theme("silkcircuit-neon");
+}
 
 fn draw_state(state: &mut AppState) -> Terminal<TestBackend> {
     let backend = TestBackend::new(60, 20);
@@ -55,22 +60,24 @@ fn line_colors(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -
 }
 
 #[test]
-fn agent_message_uses_fg_not_bright() {
+fn agent_message_uses_fg() {
+    setup();
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello agent".into() });
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Hello agent"));
-    let fg = Color::Rgb(138, 138, 138);
+    let fg = color_fg();
     assert!(
         colors.iter().any(|c| *c == fg),
-        "Agent message should use fg (#8a8a8a), got colors: {:?}", colors
+        "Agent message should use fg color, got colors: {:?}", colors
     );
 }
 
 #[test]
 fn turn_complete_uses_dim() {
+    setup();
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done".into() });
@@ -78,44 +85,46 @@ fn turn_complete_uses_dim() {
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Turn completed"));
-    let dim = Color::Rgb(74, 74, 74);
+    let dim = color_dim();
     assert!(
         colors.iter().any(|c| *c == dim),
-        "TurnComplete should use dim (#4a4a4a), got colors: {:?}", colors
+        "TurnComplete should use dim color, got colors: {:?}", colors
     );
 }
 
 #[test]
 fn status_idle_uses_dim() {
+    setup();
     let mut state = AppState::default();
     state.current_provider = "openai".into();
     state.current_model = "gpt-4".into();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("openai/gpt-4"));
-    let dim = Color::Rgb(74, 74, 74);
+    let dim = color_dim();
     assert!(
         colors.iter().any(|c| *c == dim),
-        "Idle status should use dim (#4a4a4a), got colors: {:?}", colors
+        "Idle status should use dim color, got colors: {:?}", colors
     );
 }
 
 #[test]
-fn tool_done_output_uses_fg_not_fg_mid() {
+fn tool_done_output_uses_fg() {
+    setup();
     let mut state = AppState::default();
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1.txt".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("file1.txt"));
-    let fg = Color::Rgb(138, 138, 138);
-    let fg_mid = Color::Rgb(168, 168, 168);
+    let fg = color_fg();
     assert!(
         colors.iter().any(|c| *c == fg),
-        "Tool output should use fg (#8a8a8a) for clarity, got colors: {:?}", colors
+        "Tool output should use fg color, got colors: {:?}", colors
     );
 }
 
 #[test]
 fn thought_uses_dim() {
+    setup();
     let mut state = AppState::default();
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
@@ -123,32 +132,34 @@ fn thought_uses_dim() {
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Thought"));
-    let dim = Color::Rgb(74, 74, 74);
+    let dim = color_dim();
     assert!(
         colors.iter().any(|c| *c == dim),
-        "Thought marker should use dim (#4a4a4a), got colors: {:?}", colors
+        "Thought marker should use dim color, got colors: {:?}", colors
     );
 }
 
 #[test]
 fn empty_state_uses_dim() {
+    setup();
     let mut state = AppState::default();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Type a message"));
-    let dim = Color::Rgb(74, 74, 74);
+    let dim = color_dim();
     assert!(
         colors.iter().any(|c| *c == dim),
-        "Empty state hint should use dim (#4a4a4a), got colors: {:?}", colors
+        "Empty state hint should use dim color, got colors: {:?}", colors
     );
 }
 
 #[test]
 fn inline_code_parsed_in_markdown() {
+    setup();
     use crate::markdown::parse_inline_markdown;
     let spans = parse_inline_markdown("use `cargo test` to run");
     let code_span = spans.iter().find(|s| s.content == "cargo test");
     assert!(code_span.is_some(), "Should have code span 'cargo test'");
-    let accent = Color::Rgb(139, 124, 244);
+    let accent = color_accent();
     assert_eq!(
         code_span.unwrap().style.fg.unwrap_or(Color::Reset),
         accent,
@@ -158,6 +169,7 @@ fn inline_code_parsed_in_markdown() {
 
 #[test]
 fn inline_code_with_bg_highlight() {
+    setup();
     use crate::markdown::parse_inline_markdown;
     let spans = parse_inline_markdown("`hello`");
     let code_span = spans.iter().find(|s| s.content == "hello").expect("code span");

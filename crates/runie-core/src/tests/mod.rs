@@ -15,6 +15,8 @@ mod misc;
 #[cfg(test)]
 pub mod slash;
 #[cfg(test)]
+mod theme_slash;
+#[cfg(test)]
 mod tokens;
 #[cfg(test)]
 mod queue;

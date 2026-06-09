@@ -29,7 +29,7 @@ use crate::markdown::{extract_code_blocks, md_to_spans, parse_inline_markdown_wi
 use crate::syntax::highlight_code;
 use runie_core::format_timestamp;
 use crate::theme::{
-    C, GLYPH_USER, GLYPH_AGENT, GLYPH_INDENT,
+    GLYPH_USER, GLYPH_AGENT, GLYPH_INDENT,
     GLYPH_SELECTED, GLYPH_UNSELECTED, PANEL_INPUT,
     SCROLLBAR_TRACK, SCROLLBAR_THUMB,
     code_header_label, thinking_line, tool_running_line, tool_done_header,
@@ -40,10 +40,12 @@ use crate::theme::{
     style_status_active, style_border, style_border_flash,
     style_code_header, style_input_cursor, style_placeholder, style_hint,
     style_popup_selected, style_popup_unselected, style_popup_border,
+    color_fg_bright, color_fg, set_current_theme,
 };
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
+    set_current_theme(&snap.theme_name);
     let c = vstack(f.area(), &[
         Constraint::Min(3),
         Constraint::Length(1),
@@ -172,7 +174,7 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
-        UserMessage { content, timestamp } => render_message(content, *timestamp, GLYPH_USER, C.fg_bright),
+        UserMessage { content, timestamp } => render_message(content, *timestamp, GLYPH_USER, color_fg_bright()),
         AgentMessage { content, timestamp } => render_agent_message(content, *timestamp),
         Thinking { started, .. } => vec![Line::from(
             thinking_line(started.elapsed().as_secs_f64())
@@ -197,7 +199,7 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
 fn render_message(content: &str, timestamp: f64, first_prefix: &'static str, base_color: Color) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let ts_str = format_timestamp(timestamp);
-    let base_style = if base_color == C.fg_bright { style_user() } else { style_agent() };
+    let base_style = if base_color == color_fg_bright() { style_user() } else { style_agent() };
     for (i, line) in content.lines().enumerate() {
         let prefix = if i == 0 { first_prefix } else { GLYPH_INDENT };
         let ts = format!(" {:>5}", ts_str);
@@ -301,7 +303,7 @@ fn render_msg_line(line: &str, timestamp: f64, is_first: bool) -> Line<'static> 
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
     let ts = format!(" {:>5}", format_timestamp(timestamp));
     let mut spans = vec![Span::styled(prefix.to_string(), style_agent())];
-    spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, C.fg)));
+    spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, color_fg())));
     spans.push(Span::styled(ts, style_timestamp()));
     Line::from(spans)
 }
