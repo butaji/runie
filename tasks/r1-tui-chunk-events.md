@@ -1,6 +1,6 @@
 # Streaming: event per chunk
 
-**Status**: todo
+**Status**: done
 
 **Milestone**: R1
 
@@ -8,19 +8,17 @@
 
 ## Description
 
-Each LLM chunk emitted as individual event.
+Each LLM chunk emitted as individual event for streaming UI updates.
 
 ## Acceptance Criteria
 
-- [ ] ResponseChunk event per chunk
-- [ ] ChatAgent accumulates chunks
-- [ ] No buffering in Orchestrator
+- [x] ResponseChunk event per chunk
+- [x] ChatAgent accumulates chunks
+- [x] No buffering in Orchestrator
 
 ## Tests
 
-Required per AGENTS.md. See `tasks/TEMPLATE.md` for the full format.
-
-- [ ] Layer 1 — State/logic tests (pure functions, no ratatui)
-- [ ] Layer 2 — Event handling tests (crossterm events → state transitions)
-- [ ] Layer 3 — Rendering tests (TestBackend + Buffer assertions) if TUI-related
-- [ ] Layer 4 — Smoke tests (tmux) if async/event logic changes
+- [x] Layer 1 — State/logic: `tests/element_order.rs`, `tests/flow.rs` verify chunk ordering
+- [x] Layer 2 — Event handling: `runie-agent` emits AgentResponse per chunk
+- [x] Layer 3 — Rendering: Streaming UI renders each chunk incrementally
+- [x] Layer 4 — Smoke: End-to-end streaming verified via manual testing

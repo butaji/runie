@@ -20,6 +20,20 @@ pub enum QueuedMessageKind {
     FollowUp,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DeliveryMode {
+    /// Each message triggers a separate LLM call
+    OneAtATime,
+    /// All queued messages delivered together in one LLM call
+    All,
+}
+
+impl Default for DeliveryMode {
+    fn default() -> Self {
+        DeliveryMode::OneAtATime
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
     pub content: String,
@@ -37,6 +51,10 @@ pub struct AppState {
     pub thinking_started_at: Option<std::time::Instant>,
     pub request_queue: std::collections::VecDeque<(String, String)>,
     pub message_queue: Vec<QueuedMessage>,
+    /// How steering messages are delivered to the LLM
+    pub steering_mode: DeliveryMode,
+    /// How follow-up messages are delivered to the LLM
+    pub follow_up_mode: DeliveryMode,
     pub next_id: u64,
     pub current_request_id: Option<String>,
     pub turn_started_at: Option<std::time::Instant>,
@@ -86,7 +104,10 @@ impl Default for AppState {
             messages: Vec::new(), input: String::new(), cursor_pos: 0,
             streaming: false, scroll: 0, thinking_started_at: None,
             request_queue: std::collections::VecDeque::new(),
-            message_queue: Vec::new(), next_id: 0,
+            message_queue: Vec::new(),
+            steering_mode: DeliveryMode::OneAtATime,
+            follow_up_mode: DeliveryMode::OneAtATime,
+            next_id: 0,
             current_request_id: None, turn_started_at: None,
             current_tool_name: None, tool_started_at: None,
             intermediate_step_count: 0, animation_frame: 0,
