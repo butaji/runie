@@ -51,6 +51,11 @@ pub enum Event {
 
     SwitchModel { provider: String, model: String },
     SwitchTheme { name: String },
+    CycleThinkingLevel,
+    SetThinkingLevel(crate::model::ThinkingLevel),
+    ToggleReadOnly,
+    TrustProject,
+    UntrustProject,
     FollowUp,
     Abort,
 

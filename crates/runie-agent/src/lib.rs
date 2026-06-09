@@ -19,6 +19,8 @@ pub struct AgentCommand {
     pub id: String,
     pub provider: String,
     pub model: String,
+    pub thinking_level: runie_core::model::ThinkingLevel,
+    pub read_only: bool,
 }
 
 pub fn build_provider(provider: &str, model: &str) -> AnyProvider {

@@ -30,6 +30,59 @@ pub enum DeliveryMode {
     All,
 }
 
+/// Thinking level for reasoning-intensive tasks.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum ThinkingLevel {
+    #[default]
+    Off,
+    Low,
+    Medium,
+    High,
+}
+
+impl ThinkingLevel {
+    pub fn cycle(self) -> Self {
+        match self {
+            Self::Off => Self::Low,
+            Self::Low => Self::Medium,
+            Self::Medium => Self::High,
+            Self::High => Self::Off,
+        }
+    }
+
+    pub fn prompt_suffix(&self) -> &'static str {
+        match self {
+            Self::Off => "",
+            Self::Low => "\nThink briefly before responding.",
+            Self::Medium => "\nThink step by step before responding.",
+            Self::High => "\nThink deeply and thoroughly. Consider edge cases and alternatives.",
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+        }
+    }
+}
+
+impl std::str::FromStr for ThinkingLevel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "off" => Ok(Self::Off),
+            "low" => Ok(Self::Low),
+            "medium" => Ok(Self::Medium),
+            "high" => Ok(Self::High),
+            _ => Err(format!("Unknown thinking level: {s}")),
+        }
+    }
+}
+
 
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
@@ -81,6 +134,10 @@ pub struct AppState {
     pub session_created_at: f64,
     /// Session last-updated timestamp (unix seconds)
     pub session_updated_at: f64,
+    /// Current thinking level (off → low → medium → high)
+    pub thinking_level: ThinkingLevel,
+    /// Read-only mode — when true, only safe tools are exposed to the LLM
+    pub read_only: bool,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -135,6 +192,8 @@ impl Default for AppState {
             session_display_name: None,
             session_created_at: now(),
             session_updated_at: now(),
+            thinking_level: ThinkingLevel::Off,
+            read_only: false,
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             all_collapsed: false, last_assistant_index: None, thought_seq: 0,
@@ -176,7 +235,7 @@ impl AppState {
         self.dirty = true;
     }
 
-    pub(crate) fn messages_changed(&mut self) {
+    pub fn messages_changed(&mut self) {
         self.message_gen = self.message_gen.wrapping_add(1);
         self.session_updated_at = now();
         self.dirty = true;
@@ -272,6 +331,8 @@ impl AppState {
             provider: self.current_provider.clone(),
             model: self.current_model.clone(),
             theme_name: self.theme_name.clone(),
+            thinking_level: self.thinking_level,
+            read_only: self.read_only,
             queue_count: self.message_queue.len() + self.request_queue.len(),
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),

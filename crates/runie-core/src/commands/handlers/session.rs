@@ -42,6 +42,8 @@ fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
         provider: state.current_provider.clone(),
         model: state.current_model.clone(),
         theme_name: state.theme_name.clone(),
+        thinking_level: state.thinking_level,
+        read_only: state.read_only,
     };
     match crate::session::save(name, &session) {
         Ok(()) => {
@@ -63,6 +65,8 @@ fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
             state.current_provider = session.provider;
             state.current_model = session.model;
             state.theme_name = session.theme_name;
+            state.thinking_level = session.thinking_level;
+            state.read_only = session.read_only;
             state.session_display_name = Some(session.name);
             state.session_created_at = session.created_at;
             state.session_updated_at = session.updated_at;

@@ -32,7 +32,8 @@ impl Drop for Cleanup {
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
     let terminal = setup_terminal()?;
-    let state = AppState::default();
+    let mut state = AppState::default();
+    apply_trust_on_startup(&mut state);
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
@@ -75,6 +76,37 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, bindings: HashMap<Strin
             let is_quit = matches!(&evt, CoreEvent::Quit | CoreEvent::Reset);
             if input_tx.send(evt).await.is_err() { break; }
             if is_quit { break; }
+        }
+    }
+}
+
+fn apply_trust_on_startup(state: &mut AppState) {
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let tm = runie_core::TrustManager::load();
+    match tm.decision_for(&cwd) {
+        Some(runie_core::TrustDecision::Untrusted) => {
+            state.read_only = true;
+        }
+        Some(runie_core::TrustDecision::Trusted) => {
+            state.read_only = false;
+        }
+        None => {
+            state.read_only = false;
+            state.messages.push(runie_core::ChatMessage {
+                role: runie_core::Role::System,
+                content: format!(
+                    "Welcome to runie in {}.\n\nThis project is not yet trusted. \
+                    Run /trust to enable write tools, or /untrust to enforce read-only mode.",
+                    cwd.display()
+                ),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs_f64())
+                    .unwrap_or(0.0),
+                id: "trust_welcome".to_string(),
+                ..Default::default()
+            });
+            state.messages_changed();
         }
     }
 }
@@ -203,6 +235,8 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
             id,
             provider: state.current_provider.clone(),
             model: state.current_model.clone(),
+            thinking_level: state.thinking_level,
+            read_only: state.read_only,
         }).await;
     }
 }
@@ -233,6 +267,7 @@ mod tests {
 
         let cmd = rx.try_recv().expect("Command should be sent to agent");
         assert_eq!(cmd.content, "hello");
+        assert_eq!(cmd.thinking_level, runie_core::model::ThinkingLevel::Off);
     }
 
     #[tokio::test]

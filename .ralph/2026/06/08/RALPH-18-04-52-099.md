@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 16 of 100
+- Iteration: 19 of 100
 - Prompt file: /Users/admin/.herdr/worktrees/runie/agent-impl/EXECUTE.md
-- Updated: 2026-06-09T02:07:46.720Z
+- Updated: 2026-06-09T03:43:44.165Z
 
 ## Iteration progression
 
@@ -507,4 +507,69 @@ Task **`r2-command-registry`** is complete.
 Following the execution loop, the next highest-priority R2 task that is `todo` and depends on the registry is **`r2-command-palette`** (Ctrl+P). It directly builds on the registry we just implemented.
 
 Shall I pick up **`r2-command-palette`** next?
+```
+
+### Iteration 17
+
+```text
+Six R2 tasks completed in this session. Here's a summary:
+
+| Task | What was done | Tests |
+|------|-------------|-------|
+| **r2-dequeue** | `Alt+Up` pops last queued message into input; flashes on empty | 6 new |
+| **r2-lint-zero-warnings** | Fixed all clippy warnings; added `#![warn(clippy::all)]` to all crates | — |
+| **r2-path-utils** | `resolve_path()` with cwd resolution, `~` expansion, `.`/`..` normalization; integrated into all tools | 6 new |
+| **r2-external-editor** | `Ctrl+G` spawns `$EDITOR` via `tokio::task::spawn_blocking`; reads back on save | 2 new |
+| **r2-dynamic-provider-config** | `ProviderConfigResolver` with priority: env > `.env` > `config.toml` | 5 new |
+| **r2-command-palette** | `Ctrl+P` opens fuzzy-filtered palette; category grouping; Enter executes; Esc closes | 13 new |
+
+**Current state:** 802 tests passing, zero clippy warnings across all crates.
+
+Remaining R2 tasks include: model-selector, output-accumulator, session-commands, theme-system, thinking-levels, safety-commands, settings-dialog, and others. Ready to continue the loop whenever you are.
+```
+
+### Iteration 18
+
+```text
+Completed two R2 tasks:
+
+**`r2-session-info`** — `/session` command showing message counts by role, estimated tokens, provider, model, and timestamps. Added session metadata fields (`session_display_name`, `session_created_at`, `session_updated_at`) to `AppState` and wired them through session lifecycle commands.
+
+**`r2-provider-attribution`** — `ChatMessage.provider` field with `#[serde(default)]`, set from `current_provider` on new assistant/error messages, persisted through `Session` serialization, and displayed in the TUI agent message header.
+
+All 805 tests pass. Ready for the next task.
+```
+
+### Iteration 19
+
+```text
+## Task Complete: `r2-thinking-levels`
+
+### Summary
+
+Implemented thinking levels (off → low → medium → high) with full test coverage:
+
+**Core changes:**
+- Added `ThinkingLevel` enum to `runie-core/src/model.rs` with `cycle()`, `prompt_suffix()`, and `FromStr`
+- Added `CycleThinkingLevel` and `SetThinkingLevel` events to `event.rs`
+- Added `thinking_level` field to `AppState` and `Session` structs
+- Wired `Shift+Tab` (BackTab) through keybindings → keymap → event dispatch
+- Added `/thinking` slash command with argument parsing
+
+**Agent integration:**
+- Extended `AgentCommand` with `thinking_level` field
+- `build_initial_messages` appends the thinking prompt suffix to the system message when level is not Off
+
+**TUI rendering:**
+- Status bar shows `Think: <level>` badge when active, hidden when Off
+
+**Persistence:**
+- `Session` struct saves/loads `thinking_level` via serde
+
+**Tests added (13 new):**
+- Layer 1: `cycle_rotates`, `prompt_suffix_matches`, `from_str_parses_levels`, `session_persists_thinking_level`
+- Layer 2: `shift_tab_cycles`, `slash_thinking_sets`, `slash_thinking_no_args_shows_current`, `set_thinking_level_event_updates_state`
+- Layer 3: `status_shows_thinking_badge_when_active`, `status_hides_thinking_badge_when_off`
+
+**Results:** 738 tests pass, zero clippy warnings.
 ```

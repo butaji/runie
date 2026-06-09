@@ -1,5 +1,5 @@
 //! Tests for agent turn execution
-use crate::{AgentCommand, run_agent_turn};
+use crate::{AgentCommand, run_agent_turn, turn::build_initial_messages};
 use runie_core::Event;
 
 #[tokio::test]
@@ -9,6 +9,8 @@ async fn test_agent_loop_simple_response() {
         id: "req.0".to_string(),
         provider: "mock".to_string(),
         model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -38,6 +40,8 @@ async fn test_agent_loop_with_tool_call() {
         id: "req.0".to_string(),
         provider: "mock".to_string(),
         model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -67,6 +71,8 @@ async fn test_agent_loop_respects_max_iterations() {
         id: "req.0".to_string(),
         provider: "mock".to_string(),
         model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 3)
@@ -82,6 +88,8 @@ async fn test_agent_loop_events_have_correct_id() {
         id: "req.42".to_string(),
         provider: "mock".to_string(),
         model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -99,4 +107,45 @@ async fn test_agent_loop_events_have_correct_id() {
         };
         assert_eq!(evt_id, "req.42");
     }
+}
+
+#[test]
+fn read_only_filters_tools() {
+    let cmd_ro = AgentCommand {
+        content: "test".to_string(),
+        id: "req.0".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: true,
+    };
+    let msgs_ro = build_initial_messages(&cmd_ro);
+    let system_ro = match &msgs_ro[0] {
+        runie_core::Message::System { content } => content.clone(),
+        _ => panic!("expected system message"),
+    };
+    assert!(system_ro.contains("read_file"), "read-only includes read_file");
+    assert!(system_ro.contains("list_dir"), "read-only includes list_dir");
+    assert!(system_ro.contains("grep"), "read-only includes grep");
+    assert!(system_ro.contains("find"), "read-only includes find");
+    assert!(!system_ro.contains("write_file"), "read-only excludes write_file");
+    assert!(!system_ro.contains("edit_file"), "read-only excludes edit_file");
+    assert!(!system_ro.contains("bash"), "read-only excludes bash");
+
+    let cmd_rw = AgentCommand {
+        content: "test".to_string(),
+        id: "req.1".to_string(),
+        provider: "mock".to_string(),
+        model: "echo".to_string(),
+        thinking_level: runie_core::model::ThinkingLevel::Off,
+        read_only: false,
+    };
+    let msgs_rw = build_initial_messages(&cmd_rw);
+    let system_rw = match &msgs_rw[0] {
+        runie_core::Message::System { content } => content.clone(),
+        _ => panic!("expected system message"),
+    };
+    assert!(system_rw.contains("write_file"), "read-write includes write_file");
+    assert!(system_rw.contains("edit_file"), "read-write includes edit_file");
+    assert!(system_rw.contains("bash"), "read-write includes bash");
 }

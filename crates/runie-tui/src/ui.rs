@@ -104,6 +104,12 @@ fn build_status_text(snap: &Snapshot) -> String {
             parts.push(format!("{} Working...", snap.spinner_frame));
         }
     }
+    if snap.thinking_level != runie_core::model::ThinkingLevel::Off {
+        parts.push(format!("Think: {}", snap.thinking_level.as_str()));
+    }
+    if snap.read_only {
+        parts.push("🔒 RO".to_string());
+    }
     parts.join(" · ")
 }
 

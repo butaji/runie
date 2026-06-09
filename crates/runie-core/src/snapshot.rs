@@ -24,6 +24,10 @@ pub struct Snapshot {
     pub model: String,
     /// Active theme name for the render actor
     pub theme_name: String,
+    /// Current thinking level for status display
+    pub thinking_level: crate::model::ThinkingLevel,
+    /// Read-only mode active — only safe tools exposed to LLM
+    pub read_only: bool,
     /// Flash countdown for invalid input feedback.
     pub input_flash: u8,
     /// Placeholder text shown when input is empty.

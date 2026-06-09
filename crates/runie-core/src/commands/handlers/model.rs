@@ -3,6 +3,7 @@ use crate::model::AppState;
 
 pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("model", "Switch model", &["m"], CommandCategory::Model, handle_model));
+    registry.register(cmd("thinking", "Set thinking level (off/low/medium/high)", &[], CommandCategory::Model, handle_thinking));
     registry.register(cmd("scoped-models", "Enable/disable models for cycling", &[], CommandCategory::Model, handle_scoped_models));
 }
 
@@ -46,6 +47,23 @@ fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
             "Current model: {}/{}. Usage: /model provider/model or /model model",
             state.current_provider, state.current_model
         )),
+    }
+}
+
+fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
+    let rest = args.trim();
+    if rest.is_empty() {
+        return CommandResult::Message(format!(
+            "Current thinking level: {}. Usage: /thinking off|low|medium|high",
+            state.thinking_level.as_str()
+        ));
+    }
+    match rest.parse::<crate::model::ThinkingLevel>() {
+        Ok(level) => {
+            state.thinking_level = level;
+            CommandResult::Message(format!("Thinking level set to: {}", state.thinking_level.as_str()))
+        }
+        Err(e) => CommandResult::Message(format!("Error: {e}")),
     }
 }
 

@@ -14,6 +14,8 @@ pub struct Session {
     pub provider: String,
     pub model: String,
     pub theme_name: String,
+    pub thinking_level: crate::model::ThinkingLevel,
+    pub read_only: bool,
 }
 
 /// Session store — handles save/load/list/delete
@@ -144,6 +146,8 @@ mod tests {
             provider: "mock".into(),
             model: "echo".into(),
             theme_name: "silkcircuit-neon".into(),
+            thinking_level: crate::model::ThinkingLevel::Off,
+            read_only: false,
         }
     }
 
@@ -229,6 +233,7 @@ mod tests {
         assert_eq!(session.name, decoded.name);
         assert_eq!(session.messages.len(), decoded.messages.len());
         assert_eq!(session.theme_name, decoded.theme_name);
+        assert_eq!(session.thinking_level, decoded.thinking_level);
     }
 
     #[test]

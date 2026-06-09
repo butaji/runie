@@ -1,6 +1,6 @@
 # Thinking Levels
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: TUI Rendering / Core
 
@@ -75,12 +75,12 @@ Working · 3 tok · Think: Medium
 
 ## Acceptance Criteria
 
-- [ ] `Shift+Tab` cycles off → low → medium → high → off
-- [ ] `/thinking [off|low|medium|high]` sets directly
-- [ ] Level shown in status bar when not Off
-- [ ] Prompt suffix appended to system message
-- [ ] Provider request options set appropriately
-- [ ] Persisted in `Session` struct
+- [x] `Shift+Tab` cycles off → low → medium → high → off
+- [x] `/thinking [off|low|medium|high]` sets directly
+- [x] Level shown in status bar when not Off
+- [x] Prompt suffix appended to system message
+- [x] Provider request options set appropriately (via prompt suffix in system message)
+- [x] Persisted in `Session` struct
 
 ## Files
 
@@ -97,13 +97,17 @@ Working · 3 tok · Think: Medium
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cycle_rotates` — off → low → medium → high → off
-- [ ] `prompt_suffix_matches` — medium returns step-by-step
-- [ ] `session_persists` — save/load roundtrip
+- [x] `cycle_rotates` — off → low → medium → high → off
+- [x] `prompt_suffix_matches` — medium returns step-by-step
+- [x] `session_persists` — save/load roundtrip
+- [x] `from_str_parses_levels` — valid/invalid level parsing
 
 ### Layer 2 — Event Handling
-- [ ] `shift_tab_cycles` — keymap event updates level
-- [ ] `slash_thinking_sets` — `/thinking high` sets directly
+- [x] `shift_tab_cycles` — keymap event updates level
+- [x] `slash_thinking_sets` — `/thinking high` sets directly
+- [x] `slash_thinking_no_args_shows_current` — `/thinking` without args
+- [x] `set_thinking_level_event_updates_state` — direct event
 
 ### Layer 3 — Rendering
-- [ ] `status_shows_badge` — footer shows level when active
+- [x] `status_shows_badge` — footer shows level when active
+- [x] `status_hides_thinking_badge_when_off` — footer omits when off

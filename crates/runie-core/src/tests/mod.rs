@@ -82,3 +82,7 @@ mod paste;
 mod fuzzy;
 #[cfg(test)]
 mod palette;
+#[cfg(test)]
+mod thinking;
+#[cfg(test)]
+mod safety;
