@@ -41,6 +41,9 @@ pub mod model_scroll;
 pub mod session_tree;
 pub mod auth;
 pub mod tool_markers;
+pub mod dialog;
+pub mod notification;
+pub mod themes;
 #[cfg(test)]
 pub mod dsl;
 

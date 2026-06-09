@@ -22,12 +22,12 @@ pub enum AnyProvider {
 }
 
 impl AnyProvider {
-    fn build(provider: &str, model: &str) -> Self {
+    fn build(provider: &str, model: &str) -> (Self, Option<String>) {
         let config = Config::load();
         Self::build_with_config(provider, model, &config)
     }
 
-    fn build_with_config(provider: &str, model: &str, config: &Config) -> Self {
+    fn build_with_config(provider: &str, model: &str, config: &Config) -> (Self, Option<String>) {
         let resolver = crate::config::ProviderConfigResolver::from_config(config);
 
         if let Some(api_key) = resolver.resolve_api_key(provider) {
@@ -37,26 +37,30 @@ impl AnyProvider {
                 if let Some(url) = base_url {
                     p = p.with_base_url(url);
                 }
-                return Self::OpenAi(p);
+                return (Self::OpenAi(p), None);
             }
         }
 
         match provider {
             "openai" => {
-                eprintln!("Warning: OPENAI_API_KEY not set, falling back to mock");
-                Self::Mock(MockProvider::default())
+                let warning = format!("OPENAI_API_KEY not set, falling back to mock");
+                (Self::Mock(MockProvider::default()), Some(warning))
             }
             _ => {
                 if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
-                    Self::Mock(MockProvider::with_delay(500, 3000))
+                    (Self::Mock(MockProvider::with_delay(500, 3000)), None)
                 } else {
-                    Self::Mock(MockProvider::default())
+                    (Self::Mock(MockProvider::default()), None)
                 }
             }
         }
     }
 
     pub fn new(provider: &str, model: &str) -> Self {
+        Self::build(provider, model).0
+    }
+
+    pub fn new_with_warning(provider: &str, model: &str) -> (Self, Option<String>) {
         Self::build(provider, model)
     }
 
@@ -71,11 +75,11 @@ impl AnyProvider {
         } else {
             config.provider.as_deref().unwrap_or("mock")
         };
-        Self::build_with_config(provider, model, config)
+        Self::build_with_config(provider, model, config).0
     }
 
     pub fn switch(&mut self, provider: &str, model: &str) {
-        *self = Self::build(provider, model);
+        *self = Self::build(provider, model).0;
     }
 
     pub fn name(&self) -> &'static str {

@@ -10,7 +10,7 @@
 mod keymap;
 mod share;
 
-use crossterm::event::EventStream;
+use crossterm::event::{EventStream, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
@@ -24,7 +24,11 @@ struct Cleanup;
 
 impl Drop for Cleanup {
     fn drop(&mut self) {
-        let _ = crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+        let _ = crossterm::execute!(
+            std::io::stdout(),
+            crossterm::event::PopKeyboardEnhancementFlags,
+            crossterm::terminal::LeaveAlternateScreen,
+        );
         let _ = crossterm::terminal::disable_raw_mode();
     }
 }
@@ -60,6 +64,7 @@ fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
         std::io::stdout(),
         crossterm::terminal::EnterAlternateScreen,
         crossterm::event::EnableBracketedPaste,
+        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES),
     )?;
     Terminal::new(CrosstermBackend::new(std::io::stdout()))
 }
@@ -203,11 +208,12 @@ async fn event_loop(
                     #[cfg(unix)]
                     {
                         // Restore terminal to normal before suspending
-                        let _ = crossterm::terminal::disable_raw_mode();
                         let _ = crossterm::execute!(
                             std::io::stdout(),
+                            crossterm::event::PopKeyboardEnhancementFlags,
                             crossterm::terminal::LeaveAlternateScreen,
                         );
+                        let _ = crossterm::terminal::disable_raw_mode();
 
                         // Send SIGTSTP to ourselves
                         let _ = nix::sys::signal::kill(
@@ -221,6 +227,7 @@ async fn event_loop(
                             std::io::stdout(),
                             crossterm::terminal::EnterAlternateScreen,
                             crossterm::event::EnableBracketedPaste,
+                            PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES),
                         );
 
                         // Force redraw

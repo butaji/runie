@@ -1,5 +1,6 @@
 use ratatui::{
     layout::Rect,
+    style::Style,
     text::Line,
     widgets::Paragraph,
     Frame,
@@ -9,7 +10,16 @@ use runie_core::Snapshot;
 use crate::theme::{
     GLYPH_SELECTED, GLYPH_UNSELECTED, block_popup, style_popup_selected,
     style_popup_unselected, style_hint, style_thinking, style_user, style_tool_header,
+    color_bg_panel,
 };
+use crate::ui::{parse_hint_spans, render_scrollbar};
+
+pub mod panel;
+
+/// Build a Paragraph with the panel background color baked in.
+fn popup_p<'a>(lines: Vec<Line<'a>>) -> Paragraph<'a> {
+    Paragraph::new(lines).style(Style::default().bg(color_bg_panel()))
+}
 
 pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
     let suggestions = match &snap.at_suggestions {
@@ -38,7 +48,12 @@ pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
         .collect();
     lines.push(Line::from(""));
     lines.push(Line::from("Tab=cycle Enter=insert Esc=close").style(style_hint()));
-    f.render_widget(Paragraph::new(lines).block(block_popup(&format!(" @ files ({}) ", suggestions.len()))), popup_area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .style(Style::default().bg(color_bg_panel()))
+            .block(block_popup(&format!(" @ files ({}) ", suggestions.len()))),
+        popup_area,
+    );
 }
 
 pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
@@ -69,7 +84,12 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
         .collect();
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
-    f.render_widget(Paragraph::new(lines).block(block_popup(&format!(" paths ({}) ", items.len()))), popup_area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .style(Style::default().bg(color_bg_panel()))
+            .block(block_popup(&format!(" paths ({}) ", items.len()))),
+        popup_area,
+    );
 }
 
 pub fn command_palette(f: &mut Frame, snap: &Snapshot) {
@@ -77,12 +97,117 @@ pub fn command_palette(f: &mut Frame, snap: &Snapshot) {
         Some(runie_core::commands::DialogState::CommandPalette { filter, selected }) => (filter.clone(), *selected),
         _ => return,
     };
+
     let popup_area = palette_popup_rect(f.area());
-    let lines = build_palette_lines(snap, &filter, selected);
-    f.render_widget(Paragraph::new(lines).block(block_popup(" Commands ")), popup_area);
+    let block = block_popup(" Commands ");
+    let inner = block.inner(popup_area);
+    f.render_widget(Paragraph::new("").block(block), popup_area);
+    f.buffer_mut().set_style(inner, Style::default().bg(color_bg_panel()));
+
+    // Reserve 2 lines at bottom: 1 empty spacer + 1 hotkeys
+    let content_height = inner.height.saturating_sub(2);
+    let hotkeys_area = Rect {
+        x: inner.x,
+        y: inner.y + content_height,
+        width: inner.width,
+        height: 2,
+    };
+    let content_area = Rect {
+        height: content_height,
+        ..inner
+    };
+
+    // Header: filter + separator (always visible, not scrolled)
+    let header_height = 2u16;
+    let header_area = Rect {
+        height: header_height,
+        ..content_area
+    };
+    let items_area = Rect {
+        x: content_area.x,
+        y: content_area.y + header_height,
+        height: content_height.saturating_sub(header_height),
+        width: content_area.width,
+    };
+
+    let sep_width = inner.width as usize;
+    let header_lines = vec![
+        Line::from(format!("❯ {}", filter)).style(style_user()),
+        Line::from("─".repeat(sep_width)).style(style_hint()),
+    ];
+
+    // Build item lines and track which line is selected
+    let mut item_lines: Vec<Line> = Vec::new();
+    let mut selected_line: Option<usize> = None;
+
+    if snap.palette_items.is_empty() {
+        item_lines.push(Line::from("No commands found").style(style_hint()));
+    } else {
+        let mut last_category = String::new();
+        for (i, (name, desc, category)) in snap.palette_items.iter().enumerate() {
+            if category != &last_category {
+                if !last_category.is_empty() {
+                    item_lines.push(Line::from(""));
+                }
+                item_lines.push(Line::from(format!("  {}", category)).style(style_thinking()));
+                last_category = category.clone();
+            }
+            if i == selected {
+                selected_line = Some(item_lines.len());
+            }
+            let prefix = if i == selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
+            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
+            item_lines.push(Line::from(format!("{}{:12} {}", prefix, name, desc)).style(style));
+        }
+    }
+
+    let total_item_lines = item_lines.len();
+    let visible_items_height = items_area.height as usize;
+
+    let scroll_offset = if let Some(sel) = selected_line {
+        if total_item_lines <= visible_items_height {
+            0
+        } else {
+            sel.saturating_sub(visible_items_height / 2)
+                .min(total_item_lines.saturating_sub(visible_items_height))
+        }
+    } else {
+        0
+    };
+
+    let show_scrollbar = total_item_lines > visible_items_height;
+    let items_width = if show_scrollbar {
+        items_area.width.saturating_sub(1)
+    } else {
+        items_area.width
+    };
+    let scroll_area = Rect { width: items_width, ..items_area };
+    let scrollbar_area = Rect {
+        x: items_area.x + items_width,
+        y: items_area.y,
+        width: 1,
+        height: items_area.height,
+    };
+
+    f.render_widget(popup_p(header_lines), header_area);
+    f.render_widget(
+        popup_p(item_lines).scroll((scroll_offset as u16, 0)),
+        scroll_area,
+    );
+
+    if show_scrollbar {
+        render_scrollbar(f, scrollbar_area, total_item_lines, scroll_offset as u16, visible_items_height);
+    }
+
+    // Hotkeys always pinned to bottom with shared parser (empty line + styled hints)
+    let hint_lines = vec![
+        Line::from(""),
+        Line::from(parse_hint_spans("↑↓ navigate · enter select · esc close")),
+    ];
+    f.render_widget(popup_p(hint_lines), hotkeys_area);
 }
 
-fn palette_popup_rect(area: Rect) -> Rect {
+pub fn palette_popup_rect(area: Rect) -> Rect {
     let popup_width = 60u16.min(area.width.saturating_sub(4)).max(20);
     let popup_height = 18u16.min(area.height.saturating_sub(4)).max(6);
     Rect {
@@ -127,7 +252,12 @@ pub fn settings_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("←/→=tab ↑/↓=nav Enter=toggle Esc=close").style(style_hint()));
 
-    f.render_widget(Paragraph::new(lines).block(block_popup(" Settings ")), popup_area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .style(Style::default().bg(color_bg_panel()))
+            .block(block_popup(" Settings ")),
+        popup_area,
+    );
 }
 
 pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
@@ -161,7 +291,12 @@ pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
 
-    f.render_widget(Paragraph::new(lines).block(block_popup(" Select Model ")), popup_area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .style(Style::default().bg(color_bg_panel()))
+            .block(block_popup(" Select Model ")),
+        popup_area,
+    );
 }
 
 pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
@@ -192,7 +327,12 @@ pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
         }
     }
 
-    f.render_widget(Paragraph::new(lines).block(block_popup(" Scoped Models ")), popup_area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .style(Style::default().bg(color_bg_panel()))
+            .block(block_popup(" Scoped Models ")),
+        popup_area,
+    );
 }
 
 pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
@@ -220,37 +360,13 @@ pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select f=cycle-filter Esc=close").style(style_hint()));
 
-    f.render_widget(Paragraph::new(lines).block(block_popup(" Session Tree ")), popup_area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .style(Style::default().bg(color_bg_panel()))
+            .block(block_popup(" Session Tree ")),
+        popup_area,
+    );
 }
 
-fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
-    let mut lines: Vec<Line> = Vec::new();
-    lines.push(Line::from(format!("❯ {}", filter)).style(style_user()));
-    // Separator
-    let sep_width = 56usize;
-    lines.push(Line::from("─".repeat(sep_width)).style(style_hint()));
 
-    if snap.palette_items.is_empty() {
-        lines.push(Line::from("No commands found").style(style_hint()));
-        lines.push(Line::from(""));
-        lines.push(Line::from("↑↓ navigate · enter select · esc close").style(style_hint()));
-        return lines;
-    }
 
-    let mut last_category = String::new();
-    for (i, (name, desc, category)) in snap.palette_items.iter().enumerate() {
-        if category != &last_category {
-            if !last_category.is_empty() {
-                lines.push(Line::from(""));
-            }
-            lines.push(Line::from(format!("  {}", category)).style(style_thinking()));
-            last_category = category.clone();
-        }
-        let prefix = if i == selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
-        let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
-        lines.push(Line::from(format!("{}{:12} {}", prefix, name, desc)).style(style));
-    }
-    lines.push(Line::from(""));
-    lines.push(Line::from("↑↓ navigate · enter select · esc close").style(style_hint()));
-    lines
-}

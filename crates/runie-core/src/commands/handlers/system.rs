@@ -149,18 +149,28 @@ fn handle_hotkeys(_state: &mut AppState, _args: &str) -> CommandResult {
 fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
-        return CommandResult::Message(format!(
-            "Current theme: {}\n\nAvailable themes:\n{}",
-            state.config.theme_name,
-            builtin_themes().join(", ")
-        ));
+        open_theme_selector(state);
+        return CommandResult::None;
     }
     state.config.theme_name = name.to_string();
-    if builtin_themes().contains(&name) {
+    if crate::themes::BUILTIN_THEMES.contains(&name) {
         CommandResult::Message(format!("Theme switched to '{}'", name))
     } else {
         CommandResult::Message(format!("Theme '{}' not found. Using fallback 'runie'. Use /theme to list available themes.", name))
     }
+}
+
+fn open_theme_selector(state: &mut AppState) {
+    use crate::dialog::{ItemAction, Panel, PanelStack};
+    let mut panel = Panel::new("theme", "Choose Theme").header("available themes");
+    for theme in crate::themes::BUILTIN_THEMES {
+        panel = panel.item(
+            *theme,
+            ItemAction::Emit(crate::Event::SwitchTheme { name: theme.to_string() }),
+        );
+    }
+    state.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(panel)));
+    state.mark_dirty();
 }
 
 fn handle_approve(_state: &mut AppState, _args: &str) -> CommandResult {
@@ -171,15 +181,4 @@ fn handle_reject(_state: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RejectEdit)
 }
 
-fn builtin_themes() -> &'static [&'static str] {
-    &[
-        "runie",
-        "silkcircuit-neon", "silkcircuit-glow", "silkcircuit-soft", "silkcircuit-vibrant", "silkcircuit-dawn",
-        "catppuccin-mocha", "catppuccin-macchiato", "catppuccin-frappe", "catppuccin-latte",
-        "dracula", "nord", "gruvbox-dark", "gruvbox-light", "tokyo-night", "tokyo-night-storm", "tokyo-night-moon",
-        "rose-pine", "rose-pine-moon", "rose-pine-dawn", "kanagawa-wave", "kanagawa-dragon", "kanagawa-lotus",
-        "everforest-dark", "everforest-light", "ayu-dark", "ayu-light", "ayu-mirage",
-        "one-dark", "one-light", "github-dark-dimmed", "github-light", "night-owl", "light-owl",
-        "monokai-pro", "palenight", "solarized-dark", "solarized-light", "flexoki-dark", "flexoki-light",
-    ]
-}
+

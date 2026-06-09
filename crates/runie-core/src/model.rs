@@ -112,6 +112,9 @@ pub struct AppState {
     pub(crate) last_assistant_index: Option<usize>,
     pub(crate) thought_seq: u64,
     pub(crate) input_history: Vec<String>,
+    pub transient_message: Option<String>,
+    pub transient_until: Option<std::time::Instant>,
+    pub transient_level: Option<crate::event::TransientLevel>,
     cached_palette_items: Vec<(String, String, String)>,
     cached_palette_filter: Option<String>,
     cached_model_items: Vec<(String, String, String, bool, bool)>,
@@ -149,6 +152,9 @@ impl Default for AppState {
             last_assistant_index: None,
             thought_seq: 0,
             input_history: Vec::new(),
+            transient_message: None,
+            transient_until: None,
+            transient_level: None,
             cached_palette_items: Vec::new(),
             cached_palette_filter: None,
             cached_model_items: Vec::new(),
@@ -324,9 +330,24 @@ impl AppState {
             self.input.input_flash -= 1;
             changed = true;
         }
+        if self.clear_expired_transient() {
+            changed = true;
+        }
         if changed {
             self.view.dirty = true;
         }
+    }
+
+    fn clear_expired_transient(&mut self) -> bool {
+        if let Some(until) = self.transient_until {
+            if std::time::Instant::now() > until {
+                self.transient_message = None;
+                self.transient_until = None;
+                self.transient_level = None;
+                return true;
+            }
+        }
+        false
     }
 
     /// Build an immutable Snapshot for the render actor.
@@ -365,6 +386,8 @@ impl AppState {
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
             auth_providers: crate::auth::AuthStorage::load().tokens.keys().cloned().collect(),
+            transient_message: self.transient_message.clone(),
+            transient_level: self.transient_level,
         }
     }
 

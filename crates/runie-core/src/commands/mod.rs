@@ -16,7 +16,7 @@ pub enum Dialog {
 }
 
 /// Active dialog state with per-dialog data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DialogState {
     CommandPalette {
         filter: String,
@@ -37,6 +37,7 @@ pub enum DialogState {
         filter: crate::session_tree::SessionTreeFilter,
         selected: usize,
     },
+    PanelStack(crate::dialog::PanelStack),
 }
 
 /// Result of executing a slash command

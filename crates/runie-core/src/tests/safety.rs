@@ -29,9 +29,8 @@ fn slash_readonly_toggles() {
     type_str(&mut state, "/readonly");
     state.update(Event::Submit);
     assert!(state.config.read_only, "/readonly toggles read_only");
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
-    let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("Read-only mode enabled"), "confirmation: {}", last.content);
+    assert!(state.transient_message.as_ref().unwrap().contains("Read-only mode enabled"), "confirmation: {:?}", state.transient_message);
+    assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Warning));
 }
 
 #[test]
@@ -49,9 +48,8 @@ fn slash_trust_sets_trusted() {
     type_str(&mut state, "/trust");
     state.update(Event::Submit);
     assert!(!state.config.read_only, "/trust disables read-only");
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
-    let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("trusted"), "trust confirmation: {}", last.content);
+    assert!(state.transient_message.as_ref().unwrap().contains("trusted"), "trust confirmation: {:?}", state.transient_message);
+    assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
 }
 
 #[test]
@@ -60,7 +58,6 @@ fn slash_untrust_sets_untrusted() {
     type_str(&mut state, "/untrust");
     state.update(Event::Submit);
     assert!(state.config.read_only, "/untrust enables read-only");
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
-    let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("untrusted"), "untrust confirmation: {}", last.content);
+    assert!(state.transient_message.as_ref().unwrap().contains("untrusted"), "untrust confirmation: {:?}", state.transient_message);
+    assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Warning));
 }

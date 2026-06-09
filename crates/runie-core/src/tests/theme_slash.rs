@@ -29,15 +29,20 @@ fn theme_invalid_shows_fallback_warning() {
 }
 
 #[test]
-fn theme_no_args_lists_themes() {
+fn theme_no_args_opens_selector_dialog() {
     let mut state = fresh_state();
     type_str(&mut state, "/theme");
     state.update(Event::Submit);
 
+    // No system message — instead a panel dialog should be open
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
-    assert_eq!(sys_msgs.len(), 1);
-    assert!(sys_msgs[0].content.contains("Current theme:"), "should show current theme: {}", sys_msgs[0].content);
-    assert!(sys_msgs[0].content.contains("dracula"), "should list available themes: {}", sys_msgs[0].content);
+    assert_eq!(sys_msgs.len(), 0, "/theme with no args should not emit a system message");
+
+    let dialog = state.open_dialog.as_ref().expect("theme selector dialog should be open");
+    assert!(
+        matches!(dialog, crate::commands::DialogState::PanelStack(stack) if stack.current().unwrap().id == "theme"),
+        "should open theme panel dialog"
+    );
 }
 
 #[test]

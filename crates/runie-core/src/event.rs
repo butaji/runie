@@ -128,4 +128,18 @@ pub enum Event {
     // Session sharing
     ShareSession,
     SystemMessage { content: String },
+
+    // Transient notifications (shown in hints line)
+    TransientMessage { content: String, level: TransientLevel },
+    TransientError { content: String },
+    ClearTransient,
+}
+
+/// Severity level for transient notifications shown in the hints line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransientLevel {
+    Info,
+    Success,
+    Warning,
+    Error,
 }

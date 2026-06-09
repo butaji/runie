@@ -3,14 +3,21 @@
 //! Runie-specific styles are registered as defaults so any theme can override them.
 //! The current theme is cached in a global lock; `draw_snapshot` sets it at frame start.
 
+use ratatui::layout::Alignment;
 use ratatui::style::{Color, Style};
-use ratatui::widgets::{Block, Borders, BorderType};
+use ratatui::text::Line;
+use ratatui::widgets::{Block, Borders, BorderType, TitlePosition};
 use std::sync::{Arc, RwLock};
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
 
 #[cfg(test)]
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[cfg(test)]
+pub fn test_lock() -> std::sync::MutexGuard<'static, ()> {
+    TEST_LOCK.lock().unwrap()
+}
 
 /// Set the active theme by name. Called by `draw_snapshot` at frame start.
 pub fn set_current_theme(name: &str) {
@@ -45,15 +52,7 @@ fn load_theme(name: &str) -> opaline::Theme {
 
 /// List all available builtin theme names.
 pub fn list_builtin_themes() -> Vec<&'static str> {
-    vec![
-        "silkcircuit-neon", "silkcircuit-glow", "silkcircuit-soft", "silkcircuit-vibrant", "silkcircuit-dawn",
-        "catppuccin-mocha", "catppuccin-macchiato", "catppuccin-frappe", "catppuccin-latte",
-        "dracula", "nord", "gruvbox-dark", "gruvbox-light", "tokyo-night", "tokyo-night-storm", "tokyo-night-moon",
-        "rose-pine", "rose-pine-moon", "rose-pine-dawn", "kanagawa-wave", "kanagawa-dragon", "kanagawa-lotus",
-        "everforest-dark", "everforest-light", "ayu-dark", "ayu-light", "ayu-mirage",
-        "one-dark", "one-light", "github-dark-dimmed", "github-light", "night-owl", "light-owl",
-        "monokai-pro", "palenight", "solarized-dark", "solarized-light", "flexoki-dark", "flexoki-light",
-    ]
+    runie_core::themes::BUILTIN_THEMES.to_vec()
 }
 
 const DEFAULT_THEME_TOML: &str = r##"
@@ -177,6 +176,7 @@ fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme {
     theme.register_default_style("runie.input.cursor", opaline::OpalineStyle::fg(bg).with_bg(accent));
     theme.register_default_style("runie.placeholder", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.hint", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.hint.key", opaline::OpalineStyle::fg(theme.color("text.muted")));
     theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(dim));
 
     register_runie_popup_styles(&mut theme);
@@ -200,6 +200,7 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
 // ── Raw color helpers (for markdown, diff, etc.) ───────────────────────
 
 pub fn color_bg() -> Color { Color::from(current_theme().color("bg.base")) }
+pub fn color_bg_panel() -> Color { Color::from(current_theme().color("bg.panel")) }
 pub fn color_fg() -> Color { Color::from(current_theme().color("text.primary")) }
 pub fn color_fg_mid() -> Color { Color::from(current_theme().color("text.secondary")) }
 pub fn color_fg_bright() -> Color {
@@ -209,7 +210,20 @@ pub fn color_fg_bright() -> Color {
 pub fn color_accent() -> Color { Color::from(current_theme().color("accent.primary")) }
 pub fn color_success() -> Color { Color::from(current_theme().color("success")) }
 pub fn color_warning() -> Color { Color::from(current_theme().color("warning")) }
+pub fn color_error() -> Color { Color::from(current_theme().color("error")) }
 pub fn color_dim() -> Color { Color::from(current_theme().color("text.dim")) }
+
+/// Darken an RGB color by a factor (0.0–1.0).
+pub fn darken(color: Color, factor: f32) -> Color {
+    match color {
+        Color::Rgb(r, g, b) => Color::Rgb(
+            (r as f32 * factor).clamp(0.0, 255.0) as u8,
+            (g as f32 * factor).clamp(0.0, 255.0) as u8,
+            (b as f32 * factor).clamp(0.0, 255.0) as u8,
+        ),
+        _ => color,
+    }
+}
 pub fn color_code() -> Color { Color::from(current_theme().color("code.function")) }
 pub fn color_code_bg() -> Color { Color::from(current_theme().color("bg.code")) }
 
@@ -243,6 +257,7 @@ style_fn!(style_code_header, "runie.code.header");
 style_fn!(style_input_cursor, "runie.input.cursor");
 style_fn!(style_placeholder, "runie.placeholder");
 style_fn!(style_hint, "runie.hint");
+style_fn!(style_hint_key, "runie.hint.key");
 style_fn!(style_popup_selected, "runie.popup.selected");
 style_fn!(style_popup_unselected, "runie.popup.unselected");
 style_fn!(style_popup_border, "runie.popup.border");
@@ -260,12 +275,14 @@ pub fn style_chevron(token_held: bool) -> Style {
 // ── Block helpers — centralized border styling ─────────────────────────
 
 /// Build the input panel block with rounded borders.
+/// Title is placed at the bottom-right.
 pub fn block_input(title: &str, flash: bool) -> Block<'_> {
     let border_style = if flash { style_border_flash() } else { style_border() };
     Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .title(title)
+        .title_position(TitlePosition::Bottom)
+        .title(Line::from(title).alignment(Alignment::Right))
         .border_style(border_style)
 }
 
@@ -276,6 +293,7 @@ pub fn block_popup(title: &str) -> Block<'_> {
         .border_type(BorderType::Rounded)
         .title(title)
         .border_style(style_popup_border())
+        .style(Style::default().bg(color_bg_panel()))
 }
 
 // ── Glyphs and formatting helpers (unchanged) ──────────────────────────
