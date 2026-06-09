@@ -297,19 +297,35 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_p_emits_cycle_model_next() {
+    fn ctrl_p_emits_toggle_command_palette() {
         let key = KeyEvent::new(KeyCode::Char('p'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::CycleModelNext)), "Ctrl+P should map to CycleModelNext, got {:?}", result);
+        assert!(matches!(result, Some(runie_core::Event::ToggleCommandPalette)), "Ctrl+P should map to ToggleCommandPalette, got {:?}", result);
     }
 
     #[test]
-    fn shift_ctrl_p_emits_cycle_model_prev() {
+    fn shift_ctrl_p_emits_toggle_command_palette() {
         let key = KeyEvent::new(KeyCode::Char('P'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::CycleModelPrev)), "Shift+Ctrl+P should map to CycleModelPrev, got {:?}", result);
+        assert!(matches!(result, Some(runie_core::Event::ToggleCommandPalette)), "Shift+Ctrl+P should map to ToggleCommandPalette, got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_m_emits_cycle_model_next() {
+        let key = KeyEvent::new(KeyCode::Char('m'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::CycleModelNext)), "Ctrl+M should map to CycleModelNext, got {:?}", result);
+    }
+
+    #[test]
+    fn shift_ctrl_m_emits_cycle_model_prev() {
+        let key = KeyEvent::new(KeyCode::Char('M'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::CycleModelPrev)), "Shift+Ctrl+M should map to CycleModelPrev, got {:?}", result);
     }
 
     #[test]

@@ -254,10 +254,14 @@ pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
 fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::from(format!("> {}", filter)).style(style_user()));
-    lines.push(Line::from(""));
+    // Separator
+    let sep_width = 56usize;
+    lines.push(Line::from("─".repeat(sep_width)).style(style_hint()));
 
     if snap.palette_items.is_empty() {
         lines.push(Line::from("No commands found").style(style_hint()));
+        lines.push(Line::from(""));
+        lines.push(Line::from("↑↓ navigate · enter select · esc close").style(style_hint()));
         return lines;
     }
 
@@ -270,8 +274,11 @@ fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) ->
             lines.push(Line::from(format!("  {}", category)).style(style_thinking()));
             last_category = category.clone();
         }
+        let prefix = if i == selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
         let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
-        lines.push(Line::from(format!("    {:12} {}", name, desc)).style(style));
+        lines.push(Line::from(format!("{}{:12} {}", prefix, name, desc)).style(style));
     }
+    lines.push(Line::from(""));
+    lines.push(Line::from("↑↓ navigate · enter select · esc close").style(style_hint()));
     lines
 }

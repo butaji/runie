@@ -320,6 +320,15 @@ impl AppState {
             self.toggle_path_completion();
             return;
         }
+        // Slash opens command palette when input is empty (tui1 design)
+        if c == '/' && self.input.is_empty() && self.at_suggestions.is_none() && self.path_suggestions.is_none() {
+            self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
+                filter: String::new(),
+                selected: 0,
+            });
+            self.mark_dirty();
+            return;
+        }
         self.insert_char(c);
     }
 
