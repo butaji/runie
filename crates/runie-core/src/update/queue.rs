@@ -1,4 +1,4 @@
-use crate::model::{AppState, ChatMessage, Role};
+use crate::model::{AppState, ChatMessage, DeliveryMode, Role};
 use super::now;
 
 impl AppState {
@@ -7,6 +7,7 @@ impl AppState {
             return;
         }
         let content = std::mem::take(&mut self.input).trim().to_string();
+        self.cursor_pos = 0;
         if content.is_empty() {
             return;
         }
@@ -38,54 +39,91 @@ impl AppState {
         if self.message_queue.is_empty() {
             return;
         }
+        // Try to deliver steering (batch or single depending on mode)
         if self.try_deliver_steering() {
+            // Steering delivered - in "All" mode, also try follow-ups
+            if self.follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
+                self.try_deliver_follow_ups_all();
+            }
             return;
         }
+        // No steering in queue - try follow-ups
         self.try_deliver_follow_up();
     }
 
-    fn try_deliver_steering(&mut self) -> bool {
-        let steering: Vec<_> = self.message_queue.iter().enumerate()
-            .filter(|(_, m)| m.kind == crate::model::QueuedMessageKind::Steering)
-            .map(|(i, _)| i)
+    fn has_follow_ups(&self) -> bool {
+        self.message_queue.iter().any(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+    }
+
+    /// Deliver all follow-ups in batch mode.
+    fn try_deliver_follow_ups_all(&mut self) {
+        let follow_ups: Vec<String> = self.message_queue.iter()
+            .filter(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+            .map(|m| m.content.clone())
             .collect();
-        if steering.is_empty() {
-            return false;
+
+        if follow_ups.is_empty() {
+            return;
         }
-        let idx = steering[0];
-        let msg = self.message_queue.remove(idx);
+
+        let content = follow_ups.join("\n");
+
+        // Remove all follow-ups from queue
+        self.message_queue.retain(|m| m.kind != crate::model::QueuedMessageKind::FollowUp);
+
+        self.push_user_message(content);
+        self.scroll = 0;
+        self.messages_changed();
+    }
+
+    fn push_user_message(&mut self, content: String) {
         let id = self.next_id();
         self.messages.push(ChatMessage {
             role: Role::User,
-            content: msg.content.clone(),
+            content: content.clone(),
             timestamp: now(),
             id: id.clone(),
         });
-        self.request_queue.push_back((msg.content, id));
-        self.scroll = 0;
-        self.messages_changed();
-        true
+        self.request_queue.push_back((content, id));
+    }
+
+    fn try_deliver_steering(&mut self) -> bool {
+        match self.steering_mode {
+            DeliveryMode::OneAtATime => {
+                if let Some(idx) = self.message_queue.iter().position(|m| m.kind == crate::model::QueuedMessageKind::Steering) {
+                    let content = self.message_queue.remove(idx).content;
+                    self.push_user_message(content);
+                    self.scroll = 0;
+                    self.messages_changed();
+                    true
+                } else {
+                    false
+                }
+            }
+            DeliveryMode::All => {
+                let steerings: Vec<String> = self.message_queue.iter()
+                    .filter(|m| m.kind == crate::model::QueuedMessageKind::Steering)
+                    .map(|m| m.content.clone())
+                    .collect();
+                if steerings.is_empty() {
+                    return false;
+                }
+                let content = steerings.join("\n");
+                self.message_queue.retain(|m| m.kind != crate::model::QueuedMessageKind::Steering);
+                self.push_user_message(content);
+                self.scroll = 0;
+                self.messages_changed();
+                true
+            }
+        }
     }
 
     fn try_deliver_follow_up(&mut self) {
-        let follow_up: Vec<_> = self.message_queue.iter().enumerate()
-            .filter(|(_, m)| m.kind == crate::model::QueuedMessageKind::FollowUp)
-            .map(|(i, _)| i)
-            .collect();
-        if follow_up.is_empty() {
-            return;
+        if let Some(idx) = self.message_queue.iter().position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp) {
+            let content = self.message_queue.remove(idx).content;
+            self.push_user_message(content);
+            self.scroll = 0;
+            self.messages_changed();
         }
-        let idx = follow_up[0];
-        let msg = self.message_queue.remove(idx);
-        let id = self.next_id();
-        self.messages.push(ChatMessage {
-            role: Role::User,
-            content: msg.content.clone(),
-            timestamp: now(),
-            id: id.clone(),
-        });
-        self.request_queue.push_back((msg.content, id));
-        self.scroll = 0;
-        self.messages_changed();
     }
 }
