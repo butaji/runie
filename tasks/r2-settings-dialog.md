@@ -1,6 +1,6 @@
 # Settings Dialog
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Configuration / TUI Rendering
 

@@ -9,6 +9,7 @@ mod line_nav;
 mod path_complete;
 mod queue;
 mod scoped_models;
+pub mod settings_dialog;
 
 pub(crate) fn now() -> f64 {
     std::time::SystemTime::now()
@@ -185,6 +186,23 @@ impl AppState {
             Event::ScopedModelEnableAll => scoped_models::enable_all(self),
             Event::ScopedModelDisableAll => scoped_models::disable_all(self),
             Event::ScopedModelToggleProvider { provider } => scoped_models::toggle_provider(self, &provider),
+            Event::ToggleSettingsDialog => {
+                if matches!(self.open_dialog, Some(crate::commands::DialogState::Settings { .. })) {
+                    self.open_dialog = None;
+                } else {
+                    self.open_dialog = Some(crate::commands::DialogState::Settings {
+                        category: crate::settings::SettingsCategory::Models,
+                        selected: 0,
+                    });
+                }
+                self.mark_dirty();
+            }
+            Event::SettingsUp |
+            Event::SettingsDown |
+            Event::SettingsLeft |
+            Event::SettingsRight |
+            Event::SettingsSelect |
+            Event::SettingsClose => {},
             Event::PaletteFilter(_) |
             Event::PaletteBackspace |
             Event::PaletteUp |
@@ -207,6 +225,9 @@ impl AppState {
             }
             crate::commands::DialogState::ScopedModels { selected } => {
                 scoped_models::update_scoped_models(self, event, selected);
+            }
+            crate::commands::DialogState::Settings { category, selected } => {
+                settings_dialog::update_settings_dialog(self, event, category, selected);
             }
             other => {
                 self.open_dialog = Some(other);
@@ -307,7 +328,10 @@ impl AppState {
                             selected: 0,
                         }
                     }
-                    crate::commands::Dialog::Settings => crate::commands::DialogState::Settings,
+                    crate::commands::Dialog::Settings => crate::commands::DialogState::Settings {
+                        category: crate::settings::SettingsCategory::Models,
+                        selected: 0,
+                    },
                     crate::commands::Dialog::ScopedModels => {
                         crate::commands::DialogState::ScopedModels { selected: 0 }
                     }

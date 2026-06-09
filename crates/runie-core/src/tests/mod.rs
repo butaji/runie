@@ -85,6 +85,8 @@ mod model_cycle;
 #[cfg(test)]
 mod scoped_models;
 #[cfg(test)]
+mod settings_dialog;
+#[cfg(test)]
 mod palette;
 #[cfg(test)]
 mod thinking;

@@ -49,6 +49,8 @@ pub struct Snapshot {
     pub palette_items: Vec<(String, String, String)>,
     /// Scoped models for dialog rendering.
     pub scoped_models: Vec<crate::scoped_model::ScopedModel>,
+    /// Settings items for dialog rendering.
+    pub settings_items: Vec<crate::settings::SettingItem>,
 }
 
 impl Snapshot {

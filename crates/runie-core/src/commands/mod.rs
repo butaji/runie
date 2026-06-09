@@ -26,7 +26,10 @@ pub enum DialogState {
         filter: String,
         selected: usize,
     },
-    Settings,
+    Settings {
+        category: crate::settings::SettingsCategory,
+        selected: usize,
+    },
     ScopedModels {
         selected: usize,
     },

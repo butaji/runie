@@ -63,80 +63,86 @@ impl FileMutationQueue {
 
 fn apply_mutation(mutation: &Mutation) -> MutationResult {
     match mutation {
-        Mutation::Write { path, content } => {
-            if let Some(parent) = path.parent() {
-                if !parent.as_os_str().is_empty() {
-                    if let Err(e) = std::fs::create_dir_all(parent) {
-                        return MutationResult {
-                            path: path.clone(),
-                            success: false,
-                            error: Some(format!("Error creating parent directories: {}", e)),
-                        };
-                    }
-                }
-            }
-            match std::fs::write(path, content) {
-                Ok(()) => MutationResult {
-                    path: path.clone(),
-                    success: true,
-                    error: None,
-                },
-                Err(e) => MutationResult {
-                    path: path.clone(),
-                    success: false,
-                    error: Some(format!("Error writing {}: {}", path.display(), e)),
-                },
-            }
-        }
-        Mutation::Edit { path, old, new } => {
-            if old.is_empty() {
+        Mutation::Write { path, content } => apply_write(path, content),
+        Mutation::Edit { path, old, new } => apply_edit(path, old, new),
+    }
+}
+
+fn apply_write(path: &std::path::Path, content: &str) -> MutationResult {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
                 return MutationResult {
-                    path: path.clone(),
+                    path: path.to_path_buf(),
                     success: false,
-                    error: Some("Error: search text cannot be empty".to_string()),
+                    error: Some(format!("Error creating parent directories: {}", e)),
                 };
             }
-            match std::fs::read_to_string(path) {
-                Ok(content) => {
-                    let count = content.matches(old).count();
-                    if count == 0 {
-                        return MutationResult {
-                            path: path.clone(),
-                            success: false,
-                            error: Some(format!("Error: search text not found in {}", path.display())),
-                        };
-                    }
-                    if count > 1 {
-                        return MutationResult {
-                            path: path.clone(),
-                            success: false,
-                            error: Some(format!(
-                                "Error: search text appears {} times in {}. Be more specific.",
-                                count, path.display()
-                            )),
-                        };
-                    }
-                    let new_content = content.replacen(old, new, 1);
-                    match std::fs::write(path, &new_content) {
-                        Ok(()) => MutationResult {
-                            path: path.clone(),
-                            success: true,
-                            error: None,
-                        },
-                        Err(e) => MutationResult {
-                            path: path.clone(),
-                            success: false,
-                            error: Some(format!("Error writing {}: {}", path.display(), e)),
-                        },
-                    }
-                }
-                Err(e) => MutationResult {
-                    path: path.clone(),
-                    success: false,
-                    error: Some(format!("Error reading {}: {}", path.display(), e)),
-                },
-            }
         }
+    }
+    match std::fs::write(path, content) {
+        Ok(()) => MutationResult { path: path.to_path_buf(), success: true, error: None },
+        Err(e) => MutationResult {
+            path: path.to_path_buf(),
+            success: false,
+            error: Some(format!("Error writing {}: {}", path.display(), e)),
+        },
+    }
+}
+
+fn apply_edit(path: &std::path::Path, old: &str, new: &str) -> MutationResult {
+    if old.is_empty() {
+        return MutationResult {
+            path: path.to_path_buf(),
+            success: false,
+            error: Some("Error: search text cannot be empty".to_string()),
+        };
+    }
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(e) => return MutationResult {
+            path: path.to_path_buf(),
+            success: false,
+            error: Some(format!("Error reading {}: {}", path.display(), e)),
+        },
+    };
+    if let Err(e) = validate_edit(&content, old, path) {
+        return e;
+    }
+    let new_content = content.replacen(old, new, 1);
+    write_result(path, &new_content)
+}
+
+fn validate_edit(content: &str, old: &str, path: &std::path::Path) -> Result<(), MutationResult> {
+    let count = content.matches(old).count();
+    if count == 0 {
+        return Err(MutationResult {
+            path: path.to_path_buf(),
+            success: false,
+            error: Some(format!("Error: search text not found in {}", path.display())),
+        });
+    }
+    if count > 1 {
+        return Err(MutationResult {
+            path: path.to_path_buf(),
+            success: false,
+            error: Some(format!(
+                "Error: search text appears {} times in {}. Be more specific.",
+                count, path.display()
+            )),
+        });
+    }
+    Ok(())
+}
+
+fn write_result(path: &std::path::Path, content: &str) -> MutationResult {
+    match std::fs::write(path, content) {
+        Ok(()) => MutationResult { path: path.to_path_buf(), success: true, error: None },
+        Err(e) => MutationResult {
+            path: path.to_path_buf(),
+            success: false,
+            error: Some(format!("Error writing {}: {}", path.display(), e)),
+        },
     }
 }
 

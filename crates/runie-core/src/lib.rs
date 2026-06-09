@@ -11,6 +11,7 @@
 
 pub mod model;
 pub mod scoped_model;
+pub mod settings;
 pub mod event;
 pub mod update;
 pub mod labels;

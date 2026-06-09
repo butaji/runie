@@ -366,7 +366,10 @@ impl AppState {
                     self.open_dialog = Some(match d {
                         crate::commands::Dialog::CommandPalette => crate::commands::DialogState::CommandPalette { filter: String::new(), selected: 0 },
                         crate::commands::Dialog::ModelSelector => crate::commands::DialogState::ModelSelector { filter: String::new(), selected: 0 },
-                        crate::commands::Dialog::Settings => crate::commands::DialogState::Settings,
+                        crate::commands::Dialog::Settings => crate::commands::DialogState::Settings {
+                            category: crate::settings::SettingsCategory::Models,
+                            selected: 0,
+                        },
                         crate::commands::Dialog::ScopedModels => crate::commands::DialogState::ScopedModels { selected: 0 },
                     });
                     self.mark_dirty();
