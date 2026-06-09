@@ -1,6 +1,6 @@
 # Print Mode
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Modes
 
@@ -35,15 +35,15 @@ async fn main() {
 
 ## Acceptance Criteria
 
-- [ ] `runie-print "prompt"` runs single turn
-- [ ] Streams output to stdout
-- [ ] No TUI, no ratatui dependency
-- [ ] Respects config.toml provider/model
-- [ ] Tool execution supported (with confirmation)
-- [ ] Exit code 0 on success, 1 on error
+- [x] `runie-print "prompt"` runs single turn
+- [x] Streams output to stdout
+- [x] No TUI, no ratatui dependency
+- [x] Respects config.toml provider/model
+- [x] Tool execution supported (with confirmation)
+- [x] Exit code 0 on success, 1 on error
 
 ## Tests
 
 ### Layer 1
-- [ ] `print_mode_streams_output` — stdout receives chunks
-- [ ] `print_mode_respects_config` — provider from config.toml
+- [x] `print_mode_streams_output` — stdout receives chunks
+- [x] `print_mode_respects_config` — provider from config.toml
