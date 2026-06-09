@@ -3,8 +3,8 @@ use crate::model::AppState;
 #[test]
 fn snapshot_has_turn_elapsed_when_active() {
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
 
     let snap = state.snapshot();
@@ -16,8 +16,8 @@ fn snapshot_has_turn_elapsed_when_active() {
 #[test]
 fn snapshot_turn_elapsed_none_when_inactive() {
     let mut state = AppState::default();
-    state.turn_active = false;
-    state.turn_started_at = None;
+    state.agent.turn_active = false;
+    state.agent.turn_started_at = None;
     state.ensure_fresh();
 
     let snap = state.snapshot();
@@ -27,8 +27,8 @@ fn snapshot_turn_elapsed_none_when_inactive() {
 #[test]
 fn snapshot_turn_elapsed_increases_over_time() {
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
 
     let snap1 = state.snapshot();
@@ -47,8 +47,8 @@ fn snapshot_turn_elapsed_increases_over_time() {
 fn status_text_contains_timer_when_turn_active() {
     
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
 
     let snap = state.snapshot();
@@ -70,7 +70,7 @@ fn status_text_contains_timer_when_turn_active() {
 #[test]
 fn status_text_no_timer_when_turn_inactive() {
     let mut state = AppState::default();
-    state.turn_active = false;
+    state.agent.turn_active = false;
     state.ensure_fresh();
 
     let snap = state.snapshot();
@@ -90,8 +90,8 @@ fn status_text_no_timer_when_turn_inactive() {
 #[test]
 fn turn_elapsed_survives_snapshot_cloning() {
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
 
     let snap = state.snapshot();

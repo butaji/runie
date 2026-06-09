@@ -51,8 +51,8 @@ impl AppState {
             &model_catalog(),
             &self.recent_models,
             &filter,
-            &self.current_provider,
-            &self.current_model,
+            &self.config.current_provider,
+            &self.config.current_model,
         );
         let new_sel = if selected == 0 {
             items.len().saturating_sub(1)
@@ -67,8 +67,8 @@ impl AppState {
             &model_catalog(),
             &self.recent_models,
             &filter,
-            &self.current_provider,
-            &self.current_model,
+            &self.config.current_provider,
+            &self.config.current_model,
         );
         let new_sel = if items.is_empty() {
             0
@@ -83,8 +83,8 @@ impl AppState {
             &model_catalog(),
             &self.recent_models,
             &filter,
-            &self.current_provider,
-            &self.current_model,
+            &self.config.current_provider,
+            &self.config.current_model,
         );
         if let Some(item) = items.get(selected) {
             let parts: Vec<&str> = item.1.split('/').collect();

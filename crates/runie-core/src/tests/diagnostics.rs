@@ -15,7 +15,7 @@ fn diagnostics_emits_event() {
 fn diagnostics_shows_config_path() {
     let mut state = AppState::default();
     state.update(Event::ShowDiagnostics);
-    let last = state.messages.last().unwrap();
+    let last = state.session.messages.last().unwrap();
     assert!(last.content.contains("Diagnostics:"));
     assert!(last.content.contains("Config:"));
 }
@@ -23,9 +23,9 @@ fn diagnostics_shows_config_path() {
 #[test]
 fn diagnostics_shows_providers() {
     let mut state = AppState::default();
-    state.current_provider = "openai".to_string();
-    state.current_model = "gpt-4o".to_string();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
     state.update(Event::ShowDiagnostics);
-    let last = state.messages.last().unwrap();
+    let last = state.session.messages.last().unwrap();
     assert!(last.content.contains("openai/gpt-4o"), "Should show provider/model: {}", last.content);
 }

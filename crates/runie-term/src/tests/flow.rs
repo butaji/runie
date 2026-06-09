@@ -8,10 +8,10 @@ fn test_submit_adds_message_to_queue() {
     state.update(Event::Input('H'));
     state.update(Event::Input('i'));
     state.update(Event::Submit);
-    assert_eq!(state.input, "");
-    assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, Role::User);
-    assert_eq!(state.request_queue.len(), 1);
+    assert_eq!(state.input.input, "");
+    assert_eq!(state.session.messages.len(), 1);
+    assert_eq!(state.session.messages[0].role, Role::User);
+    assert_eq!(state.agent.request_queue.len(), 1);
 }
 
 #[test]
@@ -30,9 +30,9 @@ fn test_agent_response_creates_messages() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
-    assert_eq!(state.messages.len(), 2);
-    assert_eq!(state.messages[0].role, Role::Thought);
-    assert_eq!(state.messages[1].role, Role::Assistant);
+    assert_eq!(state.session.messages.len(), 2);
+    assert_eq!(state.session.messages[0].role, Role::Thought);
+    assert_eq!(state.session.messages[1].role, Role::Assistant);
 }
 
 #[test]
@@ -60,7 +60,7 @@ fn test_sequential_fifo_a_then_b() {
     state.update(Event::AgentThinking { id: "req.1".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
     state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
-    let thoughts: Vec<_> = state.messages.iter().filter(|m| m.role == Role::Thought).collect();
+    let thoughts: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::Thought).collect();
     assert_eq!(thoughts.len(), 2);
 }
 
@@ -72,8 +72,8 @@ fn test_full_list_files_integration() {
     state.streaming = true;
     simulate_list_files_flow(&mut state);
 
-    assert!(state.messages.iter().any(|m| m.role == Role::Thought));
-    assert!(state.messages.iter().any(|m| m.role == Role::Tool));
+    assert!(state.session.messages.iter().any(|m| m.role == Role::Thought));
+    assert!(state.session.messages.iter().any(|m| m.role == Role::Tool));
     assert!(!state.streaming, "Streaming should stop after Done");
 }
 
@@ -84,10 +84,10 @@ fn test_list_files_command_flow() {
     for c in "list files".chars() {
         state.update(Event::Input(c));
     }
-    assert_eq!(state.input, "list files");
+    assert_eq!(state.input.input, "list files");
 
     state.update(Event::Submit);
-    assert!(state.input.is_empty(), "Input cleared after submit");
+    assert!(state.input.input.is_empty(), "Input cleared after submit");
 
     let (content, id) = state.peek_queue().expect("queued request");
     assert_eq!(content, "list files");
@@ -109,7 +109,7 @@ fn test_list_files_message_content() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "\nsrc/main.rs".to_string() });
 
-    let assistant = state.messages.iter().find(|m| m.role == Role::Assistant).expect("assistant msg");
+    let assistant = state.session.messages.iter().find(|m| m.role == Role::Assistant).expect("assistant msg");
     assert!(assistant.content.contains("src/main.rs"), "Should contain file list");
 }
 
@@ -119,7 +119,7 @@ fn test_list_files_full_sequence() {
     state.streaming = true;
     simulate_list_files_flow(&mut state);
 
-    let msg = state.messages.iter().find(|m| m.role == Role::Assistant).expect("assistant msg");
+    let msg = state.session.messages.iter().find(|m| m.role == Role::Assistant).expect("assistant msg");
     assert!(msg.content.contains("main.rs"));
-    assert_eq!(state.messages.len(), 5, "expected 5 messages");
+    assert_eq!(state.session.messages.len(), 5, "expected 5 messages");
 }

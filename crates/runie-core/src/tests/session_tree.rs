@@ -79,39 +79,39 @@ fn filter_cycle_rotates() {
 #[test]
 fn slash_fork_emits_event() {
     let mut state = AppState::default();
-    state.messages = vec![
+    state.session.messages = vec![
         msg(Role::User, "hello"),
         msg(Role::Assistant, "hi"),
     ];
-    state.input.push_str("/fork 1");
+    state.input.input.push_str("/fork 1");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(last.content.contains("Forked"), "fork should emit event: {}", last.content);
-    assert!(state.session_tree.is_some(), "session tree should be initialized");
+    assert!(state.session.session_tree.is_some(), "session tree should be initialized");
 }
 
 #[test]
 fn slash_clone_emits_event() {
     let mut state = AppState::default();
-    state.messages = vec![
+    state.session.messages = vec![
         msg(Role::User, "hello"),
         msg(Role::Assistant, "hi"),
     ];
-    state.input.push_str("/clone");
+    state.input.input.push_str("/clone");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(last.content.contains("cloned"), "clone should emit event: {}", last.content);
-    assert!(state.session_tree.is_some(), "session tree should be initialized");
+    assert!(state.session.session_tree.is_some(), "session tree should be initialized");
 }
 
 #[test]
 fn slash_tree_opens_dialog() {
     let mut state = AppState::default();
-    state.input.push_str("/tree");
+    state.input.input.push_str("/tree");
     state.update(Event::Submit);
 
     assert!(
@@ -123,7 +123,7 @@ fn slash_tree_opens_dialog() {
 #[test]
 fn tree_navigates_up_down() {
     let mut state = AppState::default();
-    state.session_tree = Some(SessionTree::from_messages(&[
+    state.session.session_tree = Some(SessionTree::from_messages(&[
         msg(Role::User, "a"),
         msg(Role::Assistant, "b"),
         msg(Role::User, "c"),
@@ -153,7 +153,7 @@ fn tree_navigates_up_down() {
 #[test]
 fn tree_filter_cycle_event() {
     let mut state = AppState::default();
-    state.session_tree = Some(SessionTree::from_messages(&[
+    state.session.session_tree = Some(SessionTree::from_messages(&[
         msg(Role::User, "a"),
         msg(Role::Assistant, "b"),
     ]));

@@ -8,7 +8,7 @@ mod tests {
     #[test]
     fn default_placeholder_is_set() {
         let mut state = AppState::default();
-        assert!(!state.placeholder.is_empty(), "Default placeholder should not be empty");
+        assert!(!state.input.placeholder.is_empty(), "Default placeholder should not be empty");
     }
 
     #[test]
@@ -24,7 +24,7 @@ mod tests {
         state.update(Event::Input('a'));
         let _snap = state.snapshot();
         // Placeholder is still in state, but input is no longer empty
-        assert_eq!(state.input, "a");
+        assert_eq!(state.input.input, "a");
     }
 
     #[test]
@@ -32,7 +32,7 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
         state.update(Event::Backspace);
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
         let snap = state.snapshot();
         assert!(!snap.placeholder.is_empty());
     }

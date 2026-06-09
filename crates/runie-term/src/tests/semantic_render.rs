@@ -21,7 +21,7 @@ fn agent_response_visible_after_large_tool() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Terminal 40x20 -> chat panel ~16 inner rows
     let out = render(&mut state, 40, 20);
@@ -40,7 +40,7 @@ fn agent_at_bottom_tool_files_above() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render(&mut state, 40, 18);
 
@@ -68,7 +68,7 @@ fn turn_complete_always_last_visible() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render(&mut state, 40, 15);
 

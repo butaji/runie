@@ -6,7 +6,7 @@ fn test_toggle_expand_changes_rendered_output() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.2s\nI'll list the files.".into(),
         timestamp: 0.0,
@@ -37,7 +37,7 @@ fn test_toggle_expand_changes_tool_render() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,

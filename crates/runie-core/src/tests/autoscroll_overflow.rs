@@ -18,10 +18,10 @@ fn list_files_large_output_latest_visible() {
 }
 
 fn verify_user_submit_visible(state: &mut AppState, height: usize) {
-    state.input = "list files".into();
+    state.input.input = "list files".into();
     state.update(Event::Submit);
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content, .. } if content == "list files")),
@@ -34,7 +34,7 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "I'll list files.\nTOOL:list_dir:.".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. })),
@@ -46,7 +46,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     assert!(!region.elements.is_empty(), "Visible region must not be empty");
@@ -57,7 +57,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
 fn verify_final_done_visible(state: &mut AppState, height: usize) {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done!".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!")),
@@ -74,7 +74,7 @@ fn large_thought_bottom_lines_visible() {
     for i in 1..=20 {
         thought.push_str(&format!("line{}\n", i));
     }
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: thought,
         timestamp: 1.0,
@@ -83,7 +83,7 @@ fn large_thought_bottom_lines_visible() {
     });
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     assert!(!region.elements.is_empty(), "Visible region must not be empty");
@@ -103,7 +103,7 @@ fn viewport_never_empty_when_content_exists() {
 
     // Add 10 messages = 20 lines total
     for i in 0..10 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -113,7 +113,7 @@ fn viewport_never_empty_when_content_exists() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     assert!(!region.elements.is_empty(), "Visible region must not be empty when content exists");
@@ -126,7 +126,7 @@ fn scroll_zero_always_shows_latest() {
 
     // Add 3 messages = 6 lines (fits in viewport? no, 6 > 5)
     for i in 0..3 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -136,7 +136,7 @@ fn scroll_zero_always_shows_latest() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     // Latest message (msg2) should be visible
@@ -153,7 +153,7 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
     let output = (1..=50).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // ToolDone: header (1) + 50 output lines = 51 lines total. Viewport = 5.
     // The bottom 5 lines should be visible: file50, file49, file48, file47, header

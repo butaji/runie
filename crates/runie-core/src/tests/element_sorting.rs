@@ -166,14 +166,14 @@ fn previous_turn_complete_before_next_turn_user() {
 fn elements_sorted_by_timestamp_not_index() {
     // Manually construct messages with out-of-order timestamps
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "First".into(),
         timestamp: 3.0,  // Later timestamp
         id: "u1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Second".into(),
         timestamp: 1.0,  // Earlier timestamp

@@ -5,13 +5,13 @@ impl AppState {
         let config = crate::config_reload::Config::load_from(
             &crate::config_reload::config_path());
         if let Some(provider) = &config.provider {
-            self.config_provider = provider.clone();
+            self.config.config_provider = provider.clone();
         }
         if let Some(model) = config.default_model() {
-            self.config_model = model.to_string();
+            self.config.config_model = model.to_string();
         }
         if let Some(theme) = &config.theme {
-            self.theme_name = theme.clone();
+            self.config.theme_name = theme.clone();
         }
         self.skills = crate::skills::load_all();
         let prompts_section = config.prompts();
@@ -42,13 +42,13 @@ impl AppState {
                 "default".to_string()
             }
         ));
-        lines.push(format!("  Theme: {}", self.theme_name));
+        lines.push(format!("  Theme: {}", self.config.theme_name));
         lines.push(format!(
             "  Provider: {}/{}",
-            self.current_provider, self.current_model
+            self.config.current_provider, self.config.current_model
         ));
-        lines.push(format!("  Read-only: {}", self.read_only));
-        lines.push(format!("  Scoped models: {}", self.scoped_models.len()));
+        lines.push(format!("  Read-only: {}", self.config.read_only));
+        lines.push(format!("  Scoped models: {}", self.config.scoped_models.len()));
         self.add_system_msg(lines.join("\n"));
     }
 }
@@ -72,7 +72,7 @@ mod tests {
         state.reload_all();
         // In test environment load_all returns empty (no skill dirs exist)
         assert!(state.skills.is_empty(), "reload_all should reload skills from disk");
-        let last = state.messages.last().unwrap();
+        let last = state.session.messages.last().unwrap();
         assert!(last.content.contains("Reloaded"), "Should confirm reload: {}", last.content);
         // Prompts should also be reloaded (empty in test env)
         assert!(!state.prompts.is_empty(), "reload_all should reload prompts");

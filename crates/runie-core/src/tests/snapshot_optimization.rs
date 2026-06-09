@@ -10,7 +10,7 @@ use std::sync::Arc;
 #[test]
 fn test_snapshot_contains_expected_fields() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "hello".into(),
         timestamp: 1.0,
@@ -23,10 +23,10 @@ fn test_snapshot_contains_expected_fields() {
     let snap = state.snapshot();
     assert!(!snap.elements.is_empty(), "elements should be present");
     assert!(!snap.line_counts.is_empty(), "line_counts should be present");
-    assert_eq!(snap.input, state.input);
-    assert_eq!(snap.cursor_pos, state.cursor_pos);
-    assert_eq!(snap.provider, state.current_provider);
-    assert_eq!(snap.model, state.current_model);
+    assert_eq!(snap.input, state.input.input);
+    assert_eq!(snap.cursor_pos, state.input.cursor_pos);
+    assert_eq!(snap.provider, state.config.current_provider);
+    assert_eq!(snap.model, state.config.current_model);
 }
 
 fn assert_send_sync<T: Send + Sync>() {}
@@ -67,7 +67,7 @@ fn test_event_triggers_snapshot_update() {
 fn test_render_receives_valid_snapshot() {
     let mut state = AppState::default();
     for i in 0..10 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -91,7 +91,7 @@ fn test_render_receives_valid_snapshot() {
 #[test]
 fn test_elements_uses_arc() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "hello".into(),
         timestamp: 1.0,
@@ -112,7 +112,7 @@ fn test_elements_uses_arc() {
 #[test]
 fn test_arc_pointer_stability_after_state_mutation() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "first".into(),
         timestamp: 1.0,

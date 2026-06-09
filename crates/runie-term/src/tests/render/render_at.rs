@@ -46,6 +46,6 @@ fn test_render_at_lookup_tab_cycles_and_enter_inserts() {
     state.update(Event::Submit);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
-    assert!(!state.input.contains('@'), "@ should be replaced. Got: {}", state.input);
-    assert!(state.input.contains('[') && state.input.contains(']'), "Should be inserted as [path]. Got: {}", state.input);
+    assert!(!state.input.input.contains('@'), "@ should be replaced. Got: {}", state.input.input);
+    assert!(state.input.input.contains('[') && state.input.input.contains(']'), "Should be inserted as [path]. Got: {}", state.input.input);
 }

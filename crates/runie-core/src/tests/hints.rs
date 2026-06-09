@@ -15,7 +15,7 @@ fn hint_shows_expand_hotkey_by_default() {
 #[test]
 fn hint_shows_send_when_input_has_text() {
     let mut state = fresh_state();
-    state.input = "hello".to_string();
+    state.input.input = "hello".to_string();
     let hint = state.hint_text();
     assert!(hint.contains("Enter=send"), "Hint should show send: {}", hint);
 }
@@ -23,7 +23,7 @@ fn hint_shows_send_when_input_has_text() {
 #[test]
 fn hint_shows_steer_when_turn_active() {
     let mut state = fresh_state();
-    state.turn_active = true;
+    state.agent.turn_active = true;
     let hint = state.hint_text();
     assert!(hint.contains("Enter=steer"), "Hint should show steer: {}", hint);
 }
@@ -31,7 +31,7 @@ fn hint_shows_steer_when_turn_active() {
 #[test]
 fn hint_shows_at_ref_when_suggestions_active() {
     let mut state = fresh_state();
-    state.at_suggestions = Some(vec!["a.rs".to_string()]);
+    state.completion.at_suggestions = Some(vec!["a.rs".to_string()]);
     let hint = state.hint_text();
     assert!(hint.contains("Tab=cycle"), "Hint should show @ref cycle: {}", hint);
     assert!(hint.contains("Enter=insert"), "Hint should show @ref insert: {}", hint);
@@ -47,7 +47,7 @@ fn hint_always_shows_quit() {
 #[test]
 fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning\nline two".into(),
         timestamp: 0.0,
@@ -61,7 +61,7 @@ fn toggle_expand_collapses_all_thoughts() {
 #[test]
 fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran list_files 0.5s\nfile1".into(),
         timestamp: 0.0,
@@ -75,14 +75,14 @@ fn toggle_expand_collapses_all_tools() {
 #[test]
 fn toggle_expand_affects_all_elements() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "older thought".into(),
         timestamp: 0.0,
         id: "old".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran list_files 0.5s".into(),
         timestamp: 1.0,
@@ -96,7 +96,7 @@ fn toggle_expand_affects_all_elements() {
 #[test]
 fn toggle_expand_noop_when_no_collapsible() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "hello".into(),
         timestamp: 0.0,
@@ -110,7 +110,7 @@ fn toggle_expand_noop_when_no_collapsible() {
 #[test]
 fn toggle_expand_rebuilds_cache() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning\nline two".into(),
         timestamp: 0.0,
@@ -120,7 +120,7 @@ fn toggle_expand_rebuilds_cache() {
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let cache = state.elements_cache().to_vec();
+    let cache = state.view.elements_cache().to_vec();
     assert!(
         cache.iter().any(|e| matches!(e, crate::ui::elements::Element::ThoughtSummary { .. })),
         "ToggleExpand should rebuild cache"
@@ -130,7 +130,7 @@ fn toggle_expand_rebuilds_cache() {
 #[test]
 fn toggle_expand_twice_restores() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning".into(),
         timestamp: 0.0,

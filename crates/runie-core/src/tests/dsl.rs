@@ -6,9 +6,9 @@ use crate::model::Role;
 fn dsl_type_text_and_submit() {
     let mut state = AppState::default();
     state.type_text("hello").submit();
-    assert_eq!(state.input, "");
-    assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].content, "hello");
+    assert_eq!(state.input.input, "");
+    assert_eq!(state.session.messages.len(), 1);
+    assert_eq!(state.session.messages[0].content, "hello");
 }
 
 #[test]
@@ -23,8 +23,8 @@ fn dsl_agent_turn_full() {
         .respond("done")
         .complete(1.0)
         .done();
-    assert!(!state.turn_active);
-    assert_eq!(state.messages.iter().filter(|m| m.role == Role::TurnComplete).count(), 1);
+    assert!(!state.agent.turn_active);
+    assert_eq!(state.session.messages.iter().filter(|m| m.role == Role::TurnComplete).count(), 1);
 }
 
 #[test]
@@ -35,6 +35,6 @@ fn dsl_multiple_turns() {
     state.type_text("b").submit();
     state.agent("req.1").think().respond("second").complete(1.0).done();
 
-    let turns: Vec<_> = state.messages.iter().filter(|m| m.role == Role::TurnComplete).collect();
+    let turns: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::TurnComplete).collect();
     assert_eq!(turns.len(), 2);
 }

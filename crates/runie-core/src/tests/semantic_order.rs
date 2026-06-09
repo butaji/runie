@@ -48,7 +48,7 @@ fn final_agent_visible_when_tool_overflows() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Viewport of 5 lines — tool is 21 lines + spacer = 22, agent is 1 + spacer = 2
     // Total ~30 lines. With agent AFTER tool, bottom 5 lines should include agent.

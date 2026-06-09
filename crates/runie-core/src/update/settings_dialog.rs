@@ -66,8 +66,8 @@ pub fn update_settings_dialog(state: &mut AppState, event: Event, category: Sett
 fn apply_setting(state: &mut AppState, key: &str) {
     match key {
         "read_only" => {
-            state.read_only = !state.read_only;
-            let status = if state.read_only { "enabled" } else { "disabled" };
+            state.config.read_only = !state.config.read_only;
+            let status = if state.config.read_only { "enabled" } else { "disabled" };
             state.add_system_msg(format!("Read-only mode {}", status));
         }
         "steering_mode" => {
@@ -92,7 +92,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "provider",
             "Provider",
             SettingValue::Enum {
-                current: state.current_provider.clone(),
+                current: state.config.current_provider.clone(),
                 options: vec!["mock".into(), "openai".into(), "anthropic".into(), "google".into()],
             },
             "LLM provider",
@@ -102,8 +102,8 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "model",
             "Model",
             SettingValue::Enum {
-                current: state.current_model.clone(),
-                options: state.scoped_models.iter().map(|m| m.name.clone()).collect(),
+                current: state.config.current_model.clone(),
+                options: state.config.scoped_models.iter().map(|m| m.name.clone()).collect(),
             },
             "Active model",
             SettingsCategory::Models,
@@ -112,7 +112,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "theme",
             "Theme",
             SettingValue::Enum {
-                current: state.theme_name.clone(),
+                current: state.config.theme_name.clone(),
                 options: vec!["silkcircuit-neon".into(), "dracula".into(), "nord".into()],
             },
             "UI theme",
@@ -122,7 +122,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "thinking_level",
             "Thinking Level",
             SettingValue::Enum {
-                current: state.thinking_level.as_str().to_string(),
+                current: state.config.thinking_level.as_str().to_string(),
                 options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
             },
             "Agent reasoning depth",
@@ -131,7 +131,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
         SettingItem::new(
             "read_only",
             "Read-Only",
-            SettingValue::Bool(state.read_only),
+            SettingValue::Bool(state.config.read_only),
             "Restrict to safe tools",
             SettingsCategory::Safety,
         ),

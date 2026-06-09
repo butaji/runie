@@ -83,150 +83,76 @@ pub struct QueuedMessage {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub messages: Vec<ChatMessage>,
-    pub input: String,
-    /// Cursor position in input (0 = before first char)
-    pub cursor_pos: usize,
+    pub session: crate::state::SessionState,
+    pub input: crate::state::InputState,
+    pub agent: crate::state::AgentState,
+    pub view: crate::state::ViewState,
+    pub config: crate::state::ConfigState,
+    pub completion: crate::state::CompletionState,
+
     pub streaming: bool,
-    pub scroll: usize,
     pub thinking_started_at: Option<std::time::Instant>,
-    pub request_queue: std::collections::VecDeque<(String, String)>,
-    pub message_queue: Vec<QueuedMessage>,
-    /// How steering messages are delivered to the LLM
     pub steering_mode: DeliveryMode,
-    /// How follow-up messages are delivered to the LLM
     pub follow_up_mode: DeliveryMode,
     pub next_id: u64,
-    pub current_request_id: Option<String>,
-    pub turn_started_at: Option<std::time::Instant>,
-    pub current_tool_name: Option<String>,
-    pub tool_started_at: Option<std::time::Instant>,
     pub intermediate_step_count: usize,
     pub animation_frame: u32,
-    pub turn_active: bool,
     pub current_action: Option<String>,
-    pub current_provider: String,
-    pub current_model: String,
-    /// Active theme name (resolved by runie-tui)
-    pub theme_name: String,
-    /// Command registry for slash command dispatch
     pub registry: crate::commands::CommandRegistry,
-    /// Set to true when the user requests quit
     pub should_quit: bool,
-    /// Currently open dialog (if any)
     pub open_dialog: Option<crate::commands::DialogState>,
-    /// Default provider from config (for /new reset)
-    pub config_provider: String,
-    /// Default model from config (for /new reset)
-    pub config_model: String,
-    /// Current keybindings (reloadable)
-    pub keybindings: std::collections::HashMap<String, String>,
-    /// Optional display name for the current session
-    pub session_display_name: Option<String>,
-    /// Session creation timestamp (unix seconds)
-    pub session_created_at: f64,
-    /// Session last-updated timestamp (unix seconds)
-    pub session_updated_at: f64,
-    /// Current thinking level (off → low → medium → high)
-    pub thinking_level: ThinkingLevel,
-    /// Read-only mode — when true, only safe tools are exposed to the LLM
-    pub read_only: bool,
-    /// Scoped models for Ctrl+P cycling (defaults to first 10 from catalog)
-    pub scoped_models: Vec<ScopedModel>,
-    /// Current index in scoped_models cycling
-    pub scoped_index: usize,
-    /// Recently used models (last 5) for the model selector dialog
     pub recent_models: Vec<String>,
-    /// Pending file edits awaiting user approval
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
-    /// Loaded skills from ~/.runie/skills/ and ./.runie/skills/
     pub skills: Vec<crate::skills::Skill>,
-    /// Opt-in telemetry collector
     pub telemetry: crate::telemetry::Telemetry,
-    /// Loaded prompt templates
     pub prompts: Vec<crate::prompts::PromptTemplate>,
-    /// Active prompt template name (empty = default)
     pub current_prompt: String,
-    /// Base64 image attachments pending in the input field
     pub image_attachments: Vec<String>,
-    /// Session tree for branching conversation history
-    pub session_tree: Option<crate::session_tree::SessionTree>,
-
-    /// Number of commands sent to agent but not yet completed
-    pub inflight: usize,
-    /// @-ref file lookup suggestions
-    pub at_suggestions: Option<Vec<String>>,
-    /// Selected index in @-ref suggestions
-    pub at_selected: Option<usize>,
-    /// Last @-ref query to avoid redundant filesystem calls
-    pub last_at_query: Option<String>,
-    /// Path completion suggestions (Tab-triggered)
-    pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
-    /// Selected index in path completion suggestions
-    pub path_selected: Option<usize>,
-    /// Global collapse flag — when true, ALL thoughts/tools render collapsed.
-    /// New elements automatically respect this setting.
     pub all_collapsed: bool,
-    /// Cached index of last assistant message — O(1) lookup for append_response
     pub(crate) last_assistant_index: Option<usize>,
     pub(crate) thought_seq: u64,
     pub(crate) input_history: Vec<String>,
-    pub(crate) history_pos: Option<usize>,
-    pub(crate) undo_stack: Vec<(String, usize)>,
-    pub(crate) redo_stack: Vec<(String, usize)>,
-    pub input_flash: u8,
-    pub placeholder: String,
-    element_count: usize,
-    elements_cache: Arc<[Element]>,
-    line_counts: Arc<[usize]>,
     cached_palette_items: Vec<(String, String, String)>,
     cached_palette_filter: Option<String>,
     cached_model_items: Vec<(String, String, String, bool, bool)>,
     cached_model_filter: Option<String>,
-    total_lines: usize,
-    dirty: bool,
-    message_gen: u64,
-    cached_gen: u64,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            messages: Vec::new(), input: String::new(), cursor_pos: 0,
-            streaming: false, scroll: 0, thinking_started_at: None,
-            request_queue: std::collections::VecDeque::new(),
-            message_queue: Vec::new(),
+            session: crate::state::SessionState::default(),
+            input: crate::state::InputState::default(),
+            agent: crate::state::AgentState::default(),
+            view: crate::state::ViewState::default(),
+            config: crate::state::ConfigState::default(),
+            completion: crate::state::CompletionState::default(),
+            streaming: false,
+            thinking_started_at: None,
             steering_mode: DeliveryMode::OneAtATime,
             follow_up_mode: DeliveryMode::OneAtATime,
-            next_id: 0, current_request_id: None, turn_started_at: None,
-            current_tool_name: None, tool_started_at: None,
-            intermediate_step_count: 0, animation_frame: 0,
-            turn_active: false, current_action: None,
-            current_provider: "mock".into(), current_model: "echo".into(),
-            theme_name: "silkcircuit-neon".into(),
+            next_id: 0,
+            intermediate_step_count: 0,
+            animation_frame: 0,
+            current_action: None,
             registry: crate::commands::CommandRegistry::new(),
-            should_quit: false, open_dialog: None,
-            config_provider: "mock".into(), config_model: "echo".into(),
-            keybindings: crate::keybindings::default_keybindings(),
-            session_display_name: None,
-            session_created_at: now(), session_updated_at: now(),
-            thinking_level: ThinkingLevel::Off, read_only: false,
-            scoped_models: Vec::new(), scoped_index: 0,
-            recent_models: Vec::new(), pending_edits: Vec::new(),
+            should_quit: false,
+            open_dialog: None,
+            recent_models: Vec::new(),
+            pending_edits: Vec::new(),
             skills: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
-            prompts: Vec::new(), current_prompt: String::new(),
+            prompts: Vec::new(),
+            current_prompt: String::new(),
             image_attachments: Vec::new(),
-            session_tree: None,
-            inflight: 0,
-            at_suggestions: None, at_selected: None, last_at_query: None,
-            path_suggestions: None, path_selected: None,
-            all_collapsed: false, last_assistant_index: None, thought_seq: 0,
-            input_history: Vec::new(), history_pos: None,
-            undo_stack: Vec::new(), redo_stack: Vec::new(),
-            input_flash: 0, placeholder: "Type a message to start...".into(),
-            element_count: 0, elements_cache: Arc::new([]), line_counts: Arc::new([]), total_lines: 0,
-            cached_palette_items: Vec::new(), cached_palette_filter: None, cached_model_items: Vec::new(), cached_model_filter: None, dirty: true, message_gen: 1, cached_gen: 0,
+            all_collapsed: false,
+            last_assistant_index: None,
+            thought_seq: 0,
+            input_history: Vec::new(),
+            cached_palette_items: Vec::new(),
+            cached_palette_filter: None,
+            cached_model_items: Vec::new(),
+            cached_model_filter: None,
         }
     }
 }
@@ -237,11 +163,11 @@ impl AppState {
     }
 
     pub fn turn_elapsed_secs(&self) -> Option<f64> {
-        self.turn_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent.turn_started_at.map(|t| t.elapsed().as_secs_f64())
     }
 
     pub fn tool_elapsed_secs(&self) -> Option<f64> {
-        self.tool_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent.tool_started_at.map(|t| t.elapsed().as_secs_f64())
     }
 
     /// Braille spinner frame (12-frame cycle)
@@ -256,13 +182,13 @@ impl AppState {
     }
 
     pub(crate) fn mark_dirty(&mut self) {
-        self.dirty = true;
+        self.view.dirty = true;
     }
 
     pub fn messages_changed(&mut self) {
-        self.message_gen = self.message_gen.wrapping_add(1);
-        self.session_updated_at = now();
-        self.dirty = true;
+        self.view.message_gen = self.view.message_gen.wrapping_add(1);
+        self.session.session_updated_at = now();
+        self.view.dirty = true;
     }
 
     fn palette_items(&mut self) -> Vec<(String, String, String)> {
@@ -300,7 +226,7 @@ impl AppState {
             Some(crate::commands::DialogState::SessionTree { filter, .. }) => *filter,
             _ => return Vec::new(),
         };
-        match self.session_tree.as_ref() {
+        match self.session.session_tree.as_ref() {
             Some(tree) => tree.filtered_walk(filter)
                 .into_iter()
                 .map(|(depth, node)| {
@@ -327,8 +253,8 @@ impl AppState {
                 &model_catalog(),
                 &self.recent_models,
                 &filter,
-                &self.current_provider,
-                &self.current_model,
+                &self.config.current_provider,
+                &self.config.current_model,
             );
         }
         self.cached_model_items.clone()
@@ -345,65 +271,65 @@ impl AppState {
     }
 
     pub fn cache_generation(&self) -> u64 {
-        self.message_gen
+        self.view.message_gen
     }
 
     /// Rebuild cache only when messages changed — O(n) but gated
     pub fn ensure_fresh(&mut self) {
-        if self.dirty && self.message_gen != self.cached_gen {
+        if self.view.dirty && self.view.message_gen != self.view.cached_gen {
             let elements = crate::ui::LazyCache::rebuild(self);
-            self.element_count = elements.len();
+            self.view.element_count = elements.len();
             let line_counts: Vec<usize> = elements.iter().map(|e| e.line_count()).collect();
-            self.total_lines = line_counts.iter().sum();
-            self.line_counts = line_counts.into();
-            self.elements_cache = elements.into();
-            self.cached_gen = self.message_gen;
+            self.view.total_lines = line_counts.iter().sum();
+            self.view.line_counts = line_counts.into();
+            self.view.elements_cache = elements.into();
+            self.view.cached_gen = self.view.message_gen;
         }
-        self.dirty = false;
+        self.view.dirty = false;
     }
 
     /// Visible elements slice — O(1), zero allocation
     pub fn visible(&self, skip: usize, take: usize) -> &[Element] {
-        if self.elements_cache.is_empty() {
+        if self.view.elements_cache.is_empty() {
             return &[];
         }
-        let start = skip.min(self.element_count).min(self.elements_cache.len());
-        let end = (start + take).min(self.element_count).min(self.elements_cache.len());
-        &self.elements_cache[start..end]
+        let start = skip.min(self.view.element_count).min(self.view.elements_cache.len());
+        let end = (start + take).min(self.view.element_count).min(self.view.elements_cache.len());
+        &self.view.elements_cache[start..end]
     }
 
     pub fn count(&self) -> usize {
-        self.element_count.max(self.elements_cache.len())
+        self.view.element_count.max(self.view.elements_cache.len())
     }
 
     pub fn element_count(&self) -> usize {
-        self.element_count
+        self.view.element_count
     }
 
     pub fn total_lines(&self) -> usize {
-        self.total_lines
+        self.view.total_lines
     }
 
     pub fn elements_cache(&self) -> &[Element] {
-        self.elements_cache.as_ref()
+        self.view.elements_cache.as_ref()
     }
 
     pub(crate) fn line_counts(&self) -> &[usize] {
-        self.line_counts.as_ref()
+        self.view.line_counts.as_ref()
     }
 
     pub fn tick_animation(&mut self) {
         let mut changed = false;
-        if self.turn_active {
+        if self.agent.turn_active {
             self.animation_frame = self.animation_frame.wrapping_add(1);
             changed = true;
         }
-        if self.input_flash > 0 {
-            self.input_flash -= 1;
+        if self.input.input_flash > 0 {
+            self.input.input_flash -= 1;
             changed = true;
         }
         if changed {
-            self.dirty = true;
+            self.view.dirty = true;
         }
     }
 
@@ -412,33 +338,33 @@ impl AppState {
     /// actor receives it via channel and draws without touching state.
     pub fn snapshot(&mut self) -> Snapshot {
         Snapshot {
-            elements: Arc::clone(&self.elements_cache),
-            line_counts: Arc::clone(&self.line_counts),
-            total_lines: self.total_lines,
-            input: self.input.clone(),
-            cursor_pos: self.cursor_pos,
+            elements: Arc::clone(&self.view.elements_cache),
+            line_counts: Arc::clone(&self.view.line_counts),
+            total_lines: self.view.total_lines,
+            input: self.input.input.clone(),
+            cursor_pos: self.input.cursor_pos,
             hint_text: self.hint_text(),
-            at_suggestions: self.at_suggestions.clone(),
-            at_selected: self.at_selected,
-            path_suggestions: self.path_suggestions.clone(),
-            path_selected: self.path_selected,
-            turn_active: self.turn_active,
-            input_flash: self.input_flash,
-            placeholder: self.placeholder.clone(),
+            at_suggestions: self.completion.at_suggestions.clone(),
+            at_selected: self.completion.at_selected,
+            path_suggestions: self.completion.path_suggestions.clone(),
+            path_selected: self.completion.path_selected,
+            turn_active: self.agent.turn_active,
+            input_flash: self.input.input_flash,
+            placeholder: self.input.placeholder.clone(),
             spinner_frame: self.spinner_frame(),
-            scroll: self.scroll,
+            scroll: self.view.scroll,
             turn_elapsed_secs: self.turn_elapsed_secs(),
-            provider: self.current_provider.clone(),
-            model: self.current_model.clone(),
-            theme_name: self.theme_name.clone(),
-            thinking_level: self.thinking_level,
-            read_only: self.read_only,
-            queue_count: self.message_queue.len() + self.request_queue.len(),
+            provider: self.config.current_provider.clone(),
+            model: self.config.current_model.clone(),
+            theme_name: self.config.theme_name.clone(),
+            thinking_level: self.config.thinking_level,
+            read_only: self.config.read_only,
+            queue_count: self.agent.message_queue.len() + self.agent.request_queue.len(),
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),
             model_selector_items: self.model_selector_items(),
             pending_edits: self.pending_edits.clone(),
-            scoped_models: self.scoped_models.clone(),
+            scoped_models: self.config.scoped_models.clone(),
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
@@ -447,11 +373,11 @@ impl AppState {
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.dirty
+        self.view.dirty
     }
 
     pub fn total_tokens(&self) -> usize {
-        self.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum()
+        self.session.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum()
     }
 
     pub fn compact(&mut self, keep_recent_tokens: usize) -> String {
@@ -461,15 +387,15 @@ impl AppState {
         }
         let mut accumulated = 0usize;
         let mut cut_idx = 0usize;
-        for (i, msg) in self.messages.iter().enumerate().rev() {
+        for (i, msg) in self.session.messages.iter().enumerate().rev() {
             accumulated += crate::tokens::estimate_tokens(&msg.content);
             if accumulated >= keep_recent_tokens {
                 cut_idx = i;
                 break;
             }
         }
-        while cut_idx < self.messages.len() {
-            match self.messages[cut_idx].role {
+        while cut_idx < self.session.messages.len() {
+            match self.session.messages[cut_idx].role {
                 Role::User | Role::Assistant => break,
                 _ => cut_idx += 1,
             }
@@ -478,9 +404,9 @@ impl AppState {
             return "Cannot compact: all messages are recent".to_string();
         }
         let removed_count = cut_idx;
-        self.messages.drain(..cut_idx);
+        self.session.messages.drain(..cut_idx);
         let summary = format!("[Compacted: {} earlier messages removed, keeping ~{} tokens]", removed_count, keep_recent_tokens);
-        self.messages.insert(0, ChatMessage {
+        self.session.messages.insert(0, ChatMessage {
             role: Role::System,
             content: summary.clone(),
             timestamp: now(),

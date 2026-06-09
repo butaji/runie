@@ -4,8 +4,8 @@ fn render_selector() -> Vec<String> {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.current_provider = "openai".to_string();
-    state.current_model = "gpt-4o".to_string();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
     state.update(Event::ToggleModelSelector);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();

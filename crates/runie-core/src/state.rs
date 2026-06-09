@@ -1,0 +1,185 @@
+use std::collections::VecDeque;
+use std::sync::Arc;
+
+use crate::commands::CommandRegistry;
+use crate::edit_preview::EditPreview;
+use crate::keybindings::default_keybindings;
+use crate::message::{ChatMessage, now};
+use crate::model::{DeliveryMode, QueuedMessage, ThinkingLevel};
+use crate::path_complete::PathCompletion;
+use crate::scoped_model::ScopedModel;
+use crate::session_tree::SessionTree;
+use crate::skills::Skill;
+use crate::telemetry::Telemetry;
+use crate::ui::elements::Element;
+
+#[derive(Clone)]
+pub struct InputState {
+    pub input: String,
+    pub cursor_pos: usize,
+    pub(crate) undo_stack: Vec<(String, usize)>,
+    pub(crate) redo_stack: Vec<(String, usize)>,
+    pub(crate) history_pos: Option<usize>,
+    pub input_flash: u8,
+    pub placeholder: String,
+}
+
+impl Default for InputState {
+    fn default() -> Self {
+        Self {
+            input: String::new(),
+            cursor_pos: 0,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
+            history_pos: None,
+            input_flash: 0,
+            placeholder: "Type a message to start...".into(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct AgentState {
+    pub request_queue: VecDeque<(String, String)>,
+    pub message_queue: Vec<QueuedMessage>,
+    pub current_request_id: Option<String>,
+    pub turn_started_at: Option<std::time::Instant>,
+    pub turn_active: bool,
+    pub inflight: usize,
+    pub current_tool_name: Option<String>,
+    pub tool_started_at: Option<std::time::Instant>,
+}
+
+impl Default for AgentState {
+    fn default() -> Self {
+        Self {
+            request_queue: VecDeque::new(),
+            message_queue: Vec::new(),
+            current_request_id: None,
+            turn_started_at: None,
+            turn_active: false,
+            inflight: 0,
+            current_tool_name: None,
+            tool_started_at: None,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ViewState {
+    pub scroll: usize,
+    pub elements_cache: Arc<[Element]>,
+    pub line_counts: Arc<[usize]>,
+    pub total_lines: usize,
+    pub dirty: bool,
+    pub cached_gen: u64,
+    pub message_gen: u64,
+    pub element_count: usize,
+}
+
+impl ViewState {
+    pub fn elements_cache(&self) -> &[Element] {
+        self.elements_cache.as_ref()
+    }
+
+    pub fn line_counts(&self) -> &[usize] {
+        self.line_counts.as_ref()
+    }
+
+    pub fn total_lines(&self) -> usize {
+        self.total_lines
+    }
+
+    pub fn element_count(&self) -> usize {
+        self.element_count
+    }
+}
+
+impl Default for ViewState {
+    fn default() -> Self {
+        Self {
+            scroll: 0,
+            elements_cache: Arc::new([]),
+            line_counts: Arc::new([]),
+            total_lines: 0,
+            dirty: true,
+            cached_gen: 0,
+            message_gen: 1,
+            element_count: 0,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct SessionState {
+    pub messages: Vec<ChatMessage>,
+    pub session_tree: Option<SessionTree>,
+    pub session_display_name: Option<String>,
+    pub session_created_at: f64,
+    pub session_updated_at: f64,
+}
+
+impl Default for SessionState {
+    fn default() -> Self {
+        let t = now();
+        Self {
+            messages: Vec::new(),
+            session_tree: None,
+            session_display_name: None,
+            session_created_at: t,
+            session_updated_at: t,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ConfigState {
+    pub current_provider: String,
+    pub current_model: String,
+    pub config_provider: String,
+    pub config_model: String,
+    pub keybindings: std::collections::HashMap<String, String>,
+    pub theme_name: String,
+    pub thinking_level: ThinkingLevel,
+    pub read_only: bool,
+    pub scoped_models: Vec<ScopedModel>,
+    pub scoped_index: usize,
+}
+
+impl Default for ConfigState {
+    fn default() -> Self {
+        Self {
+            current_provider: "mock".into(),
+            current_model: "echo".into(),
+            config_provider: "mock".into(),
+            config_model: "echo".into(),
+            keybindings: default_keybindings(),
+            theme_name: "silkcircuit-neon".into(),
+            thinking_level: ThinkingLevel::Off,
+            read_only: false,
+            scoped_models: Vec::new(),
+            scoped_index: 0,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct CompletionState {
+    pub path_suggestions: Option<Vec<PathCompletion>>,
+    pub path_selected: Option<usize>,
+    pub at_suggestions: Option<Vec<String>>,
+    pub at_selected: Option<usize>,
+    pub last_at_query: Option<String>,
+}
+
+impl Default for CompletionState {
+    fn default() -> Self {
+        Self {
+            path_suggestions: None,
+            path_selected: None,
+            at_suggestions: None,
+            at_selected: None,
+            last_at_query: None,
+        }
+    }
+}

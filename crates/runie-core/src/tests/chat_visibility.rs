@@ -48,7 +48,7 @@ fn list_files_full_turn_latest_always_visible() {
 }
 
 fn verify_user_visible(state: &mut AppState, height: usize) {
-    state.input = "list files".to_string();
+    state.input.input = "list files".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "User message must be visible after submit");
@@ -102,7 +102,7 @@ fn large_tool_output_bottom_lines_visible() {
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     let texts: Vec<String> = region.elements.iter().filter_map(|e| match e {
@@ -125,21 +125,21 @@ fn viewport_at_bottom_shows_latest_after_overflow() {
 
     add_small_messages(&mut state);
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let before = visible_kinds(&state, height);
     assert!(before.contains(&"User".to_string()), "User messages visible before overflow");
 
     add_huge_thought(&mut state);
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     verify_thought_visible(&state, height);
 }
 
 fn add_small_messages(state: &mut AppState) {
     for i in 0..3 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -155,7 +155,7 @@ fn add_huge_thought(state: &mut AppState) {
     for i in 1..=30 {
         huge.push_str(&format!("line{}\n", i));
     }
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: huge,
         timestamp: 10.0,
@@ -184,7 +184,7 @@ fn scroll_zero_means_bottom_after_any_event() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Send a bunch of events
     state.update(Event::AgentResponse { id: "req.0".into(), content: "a".into() });
@@ -219,10 +219,10 @@ fn user_message_visible_after_submit_clears_input() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.input = "list files".to_string();
+    state.input.input = "list files".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let region = state.visible_scroll(height);
     let has_user = region.elements.iter().any(|e| match e {
@@ -240,7 +240,7 @@ fn streaming_response_appends_not_replaces() {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "world".into() });
     state.ensure_fresh();
 
-    let assistant_msgs: Vec<_> = state.messages.iter()
+    let assistant_msgs: Vec<_> = state.session.messages.iter()
         .filter(|m| m.role == Role::Assistant)
         .collect();
     assert_eq!(assistant_msgs.len(), 1, "Should have exactly one assistant message");
@@ -252,9 +252,9 @@ fn tool_end_does_not_duplicate_messages() {
     let mut state = fresh_state();
 
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    let before_count = state.messages.len();
+    let before_count = state.session.messages.len();
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() });
-    let after_count = state.messages.len();
+    let after_count = state.session.messages.len();
 
     assert_eq!(before_count, after_count, "Tool end should update existing message, not create new one");
 }
@@ -263,14 +263,14 @@ fn tool_end_does_not_duplicate_messages() {
 fn total_lines_increases_with_each_event() {
     let mut state = fresh_state();
 
-    let t0 = state.total_lines();
+    let t0 = state.view.total_lines();
     state.update(Event::AgentResponse { id: "req.0".into(), content: "a".into() });
     state.ensure_fresh();
-    let t1 = state.total_lines();
+    let t1 = state.view.total_lines();
     assert!(t1 > t0, "total_lines should increase after response");
 
     state.update(Event::AgentResponse { id: "req.0".into(), content: "b".into() });
     state.ensure_fresh();
-    let t2 = state.total_lines();
+    let t2 = state.view.total_lines();
     assert!(t2 >= t1, "total_lines should not decrease after append");
 }

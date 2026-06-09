@@ -11,8 +11,8 @@ fn render_status(state: &mut AppState) -> String {
 #[test]
 fn status_line_shows_timer_when_turn_active() {
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
 
     let out = render_status(&mut state);
@@ -23,8 +23,8 @@ fn status_line_shows_timer_when_turn_active() {
 #[test]
 fn status_line_shows_spinner_and_timer() {
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.animation_frame = 3;
     state.ensure_fresh();
 
@@ -37,7 +37,7 @@ fn status_line_shows_spinner_and_timer() {
 #[test]
 fn status_line_empty_when_turn_inactive() {
     let mut state = AppState::default();
-    state.turn_active = false;
+    state.agent.turn_active = false;
     state.ensure_fresh();
 
     let out = render_status(&mut state);
@@ -47,8 +47,8 @@ fn status_line_empty_when_turn_inactive() {
 #[test]
 fn status_timer_updates_over_time() {
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     state.ensure_fresh();
 
     let out1 = render_status(&mut state);

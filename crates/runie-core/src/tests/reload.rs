@@ -14,11 +14,11 @@ fn reload_emits_event() {
 #[test]
 fn reload_updates_keybindings() {
     let mut state = AppState::default();
-    let initial_bindings = state.keybindings.clone();
+    let initial_bindings = state.config.keybindings.clone();
     state.update(Event::ReloadAll);
     // After reload, keybindings should be refreshed (same content but new HashMap)
-    assert_eq!(state.keybindings.len(), initial_bindings.len());
-    assert!(state.messages.iter().any(|m| {
+    assert_eq!(state.config.keybindings.len(), initial_bindings.len());
+    assert!(state.session.messages.iter().any(|m| {
         m.role == crate::model::Role::System && m.content.contains("Reloaded")
     }));
 }

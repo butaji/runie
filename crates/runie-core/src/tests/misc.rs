@@ -10,35 +10,35 @@ fn fresh_state() -> AppState {
 #[test]
 fn test_reset_clears_state() {
     let mut state = fresh_state();
-    state.input = "test".to_string();
+    state.input.input = "test".to_string();
     state.streaming = true;
     state.update(Event::Reset);
-    assert_eq!(state.input, "");
+    assert_eq!(state.input.input, "");
     assert!(!state.streaming);
-    assert_eq!(state.messages.len(), 0);
+    assert_eq!(state.session.messages.len(), 0);
 }
 
 #[test]
 fn test_scroll_up() {
     let mut state = fresh_state();
     state.update(Event::ScrollUp);
-    assert_eq!(state.scroll, 1);
+    assert_eq!(state.view.scroll, 1);
 }
 
 #[test]
 fn test_scroll_down() {
     let mut state = fresh_state();
-    state.scroll = 5;
+    state.view.scroll = 5;
     state.update(Event::ScrollDown);
-    assert_eq!(state.scroll, 4);
+    assert_eq!(state.view.scroll, 4);
 }
 
 #[test]
 fn test_scroll_down_saturates() {
     let mut state = fresh_state();
-    state.scroll = 0;
+    state.view.scroll = 0;
     state.update(Event::ScrollDown);
-    assert_eq!(state.scroll, 0);
+    assert_eq!(state.view.scroll, 0);
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn test_tool_flow_creates_two_thoughts() {
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are the files".to_string() });
-    let thought_count = state.messages.iter().filter(|m| m.role == Role::Thought).count();
+    let thought_count = state.session.messages.iter().filter(|m| m.role == Role::Thought).count();
     assert_eq!(thought_count, 2);
 }
 
@@ -61,8 +61,8 @@ fn test_turn_complete_event() {
     let mut state = fresh_state();
     state.intermediate_step_count = 1;
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
-    assert_eq!(state.messages.len(), 1);
-    let msg = &state.messages[0];
+    assert_eq!(state.session.messages.len(), 1);
+    let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::TurnComplete);
     assert!(msg.content.contains("5.1s"));
 }
@@ -75,7 +75,7 @@ fn test_turn_complete_always_added_when_event_received() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hi".to_string() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 1.0 });
-    let has_turn_complete = state.messages.iter().any(|m| m.role == Role::TurnComplete);
+    let has_turn_complete = state.session.messages.iter().any(|m| m.role == Role::TurnComplete);
     assert!(has_turn_complete, "Core should always add TurnComplete when event is received; agent decides whether to emit it");
 }
 
@@ -84,8 +84,8 @@ fn test_tool_done_event() {
     let mut state = fresh_state();
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.3, output: String::new() });
-    assert_eq!(state.messages.len(), 1);
-    let msg = &state.messages[0];
+    assert_eq!(state.session.messages.len(), 1);
+    let msg = &state.session.messages[0];
     assert_eq!(msg.role, Role::Tool);
     assert!(msg.content.contains("list_files"));
     assert!(msg.content.contains("0.3s"));
@@ -119,12 +119,12 @@ fn test_list_files_full_tool_flow_sequence() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are the files:".to_string() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
-    assert_eq!(state.messages.len(), 5);
-    assert_eq!(state.messages[0].role, Role::Thought);
-    assert_eq!(state.messages[1].role, Role::Tool);
-    assert_eq!(state.messages[2].role, Role::Thought);
-    assert_eq!(state.messages[3].role, Role::Assistant);
-    assert_eq!(state.messages[4].role, Role::TurnComplete);
+    assert_eq!(state.session.messages.len(), 5);
+    assert_eq!(state.session.messages[0].role, Role::Thought);
+    assert_eq!(state.session.messages[1].role, Role::Tool);
+    assert_eq!(state.session.messages[2].role, Role::Thought);
+    assert_eq!(state.session.messages[3].role, Role::Assistant);
+    assert_eq!(state.session.messages[4].role, Role::TurnComplete);
     let lines = format_messages(&state);
     let content: String = lines.iter()
         .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
@@ -147,7 +147,7 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here are files".to_string() });
     state.update(Event::AgentDone { id: "req.0".to_string() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 3.2 });
-    let has_turn_complete = state.messages.iter().any(|m| m.role == Role::TurnComplete);
+    let has_turn_complete = state.session.messages.iter().any(|m| m.role == Role::TurnComplete);
     assert!(has_turn_complete, "TurnComplete should show even if Done event arrives before TurnComplete");
 }
 
@@ -155,9 +155,9 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
 fn test_thinking_indicator_shows_for_queued_request() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.request_queue.push_back(("B".to_string(), "req.1".to_string()));
+    state.agent.request_queue.push_back(("B".to_string(), "req.1".to_string()));
     state.thinking_started_at = Some(std::time::Instant::now());
-    let has_thought = state.messages.iter().any(|m| m.role == Role::Thought);
+    let has_thought = state.session.messages.iter().any(|m| m.role == Role::Thought);
     assert!(!has_thought);
 }
 
@@ -168,7 +168,7 @@ fn test_sessions_command_shows_system_message() {
         state.update(Event::Input(c));
     }
     state.update(Event::Submit);
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     assert!(!sys_msgs.is_empty(), "Should show system message for /sessions");
 }
 
@@ -190,7 +190,7 @@ fn test_save_and_load_session() {
         state.update(Event::Input(c));
     }
     state.update(Event::Submit);
-    assert!(state.messages.iter().any(|m| m.role == Role::System && m.content.contains("saved")));
+    assert!(state.session.messages.iter().any(|m| m.role == Role::System && m.content.contains("saved")));
 
 
     let mut state2 = fresh_state();
@@ -198,8 +198,8 @@ fn test_save_and_load_session() {
         state2.update(Event::Input(c));
     }
     state2.update(Event::Submit);
-    assert!(state2.messages.iter().any(|m| m.role == Role::System && m.content.contains("loaded")));
-    assert!(state2.messages.iter().any(|m| m.role == Role::User && m.content == "hi"));
+    assert!(state2.session.messages.iter().any(|m| m.role == Role::System && m.content.contains("loaded")));
+    assert!(state2.session.messages.iter().any(|m| m.role == Role::User && m.content == "hi"));
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

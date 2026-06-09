@@ -104,7 +104,7 @@ fn test_render_model_m3_just_model_name() {
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Switched to mock/m3"), "/model m3 should render: {}", content);
     assert!(!content.contains("$ /model m3"), "Should NOT echo /model m3 as user message: {}", content);
-    assert_eq!(state.current_model, "m3");
+    assert_eq!(state.config.current_model, "m3");
 }
 
 #[test]

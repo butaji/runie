@@ -55,7 +55,7 @@ fn toggle_expand_collapses_all_tools() {
 #[test]
 fn thought_expanded_by_default() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Thinking...".into(),
         timestamp: 0.0,
@@ -70,7 +70,7 @@ fn thought_expanded_by_default() {
 #[test]
 fn toggle_expand_hides_thought() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning here\nline two".into(),
         timestamp: 0.0,
@@ -84,7 +84,7 @@ fn toggle_expand_hides_thought() {
 #[test]
 fn toggle_expand_restores_thought() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning".into(),
         timestamp: 0.0,
@@ -99,7 +99,7 @@ fn toggle_expand_restores_thought() {
 #[test]
 fn collapsed_thought_renders_one_line_summary() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning\nline two\nline three".into(),
         timestamp: 0.0,
@@ -119,7 +119,7 @@ fn collapsed_thought_renders_one_line_summary() {
 #[test]
 fn tool_collapsed_by_toggle() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
@@ -133,7 +133,7 @@ fn tool_collapsed_by_toggle() {
 #[test]
 fn toggle_expand_restores_tool() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
@@ -148,7 +148,7 @@ fn toggle_expand_restores_tool() {
 #[test]
 fn collapsed_tool_renders_one_line_summary() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
@@ -175,14 +175,14 @@ fn toggle_expand_noop_when_empty() {
 #[test]
 fn toggle_expand_affects_all_items() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "older thought".into(),
         timestamp: 0.0,
         id: "old".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 1.0,
@@ -196,7 +196,7 @@ fn toggle_expand_affects_all_items() {
 #[test]
 fn toggle_thought_rebuilds_cache() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning\nline two".into(),
         timestamp: 0.0,
@@ -204,12 +204,12 @@ fn toggle_thought_rebuilds_cache() {
         ..Default::default()
     });
     state.ensure_fresh();
-    let before = state.elements_cache().to_vec();
+    let before = state.view.elements_cache().to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })));
 
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let after = state.elements_cache().to_vec();
+    let after = state.view.elements_cache().to_vec();
     assert!(
         after.iter().any(|e| matches!(e, Element::ThoughtSummary { .. })),
         "Cache should rebuild to ThoughtSummary after toggle"
@@ -219,7 +219,7 @@ fn toggle_thought_rebuilds_cache() {
 #[test]
 fn toggle_thought_twice_restores_cache() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Deep reasoning".into(),
         timestamp: 0.0,
@@ -230,7 +230,7 @@ fn toggle_thought_twice_restores_cache() {
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let cache = state.elements_cache().to_vec();
+    let cache = state.view.elements_cache().to_vec();
     assert!(
         cache.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })),
         "Cache should restore ThoughtMarker after second toggle"
@@ -240,7 +240,7 @@ fn toggle_thought_twice_restores_cache() {
 #[test]
 fn toggle_tool_rebuilds_cache() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
@@ -248,12 +248,12 @@ fn toggle_tool_rebuilds_cache() {
         ..Default::default()
     });
     state.ensure_fresh();
-    let before = state.elements_cache().to_vec();
+    let before = state.view.elements_cache().to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ToolDone { .. })));
 
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let after = state.elements_cache().to_vec();
+    let after = state.view.elements_cache().to_vec();
     assert!(
         after.iter().any(|e| matches!(e, Element::ToolSummary { .. })),
         "Cache should rebuild to ToolSummary after toggle"
@@ -263,7 +263,7 @@ fn toggle_tool_rebuilds_cache() {
 #[test]
 fn toggle_tool_twice_restores_cache() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s".into(),
         timestamp: 0.0,
@@ -274,7 +274,7 @@ fn toggle_tool_twice_restores_cache() {
     state.ensure_fresh();
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
-    let cache = state.elements_cache().to_vec();
+    let cache = state.view.elements_cache().to_vec();
     assert!(
         cache.iter().any(|e| matches!(e, Element::ToolDone { .. })),
         "Cache should restore ToolDone after second toggle"
@@ -290,7 +290,7 @@ fn thought_captures_assistant_reasoning() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    let thought = state.messages.iter().find(|m| m.role == Role::Thought).unwrap();
+    let thought = state.session.messages.iter().find(|m| m.role == Role::Thought).unwrap();
     assert!(thought.content.contains("I'll list the files."), "Thought should capture reasoning: {}", thought.content);
     assert!(!thought.content.contains("TOOL:"), "Thought should have tool markers stripped");
 }
@@ -303,7 +303,7 @@ fn assistant_preserved_when_no_tools() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here is the answer.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    let assistants: Vec<_> = state.messages.iter().filter(|m| m.role == Role::Assistant).collect();
+    let assistants: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::Assistant).collect();
     assert_eq!(assistants.len(), 1, "Assistant should be preserved when no tools");
     assert_eq!(assistants[0].content, "Here is the answer.");
 }
@@ -315,7 +315,7 @@ fn tool_stores_output() {
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
 
-    let tool = state.messages.iter().find(|m| m.role == Role::Tool).unwrap();
+    let tool = state.session.messages.iter().find(|m| m.role == Role::Tool).unwrap();
     assert!(tool.content.contains("file1"), "Tool should store output: {}", tool.content);
     assert!(tool.content.contains("file2"), "Tool should store output: {}", tool.content);
 }
@@ -323,7 +323,7 @@ fn tool_stores_output() {
 #[test]
 fn collapsed_thought_hides_reasoning() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.2s\nI'll list the files.".into(),
         timestamp: 0.0,
@@ -344,7 +344,7 @@ fn collapsed_thought_hides_reasoning() {
 #[test]
 fn expanded_thought_shows_reasoning() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.2s\nI'll list the files.".into(),
         timestamp: 0.0,
@@ -364,7 +364,7 @@ fn expanded_thought_shows_reasoning() {
 #[test]
 fn collapsed_tool_hides_output() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,
@@ -387,7 +387,7 @@ fn collapsed_tool_hides_output() {
 #[test]
 fn expanded_tool_shows_output() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ list_files 0.5s\nfile1\nfile2".into(),
         timestamp: 0.0,

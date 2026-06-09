@@ -39,22 +39,22 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
 fn user_message_is_one_line() {
     let msg = ChatMessage { role: Role::User, content: "hello".into(), timestamp: 0.0, id: "u".into(), ..Default::default()};
     let mut state = fresh_state();
-    state.messages.push(msg);
+    state.session.messages.push(msg);
     state.messages_changed();
     state.ensure_fresh();
 
-    assert_eq!(state.total_lines(), 2, "UserMessage (1) + Spacer (1) = 2 lines");
+    assert_eq!(state.view.total_lines(), 2, "UserMessage (1) + Spacer (1) = 2 lines");
 }
 
 #[test]
 fn thought_line_count_matches_content() {
     let mut state = fresh_state();
     // header + 5 lines = 6 lines of content, + 1 spacer = 7 total element lines
-    state.messages.push(thought_msg("t1", 5));
+    state.session.messages.push(thought_msg("t1", 5));
     state.messages_changed();
     state.ensure_fresh();
 
-    let total = state.total_lines();
+    let total = state.view.total_lines();
     // ThoughtMarker has 6 lines (header + 5), + Spacer = 7
     assert_eq!(total, 7, "Thought with 5 content lines should be 6+1=7 lines total");
 }
@@ -62,11 +62,11 @@ fn thought_line_count_matches_content() {
 #[test]
 fn tool_line_count_matches_output() {
     let mut state = fresh_state();
-    state.messages.push(tool_msg("x1", 3));
+    state.session.messages.push(tool_msg("x1", 3));
     state.messages_changed();
     state.ensure_fresh();
 
-    let total = state.total_lines();
+    let total = state.view.total_lines();
     // ToolDone: header (1) + output (3) = 4, + Spacer = 5
     assert_eq!(total, 5, "Tool with 3 output lines should be 4+1=5 lines total");
 }
@@ -77,7 +77,7 @@ fn tool_line_count_matches_output() {
 fn visible_shows_latest_element_at_bottom() {
     let mut state = fresh_state();
     for i in 0..3 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -87,7 +87,7 @@ fn visible_shows_latest_element_at_bottom() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0; // at bottom
+    state.view.scroll = 0; // at bottom
 
     let region = state.visible_scroll(3); // 3 lines viewport
     // 3 messages = 3 UserMessage + 3 Spacer = 6 lines total
@@ -101,15 +101,15 @@ fn visible_shows_latest_element_at_bottom() {
 #[test]
 fn visible_skips_lines_from_first_element_when_overflow() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "first".into(),
         timestamp: 0.0,
         id: "u0".into(),
         ..Default::default()
     });
-    state.messages.push(thought_msg("t1", 10)); // 11 lines of thought
-    state.messages.push(ChatMessage {
+    state.session.messages.push(thought_msg("t1", 10)); // 11 lines of thought
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "latest".into(),
         timestamp: 2.0,
@@ -118,7 +118,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     });
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
     let region = state.visible_scroll(5);
 
     assert!(
@@ -137,7 +137,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
 fn scroll_up_shows_older_content() {
     let mut state = fresh_state();
     for i in 0..5 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -154,7 +154,7 @@ fn scroll_up_shows_older_content() {
     // scroll=2: viewport [5, 8) → lines 5,6,7 = msg2, spacer, msg3 — msg2 visible, msg4 hidden
 
     // scroll=5: viewport [2, 5) → msg1, spacer, msg2 — msg2 visible, msg4 hidden
-    state.scroll = 5;
+    state.view.scroll = 5;
     let region = state.visible_scroll(3);
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
@@ -171,7 +171,7 @@ fn scroll_up_shows_older_content() {
 #[test]
 fn scrollbar_no_scrollbar_when_lines_fit() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage { role: Role::User, content: "hi".into(), timestamp: 0.0, id: "u".into(), ..Default::default()});
+    state.session.messages.push(ChatMessage { role: Role::User, content: "hi".into(), timestamp: 0.0, id: "u".into(), ..Default::default()});
     state.messages_changed();
     state.ensure_fresh();
 
@@ -185,7 +185,7 @@ fn scrollbar_shows_when_lines_overflow() {
     let mut state = fresh_state();
     // 20 messages = 40 lines, viewport = 10
     for i in 0..20 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -204,7 +204,7 @@ fn scrollbar_shows_when_lines_overflow() {
 fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     let mut state = fresh_state();
     for i in 0..20 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -214,7 +214,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let (thumb, offset) = state.scrollbar_metrics(10);
     // 40 lines total, viewport 10, max_scroll = 30
@@ -227,7 +227,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
 fn scrollbar_thumb_at_top_when_fully_scrolled() {
     let mut state = fresh_state();
     for i in 0..20 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -237,7 +237,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 100; // clamped
+    state.view.scroll = 100; // clamped
 
     let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top track edge when fully scrolled");
@@ -248,7 +248,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
 #[test]
 fn large_thought_overflows_viewport() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "before".into(),
         timestamp: 0.0,
@@ -256,8 +256,8 @@ fn large_thought_overflows_viewport() {
         ..Default::default()
     });
     // Thought with 20 lines of content
-    state.messages.push(thought_msg("t1", 20));
-    state.messages.push(ChatMessage {
+    state.session.messages.push(thought_msg("t1", 20));
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "after".into(),
         timestamp: 2.0,
@@ -266,7 +266,7 @@ fn large_thought_overflows_viewport() {
     });
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Total: before(1)+spacer(1) + thought(21)+spacer(1) + after(1)+spacer(1) = 26 lines
     // Viewport of 5 lines at bottom:
@@ -286,7 +286,7 @@ fn large_thought_overflows_viewport() {
 fn multi_line_tool_at_bottom_visible() {
     let mut state = fresh_state();
     for i in 0..3 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -294,10 +294,10 @@ fn multi_line_tool_at_bottom_visible() {
             ..Default::default()
         });
     }
-    state.messages.push(tool_msg("t1", 5));
+    state.session.messages.push(tool_msg("t1", 5));
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Total: 3*2 + 6+1 = 6 + 7 = 13 lines (3 users + 3 spacers + tool header + 5 outputs + spacer)
     // Wait: tool_msg header = "◆ Ran ls 0.5s" (1 line) + 5 output lines = 6 lines for ToolDone + 1 spacer = 7
@@ -318,7 +318,7 @@ fn new_message_at_bottom_auto_shows() {
     let mut state = fresh_state();
     // Fill with enough content to overflow
     for i in 0..10 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -328,10 +328,10 @@ fn new_message_at_bottom_auto_shows() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Add new message — total lines increases, but we're at bottom
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "newest".into(),
         timestamp: 100.0,
@@ -352,7 +352,7 @@ fn new_message_at_bottom_auto_shows() {
 fn scroll_preserved_when_not_at_bottom() {
     let mut state = fresh_state();
     for i in 0..10 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -362,9 +362,9 @@ fn scroll_preserved_when_not_at_bottom() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 5; // scrolled up
+    state.view.scroll = 5; // scrolled up
 
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "newest".into(),
         timestamp: 100.0,
@@ -375,5 +375,5 @@ fn scroll_preserved_when_not_at_bottom() {
     state.ensure_fresh();
 
     // scroll preserved when not at bottom
-    assert_eq!(state.scroll, 5, "Scroll position should be preserved when not at bottom");
+    assert_eq!(state.view.scroll, 5, "Scroll position should be preserved when not at bottom");
 }

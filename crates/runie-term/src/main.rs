@@ -44,7 +44,7 @@ async fn main() -> io::Result<()> {
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
     let (render_tx, render_rx) = mpsc::channel::<Snapshot>(1);
-    let (kb_tx, kb_rx) = watch::channel(state.keybindings.clone());
+    let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
     tokio::spawn(input_reader(input_tx.clone(), kb_rx));
@@ -88,7 +88,7 @@ async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, mut kb_rx: watch::Recei
 fn init_scoped_models(state: &mut AppState) {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     if let Some(scoped) = config.scoped_models() {
-        state.scoped_models = scoped
+        state.config.scoped_models = scoped
             .iter()
             .map(|s| {
                 let parts: Vec<&str> = s.split('/').collect();
@@ -100,7 +100,7 @@ fn init_scoped_models(state: &mut AppState) {
                     }
                 } else {
                     runie_core::model::ScopedModel {
-                        provider: state.current_provider.clone(),
+                        provider: state.config.current_provider.clone(),
                         name: s.clone(),
                         enabled: true,
                     }
@@ -110,7 +110,7 @@ fn init_scoped_models(state: &mut AppState) {
     } else {
         // Default: first 10 models from catalog
         let registry = runie_provider::model::ModelRegistry::default();
-        state.scoped_models = registry
+        state.config.scoped_models = registry
             .list()
             .iter()
             .take(10)
@@ -128,14 +128,14 @@ fn apply_trust_on_startup(state: &mut AppState) {
     let tm = runie_core::TrustManager::load();
     match tm.decision_for(&cwd) {
         Some(runie_core::TrustDecision::Untrusted) => {
-            state.read_only = true;
+            state.config.read_only = true;
         }
         Some(runie_core::TrustDecision::Trusted) => {
-            state.read_only = false;
+            state.config.read_only = false;
         }
         None => {
-            state.read_only = false;
-            state.messages.push(runie_core::ChatMessage {
+            state.config.read_only = false;
+            state.session.messages.push(runie_core::ChatMessage {
                 role: runie_core::Role::System,
                 content: format!(
                     "Welcome to runie in {}.\n\nThis project is not yet trusted. \
@@ -176,14 +176,14 @@ async fn event_loop(
 
             Some(evt) = input_rx.recv() => {
                 if matches!(evt, CoreEvent::OpenExternalEditor) {
-                    let text = state.input.clone();
+                    let text = state.input.input.clone();
                     let tx = input_tx.clone();
                     tokio::task::spawn_blocking(move || {
                         let _ = spawn_external_editor_sync(text, tx);
                     });
                 } else if matches!(evt, CoreEvent::ShareSession) {
-                    let messages = state.messages.clone();
-                    let display_name = state.session_display_name.clone();
+                    let messages = state.session.messages.clone();
+                    let display_name = state.session.session_display_name.clone();
                     let tx = input_tx.clone();
                     tokio::spawn(async move {
                         match share::share_session(&messages, display_name.as_deref()).await {
@@ -236,7 +236,7 @@ async fn event_loop(
                         return Ok(());
                     }
                     if was_reload {
-                        let _ = kb_tx.send(state.keybindings.clone());
+                        let _ = kb_tx.send(state.config.keybindings.clone());
                     }
                     if was_submit || was_followup {
                         spawn_if_queued(&mut state, &cmd_tx).await;
@@ -343,8 +343,8 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
         let id = id.clone();
         state.pop_queue();
         state.streaming = true;
-        state.turn_active = true;
-        state.inflight += 1;
+        state.agent.turn_active = true;
+        state.agent.inflight += 1;
         let skills_context = runie_core::skills::build_skills_context(&state.skills);
         let system_prompt = state.prompts.iter()
             .find(|p| p.name == state.current_prompt)
@@ -353,10 +353,10 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
         let _ = cmd_tx.send(AgentCommand {
             content,
             id,
-            provider: state.current_provider.clone(),
-            model: state.current_model.clone(),
-            thinking_level: state.thinking_level,
-            read_only: state.read_only,
+            provider: state.config.current_provider.clone(),
+            model: state.config.current_model.clone(),
+            thinking_level: state.config.thinking_level,
+            read_only: state.config.read_only,
             skills_context,
             system_prompt,
         }).await;
@@ -376,16 +376,16 @@ mod tests {
     async fn spawn_if_queued_sets_turn_active_and_inflight() {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<super::AgentCommand>(10);
         let mut state = super::AppState::default();
-        state.request_queue.push_back(("hello".to_string(), "req.0".to_string()));
+        state.agent.request_queue.push_back(("hello".to_string(), "req.0".to_string()));
 
-        assert!(!state.turn_active);
-        assert_eq!(state.inflight, 0);
+        assert!(!state.agent.turn_active);
+        assert_eq!(state.agent.inflight, 0);
 
         super::spawn_if_queued(&mut state, &tx).await;
 
-        assert!(state.turn_active, "spawn_if_queued must set turn_active");
-        assert_eq!(state.inflight, 1, "spawn_if_queued must increment inflight");
-        assert!(state.request_queue.is_empty(), "Message should be popped from request_queue");
+        assert!(state.agent.turn_active, "spawn_if_queued must set turn_active");
+        assert_eq!(state.agent.inflight, 1, "spawn_if_queued must increment inflight");
+        assert!(state.agent.request_queue.is_empty(), "Message should be popped from request_queue");
 
         let cmd = rx.try_recv().expect("Command should be sent to agent");
         assert_eq!(cmd.content, "hello");
@@ -400,7 +400,7 @@ mod tests {
 
         super::spawn_if_queued(&mut state, &tx).await;
 
-        assert!(!state.turn_active);
-        assert_eq!(state.inflight, 0);
+        assert!(!state.agent.turn_active);
+        assert_eq!(state.agent.inflight, 0);
     }
 }

@@ -198,8 +198,8 @@ mod tests {
         let mut state = AppState::default();
         
         // Initial defaults
-        assert_eq!(state.current_provider, "mock");
-        assert_eq!(state.current_model, "echo");
+        assert_eq!(state.config.current_provider, "mock");
+        assert_eq!(state.config.current_model, "echo");
         
         // Send SwitchModel event
         state.update(Event::SwitchModel {
@@ -208,11 +208,11 @@ mod tests {
         });
         
         // Verify provider and model are updated
-        assert_eq!(state.current_provider, "anthropic");
-        assert_eq!(state.current_model, "claude-3-sonnet");
+        assert_eq!(state.config.current_provider, "anthropic");
+        assert_eq!(state.config.current_model, "claude-3-sonnet");
         
         // Verify a system message was added to indicate the change
-        let has_switch_msg = state.messages.iter().any(|m| {
+        let has_switch_msg = state.session.messages.iter().any(|m| {
             m.role == crate::model::Role::System &&
             m.content.contains("Switched to anthropic/claude-3-sonnet")
         });
@@ -222,14 +222,14 @@ mod tests {
     #[test]
     fn config_theme_change_applies_theme() {
         let mut state = AppState::default();
-        assert_eq!(state.theme_name, "silkcircuit-neon");
+        assert_eq!(state.config.theme_name, "silkcircuit-neon");
 
         state.update(Event::SwitchTheme {
             name: "dracula".to_string(),
         });
 
-        assert_eq!(state.theme_name, "dracula");
-        let has_theme_msg = state.messages.iter().any(|m| {
+        assert_eq!(state.config.theme_name, "dracula");
+        let has_theme_msg = state.session.messages.iter().any(|m| {
             m.role == crate::model::Role::System &&
             m.content.contains("Theme switched to 'dracula'")
         });

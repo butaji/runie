@@ -22,7 +22,7 @@ fn latest_message_visible_at_bottom() {
         });
     }
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_content(&mut state);
     assert!(out.contains("msg7"), "Latest message (msg7) must be visible at bottom");
@@ -41,7 +41,7 @@ fn large_thought_clipped_from_top_not_bottom() {
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentResponse { id: "req.0".into(), content: "after".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_with_height(&mut state, 30);
     assert!(out.contains("after"), "Latest content (after) must be visible");
@@ -60,7 +60,7 @@ fn scroll_up_shows_older_content() {
     state.ensure_fresh();
     // 20 messages = 40 lines. With 15-row terminal, chat panel has ~9 inner lines.
     // Scroll up enough to see oldest content.
-    state.scroll = 100; // auto-clamped to max_scroll
+    state.view.scroll = 100; // auto-clamped to max_scroll
 
     let out = render_with_height(&mut state, 15);
     assert!(out.contains("msg0"), "Oldest message should be visible after scrolling up");
@@ -77,7 +77,7 @@ fn scrollbar_visible_when_content_overflows() {
         });
     }
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_content(&mut state);
     assert!(out.contains("█"), "Scrollbar thumb should be visible when content overflows");
@@ -90,7 +90,7 @@ fn tool_output_latest_lines_visible() {
     let output = (1..=10).map(|i| format!("file{}", i)).collect::<Vec<_>>().join("\n");
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_with_height(&mut state, 30);
     assert!(out.contains("file10"), "Latest tool output (file10) must be visible");
@@ -136,7 +136,7 @@ fn partial_element_at_top_when_overflow() {
     state.update(Event::AgentThoughtDone { id: "req.1".into() });
     state.update(Event::AgentResponse { id: "req.2".into(), content: "last".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_with_height(&mut state, 30);
     assert!(out.contains("last"), "Latest message must be visible");
@@ -153,14 +153,14 @@ fn scroll_position_preserved_during_streaming() {
         });
     }
     state.ensure_fresh();
-    state.scroll = 8; // user scrolled up reading history
+    state.view.scroll = 8; // user scrolled up reading history
 
     // New streaming content arrives
     state.update(Event::AgentResponse { id: "req.99".into(), content: "new".into() });
     state.ensure_fresh();
 
     // Scroll should be preserved
-    assert_eq!(state.scroll, 8, "Scroll position should be preserved when not at bottom");
+    assert_eq!(state.view.scroll, 8, "Scroll position should be preserved when not at bottom");
 }
 
 #[test]
@@ -173,10 +173,10 @@ fn at_bottom_auto_scrolls_to_show_new() {
         });
     }
     state.ensure_fresh();
-    state.scroll = 0; // at bottom
+    state.view.scroll = 0; // at bottom
 
     // Submit a new message
-    state.input = "hello".to_string();
+    state.input.input = "hello".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
 

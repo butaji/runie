@@ -55,40 +55,40 @@ fn session_persists_thinking_level() {
 #[test]
 fn shift_tab_cycles() {
     let mut state = AppState::default();
-    assert_eq!(state.thinking_level, ThinkingLevel::Off);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 
     state.update(Event::CycleThinkingLevel);
-    assert_eq!(state.thinking_level, ThinkingLevel::Low);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::Low);
 
     state.update(Event::CycleThinkingLevel);
-    assert_eq!(state.thinking_level, ThinkingLevel::Medium);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::Medium);
 
     state.update(Event::CycleThinkingLevel);
-    assert_eq!(state.thinking_level, ThinkingLevel::High);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
     state.update(Event::CycleThinkingLevel);
-    assert_eq!(state.thinking_level, ThinkingLevel::Off);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 }
 
 #[test]
 fn slash_thinking_sets() {
     let mut state = AppState::default();
-    state.input.push_str("/thinking high");
+    state.input.input.push_str("/thinking high");
     state.update(Event::Submit);
-    assert_eq!(state.thinking_level, ThinkingLevel::High);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
     assert!(sys_msgs.iter().any(|m| m.content.contains("Thinking level set to: high")));
 }
 
 #[test]
 fn slash_thinking_no_args_shows_current() {
     let mut state = AppState::default();
-    state.thinking_level = ThinkingLevel::Medium;
-    state.input.push_str("/thinking");
+    state.config.thinking_level = ThinkingLevel::Medium;
+    state.input.input.push_str("/thinking");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
     assert!(sys_msgs.iter().any(|m| m.content.contains("Current thinking level: medium")));
 }
 
@@ -96,5 +96,5 @@ fn slash_thinking_no_args_shows_current() {
 fn set_thinking_level_event_updates_state() {
     let mut state = AppState::default();
     state.update(Event::SetThinkingLevel(ThinkingLevel::High));
-    assert_eq!(state.thinking_level, ThinkingLevel::High);
+    assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 }

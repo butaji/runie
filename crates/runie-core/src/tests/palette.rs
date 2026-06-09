@@ -6,7 +6,7 @@ use crate::commands::DialogState;
 fn slash_opens_command_palette_when_input_empty() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
-    assert!(state.input.is_empty());
+    assert!(state.input.input.is_empty());
     state.update(Event::Input('/'));
     assert!(matches!(state.open_dialog, Some(DialogState::CommandPalette { .. })), "Typing / with empty input should open command palette");
 }
@@ -16,10 +16,10 @@ fn slash_does_not_open_palette_when_input_not_empty() {
     let mut state = AppState::default();
     state.update(Event::Input('h'));
     state.update(Event::Input('i'));
-    assert_eq!(state.input, "hi");
+    assert_eq!(state.input.input, "hi");
     state.update(Event::Input('/'));
     assert!(state.open_dialog.is_none(), "Typing / with non-empty input should NOT open palette");
-    assert_eq!(state.input, "hi/", "Slash should be inserted normally");
+    assert_eq!(state.input.input, "hi/", "Slash should be inserted normally");
 }
 
 #[test]
