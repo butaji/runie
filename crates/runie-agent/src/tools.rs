@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 use std::process::Command;
 use crate::safety::check_bash_safety;
 use crate::truncate;
+use crate::accumulator::{OutputAccumulator, TruncateStrategy};
 
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
@@ -73,18 +74,16 @@ impl Tool {
     }
 }
 
-fn apply_truncation(output: String, use_tail: bool) -> String {
+fn apply_truncation(output: String, strategy: TruncateStrategy) -> String {
     let policy = truncate::TruncationPolicy::default();
-    let result = if use_tail {
-        truncate::truncate_tail(&output, &policy)
-    } else {
-        truncate::truncate_head(&output, &policy)
-    };
+    let mut acc = OutputAccumulator::new(&policy, strategy);
+    acc.append(output.as_bytes());
+    let result = acc.snapshot();
     if result.was_truncated {
         format!(
             "[Output truncated: {} of {} lines, {} of {} bytes]\n{}",
-            result.output_lines, result.total_lines,
-            result.output_bytes, result.total_bytes,
+            result.content.lines().count(), result.total_lines,
+            result.content.len(), result.total_bytes,
             result.content
         )
     } else {
@@ -139,7 +138,7 @@ fn list_dir(path: &str) -> (String, bool) {
             } else {
                 lines.join("\n")
             };
-            (apply_truncation(output, false), true)
+            (apply_truncation(output, TruncateStrategy::Head), true)
         }
         Err(e) => (format!("Error listing {}: {}", path.display(), e), false),
     }
@@ -216,7 +215,7 @@ fn run_bash(command: &str) -> (String, bool) {
     if result.is_empty() {
         result = if success { "(no output)".to_string() } else { "(command failed)".to_string() };
     }
-    (apply_truncation(result, true), success)
+    (apply_truncation(result, TruncateStrategy::Tail), success)
 }
 
 fn run_command_with_timeout(
@@ -304,7 +303,7 @@ fn parse_grep_output(output: std::process::Output, limit: usize) -> (String, boo
     if lines.len() >= limit {
         result.push_str(&format!("\n\n[{} matches limit reached]", limit));
     }
-    (apply_truncation(result, false), true)
+    (apply_truncation(result, TruncateStrategy::Head), true)
 }
 
 fn run_grep(
@@ -360,7 +359,7 @@ fn parse_find_output(output: std::process::Output, limit: usize) -> (String, boo
     if lines.len() > limit {
         out.push_str(&format!("\n\n[{} results limit reached]", limit));
     }
-    (apply_truncation(out, false), true)
+    (apply_truncation(out, TruncateStrategy::Head), true)
 }
 
 fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
