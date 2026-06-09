@@ -15,6 +15,7 @@ mod model_selector;
 mod path_complete;
 mod queue;
 mod scoped_models;
+mod session;
 pub mod settings_dialog;
 mod system_actions;
 mod palette;
@@ -215,61 +216,6 @@ impl AppState {
         }
     }
 
-    // === Session Event Handler ===
-    fn session_event(&mut self, event: Event) {
-        match event {
-            Event::ToggleExpand => self.toggle_expand_all(),
-            Event::ToggleSessionTree => self.toggle_session_tree_dialog(),
-            Event::SessionTreeFilterCycle => self.cycle_session_tree_filter(),
-            Event::ForkSession { message_index } => self.fork_session_at(message_index),
-            Event::CloneSession => self.clone_session(),
-            _ => {}
-        }
-    }
-
-    fn toggle_session_tree_dialog(&mut self) {
-        if matches!(self.open_dialog, Some(crate::commands::DialogState::SessionTree { .. })) {
-            self.open_dialog = None;
-        } else {
-            self.open_dialog = Some(crate::commands::DialogState::SessionTree {
-                filter: crate::session_tree::SessionTreeFilter::All,
-                selected: 0,
-            });
-        }
-        self.mark_dirty();
-    }
-
-    fn cycle_session_tree_filter(&mut self) {
-        if let Some(crate::commands::DialogState::SessionTree { ref mut filter, .. }) = self.open_dialog {
-            *filter = filter.cycle();
-            self.mark_dirty();
-        }
-    }
-
-    fn fork_session_at(&mut self, message_index: usize) {
-        if let Some(ref mut tree) = self.session.session_tree {
-            if let Some(path) = tree.fork_at(message_index) {
-                tree.navigate_to(&path);
-                self.add_system_msg(format!("Forked at message {}.", message_index));
-            }
-        } else {
-            let mut tree = crate::session_tree::SessionTree::from_messages(&self.session.messages);
-            if let Some(path) = tree.fork_at(message_index) {
-                tree.navigate_to(&path);
-                self.session.session_tree = Some(tree);
-                self.add_system_msg(format!("Forked at message {}.", message_index));
-            }
-        }
-    }
-
-    fn clone_session(&mut self) {
-        let tree = self.session.session_tree.clone().unwrap_or_else(|| {
-            crate::session_tree::SessionTree::from_messages(&self.session.messages)
-        });
-        self.session.session_tree = Some(tree);
-        self.add_system_msg("Session cloned at current position.".into());
-    }
-
     // === Dialog Toggle Event Handler ===
     fn dialog_toggle_event(&mut self, event: Event) {
         match event {
@@ -308,41 +254,6 @@ impl AppState {
     }
 
     // === Settings Event Handler ===
-    fn settings_event(&mut self, event: Event) {
-        match event {
-            Event::ToggleSettingsDialog => {
-                if matches!(self.open_dialog, Some(crate::commands::DialogState::Settings { .. })) {
-                    self.open_dialog = None;
-                } else {
-                    self.open_dialog = Some(crate::commands::DialogState::Settings {
-                        category: crate::settings::SettingsCategory::Models,
-                        selected: 0,
-                    });
-                }
-                self.mark_dirty();
-            }
-            Event::SettingsUp |
-            Event::SettingsDown |
-            Event::SettingsLeft |
-            Event::SettingsRight |
-            Event::SettingsSelect |
-            Event::SettingsClose => {}
-            Event::PaletteFilter(_) |
-            Event::PaletteBackspace |
-            Event::PaletteUp |
-            Event::PaletteDown |
-            Event::PaletteSelect |
-            Event::PaletteClose => {}
-            Event::ModelSelectorFilter(_) |
-            Event::ModelSelectorBackspace |
-            Event::ModelSelectorUp |
-            Event::ModelSelectorDown |
-            Event::ModelSelectorSelect |
-            Event::ModelSelectorClose => {}
-            _ => {}
-        }
-    }
-
     // === Edit Event Handler ===
     fn edit_event(&mut self, event: Event) {
         match event {
