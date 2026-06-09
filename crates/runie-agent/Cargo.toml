@@ -13,6 +13,7 @@ anyhow.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json.workspace = true
 dirs.workspace = true
+tempfile = "3"
 
 [dev-dependencies]
 runie-provider.workspace = true

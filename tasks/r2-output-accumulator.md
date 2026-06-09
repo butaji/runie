@@ -1,6 +1,6 @@
 # Output Accumulator
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Safety / Tools
 
@@ -46,13 +46,13 @@ impl OutputAccumulator {
 
 ## Acceptance Criteria
 
-- [ ] Accepts chunks incrementally during tool execution
-- [ ] Rolling tail buffer keeps last 2x max_bytes in memory
-- [ ] Switches to temp file when output exceeds 2x limit
-- [ ] `snapshot()` returns truncated view + metadata
-- [ ] Never splits lines mid-content
-- [ ] Per-tool strategy: head for reads, tail for bash
-- [ ] Replaces static truncation in all tools
+- [x] Accepts chunks incrementally during tool execution
+- [x] Rolling tail buffer keeps last 2x max_bytes in memory
+- [x] Switches to temp file when output exceeds 2x limit
+- [x] `snapshot()` returns truncated view + metadata
+- [x] Never splits lines mid-content
+- [x] Per-tool strategy: head for reads, tail for bash
+- [x] Replaces static truncation in all tools
 
 ## Files
 
@@ -64,8 +64,8 @@ impl OutputAccumulator {
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `accumulator_tracks_total` — append increases counters
-- [ ] `snapshot_tail_returns_end` — bash strategy
-- [ ] `snapshot_head_returns_start` — read strategy
-- [ ] `never_splits_lines` — complete lines only
-- [ ] `small_output_no_truncation` — under limit returns full
+- [x] `accumulator_tracks_total` — append increases counters
+- [x] `snapshot_tail_returns_end` — bash strategy
+- [x] `snapshot_head_returns_start` — read strategy
+- [x] `never_splits_lines` — complete lines only
+- [x] `small_output_no_truncation` — under limit returns full
