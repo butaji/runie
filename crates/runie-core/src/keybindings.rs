@@ -114,6 +114,42 @@ pub fn parse_keybindings_json(content: &str) -> Result<HashMap<String, String>> 
     Ok(bindings)
 }
 
+/// Convert an event name string to an Event variant.
+/// Supports simple names (e.g. "Quit", "Submit") and Input prefix (e.g. "Input:\t").
+pub fn event_from_name(name: &str) -> Option<Event> {
+    if let Some(rest) = name.strip_prefix("Input:") {
+        let c = rest.chars().next()?;
+        return Some(Event::Input(c));
+    }
+    match name {
+        "Quit" => Some(Event::Quit),
+        "Reset" => Some(Event::Reset),
+        "Undo" => Some(Event::Undo),
+        "Redo" => Some(Event::Redo),
+        "Submit" => Some(Event::Submit),
+        "Abort" => Some(Event::Abort),
+        "Backspace" => Some(Event::Backspace),
+        "Newline" => Some(Event::Newline),
+        "ScrollUp" => Some(Event::ScrollUp),
+        "ScrollDown" => Some(Event::ScrollDown),
+        "CursorLeft" => Some(Event::CursorLeft),
+        "CursorRight" => Some(Event::CursorRight),
+        "CursorStart" => Some(Event::CursorStart),
+        "CursorEnd" => Some(Event::CursorEnd),
+        "DeleteWord" => Some(Event::DeleteWord),
+        "DeleteToEnd" => Some(Event::DeleteToEnd),
+        "DeleteToStart" => Some(Event::DeleteToStart),
+        "KillChar" => Some(Event::KillChar),
+        "HistoryPrev" => Some(Event::HistoryPrev),
+        "HistoryNext" => Some(Event::HistoryNext),
+        "CursorWordLeft" => Some(Event::CursorWordLeft),
+        "CursorWordRight" => Some(Event::CursorWordRight),
+        "FollowUp" => Some(Event::FollowUp),
+        "ToggleExpand" => Some(Event::ToggleExpand),
+        _ => None,
+    }
+}
+
 /// Get default keybindings file path
 pub fn default_keybindings_path() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("runie").join("keybindings.json"))
@@ -229,5 +265,65 @@ mod tests {
         let bindings = load_keybindings(&Some(PathBuf::from("/tmp/nonexistent_keybindings.json")));
         // Should contain default bindings
         assert!(bindings.contains_key("ctrl+c"));
+    }
+
+    #[test]
+    fn event_from_name_quit() {
+        assert!(matches!(event_from_name("Quit"), Some(Event::Quit)));
+    }
+
+    #[test]
+    fn event_from_name_submit() {
+        assert!(matches!(event_from_name("Submit"), Some(Event::Submit)));
+    }
+
+    #[test]
+    fn event_from_name_input_tab() {
+        assert!(matches!(event_from_name("Input:\t"), Some(Event::Input('\t'))));
+    }
+
+    #[test]
+    fn event_from_name_input_char() {
+        assert!(matches!(event_from_name("Input:a"), Some(Event::Input('a'))));
+    }
+
+    #[test]
+    fn event_from_name_unknown_returns_none() {
+        assert_eq!(event_from_name("UnknownEvent"), None);
+    }
+
+    #[test]
+    fn event_from_name_all_simple_variants() {
+        let variants = vec![
+            ("Quit", Event::Quit),
+            ("Reset", Event::Reset),
+            ("Undo", Event::Undo),
+            ("Redo", Event::Redo),
+            ("Submit", Event::Submit),
+            ("Abort", Event::Abort),
+            ("Backspace", Event::Backspace),
+            ("Newline", Event::Newline),
+            ("ScrollUp", Event::ScrollUp),
+            ("ScrollDown", Event::ScrollDown),
+            ("CursorLeft", Event::CursorLeft),
+            ("CursorRight", Event::CursorRight),
+            ("CursorStart", Event::CursorStart),
+            ("CursorEnd", Event::CursorEnd),
+            ("DeleteWord", Event::DeleteWord),
+            ("DeleteToEnd", Event::DeleteToEnd),
+            ("DeleteToStart", Event::DeleteToStart),
+            ("KillChar", Event::KillChar),
+            ("HistoryPrev", Event::HistoryPrev),
+            ("HistoryNext", Event::HistoryNext),
+            ("CursorWordLeft", Event::CursorWordLeft),
+            ("CursorWordRight", Event::CursorWordRight),
+            ("FollowUp", Event::FollowUp),
+            ("ToggleExpand", Event::ToggleExpand),
+        ];
+        for (name, expected) in variants {
+            let actual = event_from_name(name).expect(name);
+            assert!(std::mem::discriminant(&actual) == std::mem::discriminant(&expected),
+                "event_from_name({:?}) returned wrong variant", name);
+        }
     }
 }

@@ -7,12 +7,14 @@
 //!   4. Render actor: owns Terminal, receives Snapshots via channel
 //!   5. If render is slow, old Snapshots are dropped — event loop never waits
 
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+mod keymap;
+
+use crossterm::event::{EventStream, KeyModifiers};
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{AgentCommand, run_agent_turn};
-use runie_core::{AppState, Event as CoreEvent, Snapshot};
-use std::{io, time::Duration};
+use runie_core::{AppState, Event as CoreEvent, Snapshot, keybindings};
+use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::mpsc;
 
 const ANIM_MS: u64 = 200;
@@ -37,8 +39,10 @@ async fn main() -> io::Result<()> {
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
     let (render_tx, render_rx) = mpsc::channel::<Snapshot>(1);
 
+    let keybindings = keybindings::load_keybindings(&None);
+
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
-    tokio::spawn(input_reader(input_tx));
+    tokio::spawn(input_reader(input_tx, keybindings));
     tokio::spawn(render_task(terminal, render_rx));
 
     event_loop(state, input_rx, agent_rx, cmd_tx, render_tx).await
@@ -63,10 +67,10 @@ async fn render_task(
     }
 }
 
-async fn input_reader(input_tx: mpsc::Sender<CoreEvent>) {
+async fn input_reader(input_tx: mpsc::Sender<CoreEvent>, bindings: HashMap<String, String>) {
     let mut reader = EventStream::new();
     while let Some(Ok(event)) = reader.next().await {
-        if let Some(evt) = convert_event(&event) {
+        if let Some(evt) = keymap::convert_event(&event, &bindings) {
             let is_quit = matches!(&evt, CoreEvent::Quit | CoreEvent::Reset);
             if input_tx.send(evt).await.is_err() { break; }
             if is_quit { break; }
@@ -175,46 +179,6 @@ mod tests {
         assert_eq!(super::ANIM_MS, 200, "ANIM_MS must be 200ms for visible braille spinner, got {}", super::ANIM_MS);
     }
 
-    #[test]
-    fn ctrl_shift_e_converts_to_toggle_expand() {
-        let key = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+Shift+E should map to ToggleExpand, got {:?}", result);
-    }
-
-    #[test]
-    fn ctrl_e_converts_to_toggle_expand_for_terminals_without_shift() {
-        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+E should map to ToggleExpand (terminal fallback), got {:?}", result);
-    }
-
-    #[test]
-    fn ctrl_c_converts_to_quit() {
-        let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::Quit)), "Ctrl+C should map to Quit");
-    }
-
-    #[test]
-    fn plain_e_not_converted() {
-        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::empty());
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::Input('e'))), "Plain e should map to Input");
-    }
-
-    #[test]
-    fn ctrl_e_does_not_conflict_with_quit() {
-        let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(!matches!(result, Some(super::CoreEvent::Quit)), "Ctrl+E should NOT map to Quit");
-    }
-
     #[tokio::test]
     async fn spawn_if_queued_sets_turn_active_and_inflight() {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<super::AgentCommand>(10);
@@ -243,167 +207,5 @@ mod tests {
 
         assert!(!state.turn_active);
         assert_eq!(state.inflight, 0);
-    }
-
-    #[test]
-    fn ctrl_shift_e_on_repeat_kind_still_works() {
-        let key = KeyEvent::new_with_kind(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT, KeyEventKind::Repeat);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+Shift+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
-    }
-
-    #[test]
-    fn ctrl_e_on_repeat_kind_still_works() {
-        let key = KeyEvent::new_with_kind(KeyCode::Char('e'), KeyModifiers::CONTROL, KeyEventKind::Repeat);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::ToggleExpand)), "Ctrl+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
-    }
-
-    #[test]
-    fn ctrl_z_converts_to_undo() {
-        let key = KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::Undo)), "Ctrl+Z should map to Undo");
-    }
-
-    #[test]
-    fn ctrl_y_converts_to_redo() {
-        let key = KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::Redo)), "Ctrl+Y should map to Redo");
-    }
-
-    #[test]
-    fn alt_b_converts_to_word_left() {
-        let key = KeyEvent::new(KeyCode::Char('b'), KeyModifiers::ALT);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::CursorWordLeft)), "Alt+B should map to CursorWordLeft");
-    }
-
-    #[test]
-    fn alt_f_converts_to_word_right() {
-        let key = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::ALT);
-        let event = crossterm::event::Event::Key(key);
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::CursorWordRight)), "Alt+F should map to CursorWordRight");
-    }
-
-    #[test]
-    fn bracketed_paste_converts_to_paste_event() {
-        let event = crossterm::event::Event::Paste("hello world".to_string());
-        let result = super::convert_event(&event);
-        assert!(matches!(result, Some(super::CoreEvent::Paste(s)) if s == "hello world"), "Paste event should map to CoreEvent::Paste");
-    }
-}
-
-fn convert_event(event: &Event) -> Option<CoreEvent> {
-    log_key_event(event);
-    match event {
-        Event::Paste(data) => {
-            Some(CoreEvent::Paste(data.clone()))
-        }
-        Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
-            map_key_event(key)
-        }
-        _ => None,
-    }
-}
-
-fn log_key_event(event: &Event) {
-    if let Event::Key(key) = event {
-        if std::env::var("RUNIE_DEBUG").is_ok() {
-            use std::io::Write;
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("/tmp/runie_keys.log")
-                .and_then(|mut f| writeln!(f, "{:?}", key));
-        }
-    }
-}
-
-fn map_key_event(key: &KeyEvent) -> Option<CoreEvent> {
-    if key.modifiers.contains(KeyModifiers::CONTROL) {
-        map_ctrl_key(key.code)
-    } else if key.modifiers.contains(KeyModifiers::ALT) {
-        map_alt_key(key.code)
-    } else if key.modifiers.contains(KeyModifiers::SHIFT) {
-        map_shift_key(key.code)
-    } else {
-        map_plain_key(key.code)
-    }
-}
-
-fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        // Ctrl+E: toggle expand (also Ctrl+Shift+E on terminals with proper modifier)
-        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
-        // Ctrl+J: newline (line feed)
-        KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Newline),
-        // Ctrl+A: move cursor to start (Emacs)
-        KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
-        // Ctrl+B: move cursor backward (Emacs)
-        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
-        // Ctrl+F: move cursor forward (Emacs)
-        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorRight),
-        // Ctrl+W: delete word (Emacs)
-        KeyCode::Char('w') | KeyCode::Char('W') => Some(CoreEvent::DeleteWord),
-        // Ctrl+K: delete to end (Emacs)
-        KeyCode::Char('k') | KeyCode::Char('K') => Some(CoreEvent::DeleteToEnd),
-        // Ctrl+U: delete to start (Emacs)
-        KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::DeleteToStart),
-        // Ctrl+D: delete char at cursor (Emacs)
-        KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::KillChar),
-        // Ctrl+Z: undo
-        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Undo),
-        // Ctrl+Y: redo
-        KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
-        // Ctrl+C: quit
-        KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
-        // Ctrl+S: abort
-        KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
-        _ => None,
-    }
-}
-
-fn map_alt_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        KeyCode::Enter => Some(CoreEvent::FollowUp),
-        // Alt+B: word backward
-        KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorWordLeft),
-        // Alt+F: word forward
-        KeyCode::Char('f') | KeyCode::Char('F') => Some(CoreEvent::CursorWordRight),
-        _ => None,
-    }
-}
-
-fn map_shift_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        // Shift+Enter: newline
-        KeyCode::Enter => Some(CoreEvent::Newline),
-        _ => None,
-    }
-}
-
-fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
-    match code {
-        KeyCode::Esc => Some(CoreEvent::Abort),
-        KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
-        KeyCode::Char(c) => Some(CoreEvent::Input(c)),
-        KeyCode::Backspace => Some(CoreEvent::Backspace),
-        KeyCode::Enter => Some(CoreEvent::Submit),
-        KeyCode::Up => Some(CoreEvent::HistoryPrev),
-        KeyCode::Down => Some(CoreEvent::HistoryNext),
-        KeyCode::Left => Some(CoreEvent::CursorLeft),
-        KeyCode::Right => Some(CoreEvent::CursorRight),
-        KeyCode::Home => Some(CoreEvent::CursorStart),
-        KeyCode::End => Some(CoreEvent::CursorEnd),
-        KeyCode::Delete => Some(CoreEvent::KillChar),
-        _ => None,
     }
 }

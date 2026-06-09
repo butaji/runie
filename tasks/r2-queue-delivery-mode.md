@@ -30,14 +30,15 @@ Set via `/settings` or `settings.json`:
 
 - `DeliveryMode` enum in `runie-core/src/model.rs`
 - `steering_mode` and `follow_up_mode` fields on `AppState`
-- Queue delivery respects mode in `runie-core/src/update/queue.rs`
+- `deliver_queued()` in `runie-core/src/update/queue.rs` respects delivery mode
+- `finish_turn()` in `runie-core/src/update/agent.rs` triggers `deliver_queued()` on `AgentDone`
 
 ## Acceptance Criteria
 
 - [x] steeringMode configuration (one-at-a-time / all)
 - [x] followUpMode configuration (one-at-a-time / all)
-- [x] QueueAgent respects delivery mode when emitting SpawnAgent
-- [x] ConfigAgent loads and validates delivery mode settings
+- [x] `deliver_queued()` moves messages from `message_queue` to `request_queue` per mode
+- [x] `finish_turn()` calls `deliver_queued()` after `AgentDone`
 - [x] Default to one-at-a-time for both modes
 
 ## Tests
