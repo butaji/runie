@@ -73,13 +73,15 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let buf_scrolled = terminal.backend().buffer().clone();
 
     let area = buf_bottom.area();
-    let right_col = area.width - 1;
+    // With margin on terminals > 10 rows, scrollbar is inset by 1 from right edge
+    let has_margin = area.width > 20 && area.height > 10;
+    let scrollbar_col = if has_margin { area.width - 2 } else { area.width - 1 };
 
     let bottom_thumb_y = (0..area.height)
-        .find(|y| buf_bottom[(right_col, *y)].symbol() == "█")
+        .find(|y| buf_bottom[(scrollbar_col, *y)].symbol() == "█")
         .expect("thumb at bottom");
     let scrolled_thumb_y = (0..area.height)
-        .find(|y| buf_scrolled[(right_col, *y)].symbol() == "█")
+        .find(|y| buf_scrolled[(scrollbar_col, *y)].symbol() == "█")
         .expect("thumb when scrolled");
 
     assert!(

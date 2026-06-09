@@ -137,7 +137,7 @@ pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
     };
     let popup_area = palette_popup_rect(f.area());
     let mut lines: Vec<Line> = Vec::new();
-    lines.push(Line::from(format!("> {}", filter)).style(style_user()));
+    lines.push(Line::from(format!("❯ {}", filter)).style(style_user()));
     lines.push(Line::from(""));
 
     if snap.model_selector_items.is_empty() {
@@ -211,7 +211,7 @@ pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
     } else {
         for (i, (depth, content)) in tree_items.iter().enumerate() {
             let indent = "  ".repeat(*depth);
-            let prefix = if i == selected { "> " } else { "  " };
+            let prefix = if i == selected { "❯ " } else { "  " };
             let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
             let truncated: String = content.chars().take(50).collect();
             lines.push(Line::from(format!("{}{}{}{}", indent, prefix, truncated, if content.len() > 50 { "…" } else { "" })).style(style));
@@ -225,7 +225,7 @@ pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
 
 fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {
     let mut lines: Vec<Line> = Vec::new();
-    lines.push(Line::from(format!("> {}", filter)).style(style_user()));
+    lines.push(Line::from(format!("❯ {}", filter)).style(style_user()));
     // Separator
     let sep_width = 56usize;
     lines.push(Line::from("─".repeat(sep_width)).style(style_hint()));

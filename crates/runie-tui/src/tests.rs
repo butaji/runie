@@ -247,13 +247,22 @@ fn input_cursor_renders_at_position() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    // Find the input line — it has "❯ he" visible, cursor should be on 'l'
-    // The input is at y ~ 17, inner x starts at 1 (after border)
-    // Cursor should be at x = 1 + 2 ("❯ ") + 2 = 5, which is 'l' in "❯ hello"
-    let cursor_cell = buf[(5, 17)].clone(); // input line, cursor at position 5
-    assert_eq!(cursor_cell.symbol(), "l", "Cursor should be on 'l' at position 2");
-    // Verify the cursor has inverted colors (bg set)
-    assert!(cursor_cell.style().bg.is_some(), "Cursor should have background color set");
+    // Find the input line by looking for the "❯ he" prefix, then verify cursor
+    let mut cursor_cell = None;
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width.saturating_sub(4) {
+            let prefix: String = (x..x + 4).map(|cx| buf[(cx, y)].symbol()).collect();
+            if prefix == "❯ he" {
+                // cursor is at position 2, so 'l' is the next char after "❯ he"
+                cursor_cell = Some(buf[(x + 4, y)].clone());
+                break;
+            }
+        }
+        if cursor_cell.is_some() { break; }
+    }
+    let cell = cursor_cell.expect("should find input line with ❯ he");
+    assert_eq!(cell.symbol(), "l", "Cursor should be on 'l' at position 2");
+    assert!(cell.style().bg.is_some(), "Cursor should have background color set");
 }
 
 #[test]
@@ -413,4 +422,138 @@ fn message_shows_provider() {
     });
     let content = draw_state(&mut state);
     assert!(content.contains("anthropic"), "Agent message header should show provider");
+}
+
+// ─── Input token — chevron color reflects focus ownership ───────────────
+
+#[test]
+fn input_chevron_is_orange_when_token_held() {
+    let mut state = AppState::default();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let orange = crate::theme::color_accent();
+    let mut found = false;
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width.saturating_sub(2) {
+            if buf[(x, y)].symbol() == "❯" {
+                assert_eq!(buf[(x, y)].style().fg, Some(orange), "Chevron should be orange when input holds token");
+                found = true;
+            }
+        }
+    }
+    assert!(found, "Should find ❯ chevron in buffer");
+}
+
+#[test]
+fn input_chevron_is_gray_when_token_released() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    // Tall terminal so popup does not cover the input panel
+    let backend = TestBackend::new(60, 40);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let dim = crate::theme::color_dim();
+    // Search bottom-up: the input panel is at the bottom, popup is centered.
+    // The bottom-most ❯ belongs to the input panel.
+    let mut found = false;
+    for y in (0..buf.area().height).rev() {
+        for x in 0..buf.area().width.saturating_sub(2) {
+            if buf[(x, y)].symbol() == "❯" {
+                assert_eq!(buf[(x, y)].style().fg, Some(dim), "Chevron should be gray when dialog holds token");
+                found = true;
+                break;
+            }
+        }
+        if found { break; }
+    }
+    assert!(found, "Should find ❯ chevron in buffer");
+}
+
+#[test]
+fn palette_filter_uses_chevron_glyph() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect::<String>())
+        .collect();
+    assert!(content.contains("❯"), "Palette filter should use ❯ chevron");
+    assert!(!content.contains("> "), "Palette filter should not use plain >");
+}
+
+#[test]
+fn model_selector_filter_uses_chevron_glyph() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleModelSelector);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect::<String>())
+        .collect();
+    assert!(content.contains("❯"), "Model selector filter should use ❯ chevron");
+    assert!(!content.contains("> "), "Model selector filter should not use plain >");
+}
+
+// ─── Background fill ────────────────────────────────────────────────────
+
+#[test]
+fn app_background_is_theme_bg_color() {
+    let mut state = AppState::default();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let expected_bg = crate::theme::color_bg();
+    // Check a corner cell that no widget should touch
+    let cell = &buf[(0, 0)];
+    assert_eq!(
+        cell.style().bg,
+        Some(expected_bg),
+        "App background should be theme bg color, got {:?}",
+        cell.style().bg
+    );
+}
+
+// ─── Input cursor color ─────────────────────────────────────────────────
+
+#[test]
+fn input_cursor_is_orange_when_token_held() {
+    let mut state = AppState::default();
+    state.input.input = "hello".to_string();
+    state.input.cursor_pos = 2;
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let orange = crate::theme::color_accent();
+    let mut found = false;
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width.saturating_sub(4) {
+            let prefix: String = (x..x + 4).map(|cx| buf[(cx, y)].symbol()).collect();
+            if prefix == "❯ he" {
+                let cursor_cell = &buf[(x + 4, y)];
+                assert_eq!(
+                    cursor_cell.style().bg,
+                    Some(orange),
+                    "Cursor bg should be orange when input holds token"
+                );
+                found = true;
+                break;
+            }
+        }
+        if found { break; }
+    }
+    assert!(found, "Should find input line");
 }

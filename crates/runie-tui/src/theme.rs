@@ -174,7 +174,7 @@ fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme {
     theme.register_default_style("runie.border.flash", opaline::OpalineStyle::fg(warning));
     theme.register_default_style("runie.code.block", opaline::OpalineStyle::fg(code_fn).with_bg(bg_code));
     theme.register_default_style("runie.code.header", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.input.cursor", opaline::OpalineStyle::fg(bg).with_bg(fg));
+    theme.register_default_style("runie.input.cursor", opaline::OpalineStyle::fg(bg).with_bg(accent));
     theme.register_default_style("runie.placeholder", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.hint", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(dim));
@@ -248,10 +248,19 @@ style_fn!(style_popup_unselected, "runie.popup.unselected");
 style_fn!(style_popup_border, "runie.popup.border");
 style_fn!(style_thought_summary, "runie.thought.summary");
 
+/// Chevron style: orange when input holds the token, gray when released.
+pub fn style_chevron(token_held: bool) -> Style {
+    if token_held {
+        style_user()
+    } else {
+        style_hint()
+    }
+}
+
 // ── Block helpers — centralized border styling ─────────────────────────
 
 /// Build the input panel block with rounded borders.
-pub fn block_input(title: &str, flash: bool) -> Block {
+pub fn block_input(title: &str, flash: bool) -> Block<'_> {
     let border_style = if flash { style_border_flash() } else { style_border() };
     Block::default()
         .borders(Borders::ALL)
@@ -261,7 +270,7 @@ pub fn block_input(title: &str, flash: bool) -> Block {
 }
 
 /// Build a popup dialog block with rounded borders.
-pub fn block_popup(title: &str) -> Block {
+pub fn block_popup(title: &str) -> Block<'_> {
     Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
