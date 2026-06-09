@@ -349,8 +349,16 @@ impl AppState {
 
         // Add to history and persist
         self.add_to_input_history(content.clone());
-        if let Some(response) = self.handle_slash(&content) {
-            self.add_system_msg(response);
+        if let Some(result) = self.handle_slash(&content) {
+            match result {
+                crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
+                crate::commands::CommandResult::Event(evt) => self.update(evt),
+                crate::commands::CommandResult::OpenDialog(d) => {
+                    self.open_dialog = Some(d);
+                    self.mark_dirty();
+                }
+                crate::commands::CommandResult::None => {}
+            }
             return;
         }
         if self.turn_active {

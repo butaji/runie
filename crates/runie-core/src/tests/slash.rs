@@ -412,14 +412,14 @@ fn slash_command_does_not_queue() {
 }
 
 #[test]
-fn unknown_slash_treated_as_user_message() {
+fn unknown_slash_returns_error() {
     let mut state = fresh_state();
     type_str(&mut state, "/unknown");
     state.update(Event::Submit);
 
-    assert_eq!(state.messages.len(), 1);
-    assert_eq!(state.messages[0].role, Role::User);
-    assert_eq!(state.messages[0].content, "/unknown");
+    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(sys_msgs.len(), 1);
+    assert!(sys_msgs[0].content.contains("Unknown command"));
 }
 
 #[test]

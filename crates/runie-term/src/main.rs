@@ -100,13 +100,12 @@ async fn event_loop(
             Some(evt) = input_rx.recv() => {
                 let was_submit = matches!(evt, CoreEvent::Submit);
                 let was_followup = matches!(evt, CoreEvent::FollowUp);
-                let was_quit = matches!(evt, CoreEvent::Quit | CoreEvent::Reset);
                 state.update(evt);
+                if state.should_quit {
+                    return Ok(());
+                }
                 if was_submit || was_followup {
                     spawn_if_queued(&mut state, &cmd_tx).await;
-                }
-                if was_quit {
-                    return Ok(());
                 }
             }
 
