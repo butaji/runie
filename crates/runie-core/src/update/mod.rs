@@ -132,6 +132,7 @@ impl AppState {
             Event::SwitchModel { provider, model } => self.switch_model(provider, model),
             Event::SwitchTheme { name } => self.switch_theme(name),
             Event::FollowUp => self.queue_follow_up(),
+            Event::Dequeue => self.dequeue(),
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
             Event::ToggleExpand => self.toggle_expand_all(),

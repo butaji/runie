@@ -271,6 +271,14 @@ mod tests {
     }
 
     #[test]
+    fn alt_up_emits_dequeue() {
+        let key = KeyEvent::new(KeyCode::Up, KeyModifiers::ALT);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Dequeue)), "Alt+Up should map to Dequeue, got {:?}", result);
+    }
+
+    #[test]
     fn key_event_to_combo_shift_enter() {
         let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT);
         assert_eq!(super::key_event_to_combo(&key), "shift+enter");

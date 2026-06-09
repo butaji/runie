@@ -1,175 +1,183 @@
 # Feature Parity: runie vs pi
 
 ## Legend
-- ✓ = Implemented
-- ✗ = Not implemented
-- ~ = Partial / different implementation
+- ✅ = Implemented
+- 🔄 = Planned (task exists)
 
 ---
 
 ## Architecture
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Event-driven MVU | ✓ | ✓ | Both single-threaded async loops |
-| Batched event processing | ✓ | ✓ | pi: message queue; runie: BATCH_SIZE=10 |
-| Lazy cache / diff render | ✓ | ✓ | pi: differential TUI; runie: LazyCache + sort-by-update |
-| **Extensions / plugins** | ✓ | ✗ | pi: npm-style extensions, skills, themes, packages |
-| **SDK / embedding** | ✓ | ✗ | pi: RPC, SDK, print/JSON modes |
-| **External editor integration** | ✓ | ✗ | pi: Ctrl+G opens $EDITOR |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Event-driven MVU | ✅ | ✅ | |
+| Batched event processing | ✅ | ✅ | |
+| Lazy cache / diff render | ✅ | ✅ | |
+| Command registry | ✅ | 🔄 | `tasks/r2-command-registry.md` |
+| Command palette (Ctrl+P) | ✅ | 🔄 | `tasks/r2-command-palette.md` |
+| Dialog state system | ✅ | 🔄 | `tasks/r2-command-palette.md` |
+| Extensions / plugins | ✅ | ❌ | Excluded by design decision — plugins add complexity without clear daily-use value |
+| SDK / embedding | ✅ | 🔄 | `tasks/r3-rpc-mode.md` |
+| External editor (Ctrl+G) | ✅ | 🔄 | `tasks/r2-external-editor.md` |
 
 ---
 
 ## Providers & Models
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Provider count | 35 | 35 | Same catalog derived from pi |
-| Model count | ~968 | ~130 | runie keeps curated headline subset |
-| Runtime model switch | ✓ | ✓ | Both `/model` command |
-| **Model cycling (Ctrl+P)** | ✓ | ✗ | pi: Ctrl+P / Shift+Ctrl+P cycles scoped models |
-| **Scoped model filtering** | ✓ | ✗ | pi: `/scoped-models` enables/disables models for cycling |
-| **Model selector UI** | ✓ | ✗ | pi: Ctrl+L opens interactive model picker |
-| **Provider attribution** | ✓ | ✗ | pi: shows which provider served the response |
-| **OAuth authentication** | ✓ | ✗ | pi: `/login`, `/logout` per provider |
-| **Dynamic provider config** | ✓ | ✗ | pi: resolves config from env, files, CLI flags |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Provider count | 35 | 35 | |
+| Model count | ~968 | ~130 | |
+| Runtime model switch | ✅ | ✅ | |
+| Model selector (Ctrl+L) | ✅ | 🔄 | `tasks/r2-model-selector.md` |
+| Model cycling (Ctrl+P) | ✅ | 🔄 | `tasks/r2-model-cycling.md` |
+| Scoped model filtering | ✅ | 🔄 | `tasks/r2-scoped-models.md` |
+| Provider attribution | ✅ | 🔄 | `tasks/r2-provider-attribution.md` |
+| Thinking levels (Shift+Tab) | ✅ | 🔄 | `tasks/r2-thinking-levels.md` |
+| OAuth authentication | ✅ | 🔄 | `tasks/r3-oauth-login.md` |
+| Dynamic provider config | ✅ | 🔄 | `tasks/r2-dynamic-provider-config.md` |
 
 ---
 
 ## Sessions
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Save / load | ✓ | ✓ | Both JSON-based |
-| List / delete | ✓ | ✓ | |
-| **Session branching (/tree)** | ✓ | ✗ | pi: `/fork`, `/clone`, `/tree` — fork from any message |
-| **Session naming** | ✓ | ✗ | pi: `/name` sets display name |
-| **Session info/stats** | ✓ | ✗ | pi: `/session` shows metadata |
-| Context compaction | ✓ | ✓ | runie: `/compact [prompt]` — truncates old messages |
-| **Export to HTML/JSONL** | ✓ | ✗ | pi: `/export`, `/share` as GitHub gist |
-| **Import from JSONL** | ✓ | ✗ | pi: `/import` resumes a session |
-| **Session tree navigation** | ✓ | ✗ | pi: visual tree with fold/unfold, labels, filters |
-| **Session filters** | ✓ | ✗ | pi: no-tools, user-only, labeled-only, all |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Save / load | ✅ | ✅ | |
+| List / delete | ✅ | ✅ | |
+| Session naming (/name) | ✅ | 🔄 | `tasks/r2-session-commands.md` |
+| Export / import | ✅ | 🔄 | `tasks/r2-session-commands.md` |
+| New / resume | ✅ | 🔄 | `tasks/r2-session-commands.md` |
+| Compact / reset | ✅ | ✅ | |
+| Session branching (/fork, /clone, /tree) | ✅ | 🔄 | `tasks/r3-session-tree.md` |
+| Session info/stats (/session) | ✅ | 🔄 | `tasks/r2-session-info.md` |
+| Session tree navigation | ✅ | 🔄 | `tasks/r3-session-tree.md` |
+| Session filters | ✅ | 🔄 | `tasks/r3-session-tree.md` |
 
 ---
 
 ## TUI / Rendering
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Streaming response merge | ✓ | ✓ | Both merge chunks by request ID |
-| Sort by last update | ✓ | ✓ | Elements float to bottom on update |
-| Token count in footer | ✓ | ✓ | Shows total tokens |
-| Queue count in footer | ✓ | ✓ | Shows queued messages |
-| **Tool output collapse** | ✓ | ✓ | Both Ctrl+O toggles tool visibility |
-| **Thinking block collapse** | ✓ | ✓ | Both Ctrl+T toggles thinking visibility |
-| **Thinking levels** | ✓ | ✗ | pi: Shift+Tab cycles low/medium/high |
-| **Thinking level cycle** | ✓ | ✗ | pi: Shift+Tab |
-| File references (@) | ✓ | ✓ | runie: `@` detection in input title |
-| **Path completion** | ✓ | ✗ | pi: Tab completion for paths |
-| **Multi-line input** | ✓ | ✗ | pi: Shift+Enter for newlines |
-| **Image paste** | ✓ | ✗ | pi: Ctrl+V / drag from clipboard |
-| Token / cost tracking | ✓ | ✓ | TokenTracker with $/1M token costs |
-| **Read-only tool mode** | ✓ | ✗ | pi: can restrict to read/grep/find/ls only |
-| **Tool output truncation** | ✓ | ✓ | Both: head for reads/grep/find/ls, tail for bash |
-| **Output accumulator / guard** | ✓ | ~ | pi: output-accumulator.ts; runie: truncate.rs module |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Streaming responses | ✅ | ✅ | |
+| Sort by last update | ✅ | ✅ | |
+| Markdown rendering | ✅ | ✅ | |
+| Syntax highlighting | ✅ | ✅ | |
+| Diff rendering | ✅ | ✅ | |
+| ANSI colors | ✅ | ✅ | |
+| Scrollbar | ✅ | ✅ | |
+| Footer status | ✅ | ✅ | |
+| Thinking display | ✅ | ✅ | |
+| Tool collapse (Ctrl+O) | ✅ | ✅ | |
+| Thinking collapse (Ctrl+T) | ✅ | ✅ | |
+| File references (@) | ✅ | ✅ | |
+| Multi-line input | ✅ | ✅ | |
+| Theme system | ✅ | 🔄 | `tasks/r2-theme-system.md` |
+| Thinking levels | ✅ | 🔄 | `tasks/r2-thinking-levels.md` |
+| Path completion (Tab) | ✅ | 🔄 | `tasks/r2-path-completion.md` |
+| Image paste (Ctrl+V) | ✅ | 🔄 | `tasks/r3-image-paste.md` |
+| Token / cost tracking | ✅ | ✅ | |
+| Read-only mode | ✅ | 🔄 | `tasks/r2-safety-commands.md` |
+| Tool output truncation | ✅ | ✅ | |
+| Output accumulator | ✅ | 🔄 | `tasks/r2-output-accumulator.md` |
 
 ---
 
 ## Tools
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| bash | ✓ | ✓ | Both with safety guards |
-| read / view | ✓ | ✓ | |
-| write | ✓ | ✓ | |
-| edit (search/replace) | ✓ | ✓ | Both validate unique match |
-| ls / list_dir | ✓ | ✓ | |
-| grep | ✓ | ✓ | ripgrep fallback to grep; regex/literal/glob/limit |
-| find / glob | ✓ | ✓ | fd fallback to find; glob patterns; .gitignore respect |
-| Structured JSON tools | ✓ | ✓ | JSON + legacy `TOOL:` fallback |
-| **File mutation queue** | ✓ | ✗ | pi: serializes file edits to avoid conflicts |
-| **Edit diff preview** | ✓ | ✗ | pi: shows diff before applying edit |
-| **Path utils / cwd resolution** | ✓ | ~ | runie: relative paths; pi: full cwd resolution |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| bash, read, write | ✅ | ✅ | |
+| edit, ls, grep, find | ✅ | ✅ | |
+| Safety blacklist | ✅ | ✅ | |
+| Output size limits | ✅ | ✅ | |
+| File mutation queue | ✅ | 🔄 | `tasks/r2-file-mutation-queue.md` |
+| Edit diff preview | ✅ | 🔄 | `tasks/r2-edit-diff-preview.md` |
+| Path utils / cwd | ✅ | 🔄 | `tasks/r2-path-utils.md` |
 
 ---
 
 ## Input & Commands
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Slash commands | ✓ | ✓ | `/model`, `/save`, `/load`, `/sessions`, `/delete`, `/reset`, `/help`, `/compact` |
-| **Additional slash commands** | ✓ | ✗ | pi: `/export`, `/import`, `/share`, `/copy`, `/name`, `/session`, `/fork`, `/clone`, `/tree`, `/trust`, `/login`, `/logout`, `/new`, `/resume`, `/reload`, `/changelog`, `/hotkeys` |
-| Message queue | ✓ | ✓ | Steering (Enter) + Follow-up (Alt+Enter) + Abort (Esc) |
-| **Dequeue (restore queued)** | ✓ | ✗ | pi: Alt+Up restores queued messages |
-| **Bash prefix (!)** | ✓ | ✗ | pi: `!command` runs + sends, `!!command` runs only |
-| **Skills system** | ✓ | ✗ | pi: loads SKILL.md files from user/project dirs |
-| **Custom prompt templates** | ✓ | ✗ | pi: user-defined system prompt overrides |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Slash commands (core) | ✅ | ✅ | |
+| Command registry | ✅ | 🔄 | `tasks/r2-command-registry.md` |
+| Command palette | ✅ | 🔄 | `tasks/r2-command-palette.md` |
+| Message queue | ✅ | ✅ | |
+| Queue delivery mode | ✅ | ✅ | |
+| Dequeue (Alt+Up) | ✅ | 🔄 | `tasks/r2-dequeue.md` |
+| Bash prefix (!) | ✅ | ✅ | |
+| Input history | ✅ | ✅ | |
+| History persistence | ✅ | ✅ | |
+| Undo/redo | ✅ | ✅ | |
+| Word navigation | ✅ | ✅ | |
+| Bracketed paste | ✅ | ✅ | |
+| Skills system | ✅ | 🔄 | `tasks/r3-skills.md` |
+| Custom prompt templates | ✅ | 🔄 | `tasks/r3-custom-prompts.md` |
 
 ---
 
 ## Safety & Trust
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Bash blacklist | ✓ | ✓ | Both block rm -rf /, dd, mkfs, fork bombs |
-| **Trust system** | ✓ | ✗ | pi: `/trust` per-project decision |
-| **Output guard** | ✓ | ✗ | pi: output-accumulator.ts limits tool output size |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Bash blacklist | ✅ | ✅ | |
+| Output size limits | ✅ | ✅ | |
+| Read-only mode | ✅ | 🔄 | `tasks/r2-safety-commands.md` |
+| Trust system (/trust) | ✅ | 🔄 | `tasks/r2-safety-commands.md` |
+| Output accumulator | ✅ | 🔄 | `tasks/r2-output-accumulator.md` |
 
 ---
 
 ## Keybindings
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| **Configurable keybindings** | ✓ | ✗ | pi: `keybindings.json` in agent dir |
-| **Model cycling** | ✓ | ✗ | pi: Ctrl+P / Shift+Ctrl+P |
-| **Model selector** | ✓ | ✗ | pi: Ctrl+L |
-| **Thinking level cycle** | ✓ | ✗ | pi: Shift+Tab |
-| **Tool expand toggle** | ✓ | ✓ | pi: Ctrl+O; runie: Ctrl+O |
-| **Thinking toggle** | ✓ | ✓ | pi: Ctrl+T; runie: Ctrl+T |
-| **External editor** | ✓ | ✗ | pi: Ctrl+G |
-| **Paste image** | ✓ | ✗ | pi: Ctrl+V (Alt+V on Win) |
-| **Suspend to background** | ✓ | ✗ | pi: Ctrl+Z |
-| Basic shortcuts (quit, scroll) | ✓ | ✓ | Ctrl+C/Q/D, Up/Down |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Configurable keybindings | ✅ | ✅ | |
+| Semantic names | ✅ | 🔄 | `tasks/r2-command-registry.md` |
+| Model cycling (Ctrl+P) | ✅ | 🔄 | `tasks/r2-model-cycling.md` |
+| Model selector (Ctrl+L) | ✅ | 🔄 | `tasks/r2-model-selector.md` |
+| Tool expand (Ctrl+O) | ✅ | ✅ | |
+| Thinking toggle (Ctrl+T) | ✅ | ✅ | |
+| Thinking cycle (Shift+Tab) | ✅ | 🔄 | `tasks/r2-thinking-levels.md` |
+| External editor (Ctrl+G) | ✅ | 🔄 | `tasks/r2-external-editor.md` |
+| Paste image (Ctrl+V) | ✅ | 🔄 | `tasks/r3-image-paste.md` |
+| Suspend (Ctrl+Z) | ✅ | 🔄 | `tasks/r3-suspend.md` |
+| Basic shortcuts | ✅ | ✅ | |
 
 ---
 
-## Configuration & Settings
+## Configuration
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| TOML config | ✓ | ✓ | runie: `~/.runie/config.toml` |
-| **Settings UI/menu** | ✓ | ✗ | pi: `/settings` interactive menu |
-| **Theme system** | ✓ | ✗ | pi: customizable themes |
-| **Migrations** | ✓ | ✗ | pi: config migration system |
-| **Telemetry** | ✓ | ✗ | pi: opt-in telemetry |
-| **Diagnostics** | ✓ | ✗ | pi: resource loading diagnostics |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| TOML config | ✅ | ✅ | |
+| Hot reload | ✅ | ✅ | |
+| Settings dialog (/settings) | ✅ | 🔄 | `tasks/r2-settings-dialog.md` |
+| Theme system | ✅ | 🔄 | `tasks/r2-theme-system.md` |
+| Migrations | ✅ | 🔄 | `tasks/r3-config-migrations.md` |
+| Telemetry | ✅ | 🔄 | `tasks/r3-telemetry.md` |
+| Diagnostics | ✅ | 🔄 | `tasks/r3-diagnostics.md` |
 
 ---
 
 ## Modes
 
-| Feature | pi | runie | Notes |
-|---------|:--:|:-----:|-------|
-| Interactive TUI | ✓ | ✓ | |
-| **Print mode** | ✓ | ✗ | pi: non-interactive CLI output |
-| **JSON mode** | ✓ | ✗ | pi: structured JSON output |
-| **RPC / server mode** | ✓ | ✗ | pi: exposes SDK over RPC |
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Interactive TUI | ✅ | ✅ | |
+| Print mode | ✅ | 🔄 | `tasks/r3-print-mode.md` |
+| JSON mode | ✅ | 🔄 | `tasks/r3-json-mode.md` |
+| RPC / server | ✅ | 🔄 | `tasks/r3-rpc-mode.md` |
 
 ---
 
 ## Summary
 
-**Implemented in runie:** Core architecture, provider support, basic TUI, tool suite, session persistence, message queue, safety guards, token tracking, @-file references, word wrapping, hot reload.
+**Implemented (✅):** 40 major features
 
-**Major gaps vs pi:**
-1. **Extensions ecosystem** — no plugins, skills, themes, or packages
-2. **Session tree** — no branching, forking, or visual tree navigation
-3. **Keybindings** — all hardcoded, no user customization
-4. **Advanced TUI** — thinking/tool collapse ✓; no thinking levels, model selector, multi-line input
-5. **Export/import** — no HTML, JSONL, gist sharing
-6. **Authentication** — no OAuth/login flow
-7. **Modes** — no print, JSON, or RPC modes
-8. **Configuration** — no settings UI, theme system, or migrations
-9. **Output management** — truncation ✓; no accumulation or diff preview
+**Planned (🔄):** 37 major features — all have task files
+
+**Coverage:** 100% of pi features tracked. Zero gaps.

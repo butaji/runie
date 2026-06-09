@@ -235,3 +235,78 @@ fn steering_and_follow_up_modes_independent() {
     assert_eq!(state.message_queue.len(), 1); // One follow-up left
     assert_eq!(state.request_queue.len(), 2);
 }
+
+// Dequeue tests
+
+#[test]
+fn dequeue_restores_last() {
+    let mut state = AppState::default();
+    state.turn_active = true;
+    state.update(Event::Input('h'));
+    state.update(Event::Input('i'));
+    state.update(Event::Submit);
+    assert_eq!(state.message_queue.len(), 1);
+
+    state.update(Event::Dequeue);
+    assert!(state.message_queue.is_empty());
+    assert_eq!(state.input, "hi");
+}
+
+#[test]
+fn dequeue_sets_cursor_end() {
+    let mut state = AppState::default();
+    state.turn_active = true;
+    state.update(Event::Input('a'));
+    state.update(Event::Input('b'));
+    state.update(Event::Submit);
+
+    state.update(Event::Dequeue);
+    assert_eq!(state.cursor_pos, 2);
+}
+
+#[test]
+fn dequeue_replaces_input() {
+    let mut state = AppState::default();
+    state.turn_active = true;
+    state.update(Event::Input('o'));
+    state.update(Event::Input('l'));
+    state.update(Event::Input('d'));
+    state.update(Event::Submit);
+
+    state.update(Event::Input('n'));
+    state.update(Event::Input('e'));
+    state.update(Event::Input('w'));
+    assert_eq!(state.input, "new");
+
+    state.update(Event::Dequeue);
+    assert_eq!(state.input, "old");
+}
+
+#[test]
+fn dequeue_empty_flashes() {
+    let mut state = AppState::default();
+    assert!(state.message_queue.is_empty());
+    assert_eq!(state.input_flash, 0);
+
+    state.update(Event::Dequeue);
+    assert_eq!(state.input_flash, 3);
+}
+
+#[test]
+fn dequeue_lifo() {
+    let mut state = AppState::default();
+    state.turn_active = true;
+    state.update(Event::Input('a'));
+    state.update(Event::Submit);
+    state.update(Event::Input('b'));
+    state.update(Event::FollowUp);
+    assert_eq!(state.message_queue.len(), 2);
+
+    state.update(Event::Dequeue);
+    assert_eq!(state.message_queue.len(), 1);
+    assert_eq!(state.input, "b");
+
+    state.update(Event::Dequeue);
+    assert!(state.message_queue.is_empty());
+    assert_eq!(state.input, "a");
+}

@@ -32,6 +32,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
 
     // Alt key combinations
     map.insert("alt+enter".to_string(), "FollowUp".to_string());
+    map.insert("alt+up".to_string(), "Dequeue".to_string());
     map.insert("alt+b".to_string(), "CursorWordLeft".to_string());
     map.insert("alt+f".to_string(), "CursorWordRight".to_string());
 
@@ -146,6 +147,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "CursorWordRight" => Some(Event::CursorWordRight),
         "FollowUp" => Some(Event::FollowUp),
         "ToggleExpand" => Some(Event::ToggleExpand),
+        "Dequeue" => Some(Event::Dequeue),
         _ => None,
     }
 }

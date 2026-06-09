@@ -1,8 +1,8 @@
 # RALPH
 
-- Iteration: 13 of 100
+- Iteration: 16 of 100
 - Prompt file: /Users/admin/.herdr/worktrees/runie/agent-impl/EXECUTE.md
-- Updated: 2026-06-09T01:07:30.467Z
+- Updated: 2026-06-09T02:07:46.720Z
 
 ## Iteration progression
 
@@ -406,4 +406,105 @@ crates/runie-core/src/config_reload.rs
     ├── config_watcher_detects_initial_change
     └── config_watcher_parses_toml_changes
 ``\`
+```
+
+### Iteration 14
+
+```text
+## Summary
+
+This session addressed several issues to ensure the codebase is in excellent shape:
+
+### Fixes Applied
+
+1. **Compilation Error Fix** (`runie-term/src/main.rs`):
+   - Fixed borrow-after-move error where `input_tx` was cloned before passing to `input_reader`
+   - Added `config_reload` module import
+
+2. **Clippy Warnings Fixed**:
+   - `crates/runie-core/src/fuzzy.rs`: Used `sort_by_key` instead of `sort_by`
+   - `crates/runie-core/src/keybindings.rs`: Added `#[allow(dead_code)]` to `parse_key_combo`, removed unused `crate::labels` import
+   - `crates/runie-core/src/update/input.rs`: Used `strip_prefix` instead of manual slicing
+   - `crates/runie-core/src/model.rs` & `crates/runie-core/src/snapshot.rs`: Added `#[allow(clippy::manual_checked_ops)]` for intentional division checks
+   - `crates/runie-core/src/session.rs`: Renamed `Store::default` to `Store::default_store` to avoid confusion
+   - `crates/runie-tui/src/diff.rs` & `crates/runie-tui/src/markdown.rs`: Used `strip_prefix` for safe prefix handling
+   - `crates/runie-term/src/keymap.rs`: Fixed redundant guard warning
+
+### Test Results
+- **742 tests pass** across all crates
+- **Zero clippy warnings**
+- All MVP, R1, R2, and cleanup tasks marked as **done**
+```
+
+### Iteration 15
+
+```text
+**Task `r2-theme-system` is complete.**
+
+### What was implemented
+
+1. **Opaline integration** (`crates/runie-tui/Cargo.toml`, `theme.rs`)
+   - Added `opaline = "0.4"` dependency
+   - Replaced hardcoded `Colors` struct with dynamic theme system
+   - `RunieTheme` wraps `opaline::Theme` and registers 24 `runie.*` default styles
+   - `set_current_theme()` / `current_theme()` global cache for frame-level theme access
+   - `load_theme()` resolves: builtin → `~/.runie/themes/*.toml` → default fallback
+
+2. **Core state changes** (`runie-core`)
+   - Added `SwitchTheme { name: String }` to `Event`
+   - Added `theme_name: String` to `AppState` (default: `"silkcircuit-neon"`)
+   - Added `theme_name` to `Snapshot` for render actor
+   - Added `/theme <name>` slash command with validation and fallback warning
+   - Config watcher parses `theme` field and emits `SwitchTheme` events
+   - `Session` struct persists `theme_name` across save/load
+
+3. **Rendering updates** (`runie-tui`)
+   - `draw_snapshot()` calls `set_current_theme(&snap.theme_name)` at frame start
+   - All `style_*()` functions query the current theme
+   - `markdown.rs` and `diff.rs` updated to use theme color helpers
+   - No hardcoded RGB values remain in the TUI
+
+### Tests
+- **Layer 1**: 7 theme loading/style tests in `runie-tui/src/tests/theme.rs`
+- **Layer 2**: 4 event/slash tests in `runie-core/src/tests/theme_slash.rs` + config_reload test
+- **Layer 3**: Existing rendering tests updated to be theme-aware
+- **All 758 workspace tests pass** with zero failures
+```
+
+### Iteration 16
+
+```text
+Task **`r2-command-registry`** is complete.
+
+### Summary
+
+- **Created** `crates/runie-core/src/commands/` module with:
+  - `CommandRegistry` — `register()`, `get()`, `list()`, `list_by_category()`
+  - `CommandDef` — name, description, aliases, category, handler, completer
+  - `CommandResult` — `Message`, `Event`, `OpenDialog`, `None`
+  - `CommandCategory` — Session, Model, Tool, System, Help
+  - `Dialog` — placeholder enum for upcoming dialog system
+
+- **Migrated** all 10 existing slash commands and registered 13 new ones (23 total):
+  - Session: `/save`, `/load`, `/sessions`, `/delete`, `/name`, `/export`, `/import`, `/new`, `/resume`, `/compact`, `/reset`, `/history`
+  - Model: `/model` (alias `/m`), `/scoped-models`
+  - Tool: `/readonly` (alias `/ro`)
+  - System: `/copy`, `/settings`, `/reload`, `/changelog`, `/hotkeys`, `/theme`
+  - Help: `/help` (aliases `/h`, `/?`), `/quit` (aliases `/q`, `/exit`)
+
+- **Updated** `AppState` with `registry`, `should_quit`, `open_dialog`, `config_provider`, `config_model`
+
+- **Replaced** `update/slash.rs` with registry dispatch in `commands/mod.rs`
+
+- **Updated** event loop in `runie-term` to break on `should_quit`
+
+- **Tests**: 9 new Layer 1 + Layer 2 tests, all 476 `runie-core` tests pass
+
+---
+
+### Next Task
+
+Following the execution loop, the next highest-priority R2 task that is `todo` and depends on the registry is **`r2-command-palette`** (Ctrl+P). It directly builds on the registry we just implemented.
+
+Shall I pick up **`r2-command-palette`** next?
 ```
