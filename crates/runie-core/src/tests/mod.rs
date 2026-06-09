@@ -23,6 +23,8 @@ mod queue;
 #[cfg(test)]
 mod reload;
 #[cfg(test)]
+mod diagnostics;
+#[cfg(test)]
 mod compaction;
 #[cfg(test)]
 mod file_refs;

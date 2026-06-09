@@ -105,6 +105,9 @@ pub enum Event {
     // Config reload
     ReloadAll,
 
+    // Diagnostics
+    ShowDiagnostics,
+
     // Path completion
     TogglePathCompletion,
     PathCompletionUp,

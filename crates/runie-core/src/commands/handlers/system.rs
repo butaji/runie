@@ -11,6 +11,7 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("approve", "Apply pending file edits", &[], CommandCategory::System, handle_approve));
     registry.register(cmd("reject", "Cancel pending file edits", &[], CommandCategory::System, handle_reject));
     registry.register(cmd("reload", "Reload config, keybindings, and themes", &[], CommandCategory::System, handle_reload));
+    registry.register(cmd("diagnostics", "Show resource loading diagnostics", &[], CommandCategory::System, handle_diagnostics));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -42,6 +43,10 @@ fn handle_settings(_state: &mut AppState, _args: &str) -> CommandResult {
 fn handle_reload(state: &mut AppState, _args: &str) -> CommandResult {
     state.keybindings = crate::keybindings::load_keybindings(&None);
     CommandResult::Event(crate::Event::ReloadAll)
+}
+
+fn handle_diagnostics(_state: &mut AppState, _args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::ShowDiagnostics)
 }
 
 fn handle_changelog(_state: &mut AppState, _args: &str) -> CommandResult {
