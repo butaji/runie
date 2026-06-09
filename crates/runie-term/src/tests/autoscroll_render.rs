@@ -66,6 +66,10 @@ fn latest_message_pushes_older_off_screen() {
     state.view.scroll = 0;
 
     let out = render_chat(&mut state, 40, 15);
+    if !out.contains("msg14") {
+        eprintln!("BUFFER:\n{}", out.chars().collect::<Vec<_>>().chunks(40).map(|c| c.iter().collect::<String>()).collect::<Vec<_>>().join("\n"));
+        eprintln!("total_lines={} scroll={}", state.view.total_lines, state.view.scroll);
+    }
     assert!(!out.contains("msg0"), "Oldest message should be off-screen");
     assert!(out.contains("msg14"), "Latest message must be visible");
 }

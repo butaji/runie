@@ -21,6 +21,19 @@ impl MockProvider {
     pub fn delay_ms(&self) -> Option<(u64, u64)> {
         self.delay_ms
     }
+
+    fn random_delay(&self) -> Option<Duration> {
+        self.delay_ms.map(|(min, max)| {
+            let range = max.saturating_sub(min) + 1;
+            Duration::from_millis(rand::random::<u64>() % range + min)
+        })
+    }
+
+    async fn maybe_sleep(&self) {
+        if let Some(delay) = self.random_delay() {
+            tokio::time::sleep(delay).await;
+        }
+    }
 }
 
 impl Provider for MockProvider {
@@ -32,10 +45,7 @@ impl Provider for MockProvider {
     where
         F: FnMut(ResponseChunk) + Send,
     {
-        if let Some((min, max)) = self.delay_ms {
-            let delay = rand::random::<u64>() % (max - min + 1) + min;
-            tokio::time::sleep(Duration::from_millis(delay)).await;
-        }
+        self.maybe_sleep().await;
 
         let last = messages.last();
 
@@ -58,9 +68,11 @@ impl Provider for MockProvider {
         if user_input.to_lowercase().contains("list files")
             || user_input.to_lowercase().contains("files")
         {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll list the files in the current directory.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "TOOL:list_dir:.".to_string(),
             });
@@ -68,9 +80,11 @@ impl Provider for MockProvider {
         }
 
         if user_input.to_lowercase().contains("read") {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "Let me read that file for you.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "TOOL:read_file:README.md".to_string(),
             });
@@ -78,9 +92,11 @@ impl Provider for MockProvider {
         }
 
         if user_input.to_lowercase().contains("write") {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll create that file for you.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "TOOL:write_file:hello.txt:Hello World".to_string(),
             });
@@ -88,9 +104,11 @@ impl Provider for MockProvider {
         }
 
         if user_input.to_lowercase().contains("edit") {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll make that edit for you.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_string(),
             });
@@ -99,9 +117,11 @@ impl Provider for MockProvider {
 
         if user_input.to_lowercase().contains("run") || user_input.to_lowercase().contains("cmd")
         {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll run that command for you.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "TOOL:bash:echo hello".to_string(),
             });
@@ -110,9 +130,11 @@ impl Provider for MockProvider {
 
         if user_input.to_lowercase().contains("grep") || user_input.to_lowercase().contains("search")
         {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll search for that pattern.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_string(),
             });
@@ -121,9 +143,11 @@ impl Provider for MockProvider {
 
         if user_input.to_lowercase().contains("find") || user_input.to_lowercase().contains("glob")
         {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll find those files for you.\n".to_string(),
             });
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
             });
@@ -131,6 +155,7 @@ impl Provider for MockProvider {
         }
 
         for word in user_input.split_whitespace() {
+            self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: format!("{} ", word),
             });
