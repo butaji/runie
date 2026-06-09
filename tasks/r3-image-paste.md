@@ -1,6 +1,6 @@
 # Image Paste (Ctrl+V)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Input & Commands
 
@@ -43,15 +43,15 @@ Event::PasteImage,  // Ctrl+V (Alt+V on Win)
 
 ## Acceptance Criteria
 
-- [ ] `Ctrl+V` pastes image from clipboard
-- [ ] `Alt+V` on Windows
-- [ ] Converts image to base64
-- [ ] Shows image attachment in input
-- [ ] Sends to vision-capable models
-- [ ] Falls back gracefully if clipboard has text
-- [ ] Max 5MB per image
+- [x] `Ctrl+V` pastes image from clipboard
+- [x] `Alt+V` on Windows
+- [x] Converts image to base64
+- [x] Shows image attachment in input
+- [x] Sends to vision-capable models
+- [x] Falls back gracefully if clipboard has text
+- [x] Max 5MB per image
 
 ## Tests
 
 ### Layer 2
-- [ ] `ctrl_v_emits_paste_image` — keymap event
+- [x] `ctrl_v_emits_paste_image` — keymap event

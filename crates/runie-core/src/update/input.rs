@@ -292,9 +292,17 @@ impl AppState {
     }
 
     pub(crate) fn paste_image(&mut self) {
-        // Image paste from clipboard is planned for a future release.
-        // For now, flash the input border to indicate the key was recognized.
-        self.input_flash = 3;
+        match crate::clipboard_image::read_clipboard_image() {
+            Some(bytes) => {
+                let uri = crate::clipboard_image::to_data_uri(&bytes);
+                self.image_attachments.push(uri);
+                self.mark_dirty();
+            }
+            None => {
+                // Clipboard does not contain an image — flash to indicate.
+                self.input_flash = 3;
+            }
+        }
     }
 
     // === Legacy methods ===
@@ -349,9 +357,25 @@ impl AppState {
         self.history_pos = None;
         self.undo_stack.clear();
         self.redo_stack.clear();
-        if content.is_empty() {
+        if content.is_empty() && self.image_attachments.is_empty() {
             return;
         }
+
+        // Append image attachments to content
+        let content = if self.image_attachments.is_empty() {
+            content
+        } else {
+            let mut full = content;
+            for uri in std::mem::take(&mut self.image_attachments) {
+                if !full.is_empty() {
+                    full.push('\n');
+                }
+                full.push_str("![image](");
+                full.push_str(&uri);
+                full.push(')');
+            }
+            full
+        };
 
         // Handle bash prefix (!)
         if let Some(stripped) = content.strip_prefix('!') {

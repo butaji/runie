@@ -33,6 +33,11 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+p".to_string(), "CycleModelNext".to_string());
     map.insert("ctrl+shift+p".to_string(), "CycleModelPrev".to_string());
 
+    #[cfg(not(target_os = "windows"))]
+    map.insert("ctrl+v".to_string(), "PasteImage".to_string());
+    #[cfg(target_os = "windows")]
+    map.insert("alt+v".to_string(), "PasteImage".to_string());
+
     // Alt key combinations
     map.insert("alt+enter".to_string(), "FollowUp".to_string());
     map.insert("alt+up".to_string(), "Dequeue".to_string());
@@ -159,6 +164,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "CycleModelNext" => Some(Event::CycleModelNext),
         "CycleModelPrev" => Some(Event::CycleModelPrev),
         "Suspend" => Some(Event::Suspend),
+        "PasteImage" => Some(Event::PasteImage),
         _ => None,
     }
 }
@@ -333,6 +339,7 @@ mod tests {
             ("FollowUp", Event::FollowUp),
             ("ToggleExpand", Event::ToggleExpand),
             ("Suspend", Event::Suspend),
+            ("PasteImage", Event::PasteImage),
         ];
         for (name, expected) in variants {
             let actual = event_from_name(name).expect(name);
