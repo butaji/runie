@@ -65,28 +65,28 @@ fn test_render_sessions_list_on_separate_lines() {
 fn test_render_model_no_args_opens_selector() {
     let content = render_slash("/model");
     assert!(content.contains("Select Model"), "Should open model selector dialog: {}", content);
-    assert!(!content.contains("$ /model"), "Should NOT echo /model as user message: {}", content);
+    assert!(!content.contains("❯ /model"), "Should NOT echo /model as user message: {}", content);
 }
 
 #[test]
 fn test_render_save_no_args_shows_usage() {
     let content = render_slash("/save");
     assert!(content.contains("Usage:"), "Should show usage: {}", content);
-    assert!(!content.contains("$ /save"), "Should NOT echo /save as user message: {}", content);
+    assert!(!content.contains("❯ /save"), "Should NOT echo /save as user message: {}", content);
 }
 
 #[test]
 fn test_render_load_no_args_shows_usage() {
     let content = render_slash("/load");
     assert!(content.contains("Usage:"), "Should show usage: {}", content);
-    assert!(!content.contains("$ /load"), "Should NOT echo /load as user message: {}", content);
+    assert!(!content.contains("❯ /load"), "Should NOT echo /load as user message: {}", content);
 }
 
 #[test]
 fn test_render_delete_no_args_shows_usage() {
     let content = render_slash("/delete");
     assert!(content.contains("Usage:"), "Should show usage: {}", content);
-    assert!(!content.contains("$ /delete"), "Should NOT echo /delete as user message: {}", content);
+    assert!(!content.contains("❯ /delete"), "Should NOT echo /delete as user message: {}", content);
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn test_render_model_m3_just_model_name() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Switched to mock/m3"), "/model m3 should render: {}", content);
-    assert!(!content.contains("$ /model m3"), "Should NOT echo /model m3 as user message: {}", content);
+    assert!(!content.contains("❯ /model m3"), "Should NOT echo /model m3 as user message: {}", content);
     assert_eq!(state.config.current_model, "m3");
 }
 
@@ -119,7 +119,7 @@ fn test_render_load_missing_shows_user_friendly_error() {
     let content = render_slash("/load missing");
     assert!(content.contains("not found"), "Should show not found: {}", content);
     assert!(content.contains("/sessions"), "Should suggest /sessions: {}", content);
-    assert!(!content.contains("$ /load missing"), "Should NOT echo as user message: {}", content);
+    assert!(!content.contains("❯ /load missing"), "Should NOT echo as user message: {}", content);
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

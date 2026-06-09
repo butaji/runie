@@ -15,7 +15,7 @@ fn test_view_renders_user_message_without_manual_ensure_fresh() {
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("$ Hi"), "Chat must render '$ Hi'. Got: {}", content);
+    assert!(content.contains("❯ Hi"), "Chat must render '❯ Hi'. Got: {}", content);
     assert!(content.contains("Hi"), "Chat must render content. Got: {}", content);
 }
 
@@ -55,7 +55,7 @@ fn test_view_renders_multiple_messages_without_manual_ensure_fresh() {
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("$ A"), "Must show user prefix");
+    assert!(content.contains("❯ A"), "Must show user prefix");
     assert!(content.contains("→ Response 1"), "Must show agent prefix");
 }
 
@@ -69,7 +69,7 @@ fn test_render_user_message() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("$ H"));
+    assert!(content.contains("❯ H"));
 }
 
 #[test]

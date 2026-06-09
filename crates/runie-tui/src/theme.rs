@@ -249,7 +249,7 @@ style_fn!(style_thought_summary, "runie.thought.summary");
 
 // ── Glyphs and formatting helpers (unchanged) ──────────────────────────
 
-pub const GLYPH_USER: &str = "$ ";
+pub const GLYPH_USER: &str = "❯ ";
 pub const GLYPH_AGENT: &str = "→ ";
 pub const GLYPH_TOOL: &str = "✓ ";
 pub const GLYPH_INDENT: &str = "  ";

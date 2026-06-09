@@ -29,7 +29,7 @@ fn empty_state_renders_input_prompt() {
     let mut state = AppState::default();
     let content = draw_state(&mut state);
     // Empty state should show input prompt with $
-    assert!(content.contains("$ "), "Empty state should show input prompt");
+    assert!(content.contains("❯ "), "Empty state should show input prompt");
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn user_message_renders() {
     state.update(Event::Input('i'));
     state.update(Event::Submit);
     let content = draw_state(&mut state);
-    assert!(content.contains("$ Hi"), "Should render user prefix");
+    assert!(content.contains("❯ Hi"), "Should render user prefix");
     assert!(content.contains("Hi"), "Should render message content");
 }
 
@@ -72,8 +72,8 @@ fn reset_clears_messages() {
     state.update(Event::Reset);
     let content = draw_state(&mut state);
     // After reset, should only show input prompt, no user messages
-    // Count occurrences of "$ " - should be exactly 1 (input prompt)
-    let count = content.matches("$ ").count();
+    // Count occurrences of "❯ " - should be exactly 1 (input prompt)
+    let count = content.matches("❯ ").count();
     assert_eq!(count, 1, "Reset should clear messages, keep only input prompt");
 }
 
@@ -247,9 +247,9 @@ fn input_cursor_renders_at_position() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    // Find the input line — it has "$ he" visible, cursor should be on 'l'
+    // Find the input line — it has "❯ he" visible, cursor should be on 'l'
     // The input is at y ~ 17, inner x starts at 1 (after border)
-    // Cursor should be at x = 1 + 2 ("$ ") + 2 = 5, which is 'l' in "$ hello"
+    // Cursor should be at x = 1 + 2 ("❯ ") + 2 = 5, which is 'l' in "❯ hello"
     let cursor_cell = buf[(5, 17)].clone(); // input line, cursor at position 5
     assert_eq!(cursor_cell.symbol(), "l", "Cursor should be on 'l' at position 2");
     // Verify the cursor has inverted colors (bg set)
