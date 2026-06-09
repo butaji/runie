@@ -150,6 +150,44 @@ pub fn settings_dialog(f: &mut Frame, snap: &Snapshot) {
     f.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 
+pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
+    let (filter, selected) = match &snap.dialog {
+        Some(runie_core::commands::DialogState::ModelSelector { filter, selected }) => (filter.clone(), *selected),
+        _ => return,
+    };
+    let popup_area = palette_popup_rect(f.area());
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(format!("> {}", filter)).style(style_user()));
+    lines.push(Line::from(""));
+
+    if snap.model_selector_items.is_empty() {
+        lines.push(Line::from("No models found").style(style_hint()));
+    } else {
+        let mut last_header = String::new();
+        for (i, (header, name, cost, _is_selected, is_current)) in snap.model_selector_items.iter().enumerate() {
+            if !header.is_empty() && header != &last_header {
+                if !last_header.is_empty() {
+                    lines.push(Line::from(""));
+                }
+                lines.push(Line::from(format!("  {}", header)).style(style_thinking()));
+                last_header = header.clone();
+            }
+            let star = if *is_current { "★ " } else { "  " };
+            let cost_part = if cost.is_empty() { String::new() } else { format!("  {}", cost) };
+            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
+            lines.push(Line::from(format!("{}{}{}", star, name, cost_part)).style(style));
+        }
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Select Model ")
+        .border_style(style_popup_border());
+    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+}
+
 pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
     let selected = match &snap.dialog {
         Some(runie_core::commands::DialogState::ScopedModels { selected }) => *selected,

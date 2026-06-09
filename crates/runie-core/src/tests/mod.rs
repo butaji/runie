@@ -83,6 +83,8 @@ mod fuzzy;
 #[cfg(test)]
 mod model_cycle;
 #[cfg(test)]
+mod model_selector;
+#[cfg(test)]
 mod scoped_models;
 #[cfg(test)]
 mod settings_dialog;

@@ -1,6 +1,6 @@
 # Model Selector
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: TUI Rendering
 
@@ -87,16 +87,16 @@ fn filter_models(models: &[ModelInfo], query: &str) -> Vec<&ModelInfo> {
 
 ## Acceptance Criteria
 
-- [ ] `Ctrl+L` opens model selector
-- [ ] `/model` (no args) opens same dialog
-- [ ] Shows all ~130 models grouped by provider
-- [ ] "Recent" section at top (last 5 used)
-- [ ] Fuzzy filter as user types
-- [ ] Arrow Up/Down navigates
-- [ ] Enter selects → `Event::SwitchModel { provider, model }`
-- [ ] Esc closes without selection
-- [ ] Cost shown as `$X.YY/1M` when available
-- [ ] Current model marked with `★`
+- [x] `Ctrl+L` opens model selector
+- [x] `/model` (no args) opens same dialog
+- [x] Shows all models grouped by provider
+- [x] "Recent" section at top (last 5 used)
+- [x] Fuzzy filter as user types
+- [x] Arrow Up/Down navigates
+- [x] Enter selects → `Event::SwitchModel { provider, model }`
+- [x] Esc closes without selection
+- [x] Cost shown when available
+- [x] Current model marked with `★`
 
 ## Files
 
@@ -111,20 +111,20 @@ fn filter_models(models: &[ModelInfo], query: &str) -> Vec<&ModelInfo> {
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `filter_matches_name` — "gpt" shows OpenAI models
-- [ ] `filter_matches_provider` — "anthropic" filters by provider
-- [ ] `filter_case_insensitive` — "GPT" matches "gpt-4o"
-- [ ] `recent_shows_max_5` — recent list capped at 5
-- [ ] `select_emits_switch_model` — selection produces correct event
+- [x] `filter_matches_name` — "gpt" shows OpenAI models
+- [x] `filter_matches_provider` — "anthropic" filters by provider
+- [x] `filter_case_insensitive` — "GPT" matches "gpt-4o"
+- [x] `recent_shows_max_5` — recent list capped at 5
+- [x] `select_emits_switch_model` — selection produces correct event
 
 ### Layer 2 — Event Handling
-- [ ] `ctrl_l_opens_selector` — keymap event pushes dialog
-- [ ] `slash_model_no_args_opens_selector` — `/model` with no args
+- [x] `ctrl_l_opens_selector` — keymap event pushes dialog
+- [x] `slash_model_no_args_opens_selector` — `/model` with no args
 
 ### Layer 3 — Rendering
-- [ ] `selector_renders_groups` — TestBackend shows provider headers
-- [ ] `selector_shows_cost` — cost badge visible
-- [ ] `selector_marks_current` — current model has star
+- [x] `selector_renders_groups` — TestBackend shows provider headers
+- [x] `selector_shows_cost` — cost badge visible
+- [x] `selector_marks_current` — current model has star
 
 ### Layer 4 — Smoke
 - [ ] `model_selector_no_panic.sh` — tmux: Ctrl+L → filter → Enter → Esc

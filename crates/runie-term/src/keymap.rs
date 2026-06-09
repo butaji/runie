@@ -99,6 +99,7 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
         KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
         KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
+        KeyCode::Char('l') | KeyCode::Char('L') => Some(CoreEvent::ToggleModelSelector),
         _ => None,
     }
 }
@@ -285,6 +286,14 @@ mod tests {
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
         assert!(matches!(result, Some(runie_core::Event::OpenExternalEditor)), "Ctrl+G should map to OpenExternalEditor, got {:?}", result);
+    }
+
+    #[test]
+    fn ctrl_l_emits_toggle_model_selector() {
+        let key = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::CONTROL);
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::ToggleModelSelector)), "Ctrl+L should map to ToggleModelSelector, got {:?}", result);
     }
 
     #[test]

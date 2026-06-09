@@ -1,4 +1,4 @@
-use crate::model::{AppState, ChatMessage, Role};
+use crate::model::AppState;
 
 pub(crate) fn extract_path_prefix(input: &str, cursor: usize) -> String {
     let before = &input[..cursor.min(input.len())];

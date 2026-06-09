@@ -6,6 +6,7 @@ mod at_refs;
 mod bash;
 mod input;
 mod line_nav;
+mod model_selector;
 mod path_complete;
 mod queue;
 mod scoped_models;
@@ -174,6 +175,17 @@ impl AppState {
                 });
                 self.mark_dirty();
             }
+            Event::ToggleModelSelector => {
+                if matches!(self.open_dialog, Some(crate::commands::DialogState::ModelSelector { .. })) {
+                    self.open_dialog = None;
+                } else {
+                    self.open_dialog = Some(crate::commands::DialogState::ModelSelector {
+                        filter: String::new(),
+                        selected: 0,
+                    });
+                }
+                self.mark_dirty();
+            }
             Event::ToggleScopedModelsDialog => {
                 if matches!(self.open_dialog, Some(crate::commands::DialogState::ScopedModels { .. })) {
                     self.open_dialog = None;
@@ -209,6 +221,12 @@ impl AppState {
             Event::PaletteDown |
             Event::PaletteSelect |
             Event::PaletteClose => {}
+            Event::ModelSelectorFilter(_) |
+            Event::ModelSelectorBackspace |
+            Event::ModelSelectorUp |
+            Event::ModelSelectorDown |
+            Event::ModelSelectorSelect |
+            Event::ModelSelectorClose => {}
             Event::TogglePathCompletion => self.toggle_path_completion(),
             Event::PathCompletionUp => self.path_completion_up(),
             Event::PathCompletionDown => self.path_completion_down(),
@@ -229,8 +247,8 @@ impl AppState {
             crate::commands::DialogState::Settings { category, selected } => {
                 settings_dialog::update_settings_dialog(self, event, category, selected);
             }
-            other => {
-                self.open_dialog = Some(other);
+            crate::commands::DialogState::ModelSelector { filter, selected } => {
+                self.update_model_selector(event, filter, selected);
             }
         }
     }
@@ -350,6 +368,7 @@ impl AppState {
     fn switch_model(&mut self, provider: String, model: String) {
         self.current_provider = provider.clone();
         self.current_model = model.clone();
+        self.record_model_usage(&provider, &model);
         self.add_system_msg(format!("Switched to {}/{}", provider, model));
     }
 
