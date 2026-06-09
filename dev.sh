@@ -7,12 +7,20 @@ if ! command -v cargo-watch > /dev/null 2>&1; then
     exit 1
 fi
 
+# Parse flags
+export RUNIE_MOCK_DELAY=""
 case "$mode" in
-  run)
-    echo "[dev] Hot reload (release). Ctrl+C to stop."
-    RUNIE_MOCK_DELAY=1 cargo watch -x 'run --release --bin runie' -w crates
+  run-delay|fast-delay)
+    export RUNIE_MOCK_DELAY=1
     ;;
-  fast)
+esac
+
+case "$mode" in
+  run|run-delay)
+    echo "[dev] Hot reload (release). Ctrl+C to stop."
+    cargo watch -x 'run --release --bin runie' -w crates
+    ;;
+  fast|fast-delay)
     echo "[dev] Hot reload (debug). Ctrl+C to stop."
     cargo watch -x 'run --bin runie' -w crates
     ;;
@@ -20,6 +28,13 @@ case "$mode" in
     cargo test --all
     ;;
   *)
-    echo "Usage: \$0 [run|fast|test]"
+    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test]"
+    echo ""
+    echo "Modes:"
+    echo "  run        - release build, no mock delays"
+    echo "  run-delay  - release build, random 0.5s-3s delays between mock chunks"
+    echo "  fast       - debug build, no mock delays"
+    echo "  fast-delay - debug build, random 0.5s-3s delays between mock chunks"
+    echo "  test       - run all tests"
     ;;
 esac
