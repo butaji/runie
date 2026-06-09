@@ -14,6 +14,20 @@ pub enum Dialog {
     Settings,
 }
 
+/// Active dialog state with per-dialog data.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DialogState {
+    CommandPalette {
+        filter: String,
+        selected: usize,
+    },
+    ModelSelector {
+        filter: String,
+        selected: usize,
+    },
+    Settings,
+}
+
 /// Result of executing a slash command
 #[derive(Debug, Clone, PartialEq)]
 pub enum CommandResult {
@@ -137,6 +151,19 @@ impl CommandRegistry {
     }
 }
 
+/// Filter commands by name or description (case-insensitive).
+pub fn filter_commands<'a>(registry: &'a CommandRegistry, query: &str) -> Vec<&'a CommandDef> {
+    let q = query.to_lowercase();
+    registry
+        .list()
+        .into_iter()
+        .filter(|e| {
+            e.name.to_lowercase().contains(&q)
+                || e.description.to_lowercase().contains(&q)
+        })
+        .collect()
+}
+
 impl Default for CommandRegistry {
     fn default() -> Self {
         Self::new()
@@ -255,6 +282,75 @@ mod tests {
         type_str(&mut state, "/m gpt-4o");
         state.update(Event::Submit);
         assert_eq!(state.current_model, "gpt-4o");
+    }
+
+    // Palette filter tests (Layer 1)
+
+    #[test]
+    fn filter_empty_shows_all() {
+        let state = AppState::default();
+        let all = state.registry.list();
+        let filtered = filter_commands(&state.registry, "");
+        assert_eq!(filtered.len(), all.len());
+    }
+
+    #[test]
+    fn filter_matches_name() {
+        let state = AppState::default();
+        let filtered = filter_commands(&state.registry, "comp");
+        assert!(
+            filtered.iter().any(|c| c.name == "compact"),
+            "'comp' should match 'compact'"
+        );
+    }
+
+    #[test]
+    fn filter_matches_description() {
+        let state = AppState::default();
+        let filtered = filter_commands(&state.registry, "copy");
+        assert!(
+            filtered.iter().any(|c| c.name == "copy"),
+            "'copy' should match 'copy' command description"
+        );
+    }
+
+    #[test]
+    fn filter_case_insensitive() {
+        let state = AppState::default();
+        let lower = filter_commands(&state.registry, "comp");
+        let upper = filter_commands(&state.registry, "COMP");
+        assert_eq!(lower.len(), upper.len());
+        assert!(upper.iter().any(|c| c.name == "compact"));
+    }
+
+    #[test]
+    fn select_wraps_up() {
+        let mut state = AppState::default();
+        state.update(Event::ToggleCommandPalette);
+        // Up at first should wrap to last
+        state.update(Event::PaletteUp);
+        let count = filter_commands(&state.registry, "").len();
+        if let Some(DialogState::CommandPalette { selected, .. }) = &state.open_dialog {
+            assert_eq!(*selected, count - 1, "Up at first should wrap to last");
+        } else {
+            panic!("Palette should be open");
+        }
+    }
+
+    #[test]
+    fn select_wraps_down() {
+        let mut state = AppState::default();
+        state.update(Event::ToggleCommandPalette);
+        let count = filter_commands(&state.registry, "").len();
+        // Down at last should wrap to first
+        for _ in 0..count {
+            state.update(Event::PaletteDown);
+        }
+        if let Some(DialogState::CommandPalette { selected, .. }) = &state.open_dialog {
+            assert_eq!(*selected, 0, "Down at last should wrap to first");
+        } else {
+            panic!("Palette should be open");
+        }
     }
 
     fn type_str(state: &mut AppState, text: &str) {

@@ -54,6 +54,10 @@ pub(crate) fn content_has_tool_markers(content: &str) -> bool {
 
 impl AppState {
     pub fn update(&mut self, event: Event) {
+        if self.open_dialog.is_some() {
+            self.update_dialog(event);
+            return;
+        }
         match event {
             Event::Input(c) => self.push_input(c),
             Event::Backspace => self.pop_input(),
@@ -142,6 +146,132 @@ impl AppState {
             Event::Abort => self.abort_queue(),
             Event::SpawnAgent => {}
             Event::ToggleExpand => self.toggle_expand_all(),
+            Event::ToggleCommandPalette => {
+                self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
+                    filter: String::new(),
+                    selected: 0,
+                });
+                self.mark_dirty();
+            }
+            Event::PaletteFilter(_) |
+            Event::PaletteBackspace |
+            Event::PaletteUp |
+            Event::PaletteDown |
+            Event::PaletteSelect |
+            Event::PaletteClose => {}
+        }
+    }
+
+    fn update_dialog(&mut self, event: Event) {
+        let Some(dialog) = self.open_dialog.take() else { return };
+        match dialog {
+            crate::commands::DialogState::CommandPalette { filter, selected } => {
+                self.update_palette(event, filter, selected);
+            }
+            other => {
+                self.open_dialog = Some(other);
+            }
+        }
+    }
+
+    fn update_palette(&mut self, event: Event, filter: String, selected: usize) {
+        match event {
+            Event::Abort | Event::PaletteClose | Event::ToggleCommandPalette => {
+                self.open_dialog = None;
+                self.mark_dirty();
+            }
+            Event::Input(c) | Event::PaletteFilter(c) => {
+                self.palette_push_char(filter, c);
+            }
+            Event::Backspace | Event::PaletteBackspace => {
+                self.palette_pop_char(filter);
+            }
+            Event::HistoryPrev | Event::PaletteUp => {
+                self.palette_move_up(filter, selected);
+            }
+            Event::HistoryNext | Event::PaletteDown => {
+                self.palette_move_down(filter, selected);
+            }
+            Event::Submit | Event::PaletteSelect => {
+                self.palette_select(filter, selected);
+            }
+            _ => {
+                self.set_palette(filter, selected);
+            }
+        }
+    }
+
+    fn palette_push_char(&mut self, mut filter: String, c: char) {
+        filter.push(c);
+        self.set_palette(filter, 0);
+    }
+
+    fn palette_pop_char(&mut self, mut filter: String) {
+        filter.pop();
+        self.set_palette(filter, 0);
+    }
+
+    fn palette_move_up(&mut self, filter: String, selected: usize) {
+        let items = crate::commands::filter_commands(&self.registry, &filter);
+        let new_sel = if selected == 0 {
+            items.len().saturating_sub(1)
+        } else {
+            selected - 1
+        };
+        self.set_palette(filter, new_sel);
+    }
+
+    fn palette_move_down(&mut self, filter: String, selected: usize) {
+        let items = crate::commands::filter_commands(&self.registry, &filter);
+        let new_sel = if items.is_empty() {
+            0
+        } else {
+            (selected + 1) % items.len()
+        };
+        self.set_palette(filter, new_sel);
+    }
+
+    fn palette_select(&mut self, filter: String, selected: usize) {
+        let items = crate::commands::filter_commands(&self.registry, &filter);
+        if let Some(cmd) = items.get(selected) {
+            let result = (cmd.handler)(self, "");
+            self.process_command_result(result);
+        }
+        self.open_dialog = None;
+        self.mark_dirty();
+    }
+
+    fn set_palette(&mut self, filter: String, selected: usize) {
+        self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
+            filter,
+            selected,
+        });
+        self.mark_dirty();
+    }
+
+    fn process_command_result(&mut self, result: crate::commands::CommandResult) {
+        match result {
+            crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
+            crate::commands::CommandResult::Event(evt) => self.update(evt),
+            crate::commands::CommandResult::OpenDialog(d) => {
+                self.open_dialog = Some(match d {
+                    crate::commands::Dialog::CommandPalette => {
+                        crate::commands::DialogState::CommandPalette {
+                            filter: String::new(),
+                            selected: 0,
+                        }
+                    }
+                    crate::commands::Dialog::ModelSelector => {
+                        crate::commands::DialogState::ModelSelector {
+                            filter: String::new(),
+                            selected: 0,
+                        }
+                    }
+                    crate::commands::Dialog::Settings => crate::commands::DialogState::Settings,
+                });
+                self.mark_dirty();
+            }
+            crate::commands::CommandResult::None => {}
         }
     }
 

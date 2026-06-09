@@ -80,3 +80,5 @@ mod placeholder;
 mod paste;
 #[cfg(test)]
 mod fuzzy;
+#[cfg(test)]
+mod palette;

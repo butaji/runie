@@ -59,4 +59,13 @@ pub enum Event {
     Dequeue,
     OpenExternalEditor,
     ExternalEditorDone { content: String },
+
+    // Command palette
+    ToggleCommandPalette,
+    PaletteFilter(char),
+    PaletteBackspace,
+    PaletteUp,
+    PaletteDown,
+    PaletteSelect,
+    PaletteClose,
 }

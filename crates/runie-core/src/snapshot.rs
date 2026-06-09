@@ -30,6 +30,10 @@ pub struct Snapshot {
     pub placeholder: String,
     /// Queue count (pending messages in queue)
     pub queue_count: usize,
+    /// Currently open dialog state for rendering overlays.
+    pub dialog: Option<crate::commands::DialogState>,
+    /// Filtered command list for palette rendering (name, description, category).
+    pub palette_items: Vec<(String, String, String)>,
 }
 
 impl Snapshot {

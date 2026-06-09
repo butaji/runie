@@ -70,7 +70,7 @@ pub struct AppState {
     /// Set to true when the user requests quit
     pub should_quit: bool,
     /// Currently open dialog (if any)
-    pub open_dialog: Option<crate::commands::Dialog>,
+    pub open_dialog: Option<crate::commands::DialogState>,
     /// Default provider from config (for /new reset)
     pub config_provider: String,
     /// Default model from config (for /new reset)
@@ -172,6 +172,17 @@ impl AppState {
         self.dirty = true;
     }
 
+    fn palette_items(&self) -> Vec<(String, String, String)> {
+        let filter = match &self.open_dialog {
+            Some(crate::commands::DialogState::CommandPalette { filter, .. }) => filter.clone(),
+            _ => return Vec::new(),
+        };
+        crate::commands::filter_commands(&self.registry, &filter)
+            .into_iter()
+            .map(|cmd| (cmd.name.clone(), cmd.description.clone(), cmd.category.as_str().to_string()))
+            .collect()
+    }
+
     pub fn cache_generation(&self) -> u64 {
         self.message_gen
     }
@@ -252,6 +263,8 @@ impl AppState {
             model: self.current_model.clone(),
             theme_name: self.theme_name.clone(),
             queue_count: self.message_queue.len() + self.request_queue.len(),
+            dialog: self.open_dialog.clone(),
+            palette_items: self.palette_items(),
         }
     }
 
