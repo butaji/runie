@@ -65,6 +65,16 @@ pub struct AppState {
     pub current_model: String,
     /// Active theme name (resolved by runie-tui)
     pub theme_name: String,
+    /// Command registry for slash command dispatch
+    pub registry: crate::commands::CommandRegistry,
+    /// Set to true when the user requests quit
+    pub should_quit: bool,
+    /// Currently open dialog (if any)
+    pub open_dialog: Option<crate::commands::Dialog>,
+    /// Default provider from config (for /new reset)
+    pub config_provider: String,
+    /// Default model from config (for /new reset)
+    pub config_model: String,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -111,6 +121,11 @@ impl Default for AppState {
             turn_active: false, current_action: None,
             current_provider: "mock".into(), current_model: "echo".into(),
             theme_name: "silkcircuit-neon".into(),
+            registry: crate::commands::CommandRegistry::new(),
+            should_quit: false,
+            open_dialog: None,
+            config_provider: "mock".into(),
+            config_model: "echo".into(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             all_collapsed: false, last_assistant_index: None, thought_seq: 0,

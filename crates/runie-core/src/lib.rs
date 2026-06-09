@@ -21,6 +21,7 @@ pub mod file_refs;
 pub mod fuzzy;
 pub mod snapshot;
 pub mod config_reload;
+pub mod commands;
 #[cfg(test)]
 pub mod dsl;
 

@@ -6,7 +6,6 @@ mod bash;
 mod input;
 mod line_nav;
 mod queue;
-mod slash;
 
 pub(crate) fn now() -> f64 {
     std::time::SystemTime::now()
@@ -99,7 +98,7 @@ impl AppState {
                 }
                 self.scroll = self.scroll.saturating_sub(1);
             }
-            Event::Quit => {}
+            Event::Quit => self.should_quit = true,
             Event::Reset => *self = AppState::default(),
             Event::AgentThinking { id } => {
                 self.set_thinking(id);
