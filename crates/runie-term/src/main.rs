@@ -36,6 +36,7 @@ async fn main() -> io::Result<()> {
     apply_trust_on_startup(&mut state);
     init_scoped_models(&mut state);
     init_skills(&mut state);
+    init_prompts(&mut state);
     init_telemetry(&mut state);
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
@@ -300,6 +301,15 @@ fn init_skills(state: &mut AppState) {
     state.skills = runie_core::skills::load_all();
 }
 
+fn init_prompts(state: &mut AppState) {
+    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let prompts_section = config.prompts();
+    state.prompts = runie_core::prompts::load_prompts(
+        prompts_section.default.as_deref(),
+        prompts_section.custom.as_deref(),
+    );
+}
+
 fn init_telemetry(state: &mut AppState) {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     state.telemetry = runie_core::Telemetry::new(config.telemetry_enabled());
@@ -317,6 +327,10 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
         state.turn_active = true;
         state.inflight += 1;
         let skills_context = runie_core::skills::build_skills_context(&state.skills);
+        let system_prompt = state.prompts.iter()
+            .find(|p| p.name == state.current_prompt)
+            .map(|p| p.content.clone())
+            .unwrap_or_default();
         let _ = cmd_tx.send(AgentCommand {
             content,
             id,
@@ -325,6 +339,7 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
             thinking_level: state.thinking_level,
             read_only: state.read_only,
             skills_context,
+            system_prompt,
         }).await;
     }
 }
@@ -356,6 +371,7 @@ mod tests {
         let cmd = rx.try_recv().expect("Command should be sent to agent");
         assert_eq!(cmd.content, "hello");
         assert_eq!(cmd.thinking_level, runie_core::model::ThinkingLevel::Off);
+        assert_eq!(cmd.system_prompt, "");
     }
 
     #[tokio::test]

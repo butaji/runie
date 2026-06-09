@@ -25,6 +25,14 @@ pub struct TelemetrySection {
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize)]
+pub struct PromptsSection {
+    #[serde(default)]
+    pub default: Option<String>,
+    #[serde(default)]
+    pub custom: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct Config {
     pub provider: Option<String>,
     model: Option<String>,
@@ -36,6 +44,8 @@ pub struct Config {
     model_providers: HashMap<String, serde_json::Value>,
     #[serde(default)]
     telemetry: TelemetrySection,
+    #[serde(default)]
+    prompts: PromptsSection,
 }
 
 impl Config {
@@ -79,6 +89,10 @@ impl Config {
 
     pub fn telemetry_enabled(&self) -> bool {
         self.telemetry.enabled
+    }
+
+    pub fn prompts(&self) -> &PromptsSection {
+        &self.prompts
     }
 }
 

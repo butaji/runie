@@ -258,12 +258,18 @@ fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
     let assistant_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::Assistant).count();
     let tool_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::Tool).count();
 
+    let prompt_info = if state.current_prompt.is_empty() {
+        "default".to_string()
+    } else {
+        state.current_prompt.clone()
+    };
     let info = format!(
         "Session: {}\n\
          Messages: {} total ({} user, {} assistant, {} tool)\n\
          Tokens: {} estimated\n\
          Provider: {}\n\
          Model: {}\n\
+         Prompt: {}\n\
          Created: {}\n\
          Updated: {}",
         state.session_display_name.as_deref().unwrap_or("unnamed"),
@@ -271,6 +277,7 @@ fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
         total_tokens,
         state.current_provider,
         state.current_model,
+        prompt_info,
         crate::labels::format_timestamp(state.session_created_at),
         crate::labels::format_timestamp(state.session_updated_at),
     );

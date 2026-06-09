@@ -14,6 +14,7 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("diagnostics", "Show resource loading diagnostics", &[], CommandCategory::System, handle_diagnostics));
     registry.register(cmd("skills", "List loaded skills", &[], CommandCategory::System, handle_skills));
     registry.register(cmd("skill", "Invoke a skill by name", &[], CommandCategory::System, handle_skill));
+    registry.register(cmd("prompt", "Switch prompt template", &[], CommandCategory::System, handle_prompt));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -79,6 +80,31 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
             CommandResult::Message(lines.join("\n"))
         }
         None => CommandResult::Message(format!("Skill '{}' not found. Use /skills to list loaded skills.", name)),
+    }
+}
+
+fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
+    let name = args.trim();
+    if name.is_empty() {
+        let current = if state.current_prompt.is_empty() {
+            "default"
+        } else {
+            &state.current_prompt
+        };
+        let mut lines = vec![format!("Current prompt: {}", current)];
+        if !state.prompts.is_empty() {
+            lines.push("Available prompts:".into());
+            for p in &state.prompts {
+                lines.push(format!("  {}", p.summary()));
+            }
+        }
+        return CommandResult::Message(lines.join("\n"));
+    }
+    if state.prompts.iter().any(|p| p.name == name) {
+        state.current_prompt = name.to_string();
+        CommandResult::Message(format!("Prompt switched to '{}'", name))
+    } else {
+        CommandResult::Message(format!("Prompt '{}' not found.", name))
     }
 }
 

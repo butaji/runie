@@ -64,23 +64,17 @@ pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {
     } else {
         "read_file, list_dir, write_file, edit_file, bash, grep, find"
     };
-    let mut system = format!(
-        "You are a helpful assistant with access to tools. \
-        Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
-        Available tools: {}.",
-        tools_list
+    let base = if command.system_prompt.is_empty() {
+        runie_core::prompts::DEFAULT_PROMPT
+    } else {
+        &command.system_prompt
+    };
+    let mut system = runie_core::prompts::build_system_prompt(
+        base,
+        tools_list,
+        command.read_only,
+        command.thinking_level.prompt_suffix(),
     );
-    if !command.read_only {
-        system.push_str(" \
-            Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.");
-    }
-    system.push_str(" \
-        Use grep to search file contents: {\"name\": \"grep\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}. \
-        Use find to list files by pattern: {\"name\": \"find\", \"arguments\": {\"pattern\": \"...\", \"path\": \"...\"}}.");
-    let suffix = command.thinking_level.prompt_suffix();
-    if !suffix.is_empty() {
-        system.push_str(suffix);
-    }
     if !command.skills_context.is_empty() {
         system.push_str(&command.skills_context);
     }

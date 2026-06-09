@@ -14,7 +14,12 @@ impl AppState {
             self.theme_name = theme.clone();
         }
         self.skills = crate::skills::load_all();
-        self.add_system_msg("Reloaded config, keybindings, theme, and skills.".to_string());
+        let prompts_section = config.prompts();
+        self.prompts = crate::prompts::load_prompts(
+            prompts_section.default.as_deref(),
+            prompts_section.custom.as_deref(),
+        );
+        self.add_system_msg("Reloaded config, keybindings, theme, skills, and prompts.".to_string());
     }
 
     pub(crate) fn show_diagnostics(&mut self) {
@@ -69,5 +74,8 @@ mod tests {
         assert!(state.skills.is_empty(), "reload_all should reload skills from disk");
         let last = state.messages.last().unwrap();
         assert!(last.content.contains("Reloaded"), "Should confirm reload: {}", last.content);
+        // Prompts should also be reloaded (empty in test env)
+        assert!(state.prompts.len() >= 1, "reload_all should reload prompts");
+        assert_eq!(state.prompts[0].name, "default");
     }
 }
