@@ -31,13 +31,32 @@ pub struct Config {
 }
 
 impl Config {
-    /// Load config from a specific path
+    /// Load config from a specific path.
+    /// Automatically migrates outdated configs and writes them back.
     pub fn load_from(path: &PathBuf) -> Self {
         if !path.exists() {
             return Self::default();
         }
         match std::fs::read_to_string(path) {
-            Ok(text) => toml::from_str(&text).unwrap_or_default(),
+            Ok(text) => {
+                let mut value: toml::Value = match toml::from_str(&text) {
+                    Ok(v) => v,
+                    Err(_) => return Self::default(),
+                };
+                match crate::config_migrate::migrate(&mut value) {
+                    Ok(true) => {
+                        // Backup old config before overwriting
+                        let _ = crate::config_migrate::backup_config(path);
+                        if let Ok(migrated) = toml::to_string(&value) {
+                            let _ = std::fs::write(path, migrated);
+                        }
+                    }
+                    Ok(false) => {}
+                    Err(_) => {}
+                }
+                let s = toml::to_string(&value).unwrap_or_default();
+                toml::from_str(&s).unwrap_or_default()
+            }
             Err(_) => Self::default(),
         }
     }
@@ -301,11 +320,10 @@ base_url = "http://localhost"
 api_key = "secret"
 "#).unwrap();
 
-        // Load the config
+        // Load the config (migration moves top-level model → models.default)
         let config = Config::load_from(&config_path);
 
         assert_eq!(config.provider, Some("test-provider".to_string()));
-        assert_eq!(config.model, Some("test-model".to_string()));
         assert_eq!(config.default_model(), Some("test-model"));
     }
 
@@ -388,7 +406,7 @@ api_key = "test"
 
         let config = Config::load_from(&config_path);
 
-        // Should prefer models.default over top-level model
+        // models.default already existed, so migration should NOT overwrite it
         assert_eq!(config.default_model(), Some("gpt-4"));
     }
 }

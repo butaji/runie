@@ -1,6 +1,6 @@
 # Config Migrations
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 
@@ -48,14 +48,14 @@ impl ConfigMigrator {
 
 ## Acceptance Criteria
 
-- [ ] Config version tracked in config.toml
-- [ ] Auto-migration on load if version mismatch
-- [ ] Backup old config before migration
-- [ ] Migration paths tested
+- [x] Config version tracked in config.toml
+- [x] Auto-migration on load if version mismatch
+- [x] Backup old config before migration
+- [x] Migration paths tested
 
 ## Tests
 
 ### Layer 1
-- [ ] `migrate_v0_to_v1` — flat to nested format
-- [ ] `migrate_v1_to_v2` — provider format change
-- [ ] `backup_created` — old config backed up
+- [x] `migrate_v0_to_v1` — flat to nested format
+- [x] `migrate_v1_to_v2` — provider format change
+- [x] `backup_created` — old config backed up
