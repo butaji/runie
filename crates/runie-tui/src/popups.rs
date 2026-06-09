@@ -1,13 +1,13 @@
 use ratatui::{
     layout::Rect,
     text::Line,
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 use runie_core::Snapshot;
 
 use crate::theme::{
-    GLYPH_SELECTED, GLYPH_UNSELECTED, style_popup_border, style_popup_selected,
+    GLYPH_SELECTED, GLYPH_UNSELECTED, block_popup, style_popup_selected,
     style_popup_unselected, style_hint, style_thinking, style_user, style_tool_header,
 };
 
@@ -38,11 +38,7 @@ pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
         .collect();
     lines.push(Line::from(""));
     lines.push(Line::from("Tab=cycle Enter=insert Esc=close").style(style_hint()));
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(format!(" @ files ({}) ", suggestions.len()))
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(&format!(" @ files ({}) ", suggestions.len()))), popup_area);
 }
 
 pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
@@ -73,11 +69,7 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
         .collect();
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(format!(" paths ({}) ", items.len()))
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(&format!(" paths ({}) ", items.len()))), popup_area);
 }
 
 pub fn command_palette(f: &mut Frame, snap: &Snapshot) {
@@ -87,11 +79,7 @@ pub fn command_palette(f: &mut Frame, snap: &Snapshot) {
     };
     let popup_area = palette_popup_rect(f.area());
     let lines = build_palette_lines(snap, &filter, selected);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Commands ")
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(" Commands ")), popup_area);
 }
 
 fn palette_popup_rect(area: Rect) -> Rect {
@@ -139,11 +127,7 @@ pub fn settings_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("←/→=tab ↑/↓=nav Enter=toggle Esc=close").style(style_hint()));
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Settings ")
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(" Settings ")), popup_area);
 }
 
 pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
@@ -177,11 +161,7 @@ pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Select Model ")
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(" Select Model ")), popup_area);
 }
 
 pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
@@ -212,11 +192,7 @@ pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
         }
     }
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Scoped Models ")
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(" Scoped Models ")), popup_area);
 }
 
 pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
@@ -244,11 +220,7 @@ pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select f=cycle-filter Esc=close").style(style_hint()));
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Session Tree ")
-        .border_style(style_popup_border());
-    f.render_widget(Paragraph::new(lines).block(block), popup_area);
+    f.render_widget(Paragraph::new(lines).block(block_popup(" Session Tree ")), popup_area);
 }
 
 fn build_palette_lines<'a>(snap: &'a Snapshot, filter: &str, selected: usize) -> Vec<Line<'a>> {

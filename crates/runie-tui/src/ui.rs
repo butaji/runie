@@ -11,7 +11,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Color,
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
+    widgets::{Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
     Frame,
 };
 
@@ -36,9 +36,8 @@ use crate::theme::{
     style_user, style_agent, style_thought, style_thinking, style_thought_summary,
     style_tool_running, style_tool_header, style_tool_output, style_tool_summary,
     style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
-    style_status_active, style_border, style_border_flash,
-    style_code_header, style_input_cursor, style_placeholder, style_hint,
-    color_fg_bright, color_fg, set_current_theme,
+    style_status_active, style_code_header, style_input_cursor, style_placeholder, style_hint,
+    color_fg_bright, color_fg, set_current_theme, block_input,
 };
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
@@ -353,15 +352,7 @@ fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'s
 }
 
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
-    let border_style = if snap.input_flash > 0 {
-        style_border_flash()
-    } else {
-        style_border()
-    };
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(PANEL_INPUT)
-        .border_style(border_style);
+    let block = block_input(PANEL_INPUT, snap.input_flash > 0);
     let inner = block.inner(area);
 
     let spans = build_input_spans(snap);
