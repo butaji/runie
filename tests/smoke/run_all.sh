@@ -35,7 +35,7 @@ PASSED=0
 FAILED=0
 SKIPPED=0
 
-for test in smoke_*.sh; do
+for test in "$SCRIPT_DIR"/smoke_*.sh; do
     if [ "$test" = "run_all.sh" ]; then
         continue
     fi
