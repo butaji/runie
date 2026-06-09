@@ -154,3 +154,30 @@ jobs:
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+
+  smoke:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install tmux
+        run: sudo apt-get update && sudo apt-get install -y tmux
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Run smoke tests
+        run: bash tests/smoke/run_all.sh
+
+      - name: Verify smoke test results
+        run: |
+          if ! bash tests/smoke/run_all.sh 2>&1 | tee smoke_output.txt; then
+            if grep -q "SKIP" smoke_output.txt; then
+              echo "Smoke tests skipped (tmux not available)"
+            else
+              echo "ERROR: Smoke tests failed!"
+              exit 1
+            fi
+          fi
