@@ -54,7 +54,7 @@ pub fn load_history() -> Result<Vec<String>> {
         }
         // Each line is a JSON string (escaped content)
         let entry: String = serde_json::from_str(&line)
-            .unwrap_or_else(|_| line); // Fallback: use raw line if not valid JSON
+            .unwrap_or(line); // Fallback: use raw line if not valid JSON
         entries.push(entry);
     }
 

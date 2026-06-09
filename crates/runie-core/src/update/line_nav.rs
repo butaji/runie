@@ -10,7 +10,7 @@ impl AppState {
         }
 
         // Find which line the cursor is on
-        let mut current_pos = 0;
+        let _current_pos = 0;
         let mut line_start = 0;
         let mut line_end = self.input.len();
 

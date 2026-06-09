@@ -62,7 +62,7 @@ These require code changes and are tracked in `docs/SHIP_REVIEW_2.md`:
    - Move lint from build gate to CI/`cargo xtask`
    - Currently only checks runie-core, not runie-tui where syntax.rs violates limit
 
-4. **Trim syntax.rs** to <500 lines (only lint violation)
+4. ~~**Trim syntax.rs**~~ — Already split into `syntax/` directory. No lint violations remain.
 
 ## Task Inventory (Post-Review)
 
