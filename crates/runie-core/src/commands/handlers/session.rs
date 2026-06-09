@@ -18,6 +18,7 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(cmd("fork", "Fork session from a message", &[], CommandCategory::Session, handle_fork));
     registry.register(cmd("clone", "Clone current session position", &[], CommandCategory::Session, handle_clone));
     registry.register(cmd("tree", "Open session tree dialog", &[], CommandCategory::Session, handle_tree));
+    registry.register(cmd("share", "Share session as GitHub gist", &[], CommandCategory::Session, handle_share));
 }
 
 fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
@@ -323,4 +324,8 @@ fn handle_clone(state: &mut AppState, _args: &str) -> CommandResult {
 
 fn handle_tree(_state: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ToggleSessionTree)
+}
+
+fn handle_share(_state: &mut AppState, _args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::ShareSession)
 }

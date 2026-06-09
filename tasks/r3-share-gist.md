@@ -1,6 +1,6 @@
 # Share as GitHub Gist (/share)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Sessions
 
@@ -37,14 +37,14 @@ async fn share_session(session: &Session) -> Result<String> {
 
 ## Acceptance Criteria
 
-- [ ] `/share` uploads session as secret GitHub gist
-- [ ] Requires `GITHUB_TOKEN` env var or config
-- [ ] Shows gist URL in chat
-- [ ] Formats session as markdown
-- [ ] Error if no token configured
+- [x] `/share` uploads session as secret GitHub gist
+- [x] Requires `GITHUB_TOKEN` env var or config
+- [x] Shows gist URL in chat
+- [x] Formats session as markdown
+- [x] Error if no token configured
 
 ## Tests
 
 ### Layer 1
-- [ ] `format_session_markdown` — output is valid markdown
-- [ ] `share_url_extracted` — parses gist URL from response
+- [x] `format_session_markdown` — output is valid markdown
+- [x] `share_url_extracted` — parses gist URL from response

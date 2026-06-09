@@ -289,6 +289,8 @@ impl AppState {
             Event::PathCompletionSelect => self.path_completion_select(),
             Event::PathCompletionClose => self.path_completion_close(),
             Event::Suspend => {} // Handled in main event loop
+            Event::ShareSession => {} // Handled in main event loop
+            Event::SystemMessage { content } => self.add_system_msg(content),
         }
     }
 

@@ -119,9 +119,28 @@ pub fn delete(name: &str) -> anyhow::Result<()> {
         .delete(name)
 }
 
+/// Format a slice of chat messages as Markdown for export or sharing.
+pub fn format_as_markdown(messages: &[ChatMessage], display_name: Option<&str>) -> String {
+    let mut lines = Vec::new();
+    let title = display_name.unwrap_or("Session");
+    lines.push(format!("# {}\n", title));
 
+    for msg in messages {
+        let role_label = match msg.role {
+            crate::model::Role::User => "User",
+            crate::model::Role::Assistant => "Assistant",
+            crate::model::Role::System => "System",
+            crate::model::Role::Tool => "Tool",
+            crate::model::Role::Thought => "Thought",
+            crate::model::Role::TurnComplete => continue,
+        };
+        lines.push(format!("## {}\n", role_label));
+        lines.push(msg.content.clone());
+        lines.push(String::new());
+    }
 
-
+    lines.join("\n")
+}
 
 #[cfg(test)]
 mod tests {
@@ -250,5 +269,34 @@ mod tests {
         store.save("provider_test", &session).unwrap();
         let loaded = store.load("provider_test").unwrap();
         assert_eq!(loaded.messages[1].provider, "openai");
+    }
+
+    #[test]
+    fn format_session_markdown_includes_title() {
+        let session = sample_session("md_test");
+        let md = format_as_markdown(&session.messages, Some("My Session"));
+        assert!(md.starts_with("# My Session\n"));
+    }
+
+    #[test]
+    fn format_session_markdown_includes_roles() {
+        let session = sample_session("md_test");
+        let md = format_as_markdown(&session.messages, None);
+        assert!(md.contains("## User\n"));
+        assert!(md.contains("## Assistant\n"));
+    }
+
+    #[test]
+    fn format_session_markdown_skips_turn_complete() {
+        let mut session = sample_session("md_test");
+        session.messages.push(ChatMessage {
+            role: Role::TurnComplete,
+            content: String::new(),
+            timestamp: 3.0,
+            id: "tc".into(),
+            ..Default::default()
+        });
+        let md = format_as_markdown(&session.messages, None);
+        assert!(!md.contains("TurnComplete"));
     }
 }

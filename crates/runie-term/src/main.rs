@@ -8,6 +8,7 @@
 //!   5. If render is slow, old Snapshots are dropped — event loop never waits
 
 mod keymap;
+mod share;
 
 use crossterm::event::EventStream;
 use futures::StreamExt;
@@ -179,6 +180,24 @@ async fn event_loop(
                     let tx = input_tx.clone();
                     tokio::task::spawn_blocking(move || {
                         let _ = spawn_external_editor_sync(text, tx);
+                    });
+                } else if matches!(evt, CoreEvent::ShareSession) {
+                    let messages = state.messages.clone();
+                    let display_name = state.session_display_name.clone();
+                    let tx = input_tx.clone();
+                    tokio::spawn(async move {
+                        match share::share_session(&messages, display_name.as_deref()).await {
+                            Ok(url) => {
+                                let _ = tx.send(CoreEvent::SystemMessage {
+                                    content: format!("Shared session: {}", url),
+                                }).await;
+                            }
+                            Err(e) => {
+                                let _ = tx.send(CoreEvent::SystemMessage {
+                                    content: format!("Could not share session: {}", e),
+                                }).await;
+                            }
+                        }
                     });
                 } else if matches!(evt, CoreEvent::Suspend) {
                     #[cfg(unix)]
