@@ -1,4 +1,5 @@
 //! Model — Application State (mutable borrow, no cloning per event)
+use std::sync::Arc;
 use crate::snapshot::Snapshot;
 use crate::ui::elements::Element;
 pub use crate::message::{ChatMessage, Role, now};
@@ -176,8 +177,12 @@ pub struct AppState {
     pub input_flash: u8,
     pub placeholder: String,
     element_count: usize,
-    elements_cache: Vec<Element>,
-    line_counts: Vec<usize>,
+    elements_cache: Arc<[Element]>,
+    line_counts: Arc<[usize]>,
+    cached_palette_items: Vec<(String, String, String)>,
+    cached_palette_filter: Option<String>,
+    cached_model_items: Vec<(String, String, String, bool, bool)>,
+    cached_model_filter: Option<String>,
     total_lines: usize,
     dirty: bool,
     message_gen: u64,
@@ -220,9 +225,8 @@ impl Default for AppState {
             input_history: Vec::new(), history_pos: None,
             undo_stack: Vec::new(), redo_stack: Vec::new(),
             input_flash: 0, placeholder: "Type a message to start...".into(),
-            element_count: 0, elements_cache: Vec::new(),
-            line_counts: Vec::new(), total_lines: 0,
-            dirty: true, message_gen: 1, cached_gen: 0,
+            element_count: 0, elements_cache: Arc::new([]), line_counts: Arc::new([]), total_lines: 0,
+            cached_palette_items: Vec::new(), cached_palette_filter: None, cached_model_items: Vec::new(), cached_model_filter: None, dirty: true, message_gen: 1, cached_gen: 0,
         }
     }
 }
@@ -261,26 +265,34 @@ impl AppState {
         self.dirty = true;
     }
 
-    fn palette_items(&self) -> Vec<(String, String, String)> {
+    fn palette_items(&mut self) -> Vec<(String, String, String)> {
         let filter = match &self.open_dialog {
             Some(crate::commands::DialogState::CommandPalette { filter, .. }) => filter.clone(),
-            _ => return Vec::new(),
-        };
-        let mut items: Vec<_> = crate::commands::filter_commands(&self.registry, &filter)
-            .into_iter()
-            .map(|cmd| (cmd.name.clone(), cmd.description.clone(), cmd.category.as_str().to_string()))
-            .collect();
-        let f = filter.to_lowercase();
-        for skill in &self.skills {
-            if skill.user_invocable
-                && (f.is_empty()
-                    || skill.name.to_lowercase().contains(&f)
-                    || skill.description.to_lowercase().contains(&f))
-            {
-                items.push((skill.name.clone(), skill.description.clone(), "Skill".to_string()));
+            _ => {
+                self.cached_palette_filter = None;
+                self.cached_palette_items.clear();
+                return Vec::new();
             }
+        };
+        if Some(&filter) != self.cached_palette_filter.as_ref() {
+            self.cached_palette_filter = Some(filter.clone());
+            let mut items: Vec<_> = crate::commands::filter_commands(&self.registry, &filter)
+                .into_iter()
+                .map(|cmd| (cmd.name.clone(), cmd.description.clone(), cmd.category.as_str().to_string()))
+                .collect();
+            let f = filter.to_lowercase();
+            for skill in &self.skills {
+                if skill.user_invocable
+                    && (f.is_empty()
+                        || skill.name.to_lowercase().contains(&f)
+                        || skill.description.to_lowercase().contains(&f))
+                {
+                    items.push((skill.name.clone(), skill.description.clone(), "Skill".to_string()));
+                }
+            }
+            self.cached_palette_items = items;
         }
-        items
+        self.cached_palette_items.clone()
     }
 
     fn session_tree_items(&self) -> Vec<(usize, String)> {
@@ -300,18 +312,26 @@ impl AppState {
         }
     }
 
-    fn model_selector_items(&self) -> Vec<(String, String, String, bool, bool)> {
-        let (filter, _) = match &self.open_dialog {
-            Some(crate::commands::DialogState::ModelSelector { filter, .. }) => (filter.clone(), 0),
-            _ => return Vec::new(),
+    fn model_selector_items(&mut self) -> Vec<(String, String, String, bool, bool)> {
+        let filter = match &self.open_dialog {
+            Some(crate::commands::DialogState::ModelSelector { filter, .. }) => filter.clone(),
+            _ => {
+                self.cached_model_filter = None;
+                self.cached_model_items.clear();
+                return Vec::new();
+            }
         };
-        build_model_selector_items(
-            &model_catalog(),
-            &self.recent_models,
-            &filter,
-            &self.current_provider,
-            &self.current_model,
-        )
+        if Some(&filter) != self.cached_model_filter.as_ref() {
+            self.cached_model_filter = Some(filter.clone());
+            self.cached_model_items = build_model_selector_items(
+                &model_catalog(),
+                &self.recent_models,
+                &filter,
+                &self.current_provider,
+                &self.current_model,
+            );
+        }
+        self.cached_model_items.clone()
     }
 
     /// Record a model selection in recent history (max 5, no duplicates).
@@ -331,10 +351,12 @@ impl AppState {
     /// Rebuild cache only when messages changed — O(n) but gated
     pub fn ensure_fresh(&mut self) {
         if self.dirty && self.message_gen != self.cached_gen {
-            self.elements_cache = crate::ui::LazyCache::rebuild(self);
-            self.element_count = self.elements_cache.len();
-            self.line_counts = self.elements_cache.iter().map(|e| e.line_count()).collect();
-            self.total_lines = self.line_counts.iter().sum();
+            let elements = crate::ui::LazyCache::rebuild(self);
+            self.element_count = elements.len();
+            let line_counts: Vec<usize> = elements.iter().map(|e| e.line_count()).collect();
+            self.total_lines = line_counts.iter().sum();
+            self.line_counts = line_counts.into();
+            self.elements_cache = elements.into();
             self.cached_gen = self.message_gen;
         }
         self.dirty = false;
@@ -363,11 +385,11 @@ impl AppState {
     }
 
     pub fn elements_cache(&self) -> &[Element] {
-        &self.elements_cache
+        self.elements_cache.as_ref()
     }
 
     pub(crate) fn line_counts(&self) -> &[usize] {
-        &self.line_counts
+        self.line_counts.as_ref()
     }
 
     pub fn tick_animation(&mut self) {
@@ -388,10 +410,10 @@ impl AppState {
     /// Build an immutable Snapshot for the render actor.
     /// The event loop calls this after ensure_fresh(); the render
     /// actor receives it via channel and draws without touching state.
-    pub fn snapshot(&self) -> Snapshot {
+    pub fn snapshot(&mut self) -> Snapshot {
         Snapshot {
-            elements: self.elements_cache.clone(),
-            line_counts: self.line_counts.clone(),
+            elements: Arc::clone(&self.elements_cache),
+            line_counts: Arc::clone(&self.line_counts),
             total_lines: self.total_lines,
             input: self.input.clone(),
             cursor_pos: self.cursor_pos,
@@ -420,10 +442,7 @@ impl AppState {
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
-            auth_providers: {
-                let auth = crate::auth::AuthStorage::load();
-                auth.tokens.keys().cloned().collect()
-            },
+            auth_providers: crate::auth::AuthStorage::load().tokens.keys().cloned().collect(),
         }
     }
 

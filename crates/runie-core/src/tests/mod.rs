@@ -95,6 +95,8 @@ mod settings_dialog;
 #[cfg(test)]
 mod palette;
 #[cfg(test)]
+mod snapshot_optimization;
+#[cfg(test)]
 mod thinking;
 #[cfg(test)]
 mod safety;

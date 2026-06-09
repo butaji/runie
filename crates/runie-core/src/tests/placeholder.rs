@@ -7,13 +7,13 @@ mod tests {
 
     #[test]
     fn default_placeholder_is_set() {
-        let state = AppState::default();
+        let mut state = AppState::default();
         assert!(!state.placeholder.is_empty(), "Default placeholder should not be empty");
     }
 
     #[test]
     fn placeholder_in_snapshot_when_input_empty() {
-        let state = AppState::default();
+        let mut state = AppState::default();
         let snap = state.snapshot();
         assert!(!snap.placeholder.is_empty(), "Snapshot should contain placeholder");
     }
