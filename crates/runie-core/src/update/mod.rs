@@ -247,6 +247,7 @@ impl AppState {
             Event::PathCompletionDown => self.path_completion_down(),
             Event::PathCompletionSelect => self.path_completion_select(),
             Event::PathCompletionClose => self.path_completion_close(),
+            Event::Suspend => {} // Handled in main event loop
         }
     }
 

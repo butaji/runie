@@ -95,7 +95,7 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('k') | KeyCode::Char('K') => Some(CoreEvent::DeleteToEnd),
         KeyCode::Char('u') | KeyCode::Char('U') => Some(CoreEvent::DeleteToStart),
         KeyCode::Char('d') | KeyCode::Char('D') => Some(CoreEvent::KillChar),
-        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Undo),
+        KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Suspend),
         KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
         KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
         KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
@@ -203,11 +203,11 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_z_converts_to_undo() {
+    fn ctrl_z_converts_to_suspend() {
         let key = KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Undo)), "Ctrl+Z should map to Undo");
+        assert!(matches!(result, Some(runie_core::Event::Suspend)), "Ctrl+Z should map to Suspend");
     }
 
     #[test]

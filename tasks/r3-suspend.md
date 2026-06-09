@@ -1,6 +1,6 @@
 # Suspend to Background (Ctrl+Z)
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Input & Commands
 
@@ -29,12 +29,12 @@ Event::Suspend => {
 
 ## Acceptance Criteria
 
-- [ ] `Ctrl+Z` suspends to background on Unix
-- [ ] No-op on Windows (no job control)
-- [ ] Terminal restored on resume
-- [ ] Event loop pauses correctly
+- [x] `Ctrl+Z` suspends to background on Unix
+- [x] No-op on Windows (no job control)
+- [x] Terminal restored on resume
+- [x] Event loop pauses correctly
 
 ## Tests
 
 ### Layer 2
-- [ ] `ctrl_z_emits_suspend` — keymap event
+- [x] `ctrl_z_emits_suspend` — keymap event
