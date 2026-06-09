@@ -38,7 +38,7 @@ use crate::theme::{
     style_turn_complete, style_empty_state, style_timestamp, style_status_idle,
     style_status_active, style_code_header, style_input_cursor, style_placeholder, style_hint,
     style_hint_key, color_fg_bright, color_fg, color_success, color_warning, color_error, color_bg,
-    darken, set_current_theme, block_input, style_chevron,
+    color_border, darken, set_current_theme, block_input, style_chevron,
 };
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
@@ -164,7 +164,7 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     };
 
     let h = hstack(area, &[Constraint::Length(content_width), Constraint::Min(0)]);
-    let lines = build_lines(snap);
+    let lines = build_lines(snap, content_width);
     let offset = snap.scroll_offset(height);
     f.render_widget(
         Paragraph::new(lines)
@@ -178,10 +178,10 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     }
 }
 
-fn build_lines(snap: &Snapshot) -> Vec<Line<'_>> {
+fn build_lines(snap: &Snapshot, content_width: u16) -> Vec<Line<'_>> {
     let mut lines = Vec::with_capacity(snap.total_lines);
     for elem in snap.elements.iter() {
-        lines.extend(to_lines(elem, snap.spinner_frame));
+        lines.extend(to_lines(elem, snap.spinner_frame, content_width));
     }
     lines
 }
@@ -201,12 +201,12 @@ pub fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, he
     f.render_stateful_widget(scrollbar, area, &mut state);
 }
 
-fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
+fn to_lines<'a>(elem: &'a Element, _spinner_frame: char, content_width: u16) -> Vec<Line<'a>> {
     use runie_core::Element::*;
     match elem {
         Spacer { .. } => vec![Line::from("")],
-        UserMessage { content, timestamp } => render_message(content, *timestamp, GLYPH_USER, color_fg_bright()),
-        AgentMessage { content, timestamp, provider } => render_agent_message(content, *timestamp, provider),
+        UserMessage { content, timestamp } => render_message(content, *timestamp, GLYPH_USER, color_fg_bright(), true, content_width),
+        AgentMessage { content, timestamp, provider } => render_agent_message(content, *timestamp, provider, content_width),
         Thinking { started, .. } => vec![Line::from(
             thinking_line(started.elapsed().as_secs_f64())
         ).style(style_thinking())],
@@ -227,46 +227,89 @@ fn to_lines<'a>(elem: &'a Element, _spinner_frame: char) -> Vec<Line<'a>> {
     }
 }
 
-fn render_message(content: &str, timestamp: f64, first_prefix: &'static str, base_color: Color) -> Vec<Line<'static>> {
+fn render_message(content: &str, timestamp: f64, first_prefix: &'static str, base_color: Color, is_user: bool, content_width: u16) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
     let ts_str = format_timestamp(timestamp);
-    let base_style = if base_color == color_fg_bright() { style_user() } else { style_agent() };
-    for (i, line) in content.lines().enumerate() {
+    let base_style = if is_user { style_user() } else { style_agent() };
+    let bg_style = if is_user { Style::default().bg(color_border()) } else { Style::default() };
+    let content_lines: Vec<&str> = content.lines().collect();
+
+    for (i, line) in content_lines.iter().enumerate() {
         let prefix = if i == 0 { first_prefix } else { GLYPH_INDENT };
-        let ts = format!(" {:>5}", ts_str);
         let mut spans = vec![Span::styled(prefix, base_style)];
         spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, base_color)));
-        spans.push(Span::styled(ts, style_timestamp()));
-        lines.push(Line::from(spans));
+
+        // Only show timestamp on the first line, right-aligned
+        if i == 0 && content_width > 0 {
+            let ts_width = ts_str.len() as u16 + 1;  // +1 for space
+            let prefix_width = prefix.chars().count() as u16;
+            let line_text_width = prefix_width + line.chars().count() as u16;
+            let padding = content_width.saturating_sub(line_text_width).saturating_sub(ts_width);
+            if padding > 0 {
+                spans.push(Span::styled(" ".repeat(padding as usize), base_style));
+            }
+            spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        }
+
+        let mut line = Line::from(spans);
+        if is_user {
+            line = line.style(bg_style);
+        }
+        lines.push(line);
     }
+
     if lines.is_empty() {
-        lines.push(Line::from(format!("{}{:>5}", first_prefix, ts_str)).style(base_style));
+        let mut spans = vec![Span::styled(first_prefix, base_style)];
+        if content_width > 0 {
+            let ts_width = ts_str.len() as u16 + 1;
+            let prefix_width = first_prefix.chars().count() as u16;
+            let padding = content_width.saturating_sub(prefix_width).saturating_sub(ts_width);
+            if padding > 0 {
+                spans.push(Span::styled(" ".repeat(padding as usize), base_style));
+            }
+            spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+        }
+        let mut line = Line::from(spans);
+        if is_user {
+            line = line.style(bg_style);
+        }
+        lines.push(line);
     }
     lines
 }
 
-fn render_list_item(item: &str, ordered: bool, idx: usize, is_first: bool, ts_str: &str) -> Line<'static> {
+fn render_list_item(item: &str, ordered: bool, idx: usize, is_first: bool, content_width: u16, ts_str: &str) -> Line<'static> {
     let bullet = if ordered { format!("{}.", idx + 1) } else { "•".to_string() };
     let first_line_prefix = if is_first { format!("{} {}", GLYPH_AGENT, bullet) } else { format!("{} {}", GLYPH_INDENT, bullet) };
     let rest_prefix = format!("{}   ", GLYPH_INDENT);
-    let first_ts = format!(" {:>5}", ts_str);
-    let rest_ts = "      ".to_string();
     let lines: Vec<&str> = item.lines().collect();
-    let mut text = String::new();
+    let mut result_spans: Vec<Span<'static>> = Vec::new();
+    let mut text_len = 0u16;
+
     for (j, line) in lines.iter().enumerate() {
         let prefix = if j == 0 { &first_line_prefix } else { &rest_prefix };
-        let ts = if j == 0 { &first_ts } else { &rest_ts };
-        text.push_str(prefix);
-        text.push_str(line);
-        text.push_str(ts);
-        if j + 1 < lines.len() {
-            text.push('\n');
+        if j > 0 {
+            result_spans.push(Span::raw("\n".to_string()));
         }
+        result_spans.push(Span::styled(prefix.clone(), style_agent()));
+        result_spans.push(Span::styled(line.to_string(), style_agent()));
+        text_len = prefix.chars().count() as u16 + line.chars().count() as u16;
     }
-    Line::from(text).style(style_agent())
+
+    if is_first && content_width > 0 {
+        let ts_width = ts_str.len() as u16 + 1;
+        let padding = content_width.saturating_sub(text_len).saturating_sub(ts_width);
+        if padding > 0 {
+            result_spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
+        result_spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+    }
+
+    Line::from(result_spans).style(style_agent())
 }
 
-fn render_code_block_lines(content: &str, lang: &str, ts_str: &str) -> Vec<Line<'static>> {
+fn render_code_block_lines(content: &str, lang: &str) -> Vec<Line<'static>> {
+    let _ = lang;
     let highlighted = highlight_code(content, lang);
     highlighted
         .into_iter()
@@ -275,7 +318,6 @@ fn render_code_block_lines(content: &str, lang: &str, ts_str: &str) -> Vec<Line<
             for token in tokens {
                 spans.push(Span::styled(token.content, token.style));
             }
-            spans.push(Span::raw(format!(" {:>5}", ts_str)));
             Line::from(spans)
         })
         .collect()
@@ -287,7 +329,7 @@ fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {
         .collect()
 }
 
-fn render_agent_message(content: &str, timestamp: f64, provider: &str) -> Vec<Line<'static>> {
+fn render_agent_message(content: &str, timestamp: f64, provider: &str, content_width: u16) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
     let mut lines = Vec::new();
     let mut is_first = true;
@@ -296,18 +338,18 @@ fn render_agent_message(content: &str, timestamp: f64, provider: &str) -> Vec<Li
         match block {
             CodeBlock::Text(text) => {
                 for line in text.lines() {
-                    lines.push(render_msg_line(line, timestamp, is_first, provider));
+                    lines.push(render_msg_line(line, timestamp, is_first, provider, content_width, &ts_str));
                     is_first = false;
                 }
             }
             CodeBlock::Code { lang, content } => {
-                lines.push(render_code_header(&lang, is_first));
+                lines.push(render_code_header(&lang, is_first, content_width, &ts_str));
                 is_first = false;
-                lines.extend(render_code_block_lines(&content, &lang, &ts_str));
+                lines.extend(render_code_block_lines(&content, &lang));
             }
             CodeBlock::List { ordered, items } => {
                 for (i, item) in items.iter().enumerate() {
-                    let rendered = render_list_item(item, ordered, i, is_first, &ts_str);
+                    let rendered = render_list_item(item, ordered, i, is_first, content_width, &ts_str);
                     lines.push(rendered);
                     is_first = false;
                 }
@@ -319,30 +361,61 @@ fn render_agent_message(content: &str, timestamp: f64, provider: &str) -> Vec<Li
         }
     }
     if lines.is_empty() {
-        if provider.is_empty() {
-            lines.push(Line::from(format!("{}{:>5}", GLYPH_AGENT, ts_str)).style(style_agent()));
-        } else {
-            lines.push(Line::from(format!("{} {} {:>5}", GLYPH_AGENT, provider, ts_str)).style(style_agent()));
-        }
+        lines.push(render_empty_agent_line(provider, content_width, &ts_str));
     }
     lines
 }
 
-fn render_code_header(lang: &str, is_first: bool) -> Line<'static> {
+fn render_code_header(lang: &str, is_first: bool, content_width: u16, ts_str: &str) -> Line<'static> {
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
-    Line::from(code_header_label(prefix, lang)).style(style_code_header())
+    let label = code_header_label(prefix, lang);
+    let mut spans = vec![Span::styled(label.clone(), style_code_header())];
+    if is_first && content_width > 0 {
+        let text_len = label.chars().count() as u16;
+        let ts_width = ts_str.len() as u16 + 1;
+        let padding = content_width.saturating_sub(text_len).saturating_sub(ts_width);
+        if padding > 0 {
+            spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
+        spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+    }
+    Line::from(spans).style(style_code_header())
 }
 
-fn render_msg_line(line: &str, timestamp: f64, is_first: bool, provider: &str) -> Line<'static> {
+fn render_msg_line(line: &str, _timestamp: f64, is_first: bool, provider: &str, content_width: u16, ts_str: &str) -> Line<'static> {
     let prefix = if is_first { GLYPH_AGENT } else { GLYPH_INDENT };
-    let ts = format!(" {:>5}", format_timestamp(timestamp));
     let mut spans = vec![Span::styled(prefix.to_string(), style_agent())];
     spans.extend(md_to_spans(&parse_inline_markdown_with_color(line, color_fg())));
     if is_first && !provider.is_empty() {
         spans.push(Span::styled(format!(" · {}", provider), style_timestamp()));
     }
-    spans.push(Span::styled(ts, style_timestamp()));
+    if is_first && content_width > 0 {
+        let text_len: u16 = spans.iter().map(|s| s.content.chars().count() as u16).sum();
+        let ts_width = ts_str.len() as u16 + 1;
+        let padding = content_width.saturating_sub(text_len).saturating_sub(ts_width);
+        if padding > 0 {
+            spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
+        spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+    }
     Line::from(spans)
+}
+
+fn render_empty_agent_line(provider: &str, content_width: u16, ts_str: &str) -> Line<'static> {
+    let mut text = GLYPH_AGENT.to_string();
+    if !provider.is_empty() {
+        text.push_str(&format!(" {}", provider));
+    }
+    let mut spans = vec![Span::styled(text.clone(), style_agent())];
+    if content_width > 0 {
+        let ts_width = ts_str.len() as u16 + 1;
+        let padding = content_width.saturating_sub(text.chars().count() as u16).saturating_sub(ts_width);
+        if padding > 0 {
+            spans.push(Span::raw(" ".repeat(padding as usize)));
+        }
+        spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
+    }
+    Line::from(spans).style(style_agent())
 }
 
 fn render_thought_marker(content: &str) -> Vec<Line<'static>> {

@@ -212,6 +212,7 @@ pub fn color_success() -> Color { Color::from(current_theme().color("success")) 
 pub fn color_warning() -> Color { Color::from(current_theme().color("warning")) }
 pub fn color_error() -> Color { Color::from(current_theme().color("error")) }
 pub fn color_dim() -> Color { Color::from(current_theme().color("text.dim")) }
+pub fn color_border() -> Color { Color::from(current_theme().color("border.unfocused")) }
 
 /// Darken an RGB color by a factor (0.0–1.0).
 pub fn darken(color: Color, factor: f32) -> Color {
