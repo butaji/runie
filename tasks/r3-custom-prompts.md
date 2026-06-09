@@ -1,6 +1,6 @@
 # Custom Prompt Templates
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 
@@ -31,15 +31,15 @@ pub enum PromptSource {
 
 ## Acceptance Criteria
 
-- [ ] `prompts.default` in config.toml sets system prompt
-- [ ] `prompts.custom` loads from file path
-- [ ] `/prompt <name>` switches prompt template
-- [ ] Prompt shown in session info
-- [ ] Prompts reload with `/reload`
+- [x] `prompts.default` in config.toml sets system prompt
+- [x] `prompts.custom` loads from file path
+- [x] `/prompt <name>` switches prompt template
+- [x] Prompt shown in session info
+- [x] Prompts reload with `/reload`
 
 ## Tests
 
 ### Layer 1
-- [ ] `prompt_loaded_from_config` — config field parsed
-- [ ] `prompt_loaded_from_file` — file content read
-- [ ] `prompt_switch_updates` — /prompt changes system message
+- [x] `prompt_loaded_from_config` — config field parsed
+- [x] `prompt_loaded_from_file` — file content read
+- [x] `prompt_switch_updates` — /prompt changes system message

@@ -142,6 +142,10 @@ pub struct AppState {
     pub skills: Vec<crate::skills::Skill>,
     /// Opt-in telemetry collector
     pub telemetry: crate::telemetry::Telemetry,
+    /// Loaded prompt templates
+    pub prompts: Vec<crate::prompts::PromptTemplate>,
+    /// Active prompt template name (empty = default)
+    pub current_prompt: String,
 
     /// Number of commands sent to agent but not yet completed
     pub inflight: usize,
@@ -185,8 +189,7 @@ impl Default for AppState {
             message_queue: Vec::new(),
             steering_mode: DeliveryMode::OneAtATime,
             follow_up_mode: DeliveryMode::OneAtATime,
-            next_id: 0,
-            current_request_id: None, turn_started_at: None,
+            next_id: 0, current_request_id: None, turn_started_at: None,
             current_tool_name: None, tool_started_at: None,
             intermediate_step_count: 0, animation_frame: 0,
             turn_active: false, current_action: None,
@@ -198,12 +201,12 @@ impl Default for AppState {
             keybindings: crate::keybindings::default_keybindings(),
             session_display_name: None,
             session_created_at: now(), session_updated_at: now(),
-            thinking_level: ThinkingLevel::Off,
-            read_only: false,
+            thinking_level: ThinkingLevel::Off, read_only: false,
             scoped_models: Vec::new(), scoped_index: 0,
             recent_models: Vec::new(), pending_edits: Vec::new(),
             skills: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
+            prompts: Vec::new(), current_prompt: String::new(),
             inflight: 0,
             at_suggestions: None, at_selected: None, last_at_query: None,
             path_suggestions: None, path_selected: None,

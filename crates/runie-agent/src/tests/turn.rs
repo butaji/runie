@@ -12,6 +12,7 @@ async fn test_agent_loop_simple_response() {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         skills_context: String::new(),
+        system_prompt: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -44,6 +45,7 @@ async fn test_agent_loop_with_tool_call() {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         skills_context: String::new(),
+        system_prompt: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -76,6 +78,7 @@ async fn test_agent_loop_respects_max_iterations() {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         skills_context: String::new(),
+        system_prompt: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 3)
@@ -94,6 +97,7 @@ async fn test_agent_loop_events_have_correct_id() {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         skills_context: String::new(),
+        system_prompt: String::new(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -123,6 +127,7 @@ fn read_only_excludes_write_tools() {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: true,
         skills_context: String::new(),
+        system_prompt: String::new(),
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0] {
@@ -148,6 +153,7 @@ fn read_write_includes_all_tools() {
         thinking_level: runie_core::model::ThinkingLevel::Off,
         read_only: false,
         skills_context: String::new(),
+        system_prompt: String::new(),
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0] {

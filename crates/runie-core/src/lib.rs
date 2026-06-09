@@ -32,6 +32,7 @@ pub mod config_migrate;
 pub mod commands;
 pub mod trust;
 pub mod telemetry;
+pub mod prompts;
 pub mod path_complete;
 pub mod skills;
 pub mod model_scroll;
@@ -59,4 +60,5 @@ pub use input_history::{load_history, save_history, filter_history, search_histo
 pub use keybindings::{load_keybindings, default_keybindings, parse_keybindings_json, event_from_name};
 pub use trust::{TrustManager, TrustDecision};
 pub use telemetry::Telemetry;
+pub use prompts::{PromptTemplate, PromptSource, load_prompts, build_system_prompt, DEFAULT_PROMPT};
 pub use skills::{Skill, build_skills_context, load_all, load_from_dir};

@@ -283,6 +283,72 @@ fn palette_select_skill_emits_message() {
     assert!(last.content.contains("rust"), "Selecting skill should emit info message: {}", last.content);
 }
 
+// Prompt tests (Layer 1 + Layer 2)
+
+#[test]
+fn prompt_switch_updates() {
+    let mut state = AppState::default();
+    state.prompts = vec![
+        crate::prompts::PromptTemplate {
+            name: "custom".into(),
+            content: "Be concise.".into(),
+            source: crate::prompts::PromptSource::BuiltIn,
+        }
+    ];
+    let cmd = state.registry.get("prompt").unwrap();
+    let result = (cmd.handler)(&mut state, "custom");
+    if let CommandResult::Message(msg) = result {
+        assert!(msg.contains("custom"), "Should confirm prompt switch: {}", msg);
+    } else {
+        panic!("/prompt custom should return Message, got {:?}", result);
+    }
+    assert_eq!(state.current_prompt, "custom");
+}
+
+#[test]
+fn prompt_shows_current_when_no_args() {
+    let mut state = AppState::default();
+    state.prompts = vec![
+        crate::prompts::PromptTemplate {
+            name: "default".into(),
+            content: "Be helpful.".into(),
+            source: crate::prompts::PromptSource::BuiltIn,
+        }
+    ];
+    let cmd = state.registry.get("prompt").unwrap();
+    let result = (cmd.handler)(&mut state, "");
+    if let CommandResult::Message(msg) = result {
+        assert!(msg.contains("default"), "Should show current prompt: {}", msg);
+    } else {
+        panic!("/prompt should return Message, got {:?}", result);
+    }
+}
+
+#[test]
+fn prompt_unknown_returns_error() {
+    let mut state = AppState::default();
+    let cmd = state.registry.get("prompt").unwrap();
+    let result = (cmd.handler)(&mut state, "unknown");
+    if let CommandResult::Message(msg) = result {
+        assert!(msg.contains("not found"), "Should report unknown prompt: {}", msg);
+    } else {
+        panic!("/prompt unknown should return error Message, got {:?}", result);
+    }
+}
+
+#[test]
+fn session_info_shows_prompt() {
+    let mut state = AppState::default();
+    state.current_prompt = "custom".into();
+    let cmd = state.registry.get("session").unwrap();
+    let result = (cmd.handler)(&mut state, "");
+    if let CommandResult::Message(msg) = result {
+        assert!(msg.contains("Prompt: custom"), "Session should show prompt: {}", msg);
+    } else {
+        panic!("session should return Message, got {:?}", result);
+    }
+}
+
 // Session info tests (Layer 1)
 
 #[test]
