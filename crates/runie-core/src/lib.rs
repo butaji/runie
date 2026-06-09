@@ -39,6 +39,7 @@ pub mod skills;
 pub mod model_scroll;
 pub mod session_tree;
 pub mod auth;
+pub mod tool_markers;
 #[cfg(test)]
 pub mod dsl;
 

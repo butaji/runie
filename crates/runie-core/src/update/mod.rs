@@ -1,5 +1,10 @@
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
+use crate::tool_markers::has_tool_markers;
+
+// Re-export for backward compatibility
+pub use crate::tool_markers::has_tool_markers as content_has_tool_markers;
+pub use crate::tool_markers::strip_tool_markers;
 
 mod agent;
 mod at_refs;
@@ -20,44 +25,6 @@ pub(crate) fn now() -> f64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs_f64())
         .unwrap_or(0.0)
-}
-
-pub(crate) fn strip_tool_markers(content: &str) -> String {
-    if let Some(pos) = content.find("TOOL:") {
-        let before = &content[..pos];
-        return before.trim_end().to_string();
-    }
-    let mut result = String::new();
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with('{') {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
-                if val.get("name").is_some() && val.get("arguments").is_some() {
-                    continue;
-                }
-            }
-        }
-        if !result.is_empty() {
-            result.push('\n');
-        }
-        result.push_str(line);
-    }
-    result
-}
-
-pub(crate) fn content_has_tool_markers(content: &str) -> bool {
-    if content.contains("TOOL:") {
-        return true;
-    }
-    content.lines().any(|line| {
-        let trimmed = line.trim();
-        if !trimmed.starts_with('{') {
-            return false;
-        }
-        serde_json::from_str::<serde_json::Value>(trimmed)
-            .map(|v| v.get("name").is_some() && v.get("arguments").is_some())
-            .unwrap_or(false)
-    })
 }
 
 impl AppState {
