@@ -9,8 +9,8 @@ fn theme_switch_updates_state() {
     type_str(&mut state, "/theme dracula");
     state.update(Event::Submit);
 
-    assert_eq!(state.theme_name, "dracula");
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(state.config.theme_name, "dracula");
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(sys_msgs[0].content.contains("Theme switched to 'dracula'"), "should confirm theme switch: {}", sys_msgs[0].content);
 }
@@ -21,8 +21,8 @@ fn theme_invalid_shows_fallback_warning() {
     type_str(&mut state, "/theme not-a-real-theme");
     state.update(Event::Submit);
 
-    assert_eq!(state.theme_name, "not-a-real-theme");
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    assert_eq!(state.config.theme_name, "not-a-real-theme");
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(sys_msgs[0].content.contains("not found"), "should warn about fallback: {}", sys_msgs[0].content);
     assert!(sys_msgs[0].content.contains("silkcircuit-neon"), "should mention fallback: {}", sys_msgs[0].content);
@@ -34,7 +34,7 @@ fn theme_no_args_lists_themes() {
     type_str(&mut state, "/theme");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
     assert!(sys_msgs[0].content.contains("Current theme:"), "should show current theme: {}", sys_msgs[0].content);
     assert!(sys_msgs[0].content.contains("dracula"), "should list available themes: {}", sys_msgs[0].content);
@@ -48,7 +48,7 @@ fn theme_persisted_in_session() {
     std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
 
     let mut state = fresh_state();
-    state.theme_name = "nord".to_string();
+    state.config.theme_name = "nord".to_string();
     type_str(&mut state, "/save themed");
     state.update(Event::Submit);
 

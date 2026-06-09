@@ -107,7 +107,7 @@ fn multiple_thoughts_all_follow_global_flag() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Second reasoning.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
 
-    let thoughts: Vec<_> = state.messages.iter().filter(|m| m.role == Role::Thought).collect();
+    let thoughts: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::Thought).collect();
     assert_eq!(thoughts.len(), 2, "Should have two thoughts");
 
     // Toggle — collapse ALL thoughts

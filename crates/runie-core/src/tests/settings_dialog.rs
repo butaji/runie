@@ -84,13 +84,13 @@ fn settings_right_changes_category() {
 #[test]
 fn settings_select_toggles_read_only() {
     let mut state = AppState::default();
-    state.read_only = false;
+    state.config.read_only = false;
     state.open_dialog = Some(DialogState::Settings {
         category: SettingsCategory::Safety,
         selected: 0,
     });
     state.update(Event::SettingsSelect);
-    assert!(state.read_only);
+    assert!(state.config.read_only);
 }
 
 #[test]

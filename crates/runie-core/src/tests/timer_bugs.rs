@@ -93,8 +93,8 @@ fn turn_complete_timestamp_monotonically_increases() {
     let mut state = fresh_state();
     state.type_text("a").submit();
     state.agent("req.0").respond("A").complete(1.0);
-    let ts1 = state.messages.iter().find(|m| m.role == Role::TurnComplete).map(|m| m.timestamp).unwrap();
+    let ts1 = state.session.messages.iter().find(|m| m.role == Role::TurnComplete).map(|m| m.timestamp).unwrap();
     state.agent("req.0").respond("B");
-    let ts2 = state.messages.iter().find(|m| m.role == Role::TurnComplete).map(|m| m.timestamp).unwrap();
+    let ts2 = state.session.messages.iter().find(|m| m.role == Role::TurnComplete).map(|m| m.timestamp).unwrap();
     assert!(ts2 >= ts1, "TurnComplete timestamp must not regress: {} -> {}", ts1, ts2);
 }

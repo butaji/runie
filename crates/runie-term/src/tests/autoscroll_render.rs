@@ -11,7 +11,7 @@ fn render_chat(state: &mut AppState, width: u16, height: u16) -> String {
 #[test]
 fn latest_user_message_visible_after_submit() {
     let mut state = AppState::default();
-    state.input = "list files".into();
+    state.input.input = "list files".into();
     state.update(Event::Submit);
     state.ensure_fresh();
 
@@ -27,7 +27,7 @@ fn large_tool_output_latest_visible_at_bottom() {
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_chat(&mut state, 40, 20);
     assert!(out.contains("file20"), "Latest file (file20) must be visible at bottom");
@@ -48,7 +48,7 @@ fn final_response_visible_after_full_turn() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 2.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_chat(&mut state, 40, 20);
     assert!(out.contains("Done!"), "Final 'Done!' must be visible");
@@ -59,11 +59,11 @@ fn latest_message_pushes_older_off_screen() {
     let mut state = AppState::default();
 
     for i in 0..15 {
-        state.input = format!("msg{}", i);
+        state.input.input = format!("msg{}", i);
         state.update(Event::Submit);
     }
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_chat(&mut state, 40, 15);
     assert!(!out.contains("msg0"), "Oldest message should be off-screen");
@@ -74,11 +74,11 @@ fn latest_message_pushes_older_off_screen() {
 fn scroll_up_shows_older_content() {
     let mut state = AppState::default();
     for i in 0..15 {
-        state.input = format!("msg{}", i);
+        state.input.input = format!("msg{}", i);
         state.update(Event::Submit);
     }
     state.ensure_fresh();
-    state.scroll = 100; // clamped to max
+    state.view.scroll = 100; // clamped to max
 
     let out = render_chat(&mut state, 40, 15);
     assert!(out.contains("msg0"), "Oldest message visible after scroll up");
@@ -89,13 +89,13 @@ fn scroll_up_shows_older_content() {
 fn new_content_auto_shows_when_at_bottom() {
     let mut state = AppState::default();
     for i in 0..10 {
-        state.input = format!("msg{}", i);
+        state.input.input = format!("msg{}", i);
         state.update(Event::Submit);
     }
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
-    state.input = "NEWEST".into();
+    state.input.input = "NEWEST".into();
     state.update(Event::Submit);
     state.ensure_fresh();
 

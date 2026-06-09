@@ -8,7 +8,7 @@ mod tests {
     #[test]
     fn cursor_starts_at_zero() {
         let state = AppState::default();
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -16,8 +16,8 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('h'));
         state.update(Event::Input('i'));
-        assert_eq!(state.input, "hi");
-        assert_eq!(state.cursor_pos, 2);
+        assert_eq!(state.input.input, "hi");
+        assert_eq!(state.input.cursor_pos, 2);
     }
 
     #[test]
@@ -26,7 +26,7 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::Input('b'));
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -35,7 +35,7 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::CursorLeft);
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -44,7 +44,7 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::CursorLeft);
         state.update(Event::CursorRight);
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -52,7 +52,7 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
         state.update(Event::CursorRight);
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -62,7 +62,7 @@ mod tests {
         state.update(Event::Input('b'));
         state.update(Event::Input('c'));
         state.update(Event::CursorStart);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -74,7 +74,7 @@ mod tests {
         state.update(Event::CursorLeft);
         state.update(Event::CursorLeft);
         state.update(Event::CursorEnd);
-        assert_eq!(state.cursor_pos, 3);
+        assert_eq!(state.input.cursor_pos, 3);
     }
 
     #[test]
@@ -85,8 +85,8 @@ mod tests {
         state.update(Event::CursorLeft);
         state.update(Event::Backspace);
         // Deleted 'a', cursor moves left
-        assert_eq!(state.input, "b");
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.input, "b");
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -95,8 +95,8 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::CursorStart);
         state.update(Event::Backspace);
-        assert_eq!(state.input, "a");
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.input, "a");
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -110,8 +110,8 @@ mod tests {
         state.update(Event::CursorEnd);
         // Delete word (Emacs: deletes previous word "world")
         state.update(Event::DeleteWord);
-        assert_eq!(state.input, "hello ");
-        assert_eq!(state.cursor_pos, 6);
+        assert_eq!(state.input.input, "hello ");
+        assert_eq!(state.input.cursor_pos, 6);
     }
 
     #[test]
@@ -128,8 +128,8 @@ mod tests {
         state.update(Event::CursorLeft); // at 8 (before 'r')
         // DeleteWord should delete from position 6 ("w") to cursor 8 = "wo"
         state.update(Event::DeleteWord);
-        assert_eq!(state.input, "hello rld");
-        assert_eq!(state.cursor_pos, 6);
+        assert_eq!(state.input.input, "hello rld");
+        assert_eq!(state.input.cursor_pos, 6);
     }
 
     #[test]
@@ -146,8 +146,8 @@ mod tests {
         state.update(Event::CursorLeft);
         state.update(Event::DeleteToEnd);
         // Should delete "llo", leaving "he"
-        assert_eq!(state.input, "he");
-        assert_eq!(state.cursor_pos, 2);
+        assert_eq!(state.input.input, "he");
+        assert_eq!(state.input.cursor_pos, 2);
     }
 
     #[test]
@@ -164,8 +164,8 @@ mod tests {
         state.update(Event::CursorLeft);
         state.update(Event::DeleteToStart);
         // Should delete "he", leaving "lo"
-        assert_eq!(state.input, "lo");
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.input, "lo");
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -176,14 +176,14 @@ mod tests {
         state.update(Event::Input('c'));
         // Cursor at end, KillChar is no-op
         state.update(Event::KillChar);
-        assert_eq!(state.input, "abc");
+        assert_eq!(state.input.input, "abc");
         // Move cursor left twice (between 'a' and 'b')
         state.update(Event::CursorLeft);
         state.update(Event::CursorLeft);
         // KillChar deletes 'b' (char after cursor)
         state.update(Event::KillChar);
-        assert_eq!(state.input, "ac");
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.input, "ac");
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -191,8 +191,8 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
         state.update(Event::KillChar);
-        assert_eq!(state.input, "a");
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.input, "a");
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -202,11 +202,11 @@ mod tests {
         state.update(Event::Input('e'));
         state.update(Event::Input('s'));
         state.update(Event::Input('t'));
-        assert_eq!(state.input, "test");
-        assert_eq!(state.cursor_pos, 4);
+        assert_eq!(state.input.input, "test");
+        assert_eq!(state.input.cursor_pos, 4);
         state.update(Event::Submit);
-        assert!(state.input.is_empty());
-        assert_eq!(state.cursor_pos, 0);
+        assert!(state.input.input.is_empty());
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -216,7 +216,7 @@ mod tests {
         state.update(Event::Input('c'));
         state.update(Event::CursorLeft);
         state.update(Event::Input('b'));
-        assert_eq!(state.input, "abc");
-        assert_eq!(state.cursor_pos, 2);
+        assert_eq!(state.input.input, "abc");
+        assert_eq!(state.input.cursor_pos, 2);
     }
 }

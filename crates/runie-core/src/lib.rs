@@ -10,6 +10,7 @@
 //!   labels    :: Static text constants
 
 pub mod model;
+pub mod state;
 pub mod model_catalog;
 pub mod message;
 pub mod edit_preview;

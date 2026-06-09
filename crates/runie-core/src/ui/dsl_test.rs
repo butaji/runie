@@ -10,7 +10,7 @@ mod tests {
     #[test]
     fn test_rebuild_creates_elements() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: "Hello".to_string(),
             timestamp: 0.0,
@@ -56,11 +56,11 @@ mod tests {
     #[test]
     fn test_every_message_has_spacer() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage { role: Role::User, content: "Hello".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Thought, content: "Thinking...".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Assistant, content: "Hi".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Tool, content: "Ran test 1.0s".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::TurnComplete, content: "Turn completed in 2.0s".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Hello".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Thought, content: "Thinking...".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Assistant, content: "Hi".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Tool, content: "Ran test 1.0s".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::TurnComplete, content: "Turn completed in 2.0s".into(), timestamp: 0.0, id: "req.0".into(), ..Default::default()});
 
         let elements = LazyCache::rebuild(&state);
         for (i, elem) in elements.iter().enumerate().step_by(2) {
@@ -90,10 +90,10 @@ mod tests {
     #[test]
     fn test_elements_follow_timestamp_order() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 1.0, id: "u1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 2.0, id: "a1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::User, content: "Q2".into(), timestamp: 3.0, id: "u2".into(), ..Default::default()});
-        state.messages[1].timestamp = 4.0;
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 1.0, id: "u1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 2.0, id: "a1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Q2".into(), timestamp: 3.0, id: "u2".into(), ..Default::default()});
+        state.session.messages[1].timestamp = 4.0;
         let feed = LazyCache::feed(&state);
         let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
             Element::UserMessage { .. } => "U",
@@ -107,8 +107,8 @@ mod tests {
     #[test]
     fn test_thought_ordered_by_timestamp() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage { role: Role::Assistant, content: "Hello".into(), timestamp: 1.0, id: "same".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Thought, content: "Thinking...".into(), timestamp: 2.0, id: "same".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Assistant, content: "Hello".into(), timestamp: 1.0, id: "same".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Thought, content: "Thinking...".into(), timestamp: 2.0, id: "same".into(), ..Default::default()});
         let feed = LazyCache::feed(&state);
         let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
             Element::ThoughtMarker { .. } => "T",
@@ -122,8 +122,8 @@ mod tests {
     #[test]
     fn test_insertion_order_stable() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage { role: Role::User, content: "First".into(), timestamp: 1.0, id: "u1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::User, content: "Second".into(), timestamp: 1.0, id: "u2".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "First".into(), timestamp: 1.0, id: "u1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Second".into(), timestamp: 1.0, id: "u2".into(), ..Default::default()});
         let feed = LazyCache::feed(&state);
         let texts: Vec<String> = feed.elements.iter().filter_map(|e| match e {
             Element::UserMessage { content, .. } => Some(content.clone()),
@@ -135,9 +135,9 @@ mod tests {
     #[test]
     fn thinking_indicator_after_user_when_no_response_yet() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 1.0, id: "t1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::User, content: "Q2".into(), timestamp: 2.0, id: "t2".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 1.0, id: "t1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Q2".into(), timestamp: 2.0, id: "t2".into(), ..Default::default()});
         state.thinking_started_at = Some(std::time::Instant::now());
         let feed = LazyCache::feed(&state);
         let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
@@ -153,12 +153,12 @@ mod tests {
     #[test]
     fn thinking_indicator_ordered_by_timestamp() {
         let mut state = AppState::default();
-        state.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 1.0, id: "t1".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::User, content: "Q2".into(), timestamp: 2.0, id: "t2".into(), ..Default::default()});
-        state.messages.push(ChatMessage { role: Role::Assistant, content: "A2 partial".into(), timestamp: 3.0, id: "t2".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Q1".into(), timestamp: 0.0, id: "t1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Assistant, content: "A1".into(), timestamp: 1.0, id: "t1".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::User, content: "Q2".into(), timestamp: 2.0, id: "t2".into(), ..Default::default()});
+        state.session.messages.push(ChatMessage { role: Role::Assistant, content: "A2 partial".into(), timestamp: 3.0, id: "t2".into(), ..Default::default()});
         state.thinking_started_at = Some(std::time::Instant::now());
-        state.current_request_id = Some("t2".into());
+        state.agent.current_request_id = Some("t2".into());
         let feed = LazyCache::feed(&state);
         let kinds: Vec<&str> = feed.elements.iter().map(|e| match e {
             Element::UserMessage { .. } => "U",

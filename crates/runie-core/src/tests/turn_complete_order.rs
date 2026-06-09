@@ -117,7 +117,7 @@ fn turn_complete_before_next_turn_user_message() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
     // User sends next message
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Next turn".into(),
         timestamp: crate::model::now(),
@@ -142,11 +142,11 @@ fn turn_complete_timestamp_is_max_after_done() {
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });
 
-    let turn_ts = state.messages.iter()
+    let turn_ts = state.session.messages.iter()
         .find(|m| m.role == Role::TurnComplete)
         .map(|m| m.timestamp)
         .unwrap();
-    let max_other_ts = state.messages.iter()
+    let max_other_ts = state.session.messages.iter()
         .filter(|m| m.role != Role::TurnComplete)
         .map(|m| m.timestamp)
         .fold(0.0, f64::max);
@@ -166,7 +166,7 @@ fn turn_complete_deduplicated_on_duplicate_events() {
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
 
-    let turn_count = state.messages.iter().filter(|m| m.role == Role::TurnComplete).count();
+    let turn_count = state.session.messages.iter().filter(|m| m.role == Role::TurnComplete).count();
     assert_eq!(turn_count, 1, "Should have exactly one TurnComplete, got {}", turn_count);
 
     let kinds = element_kinds_no_spacer(&state);

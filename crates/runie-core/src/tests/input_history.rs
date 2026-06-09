@@ -8,7 +8,7 @@ mod tests {
     #[test]
     fn history_starts_empty() {
         let state = AppState::default();
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
     }
 
     #[test]
@@ -17,7 +17,7 @@ mod tests {
         state.update(Event::Input('h'));
         state.update(Event::Input('i'));
         state.update(Event::Submit);
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
         // History should have "hi"
     }
 
@@ -28,7 +28,7 @@ mod tests {
         state.update(Event::Input('i'));
         state.update(Event::Submit);
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "hi");
+        assert_eq!(state.input.input, "hi");
     }
 
     #[test]
@@ -38,9 +38,9 @@ mod tests {
         state.update(Event::Input('i'));
         state.update(Event::Submit);
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "hi");
+        assert_eq!(state.input.input, "hi");
         state.update(Event::HistoryNext);
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
     }
 
     #[test]
@@ -57,14 +57,14 @@ mod tests {
         state.update(Event::Submit);
 
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "third");
+        assert_eq!(state.input.input, "third");
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "second");
+        assert_eq!(state.input.input, "second");
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "first");
+        assert_eq!(state.input.input, "first");
         // At beginning, stays at first
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "first");
+        assert_eq!(state.input.input, "first");
     }
 
     #[test]
@@ -73,12 +73,12 @@ mod tests {
         for c in "test".chars() { state.update(Event::Input(c)); }
         state.update(Event::Submit);
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "test");
+        assert_eq!(state.input.input, "test");
         state.update(Event::HistoryNext);
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
         // Stays empty
         state.update(Event::HistoryNext);
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
     }
 
     #[test]
@@ -87,11 +87,11 @@ mod tests {
         for c in "hello".chars() { state.update(Event::Input(c)); }
         state.update(Event::Submit);
         state.update(Event::HistoryPrev);
-        assert_eq!(state.input, "hello");
+        assert_eq!(state.input.input, "hello");
         // Type something new
         state.update(Event::Input('x'));
         // Now down should clear
         state.update(Event::HistoryNext);
-        assert!(state.input.is_empty());
+        assert!(state.input.input.is_empty());
     }
 }

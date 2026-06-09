@@ -8,14 +8,14 @@ fn fresh_state() -> AppState {
 #[test]
 fn collapse_all_when_some_expanded() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s\nreasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\noutput".into(),
         timestamp: 1.0,
@@ -31,14 +31,14 @@ fn collapse_all_when_some_expanded() {
 #[test]
 fn expand_all_when_all_collapsed() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s\nreasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\noutput".into(),
         timestamp: 1.0,
@@ -54,14 +54,14 @@ fn expand_all_when_all_collapsed() {
 #[test]
 fn running_tools_always_expanded_regardless_of_global_flag() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s".into(),
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "⠋ Running ls...".into(),
         timestamp: 1.0,
@@ -84,7 +84,7 @@ fn toggle_all_empty_state_flips_flag() {
 #[test]
 fn toggle_all_twice_restores_expanded() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s".into(),
         timestamp: 0.0,
@@ -106,7 +106,7 @@ fn toggle_all_twice_restores_expanded() {
 fn toggle_all_with_many_items() {
     let mut state = fresh_state();
     for i in 0..5 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::Thought,
             content: format!("◆ Thought {}", i),
             timestamp: i as f64,

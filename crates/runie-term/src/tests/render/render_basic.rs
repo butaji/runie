@@ -106,14 +106,14 @@ fn test_render_performance_1000_messages() {
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
     for i in 0..200 {
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::User,
             content: format!("Message {} from user with some content here", i),
             timestamp: 0.0,
             id: format!("req.{}", i),
             ..Default::default()
         });
-        state.messages.push(ChatMessage {
+        state.session.messages.push(ChatMessage {
             role: Role::Assistant,
             content: format!("Response {} from agent with detailed explanation", i),
             timestamp: 0.0,
@@ -126,7 +126,7 @@ fn test_render_performance_1000_messages() {
         terminal.draw(|f| view(f, &mut state)).unwrap();
     }
     let elapsed = start.elapsed();
-    println!("100 renders with {} messages: {:?}", state.messages.len(), elapsed);
+    println!("100 renders with {} messages: {:?}", state.session.messages.len(), elapsed);
     assert!(elapsed.as_secs_f64() < 5.0, "Rendering too slow: {:?}", elapsed);
 }
 
@@ -147,5 +147,5 @@ fn test_stress_many_tool_calls() {
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
     assert!(content.contains("Files for turn"));
-    assert!(state.messages.len() >= 100, "many messages, got {}", state.messages.len());
+    assert!(state.session.messages.len() >= 100, "many messages, got {}", state.session.messages.len());
 }

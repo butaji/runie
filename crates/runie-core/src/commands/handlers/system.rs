@@ -31,7 +31,7 @@ fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, hand
 }
 
 fn handle_copy(state: &mut AppState, _args: &str) -> CommandResult {
-    let text = state.messages.iter().rev()
+    let text = state.session.messages.iter().rev()
         .find(|m| m.role == crate::model::Role::Assistant)
         .map(|m| m.content.clone())
         .unwrap_or_default();
@@ -46,7 +46,7 @@ fn handle_settings(_state: &mut AppState, _args: &str) -> CommandResult {
 }
 
 fn handle_reload(state: &mut AppState, _args: &str) -> CommandResult {
-    state.keybindings = crate::keybindings::load_keybindings(&None);
+    state.config.keybindings = crate::keybindings::load_keybindings(&None);
     CommandResult::Event(crate::Event::ReloadAll)
 }
 
@@ -151,11 +151,11 @@ fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message(format!(
             "Current theme: {}\n\nAvailable themes:\n{}",
-            state.theme_name,
+            state.config.theme_name,
             builtin_themes().join(", ")
         ));
     }
-    state.theme_name = name.to_string();
+    state.config.theme_name = name.to_string();
     if builtin_themes().contains(&name) {
         CommandResult::Message(format!("Theme switched to '{}'", name))
     } else {

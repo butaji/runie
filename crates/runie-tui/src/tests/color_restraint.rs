@@ -127,8 +127,8 @@ fn user_message_is_bright() {
 fn status_active_is_success() {
     setup();
     let mut state = AppState::default();
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Working"));
     let success = color_success();
@@ -142,8 +142,8 @@ fn status_active_is_success() {
 fn status_idle_is_dim() {
     setup();
     let mut state = AppState::default();
-    state.current_provider = "openai".into();
-    state.current_model = "gpt-4".into();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4".into();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("openai/gpt-4"));
     let _dim = color_dim();

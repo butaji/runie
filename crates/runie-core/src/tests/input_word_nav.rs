@@ -14,7 +14,7 @@ mod tests {
         state.update(Event::CursorEnd);
         state.update(Event::CursorWordLeft);
         // Should land at start of "world" (position 6)
-        assert_eq!(state.cursor_pos, 6);
+        assert_eq!(state.input.cursor_pos, 6);
     }
 
     #[test]
@@ -25,7 +25,7 @@ mod tests {
         }
         state.update(Event::CursorEnd);
         state.update(Event::CursorWordLeft);
-        assert_eq!(state.cursor_pos, 7); // start of "world"
+        assert_eq!(state.input.cursor_pos, 7); // start of "world"
     }
 
     #[test]
@@ -36,7 +36,7 @@ mod tests {
         }
         state.update(Event::CursorStart);
         state.update(Event::CursorWordLeft);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -48,7 +48,7 @@ mod tests {
         state.update(Event::CursorStart);
         state.update(Event::CursorWordRight);
         // Should skip "hello" and spaces, land at start of "world"
-        assert_eq!(state.cursor_pos, 6);
+        assert_eq!(state.input.cursor_pos, 6);
     }
 
     #[test]
@@ -57,10 +57,10 @@ mod tests {
         for c in "hello world".chars() {
             state.update(Event::Input(c));
         }
-        state.cursor_pos = 2; // middle of "hello"
+        state.input.cursor_pos = 2; // middle of "hello"
         state.update(Event::CursorWordRight);
         // Should skip rest of "hello" and spaces, land at start of "world"
-        assert_eq!(state.cursor_pos, 6);
+        assert_eq!(state.input.cursor_pos, 6);
     }
 
     #[test]
@@ -71,7 +71,7 @@ mod tests {
         }
         state.update(Event::CursorEnd);
         state.update(Event::CursorWordRight);
-        assert_eq!(state.cursor_pos, 2);
+        assert_eq!(state.input.cursor_pos, 2);
     }
 
     #[test]
@@ -82,11 +82,11 @@ mod tests {
         }
         state.update(Event::CursorEnd);
         state.update(Event::CursorWordLeft);
-        assert_eq!(state.cursor_pos, 8); // start of "three"
+        assert_eq!(state.input.cursor_pos, 8); // start of "three"
         state.update(Event::CursorWordLeft);
-        assert_eq!(state.cursor_pos, 4); // start of "two"
+        assert_eq!(state.input.cursor_pos, 4); // start of "two"
         state.update(Event::CursorWordLeft);
-        assert_eq!(state.cursor_pos, 0); // start of "one"
+        assert_eq!(state.input.cursor_pos, 0); // start of "one"
     }
 
     #[test]
@@ -97,6 +97,6 @@ mod tests {
         }
         state.update(Event::CursorEnd);
         state.update(Event::CursorWordLeft);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 }

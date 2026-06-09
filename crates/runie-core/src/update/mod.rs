@@ -78,16 +78,16 @@ impl AppState {
     fn scroll_event(&mut self, event: Event) {
         match event {
             Event::ScrollUp => {
-                if self.messages.is_empty() && !self.turn_active {
-                    self.input_flash = 3;
+                if self.session.messages.is_empty() && !self.agent.turn_active {
+                    self.input.input_flash = 3;
                 }
-                self.scroll = self.scroll.saturating_add(1);
+                self.view.scroll = self.view.scroll.saturating_add(1);
             }
             Event::ScrollDown => {
-                if self.scroll == 0 {
-                    self.input_flash = 3;
+                if self.view.scroll == 0 {
+                    self.input.input_flash = 3;
                 }
-                self.scroll = self.scroll.saturating_sub(1);
+                self.view.scroll = self.view.scroll.saturating_sub(1);
             }
             _ => {}
         }
@@ -99,7 +99,7 @@ impl AppState {
             Event::Quit => self.should_quit = true,
             Event::Reset => *self = AppState::default(),
             Event::Abort => {
-                if self.path_suggestions.is_some() {
+                if self.completion.path_suggestions.is_some() {
                     self.path_completion_close();
                 } else {
                     self.abort_queue();
@@ -107,8 +107,8 @@ impl AppState {
             }
             Event::SpawnAgent | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
             Event::ExternalEditorDone { content } => {
-                self.input = content;
-                self.cursor_pos = self.input.len();
+                self.input.input = content;
+                self.input.cursor_pos = self.input.input.len();
                 self.mark_dirty();
             }
             _ => {}
@@ -143,9 +143,9 @@ impl AppState {
     }
 
     fn handle_history_prev(&mut self) {
-        if self.path_suggestions.is_some() {
+        if self.completion.path_suggestions.is_some() {
             self.path_completion_up();
-        } else if self.input.contains('\n') {
+        } else if self.input.input.contains('\n') {
             self.move_cursor_up();
         } else {
             self.history_prev();
@@ -153,9 +153,9 @@ impl AppState {
     }
 
     fn handle_history_next(&mut self) {
-        if self.path_suggestions.is_some() {
+        if self.completion.path_suggestions.is_some() {
             self.path_completion_down();
-        } else if self.input.contains('\n') {
+        } else if self.input.input.contains('\n') {
             self.move_cursor_down();
         } else {
             self.history_next();
@@ -248,26 +248,26 @@ impl AppState {
     }
 
     fn fork_session_at(&mut self, message_index: usize) {
-        if let Some(ref mut tree) = self.session_tree {
+        if let Some(ref mut tree) = self.session.session_tree {
             if let Some(path) = tree.fork_at(message_index) {
                 tree.navigate_to(&path);
                 self.add_system_msg(format!("Forked at message {}.", message_index));
             }
         } else {
-            let mut tree = crate::session_tree::SessionTree::from_messages(&self.messages);
+            let mut tree = crate::session_tree::SessionTree::from_messages(&self.session.messages);
             if let Some(path) = tree.fork_at(message_index) {
                 tree.navigate_to(&path);
-                self.session_tree = Some(tree);
+                self.session.session_tree = Some(tree);
                 self.add_system_msg(format!("Forked at message {}.", message_index));
             }
         }
     }
 
     fn clone_session(&mut self) {
-        let tree = self.session_tree.clone().unwrap_or_else(|| {
-            crate::session_tree::SessionTree::from_messages(&self.messages)
+        let tree = self.session.session_tree.clone().unwrap_or_else(|| {
+            crate::session_tree::SessionTree::from_messages(&self.session.messages)
         });
-        self.session_tree = Some(tree);
+        self.session.session_tree = Some(tree);
         self.add_system_msg("Session cloned at current position.".into());
     }
 
@@ -429,8 +429,8 @@ impl AppState {
     }
 
     fn switch_model(&mut self, provider: String, model: String) {
-        self.current_provider = provider.clone();
-        self.current_model = model.clone();
+        self.config.current_provider = provider.clone();
+        self.config.current_model = model.clone();
         self.record_model_usage(&provider, &model);
         self.telemetry.track_event(
             "model_switch",
@@ -445,40 +445,40 @@ impl AppState {
     }
 
     fn switch_theme(&mut self, name: String) {
-        self.theme_name = name.clone();
+        self.config.theme_name = name.clone();
         self.add_system_msg(format!("Theme switched to '{}'", name));
     }
 
     fn cycle_model(&mut self, delta: isize) {
         let enabled: Vec<usize> = self
-            .scoped_models
+            .config.scoped_models
             .iter()
             .enumerate()
             .filter(|(_, m)| m.enabled)
             .map(|(i, _)| i)
             .collect();
         if enabled.is_empty() { return; }
-        let current_pos = enabled.iter().position(|&i| i == self.scoped_index).unwrap_or(0);
+        let current_pos = enabled.iter().position(|&i| i == self.config.scoped_index).unwrap_or(0);
         let len = enabled.len() as isize;
         let new_pos = ((current_pos as isize + delta).rem_euclid(len)) as usize;
-        self.scoped_index = enabled[new_pos];
-        let model = &self.scoped_models[self.scoped_index];
+        self.config.scoped_index = enabled[new_pos];
+        let model = &self.config.scoped_models[self.config.scoped_index];
         self.switch_model(model.provider.clone(), model.name.clone());
     }
 
     fn cycle_thinking_level(&mut self) {
-        self.thinking_level = self.thinking_level.cycle();
-        self.add_system_msg(format!("Thinking level: {}", self.thinking_level.as_str()));
+        self.config.thinking_level = self.config.thinking_level.cycle();
+        self.add_system_msg(format!("Thinking level: {}", self.config.thinking_level.as_str()));
     }
 
     fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
-        self.thinking_level = level;
-        self.add_system_msg(format!("Thinking level set to: {}", self.thinking_level.as_str()));
+        self.config.thinking_level = level;
+        self.add_system_msg(format!("Thinking level set to: {}", self.config.thinking_level.as_str()));
     }
 
     fn toggle_read_only(&mut self) {
-        self.read_only = !self.read_only;
-        let status = if self.read_only { "enabled" } else { "disabled" };
+        self.config.read_only = !self.config.read_only;
+        let status = if self.config.read_only { "enabled" } else { "disabled" };
         self.add_system_msg(format!("Read-only mode {}", status));
     }
 
@@ -487,7 +487,7 @@ impl AppState {
         let mut tm = crate::trust::TrustManager::load();
         tm.set(&cwd, crate::trust::TrustDecision::Trusted);
         let _ = tm.save();
-        self.read_only = false;
+        self.config.read_only = false;
         self.add_system_msg(format!("Project '{}' trusted. Read-only disabled.", cwd.display()));
     }
 
@@ -496,20 +496,20 @@ impl AppState {
         let mut tm = crate::trust::TrustManager::load();
         tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
         let _ = tm.save();
-        self.read_only = true;
+        self.config.read_only = true;
         self.add_system_msg(format!("Project '{}' untrusted. Read-only enabled.", cwd.display()));
     }
 
     pub fn peek_queue(&self) -> Option<&(String, String)> {
-        self.request_queue.front()
+        self.agent.request_queue.front()
     }
 
     pub fn pop_queue(&mut self) -> Option<(String, String)> {
-        self.request_queue.pop_front()
+        self.agent.request_queue.pop_front()
     }
 
     pub(crate) fn add_system_msg(&mut self, content: String) {
-        self.messages.push(ChatMessage {
+        self.session.messages.push(ChatMessage {
             role: Role::System,
             content,
             timestamp: now(),
@@ -522,16 +522,16 @@ impl AppState {
     /// Move TurnComplete to the end of messages and bump its timestamp.
     /// Called after every agent event to ensure TurnComplete remains last.
     fn ensure_turn_complete_last(&mut self) {
-        if let Some(idx) = self.messages.iter().position(|m| m.role == Role::TurnComplete) {
-            let mut tc = self.messages.remove(idx);
+        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete) {
+            let mut tc = self.session.messages.remove(idx);
             tc.timestamp = now();
-            self.messages.push(tc);
+            self.session.messages.push(tc);
             self.messages_changed();
         }
     }
 
     fn update_session_tree(&mut self, event: Event, filter: crate::session_tree::SessionTreeFilter, selected: usize) {
-        let tree = match self.session_tree.as_ref() {
+        let tree = match self.session.session_tree.as_ref() {
             Some(t) => t,
             None => {
                 self.open_dialog = Some(crate::commands::DialogState::SessionTree { filter, selected });

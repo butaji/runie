@@ -10,10 +10,10 @@ fn fresh_state() -> AppState {
 #[test]
 fn large_tool_output_bottom_lines_in_viewport() {
     let mut state = fresh_state();
-    state.scroll = 0; // at bottom
+    state.view.scroll = 0; // at bottom
 
     // User message + spacer = 2 lines
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "list files".into(),
         timestamp: 0.0,
@@ -21,7 +21,7 @@ fn large_tool_output_bottom_lines_in_viewport() {
         ..Default::default()
     });
     // Tool with 20 output lines: header(1) + output(20) = 21 lines + spacer = 22
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5\nfile6\nfile7\nfile8\nfile9\nfile10\nfile11\nfile12\nfile13\nfile14\nfile15\nfile16\nfile17\nfile18\nfile19\nfile20".into(),
         timestamp: 1.0,
@@ -49,9 +49,9 @@ fn large_tool_output_bottom_lines_in_viewport() {
 #[test]
 fn viewport_never_exceeds_height() {
     let mut state = fresh_state();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\nfile1\nfile2\nfile3\nfile4\nfile5".into(),
         timestamp: 1.0,
@@ -82,7 +82,7 @@ fn viewport_never_exceeds_height() {
 #[test]
 fn last_element_lines_clipped_to_fit_viewport() {
     let mut state = fresh_state();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     add_user_and_huge_thought(&mut state);
     state.ensure_fresh();
@@ -93,7 +93,7 @@ fn last_element_lines_clipped_to_fit_viewport() {
 }
 
 fn add_user_and_huge_thought(state: &mut AppState) {
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "hi".into(),
         timestamp: 0.0,
@@ -104,7 +104,7 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     for i in 1..=30 {
         thought.push_str(&format!("line{}\n", i));
     }
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: thought,
         timestamp: 1.0,
@@ -132,10 +132,10 @@ fn submit_then_large_response_stays_at_bottom() {
     let mut state = fresh_state();
 
     // User submits
-    state.input = "list files".into();
+    state.input.input = "list files".into();
     state.update(Event::Submit);
     state.ensure_fresh();
-    assert_eq!(state.scroll, 0, "Scroll must be 0 after submit");
+    assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
 
     // Agent tool with large output
     state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
@@ -144,7 +144,7 @@ fn submit_then_large_response_stays_at_bottom() {
     state.ensure_fresh();
 
     // Scroll must still be 0 (at bottom) — user didn't scroll
-    assert_eq!(state.scroll, 0, "Scroll must stay at 0 after response");
+    assert_eq!(state.view.scroll, 0, "Scroll must stay at 0 after response");
 
     // Latest file must be visible
     let region = state.visible_scroll(5);
@@ -160,7 +160,7 @@ fn submit_then_large_response_stays_at_bottom() {
 fn streaming_large_content_scroll_zero_shows_latest() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     // Simulate streaming chunks that build up to >1 page
     for i in 0..10 {

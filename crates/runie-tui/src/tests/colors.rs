@@ -96,8 +96,8 @@ fn turn_complete_uses_dim() {
 fn status_idle_uses_dim() {
     setup();
     let mut state = AppState::default();
-    state.current_provider = "openai".into();
-    state.current_model = "gpt-4".into();
+    state.config.current_provider = "openai".into();
+    state.config.current_model = "gpt-4".into();
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("openai/gpt-4"));
     let dim = color_dim();

@@ -33,13 +33,13 @@ fn snapshot_renders_user_message() {
 #[test]
 fn snapshot_is_immutable_after_creation() {
     let mut state = AppState::default();
-    state.input = "A".to_string();
+    state.input.input = "A".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
     let snap = state.snapshot();
 
     // Mutate state AFTER snapshot
-    state.input = "B".to_string();
+    state.input.input = "B".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
 
@@ -52,7 +52,7 @@ fn snapshot_is_immutable_after_creation() {
 #[test]
 fn snapshot_spinner_frame_captured() {
     let mut state = AppState::default();
-    state.turn_active = true;
+    state.agent.turn_active = true;
     state.animation_frame = 5;
     state.ensure_fresh();
     let snap = state.snapshot();

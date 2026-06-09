@@ -80,9 +80,9 @@ fn reset_clears_messages() {
 #[test]
 fn at_suggestions_popup_renders() {
     let mut state = AppState::default();
-    state.input = "@Cargo".to_string();
+    state.input.input = "@Cargo".to_string();
     state.update(Event::Input('\t'));
-    assert!(state.at_suggestions.is_some(), "Should have suggestions after Tab");
+    assert!(state.completion.at_suggestions.is_some(), "Should have suggestions after Tab");
     let backend = TestBackend::new(40, 15);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -107,7 +107,7 @@ fn at_suggestions_popup_renders() {
 fn long_message_wraps_to_multiple_lines() {
     let mut state = AppState::default();
     let long = "a".repeat(100);
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
         content: long.clone(),
         timestamp: 0.0,
@@ -132,7 +132,7 @@ fn long_message_wraps_to_multiple_lines() {
 #[test]
 fn wrapping_preserves_prefix_on_first_line_only() {
     let mut state = AppState::default();
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Assistant,
         content: "word ".repeat(20),
         timestamp: 0.0,
@@ -157,7 +157,7 @@ fn wrapping_preserves_prefix_on_first_line_only() {
 #[test]
 fn wrapping_respects_panel_width() {
     let mut state = AppState::default();
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
         content: "x".repeat(50),
         timestamp: 0.0,
@@ -187,15 +187,15 @@ fn wrapping_respects_panel_width() {
 #[test]
 fn tokens_on_right_side_of_status() {
     let mut state = AppState::default();
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
         content: "hello".to_string(),
         timestamp: 0.0,
         id: "req.0".to_string(),
         ..Default::default()
     });
-    state.turn_active = true;
-    state.turn_started_at = Some(std::time::Instant::now());
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
     let backend = TestBackend::new(60, 10);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -241,8 +241,8 @@ fn empty_state_shows_hint() {
 #[test]
 fn input_cursor_renders_at_position() {
     let mut state = AppState::default();
-    state.input = "hello".to_string();
-    state.cursor_pos = 2;
+    state.input.input = "hello".to_string();
+    state.input.cursor_pos = 2;
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -259,8 +259,8 @@ fn input_cursor_renders_at_position() {
 #[test]
 fn status_shows_provider_model() {
     let mut state = AppState::default();
-    state.current_provider = "openai".to_string();
-    state.current_model = "gpt-4".to_string();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4".to_string();
     let backend = TestBackend::new(60, 10);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -277,7 +277,7 @@ fn status_shows_provider_model() {
 #[test]
 fn status_shows_thinking_badge_when_active() {
     let mut state = AppState::default();
-    state.thinking_level = runie_core::model::ThinkingLevel::Medium;
+    state.config.thinking_level = runie_core::model::ThinkingLevel::Medium;
     let backend = TestBackend::new(60, 10);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -293,7 +293,7 @@ fn status_shows_thinking_badge_when_active() {
 #[test]
 fn status_hides_thinking_badge_when_off() {
     let mut state = AppState::default();
-    state.thinking_level = runie_core::model::ThinkingLevel::Off;
+    state.config.thinking_level = runie_core::model::ThinkingLevel::Off;
     let backend = TestBackend::new(60, 10);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -362,35 +362,35 @@ fn palette_highlights_selected() {
 #[test]
 fn turn_complete_renders_after_tool_flow() {
     let mut state = AppState::default();
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
         content: "list files".to_string(),
         timestamp: 0.0,
         id: "req.0".to_string(),
         ..Default::default()
     });
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Thought,
         content: "Thinking...".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
         ..Default::default()
     });
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Tool,
         content: "Ran list_files 0.5s".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
         ..Default::default()
     });
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Assistant,
         content: "Here are the files".to_string(),
         timestamp: 0.0,
         id: "req.1".to_string(),
         ..Default::default()
     });
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::TurnComplete,
         content: "Turn completed in 3.2s".to_string(),
         timestamp: 0.0,
@@ -404,7 +404,7 @@ fn turn_complete_renders_after_tool_flow() {
 #[test]
 fn message_shows_provider() {
     let mut state = AppState::default();
-    state.messages.push(runie_core::ChatMessage {
+    state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Assistant,
         content: "Hello".to_string(),
         timestamp: 0.0,

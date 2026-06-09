@@ -144,7 +144,7 @@ fn full_turn_no_ghost_agent_messages() {
 }
 
 fn verify_no_agent_before_response(state: &mut AppState) {
-    state.input = "list files".into();
+    state.input.input = "list files".into();
     state.update(Event::Submit);
     state.ensure_fresh();
     assert!(agent_texts(state).is_empty(), "No agent msg before agent responds");

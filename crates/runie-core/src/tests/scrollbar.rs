@@ -8,7 +8,7 @@ fn fresh_state() -> AppState {
 fn scrollbar_no_scrollbar_when_content_fits() {
     let mut state = fresh_state();
     for i in 0..3 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: 0.0,
@@ -27,7 +27,7 @@ fn scrollbar_no_scrollbar_when_content_fits() {
 fn scrollbar_shows_when_content_overflows() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -45,7 +45,7 @@ fn scrollbar_shows_when_content_overflows() {
 fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -55,7 +55,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 0; // at bottom
+    state.view.scroll = 0; // at bottom
     let (thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 10 - thumb, "Thumb at bottom when scroll=0");
 }
@@ -64,7 +64,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
 fn scrollbar_thumb_at_top_when_fully_scrolled() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -74,7 +74,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 100; // way up
+    state.view.scroll = 100; // way up
     let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top when fully scrolled");
 }
@@ -83,7 +83,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
 fn scrollbar_thumb_in_middle_when_half_scrolled() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -95,7 +95,7 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     state.ensure_fresh();
     // 30 messages = 60 lines (30 messages + 30 spacers)
     // max_scroll = 50, thumb = max(1, 10*10/60) = 1
-    state.scroll = 25; // halfway
+    state.view.scroll = 25; // halfway
     let (thumb, offset) = state.scrollbar_metrics(10);
     let expected_offset = (50 - 25) * (10 - thumb) / 50;
     assert_eq!(offset, expected_offset, "Thumb should be in middle");
@@ -105,7 +105,7 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
 fn scroll_clamped_to_max() {
     let mut state = fresh_state();
     for i in 0..30 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -115,7 +115,7 @@ fn scroll_clamped_to_max() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.scroll = 500;
+    state.view.scroll = 500;
     let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Scroll should be clamped to max");
 }
@@ -124,7 +124,7 @@ fn scroll_clamped_to_max() {
 fn visible_uses_scroll_offset() {
     let mut state = fresh_state();
     for i in 0..10 {
-        state.messages.push(crate::model::ChatMessage {
+        state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
             timestamp: i as f64,
@@ -141,7 +141,7 @@ fn visible_uses_scroll_offset() {
     assert!(visible_bottom.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
     // At scroll=15 (top), we see oldest: first is msg0
-    state.scroll = 15;
+    state.view.scroll = 15;
     let visible_top = state.visible_scroll(5);
     assert!(visible_top.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }

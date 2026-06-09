@@ -40,20 +40,20 @@ fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
     let now = crate::update::now();
     let session = crate::session::Session {
         name: name.to_string(),
-        display_name: state.session_display_name.clone(),
-        created_at: state.session_created_at,
+        display_name: state.session.session_display_name.clone(),
+        created_at: state.session.session_created_at,
         updated_at: now,
-        messages: state.messages.clone(),
-        provider: state.current_provider.clone(),
-        model: state.current_model.clone(),
-        theme_name: state.theme_name.clone(),
-        thinking_level: state.thinking_level,
-        read_only: state.read_only,
-        session_tree: state.session_tree.clone(),
+        messages: state.session.messages.clone(),
+        provider: state.config.current_provider.clone(),
+        model: state.config.current_model.clone(),
+        theme_name: state.config.theme_name.clone(),
+        thinking_level: state.config.thinking_level,
+        read_only: state.config.read_only,
+        session_tree: state.session.session_tree.clone(),
     };
     match crate::session::save(name, &session) {
         Ok(()) => {
-            state.session_updated_at = now;
+            state.session.session_updated_at = now;
             CommandResult::Message(format!("Session '{}' saved.", name))
         }
         Err(e) => CommandResult::Message(format!("Could not save '{}': {}", name, e)),
@@ -67,16 +67,16 @@ fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
     }
     match crate::session::load(name) {
         Ok(session) => {
-            state.messages = session.messages;
-            state.current_provider = session.provider;
-            state.current_model = session.model;
-            state.theme_name = session.theme_name;
-            state.thinking_level = session.thinking_level;
-            state.read_only = session.read_only;
-            state.session_display_name = session.display_name.or(Some(session.name));
-            state.session_created_at = session.created_at;
-            state.session_updated_at = session.updated_at;
-            state.session_tree = session.session_tree;
+            state.session.messages = session.messages;
+            state.config.current_provider = session.provider;
+            state.config.current_model = session.model;
+            state.config.theme_name = session.theme_name;
+            state.config.thinking_level = session.thinking_level;
+            state.config.read_only = session.read_only;
+            state.session.session_display_name = session.display_name.or(Some(session.name));
+            state.session.session_created_at = session.created_at;
+            state.session.session_updated_at = session.updated_at;
+            state.session.session_tree = session.session_tree;
             state.messages_changed();
             CommandResult::Message(format!("Session '{}' loaded.", name))
         }
@@ -117,7 +117,7 @@ fn handle_delete(_state: &mut AppState, args: &str) -> CommandResult {
 fn handle_name(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
-        let current = state.session_display_name.as_deref().unwrap_or("(unset)");
+        let current = state.session.session_display_name.as_deref().unwrap_or("(unset)");
         return CommandResult::Message(format!("Current display name: {}", current));
     }
     let truncated = if name.chars().count() > 64 {
@@ -125,7 +125,7 @@ fn handle_name(state: &mut AppState, args: &str) -> CommandResult {
     } else {
         name.to_string()
     };
-    state.session_display_name = Some(truncated.clone());
+    state.session.session_display_name = Some(truncated.clone());
     CommandResult::Message(format!("Session name set to '{}'", truncated))
 }
 
@@ -136,22 +136,22 @@ fn handle_export(state: &mut AppState, args: &str) -> CommandResult {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        format!("{}_{}.json", state.session_display_name.as_deref().unwrap_or("session"), timestamp)
+        format!("{}_{}.json", state.session.session_display_name.as_deref().unwrap_or("session"), timestamp)
     } else {
         path.to_string()
     };
     let session = crate::session::Session {
-        name: state.session_display_name.clone().unwrap_or_else(|| "exported".into()),
-        display_name: state.session_display_name.clone(),
-        created_at: state.session_created_at,
+        name: state.session.session_display_name.clone().unwrap_or_else(|| "exported".into()),
+        display_name: state.session.session_display_name.clone(),
+        created_at: state.session.session_created_at,
         updated_at: crate::update::now(),
-        messages: state.messages.clone(),
-        provider: state.current_provider.clone(),
-        model: state.current_model.clone(),
-        theme_name: state.theme_name.clone(),
-        thinking_level: state.thinking_level,
-        read_only: state.read_only,
-        session_tree: state.session_tree.clone(),
+        messages: state.session.messages.clone(),
+        provider: state.config.current_provider.clone(),
+        model: state.config.current_model.clone(),
+        theme_name: state.config.theme_name.clone(),
+        thinking_level: state.config.thinking_level,
+        read_only: state.config.read_only,
+        session_tree: state.session.session_tree.clone(),
     };
     match std::fs::write(&path, serde_json::to_string_pretty(&session).unwrap_or_default()) {
         Ok(()) => CommandResult::Message(format!("Session exported to '{}'", path)),
@@ -167,16 +167,16 @@ fn handle_import(state: &mut AppState, args: &str) -> CommandResult {
     match std::fs::read_to_string(path) {
         Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {
             Ok(session) => {
-                state.messages = session.messages;
-                state.current_provider = session.provider;
-                state.current_model = session.model;
-                state.theme_name = session.theme_name;
-                state.thinking_level = session.thinking_level;
-                state.read_only = session.read_only;
-                state.session_display_name = session.display_name.or(Some(session.name));
-                state.session_created_at = session.created_at;
-                state.session_updated_at = session.updated_at;
-                state.session_tree = session.session_tree;
+                state.session.messages = session.messages;
+                state.config.current_provider = session.provider;
+                state.config.current_model = session.model;
+                state.config.theme_name = session.theme_name;
+                state.config.thinking_level = session.thinking_level;
+                state.config.read_only = session.read_only;
+                state.session.session_display_name = session.display_name.or(Some(session.name));
+                state.session.session_created_at = session.created_at;
+                state.session.session_updated_at = session.updated_at;
+                state.session.session_tree = session.session_tree;
                 state.messages_changed();
                 CommandResult::Message(format!("Session imported from '{}'", path))
             }
@@ -187,17 +187,17 @@ fn handle_import(state: &mut AppState, args: &str) -> CommandResult {
 }
 
 fn handle_new(state: &mut AppState, _args: &str) -> CommandResult {
-    state.messages.clear();
-    state.input.clear();
-    state.cursor_pos = 0;
-    state.message_queue.clear();
-    state.request_queue.clear();
-    state.current_provider = state.config_provider.clone();
-    state.current_model = state.config_model.clone();
-    state.session_display_name = None;
+    state.session.messages.clear();
+    state.input.input.clear();
+    state.input.cursor_pos = 0;
+    state.agent.message_queue.clear();
+    state.agent.request_queue.clear();
+    state.config.current_provider = state.config.config_provider.clone();
+    state.config.current_model = state.config.config_model.clone();
+    state.session.session_display_name = None;
     let now = crate::update::now();
-    state.session_created_at = now;
-    state.session_updated_at = now;
+    state.session.session_created_at = now;
+    state.session.session_updated_at = now;
     state.messages_changed();
     CommandResult::Message("New session started".into())
 }
@@ -260,11 +260,11 @@ fn handle_history(state: &mut AppState, _args: &str) -> CommandResult {
 }
 
 fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
-    let total_tokens: usize = state.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum();
-    let msg_count = state.messages.len();
-    let user_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::User).count();
-    let assistant_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::Assistant).count();
-    let tool_msgs = state.messages.iter().filter(|m| m.role == crate::model::Role::Tool).count();
+    let total_tokens: usize = state.session.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum();
+    let msg_count = state.session.messages.len();
+    let user_msgs = state.session.messages.iter().filter(|m| m.role == crate::model::Role::User).count();
+    let assistant_msgs = state.session.messages.iter().filter(|m| m.role == crate::model::Role::Assistant).count();
+    let tool_msgs = state.session.messages.iter().filter(|m| m.role == crate::model::Role::Tool).count();
 
     let prompt_info = if state.current_prompt.is_empty() {
         "default".to_string()
@@ -280,14 +280,14 @@ fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
          Prompt: {}\n\
          Created: {}\n\
          Updated: {}",
-        state.session_display_name.as_deref().unwrap_or("unnamed"),
+        state.session.session_display_name.as_deref().unwrap_or("unnamed"),
         msg_count, user_msgs, assistant_msgs, tool_msgs,
         total_tokens,
-        state.current_provider,
-        state.current_model,
+        state.config.current_provider,
+        state.config.current_model,
         prompt_info,
-        crate::labels::format_timestamp(state.session_created_at),
-        crate::labels::format_timestamp(state.session_updated_at),
+        crate::labels::format_timestamp(state.session.session_created_at),
+        crate::labels::format_timestamp(state.session.session_updated_at),
     );
     CommandResult::Message(info)
 }
@@ -295,19 +295,19 @@ fn handle_session(state: &mut AppState, _args: &str) -> CommandResult {
 fn handle_fork(state: &mut AppState, args: &str) -> CommandResult {
     let index = args.trim().parse::<usize>().unwrap_or_else(|_| {
         // Default to last user message if no index given
-        state.messages.iter().enumerate().rfind(|(_, m)| m.role == crate::model::Role::User).map(|(i, _)| i).unwrap_or(0)
+        state.session.messages.iter().enumerate().rfind(|(_, m)| m.role == crate::model::Role::User).map(|(i, _)| i).unwrap_or(0)
     });
-    if index >= state.messages.len() {
-        return CommandResult::Message(format!("Message index {} out of range (0–{})", index, state.messages.len().saturating_sub(1)));
+    if index >= state.session.messages.len() {
+        return CommandResult::Message(format!("Message index {} out of range (0–{})", index, state.session.messages.len().saturating_sub(1)));
     }
     // Initialize or update session tree
-    let mut tree = state.session_tree.take().unwrap_or_else(|| {
-        crate::session_tree::SessionTree::from_messages(&state.messages)
+    let mut tree = state.session.session_tree.take().unwrap_or_else(|| {
+        crate::session_tree::SessionTree::from_messages(&state.session.messages)
     });
     match tree.fork_at(index) {
         Some(path) => {
             tree.navigate_to(&path);
-            state.session_tree = Some(tree);
+            state.session.session_tree = Some(tree);
             CommandResult::Message(format!("Forked at message {}. New branch created.", index))
         }
         None => CommandResult::Message("Could not fork at that message.".into()),
@@ -315,10 +315,10 @@ fn handle_fork(state: &mut AppState, args: &str) -> CommandResult {
 }
 
 fn handle_clone(state: &mut AppState, _args: &str) -> CommandResult {
-    let tree = state.session_tree.clone().unwrap_or_else(|| {
-        crate::session_tree::SessionTree::from_messages(&state.messages)
+    let tree = state.session.session_tree.clone().unwrap_or_else(|| {
+        crate::session_tree::SessionTree::from_messages(&state.session.messages)
     });
-    state.session_tree = Some(tree);
+    state.session.session_tree = Some(tree);
     CommandResult::Message("Session cloned at current position.".into())
 }
 

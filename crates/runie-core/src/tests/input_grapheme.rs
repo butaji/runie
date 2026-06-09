@@ -10,10 +10,10 @@ mod tests {
         let mut state = AppState::default();
         // "é" is 2 bytes but 1 grapheme
         state.update(Event::Input('é'));
-        assert_eq!(state.input, "é");
-        assert_eq!(state.cursor_pos, 2); // byte position after 'é'
+        assert_eq!(state.input.input, "é");
+        assert_eq!(state.input.cursor_pos, 2); // byte position after 'é'
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 0); // should go to start, not 1
+        assert_eq!(state.input.cursor_pos, 0); // should go to start, not 1
     }
 
     #[test]
@@ -21,9 +21,9 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('é'));
         state.update(Event::Input('a'));
-        state.cursor_pos = 0;
+        state.input.cursor_pos = 0;
         state.update(Event::CursorRight);
-        assert_eq!(state.cursor_pos, 2); // skip full 'é' grapheme
+        assert_eq!(state.input.cursor_pos, 2); // skip full 'é' grapheme
     }
 
     #[test]
@@ -31,8 +31,8 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('é'));
         state.update(Event::Backspace);
-        assert_eq!(state.input, "");
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.input, "");
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -40,10 +40,10 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('é'));
         state.update(Event::Input('a'));
-        state.cursor_pos = 0;
+        state.input.cursor_pos = 0;
         state.update(Event::KillChar);
-        assert_eq!(state.input, "a");
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.input, "a");
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -51,9 +51,9 @@ mod tests {
         let mut state = AppState::default();
         // "🎉" is 4 bytes
         state.update(Event::Input('🎉'));
-        assert_eq!(state.cursor_pos, 4);
+        assert_eq!(state.input.cursor_pos, 4);
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -62,13 +62,13 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::Input('é'));
         state.update(Event::Input('b'));
-        assert_eq!(state.cursor_pos, 4); // 1 + 2 + 1
+        assert_eq!(state.input.cursor_pos, 4); // 1 + 2 + 1
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 3); // before 'b', after 'é'
+        assert_eq!(state.input.cursor_pos, 3); // before 'b', after 'é'
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 1); // before 'é', after 'a'
+        assert_eq!(state.input.cursor_pos, 1); // before 'é', after 'a'
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
     }
 
     #[test]
@@ -78,8 +78,8 @@ mod tests {
         state.update(Event::Input('b'));
         state.update(Event::Newline);
         state.update(Event::Input('c'));
-        assert_eq!(state.input, "ab\nc");
-        assert_eq!(state.cursor_pos, 4);
+        assert_eq!(state.input.input, "ab\nc");
+        assert_eq!(state.input.cursor_pos, 4);
     }
 
     #[test]
@@ -88,10 +88,10 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::Input('b'));
         state.update(Event::Input('c'));
-        state.cursor_pos = 1; // after 'a'
+        state.input.cursor_pos = 1; // after 'a'
         state.update(Event::Newline);
-        assert_eq!(state.input, "a\nbc");
-        assert_eq!(state.cursor_pos, 2);
+        assert_eq!(state.input.input, "a\nbc");
+        assert_eq!(state.input.cursor_pos, 2);
     }
 
     #[test]
@@ -107,7 +107,7 @@ mod tests {
         state.update(Event::Input('i'));
         state.update(Event::Input('n'));
         state.update(Event::Input('e'));
-        assert_eq!(state.input, "first\nline");
+        assert_eq!(state.input.input, "first\nline");
     }
 
     #[test]
@@ -117,15 +117,15 @@ mod tests {
         state.update(Event::Newline);
         state.update(Event::Input('b'));
         // Now at end of "a\nb" (cursor after 'b')
-        assert_eq!(state.input, "a\nb");
-        assert_eq!(state.cursor_pos, 3); // After 'a\n' (2 chars) + 'b' (1 char)
+        assert_eq!(state.input.input, "a\nb");
+        assert_eq!(state.input.cursor_pos, 3); // After 'a\n' (2 chars) + 'b' (1 char)
         // Move cursor back to after the newline (start of second line)
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 2); // After 'a\n'
+        assert_eq!(state.input.cursor_pos, 2); // After 'a\n'
         // Backspace should remove the newline and join lines
         state.update(Event::Backspace);
-        assert_eq!(state.input, "ab");
-        assert_eq!(state.cursor_pos, 1); // Cursor at position 1 (after removing newline and 'a')
+        assert_eq!(state.input.input, "ab");
+        assert_eq!(state.input.cursor_pos, 1); // Cursor at position 1 (after removing newline and 'a')
     }
 
     #[test]
@@ -133,11 +133,11 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
         state.update(Event::CursorLeft);
-        assert_eq!(state.cursor_pos, 0);
+        assert_eq!(state.input.cursor_pos, 0);
         state.update(Event::Backspace);
         // Should flash, not delete
-        assert_eq!(state.input, "a");
-        assert!(state.input_flash > 0);
+        assert_eq!(state.input.input, "a");
+        assert!(state.input.input_flash > 0);
     }
 
     #[test]
@@ -148,13 +148,13 @@ mod tests {
         state.update(Event::Input('b'));
         state.update(Event::Newline);
         state.update(Event::Input('c'));
-        assert_eq!(state.input, "a\nb\nc");
+        assert_eq!(state.input.input, "a\nb\nc");
         // Cursor is at end (after 'c')
         // Move to start of third line
-        state.cursor_pos = 4;
+        state.input.cursor_pos = 4;
         state.update(Event::Backspace);
         // Should only remove the newline before 'c', not the one before 'b'
-        assert_eq!(state.input, "a\nbc");
+        assert_eq!(state.input.input, "a\nbc");
     }
 
     #[test]
@@ -173,7 +173,7 @@ mod tests {
         state.update(Event::Input('o'));
         state.update(Event::Submit);
         // Command should have run and added output
-        assert!(state.messages.iter().any(|m| m.content.contains("hello")),
+        assert!(state.session.messages.iter().any(|m| m.content.contains("hello")),
             "Should have hello in output");
     }
 
@@ -186,7 +186,7 @@ mod tests {
         state.update(Event::Input('d'));
         state.update(Event::Submit);
         // Should not add to request queue
-        assert!(state.request_queue.is_empty(), "Bash command should not be queued for agent");
+        assert!(state.agent.request_queue.is_empty(), "Bash command should not be queued for agent");
     }
 
     #[test]
@@ -199,8 +199,8 @@ mod tests {
         state.update(Event::Input('o'));
         state.update(Event::Submit);
         // Should add user message and queue for agent
-        assert!(!state.request_queue.is_empty(), "Regular submit should queue for agent");
-        assert_eq!(state.messages.len(), 1, "Should have one message");
+        assert!(!state.agent.request_queue.is_empty(), "Regular submit should queue for agent");
+        assert_eq!(state.session.messages.len(), 1, "Should have one message");
     }
 
     // === Layer 2: Event handling tests (crossterm-style event → state) ===
@@ -223,16 +223,16 @@ mod tests {
         state.update(Event::Input('2'));
 
         // Cursor is at end (position 11)
-        assert_eq!(state.input, "line1\nline2");
-        assert_eq!(state.cursor_pos, 11);
+        assert_eq!(state.input.input, "line1\nline2");
+        assert_eq!(state.input.cursor_pos, 11);
 
         // Move cursor back to position 6 (start of "line2")
-        state.cursor_pos = 6;
+        state.input.cursor_pos = 6;
 
         // Press Backspace - should remove newline and join lines
         state.update(Event::Backspace);
-        assert_eq!(state.input, "line1line2");
+        assert_eq!(state.input.input, "line1line2");
         // Cursor should be at position 5 (after "line1")
-        assert_eq!(state.cursor_pos, 5);
+        assert_eq!(state.input.cursor_pos, 5);
     }
 }

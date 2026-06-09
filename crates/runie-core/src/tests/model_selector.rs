@@ -79,7 +79,7 @@ fn select_emits_switch_model() {
     state.update(Event::ModelSelectorSelect);
     assert!(state.open_dialog.is_none());
     // Model should have switched from default mock/echo
-    let switched = state.current_provider != "mock" || state.current_model != "echo";
+    let switched = state.config.current_provider != "mock" || state.config.current_model != "echo";
     assert!(switched, "Should switch model on select");
 }
 

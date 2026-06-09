@@ -15,7 +15,7 @@ fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
 #[test]
 fn toggle_model_excludes_from_cycle() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
     ];
@@ -24,39 +24,39 @@ fn toggle_model_excludes_from_cycle() {
         name: "gpt-4o".to_string(),
     });
 
-    assert!(!state.scoped_models[1].enabled);
+    assert!(!state.config.scoped_models[1].enabled);
 }
 
 #[test]
 fn enable_all_includes_all() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", false),
         sm("openai", "gpt-4o", false),
     ];
 
     state.update(Event::ScopedModelEnableAll);
 
-    assert!(state.scoped_models.iter().all(|m| m.enabled));
+    assert!(state.config.scoped_models.iter().all(|m| m.enabled));
 }
 
 #[test]
 fn disable_all_excludes_all() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
     ];
 
     state.update(Event::ScopedModelDisableAll);
 
-    assert!(state.scoped_models.iter().all(|m| !m.enabled));
+    assert!(state.config.scoped_models.iter().all(|m| !m.enabled));
 }
 
 #[test]
 fn provider_toggle_affects_all() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("openai", "gpt-4o", true),
         sm("openai", "gpt-4o-mini", true),
         sm("anthropic", "claude-3", true),
@@ -66,15 +66,15 @@ fn provider_toggle_affects_all() {
         provider: "openai".to_string(),
     });
 
-    assert!(!state.scoped_models[0].enabled);
-    assert!(!state.scoped_models[1].enabled);
-    assert!(state.scoped_models[2].enabled);
+    assert!(!state.config.scoped_models[0].enabled);
+    assert!(!state.config.scoped_models[1].enabled);
+    assert!(state.config.scoped_models[2].enabled);
 }
 
 #[test]
 fn provider_toggle_re_enables_all() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("openai", "gpt-4o", false),
         sm("openai", "gpt-4o-mini", true),
         sm("anthropic", "claude-3", true),
@@ -84,15 +84,15 @@ fn provider_toggle_re_enables_all() {
         provider: "openai".to_string(),
     });
 
-    assert!(state.scoped_models[0].enabled);
-    assert!(state.scoped_models[1].enabled);
-    assert!(state.scoped_models[2].enabled);
+    assert!(state.config.scoped_models[0].enabled);
+    assert!(state.config.scoped_models[1].enabled);
+    assert!(state.config.scoped_models[2].enabled);
 }
 
 #[test]
 fn slash_scoped_models_opens_dialog() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
     ];
@@ -112,7 +112,7 @@ fn slash_scoped_models_opens_dialog() {
 #[test]
 fn scoped_models_dialog_navigates_up() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
         sm("anthropic", "claude-3", true),
@@ -131,7 +131,7 @@ fn scoped_models_dialog_navigates_up() {
 #[test]
 fn scoped_models_dialog_navigates_down() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
         sm("anthropic", "claude-3", true),
@@ -150,7 +150,7 @@ fn scoped_models_dialog_navigates_down() {
 #[test]
 fn scoped_models_dialog_space_toggles() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
     ];
@@ -158,14 +158,14 @@ fn scoped_models_dialog_space_toggles() {
 
     state.update(Event::Input(' '));
 
-    assert!(!state.scoped_models[1].enabled);
+    assert!(!state.config.scoped_models[1].enabled);
     assert!(matches!(state.open_dialog, Some(DialogState::ScopedModels { .. })));
 }
 
 #[test]
 fn scoped_models_dialog_a_enables_all() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", false),
         sm("openai", "gpt-4o", false),
     ];
@@ -173,13 +173,13 @@ fn scoped_models_dialog_a_enables_all() {
 
     state.update(Event::Input('a'));
 
-    assert!(state.scoped_models.iter().all(|m| m.enabled));
+    assert!(state.config.scoped_models.iter().all(|m| m.enabled));
 }
 
 #[test]
 fn scoped_models_dialog_x_disables_all() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("mock", "echo", true),
         sm("openai", "gpt-4o", true),
     ];
@@ -187,13 +187,13 @@ fn scoped_models_dialog_x_disables_all() {
 
     state.update(Event::Input('x'));
 
-    assert!(state.scoped_models.iter().all(|m| !m.enabled));
+    assert!(state.config.scoped_models.iter().all(|m| !m.enabled));
 }
 
 #[test]
 fn scoped_models_dialog_p_toggles_provider() {
     let mut state = AppState::default();
-    state.scoped_models = vec![
+    state.config.scoped_models = vec![
         sm("openai", "gpt-4o", true),
         sm("openai", "gpt-4o-mini", true),
         sm("anthropic", "claude-3", true),
@@ -202,15 +202,15 @@ fn scoped_models_dialog_p_toggles_provider() {
 
     state.update(Event::Input('p'));
 
-    assert!(!state.scoped_models[0].enabled);
-    assert!(!state.scoped_models[1].enabled);
-    assert!(state.scoped_models[2].enabled);
+    assert!(!state.config.scoped_models[0].enabled);
+    assert!(!state.config.scoped_models[1].enabled);
+    assert!(state.config.scoped_models[2].enabled);
 }
 
 #[test]
 fn scoped_models_dialog_esc_closes() {
     let mut state = AppState::default();
-    state.scoped_models = vec![sm("mock", "echo", true)];
+    state.config.scoped_models = vec![sm("mock", "echo", true)];
     state.open_dialog = Some(DialogState::ScopedModels { selected: 0 });
 
     state.update(Event::Abort);

@@ -25,21 +25,21 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
 #[test]
 fn elements_ordered_by_timestamp_strict() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ ls 0.5s\noutput".into(),
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "world".into(),
         timestamp: 3.0,
         id: "req.0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s\nhello".into(),
         timestamp: 4.0,
@@ -57,14 +57,14 @@ fn elements_ordered_by_timestamp_strict() {
 #[test]
 fn newer_assistant_appears_after_older_thought() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s".into(),
         timestamp: 1.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "updated later".into(),
         timestamp: 5.0,
@@ -82,14 +82,14 @@ fn newer_assistant_appears_after_older_thought() {
 #[test]
 fn thinking_indicator_is_always_last_when_newest() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "hello".into(),
         timestamp: 1.0,
         id: "u0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "hi".into(),
         timestamp: 2.0,
@@ -108,21 +108,21 @@ fn thinking_indicator_is_always_last_when_newest() {
 #[test]
 fn streaming_bump_moves_assistant_to_end() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Q1".into(),
         timestamp: 1.0,
         id: "u0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "A1".into(),
         timestamp: 2.0,
         id: "req.0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Q2".into(),
         timestamp: 3.0,
@@ -130,7 +130,7 @@ fn streaming_bump_moves_assistant_to_end() {
         ..Default::default()
     });
     // Now bump assistant timestamp to 4.0 — simulating streaming update
-    if let Some(msg) = state.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == "req.0") {
+    if let Some(msg) = state.session.messages.iter_mut().find(|m| m.role == Role::Assistant && m.id == "req.0") {
         msg.timestamp = 4.0;
     }
     state.messages_changed();
@@ -144,14 +144,14 @@ fn streaming_bump_moves_assistant_to_end() {
 #[test]
 fn tool_end_bump_moves_tool_after_later_messages() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "Running ls...".into(),
         timestamp: 2.0,
         id: "tool.req.0.1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "next".into(),
         timestamp: 3.0,
@@ -159,7 +159,7 @@ fn tool_end_bump_moves_tool_after_later_messages() {
         ..Default::default()
     });
     // Tool completes — bump to 5.0
-    if let Some(msg) = state.messages.iter_mut().find(|m| m.role == Role::Tool) {
+    if let Some(msg) = state.session.messages.iter_mut().find(|m| m.role == Role::Tool) {
         msg.timestamp = 5.0;
         msg.content = "✓ ls 0.5s\noutput".into();
     }
@@ -174,21 +174,21 @@ fn tool_end_bump_moves_tool_after_later_messages() {
 #[test]
 fn multiple_tools_ordered_by_completion_time() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ cat 0.1s".into(),
         timestamp: 5.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ ls 0.2s".into(),
         timestamp: 2.0,
         id: "t2".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "✓ grep 0.3s".into(),
         timestamp: 8.0,
@@ -214,14 +214,14 @@ fn multiple_tools_ordered_by_completion_time() {
 #[test]
 fn thought_before_agent_when_older_timestamp() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s\nreasoning".into(),
         timestamp: 2.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "response".into(),
         timestamp: 3.0,
@@ -239,14 +239,14 @@ fn thought_before_agent_when_older_timestamp() {
 #[test]
 fn agent_before_thought_when_agent_newer() {
     let mut state = AppState::default();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s".into(),
         timestamp: 5.0,
         id: "req.0#thought.0".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "response".into(),
         timestamp: 3.0,
@@ -272,6 +272,6 @@ fn via_events_appended_assistant_found_anywhere_in_vec() {
     state.update(Event::AgentResponse { id: "req.0".into(), content: "world".into() });
     state.ensure_fresh();
 
-    let assistant_count = state.messages.iter().filter(|m| m.role == Role::Assistant).count();
+    let assistant_count = state.session.messages.iter().filter(|m| m.role == Role::Assistant).count();
     assert_eq!(assistant_count, 1, "Should not create duplicate assistant messages for same id");
 }

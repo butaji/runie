@@ -31,7 +31,7 @@ impl LazyCache {
     fn collect_entries(state: &AppState) -> Vec<Element> {
         let mut entries: Vec<Element> = Vec::new();
 
-        for msg in state.messages.iter() {
+        for msg in state.session.messages.iter() {
             if Self::should_skip_msg(msg, state) {
                 continue;
             }
@@ -39,12 +39,12 @@ impl LazyCache {
         }
 
         if let Some(started) = state.thinking_started_at {
-            let max_ts = state.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
-            let turn_ts = state.messages.iter()
+            let max_ts = state.session.messages.iter().map(|m| m.timestamp).fold(0.0, f64::max);
+            let turn_ts = state.session.messages.iter()
                 .find(|m| m.role == Role::TurnComplete)
                 .map(|m| m.timestamp);
-            let turn_complete_for_current = state.current_request_id.as_ref().and_then(|id| {
-                state.messages.iter()
+            let turn_complete_for_current = state.agent.current_request_id.as_ref().and_then(|id| {
+                state.session.messages.iter()
                     .find(|m| m.role == Role::TurnComplete && m.id == *id)
                     .map(|m| m.timestamp)
             });
@@ -67,7 +67,7 @@ impl LazyCache {
             return true;
         }
         state.thinking_started_at.is_some()
-            && state.current_request_id.as_deref() == Some(&msg.id)
+            && state.agent.current_request_id.as_deref() == Some(&msg.id)
     }
 
     pub fn visible(cache: &[Element], skip: usize, take: usize) -> &[Element] {
@@ -106,7 +106,7 @@ impl LazyCache {
     fn tool_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
         if msg.content.contains("⠋ Running ") {
             let name = msg.content.trim_start_matches("⠋ Running ").trim_end_matches("...");
-            return Element::tool_running(name, state.tool_started_at.unwrap_or_else(std::time::Instant::now)).at(ts);
+            return Element::tool_running(name, state.agent.tool_started_at.unwrap_or_else(std::time::Instant::now)).at(ts);
         }
         let (name, dur, output) = Self::parse_tool_content(&msg.content);
         if state.all_collapsed {

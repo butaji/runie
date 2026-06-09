@@ -11,8 +11,8 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::Input('b'));
         state.update(Event::Undo);
-        assert_eq!(state.input, "a");
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.input, "a");
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -22,10 +22,10 @@ mod tests {
             state.update(Event::Input(c));
         }
         state.update(Event::DeleteWord);
-        assert_eq!(state.input, "hello ");
+        assert_eq!(state.input.input, "hello ");
         state.update(Event::Undo);
-        assert_eq!(state.input, "hello world");
-        assert_eq!(state.cursor_pos, 11);
+        assert_eq!(state.input.input, "hello world");
+        assert_eq!(state.input.cursor_pos, 11);
     }
 
     #[test]
@@ -34,17 +34,17 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::Input('b'));
         state.update(Event::Undo);
-        assert_eq!(state.input, "a");
+        assert_eq!(state.input.input, "a");
         state.update(Event::Redo);
-        assert_eq!(state.input, "ab");
-        assert_eq!(state.cursor_pos, 2);
+        assert_eq!(state.input.input, "ab");
+        assert_eq!(state.input.cursor_pos, 2);
     }
 
     #[test]
     fn undo_at_empty_does_nothing() {
         let mut state = AppState::default();
         state.update(Event::Undo);
-        assert_eq!(state.input, "");
+        assert_eq!(state.input.input, "");
     }
 
     #[test]
@@ -52,7 +52,7 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
         state.update(Event::Redo);
-        assert_eq!(state.input, "a");
+        assert_eq!(state.input.input, "a");
     }
 
     #[test]
@@ -61,11 +61,11 @@ mod tests {
         state.update(Event::Input('a'));
         state.update(Event::Input('b'));
         state.update(Event::Undo);
-        assert_eq!(state.input, "a");
+        assert_eq!(state.input.input, "a");
         // Typing clears redo stack
         state.update(Event::Input('c'));
         state.update(Event::Redo);
-        assert_eq!(state.input, "ac"); // redo had no effect
+        assert_eq!(state.input.input, "ac"); // redo had no effect
     }
 
     #[test]
@@ -75,11 +75,11 @@ mod tests {
         state.update(Event::Input('b'));
         state.update(Event::Input('c'));
         state.update(Event::Undo);
-        assert_eq!(state.input, "ab");
+        assert_eq!(state.input.input, "ab");
         state.update(Event::Undo);
-        assert_eq!(state.input, "a");
+        assert_eq!(state.input.input, "a");
         state.update(Event::Undo);
-        assert_eq!(state.input, "");
+        assert_eq!(state.input.input, "");
     }
 
     #[test]
@@ -91,8 +91,8 @@ mod tests {
         state.update(Event::Input('c'));
         // Should be able to undo to before the 'c' insert
         state.update(Event::Undo);
-        assert_eq!(state.input, "ab");
-        assert_eq!(state.cursor_pos, 1);
+        assert_eq!(state.input.input, "ab");
+        assert_eq!(state.input.cursor_pos, 1);
     }
 
     #[test]
@@ -103,9 +103,9 @@ mod tests {
         }
         state.update(Event::CursorStart);
         state.update(Event::DeleteToEnd);
-        assert_eq!(state.input, "");
+        assert_eq!(state.input.input, "");
         state.update(Event::Undo);
-        assert_eq!(state.input, "hello");
-        assert_eq!(state.cursor_pos, 0); // cursor restored to start
+        assert_eq!(state.input.input, "hello");
+        assert_eq!(state.input.cursor_pos, 0); // cursor restored to start
     }
 }

@@ -26,23 +26,23 @@ fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     let parts: Vec<&str> = rest.split('/').filter(|s| !s.is_empty()).collect();
     match parts.len() {
         2 => {
-            state.current_provider = parts[0].to_string();
-            state.current_model = parts[1].to_string();
+            state.config.current_provider = parts[0].to_string();
+            state.config.current_model = parts[1].to_string();
             CommandResult::Message(format!(
                 "Switched to {}/{}",
-                state.current_provider, state.current_model
+                state.config.current_provider, state.config.current_model
             ))
         }
         1 => {
-            state.current_model = parts[0].to_string();
+            state.config.current_model = parts[0].to_string();
             CommandResult::Message(format!(
                 "Switched to {}/{}",
-                state.current_provider, state.current_model
+                state.config.current_provider, state.config.current_model
             ))
         }
         _ => CommandResult::Message(format!(
             "Current model: {}/{}. Usage: /model provider/model or /model model",
-            state.current_provider, state.current_model
+            state.config.current_provider, state.config.current_model
         )),
     }
 }
@@ -52,20 +52,20 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     if rest.is_empty() {
         return CommandResult::Message(format!(
             "Current thinking level: {}. Usage: /thinking off|low|medium|high",
-            state.thinking_level.as_str()
+            state.config.thinking_level.as_str()
         ));
     }
     match rest.parse::<crate::model::ThinkingLevel>() {
         Ok(level) => {
-            state.thinking_level = level;
-            CommandResult::Message(format!("Thinking level set to: {}", state.thinking_level.as_str()))
+            state.config.thinking_level = level;
+            CommandResult::Message(format!("Thinking level set to: {}", state.config.thinking_level.as_str()))
         }
         Err(e) => CommandResult::Message(format!("Error: {e}")),
     }
 }
 
 fn handle_scoped_models(state: &mut AppState, _args: &str) -> CommandResult {
-    if state.scoped_models.is_empty() {
+    if state.config.scoped_models.is_empty() {
         return CommandResult::Message("No scoped models configured. Add [models.scoped] to config.toml.".into());
     }
     CommandResult::OpenDialog(Dialog::ScopedModels)

@@ -131,7 +131,7 @@ fn new_tool_respects_global_collapse_flag() {
 #[test]
 fn expand_then_collapse_then_expand_same_state() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.2s\nline1\nline2".into(),
         timestamp: 0.0,
@@ -180,7 +180,7 @@ fn running_tool_ignored_by_global_toggle() {
 #[test]
 fn reset_clears_global_collapse() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "Thought".into(),
         timestamp: 0.0,
@@ -196,14 +196,14 @@ fn reset_clears_global_collapse() {
 #[test]
 fn global_toggle_does_not_affect_user_or_assistant_messages() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Hello".into(),
         timestamp: 0.0,
         id: "u1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "Hi".into(),
         timestamp: 0.0,
@@ -224,7 +224,7 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Assistant,
         content: "Done".into(),
         timestamp: 2.0,
@@ -238,14 +238,14 @@ fn cache_rebuilds_correctly_with_global_collapse_and_new_items() {
 }
 
 fn add_thought_and_tool(state: &mut AppState) {
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Thought,
         content: "◆ Thought 1.0s\nReasoning".into(),
         timestamp: 0.0,
         id: "t1".into(),
         ..Default::default()
     });
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::Tool,
         content: "◆ Ran ls 0.5s\nfile1".into(),
         timestamp: 1.0,

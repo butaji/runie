@@ -17,16 +17,16 @@ fn name_sets_display_name() {
     let mut state = fresh_state();
     type_str(&mut state, "/name my-project");
     state.update(Event::Submit);
-    assert_eq!(state.session_display_name, Some("my-project".to_string()));
+    assert_eq!(state.session.session_display_name, Some("my-project".to_string()));
 }
 
 #[test]
 fn name_shows_current_when_no_args() {
     let mut state = fresh_state();
-    state.session_display_name = Some("existing".to_string());
+    state.session.session_display_name = Some("existing".to_string());
     type_str(&mut state, "/name");
     state.update(Event::Submit);
-    let sys_msgs: Vec<_> = state.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(last.content.contains("existing"), "shows current name: {}", last.content);
 }
@@ -35,10 +35,10 @@ fn name_shows_current_when_no_args() {
 fn name_truncates_long_input() {
     let mut state = fresh_state();
     let long_name = "a".repeat(100);
-    state.input.push_str("/name ");
-    state.input.push_str(&long_name);
+    state.input.input.push_str("/name ");
+    state.input.input.push_str(&long_name);
     state.update(Event::Submit);
-    let name = state.session_display_name.as_ref().unwrap();
+    let name = state.session.session_display_name.as_ref().unwrap();
     assert_eq!(name.chars().count(), 65, "truncated to 64 + ellipsis");
     assert!(name.ends_with('…'), "ends with ellipsis");
 }
@@ -46,7 +46,7 @@ fn name_truncates_long_input() {
 #[test]
 fn export_creates_file() {
     let mut state = fresh_state();
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "hello".into(),
         timestamp: 0.0,
@@ -94,14 +94,14 @@ fn import_loads_file() {
     type_str(&mut state, &format!("/import {}", path));
     state.update(Event::Submit);
 
-    assert_eq!(state.messages.len(), 2); // imported + system confirmation
-    assert_eq!(state.messages[0].content, "imported msg");
-    assert_eq!(state.current_provider, "openai");
-    assert_eq!(state.current_model, "gpt-4o");
-    assert_eq!(state.theme_name, "tokyo-night");
-    assert_eq!(state.thinking_level, crate::model::ThinkingLevel::Medium);
-    assert!(state.read_only);
-    assert_eq!(state.session_display_name, Some("My Session".to_string()));
+    assert_eq!(state.session.messages.len(), 2); // imported + system confirmation
+    assert_eq!(state.session.messages[0].content, "imported msg");
+    assert_eq!(state.config.current_provider, "openai");
+    assert_eq!(state.config.current_model, "gpt-4o");
+    assert_eq!(state.config.theme_name, "tokyo-night");
+    assert_eq!(state.config.thinking_level, crate::model::ThinkingLevel::Medium);
+    assert!(state.config.read_only);
+    assert_eq!(state.session.session_display_name, Some("My Session".to_string()));
     let _ = std::fs::remove_file(&tmp);
 }
 

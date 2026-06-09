@@ -22,9 +22,9 @@ fn add_messages(state: &mut AppState, count: usize) {
 fn latest_message_visible_after_submit() {
     let mut state = AppState::default();
     add_messages(&mut state, 30);
-    state.scroll = 5; // scrolled up
+    state.view.scroll = 5; // scrolled up
 
-    state.input = "hello".to_string();
+    state.input.input = "hello".to_string();
     state.update(Event::Submit);
     state.ensure_fresh();
 
@@ -36,7 +36,7 @@ fn latest_message_visible_after_submit() {
 fn latest_agent_response_visible_when_at_bottom() {
     let mut state = AppState::default();
     add_messages(&mut state, 30);
-    state.scroll = 0; // at bottom
+    state.view.scroll = 0; // at bottom
 
     state.update(Event::AgentResponse { id: "req.99".to_string(), content: "Latest response".to_string() });
     state.ensure_fresh();
@@ -49,7 +49,7 @@ fn latest_agent_response_visible_when_at_bottom() {
 fn latest_thought_visible_when_at_bottom() {
     let mut state = AppState::default();
     add_messages(&mut state, 30);
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     state.update(Event::AgentThinking { id: "req.0".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
@@ -65,7 +65,7 @@ fn latest_thought_visible_when_at_bottom() {
 fn latest_tool_visible_when_at_bottom() {
     let mut state = AppState::default();
     add_messages(&mut state, 30);
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2\nfile3".to_string() });
@@ -84,7 +84,7 @@ fn sticky_bottom_clips_top_not_bottom() {
     state.update(Event::AgentResponse { id: "req.99".to_string(), content: "TOOL:list_dir:.".to_string() });
     state.update(Event::AgentThoughtDone { id: "req.99".to_string() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_content(&mut state);
     // With sticky bottom, the BOTTOM lines of overflow content should be visible.
@@ -95,26 +95,26 @@ fn sticky_bottom_clips_top_not_bottom() {
 fn user_scrolled_up_does_not_see_new_content() {
     let mut state = AppState::default();
     add_messages(&mut state, 30);
-    state.scroll = 10; // scrolled up
+    state.view.scroll = 10; // scrolled up
 
     state.update(Event::AgentResponse { id: "req.99".to_string(), content: "Hidden response".to_string() });
     state.ensure_fresh();
 
     // When scrolled up, new content may not be visible. Key: scroll position preserved.
-    assert_eq!(state.scroll, 10, "Scroll position should be preserved when user is not at bottom");
+    assert_eq!(state.view.scroll, 10, "Scroll position should be preserved when user is not at bottom");
 }
 
 #[test]
 fn scroll_down_to_bottom_shows_latest() {
     let mut state = AppState::default();
     add_messages(&mut state, 30);
-    state.scroll = 10;
+    state.view.scroll = 10;
 
     // Scroll down back to bottom
     for _ in 0..15 {
         state.update(Event::ScrollDown);
     }
-    assert_eq!(state.scroll, 0, "ScrollDown should reach bottom");
+    assert_eq!(state.view.scroll, 0, "ScrollDown should reach bottom");
 
     let out = render_content(&mut state);
     assert!(out.contains("msg29"), "Latest message should be visible after scrolling to bottom");
@@ -131,7 +131,7 @@ fn mixed_content_latest_visible() {
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Done!".to_string() });
     state.ensure_fresh();
-    state.scroll = 0;
+    state.view.scroll = 0;
 
     let out = render_content(&mut state);
     assert!(out.contains("Done!"), "Latest assistant message must be visible");

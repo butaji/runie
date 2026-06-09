@@ -18,7 +18,7 @@ fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, hand
 }
 
 fn handle_help(state: &mut AppState, _args: &str) -> CommandResult {
-    let text = state.registry.help_text(&state.current_provider, &state.current_model);
+    let text = state.registry.help_text(&state.config.current_provider, &state.config.current_model);
     CommandResult::Message(text)
 }
 

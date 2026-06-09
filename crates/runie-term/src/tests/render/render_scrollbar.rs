@@ -17,7 +17,7 @@ fn test_scrollbar_shows_when_content_overflows() {
     let backend = TestBackend::new(40, 10);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.messages = make_messages(20);
+    state.session.messages = make_messages(20);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
@@ -37,7 +37,7 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
     let backend = TestBackend::new(40, 10);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.messages = make_messages(20);
+    state.session.messages = make_messages(20);
 
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
@@ -58,7 +58,7 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let backend = TestBackend::new(40, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    state.messages = make_messages(50);
+    state.session.messages = make_messages(50);
 
     // Render at bottom
     terminal.draw(|f| view(f, &mut state)).expect("draw");
@@ -95,7 +95,7 @@ fn test_no_scrollbar_when_content_fits() {
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
 
-    state.messages.push(ChatMessage {
+    state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Hello".into(),
         timestamp: 0.0,

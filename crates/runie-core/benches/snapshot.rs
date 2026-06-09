@@ -5,7 +5,7 @@ fn bench_snapshot(c: &mut Criterion) {
     c.bench_function("snapshot_100_messages", |b| {
         let mut state = AppState::default();
         for i in 0..100 {
-            state.messages.push(ChatMessage {
+            state.session.messages.push(ChatMessage {
                 role: Role::User,
                 content: format!("Message {} with some content to make it realistic", i),
                 timestamp: i as f64,
@@ -24,7 +24,7 @@ fn bench_snapshot(c: &mut Criterion) {
     c.bench_function("snapshot_500_messages", |b| {
         let mut state = AppState::default();
         for i in 0..500 {
-            state.messages.push(ChatMessage {
+            state.session.messages.push(ChatMessage {
                 role: Role::User,
                 content: format!("Message {} with some content to make it realistic", i),
                 timestamp: i as f64,
