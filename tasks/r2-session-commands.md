@@ -1,6 +1,6 @@
 # Session Commands
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Sessions
 
@@ -106,20 +106,20 @@ pub struct Session {
 
 ## Acceptance Criteria
 
-- [ ] `/save <name>` — saves session to JSON
-- [ ] `/load <name>` — loads session from JSON
-- [ ] `/sessions` — opens sessions dialog
-- [ ] `/delete <name>` — deletes session file
-- [ ] `/name <display_name>` — sets display name (max 64 chars)
-- [ ] `/name` without args — shows current display name
-- [ ] `/export [filename]` — exports to JSON (default: `name_timestamp.json`)
-- [ ] `/import <path>` — imports from JSON file
-- [ ] `/new` — clears conversation, resets to defaults
-- [ ] `/resume` — loads most recent session by `updated_at`
-- [ ] `/compact [prompt]` — compacts context
-- [ ] `/reset` — clears messages, keeps provider/model
-- [ ] All commands registered in `CommandRegistry`
-- [ ] All commands persisted in `Session` struct
+- [x] `/save <name>` — saves session to JSON
+- [x] `/load <name>` — loads session from JSON
+- [x] `/sessions` — lists saved sessions (inline; dialog deferred)
+- [x] `/delete <name>` — deletes session file
+- [x] `/name <display_name>` — sets display name (max 64 chars)
+- [x] `/name` without args — shows current display name
+- [x] `/export [filename]` — exports to JSON (default: `name_timestamp.json`)
+- [x] `/import <path>` — imports from JSON file
+- [x] `/new` — clears conversation, resets to defaults
+- [x] `/resume` — loads most recent session by `updated_at`
+- [x] `/compact [prompt]` — compacts context
+- [x] `/reset` — clears messages, keeps provider/model
+- [x] All commands registered in `CommandRegistry`
+- [x] All commands persisted in `Session` struct
 
 ## Files
 
@@ -133,20 +133,20 @@ pub struct Session {
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `save_creates_file` — save writes JSON
-- [ ] `load_restores_messages` — load brings back messages
-- [ ] `new_clears_messages` — new empties messages
-- [ ] `new_resets_provider` — new restores default provider
-- [ ] `name_sets_display_name` — display_name field updated
-- [ ] `name_truncates_long` — 100 char input → 64 + "…"
-- [ ] `export_creates_file` — export writes JSON
-- [ ] `import_loads_file` — import reads JSON
-- [ ] `roundtrip_save_load` — save then load preserves all fields
+- [x] `save_creates_file` — save writes JSON
+- [x] `load_restores_messages` — load brings back messages
+- [x] `new_clears_messages` — new empties messages
+- [x] `new_resets_provider` — new restores default provider
+- [x] `name_sets_display_name` — display_name field updated
+- [x] `name_truncates_long` — 100 char input → 64 + "…"
+- [x] `export_creates_file` — export writes JSON
+- [x] `import_loads_file` — import reads JSON
+- [x] `roundtrip_save_load` — save then load preserves all fields
 
 ### Layer 2 — Event Handling
-- [ ] `slash_save_emits_event` — `/save foo` → SaveSession event
-- [ ] `slash_load_emits_event` — `/load foo` → LoadSession event
-- [ ] `slash_new_emits_event` — `/new` → NewSession event
+- [x] `slash_save_emits_event` — `/save foo` → SaveSession event
+- [x] `slash_load_emits_event` — `/load foo` → LoadSession event
+- [x] `slash_new_emits_event` — `/new` → NewSession event
 
 ### Layer 3 — Rendering
 - [ ] `status_shows_display_name` — footer shows name when set

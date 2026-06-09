@@ -86,3 +86,5 @@ mod palette;
 mod thinking;
 #[cfg(test)]
 mod safety;
+#[cfg(test)]
+mod session_extra;

@@ -36,6 +36,7 @@ fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
     let now = crate::update::now();
     let session = crate::session::Session {
         name: name.to_string(),
+        display_name: state.session_display_name.clone(),
         created_at: state.session_created_at,
         updated_at: now,
         messages: state.messages.clone(),
@@ -67,7 +68,7 @@ fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
             state.theme_name = session.theme_name;
             state.thinking_level = session.thinking_level;
             state.read_only = session.read_only;
-            state.session_display_name = Some(session.name);
+            state.session_display_name = session.display_name.or(Some(session.name));
             state.session_created_at = session.created_at;
             state.session_updated_at = session.updated_at;
             state.messages_changed();
@@ -110,26 +111,71 @@ fn handle_delete(_state: &mut AppState, args: &str) -> CommandResult {
 fn handle_name(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /name display_name".into());
+        let current = state.session_display_name.as_deref().unwrap_or("(unset)");
+        return CommandResult::Message(format!("Current display name: {}", current));
     }
-    state.session_display_name = Some(name.to_string());
-    CommandResult::Message(format!("Session name set to '{}'", name))
+    let truncated = if name.chars().count() > 64 {
+        format!("{}…", name.chars().take(64).collect::<String>())
+    } else {
+        name.to_string()
+    };
+    state.session_display_name = Some(truncated.clone());
+    CommandResult::Message(format!("Session name set to '{}'", truncated))
 }
 
-fn handle_export(_state: &mut AppState, args: &str) -> CommandResult {
-    let name = args.trim();
-    if name.is_empty() {
-        return CommandResult::Message("Usage: /export filename".into());
+fn handle_export(state: &mut AppState, args: &str) -> CommandResult {
+    let path = args.trim();
+    let path = if path.is_empty() {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        format!("{}_{}.json", state.session_display_name.as_deref().unwrap_or("session"), timestamp)
+    } else {
+        path.to_string()
+    };
+    let session = crate::session::Session {
+        name: state.session_display_name.clone().unwrap_or_else(|| "exported".into()),
+        display_name: state.session_display_name.clone(),
+        created_at: state.session_created_at,
+        updated_at: crate::update::now(),
+        messages: state.messages.clone(),
+        provider: state.current_provider.clone(),
+        model: state.current_model.clone(),
+        theme_name: state.theme_name.clone(),
+        thinking_level: state.thinking_level,
+        read_only: state.read_only,
+    };
+    match std::fs::write(&path, serde_json::to_string_pretty(&session).unwrap_or_default()) {
+        Ok(()) => CommandResult::Message(format!("Session exported to '{}'", path)),
+        Err(e) => CommandResult::Message(format!("Could not export: {}", e)),
     }
-    CommandResult::Message(format!("Session exported to '{}'", name))
 }
 
-fn handle_import(_state: &mut AppState, args: &str) -> CommandResult {
-    let name = args.trim();
-    if name.is_empty() {
-        return CommandResult::Message("Usage: /import filename".into());
+fn handle_import(state: &mut AppState, args: &str) -> CommandResult {
+    let path = args.trim();
+    if path.is_empty() {
+        return CommandResult::Message("Usage: /import filename.json".into());
     }
-    CommandResult::Message(format!("Session imported from '{}'", name))
+    match std::fs::read_to_string(path) {
+        Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {
+            Ok(session) => {
+                state.messages = session.messages;
+                state.current_provider = session.provider;
+                state.current_model = session.model;
+                state.theme_name = session.theme_name;
+                state.thinking_level = session.thinking_level;
+                state.read_only = session.read_only;
+                state.session_display_name = session.display_name.or(Some(session.name));
+                state.session_created_at = session.created_at;
+                state.session_updated_at = session.updated_at;
+                state.messages_changed();
+                CommandResult::Message(format!("Session imported from '{}'", path))
+            }
+            Err(e) => CommandResult::Message(format!("Invalid session file: {}", e)),
+        },
+        Err(e) => CommandResult::Message(format!("Could not read file: {}", e)),
+    }
 }
 
 fn handle_new(state: &mut AppState, _args: &str) -> CommandResult {
