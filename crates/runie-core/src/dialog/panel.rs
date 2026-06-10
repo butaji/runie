@@ -129,11 +129,11 @@ impl Panel {
             .count()
     }
 
-    /// Map a navigable-item index to the raw item index.
+    /// Map a navigable-item index to the raw item index in the ORIGINAL list.
     pub fn raw_index(&self, nav_index: usize) -> Option<usize> {
         let mut nav = 0;
         for (i, item) in self.items.iter().enumerate() {
-            if matches!(item, PanelItem::Action { .. } | PanelItem::Toggle { .. } | PanelItem::Select { .. }) {
+            if item.is_navigable() {
                 if nav == nav_index {
                     return Some(i);
                 }
@@ -143,12 +143,23 @@ impl Panel {
         None
     }
 
-    /// Get the currently selected navigable item.
+    /// Get the currently selected navigable item from the FILTERED list.
     pub fn selected_item(&self) -> Option<&PanelItem> {
-        self.raw_index(self.selected).and_then(|i| self.items.get(i))
+        let filtered = self.filtered_items();
+        let mut nav = 0;
+        for item in filtered {
+            if item.is_navigable() {
+                if nav == self.selected {
+                    return Some(item);
+                }
+                nav += 1;
+            }
+        }
+        None
     }
 
     /// Mutable access to the currently selected navigable item.
+    /// NOTE: This uses the ORIGINAL list since we need mutable access.
     pub fn selected_item_mut(&mut self) -> Option<&mut PanelItem> {
         self.raw_index(self.selected).and_then(|i| self.items.get_mut(i))
     }

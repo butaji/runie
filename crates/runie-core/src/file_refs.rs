@@ -8,6 +8,27 @@ pub struct FileRef {
     pub is_image: bool,
 }
 
+/// A file entry with directory flag for the @-file picker.
+#[derive(Debug, Clone)]
+pub struct FileEntry {
+    pub name: String,
+    pub is_dir: bool,
+}
+
+/// List files/folders in base directory, marking dirs with is_dir=true.
+/// Names are returned as-is; callers append `/` for display/insertion.
+pub fn find_file_entries(base: &str, limit: usize) -> Vec<FileEntry> {
+    let mut results = Vec::new();
+    let Ok(entries) = std::fs::read_dir(base) else { return results };
+    for entry in entries.flatten().take(limit) {
+        let name = entry.file_name().to_string_lossy().to_string();
+        let is_dir = entry.file_type().map_or(false, |t| t.is_dir());
+        results.push(FileEntry { name, is_dir });
+    }
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    results
+}
+
 pub fn find_files(pattern: &str, base: &str, limit: usize) -> Vec<String> {
     find_files_deep(pattern, base, limit)
 }
