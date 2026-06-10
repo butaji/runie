@@ -121,7 +121,7 @@ fn build_right_status_idle_shows_context_and_bar() {
 }
 
 #[test]
-fn build_right_status_active_shows_only_context() {
+fn build_right_status_active_shows_turn_stats() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
@@ -129,7 +129,8 @@ fn build_right_status_active_shows_only_context() {
     state.agent.turn_started_at = Some(std::time::Instant::now());
     let snap = state.snapshot();
     let right = crate::ui::build_right_status(&snap);
-    assert!(!right.contains('⏵'), "Right side must NOT show timer, got: {}", right);
+    assert!(!right.contains('⏵'), "Right side must NOT show extra timer, got: {}", right);
+    assert!(right.contains("↑- ↓- -/s"), "Should show ↑/↓/speed when active, got: {}", right);
     assert!(right.contains("0%/128k"), "Should show context, got: {}", right);
 }
 
@@ -153,7 +154,7 @@ fn status_right_renders_context_usage_when_idle() {
 }
 
 #[test]
-fn status_right_renders_context_when_active() {
+fn status_right_renders_turn_stats_when_active() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
@@ -165,7 +166,8 @@ fn status_right_renders_context_when_active() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(!content.contains('⏵'), "Right side must NOT show timer");
+    assert!(!content.contains('⏵'), "Right side must NOT show extra timer");
+    assert!(content.contains("↑- ↓- -/s"), "Should show ↑/↓/speed when active");
     assert!(content.contains("0%/128k"), "Should show context usage");
 }
 

@@ -89,12 +89,18 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 /// Build the right side of the status line.
+/// Turn stats (↑/↓/speed) before context when turn is active.
 /// Context usage + radial bar always visible, bar at the very end.
-/// No extra timer here — the Working indicator lives on the left side.
+/// No extra ⏵ timer here — Working indicator lives on the left side.
 pub(crate) fn build_right_status(snap: &Snapshot) -> String {
     let ctx = context_usage(snap);
     let bar = radial_bar(ctx.percent);
-    format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar)
+
+    if snap.turn_active {
+        format!("↑- ↓- -/s {}%/{} {}", ctx.percent, ctx.limit_k(), bar)
+    } else {
+        format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar)
+    }
 }
 
 pub(crate) fn radial_bar(percent: usize) -> char {
