@@ -190,8 +190,8 @@ fn to_lines<'a>(elem: &'a Element, content_width: u16) -> Vec<Line<'a>> {
         UserMessage { content, timestamp } => {
             msg::render_user_message(content, *timestamp, content_width)
         }
-        AgentMessage { content, timestamp, provider } => {
-            msg::render_agent_message(content, *timestamp, provider, content_width)
+        AgentMessage { content, timestamp, .. } => {
+            msg::render_agent_message(content, *timestamp, content_width)
         }
         Thinking { started, .. } => msg::render_thinking(*started),
         ThoughtSummary { content, duration_secs, .. } => {

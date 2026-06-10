@@ -64,6 +64,6 @@ fn total_lines_includes_spacers() {
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let total: usize = feed.elements.iter().map(|e| e.line_count()).sum();
-    // UserMessage is 1 line, Spacer is 1 line = 2 total
-    assert_eq!(total, 2, "Total lines should include spacer empty line");
+    // UserMessage is 1 content line + 2 margin lines = 3, Spacer is 1 line = 4 total
+    assert_eq!(total, 4, "Total lines should include spacer empty line");
 }

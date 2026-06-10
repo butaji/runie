@@ -1,4 +1,4 @@
-use crate::model::{AppState, Role};
+use crate::model::AppState;
 use crate::dsl::AppStateDsl;
 use crate::ui::LazyCache;
 
@@ -58,7 +58,7 @@ fn finish_turn_does_not_clear_next_turns_thinking() {
 fn next_turn_thinking_shows_after_previous_turn_complete() {
     let mut state = fresh_state();
     state.type_text("a").submit();
-    state.agent("req.0").respond("First").complete(1.0).done();
+    state.agent("req.0").think().thought_done().tool("ls", "a").respond("First").complete(1.0).done();
     state.agent("req.1").think();
     state.ensure_fresh();
     let k: Vec<_> = element_kinds(&state).into_iter().filter(|x| x != "Spacer").collect();
@@ -82,7 +82,7 @@ fn thinking_indicator_gone_after_thought_done() {
 fn only_one_turn_complete_after_done() {
     let mut state = fresh_state();
     state.type_text("a").submit();
-    state.agent("req.0").respond("Hello").complete(1.0).done();
+    state.agent("req.0").think().thought_done().tool("ls", "a").respond("Hello").complete(1.0).done();
     state.ensure_fresh();
     let k: Vec<_> = element_kinds(&state).into_iter().filter(|x| x != "Spacer").collect();
     assert_eq!(k.iter().filter(|x| *x == "Turn").count(), 1, "Got: {:?}", k);
@@ -92,9 +92,9 @@ fn only_one_turn_complete_after_done() {
 fn turn_complete_timestamp_monotonically_increases() {
     let mut state = fresh_state();
     state.type_text("a").submit();
-    state.agent("req.0").respond("A").complete(1.0);
-    let ts1 = state.session.messages.iter().find(|m| m.role == Role::TurnComplete).map(|m| m.timestamp).unwrap();
+    state.agent("req.0").think().thought_done().tool("ls", "a").respond("A").complete(1.0);
+    let ts1 = state.session.messages.iter().find(|m| m.role == crate::model::Role::TurnComplete).map(|m| m.timestamp).unwrap();
     state.agent("req.0").respond("B");
-    let ts2 = state.session.messages.iter().find(|m| m.role == Role::TurnComplete).map(|m| m.timestamp).unwrap();
+    let ts2 = state.session.messages.iter().find(|m| m.role == crate::model::Role::TurnComplete).map(|m| m.timestamp).unwrap();
     assert!(ts2 >= ts1, "TurnComplete timestamp must not regress: {} -> {}", ts1, ts2);
 }

@@ -97,6 +97,8 @@ fn thought_appears_before_agent_even_when_agent_updated_later() {
     state.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
+    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() });
     // Thought created at timestamp ~1, agent message created at timestamp ~2
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Result".into() });
     // Agent timestamp bumped to ~3
@@ -120,6 +122,10 @@ fn thought_appears_before_agent_even_when_agent_updated_later() {
 fn turn_complete_last_during_turn_despite_updates() {
     let mut state = fresh_state();
     state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".into() });
+    state.update(Event::AgentThoughtDone { id: "req.0".into() });
+    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() });
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello".into() });
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     // Even after turn complete, delayed empty response bumps assistant
@@ -138,6 +144,10 @@ fn previous_turn_complete_before_next_turn_user() {
     let mut state = fresh_state();
     // Turn 1
     state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".into() });
+    state.update(Event::AgentThoughtDone { id: "req.0".into() });
+    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() });
     state.update(Event::AgentResponse { id: "req.0".into(), content: "T1".into() });
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });

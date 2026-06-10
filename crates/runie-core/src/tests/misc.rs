@@ -95,6 +95,8 @@ fn test_tool_done_event() {
 fn test_formatted_labels_short_names() {
     let mut state = fresh_state();
     state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
     state.update(Event::AgentToolEnd { duration_secs: 0.3, output: String::new() });
     state.update(Event::AgentTurnComplete { id: "req.0".to_string(), duration_secs: 5.1 });
