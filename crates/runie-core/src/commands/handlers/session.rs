@@ -1,4 +1,4 @@
-use crate::commands::{CommandCategory, CommandDef, CommandHandler, CommandRegistry, CommandResult};
+use crate::commands::{command_form_dialog, CommandCategory, CommandDef, CommandHandler, CommandRegistry, CommandResult};
 use crate::model::AppState;
 
 pub fn register(registry: &mut CommandRegistry) {
@@ -32,10 +32,17 @@ fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, hand
     }
 }
 
-fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
-    let name = args;
+pub fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
+    let name = args.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /save name".into());
+        // Open form dialog
+        let form = command_form_dialog(
+            "save",
+            "Save Session",
+            vec![("Name", "session-name", "name")],
+            crate::Event::RunSaveCommand,
+        );
+        return CommandResult::OpenPanelStack(form);
     }
     let now = crate::update::now();
     let session = crate::session::Session {
@@ -60,10 +67,17 @@ fn handle_save(state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
-    let name = args;
+pub fn handle_load(state: &mut AppState, args: &str) -> CommandResult {
+    let name = args.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /load name".into());
+        // Open sessions list form
+        let form = command_form_dialog(
+            "load",
+            "Load Session",
+            vec![("Name", "session-name", "name")],
+            crate::Event::RunLoadCommand { name: String::new() },
+        );
+        return CommandResult::OpenPanelStack(form);
     }
     match crate::session::load(name) {
         Ok(session) => {
@@ -100,10 +114,16 @@ fn handle_sessions(_state: &mut AppState, _args: &str) -> CommandResult {
     }
 }
 
-fn handle_delete(_state: &mut AppState, args: &str) -> CommandResult {
-    let name = args;
+pub fn handle_delete(_state: &mut AppState, args: &str) -> CommandResult {
+    let name = args.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /delete name".into());
+        let form = command_form_dialog(
+            "delete",
+            "Delete Session",
+            vec![("Name", "session-name", "name")],
+            crate::Event::RunDeleteCommand { name: String::new() },
+        );
+        return CommandResult::OpenPanelStack(form);
     }
     match crate::session::delete(name) {
         Ok(()) => CommandResult::Message(format!("Session '{}' deleted.", name)),
@@ -129,17 +149,17 @@ fn handle_name(state: &mut AppState, args: &str) -> CommandResult {
     CommandResult::Message(format!("Session name set to '{}'", truncated))
 }
 
-fn handle_export(state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_export(state: &mut AppState, args: &str) -> CommandResult {
     let path = args.trim();
-    let path = if path.is_empty() {
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        format!("{}_{}.json", state.session.session_display_name.as_deref().unwrap_or("session"), timestamp)
-    } else {
-        path.to_string()
-    };
+    if path.is_empty() {
+        let form = command_form_dialog(
+            "export",
+            "Export Session",
+            vec![("Path", "session.json", "path")],
+            crate::Event::RunExportCommand { path: String::new() },
+        );
+        return CommandResult::OpenPanelStack(form);
+    }
     let session = crate::session::Session {
         name: state.session.session_display_name.clone().unwrap_or_else(|| "exported".into()),
         display_name: state.session.session_display_name.clone(),
@@ -159,10 +179,16 @@ fn handle_export(state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_import(state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_import(state: &mut AppState, args: &str) -> CommandResult {
     let path = args.trim();
     if path.is_empty() {
-        return CommandResult::Message("Usage: /import filename.json".into());
+        let form = command_form_dialog(
+            "import",
+            "Import Session",
+            vec![("Path", "session.json", "path")],
+            crate::Event::RunImportCommand { path: String::new() },
+        );
+        return CommandResult::OpenPanelStack(form);
     }
     match std::fs::read_to_string(path) {
         Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {

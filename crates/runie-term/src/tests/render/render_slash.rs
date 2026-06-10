@@ -69,23 +69,26 @@ fn test_render_model_no_args_opens_selector() {
 }
 
 #[test]
-fn test_render_save_no_args_shows_usage() {
+fn test_render_save_no_args_opens_form() {
     let content = render_slash("/save");
-    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(content.contains("Save Session"), "Should open save form: {}", content);
+    assert!(content.contains("Name"), "Should show name field: {}", content);
     assert!(!content.contains("❯ /save"), "Should NOT echo /save as user message: {}", content);
 }
 
 #[test]
-fn test_render_load_no_args_shows_usage() {
+fn test_render_load_no_args_opens_form() {
     let content = render_slash("/load");
-    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(content.contains("Load Session"), "Should open load form: {}", content);
+    assert!(content.contains("Name"), "Should show name field: {}", content);
     assert!(!content.contains("❯ /load"), "Should NOT echo /load as user message: {}", content);
 }
 
 #[test]
-fn test_render_delete_no_args_shows_usage() {
+fn test_render_delete_no_args_opens_form() {
     let content = render_slash("/delete");
-    assert!(content.contains("Usage:"), "Should show usage: {}", content);
+    assert!(content.contains("Delete Session"), "Should open delete form: {}", content);
+    assert!(content.contains("Name"), "Should show name field: {}", content);
     assert!(!content.contains("❯ /delete"), "Should NOT echo /delete as user message: {}", content);
 }
 

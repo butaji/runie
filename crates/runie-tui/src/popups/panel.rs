@@ -6,6 +6,7 @@ use ratatui::{
     Frame,
 };
 use runie_core::Snapshot;
+use runie_core::dialog::PanelItem;
 
 use crate::theme::{
     GLYPH_SELECTED, GLYPH_UNSELECTED, block_popup, style_popup_selected,
@@ -107,6 +108,29 @@ pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
                 let prefix = if nav_idx == panel.selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
                 let style = if nav_idx == panel.selected { style_popup_selected() } else { style_popup_unselected() };
                 item_lines.push(Line::from(format!("{}{:20} {}", prefix, label, current)).style(style));
+                nav_idx += 1;
+            }
+            runie_core::dialog::PanelItem::FormField { label, value, placeholder, .. } => {
+                if nav_idx == panel.selected {
+                    selected_line = Some(item_lines.len());
+                }
+                let prefix = if nav_idx == panel.selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
+                let style = if nav_idx == panel.selected { style_popup_selected() } else { style_popup_unselected() };
+                let display_value = if value.is_empty() {
+                    format!("  {}  {}", label, placeholder)
+                } else {
+                    format!("  {}  {}", label, value)
+                };
+                item_lines.push(Line::from(format!("{}{}", prefix, display_value)).style(style));
+                nav_idx += 1;
+            }
+            runie_core::dialog::PanelItem::FormSubmit => {
+                if nav_idx == panel.selected {
+                    selected_line = Some(item_lines.len());
+                }
+                let prefix = if nav_idx == panel.selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
+                let style = if nav_idx == panel.selected { style_popup_selected() } else { style_popup_unselected() };
+                item_lines.push(Line::from(format!("{}▶ Submit", prefix)).style(style));
                 nav_idx += 1;
             }
         }

@@ -114,3 +114,5 @@ mod session_extra;
 mod session_tree;
 #[cfg(test)]
 mod dialog_theme_switch;
+#[cfg(test)]
+mod form_dialog;
