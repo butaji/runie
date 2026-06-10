@@ -1,4 +1,5 @@
 use crate::model::AppState;
+use crate::Event;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -209,6 +210,102 @@ fn visible_scroll_handles_partial_element_at_top() {
     state.view.scroll = state.view.total_lines.saturating_sub(3);
     let visible = state.visible_scroll(3);
     assert!(!visible.elements.is_empty(), "Should have visible elements");
+}
+
+#[test]
+fn pageup_scrolls_by_five_lines() {
+    let mut state = fresh_state();
+    for i in 0..30 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    state.view.scroll = 0; // at bottom
+
+    state.update(Event::PageUp);
+    assert_eq!(state.view.scroll, 5, "PageUp should scroll by 5 lines");
+
+    state.update(Event::PageUp);
+    assert_eq!(state.view.scroll, 10, "PageUp should accumulate");
+}
+
+#[test]
+fn pagedown_scrolls_down_by_five_lines() {
+    let mut state = fresh_state();
+    for i in 0..30 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    state.view.scroll = 20;
+
+    state.update(Event::PageDown);
+    assert_eq!(state.view.scroll, 15, "PageDown should scroll down by 5 lines");
+
+    state.update(Event::PageDown);
+    assert_eq!(state.view.scroll, 10, "PageDown should accumulate");
+}
+
+#[test]
+fn pagedown_stops_at_zero() {
+    let mut state = fresh_state();
+    for i in 0..30 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    state.view.scroll = 3;
+
+    state.update(Event::PageDown);
+    assert_eq!(state.view.scroll, 0, "PageDown should clamp at 0");
+
+    state.update(Event::PageDown);
+    assert_eq!(state.view.scroll, 0, "PageDown at 0 should stay 0");
+}
+
+#[test]
+fn pageup_flashes_when_empty() {
+    let mut state = fresh_state();
+    state.update(Event::PageUp);
+    assert!(state.input.input_flash > 0, "PageUp on empty feed should flash");
+}
+
+#[test]
+fn pagedown_flashes_at_bottom() {
+    let mut state = fresh_state();
+    for i in 0..5 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    state.view.scroll = 0;
+
+    state.update(Event::PageDown);
+    assert!(state.input.input_flash > 0, "PageDown at bottom should flash");
 }
 
 #[test]

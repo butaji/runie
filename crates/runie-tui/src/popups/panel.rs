@@ -13,7 +13,7 @@ use crate::theme::{
     color_bg_panel,
 };
 use crate::ui::{parse_hint_spans, render_scrollbar};
-use crate::popups::{palette_popup_rect, popup_p};
+use crate::popups::{palette_popup_rect, popup_p, clear_panel_bg};
 
 pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
     let stack = match &snap.dialog {
@@ -26,6 +26,7 @@ pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
     };
 
     let popup_area = palette_popup_rect(f.area());
+    clear_panel_bg(f, popup_area);
     let title = if stack.len() > 1 {
         format!(" {} › {} ", stack.panels[0].title, panel.title)
     } else {

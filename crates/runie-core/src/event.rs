@@ -9,6 +9,8 @@ pub enum Event {
     Submit,
     ScrollUp,
     ScrollDown,
+    PageUp,
+    PageDown,
 
     // Cursor movement (Emacs-style)
     CursorLeft,

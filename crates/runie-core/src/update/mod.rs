@@ -48,7 +48,7 @@ impl AppState {
             | Event::AgentToolStart { .. } | Event::AgentToolEnd { .. } 
             | Event::AgentResponse { .. } | Event::AgentTurnComplete { .. } 
             | Event::AgentDone { .. } | Event::AgentError { .. } => self.agent_event(event),
-            Event::ScrollUp | Event::ScrollDown => self.scroll_event(event),
+            Event::ScrollUp | Event::ScrollDown | Event::PageUp | Event::PageDown => self.scroll_event(event),
             Event::Quit | Event::Reset | Event::Abort | Event::ExternalEditorDone { .. } 
             | Event::SpawnAgent | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => self.control_event(event),
             Event::SwitchModel { .. } | Event::SwitchTheme { .. } | Event::CycleModelNext 
@@ -79,6 +79,7 @@ impl AppState {
 
     // === Scroll Event Handler ===
     fn scroll_event(&mut self, event: Event) {
+        let page_size = 5usize;
         match event {
             Event::ScrollUp => {
                 if self.session.messages.is_empty() && !self.agent.turn_active {
@@ -91,6 +92,18 @@ impl AppState {
                     self.input.input_flash = 3;
                 }
                 self.view.scroll = self.view.scroll.saturating_sub(1);
+            }
+            Event::PageUp => {
+                if self.session.messages.is_empty() && !self.agent.turn_active {
+                    self.input.input_flash = 3;
+                }
+                self.view.scroll = self.view.scroll.saturating_add(page_size);
+            }
+            Event::PageDown => {
+                if self.view.scroll == 0 {
+                    self.input.input_flash = 3;
+                }
+                self.view.scroll = self.view.scroll.saturating_sub(page_size);
             }
             _ => {}
         }
