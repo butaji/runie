@@ -77,8 +77,8 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let tokens: usize = snap.elements.iter().map(estimate_element_tokens).sum();
-    let left_text = build_status_text(snap);
-    let right_text = format!("{} tok", tokens);
+    let left_text = format!(" {}", build_status_text(snap));
+    let right_text = format!("{} tok ", tokens);
 
     let h = hstack(area, &[
         Constraint::Min(0),
@@ -282,7 +282,10 @@ fn build_input_content_lines(
         let mut spans = vec![Span::styled(prefix, chevron_style)];
 
         if line_idx == cursor.line_idx {
-            spans.extend(render_cursor_spans(line_content, cursor.col_in_line, token_held));
+            let ghost = if line_idx == snap.input.lines().count().saturating_sub(1) {
+                snap.ghost_completion.as_deref().unwrap_or("")
+            } else { "" };
+            spans.extend(render_cursor_spans(line_content, cursor.col_in_line, token_held, ghost));
         } else {
             spans.push(Span::styled(line_content, crate::theme::style_agent()));
         }
@@ -310,7 +313,7 @@ fn build_trailing_cursor_line(
     Line::from(spans)
 }
 
-fn render_cursor_spans(line_content: &str, cursor_col_in_line: usize, token_held: bool) -> Vec<Span<'_>> {
+fn render_cursor_spans<'a>(line_content: &'a str, cursor_col_in_line: usize, token_held: bool, ghost: &'a str) -> Vec<Span<'a>> {
     let cursor_style = if token_held { style_input_cursor() } else { crate::theme::style_agent() };
     let before = &line_content[..cursor_col_in_line.min(line_content.len())];
     let (at_cursor, after) = if cursor_col_in_line < line_content.len() {
@@ -320,11 +323,16 @@ fn render_cursor_spans(line_content: &str, cursor_col_in_line: usize, token_held
     } else {
         (" ".to_string(), "")
     };
-    vec![
+    let mut spans = vec![
         Span::styled(before, crate::theme::style_agent()),
         Span::styled(at_cursor, cursor_style),
         Span::styled(after, crate::theme::style_agent()),
-    ]
+    ];
+    if !ghost.is_empty() {
+        spans.push(Span::styled(ghost, style_hint()));
+        spans.push(Span::styled("→", style_hint()));
+    }
+    spans
 }
 
 fn image_attachment_label(snap: &Snapshot) -> Option<String> {

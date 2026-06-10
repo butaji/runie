@@ -2,8 +2,9 @@ use crate::model::AppState;
 
 impl AppState {
     /// Legacy @-trigger popup disabled — file picker now uses PanelStack dialog.
-    /// This method only clears any stale state, never creates suggestions.
+    /// Clears stale state and ghost completions on any text change.
     pub(crate) fn handle_at_trigger(&mut self) {
+        self.clear_ghost();
         self.completion.at_suggestions = None;
         self.completion.at_selected = None;
         self.completion.last_at_query = None;

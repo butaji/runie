@@ -48,7 +48,7 @@ pub fn default_keybindings() -> HashMap<String, String> {
 
     // Plain keys
     map.insert("escape".to_string(), "Abort".to_string());
-    map.insert("tab".to_string(), "Input:\\t".to_string());
+    map.insert("tab".to_string(), "Input:\t".to_string());
     map.insert("backspace".to_string(), "Backspace".to_string());
     map.insert("enter".to_string(), "Submit".to_string());
     map.insert("up".to_string(), "HistoryPrev".to_string());

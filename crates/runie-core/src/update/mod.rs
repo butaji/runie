@@ -19,6 +19,7 @@ mod session;
 pub mod settings_dialog;
 mod system_actions;
 mod palette;
+pub mod tab_complete;
 
 pub(crate) fn now() -> f64 {
     std::time::SystemTime::now()
