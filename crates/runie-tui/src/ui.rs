@@ -78,14 +78,22 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let left_text = format!(" {}", build_status_text(snap));
     let right_text = build_right_status(snap);
+    let right_width = display_width(&right_text) as u16;
 
     let h = hstack(area, &[
         Constraint::Min(0),
-        Constraint::Length(right_text.len() as u16),
+        Constraint::Length(right_width),
     ]);
 
     f.render_widget(Paragraph::new(left_text).style(style_status_idle()), h[0]);
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
+}
+
+/// Count display columns for the status-right string.
+/// All characters are ASCII or single-width symbols (○◔◑◕●),
+/// so char count equals display width.
+fn display_width(s: &str) -> usize {
+    s.chars().count()
 }
 
 /// Build the right side of the status line.
