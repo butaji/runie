@@ -77,7 +77,7 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let left_text = format!(" {}", build_status_text(snap));
-    let right_text = build_right_status(snap);
+    let right_text = format!("{} ", build_right_status(snap));
     let right_width = display_width(&right_text) as u16;
 
     let h = hstack(area, &[

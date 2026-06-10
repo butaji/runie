@@ -172,7 +172,7 @@ fn status_right_renders_turn_stats_when_active() {
 }
 
 #[test]
-fn radial_bar_is_at_rightmost_column() {
+fn radial_bar_has_1_cell_right_margin() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
@@ -181,6 +181,7 @@ fn radial_bar_is_at_rightmost_column() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
+    let w = buf.area().width;
 
     // Find the row containing the radial bar (status line)
     let status_y = (0..buf.area().height)
@@ -189,15 +190,21 @@ fn radial_bar_is_at_rightmost_column() {
         })
         .expect("Should find radial bar in status line");
 
-    // Find the rightmost non-empty cell on that row
-    let rightmost = (0..buf.area().width)
-        .rev()
-        .find(|&x| !buf[(x, status_y)].symbol().trim().is_empty())
-        .expect("Status line should have content");
+    let bar_x = (0..buf.area().width)
+        .find(|&x| buf[(x, status_y)].symbol() == "○")
+        .expect("Should find ○");
 
+    // ○ should NOT be at the absolute right edge — there must be 1 cell margin
+    assert!(
+        bar_x < w - 1,
+        "Radial bar at {} should not be at right edge (width={})",
+        bar_x, w
+    );
+
+    // The column immediately to the right of ○ must be empty (the margin space)
     assert_eq!(
-        buf[(rightmost, status_y)].symbol(),
-        "○",
-        "Radial bar should be at the very end of the status line"
+        buf[(bar_x + 1, status_y)].symbol().trim(),
+        "",
+        "Column right of ○ should be empty margin"
     );
 }
