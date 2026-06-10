@@ -21,8 +21,6 @@ pub struct Snapshot {
     pub input: String,
     pub cursor_pos: usize,
     pub hint_text: String,
-    pub at_suggestions: Option<Vec<String>>,
-    pub at_selected: Option<usize>,
     pub path_suggestions: Option<Vec<crate::path_complete::PathCompletion>>,
     pub path_selected: Option<usize>,
     pub turn_active: bool,

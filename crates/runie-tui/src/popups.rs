@@ -27,42 +27,6 @@ fn clear_panel_bg(f: &mut Frame, area: Rect) {
     f.buffer_mut().set_style(area, Style::default().bg(color_bg_panel()));
 }
 
-pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
-    let suggestions = match &snap.at_suggestions {
-        Some(s) if !s.is_empty() => s,
-        _ => return,
-    };
-    let selected = snap.at_selected.unwrap_or(0).min(suggestions.len().saturating_sub(1));
-    let area = f.area();
-    let display_count = suggestions.len().min(8) as u16;
-    let max_height = display_count + 4;
-    let popup_area = Rect {
-        x: area.x + 1,
-        y: area.y + area.height.saturating_sub(4 + max_height),
-        width: area.width.saturating_sub(2).max(20),
-        height: max_height,
-    };
-    let mut lines: Vec<Line> = suggestions
-        .iter()
-        .take(8)
-        .enumerate()
-        .map(|(i, s)| {
-            let prefix = if i == selected { GLYPH_SELECTED } else { GLYPH_UNSELECTED };
-            let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
-            Line::from(format!("{}{}", prefix, s)).style(style)
-        })
-        .collect();
-    lines.push(Line::from(""));
-    lines.push(Line::from("Tab=cycle Enter=insert Esc=close").style(style_hint()));
-    clear_panel_bg(f, popup_area);
-    f.render_widget(
-        Paragraph::new(lines)
-            .style(Style::default().bg(color_bg_panel()))
-            .block(block_popup(&format!(" @ files ({}) ", suggestions.len()))),
-        popup_area,
-    );
-}
-
 pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
     let items = match &snap.path_suggestions {
         Some(s) if !s.is_empty() => s,

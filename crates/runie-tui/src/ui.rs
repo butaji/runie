@@ -59,7 +59,6 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     status(f, snap, c[2]);
     input(f, snap, c[3]);
     hints(f, snap, c[5]);
-    crate::popups::at_suggestions(f, snap);
     crate::popups::path_suggestions(f, snap);
     crate::popups::command_palette(f, snap);
     crate::popups::model_selector_dialog(f, snap);
