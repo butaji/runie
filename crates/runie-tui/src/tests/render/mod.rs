@@ -34,3 +34,4 @@ mod transient;
 mod timestamps;
 mod input_box;
 mod popup_bg;
+mod scrollbar;

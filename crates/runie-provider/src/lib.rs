@@ -44,7 +44,12 @@ impl AnyProvider {
         match provider {
             "openai" => {
                 let warning = format!("OPENAI_API_KEY not set, falling back to mock");
-                (Self::Mock(MockProvider::default()), Some(warning))
+                let mock = if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
+                    MockProvider::with_delay(500, 3000)
+                } else {
+                    MockProvider::default()
+                };
+                (Self::Mock(mock), Some(warning))
             }
             _ => {
                 if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
