@@ -164,3 +164,106 @@ impl Provider for MockProvider {
         Ok(())
     }
 }
+
+/// Mock provider that streams tokens character-by-character for testing animations.
+/// Useful for testing token counter animations and speed calculations.
+#[derive(Clone)]
+pub struct MockStreamingProvider {
+    /// Characters per chunk (default: 1 for char-by-char)
+    pub chunk_size: usize,
+    /// Delay between chunks in milliseconds
+    pub delay_ms: u64,
+    /// Total chunks to stream (None = based on response length)
+    pub total_chunks: Option<usize>,
+}
+
+impl Default for MockStreamingProvider {
+    fn default() -> Self {
+        Self {
+            chunk_size: 1,  // Default to char-by-char streaming
+            delay_ms: 10,   // Default 10ms between chunks
+            total_chunks: None,
+        }
+    }
+}
+
+impl MockStreamingProvider {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create a provider that streams at a specific rate (tokens/sec)
+    pub fn with_rate(tokens_per_sec: f64) -> Self {
+        // Assuming ~4 chars per token, calculate delay per chunk
+        let chars_per_token = 4.0;
+        let delay_ms = if tokens_per_sec > 0.0 {
+            ((chars_per_token / tokens_per_sec) * 1000.0) as u64
+        } else {
+            50 // Default 50ms
+        };
+        Self {
+            chunk_size: 1,
+            delay_ms,
+            total_chunks: None,
+        }
+    }
+
+    /// Create a provider that streams at a variable rate for testing animation
+    pub fn with_variable_rate() -> Self {
+        Self {
+            chunk_size: 1,
+            delay_ms: 30, // Fast for testing
+            total_chunks: None,
+        }
+    }
+}
+
+impl Provider for MockStreamingProvider {
+    async fn generate<F>(
+        &self,
+        messages: Vec<Message>,
+        mut on_chunk: F,
+    ) -> Result<()>
+    where
+        F: FnMut(ResponseChunk) + Send,
+    {
+        let user_input = messages
+            .iter()
+            .rev()
+            .find_map(|m| match m {
+                Message::User { content } => Some(content.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| "This is a test response with multiple words.".to_string());
+
+        // Create a response that echoes the input with some expansion
+        let response = format!(
+            "You said: '{}'. I understand and will help you with that task. ",
+            user_input
+        );
+
+        // Stream the response in chunks
+        let total_chunks = self.total_chunks.unwrap_or_else(|| {
+            (response.len() + self.chunk_size - 1) / self.chunk_size
+        });
+
+        for i in 0..total_chunks {
+            let start = i * self.chunk_size;
+            let end = (start + self.chunk_size).min(response.len());
+            let chunk = &response[start..end];
+
+            if !chunk.is_empty() {
+                on_chunk(ResponseChunk {
+                    content: chunk.to_string(),
+                });
+            }
+
+            // Don't delay after the last chunk
+            if i < total_chunks - 1 && self.delay_ms > 0 {
+                tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+            }
+        }
+
+        Ok(())
+    }
+}

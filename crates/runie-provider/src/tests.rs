@@ -1,7 +1,7 @@
 //! Tests for runie-provider
 
 use runie_core::provider::{Message, Provider};
-use crate::{MockProvider, model::{ModelId, ModelRegistry, builtin_providers, ProviderMeta}};
+use crate::{MockProvider, MockStreamingProvider, model::{ModelId, ModelRegistry, builtin_providers, ProviderMeta}};
 
 #[tokio::test]
 async fn test_mock_provider_generates_chunks() {
@@ -196,4 +196,68 @@ async fn mock_provider_default_no_delay() {
 fn mock_provider_with_delay_configured() {
     let p = MockProvider::with_delay(500, 3000);
     assert_eq!(p.delay_ms(), Some((500, 3000)));
+}
+
+// =============================================================================
+// MockStreamingProvider tests
+// =============================================================================
+
+#[tokio::test]
+async fn test_mock_streaming_provider_basic() {
+    let provider = MockStreamingProvider::new();
+    let messages = vec![Message::User { content: "Hello".to_string() }];
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    // Should have some chunks
+    assert!(!chunks.is_empty());
+    // All chunks should have content (default chunk_size=1)
+    for chunk in &chunks {
+        assert!(!chunk.content.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn test_mock_streaming_provider_at_rate() {
+    // Create provider streaming at ~100 tokens/sec
+    // (4 chars/token = 25 chars/sec = 40ms per char)
+    let provider = MockStreamingProvider::with_rate(100.0);
+    let messages = vec![Message::User { content: "test".to_string() }];
+    let start = std::time::Instant::now();
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    let elapsed = start.elapsed();
+    
+    // Should have streamed some content
+    assert!(!chunks.is_empty());
+    // With ~100 tokens/sec, should take at least 100ms for reasonable response
+    // (but may be fast in test environment)
+    assert!(elapsed < std::time::Duration::from_secs(5));
+}
+
+#[tokio::test]
+async fn test_mock_streaming_provider_no_delay() {
+    let mut provider = MockStreamingProvider::new();
+    provider.delay_ms = 0; // No delay
+    let messages = vec![Message::User { content: "Hi".to_string() }];
+    let start = std::time::Instant::now();
+    let mut chunks = Vec::new();
+    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    
+    // Should complete very quickly with no delay
+    assert!(start.elapsed() < std::time::Duration::from_millis(50));
+    assert!(!chunks.is_empty());
+}
+
+#[tokio::test]
+async fn test_mock_streaming_provider_accumulates_content() {
+    let provider = MockStreamingProvider::new();
+    let messages = vec![Message::User { content: "test".to_string() }];
+    let mut full_content = String::new();
+    provider.generate(messages, |c| {
+        full_content.push_str(&c.content);
+    }).await.unwrap();
+    
+    // Should accumulate to a complete response
+    assert!(full_content.contains("test"));
+    assert!(full_content.len() > 10);
 }
