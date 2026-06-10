@@ -22,7 +22,7 @@ use crate::theme::{
     SCROLLBAR_TRACK, SCROLLBAR_THUMB,
     style_empty_state, style_timestamp, style_status_idle, style_status_active,
     style_input_cursor, style_placeholder, style_hint, style_hint_key,
-    color_bg, set_current_theme, block_input, style_chevron,
+    style_scrollbar, color_bg, set_current_theme, block_input, style_chevron,
 };
 
 fn vstack(area: Rect, heights: &[Constraint]) -> Vec<Rect> {
@@ -141,22 +141,25 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     }
 
     let show_bar = total_lines > height;
-    let content_width = if show_bar {
-        area.width.saturating_sub(1)
-    } else {
-        area.width
-    };
-
-    let h = hstack(area, &[Constraint::Length(content_width), Constraint::Min(0)]);
+    let content_width = area.width;
     let lines = build_lines(snap, content_width);
     let offset = snap.scroll_offset(height);
     f.render_widget(
         Paragraph::new(lines).scroll((offset, 0)).wrap(Wrap { trim: false }),
-        h[0],
+        area,
     );
 
     if show_bar {
-        render_scrollbar(f, area, total_lines, offset, height);
+        // Place scrollbar in the right-margin column (past the content area).
+        // With a 1-cell margin this sits flush against the terminal edge.
+        let full_w = f.area().width;
+        let scrollbar_area = Rect {
+            x: (area.x + area.width).min(full_w.saturating_sub(1)),
+            y: area.y,
+            width: 1,
+            height: area.height,
+        };
+        render_scrollbar(f, scrollbar_area, total_lines, offset, height);
     }
 }
 
@@ -175,7 +178,7 @@ pub fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, he
         .end_symbol(None)
         .track_symbol(Some(SCROLLBAR_TRACK))
         .thumb_symbol(SCROLLBAR_THUMB)
-        .style(style_hint());
+        .style(style_scrollbar());
 
     // Inverted feed: newest at bottom. offset=0 means top (oldest),
     // offset=max_scroll means bottom (newest). Ratatui's scrollbar
