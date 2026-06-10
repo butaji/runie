@@ -96,11 +96,36 @@ impl Panel {
         self.selected
     }
 
+    /// Items visible after applying the current filter.
+    /// Headers/separators are kept if any navigable item below them matches.
+    pub fn filtered_items(&self) -> Vec<&PanelItem> {
+        if !self.filterable || self.filter.is_empty() {
+            return self.items.iter().collect();
+        }
+        let q = self.filter.to_lowercase();
+        let mut result = Vec::new();
+        let mut pending_headers: Vec<&PanelItem> = Vec::new();
+        for item in &self.items {
+            match item {
+                PanelItem::Header(_) | PanelItem::Separator => {
+                    pending_headers.push(item);
+                }
+                _ => {
+                    if item.label().map_or(false, |l| l.to_lowercase().contains(&q)) {
+                        result.extend(pending_headers.drain(..));
+                        result.push(item);
+                    }
+                }
+            }
+        }
+        result
+    }
+
     /// Number of items that can receive selection (not headers/separators).
     pub fn navigable_count(&self) -> usize {
-        self.items
-            .iter()
-            .filter(|i| matches!(i, PanelItem::Action { .. } | PanelItem::Toggle { .. } | PanelItem::Select { .. }))
+        self.filtered_items()
+            .into_iter()
+            .filter(|i| i.is_navigable())
             .count()
     }
 

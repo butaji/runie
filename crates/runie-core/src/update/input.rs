@@ -320,13 +320,18 @@ impl AppState {
             self.toggle_path_completion();
             return;
         }
-        // Slash opens command palette when input is empty (tui1 design)
-        if c == '/' && self.input.input.is_empty() && self.completion.at_suggestions.is_none() && self.completion.path_suggestions.is_none() {
+        // Slash opens command palette when input is empty
+        if c == '/' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
             self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
                 filter: String::new(),
                 selected: 0,
             });
             self.mark_dirty();
+            return;
+        }
+        // @ opens file picker when input is empty
+        if c == '@' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
+            self.open_at_file_picker();
             return;
         }
         self.insert_char(c);

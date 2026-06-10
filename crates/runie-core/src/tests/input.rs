@@ -53,17 +53,7 @@ fn test_submit_reset_command() {
 }
 
 #[test]
-fn at_ref_tracks_last_query() {
-    let mut state = fresh_state();
-    state.update(Event::Input('@'));
-    assert_eq!(state.completion.last_at_query, Some("".to_string()), "Empty query after @");
-
-    state.update(Event::Input('C'));
-    assert_eq!(state.completion.last_at_query, Some("C".to_string()), "Query should be 'C'");
-}
-
-#[test]
-fn typing_without_at_clears_query_tracker() {
+fn typing_without_at_does_not_open_dialog() {
     let mut state = fresh_state();
     for c in "hello".chars() {
         state.update(Event::Input(c));
