@@ -1,7 +1,7 @@
 use super::*;
 
 fn render_status(state: &mut AppState) -> String {
-    let backend = TestBackend::new(60, 6);
+    let backend = TestBackend::new(60, 12);
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal.draw(|f| view(f, state)).expect("draw");
     let buf = terminal.backend().buffer();

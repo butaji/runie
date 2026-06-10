@@ -12,6 +12,8 @@ mod color_restraint;
 mod style_dsl;
 #[cfg(test)]
 mod theme;
+#[cfg(test)]
+mod status_right;
 
 use runie_core::{AppState, Event};
 use crate::ui::view;
@@ -180,8 +182,10 @@ fn wrapping_respects_panel_width() {
 }
 
 #[test]
-fn tokens_on_right_side_of_status() {
+fn context_usage_on_right_side_of_status() {
     let mut state = AppState::default();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::User,
         content: "hello".to_string(),
@@ -196,7 +200,7 @@ fn tokens_on_right_side_of_status() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let mut working_pos = None;
-    let mut tok_pos = None;
+    let mut ctx_pos = None;
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
             .map(|x| buf[(x, y)].symbol().to_string())
@@ -206,16 +210,16 @@ fn tokens_on_right_side_of_status() {
                 working_pos = Some(pos);
             }
         }
-        if tok_pos.is_none() {
-            if let Some(pos) = line.find("tok") {
-                tok_pos = Some(pos);
+        if ctx_pos.is_none() {
+            if let Some(pos) = line.find("/128k") {
+                ctx_pos = Some(pos);
             }
         }
     }
     let working_pos = working_pos.expect("Should find 'Working' in status bar");
-    let tok_pos = tok_pos.expect("Should find 'tok' in status bar");
-    assert!(working_pos < tok_pos, "Working ({}) should be left of tok ({})", working_pos, tok_pos);
-    assert!(tok_pos > 40, "tok should appear on right side of status bar, got pos {}", tok_pos);
+    let ctx_pos = ctx_pos.expect("Should find '/128k' context usage in status bar");
+    assert!(working_pos < ctx_pos, "Working ({}) should be left of context ({})", working_pos, ctx_pos);
+    assert!(ctx_pos > 30, "Context usage should appear on right side of status bar, got pos {}", ctx_pos);
 }
 
 #[test]

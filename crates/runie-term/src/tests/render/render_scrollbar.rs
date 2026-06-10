@@ -27,7 +27,7 @@ fn test_scrollbar_shows_when_content_overflows() {
         .map(|y| buf[(scrollbar_col, y)].symbol().to_string())
         .collect();
     assert!(
-        bar_chars.iter().any(|s| s == "█" || s == "│"),
+        bar_chars.iter().any(|s| s == "▐" || s == "│"),
         "Scrollbar should render at col {}. Got: {:?}", scrollbar_col, bar_chars
     );
 }
@@ -47,7 +47,7 @@ fn test_scrollbar_thumb_at_bottom_by_default() {
         .map(|y| buf[(scrollbar_col, y)].symbol().to_string())
         .collect();
     assert!(
-        bar_chars.iter().any(|s| s == "█"),
+        bar_chars.iter().any(|s| s == "▐"),
         "Thumb should be visible when content overflows. Bar chars: {:?}",
         bar_chars
     );
@@ -78,10 +78,10 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let scrollbar_col = if has_margin { area.width - 2 } else { area.width - 1 };
 
     let bottom_thumb_y = (0..area.height)
-        .find(|y| buf_bottom[(scrollbar_col, *y)].symbol() == "█")
+        .find(|y| buf_bottom[(scrollbar_col, *y)].symbol() == "▐")
         .expect("thumb at bottom");
     let scrolled_thumb_y = (0..area.height)
-        .find(|y| buf_scrolled[(scrollbar_col, *y)].symbol() == "█")
+        .find(|y| buf_scrolled[(scrollbar_col, *y)].symbol() == "▐")
         .expect("thumb when scrolled");
 
     assert!(
@@ -110,6 +110,6 @@ fn test_no_scrollbar_when_content_fits() {
     let area = buf.area();
     let scrollbar_col = area.width - 1;
     let has_thumb = (0..area.height)
-        .any(|y| buf[(scrollbar_col, y)].symbol() == "█");
+        .any(|y| buf[(scrollbar_col, y)].symbol() == "▐");
     assert!(!has_thumb, "No scrollbar thumb when content fits");
 }
