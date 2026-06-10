@@ -78,29 +78,24 @@ fn reset_clears_messages() {
 }
 
 #[test]
-fn at_suggestions_popup_renders() {
+fn at_file_picker_panel_renders() {
     let mut state = AppState::default();
-    state.input.input = "@Cargo".to_string();
-    state.update(Event::Input('\t'));
-    assert!(state.completion.at_suggestions.is_some(), "Should have suggestions after Tab");
+    state.update(Event::Input('@'));
+    assert!(
+        matches!(state.open_dialog, Some(runie_core::commands::DialogState::PanelStack(_))),
+        "@ should open PanelStack dialog"
+    );
     let backend = TestBackend::new(40, 15);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let has_popup = (0..buf.area().height as usize).any(|y| {
+    let has_dialog = (0..buf.area().height as usize).any(|y| {
         let line: String = (0..buf.area().width)
             .map(|x| buf[(x, y as u16)].symbol().to_string())
             .collect();
-        line.contains("@ files")
+        line.contains("Files")
     });
-    let has_hint = (0..buf.area().height as usize).any(|y| {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y as u16)].symbol().to_string())
-            .collect();
-        line.contains("Tab=cycle")
-    });
-    assert!(has_popup, "Should render @ files popup");
-    assert!(has_hint, "Should render hint line");
+    assert!(has_dialog, "Should render Files dialog");
 }
 
 #[test]

@@ -477,7 +477,7 @@ impl AppState {
     pub(crate) fn open_at_file_picker(&mut self) {
         use crate::dialog::{ItemAction, Panel, PanelStack};
         let files = crate::file_refs::find_files("", ".", 50);
-        let mut panel = Panel::new("at-files", " @ files ").with_filter();
+        let mut panel = Panel::new("at-files", " Files ").with_filter();
         if files.is_empty() {
             panel = panel.header("No files found");
         } else {

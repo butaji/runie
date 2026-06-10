@@ -361,8 +361,6 @@ impl AppState {
             input: self.input.input.clone(),
             cursor_pos: self.input.cursor_pos,
             hint_text: self.hint_text(),
-            at_suggestions: self.completion.at_suggestions.clone(),
-            at_selected: self.completion.at_selected,
             path_suggestions: self.completion.path_suggestions.clone(),
             path_selected: self.completion.path_selected,
             turn_active: self.agent.turn_active,
