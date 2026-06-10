@@ -80,6 +80,7 @@ impl AppState {
     pub(crate) fn cursor_left(&mut self) {
         if self.input.cursor_pos > 0 {
             self.input.cursor_pos = prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            self.clear_ghost();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -87,6 +88,11 @@ impl AppState {
     }
 
     pub(crate) fn cursor_right(&mut self) {
+        // If ghost completion is active, accept it instead of moving cursor
+        if self.input.ghost_completion.is_some() {
+            self.accept_ghost();
+            return;
+        }
         if self.input.cursor_pos < self.input.input.len() {
             self.input.cursor_pos = next_grapheme_boundary(&self.input.input, self.input.cursor_pos);
             self.mark_dirty();
@@ -100,6 +106,7 @@ impl AppState {
             self.move_cursor_to_line_start();
         } else if self.input.cursor_pos != 0 {
             self.input.cursor_pos = 0;
+            self.clear_ghost();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -111,6 +118,7 @@ impl AppState {
             self.move_cursor_to_line_end();
         } else if self.input.cursor_pos != self.input.input.len() {
             self.input.cursor_pos = self.input.input.len();
+            self.clear_ghost();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -122,6 +130,7 @@ impl AppState {
     pub(crate) fn cursor_word_left(&mut self) {
         if self.input.cursor_pos > 0 {
             self.input.cursor_pos = find_word_boundary_left(&self.input.input, self.input.cursor_pos);
+            self.clear_ghost();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -131,6 +140,7 @@ impl AppState {
     pub(crate) fn cursor_word_right(&mut self) {
         if self.input.cursor_pos < self.input.input.len() {
             self.input.cursor_pos = find_word_boundary_right(&self.input.input, self.input.cursor_pos);
+            self.clear_ghost();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -309,15 +319,7 @@ impl AppState {
 
     pub(crate) fn push_input(&mut self, c: char) {
         if c == '\t' {
-            if self.input.input.contains('@') || self.completion.at_suggestions.is_some() {
-                self.cycle_at_suggestions();
-                return;
-            }
-            if self.completion.path_suggestions.is_some() {
-                self.path_completion_down();
-                return;
-            }
-            self.toggle_path_completion();
+            self.tab_complete();
             return;
         }
         // Slash opens command palette when input is empty
@@ -362,6 +364,8 @@ impl AppState {
             self.path_completion_select();
             return;
         }
+        // Accept ghost completion before submitting
+        self.accept_ghost();
         if self.input.input.is_empty() {
             self.input.input_flash = 3;
             return;

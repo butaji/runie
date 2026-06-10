@@ -85,6 +85,10 @@ mod placeholder;
 #[cfg(test)]
 mod paste;
 #[cfg(test)]
+mod tab_complete;
+#[cfg(test)]
+mod ghost_completion;
+#[cfg(test)]
 mod fuzzy;
 #[cfg(test)]
 mod model_cycle;

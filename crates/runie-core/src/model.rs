@@ -366,6 +366,7 @@ impl AppState {
             turn_active: self.agent.turn_active,
             input_flash: self.input.input_flash,
             placeholder: self.input.placeholder.clone(),
+            ghost_completion: self.input.ghost_completion.clone(),
             spinner_frame: self.spinner_frame(),
             scroll: self.view.scroll,
             turn_elapsed_secs: self.turn_elapsed_secs(),

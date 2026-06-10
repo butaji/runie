@@ -18,6 +18,12 @@ pub struct InputState {
     pub(crate) history_pos: Option<usize>,
     pub input_flash: u8,
     pub placeholder: String,
+    /// Ghost completion suffix shown in gray after the cursor.
+    pub ghost_completion: Option<String>,
+    /// Tab-completion state stored as raw fields (avoid circular dep).
+    pub tab_complete_prefix: Option<String>,
+    pub tab_complete_matches: Vec<String>,
+    pub tab_complete_index: usize,
 }
 
 impl Default for InputState {
@@ -30,6 +36,10 @@ impl Default for InputState {
             history_pos: None,
             input_flash: 0,
             placeholder: "Type a message to start...".into(),
+            ghost_completion: None,
+            tab_complete_prefix: None,
+            tab_complete_matches: Vec::new(),
+            tab_complete_index: 0,
         }
     }
 }

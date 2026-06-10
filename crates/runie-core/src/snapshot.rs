@@ -40,6 +40,8 @@ pub struct Snapshot {
     pub input_flash: u8,
     /// Placeholder text shown when input is empty.
     pub placeholder: String,
+    /// Ghost completion suffix shown in gray after cursor.
+    pub ghost_completion: Option<String>,
     /// Queue count (pending messages in queue)
     pub queue_count: usize,
     /// Currently open dialog state for rendering overlays.
