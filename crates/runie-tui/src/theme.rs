@@ -264,6 +264,11 @@ style_fn!(style_popup_unselected, "runie.popup.unselected");
 style_fn!(style_popup_border, "runie.popup.border");
 style_fn!(style_thought_summary, "runie.thought.summary");
 
+/// Scrollbar style: nearly invisible — uses panel bg as fg for subtle contrast.
+pub fn style_scrollbar() -> Style {
+    Style::default().fg(color_bg_panel())
+}
+
 /// Chevron style: orange when input holds the token, gray when released.
 pub fn style_chevron(token_held: bool) -> Style {
     if token_held {
@@ -307,8 +312,8 @@ pub const GLYPH_SELECTED: &str = "▸ ";
 pub const GLYPH_UNSELECTED: &str = "  ";
 pub const GLYPH_THINKING: char = '◐';
 pub const GLYPH_SPINNER: char = '⠋';
-pub const SCROLLBAR_TRACK: &str = "│";
-pub const SCROLLBAR_THUMB: &str = "█";
+pub const SCROLLBAR_TRACK: &str = " ";   // invisible track
+pub const SCROLLBAR_THUMB: &str = "▏";   // thin right-edge bar, almost invisible
 pub const INDICATOR_COLLAPSED: &str = " [+]";
 pub const PANEL_CHAT: &str = " Chat ";
 pub const PANEL_INPUT: &str = " Input ";
