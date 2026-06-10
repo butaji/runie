@@ -48,15 +48,17 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let input_height = (input_lines + 2).min(10) as u16;
     let c = vstack(area, &[
         Constraint::Min(3),
-        Constraint::Length(1),
+        Constraint::Length(1), // empty margin above status
+        Constraint::Length(1), // status
         Constraint::Length(input_height),
         Constraint::Length(1),
         Constraint::Length(1),
     ]);
     messages(f, snap, c[0]);
-    status(f, snap, c[1]);
-    input(f, snap, c[2]);
-    hints(f, snap, c[4]);
+    // c[1] is the empty margin line — no rendering needed
+    status(f, snap, c[2]);
+    input(f, snap, c[3]);
+    hints(f, snap, c[5]);
     crate::popups::at_suggestions(f, snap);
     crate::popups::path_suggestions(f, snap);
     crate::popups::command_palette(f, snap);
@@ -77,33 +79,31 @@ pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
 fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let tokens: usize = snap.elements.iter().map(estimate_element_tokens).sum();
     let left_text = build_status_text(snap);
-    let queue_part = if snap.queue_count > 0 {
-        format!(" · {} queued", snap.queue_count)
-    } else {
-        String::new()
-    };
-    let right_text = format!("{} tok{}", tokens, queue_part);
+    let right_text = format!("{} tok", tokens);
 
     let h = hstack(area, &[
         Constraint::Min(0),
         Constraint::Length(right_text.len() as u16),
     ]);
 
-    let status_style = if snap.turn_active { style_status_active() } else { style_status_idle() };
-    f.render_widget(Paragraph::new(left_text).style(status_style), h[0]);
+    f.render_widget(Paragraph::new(left_text).style(style_status_idle()), h[0]);
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
 }
 
 fn build_status_text(snap: &Snapshot) -> String {
     let mut parts = Vec::new();
     if snap.turn_active {
-        if let Some(elapsed) = snap.turn_elapsed_secs {
-            parts.push(runie_core::labels::action_text(
+        let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
+            runie_core::labels::action_text(
                 snap.spinner_frame, "Working", elapsed,
-            ));
+            )
         } else {
-            parts.push(format!("{} Working...", snap.spinner_frame));
+            format!("{} Working...", snap.spinner_frame)
+        };
+        if snap.queue_count > 0 {
+            text.push_str(&format!(" ({} queued)", snap.queue_count));
         }
+        parts.push(text);
     }
     if snap.thinking_level != runie_core::model::ThinkingLevel::Off {
         parts.push(format!("Think: {}", snap.thinking_level.as_str()));

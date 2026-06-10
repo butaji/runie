@@ -120,17 +120,22 @@ fn user_message_is_bright() {
 }
 
 #[test]
-fn status_active_is_success() {
+fn status_active_is_dim_not_success() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Working"));
+    let dim = color_dim();
     let success = color_success();
     assert!(
-        colors.contains(&success),
-        "Active status SHOULD use success color, got: {:?}", colors
+        colors.contains(&dim),
+        "Active status should use dim color, got: {:?}", colors
+    );
+    assert!(
+        !colors.contains(&success),
+        "Active status should NOT use success color, got: {:?}", colors
     );
 }
 
