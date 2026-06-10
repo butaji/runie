@@ -62,6 +62,8 @@ pub fn default_keybindings() -> HashMap<String, String> {
     // Shift combinations (handled specially)
     map.insert("shift+enter".to_string(), "Newline".to_string());
     map.insert("shift+tab".to_string(), "CycleThinkingLevel".to_string());
+    map.insert("pageup".to_string(), "PageUp".to_string());
+    map.insert("pagedown".to_string(), "PageDown".to_string());
 
     map
 }
@@ -144,6 +146,8 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "Newline" => Some(Event::Newline),
         "ScrollUp" => Some(Event::ScrollUp),
         "ScrollDown" => Some(Event::ScrollDown),
+        "PageUp" => Some(Event::PageUp),
+        "PageDown" => Some(Event::PageDown),
         "CursorLeft" => Some(Event::CursorLeft),
         "CursorRight" => Some(Event::CursorRight),
         "CursorStart" => Some(Event::CursorStart),
@@ -191,6 +195,7 @@ pub fn validate_key_combo(combo: &str) -> bool {
         | "backspace" | "enter" | "escape" | "tab"
         | "up" | "down" | "left" | "right" | "home" | "end" | "delete"
         | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
+        | "pageup" | "pagedown"
     )
 }
 

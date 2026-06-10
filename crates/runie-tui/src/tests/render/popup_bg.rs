@@ -112,6 +112,19 @@ fn model_selector_hides_underlying_messages() {
     );
 }
 
+fn find_popup_title(buf: &ratatui::buffer::Buffer, title: &str) -> Option<(u16, u16)> {
+    let search_len = title.len();
+    for y in 0..buf.area().height {
+        for x in 0..buf.area().width.saturating_sub(search_len as u16) {
+            let s: String = (x..x + search_len as u16).map(|cx| buf[(cx, y)].symbol()).collect();
+            if s == title {
+                return Some((x + 1, y + 1)); // inner: +1 for border
+            }
+        }
+    }
+    None
+}
+
 /// Popup area must have panel background color, not app background.
 #[test]
 fn command_palette_has_panel_background_color() {
@@ -135,38 +148,58 @@ fn command_palette_has_panel_background_color() {
     let panel_bg = crate::theme::color_bg_panel();
     let app_bg = crate::theme::color_bg();
 
-    // Find the popup inner area by looking for the "Commands" title
-    let mut found_title = false;
-    let mut popup_inner_y = 0;
-    let mut popup_inner_x_start = 0;
+    let (inner_x, inner_y) = find_popup_title(buf, " Commands")
+        .expect("Should find 'Commands' title");
 
-    for y in 0..buf.area().height {
-        for x in 0..buf.area().width.saturating_sub(9) {
-            let s: String = (x..x+9).map(|cx| buf[(cx, y)].symbol()).collect();
-            if s == " Commands" {
-                found_title = true;
-                popup_inner_y = y + 1; // row below title
-                popup_inner_x_start = x + 1; // inside left border
-                break;
-            }
-        }
-        if found_title { break; }
-    }
-
-    assert!(found_title, "Should find 'Commands' title");
-
-    // Inner area should have panel bg, not app bg
     let mut found_panel_bg = false;
-    for y in popup_inner_y..popup_inner_y + 5 {
-        for x in popup_inner_x_start..popup_inner_x_start + 40 {
+    for y in inner_y..inner_y + 5 {
+        for x in inner_x..inner_x + 40 {
             let cell_bg = buf[(x, y)].style().bg;
             if cell_bg == Some(panel_bg) {
                 found_panel_bg = true;
             }
-            // Should NOT have app background in popup inner area
             assert_ne!(cell_bg, Some(app_bg),
-                "Popup inner area at ({},{}) should not have app bg color", x, y);
+                "Popup inner at ({},{}) should not have app bg", x, y);
         }
     }
     assert!(found_panel_bg, "Should find panel background color in popup");
+}
+
+/// Panel dialog (e.g. /theme selector) must hide underlying content.
+#[test]
+fn panel_dialog_hides_underlying_messages() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        content: "XYZZY_PLUGH".into(),
+        timestamp: 0.0,
+        id: "u0".into(),
+        ..Default::default()
+    });
+    state.messages_changed();
+
+    // Open theme panel dialog via /theme with no args
+    state.input.input = "/theme".into();
+    state.input.cursor_pos = 6;
+    state.update(Event::Submit);
+
+    assert!(
+        matches!(state.open_dialog, Some(runie_core::commands::DialogState::PanelStack(_))),
+        "PanelStack dialog should be open"
+    );
+
+    let backend = TestBackend::new(80, 24);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+
+    let popup_rect = ratatui::layout::Rect {
+        x: 10, y: 3, width: 60, height: 18,
+    };
+    assert!(
+        !rect_contains_text(buf, popup_rect, "XYZZY"),
+        "Panel dialog should hide underlying 'XYZZY_PLUGH'"
+    );
 }
