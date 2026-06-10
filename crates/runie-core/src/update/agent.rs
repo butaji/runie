@@ -10,6 +10,13 @@ impl AppState {
         self.agent.turn_active = true;
         self.current_action = Some("Thinking".to_string());
         self.agent.turn_started_at.get_or_insert_with(std::time::Instant::now);
+        // Init speed tracking for this turn
+        self.agent.turn_tokens_out = 0;
+        self.agent.last_speed_update = Some(std::time::Instant::now());
+        self.agent.tokens_at_last_speed = self.agent.tokens_out;
+        self.agent.speed_tps = 0.0;
+        // Keep existing rolling window - it auto-evicts to 1000 tokens
+        self.agent.speed_window.record(self.agent.tokens_out);
         self.messages_changed();
     }
 
@@ -92,6 +99,13 @@ impl AppState {
     }
 
     pub(crate) fn append_response(&mut self, id: String, content: String) {
+        // Count output tokens from this chunk
+        if !content.is_empty() {
+            let n = crate::model::count_tokens(&content);
+            self.agent.tokens_out += n;
+            self.agent.turn_tokens_out += n;
+        }
+
         // O(1) lookup using cached last_assistant_index
         if let Some(idx) = self.last_assistant_index {
             if let Some(msg) = self.session.messages.get_mut(idx) {
@@ -188,6 +202,10 @@ impl AppState {
         self.agent.turn_active = false;
         self.agent.turn_started_at = None;
         self.agent.inflight = self.agent.inflight.saturating_sub(1);
+        // Reset per-turn speed tracking (but keep speed_window for continuity)
+        self.agent.turn_tokens_out = 0;
+        self.agent.speed_tps = 0.0;
+        self.agent.last_speed_update = None;
     }
 
     fn maybe_end_streaming(&mut self) {

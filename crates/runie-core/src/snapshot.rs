@@ -66,6 +66,16 @@ pub struct Snapshot {
     pub transient_message: Option<String>,
     /// Severity level of the transient notification.
     pub transient_level: Option<crate::event::TransientLevel>,
+    /// Cumulative input tokens sent to LLM.
+    pub tokens_in: usize,
+    /// Cumulative output tokens received from LLM.
+    pub tokens_out: usize,
+    /// Current streaming speed in tokens/sec.
+    pub speed_tps: f64,
+    /// Animated display value for tokens_in.
+    pub tokens_in_display: f64,
+    /// Animated display value for tokens_out.
+    pub tokens_out_display: f64,
 }
 
 impl Snapshot {

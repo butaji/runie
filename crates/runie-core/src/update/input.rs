@@ -395,6 +395,9 @@ impl AppState {
             full
         };
 
+        // Count input tokens
+        self.agent.tokens_in += crate::model::count_tokens(&content);
+
         // Handle bash prefix (!)
         if let Some(stripped) = content.strip_prefix('!') {
             let command = stripped.trim().to_string();
@@ -494,5 +497,4 @@ impl AppState {
         }
         self.mark_dirty();
     }
-
 }

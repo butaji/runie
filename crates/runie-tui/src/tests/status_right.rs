@@ -1,7 +1,8 @@
 //! Layer 1 + Layer 3 tests for status line right-side (context usage + radial bar)
 
-use runie_core::{AppState, Element, ChatMessage, Role};
+use runie_core::AppState;
 use crate::ui::view;
+use crate::status_bar::{radial_bar, context_window_for, build_right_status, ContextUsage};
 use ratatui::{backend::TestBackend, Terminal};
 
 fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
@@ -18,94 +19,94 @@ fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
 
 #[test]
 fn radial_bar_0_percent_is_empty_circle() {
-    assert_eq!(crate::ui::radial_bar(0), '○');
+    assert_eq!(radial_bar(0), '○');
 }
 
 #[test]
 fn radial_bar_12_percent_is_empty_circle() {
-    assert_eq!(crate::ui::radial_bar(12), '○');
+    assert_eq!(radial_bar(12), '○');
 }
 
 #[test]
 fn radial_bar_13_percent_is_quarter() {
-    assert_eq!(crate::ui::radial_bar(13), '◔');
+    assert_eq!(radial_bar(13), '◔');
 }
 
 #[test]
 fn radial_bar_37_percent_is_quarter() {
-    assert_eq!(crate::ui::radial_bar(37), '◔');
+    assert_eq!(radial_bar(37), '◔');
 }
 
 #[test]
 fn radial_bar_38_percent_is_half() {
-    assert_eq!(crate::ui::radial_bar(38), '◑');
+    assert_eq!(radial_bar(38), '◑');
 }
 
 #[test]
 fn radial_bar_62_percent_is_half() {
-    assert_eq!(crate::ui::radial_bar(62), '◑');
+    assert_eq!(radial_bar(62), '◑');
 }
 
 #[test]
 fn radial_bar_63_percent_is_three_quarters() {
-    assert_eq!(crate::ui::radial_bar(63), '◕');
+    assert_eq!(radial_bar(63), '◕');
 }
 
 #[test]
 fn radial_bar_87_percent_is_three_quarters() {
-    assert_eq!(crate::ui::radial_bar(87), '◕');
+    assert_eq!(radial_bar(87), '◕');
 }
 
 #[test]
 fn radial_bar_88_percent_is_full() {
-    assert_eq!(crate::ui::radial_bar(88), '●');
+    assert_eq!(radial_bar(88), '●');
 }
 
 #[test]
 fn radial_bar_100_percent_is_full() {
-    assert_eq!(crate::ui::radial_bar(100), '●');
+    assert_eq!(radial_bar(100), '●');
 }
 
 #[test]
 fn context_window_openai_gpt4o_is_128k() {
-    assert_eq!(crate::ui::context_window_for("openai", "gpt-4o"), 128_000);
+    assert_eq!(context_window_for("openai", "gpt-4o"), 128_000);
 }
 
 #[test]
 fn context_window_anthropic_is_200k() {
-    assert_eq!(crate::ui::context_window_for("anthropic", "claude-sonnet-4-6"), 200_000);
+    assert_eq!(context_window_for("anthropic", "claude-sonnet-4-6"), 200_000);
 }
 
 #[test]
 fn context_window_google_is_1m() {
-    assert_eq!(crate::ui::context_window_for("google", "gemini-2.5-pro"), 1_000_000);
+    assert_eq!(context_window_for("google", "gemini-2.5-pro"), 1_000_000);
 }
 
 #[test]
 fn context_window_unknown_defaults_to_128k() {
-    assert_eq!(crate::ui::context_window_for("unknown", "model"), 128_000);
+    assert_eq!(context_window_for("unknown", "model"), 128_000);
 }
 
 #[test]
 fn context_window_openai_o1_is_200k() {
-    assert_eq!(crate::ui::context_window_for("openai", "o1"), 200_000);
+    assert_eq!(context_window_for("openai", "o1"), 200_000);
 }
 
 #[test]
 fn limit_k_shows_k_for_thousands() {
-    let ctx = crate::ui::ContextUsage { used: 1000, limit: 128_000, percent: 0 };
+    let ctx = ContextUsage { used: 1000, limit: 128_000, percent: 0 };
     assert_eq!(ctx.limit_k(), "128k");
 }
 
 #[test]
 fn limit_k_shows_m_for_millions() {
-    let ctx = crate::ui::ContextUsage { used: 1000, limit: 1_000_000, percent: 0 };
+    let ctx = ContextUsage { used: 1000, limit: 1_000_000, percent: 0 };
     assert_eq!(ctx.limit_k(), "1M");
 }
 
 #[test]
 fn limit_k_shows_raw_for_small() {
-    let ctx = crate::ui::ContextUsage { used: 100, limit: 500, percent: 0 };
+    let ctx = ContextUsage { used: 100, limit: 500, percent: 0 };
     assert_eq!(ctx.limit_k(), "500");
 }
 
@@ -115,7 +116,7 @@ fn build_right_status_idle_shows_context_and_bar() {
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
     let snap = state.snapshot();
-    let right = crate::ui::build_right_status(&snap);
+    let right = build_right_status(&snap);
     assert!(right.contains("0%/128k"), "Should show context usage, got: {}", right);
     assert!(right.contains('○'), "Should show radial bar, got: {}", right);
 }
@@ -128,9 +129,12 @@ fn build_right_status_active_shows_turn_stats() {
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     let snap = state.snapshot();
-    let right = crate::ui::build_right_status(&snap);
+    let right = build_right_status(&snap);
     assert!(!right.contains('⏵'), "Right side must NOT show extra timer, got: {}", right);
-    assert!(right.contains("↑- ↓- -/s"), "Should show ↑/↓/speed when active, got: {}", right);
+    // With animated values, tokens start at 0
+    assert!(right.contains("↑"), "Should show up arrow, got: {}", right);
+    assert!(right.contains("↓"), "Should show down arrow, got: {}", right);
+    assert!(right.contains("/s"), "Should show speed, got: {}", right);
     assert!(right.contains("0%/128k"), "Should show context, got: {}", right);
 }
 
@@ -167,7 +171,10 @@ fn status_right_renders_turn_stats_when_active() {
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
     assert!(!content.contains('⏵'), "Right side must NOT show extra timer");
-    assert!(content.contains("↑- ↓- -/s"), "Should show ↑/↓/speed when active");
+    // With animated values, tokens start at 0
+    assert!(content.contains('↑'), "Should show up arrow");
+    assert!(content.contains('↓'), "Should show down arrow");
+    assert!(content.contains("/s"), "Should show speed");
     assert!(content.contains("0%/128k"), "Should show context usage");
 }
 

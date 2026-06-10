@@ -6,6 +6,7 @@ pub mod markdown;
 pub mod message;
 pub mod popups;
 pub mod syntax;
+pub mod status_bar;
 pub mod theme;
 pub mod ui;
 

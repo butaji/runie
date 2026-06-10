@@ -7,7 +7,7 @@ pub mod model;
 pub mod openai;
 pub mod config;
 
-pub use mock::MockProvider;
+pub use mock::{MockProvider, MockStreamingProvider};
 pub use model::{ModelId, ModelRegistry};
 pub use openai::OpenAiProvider;
 pub use config::Config;

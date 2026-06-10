@@ -7,6 +7,11 @@ pub use crate::message::{ChatMessage, Role, now};
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
 
+/// Approximate token count from text (4 chars ≈ 1 token).
+pub fn count_tokens(text: &str) -> usize {
+    text.chars().count() / 4
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QueuedMessageKind {
     Steering,
@@ -324,6 +329,7 @@ impl AppState {
         let mut changed = false;
         if self.agent.turn_active {
             self.animation_frame = self.animation_frame.wrapping_add(1);
+            self.update_speed();
             changed = true;
         }
         if self.input.input_flash > 0 {
@@ -333,8 +339,76 @@ impl AppState {
         if self.clear_expired_transient() {
             changed = true;
         }
+        // Animate token counters toward their target values
+        if self.animate_tokens() {
+            changed = true;
+        }
         if changed {
             self.view.dirty = true;
+        }
+    }
+
+    /// Animate token display values toward their actual values.
+    /// Returns true if the display values changed.
+    fn animate_tokens(&mut self) -> bool {
+        // Track changes in actual values
+        if self.agent.tokens_in != self.agent.tokens_in_prev {
+            self.agent.tokens_in_prev = self.agent.tokens_in;
+        }
+        if self.agent.tokens_out != self.agent.tokens_out_prev {
+            self.agent.tokens_out_prev = self.agent.tokens_out;
+        }
+        // Ease-out interpolation: 15% of remaining per tick
+        let t_in = self.agent.tokens_in as f64;
+        let t_out = self.agent.tokens_out as f64;
+        let d_in = t_in - self.agent.tokens_in_display;
+        let d_out = t_out - self.agent.tokens_out_display;
+        let c1 = if d_in.abs() < 0.5 {
+            let n = self.agent.tokens_in_display.round() as usize != t_in as usize;
+            if n { self.agent.tokens_in_display = t_in; }
+            n
+        } else {
+            self.agent.tokens_in_display += d_in * 0.15;
+            true
+        };
+        let c2 = if d_out.abs() < 0.5 {
+            let n = self.agent.tokens_out_display.round() as usize != t_out as usize;
+            if n { self.agent.tokens_out_display = t_out; }
+            n
+        } else {
+            self.agent.tokens_out_display += d_out * 0.15;
+            true
+        };
+        c1 || c2
+    }
+
+    /// Update streaming speed using rolling window of last 1000 tokens.
+    /// Called every animation tick (~200ms).
+    pub fn update_speed(&mut self) {
+        let now = std::time::Instant::now();
+        let last = self.agent.last_speed_update.get_or_insert(now);
+        let elapsed = now.duration_since(*last).as_secs_f64();
+
+        if elapsed < 0.05 {
+            return; // Too soon, wait for next tick
+        }
+
+        let prev_tokens = self.agent.tokens_at_last_speed;
+        let delta_tokens = self.agent.tokens_out.saturating_sub(prev_tokens);
+
+        if delta_tokens > 0 {
+            // Record new tokens in rolling window
+            self.agent.speed_window.record(self.agent.tokens_out);
+            self.agent.tokens_at_last_speed = self.agent.tokens_out;
+            // Calculate speed from rolling window
+            self.agent.speed_tps = self.agent.speed_window.speed();
+            *last = now;
+        } else if elapsed > 1.0 {
+            // No new tokens for 1s+ — decay speed toward 0
+            self.agent.speed_tps *= 0.5;
+            if self.agent.speed_tps < 0.1 {
+                self.agent.speed_tps = 0.0;
+            }
         }
     }
 
@@ -387,6 +461,11 @@ impl AppState {
             auth_providers: crate::auth::AuthStorage::load().tokens.keys().cloned().collect(),
             transient_message: self.transient_message.clone(),
             transient_level: self.transient_level,
+            tokens_in: self.agent.tokens_in,
+            tokens_out: self.agent.tokens_out,
+            speed_tps: self.agent.speed_tps,
+            tokens_in_display: self.agent.tokens_in_display,
+            tokens_out_display: self.agent.tokens_out_display,
         }
     }
 
