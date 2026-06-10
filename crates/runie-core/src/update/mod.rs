@@ -476,16 +476,26 @@ impl AppState {
     /// Open a filterable @-file picker as a PanelStack dialog.
     pub(crate) fn open_at_file_picker(&mut self) {
         use crate::dialog::{ItemAction, Panel, PanelStack};
-        let files = crate::file_refs::find_files("", ".", 50);
+        let entries = crate::file_refs::find_file_entries(".", 50);
         let mut panel = Panel::new("at-files", " Files ").with_filter();
-        if files.is_empty() {
+        if entries.is_empty() {
             panel = panel.header("No files found");
         } else {
-            panel = panel.header(&format!("{} files", files.len()));
-            for path in files {
+            panel = panel.header(&format!("{} files", entries.len()));
+            for entry in entries {
+                let label = if entry.is_dir {
+                    format!("{}/", entry.name)
+                } else {
+                    entry.name.clone()
+                };
+                let insert_name = if entry.is_dir {
+                    format!("{}/", entry.name)
+                } else {
+                    entry.name.clone()
+                };
                 panel = panel.item(
-                    &path,
-                    ItemAction::Emit(crate::Event::InsertAtRef(path.clone())),
+                    &label,
+                    ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
                 );
             }
         }
@@ -493,9 +503,9 @@ impl AppState {
         self.mark_dirty();
     }
 
-    /// Insert @filepath into input and close any dialog.
+    /// Insert filepath into input and close any dialog.
     pub(crate) fn insert_at_ref(&mut self, path: &str) {
-        self.input.input = format!("@{}", path);
+        self.input.input = path.to_string();
         self.input.cursor_pos = self.input.input.len();
         self.open_dialog = None;
         self.mark_dirty();

@@ -54,7 +54,7 @@ fn at_ref_select_inserts_file_path() {
         }).expect("Should have at least one Action item")
     };
     state.update(Event::Submit);
-    assert_eq!(state.input.input, format!("@{}", path), "Should insert @filepath after selection");
+    assert_eq!(state.input.input, path, "Should insert filepath after selection");
     assert!(state.open_dialog.is_none(), "Dialog should close after selection");
 }
 
