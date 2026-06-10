@@ -174,7 +174,7 @@ fn wrapping_respects_panel_width() {
             .map(|x| buf[(x, y)].symbol().to_string())
             .collect();
         if line.trim().starts_with("$") || line.trim().starts_with("x") {
-            let visible_len = line.trim_end().len();
+            let visible_len = line.trim_end().chars().count();
             assert!(
                 visible_len <= width as usize,
                 "Wrapped line {} chars exceeds width {}: {:?}",
