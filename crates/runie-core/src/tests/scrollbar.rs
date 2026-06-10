@@ -145,3 +145,90 @@ fn visible_uses_scroll_offset() {
     let visible_top = state.visible_scroll(5);
     assert!(visible_top.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }
+
+#[test]
+fn scrollbar_thumb_never_exceeds_track() {
+    let mut state = fresh_state();
+    for i in 0..30 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    for scroll in [0, 5, 10, 20, 50, 100] {
+        state.view.scroll = scroll;
+        let (thumb, offset) = state.scrollbar_metrics(10);
+        assert!(thumb <= 10, "thumb={} must not exceed track=10 at scroll={}", thumb, scroll);
+        assert!(offset + thumb <= 10, "thumb+offset={}+{}={} must not exceed track=10 at scroll={}", thumb, offset, thumb + offset, scroll);
+    }
+}
+
+#[test]
+fn scrollbar_consistent_between_offset_and_metrics() {
+    let mut state = fresh_state();
+    for i in 0..30 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    for scroll in [0, 5, 10, 25, 50, 100] {
+        state.view.scroll = scroll;
+        let offset = state.scroll_offset(10) as usize;
+        let max_scroll = state.view.total_lines.saturating_sub(10);
+        let clamped_scroll = scroll.min(max_scroll);
+        let expected_offset = max_scroll.saturating_sub(clamped_scroll);
+        assert_eq!(offset, expected_offset, "scroll_offset mismatch at scroll={}", scroll);
+    }
+}
+
+#[test]
+fn visible_scroll_handles_partial_element_at_top() {
+    let mut state = fresh_state();
+    for i in 0..5 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{}", i),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+    state.view.scroll = state.view.total_lines.saturating_sub(3);
+    let visible = state.visible_scroll(3);
+    assert!(!visible.elements.is_empty(), "Should have visible elements");
+}
+
+#[test]
+fn scrollbar_with_single_message() {
+    let mut state = fresh_state();
+    state.session.messages.push(crate::model::ChatMessage {
+        role: crate::model::Role::User,
+        content: "only".into(),
+        timestamp: 0.0,
+        id: "u0".into(),
+        ..Default::default()
+    });
+    state.messages_changed();
+    state.ensure_fresh();
+    let (thumb, offset) = state.scrollbar_metrics(1);
+    let total = state.view.total_lines;
+    if total > 1 {
+        assert!(thumb > 0, "Should have thumb when total={} > height=1", total);
+    } else {
+        assert_eq!(thumb, 0, "No thumb when content fits");
+    }
+    assert_eq!(offset + thumb <= 1, true, "thumb+offset must fit in track");
+}
