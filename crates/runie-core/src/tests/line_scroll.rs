@@ -210,10 +210,10 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     state.view.scroll = 0;
 
     let (thumb, offset) = state.scrollbar_metrics(10);
-    // 40 lines total, viewport 10, max_scroll = 30
-    // thumb = max(1, 10*10/40) = max(1, 2) = 2
-    // offset = (30 - 0) * (10 - 2) / 30 = 30 * 8 / 30 = 8
-    assert_eq!(offset, 10 - thumb, "Thumb at bottom track edge when scroll=0");
+    // 80 lines total (20 msgs × 4), viewport 10, position = 70
+    // thumb_start = round(70 * 10 / 80) = 9, thumb_end = round(80 * 10 / 80) = 10
+    // thumb = 1, offset = 9 (bottom of 10-row track)
+    assert_eq!(offset, 9, "Thumb at bottom track edge when scroll=0");
 }
 
 #[test]
