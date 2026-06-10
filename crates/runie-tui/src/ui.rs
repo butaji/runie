@@ -89,27 +89,12 @@ fn status(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 /// Build the right side of the status line.
-/// Turn stats (↑/↓/speed) only when turn is active.
 /// Context usage + radial bar always visible, bar at the very end.
+/// No extra timer here — the Working indicator lives on the left side.
 pub(crate) fn build_right_status(snap: &Snapshot) -> String {
     let ctx = context_usage(snap);
     let bar = radial_bar(ctx.percent);
-
-    let mut parts = Vec::new();
-
-    // Turn stats — only when active
-    if snap.turn_active {
-        if let Some(elapsed) = snap.turn_elapsed_secs {
-            parts.push(format!("⏵ {:.1}s", elapsed));
-        }
-        // Placeholder for ↑/↓/speed until we have real streaming token data
-        parts.push("↑- ↓- -/s".to_string());
-    }
-
-    // Context usage: "12%/128k" then radial bar at the very end
-    parts.push(format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar));
-
-    format!("{} ", parts.join(" "))
+    format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar)
 }
 
 pub(crate) fn radial_bar(percent: usize) -> char {
