@@ -135,6 +135,19 @@ pub enum Event {
     AtFilePicker,
     InsertAtRef(String),
 
+    // Command form dialog
+    CommandFormInput(char),
+    CommandFormBackspace,
+    CommandFormUp,
+    CommandFormDown,
+    CommandFormSubmit,
+    CommandFormClose,
+    RunSaveCommand,
+    RunLoadCommand { name: String },
+    RunDeleteCommand { name: String },
+    RunImportCommand { path: String },
+    RunExportCommand { path: String },
+
     // Transient notifications (shown in hints line)
     TransientMessage { content: String, level: TransientLevel },
     TransientError { content: String },

@@ -69,10 +69,15 @@ impl AppState {
             | Event::PaletteDown | Event::PaletteSelect | Event::PaletteClose 
             | Event::ModelSelectorFilter(_) | Event::ModelSelectorBackspace | Event::ModelSelectorUp 
             | Event::ModelSelectorDown | Event::ModelSelectorSelect | Event::ModelSelectorClose => self.settings_event(event),
+            Event::CommandFormInput(_) | Event::CommandFormBackspace | Event::CommandFormUp 
+            | Event::CommandFormDown | Event::CommandFormSubmit | Event::CommandFormClose => self.form_dialog_event(event),
             Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit 
             | Event::ReloadAll | Event::ShowDiagnostics | Event::TogglePathCompletion 
             | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect 
             | Event::PathCompletionClose => self.edit_event(event),
+            // These events should not reach here when dialog is open
+            Event::RunSaveCommand { .. } | Event::RunLoadCommand { .. } | Event::RunDeleteCommand { .. }
+            | Event::RunImportCommand { .. } | Event::RunExportCommand { .. } => {}
             Event::SystemMessage { content } => self.add_system_msg(content),
             Event::TransientMessage { content, level } => self.set_transient(content, level),
             Event::TransientError { content } => self.set_transient(content, crate::event::TransientLevel::Error),
@@ -339,6 +344,15 @@ impl AppState {
 
     fn update_panel_stack(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) {
         use Event::*;
+        
+        // Form dialog handling - check if current panel is a form
+        let is_form = stack.current().map_or(false, |p| p.is_form());
+        
+        if is_form {
+            self.update_form_panel(event, stack);
+            return;
+        }
+        
         match event {
             SettingsClose => { self.open_dialog = None; self.mark_dirty(); return; }
             HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => stack.select_up(),
@@ -353,6 +367,77 @@ impl AppState {
         }
         self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
         self.mark_dirty();
+    }
+
+    fn update_form_panel(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) {
+        use Event::*;
+        let panel = stack.current_mut().expect("form panel");
+        
+        match event {
+            SettingsClose | CommandFormClose | Abort => {
+                self.open_dialog = None;
+                self.mark_dirty();
+            }
+            CommandFormUp | HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => { let _ = panel.select_up(); }
+            CommandFormDown | HistoryNext | SettingsDown | PaletteDown | ModelSelectorDown => { let _ = panel.select_down(); }
+            CommandFormInput(c) | Input(c) => {
+                if let Some(idx) = panel.selected_form_field() {
+                    if let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] {
+                        value.push(c);
+                        panel.form_values.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+            CommandFormBackspace | Backspace => {
+                if let Some(idx) = panel.selected_form_field() {
+                    if let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] {
+                        value.pop();
+                        panel.form_values.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+            CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => {
+                // Submit the form - this sets open_dialog to None
+                self.run_form_submit(panel);
+                return; // Don't overwrite the dialog state
+            }
+            _ => {}
+        }
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
+        self.mark_dirty();
+    }
+
+    /// Execute form submission - runs the command with collected form values.
+    fn run_form_submit(&mut self, panel: &mut crate::dialog::Panel) {
+        let values = panel.get_form_values().clone();
+        let cmd = panel.id.clone();
+        self.open_dialog = None;
+        
+        // Execute the command directly with the form values
+        let result = match cmd.as_str() {
+            "save" => {
+                let name = values.get("name").cloned().unwrap_or_default();
+                crate::commands::handlers::session::handle_save(self, &name)
+            }
+            "load" => {
+                let name = values.get("name").cloned().unwrap_or_default();
+                crate::commands::handlers::session::handle_load(self, &name)
+            }
+            "delete" => {
+                let name = values.get("name").cloned().unwrap_or_default();
+                crate::commands::handlers::session::handle_delete(self, &name)
+            }
+            "import" => {
+                let path = values.get("path").cloned().unwrap_or_default();
+                crate::commands::handlers::session::handle_import(self, &path)
+            }
+            "export" => {
+                let path = values.get("path").cloned().unwrap_or_default();
+                crate::commands::handlers::session::handle_export(self, &path)
+            }
+            _ => crate::commands::CommandResult::None,
+        };
+        self.process_command_result(result);
     }
 
     fn try_activate_panel(&mut self, stack: &mut crate::dialog::PanelStack) -> bool {
@@ -447,30 +532,32 @@ impl AppState {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
             crate::commands::CommandResult::Event(evt) => self.update(evt),
             crate::commands::CommandResult::OpenDialog(d) => {
-                self.open_dialog = Some(match d {
-                    crate::commands::Dialog::CommandPalette => {
-                        crate::commands::DialogState::CommandPalette {
-                            filter: String::new(),
-                            selected: 0,
-                        }
-                    }
-                    crate::commands::Dialog::ModelSelector => {
-                        crate::commands::DialogState::ModelSelector {
-                            filter: String::new(),
-                            selected: 0,
-                        }
-                    }
-                    crate::commands::Dialog::Settings => crate::commands::DialogState::Settings {
-                        category: crate::settings::SettingsCategory::Models,
-                        selected: 0,
-                    },
-                    crate::commands::Dialog::ScopedModels => {
-                        crate::commands::DialogState::ScopedModels { selected: 0 }
-                    }
-                });
+                self.open_dialog = Some(self.dialog_from_command(d));
+                self.mark_dirty();
+            }
+            crate::commands::CommandResult::OpenPanelStack(stack) => {
+                self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
                 self.mark_dirty();
             }
             crate::commands::CommandResult::None => {}
+        }
+    }
+
+    fn dialog_from_command(&self, d: crate::commands::Dialog) -> crate::commands::DialogState {
+        match d {
+            crate::commands::Dialog::CommandPalette => crate::commands::DialogState::CommandPalette {
+                filter: String::new(),
+                selected: 0,
+            },
+            crate::commands::Dialog::ModelSelector => crate::commands::DialogState::ModelSelector {
+                filter: String::new(),
+                selected: 0,
+            },
+            crate::commands::Dialog::Settings => crate::commands::DialogState::Settings {
+                category: crate::settings::SettingsCategory::Models,
+                selected: 0,
+            },
+            crate::commands::Dialog::ScopedModels => crate::commands::DialogState::ScopedModels { selected: 0 },
         }
     }
 
@@ -686,6 +773,51 @@ impl AppState {
                 filter: filter.cycle(),
                 selected,
             }),
+            _ => None,
+        }
+    }
+
+    /// Handle command form dialog events.
+    fn form_dialog_event(&mut self, event: Event) {
+        let submit_evt = {
+            let Some(d) = &mut self.open_dialog else { return };
+            let crate::commands::DialogState::PanelStack(stack) = d else { return };
+            let Some(panel) = stack.current_mut() else { return };
+            if !panel.is_form() { return };
+
+            match event {
+                Event::CommandFormUp => { panel.select_up(); return; }
+                Event::CommandFormDown => { panel.select_down(); return; }
+                Event::CommandFormInput(c) => { Self::form_edit_value(panel, c, true); return; }
+                Event::CommandFormBackspace => { Self::form_edit_value(panel, ' ', false); return; }
+                Event::CommandFormSubmit => Self::form_build_submit(panel),
+                Event::CommandFormClose => { self.open_dialog = None; return; }
+                _ => return,
+            }
+        };
+        self.open_dialog = None;
+        self.mark_dirty();
+        if let Some(e) = submit_evt { self.update(e); }
+    }
+
+    fn form_edit_value(panel: &mut crate::dialog::Panel, c: char, is_input: bool) {
+        let idx = panel.selected_form_field();
+        if let Some(i) = idx {
+            if let crate::dialog::PanelItem::FormField { value, .. } = &mut panel.items[i] {
+                if is_input { value.push(c); } else { value.pop(); }
+            }
+        }
+    }
+
+    fn form_build_submit(panel: &mut crate::dialog::Panel) -> Option<crate::Event> {
+        let values = panel.get_form_values().clone();
+        let cmd = panel.id.clone();
+        match cmd.as_str() {
+            "save" => Some(crate::Event::RunSaveCommand),
+            "load" => Some(crate::Event::RunLoadCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "delete" => Some(crate::Event::RunDeleteCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "import" => Some(crate::Event::RunImportCommand { path: values.get("path").cloned().unwrap_or_default() }),
+            "export" => Some(crate::Event::RunExportCommand { path: values.get("path").cloned().unwrap_or_default() }),
             _ => None,
         }
     }

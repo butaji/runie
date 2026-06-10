@@ -46,6 +46,7 @@ pub enum CommandResult {
     Message(String),
     Event(Event),
     OpenDialog(Dialog),
+    OpenPanelStack(crate::dialog::PanelStack),
     None,
 }
 
@@ -179,6 +180,25 @@ pub fn filter_commands<'a>(registry: &'a CommandRegistry, query: &str) -> Vec<&'
                 || e.description.to_lowercase().contains(&q)
         })
         .collect()
+}
+
+/// Creates a form dialog for a command that needs parameters.
+/// Each field is (name, placeholder, key) - the key is used to identify the value in the handler.
+pub fn command_form_dialog(
+    command: &str,
+    title: &str,
+    fields: Vec<(&str, &str, &str)>, // (label, placeholder, key)
+    submit_handler: Event,
+) -> crate::dialog::PanelStack {
+    let mut panel = crate::dialog::Panel::new(command, title).with_filter();
+    
+    for (label, placeholder, _key) in &fields {
+        panel = panel.form_field(*label, *placeholder, label.to_lowercase().replace(' ', "_"));
+    }
+    
+    panel = panel.form_submit(crate::dialog::ItemAction::Emit(submit_handler));
+    
+    crate::dialog::PanelStack::new(panel)
 }
 
 impl Default for CommandRegistry {

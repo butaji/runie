@@ -1,4 +1,4 @@
-use super::{CommandRegistry};
+use super::CommandRegistry;
 
 pub fn register_all(registry: &mut CommandRegistry) {
     session::register(registry);
@@ -8,8 +8,8 @@ pub fn register_all(registry: &mut CommandRegistry) {
     help::register(registry);
 }
 
-mod session;
-mod model;
-mod tool;
-mod system;
-mod help;
+pub mod session;
+pub mod model;
+pub mod tool;
+pub mod system;
+pub mod help;
