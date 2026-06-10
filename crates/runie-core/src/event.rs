@@ -131,6 +131,10 @@ pub enum Event {
     ShareSession,
     SystemMessage { content: String },
 
+    // @-file picker dialog
+    AtFilePicker,
+    InsertAtRef(String),
+
     // Transient notifications (shown in hints line)
     TransientMessage { content: String, level: TransientLevel },
     TransientError { content: String },

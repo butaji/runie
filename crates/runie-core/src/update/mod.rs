@@ -59,7 +59,9 @@ impl AppState {
             | Event::ForkSession { .. } | Event::CloneSession => self.session_event(event),
             Event::ToggleCommandPalette | Event::ToggleModelSelector | Event::ToggleScopedModelsDialog 
             | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll 
-            | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. } => self.dialog_toggle_event(event),
+            | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. }
+            | Event::AtFilePicker => self.dialog_toggle_event(event),
+            Event::InsertAtRef(_) => self.input_event(event),
             Event::ToggleSettingsDialog | Event::SettingsUp | Event::SettingsDown 
             | Event::SettingsLeft | Event::SettingsRight | Event::SettingsSelect | Event::SettingsClose 
             | Event::PaletteFilter(_) | Event::PaletteBackspace | Event::PaletteUp 
@@ -154,6 +156,7 @@ impl AppState {
             Event::Submit => self.submit(),
             Event::HistoryPrev => self.handle_history_prev(),
             Event::HistoryNext => self.handle_history_next(),
+            Event::InsertAtRef(path) => self.insert_at_ref(&path),
             _ => {}
         }
     }
@@ -260,6 +263,9 @@ impl AppState {
                     self.open_dialog = Some(crate::commands::DialogState::ScopedModels { selected: 0 });
                 }
                 self.mark_dirty();
+            }
+            Event::AtFilePicker => {
+                self.open_at_file_picker();
             }
             Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(self, &name),
             Event::ScopedModelEnableAll => scoped_models::enable_all(self),
@@ -373,8 +379,10 @@ impl AppState {
                 true
             }
             ItemAction::Emit(evt) => {
+                self.open_dialog = None;
+                self.mark_dirty();
                 self.update(evt);
-                false
+                true
             }
             ItemAction::Toggle(key) => {
                 self.panel_toggle_item(stack, &key);
@@ -463,6 +471,34 @@ impl AppState {
             }
             crate::commands::CommandResult::None => {}
         }
+    }
+
+    /// Open a filterable @-file picker as a PanelStack dialog.
+    pub(crate) fn open_at_file_picker(&mut self) {
+        use crate::dialog::{ItemAction, Panel, PanelStack};
+        let files = crate::file_refs::find_files("", ".", 50);
+        let mut panel = Panel::new("at-files", " @ files ").with_filter();
+        if files.is_empty() {
+            panel = panel.header("No files found");
+        } else {
+            panel = panel.header(&format!("{} files", files.len()));
+            for path in files {
+                panel = panel.item(
+                    &path,
+                    ItemAction::Emit(crate::Event::InsertAtRef(path.clone())),
+                );
+            }
+        }
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(panel)));
+        self.mark_dirty();
+    }
+
+    /// Insert @filepath into input and close any dialog.
+    pub(crate) fn insert_at_ref(&mut self, path: &str) {
+        self.input.input = format!("@{}", path);
+        self.input.cursor_pos = self.input.input.len();
+        self.open_dialog = None;
+        self.mark_dirty();
     }
 
     fn toggle_expand_all(&mut self) {

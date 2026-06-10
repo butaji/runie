@@ -68,11 +68,12 @@ pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
         width: content_area.width,
     };
 
+    let filtered = panel.filtered_items();
     let mut item_lines: Vec<Line> = Vec::new();
     let mut selected_line: Option<usize> = None;
     let mut nav_idx = 0;
 
-    for item in panel.items.iter() {
+    for item in filtered.iter() {
         match item {
             runie_core::dialog::PanelItem::Header(text) => {
                 item_lines.push(Line::from(format!("  {}", text)).style(style_thinking()));

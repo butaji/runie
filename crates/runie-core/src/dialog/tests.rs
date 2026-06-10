@@ -167,3 +167,55 @@ fn stack_activate_on_action_returns_clone() {
     let action = stack.activate();
     assert!(matches!(action, Some(ItemAction::Close)));
 }
+
+// ─── Panel filtering ────────────────────────────────────────────────────
+
+#[test]
+fn panel_filtered_items_shows_all_when_no_filter() {
+    let panel = Panel::new("test", "Test")
+        .with_filter()
+        .header("Section")
+        .item("alpha", ItemAction::Close)
+        .item("beta", ItemAction::Close);
+    let filtered = panel.filtered_items();
+    assert_eq!(filtered.len(), 3, "No filter = all items visible");
+}
+
+#[test]
+fn panel_filtered_items_hides_non_matching() {
+    let mut panel = Panel::new("test", "Test")
+        .with_filter()
+        .header("Section")
+        .item("alpha", ItemAction::Close)
+        .item("xyz", ItemAction::Close);
+    panel.push_filter('a');
+    let filtered = panel.filtered_items();
+    assert_eq!(filtered.len(), 2, "Header + matching 'alpha'");
+    assert!(filtered.iter().any(|i| matches!(i, PanelItem::Action { label, .. } if label == "alpha")));
+    assert!(!filtered.iter().any(|i| matches!(i, PanelItem::Action { label, .. } if label == "xyz")));
+}
+
+#[test]
+fn panel_filtered_items_is_case_insensitive() {
+    let mut panel = Panel::new("test", "Test")
+        .with_filter()
+        .item("ALPHA", ItemAction::Close)
+        .item("beta", ItemAction::Close);
+    panel.push_filter('a');
+    let filtered = panel.filtered_items();
+    assert!(filtered.iter().any(|i| matches!(i, PanelItem::Action { label, .. } if label == "ALPHA")));
+}
+
+#[test]
+fn panel_filtered_items_keeps_header_with_match() {
+    let mut panel = Panel::new("test", "Test")
+        .with_filter()
+        .header("Group A")
+        .item("alice", ItemAction::Close)
+        .header("Group B")
+        .item("bob", ItemAction::Close);
+    panel.push_filter('a');
+    let filtered = panel.filtered_items();
+    assert!(filtered.iter().any(|i| matches!(i, PanelItem::Header(t) if t == "Group A")));
+    assert!(!filtered.iter().any(|i| matches!(i, PanelItem::Header(t) if t == "Group B")));
+}

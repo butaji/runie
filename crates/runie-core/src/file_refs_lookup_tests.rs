@@ -1,68 +1,74 @@
 use crate::model::AppState;
 use crate::event::Event;
+use crate::commands::DialogState;
 
 #[test]
-fn at_ref_shows_suggestions() {
+fn at_ref_opens_file_picker_dialog() {
     let mut state = AppState::default();
     state.update(Event::Input('@'));
-    for c in "Cargo".chars() {
-        state.update(Event::Input(c));
-    }
-    let suggestions = state.completion.at_suggestions.clone().unwrap_or_default();
-    assert!(!suggestions.is_empty(), "Should find files matching @Cargo");
-    assert!(suggestions.iter().any(|s| s.contains("Cargo")));
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
+        "@ should open a PanelStack file picker dialog"
+    );
 }
 
 #[test]
-fn at_ref_empty_shows_files() {
+fn at_ref_dialog_has_file_items() {
     let mut state = AppState::default();
     state.update(Event::Input('@'));
-    let suggestions = state.completion.at_suggestions.clone().unwrap_or_default();
-    assert!(!suggestions.is_empty(), "Should list files after @");
+    let stack = match &state.open_dialog {
+        Some(DialogState::PanelStack(s)) => s,
+        _ => panic!("Expected PanelStack dialog"),
+    };
+    let panel = stack.current().expect("PanelStack should have a panel");
+    let nav_count = panel.navigable_count();
+    assert!(nav_count > 0, "File picker should have at least one file item, got {}", nav_count);
 }
 
 #[test]
-fn tab_cycles_suggestions() {
+fn at_ref_dialog_is_filterable() {
     let mut state = AppState::default();
     state.update(Event::Input('@'));
-    state.update(Event::Input('C'));
-    state.update(Event::Input('\t'));
-    let first = state.completion.at_suggestions.clone().unwrap_or_default();
-    assert!(!first.is_empty());
-    let idx1 = state.completion.at_selected.unwrap_or(0);
-    state.update(Event::Input('\t'));
-    let idx2 = state.completion.at_selected.unwrap_or(0);
-    assert_ne!(idx1, idx2, "Tab should cycle to next suggestion");
+    let stack = match &state.open_dialog {
+        Some(DialogState::PanelStack(s)) => s,
+        _ => panic!("Expected PanelStack dialog"),
+    };
+    let panel = stack.current().expect("PanelStack should have a panel");
+    assert!(panel.filterable, "File picker panel should be filterable");
 }
 
 #[test]
-fn enter_inserts_selected_suggestion() {
+fn at_ref_select_inserts_file_path() {
     let mut state = AppState::default();
     state.update(Event::Input('@'));
-    for c in "Cargo.toml".chars() {
-        state.update(Event::Input(c));
-    }
-    state.update(Event::Input('\t'));
-    let suggestions = state.completion.at_suggestions.clone().unwrap_or_default();
-    assert!(!suggestions.is_empty());
+    // Find a file item and select it
+    let path = {
+        let stack = match &state.open_dialog {
+            Some(DialogState::PanelStack(s)) => s,
+            _ => panic!("Expected PanelStack dialog"),
+        };
+        let panel = stack.current().expect("Panel should exist");
+        panel.items.iter().find_map(|item| match item {
+            crate::dialog::PanelItem::Action { label, .. } => Some(label.clone()),
+            _ => None,
+        }).expect("Should have at least one Action item")
+    };
     state.update(Event::Submit);
-    assert!(!state.input.input.contains('@'), "@ should be replaced by selected file");
-    assert!(state.input.input.contains("Cargo.toml"), "Expected Cargo.toml in {:?}", state.input.input);
+    assert_eq!(state.input.input, format!("@{}", path), "Should insert @filepath after selection");
+    assert!(state.open_dialog.is_none(), "Dialog should close after selection");
 }
 
 #[test]
-fn escape_clears_at_suggestions() {
+fn at_ref_escape_closes_dialog() {
     let mut state = AppState::default();
     state.update(Event::Input('@'));
-    state.update(Event::Input('C'));
-    state.update(Event::Input('\t'));
-    assert!(state.completion.at_suggestions.is_some());
+    assert!(state.open_dialog.is_some(), "Dialog should be open");
     state.update(Event::Abort);
-    assert!(state.completion.at_suggestions.is_none());
+    assert!(state.open_dialog.is_none(), "Escape should close dialog");
 }
 
 #[test]
-fn no_at_ref_no_suggestions() {
+fn no_at_ref_no_dialog() {
     let state = AppState::default();
-    assert!(state.completion.at_suggestions.is_none());
+    assert!(state.open_dialog.is_none());
 }
