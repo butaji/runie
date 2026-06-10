@@ -572,8 +572,15 @@ impl AppState {
 
     /// Move TurnComplete to the end of messages and bump its timestamp.
     /// Called after every agent event to ensure TurnComplete remains last.
+    /// Only moves the TurnComplete for the current turn (matching current_request_id
+    /// or falling back to the last assistant message's id), so earlier turns'
+    /// TurnComplete are not affected.
     fn ensure_turn_complete_last(&mut self) {
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete) {
+        let target_id = self.agent.current_request_id.clone()
+            .or_else(|| self.last_assistant_index
+                .and_then(|idx| self.session.messages.get(idx).map(|m| m.id.clone())));
+        let Some(target_id) = target_id else { return };
+        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == target_id) {
             let mut tc = self.session.messages.remove(idx);
             tc.timestamp = now();
             self.session.messages.push(tc);

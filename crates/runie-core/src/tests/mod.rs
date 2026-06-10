@@ -47,6 +47,8 @@ mod line_scroll;
 #[cfg(test)]
 mod turn_complete_order;
 #[cfg(test)]
+mod turn_complete_visibility;
+#[cfg(test)]
 mod no_ghost_agent;
 #[cfg(test)]
 mod status_timer;
