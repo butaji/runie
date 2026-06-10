@@ -382,14 +382,14 @@ fn turn_complete_renders_after_tool_flow() {
         role: runie_core::Role::Thought,
         content: "Thinking...".to_string(),
         timestamp: 0.0,
-        id: "req.1".to_string(),
+        id: "req.1#thought.0".to_string(),
         ..Default::default()
     });
     state.session.messages.push(runie_core::ChatMessage {
         role: runie_core::Role::Tool,
         content: "Ran list_files 0.5s".to_string(),
         timestamp: 0.0,
-        id: "req.1".to_string(),
+        id: "tool.req.1.1".to_string(),
         ..Default::default()
     });
     state.session.messages.push(runie_core::ChatMessage {

@@ -2,7 +2,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
     text::Line,
-    widgets::Paragraph,
+    widgets::{Clear, Paragraph},
     Frame,
 };
 use runie_core::Snapshot;
@@ -19,6 +19,12 @@ pub mod panel;
 /// Build a Paragraph with the panel background color baked in.
 fn popup_p<'a>(lines: Vec<Line<'a>>) -> Paragraph<'a> {
     Paragraph::new(lines).style(Style::default().bg(color_bg_panel()))
+}
+
+/// Clear the given rect with the panel background color.
+fn clear_panel_bg(f: &mut Frame, area: Rect) {
+    f.render_widget(Clear, area);
+    f.buffer_mut().set_style(area, Style::default().bg(color_bg_panel()));
 }
 
 pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
@@ -48,6 +54,7 @@ pub fn at_suggestions(f: &mut Frame, snap: &Snapshot) {
         .collect();
     lines.push(Line::from(""));
     lines.push(Line::from("Tab=cycle Enter=insert Esc=close").style(style_hint()));
+    clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
             .style(Style::default().bg(color_bg_panel()))
@@ -84,6 +91,7 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
         .collect();
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
+    clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
             .style(Style::default().bg(color_bg_panel()))
@@ -99,10 +107,10 @@ pub fn command_palette(f: &mut Frame, snap: &Snapshot) {
     };
 
     let popup_area = palette_popup_rect(f.area());
+    clear_panel_bg(f, popup_area);
     let block = block_popup(" Commands ");
     let inner = block.inner(popup_area);
     f.render_widget(Paragraph::new("").block(block), popup_area);
-    f.buffer_mut().set_style(inner, Style::default().bg(color_bg_panel()));
 
     // Reserve 2 lines at bottom: 1 empty spacer + 1 hotkeys
     let content_height = inner.height.saturating_sub(2);
@@ -252,6 +260,7 @@ pub fn settings_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("←/→=tab ↑/↓=nav Enter=toggle Esc=close").style(style_hint()));
 
+    clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
             .style(Style::default().bg(color_bg_panel()))
@@ -291,6 +300,7 @@ pub fn model_selector_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
 
+    clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
             .style(Style::default().bg(color_bg_panel()))
@@ -327,6 +337,7 @@ pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
         }
     }
 
+    clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
             .style(Style::default().bg(color_bg_panel()))
@@ -360,6 +371,7 @@ pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {
     lines.push(Line::from(""));
     lines.push(Line::from("↑/↓=nav Enter=select f=cycle-filter Esc=close").style(style_hint()));
 
+    clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
             .style(Style::default().bg(color_bg_panel()))
