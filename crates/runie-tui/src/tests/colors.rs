@@ -57,6 +57,10 @@ fn turn_complete_uses_dim() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
+    state.update(Event::AgentThinking { id: "req.0".into() });
+    state.update(Event::AgentThoughtDone { id: "req.0".into() });
+    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
+    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() });
     state.update(Event::AgentResponse { id: "req.0".into(), content: "Done".into() });
     state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
     state.update(Event::AgentDone { id: "req.0".into() });

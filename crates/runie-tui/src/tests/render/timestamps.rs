@@ -121,3 +121,37 @@ fn agent_message_timestamp_appears_once() {
         .count();
     assert_eq!(count, 1);
 }
+
+#[test]
+fn timestamp_never_wraps_even_when_content_is_very_long() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    let long_content = "a".repeat(200);
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: long_content,
+        timestamp: 12345.0,
+        id: "msg.1".to_string(),
+        ..Default::default()
+    });
+    state.messages_changed();
+    let backend = TestBackend::new(40, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+
+    let ts_str = runie_core::format_timestamp(12345.0);
+    let mut found_y: Option<u16> = None;
+    for y in 0..buf.area().height {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol())
+            .collect();
+        if line.contains(&ts_str) {
+            if let Some(prev_y) = found_y {
+                panic!("Timestamp wrapped! Found on line {} and again on line {}", prev_y, y);
+            }
+            found_y = Some(y);
+        }
+    }
+    assert!(found_y.is_some(), "Timestamp should be visible somewhere");
+}

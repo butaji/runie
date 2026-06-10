@@ -43,7 +43,7 @@ fn user_message_is_one_line() {
     state.messages_changed();
     state.ensure_fresh();
 
-    assert_eq!(state.view.total_lines(), 2, "UserMessage (1) + Spacer (1) = 2 lines");
+    assert_eq!(state.view.total_lines(), 4, "UserMessage (3: margins+content) + Spacer (1) = 4 lines");
 }
 
 #[test]
@@ -90,8 +90,7 @@ fn visible_shows_latest_element_at_bottom() {
     state.view.scroll = 0; // at bottom
 
     let region = state.visible_scroll(3); // 3 lines viewport
-    // 3 messages = 3 UserMessage + 3 Spacer = 6 lines total
-    // Viewport of 3 lines at bottom shows: msg2 (1) + spacer (1) + msg1 (1) = 3 lines exactly
+    // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
         "Latest message (msg2) must be in visible region"
@@ -108,7 +107,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
         id: "u0".into(),
         ..Default::default()
     });
-    state.session.messages.push(thought_msg("t1", 10)); // 11 lines of thought
+    state.session.messages.push(thought_msg("t1", 30)); // 31 lines of thought
     state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "latest".into(),
@@ -119,7 +118,7 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     state.messages_changed();
     state.ensure_fresh();
     state.view.scroll = 0;
-    let region = state.visible_scroll(5);
+    let region = state.visible_scroll(10);
 
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "latest")),
@@ -129,7 +128,6 @@ fn visible_skips_lines_from_first_element_when_overflow() {
         region.elements.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })),
         "Thought must be partially visible"
     );
-    // The first visible element should be the thought, and we should skip some lines
     assert!(region.skip_lines > 0, "Should skip lines from top of first visible element");
 }
 
@@ -147,14 +145,9 @@ fn scroll_up_shows_older_content() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 5 messages = 10 lines total (5 messages + 5 spacers). Viewport of 3 lines.
-    // Lines: 0:msg0, 1:spacer, 2:msg1, 3:spacer, 4:msg2, 5:spacer, 6:msg3, 7:spacer, 8:msg4, 9:spacer
-    // Total 10 lines. viewport=3.
-    // scroll=0: viewport [7, 10) → lines 7,8,9 = spacer(msg3), msg4, spacer(msg4) — msg4 visible
-    // scroll=2: viewport [5, 8) → lines 5,6,7 = msg2, spacer, msg3 — msg2 visible, msg4 hidden
-
-    // scroll=5: viewport [2, 5) → msg1, spacer, msg2 — msg2 visible, msg4 hidden
-    state.view.scroll = 5;
+    // 5 messages = 20 lines total (5*3 messages + 5 spacers). Viewport of 3 lines.
+    // scroll=8: viewport [9, 12) — msg2 visible, msg4 hidden
+    state.view.scroll = 8;
     let region = state.visible_scroll(3);
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
@@ -255,8 +248,7 @@ fn large_thought_overflows_viewport() {
         id: "u0".into(),
         ..Default::default()
     });
-    // Thought with 20 lines of content
-    state.session.messages.push(thought_msg("t1", 20));
+    state.session.messages.push(thought_msg("t1", 30));
     state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "after".into(),
@@ -268,17 +260,12 @@ fn large_thought_overflows_viewport() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    // Total: before(1)+spacer(1) + thought(21)+spacer(1) + after(1)+spacer(1) = 26 lines
-    // Viewport of 5 lines at bottom:
-    // after(1) + spacer(1) = 2, need 3 more from thought
-    // thought has 21 lines, so skip 21-3 = 18 from top
-    let region = state.visible_scroll(5);
+    let region = state.visible_scroll(10);
 
     assert!(
         region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "after")),
         "Latest message must be visible"
     );
-    // skip_lines should be large since we're deep into the thought
     assert!(region.skip_lines >= 15, "Should skip many lines from large thought: got skip={}", region.skip_lines);
 }
 
@@ -294,15 +281,14 @@ fn multi_line_tool_at_bottom_visible() {
             ..Default::default()
         });
     }
-    state.session.messages.push(tool_msg("t1", 5));
+    let mut tool = tool_msg("t1", 5);
+    tool.timestamp = 3.0; // after all user messages
+    state.session.messages.push(tool);
     state.messages_changed();
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    // Total: 3*2 + 6+1 = 6 + 7 = 13 lines (3 users + 3 spacers + tool header + 5 outputs + spacer)
-    // Wait: tool_msg header = "◆ Ran ls 0.5s" (1 line) + 5 output lines = 6 lines for ToolDone + 1 spacer = 7
-    // 3 users: 3*2 = 6 lines. Total = 13 lines.
-    // Viewport of 5 lines at bottom: should include the tool
+    // Total: 3*4 + 7 = 19 lines (3 users with margins + 3 spacers + tool 6 lines + spacer)
     let region = state.visible_scroll(5);
 
     assert!(

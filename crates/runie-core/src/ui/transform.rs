@@ -28,12 +28,41 @@ impl LazyCache {
         feed
     }
 
+    fn action_turn_id(msg: &crate::model::ChatMessage) -> Option<String> {
+        match msg.role {
+            Role::Thought => msg.id.split_once('#').map(|(prefix, _)| prefix.to_string()),
+            Role::Tool => {
+                let rest = msg.id.strip_prefix("tool.")?;
+                let idx = rest.rfind('.')?;
+                Some(rest[..idx].to_string())
+            }
+            _ => None,
+        }
+    }
+
+    fn action_counts(state: &AppState) -> std::collections::HashMap<String, usize> {
+        let mut counts = std::collections::HashMap::new();
+        for msg in state.session.messages.iter() {
+            if let Some(turn_id) = Self::action_turn_id(msg) {
+                *counts.entry(turn_id).or_insert(0) += 1;
+            }
+        }
+        counts
+    }
+
     fn collect_entries(state: &AppState) -> Vec<Element> {
         let mut entries: Vec<Element> = Vec::new();
+        let action_counts = Self::action_counts(state);
 
         for msg in state.session.messages.iter() {
             if Self::should_skip_msg(msg, state) {
                 continue;
+            }
+            if msg.role == Role::TurnComplete {
+                let count = action_counts.get(&msg.id).copied().unwrap_or(0);
+                if count <= 1 {
+                    continue;
+                }
             }
             entries.push(Self::msg_to_elem(msg, state));
         }
@@ -83,7 +112,7 @@ impl LazyCache {
             Role::Thought => Self::thought_elem(msg, state, ts),
             Role::Assistant => Element::AgentMessage { content: crate::update::strip_tool_markers(&msg.content), timestamp: ts, provider: msg.provider.clone() },
             Role::Tool => Self::tool_elem(msg, state, ts),
-            Role::TurnComplete => Element::turn_complete(Self::parse_dur(&msg.content)).at(ts),
+            Role::TurnComplete => Element::turn_complete(Self::parse_dur(&msg.content)).at(ts), // filtered in collect_entries
             Role::System => Element::thought(msg.content.clone()).at(ts),
         }
     }

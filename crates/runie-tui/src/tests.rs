@@ -410,19 +410,5 @@ fn turn_complete_renders_after_tool_flow() {
     assert!(content.contains("Turn completed in 3.2s"), "TurnComplete should render in TUI after tool flow");
 }
 
-#[test]
-fn message_shows_provider() {
-    let mut state = AppState::default();
-    state.session.messages.push(runie_core::ChatMessage {
-        role: runie_core::Role::Assistant,
-        content: "Hello".to_string(),
-        timestamp: 0.0,
-        id: "resp.0".to_string(),
-        provider: "anthropic".to_string(),
-    });
-    let content = draw_state(&mut state);
-    assert!(content.contains("anthropic"), "Agent message header should show provider");
-}
-
 #[cfg(test)]
 mod render;

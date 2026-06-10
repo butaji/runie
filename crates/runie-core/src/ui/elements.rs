@@ -94,7 +94,7 @@ impl Element {
     pub fn line_count(&self) -> usize {
         match self {
             Element::Spacer { .. } => 1,
-            Element::UserMessage { content, .. } => content.lines().count().max(1),
+            Element::UserMessage { content, .. } => content.lines().count().max(1) + 2,
             Element::AgentMessage { content, .. } => content.lines().count().max(1),
             Element::Thinking { .. } => 1,
             Element::ThoughtMarker { content, .. } => content.lines().count().max(1),

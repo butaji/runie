@@ -7,7 +7,7 @@ fn fresh_state() -> AppState {
 #[test]
 fn scrollbar_no_scrollbar_when_content_fits() {
     let mut state = fresh_state();
-    for i in 0..3 {
+    for i in 0..2 {
         state.session.messages.push(crate::model::ChatMessage {
             role: crate::model::Role::User,
             content: format!("msg{}", i),
@@ -93,11 +93,11 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 30 messages = 60 lines (30 messages + 30 spacers)
-    // max_scroll = 50, thumb = max(1, 10*10/60) = 1
+    // 30 messages = 120 lines (30*3 messages + 30 spacers)
+    // max_scroll = 110, thumb = max(1, 10*10/120) = 1
     state.view.scroll = 25; // halfway
     let (thumb, offset) = state.scrollbar_metrics(10);
-    let expected_offset = (50 - 25) * (10 - thumb) / 50;
+    let expected_offset = (110 - 25) * (10 - thumb) / 110;
     assert_eq!(offset, expected_offset, "Thumb should be in middle");
 }
 
@@ -134,14 +134,14 @@ fn visible_uses_scroll_offset() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    // 10 messages = 20 lines (10 messages + 10 spacers), max_scroll = 15
+    // 10 messages = 40 lines (10*3 messages + 10 spacers), max_scroll = 35
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
     let visible_bottom = state.visible_scroll(5);
     assert!(visible_bottom.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
-    // At scroll=15 (top), we see oldest: first is msg0
-    state.view.scroll = 15;
+    // At scroll=35 (top), we see oldest: first is msg0
+    state.view.scroll = 35;
     let visible_top = state.visible_scroll(5);
     assert!(visible_top.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }
