@@ -159,7 +159,7 @@ impl AppState {
         self.deliver_queued();
         self.maybe_end_streaming();
         self.reorder_agent_after_tools();
-        self.move_turn_complete_to_end();
+        self.move_turn_complete_to_end(&id);
         self.messages_changed();
     }
 
@@ -215,8 +215,8 @@ impl AppState {
         }
     }
 
-    fn move_turn_complete_to_end(&mut self) {
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete) {
+    fn move_turn_complete_to_end(&mut self, id: &str) {
+        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == id) {
             let mut turn_complete = self.session.messages.remove(idx);
             turn_complete.timestamp = now();
             self.session.messages.push(turn_complete);
