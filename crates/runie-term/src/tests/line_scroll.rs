@@ -80,7 +80,7 @@ fn scrollbar_visible_when_content_overflows() {
     state.view.scroll = 0;
 
     let out = render_content(&mut state);
-    assert!(out.contains("█"), "Scrollbar thumb should be visible when content overflows");
+    assert!(out.contains("▐"), "Scrollbar thumb should be visible when content overflows");
 }
 
 #[test]

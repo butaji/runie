@@ -14,7 +14,7 @@ fn test_render_at_lookup_popup_shows_on_tab() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("@ files"), "Popup title must render. Buffer:\n{}", content);
+    assert!(content.contains("Files"), "Popup title must render. Buffer:\n{}", content);
     assert!(content.contains("Cargo") || content.contains("cargo"), "Must show Cargo files. Buffer:\n{}", content);
 }
 
@@ -29,7 +29,7 @@ fn test_render_at_lookup_popup_shows_immediately() {
 
     let buf = terminal.backend().buffer();
     let content: String = buf.content.iter().map(|c| c.symbol()).collect();
-    assert!(content.contains("@ files"), "Popup must show immediately on @. Buffer:\n{}", content);
+    assert!(content.contains("Files"), "Popup must show immediately on @. Buffer:\n{}", content);
 }
 
 #[test]
