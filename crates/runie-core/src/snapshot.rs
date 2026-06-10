@@ -135,14 +135,18 @@ impl Snapshot {
         let max_scroll = total.saturating_sub(visible_height);
         let scroll = self.scroll.min(max_scroll);
         let position = max_scroll.saturating_sub(scroll);
-        let track = visible_height;
-        let thumb = (visible_height * visible_height / total).max(1);
-        #[allow(clippy::manual_checked_ops)]
-        let thumb_offset = if max_scroll > 0 {
-            position * (track - thumb) / max_scroll
-        } else {
-            0
-        };
-        (thumb, thumb_offset)
+        let track = visible_height as f64;
+        // Match ratatui's rounding formula exactly:
+        // thumb_start = round(position * track / total)
+        // thumb_end   = round((position + visible_height) * track / total)
+        let track_f = track;
+        let thumb_start = (position as f64 * track_f / total as f64)
+            .round()
+            .clamp(0.0, track_f - 1.0) as usize;
+        let thumb_end = ((position + visible_height) as f64 * track_f / total as f64)
+            .round()
+            .clamp(0.0, track_f) as usize;
+        let thumb = thumb_end.saturating_sub(thumb_start).max(1);
+        (thumb, thumb_start)
     }
 }

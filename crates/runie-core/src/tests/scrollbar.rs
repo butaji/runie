@@ -75,7 +75,7 @@ fn scrollbar_thumb_at_top_when_fully_scrolled() {
     }
     state.messages_changed();
     state.ensure_fresh();
-    state.view.scroll = 100; // way up
+    state.view.scroll = 200; // way up, clamped to max_scroll
     let (_thumb, offset) = state.scrollbar_metrics(10);
     assert_eq!(offset, 0, "Thumb at top when fully scrolled");
 }
@@ -98,8 +98,10 @@ fn scrollbar_thumb_in_middle_when_half_scrolled() {
     // max_scroll = 110, thumb = max(1, 10*10/120) = 1
     state.view.scroll = 25; // halfway
     let (thumb, offset) = state.scrollbar_metrics(10);
-    let expected_offset = (110 - 25) * (10 - thumb) / 110;
-    assert_eq!(offset, expected_offset, "Thumb should be in middle");
+    // position = 110 - 25 = 85
+    // thumb_start = round(85 * 10 / 120) = 7, thumb_end = round(95 * 10 / 120) = 8
+    assert_eq!(thumb, 1, "Thumb size");
+    assert_eq!(offset, 7, "Thumb should be in middle");
 }
 
 #[test]

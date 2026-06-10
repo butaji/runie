@@ -18,7 +18,7 @@ fn user_message_has_border_bg_color() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let expected_bg = crate::theme::darken(crate::theme::color_border(), 0.5);
+    let expected_bg = crate::theme::color_bg_panel();
 
     let mut found = false;
     for y in 0..buf.area().height {

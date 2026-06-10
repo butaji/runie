@@ -15,7 +15,7 @@ use crate::theme::{
     style_user, style_agent, style_thought, style_code_header,
     style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
     style_turn_complete, style_thinking, style_timestamp,
-    color_fg, color_fg_bright, color_border, darken,
+    color_fg, color_fg_bright, color_bg_panel,
 };
 
 const MARGIN_SYMBOL: &str = " ";
@@ -169,7 +169,7 @@ pub fn render_user_message(
 ) -> Vec<Line<'static>> {
     let ts_str = format_timestamp(timestamp);
     let base_style = style_user();
-    let bg_style = Style::default().bg(darken(color_border(), 0.5));
+    let bg_style = Style::default().bg(color_bg_panel());
     let inner_width = content_width.saturating_sub(2);
     let prefix_width = GLYPH_USER.chars().count() as u16;
     let indent_width = GLYPH_INDENT.chars().count() as u16;
