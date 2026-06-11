@@ -119,7 +119,19 @@ fn test_render_load_missing_shows_user_friendly_error() {
     let _ = std::fs::remove_dir_all(&store.dir);
     std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
 
-    let content = render_slash("/load missing");
+    // Test that /load opens a form, then submit to trigger the error
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).expect("terminal");
+    let mut state = AppState::default();
+    for c in "/load missing".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::CommandFormSubmit); // Submits form, triggers error
+    terminal.draw(|f| view(f, &mut state)).expect("draw");
+    let buf = terminal.backend().buffer();
+    let content: String = buf.content.iter().map(|c| c.symbol()).collect();
+    
     assert!(content.contains("not found"), "Should show not found: {}", content);
     assert!(content.contains("/sessions"), "Should suggest /sessions: {}", content);
     assert!(!content.contains("❯ /load missing"), "Should NOT echo as user message: {}", content);

@@ -16,7 +16,8 @@ fn type_str(state: &mut AppState, text: &str) {
 fn name_sets_display_name() {
     let mut state = fresh_state();
     type_str(&mut state, "/name my-project");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::CommandFormSubmit); // Submits the form
     assert_eq!(state.session.session_display_name, Some("my-project".to_string()));
 }
 
@@ -25,7 +26,9 @@ fn name_shows_current_when_no_args() {
     let mut state = fresh_state();
     state.session.session_display_name = Some("existing".to_string());
     type_str(&mut state, "/name");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form
+    // Form shows with current value pre-filled, submit to see behavior
+    state.update(Event::CommandFormSubmit);
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
     assert!(last.content.contains("existing"), "shows current name: {}", last.content);
@@ -37,7 +40,8 @@ fn name_truncates_long_input() {
     let long_name = "a".repeat(100);
     state.input.input.push_str("/name ");
     state.input.input.push_str(&long_name);
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::CommandFormSubmit); // Submits the form
     let name = state.session.session_display_name.as_ref().unwrap();
     assert_eq!(name.chars().count(), 65, "truncated to 64 + ellipsis");
     assert!(name.ends_with('…'), "ends with ellipsis");

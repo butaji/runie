@@ -80,7 +80,9 @@ impl AppState {
             // Handled in edit_event
             Event::RunSaveCommand { .. } | Event::RunLoadCommand { .. } | Event::RunDeleteCommand { .. }
             | Event::RunImportCommand { .. } | Event::RunExportCommand { .. }
-            | Event::RunSkillCommand { .. } | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. } => {}
+            | Event::RunSkillCommand { .. } | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. }
+            | Event::RunNameCommand { .. } | Event::RunForkCommand { .. } | Event::RunCompactCommand { .. }
+            | Event::RunPromptCommand { .. } | Event::RunThinkingCommand { .. } => {}
             Event::SystemMessage { content } => self.add_system_msg(content),
             Event::TransientMessage { content, level } => self.set_transient(content, level),
             Event::TransientError { content } => self.set_transient(content, crate::event::TransientLevel::Error),
@@ -326,6 +328,11 @@ impl AppState {
             Event::RunSkillCommand { name } => self.run_skill_command(&name),
             Event::RunLoginCommand { provider, token } => self.run_login_command(&provider, &token),
             Event::RunLogoutCommand { provider } => self.run_logout_command(&provider),
+            Event::RunNameCommand { name } => self.run_name_command(&name),
+            Event::RunForkCommand { message_index } => self.run_fork_command(message_index),
+            Event::RunCompactCommand { keep, focus } => self.run_compact_command(keep, &focus),
+            Event::RunPromptCommand { name } => self.run_prompt_command(&name),
+            Event::RunThinkingCommand { level } => self.run_thinking_command(level),
             _ => {}
         }
     }
@@ -477,6 +484,77 @@ impl AppState {
         }
     }
 
+    fn run_name_command(&mut self, name: &str) {
+        let name = name.trim();
+        if name.is_empty() {
+            let current = self.session.session_display_name.as_deref().unwrap_or("(unset)");
+            self.add_system_msg(format!("Current display name: {}", current));
+            return;
+        }
+        let truncated = if name.chars().count() > 64 {
+            format!("{}…", name.chars().take(64).collect::<String>())
+        } else {
+            name.to_string()
+        };
+        self.session.session_display_name = Some(truncated.clone());
+        self.add_system_msg(format!("Session name set to '{}'", truncated));
+    }
+
+    fn run_fork_command(&mut self, message_index: usize) {
+        if message_index >= self.session.messages.len() {
+            self.add_system_msg(format!(
+                "Index {} out of range (0–{})",
+                message_index,
+                self.session.messages.len().saturating_sub(1)
+            ));
+            return;
+        }
+        let mut tree = self.session.session_tree.take()
+            .unwrap_or_else(|| crate::session_tree::SessionTree::from_messages(&self.session.messages));
+        match tree.fork_at(message_index) {
+            Some(path) => {
+                tree.navigate_to(&path);
+                self.session.session_tree = Some(tree);
+                self.add_system_msg(format!("Forked at message {}.", message_index));
+            }
+            None => self.add_system_msg("Could not fork.".into()),
+        }
+    }
+
+    fn run_compact_command(&mut self, keep: usize, focus: &str) {
+        let keep = if keep == 0 { 2000 } else { keep };
+        let msg = self.compact(keep);
+        let result = if focus.is_empty() { msg } else { format!("{} (focus: {})", msg, focus) };
+        self.add_system_msg(result);
+    }
+
+    fn run_prompt_command(&mut self, name: &str) {
+        let name = name.trim();
+        if name.is_empty() {
+            let current = if self.current_prompt.is_empty() { "default" } else { &self.current_prompt };
+            let mut lines = vec![format!("Current prompt: {}", current)];
+            if !self.prompts.is_empty() {
+                lines.push("Available prompts:".into());
+                for p in &self.prompts {
+                    lines.push(format!("  {}", p.summary()));
+                }
+            }
+            self.add_system_msg(lines.join("\n"));
+            return;
+        }
+        if self.prompts.iter().any(|p| p.name == name) {
+            self.current_prompt = name.to_string();
+            self.add_system_msg(format!("Prompt switched to '{}'", name));
+        } else {
+            self.add_system_msg(format!("Prompt '{}' not found.", name));
+        }
+    }
+
+    fn run_thinking_command(&mut self, level: crate::model::ThinkingLevel) {
+        self.config.thinking_level = level;
+        self.add_system_msg(format!("Thinking level set to: {}", self.config.thinking_level.as_str()));
+    }
+
     /// Handles dialog-specific events.
     /// Esc (Abort) always closes any dialog. Global events pass through.
     fn update_dialog(&mut self, event: Event) {
@@ -584,30 +662,28 @@ impl AppState {
         self.open_dialog = None;
         
         // Execute the command directly with the form values
-        let result = match cmd.as_str() {
-            "save" => {
-                let name = values.get("name").cloned().unwrap_or_default();
-                crate::commands::handlers::session::handle_save(self, &name)
-            }
-            "load" => {
-                let name = values.get("name").cloned().unwrap_or_default();
-                crate::commands::handlers::session::handle_load(self, &name)
-            }
-            "delete" => {
-                let name = values.get("name").cloned().unwrap_or_default();
-                crate::commands::handlers::session::handle_delete(self, &name)
-            }
-            "import" => {
-                let path = values.get("path").cloned().unwrap_or_default();
-                crate::commands::handlers::session::handle_import(self, &path)
-            }
-            "export" => {
-                let path = values.get("path").cloned().unwrap_or_default();
-                crate::commands::handlers::session::handle_export(self, &path)
-            }
-            _ => crate::commands::CommandResult::None,
-        };
+        let result = Self::dispatch_form_command(&cmd, &values, self);
         self.process_command_result(result);
+    }
+
+    /// Dispatch a form command based on its ID and values.
+    fn dispatch_form_command(cmd: &str, values: &std::collections::HashMap<String, String>, state: &mut Self) -> crate::commands::CommandResult {
+        match cmd {
+            "save" => crate::commands::handlers::session::handle_save(state, values.get("name").map(|s| s.as_str()).unwrap_or("")),
+            "load" => crate::commands::handlers::session::handle_load(state, values.get("name").map(|s| s.as_str()).unwrap_or("")),
+            "delete" => crate::commands::handlers::session::handle_delete(state, values.get("name").map(|s| s.as_str()).unwrap_or("")),
+            "import" => crate::commands::handlers::session::handle_import(state, values.get("path").map(|s| s.as_str()).unwrap_or("")),
+            "export" => crate::commands::handlers::session::handle_export(state, values.get("path").map(|s| s.as_str()).unwrap_or("")),
+            "name" => { state.run_name_command(values.get("name").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
+            "fork" => { state.run_fork_command(values.get("index").and_then(|s| s.parse().ok()).unwrap_or(0)); crate::commands::CommandResult::None }
+            "compact" => { let keep = values.get("keep").and_then(|s| s.parse().ok()).unwrap_or(2000); let focus = values.get("focus").cloned().unwrap_or_default(); state.run_compact_command(keep, &focus); crate::commands::CommandResult::None }
+            "prompt" => { state.run_prompt_command(values.get("name").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
+            "thinking" => { let level = values.get("level").and_then(|s| s.parse().ok()).unwrap_or(crate::model::ThinkingLevel::Medium); state.run_thinking_command(level); crate::commands::CommandResult::None }
+            "skill" => { state.run_skill_command(values.get("name").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
+            "login" => { state.run_login_command(values.get("provider").map(|s| s.as_str()).unwrap_or(""), values.get("token").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
+            "logout" => { state.run_logout_command(values.get("provider").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None },
+            _ => crate::commands::CommandResult::None,
+        }
     }
 
     fn try_activate_panel(&mut self, stack: &mut crate::dialog::PanelStack) -> bool {
@@ -1000,6 +1076,23 @@ impl AppState {
                 token: values.get("token").cloned().unwrap_or_default(),
             }),
             "logout" => Some(crate::Event::RunLogoutCommand { provider: values.get("provider").cloned().unwrap_or_default() }),
+            "name" => Some(crate::Event::RunNameCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "fork" => {
+                let index = values.get("index").and_then(|s| s.parse().ok()).unwrap_or(0);
+                Some(crate::Event::RunForkCommand { message_index: index })
+            }
+            "compact" => {
+                let keep = values.get("keep").and_then(|s| s.parse().ok()).unwrap_or(2000);
+                let focus = values.get("focus").cloned().unwrap_or_default();
+                Some(crate::Event::RunCompactCommand { keep, focus })
+            }
+            "prompt" => Some(crate::Event::RunPromptCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "thinking" => {
+                let level = values.get("level")
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(crate::model::ThinkingLevel::Medium);
+                Some(crate::Event::RunThinkingCommand { level })
+            }
             _ => None,
         }
     }

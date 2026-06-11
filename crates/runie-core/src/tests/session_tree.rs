@@ -84,7 +84,8 @@ fn slash_fork_emits_event() {
         msg(Role::Assistant, "hi"),
     ];
     state.input.input.push_str("/fork 1");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled index
+    state.update(Event::CommandFormSubmit); // Submits the form
 
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
