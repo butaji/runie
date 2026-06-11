@@ -15,7 +15,6 @@ pub struct Panel {
     pub filterable: bool,
     pub keep_open_on_activate: bool,
     pub form_values: HashMap<String, String>,
-    pub(crate) last_action: Option<ItemAction>,
 }
 
 impl Panel {
@@ -30,7 +29,6 @@ impl Panel {
             filterable: false,
             keep_open_on_activate: false,
             form_values: HashMap::new(),
-            last_action: None,
         }
     }
 
@@ -274,7 +272,6 @@ impl Panel {
             filterable: self.filterable,
             keep_open_on_activate: self.keep_open_on_activate,
             form_values: self.form_values,
-            last_action: self.last_action,
         }
     }
 }

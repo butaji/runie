@@ -15,9 +15,6 @@ pub struct Panel {
     pub keep_open_on_activate: bool,
     /// For form panels: stores form values (key -> value)
     pub form_values: std::collections::HashMap<String, String>,
-    /// For form panels: last action to execute on submit
-    #[allow(dead_code)]
-    pub last_action: Option<ItemAction>,
 }
 
 impl Panel {
@@ -31,7 +28,6 @@ impl Panel {
             filterable: false,
             keep_open_on_activate: false,
             form_values: std::collections::HashMap::new(),
-            last_action: None,
         }
     }
 
@@ -115,9 +111,12 @@ impl Panel {
         self
     }
 
-    pub fn form_submit(mut self, action: ItemAction) -> Self {
+    pub fn form_submit(mut self) -> Self {
+        // Submit button. The form's submit dispatch is owned by `form_build_submit`
+        // in update/mod.rs, which matches on `panel.id` and reads form values.
+        // No need to store an action here — `PanelItem::FormSubmit` is purely
+        // the visible "Submit" item.
         self.items.push(PanelItem::FormSubmit);
-        self.last_action = Some(action);
         self
     }
 

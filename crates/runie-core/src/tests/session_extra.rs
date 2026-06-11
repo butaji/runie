@@ -22,6 +22,29 @@ fn name_sets_display_name() {
 }
 
 #[test]
+fn name_form_submit_via_submit_event_also_works() {
+    // Regression: form submit must work via both CommandFormSubmit AND Submit
+    // (since the form panel stack treats Submit|SettingsSelect|PaletteSelect
+    // as submit too).
+    let mut state = fresh_state();
+    type_str(&mut state, "/name via-submit-event");
+    state.update(Event::Submit); // Opens form
+    state.update(Event::Submit); // Submits the form (PaletteSelect path)
+    assert_eq!(state.session.session_display_name, Some("via-submit-event".to_string()));
+}
+
+#[test]
+fn name_form_submit_via_palette_select_event_works() {
+    // Same as above but via PaletteSelect — this is the key path the
+    // panel-stack uses to activate form fields.
+    let mut state = fresh_state();
+    type_str(&mut state, "/name via-palette");
+    state.update(Event::Submit); // Opens form
+    state.update(Event::PaletteSelect); // Submits the form (panel-stack path)
+    assert_eq!(state.session.session_display_name, Some("via-palette".to_string()));
+}
+
+#[test]
 fn name_shows_current_when_no_args() {
     let mut state = fresh_state();
     state.session.session_display_name = Some("existing".to_string());

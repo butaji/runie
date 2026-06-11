@@ -151,8 +151,8 @@ pub enum Event {
     RunLoginCommand { provider: String, token: String },
     RunLogoutCommand { provider: String },
     RunNameCommand { name: String },
-    RunForkCommand { message_index: usize },
-    RunCompactCommand { keep: usize, focus: String },
+    RunForkCommand { message_index: String },
+    RunCompactCommand { keep: String, focus: String },
     RunPromptCommand { name: String },
     RunThinkingCommand { level: crate::model::ThinkingLevel },
 

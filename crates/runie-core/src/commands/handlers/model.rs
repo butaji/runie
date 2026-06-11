@@ -61,28 +61,23 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
 }
 
 fn open_thinking_panel(state: &mut AppState) -> CommandResult {
-    let levels = vec!["off", "low", "medium", "high"];
-    let current = state.config.thinking_level.as_str();
-    
+    use crate::model::ThinkingLevel;
+    let current = state.config.thinking_level;
+
     let mut panel = Panel::new("thinking", "Thinking Level")
-        .header("Select thinking level");
-    
-    for level in &levels {
-        let label = if *level == current {
-            format!("{} (current)", level)
+        .header("Select thinking level")
+        .header("Tip: /thinking off|low|medium|high also works");
+
+    for &level in ThinkingLevel::all() {
+        let label = if level == current {
+            format!("{} (current)", level.as_str())
         } else {
-            level.to_string()
+            level.as_str().to_string()
         };
-        let evt = match *level {
-            "off" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::Off },
-            "low" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::Low },
-            "medium" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::Medium },
-            "high" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::High },
-            _ => continue,
-        };
+        let evt = crate::Event::RunThinkingCommand { level };
         panel = panel.item(&label, ItemAction::Emit(evt));
     }
-    
+
     CommandResult::OpenPanelStack(PanelStack::new(panel))
 }
 
@@ -91,4 +86,14 @@ fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
         return CommandResult::Message("No scoped models configured. Add [models.scoped] to config.toml.".into());
     }
     CommandResult::OpenDialog(DialogType::ScopedModels)
+}
+
+// ============================================================================
+// Form-submit handlers (called from update/mod.rs with form values).
+// ============================================================================
+
+/// Set the thinking level (e.g. from the thinking panel selection).
+pub(crate) fn run_thinking(state: &mut AppState, level: crate::model::ThinkingLevel) {
+    state.config.thinking_level = level;
+    state.add_system_msg(format!("Thinking level set to: {}", state.config.thinking_level.as_str()));
 }

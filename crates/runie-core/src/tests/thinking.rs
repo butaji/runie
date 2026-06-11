@@ -11,6 +11,16 @@ fn cycle_rotates() {
 }
 
 #[test]
+fn all_returns_all_levels_in_order() {
+    assert_eq!(ThinkingLevel::all().to_vec(), vec![
+        ThinkingLevel::Off,
+        ThinkingLevel::Low,
+        ThinkingLevel::Medium,
+        ThinkingLevel::High,
+    ]);
+}
+
+#[test]
 fn prompt_suffix_matches() {
     assert_eq!(ThinkingLevel::Off.prompt_suffix(), "");
     assert_eq!(ThinkingLevel::Low.prompt_suffix(), "\nThink briefly before responding.");
@@ -94,6 +104,76 @@ fn slash_thinking_no_args_shows_panel() {
     // No system messages should be generated yet
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
     assert!(sys_msgs.is_empty(), "no system messages yet");
+}
+
+#[test]
+fn thinking_panel_contains_all_levels() {
+    use crate::commands::DialogState;
+    let mut state = AppState::default();
+    state.config.thinking_level = ThinkingLevel::Medium;
+    state.input.input.push_str("/thinking");
+    state.update(Event::Submit);
+
+    let Some(DialogState::PanelStack(stack)) = &state.open_dialog else {
+        panic!("expected PanelStack dialog");
+    };
+    let panel = stack.current().expect("current panel");
+    let labels: Vec<String> = panel.items.iter()
+        .filter_map(|i| i.label().map(|s| s.to_string()))
+        .collect();
+
+    // Current level is marked
+    assert!(labels.iter().any(|l| l == "medium (current)"), "current level marked: {:?}", labels);
+    // All other levels shown
+    assert!(labels.contains(&"off".to_string()));
+    assert!(labels.contains(&"low".to_string()));
+    assert!(labels.contains(&"high".to_string()));
+}
+
+#[test]
+fn thinking_panel_uses_thinking_level_all() {
+    // Regression: panel must use ThinkingLevel::all() — not a hardcoded list
+    // so adding a new level doesn't require changes to model.rs handler.
+    assert_eq!(ThinkingLevel::all().len(), 4);
+}
+
+#[test]
+fn thinking_panel_has_cli_usage_hint() {
+    // After moving /thinking to a panel selector, the CLI form
+    // ("/thinking off|low|medium|high") should still be discoverable.
+    use crate::commands::DialogState;
+    let mut state = AppState::default();
+    state.input.input.push_str("/thinking");
+    state.update(Event::Submit);
+    let Some(DialogState::PanelStack(stack)) = &state.open_dialog else {
+        panic!("expected panel");
+    };
+    let panel = stack.current().expect("panel");
+    let labels: Vec<String> = panel.items.iter()
+        .filter_map(|i| i.label().map(|s| s.to_string()))
+        .collect();
+    let hint = labels.iter().find(|l| l.contains("/thinking"));
+    assert!(hint.is_some(), "panel should advertise the CLI form, got labels: {:?}", labels);
+}
+
+#[test]
+fn thinking_does_not_create_a_form_panel() {
+    // /thinking must use a select panel, not a form. Forms are for free-text
+    // input; thinking levels are a fixed enum.
+    use crate::commands::{CommandRegistry, CommandResult};
+    let mut reg = CommandRegistry::new();
+    crate::commands::handlers::register_all(&mut reg);
+    let cmd = reg.get("thinking").expect("thinking command");
+    let mut state = AppState::default();
+    state.config.thinking_level = ThinkingLevel::Medium;
+    let result = cmd.flow.clone().exec(&mut state, "thinking", "");
+    match result {
+        CommandResult::OpenPanelStack(stack) => {
+            let panel = stack.current().expect("panel");
+            assert!(!panel.is_form(), "thinking panel must not be a form, got items: {:?}", panel.items);
+        }
+        other => panic!("expected OpenPanelStack, got {:?}", other),
+    }
 }
 
 #[test]

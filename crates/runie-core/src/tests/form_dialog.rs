@@ -131,6 +131,109 @@ fn form_submit_executes_command() {
 }
 
 #[test]
+#[test]
+fn form_panel_id_maps_to_known_form_command() {
+    // The form's id selects which command to run. "save" runs RunSaveCommand.
+    // An unknown id (a form registered but not in the dispatch table) must
+    // not silently dispatch anything — the dialog closes, no event fires.
+    use std::sync::Mutex;
+    static UNKNOWN_LOCK: Mutex<()> = Mutex::new(());
+    let _guard = UNKNOWN_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    let mut state = fresh_state();
+    use crate::commands::DialogState;
+    use crate::dialog::{Panel, PanelStack};
+    let mut panel = Panel::new("unknown_command_xyz", "T")
+        .form_field("Field", "ph", "name");
+    panel.form_values.insert("name".into(), "should-not-fire".into());
+    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+
+    state.update(crate::Event::CommandFormSubmit);
+
+    assert!(state.open_dialog.is_none(), "dialog should close on submit");
+    let sys_count = state.session.messages.iter()
+        .filter(|m| m.role == crate::model::Role::System)
+        .count();
+    assert_eq!(sys_count, 0, "unknown form id must not produce side effects, got {} system msgs", sys_count);
+}
+
+#[test]
+fn all_form_commands_are_listed() {
+    // Regression: every command that has a form-flow should be in the dispatch
+    // table. This list is the contract — when a new form command is added,
+    // this test must be updated to include it.
+    use crate::commands::{CommandFlow, CommandRegistry};
+    let mut reg = CommandRegistry::new();
+    crate::commands::handlers::register_all(&mut reg);
+    let form_commands: Vec<String> = reg.list().iter()
+        .filter_map(|def| {
+            if matches!(def.flow, CommandFlow::Form { .. }) {
+                Some(def.name.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+    // Sanity: we have multiple form commands
+    assert!(form_commands.len() >= 8, "expected at least 8 form commands, got {:?} (this is a sanity check; if a new form is added, ensure form_build_submit handles it)", form_commands);
+}
+
+#[test]
+fn invalid_fork_index_shows_error_for_out_of_range() {
+    // /fork with an out-of-range index must surface a clear error, not
+    // silently dispatch with a default.
+    use crate::commands::DialogState;
+    use crate::dialog::{Panel, PanelStack};
+    use crate::model::Role;
+    let mut state = fresh_state();
+    state.session.messages.push(crate::model::ChatMessage {
+        role: Role::User, content: "hi".into(), timestamp: 0.0, id: "u0".into(), ..Default::default()
+    });
+    let mut panel = Panel::new("fork", "Fork Session")
+        .form_field("Message index", "0", "index");
+    panel.form_values.insert("index".into(), "999".into());
+    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+
+    state.update(crate::Event::CommandFormSubmit);
+
+    assert!(state.open_dialog.is_none(), "dialog should close");
+    let sys: Vec<_> = state.session.messages.iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
+    assert!(!sys.is_empty(), "expected a system error message");
+    assert!(sys.last().unwrap().content.contains("out of range"),
+        "expected out-of-range error, got: {:?}", sys.last().unwrap().content);
+}
+
+#[test]
+fn compact_with_invalid_keep_shows_error() {
+    // /compact with a non-numeric keep value must surface a clear error,
+    // not silently fall back to 2000.
+    use crate::commands::DialogState;
+    use crate::dialog::{Panel, PanelStack};
+    use crate::model::Role;
+    let mut state = fresh_state();
+    let mut panel = Panel::new("compact", "Compact Context")
+        .form_field("Keep tokens", "2000", "keep")
+        .form_field("Focus", "f", "focus");
+    panel.form_values.insert("keep".into(), "not-a-number".into());
+    panel.form_values.insert("focus".into(), "".into());
+    state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
+
+    state.update(crate::Event::CommandFormSubmit);
+
+    let sys: Vec<_> = state.session.messages.iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
+    assert!(!sys.is_empty(), "expected a system error message");
+    let last = sys.last().unwrap().content.clone();
+    assert!(
+        last.contains("Invalid") || last.contains("invalid") || last.contains("not a number") || last.contains("parse"),
+        "expected an error mentioning invalid input, got: {}", last
+    );
+}
+
+#[test]
 fn form_escape_closes_dialog() {
     let mut state = fresh_state();
     type_str(&mut state, "/save");

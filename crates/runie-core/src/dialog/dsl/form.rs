@@ -1,6 +1,6 @@
 //! Form Panel Builder - Fluent API for creating forms with submit handling
 
-use super::{Panel, panel, PanelItem, ItemAction};
+use super::{Panel, panel, PanelItem};
 use crate::Event;
 
 /// Form panel builder with submit handling
@@ -37,10 +37,11 @@ impl FormPanel {
         self
     }
 
-    /// Set the event to emit on submit
+    /// Set the event to emit on submit. The event is stored only for
+    /// inspection; the dispatch is owned by `form_build_submit` in update/mod.rs
+    /// which reads form values and constructs the final event.
     pub fn on_submit(mut self, event: Event) -> Self {
-        self.submit_event = Some(event.clone());
-        self.panel.last_action = Some(ItemAction::Emit(event));
+        self.submit_event = Some(event);
         self.panel.items.push(PanelItem::FormSubmit);
         self
     }

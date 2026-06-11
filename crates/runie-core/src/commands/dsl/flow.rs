@@ -135,7 +135,7 @@ fn build_form_panel(id: &str, title: &str, fields: Vec<super::FormField>, args: 
         };
     }
 
-    panel.form_submit(ItemAction::Emit(submit))
+    panel.form_submit()
 }
 
 #[cfg(test)]

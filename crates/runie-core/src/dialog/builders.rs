@@ -123,8 +123,6 @@ pub fn settings(categories: Vec<(String, Vec<SettingsRow>)>) -> PanelStack {
             panel.items.push(item);
         }
     }
-    // Add metadata for category navigation
-    panel.last_action = Some(ItemAction::Push(format!("__settings_cats:{}", cat_count)));
     PanelStack::new(panel)
 }
 
