@@ -75,6 +75,8 @@ mod element_dsl;
 #[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
+mod input_scroll;
+#[cfg(test)]
 mod input_undo;
 #[cfg(test)]
 mod input_word_nav;

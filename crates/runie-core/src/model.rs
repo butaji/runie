@@ -546,6 +546,7 @@ impl AppState {
             tokens_out_display: self.agent.tokens_out_display,
             git_info: self.git_info.clone(),
             cwd_name: self.cwd_name.clone(),
+            input_scroll: self.input.input_scroll,
         }
     }
 

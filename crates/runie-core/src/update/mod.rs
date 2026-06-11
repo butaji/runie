@@ -10,6 +10,8 @@ mod at_refs;
 mod bash;
 mod edit_approval;
 mod input;
+mod input_scroll;
+mod input_text;
 mod line_nav;
 mod model_selector;
 mod path_complete;
@@ -121,7 +123,18 @@ impl AppState {
     // === Control Event Handler ===
     fn control_event(&mut self, event: Event) {
         match event {
-            Event::Quit => self.should_quit = true,
+            Event::Quit => {
+                if !self.input.input.is_empty() {
+                    self.input.input.clear();
+                    self.input.cursor_pos = 0;
+                    self.input.input_scroll = 0;
+                    self.input.undo_stack.clear();
+                    self.input.redo_stack.clear();
+                    self.mark_dirty();
+                } else {
+                    self.should_quit = true;
+                }
+            }
             Event::Reset => *self = AppState::default(),
             Event::Abort => {
                 if self.completion.path_suggestions.is_some() {

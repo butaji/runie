@@ -101,6 +101,8 @@ pub struct Snapshot {
     pub git_info: Option<GitInfo>,
     /// Current working directory name (fallback when no git).
     pub cwd_name: String,
+    /// Top visible line index for multi-line input scrolling.
+    pub input_scroll: usize,
 }
 
 impl Snapshot {
