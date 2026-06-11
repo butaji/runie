@@ -13,12 +13,15 @@ pub struct GitInfo {
 }
 
 impl GitInfo {
-    /// Format for status bar right side when turn is not active.
-    /// Returns "repo/branch" if in a git repo, or "folder/" if not.
+    /// Format for status bar left side when turn is not active.
+    /// Returns "repo/branch" when both known, "branch" when only branch known,
+    /// or "folder/" when not in a git repo at all.
     pub fn format_right(&self, cwd_name: &str) -> String {
         match (&self.repo_name, &self.branch) {
             (Some(repo), Some(branch)) => format!("{}/{}", repo, branch),
-            _ => format!("{}/", cwd_name),
+            (None, Some(branch)) => branch.to_string(),
+            (Some(repo), None) => format!("{}/", repo),
+            (None, None) => format!("{}/", cwd_name),
         }
     }
 }

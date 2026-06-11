@@ -8,43 +8,68 @@ const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦'
 const SPINNER_FRAMES: u32 = 12;
 
 /// Detect git repo name and current branch from the given directory.
-/// Walks up the tree looking for `.git/HEAD`.
+/// Walks up the tree looking for `.git` (dir or file with `gitdir:` pointer).
 pub fn detect_git_info(start: &std::path::Path) -> Option<crate::snapshot::GitInfo> {
     let mut current = Some(start);
     while let Some(dir) = current {
-        let git_dir = dir.join(".git");
-        if git_dir.is_dir() {
-            let head_path = git_dir.join("HEAD");
-            let branch = std::fs::read_to_string(&head_path).ok()
+        let git_path = dir.join(".git");
+        if git_path.is_dir() {
+            return read_git_info(&git_path);
+        }
+        if git_path.is_file() {
+            // Worktree: `.git` file contains `gitdir: <path>`
+            let gitdir = std::fs::read_to_string(&git_path).ok()
                 .and_then(|content| {
-                    content.trim().strip_prefix("ref: refs/heads/")
-                        .map(|b| b.to_string())
+                    content.trim().strip_prefix("gitdir:")
+                        .map(|s| std::path::PathBuf::from(s.trim()))
                 });
-
-            // Try to get repo name from remote origin URL
-            let config_path = git_dir.join("config");
-            let repo_name = std::fs::read_to_string(&config_path).ok()
-                .and_then(|config| {
-                    config.lines()
-                        .skip_while(|line| !line.contains("[remote \"origin\"]"))
-                        .skip(1)
-                        .find(|line| line.trim().starts_with("url"))
-                        .and_then(|url_line| {
-                            let url = url_line.split('=').nth(1)?;
-                            let url = url.trim();
-                            // Extract repo name from URL like:
-                            // git@github.com:user/repo.git → repo
-                            // https://github.com/user/repo.git → repo
-                            url.rsplit('/').next()
-                                .map(|name| name.trim_end_matches(".git").to_string())
-                        })
-                });
-
-            return Some(crate::snapshot::GitInfo { repo_name, branch });
+            if let Some(worktree_gitdir) = gitdir {
+                // HEAD is in the worktree gitdir; config is in the parent repo
+                let head_path = worktree_gitdir.join("HEAD");
+                let branch = std::fs::read_to_string(&head_path).ok()
+                    .and_then(|content| {
+                        content.trim().strip_prefix("ref: refs/heads/")
+                            .map(|b| b.to_string())
+                    });
+                // Config is one level up from worktrees/<name>
+                let config_path = worktree_gitdir.parent()
+                    .and_then(|p| p.parent())
+                    .map(|p| p.join("config"));
+                let repo_name = config_path.and_then(|p| read_origin_repo_name(&p));
+                return Some(crate::snapshot::GitInfo { repo_name, branch });
+            }
         }
         current = dir.parent();
     }
     None
+}
+
+fn read_git_info(git_dir: &std::path::Path) -> Option<crate::snapshot::GitInfo> {
+    let head_path = git_dir.join("HEAD");
+    let branch = std::fs::read_to_string(&head_path).ok()
+        .and_then(|content| {
+            content.trim().strip_prefix("ref: refs/heads/")
+                .map(|b| b.to_string())
+        });
+    let config_path = git_dir.join("config");
+    let repo_name = read_origin_repo_name(&config_path);
+    Some(crate::snapshot::GitInfo { repo_name, branch })
+}
+
+fn read_origin_repo_name(config_path: &std::path::Path) -> Option<String> {
+    std::fs::read_to_string(config_path).ok()
+        .and_then(|config| {
+            config.lines()
+                .skip_while(|line| !line.contains("[remote \"origin\"]"))
+                .skip(1)
+                .find(|line| line.trim().starts_with("url"))
+                .and_then(|url_line| {
+                    let url = url_line.split('=').nth(1)?;
+                    let url = url.trim();
+                    url.rsplit('/').next()
+                        .map(|name| name.trim_end_matches(".git").to_string())
+                })
+        })
 }
 
 /// Get the current working directory name.
