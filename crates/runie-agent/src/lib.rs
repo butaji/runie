@@ -7,6 +7,7 @@ pub mod mutation_queue;
 pub mod path_utils;
 pub mod parser;
 pub mod safety;
+pub mod subagent;
 pub mod tools;
 pub mod truncate;
 pub mod turn;
@@ -26,6 +27,8 @@ pub struct AgentCommand {
     pub read_only: bool,
     pub skills_context: String,
     pub system_prompt: String,
+    /// Truncation policy for tool output. Defaults to 2000 lines / 50KB.
+    pub truncation: crate::truncate::TruncationPolicy,
 }
 
 pub fn build_provider(provider: &str, model: &str) -> AnyProvider {

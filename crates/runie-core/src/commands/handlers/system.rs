@@ -88,10 +88,30 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
         .map(|m| m.content.clone())
         .unwrap_or_default();
     if text.is_empty() {
-        CommandResult::Message("No assistant response to copy".into())
-    } else {
-        CommandResult::Message("Copied to clipboard".into())
+        return CommandResult::Message("No assistant response to copy".into());
     }
+    match write_clipboard(&text) {
+        Ok(path) => CommandResult::Message(format!("Copied to {}", path.display())),
+        Err(e) => CommandResult::Message(format!("Could not copy: {}", e)),
+    }
+}
+
+/// Write `text` to the clipboard file. Respects `$RUNIE_CACHE_DIR` for
+/// tests; defaults to `<data_dir>/runie/clipboard.md`.
+fn write_clipboard(text: &str) -> std::io::Result<std::path::PathBuf> {
+    use std::io::Write;
+    let dir = if let Ok(p) = std::env::var("RUNIE_CACHE_DIR") {
+        std::path::PathBuf::from(p)
+    } else {
+        dirs::data_dir()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "no data dir"))?
+            .join("runie")
+    };
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("clipboard.md");
+    let mut f = std::fs::File::create(&path)?;
+    f.write_all(text.as_bytes())?;
+    Ok(path)
 }
 
 fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {

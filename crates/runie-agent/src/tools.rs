@@ -53,8 +53,14 @@ impl Tool {
     }
 
     pub fn execute(&self) -> ToolResult {
+        self.execute_with_policy(&crate::truncate::TruncationPolicy::default())
+    }
+
+    /// Execute the tool with a specific truncation policy. Use this when the
+    /// caller has a configured policy (e.g. from `config.toml`).
+    pub fn execute_with_policy(&self, policy: &crate::truncate::TruncationPolicy) -> ToolResult {
         let start = Instant::now();
-        let (output, success) = self.run_inner();
+        let (output, success) = self.run_inner(policy);
         let _elapsed = start.elapsed();
         ToolResult {
             tool: self.clone(),
@@ -63,23 +69,22 @@ impl Tool {
         }
     }
 
-    fn run_inner(&self) -> (String, bool) {
+    fn run_inner(&self, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
         match self {
-            Tool::ReadFile { path, offset, limit } => read_file(path, *offset, *limit),
-            Tool::ListDir { path } => list_dir(path),
+            Tool::ReadFile { path, offset, limit } => read_file(path, *offset, *limit, policy),
+            Tool::ListDir { path } => list_dir(path, policy),
             Tool::WriteFile { path, content } => write_file(path, content),
             Tool::EditFile { path, search, replace } => edit_file(path, search, replace),
-            Tool::Bash { command } => run_bash(command),
-            Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => run_grep(pattern, path, glob.as_deref(), *ignore_case, *literal, *context, *limit),
-            Tool::Find { pattern, path, limit } => run_find(pattern, path, *limit),
+            Tool::Bash { command } => run_bash(command, policy),
+            Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => run_grep(pattern, path, glob.as_deref(), *ignore_case, *literal, *context, *limit, policy),
+            Tool::Find { pattern, path, limit } => run_find(pattern, path, *limit, policy),
             Tool::FetchDocs { library } => run_fetch_docs(library),
         }
     }
 }
 
-fn apply_truncation(output: String, strategy: TruncateStrategy) -> String {
-    let policy = truncate::TruncationPolicy::default();
-    let mut acc = OutputAccumulator::new(&policy, strategy);
+fn apply_truncation(output: String, strategy: TruncateStrategy, policy: &truncate::TruncationPolicy) -> String {
+    let mut acc = OutputAccumulator::new(policy, strategy);
     acc.append(output.as_bytes());
     let result = acc.snapshot();
     if result.was_truncated {
@@ -94,7 +99,7 @@ fn apply_truncation(output: String, strategy: TruncateStrategy) -> String {
     }
 }
 
-fn read_file(path: &str, offset: Option<usize>, limit: Option<usize>) -> (String, bool) {
+fn read_file(path: &str, offset: Option<usize>, limit: Option<usize>, _policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     let path = crate::path_utils::resolve_path(path);
     match std::fs::read_to_string(&path) {
         Ok(content) => {
@@ -125,7 +130,7 @@ fn read_file(path: &str, offset: Option<usize>, limit: Option<usize>) -> (String
     }
 }
 
-fn list_dir(path: &str) -> (String, bool) {
+fn list_dir(path: &str, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     let path = crate::path_utils::resolve_path(path);
     let p = Path::new(&path);
     match std::fs::read_dir(p) {
@@ -141,7 +146,7 @@ fn list_dir(path: &str) -> (String, bool) {
             } else {
                 lines.join("\n")
             };
-            (apply_truncation(output, TruncateStrategy::Head), true)
+            (apply_truncation(output, TruncateStrategy::Head, policy), true)
         }
         Err(e) => (format!("Error listing {}: {}", path.display(), e), false),
     }
@@ -192,11 +197,11 @@ fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
     }
 }
 
-fn run_bash(command: &str) -> (String, bool) {
+fn run_bash(command: &str, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     if let Some(reason) = check_bash_safety(command) {
         return (format!("Blocked: {}", reason), false);
     }
-    
+
     let output = match run_command_with_timeout(
         "bash".to_string(),
         vec!["-c".to_string(), command.to_string()],
@@ -205,7 +210,7 @@ fn run_bash(command: &str) -> (String, bool) {
         Ok(output) => output,
         Err(e) => return (format!("Error executing '{}': {}", command, e), false),
     };
-    
+
     let mut result = String::new();
     if !output.stdout.is_empty() {
         result.push_str(&String::from_utf8_lossy(&output.stdout));
@@ -218,7 +223,7 @@ fn run_bash(command: &str) -> (String, bool) {
     if result.is_empty() {
         result = if success { "(no output)".to_string() } else { "(command failed)".to_string() };
     }
-    (apply_truncation(result, TruncateStrategy::Tail), success)
+    (apply_truncation(result, TruncateStrategy::Tail, policy), success)
 }
 
 fn run_command_with_timeout(
@@ -292,7 +297,7 @@ fn build_grep_args(
     args
 }
 
-fn parse_grep_output(output: std::process::Output, limit: usize) -> (String, bool) {
+fn parse_grep_output(output: std::process::Output, limit: usize, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     let text = String::from_utf8_lossy(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
     if text.trim().is_empty() {
@@ -306,7 +311,7 @@ fn parse_grep_output(output: std::process::Output, limit: usize) -> (String, boo
     if lines.len() >= limit {
         result.push_str(&format!("\n\n[{} matches limit reached]", limit));
     }
-    (apply_truncation(result, TruncateStrategy::Head), true)
+    (apply_truncation(result, TruncateStrategy::Head, policy), true)
 }
 
 fn run_grep(
@@ -317,12 +322,13 @@ fn run_grep(
     literal: bool,
     context: usize,
     limit: usize,
+    policy: &crate::truncate::TruncationPolicy,
 ) -> (String, bool) {
     let path = crate::path_utils::resolve_path(path);
     let args = build_grep_args(pattern, &path.to_string_lossy(), glob, ignore_case, literal, context, limit);
     let tool = if which_tool("rg").is_some() { "rg" } else { "grep" };
     match std::process::Command::new(tool).args(&args).output() {
-        Ok(output) => parse_grep_output(output, limit),
+        Ok(output) => parse_grep_output(output, limit, policy),
         Err(e) => (format!("Error running grep: {}", e), false),
     }
 }
@@ -352,7 +358,7 @@ fn build_find_args(pattern: &str, path: &str) -> Vec<String> {
     args
 }
 
-fn parse_find_output(output: std::process::Output, limit: usize) -> (String, bool) {
+fn parse_find_output(output: std::process::Output, limit: usize, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     let text = String::from_utf8_lossy(&output.stdout);
     if text.trim().is_empty() {
         return ("No files found matching pattern".to_string(), true);
@@ -362,10 +368,10 @@ fn parse_find_output(output: std::process::Output, limit: usize) -> (String, boo
     if lines.len() > limit {
         out.push_str(&format!("\n\n[{} results limit reached]", limit));
     }
-    (apply_truncation(out, TruncateStrategy::Head), true)
+    (apply_truncation(out, TruncateStrategy::Head, policy), true)
 }
 
-fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
+fn run_find(pattern: &str, path: &str, limit: usize, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     let path = crate::path_utils::resolve_path(path);
     let tool = if which_tool("fd").is_some() { "fd" } else { "find" };
     let path_str = path.to_string_lossy();
@@ -376,7 +382,7 @@ fn run_find(pattern: &str, path: &str, limit: usize) -> (String, bool) {
     };
 
     match result {
-        Ok(output) => parse_find_output(output, limit),
+        Ok(output) => parse_find_output(output, limit, policy),
         Err(e) => (format!("Error running find: {}", e), false),
     }
 }

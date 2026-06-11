@@ -13,6 +13,7 @@ async fn test_agent_loop_simple_response() {
         read_only: false,
         skills_context: String::new(),
         system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -46,6 +47,7 @@ async fn test_agent_loop_with_tool_call() {
         read_only: false,
         skills_context: String::new(),
         system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -79,6 +81,7 @@ async fn test_agent_loop_respects_max_iterations() {
         read_only: false,
         skills_context: String::new(),
         system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 3)
@@ -98,6 +101,7 @@ async fn test_agent_loop_events_have_correct_id() {
         read_only: false,
         skills_context: String::new(),
         system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
     run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
@@ -128,6 +132,7 @@ fn read_only_excludes_write_tools() {
         read_only: true,
         skills_context: String::new(),
         system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0] {
@@ -154,6 +159,7 @@ fn read_write_includes_all_tools() {
         read_only: false,
         skills_context: String::new(),
         system_prompt: String::new(),
+        truncation: crate::truncate::TruncationPolicy::default(),
     };
     let msgs = build_initial_messages(&cmd);
     let system = match &msgs[0] {

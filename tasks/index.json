@@ -86,6 +86,9 @@
     "refactor-tool-parsing",
     "optimize-snapshot-cloning",
     "refactor-session-tree-indexing",
-    "add-smoke-tests"
+    "add-smoke-tests",
+    "r5-fix-copy",
+    "r5-configurable-truncation",
+    "r5-subagents"
   ]
 }

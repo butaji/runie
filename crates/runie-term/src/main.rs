@@ -43,6 +43,7 @@ async fn main() -> io::Result<()> {
     init_skills(&mut state);
     init_prompts(&mut state);
     init_telemetry(&mut state);
+    init_truncation(&mut state);
 
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
@@ -240,6 +241,41 @@ async fn event_loop(
                         state.ensure_fresh();
                         let _ = render_tx.try_send(state.snapshot());
                     }
+                } else if let CoreEvent::SpawnAgent { prompt } = &evt {
+                    // Run the subagent in a background task; inject the
+                    // result as a system message when done.
+                    let provider = state.config.current_provider.clone();
+                    let model = state.config.current_model.clone();
+                    let thinking = state.config.thinking_level;
+                    let read_only = state.config.read_only;
+                    let skills = runie_core::skills::build_skills_context(&state.skills);
+                    let preview: String = prompt.chars().take(60).collect();
+                    let preview = if prompt.chars().count() > 60 {
+                        format!("{}…", preview)
+                    } else {
+                        preview
+                    };
+                    let tx = input_tx.clone();
+                    let prompt = prompt.clone();
+                    tokio::task::spawn_blocking(move || {
+                        let result = runie_agent::subagent::run_subagent(
+                            &prompt, &provider, &model,
+                            thinking, read_only, &skills, "", 5,
+                        );
+                        let msg = match result {
+                            Ok(text) => {
+                                let snippet: String = text.chars().take(200).collect();
+                                let snippet = if text.chars().count() > 200 {
+                                    format!("{}…", snippet)
+                                } else {
+                                    snippet
+                                };
+                                format!("Subagent \"{}\" → {}", preview, snippet)
+                            }
+                            Err(e) => format!("Subagent \"{}\" failed: {}", preview, e),
+                        };
+                        let _ = tx.blocking_send(CoreEvent::SystemMessage { content: msg });
+                    });
                 } else {
                     let was_submit = matches!(evt, CoreEvent::Submit);
                     let was_followup = matches!(evt, CoreEvent::FollowUp);
@@ -350,6 +386,11 @@ fn init_telemetry(state: &mut AppState) {
     }
 }
 
+fn init_truncation(state: &mut AppState) {
+    let config = config_reload::Config::load_from(&config_reload::config_path());
+    state.config.truncation = config.truncation;
+}
+
 async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {
     if let Some((content, id)) = state.peek_queue() {
         let content = content.clone();
@@ -372,6 +413,10 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
             read_only: state.config.read_only,
             skills_context,
             system_prompt,
+            truncation: runie_agent::truncate::policy_from_section(
+                state.config.truncation.max_lines,
+                state.config.truncation.max_bytes,
+            ),
         }).await;
     }
 }
