@@ -19,6 +19,11 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
             if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
                 return Some(CoreEvent::Newline);
             }
+            // tmux sends \e[13;2~ for Shift+Enter — some crossterm versions report this as
+            // F(3) without the SHIFT modifier bit set. Always treat F(3) as Newline.
+            if key.code == KeyCode::F(3) {
+                return Some(CoreEvent::Newline);
+            }
             map_key_event(key, bindings)
         }
         _ => None,
@@ -433,6 +438,16 @@ mod tests {
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
         assert!(matches!(result, Some(runie_core::Event::Newline)), "Shift+F3 should map to Newline for tmux Shift+Enter, got {:?}", result);
+    }
+
+    #[test]
+    fn f3_without_shift_converts_to_newline_for_tmux_compat() {
+        // Some crossterm versions report tmux Shift+Enter (\e[13;2~) as F(3)
+        // without the SHIFT modifier bit set. F(3) should still map to Newline.
+        let key = KeyEvent::new(KeyCode::F(3), KeyModifiers::empty());
+        let event = crossterm::event::Event::Key(key);
+        let result = super::convert_event(&event, &default_bindings());
+        assert!(matches!(result, Some(runie_core::Event::Newline)), "F3 without shift should map to Newline for tmux compat, got {:?}", result);
     }
 
     #[test]
