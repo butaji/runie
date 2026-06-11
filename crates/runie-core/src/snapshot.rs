@@ -5,6 +5,24 @@
 use std::sync::Arc;
 use crate::ui::elements::Element;
 
+/// Git repository info detected from current working directory.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct GitInfo {
+    pub repo_name: Option<String>,
+    pub branch: Option<String>,
+}
+
+impl GitInfo {
+    /// Format for status bar right side when turn is not active.
+    /// Returns "repo/branch" if in a git repo, or "folder/" if not.
+    pub fn format_right(&self, cwd_name: &str) -> String {
+        match (&self.repo_name, &self.branch) {
+            (Some(repo), Some(branch)) => format!("{}/{}", repo, branch),
+            _ => format!("{}/", cwd_name),
+        }
+    }
+}
+
 /// A viewport into the element cache — elements plus how many
 /// lines to skip from the top of the first element.
 #[derive(Clone, Copy)]
@@ -76,6 +94,10 @@ pub struct Snapshot {
     pub tokens_in_display: f64,
     /// Animated display value for tokens_out.
     pub tokens_out_display: f64,
+    /// Git repo info for status bar display.
+    pub git_info: Option<GitInfo>,
+    /// Current working directory name (fallback when no git).
+    pub cwd_name: String,
 }
 
 impl Snapshot {

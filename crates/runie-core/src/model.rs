@@ -7,6 +7,54 @@ pub use crate::message::{ChatMessage, Role, now};
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
 
+/// Detect git repo name and current branch from the given directory.
+/// Walks up the tree looking for `.git/HEAD`.
+pub fn detect_git_info(start: &std::path::Path) -> Option<crate::snapshot::GitInfo> {
+    let mut current = Some(start);
+    while let Some(dir) = current {
+        let git_dir = dir.join(".git");
+        if git_dir.is_dir() {
+            let head_path = git_dir.join("HEAD");
+            let branch = std::fs::read_to_string(&head_path).ok()
+                .and_then(|content| {
+                    content.trim().strip_prefix("ref: refs/heads/")
+                        .map(|b| b.to_string())
+                });
+
+            // Try to get repo name from remote origin URL
+            let config_path = git_dir.join("config");
+            let repo_name = std::fs::read_to_string(&config_path).ok()
+                .and_then(|config| {
+                    config.lines()
+                        .skip_while(|line| !line.contains("[remote \"origin\"]"))
+                        .skip(1)
+                        .find(|line| line.trim().starts_with("url"))
+                        .and_then(|url_line| {
+                            let url = url_line.split('=').nth(1)?;
+                            let url = url.trim();
+                            // Extract repo name from URL like:
+                            // git@github.com:user/repo.git → repo
+                            // https://github.com/user/repo.git → repo
+                            url.rsplit('/').next()
+                                .map(|name| name.trim_end_matches(".git").to_string())
+                        })
+                });
+
+            return Some(crate::snapshot::GitInfo { repo_name, branch });
+        }
+        current = dir.parent();
+    }
+    None
+}
+
+/// Get the current working directory name.
+pub fn current_dir_name() -> String {
+    std::env::current_dir()
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+        .unwrap_or_default()
+}
+
 /// Approximate token count from text (4 chars ≈ 1 token).
 pub fn count_tokens(text: &str) -> usize {
     text.chars().count() / 4
@@ -120,14 +168,27 @@ pub struct AppState {
     pub transient_message: Option<String>,
     pub transient_until: Option<std::time::Instant>,
     pub transient_level: Option<crate::event::TransientLevel>,
+    pub git_info: Option<crate::snapshot::GitInfo>,
+    pub cwd_name: String,
     cached_palette_items: Vec<(String, String, String)>,
     cached_palette_filter: Option<String>,
     cached_model_items: Vec<(String, String, String, bool, bool)>,
     cached_model_filter: Option<String>,
 }
 
+fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
+    let cwd = std::env::current_dir().ok();
+    let cwd_name = cwd.as_ref()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let git_info = cwd.as_ref().and_then(|p| detect_git_info(p));
+    (git_info, cwd_name)
+}
+
 impl Default for AppState {
     fn default() -> Self {
+        let (git_info, cwd_name) = init_git_and_cwd();
         Self {
             session: crate::state::SessionState::default(),
             input: crate::state::InputState::default(),
@@ -135,31 +196,23 @@ impl Default for AppState {
             view: crate::state::ViewState::default(),
             config: crate::state::ConfigState::default(),
             completion: crate::state::CompletionState::default(),
-            streaming: false,
-            thinking_started_at: None,
+            streaming: false, thinking_started_at: None,
             steering_mode: DeliveryMode::OneAtATime,
             follow_up_mode: DeliveryMode::OneAtATime,
-            next_id: 0,
-            intermediate_step_count: 0,
-            animation_frame: 0,
-            current_action: None,
+            next_id: 0, intermediate_step_count: 0,
+            animation_frame: 0, current_action: None,
             registry: crate::commands::CommandRegistry::new(),
-            should_quit: false,
-            open_dialog: None,
-            recent_models: Vec::new(),
-            pending_edits: Vec::new(),
+            should_quit: false, open_dialog: None,
+            recent_models: Vec::new(), pending_edits: Vec::new(),
             skills: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
-            prompts: Vec::new(),
-            current_prompt: String::new(),
-            image_attachments: Vec::new(),
-            all_collapsed: false,
-            last_assistant_index: None,
-            thought_seq: 0,
+            prompts: Vec::new(), current_prompt: String::new(),
+            image_attachments: Vec::new(), all_collapsed: false,
+            last_assistant_index: None, thought_seq: 0,
             input_history: Vec::new(),
             transient_message: None,
-            transient_until: None,
-            transient_level: None,
+            transient_until: None, transient_level: None,
+            git_info, cwd_name,
             cached_palette_items: Vec::new(),
             cached_palette_filter: None,
             cached_model_items: Vec::new(),
@@ -466,6 +519,8 @@ impl AppState {
             speed_tps: self.agent.speed_tps,
             tokens_in_display: self.agent.tokens_in_display,
             tokens_out_display: self.agent.tokens_out_display,
+            git_info: self.git_info.clone(),
+            cwd_name: self.cwd_name.clone(),
         }
     }
 
