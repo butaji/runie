@@ -1466,6 +1466,10 @@ impl AppState {
             "prompt" => Some(crate::Event::RunPromptCommand {
                 name: values.get("name").cloned().unwrap_or_default(),
             }),
+            "login-key" => Some(crate::Event::LoginFlowSubmitKey {
+                provider: String::new(),
+                key: values.get("key").cloned().unwrap_or_default(),
+            }),
             _ => None,
         }
     }
