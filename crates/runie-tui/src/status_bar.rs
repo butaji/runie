@@ -88,7 +88,10 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
             bar
         )
     } else {
-        format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar)
+        let git_or_folder = snap.git_info.as_ref()
+            .map(|g| g.format_right(&snap.cwd_name))
+            .unwrap_or_else(|| format!("{}/", snap.cwd_name));
+        format!("{} {}%/{} {}", git_or_folder, ctx.percent, ctx.limit_k(), bar)
     }
 }
 

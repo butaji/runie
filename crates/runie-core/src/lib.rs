@@ -54,7 +54,7 @@ mod file_refs_lookup_tests;
 
 pub use model::{AppState, ChatMessage, Role, now};
 pub use edit_preview::EditPreview;
-pub use snapshot::Snapshot;
+pub use snapshot::{Snapshot, GitInfo};
 pub use session::{Session, save, load, list, delete, format_as_markdown};
 pub use event::Event;
 pub use labels::{
