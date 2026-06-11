@@ -2,6 +2,7 @@
 
 use crate::commands::{cmd, CommandCategory, CommandRegistry, CommandResult, DialogType};
 use crate::model::AppState;
+use crate::dialog::{Panel, PanelStack, ItemAction};
 
 pub fn register(registry: &mut CommandRegistry) {
     registry.register(crate::cmd!("model")
@@ -48,10 +49,7 @@ fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
 fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
-        return CommandResult::Message(format!(
-            "Current thinking: {}. Usage: /thinking off|low|medium|high",
-            state.config.thinking_level.as_str()
-        ));
+        return open_thinking_panel(state);
     }
     match rest.parse::<crate::model::ThinkingLevel>() {
         Ok(level) => {
@@ -60,6 +58,32 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
         }
         Err(e) => CommandResult::Message(format!("Error: {e}")),
     }
+}
+
+fn open_thinking_panel(state: &mut AppState) -> CommandResult {
+    let levels = vec!["off", "low", "medium", "high"];
+    let current = state.config.thinking_level.as_str();
+    
+    let mut panel = Panel::new("thinking", "Thinking Level")
+        .header("Select thinking level");
+    
+    for level in &levels {
+        let label = if *level == current {
+            format!("{} (current)", level)
+        } else {
+            level.to_string()
+        };
+        let evt = match *level {
+            "off" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::Off },
+            "low" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::Low },
+            "medium" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::Medium },
+            "high" => crate::Event::RunThinkingCommand { level: crate::model::ThinkingLevel::High },
+            _ => continue,
+        };
+        panel = panel.item(&label, ItemAction::Emit(evt));
+    }
+    
+    CommandResult::OpenPanelStack(PanelStack::new(panel))
 }
 
 fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {

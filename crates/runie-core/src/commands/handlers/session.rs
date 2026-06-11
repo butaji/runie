@@ -86,17 +86,24 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(crate::cmd!("compact")
         .desc("Compact context")
         .category(CommandCategory::Session)
-        .handler(handle_compact));
+        .form("Compact Context", |f| f
+            .field("Keep tokens", "2000", "keep")
+            .field("Focus", "optional focus keyword", "focus"),
+            crate::Event::RunCompactCommand { keep: 0, focus: String::new() }));
 
     registry.register(crate::cmd!("fork")
         .desc("Fork session from a message")
         .category(CommandCategory::Session)
-        .handler(handle_fork));
+        .form("Fork Session", |f| f
+            .field("Message index", "0", "index"),
+            crate::Event::RunForkCommand { message_index: 0 }));
 
     registry.register(crate::cmd!("name")
         .desc("Set session display name")
         .category(CommandCategory::Session)
-        .handler(handle_name));
+        .form("Set Session Name", |f| f
+            .field("Name", "session-name", "name"),
+            crate::Event::RunNameCommand { name: String::new() }));
 }
 
 // ============================================================================
@@ -218,49 +225,6 @@ fn find_most_recent() -> Option<String> {
         }
     }
     most_recent
-}
-
-fn handle_compact(state: &mut AppState, args: &str) -> CommandResult {
-    let keep = 2000usize;
-    let msg = state.compact(keep);
-    let result = if args.is_empty() { msg } else { format!("{} (focus: {})", msg, args) };
-    CommandResult::Message(result)
-}
-
-fn handle_fork(state: &mut AppState, args: &str) -> CommandResult {
-    let index = args.trim().parse::<usize>().unwrap_or_else(|_| {
-        state.session.messages.iter().enumerate()
-            .rfind(|(_, m)| m.role == crate::model::Role::User)
-            .map(|(i, _)| i).unwrap_or(0)
-    });
-    if index >= state.session.messages.len() {
-        return CommandResult::Message(format!("Index {} out of range (0–{})", index, state.session.messages.len().saturating_sub(1)));
-    }
-    let mut tree = state.session.session_tree.take()
-        .unwrap_or_else(|| crate::session_tree::SessionTree::from_messages(&state.session.messages));
-    match tree.fork_at(index) {
-        Some(path) => {
-            tree.navigate_to(&path);
-            state.session.session_tree = Some(tree);
-            CommandResult::Message(format!("Forked at message {}.", index))
-        }
-        None => CommandResult::Message("Could not fork.".into()),
-    }
-}
-
-fn handle_name(state: &mut AppState, args: &str) -> CommandResult {
-    let name = args.trim();
-    if name.is_empty() {
-        let current = state.session.session_display_name.as_deref().unwrap_or("(unset)");
-        return CommandResult::Message(format!("Current display name: {}", current));
-    }
-    let truncated = if name.chars().count() > 64 {
-        format!("{}…", name.chars().take(64).collect::<String>())
-    } else {
-        name.to_string()
-    };
-    state.session.session_display_name = Some(truncated.clone());
-    CommandResult::Message(format!("Session name set to '{}'", truncated))
 }
 
 // Form handlers (called from update/mod.rs with form values)

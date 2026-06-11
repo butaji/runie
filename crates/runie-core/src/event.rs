@@ -150,6 +150,11 @@ pub enum Event {
     RunSkillCommand { name: String },
     RunLoginCommand { provider: String, token: String },
     RunLogoutCommand { provider: String },
+    RunNameCommand { name: String },
+    RunForkCommand { message_index: usize },
+    RunCompactCommand { keep: usize, focus: String },
+    RunPromptCommand { name: String },
+    RunThinkingCommand { level: crate::model::ThinkingLevel },
 
     // Transient notifications (shown in hints line)
     TransientMessage { content: String, level: TransientLevel },

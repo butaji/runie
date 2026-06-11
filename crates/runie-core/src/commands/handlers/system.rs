@@ -41,7 +41,9 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(crate::cmd!("prompt")
         .desc("Switch prompt template")
         .category(CommandCategory::System)
-        .handler(handle_prompt));
+        .form("Switch Prompt", |f| f
+            .field("Prompt name", "prompt-name", "name"),
+            crate::Event::RunPromptCommand { name: String::new() }));
 
     registry.register(crate::cmd!("changelog")
         .desc("Show changelog")
@@ -135,27 +137,6 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
             CommandResult::Message(lines.join("\n"))
         }
         None => CommandResult::Message(format!("Skill '{}' not found. Use /skills.", name)),
-    }
-}
-
-fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
-    let name = args.trim();
-    if name.is_empty() {
-        let current = state.current_prompt.is_empty().then_some("default").unwrap_or(&state.current_prompt);
-        let mut lines = vec![format!("Current prompt: {}", current)];
-        if !state.prompts.is_empty() {
-            lines.push("Available prompts:".into());
-            for p in &state.prompts {
-                lines.push(format!("  {}", p.summary()));
-            }
-        }
-        return CommandResult::Message(lines.join("\n"));
-    }
-    if state.prompts.iter().any(|p| p.name == name) {
-        state.current_prompt = name.to_string();
-        CommandResult::Message(format!("Prompt switched to '{}'", name))
-    } else {
-        CommandResult::Message(format!("Prompt '{}' not found.", name))
     }
 }
 

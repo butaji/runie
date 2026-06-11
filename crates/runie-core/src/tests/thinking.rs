@@ -74,7 +74,8 @@ fn shift_tab_cycles() {
 fn slash_thinking_sets() {
     let mut state = AppState::default();
     state.input.input.push_str("/thinking high");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled level
+    state.update(Event::CommandFormSubmit); // Submits the form
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
@@ -82,14 +83,17 @@ fn slash_thinking_sets() {
 }
 
 #[test]
-fn slash_thinking_no_args_shows_current() {
+fn slash_thinking_no_args_shows_panel() {
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
     state.input.input.push_str("/thinking");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens the thinking level selector panel
 
+    // Panel should be open
+    assert!(state.open_dialog.is_some(), "panel should be open");
+    // No system messages should be generated yet
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
-    assert!(sys_msgs.iter().any(|m| m.content.contains("Current thinking: medium")));
+    assert!(sys_msgs.is_empty(), "no system messages yet");
 }
 
 #[test]
