@@ -24,6 +24,8 @@ pub struct InputState {
     pub tab_complete_prefix: Option<String>,
     pub tab_complete_matches: Vec<String>,
     pub tab_complete_index: usize,
+    /// Top visible line index for multi-line input scrolling.
+    pub input_scroll: usize,
 }
 
 impl Default for InputState {
@@ -40,6 +42,7 @@ impl Default for InputState {
             tab_complete_prefix: None,
             tab_complete_matches: Vec::new(),
             tab_complete_index: 0,
+            input_scroll: 0,
         }
     }
 }

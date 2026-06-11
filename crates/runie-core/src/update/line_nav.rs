@@ -39,6 +39,7 @@ impl AppState {
     pub(crate) fn move_cursor_to_line_start(&mut self) {
         let (line_start, _) = self.get_current_line_bounds();
         self.input.cursor_pos = line_start;
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -46,6 +47,7 @@ impl AppState {
     pub(crate) fn move_cursor_to_line_end(&mut self) {
         let (_, line_end) = self.get_current_line_bounds();
         self.input.cursor_pos = line_end;
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -81,6 +83,7 @@ impl AppState {
 
         // Position cursor at same column (or end of line if line is shorter)
         self.input.cursor_pos = prev_line_start + current_col.min(prev_line_len);
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -117,6 +120,7 @@ impl AppState {
         // Position cursor at same column (or end of line if line is shorter)
         let next_line_len = next_line_end - next_line_start;
         self.input.cursor_pos = next_line_start + current_col.min(next_line_len);
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 }

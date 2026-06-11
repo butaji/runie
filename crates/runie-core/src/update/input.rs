@@ -1,55 +1,5 @@
-use unicode_segmentation::UnicodeSegmentation;
 use super::*;
-// === Grapheme helpers ===
-
-fn prev_grapheme_boundary(s: &str, pos: usize) -> usize {
-    let mut last = 0;
-    for (i, _) in s.grapheme_indices(true) {
-        if i >= pos { break; }
-        last = i;
-    }
-    last
-}
-
-fn next_grapheme_boundary(s: &str, pos: usize) -> usize {
-    for (i, _) in s.grapheme_indices(true) {
-        if i > pos { return i; }
-    }
-    s.len()
-}
-
-// === Word boundary helpers ===
-
-fn find_word_boundary_left(s: &str, pos: usize) -> usize {
-    let mut pos = pos;
-    while pos > 0 {
-        let prev = prev_grapheme_boundary(s, pos);
-        if &s[prev..pos] != " " { break; }
-        pos = prev;
-    }
-    while pos > 0 {
-        let prev = prev_grapheme_boundary(s, pos);
-        if &s[prev..pos] == " " { break; }
-        pos = prev;
-    }
-    pos
-}
-
-fn find_word_boundary_right(s: &str, pos: usize) -> usize {
-    let mut pos = pos;
-    let len = s.len();
-    while pos < len {
-        let next = next_grapheme_boundary(s, pos);
-        if &s[pos..next] == " " { break; }
-        pos = next;
-    }
-    while pos < len {
-        let next = next_grapheme_boundary(s, pos);
-        if &s[pos..next] != " " { break; }
-        pos = next;
-    }
-    pos
-}
+use super::input_text::{prev_grapheme_boundary, next_grapheme_boundary, find_word_boundary_left, find_word_boundary_right};
 
 impl AppState {
     pub fn hint_text(&self) -> String {
@@ -81,6 +31,7 @@ impl AppState {
         if self.input.cursor_pos > 0 {
             self.input.cursor_pos = prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
             self.clear_ghost();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -95,6 +46,7 @@ impl AppState {
         }
         if self.input.cursor_pos < self.input.input.len() {
             self.input.cursor_pos = next_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -107,6 +59,7 @@ impl AppState {
         } else if self.input.cursor_pos != 0 {
             self.input.cursor_pos = 0;
             self.clear_ghost();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -119,6 +72,7 @@ impl AppState {
         } else if self.input.cursor_pos != self.input.input.len() {
             self.input.cursor_pos = self.input.input.len();
             self.clear_ghost();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -131,6 +85,7 @@ impl AppState {
         if self.input.cursor_pos > 0 {
             self.input.cursor_pos = find_word_boundary_left(&self.input.input, self.input.cursor_pos);
             self.clear_ghost();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -141,6 +96,7 @@ impl AppState {
         if self.input.cursor_pos < self.input.input.len() {
             self.input.cursor_pos = find_word_boundary_right(&self.input.input, self.input.cursor_pos);
             self.clear_ghost();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -159,6 +115,7 @@ impl AppState {
         self.input.cursor_pos += c.len_utf8();
         self.clear_redo();
         self.handle_at_trigger();
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -174,6 +131,7 @@ impl AppState {
                 self.input.cursor_pos = new_pos;
                 self.clear_redo();
                 self.handle_at_trigger();
+                self.clamp_input_scroll();
                 self.mark_dirty();
             } else {
                 // Normal delete - remove grapheme before cursor
@@ -183,6 +141,7 @@ impl AppState {
                 self.input.cursor_pos = new_pos;
                 self.clear_redo();
                 self.handle_at_trigger();
+                self.clamp_input_scroll();
                 self.mark_dirty();
             }
         } else if self.input.cursor_pos == 0 && !self.input.input.is_empty() {
@@ -192,6 +151,7 @@ impl AppState {
                 self.input.input.remove(0);
                 self.clear_redo();
                 self.handle_at_trigger();
+                self.clamp_input_scroll();
                 self.mark_dirty();
             } else {
                 self.input.input_flash = 3;
@@ -212,6 +172,7 @@ impl AppState {
         self.input.cursor_pos = start;
         self.clear_redo();
         self.handle_at_trigger();
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -221,6 +182,7 @@ impl AppState {
             self.input.input.truncate(self.input.cursor_pos);
             self.clear_redo();
             self.handle_at_trigger();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -234,6 +196,7 @@ impl AppState {
             self.input.cursor_pos = 0;
             self.clear_redo();
             self.handle_at_trigger();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -247,6 +210,7 @@ impl AppState {
             self.input.input.drain(self.input.cursor_pos..end);
             self.clear_redo();
             self.handle_at_trigger();
+            self.clamp_input_scroll();
             self.mark_dirty();
         } else {
             self.input.input_flash = 3;
@@ -269,6 +233,7 @@ impl AppState {
             self.input.input = text;
             self.input.cursor_pos = pos;
             self.handle_at_trigger();
+            self.clamp_input_scroll();
             self.mark_dirty();
         }
     }
@@ -279,6 +244,7 @@ impl AppState {
             self.input.input = text;
             self.input.cursor_pos = pos;
             self.handle_at_trigger();
+            self.clamp_input_scroll();
             self.mark_dirty();
         }
     }
@@ -298,6 +264,7 @@ impl AppState {
         self.input.cursor_pos += clean.len();
         self.clear_redo();
         self.handle_at_trigger();
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -352,6 +319,7 @@ impl AppState {
         }
         self.input.cursor_pos += 1;
         self.clear_redo();
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -372,6 +340,7 @@ impl AppState {
         }
         let content = std::mem::take(&mut self.input.input).trim().to_string();
         self.input.cursor_pos = 0;
+        self.input.input_scroll = 0;
         self.input.history_pos = None;
         self.input.undo_stack.clear();
         self.input.redo_stack.clear();
@@ -471,6 +440,7 @@ impl AppState {
         self.input.history_pos = Some(pos);
         self.input.input = self.input_history[pos].clone();
         self.input.cursor_pos = self.input.input.len();
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 
@@ -491,6 +461,7 @@ impl AppState {
             self.input.input = self.input_history[pos].clone();
             self.input.cursor_pos = self.input.input.len();
         }
+        self.clamp_input_scroll();
         self.mark_dirty();
     }
 }

@@ -64,7 +64,10 @@ fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
         std::io::stdout(),
         crossterm::terminal::EnterAlternateScreen,
         crossterm::event::EnableBracketedPaste,
-        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES),
+        PushKeyboardEnhancementFlags(
+            KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+                | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+        ),
     )?;
     Terminal::new(CrosstermBackend::new(std::io::stdout()))
 }
@@ -227,7 +230,10 @@ async fn event_loop(
                             std::io::stdout(),
                             crossterm::terminal::EnterAlternateScreen,
                             crossterm::event::EnableBracketedPaste,
-                            PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES),
+                            PushKeyboardEnhancementFlags(
+                                KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+                                    | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+                            ),
                         );
 
                         // Force redraw

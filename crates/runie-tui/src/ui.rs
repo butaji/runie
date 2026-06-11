@@ -170,7 +170,7 @@ fn to_lines<'a>(elem: &'a Element, content_width: u16) -> Vec<Line<'a>> {
     }
 }
 
-fn count_input_lines(input: &str) -> usize {
+pub fn count_input_lines(input: &str) -> usize {
     if input.is_empty() {
         return 1;
     }
@@ -186,7 +186,39 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let block = block_input(&title, snap.input_flash > 0);
     let token_held = snap.dialog.is_none();
     let lines = build_input_lines(snap, token_held);
-    f.render_widget(Paragraph::new(lines).block(block), area);
+    let total_lines = lines.len();
+    let inner_height = area.height.saturating_sub(2) as usize;
+    let show_scrollbar = total_lines > inner_height;
+
+    let scroll = snap.input_scroll.min(total_lines.saturating_sub(1));
+    let visible_lines = if total_lines > inner_height {
+        let end = (scroll + inner_height).min(total_lines);
+        lines[scroll..end].to_vec()
+    } else {
+        lines
+    };
+
+    f.render_widget(Paragraph::new(visible_lines).block(block), area);
+
+    if show_scrollbar {
+        render_input_scrollbar(f, area, total_lines, scroll, inner_height);
+    }
+}
+
+fn render_input_scrollbar(f: &mut Frame, area: Rect, total: usize, scroll: usize, height: usize) {
+    let sb_area = Rect { x: area.x + area.width - 1, y: area.y + 1, width: 1, height: area.height.saturating_sub(2) };
+    let max_scroll = total.saturating_sub(height);
+    let mut state = ScrollbarState::new(max_scroll.saturating_add(1))
+        .position(scroll)
+        .viewport_content_length(height);
+    let scrollbar = Scrollbar::default()
+        .orientation(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(None)
+        .end_symbol(None)
+        .track_symbol(Some(SCROLLBAR_TRACK))
+        .thumb_symbol(SCROLLBAR_THUMB)
+        .style(style_scrollbar());
+    f.render_stateful_widget(scrollbar, sb_area, &mut state);
 }
 
 fn build_input_lines(snap: &Snapshot, token_held: bool) -> Vec<Line<'_>> {
