@@ -1,7 +1,7 @@
-use runie_core::{AppState, Event};
+use super::find_input_box_bounds;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use super::find_input_box_bounds;
+use runie_core::{AppState, Event};
 
 #[test]
 fn input_box_shows_model_name_at_bottom_right() {
@@ -21,7 +21,11 @@ fn input_box_shows_model_name_at_bottom_right() {
             .collect();
         if line.contains('╯') && line.contains("openai/gpt-4o") {
             let pos = line.find("openai/gpt-4o").unwrap();
-            assert!(pos > 40, "Model name should be right-aligned, got pos {}", pos);
+            assert!(
+                pos > 40,
+                "Model name should be right-aligned, got pos {}",
+                pos
+            );
             model_row = Some(y);
         }
     }
@@ -34,20 +38,43 @@ fn theme_selector_renders_theme_list() {
     let mut state = AppState::default();
     state.input.input = "/theme".to_string();
     state.update(Event::Submit);
-    assert!(matches!(state.open_dialog, Some(runie_core::commands::DialogState::PanelStack(_))));
+    assert!(matches!(
+        state.open_dialog,
+        Some(runie_core::commands::DialogState::PanelStack(_))
+    ));
 
     let backend = TestBackend::new(60, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
     assert!(content.contains("Choose Theme"));
     assert!(content.contains("runie"));
-    assert!(content.contains("dracula"));
+    // The theme picker is fuzzy-searchable. Use the filter to narrow to
+    // dracula and verify it becomes visible.
+    state.update(Event::Input('d'));
+    state.update(Event::Input('r'));
+    state.update(Event::Input('a'));
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content: String = (0..buf.area().height)
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
+        .collect();
+    assert!(
+        content.contains("dracula"),
+        "filtered theme picker should show 'dracula': {}",
+        content
+    );
 }
 
 #[test]
@@ -111,7 +138,12 @@ fn input_box_single_line() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let (top, bottom) = find_input_box_bounds(&buf);
-    assert!(bottom - top + 1 >= 2, "input box should be at least 2 rows tall, got top={} bottom={}", top, bottom);
+    assert!(
+        bottom - top + 1 >= 2,
+        "input box should be at least 2 rows tall, got top={} bottom={}",
+        top,
+        bottom
+    );
 }
 
 #[test]
@@ -173,6 +205,11 @@ fn input_box_shrinks_when_content_reduced() {
         terminal.draw(|f| view(f, &mut state)).unwrap();
         let buf = terminal.backend().buffer();
         let (top2, bottom2) = find_input_box_bounds(&buf);
-        assert!(top2 > top1, "top should move down when input shrinks: top1={} top2={}", top1, top2);
+        assert!(
+            top2 > top1,
+            "top should move down when input shrinks: top1={} top2={}",
+            top1,
+            top2
+        );
     }
 }

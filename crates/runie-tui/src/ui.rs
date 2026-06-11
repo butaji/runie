@@ -19,25 +19,33 @@ use runie_core::{Element, Snapshot};
 
 use crate::message as msg;
 use crate::theme::{
-    SCROLLBAR_TRACK, SCROLLBAR_THUMB,
-    style_empty_state, style_timestamp, style_status_idle, style_status_active,
-    style_input_cursor, style_placeholder, style_hint, style_hint_key,
-    style_scrollbar, color_bg, set_current_theme, block_input, style_chevron,
+    block_input, color_bg, set_current_theme, style_chevron, style_empty_state, style_hint,
+    style_hint_key, style_input_cursor, style_placeholder, style_scrollbar, style_status_active,
+    style_status_idle, style_timestamp, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
 };
 
 fn vstack(area: Rect, heights: &[Constraint]) -> Vec<Rect> {
-    Layout::default().direction(Direction::Vertical).constraints(heights).split(area).to_vec()
+    Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(heights)
+        .split(area)
+        .to_vec()
 }
 
 pub(crate) fn hstack(area: Rect, widths: &[Constraint]) -> Vec<Rect> {
-    Layout::default().direction(Direction::Horizontal).constraints(widths).split(area).to_vec()
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(widths)
+        .split(area)
+        .to_vec()
 }
 
 /// Draw a Snapshot to the terminal. Pure function — no mutable state.
 pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     set_current_theme(&snap.theme_name);
     let full_area = f.area();
-    f.buffer_mut().set_style(full_area, Style::default().bg(color_bg()));
+    f.buffer_mut()
+        .set_style(full_area, Style::default().bg(color_bg()));
     let margin = if full_area.width > 20 && full_area.height > 10 {
         Margin::new(1, 1)
     } else {
@@ -46,25 +54,23 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
     let area = full_area.inner(margin);
     let input_lines = count_input_lines(&snap.input);
     let input_height = (input_lines + 2).min(10) as u16;
-    let c = vstack(area, &[
-        Constraint::Min(3),
-        Constraint::Length(1), // empty margin above status
-        Constraint::Length(1), // status
-        Constraint::Length(input_height),
-        Constraint::Length(1),
-        Constraint::Length(1),
-    ]);
+    let c = vstack(
+        area,
+        &[
+            Constraint::Min(3),
+            Constraint::Length(1), // empty margin above status
+            Constraint::Length(1), // status
+            Constraint::Length(input_height),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ],
+    );
     messages(f, snap, c[0]);
     // c[1] is the empty margin line — no rendering needed
     crate::status_bar::render(f, snap, c[2]);
     input(f, snap, c[3]);
     hints(f, snap, c[5]);
     crate::popups::path_suggestions(f, snap);
-    crate::popups::command_palette(f, snap);
-    crate::popups::model_selector_dialog(f, snap);
-    crate::popups::scoped_models_dialog(f, snap);
-    crate::popups::settings_dialog(f, snap);
-    crate::popups::session_tree_dialog(f, snap);
     crate::popups::panel::panel_dialog(f, snap);
 }
 
@@ -100,7 +106,9 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let lines = build_lines(snap, content_width);
     let offset = snap.scroll_offset(height);
     f.render_widget(
-        Paragraph::new(lines).scroll((offset, 0)).wrap(Wrap { trim: false }),
+        Paragraph::new(lines)
+            .scroll((offset, 0))
+            .wrap(Wrap { trim: false }),
         area,
     );
 
@@ -155,17 +163,30 @@ fn to_lines<'a>(elem: &'a Element, content_width: u16) -> Vec<Line<'a>> {
         UserMessage { content, timestamp } => {
             msg::render_user_message(content, *timestamp, content_width)
         }
-        AgentMessage { content, timestamp, .. } => {
-            msg::render_agent_message(content, *timestamp, content_width)
-        }
+        AgentMessage {
+            content, timestamp, ..
+        } => msg::render_agent_message(content, *timestamp, content_width),
         Thinking { started, .. } => msg::render_thinking(*started),
-        ThoughtSummary { content, duration_secs, .. } => {
-            msg::render_thought_summary(content, *duration_secs)
-        }
+        ThoughtSummary {
+            content,
+            duration_secs,
+            ..
+        } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content),
-        ToolRunning { name, started, .. } => msg::render_tool_running(name, started.elapsed().as_secs_f64()),
-        ToolDone { name, duration_secs, output, .. } => msg::render_tool_done(name, *duration_secs, output),
-        ToolSummary { name, duration_secs, .. } => msg::render_tool_summary(name, *duration_secs),
+        ToolRunning { name, started, .. } => {
+            msg::render_tool_running(name, started.elapsed().as_secs_f64())
+        }
+        ToolDone {
+            name,
+            duration_secs,
+            output,
+            ..
+        } => msg::render_tool_done(name, *duration_secs, output),
+        ToolSummary {
+            name,
+            duration_secs,
+            ..
+        } => msg::render_tool_summary(name, *duration_secs),
         TurnComplete { duration_secs, .. } => msg::render_turn_complete(*duration_secs),
     }
 }
@@ -206,7 +227,12 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
 }
 
 fn render_input_scrollbar(f: &mut Frame, area: Rect, total: usize, scroll: usize, height: usize) {
-    let sb_area = Rect { x: area.x + area.width - 1, y: area.y + 1, width: 1, height: area.height.saturating_sub(2) };
+    let sb_area = Rect {
+        x: area.x + area.width - 1,
+        y: area.y + 1,
+        width: 1,
+        height: area.height.saturating_sub(2),
+    };
     let max_scroll = total.saturating_sub(height);
     let mut state = ScrollbarState::new(max_scroll.saturating_add(1))
         .position(scroll)
@@ -230,12 +256,21 @@ fn build_input_lines(snap: &Snapshot, token_held: bool) -> Vec<Line<'_>> {
     let cursor = input_cursor(snap);
     let mut result = build_input_content_lines(snap, cursor, chevron_style, token_held);
     if cursor.line_idx >= snap.input.lines().count() {
-        result.push(build_trailing_cursor_line(snap, cursor, chevron_style, token_held));
+        result.push(build_trailing_cursor_line(
+            snap,
+            cursor,
+            chevron_style,
+            token_held,
+        ));
     }
     result
 }
 
-fn build_placeholder_line(snap: &Snapshot, chevron_style: Style, token_held: bool) -> Line<'static> {
+fn build_placeholder_line(
+    snap: &Snapshot,
+    chevron_style: Style,
+    token_held: bool,
+) -> Line<'static> {
     let mut spans = vec![Span::styled(crate::theme::GLYPH_USER, chevron_style)];
     if token_held {
         spans.push(Span::styled(" ".to_string(), style_input_cursor()));
@@ -253,8 +288,17 @@ struct InputCursor {
 fn input_cursor(snap: &Snapshot) -> InputCursor {
     let pos = snap.cursor_pos.min(snap.input.len());
     let line_idx = snap.input[..pos].chars().filter(|&c| c == '\n').count();
-    let col_in_line = pos - snap.input.lines().take(line_idx).map(|l| l.len() + 1).sum::<usize>();
-    InputCursor { line_idx, col_in_line }
+    let col_in_line = pos
+        - snap
+            .input
+            .lines()
+            .take(line_idx)
+            .map(|l| l.len() + 1)
+            .sum::<usize>();
+    InputCursor {
+        line_idx,
+        col_in_line,
+    }
 }
 
 fn build_input_content_lines(
@@ -264,28 +308,53 @@ fn build_input_content_lines(
     token_held: bool,
 ) -> Vec<Line<'_>> {
     let indent = "  ";
-    let mut result = Vec::new();
-    for (line_idx, line_content) in snap.input.lines().enumerate() {
-        let prefix = if line_idx == 0 { crate::theme::GLYPH_USER } else { indent };
-        let mut spans = vec![Span::styled(prefix, chevron_style)];
-
-        if line_idx == cursor.line_idx {
-            let ghost = if line_idx == snap.input.lines().count().saturating_sub(1) {
-                snap.ghost_completion.as_deref().unwrap_or("")
-            } else { "" };
-            spans.extend(render_cursor_spans(line_content, cursor.col_in_line, token_held, ghost));
-        } else {
-            spans.push(Span::styled(line_content, crate::theme::style_agent()));
-        }
-
-        if line_idx == 0 {
-            if let Some(label) = image_attachment_label(snap) {
-                spans.push(Span::styled(label, style_hint()));
+    let last_line_idx = snap.input.lines().count().saturating_sub(1);
+    snap.input
+        .lines()
+        .enumerate()
+        .map(|(line_idx, line_content)| {
+            let prefix = if line_idx == 0 {
+                crate::theme::GLYPH_USER
+            } else {
+                indent
+            };
+            let mut spans = vec![Span::styled(prefix, chevron_style)];
+            spans.extend(line_spans(
+                line_idx,
+                line_content,
+                cursor,
+                token_held,
+                snap,
+                last_line_idx,
+            ));
+            if line_idx == 0 {
+                if let Some(label) = image_attachment_label(snap) {
+                    spans.push(Span::styled(label, style_hint()));
+                }
             }
-        }
-        result.push(Line::from(spans));
+            Line::from(spans)
+        })
+        .collect()
+}
+
+fn line_spans<'a>(
+    line_idx: usize,
+    line_content: &'a str,
+    cursor: InputCursor,
+    token_held: bool,
+    snap: &'a Snapshot,
+    last_line_idx: usize,
+) -> Vec<Span<'a>> {
+    if line_idx == cursor.line_idx {
+        let ghost = if line_idx == last_line_idx {
+            snap.ghost_completion.as_deref().unwrap_or("")
+        } else {
+            ""
+        };
+        render_cursor_spans(line_content, cursor.col_in_line, token_held, ghost)
+    } else {
+        vec![Span::styled(line_content, crate::theme::style_agent())]
     }
-    result
 }
 
 fn build_trailing_cursor_line(
@@ -294,20 +363,40 @@ fn build_trailing_cursor_line(
     chevron_style: Style,
     token_held: bool,
 ) -> Line<'static> {
-    let prefix = if snap.input.is_empty() { crate::theme::GLYPH_USER } else { "  " };
+    let prefix = if snap.input.is_empty() {
+        crate::theme::GLYPH_USER
+    } else {
+        "  "
+    };
     let mut spans = vec![Span::styled(prefix, chevron_style)];
-    let cursor_style = if token_held { style_input_cursor() } else { crate::theme::style_agent() };
+    let cursor_style = if token_held {
+        style_input_cursor()
+    } else {
+        crate::theme::style_agent()
+    };
     spans.push(Span::styled(" ", cursor_style));
     Line::from(spans)
 }
 
-fn render_cursor_spans<'a>(line_content: &'a str, cursor_col_in_line: usize, token_held: bool, ghost: &'a str) -> Vec<Span<'a>> {
-    let cursor_style = if token_held { style_input_cursor() } else { crate::theme::style_agent() };
+fn render_cursor_spans<'a>(
+    line_content: &'a str,
+    cursor_col_in_line: usize,
+    token_held: bool,
+    ghost: &'a str,
+) -> Vec<Span<'a>> {
+    let cursor_style = if token_held {
+        style_input_cursor()
+    } else {
+        crate::theme::style_agent()
+    };
     let before = &line_content[..cursor_col_in_line.min(line_content.len())];
     let (at_cursor, after) = if cursor_col_in_line < line_content.len() {
         let c = line_content[cursor_col_in_line..].chars().next().unwrap();
         let char_len = c.len_utf8();
-        (c.to_string(), &line_content[cursor_col_in_line + char_len..])
+        (
+            c.to_string(),
+            &line_content[cursor_col_in_line + char_len..],
+        )
     } else {
         (" ".to_string(), "")
     };
@@ -334,9 +423,15 @@ fn image_attachment_label(snap: &Snapshot) -> Option<String> {
 fn hints(f: &mut Frame, snap: &Snapshot, area: Rect) {
     if let Some(ref msg) = snap.transient_message {
         let (label, bg) = match snap.transient_level {
-            Some(runie_core::event::TransientLevel::Success) => ("\\ok\\", crate::theme::color_success()),
-            Some(runie_core::event::TransientLevel::Warning) => ("\\warn\\", crate::theme::color_warning()),
-            Some(runie_core::event::TransientLevel::Error) => ("\\err\\", crate::theme::color_error()),
+            Some(runie_core::event::TransientLevel::Success) => {
+                ("\\ok\\", crate::theme::color_success())
+            }
+            Some(runie_core::event::TransientLevel::Warning) => {
+                ("\\warn\\", crate::theme::color_warning())
+            }
+            Some(runie_core::event::TransientLevel::Error) => {
+                ("\\err\\", crate::theme::color_error())
+            }
             _ => ("", crate::theme::color_bg_panel()),
         };
         let badge_bg = crate::theme::darken(bg, 0.8);
@@ -388,10 +483,7 @@ pub(crate) fn estimate_element_tokens(elem: &Element) -> usize {
         UserMessage { content, .. }
         | AgentMessage { content, .. }
         | ThoughtMarker { content, .. } => content.len() / 4,
-        Thinking { .. }
-        | ThoughtSummary { .. }
-        | ToolSummary { .. }
-        | TurnComplete { .. } => 10,
+        Thinking { .. } | ThoughtSummary { .. } | ToolSummary { .. } | TurnComplete { .. } => 10,
         ToolRunning { .. } => 10,
         ToolDone { output, .. } => output.len() / 4 + 10,
         Spacer { .. } => 0,

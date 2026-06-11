@@ -6,7 +6,7 @@
 use ratatui::layout::Alignment;
 use ratatui::style::{Color, Style};
 use ratatui::text::Line;
-use ratatui::widgets::{Block, Borders, BorderType, TitlePosition};
+use ratatui::widgets::{Block, BorderType, Borders, TitlePosition};
 use std::sync::{Arc, RwLock};
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
@@ -16,7 +16,7 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
 pub fn test_lock() -> std::sync::MutexGuard<'static, ()> {
-    TEST_LOCK.lock().unwrap()
+    TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// Set the active theme by name. Called by `draw_snapshot` at frame start.
@@ -142,45 +142,80 @@ inline_code = { fg = "success", bg = "bg.code" }
 "##;
 
 fn default_theme() -> opaline::Theme {
-    opaline::load_from_str(DEFAULT_THEME_TOML, None)
-        .expect("embedded default theme must be valid")
+    opaline::load_from_str(DEFAULT_THEME_TOML, None).expect("embedded default theme must be valid")
 }
 
 fn register_runie_styles(mut theme: opaline::Theme) -> opaline::Theme {
+    register_chat_styles(&mut theme);
+    register_tool_styles(&mut theme);
+    register_status_styles(&mut theme);
+    register_code_styles(&mut theme);
+    register_input_styles(&mut theme);
+    register_runie_popup_styles(&mut theme);
+    theme
+}
+
+fn register_chat_styles(theme: &mut opaline::Theme) {
     let accent = theme.color("accent.primary");
     let fg = theme.color("text.primary");
     let dim = theme.color("text.dim");
-    let success = theme.color("success");
-    let warning = theme.color("warning");
-    let bg = theme.color("bg.base");
-    let bg_code = theme.color("bg.code");
-    let code_fn = theme.color("code.function");
-
     theme.register_default_style("runie.user", opaline::OpalineStyle::fg(accent).bold());
     theme.register_default_style("runie.agent", opaline::OpalineStyle::fg(fg));
     theme.register_default_style("runie.thought", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.thinking", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.empty", opaline::OpalineStyle::fg(dim));
+    theme.register_default_style("runie.timestamp", opaline::OpalineStyle::fg(dim));
+}
+
+fn register_tool_styles(theme: &mut opaline::Theme) {
+    let dim = theme.color("text.dim");
+    let fg = theme.color("text.primary");
     theme.register_default_style("runie.tool.running", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.tool.header", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.tool.output", opaline::OpalineStyle::fg(fg));
     theme.register_default_style("runie.tool.summary", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.turn.complete", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.empty", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.timestamp", opaline::OpalineStyle::fg(dim));
+}
+
+fn register_status_styles(theme: &mut opaline::Theme) {
+    let dim = theme.color("text.dim");
+    let success = theme.color("success");
+    let warning = theme.color("warning");
     theme.register_default_style("runie.status.idle", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.status.active", opaline::OpalineStyle::fg(success));
-    theme.register_default_style("runie.border", opaline::OpalineStyle::fg(theme.color("border.unfocused")));
+    theme.register_default_style(
+        "runie.border",
+        opaline::OpalineStyle::fg(theme.color("border.unfocused")),
+    );
     theme.register_default_style("runie.border.flash", opaline::OpalineStyle::fg(warning));
-    theme.register_default_style("runie.code.block", opaline::OpalineStyle::fg(code_fn).with_bg(bg_code));
+}
+
+fn register_code_styles(theme: &mut opaline::Theme) {
+    let dim = theme.color("text.dim");
+    let code_fn = theme.color("code.function");
+    let bg_code = theme.color("bg.code");
+    theme.register_default_style(
+        "runie.code.block",
+        opaline::OpalineStyle::fg(code_fn).with_bg(bg_code),
+    );
     theme.register_default_style("runie.code.header", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.input.cursor", opaline::OpalineStyle::fg(bg).with_bg(accent));
+}
+
+fn register_input_styles(theme: &mut opaline::Theme) {
+    let dim = theme.color("text.dim");
+    let bg = theme.color("bg.base");
+    let accent = theme.color("accent.primary");
+    theme.register_default_style(
+        "runie.input.cursor",
+        opaline::OpalineStyle::fg(bg).with_bg(accent),
+    );
     theme.register_default_style("runie.placeholder", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.hint", opaline::OpalineStyle::fg(dim));
-    theme.register_default_style("runie.hint.key", opaline::OpalineStyle::fg(theme.color("text.muted")));
-    theme.register_default_style("runie.thought.summary", opaline::OpalineStyle::fg(dim));
-
-    register_runie_popup_styles(&mut theme);
-    theme
+    theme.register_default_style(
+        "runie.hint.key",
+        opaline::OpalineStyle::fg(theme.color("text.muted")),
+    );
 }
 
 fn register_runie_popup_styles(theme: &mut opaline::Theme) {
@@ -191,28 +226,56 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
 
     theme.register_default_style(
         "runie.popup.selected",
-        opaline::OpalineStyle::fg(accent_secondary).with_bg(bg_highlight).bold(),
+        opaline::OpalineStyle::fg(accent_secondary)
+            .with_bg(bg_highlight)
+            .bold(),
     );
-    theme.register_default_style("runie.popup.unselected", opaline::OpalineStyle::fg(fg_secondary));
-    theme.register_default_style("runie.popup.border", opaline::OpalineStyle::fg(border_focused));
+    theme.register_default_style(
+        "runie.popup.unselected",
+        opaline::OpalineStyle::fg(fg_secondary),
+    );
+    theme.register_default_style(
+        "runie.popup.border",
+        opaline::OpalineStyle::fg(border_focused),
+    );
 }
 
 // ── Raw color helpers (for markdown, diff, etc.) ───────────────────────
 
-pub fn color_bg() -> Color { Color::from(current_theme().color("bg.base")) }
-pub fn color_bg_panel() -> Color { Color::from(current_theme().color("bg.panel")) }
-pub fn color_fg() -> Color { Color::from(current_theme().color("text.primary")) }
-pub fn color_fg_mid() -> Color { Color::from(current_theme().color("text.secondary")) }
+pub fn color_bg() -> Color {
+    Color::from(current_theme().color("bg.base"))
+}
+pub fn color_bg_panel() -> Color {
+    Color::from(current_theme().color("bg.panel"))
+}
+pub fn color_fg() -> Color {
+    Color::from(current_theme().color("text.primary"))
+}
+pub fn color_fg_mid() -> Color {
+    Color::from(current_theme().color("text.secondary"))
+}
 pub fn color_fg_bright() -> Color {
     let c = current_theme().color("text.primary").lighten(0.3);
     Color::Rgb(c.r, c.g, c.b)
 }
-pub fn color_accent() -> Color { Color::from(current_theme().color("accent.primary")) }
-pub fn color_success() -> Color { Color::from(current_theme().color("success")) }
-pub fn color_warning() -> Color { Color::from(current_theme().color("warning")) }
-pub fn color_error() -> Color { Color::from(current_theme().color("error")) }
-pub fn color_dim() -> Color { Color::from(current_theme().color("text.dim")) }
-pub fn color_border() -> Color { Color::from(current_theme().color("border.unfocused")) }
+pub fn color_accent() -> Color {
+    Color::from(current_theme().color("accent.primary"))
+}
+pub fn color_success() -> Color {
+    Color::from(current_theme().color("success"))
+}
+pub fn color_warning() -> Color {
+    Color::from(current_theme().color("warning"))
+}
+pub fn color_error() -> Color {
+    Color::from(current_theme().color("error"))
+}
+pub fn color_dim() -> Color {
+    Color::from(current_theme().color("text.dim"))
+}
+pub fn color_border() -> Color {
+    Color::from(current_theme().color("border.unfocused"))
+}
 
 /// Darken an RGB color by a factor (0.0–1.0).
 pub fn darken(color: Color, factor: f32) -> Color {
@@ -225,8 +288,12 @@ pub fn darken(color: Color, factor: f32) -> Color {
         _ => color,
     }
 }
-pub fn color_code() -> Color { Color::from(current_theme().color("code.function")) }
-pub fn color_code_bg() -> Color { Color::from(current_theme().color("bg.code")) }
+pub fn color_code() -> Color {
+    Color::from(current_theme().color("code.function"))
+}
+pub fn color_code_bg() -> Color {
+    Color::from(current_theme().color("bg.code"))
+}
 
 // ── Style helpers ──────────────────────────────────────────────────────
 
@@ -284,7 +351,11 @@ pub fn style_chevron(token_held: bool) -> Style {
 /// Build the input panel block with rounded borders.
 /// Title is placed at the bottom-right.
 pub fn block_input(title: &str, flash: bool) -> Block<'_> {
-    let border_style = if flash { style_border_flash() } else { style_border() };
+    let border_style = if flash {
+        style_border_flash()
+    } else {
+        style_border()
+    };
     Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -313,8 +384,8 @@ pub const GLYPH_SELECTED: &str = "▸ ";
 pub const GLYPH_UNSELECTED: &str = "  ";
 pub const GLYPH_THINKING: char = '◐';
 pub const GLYPH_SPINNER: char = '⠋';
-pub const SCROLLBAR_TRACK: &str = " ";   // invisible track
-pub const SCROLLBAR_THUMB: &str = "▐";   // right half-block — visible but not heavy
+pub const SCROLLBAR_TRACK: &str = " "; // invisible track
+pub const SCROLLBAR_THUMB: &str = "▐"; // right half-block — visible but not heavy
 pub const INDICATOR_COLLAPSED: &str = " [+]";
 pub const PANEL_CHAT: &str = " Chat ";
 pub const PANEL_INPUT: &str = " Input ";
@@ -340,7 +411,10 @@ pub fn tool_done_header(name: &str, duration_secs: f64) -> String {
 }
 
 pub fn tool_summary_line(name: &str, duration_secs: f64) -> String {
-    format!("{}{} {:.1}s{}", GLYPH_TOOL, name, duration_secs, INDICATOR_COLLAPSED)
+    format!(
+        "{}{} {:.1}s{}",
+        GLYPH_TOOL, name, duration_secs, INDICATOR_COLLAPSED
+    )
 }
 
 pub fn turn_complete_line(duration_secs: f64) -> String {

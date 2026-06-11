@@ -25,7 +25,9 @@ impl Panel {
             items: Vec::new(),
             selected: 0,
             filter: String::new(),
-            filterable: false,
+            // List-style panels are searchable by default. Forms should opt-out
+            // explicitly since they use keyboard input for field editing.
+            filterable: true,
             keep_open_on_activate: false,
             form_values: std::collections::HashMap::new(),
         }
@@ -125,6 +127,12 @@ impl Panel {
         self
     }
 
+    /// Explicitly enable or disable fuzzy filtering for this panel.
+    pub fn filterable(mut self, enabled: bool) -> Self {
+        self.filterable = enabled;
+        self
+    }
+
     /// When true, the panel stays open after activating an item (Enter).
     /// Use for previews like theme picker or live toggles.
     pub fn keep_open(mut self) -> Self {
@@ -156,51 +164,72 @@ impl Panel {
         self.selected
     }
 
+    /// Get raw indices of navigable items that match the current filter,
+    /// sorted by match quality (best matches first).
+    fn filtered_navigable_indices(&self) -> Vec<usize> {
+        if !self.filterable || self.filter.is_empty() {
+            return self
+                .items
+                .iter()
+                .enumerate()
+                .filter(|(_, i)| i.is_navigable())
+                .map(|(i, _)| i)
+                .collect();
+        }
+        let q = self.filter.to_lowercase();
+        let mut scored: Vec<(usize, isize)> = self
+            .items
+            .iter()
+            .enumerate()
+            .filter(|(_, i)| i.is_navigable())
+            .filter_map(|(i, item)| {
+                let label = item.label()?;
+                let score = match_score(label, &q)?;
+                Some((i, score))
+            })
+            .collect();
+        scored.sort_by(|a, b| b.1.cmp(&a.1)); // descending by score
+        scored.into_iter().map(|(i, _)| i).collect()
+    }
+
     /// Items visible after applying the current filter.
-    /// Headers/separators are kept if any navigable item below them matches.
+    /// When filtering, only navigable items are returned, sorted by match quality.
+    /// Headers and separators are dropped for clarity.
     pub fn filtered_items(&self) -> Vec<&PanelItem> {
         if !self.filterable || self.filter.is_empty() {
             return self.items.iter().collect();
         }
-        let q = self.filter.to_lowercase();
-        let mut result = Vec::new();
-        let mut pending_headers: Vec<&PanelItem> = Vec::new();
-        for item in &self.items {
-            match item {
-                PanelItem::Header(_) | PanelItem::Separator => {
-                    pending_headers.push(item);
-                }
-                _ => {
-                    if item.label().map_or(false, |l| l.to_lowercase().contains(&q)) {
-                        result.extend(pending_headers.drain(..));
-                        result.push(item);
-                    }
-                }
-            }
-        }
-        result
+        self.filtered_navigable_indices()
+            .iter()
+            .map(|&i| &self.items[i])
+            .collect()
     }
 
     /// Number of items that can receive selection (not headers/separators).
     pub fn navigable_count(&self) -> usize {
-        self.filtered_items()
-            .into_iter()
-            .filter(|i| i.is_navigable())
-            .count()
+        if !self.filterable || self.filter.is_empty() {
+            self.items.iter().filter(|i| i.is_navigable()).count()
+        } else {
+            self.filtered_navigable_indices().len()
+        }
     }
 
-    /// Map a navigable-item index to the raw item index in the ORIGINAL list.
+    /// Map a navigable-item index to the raw item index.
     pub fn raw_index(&self, nav_index: usize) -> Option<usize> {
-        let mut nav = 0;
-        for (i, item) in self.items.iter().enumerate() {
-            if item.is_navigable() {
-                if nav == nav_index {
-                    return Some(i);
+        if !self.filterable || self.filter.is_empty() {
+            let mut nav = 0;
+            for (i, item) in self.items.iter().enumerate() {
+                if item.is_navigable() {
+                    if nav == nav_index {
+                        return Some(i);
+                    }
+                    nav += 1;
                 }
-                nav += 1;
             }
+            None
+        } else {
+            self.filtered_navigable_indices().get(nav_index).copied()
         }
-        None
     }
 
     /// Get the currently selected navigable item from the FILTERED list.
@@ -221,7 +250,8 @@ impl Panel {
     /// Mutable access to the currently selected navigable item.
     /// NOTE: This uses the ORIGINAL list since we need mutable access.
     pub fn selected_item_mut(&mut self) -> Option<&mut PanelItem> {
-        self.raw_index(self.selected).and_then(|i| self.items.get_mut(i))
+        self.raw_index(self.selected)
+            .and_then(|i| self.items.get_mut(i))
     }
 
     /// Append a filter character.
@@ -238,16 +268,17 @@ impl Panel {
 
     /// Returns true if this panel contains any form fields.
     pub fn is_form(&self) -> bool {
-        self.items.iter().any(|i| matches!(i, PanelItem::FormField { .. }))
+        self.items
+            .iter()
+            .any(|i| matches!(i, PanelItem::FormField { .. }))
     }
 
     /// Get the index of the currently selected form field (or None if not on a field).
     pub fn selected_form_field(&self) -> Option<usize> {
-        let filtered = self.filtered_items();
         let mut nav = 0;
         for (i, item) in self.items.iter().enumerate() {
-            if matches!(item, PanelItem::FormField { .. }) {
-                if nav == self.selected {
+            if item.is_navigable() {
+                if nav == self.selected && matches!(item, PanelItem::FormField { .. }) {
                     return Some(i);
                 }
                 nav += 1;
@@ -268,14 +299,113 @@ impl Panel {
     pub fn get_form_values(&self) -> &std::collections::HashMap<String, String> {
         &self.form_values
     }
+
+    /// Find a button (Action item) in this panel whose label contains an
+    /// accelerator matching the given character. Labels use "_X" syntax
+    /// where X is the accelerator key, e.g. "_Submit" → 'S'.
+    pub fn find_button_by_accel(&self, c: char) -> Option<&ItemAction> {
+        let c = c.to_ascii_lowercase();
+        for item in &self.items {
+            if let PanelItem::Action { label, action } = item {
+                if let Some(accel) = parse_accel(label) {
+                    if accel.to_ascii_lowercase() == c {
+                        return Some(action);
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+/// Score how well a label matches a query. Higher is better.
+/// Priority: startsWith > contains > fuzzy variations.
+fn match_score(label: &str, query: &str) -> Option<isize> {
+    if query.is_empty() {
+        return Some(0);
+    }
+    let label_lower = label.to_lowercase();
+    let query_lower = query.to_lowercase();
+
+    if label_lower.starts_with(&query_lower) {
+        return Some(10_000 + (100 - label.len() as isize).max(0));
+    }
+    if label_lower.contains(&query_lower) {
+        return Some(5_000 + (100 - label.len() as isize).max(0));
+    }
+    fuzzy_score(&label_lower, &query_lower)
+}
+
+fn fuzzy_score(label_lower: &str, query_lower: &str) -> Option<isize> {
+    let label_chars: Vec<char> = label_lower.chars().collect();
+    let query_chars: Vec<char> = query_lower.chars().collect();
+    let mut q_idx = 0;
+    let mut prev_match_idx: Option<usize> = None;
+    let mut score: isize = 1_000;
+
+    for (l_idx, l_ch) in label_chars.iter().enumerate() {
+        if q_idx >= query_chars.len() {
+            break;
+        }
+        if *l_ch == query_chars[q_idx] {
+            if q_idx == 0 && l_idx == 0 {
+                score += 50;
+            }
+            if let Some(prev) = prev_match_idx {
+                let gap = l_idx - prev;
+                if gap == 1 {
+                    score += 20;
+                } else {
+                    score -= gap as isize * 5;
+                }
+            }
+            prev_match_idx = Some(l_idx);
+            q_idx += 1;
+        }
+    }
+
+    if q_idx == query_chars.len() {
+        Some(score)
+    } else {
+        None
+    }
+}
+
+/// Parse an accelerator from a label like "_Submit" → Some('S').
+/// The underscore is removed from display text.
+pub fn parse_accel(label: &str) -> Option<char> {
+    let mut chars = label.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '_' {
+            return chars.next();
+        }
+    }
+    None
+}
+
+/// Strip accelerator underscores from a label for display.
+pub fn strip_accel(label: &str) -> String {
+    label.replace('_', "")
 }
 
 /// A single row inside a panel.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PanelItem {
-    Action { label: String, action: ItemAction },
-    Toggle { label: String, value: bool, key: String },
-    Select { label: String, current: String, options: Vec<String>, key: String },
+    Action {
+        label: String,
+        action: ItemAction,
+    },
+    Toggle {
+        label: String,
+        value: bool,
+        key: String,
+    },
+    Select {
+        label: String,
+        current: String,
+        options: Vec<String>,
+        key: String,
+    },
     FormField {
         label: String,
         value: String,

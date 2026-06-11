@@ -1,6 +1,6 @@
 //! Panel Builder - Fluent API for creating panels
 
-use super::{PanelItem, ItemAction};
+use super::{ItemAction, PanelItem};
 use crate::Event;
 use std::collections::HashMap;
 
@@ -26,7 +26,9 @@ impl Panel {
             items: Vec::new(),
             selected: 0,
             filter: String::new(),
-            filterable: false,
+            // List-style panels are searchable by default. Forms opt-out via the
+            // form builder, which disables filtering before adding fields.
+            filterable: true,
             keep_open_on_activate: false,
             form_values: HashMap::new(),
         }
@@ -88,7 +90,12 @@ impl Panel {
     }
 
     /// Add a form field
-    pub fn field(mut self, label: impl Into<String>, placeholder: impl Into<String>, key: impl Into<String>) -> Self {
+    pub fn field(
+        mut self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Self {
         self.items.push(PanelItem::FormField {
             label: label.into(),
             value: String::new(),
@@ -120,9 +127,16 @@ impl Panel {
         self
     }
 
-    /// Mark as filterable (typing filters items)
+    /// Mark as filterable (typing filters items). No-op for list panels
+    /// because they are already searchable by default.
     pub fn searchable(mut self) -> Self {
         self.filterable = true;
+        self
+    }
+
+    /// Explicitly enable or disable fuzzy filtering for this panel.
+    pub fn filterable(mut self, enabled: bool) -> Self {
+        self.filterable = enabled;
         self
     }
 
@@ -135,7 +149,9 @@ impl Panel {
 
     /// Add items from a closure (for sections/groups)
     pub fn section<F>(mut self, header: impl Into<String>, f: F) -> Self
-    where F: FnOnce(Panel) -> Panel {
+    where
+        F: FnOnce(Panel) -> Panel,
+    {
         self.items.push(PanelItem::Header(header.into()));
         self = f(self);
         self
@@ -143,27 +159,40 @@ impl Panel {
 
     /// Shorthand for grouping items
     pub fn group<F>(mut self, f: F) -> Self
-    where F: FnOnce(Panel) -> Panel {
+    where
+        F: FnOnce(Panel) -> Panel,
+    {
         f(self)
     }
 
     /// Navigate selection up
     pub fn select_up(&mut self) {
         let count = self.navigable_count();
-        if count == 0 { return; }
-        self.selected = if self.selected == 0 { count - 1 } else { self.selected - 1 };
+        if count == 0 {
+            return;
+        }
+        self.selected = if self.selected == 0 {
+            count - 1
+        } else {
+            self.selected - 1
+        };
     }
 
     /// Navigate selection down
     pub fn select_down(&mut self) {
         let count = self.navigable_count();
-        if count == 0 { return; }
+        if count == 0 {
+            return;
+        }
         self.selected = (self.selected + 1) % count;
     }
 
     /// Count of navigable items
     pub fn navigable_count(&self) -> usize {
-        self.filtered_items().iter().filter(|i| i.is_navigable()).count()
+        self.filtered_items()
+            .iter()
+            .filter(|i| i.is_navigable())
+            .count()
     }
 
     /// Get filtered items
@@ -176,9 +205,14 @@ impl Panel {
         let mut pending_headers: Vec<&PanelItem> = Vec::new();
         for item in &self.items {
             match item {
-                PanelItem::Header(_) | PanelItem::Separator => { pending_headers.push(item); }
+                PanelItem::Header(_) | PanelItem::Separator => {
+                    pending_headers.push(item);
+                }
                 _ => {
-                    if item.label().map_or(false, |l| l.to_lowercase().contains(&q)) {
+                    if item
+                        .label()
+                        .map_or(false, |l| l.to_lowercase().contains(&q))
+                    {
                         result.extend(pending_headers.drain(..));
                         result.push(item);
                     }
@@ -193,7 +227,9 @@ impl Panel {
         let mut nav = 0;
         for (i, item) in self.items.iter().enumerate() {
             if item.is_navigable() {
-                if nav == nav_index { return Some(i); }
+                if nav == nav_index {
+                    return Some(i);
+                }
                 nav += 1;
             }
         }
@@ -206,7 +242,9 @@ impl Panel {
         let mut nav = 0;
         for item in filtered {
             if item.is_navigable() {
-                if nav == self.selected { return Some(item); }
+                if nav == self.selected {
+                    return Some(item);
+                }
                 nav += 1;
             }
         }
@@ -215,7 +253,8 @@ impl Panel {
 
     /// Mutable access to selected item
     pub fn selected_item_mut(&mut self) -> Option<&mut PanelItem> {
-        self.raw_index(self.selected).and_then(|i| self.items.get_mut(i))
+        self.raw_index(self.selected)
+            .and_then(|i| self.items.get_mut(i))
     }
 
     /// Push filter character
@@ -232,7 +271,9 @@ impl Panel {
 
     /// Check if panel has form fields
     pub fn is_form(&self) -> bool {
-        self.items.iter().any(|i| matches!(i, PanelItem::FormField { .. }))
+        self.items
+            .iter()
+            .any(|i| matches!(i, PanelItem::FormField { .. }))
     }
 
     /// Get selected form field index
@@ -241,7 +282,9 @@ impl Panel {
         let mut nav = 0;
         for (i, item) in self.items.iter().enumerate() {
             if matches!(item, PanelItem::FormField { .. }) {
-                if nav == self.selected { return Some(i); }
+                if nav == self.selected {
+                    return Some(i);
+                }
                 nav += 1;
             }
         }
@@ -276,7 +319,12 @@ impl Panel {
     }
 }
 
-/// Create a new panel builder
+/// Create a new list-view panel builder. Alias for [`panel`].
+pub fn list(id: impl Into<String>, title: impl Into<String>) -> Panel {
+    Panel::new(id, title)
+}
+
+/// Create a new list-view panel builder.
 pub fn panel(id: impl Into<String>, title: impl Into<String>) -> Panel {
     Panel::new(id, title)
 }
@@ -332,18 +380,16 @@ mod tests {
 
     #[test]
     fn test_panel_section() {
-        let p = panel("test", "Test")
-            .section("Settings", |p| p
-                .toggle("Option 1", false, "opt1")
+        let p = panel("test", "Test").section("Settings", |p| {
+            p.toggle("Option 1", false, "opt1")
                 .toggle("Option 2", true, "opt2")
-            );
+        });
         assert_eq!(p.items.len(), 3);
     }
 
     #[test]
     fn test_panel_into_core() {
-        let dsl_panel = panel("test", "Test")
-            .action("Click me", ItemAction::Close);
+        let dsl_panel = panel("test", "Test").action("Click me", ItemAction::Close);
 
         let core = dsl_panel.into_core();
         assert_eq!(core.id, "test");

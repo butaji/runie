@@ -1,6 +1,6 @@
 //! Form Panel Builder - Fluent API for creating forms with submit handling
 
-use super::{Panel, panel, PanelItem};
+use super::{panel, Panel, PanelItem};
 use crate::Event;
 
 /// Form panel builder with submit handling
@@ -13,14 +13,21 @@ pub struct FormPanel {
 impl FormPanel {
     /// Create a new form panel
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
+        // Forms never use fuzzy filtering — keystrokes edit field values.
+        let panel = Panel::new(id, title).filterable(false);
         Self {
-            panel: Panel::new(id, title),
+            panel,
             submit_event: None,
         }
     }
 
     /// Add a form field
-    pub fn field(mut self, label: impl Into<String>, placeholder: impl Into<String>, key: impl Into<String>) -> Self {
+    pub fn field(
+        mut self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Self {
         self.panel = self.panel.field(label, placeholder, key);
         self
     }
@@ -75,7 +82,9 @@ mod tests {
         let p = form("save", "Save")
             .field("Name", "session", "name")
             .field("Tags", "tag1, tag2", "tags")
-            .on_submit(Event::RunSaveCommand { name: String::new() })
+            .on_submit(Event::RunSaveCommand {
+                name: String::new(),
+            })
             .build();
 
         assert!(p.is_form());
@@ -86,7 +95,9 @@ mod tests {
     fn test_form_to_stack() {
         let stack = form("save", "Save")
             .field("Name", "session", "name")
-            .on_submit(Event::RunSaveCommand { name: String::new() })
+            .on_submit(Event::RunSaveCommand {
+                name: String::new(),
+            })
             .into_stack();
 
         assert_eq!(stack.len(), 1);
