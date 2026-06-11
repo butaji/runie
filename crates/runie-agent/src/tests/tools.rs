@@ -55,6 +55,33 @@ fn test_tool_bash_echo() {
 }
 
 #[test]
+fn test_bash_truncation_uses_configured_policy() {
+    // Generate 50 lines; with max_lines=10 the output should be truncated.
+    let policy = crate::truncate::TruncationPolicy { max_lines: 10, max_bytes: 1024 * 1024 };
+    let result = Tool::Bash { command: "seq 1 50".to_string() }.execute_with_policy(&policy);
+    assert!(result.success);
+    assert!(result.output.contains("Output truncated"),
+        "expected truncation marker, got: {:?}", result.output);
+    // Tail strategy: keep last N lines.
+    assert!(result.output.contains("46"), "tail should keep the latest lines: {:?}", result.output);
+    // The earliest kept line is "41" (lines 41-50 of 50 = 10 lines).
+    // Lines 1-40 should not appear in the truncated output.
+    assert!(!result.output.contains("\n1\n"),
+        "head lines should be dropped: {:?}", result.output);
+    assert!(!result.output.contains("20\n"),
+        "mid lines should be dropped: {:?}", result.output);
+}
+
+#[test]
+fn test_bash_no_truncation_when_under_policy() {
+    // Under the default policy, 50 lines should not be truncated.
+    let result = Tool::Bash { command: "seq 1 50".to_string() }.execute();
+    assert!(result.success);
+    assert!(!result.output.contains("Output truncated"),
+        "small output should not be truncated: {:?}", result.output);
+}
+
+#[test]
 fn test_tool_bash_invalid_command() {
     let result = Tool::Bash { command: "not_a_real_command_12345".to_string() }.execute();
     assert!(!result.success);

@@ -15,6 +15,9 @@ serde_json.workspace = true
 reqwest = { workspace = true, features = ["blocking"] }
 dirs.workspace = true
 tempfile = "3"
+toml.workspace = true
+thiserror = "1"
+tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 runie-provider.workspace = true

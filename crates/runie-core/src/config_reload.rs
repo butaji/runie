@@ -32,6 +32,25 @@ pub struct PromptsSection {
     pub custom: Option<String>,
 }
 
+/// Truncation limits for tool output. See `[truncation]` in `config.toml`.
+/// Defaults match the documented limits in the agent crate; if those change
+/// here, also update `runie-agent::truncate::DEFAULT_MAX_LINES/_BYTES`.
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(default)]
+pub struct TruncationSection {
+    pub max_lines: usize,
+    pub max_bytes: usize,
+}
+
+impl Default for TruncationSection {
+    fn default() -> Self {
+        Self {
+            max_lines: 2000,
+            max_bytes: 50 * 1024,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct Config {
     pub provider: Option<String>,
@@ -46,6 +65,8 @@ pub struct Config {
     telemetry: TelemetrySection,
     #[serde(default)]
     prompts: PromptsSection,
+    #[serde(default)]
+    pub truncation: TruncationSection,
 }
 
 impl Config {

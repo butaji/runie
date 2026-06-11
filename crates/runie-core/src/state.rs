@@ -223,6 +223,9 @@ pub struct ConfigState {
     pub read_only: bool,
     pub scoped_models: Vec<ScopedModel>,
     pub scoped_index: usize,
+    /// Truncation limits for tool output. Loaded from `[truncation]` in
+    /// `config.toml`. See `runie-agent::truncate::TruncationPolicy`.
+    pub truncation: crate::config_reload::TruncationSection,
 }
 
 impl Default for ConfigState {
@@ -238,6 +241,7 @@ impl Default for ConfigState {
             read_only: false,
             scoped_models: Vec::new(),
             scoped_index: 0,
+            truncation: crate::config_reload::TruncationSection::default(),
         }
     }
 }

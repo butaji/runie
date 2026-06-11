@@ -118,3 +118,9 @@ mod session_tree;
 mod dialog_theme_switch;
 #[cfg(test)]
 mod form_dialog;
+#[cfg(test)]
+mod subagent_cmd;
+
+#[cfg(test)]
+mod copy;
+

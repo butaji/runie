@@ -64,7 +64,7 @@ impl AppState {
             | Event::AgentDone { .. } | Event::AgentError { .. } => self.agent_event(event),
             Event::ScrollUp | Event::ScrollDown | Event::PageUp | Event::PageDown => self.scroll_event(event),
             Event::Quit | Event::Reset | Event::Abort | Event::ExternalEditorDone { .. } 
-            | Event::SpawnAgent | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => self.control_event(event),
+            | Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => self.control_event(event),
             Event::SwitchModel { .. } | Event::SwitchTheme { .. } | Event::CycleModelNext 
             | Event::CycleModelPrev | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) 
             | Event::ToggleReadOnly | Event::TrustProject | Event::UntrustProject 
@@ -155,7 +155,7 @@ impl AppState {
                     self.abort_queue();
                 }
             }
-            Event::SpawnAgent | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
+            Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
             Event::ExternalEditorDone { content } => {
                 self.input.input = content;
                 self.input.cursor_pos = self.input.input.len();

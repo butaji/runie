@@ -76,7 +76,7 @@ pub enum Event {
     FollowUp,
     Abort,
 
-    SpawnAgent,
+    SpawnAgent { prompt: String },
     ToggleExpand,
     Dequeue,
     OpenExternalEditor,
