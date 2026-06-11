@@ -118,7 +118,7 @@ fn form_has_prominent_submit_button() {
     let mut state = AppState::default();
     let panel = Panel::new("save", "Save Session")
         .form_field("Name", "session-name", "name")
-        .form_submit(ItemAction::Close);
+        .form_submit();
     open_form_dialog(&mut state, panel);
 
     let buf = render(&mut state);

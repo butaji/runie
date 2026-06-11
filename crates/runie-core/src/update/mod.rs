@@ -5,6 +5,17 @@ use crate::Event;
 pub use crate::tool_markers::has_tool_markers as content_has_tool_markers;
 pub use crate::tool_markers::strip_tool_markers;
 
+/// What a form panel should do in response to an event.
+#[derive(Debug, Clone)]
+enum FormAction {
+    /// Keep the form open, persist the panel state.
+    KeepOpen,
+    /// Close the form (no submit).
+    Close,
+    /// Close the form and dispatch the submit event.
+    Submit(Option<crate::Event>),
+}
+
 mod agent;
 mod at_refs;
 mod bash;
@@ -73,16 +84,15 @@ impl AppState {
             | Event::ModelSelectorDown | Event::ModelSelectorSelect | Event::ModelSelectorClose => self.settings_event(event),
             Event::CommandFormInput(_) | Event::CommandFormBackspace | Event::CommandFormUp 
             | Event::CommandFormDown | Event::CommandFormSubmit | Event::CommandFormClose => self.form_dialog_event(event),
-            Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit 
-            | Event::ReloadAll | Event::ShowDiagnostics | Event::TogglePathCompletion 
-            | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect 
-            | Event::PathCompletionClose => self.edit_event(event),
-            // Handled in edit_event
-            Event::RunSaveCommand { .. } | Event::RunLoadCommand { .. } | Event::RunDeleteCommand { .. }
+            Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit
+            | Event::ReloadAll | Event::ShowDiagnostics | Event::TogglePathCompletion
+            | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect
+            | Event::PathCompletionClose
+            | Event::RunSaveCommand { .. } | Event::RunLoadCommand { .. } | Event::RunDeleteCommand { .. }
             | Event::RunImportCommand { .. } | Event::RunExportCommand { .. }
             | Event::RunSkillCommand { .. } | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. }
             | Event::RunNameCommand { .. } | Event::RunForkCommand { .. } | Event::RunCompactCommand { .. }
-            | Event::RunPromptCommand { .. } | Event::RunThinkingCommand { .. } => {}
+            | Event::RunPromptCommand { .. } | Event::RunThinkingCommand { .. } => self.edit_event(event),
             Event::SystemMessage { content } => self.add_system_msg(content),
             Event::TransientMessage { content, level } => self.set_transient(content, level),
             Event::TransientError { content } => self.set_transient(content, crate::event::TransientLevel::Error),
@@ -329,8 +339,8 @@ impl AppState {
             Event::RunLoginCommand { provider, token } => self.run_login_command(&provider, &token),
             Event::RunLogoutCommand { provider } => self.run_logout_command(&provider),
             Event::RunNameCommand { name } => self.run_name_command(&name),
-            Event::RunForkCommand { message_index } => self.run_fork_command(message_index),
-            Event::RunCompactCommand { keep, focus } => self.run_compact_command(keep, &focus),
+            Event::RunForkCommand { message_index } => self.run_fork_command(&message_index),
+            Event::RunCompactCommand { keep, focus } => self.run_compact_command(&keep, &focus),
             Event::RunPromptCommand { name } => self.run_prompt_command(&name),
             Event::RunThinkingCommand { level } => self.run_thinking_command(level),
             _ => {}
@@ -485,74 +495,23 @@ impl AppState {
     }
 
     fn run_name_command(&mut self, name: &str) {
-        let name = name.trim();
-        if name.is_empty() {
-            let current = self.session.session_display_name.as_deref().unwrap_or("(unset)");
-            self.add_system_msg(format!("Current display name: {}", current));
-            return;
-        }
-        let truncated = if name.chars().count() > 64 {
-            format!("{}…", name.chars().take(64).collect::<String>())
-        } else {
-            name.to_string()
-        };
-        self.session.session_display_name = Some(truncated.clone());
-        self.add_system_msg(format!("Session name set to '{}'", truncated));
+        crate::commands::handlers::session::run_name(self, name)
     }
 
-    fn run_fork_command(&mut self, message_index: usize) {
-        if message_index >= self.session.messages.len() {
-            self.add_system_msg(format!(
-                "Index {} out of range (0–{})",
-                message_index,
-                self.session.messages.len().saturating_sub(1)
-            ));
-            return;
-        }
-        let mut tree = self.session.session_tree.take()
-            .unwrap_or_else(|| crate::session_tree::SessionTree::from_messages(&self.session.messages));
-        match tree.fork_at(message_index) {
-            Some(path) => {
-                tree.navigate_to(&path);
-                self.session.session_tree = Some(tree);
-                self.add_system_msg(format!("Forked at message {}.", message_index));
-            }
-            None => self.add_system_msg("Could not fork.".into()),
-        }
+    fn run_fork_command(&mut self, index_raw: &str) {
+        crate::commands::handlers::session::run_fork(self, index_raw)
     }
 
-    fn run_compact_command(&mut self, keep: usize, focus: &str) {
-        let keep = if keep == 0 { 2000 } else { keep };
-        let msg = self.compact(keep);
-        let result = if focus.is_empty() { msg } else { format!("{} (focus: {})", msg, focus) };
-        self.add_system_msg(result);
+    fn run_compact_command(&mut self, keep_raw: &str, focus: &str) {
+        crate::commands::handlers::session::run_compact(self, keep_raw, focus)
     }
 
     fn run_prompt_command(&mut self, name: &str) {
-        let name = name.trim();
-        if name.is_empty() {
-            let current = if self.current_prompt.is_empty() { "default" } else { &self.current_prompt };
-            let mut lines = vec![format!("Current prompt: {}", current)];
-            if !self.prompts.is_empty() {
-                lines.push("Available prompts:".into());
-                for p in &self.prompts {
-                    lines.push(format!("  {}", p.summary()));
-                }
-            }
-            self.add_system_msg(lines.join("\n"));
-            return;
-        }
-        if self.prompts.iter().any(|p| p.name == name) {
-            self.current_prompt = name.to_string();
-            self.add_system_msg(format!("Prompt switched to '{}'", name));
-        } else {
-            self.add_system_msg(format!("Prompt '{}' not found.", name));
-        }
+        crate::commands::handlers::system::run_prompt(self, name)
     }
 
     fn run_thinking_command(&mut self, level: crate::model::ThinkingLevel) {
-        self.config.thinking_level = level;
-        self.add_system_msg(format!("Thinking level set to: {}", self.config.thinking_level.as_str()));
+        crate::commands::handlers::model::run_thinking(self, level)
     }
 
     /// Handles dialog-specific events.
@@ -618,72 +577,49 @@ impl AppState {
     }
 
     fn update_form_panel(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) {
+        let action = {
+            let panel = stack.current_mut().expect("form panel");
+            Self::form_panel_action(panel, event)
+        };
+        if matches!(action, FormAction::KeepOpen) {
+            self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
+        }
+        self.apply_form_action(action);
+    }
+
+    /// Map a single event to an action on a form panel. Pure: no I/O on `self`.
+    fn form_panel_action(panel: &mut crate::dialog::Panel, event: Event) -> FormAction {
         use Event::*;
-        let panel = stack.current_mut().expect("form panel");
-        
+        use FormAction as A;
         match event {
-            SettingsClose | CommandFormClose | Abort => {
-                self.open_dialog = None;
-                self.mark_dirty();
+            SettingsClose | CommandFormClose | Abort => A::Close,
+            CommandFormUp | HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => {
+                let _ = panel.select_up();
+                A::KeepOpen
             }
-            CommandFormUp | HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => { let _ = panel.select_up(); }
-            CommandFormDown | HistoryNext | SettingsDown | PaletteDown | ModelSelectorDown => { let _ = panel.select_down(); }
+            CommandFormDown | HistoryNext | SettingsDown | PaletteDown | ModelSelectorDown => {
+                let _ = panel.select_down();
+                A::KeepOpen
+            }
             CommandFormInput(c) | Input(c) => {
-                if let Some(idx) = panel.selected_form_field() {
-                    if let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] {
-                        value.push(c);
-                        panel.form_values.insert(key.clone(), value.clone());
-                    }
-                }
+                Self::form_panel_edit_char(panel, c, true);
+                A::KeepOpen
             }
             CommandFormBackspace | Backspace => {
-                if let Some(idx) = panel.selected_form_field() {
-                    if let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] {
-                        value.pop();
-                        panel.form_values.insert(key.clone(), value.clone());
-                    }
-                }
+                Self::form_panel_edit_char(panel, ' ', false);
+                A::KeepOpen
             }
-            CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => {
-                // Submit the form - this sets open_dialog to None
-                self.run_form_submit(panel);
-                return; // Don't overwrite the dialog state
-            }
-            _ => {}
+            CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => A::Submit(Self::form_build_submit(panel)),
+            _ => A::KeepOpen,
         }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
-        self.mark_dirty();
     }
 
-    /// Execute form submission - runs the command with collected form values.
-    fn run_form_submit(&mut self, panel: &mut crate::dialog::Panel) {
-        let values = panel.get_form_values().clone();
-        let cmd = panel.id.clone();
-        self.open_dialog = None;
-        
-        // Execute the command directly with the form values
-        let result = Self::dispatch_form_command(&cmd, &values, self);
-        self.process_command_result(result);
-    }
-
-    /// Dispatch a form command based on its ID and values.
-    fn dispatch_form_command(cmd: &str, values: &std::collections::HashMap<String, String>, state: &mut Self) -> crate::commands::CommandResult {
-        match cmd {
-            "save" => crate::commands::handlers::session::handle_save(state, values.get("name").map(|s| s.as_str()).unwrap_or("")),
-            "load" => crate::commands::handlers::session::handle_load(state, values.get("name").map(|s| s.as_str()).unwrap_or("")),
-            "delete" => crate::commands::handlers::session::handle_delete(state, values.get("name").map(|s| s.as_str()).unwrap_or("")),
-            "import" => crate::commands::handlers::session::handle_import(state, values.get("path").map(|s| s.as_str()).unwrap_or("")),
-            "export" => crate::commands::handlers::session::handle_export(state, values.get("path").map(|s| s.as_str()).unwrap_or("")),
-            "name" => { state.run_name_command(values.get("name").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
-            "fork" => { state.run_fork_command(values.get("index").and_then(|s| s.parse().ok()).unwrap_or(0)); crate::commands::CommandResult::None }
-            "compact" => { let keep = values.get("keep").and_then(|s| s.parse().ok()).unwrap_or(2000); let focus = values.get("focus").cloned().unwrap_or_default(); state.run_compact_command(keep, &focus); crate::commands::CommandResult::None }
-            "prompt" => { state.run_prompt_command(values.get("name").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
-            "thinking" => { let level = values.get("level").and_then(|s| s.parse().ok()).unwrap_or(crate::model::ThinkingLevel::Medium); state.run_thinking_command(level); crate::commands::CommandResult::None }
-            "skill" => { state.run_skill_command(values.get("name").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
-            "login" => { state.run_login_command(values.get("provider").map(|s| s.as_str()).unwrap_or(""), values.get("token").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None }
-            "logout" => { state.run_logout_command(values.get("provider").map(|s| s.as_str()).unwrap_or("")); crate::commands::CommandResult::None },
-            _ => crate::commands::CommandResult::None,
-        }
+    /// Append (push=true) or delete one char (push=false) from the selected form field.
+    fn form_panel_edit_char(panel: &mut crate::dialog::Panel, c: char, push: bool) {
+        let Some(idx) = panel.selected_form_field() else { return };
+        let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] else { return };
+        if push { value.push(c); } else { value.pop(); }
+        panel.form_values.insert(key.clone(), value.clone());
     }
 
     fn try_activate_panel(&mut self, stack: &mut crate::dialog::PanelStack) -> bool {
@@ -1029,39 +965,43 @@ impl AppState {
         }
     }
 
-    /// Handle command form dialog events.
+    /// Handle command form dialog events. Defers to `form_panel_action` after
+    /// routing through the panel-stack. This is the entry point for the
+    /// legacy `CommandForm*` events; `update_panel_stack` calls
+    /// `update_form_panel` directly for non-CommandForm events.
     fn form_dialog_event(&mut self, event: Event) {
-        let submit_evt = {
+        let action = {
             let Some(d) = &mut self.open_dialog else { return };
             let crate::commands::DialogState::PanelStack(stack) = d else { return };
             let Some(panel) = stack.current_mut() else { return };
             if !panel.is_form() { return };
-
-            match event {
-                Event::CommandFormUp => { panel.select_up(); return; }
-                Event::CommandFormDown => { panel.select_down(); return; }
-                Event::CommandFormInput(c) => { Self::form_edit_value(panel, c, true); return; }
-                Event::CommandFormBackspace => { Self::form_edit_value(panel, ' ', false); return; }
-                Event::CommandFormSubmit => Self::form_build_submit(panel),
-                Event::CommandFormClose => { self.open_dialog = None; return; }
-                _ => return,
-            }
+            Self::form_panel_action(panel, event)
         };
-        self.open_dialog = None;
-        self.mark_dirty();
-        if let Some(e) = submit_evt { self.update(e); }
+        self.apply_form_action(action);
     }
 
-    fn form_edit_value(panel: &mut crate::dialog::Panel, c: char, is_input: bool) {
-        let idx = panel.selected_form_field();
-        if let Some(i) = idx {
-            if let crate::dialog::PanelItem::FormField { value, .. } = &mut panel.items[i] {
-                if is_input { value.push(c); } else { value.pop(); }
+    /// Apply a `FormAction` to the current dialog. Mirrors the KeepOpen /
+    /// Close / Submit paths in `update_form_panel`.
+    fn apply_form_action(&mut self, action: FormAction) {
+        match action {
+            FormAction::Close => {
+                self.open_dialog = None;
+                self.mark_dirty();
+            }
+            FormAction::Submit(evt) => {
+                self.open_dialog = None;
+                self.mark_dirty();
+                if let Some(e) = evt { self.update(e); }
+            }
+            FormAction::KeepOpen => {
+                self.mark_dirty();
             }
         }
     }
-
-    fn form_build_submit(panel: &mut crate::dialog::Panel) -> Option<crate::Event> {
+    /// Build the submit event for a form panel by reading form values and
+    /// dispatching via the form-command table. The panel's `id` selects which
+    /// command to run. Returns `None` for unknown command ids.
+    pub(crate) fn form_build_submit(panel: &mut crate::dialog::Panel) -> Option<crate::Event> {
         let values = panel.get_form_values().clone();
         let cmd = panel.id.clone();
         match cmd.as_str() {
@@ -1078,21 +1018,15 @@ impl AppState {
             "logout" => Some(crate::Event::RunLogoutCommand { provider: values.get("provider").cloned().unwrap_or_default() }),
             "name" => Some(crate::Event::RunNameCommand { name: values.get("name").cloned().unwrap_or_default() }),
             "fork" => {
-                let index = values.get("index").and_then(|s| s.parse().ok()).unwrap_or(0);
+                let index = values.get("index").cloned().unwrap_or_default();
                 Some(crate::Event::RunForkCommand { message_index: index })
             }
             "compact" => {
-                let keep = values.get("keep").and_then(|s| s.parse().ok()).unwrap_or(2000);
+                let keep = values.get("keep").cloned().unwrap_or_default();
                 let focus = values.get("focus").cloned().unwrap_or_default();
                 Some(crate::Event::RunCompactCommand { keep, focus })
             }
             "prompt" => Some(crate::Event::RunPromptCommand { name: values.get("name").cloned().unwrap_or_default() }),
-            "thinking" => {
-                let level = values.get("level")
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(crate::model::ThinkingLevel::Medium);
-                Some(crate::Event::RunThinkingCommand { level })
-            }
             _ => None,
         }
     }

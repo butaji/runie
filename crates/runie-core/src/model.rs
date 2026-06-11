@@ -112,6 +112,20 @@ pub enum ThinkingLevel {
 }
 
 impl ThinkingLevel {
+    /// All thinking levels in cycle order (low → high).
+    /// Single source of truth for UI selectors.
+    pub const ALL: &'static [ThinkingLevel] = &[
+        ThinkingLevel::Off,
+        ThinkingLevel::Low,
+        ThinkingLevel::Medium,
+        ThinkingLevel::High,
+    ];
+
+    /// All thinking levels in cycle order. See [`ALL`](Self::ALL).
+    pub fn all() -> &'static [ThinkingLevel] {
+        Self::ALL
+    }
+
     pub fn cycle(self) -> Self {
         match self {
             Self::Off => Self::Low,

@@ -1,8 +1,6 @@
 //! System commands using the new DSL
 
-use crate::commands::{
-    cmd, CommandCategory, CommandRegistry, CommandResult, DialogType, FormBuilder,
-};
+use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
@@ -171,4 +169,32 @@ fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
 
 fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RejectEdit)
+}
+
+// ============================================================================
+// Form-submit handlers (called from update/mod.rs with form values).
+// ============================================================================
+
+/// Switch the prompt template. Empty name lists the current prompt and
+/// available templates.
+pub(crate) fn run_prompt(state: &mut AppState, name: &str) {
+    let name = name.trim();
+    if name.is_empty() {
+        let current = if state.current_prompt.is_empty() { "default" } else { &state.current_prompt };
+        let mut lines = vec![format!("Current prompt: {}", current)];
+        if !state.prompts.is_empty() {
+            lines.push("Available prompts:".into());
+            for p in &state.prompts {
+                lines.push(format!("  {}", p.summary()));
+            }
+        }
+        state.add_system_msg(lines.join("\n"));
+        return;
+    }
+    if state.prompts.iter().any(|p| p.name == name) {
+        state.current_prompt = name.to_string();
+        state.add_system_msg(format!("Prompt switched to '{}'", name));
+    } else {
+        state.add_system_msg(format!("Prompt '{}' not found.", name));
+    }
 }
