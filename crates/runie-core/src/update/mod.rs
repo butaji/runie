@@ -75,9 +75,10 @@ impl AppState {
             | Event::ReloadAll | Event::ShowDiagnostics | Event::TogglePathCompletion 
             | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect 
             | Event::PathCompletionClose => self.edit_event(event),
-            // These events should not reach here when dialog is open
+            // Handled in edit_event
             Event::RunSaveCommand { .. } | Event::RunLoadCommand { .. } | Event::RunDeleteCommand { .. }
-            | Event::RunImportCommand { .. } | Event::RunExportCommand { .. } => {}
+            | Event::RunImportCommand { .. } | Event::RunExportCommand { .. }
+            | Event::RunSkillCommand { .. } | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. } => {}
             Event::SystemMessage { content } => self.add_system_msg(content),
             Event::TransientMessage { content, level } => self.set_transient(content, level),
             Event::TransientError { content } => self.set_transient(content, crate::event::TransientLevel::Error),
@@ -303,7 +304,163 @@ impl AppState {
             Event::PathCompletionDown => self.path_completion_down(),
             Event::PathCompletionSelect => self.path_completion_select(),
             Event::PathCompletionClose => self.path_completion_close(),
+            // Form submit events - execute the command
+            Event::RunSaveCommand { name } => self.run_save_command(&name),
+            Event::RunLoadCommand { name } => self.run_load_command(&name),
+            Event::RunDeleteCommand { name } => self.run_delete_command(&name),
+            Event::RunExportCommand { path } => self.run_export_command(&path),
+            Event::RunImportCommand { path } => self.run_import_command(&path),
+            Event::RunSkillCommand { name } => self.run_skill_command(&name),
+            Event::RunLoginCommand { provider, token } => self.run_login_command(&provider, &token),
+            Event::RunLogoutCommand { provider } => self.run_logout_command(&provider),
             _ => {}
+        }
+    }
+    
+    fn run_save_command(&mut self, name: &str) {
+        use crate::session::Session;
+        let now = crate::update::now();
+        let session = Session {
+            name: name.to_string(),
+            display_name: self.session.session_display_name.clone(),
+            created_at: self.session.session_created_at,
+            updated_at: now,
+            messages: self.session.messages.clone(),
+            provider: self.config.current_provider.clone(),
+            model: self.config.current_model.clone(),
+            theme_name: self.config.theme_name.clone(),
+            thinking_level: self.config.thinking_level,
+            read_only: self.config.read_only,
+            session_tree: self.session.session_tree.clone(),
+        };
+        match crate::session::save(name, &session) {
+            Ok(()) => {
+                self.session.session_updated_at = now;
+                self.add_system_msg(format!("Session '{}' saved.", name));
+            }
+            Err(e) => self.add_system_msg(format!("Could not save '{}': {}", name, e)),
+        }
+    }
+    
+    fn run_load_command(&mut self, name: &str) {
+        match crate::session::load(name) {
+            Ok(session) => {
+                self.session.messages = session.messages;
+                self.config.current_provider = session.provider;
+                self.config.current_model = session.model;
+                self.config.theme_name = session.theme_name;
+                self.config.thinking_level = session.thinking_level;
+                self.config.read_only = session.read_only;
+                self.session.session_display_name = session.display_name.or(Some(session.name));
+                self.session.session_created_at = session.created_at;
+                self.session.session_updated_at = session.updated_at;
+                self.session.session_tree = session.session_tree;
+                self.messages_changed();
+                self.add_system_msg(format!("Session '{}' loaded.", name));
+            }
+            Err(_) => self.add_system_msg(format!(
+                "Session '{}' not found. Use /sessions to list saved sessions.",
+                name
+            )),
+        }
+    }
+    
+    fn run_delete_command(&mut self, name: &str) {
+        match crate::session::delete(name) {
+            Ok(()) => self.add_system_msg(format!("Session '{}' deleted.", name)),
+            Err(_) => self.add_system_msg(format!(
+                "Session '{}' not found. Use /sessions to list saved sessions.",
+                name
+            )),
+        }
+    }
+    
+    fn run_export_command(&mut self, path: &str) {
+        use crate::session::Session;
+        let session = Session {
+            name: self.session.session_display_name.clone().unwrap_or_else(|| "exported".into()),
+            display_name: self.session.session_display_name.clone(),
+            created_at: self.session.session_created_at,
+            updated_at: crate::update::now(),
+            messages: self.session.messages.clone(),
+            provider: self.config.current_provider.clone(),
+            model: self.config.current_model.clone(),
+            theme_name: self.config.theme_name.clone(),
+            thinking_level: self.config.thinking_level,
+            read_only: self.config.read_only,
+            session_tree: self.session.session_tree.clone(),
+        };
+        match std::fs::write(path, serde_json::to_string_pretty(&session).unwrap_or_default()) {
+            Ok(()) => self.add_system_msg(format!("Session exported to '{}'", path)),
+            Err(e) => self.add_system_msg(format!("Could not export: {}", e)),
+        }
+    }
+    
+    fn run_import_command(&mut self, path: &str) {
+        match std::fs::read_to_string(path) {
+            Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {
+                Ok(session) => {
+                    self.session.messages = session.messages;
+                    self.config.current_provider = session.provider;
+                    self.config.current_model = session.model;
+                    self.config.theme_name = session.theme_name;
+                    self.config.thinking_level = session.thinking_level;
+                    self.config.read_only = session.read_only;
+                    self.session.session_display_name = session.display_name.or(Some(session.name));
+                    self.session.session_created_at = session.created_at;
+                    self.session.session_updated_at = session.updated_at;
+                    self.session.session_tree = session.session_tree;
+                    self.messages_changed();
+                    self.add_system_msg(format!("Session imported from '{}'", path));
+                }
+                Err(e) => self.add_system_msg(format!("Invalid session file: {}", e)),
+            },
+            Err(e) => self.add_system_msg(format!("Could not read file: {}", e)),
+        }
+    }
+    
+    fn run_skill_command(&mut self, name: &str) {
+        match self.skills.iter().find(|s| s.name == name) {
+            Some(skill) => {
+                let mut lines = vec![format!("Skill: {}", skill.name)];
+                if !skill.description.is_empty() {
+                    lines.push(format!("Description: {}", skill.description));
+                }
+                if !skill.context.is_empty() {
+                    lines.push(format!("Context: {}", skill.context));
+                }
+                self.add_system_msg(lines.join("\n"));
+            }
+            None => self.add_system_msg(format!(
+                "Skill '{}' not found. Use /skills to list loaded skills.",
+                name
+            )),
+        }
+    }
+    
+    fn run_login_command(&mut self, provider: &str, token: &str) {
+        if provider.is_empty() || token.is_empty() {
+            self.add_system_msg("Usage: /login provider token".into());
+            return;
+        }
+        let mut storage = crate::auth::AuthStorage::load();
+        storage.set(provider, token, None);
+        match storage.save() {
+            Ok(()) => self.add_system_msg(format!("Logged in to '{}'.", provider)),
+            Err(e) => self.add_system_msg(format!("Could not save token: {}", e)),
+        }
+    }
+    
+    fn run_logout_command(&mut self, provider: &str) {
+        if provider.is_empty() {
+            self.add_system_msg("Usage: /logout provider".into());
+            return;
+        }
+        let mut storage = crate::auth::AuthStorage::load();
+        storage.remove(provider);
+        match storage.save() {
+            Ok(()) => self.add_system_msg(format!("Logged out from '{}'.", provider)),
+            Err(e) => self.add_system_msg(format!("Could not remove token: {}", e)),
         }
     }
 
@@ -465,10 +622,16 @@ impl AppState {
                 true
             }
             ItemAction::Emit(evt) => {
-                self.open_dialog = None;
+                let keep_open = stack
+                    .current()
+                    .map(|p| p.keep_open_on_activate)
+                    .unwrap_or(false);
+                if !keep_open {
+                    self.open_dialog = None;
+                }
                 self.mark_dirty();
                 self.update(evt);
-                true
+                !keep_open
             }
             ItemAction::Toggle(key) => {
                 self.panel_toggle_item(stack, &key);
@@ -543,21 +706,21 @@ impl AppState {
         }
     }
 
-    fn dialog_from_command(&self, d: crate::commands::Dialog) -> crate::commands::DialogState {
+    fn dialog_from_command(&self, d: crate::commands::DialogType) -> crate::commands::DialogState {
         match d {
-            crate::commands::Dialog::CommandPalette => crate::commands::DialogState::CommandPalette {
+            crate::commands::DialogType::CommandPalette => crate::commands::DialogState::CommandPalette {
                 filter: String::new(),
                 selected: 0,
             },
-            crate::commands::Dialog::ModelSelector => crate::commands::DialogState::ModelSelector {
+            crate::commands::DialogType::ModelSelector => crate::commands::DialogState::ModelSelector {
                 filter: String::new(),
                 selected: 0,
             },
-            crate::commands::Dialog::Settings => crate::commands::DialogState::Settings {
+            crate::commands::DialogType::Settings => crate::commands::DialogState::Settings {
                 category: crate::settings::SettingsCategory::Models,
                 selected: 0,
             },
-            crate::commands::Dialog::ScopedModels => crate::commands::DialogState::ScopedModels { selected: 0 },
+            crate::commands::DialogType::ScopedModels => crate::commands::DialogState::ScopedModels { selected: 0 },
         }
     }
 
@@ -813,11 +976,17 @@ impl AppState {
         let values = panel.get_form_values().clone();
         let cmd = panel.id.clone();
         match cmd.as_str() {
-            "save" => Some(crate::Event::RunSaveCommand),
+            "save" => Some(crate::Event::RunSaveCommand { name: values.get("name").cloned().unwrap_or_default() }),
             "load" => Some(crate::Event::RunLoadCommand { name: values.get("name").cloned().unwrap_or_default() }),
             "delete" => Some(crate::Event::RunDeleteCommand { name: values.get("name").cloned().unwrap_or_default() }),
             "import" => Some(crate::Event::RunImportCommand { path: values.get("path").cloned().unwrap_or_default() }),
             "export" => Some(crate::Event::RunExportCommand { path: values.get("path").cloned().unwrap_or_default() }),
+            "skill" => Some(crate::Event::RunSkillCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "login" => Some(crate::Event::RunLoginCommand {
+                provider: values.get("provider").cloned().unwrap_or_default(),
+                token: values.get("token").cloned().unwrap_or_default(),
+            }),
+            "logout" => Some(crate::Event::RunLogoutCommand { provider: values.get("provider").cloned().unwrap_or_default() }),
             _ => None,
         }
     }

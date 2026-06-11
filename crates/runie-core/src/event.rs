@@ -142,11 +142,14 @@ pub enum Event {
     CommandFormDown,
     CommandFormSubmit,
     CommandFormClose,
-    RunSaveCommand,
+    RunSaveCommand { name: String },
     RunLoadCommand { name: String },
     RunDeleteCommand { name: String },
     RunImportCommand { path: String },
     RunExportCommand { path: String },
+    RunSkillCommand { name: String },
+    RunLoginCommand { provider: String, token: String },
+    RunLogoutCommand { provider: String },
 
     // Transient notifications (shown in hints line)
     TransientMessage { content: String, level: TransientLevel },

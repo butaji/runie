@@ -191,7 +191,8 @@ fn test_save_and_load_session() {
     for c in "/save test_session".chars() {
         state.update(Event::Input(c));
     }
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
     assert!(state.session.messages.iter().any(|m| m.role == Role::System && m.content.contains("saved")));
 
 
@@ -199,7 +200,8 @@ fn test_save_and_load_session() {
     for c in "/load test_session".chars() {
         state2.update(Event::Input(c));
     }
-    state2.update(Event::Submit);
+    state2.update(Event::Submit); // Opens form with pre-filled name
+    state2.update(Event::Submit); // Submits the form
     assert!(state2.session.messages.iter().any(|m| m.role == Role::System && m.content.contains("loaded")));
     assert!(state2.session.messages.iter().any(|m| m.role == Role::User && m.content == "hi"));
 

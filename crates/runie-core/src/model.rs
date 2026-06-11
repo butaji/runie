@@ -215,7 +215,7 @@ impl AppState {
             self.cached_palette_filter = Some(filter.clone());
             let mut items: Vec<_> = crate::commands::filter_commands(&self.registry, &filter)
                 .into_iter()
-                .map(|cmd| (cmd.name.clone(), cmd.description.clone(), cmd.category.as_str().to_string()))
+                .map(|cmd| (cmd.name.clone(), cmd.desc.clone(), cmd.category.as_str().to_string()))
                 .collect();
             let f = filter.to_lowercase();
             for skill in &self.skills {

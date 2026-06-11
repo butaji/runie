@@ -279,35 +279,112 @@ pub fn scoped_models_dialog(f: &mut Frame, snap: &Snapshot) {
         _ => return,
     };
     let popup_area = palette_popup_rect(f.area());
-    let mut lines: Vec<Line> = Vec::new();
-    lines.push(Line::from("Scoped Models — Space=toggle a/x=all/none p=provider").style(style_tool_header()));
-    lines.push(Line::from(""));
+    clear_panel_bg(f, popup_area);
+    let block = block_popup(" Scoped Models ");
+    let inner = block.inner(popup_area);
+    f.render_widget(Paragraph::new("").block(block), popup_area);
+
+    // Reserve 2 lines at bottom: 1 empty spacer + 1 hotkeys (pinned, never scrolls)
+    let content_height = inner.height.saturating_sub(2);
+    let hotkeys_area = Rect {
+        x: inner.x,
+        y: inner.y + content_height,
+        width: inner.width,
+        height: 2,
+    };
+    let content_area = Rect {
+        height: content_height,
+        ..inner
+    };
+
+    // Header: sub-title (1 line) + separator (1 line)
+    let header_height = 2u16;
+    let header_area = Rect {
+        height: header_height,
+        ..content_area
+    };
+    let items_area = Rect {
+        x: content_area.x,
+        y: content_area.y + header_height,
+        height: content_height.saturating_sub(header_height),
+        width: content_area.width,
+    };
+
+    let sep_width = inner.width as usize;
+    let header_lines = vec![
+        Line::from("space toggle · a all · x none · p provider").style(style_hint()),
+        Line::from("─".repeat(sep_width)).style(style_hint()),
+    ];
+
+    // Build item lines and track which line is selected
+    let mut item_lines: Vec<Line> = Vec::new();
+    let mut selected_line: Option<usize> = None;
 
     if snap.scoped_models.is_empty() {
-        lines.push(Line::from("No models configured.").style(style_hint()));
+        item_lines.push(Line::from("No models configured.").style(style_hint()));
     } else {
         let mut last_provider = String::new();
         for (i, model) in snap.scoped_models.iter().enumerate() {
             if model.provider != last_provider {
                 if !last_provider.is_empty() {
-                    lines.push(Line::from(""));
+                    item_lines.push(Line::from(""));
                 }
-                lines.push(Line::from(format!("  {}", model.provider)).style(style_thinking()));
+                item_lines.push(Line::from(format!("  {}", model.provider)).style(style_thinking()));
                 last_provider = model.provider.clone();
+            }
+            if i == selected {
+                selected_line = Some(item_lines.len());
             }
             let checkbox = if model.enabled { "[x]" } else { "[ ]" };
             let style = if i == selected { style_popup_selected() } else { style_popup_unselected() };
-            lines.push(Line::from(format!("    {} {}", checkbox, model.name)).style(style));
+            item_lines.push(Line::from(format!("    {} {}", checkbox, model.name)).style(style));
         }
     }
 
-    clear_panel_bg(f, popup_area);
+    let total_item_lines = item_lines.len();
+    let visible_items_height = items_area.height as usize;
+
+    let scroll_offset = if let Some(sel) = selected_line {
+        if total_item_lines <= visible_items_height {
+            0
+        } else {
+            sel.saturating_sub(visible_items_height / 2)
+                .min(total_item_lines.saturating_sub(visible_items_height))
+        }
+    } else {
+        0
+    };
+
+    let show_scrollbar = total_item_lines > visible_items_height;
+    let items_width = if show_scrollbar {
+        items_area.width.saturating_sub(1)
+    } else {
+        items_area.width
+    };
+    let scroll_area = Rect { width: items_width, ..items_area };
+    let scrollbar_area = Rect {
+        x: items_area.x + items_width,
+        y: items_area.y,
+        width: 1,
+        height: items_area.height,
+    };
+
+    f.render_widget(popup_p(header_lines), header_area);
     f.render_widget(
-        Paragraph::new(lines)
-            .style(Style::default().bg(color_bg_panel()))
-            .block(block_popup(" Scoped Models ")),
-        popup_area,
+        popup_p(item_lines).scroll((scroll_offset as u16, 0)),
+        scroll_area,
     );
+
+    if show_scrollbar {
+        render_scrollbar(f, scrollbar_area, total_item_lines, scroll_offset as u16, visible_items_height);
+    }
+
+    // Hotkeys pinned to bottom with shared parser (empty line + styled hints)
+    let hint_lines = vec![
+        Line::from(""),
+        Line::from(parse_hint_spans("↑↓ navigate · space toggle · esc close")),
+    ];
+    f.render_widget(popup_p(hint_lines), hotkeys_area);
 }
 
 pub fn session_tree_dialog(f: &mut Frame, snap: &Snapshot) {

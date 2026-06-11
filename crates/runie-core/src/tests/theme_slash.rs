@@ -55,7 +55,8 @@ fn theme_persisted_in_session() {
     let mut state = fresh_state();
     state.config.theme_name = "nord".to_string();
     type_str(&mut state, "/save themed");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     let loaded = store.load("themed").unwrap();
     assert_eq!(loaded.theme_name, "nord");

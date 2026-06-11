@@ -80,7 +80,8 @@ impl AppState {
 
         // Try exact match by name or alias first
         if let Some(cmd) = self.registry.get(cmd_part) {
-            let result = (cmd.handler)(self, args);
+            let cmd_name = cmd.name.clone();
+            let result = cmd.flow.clone().exec(self, &cmd_name, args);
             self.process_command_result(result);
             self.mark_dirty();
             return;
@@ -92,7 +93,8 @@ impl AppState {
 
         if selected < cmd_items.len() {
             if let Some(cmd) = cmd_items.get(selected) {
-                let result = (cmd.handler)(self, args);
+                let cmd_name = cmd.name.clone();
+                let result = cmd.flow.clone().exec(self, &cmd_name, args);
                 self.process_command_result(result);
             }
         } else if let Some(skill) = skill_items.get(selected - cmd_items.len()) {

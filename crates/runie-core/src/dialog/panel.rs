@@ -10,11 +10,14 @@ pub struct Panel {
     /// Optional filter text when the panel is filterable.
     pub filter: String,
     pub filterable: bool,
+    /// When true, activating an item (Enter) does NOT close the dialog.
+    /// Useful for previews (e.g. theme picker) and live toggles.
+    pub keep_open_on_activate: bool,
     /// For form panels: stores form values (key -> value)
     pub form_values: std::collections::HashMap<String, String>,
     /// For form panels: last action to execute on submit
     #[allow(dead_code)]
-    last_action: Option<ItemAction>,
+    pub last_action: Option<ItemAction>,
 }
 
 impl Panel {
@@ -26,6 +29,7 @@ impl Panel {
             selected: 0,
             filter: String::new(),
             filterable: false,
+            keep_open_on_activate: false,
             form_values: std::collections::HashMap::new(),
             last_action: None,
         }
@@ -89,6 +93,28 @@ impl Panel {
         self
     }
 
+    /// Add a form field with a pre-filled value.
+    pub fn form_field_value(
+        mut self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Self {
+        let value_str = value.into();
+        let key_str = key.into();
+        self.items.push(PanelItem::FormField {
+            label: label.into(),
+            value: value_str.clone(),
+            placeholder: placeholder.into(),
+            key: key_str.clone(),
+        });
+        if !value_str.is_empty() {
+            self.form_values.insert(key_str, value_str);
+        }
+        self
+    }
+
     pub fn form_submit(mut self, action: ItemAction) -> Self {
         self.items.push(PanelItem::FormSubmit);
         self.last_action = Some(action);
@@ -97,6 +123,13 @@ impl Panel {
 
     pub fn with_filter(mut self) -> Self {
         self.filterable = true;
+        self
+    }
+
+    /// When true, the panel stays open after activating an item (Enter).
+    /// Use for previews like theme picker or live toggles.
+    pub fn keep_open(mut self) -> Self {
+        self.keep_open_on_activate = true;
         self
     }
 
