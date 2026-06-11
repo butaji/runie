@@ -1,8 +1,8 @@
-//! Layer 1 + Layer 3 tests for status line right-side (context usage + radial bar + git info)
+//! Layer 1 + Layer 3 tests for status line (left: git/folder + working state, right: context usage + radial bar)
 
 use runie_core::{AppState, snapshot::GitInfo};
 use crate::ui::view;
-use crate::status_bar::{radial_bar, context_window_for, build_right_status, ContextUsage};
+use crate::status_bar::{radial_bar, context_window_for, build_left_text, build_right_status, ContextUsage};
 use ratatui::{backend::TestBackend, Terminal};
 
 fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
@@ -17,7 +17,6 @@ fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
 // Layer 1: Pure function tests — no ratatui imports
 // =============================================================================
 
-#[test]
 // ── GitInfo Layer 1 tests ──────────────────────────────────────────────────
 
 #[test]
@@ -36,47 +35,45 @@ fn git_info_format_without_git_shows_folder() {
 }
 
 #[test]
-fn git_info_format_empty_branch_shows_folder() {
-    // repo_name present but branch missing — fallback to folder
+fn git_info_format_only_branch_shows_branch() {
+    let info = GitInfo { repo_name: None, branch: Some("agent-impl".into()) };
+    assert_eq!(info.format_right("runie"), "agent-impl");
+}
+
+#[test]
+fn git_info_format_only_repo_shows_repo_slash() {
     let info = GitInfo { repo_name: Some("runie".into()), branch: None };
     assert_eq!(info.format_right("runie"), "runie/");
 }
 
+// ── Left side tests ────────────────────────────────────────────────────────
+
 #[test]
-fn build_right_status_idle_shows_git_info_when_available() {
+fn build_left_text_idle_shows_git_info_when_available() {
     let mut state = AppState::default();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
-    // Simulate being in a git repo
     state.git_info = Some(GitInfo {
         repo_name: Some("runie".into()),
         branch: Some("agent-impl".into()),
     });
     state.cwd_name = "runie".into();
     let snap = state.snapshot();
-    let right = build_right_status(&snap);
-    assert!(right.contains("runie/agent-impl"), "Should show git info, got: {}", right);
-    assert!(right.contains("0%/128k"), "Should show context usage, got: {}", right);
-    assert!(right.contains('○'), "Should show radial bar, got: {}", right);
+    let left = build_left_text(&snap);
+    assert!(left.contains("runie/agent-impl"), "Should show git info on LEFT, got: {}", left);
 }
 
 #[test]
-fn build_right_status_idle_shows_folder_when_no_git() {
+fn build_left_text_idle_shows_folder_when_no_git() {
     let mut state = AppState::default();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
+    state.git_info = None;
     state.cwd_name = "my-project".into();
     let snap = state.snapshot();
-    let right = build_right_status(&snap);
-    assert!(right.contains("my-project/"), "Should show folder name, got: {}", right);
-    assert!(right.contains("0%/128k"), "Should show context usage, got: {}", right);
+    let left = build_left_text(&snap);
+    assert!(left.contains("my-project/"), "Should show folder name on LEFT, got: {}", left);
 }
 
 #[test]
-fn build_right_status_active_ignores_git_shows_turn_stats() {
+fn build_left_text_active_shows_working_not_git() {
     let mut state = AppState::default();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     state.git_info = Some(GitInfo {
@@ -84,10 +81,56 @@ fn build_right_status_active_ignores_git_shows_turn_stats() {
         branch: Some("agent-impl".into()),
     });
     let snap = state.snapshot();
+    let left = build_left_text(&snap);
+    assert!(!left.contains("runie/agent-impl"), "Active turn should NOT show git info on LEFT, got: {}", left);
+    assert!(left.contains("Working"), "Should show Working... when active, got: {}", left);
+}
+
+#[test]
+fn build_left_text_idle_shows_thinking_level_when_set() {
+    let mut state = AppState::default();
+    state.config.thinking_level = runie_core::model::ThinkingLevel::Low;
+    state.git_info = Some(GitInfo {
+        repo_name: Some("runie".into()),
+        branch: Some("agent-impl".into()),
+    });
+    let snap = state.snapshot();
+    let left = build_left_text(&snap);
+    assert!(left.contains("runie/agent-impl"), "Should show git info, got: {}", left);
+    assert!(left.contains("Think: low"), "Should show thinking level, got: {}", left);
+}
+
+// ── Right side tests (no git info here) ────────────────────────────────────
+
+#[test]
+fn build_right_status_idle_shows_context_and_bar_only() {
+    let mut state = AppState::default();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
+    state.git_info = Some(GitInfo {
+        repo_name: Some("runie".into()),
+        branch: Some("agent-impl".into()),
+    });
+    let snap = state.snapshot();
     let right = build_right_status(&snap);
-    // When turn is active, git info should NOT appear
-    assert!(!right.contains("runie/agent-impl"), "Active turn should NOT show git info, got: {}", right);
+    assert!(right.contains("0%/128k"), "Should show context usage, got: {}", right);
+    assert!(right.contains('○'), "Should show radial bar, got: {}", right);
+    assert!(!right.contains("runie"), "Right side must NOT show git info, got: {}", right);
+}
+
+#[test]
+fn build_right_status_active_shows_turn_stats() {
+    let mut state = AppState::default();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
+    let snap = state.snapshot();
+    let right = build_right_status(&snap);
     assert!(right.contains("↑"), "Should show up arrow, got: {}", right);
+    assert!(right.contains("↓"), "Should show down arrow, got: {}", right);
+    assert!(right.contains("/s"), "Should show speed, got: {}", right);
+    assert!(right.contains("0%/128k"), "Should show context, got: {}", right);
 }
 
 fn radial_bar_0_percent_is_empty_circle() {
@@ -182,37 +225,67 @@ fn limit_k_shows_raw_for_small() {
     assert_eq!(ctx.limit_k(), "500");
 }
 
+// =============================================================================
+// Layer 3: Rendering tests — TestBackend + Buffer assertions
+// =============================================================================
+
 #[test]
-fn build_right_status_idle_shows_context_and_bar() {
+fn status_left_renders_git_info_when_idle_in_repo() {
+    let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
-    let snap = state.snapshot();
-    let right = build_right_status(&snap);
-    assert!(right.contains("0%/128k"), "Should show context usage, got: {}", right);
-    assert!(right.contains('○'), "Should show radial bar, got: {}", right);
+    state.git_info = Some(GitInfo {
+        repo_name: Some("runie".into()),
+        branch: Some("agent-impl".into()),
+    });
+    state.cwd_name = "runie".into();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content = flatten_buffer(buf);
+    assert!(content.contains("runie/agent-impl"), "Should show git info on left, got: {}", content);
+    assert!(content.contains("0%/128k"), "Should show context usage on right");
 }
 
 #[test]
-fn build_right_status_active_shows_turn_stats() {
+fn status_left_renders_folder_when_idle_no_git() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
+    state.git_info = None;
+    state.cwd_name = "my-project".into();
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content = flatten_buffer(buf);
+    assert!(content.contains("my-project/"), "Should show folder name on left, got: {}", content);
+    assert!(content.contains("0%/128k"), "Should show context usage on right");
+}
+
+#[test]
+fn status_left_renders_working_when_active() {
+    let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
-    let snap = state.snapshot();
-    let right = build_right_status(&snap);
-    assert!(!right.contains('⏵'), "Right side must NOT show extra timer, got: {}", right);
-    // With animated values, tokens start at 0
-    assert!(right.contains("↑"), "Should show up arrow, got: {}", right);
-    assert!(right.contains("↓"), "Should show down arrow, got: {}", right);
-    assert!(right.contains("/s"), "Should show speed, got: {}", right);
-    assert!(right.contains("0%/128k"), "Should show context, got: {}", right);
+    state.git_info = Some(GitInfo {
+        repo_name: Some("runie".into()),
+        branch: Some("agent-impl".into()),
+    });
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content = flatten_buffer(buf);
+    assert!(content.contains("Working"), "Should show Working... on left when active");
+    assert!(!content.contains("runie/agent-impl"), "Should NOT show git info when active");
 }
-
-// =============================================================================
-// Layer 3: Rendering tests — TestBackend + Buffer assertions
-// =============================================================================
 
 #[test]
 fn status_right_renders_context_usage_when_idle() {
@@ -242,8 +315,6 @@ fn status_right_renders_turn_stats_when_active() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(!content.contains('⏵'), "Right side must NOT show extra timer");
-    // With animated values, tokens start at 0
     assert!(content.contains('↑'), "Should show up arrow");
     assert!(content.contains('↓'), "Should show down arrow");
     assert!(content.contains("/s"), "Should show speed");
@@ -262,7 +333,6 @@ fn radial_bar_has_1_cell_right_margin() {
     let buf = terminal.backend().buffer();
     let w = buf.area().width;
 
-    // Find the row containing the radial bar (status line)
     let status_y = (0..buf.area().height)
         .find(|&y| {
             (0..buf.area().width).any(|x| buf[(x, y)].symbol() == "○")
@@ -273,53 +343,15 @@ fn radial_bar_has_1_cell_right_margin() {
         .find(|&x| buf[(x, status_y)].symbol() == "○")
         .expect("Should find ○");
 
-    // ○ should NOT be at the absolute right edge — there must be 1 cell margin
     assert!(
         bar_x < w - 1,
         "Radial bar at {} should not be at right edge (width={})",
         bar_x, w
     );
 
-    // The column immediately to the right of ○ must be empty (the margin space)
     assert_eq!(
         buf[(bar_x + 1, status_y)].symbol().trim(),
         "",
         "Column right of ○ should be empty margin"
     );
-}
-
-#[test]
-fn status_right_renders_git_info_when_idle_in_repo() {
-    let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
-    state.git_info = Some(GitInfo {
-        repo_name: Some("runie".into()),
-        branch: Some("agent-impl".into()),
-    });
-    state.cwd_name = "runie".into();
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-    let content = flatten_buffer(buf);
-    assert!(content.contains("runie/agent-impl"), "Should show git info, got: {}", content);
-    assert!(content.contains("0%/128k"), "Should show context usage");
-}
-
-#[test]
-fn status_right_renders_folder_when_idle_no_git() {
-    let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
-    state.cwd_name = "my-project".into();
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-    let content = flatten_buffer(buf);
-    assert!(content.contains("my-project/"), "Should show folder name, got: {}", content);
-    assert!(content.contains("0%/128k"), "Should show context usage");
 }

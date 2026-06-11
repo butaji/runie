@@ -1,4 +1,4 @@
-//! Status bar rendering — left ( Working... ) and right ( ↑1.2k ↓4.8k 42/s 12%/128k ○ )
+//! Status bar rendering — left ( git/folder · Working... ) and right ( ↑1.2k ↓4.8k 42/s 12%/128k ○ )
 
 use ratatui::{
     layout::{Constraint, Rect},
@@ -29,8 +29,15 @@ fn display_width(s: &str) -> usize {
     s.chars().count()
 }
 
-fn build_left_text(snap: &Snapshot) -> String {
+pub(crate) fn build_left_text(snap: &Snapshot) -> String {
     let mut parts = Vec::new();
+    // When idle, show git repo/branch or current folder name
+    if !snap.turn_active {
+        let git_or_folder = snap.git_info.as_ref()
+            .map(|g| g.format_right(&snap.cwd_name))
+            .unwrap_or_else(|| format!("{}/", snap.cwd_name));
+        parts.push(git_or_folder);
+    }
     if snap.turn_active {
         let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
             runie_core::labels::action_text(
@@ -88,10 +95,7 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
             bar
         )
     } else {
-        let git_or_folder = snap.git_info.as_ref()
-            .map(|g| g.format_right(&snap.cwd_name))
-            .unwrap_or_else(|| format!("{}/", snap.cwd_name));
-        format!("{} {}%/{} {}", git_or_folder, ctx.percent, ctx.limit_k(), bar)
+        format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar)
     }
 }
 
