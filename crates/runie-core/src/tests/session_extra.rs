@@ -56,7 +56,8 @@ fn export_creates_file() {
     let tmp = std::env::temp_dir().join(format!("runie_export_{}.json", std::process::id()));
     let path = tmp.to_string_lossy();
     type_str(&mut state, &format!("/export {}", path));
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled path
+    state.update(Event::Submit); // Submits the form
     assert!(tmp.exists(), "export file created");
     let json = std::fs::read_to_string(&tmp).unwrap();
     let session: crate::session::Session = serde_json::from_str(&json).unwrap();
@@ -92,7 +93,8 @@ fn import_loads_file() {
 
     let path = tmp.to_string_lossy();
     type_str(&mut state, &format!("/import {}", path));
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled path
+    state.update(Event::Submit); // Submits the form
 
     assert_eq!(state.session.messages.len(), 2); // imported + system confirmation
     assert_eq!(state.session.messages[0].content, "imported msg");

@@ -12,7 +12,7 @@ trap 'tmux kill-session -t "$SESSION" 2>/dev/null || true' EXIT
 # Build if needed
 if [ ! -f "$BINARY" ]; then
     echo "[smoke] Building release binary..."
-    cargo build --release -p runie 2>/dev/null
+    cargo build --release -p runie-term 2>&1 | tail -2
 fi
 
 echo "[smoke] Starting tmux session..."

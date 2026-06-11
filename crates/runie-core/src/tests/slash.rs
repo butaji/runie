@@ -151,7 +151,7 @@ fn model_only_slashes_shows_usage() {
 
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     assert_eq!(sys_msgs.len(), 1);
-    assert!(sys_msgs[0].content.contains("Current model:"), "only slashes shows usage: {}", sys_msgs[0].content);
+    assert!(sys_msgs[0].content.contains("Current:"), "only slashes shows usage: {}", sys_msgs[0].content);
 }
 
 #[test]
@@ -179,7 +179,8 @@ fn save_creates_session_file() {
     type_str(&mut state, "hello world");
     state.update(Event::Submit);
     type_str(&mut state, "/save mysession");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     assert!(store.path("mysession").exists(), "session file created");
 
@@ -203,7 +204,8 @@ fn save_preserves_messages_provider_model() {
     type_str(&mut state, "test message");
     state.update(Event::Submit);
     type_str(&mut state, "/save preserved");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     let loaded = store.load("preserved").unwrap();
     assert_eq!(loaded.provider, "openai");
@@ -257,7 +259,8 @@ fn load_restores_conversation() {
 
     let mut state = fresh_state();
     type_str(&mut state, "/load restore_me");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     assert_eq!(state.session.messages.len(), 3); // 2 loaded + 1 system confirmation
     assert_eq!(state.session.messages[0].content, "hi");
@@ -280,7 +283,8 @@ fn load_missing_session_shows_error() {
 
     let mut state = fresh_state();
     type_str(&mut state, "/load nope");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
@@ -385,7 +389,8 @@ fn delete_removes_session_file() {
 
     let mut state = fresh_state();
     type_str(&mut state, "/delete gone");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     assert!(!store.path("gone").exists(), "session file removed");
 
@@ -405,7 +410,8 @@ fn delete_missing_session_shows_error() {
 
     let mut state = fresh_state();
     type_str(&mut state, "/delete missing");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
     let last = sys_msgs.last().expect("system msg");
@@ -471,7 +477,8 @@ fn save_trims_whitespace() {
 
     let mut state = fresh_state();
     type_str(&mut state, "/save  trimmed");
-    state.update(Event::Submit);
+    state.update(Event::Submit); // Opens form with pre-filled name
+    state.update(Event::Submit); // Submits the form
 
     // Should save with trimmed name
     assert!(store.path("trimmed").exists(), "whitespace should be trimmed");

@@ -1,6 +1,27 @@
 #!/bin/bash
 mode="${1:-run}"
-export PATH="$HOME/.cargo/bin:$PATH"
+
+# Ensure we use the rustup-managed toolchain (project requires nightly for
+# the cranelift codegen flag in .cargo/config.toml). If the active `cargo`
+# isn't the rustup proxy, prepend the toolchain bin from rustup settings.
+# Override via RUNIE_TOOLCHAIN env var.
+TOOLCHAIN="${RUNIE_TOOLCHAIN:-nightly}"
+RUSTUP_TOOLCHAIN="$TOOLCHAIN" cargo --version >/dev/null 2>&1 || true
+
+# Resolve the actual toolchain bin dir from rustup (e.g. nightly-aarch64-apple-darwin/bin)
+RUSTUP_BIN=""
+if command -v rustup >/dev/null 2>&1; then
+    TC_DIR=$(rustup which --toolchain "$TOOLCHAIN" cargo 2>/dev/null | xargs dirname 2>/dev/null)
+    if [ -n "$TC_DIR" ] && [ -x "$TC_DIR/cargo" ]; then
+        RUSTUP_BIN="$TC_DIR"
+    fi
+fi
+
+# Prepend toolchain bin (so nightly cargo wins) and $HOME/.cargo/bin (for cargo-watch).
+export PATH="$RUSTUP_BIN:$HOME/.cargo/bin:$PATH"
+
+# Tell cargo to use the nightly toolchain even if invoked via a non-proxy binary.
+export RUSTUP_TOOLCHAIN="$TOOLCHAIN"
 
 if ! command -v cargo-watch > /dev/null 2>&1; then
     echo "cargo-watch not found. Install: cargo install cargo-watch"
@@ -29,7 +50,7 @@ case "$mode" in
     ;;
   smoke)
     echo "[dev] Running smoke tests..."
-    cargo build --release -p runie 2>/dev/null
+    cargo build --release -p runie-term 2>&1 | tail -2
     ./scripts/smoke-tab-completion.sh
     ./scripts/smoke-turn-complete.sh
     echo "[dev] All smoke tests passed!"

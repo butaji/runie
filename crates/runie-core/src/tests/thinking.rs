@@ -89,7 +89,7 @@ fn slash_thinking_no_args_shows_current() {
     state.update(Event::Submit);
 
     let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
-    assert!(sys_msgs.iter().any(|m| m.content.contains("Current thinking level: medium")));
+    assert!(sys_msgs.iter().any(|m| m.content.contains("Current thinking: medium")));
 }
 
 #[test]

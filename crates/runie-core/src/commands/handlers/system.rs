@@ -1,74 +1,127 @@
-use crate::commands::{CommandCategory, CommandDef, CommandHandler, CommandRegistry, CommandResult, Dialog};
+//! System commands using the new DSL
+
+use crate::commands::{
+    cmd, CommandCategory, CommandRegistry, CommandResult, DialogType, FormBuilder,
+};
+use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
 pub fn register(registry: &mut CommandRegistry) {
-    registry.register(cmd("copy", "Copy last response to clipboard", &[], CommandCategory::System, handle_copy));
-    registry.register(cmd("settings", "Open settings dialog", &[], CommandCategory::System, handle_settings));
-    registry.register(cmd("reload", "Reload config, keybindings, themes", &[], CommandCategory::System, handle_reload));
-    registry.register(cmd("changelog", "Show changelog", &[], CommandCategory::System, handle_changelog));
-    registry.register(cmd("hotkeys", "Show all keyboard shortcuts", &[], CommandCategory::System, handle_hotkeys));
-    registry.register(cmd("theme", "Switch theme or list available themes", &[], CommandCategory::System, handle_theme));
-    registry.register(cmd("approve", "Apply pending file edits", &[], CommandCategory::System, handle_approve));
-    registry.register(cmd("reject", "Cancel pending file edits", &[], CommandCategory::System, handle_reject));
-    registry.register(cmd("reload", "Reload config, keybindings, and themes", &[], CommandCategory::System, handle_reload));
-    registry.register(cmd("diagnostics", "Show resource loading diagnostics", &[], CommandCategory::System, handle_diagnostics));
-    registry.register(cmd("skills", "List loaded skills", &[], CommandCategory::System, handle_skills));
-    registry.register(cmd("skill", "Invoke a skill by name", &[], CommandCategory::System, handle_skill));
-    registry.register(cmd("prompt", "Switch prompt template", &[], CommandCategory::System, handle_prompt));
-    registry.register(cmd("login", "Store API key for a provider", &[], CommandCategory::System, handle_login));
-    registry.register(cmd("logout", "Remove stored token for a provider", &[], CommandCategory::System, handle_logout));
+    // Dialog commands
+    registry.register(crate::cmd!("settings")
+        .desc("Open settings dialog")
+        .category(CommandCategory::System)
+        .dialog(DialogType::Settings));
+
+    registry.register(crate::cmd!("copy")
+        .desc("Copy last response to clipboard")
+        .category(CommandCategory::System)
+        .handler(handle_copy));
+
+    registry.register(crate::cmd!("reload")
+        .desc("Reload config, keybindings, themes")
+        .category(CommandCategory::System)
+        .handler(handle_reload));
+
+    registry.register(crate::cmd!("diagnostics")
+        .desc("Show resource loading diagnostics")
+        .category(CommandCategory::System)
+        .handler(handle_diagnostics));
+
+    registry.register(crate::cmd!("skills")
+        .desc("List loaded skills")
+        .category(CommandCategory::System)
+        .handler(handle_skills));
+
+    registry.register(crate::cmd!("skill")
+        .desc("Show skill details")
+        .category(CommandCategory::System)
+        .handler(handle_skill));
+
+    registry.register(crate::cmd!("prompt")
+        .desc("Switch prompt template")
+        .category(CommandCategory::System)
+        .handler(handle_prompt));
+
+    registry.register(crate::cmd!("changelog")
+        .desc("Show changelog")
+        .category(CommandCategory::System)
+        .msg("Changelog: not yet implemented"));
+
+    registry.register(crate::cmd!("hotkeys")
+        .desc("Show all keyboard shortcuts")
+        .category(CommandCategory::System)
+        .msg("Keyboard shortcuts: not yet implemented"));
+
+    registry.register(crate::cmd!("theme")
+        .desc("Switch theme or list available themes")
+        .category(CommandCategory::System)
+        .handler(handle_theme));
+
+    registry.register(crate::cmd!("approve")
+        .desc("Apply pending file edits")
+        .category(CommandCategory::System)
+        .handler(handle_approve));
+
+    registry.register(crate::cmd!("reject")
+        .desc("Cancel pending file edits")
+        .category(CommandCategory::System)
+        .handler(handle_reject));
+
+    // Form commands for auth
+    registry.register(crate::cmd!("login")
+        .desc("Store API key for a provider")
+        .category(CommandCategory::System)
+        .form("Login", |f| f.field("Provider", "anthropic", "provider").field("Token", "sk-...", "token"),
+              crate::Event::RunLoginCommand { provider: String::new(), token: String::new() }));
+
+    registry.register(crate::cmd!("logout")
+        .desc("Remove stored token for a provider")
+        .category(CommandCategory::System)
+        .form("Logout", |f| f.field("Provider", "provider-name", "provider"),
+              crate::Event::RunLogoutCommand { provider: String::new() }));
 }
 
-fn cmd(name: &str, desc: &str, aliases: &[&str], category: CommandCategory, handler: CommandHandler) -> CommandDef {
-    CommandDef {
-        name: name.into(),
-        description: desc.into(),
-        aliases: aliases.iter().map(|s| s.to_string()).collect(),
-        category,
-        handler,
-        completer: None,
-    }
-}
-
-fn handle_copy(state: &mut AppState, _args: &str) -> CommandResult {
+fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     let text = state.session.messages.iter().rev()
         .find(|m| m.role == crate::model::Role::Assistant)
         .map(|m| m.content.clone())
         .unwrap_or_default();
     if text.is_empty() {
-        return CommandResult::Message("No assistant response to copy".into());
+        CommandResult::Message("No assistant response to copy".into())
+    } else {
+        CommandResult::Message("Copied to clipboard".into())
     }
-    CommandResult::Message("Copied to clipboard".into())
 }
 
-fn handle_settings(_state: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::OpenDialog(Dialog::Settings)
-}
-
-fn handle_reload(state: &mut AppState, _args: &str) -> CommandResult {
+fn handle_reload(state: &mut AppState, _: &str) -> CommandResult {
     state.config.keybindings = crate::keybindings::load_keybindings(&None);
     CommandResult::Event(crate::Event::ReloadAll)
 }
 
-fn handle_diagnostics(_state: &mut AppState, _args: &str) -> CommandResult {
+fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ShowDiagnostics)
 }
 
-fn handle_skills(state: &mut AppState, _args: &str) -> CommandResult {
+fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
     if state.skills.is_empty() {
         return CommandResult::Message("No skills loaded.".into());
     }
-    let mut lines = vec!["Loaded skills:".to_string()];
-    for skill in &state.skills {
-        lines.push(format!("  {}", skill.summary()));
-    }
+    let lines: Vec<_> = std::iter::once("Loaded skills:".into())
+        .chain(state.skills.iter().map(|s| format!("  {}", s.summary())))
+        .collect();
     CommandResult::Message(lines.join("\n"))
 }
 
 fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
-        return CommandResult::Message("Usage: /skill <name>".into());
+        use crate::dialog::dsl::{panel, form};
+        let stack = form("skill", "Show Skill")
+            .field("Name", "skill-name", "name")
+            .on_submit(crate::Event::RunSkillCommand { name: String::new() })
+            .into_stack();
+        return CommandResult::OpenPanelStack(stack);
     }
     match state.skills.iter().find(|s| s.name == name) {
         Some(skill) => {
@@ -81,18 +134,14 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
             }
             CommandResult::Message(lines.join("\n"))
         }
-        None => CommandResult::Message(format!("Skill '{}' not found. Use /skills to list loaded skills.", name)),
+        None => CommandResult::Message(format!("Skill '{}' not found. Use /skills.", name)),
     }
 }
 
 fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
-        let current = if state.current_prompt.is_empty() {
-            "default"
-        } else {
-            &state.current_prompt
-        };
+        let current = state.current_prompt.is_empty().then_some("default").unwrap_or(&state.current_prompt);
         let mut lines = vec![format!("Current prompt: {}", current)];
         if !state.prompts.is_empty() {
             lines.push("Available prompts:".into());
@@ -110,42 +159,6 @@ fn handle_prompt(state: &mut AppState, args: &str) -> CommandResult {
     }
 }
 
-fn handle_login(_state: &mut AppState, args: &str) -> CommandResult {
-    let parts: Vec<&str> = args.trim().splitn(2, ' ').collect();
-    if parts.len() < 2 || parts[0].is_empty() || parts[1].is_empty() {
-        return CommandResult::Message("Usage: /login <provider> <token>".into());
-    }
-    let provider = parts[0];
-    let token = parts[1];
-    let mut storage = crate::auth::AuthStorage::load();
-    storage.set(provider, token, None);
-    match storage.save() {
-        Ok(()) => CommandResult::Message(format!("Logged in to '{}'.", provider)),
-        Err(e) => CommandResult::Message(format!("Could not save token: {}", e)),
-    }
-}
-
-fn handle_logout(_state: &mut AppState, args: &str) -> CommandResult {
-    let provider = args.trim();
-    if provider.is_empty() {
-        return CommandResult::Message("Usage: /logout <provider>".into());
-    }
-    let mut storage = crate::auth::AuthStorage::load();
-    storage.remove(provider);
-    match storage.save() {
-        Ok(()) => CommandResult::Message(format!("Logged out from '{}'.", provider)),
-        Err(e) => CommandResult::Message(format!("Could not remove token: {}", e)),
-    }
-}
-
-fn handle_changelog(_state: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Message("Changelog: not yet implemented".into())
-}
-
-fn handle_hotkeys(_state: &mut AppState, _args: &str) -> CommandResult {
-    CommandResult::Message("Keyboard shortcuts: not yet implemented".into())
-}
-
 fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     let name = args.trim();
     if name.is_empty() {
@@ -156,29 +169,25 @@ fn handle_theme(state: &mut AppState, args: &str) -> CommandResult {
     if crate::themes::BUILTIN_THEMES.contains(&name) {
         CommandResult::Message(format!("Theme switched to '{}'", name))
     } else {
-        CommandResult::Message(format!("Theme '{}' not found. Using fallback 'runie'. Use /theme to list available themes.", name))
+        CommandResult::Message(format!("Theme '{}' not found. Use /theme to list. (fallback: runie)", name))
     }
 }
 
 fn open_theme_selector(state: &mut AppState) {
-    use crate::dialog::{ItemAction, Panel, PanelStack};
-    let mut panel = Panel::new("theme", "Choose Theme").header("available themes");
+    let mut panel = Panel::new("theme", "Choose Theme")
+        .header("available themes")
+        .keep_open(); // Keep dialog open for live theme preview
     for theme in crate::themes::BUILTIN_THEMES {
-        panel = panel.item(
-            *theme,
-            ItemAction::Emit(crate::Event::SwitchTheme { name: theme.to_string() }),
-        );
+        panel = panel.item(*theme, ItemAction::Emit(crate::Event::SwitchTheme { name: theme.to_string() }));
     }
     state.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(panel)));
     state.mark_dirty();
 }
 
-fn handle_approve(_state: &mut AppState, _args: &str) -> CommandResult {
+fn handle_approve(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ApproveEdit)
 }
 
-fn handle_reject(_state: &mut AppState, _args: &str) -> CommandResult {
+fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RejectEdit)
 }
-
-

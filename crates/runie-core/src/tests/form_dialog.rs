@@ -101,15 +101,17 @@ fn form_submit_executes_command() {
     // Verify form is open
     assert!(state.open_dialog.is_some(), "form should be open after submit");
     
-    // Check the dialog type
-    if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
+    // Check the dialog type - take dialog to inspect, then restore
+    let form_is_form = if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
         if let Some(panel) = stack.current() {
-            assert!(panel.is_form(), "panel should be a form");
-            // Check form values
-            let values = panel.get_form_values();
-            assert!(values.is_empty(), "form values should start empty");
+            panel.is_form()
+        } else {
+            false
         }
-    }
+    } else {
+        false
+    };
+    assert!(form_is_form, "panel should be a form");
     
     // Type a name - these go to input, but should be routed to form
     state.update(Event::Input('m'));

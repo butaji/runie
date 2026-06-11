@@ -3,6 +3,7 @@
 use crate::model::AppState;
 use crate::event::Event;
 use crate::commands::DialogState;
+use crate::dialog::builders::theme_picker;
 
 #[test]
 fn theme_switch_reaches_handler_while_settings_dialog_open() {
@@ -61,4 +62,26 @@ fn quit_works_while_dialog_open() {
     state.update(Event::Quit);
 
     assert!(state.should_quit);
+}
+
+/// Layer 1 test: Theme picker panel has keep_open_on_activate enabled.
+/// This enables live theme preview - Enter applies theme but dialog stays open.
+#[test]
+fn theme_picker_panel_keeps_open_for_preview() {
+    let stack = theme_picker(vec![
+        ("runie".into(), Event::SwitchTheme { name: "runie".into() }),
+        ("dracula".into(), Event::SwitchTheme { name: "dracula".into() }),
+    ]);
+    let panel = stack.current().expect("panel stack should have a panel");
+
+    // Theme picker must have keep_open flag so Enter applies theme but keeps dialog open
+    assert!(
+        panel.keep_open_on_activate,
+        "Theme picker should have keep_open_on_activate for live preview"
+    );
+
+    // Verify the Emit action will be sent
+    assert!(panel.items.iter().any(|item| {
+        matches!(item, crate::dialog::PanelItem::Action { action: crate::dialog::ItemAction::Emit(_), .. })
+    }));
 }

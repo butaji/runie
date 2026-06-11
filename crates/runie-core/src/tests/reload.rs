@@ -7,7 +7,8 @@ use crate::model::AppState;
 fn reload_emits_event() {
     let mut state = AppState::default();
     let cmd = state.registry.get("reload").unwrap();
-    let result = (cmd.handler)(&mut state, "");
+    let cmd_name = cmd.name.clone();
+    let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
     assert!(matches!(result, crate::commands::CommandResult::Event(Event::ReloadAll)));
 }
 
