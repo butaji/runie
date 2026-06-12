@@ -11,3 +11,4 @@ runie-core.workspace = true
 ratatui.workspace = true
 opaline = "0.4"
 dirs.workspace = true
+serde_json.workspace = true

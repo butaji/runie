@@ -32,22 +32,6 @@ fn draw_state(state: &mut AppState) -> String {
         .collect()
 }
 
-fn line_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
-    (0..buf.area().width)
-        .map(|x| buf[(x, y)].symbol().to_string())
-        .collect()
-}
-
-fn push_message(state: &mut AppState, role: runie_core::Role, content: &str, id: &str) {
-    state.session.messages.push(runie_core::ChatMessage {
-        role,
-        content: content.to_string(),
-        timestamp: 0.0,
-        id: id.to_string(),
-        ..Default::default()
-    });
-}
-
 #[test]
 fn empty_state_renders_input_prompt() {
     let mut state = AppState::default();
@@ -244,7 +228,13 @@ fn piece_is_last_character_on_right_side() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
-    push_message(&mut state, runie_core::Role::User, "hello", "req.0");
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: "hello".to_string(),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+        ..Default::default()
+    });
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
     let backend = TestBackend::new(60, 10);
@@ -254,17 +244,12 @@ fn piece_is_last_character_on_right_side() {
     // Find the status bar line and check chess piece is the last character
     let mut right_line: String = String::new();
     for y in 0..buf.area().height {
-<<<<<<< HEAD
         let line: String = (0..buf.area().width)
             .map(|x| buf[(x, y)].symbol().to_string())
             .collect::<String>()
             .trim_end()
             .to_string();
-        if line.rfind('⛀').is_some()
-            || line.rfind('⛁').is_some()
-            || line.rfind('⛂').is_some()
-            || line.rfind('⛃').is_some()
-        {
+        if line.rfind('⛀').is_some() || line.rfind('⛁').is_some() || line.rfind('⛂').is_some() || line.rfind('⛃').is_some() {
             right_line = line.clone();
             break;
         }
@@ -277,23 +262,6 @@ fn piece_is_last_character_on_right_side() {
         "Chess piece must be last character (before any trailing spaces), got last char: '{}' in '{}'",
         last_char,
         right_line
-=======
-        let line = line_text(buf, y);
-        if working_pos.is_none() && line.find("Working").is_some() {
-            working_pos = line.find("Working");
-        }
-        if ctx_pos.is_none() && line.find("/128k").is_some() {
-            ctx_pos = line.find("/128k");
-        }
-    }
-    let working_pos = working_pos.expect("Should find 'Working' in status bar");
-    let ctx_pos = ctx_pos.expect("Should find '/128k' context usage in status bar");
-    assert!(working_pos < ctx_pos, "Working ({}) should be left of context ({})", working_pos, ctx_pos);
-    assert!(
-        ctx_pos > 30,
-        "Context usage should appear on right side of status bar, got pos {}",
-        ctx_pos
->>>>>>> review
     );
 }
 
@@ -467,16 +435,41 @@ fn palette_highlights_selected() {
 #[test]
 fn turn_complete_renders_after_tool_flow() {
     let mut state = AppState::default();
-    push_message(&mut state, runie_core::Role::User, "list files", "req.0");
-    push_message(&mut state, runie_core::Role::Thought, "Thinking...", "req.1#thought.0");
-    push_message(&mut state, runie_core::Role::Tool, "Ran list_files 0.5s", "tool.req.1.1");
-    push_message(&mut state, runie_core::Role::Assistant, "Here are the files", "req.1");
-    push_message(
-        &mut state,
-        runie_core::Role::TurnComplete,
-        "Turn completed in 3.2s",
-        "req.1",
-    );
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::User,
+        content: "list files".to_string(),
+        timestamp: 0.0,
+        id: "req.0".to_string(),
+        ..Default::default()
+    });
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Thought,
+        content: "Thinking...".to_string(),
+        timestamp: 0.0,
+        id: "req.1#thought.0".to_string(),
+        ..Default::default()
+    });
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Tool,
+        content: "Ran list_files 0.5s".to_string(),
+        timestamp: 0.0,
+        id: "tool.req.1.1".to_string(),
+        ..Default::default()
+    });
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::Assistant,
+        content: "Here are the files".to_string(),
+        timestamp: 0.0,
+        id: "req.1".to_string(),
+        ..Default::default()
+    });
+    state.session.messages.push(runie_core::ChatMessage {
+        role: runie_core::Role::TurnComplete,
+        content: "Turn completed in 3.2s".to_string(),
+        timestamp: 0.0,
+        id: "req.1".to_string(),
+        ..Default::default()
+    });
     let content = draw_state(&mut state);
     assert!(
         content.contains("Turn completed in 3.2s"),

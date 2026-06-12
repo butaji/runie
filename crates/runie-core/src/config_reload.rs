@@ -220,9 +220,7 @@ pub fn config_path() -> PathBuf {
         .join("config.toml")
 }
 
-
 #[cfg(test)]
-<<<<<<< HEAD
 mod tests {
     use super::*;
     use crate::model::AppState;
@@ -566,6 +564,3 @@ api_key = "test"
         assert_eq!(config.default_model(), Some("gpt-4"));
     }
 }
-=======
-mod tests;
->>>>>>> review

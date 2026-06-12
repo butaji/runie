@@ -18,7 +18,7 @@
     },
     {
       "id": "wire-orphan-crates",
-      "status": "todo",
+      "status": "done",
       "milestone": "MVP",
       "category": "Configuration",
       "priority": "P0"

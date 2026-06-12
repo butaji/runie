@@ -15,26 +15,17 @@ Runie is a terminal-based AI coding harness that provides an interactive TUI for
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      runie-cli                          │
+│                      runie-tui                           │
 │                   (CLI entry point)                     │
 └─────────────────────┬───────────────────────────────────┘
                       │
-         ┌───────────┴───────────┐
-         │                       │
-    ┌────▼────┐            ┌──────▼─────┐
-    │runie-tui│            │  harness   │
-    │   TUI   │            │  (tests)   │
-    └────┬────┘            └──────┬─────┘
-         │                       │
-    ┌────▼───────────────────────▼─────┐
-    │         runie-agent              │
-    │   Agent loop + streaming + tools │
-    └────┬──────────────────────────────┘
-         │
-    ┌────▼────┐     ┌────────────┐     ┌───────────┐
-    │runie-ai │────▶│runie-tools │────▶│runie-core │
-    │Provider │     │  Tools     │     │  Types    │
-    └─────────┘     └────────────┘     └───────────┘
+    ┌─────────────────┴─────────────────┐
+    │                                   │
+┌───▼────┐     ┌────────────┐     ┌──────▼──────┐
+│runie-  │     │  runie-    │     │   runie-    │
+│term    │     │  provider  │     │   core      │
+│(term)  │     │(providers) │     │  (types)    │
+└────────┘     └────────────┘     └─────────────┘
 ```
 
 ### Crates
@@ -42,12 +33,13 @@ Runie is a terminal-based AI coding harness that provides an interactive TUI for
 | Crate | Purpose |
 |-------|---------|
 | `runie-core` | Shared types: Message, Tool, Session, Context, SlashCommand |
-| `runie-ai` | Model providers with unified API, streaming, token usage |
-| `runie-agent` | Agent loop engine, event streaming, permission gating |
-| `runie-tools` | Tool implementations: bash, read/write/edit files, search |
 | `runie-tui` | Terminal UI: feed, input, global tags, top bar, command palette |
-| `runie-cli` | CLI binary (`runie`) and `cargo-pantry` |
-| `harness` | Eval/grading harness for task fixtures (Rust graders) |
+| `runie-term` | Terminal utilities and helpers |
+| `runie-agent` | Agent loop engine, event streaming, permission gating |
+| `runie-provider` | Model provider implementations |
+| `runie-print` | Printing utilities |
+| `runie-json` | JSON utilities |
+| `runie-server` | Server components |
 
 ## Model Support
 
