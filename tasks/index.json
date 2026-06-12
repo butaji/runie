@@ -1,3 +1,112 @@
 {
-  "tasks": []
+  "tasks": [
+    {
+      "id": "resolve-merge-conflicts",
+      "status": "done",
+      "milestone": "MVP",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "blocks": ["fix-broken-references", "fix-build-lint", "appstate-decomposition", "deduplicate-panel-types", "split-update-mod", "deduplicate-login-flow", "snapshot-dead-code", "clean-dead-modules"]
+    },
+    {
+      "id": "fix-broken-references",
+      "status": "todo",
+      "milestone": "MVP",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "depends_on": ["resolve-merge-conflicts"]
+    },
+    {
+      "id": "wire-orphan-crates",
+      "status": "todo",
+      "milestone": "MVP",
+      "category": "Configuration",
+      "priority": "P0"
+    },
+    {
+      "id": "fix-build-lint",
+      "status": "todo",
+      "milestone": "MVP",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "depends_on": ["resolve-merge-conflicts"]
+    },
+    {
+      "id": "anyprovider-dynamic-dispatch",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "depends_on": ["wire-orphan-crates"]
+    },
+    {
+      "id": "appstate-decomposition",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "depends_on": ["resolve-merge-conflicts"]
+    },
+    {
+      "id": "deduplicate-panel-types",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "depends_on": ["resolve-merge-conflicts"]
+    },
+    {
+      "id": "split-update-mod",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "depends_on": ["resolve-merge-conflicts", "fix-broken-references", "deduplicate-login-flow"]
+    },
+    {
+      "id": "deduplicate-login-flow",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "depends_on": ["resolve-merge-conflicts", "fix-broken-references"]
+    },
+    {
+      "id": "consolidate-tui-tests",
+      "status": "todo",
+      "milestone": "R2",
+      "category": "TUI Rendering",
+      "priority": "P1"
+    },
+    {
+      "id": "keybindings-table-driven",
+      "status": "todo",
+      "milestone": "R2",
+      "category": "Input & Commands",
+      "priority": "P1"
+    },
+    {
+      "id": "snapshot-dead-code",
+      "status": "todo",
+      "milestone": "R2",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "depends_on": ["resolve-merge-conflicts"]
+    },
+    {
+      "id": "clean-dead-modules",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "depends_on": ["resolve-merge-conflicts"]
+    },
+    {
+      "id": "sync-docs",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2"
+    }
+  ]
 }
