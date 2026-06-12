@@ -293,3 +293,98 @@ pub enum TransientLevel {
     Warning,
     Error,
 }
+
+/// Routing category for [`Event`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventCategory {
+    Input,
+    Agent,
+    Scroll,
+    Control,
+    ModelConfig,
+    DialogToggle,
+    Settings,
+    Edit,
+    System,
+    Transient,
+}
+
+impl Event {
+    /// Whether this event belongs to the login flow.
+    pub fn is_login(&self) -> bool {
+        matches!(
+            self,
+            Event::LoginFlowStart
+                | Event::LoginFlowSelectProvider { .. }
+                | Event::LoginFlowSubmitKey { .. }
+                | Event::LoginFlowValidate { .. }
+                | Event::LoginFlowValidationDone { .. }
+                | Event::LoginFlowValidationFailed { .. }
+                | Event::LoginFlowModelsFetched { .. }
+                | Event::LoginFlowToggleModel { .. }
+                | Event::LoginFlowSave
+                | Event::LoginFlowCancel
+        )
+    }
+
+    /// Categorizes an event for dispatch.
+    pub fn category(&self) -> EventCategory {
+        use Event::*;
+        match self {
+            Input(_) | Backspace | Newline | Submit | CursorLeft | CursorRight | CursorStart
+            | CursorEnd | DeleteWord | DeleteToEnd | DeleteToStart | KillChar | Undo | Redo
+            | CursorWordLeft | CursorWordRight | Paste(_) | PasteImage | HistoryPrev
+            | HistoryNext => EventCategory::Input,
+            AgentThinking { .. }
+            | AgentThoughtDone { .. }
+            | AgentToolStart { .. }
+            | AgentToolEnd { .. }
+            | AgentResponse { .. }
+            | AgentTurnComplete { .. }
+            | AgentDone { .. }
+            | AgentError { .. } => EventCategory::Agent,
+            ScrollUp | ScrollDown | PageUp | PageDown => EventCategory::Scroll,
+            Quit | Reset | Abort | SpawnAgent { .. } | ToggleExpand | OpenExternalEditor
+            | ExternalEditorDone { .. } | Suspend | ShareSession | ForkSession { .. }
+            | CloneSession | ToggleSessionTree | SessionTreeFilterCycle | SessionTreeSelect { .. }
+            | AtFilePicker | InsertAtRef(_) => EventCategory::Control,
+            SwitchModel { .. } | SwitchTheme { .. } | CycleModelNext | CycleModelPrev
+            | ToggleScopedModelsDialog | ScopedModelToggle { .. } | ScopedModelEnableAll
+            | ScopedModelDisableAll | ScopedModelToggleProvider { .. } | CycleThinkingLevel
+            | SetThinkingLevel(_) | ToggleReadOnly | TrustProject | UntrustProject | FollowUp
+            | Dequeue => EventCategory::ModelConfig,
+            ToggleCommandPalette | PaletteFilter(_) | PaletteBackspace | PaletteUp | PaletteDown
+            | PaletteSelect | PaletteClose | ToggleModelSelector | ModelSelectorFilter(_)
+            | ModelSelectorBackspace | ModelSelectorUp | ModelSelectorDown | ModelSelectorSelect
+            | ModelSelectorClose | CommandFormInput(_) | CommandFormBackspace | CommandFormUp
+            | CommandFormDown | CommandFormSubmit | CommandFormClose => EventCategory::DialogToggle,
+            ToggleSettingsDialog | SettingsUp | SettingsDown | SettingsLeft | SettingsRight
+            | SettingsSelect | SettingsClose | SettingsSwitchCategory { .. } => {
+                EventCategory::Settings
+            }
+            PendingEdit { .. } | ApproveEdit | RejectEdit | ReloadAll | ShowDiagnostics
+            | TogglePathCompletion | PathCompletionUp | PathCompletionDown | PathCompletionSelect
+            | PathCompletionClose | RunSaveCommand { .. } | RunLoadCommand { .. }
+            | RunDeleteCommand { .. } | RunImportCommand { .. } | RunExportCommand { .. }
+            | RunSkillCommand { .. } | RunLoginCommand { .. } | RunLogoutCommand { .. }
+            | RunNameCommand { .. } | RunForkCommand { .. } | RunCompactCommand { .. }
+            | RunPromptCommand { .. } | RunThinkingCommand { .. } | RunPaletteCommand { .. } => {
+                EventCategory::Edit
+            }
+            SystemMessage { .. } => EventCategory::System,
+            TransientMessage { .. } | TransientError { .. } | ClearTransient => {
+                EventCategory::Transient
+            }
+            LoginFlowStart
+            | LoginFlowSelectProvider { .. }
+            | LoginFlowSubmitKey { .. }
+            | LoginFlowValidate { .. }
+            | LoginFlowValidationDone { .. }
+            | LoginFlowValidationFailed { .. }
+            | LoginFlowModelsFetched { .. }
+            | LoginFlowToggleModel { .. }
+            | LoginFlowSave
+            | LoginFlowCancel => EventCategory::Control,
+        }
+    }
+}

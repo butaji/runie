@@ -5,6 +5,65 @@ fn fresh_state() -> AppState {
     AppState::default()
 }
 
+fn big_output() -> String {
+    (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n")
+}
+
+fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: response.into(),
+    });
+    state.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: tool_output.into(),
+    });
+    state.update(Event::AgentTurnComplete {
+        id: "req.0".into(),
+        duration_secs: 1.0,
+    });
+    state.update(Event::AgentDone { id: "req.0".into() });
+    state.ensure_fresh();
+}
+
+fn agent_pos(state: &AppState) -> Option<usize> {
+    crate::ui::LazyCache::feed(state)
+        .elements
+        .iter()
+        .position(|e| matches!(e, crate::ui::Element::AgentMessage { .. }))
+}
+
+fn tool_pos(state: &AppState) -> Option<usize> {
+    crate::ui::LazyCache::feed(state)
+        .elements
+        .iter()
+        .position(|e| matches!(e, crate::ui::Element::ToolDone { .. }))
+}
+
+fn thought_pos(state: &AppState) -> Option<usize> {
+    crate::ui::LazyCache::feed(state)
+        .elements
+        .iter()
+        .position(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }))
+}
+
+fn agent_turn_complete_kinds(state: &AppState) -> Vec<&'static str> {
+    crate::ui::LazyCache::feed(state)
+        .elements
+        .iter()
+        .map(|e| match e {
+            crate::ui::Element::AgentMessage { .. } => "A",
+            crate::ui::Element::TurnComplete { .. } => "T",
+            crate::ui::Element::Spacer { .. } => "S",
+            _ => "?",
+        })
+        .collect()
+}
+
 /// The bug: when agent response arrives before tool (mock provider),
 /// large tool output pushes the agent response above the viewport.
 /// After finish_turn, the final agent response must be AFTER tools.
@@ -12,82 +71,19 @@ fn fresh_state() -> AppState {
 fn final_agent_after_tools_when_turn_completes() {
     let mut state = fresh_state();
     state.streaming = true;
-
-    // Simulate mock provider event order: response BEFORE tool
-    state.update(Event::AgentResponse {
-        id: "req.0".into(),
-        content: "Done!".into(),
-    });
-    state.update(Event::AgentToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    });
-    let output = (1..=20)
-        .map(|i| format!("file{}.txt", i))
-        .collect::<Vec<_>>()
-        .join("\n");
-    state.update(Event::AgentToolEnd {
-        duration_secs: 0.5,
-        output,
-    });
-    state.update(Event::AgentTurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
-    state.update(Event::AgentDone { id: "req.0".into() });
-    state.ensure_fresh();
-
-    // Find positions of Agent and Tool in element feed
-    let feed = crate::ui::LazyCache::feed(&state);
-    let agent_pos = feed.elements.iter().position(
-        |e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"),
-    );
-    let tool_pos = feed
-        .elements
-        .iter()
-        .position(|e| matches!(e, crate::ui::Element::ToolDone { .. }));
-
-    assert!(agent_pos.is_some(), "Agent message must exist");
-    assert!(tool_pos.is_some(), "Tool message must exist");
-    assert!(
-        agent_pos.unwrap() > tool_pos.unwrap(),
-        "Final agent response must appear AFTER tool output. Got agent at {:?}, tool at {:?}",
-        agent_pos,
-        tool_pos
-    );
+    run_tool_turn(&mut state, "Done!", &big_output());
+    let (a, t) = (agent_pos(&state), tool_pos(&state));
+    assert!(a.is_some(), "Agent message must exist");
+    assert!(t.is_some(), "Tool message must exist");
+    assert!(a.unwrap() > t.unwrap(), "Final agent must appear AFTER tool");
 }
 
 #[test]
 fn final_agent_visible_when_tool_overflows() {
     let mut state = fresh_state();
     state.streaming = true;
-
-    state.update(Event::AgentResponse {
-        id: "req.0".into(),
-        content: "Done!".into(),
-    });
-    state.update(Event::AgentToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    });
-    let output = (1..=20)
-        .map(|i| format!("file{}.txt", i))
-        .collect::<Vec<_>>()
-        .join("\n");
-    state.update(Event::AgentToolEnd {
-        duration_secs: 0.5,
-        output,
-    });
-    state.update(Event::AgentTurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
-    state.update(Event::AgentDone { id: "req.0".into() });
-    state.ensure_fresh();
+    run_tool_turn(&mut state, "Done!", &big_output());
     state.view.scroll = 0;
-
-    // Viewport of 5 lines — tool is 21 lines + spacer = 22, agent is 1 + spacer = 2
-    // Total ~30 lines. With agent AFTER tool, bottom 5 lines should include agent.
     let region = state.visible_scroll(5);
     let has_agent = region.elements.iter().any(
         |e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"),
@@ -99,8 +95,6 @@ fn final_agent_visible_when_tool_overflows() {
 fn agent_before_tool_preserved_during_turn() {
     let mut state = fresh_state();
     state.streaming = true;
-
-    // During the turn, before done, agent IS before tool (timestamp order)
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Done!".into(),
@@ -114,19 +108,7 @@ fn agent_before_tool_preserved_during_turn() {
         output: "a".into(),
     });
     state.ensure_fresh();
-
-    let feed = crate::ui::LazyCache::feed(&state);
-    let agent_pos = feed
-        .elements
-        .iter()
-        .position(|e| matches!(e, crate::ui::Element::AgentMessage { .. }));
-    let tool_pos = feed
-        .elements
-        .iter()
-        .position(|e| matches!(e, crate::ui::Element::ToolDone { .. }));
-
-    // Before finish_turn, agent can be before tool (streaming order)
-    assert!(agent_pos.is_some() && tool_pos.is_some());
+    assert!(agent_pos(&state).is_some() && tool_pos(&state).is_some());
 }
 
 #[test]
@@ -154,19 +136,7 @@ fn no_reorder_when_no_tools() {
     });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
-
-    let feed = crate::ui::LazyCache::feed(&state);
-    let kinds: Vec<&str> = feed
-        .elements
-        .iter()
-        .map(|e| match e {
-            crate::ui::Element::AgentMessage { .. } => "A",
-            crate::ui::Element::TurnComplete { .. } => "T",
-            crate::ui::Element::Spacer { .. } => "S",
-            _ => "?",
-        })
-        .collect();
-    // Agent, Spacer, TurnComplete, Spacer — other elements (Thought, ToolDone) are before
+    let kinds = agent_turn_complete_kinds(&state);
     assert!(
         kinds.iter().position(|&k| k == "A").unwrap()
             < kinds.iter().position(|&k| k == "T").unwrap(),
@@ -186,48 +156,10 @@ fn thought_stays_before_tool_after_reorder() {
         content: "I'll list files.\nTOOL:list_dir:.".into(),
     });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
-    state.update(Event::AgentResponse {
-        id: "req.0".into(),
-        content: "Done!".into(),
-    });
-    state.update(Event::AgentToolStart {
-        id: "req.0".into(),
-        name: "list_dir".into(),
-    });
-    state.update(Event::AgentToolEnd {
-        duration_secs: 0.5,
-        output: "file1".into(),
-    });
-    state.update(Event::AgentTurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
-    state.update(Event::AgentDone { id: "req.0".into() });
-    state.ensure_fresh();
+    run_tool_turn(&mut state, "Done!", "file1");
 
-    let feed = crate::ui::LazyCache::feed(&state);
-    let thought_pos = feed
-        .elements
-        .iter()
-        .position(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }));
-    let tool_pos = feed
-        .elements
-        .iter()
-        .position(|e| matches!(e, crate::ui::Element::ToolDone { .. }));
-    let agent_pos = feed
-        .elements
-        .iter()
-        .position(|e| matches!(e, crate::ui::Element::AgentMessage { .. }));
-
-    assert!(thought_pos.is_some(), "Thought must exist");
-    assert!(tool_pos.is_some(), "Tool must exist");
-    assert!(agent_pos.is_some(), "Agent must exist");
-    assert!(
-        thought_pos.unwrap() < tool_pos.unwrap(),
-        "Thought must be before tool"
-    );
-    assert!(
-        tool_pos.unwrap() < agent_pos.unwrap(),
-        "Agent must be after tool"
-    );
+    let (t, o, a) = (thought_pos(&state), tool_pos(&state), agent_pos(&state));
+    assert!(t.is_some() && o.is_some() && a.is_some());
+    assert!(t.unwrap() < o.unwrap(), "Thought must be before tool");
+    assert!(o.unwrap() < a.unwrap(), "Agent must be after tool");
 }

@@ -68,9 +68,7 @@ fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
             offset: arg_opt_usize(args, "offset"),
             limit: arg_opt_usize(args, "limit"),
         },
-        "list_dir" => crate::Tool::ListDir {
-            path: arg_str(args, "path"),
-        },
+        "list_dir" => crate::Tool::ListDir { path: arg_str(args, "path") },
         "write_file" => crate::Tool::WriteFile {
             path: arg_str(args, "path"),
             content: arg_str(args, "content"),
@@ -80,9 +78,7 @@ fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
             search: arg_str(args, "search"),
             replace: arg_str(args, "replace"),
         },
-        "bash" => crate::Tool::Bash {
-            command: arg_str(args, "command"),
-        },
+        "bash" => crate::Tool::Bash { command: arg_str(args, "command") },
         "grep" => crate::Tool::Grep {
             pattern: arg_str(args, "pattern"),
             path: arg_str(args, "path"),
@@ -97,9 +93,7 @@ fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
             path: arg_str(args, "path"),
             limit: arg_usize(args, "limit").max(1),
         },
-        "fetch_docs" => crate::Tool::FetchDocs {
-            library: arg_str(args, "library"),
-        },
+        "fetch_docs" => crate::Tool::FetchDocs { library: arg_str(args, "library") },
         _ => return None,
     })
 }

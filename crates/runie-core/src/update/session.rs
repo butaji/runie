@@ -1,18 +1,7 @@
 use crate::model::AppState;
-use crate::Event;
 
 impl AppState {
     // === Session Event Handler ===
-    pub(crate) fn session_event(&mut self, event: Event) {
-        match event {
-            Event::ToggleExpand => self.toggle_expand_all(),
-            Event::ToggleSessionTree => self.toggle_session_tree_dialog(),
-            Event::SessionTreeFilterCycle => self.cycle_session_tree_filter(),
-            Event::ForkSession { message_index } => self.fork_session_at(message_index),
-            Event::CloneSession => self.clone_session(),
-            _ => {}
-        }
-    }
 
     pub(crate) fn toggle_session_tree_dialog(&mut self) {
         use crate::commands::DialogState;
@@ -57,5 +46,9 @@ impl AppState {
         });
         self.session.session_tree = Some(tree);
         self.add_system_msg("Session cloned at current position.".into());
+    }
+
+    pub(crate) fn session_tree_select(&mut self, _id: &str) {
+        // Placeholder: session tree selection is handled by the dialog stack.
     }
 }

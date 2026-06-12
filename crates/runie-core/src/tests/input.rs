@@ -5,6 +5,29 @@ fn fresh_state() -> AppState {
     AppState::default()
 }
 
+fn push_user_msg(state: &mut AppState, content: &str, id: &str) {
+    state.session.messages.push(crate::model::ChatMessage {
+        role: crate::model::Role::User,
+        content: content.into(),
+        timestamp: 0.0,
+        id: id.into(),
+        ..Default::default()
+    });
+}
+
+fn thinking_started(state: &AppState) -> std::time::Instant {
+    use crate::ui::Element;
+    state
+        .view
+        .elements_cache()
+        .iter()
+        .find_map(|e| match e {
+            Element::Thinking { started, .. } => Some(*started),
+            _ => None,
+        })
+        .expect("Should have Thinking element")
+}
+
 #[test]
 fn test_input_adds_character() {
     let mut state = fresh_state();
@@ -200,20 +223,12 @@ fn tool_running_element_stores_instant_not_elapsed() {
 
 #[test]
 fn timer_advances_without_cache_rebuild() {
-    use crate::ui::Element;
     let mut state = fresh_state();
-    state.session.messages.push(crate::model::ChatMessage {
-        role: crate::model::Role::User,
-        content: "hi".into(),
-        timestamp: 0.0,
-        id: "t1".into(),
-        ..Default::default()
-    });
+    push_user_msg(&mut state, "hi", "t1");
     state.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
     state.agent.turn_active = true;
     state.messages_changed();
     state.ensure_fresh();
-
     let gen_before = state.cache_generation();
     state.tick_animation();
     assert_eq!(
@@ -221,22 +236,8 @@ fn timer_advances_without_cache_rebuild() {
         gen_before,
         "tick_animation must not bump cache gen"
     );
-    assert!(
-        state.is_dirty(),
-        "tick_animation must mark dirty for render"
-    );
-
-    let started = state
-        .view
-        .elements_cache()
-        .iter()
-        .find_map(|e| match e {
-            Element::Thinking { started, .. } => Some(*started),
-            _ => None,
-        })
-        .expect("Should have Thinking element");
-
-    let elapsed = started.elapsed().as_secs_f64();
+    assert!(state.is_dirty(), "tick_animation must mark dirty for render");
+    let elapsed = thinking_started(&state).elapsed().as_secs_f64();
     assert!(
         elapsed >= 4.9,
         "Timer should advance without cache rebuild: {:.1}s",

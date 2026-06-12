@@ -141,7 +141,6 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     state.ensure_fresh();
     state.view.scroll = 0;
     let region = state.visible_scroll(10);
-
     assert!(
         region
             .elements

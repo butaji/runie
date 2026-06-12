@@ -63,11 +63,9 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let mut state = AppState::default();
     state.session.messages = make_messages(50);
 
-    // Render at bottom
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_bottom = terminal.backend().buffer().clone();
 
-    // Scroll up enough to move thumb visibly
     for _ in 0..20 {
         state.update(Event::ScrollUp);
     }
@@ -76,7 +74,6 @@ fn test_scrollbar_moves_when_scrolled_up() {
     let buf_scrolled = terminal.backend().buffer().clone();
 
     let area = buf_bottom.area();
-    // With margin on terminals > 10 rows, scrollbar is inset by 1 from right edge
     let has_margin = area.width > 20 && area.height > 10;
     let scrollbar_col = if has_margin {
         area.width - 2

@@ -28,6 +28,16 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
         .collect()
 }
 
+fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
+    ChatMessage {
+        role,
+        content: content.into(),
+        timestamp,
+        id: id.into(),
+        ..Default::default()
+    }
+}
+
 #[test]
 fn elements_ordered_by_timestamp_strict() {
     let mut state = AppState::default();
@@ -123,39 +133,19 @@ fn thinking_indicator_is_always_last_when_newest() {
 #[test]
 fn streaming_bump_moves_assistant_to_end() {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: Role::User,
-        content: "Q1".into(),
-        timestamp: 1.0,
-        id: "u0".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::Assistant,
-        content: "A1".into(),
-        timestamp: 2.0,
-        id: "req.0".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::User,
-        content: "Q2".into(),
-        timestamp: 3.0,
-        id: "u1".into(),
-        ..Default::default()
-    });
-    // Now bump assistant timestamp to 4.0 — simulating streaming update
-    if let Some(msg) = state
-        .session
+    state.session.messages.extend([
+        msg(Role::User, "Q1", 1.0, "u0"),
+        msg(Role::Assistant, "A1", 2.0, "req.0"),
+        msg(Role::User, "Q2", 3.0, "u1"),
+    ]);
+    state.session
         .messages
         .iter_mut()
         .find(|m| m.role == Role::Assistant && m.id == "req.0")
-    {
-        msg.timestamp = 4.0;
-    }
+        .unwrap()
+        .timestamp = 4.0;
     state.messages_changed();
     state.ensure_fresh();
-
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
         kinds,
@@ -205,37 +195,19 @@ fn tool_end_bump_moves_tool_after_later_messages() {
 #[test]
 fn multiple_tools_ordered_by_completion_time() {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: Role::Tool,
-        content: "✓ cat 0.1s".into(),
-        timestamp: 5.0,
-        id: "t1".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::Tool,
-        content: "✓ ls 0.2s".into(),
-        timestamp: 2.0,
-        id: "t2".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::Tool,
-        content: "✓ grep 0.3s".into(),
-        timestamp: 8.0,
-        id: "t3".into(),
-        ..Default::default()
-    });
+    state.session.messages.extend([
+        msg(Role::Tool, "✓ cat 0.1s", 5.0, "t1"),
+        msg(Role::Tool, "✓ ls 0.2s", 2.0, "t2"),
+        msg(Role::Tool, "✓ grep 0.3s", 8.0, "t3"),
+    ]);
     state.messages_changed();
     state.ensure_fresh();
-
     let kinds = element_kinds_no_spacer(&state);
     assert_eq!(
         kinds,
         vec!["ToolDone", "ToolDone", "ToolDone"],
         "Tools should be ordered by timestamp"
     );
-    // Also verify the actual order by checking content
     let feed = LazyCache::feed(&state);
     let texts: Vec<String> = feed
         .elements

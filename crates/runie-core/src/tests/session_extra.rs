@@ -19,6 +19,28 @@ fn exec(state: &mut AppState, text: &str) {
     state.update(Event::Submit);
 }
 
+fn imported_session() -> crate::session::Session {
+    crate::session::Session {
+        name: "imported".to_string(),
+        display_name: Some("My Session".to_string()),
+        created_at: 1.0,
+        updated_at: 2.0,
+        messages: vec![ChatMessage {
+            role: Role::Assistant,
+            content: "imported msg".into(),
+            timestamp: 0.0,
+            id: "resp.0".into(),
+            ..Default::default()
+        }],
+        provider: "openai".into(),
+        model: "gpt-4o".into(),
+        theme_name: "tokyo-night".into(),
+        thinking_level: crate::model::ThinkingLevel::Medium,
+        read_only: true,
+        session_tree: None,
+    }
+}
+
 #[test]
 fn name_sets_display_name() {
     let mut state = fresh_state();
@@ -113,45 +135,18 @@ fn export_creates_file() {
 fn import_loads_file() {
     let mut state = fresh_state();
     let tmp = std::env::temp_dir().join(format!("runie_import_{}.json", std::process::id()));
-    let session = crate::session::Session {
-        name: "imported".to_string(),
-        display_name: Some("My Session".to_string()),
-        created_at: 1.0,
-        updated_at: 2.0,
-        messages: vec![ChatMessage {
-            role: Role::Assistant,
-            content: "imported msg".into(),
-            timestamp: 0.0,
-            id: "resp.0".into(),
-            ..Default::default()
-        }],
-        provider: "openai".into(),
-        model: "gpt-4o".into(),
-        theme_name: "tokyo-night".into(),
-        thinking_level: crate::model::ThinkingLevel::Medium,
-        read_only: true,
-        session_tree: None,
-    };
-    std::fs::write(&tmp, serde_json::to_string_pretty(&session).unwrap()).unwrap();
-
+    std::fs::write(&tmp, serde_json::to_string_pretty(&imported_session()).unwrap()).unwrap();
     let path = tmp.to_string_lossy();
     exec(&mut state, &format!("/import {}", path)); // Opens form with pre-filled path
     state.update(Event::Submit); // Submits the form
-
     assert_eq!(state.session.messages.len(), 2); // imported + system confirmation
     assert_eq!(state.session.messages[0].content, "imported msg");
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert_eq!(state.config.theme_name, "tokyo-night");
-    assert_eq!(
-        state.config.thinking_level,
-        crate::model::ThinkingLevel::Medium
-    );
+    assert_eq!(state.config.thinking_level, crate::model::ThinkingLevel::Medium);
     assert!(state.config.read_only);
-    assert_eq!(
-        state.session.session_display_name,
-        Some("My Session".to_string())
-    );
+    assert_eq!(state.session.session_display_name, Some("My Session".to_string()));
     let _ = std::fs::remove_file(&tmp);
 }
 
