@@ -1053,7 +1053,16 @@ impl AppState {
         // Exception: if the handler already set `open_dialog` (e.g. login flow
         // rebuild on keep_open Emit), leave it alone.
         if !activated && self.open_dialog.is_none() {
-            self.open_dialog = Some(dialog);
+            // If the panel stack was closed at its root AND the global
+            // back stack has a previous dialog (e.g. the command
+            // palette that pushed this sub-dialog), restore it instead
+            // of closing the whole UI. This is the Android-like Back
+            // behavior: pop one level, close only at the root of all.
+            if let Some(previous) = self.dialog_back_stack.pop() {
+                self.open_dialog = Some(previous);
+            } else {
+                self.open_dialog = Some(dialog);
+            }
         }
         self.mark_dirty();
     }
@@ -1078,9 +1087,20 @@ impl AppState {
                     // with the popped stack; update_dialog restores the
                     // original DialogState variant around the mutated stack)
                 } else {
-                    self.open_dialog = None;
-                    self.mark_dirty();
-                    return true;
+                    // At the root of this dialog. If the global back
+                    // stack has a previous dialog (e.g. the command
+                    // palette that pushed this sub-dialog), restore it
+                    // — Android-like: pop one level, close only at the
+                    // absolute root.
+                    if let Some(previous) = self.dialog_back_stack.pop() {
+                        self.open_dialog = Some(previous);
+                        self.mark_dirty();
+                        return false; // keep open with restored dialog
+                    } else {
+                        self.open_dialog = None;
+                        self.mark_dirty();
+                        return true; // closed at the absolute root
+                    }
                 }
             }
             HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => stack.select_up(),
@@ -1122,9 +1142,17 @@ impl AppState {
                 self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
                 return false; // keep open with popped stack
             } else {
-                self.open_dialog = None;
-                self.mark_dirty();
-                return true; // closed at root
+                // At the root of this dialog. If the global back stack
+                // has a previous dialog, restore it (Android-like).
+                if let Some(previous) = self.dialog_back_stack.pop() {
+                    self.open_dialog = Some(previous);
+                    self.mark_dirty();
+                    return false; // keep open with restored dialog
+                } else {
+                    self.open_dialog = None;
+                    self.mark_dirty();
+                    return true; // closed at the absolute root
+                }
             }
         }
 
@@ -1317,13 +1345,25 @@ impl AppState {
         match result {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
             crate::commands::CommandResult::Event(evt) => self.update(evt),
-            crate::commands::CommandResult::OpenDialog(d) => match d {
-                crate::commands::DialogType::CommandPalette => self.open_command_palette(),
-                crate::commands::DialogType::ModelSelector => self.open_model_selector(),
-                crate::commands::DialogType::Settings => self.open_settings_dialog(),
-                crate::commands::DialogType::ScopedModels => self.open_scoped_models_dialog(),
-            },
+            crate::commands::CommandResult::OpenDialog(d) => {
+                // Android-like: if a dialog is already open (e.g. the
+                // command palette, the main menu), push it onto the
+                // global back stack so Esc returns to it. The new
+                // dialog becomes the top.
+                if let Some(current) = self.open_dialog.take() {
+                    self.dialog_back_stack.push(current);
+                }
+                match d {
+                    crate::commands::DialogType::CommandPalette => self.open_command_palette(),
+                    crate::commands::DialogType::ModelSelector => self.open_model_selector(),
+                    crate::commands::DialogType::Settings => self.open_settings_dialog(),
+                    crate::commands::DialogType::ScopedModels => self.open_scoped_models_dialog(),
+                }
+            }
             crate::commands::CommandResult::OpenPanelStack(stack) => {
+                if let Some(current) = self.open_dialog.take() {
+                    self.dialog_back_stack.push(current);
+                }
                 self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
                 self.mark_dirty();
             }

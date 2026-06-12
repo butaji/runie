@@ -159,6 +159,56 @@ fn form_dialog_esc_pops_or_closes() {
 }
 
 #[test]
+fn global_dialog_back_stack_palette_pushes_subdialog() {
+    // Android-like: when a command from the command palette (main
+    // menu) opens a sub-dialog, the palette is pushed onto a global
+    // back stack. Esc on the sub-dialog pops back to the palette.
+    // Esc on the palette (root of the back stack) closes the bar.
+    use crate::commands::DialogState;
+    use crate::dialog::{ItemAction, Panel, PanelStack};
+    use crate::event::Event;
+
+    let mut state = AppState::default();
+    // Simulate the palette being open.
+    let palette = Panel::new("palette", "Commands").keep_open();
+    let palette_stack = PanelStack::new(palette);
+    state.open_dialog = Some(DialogState::CommandPalette(palette_stack));
+
+    // A command from the palette opens a sub-dialog (e.g. settings).
+    // process_command_result pushes the palette onto the back stack.
+    let sub = Panel::new("sub", "Sub").keep_open();
+    let sub_stack = PanelStack::new(sub);
+    if let Some(current) = state.open_dialog.take() {
+        state.dialog_back_stack.push(current);
+    }
+    state.open_dialog = Some(DialogState::PanelStack(sub_stack));
+
+    // Verify: back stack has the palette, current is the sub-dialog.
+    assert_eq!(state.dialog_back_stack.len(), 1);
+    assert!(matches!(
+        state.open_dialog,
+        Some(DialogState::PanelStack(_))
+    ));
+
+    // Esc on the sub-dialog (root of its PanelStack) should restore
+    // the palette from the back stack, NOT close the dialog.
+    state.update(Event::DialogBack);
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::CommandPalette(_))),
+        "Esc on sub-dialog must restore palette, got {:?}",
+        state.open_dialog
+    );
+    assert!(state.dialog_back_stack.is_empty());
+
+    // Esc on the palette (root, back stack empty) should close.
+    state.update(Event::DialogBack);
+    assert!(
+        state.open_dialog.is_none(),
+        "Esc on palette (root) must close the dialog"
+    );
+}
+
+#[test]
 fn pushing_via_item_action_grows_the_stack() {
     // The Push action on a list item should grow the stack by one.
     let root = Panel::new("root", "Root")

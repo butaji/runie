@@ -895,6 +895,48 @@ fn f8_open_close_palette_repeatedly() {
     assert_no_panic(&output);
 }
 
+/// F9: Android-like global back stack. Opening the command bar
+/// (palette = main menu) and selecting a command pushes the
+/// sub-dialog onto a back stack. Esc pops back to the palette.
+/// Esc on the palette (root) closes the bar.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn f9_global_back_stack_palette_pushes_subdialog_esc_pops_then_closes() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    // Open the command bar (Ctrl+P = main menu).
+    send(&mut p, "\x10").expect("ctrl-p open");
+    p.flush().expect("flush");
+    wait_for(&mut p, "Commands").expect("palette title");
+
+    // Select the "scoped-models" command from the palette. This
+    // pushes the scoped-models dialog onto the global back stack
+    // (the palette stays as the previous entry).
+    send_line(&mut p, "scoped-models").expect("type and enter");
+
+    // Esc on the sub-dialog must pop back to the palette (main menu).
+    // Assert on a palette body item (always present) rather than the
+    // title text, which can be split by ANSI codes.
+    send_escape(&mut p).expect("esc pops to palette");
+    wait_for(&mut p, "settings").expect("back at palette, popped state visible");
+
+    // Esc on the palette (root of the back stack) must close the bar.
+    send_escape(&mut p).expect("esc at root closes");
+    p.flush().expect("flush");
+    wait_idle(&mut p);
+
+    send_ctrl_c(&mut p).expect("ctrl-c");
+    p.process_mut().set_kill_timeout(Some(3_000));
+    let output = p
+        .process_mut()
+        .exit()
+        .ok()
+        .map(|_| p.exp_eof().unwrap_or_default())
+        .unwrap_or_default();
+    assert_no_panic(&output);
+}
+
 /// F8b: Esc on the command bar's main menu closes the bar. The command
 /// bar is a `PanelStack`; Esc is a Back button that pops one level,
 /// closing the bar only at the root (main menu). This is the exact

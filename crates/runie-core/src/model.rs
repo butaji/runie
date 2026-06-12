@@ -207,6 +207,11 @@ pub struct AppState {
     pub registry: crate::commands::CommandRegistry,
     pub should_quit: bool,
     pub open_dialog: Option<crate::commands::DialogState>,
+    /// Global dialog back stack (Android-like). When a command from
+    /// the palette (or any dialog) opens a sub-dialog, the current
+    /// dialog is pushed here. Esc pops from this stack, restoring
+    /// the previous dialog. At the root, Esc closes the bar.
+    pub dialog_back_stack: Vec<crate::commands::DialogState>,
     pub login_flow: Option<crate::login_flow::LoginFlowState>,
     pub recent_models: Vec<String>,
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
@@ -262,6 +267,7 @@ impl Default for AppState {
             registry: crate::commands::CommandRegistry::new(),
             should_quit: false,
             open_dialog: None,
+            dialog_back_stack: Vec::new(),
             login_flow: None,
             recent_models: Vec::new(),
             pending_edits: Vec::new(),
