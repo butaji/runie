@@ -391,10 +391,9 @@ impl AppState {
         if let Some(result) = self.handle_slash(&content) {
             match result {
                 crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
-                crate::commands::CommandResult::Warning(msg) => self.notify(
-                    msg,
-                    crate::event::TransientLevel::Warning,
-                ),
+                crate::commands::CommandResult::Warning(msg) => {
+                    self.notify(msg, crate::event::TransientLevel::Warning)
+                }
                 crate::commands::CommandResult::Event(evt) => self.update(evt),
                 crate::commands::CommandResult::OpenDialog(d) => match d {
                     crate::commands::DialogType::CommandPalette => self.open_command_palette(),

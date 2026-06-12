@@ -260,7 +260,11 @@ fn piece_is_last_character_on_right_side() {
             .collect::<String>()
             .trim_end()
             .to_string();
-        if line.rfind('⛀').is_some() || line.rfind('⛁').is_some() || line.rfind('⛂').is_some() || line.rfind('⛃').is_some() {
+        if line.rfind('⛀').is_some()
+            || line.rfind('⛁').is_some()
+            || line.rfind('⛂').is_some()
+            || line.rfind('⛃').is_some()
+        {
             right_line = line.clone();
             break;
         }

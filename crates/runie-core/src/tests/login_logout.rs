@@ -6,7 +6,7 @@
 //! Flow: /providers → Add → Login flow → Save → Providers dialog → Select model
 
 use crate::event::Event;
-use crate::login_config::{config_path, list_configured_providers, remove_provider_config};
+use crate::login_config::{config_path, list_configured_providers};
 use crate::model::AppState;
 
 /// Clear the config file before each test to avoid pollution.
@@ -96,10 +96,7 @@ fn login_flow_save_shows_providers_dialog() {
         state.open_dialog.is_some(),
         "providers dialog should be shown after login flow save"
     );
-    assert!(
-        state.login_flow.is_none(),
-        "login flow should be cleared"
-    );
+    assert!(state.login_flow.is_none(), "login flow should be cleared");
 }
 
 #[test]
@@ -439,7 +436,10 @@ fn providers_add_starts_login_flow() {
     clean_config();
     let mut state = AppState::default();
     state.update(Event::ProvidersDialog);
-    assert!(state.open_dialog.is_some(), "providers dialog should be open");
+    assert!(
+        state.open_dialog.is_some(),
+        "providers dialog should be open"
+    );
 
     // Click "Add provider" - should start the login flow.
     state.update(Event::ProvidersAdd);
@@ -469,7 +469,10 @@ fn login_flow_cancel_returns_to_providers_dialog() {
     state.update(Event::LoginFlowCancel);
 
     // Login flow should be cleared.
-    assert!(state.login_flow.is_none(), "login flow should be cleared on cancel");
+    assert!(
+        state.login_flow.is_none(),
+        "login flow should be cleared on cancel"
+    );
 
     // Providers dialog should be restored from back stack.
     let restored = state.open_dialog.is_some() || !state.dialog_back_stack.is_empty();
@@ -536,7 +539,10 @@ fn disconnect_active_provider_switches_to_another() {
         "openai should not be current after disconnect"
     );
     // Dialog should be closed.
-    assert!(state.open_dialog.is_none(), "dialog should be closed after disconnect");
+    assert!(
+        state.open_dialog.is_none(),
+        "dialog should be closed after disconnect"
+    );
 }
 
 // ============================================================================
@@ -620,7 +626,10 @@ fn login_flow_toggle_model() {
     // Selection should be toggled.
     let flow = state.login_flow.as_ref().unwrap();
     let is_selected = flow.selected_models.contains(&initial_model);
-    assert_eq!(is_selected, !was_selected, "model selection should be toggled");
+    assert_eq!(
+        is_selected, !was_selected,
+        "model selection should be toggled"
+    );
 }
 
 // ============================================================================

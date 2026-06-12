@@ -307,12 +307,14 @@ mod tests {
         assert!(matches!(cmd.flow, CommandFlow::Sub(_)));
     }
 
+    #[test]
     fn test_sub_is_noop_for_empty_flow() {
         // .sub() on a command with no flow should be a no-op.
         let cmd = crate::cmd!("nothing").sub();
         assert!(matches!(cmd.flow, CommandFlow::None));
     }
 
+    #[test]
     fn test_sub_wraps_handler() {
         // .sub() before .handler() also wraps, so event-based
         // commands (like login) get back-stack behavior too.
@@ -326,6 +328,7 @@ mod tests {
         assert!(matches!(cmd.flow, super::super::CommandFlow::Sub(_)));
     }
 
+    #[test]
     fn test_form_builder() {
         let fields = FormBuilder::new()
             .field("Name", "session", "name")

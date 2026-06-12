@@ -167,8 +167,8 @@ impl ThinkingLevel {
     /// Maps to 3-bit representation: 000=earth, 111=heaven.
     pub fn hexagram(&self) -> &'static str {
         match self {
-            Self::Off => "☷",   // 000 - earth (no thinking)
-            Self::Low => "☵",   // 010 - water (minimal thinking)
+            Self::Off => "☷",    // 000 - earth (no thinking)
+            Self::Low => "☵",    // 010 - water (minimal thinking)
             Self::Medium => "☳", // 100 - thunder (moderate thinking)
             Self::High => "☰",   // 111 - heaven (deep thinking)
         }
