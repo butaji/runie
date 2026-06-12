@@ -227,13 +227,15 @@ fn e2e_login_flow_opens_and_cancel_works() {
 
     send(&mut p, "\x10").expect("ctrl-p palette"); // Ctrl+P
     wait_for(&mut p, "Commands").expect("palette title");
-    send_line(&mut p, "login").expect("type login");
-    wait_for(&mut p, "Login").expect("login dialog");
+    send_line(&mut p, "providers").expect("type providers");
+    wait_for(&mut p, "No providers").expect("providers dialog (no providers message)");
 
-    send_line(&mut p, "").expect("select provider");
-    wait_for(&mut p, "API Key").expect("key input form");
+    send_line(&mut p, "").expect("select Add provider");
+    wait_for(&mut p, "Login").expect("login dialog starts");
 
     send_escape(&mut p).expect("cancel");
+    // After canceling login, we should be back at the providers dialog.
+    wait_for(&mut p, "Add provider").expect("back at providers dialog");
     send_ctrl_c(&mut p).expect("ctrl-c");
 }
 
@@ -249,32 +251,31 @@ fn e2e_login_stack_navigation_esc_pops_and_closes_at_root() {
     let mut p = spawn_runie().expect("spawn runie");
     wait_for(&mut p, "Type a message to start").expect("welcome prompt");
 
-    run_command(&mut p, "login");
-    wait_for(&mut p, "Login").expect("provider picker (root)");
+    run_command(&mut p, "providers");
+    wait_for(&mut p, "No providers").expect("providers dialog (no providers message)");
 
-    // Push to key input.
+    // Select "Add provider" to start the login flow.
+    send_line(&mut p, "").expect("select Add provider");
+    wait_for(&mut p, "Login").expect("login dialog starts");
+
+    // Esc on login dialog pops back to providers dialog (root).
+    send_escape(&mut p).expect("esc pops to providers");
+    wait_for(&mut p, "No providers").expect("back at providers dialog");
+
+    // Add provider again, then go through the login flow.
+    send_line(&mut p, "").expect("select Add provider again");
+    wait_for(&mut p, "Login").expect("login dialog starts again");
     send_line(&mut p, "").expect("select first provider");
     wait_for(&mut p, "API Key").expect("key input pushed");
-
-    // Esc pops back to the provider picker (root). We assert on a
-    // provider name (always in the body) rather than the header text,
-    // which can be split by ANSI codes.
-    send_escape(&mut p).expect("esc pops to root");
-    wait_for(&mut p, "Anthropic").expect("back at root, provider picker visible");
-
-    // Go to key input again, then submit to push model selector.
-    send_line(&mut p, "").expect("select provider again");
-    wait_for(&mut p, "API Key").expect("key input pushed again");
     send_line(&mut p, "sk-fake").expect("submit key");
     wait_for(&mut p, "Models").expect("model selector pushed");
 
-    // Esc pops to provider picker (root) — the key input was
-    // consumed on submit, so it is no longer in the back stack.
-    send_escape(&mut p).expect("esc pops to root");
-    send_escape(&mut p).expect("esc at root closes the dialog");
-    let _ = wait_for(&mut p, "Type a message to start");
+    // Esc on the model selector closes the login flow and returns
+    // to the providers dialog (the key input is consumed on submit).
+    send_escape(&mut p).expect("esc closes login flow");
+    wait_for(&mut p, "No providers").expect("back at providers dialog");
 
-    // Esc at root closes the dialog.
+    // Esc at providers closes the dialog.
     send_escape(&mut p).expect("esc at root closes");
     let _ = wait_for(&mut p, "Type a message to start");
 
@@ -433,9 +434,13 @@ fn e2e_session_commands_no_panic() {
     wait_for(&mut p, "cleared").expect("reset");
     wait_idle(&mut p);
 
-    run_command(&mut p, "logout");
-    wait_for(&mut p, "providers configured").expect("logout message");
-    wait_idle(&mut p);
+    run_command(&mut p, "providers");
+    // When no providers are configured, the dialog shows a message.
+    wait_for(&mut p, "No providers").expect("no providers message");
+    send_escape(&mut p).expect("close providers dialog");
+    // Esc on providers returns to the palette.
+    send_escape(&mut p).expect("close palette");
+    let _ = wait_for(&mut p, "Type a message to start");
 
     send_ctrl_c(&mut p).expect("ctrl-c");
 }
@@ -713,8 +718,11 @@ fn f4_login_is_non_blocking() {
     let mut p = spawn_runie().expect("spawn runie");
     wait_for(&mut p, "Type a message to start").expect("prompt");
 
-    run_command(&mut p, "login");
-    wait_for(&mut p, "Login").expect("provider picker");
+    run_command(&mut p, "providers");
+    wait_for(&mut p, "No providers").expect("providers dialog (no providers message)");
+    // Click "Add provider" to start the login flow.
+    send_line(&mut p, "").expect("select Add provider");
+    wait_for(&mut p, "Login").expect("login dialog starts");
     // Select the first provider (Anthropic) by pressing Enter.
     send_line(&mut p, "").expect("select first provider");
     wait_for(&mut p, "API Key").expect("key input");
@@ -745,8 +753,10 @@ fn f5_login_validation_failure_shows_transient() {
     let mut p = spawn_runie().expect("spawn runie");
     wait_for(&mut p, "Type a message to start").expect("prompt");
 
-    run_command(&mut p, "login");
-    wait_for(&mut p, "Login").expect("provider picker");
+    run_command(&mut p, "providers");
+    wait_for(&mut p, "No providers").expect("providers dialog (no providers message)");
+    send_line(&mut p, "").expect("select Add provider");
+    wait_for(&mut p, "Login").expect("login dialog starts");
     send_line(&mut p, "").expect("select first provider");
     wait_for(&mut p, "API Key").expect("key input");
     send_line(&mut p, "sk-definitely-not-valid").expect("submit key");
@@ -1102,12 +1112,13 @@ fn f10c_ctrl_p_save_form_esc_pops_to_palette() {
     assert_no_panic(&output);
 }
 
-/// F10d: Handler-based login flow — Ctrl+P -> "login" -> provider
-/// picker -> Esc -> palette. Verifies .sub() works for event-based
-/// handlers (login returns Event(LoginFlowStart)).
+/// F10d: Handler-based providers flow — Ctrl+P -> "providers" ->
+/// providers dialog -> Add provider -> login dialog -> Esc ->
+/// providers dialog -> Esc -> palette. Verifies the full back-stack
+/// navigation works for the providers command and its login flow sub-dialog.
 #[test]
 #[ignore = "e2e: requires release binary"]
-fn f10d_ctrl_p_login_esc_pops_to_palette() {
+fn f10d_ctrl_p_providers_esc_pops_to_palette() {
     let mut p = spawn_runie().expect("spawn runie");
     wait_for(&mut p, "Type a message to start").expect("welcome prompt");
 
@@ -1115,16 +1126,27 @@ fn f10d_ctrl_p_login_esc_pops_to_palette() {
     p.flush().expect("flush");
     std::thread::sleep(std::time::Duration::from_millis(500));
 
-    send_line(&mut p, "login").expect("select login");
-    std::thread::sleep(std::time::Duration::from_millis(800));
+    send_line(&mut p, "providers").expect("select providers");
+    wait_for(&mut p, "No providers").expect("providers dialog (no providers message)");
 
-    // Esc on provider picker (Sub Menu) -> palette (Main Menu).
-    send_escape(&mut p).expect("esc pops to palette from login");
+    // Select "Add provider" -> login dialog opens.
+    send_line(&mut p, "").expect("select Add provider");
+    wait_for(&mut p, "Login").expect("login dialog");
     std::thread::sleep(std::time::Duration::from_millis(500));
 
-    // Verify palette is active by running login again.
-    send_line(&mut p, "login").expect("login again from restored palette");
-    std::thread::sleep(std::time::Duration::from_millis(800));
+    // Esc on login dialog -> back to providers dialog.
+    send_escape(&mut p).expect("esc pops to providers from login");
+    wait_for(&mut p, "No providers").expect("back at providers dialog");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Esc on providers dialog -> back to palette.
+    send_escape(&mut p).expect("esc pops to palette from providers");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Verify palette is active by running providers again.
+    send_line(&mut p, "providers").expect("providers again from restored palette");
+    wait_for(&mut p, "No providers").expect("providers dialog again");
+    std::thread::sleep(std::time::Duration::from_millis(500));
 
     send_escape(&mut p).expect("esc pops to palette");
     std::thread::sleep(std::time::Duration::from_millis(500));

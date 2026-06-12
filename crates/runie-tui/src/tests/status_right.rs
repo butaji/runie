@@ -1,11 +1,9 @@
-//! Layer 1 + Layer 3 tests for status line (left: git/folder + working state, right: context usage + radial bar)
+//! Layer 1 + Layer 3 tests for status line (left: git/folder + thinking, right: context chess piece + token throughput)
 
-use crate::status_bar::{
-    build_left_text, build_right_status, context_window_for, radial_bar, ContextUsage,
-};
+use crate::status_bar::{build_left_text, build_right_status, context_piece, context_usage, context_window_for};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{snapshot::GitInfo, AppState};
+use runie_core::{model::ThinkingLevel, snapshot::GitInfo, AppState};
 
 fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
     (0..buf.area().height)
@@ -118,7 +116,7 @@ fn build_left_text_active_shows_working_not_git() {
 #[test]
 fn build_left_text_idle_shows_thinking_level_when_set() {
     let mut state = AppState::default();
-    state.config.thinking_level = runie_core::model::ThinkingLevel::Low;
+    state.config.thinking_level = ThinkingLevel::Low;
     state.git_info = Some(GitInfo {
         repo_name: Some("runie".into()),
         branch: Some("agent-impl".into()),
@@ -137,38 +135,44 @@ fn build_left_text_idle_shows_thinking_level_when_set() {
     );
 }
 
-// ── Right side tests (no git info here) ────────────────────────────────────
+// ── Right side tests (context chess piece) ───────────────────────────────────
 
 #[test]
-fn build_right_status_idle_shows_context_and_bar_only() {
+fn context_piece_white_king_for_zero_usage() {
+    assert_eq!(context_piece(0), '⛀');
+    assert_eq!(context_piece(25), '⛀');
+}
+
+#[test]
+fn context_piece_increments_with_usage() {
+    assert_eq!(context_piece(26), '⛁');
+    assert_eq!(context_piece(51), '⛂');
+    assert_eq!(context_piece(76), '⛃');
+    assert_eq!(context_piece(100), '⛃');
+}
+
+#[test]
+fn build_right_status_idle_shows_piece_last() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
-    state.git_info = Some(GitInfo {
-        repo_name: Some("runie".into()),
-        branch: Some("agent-impl".into()),
-    });
     let snap = state.snapshot();
     let right = build_right_status(&snap);
+    // Chess piece must be the LAST character
     assert!(
-        right.contains("0%/128k"),
-        "Should show context usage, got: {}",
+        right.ends_with('⛀'),
+        "Chess piece must be last char, got: {}",
         right
     );
     assert!(
-        right.contains('○'),
-        "Should show radial bar, got: {}",
-        right
-    );
-    assert!(
-        !right.contains("runie"),
-        "Right side must NOT show git info, got: {}",
+        right.contains("128k ⛀"),
+        "Should show 128k limit before piece, got: {}",
         right
     );
 }
 
 #[test]
-fn build_right_status_active_shows_turn_stats() {
+fn build_right_status_active_shows_turn_stats_and_piece_last() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
@@ -183,62 +187,15 @@ fn build_right_status_active_shows_turn_stats() {
         right
     );
     assert!(right.contains("/s"), "Should show speed, got: {}", right);
+    // Chess piece must be the LAST character
     assert!(
-        right.contains("0%/128k"),
-        "Should show context, got: {}",
+        right.ends_with('⛀'),
+        "Chess piece must be last char when active, got: {}",
         right
     );
 }
 
-#[test]
-fn radial_bar_0_percent_is_empty_circle() {
-    assert_eq!(radial_bar(0), '○');
-}
-
-#[test]
-fn radial_bar_12_percent_is_empty_circle() {
-    assert_eq!(radial_bar(12), '○');
-}
-
-#[test]
-fn radial_bar_13_percent_is_quarter() {
-    assert_eq!(radial_bar(13), '◔');
-}
-
-#[test]
-fn radial_bar_37_percent_is_quarter() {
-    assert_eq!(radial_bar(37), '◔');
-}
-
-#[test]
-fn radial_bar_38_percent_is_half() {
-    assert_eq!(radial_bar(38), '◑');
-}
-
-#[test]
-fn radial_bar_62_percent_is_half() {
-    assert_eq!(radial_bar(62), '◑');
-}
-
-#[test]
-fn radial_bar_63_percent_is_three_quarters() {
-    assert_eq!(radial_bar(63), '◕');
-}
-
-#[test]
-fn radial_bar_87_percent_is_three_quarters() {
-    assert_eq!(radial_bar(87), '◕');
-}
-
-#[test]
-fn radial_bar_88_percent_is_full() {
-    assert_eq!(radial_bar(88), '●');
-}
-
-#[test]
-fn radial_bar_100_percent_is_full() {
-    assert_eq!(radial_bar(100), '●');
-}
+// ── Context window tests ────────────────────────────────────────────────────
 
 #[test]
 fn context_window_openai_gpt4o_is_128k() {
@@ -247,10 +204,7 @@ fn context_window_openai_gpt4o_is_128k() {
 
 #[test]
 fn context_window_anthropic_is_200k() {
-    assert_eq!(
-        context_window_for("anthropic", "claude-sonnet-4-6"),
-        200_000
-    );
+    assert_eq!(context_window_for("anthropic", "claude-sonnet-4-6"), 200_000);
 }
 
 #[test]
@@ -268,34 +222,26 @@ fn context_window_openai_o1_is_200k() {
     assert_eq!(context_window_for("openai", "o1"), 200_000);
 }
 
+// ── Context usage struct tests ────────────────────────────────────────────
+
 #[test]
-fn limit_k_shows_k_for_thousands() {
-    let ctx = ContextUsage {
-        used: 1000,
-        limit: 128_000,
-        percent: 0,
-    };
-    assert_eq!(ctx.limit_k(), "128k");
+fn context_usage_limit_k_shows_m() {
+    let mut state = AppState::default();
+    state.config.current_provider = "google".to_string();
+    state.config.current_model = "gemini-2.5-pro".to_string();
+    let snap = state.snapshot();
+    let usage = context_usage(&snap);
+    assert_eq!(usage.limit_k(), "1M");
 }
 
 #[test]
-fn limit_k_shows_m_for_millions() {
-    let ctx = ContextUsage {
-        used: 1000,
-        limit: 1_000_000,
-        percent: 0,
-    };
-    assert_eq!(ctx.limit_k(), "1M");
-}
-
-#[test]
-fn limit_k_shows_raw_for_small() {
-    let ctx = ContextUsage {
-        used: 100,
-        limit: 500,
-        percent: 0,
-    };
-    assert_eq!(ctx.limit_k(), "500");
+fn context_usage_limit_k_shows_k() {
+    let mut state = AppState::default();
+    state.config.current_provider = "openai".to_string();
+    state.config.current_model = "gpt-4o".to_string();
+    let snap = state.snapshot();
+    let usage = context_usage(&snap);
+    assert_eq!(usage.limit_k(), "128k");
 }
 
 // =============================================================================
@@ -323,10 +269,6 @@ fn status_left_renders_git_info_when_idle_in_repo() {
         "Should show git info on left, got: {}",
         content
     );
-    assert!(
-        content.contains("0%/128k"),
-        "Should show context usage on right"
-    );
 }
 
 #[test]
@@ -346,10 +288,6 @@ fn status_left_renders_folder_when_idle_no_git() {
         content.contains("my-project/"),
         "Should show folder name on left, got: {}",
         content
-    );
-    assert!(
-        content.contains("0%/128k"),
-        "Should show context usage on right"
     );
 }
 
@@ -381,7 +319,7 @@ fn status_left_renders_working_when_active() {
 }
 
 #[test]
-fn status_right_renders_context_usage_when_idle() {
+fn status_right_renders_piece_when_idle() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
@@ -391,12 +329,14 @@ fn status_right_renders_context_usage_when_idle() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("0%/128k"), "Should show context usage");
-    assert!(content.contains('○'), "Should show empty radial bar");
+    assert!(
+        content.contains('⛀'),
+        "Should show chess piece on right"
+    );
 }
 
 #[test]
-fn status_right_renders_turn_stats_when_active() {
+fn status_right_renders_turn_stats_and_piece_when_active() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
@@ -411,39 +351,8 @@ fn status_right_renders_turn_stats_when_active() {
     assert!(content.contains('↑'), "Should show up arrow");
     assert!(content.contains('↓'), "Should show down arrow");
     assert!(content.contains("/s"), "Should show speed");
-    assert!(content.contains("0%/128k"), "Should show context usage");
-}
-
-#[test]
-fn radial_bar_has_1_cell_right_margin() {
-    let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.config.current_provider = "openai".to_string();
-    state.config.current_model = "gpt-4o".to_string();
-    let backend = TestBackend::new(60, 20);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-    let w = buf.area().width;
-
-    let status_y = (0..buf.area().height)
-        .find(|&y| (0..buf.area().width).any(|x| buf[(x, y)].symbol() == "○"))
-        .expect("Should find radial bar in status line");
-
-    let bar_x = (0..buf.area().width)
-        .find(|&x| buf[(x, status_y)].symbol() == "○")
-        .expect("Should find ○");
-
     assert!(
-        bar_x < w - 1,
-        "Radial bar at {} should not be at right edge (width={})",
-        bar_x,
-        w
-    );
-
-    assert_eq!(
-        buf[(bar_x + 1, status_y)].symbol().trim(),
-        "",
-        "Column right of ○ should be empty margin"
+        content.contains('⛀'),
+        "Should show chess piece"
     );
 }

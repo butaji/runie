@@ -66,8 +66,28 @@ impl AppState {
             return;
         }
 
+        // Providers dialog events need special handling even when a dialog is open.
+        if matches!(
+            event,
+            Event::ProvidersDialog
+                | Event::ProvidersSelectModel { .. }
+                | Event::ProvidersDisconnect { .. }
+                | Event::ProvidersAdd
+        ) {
+            self.providers_event(event);
+            return;
+        }
+
         // Dialog events are handled separately
         if self.open_dialog.is_some() {
+            // Intercept Esc/DialogBack while login flow is active: redirect
+            // to login_flow_cancel so Esc closes the login flow (returning to
+            // the providers dialog) instead of being absorbed by the panel
+            // stack handler which would leave the dialog open.
+            if self.login_flow.is_some() && event == Event::DialogBack {
+                self.login_flow_cancel();
+                return;
+            }
             self.update_dialog(event);
             return;
         }
@@ -207,6 +227,78 @@ impl AppState {
         }
     }
 
+    // === Providers Dialog Event Handler ===
+    fn providers_event(&mut self, event: Event) {
+        match event {
+            Event::ProvidersDialog => self.open_providers_dialog(),
+            Event::ProvidersSelectModel { provider, model } => {
+                self.providers_select_model(&provider, &model);
+            }
+            Event::ProvidersDisconnect { provider } => {
+                self.providers_disconnect(&provider);
+            }
+            Event::ProvidersAdd => {
+                // Close the providers dialog and start the login flow.
+                // Push current dialog to back stack so Esc returns here.
+                if let Some(current) = self.open_dialog.take() {
+                    self.dialog_back_stack.push(current);
+                }
+                self.login_flow = Some(crate::login_flow::LoginFlowState::new());
+                self.rebuild_login_dialog();
+            }
+            _ => {}
+        }
+    }
+
+    fn open_providers_dialog(&mut self) {
+        use crate::providers_dialog::build_providers_dialog;
+        // Save the current dialog (e.g. palette) to the back stack so Esc
+        // can restore it after the providers dialog or login flow closes.
+        if let Some(current) = self.open_dialog.take() {
+            self.dialog_back_stack.push(current);
+        }
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(build_providers_dialog(
+            &self.config.current_provider,
+            &self.config.current_model,
+        )));
+        self.mark_dirty();
+    }
+
+    fn providers_select_model(&mut self, provider: &str, model: &str) {
+        self.config.current_provider = provider.to_string();
+        self.config.current_model = model.to_string();
+        self.record_model_usage(provider, model);
+        self.open_dialog = None;
+        self.mark_dirty();
+    }
+
+    fn providers_disconnect(&mut self, provider: &str) {
+        match crate::login_config::remove_provider_config(provider) {
+            Ok(()) => {
+                // If this was the active provider, switch to another one or clear.
+                if self.config.current_provider == provider {
+                    // Try to find another configured provider.
+                    let configured = crate::login_config::list_configured_providers();
+                    if let Some((name, _, models)) = configured.first() {
+                        self.config.current_provider = name.clone();
+                        self.config.current_model = models.first().cloned().unwrap_or_default();
+                    } else {
+                        self.config.current_provider.clear();
+                        self.config.current_model.clear();
+                    }
+                }
+                self.open_dialog = None;
+                self.mark_dirty();
+            }
+            Err(e) => {
+                self.set_transient(
+                    format!("Could not disconnect {}: {}", provider, e),
+                    crate::event::TransientLevel::Error,
+                );
+            }
+        }
+    }
+
     fn login_flow_event(&mut self, event: Event) {
         match event {
             Event::LoginFlowStart => self.login_flow_start(),
@@ -317,21 +409,40 @@ impl AppState {
     }
 
     fn login_flow_save(&mut self) {
-        if let Some(ref flow) = self.login_flow {
+        let _provider = if let Some(ref flow) = self.login_flow {
             let base_url = crate::provider_registry::find_provider(&flow.provider)
                 .map(|p| p.base_url.to_string())
                 .unwrap_or_default();
-            let _ = crate::login_config::save_provider_config(
-                &flow.provider,
+            let selected: Vec<String> =
+                flow.selected_models.iter().cloned().collect::<Vec<_>>();
+            let provider = flow.provider.clone();
+            if let Err(e) = crate::login_config::save_provider_config(
+                &provider,
                 &base_url,
                 &flow.key,
-                &flow.selected_models.iter().cloned().collect::<Vec<_>>(),
-            );
-        }
-        // Save closes the whole dialog (final action).
-        self.refresh_configured_providers();
-        self.open_dialog = None;
+                &selected,
+            ) {
+                self.add_system_msg(format!("Failed to save provider config: {}", e));
+                return;
+            }
+            provider
+        } else {
+            return;
+        };
+
+        // Clear the login flow state.
         self.login_flow = None;
+
+        // Restore the providers dialog (from back stack) so the user can
+        // choose which model to activate. This gives them control over
+        // the active model selection instead of auto-activating the first.
+        if let Some(previous) = self.dialog_back_stack.pop() {
+            self.open_dialog = Some(previous);
+        } else {
+            // Fallback: open the providers dialog directly.
+            self.open_providers_dialog();
+        }
+
         self.mark_dirty();
     }
 
@@ -365,10 +476,17 @@ impl AppState {
             self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
             self.mark_dirty();
         } else {
-            // At the root: close the dialog.
-            self.open_dialog = None;
+            // At the root: close the login flow and restore the previous
+            // dialog from the back stack (e.g. the providers dialog that
+            // pushed this login flow).
             self.login_flow = None;
-            self.mark_dirty();
+            if let Some(previous) = self.dialog_back_stack.pop() {
+                self.open_dialog = Some(previous);
+                self.mark_dirty();
+            } else {
+                self.open_dialog = None;
+                self.mark_dirty();
+            }
         }
     }
 
@@ -974,44 +1092,37 @@ impl AppState {
         }
     }
 
-    fn run_login_command(&mut self, provider: &str, token: &str) {
-        if provider.is_empty() || token.is_empty() {
-            self.add_system_msg("Usage: /login provider token".into());
-            return;
-        }
-        let meta = crate::provider_registry::find_provider(provider);
-        let base_url = meta.map(|p| p.base_url.to_string()).unwrap_or_default();
-        let defaults: Vec<String> = meta
-            .map(|p| p.default_models.iter().map(|s| s.to_string()).collect())
-            .unwrap_or_default();
-        match crate::login_config::save_provider_config(provider, &base_url, token, &defaults) {
-            Ok(()) => {
-                self.refresh_configured_providers();
-                self.add_system_msg(format!("Logged in to '{}'.", provider));
-            }
-            Err(e) => self.add_system_msg(format!("Could not save provider config: {}", e)),
-        }
+    /// Connect a provider programmatically. Opens the providers dialog to guide
+    /// the user through the full login flow.
+    fn run_login_command(&mut self, _provider: &str, _token: &str) {
+        // Redirect to the providers dialog for a guided flow
+        self.open_providers_dialog();
     }
 
+    /// Disconnect a provider programmatically. Removes it from config.toml.
     fn run_logout_command(&mut self, provider: &str) {
         if provider.is_empty() {
-            self.add_system_msg("Usage: /logout provider".into());
+            // Redirect to the providers dialog
+            self.open_providers_dialog();
             return;
         }
         match crate::login_config::remove_provider_config(provider) {
             Ok(()) => {
-                self.refresh_configured_providers();
-                self.add_system_msg(format!("Logged out from '{}'.", provider));
+                // If this was the active provider, switch to another one or clear.
+                if self.config.current_provider == provider {
+                    let configured = crate::login_config::list_configured_providers();
+                    if let Some((name, _, models)) = configured.first() {
+                        self.config.current_provider = name.clone();
+                        self.config.current_model = models.first().cloned().unwrap_or_default();
+                    } else {
+                        self.config.current_provider.clear();
+                        self.config.current_model.clear();
+                    }
+                }
+                self.add_system_msg(format!("Disconnected '{}'. Use /providers to manage providers.", provider));
             }
             Err(e) => self.add_system_msg(format!("Could not remove provider config: {}", e)),
         }
-    }
-
-    fn refresh_configured_providers(&mut self) {
-        self.configured_providers = crate::login_config::list_configured_providers()
-            .into_iter()
-            .map(|(name, _, _)| name)
-            .collect();
     }
 
     fn run_name_command(&mut self, name: &str) {
@@ -1722,13 +1833,7 @@ impl AppState {
             "skill" => Some(crate::Event::RunSkillCommand {
                 name: values.get("name").cloned().unwrap_or_default(),
             }),
-            "login" => Some(crate::Event::RunLoginCommand {
-                provider: values.get("provider").cloned().unwrap_or_default(),
-                token: values.get("token").cloned().unwrap_or_default(),
-            }),
-            "logout" => Some(crate::Event::RunLogoutCommand {
-                provider: values.get("provider").cloned().unwrap_or_default(),
-            }),
+            "providers" | "provider" => Some(crate::Event::ProvidersDialog),
             "name" => Some(crate::Event::RunNameCommand {
                 name: values.get("name").cloned().unwrap_or_default(),
             }),

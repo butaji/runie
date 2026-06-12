@@ -725,9 +725,11 @@ mod tests {
     fn s6_save_before_fetch_then_fetch_is_ignored() {
         let mut state = drive_to_model_select("minimax");
         state.update(Event::LoginFlowSave);
-        assert!(state.open_dialog.is_none());
+        // Login flow is cleared.
         assert!(state.login_flow.is_none());
-        // Late fetch event arrives; nothing to update.
+        // Providers dialog is shown (so user can choose active model).
+        assert!(state.open_dialog.is_some());
+        // Late fetch event arrives; nothing to update since login_flow is None.
         state.update(Event::LoginFlowModelsFetched {
             provider: "minimax".into(),
             key: "sk-test".into(),

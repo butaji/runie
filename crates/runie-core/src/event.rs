@@ -243,6 +243,17 @@ pub enum Event {
         category: crate::settings::SettingsCategory,
     },
 
+    // Providers dialog (unified login/logout/select)
+    ProvidersDialog,
+    ProvidersSelectModel {
+        provider: String,
+        model: String,
+    },
+    ProvidersDisconnect {
+        provider: String,
+    },
+    ProvidersAdd,
+
     // Login dialog flow
     LoginFlowStart,
     LoginFlowSelectProvider {

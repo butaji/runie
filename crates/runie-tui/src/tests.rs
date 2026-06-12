@@ -224,7 +224,7 @@ fn wrapping_respects_panel_width() {
 }
 
 #[test]
-fn context_usage_on_right_side_of_status() {
+fn piece_is_last_character_on_right_side() {
     let mut state = AppState::default();
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
@@ -241,35 +241,27 @@ fn context_usage_on_right_side_of_status() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let mut working_pos = None;
-    let mut ctx_pos = None;
+    // Find the status bar line and check chess piece is the last character
+    let mut right_line: String = String::new();
     for y in 0..buf.area().height {
         let line: String = (0..buf.area().width)
             .map(|x| buf[(x, y)].symbol().to_string())
-            .collect();
-        if working_pos.is_none() {
-            if let Some(pos) = line.find("Working") {
-                working_pos = Some(pos);
-            }
-        }
-        if ctx_pos.is_none() {
-            if let Some(pos) = line.find("/128k") {
-                ctx_pos = Some(pos);
-            }
+            .collect::<String>()
+            .trim_end()
+            .to_string();
+        if line.rfind('⛀').is_some() || line.rfind('⛁').is_some() || line.rfind('⛂').is_some() || line.rfind('⛃').is_some() {
+            right_line = line.clone();
+            break;
         }
     }
-    let working_pos = working_pos.expect("Should find 'Working' in status bar");
-    let ctx_pos = ctx_pos.expect("Should find '/128k' context usage in status bar");
+    // Check piece is last non-space character
+    let line_trimmed = right_line.trim_end();
+    let last_char = line_trimmed.chars().last().unwrap();
     assert!(
-        working_pos < ctx_pos,
-        "Working ({}) should be left of context ({})",
-        working_pos,
-        ctx_pos
-    );
-    assert!(
-        ctx_pos > 30,
-        "Context usage should appear on right side of status bar, got pos {}",
-        ctx_pos
+        last_char == '⛀' || last_char == '⛁' || last_char == '⛂' || last_char == '⛃',
+        "Chess piece must be last character (before any trailing spaces), got last char: '{}' in '{}'",
+        last_char,
+        right_line
     );
 }
 

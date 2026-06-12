@@ -35,6 +35,7 @@ pub mod path_complete;
 pub mod prompts;
 pub mod provider;
 pub mod provider_registry;
+pub mod providers_dialog;
 pub mod scoped_model;
 pub mod session;
 pub mod session_tree;
