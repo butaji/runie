@@ -5,6 +5,15 @@ fn fresh_state() -> AppState {
     AppState::default()
 }
 
+fn user_count(state: &AppState) -> usize {
+    state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::User)
+        .count()
+}
+
 #[test]
 fn test_complete_agent_flow() {
     let mut state = fresh_state();
@@ -113,71 +122,24 @@ fn test_queued_message_appears_after_turn_completes() {
 #[test]
 fn test_three_messages_one_at_a_time() {
     let mut state = fresh_state();
-    // Message 1
     state.update(Event::Input('1'));
     state.update(Event::Submit);
     state.agent.turn_active = true;
 
-    // Messages 2 and 3 queued while message 1 is processing
     state.update(Event::Input('2'));
     state.update(Event::Submit);
     state.update(Event::Input('3'));
     state.update(Event::Submit);
 
-    // Only message 1 in chat
-    let user_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::User)
-        .collect();
-    assert_eq!(
-        user_msgs.len(),
-        1,
-        "Only first message visible during active turn"
-    );
-    assert_eq!(
-        state.agent.message_queue.len(),
-        2,
-        "Messages 2 and 3 queued"
-    );
+    assert_eq!(user_count(&state), 1, "Only first message visible during active turn");
+    assert_eq!(state.agent.message_queue.len(), 2, "Messages 2 and 3 queued");
 
-    // Agent done with message 1
-    state.update(Event::AgentDone {
-        id: "req.0".to_string(),
-    });
-
-    // Message 2 appears, message 3 still queued
-    let user_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::User)
-        .collect();
-    assert_eq!(
-        user_msgs.len(),
-        2,
-        "Message 2 appears after turn 1 completes"
-    );
+    state.update(Event::AgentDone { id: "req.0".into() });
+    assert_eq!(user_count(&state), 2, "Message 2 appears after turn 1 completes");
     assert_eq!(state.agent.message_queue.len(), 1, "Message 3 still queued");
 
-    // Agent done with message 2
-    state.update(Event::AgentDone {
-        id: "req.1".to_string(),
-    });
-
-    // Message 3 appears
-    let user_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::User)
-        .collect();
-    assert_eq!(
-        user_msgs.len(),
-        3,
-        "Message 3 appears after turn 2 completes"
-    );
+    state.update(Event::AgentDone { id: "req.1".into() });
+    assert_eq!(user_count(&state), 3, "Message 3 appears after turn 2 completes");
     assert!(
         state.agent.message_queue.is_empty(),
         "Queue empty after all delivered"

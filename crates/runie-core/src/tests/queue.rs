@@ -184,7 +184,6 @@ fn follow_up_mode_all_batches_messages() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
     state.follow_up_mode = DeliveryMode::All;
-
     // Queue three follow-up messages
     state.update(Event::Input('x'));
     state.update(Event::FollowUp);
@@ -192,24 +191,19 @@ fn follow_up_mode_all_batches_messages() {
     state.update(Event::FollowUp);
     state.update(Event::Input('z'));
     state.update(Event::FollowUp);
-
     assert_eq!(state.agent.message_queue.len(), 3);
-
     // First complete a turn to trigger delivery
     state.update(Event::Input('i'));
     state.update(Event::Submit);
-
     // After submit, message_queue should have [x, y, z, "i"]
     assert_eq!(
         state.agent.message_queue.len(),
         4,
         "Expected 4 queued messages before turn done"
     );
-
     state.update(Event::AgentDone {
         id: "req.0".to_string(),
     });
-
     // All three follow-ups should be batched into one request
     assert!(
         state.agent.message_queue.is_empty(),

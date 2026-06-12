@@ -139,13 +139,11 @@ fn count_visible_lines(region: &crate::snapshot::VisibleRegion) -> usize {
 #[test]
 fn submit_then_large_response_stays_at_bottom() {
     let mut state = fresh_state();
-
     // User submits
     state.input.input = "list files".into();
     state.update(Event::Submit);
     state.ensure_fresh();
     assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
-
     // Agent tool with large output
     state.update(Event::AgentToolStart {
         id: "req.0".into(),
@@ -160,10 +158,8 @@ fn submit_then_large_response_stays_at_bottom() {
         output,
     });
     state.ensure_fresh();
-
     // Scroll must still be 0 (at bottom) — user didn't scroll
     assert_eq!(state.view.scroll, 0, "Scroll must stay at 0 after response");
-
     // Latest file must be visible
     let region = state.visible_scroll(5);
     let tool_texts: Vec<String> = region

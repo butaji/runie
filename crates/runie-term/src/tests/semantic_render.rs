@@ -77,8 +77,6 @@ fn agent_at_bottom_tool_files_above() {
 
     let out = render(&mut state, 40, 18);
 
-    // "Here are the files." should be at the bottom (after tool files)
-    // Find positions of "file15" and "Here are"
     let file15_pos = out.find("file15");
     let agent_pos = out.find("Here are");
 

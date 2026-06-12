@@ -3,6 +3,13 @@ use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::{AppState, Event};
 
+fn buffer_content(terminal: &Terminal<TestBackend>) -> String {
+    let buf = terminal.backend().buffer();
+    (0..buf.area().height)
+        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .collect()
+}
+
 #[test]
 fn input_box_shows_model_name_at_bottom_right() {
     let _lock = crate::theme::test_lock();
@@ -46,14 +53,7 @@ fn theme_selector_renders_theme_list() {
     let backend = TestBackend::new(60, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-    let content: String = (0..buf.area().height)
-        .map(|y| {
-            (0..buf.area().width)
-                .map(|x| buf[(x, y)].symbol())
-                .collect::<String>()
-        })
-        .collect();
+    let content = buffer_content(&terminal);
     assert!(content.contains("Choose Theme"));
     assert!(content.contains("runie"));
     // The theme picker is fuzzy-searchable. Use the filter to narrow to
@@ -62,14 +62,7 @@ fn theme_selector_renders_theme_list() {
     state.update(Event::Input('r'));
     state.update(Event::Input('a'));
     terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
-    let content: String = (0..buf.area().height)
-        .map(|y| {
-            (0..buf.area().width)
-                .map(|x| buf[(x, y)].symbol())
-                .collect::<String>()
-        })
-        .collect();
+    let content = buffer_content(&terminal);
     assert!(
         content.contains("dracula"),
         "filtered theme picker should show 'dracula': {}",

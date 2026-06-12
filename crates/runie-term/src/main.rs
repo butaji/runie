@@ -7,6 +7,7 @@
 //!   4. Render actor: owns Terminal, receives Snapshots via channel
 //!   5. If render is slow, old Snapshots are dropped — event loop never waits
 
+mod app_init;
 mod keymap;
 mod share;
 
@@ -38,12 +39,12 @@ async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
     let terminal = setup_terminal()?;
     let mut state = AppState::default();
-    apply_trust_on_startup(&mut state);
-    init_scoped_models(&mut state);
-    init_skills(&mut state);
-    init_prompts(&mut state);
-    init_telemetry(&mut state);
-    init_truncation(&mut state);
+    app_init::apply_trust_on_startup(&mut state);
+    app_init::init_scoped_models(&mut state);
+    app_init::init_skills(&mut state);
+    app_init::init_prompts(&mut state);
+    app_init::init_telemetry(&mut state);
+    app_init::init_truncation(&mut state);
 
     // Production-ready startup: if no provider is configured and the
     // mock provider is not enabled, auto-open the login dialog so the
@@ -143,75 +144,6 @@ async fn input_reader(
             if is_quit {
                 break;
             }
-        }
-    }
-}
-
-fn init_scoped_models(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
-    if let Some(scoped) = config.scoped_models() {
-        state.config.scoped_models = scoped
-            .iter()
-            .map(|s| {
-                let parts: Vec<&str> = s.split('/').collect();
-                if parts.len() == 2 {
-                    runie_core::model::ScopedModel {
-                        provider: parts[0].to_string(),
-                        name: parts[1].to_string(),
-                        enabled: true,
-                    }
-                } else {
-                    runie_core::model::ScopedModel {
-                        provider: state.config.current_provider.clone(),
-                        name: s.clone(),
-                        enabled: true,
-                    }
-                }
-            })
-            .collect();
-    } else {
-        // Default: first 10 models from catalog
-        let registry = runie_provider::model::ModelRegistry::default();
-        state.config.scoped_models = registry
-            .list()
-            .iter()
-            .take(10)
-            .map(|m| runie_core::model::ScopedModel {
-                provider: m.provider.clone(),
-                name: m.name.clone(),
-                enabled: true,
-            })
-            .collect();
-    }
-}
-
-fn apply_trust_on_startup(state: &mut AppState) {
-    let cwd = std::env::current_dir().unwrap_or_default();
-    let tm = runie_core::TrustManager::load();
-    match tm.decision_for(&cwd) {
-        Some(runie_core::TrustDecision::Untrusted) => {
-            state.config.read_only = true;
-        }
-        Some(runie_core::TrustDecision::Trusted) => {
-            state.config.read_only = false;
-        }
-        None => {
-            state.config.read_only = false;
-            state.session.messages.push(runie_core::ChatMessage {
-                role: runie_core::Role::System,
-                content: format!(
-                    "Welcome to runie in {}.\n\nThis project is not yet trusted. \
-                    Run /trust to enable write tools, or /untrust to enforce read-only mode.",
-                    cwd.display()
-                ),
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs_f64())
-                    .unwrap_or(0.0),
-                id: "trust_welcome".to_string(),
-                ..Default::default()
-            });
-            state.messages_changed();
         }
     }
 }
@@ -451,34 +383,6 @@ fn spawn_external_editor_sync(text: String, tx: mpsc::Sender<CoreEvent>) -> io::
     }
 
     Ok(())
-}
-
-fn init_skills(state: &mut AppState) {
-    state.skills = runie_core::skills::load_all();
-}
-
-fn init_prompts(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
-    let prompts_section = config.prompts();
-    state.prompts = runie_core::prompts::load_prompts(
-        prompts_section.default.as_deref(),
-        prompts_section.custom.as_deref(),
-    );
-}
-
-fn init_telemetry(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
-    state.telemetry = runie_core::Telemetry::new(config.telemetry_enabled());
-    if state.telemetry.is_enabled() {
-        state
-            .telemetry
-            .track_event("startup", std::collections::HashMap::new());
-    }
-}
-
-fn init_truncation(state: &mut AppState) {
-    let config = config_reload::Config::load_from(&config_reload::config_path());
-    state.config.truncation = config.truncation;
 }
 
 async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {

@@ -154,18 +154,14 @@ fn command_palette_has_panel_background_color() {
     });
     state.messages_changed();
     state.update(Event::ToggleCommandPalette);
-
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-
     let panel_bg = crate::theme::color_bg_panel();
     let app_bg = crate::theme::color_bg();
-
     let (inner_x, inner_y) =
         find_popup_title(buf, " Commands").expect("Should find 'Commands' title");
-
     let mut found_panel_bg = false;
     for y in inner_y..inner_y + 5 {
         for x in inner_x..inner_x + 40 {
@@ -182,10 +178,7 @@ fn command_palette_has_panel_background_color() {
             );
         }
     }
-    assert!(
-        found_panel_bg,
-        "Should find panel background color in popup"
-    );
+    assert!(found_panel_bg, "Should find panel background color in popup");
 }
 
 /// Panel dialog (e.g. /theme selector) must hide underlying content.
@@ -193,7 +186,6 @@ fn command_palette_has_panel_background_color() {
 fn panel_dialog_hides_underlying_messages() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-
     state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "XYZZY_PLUGH".into(),
@@ -202,12 +194,9 @@ fn panel_dialog_hides_underlying_messages() {
         ..Default::default()
     });
     state.messages_changed();
-
-    // Open theme panel dialog via /theme with no args
     state.input.input = "/theme".into();
     state.input.cursor_pos = 6;
     state.update(Event::Submit);
-
     assert!(
         matches!(
             state.open_dialog,
@@ -215,12 +204,10 @@ fn panel_dialog_hides_underlying_messages() {
         ),
         "PanelStack dialog should be open"
     );
-
     let backend = TestBackend::new(80, 24);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-
     let popup_rect = ratatui::layout::Rect {
         x: 10,
         y: 3,

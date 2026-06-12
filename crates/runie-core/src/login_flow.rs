@@ -224,12 +224,11 @@ pub fn build_login_root() -> PanelStack {
 // In every scenario the user lands on the model selector **immediately**
 // after submitting the key. The network call is a best-effort enrichment.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::dialog::PanelItem;
-    use crate::model::AppState;
 
+#[cfg(test)]
+mod tests;
+
+<<<<<<< HEAD
     // -----------------------------------------------------------------------
     // Layer 1: pure state transitions
     // -----------------------------------------------------------------------
@@ -906,3 +905,5 @@ mod tests {
         assert!(state.login_flow.is_none());
     }
 }
+=======
+>>>>>>> review

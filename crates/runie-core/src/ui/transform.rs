@@ -51,6 +51,32 @@ impl LazyCache {
         counts
     }
 
+    fn thinking_timestamp(state: &AppState) -> f64 {
+        let max_ts = state
+            .session
+            .messages
+            .iter()
+            .map(|m| m.timestamp)
+            .fold(0.0, f64::max);
+        let turn_ts = state
+            .session
+            .messages
+            .iter()
+            .find(|m| m.role == Role::TurnComplete)
+            .map(|m| m.timestamp);
+        let current = state.agent.current_request_id.as_ref().and_then(|id| {
+            state
+                .session
+                .messages
+                .iter()
+                .find(|m| m.role == Role::TurnComplete && m.id == *id)
+                .map(|m| m.timestamp)
+        });
+        current
+            .map(|t| t - 1e-6)
+            .unwrap_or_else(|| turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6))
+    }
+
     fn collect_entries(state: &AppState) -> Vec<Element> {
         let mut entries: Vec<Element> = Vec::new();
         let action_counts = Self::action_counts(state);
@@ -69,33 +95,7 @@ impl LazyCache {
         }
 
         if let Some(started) = state.thinking_started_at {
-            let max_ts = state
-                .session
-                .messages
-                .iter()
-                .map(|m| m.timestamp)
-                .fold(0.0, f64::max);
-            let turn_ts = state
-                .session
-                .messages
-                .iter()
-                .find(|m| m.role == Role::TurnComplete)
-                .map(|m| m.timestamp);
-            let turn_complete_for_current =
-                state.agent.current_request_id.as_ref().and_then(|id| {
-                    state
-                        .session
-                        .messages
-                        .iter()
-                        .find(|m| m.role == Role::TurnComplete && m.id == *id)
-                        .map(|m| m.timestamp)
-                });
-            let ts = if let Some(tc_ts) = turn_complete_for_current {
-                tc_ts - 1e-6
-            } else {
-                turn_ts.map(|t| t + 1e-6).unwrap_or(max_ts + 1e-6)
-            };
-            entries.push(Element::thinking(started).at(ts));
+            entries.push(Element::thinking(started).at(Self::thinking_timestamp(state)));
         }
 
         entries

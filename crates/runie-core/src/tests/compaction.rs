@@ -1,6 +1,16 @@
 use crate::model::{AppState, ChatMessage, Role};
 use crate::tokens::estimate_tokens;
 
+fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
+    ChatMessage {
+        role,
+        content: content.into(),
+        timestamp,
+        id: id.into(),
+        ..Default::default()
+    }
+}
+
 #[test]
 fn token_estimation_consistent() {
     assert_eq!(estimate_tokens(""), 0);
@@ -91,34 +101,12 @@ fn compaction_keeps_recent_messages() {
 #[test]
 fn compaction_does_not_cut_mid_turn() {
     let mut state = AppState::default();
-    state.session.messages.push(ChatMessage {
-        role: Role::User,
-        content: "Start".to_string(),
-        timestamp: 0.0,
-        id: "u1".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::Assistant,
-        content: "A".to_string(),
-        timestamp: 1.0,
-        id: "a1".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::Tool,
-        content: "tool result".to_string(),
-        timestamp: 2.0,
-        id: "t1".into(),
-        ..Default::default()
-    });
-    state.session.messages.push(ChatMessage {
-        role: Role::User,
-        content: "Recent".to_string(),
-        timestamp: 3.0,
-        id: "u2".into(),
-        ..Default::default()
-    });
+    state.session.messages.extend([
+        msg(Role::User, "Start", 0.0, "u1"),
+        msg(Role::Assistant, "A", 1.0, "a1"),
+        msg(Role::Tool, "tool result", 2.0, "t1"),
+        msg(Role::User, "Recent", 3.0, "u2"),
+    ]);
     state.compact(10);
     let has_tool = state.session.messages.iter().any(|m| m.role == Role::Tool);
     let has_assistant = state
