@@ -14,6 +14,10 @@ pub struct CommandDef {
     pub aliases: Vec<String>,
     pub category: CommandCategory,
     pub flow: CommandFlow,
+    /// If true, this command opens a sub-dialog: the current dialog
+    /// (e.g. the command palette = Main Menu) is pushed onto the
+    /// global back stack before the command runs. Android-like.
+    pub is_sub: bool,
 }
 
 impl CommandDef {
@@ -25,6 +29,7 @@ impl CommandDef {
             aliases: Vec::new(),
             category: CommandCategory::Help,
             flow: CommandFlow::None,
+            is_sub: false,
         }
     }
 
@@ -69,12 +74,47 @@ impl CommandDef {
 
     /// Open a dialog
     pub fn dialog(self, d: DialogType) -> Self {
-        self.with_flow(CommandFlow::Dialog(d))
+        self.with_flow(CommandFlow::Dialog(d)).apply_sub()
     }
 
     /// Open a panel stack
     pub fn panel(self, f: fn(&mut AppState, &str) -> CoreStack) -> Self {
-        self.with_flow(CommandFlow::PanelStack(f))
+        self.with_flow(CommandFlow::PanelStack(f)).apply_sub()
+    }
+
+    /// Mark this command as opening a sub-dialog. The current dialog
+    /// (typically the command palette = Main Menu) is automatically
+    /// pushed onto the global back stack before the command runs.
+    /// Esc returns to the previous dialog; only at the absolute root
+    /// does Esc close the bar. Android-like navigation for every
+    /// menu bar item.
+    ///
+    /// # Example
+    /// ```ignore
+    /// crate::cmd!("settings")
+    ///     .desc("Open settings")
+    ///     .sub()
+    ///     .dialog(DialogType::Settings)
+    ///
+    /// crate::cmd!("login")
+    ///     .desc("Login to a provider")
+    ///     .sub()
+    ///     .panel(|state, _| build_login_root(state))
+    /// ```
+    pub fn sub(mut self) -> Self {
+        self.is_sub = true;
+        self
+    }
+
+    /// Apply the sub-dialog wrapping if `.sub()` was called. Wraps
+    /// the flow in `CommandFlow::Sub` so the executor pushes the
+    /// current dialog onto the back stack before running.
+    fn apply_sub(mut self) -> Self {
+        if self.is_sub && !matches!(self.flow, CommandFlow::None) {
+            let inner = std::mem::replace(&mut self.flow, CommandFlow::None);
+            self.flow = CommandFlow::Sub(Box::new(inner));
+        }
+        self
     }
 
     /// Show a form dialog
@@ -88,6 +128,7 @@ impl CommandDef {
             fields,
             submit,
         })
+        .apply_sub()
     }
 
     /// Show a form from a DSL panel
@@ -102,11 +143,12 @@ impl CommandDef {
             fields,
             submit,
         })
+        .apply_sub()
     }
 
     /// Custom handler
     pub fn handler(self, f: fn(&mut AppState, &str) -> CommandResult) -> Self {
-        self.with_flow(CommandFlow::Handler(f))
+        self.with_flow(CommandFlow::Handler(f)).apply_sub()
     }
 
     /// Chain multiple flows
@@ -252,6 +294,25 @@ mod tests {
     }
 
     #[test]
+    fn test_sub_wraps_flow() {
+        use super::super::{CommandFlow, DialogType};
+        // .sub() wraps the flow in CommandFlow::Sub so the current
+        // dialog (e.g. the palette = Main Menu) is pushed onto the
+        // back stack before the command runs.
+        let cmd = crate::cmd!("settings")
+            .desc("Open settings")
+            .category(CommandCategory::System)
+            .sub()
+            .dialog(DialogType::Settings);
+        assert!(matches!(cmd.flow, CommandFlow::Sub(_)));
+    }
+
+    fn test_sub_is_noop_for_empty_flow() {
+        // .sub() on a command with no flow should be a no-op.
+        let cmd = crate::cmd!("nothing").sub();
+        assert!(matches!(cmd.flow, CommandFlow::None));
+    }
+
     fn test_form_builder() {
         let fields = FormBuilder::new()
             .field("Name", "session", "name")

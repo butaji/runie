@@ -10,6 +10,7 @@ pub fn register(registry: &mut CommandRegistry) {
             .desc("Switch model")
             .aliases(&["m"])
             .category(CommandCategory::Model)
+            .sub()
             .handler(handle_model),
     );
 
@@ -17,6 +18,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("thinking")
             .desc("Set thinking level (off/low/medium/high)")
             .category(CommandCategory::Model)
+            .sub()
             .handler(handle_thinking),
     );
 
@@ -24,6 +26,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("scoped-models")
             .desc("Enable/disable models for cycling")
             .category(CommandCategory::Model)
+            .sub()
             .handler(handle_scoped_models),
     );
 }
