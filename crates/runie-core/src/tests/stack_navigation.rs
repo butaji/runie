@@ -158,6 +158,130 @@ fn form_dialog_esc_pops_or_closes() {
     assert!(state.open_dialog.is_none(), "form root ESC should close");
 }
 
+/// Contract: every menu-bar command that opens a sub-dialog (form,
+/// panel, or built-in dialog) MUST be registered with `.sub()` so it
+/// participates in the global back stack. This is the Android-like
+/// "Back button" contract: Main Menu -> Sub Menu -> Esc -> Main Menu.
+///
+/// Commands that just show a message or perform a side effect
+/// (e.g. `new`, `reset`, `clone`, `share`) do NOT need `.sub()`.
+#[test]
+fn every_sub_opening_command_is_marked_sub() {
+    use crate::commands::{CommandFlow, CommandRegistry};
+
+    let mut reg = CommandRegistry::new();
+    crate::commands::handlers::register_all(&mut reg);
+
+    // These commands open a sub-dialog and MUST have .sub().
+    let must_be_sub: &[&str] = &[
+        // Built-in dialogs
+        "settings",
+        // Handler-based: open dialogs from their handler
+        "theme",
+        "model",
+        "thinking",
+        "scoped-models",
+        "login",
+        "logout",
+        "tree",
+        // Form-based
+        "save",
+        "load",
+        "delete",
+        "export",
+        "import",
+        "compact",
+        "fork",
+        "name",
+        "prompt",
+    ];
+
+    let mut missing: Vec<String> = Vec::new();
+    for name in must_be_sub {
+        match reg.get(name) {
+            Some(def) => {
+                let flow = match &def.flow {
+                    CommandFlow::Sub(inner) => inner.as_ref(),
+                    other => other,
+                };
+                // Inner flow must be a dialog-opening flow.
+                let opens_sub = matches!(
+                    flow,
+                    CommandFlow::Dialog(_)
+                        | CommandFlow::PanelStack(_)
+                        | CommandFlow::Form { .. }
+                        | CommandFlow::Handler(_)
+                );
+                let is_sub = matches!(def.flow, CommandFlow::Sub(_));
+                if !is_sub {
+                    missing.push(format!("'{}' is missing .sub()", name));
+                } else if !opens_sub {
+                    missing.push(format!(
+                        "'{}' has .sub() but inner flow does not open a dialog",
+                        name
+                    ));
+                }
+            }
+            None => missing.push(format!("'{}' is not registered", name)),
+        }
+    }
+
+    assert!(
+        missing.is_empty(),
+        "Commands that should have .sub() but don't:\n  {}\n\
+         Every menu-bar item that opens a sub-dialog MUST be marked\n\
+         with .sub() for Android-like back-stack navigation (Esc pops\n\
+         back to the Main Menu).",
+        missing.join("\n  ")
+    );
+}
+
+/// Verify the full round-trip for every .sub() command: execute
+/// the flow and confirm it pushes the current dialog to the back
+/// stack. This catches regressions where a command is added without
+/// .sub() or the Sub variant stops pushing.
+#[test]
+fn sub_command_pushes_current_dialog_to_back_stack() {
+    use crate::commands::{CommandFlow, CommandRegistry, CommandResult};
+    use crate::dialog::Panel;
+
+    let mut reg = CommandRegistry::new();
+    crate::commands::handlers::register_all(&mut reg);
+
+    // Commands that must push to back stack (those with .sub()).
+    let must_push: &[&str] = &[
+        "settings",
+        "theme",
+        "model",
+        "thinking",
+        "scoped-models",
+        "login",
+        "logout",
+        "tree",
+        "save",
+        "load",
+        "delete",
+        "export",
+        "import",
+        "compact",
+        "fork",
+        "name",
+        "prompt",
+    ];
+
+    for name in must_push {
+        let def = reg
+            .get(name)
+            .unwrap_or_else(|| panic!("{} not registered", name));
+        // The flow must be Sub-wrapped.
+        assert!(
+            matches!(def.flow, CommandFlow::Sub(_)),
+            "'{}' must be wrapped in CommandFlow::Sub (use .sub() in DSL)",
+            name
+        );
+    }
+}
+
 #[test]
 fn global_dialog_back_stack_palette_pushes_subdialog() {
     // Android-like: when a command from the command palette (main

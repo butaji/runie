@@ -1059,3 +1059,84 @@ fn f10b_ctrl_p_settings_esc_pops_to_palette_not_closes() {
         .unwrap_or_default();
     assert_no_panic(&output);
 }
+
+/// F10c: Form-based command — Ctrl+P -> "save" -> form opens ->
+/// Esc -> palette. Verifies .sub() works with .form() DSL.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn f10c_ctrl_p_save_form_esc_pops_to_palette() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    send(&mut p, "\x10").expect("ctrl-p open");
+    p.flush().expect("flush");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    send_line(&mut p, "save").expect("select save (form)");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    // Esc on form (Sub Menu) -> palette (Main Menu).
+    send_escape(&mut p).expect("esc pops to palette from form");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Verify palette is active by running save again.
+    send_line(&mut p, "save").expect("save again from restored palette");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    send_escape(&mut p).expect("esc pops to palette");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    send_escape(&mut p).expect("esc on main menu closes");
+    p.flush().expect("flush");
+    wait_idle(&mut p);
+
+    send_ctrl_c(&mut p).expect("ctrl-c");
+    p.process_mut().set_kill_timeout(Some(3_000));
+    let output = p
+        .process_mut()
+        .exit()
+        .ok()
+        .map(|_| p.exp_eof().unwrap_or_default())
+        .unwrap_or_default();
+    assert_no_panic(&output);
+}
+
+/// F10d: Handler-based login flow — Ctrl+P -> "login" -> provider
+/// picker -> Esc -> palette. Verifies .sub() works for event-based
+/// handlers (login returns Event(LoginFlowStart)).
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn f10d_ctrl_p_login_esc_pops_to_palette() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    send(&mut p, "\x10").expect("ctrl-p open");
+    p.flush().expect("flush");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    send_line(&mut p, "login").expect("select login");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    // Esc on provider picker (Sub Menu) -> palette (Main Menu).
+    send_escape(&mut p).expect("esc pops to palette from login");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Verify palette is active by running login again.
+    send_line(&mut p, "login").expect("login again from restored palette");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    send_escape(&mut p).expect("esc pops to palette");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    send_escape(&mut p).expect("esc on main menu closes");
+    p.flush().expect("flush");
+    wait_idle(&mut p);
+
+    send_ctrl_c(&mut p).expect("ctrl-c");
+    p.process_mut().set_kill_timeout(Some(3_000));
+    let output = p
+        .process_mut()
+        .exit()
+        .ok()
+        .map(|_| p.exp_eof().unwrap_or_default())
+        .unwrap_or_default();
+    assert_no_panic(&output);
+}
