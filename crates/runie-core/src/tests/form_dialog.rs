@@ -95,17 +95,14 @@ fn form_submit_executes_command() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let store = tmp_store();
     std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
-
     let mut state = fresh_state();
     type_str(&mut state, "/save");
     state.update(Event::Submit);
-
     // Verify form is open
     assert!(
         state.open_dialog.is_some(),
         "form should be open after submit"
     );
-
     // Check the dialog type - take dialog to inspect, then restore
     let form_is_form =
         if let Some(crate::commands::DialogState::PanelStack(stack)) = &state.open_dialog {
@@ -118,21 +115,17 @@ fn form_submit_executes_command() {
             false
         };
     assert!(form_is_form, "panel should be a form");
-
     // Type a name - these go to input, but should be routed to form
     state.update(Event::Input('m'));
     state.update(Event::Input('y'));
     state.update(Event::Input('s'));
     state.update(Event::Input('e'));
     state.update(Event::Input('s'));
-
     // Submit the form
     state.update(Event::Submit);
-
     // Should close dialog and execute save
     assert!(state.open_dialog.is_none(), "dialog should close");
     assert!(store.path("myses").exists(), "session should be saved");
-
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
 

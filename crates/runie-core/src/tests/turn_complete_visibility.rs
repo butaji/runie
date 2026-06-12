@@ -6,6 +6,12 @@ fn fresh_state() -> AppState {
     AppState::default()
 }
 
+fn dispatch(state: &mut AppState, events: &[Event]) {
+    for e in events {
+        state.update(e.clone());
+    }
+}
+
 fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
     let feed = LazyCache::feed(state);
     feed.elements
@@ -212,45 +218,29 @@ fn zero_actions_hides_turn_complete() {
 fn second_turn_independent_action_count() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".into() });
-    state.update(Event::AgentThoughtDone { id: "req.0".into() });
-    state.update(Event::AgentToolStart {
-        id: "req.0".into(),
-        name: "ls".into(),
-    });
-    state.update(Event::AgentToolEnd {
-        duration_secs: 0.5,
-        output: "a".into(),
-    });
-    state.update(Event::AgentResponse {
-        id: "req.0".into(),
-        content: "First".into(),
-    });
-    state.update(Event::AgentTurnComplete {
-        id: "req.0".into(),
-        duration_secs: 1.0,
-    });
-    state.update(Event::AgentDone { id: "req.0".into() });
-
-    state.update(Event::AgentThinking { id: "req.1".into() });
-    state.update(Event::AgentToolStart {
-        id: "req.1".into(),
-        name: "cat".into(),
-    });
-    state.update(Event::AgentToolEnd {
-        duration_secs: 0.3,
-        output: "b".into(),
-    });
-    state.update(Event::AgentResponse {
-        id: "req.1".into(),
-        content: "Second".into(),
-    });
-    state.update(Event::AgentTurnComplete {
-        id: "req.1".into(),
-        duration_secs: 0.8,
-    });
-    state.update(Event::AgentDone { id: "req.1".into() });
-
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentToolStart { id: "req.0".into(), name: "ls".into() },
+            Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() },
+            Event::AgentResponse { id: "req.0".into(), content: "First".into() },
+            Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 },
+            Event::AgentDone { id: "req.0".into() },
+        ],
+    );
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.1".into() },
+            Event::AgentToolStart { id: "req.1".into(), name: "cat".into() },
+            Event::AgentToolEnd { duration_secs: 0.3, output: "b".into() },
+            Event::AgentResponse { id: "req.1".into(), content: "Second".into() },
+            Event::AgentTurnComplete { id: "req.1".into(), duration_secs: 0.8 },
+            Event::AgentDone { id: "req.1".into() },
+        ],
+    );
     state.ensure_fresh();
     let kinds = element_kinds_no_spacer(&state);
     let turn_count = kinds.iter().filter(|k| *k == "Turn").count();

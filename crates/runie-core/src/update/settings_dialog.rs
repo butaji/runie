@@ -4,38 +4,36 @@ use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 use crate::Event;
 
-impl AppState {
-    pub(crate) fn settings_event(&mut self, event: Event) {
-        use crate::commands::DialogState;
-        match event {
-            Event::ToggleSettingsDialog => {
-                if matches!(self.open_dialog, Some(DialogState::Settings(_))) {
-                    self.open_dialog = None;
-                    self.mark_dirty();
-                } else {
-                    self.open_settings_dialog();
-                }
+pub(crate) fn update(state: &mut AppState, event: Event) {
+    use crate::commands::DialogState;
+    match event {
+        Event::ToggleSettingsDialog => {
+            if matches!(state.open_dialog, Some(DialogState::Settings(_))) {
+                state.open_dialog = None;
+                state.mark_dirty();
+            } else {
+                state.open_settings_dialog();
             }
-            Event::SettingsUp
-            | Event::SettingsDown
-            | Event::SettingsLeft
-            | Event::SettingsRight
-            | Event::SettingsSelect
-            | Event::SettingsClose => {}
-            Event::PaletteFilter(_)
-            | Event::PaletteBackspace
-            | Event::PaletteUp
-            | Event::PaletteDown
-            | Event::PaletteSelect
-            | Event::PaletteClose => {}
-            Event::ModelSelectorFilter(_)
-            | Event::ModelSelectorBackspace
-            | Event::ModelSelectorUp
-            | Event::ModelSelectorDown
-            | Event::ModelSelectorSelect
-            | Event::ModelSelectorClose => {}
-            _ => {}
         }
+        Event::SettingsUp
+        | Event::SettingsDown
+        | Event::SettingsLeft
+        | Event::SettingsRight
+        | Event::SettingsSelect
+        | Event::SettingsClose => {}
+        Event::PaletteFilter(_)
+        | Event::PaletteBackspace
+        | Event::PaletteUp
+        | Event::PaletteDown
+        | Event::PaletteSelect
+        | Event::PaletteClose => {}
+        Event::ModelSelectorFilter(_)
+        | Event::ModelSelectorBackspace
+        | Event::ModelSelectorUp
+        | Event::ModelSelectorDown
+        | Event::ModelSelectorSelect
+        | Event::ModelSelectorClose => {}
+        _ => {}
     }
 }
 

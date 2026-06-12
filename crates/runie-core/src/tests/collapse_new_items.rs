@@ -7,6 +7,12 @@ fn fresh_state() -> AppState {
     AppState::default()
 }
 
+fn dispatch(state: &mut AppState, events: &[Event]) {
+    for e in events {
+        state.update(e.clone());
+    }
+}
+
 #[test]
 fn global_collapse_persists_after_agent_response() {
     let mut state = fresh_state();
@@ -21,18 +27,13 @@ fn global_collapse_persists_after_agent_response() {
     state.update(Event::AgentThoughtDone {
         id: "req.0".to_string(),
     });
-
-    // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
-
-    // New agent response arrives
     state.update(Event::AgentResponse {
         id: "req.0".to_string(),
         content: "Here they are.".to_string(),
     });
     state.ensure_fresh();
-
     let feed = LazyCache::feed(&state);
     let has_summary = feed
         .elements
@@ -56,52 +57,29 @@ fn global_collapse_persists_after_agent_response() {
 fn global_collapse_persists_after_second_thought() {
     let mut state = fresh_state();
     state.streaming = true;
-
-    // First thought
-    state.update(Event::AgentThinking {
-        id: "req.0".to_string(),
-    });
-    state.update(Event::AgentResponse {
-        id: "req.0".to_string(),
-        content: "A".to_string(),
-    });
-    state.update(Event::AgentThoughtDone {
-        id: "req.0".to_string(),
-    });
-
-    // Collapse all
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentResponse { id: "req.0".into(), content: "A".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+        ],
+    );
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
-
-    // Second thought arrives — should ALSO be collapsed
-    state.update(Event::AgentThinking {
-        id: "req.1".to_string(),
-    });
-    state.update(Event::AgentResponse {
-        id: "req.1".to_string(),
-        content: "B".to_string(),
-    });
-    state.update(Event::AgentThoughtDone {
-        id: "req.1".to_string(),
-    });
-    state.ensure_fresh();
-
-    let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed
-        .elements
-        .iter()
-        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
-        .collect();
-    assert_eq!(
-        summaries.len(),
-        2,
-        "BOTH thoughts should be collapsed with global flag"
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.1".into() },
+            Event::AgentResponse { id: "req.1".into(), content: "B".into() },
+            Event::AgentThoughtDone { id: "req.1".into() },
+        ],
     );
-    let markers: Vec<_> = feed
-        .elements
-        .iter()
-        .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
-        .collect();
+    state.ensure_fresh();
+    let feed = LazyCache::feed(&state);
+    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtSummary { .. })).collect();
+    assert_eq!(summaries.len(), 2, "BOTH thoughts should be collapsed with global flag");
+    let markers: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtMarker { .. })).collect();
     assert_eq!(markers.len(), 0, "No thoughts should be expanded");
 }
 
@@ -109,8 +87,6 @@ fn global_collapse_persists_after_second_thought() {
 fn global_collapse_persists_after_second_tool() {
     let mut state = fresh_state();
     state.streaming = true;
-
-    // First tool
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),
         name: "ls".to_string(),
@@ -119,12 +95,8 @@ fn global_collapse_persists_after_second_tool() {
         duration_secs: 0.5,
         output: "a".to_string(),
     });
-
-    // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
-
-    // Second tool arrives — should ALSO be collapsed
     state.update(Event::AgentToolStart {
         id: "req.1".to_string(),
         name: "cat".to_string(),
@@ -134,7 +106,6 @@ fn global_collapse_persists_after_second_tool() {
         output: "b".to_string(),
     });
     state.ensure_fresh();
-
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
         .elements
@@ -158,7 +129,6 @@ fn global_collapse_persists_after_second_tool() {
 fn new_thought_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.streaming = true;
-
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -169,12 +139,8 @@ fn new_thought_respects_global_collapse_flag() {
     state.update(Event::AgentThoughtDone {
         id: "req.0".to_string(),
     });
-
-    // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
-
-    // New thought arrives while globally collapsed
     state.update(Event::AgentThinking {
         id: "req.1".to_string(),
     });
@@ -186,7 +152,6 @@ fn new_thought_respects_global_collapse_flag() {
         id: "req.1".to_string(),
     });
     state.ensure_fresh();
-
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed
         .elements

@@ -67,6 +67,123 @@ pub struct ModelRegistry {
     models: Vec<ModelId>,
 }
 
+const AI_CATALOG: &[(&str, &[&str])] = &[
+    (
+        "anthropic",
+        &["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5"],
+    ),
+    (
+        "openai",
+        &[
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-5",
+            "o3-mini",
+            "o4-mini",
+            "o1",
+            "o3",
+        ],
+    ),
+    (
+        "google",
+        &["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
+    ),
+    ("deepseek", &["deepseek-v4-flash", "deepseek-v4-pro"]),
+    (
+        "mistral",
+        &[
+            "mistral-large-latest",
+            "codestral-latest",
+            "devstral-latest",
+        ],
+    ),
+    (
+        "groq",
+        &[
+            "llama-3.3-70b-versatile",
+            "gemma2-9b-it",
+            "mixtral-8x7b-32768",
+        ],
+    ),
+    (
+        "together",
+        &[
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "deepseek-ai/DeepSeek-V4-Pro",
+        ],
+    ),
+    (
+        "fireworks",
+        &[
+            "accounts/fireworks/models/deepseek-v4-pro",
+            "accounts/fireworks/models/kimi-k2p6",
+        ],
+    ),
+    (
+        "openrouter",
+        &[
+            "anthropic/claude_sonnet-4.6",
+            "openai/gpt-4o",
+            "google/gemini-2.5-pro",
+            "deepseek/deepseek-chat",
+            "deepseek/deepseek-r1",
+        ],
+    ),
+];
+
+const CHINA_CATALOG: &[(&str, &[&str])] = &[
+    ("kimi-coding", &["kimi-for-coding", "kimi-k2-thinking"]),
+    (
+        "moonshotai",
+        &["kimi-k2.5", "kimi-k2.6", "kimi-k2-thinking"],
+    ),
+    ("minimax", &["MiniMax-M2.7", "MiniMax-M3"]),
+    ("xiaomi", &["mimo-v2.5", "mimo-v2.5-pro"]),
+    ("zai", &["glm-4.7", "glm-5", "glm-5-turbo", "glm-5.1"]),
+    (
+        "opencode",
+        &["claude-sonnet-4-6", "gpt-5.1", "kimi-k2.6", "glm-5"],
+    ),
+];
+
+const GATEWAY_CATALOG: &[(&str, &[&str])] = &[
+    ("cloudflare-ai-gateway", &["claude-sonnet-4-5", "gpt-5.1"]),
+    (
+        "cloudflare-workers-ai",
+        &["@cf/moonshotai/kimi-k2.6", "@cf/meta/llama-4-scout-17b"],
+    ),
+    (
+        "vercel-ai-gateway",
+        &["moonshotai/kimi-k2.5", "openai/gpt-5"],
+    ),
+];
+
+const SPECIALIZED_CATALOG: &[(&str, &[&str])] = &[
+    (
+        "amazon-bedrock",
+        &["us.anthropic.claude-sonnet-4-6", "us.deepseek.r1-v1:0"],
+    ),
+    ("azure-openai-responses", &["gpt-4o", "gpt-4.1", "o3-mini"]),
+    ("cerebras", &["gpt-oss-120b", "llama3.1-8b"]),
+    ("github-copilot", &["claude-sonnet-4-6", "gemini-2.5-pro"]),
+    (
+        "huggingface",
+        &[
+            "meta-llama/Llama-3.3-70B-Instruct",
+            "mistralai/Mistral-Large-Instruct-2411",
+        ],
+    ),
+    (
+        "nvidia",
+        &[
+            "meta/llama-3.3-70b-instruct",
+            "nvidia/nemotron-3-super-120b-a12b",
+        ],
+    ),
+    ("ollama", &["llama3.1", "qwen2.5-coder:7b", "mistral"]),
+    ("xai", &["grok-3", "grok-4.3"]),
+];
+
 impl Default for ModelRegistry {
     fn default() -> Self {
         let mut models = Vec::new();
@@ -80,131 +197,19 @@ impl Default for ModelRegistry {
 
 impl ModelRegistry {
     fn fill_ai_providers(models: &mut Vec<ModelId>) {
-        let catalog: &[(&str, &[&str])] = &[
-            (
-                "anthropic",
-                &["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5"],
-            ),
-            (
-                "openai",
-                &[
-                    "gpt-4o",
-                    "gpt-4o-mini",
-                    "gpt-5",
-                    "o3-mini",
-                    "o4-mini",
-                    "o1",
-                    "o3",
-                ],
-            ),
-            (
-                "google",
-                &["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
-            ),
-            ("deepseek", &["deepseek-v4-flash", "deepseek-v4-pro"]),
-            (
-                "mistral",
-                &[
-                    "mistral-large-latest",
-                    "codestral-latest",
-                    "devstral-latest",
-                ],
-            ),
-            (
-                "groq",
-                &[
-                    "llama-3.3-70b-versatile",
-                    "gemma2-9b-it",
-                    "mixtral-8x7b-32768",
-                ],
-            ),
-            (
-                "together",
-                &[
-                    "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-                    "deepseek-ai/DeepSeek-V4-Pro",
-                ],
-            ),
-            (
-                "fireworks",
-                &[
-                    "accounts/fireworks/models/deepseek-v4-pro",
-                    "accounts/fireworks/models/kimi-k2p6",
-                ],
-            ),
-            (
-                "openrouter",
-                &[
-                    "anthropic/claude-sonnet-4.6",
-                    "openai/gpt-4o",
-                    "google/gemini-2.5-pro",
-                    "deepseek/deepseek-chat",
-                    "deepseek/deepseek-r1",
-                ],
-            ),
-        ];
-        Self::extend_models(models, catalog);
+        Self::extend_models(models, AI_CATALOG);
     }
 
     fn fill_china_providers(models: &mut Vec<ModelId>) {
-        let catalog: &[(&str, &[&str])] = &[
-            ("kimi-coding", &["kimi-for-coding", "kimi-k2-thinking"]),
-            (
-                "moonshotai",
-                &["kimi-k2.5", "kimi-k2.6", "kimi-k2-thinking"],
-            ),
-            ("minimax", &["MiniMax-M2.7", "MiniMax-M3"]),
-            ("xiaomi", &["mimo-v2.5", "mimo-v2.5-pro"]),
-            ("zai", &["glm-4.7", "glm-5", "glm-5-turbo", "glm-5.1"]),
-            (
-                "opencode",
-                &["claude-sonnet-4-6", "gpt-5.1", "kimi-k2.6", "glm-5"],
-            ),
-        ];
-        Self::extend_models(models, catalog);
+        Self::extend_models(models, CHINA_CATALOG);
     }
 
     fn fill_gateway_providers(models: &mut Vec<ModelId>) {
-        let catalog: &[(&str, &[&str])] = &[
-            ("cloudflare-ai-gateway", &["claude-sonnet-4-5", "gpt-5.1"]),
-            (
-                "cloudflare-workers-ai",
-                &["@cf/moonshotai/kimi-k2.6", "@cf/meta/llama-4-scout-17b"],
-            ),
-            (
-                "vercel-ai-gateway",
-                &["moonshotai/kimi-k2.5", "openai/gpt-5"],
-            ),
-        ];
-        Self::extend_models(models, catalog);
+        Self::extend_models(models, GATEWAY_CATALOG);
     }
 
     fn fill_specialized(models: &mut Vec<ModelId>) {
-        let mut catalog: Vec<(&str, &[&str])> = vec![
-            (
-                "amazon-bedrock",
-                &["us.anthropic.claude-sonnet-4-6", "us.deepseek.r1-v1:0"],
-            ),
-            ("azure-openai-responses", &["gpt-4o", "gpt-4.1", "o3-mini"]),
-            ("cerebras", &["gpt-oss-120b", "llama3.1-8b"]),
-            ("github-copilot", &["claude-sonnet-4-6", "gemini-2.5-pro"]),
-            (
-                "huggingface",
-                &[
-                    "meta-llama/Llama-3.3-70B-Instruct",
-                    "mistralai/Mistral-Large-Instruct-2411",
-                ],
-            ),
-            (
-                "nvidia",
-                &[
-                    "meta/llama-3.3-70b-instruct",
-                    "nvidia/nemotron-3-super-120b-a12b",
-                ],
-            ),
-            ("ollama", &["llama3.1", "qwen2.5-coder:7b", "mistral"]),
-            ("xai", &["grok-3", "grok-4.3"]),
-        ];
+        let mut catalog: Vec<(&str, &[&str])> = SPECIALIZED_CATALOG.to_vec();
         // The mock model is only present when dev flags enable the mock
         // provider. In production the catalog is real models only.
         if runie_core::provider_registry::is_mock_enabled() {

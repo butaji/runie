@@ -1,11 +1,11 @@
 //! Model — Application State (mutable borrow, no cloning per event)
-pub use crate::message::{now, ChatMessage, Role};
-use crate::snapshot::Snapshot;
-use crate::ui::elements::Element;
-use std::sync::Arc;
 
-const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
-const SPINNER_FRAMES: u32 = 12;
+pub mod app_state;
+
+pub use crate::message::{now, ChatMessage, Role};
+
+pub(crate) const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
+pub(crate) const SPINNER_FRAMES: u32 = 12;
 
 /// Detect git repo name and current branch from the given directory.
 /// Walks up the tree looking for `.git` (dir or file with `gitdir:` pointer).
@@ -246,7 +246,7 @@ pub struct AppState {
     cached_model_filter: Option<String>,
 }
 
-fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
+pub(crate) fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
     let cwd = std::env::current_dir().ok();
     let cwd_name = cwd
         .as_ref()
@@ -257,6 +257,7 @@ fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
     (git_info, cwd_name)
 }
 
+<<<<<<< HEAD
 impl Default for AppState {
     fn default() -> Self {
         let (git_info, cwd_name) = init_git_and_cwd();
@@ -704,3 +705,5 @@ impl AppState {
         summary
     }
 }
+=======
+>>>>>>> review

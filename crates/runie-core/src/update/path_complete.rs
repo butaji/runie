@@ -54,7 +54,7 @@ impl AppState {
         self.mark_dirty();
     }
 
-    pub(crate) fn path_completion_close(&mut self) {
+    pub(super) fn path_completion_close(&mut self) {
         self.completion.path_suggestions = None;
         self.completion.path_selected = None;
         self.mark_dirty();
