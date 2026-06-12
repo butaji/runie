@@ -1,0 +1,121 @@
+use ratatui::{buffer::Buffer, layout::Rect, style::Style};
+
+use crate::components::message_list::WrapCache;
+use crate::glyphs;
+use crate::theme::ThemeWrapper;
+
+/// Format current time as "h:mm AM/PM" (e.g., "4:10 PM").
+/// Reads RUNIE_MOCK_TIMESTAMP from env so scenario_replay can pin
+/// the rendered timestamp to a value that matches the frozen Grok
+/// reference dump.
+fn format_timestamp_now() -> String {
+    if let Ok(mock) = std::env::var("RUNIE_MOCK_TIMESTAMP") {
+        if !mock.is_empty() {
+            return mock;
+        }
+    }
+    use chrono::Local;
+    Local::now().format("%-I:%M %p").to_string()
+}
+
+/// Render a user message
+pub fn render_user_msg(
+    text: &str,
+    timestamp: Option<&str>,
+    area: Rect,
+    row: u16,
+    margin_x: u16,
+    _text_x: u16,
+    _max_rows: u16,
+    buf: &mut Buffer,
+    theme: &ThemeWrapper,
+    wrap_cache: &mut WrapCache,
+) -> u16 {
+    let bg_color: ratatui::style::Color = theme.color("feed.user.bg").into();
+    let chevron_color: ratatui::style::Color = theme.color("accent.primary").into();
+    let text_primary: ratatui::style::Color = theme.color("text.primary").into();
+    // Resolve timestamp: use provided or generate current time
+    let ts_display = timestamp.map(|s| s.to_string()).unwrap_or_else(format_timestamp_now);
+    // 3-space indent for user messages (like Grok).
+    // margin_x = area.x + PADDING_X (2), so margin_x + 3 = area.x + 5.
+    // That places the ❯ at column 5, matching the Grok reference dump.
+    let indent = 3;
+    // Account for left margin + indent + chevron(2) + space(1) + right padding(1) = margin_x + indent + 4 from area.right()
+    let text_width = (area.width - margin_x + area.x - indent - 4) as usize;
+
+    // Wrap user text
+    let wrapped = wrap_cache.get_wrapped(text.trim(), text_width);
+
+    let content_lines = if wrapped.is_empty() { 1 } else { wrapped.len() };
+    let total_height = content_lines + 2; // +2 for vertical padding (1 above, 1 below)
+
+    let bg_padding = 1u16;
+    let bg_start = margin_x + bg_padding;
+    let bg_end = area.right().saturating_sub(bg_padding);
+
+    // Content starts after 1 line of vertical padding
+    let content_start_y = area.y + row + 1;
+    // Render vertical padding ABOVE (1 line)
+    let padding_above_y = area.y + row;
+    for x in bg_start..bg_end {
+        if let Some(cell) = buf.cell_mut((x, padding_above_y)) {
+            cell.set_char(' ');
+            cell.set_style(Style::default().bg(bg_color));
+        }
+    }
+
+    // Render content lines with horizontal padding
+    for (i, line_text) in wrapped.iter().enumerate() {
+        let line_y = content_start_y + i as u16;
+        if line_y >= area.bottom() {
+            break;
+        }
+        // Fill gray background with horizontal padding
+        for x in bg_start..bg_end {
+            if let Some(cell) = buf.cell_mut((x, line_y)) {
+                cell.set_char(' ');
+                cell.set_style(Style::default().bg(bg_color));
+            }
+        }
+
+        if i == 0 {
+            // First line: chevron at 5-space indent
+            let chevron_x = margin_x + indent;
+            if let Some(cell) = buf.cell_mut((chevron_x, line_y)) {
+                cell.set_char(glyphs::CHEVRON);
+                cell.set_style(Style::default().fg(chevron_color).bg(bg_color));
+            }
+            let text_x = chevron_x + 2;
+            let first_line = ratatui::text::Line::raw(line_text.as_str())
+                .style(Style::default().fg(text_primary).bg(bg_color));
+            buf.set_line(text_x, line_y, &first_line, text_width as u16);
+
+            // Timestamp on first line for all messages
+            let ts_len = ts_display.len() as u16;
+            let ts_x = bg_end.saturating_sub(ts_len + 3);
+            if ts_x > text_x {
+                let ts_color: ratatui::style::Color = theme.color("text.muted").into();
+                let ts_line = ratatui::text::Line::raw(&ts_display)
+                    .style(Style::default().fg(ts_color).bg(bg_color));
+                buf.set_line(ts_x, line_y, &ts_line, ts_len);
+            }
+        } else {
+            // Continuation lines: aligned with text after chevron
+            let text_x = margin_x + indent + 2;
+            let line = ratatui::text::Line::raw(line_text.as_str())
+                .style(Style::default().fg(text_primary).bg(bg_color));
+            buf.set_line(text_x, line_y, &line, text_width as u16);
+        }
+    }
+
+    // Render vertical padding BELOW (1 line)
+    let padding_below_y = content_start_y + content_lines as u16;
+    for x in bg_start..bg_end {
+        if let Some(cell) = buf.cell_mut((x, padding_below_y)) {
+            cell.set_char(' ');
+            cell.set_style(Style::default().bg(bg_color));
+        }
+    }
+
+    total_height as u16
+}

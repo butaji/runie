@@ -1,0 +1,85 @@
+# bacon — auto-rebuild + run on save
+# https://github.com/Canop/bacon
+#
+# Usage:
+#   bacon                # default job (run check)
+#   bacon test           # run tests
+#   bacon run            # run the runie TUI binary
+#   bacon ui             # cargo check just the runie-tui crate (fast)
+#
+# Press 'r' in the bacon UI to cycle to the next job.
+
+# When `bacon` starts, this job is auto-launched
+default_job = "ui"
+
+# ANSI clear on each run
+clear = true
+
+# Don't show full file paths in error summary
+wrap = true
+
+# Don't exit on first error — keep watching
+no_beep = true
+
+# How many lines of output to keep in scrollback
+term_scroll_lines = 2000
+
+# ──────────────────────────────────────────────────────────────────────
+# Jobs
+# ──────────────────────────────────────────────────────────────────────
+
+[jobs.ui]
+# FAST: just type-check the runie-tui crate. Sub-second on incremental.
+# Use this while editing layout/render code; the parity test will catch
+# regressions separately.
+command = ["cargo", "check", "-p", "runie-tui", "--message-format", "short"]
+need_stdout = false
+watch = ["crates/runie-tui/src"]
+
+[jobs.run]
+# Run the actual TUI binary. bacon keeps a long-running process and
+# relaunches on save. Press 'r' in bacon to switch to this job when
+# you want to SEE the layout, not just check it.
+command = ["cargo", "run", "-p", "runie-cli", "--release"]
+need_stdout = true
+watch = ["crates/"]
+
+[jobs.test]
+# Run the grok_parity_test binary. ~5s on incremental, runs all 47
+# (soon 52+) component-level visual assertions.
+command = ["cargo", "run", "-p", "runie-tui", "--bin", "grok_parity_test", "--release"]
+need_stdout = true
+watch = ["crates/"]
+
+[jobs.check]
+# Full workspace check (slower but catches cross-crate breaks).
+command = ["cargo", "check", "--workspace", "--message-format", "short"]
+need_stdout = false
+watch = ["crates/"]
+
+[jobs.check-skip]
+# Like `check` but bypasses the broken in-tree build.rs linter.
+env = { RUNIE_SKIP_BUILD_CHECKS = "1" }
+command = ["cargo", "check", "--workspace", "--message-format", "short"]
+need_stdout = false
+watch = ["crates/"]
+
+[jobs.replay]
+# Replay the last scenario you were working on. The actual file path is
+# kept in `.hermes/plans/last-scenario.txt` — just edit that file (or
+# use `runie-set-scenario <name>`) and this job picks it up.
+#
+# Sub-100ms iteration: edit a render function, save, see the new
+# render in the terminal here. No TTY needed (uses TestBackend).
+env = { RUNIE_SKIP_BUILD_CHECKS = "1" }
+command = ["sh", "-c", "SCENARIO=$(cat .hermes/plans/last-scenario.txt 2>/dev/null); target/release/scenario_replay $SCENARIO"]
+need_stdout = true
+watch = ["crates/runie-tui/src", "ui/dumps/scenarios/"]
+
+[jobs.parity]
+# Run grok_parity_test — 47/47 component-level visual assertions.
+# Catches regressions when you edit a render function.
+env = { RUNIE_SKIP_BUILD_CHECKS = "1" }
+command = ["cargo", "run", "-p", "runie-tui", "--bin", "grok_parity_test", "--release"]
+need_stdout = true
+watch = ["crates/runie-tui/src"]

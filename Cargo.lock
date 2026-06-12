@@ -2084,7 +2084,7 @@ dependencies = [
 
 [[package]]
 name = "runie-agent"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "dirs",
@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "runie-core"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "base64",
@@ -2117,7 +2117,7 @@ dependencies = [
 
 [[package]]
 name = "runie-json"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "runie-agent",
@@ -2131,7 +2131,7 @@ dependencies = [
 
 [[package]]
 name = "runie-print"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "runie-agent",
@@ -2143,7 +2143,7 @@ dependencies = [
 
 [[package]]
 name = "runie-provider"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "dirs",
@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "runie-server"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "ctrlc",
@@ -2173,7 +2173,7 @@ dependencies = [
 
 [[package]]
 name = "runie-term"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "anyhow",
  "crossterm",
@@ -2196,7 +2196,7 @@ dependencies = [
 
 [[package]]
 name = "runie-tui"
-version = "0.1.0"
+version = "0.2.16"
 dependencies = [
  "dirs",
  "opaline",

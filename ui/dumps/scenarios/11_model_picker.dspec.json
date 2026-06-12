@@ -1,0 +1,97 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                 │ 42K / 512K │ +2 │"
+      },
+      {
+        "type": "text",
+        "content": " ┌                                                                            ┐"
+      },
+      {
+        "type": "text",
+        "content": " │                                                                            │"
+      },
+      {
+        "type": "text",
+        "content": " │   ❯ //plan                                                        4:38 PM  │"
+      },
+      {
+        "type": "text",
+        "content": " │                                                                            │"
+      },
+      {
+        "type": "text",
+        "content": " └                                                                            ┘"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  ◆ Run git log --oneline -15 --graph --decorate"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  ◆ Run git diff --name-only HEAD~6..HEAD                                   █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     #1 extensions"
+      },
+      {
+        "type": "text",
+        "content": "     #2 theme"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "    ⠼ Run git diff --name-only HEAD~6..HEAD 0.2s             22s ⇣43.0k [↓][✗]"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯ Build anything                                                         │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰────────────────────────────────────────────────────── Grok Build · plan ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Ctrl+Shift+e:expand thinking  │  Space:prompt  │  Ctrl+c:cancel  │"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+
+   feat/grok-redesign ~/Code/GitHub/runie                      │ 33K / 512K │
+ ┌                                                                            ┐
+ │                                                                            │
+ │   ❯ /fork.                                                       12:19 PM  │
+ │                                                                            │
+ └                                                                            ┘
+     ◆ Thought for 0.6s
+     ◆ Search "/fork|fork command|slash.*fork" in /… (14 matches in 4 files)   █
+     ◆ Search "fork" in /U/a/.grok/docs/user-guide (2 matches in 2 files)      █
+     ◆ Thought for 0.2s                                                        █
+     ◆ Read /Users/admin/.grok/docs/user-guide/17-sessions.md                  █
+     ◆ Thought for 0.2s                                                        █
+     ◆ Read /U/admin/.grok/docs/user-guide/15-agent-mode.md (101-150 of 275)   █
+                                                                               █
+
+    ⠧ Waiting… 0.6s                                             14s ⇣33.8k [✗]
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯ Shift+Tab                                                              │
+  ╰───────────────────────────────────────────────────────────── Grok Build ─╯
+
+  Ctrl+Shift+e:expand thinking  │  Space:prompt  │  Ctrl+c:cancel  │
+

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# `runie-parity <name>` — replay a scenario and diff against the matching
+# Grok dump. Designed to be called repeatedly while iterating.
+#
+#   bin/runie-parity 03_chat_simple                    # auto-find the dump
+#   bin/runie-parity 03_chat_simple --diff path.txt    # explicit dump path
+#   bin/runie-parity 03_chat_simple --wireframe        # show layout overlay
+#
+# Edit `crates/runie-tui/src/.../*.rs` and re-run — see the new diff in <1s.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+NAME="${1:?usage: runie-parity <scenario-name-or-path> [extra args to scenario_replay]}"
+shift
+
+SCENARIO="ui/dumps/scenarios/${NAME%.jsonl}.jsonl"
+[ -f "$NAME" ] && SCENARIO="$NAME"
+[ ! -f "$SCENARIO" ] && { echo "scenario not found: $SCENARIO" >&2; exit 2; }
+
+# Auto-find the matching Grok dump if no --diff is given.
+DUMP=""
+for arg in "$@"; do
+  case "$arg" in --diff) DUMP="${2:-}"; shift 2;; esac
+done
+if [ -z "$DUMP" ]; then
+  base="$(basename "$SCENARIO" .jsonl)"
+  # Strip trailing _simple / _basic suffix to match dump names.
+  base="${base%_simple}"
+  base="${base%_basic}"
+  for candidate in \
+      "ui/dumps/grok/${base}.txt" \
+      "ui/dumps/grok/${base}_complete.txt" \
+      "ui/dumps/grok/${base}_view.txt" \
+      "ui/dumps/grok/${base}_user_msg.txt" \
+      "ui/dumps/grok/${base}_clean.txt" \
+      "ui/dumps/grok/${base}_chat.txt" \
+      "ui/dumps/grok/${base}_tools.txt" \
+      "ui/dumps/grok/${base}_input_focused.txt"
+  do
+    [ -f "$candidate" ] && { DUMP="$candidate"; break; }
+  done
+fi
+
+# Make sure the binary is built (debug for fast iteration; rerun
+# script does the same so a watch loop is just as fast).
+if [ ! -x target/debug/scenario_replay ]; then
+  echo "→ building scenario_replay (first run only)..." >&2
+  RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --bin scenario_replay >&2
+fi
+
+# Stash the path for the bacon `replay` job.
+echo "$SCENARIO" > .hermes/plans/last-scenario.txt
+
+CMD=(target/debug/scenario_replay "$SCENARIO")
+[ -n "$DUMP" ] && CMD+=(--diff "$DUMP")
+CMD+=("$@")
+exec "${CMD[@]}"

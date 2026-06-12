@@ -3,7 +3,7 @@ members = ["crates/runie-core", "crates/runie-tui", "crates/runie-term", "crates
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.16"
 edition = "2021"
 
 [workspace.dependencies]

@@ -1,0 +1,99 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                      │ 22K / 512K │"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     ❯ list the fi┌─ Commands ───────────────────────── [✗] ─┐       4:37 PM"
+      },
+      {
+        "type": "text",
+        "content": "                  │                                          │"
+      },
+      {
+        "type": "text",
+        "content": "                  │   search:                                │"
+      },
+      {
+        "type": "text",
+        "content": "     • src/ — Top-│──────────────────────────────────────────│"
+      },
+      {
+        "type": "text",
+        "content": "     • target/ — B│   Session ────────────────────────────  █│"
+      },
+      {
+        "type": "text",
+        "content": "     • tmp_config/│  ◆ New Session                 Ctrl+N   █│"
+      },
+      {
+        "type": "text",
+        "content": "     • ui/ — UI-re│  ◆ New Session in Work…  Ctrl+Shift+N   █│"
+      },
+      {
+        "type": "text",
+        "content": "                  │  ◆ Switch Sessions          /sessions    │"
+      },
+      {
+        "type": "text",
+        "content": "     Would you lik│  ◆ Back to Home          Ctrl+Shift+H    │"
+      },
+      {
+        "type": "text",
+        "content": "     crates/runie-│  ◆ Resume Session             /resume    │                 █"
+      },
+      {
+        "type": "text",
+        "content": "                  │  ◆ Rename Session            /rename     │                 █"
+      },
+      {
+        "type": "text",
+        "content": "     Turn complete│  ◆ Session Info         /session-info    │                 █"
+      },
+      {
+        "type": "text",
+        "content": "                  │  ◆ Send Feedback            /feedback    │                 █"
+      },
+      {
+        "type": "text",
+        "content": "                  │                                          │"
+      },
+      {
+        "type": "text",
+        "content": "  ╭───────────────│  ↑/↓ nav  |  Enter select  |  Esc close  │───────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯ /           └──────────────────────────────────────────┘               │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰───────────────────────────────────────────────────────────── Grok Build ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

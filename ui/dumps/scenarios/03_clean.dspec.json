@@ -1,0 +1,98 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                      │ 21K / 512K │ "
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     ❯ hello                                                         9:52 PM   █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  ◆ Thinking…                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "  ┃                                                                            █"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  …                                                                         █"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  (runie-tui). There's mention of Grok in docs and GROK.md, and it seems    █"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  related to AI/agent tooling, likely a terminal UI for interacting with    █"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  AI models like Grok.                                                      █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "    ⠦ Thinking… 0.7s                                           6.0s ⇣21.8k [✗]"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯                                                                        │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰──────────────────────────────────────────── Grok Build · always-approve ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Shift+Tab:mode  │  Ctrl+c:cancel  │  Ctrl+Enter:interject  │  Ctrl+.:       "
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

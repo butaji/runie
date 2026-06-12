@@ -1,0 +1,10 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+                                                                                
+   ❯ Hello AI                                                        4:38 AM    
+                                                                                
+                                                                                
+                                                                                
+   Hello! How can I help you today?
