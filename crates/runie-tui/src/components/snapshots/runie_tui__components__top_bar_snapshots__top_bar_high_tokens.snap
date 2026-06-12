@@ -1,0 +1,5 @@
+---
+source: crates/runie-tui/src/components/top_bar_snapshots.rs
+expression: rendered
+---
+"myproject\u{e0a0} develop crates/core/src/lib.rs                     │ 95K / 100K │"

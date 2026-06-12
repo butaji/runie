@@ -1,0 +1,24 @@
+
+   feat/grok-redesign ~/Code/GitHub/runie                 │ 27K / 512K │ +2 │
+
+
+     ❯ //plan                                                        4:38 PM
+
+
+
+  ┃  ◆ Thinking…
+  ┃
+  ┃  The tool response confirms I am now in plan mode.                         █
+                                                                               █
+
+     #1 extensions
+     #2 theme
+
+    ⠋ Thinking… 2.6s                                            12s ⇣27.0k [✗]
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯                                                                        │
+  ╰────────────────────────────────────────────────────── Grok Build · plan ─╯
+
+  Shift+Tab:mode  │  Ctrl+c:cancel  │  Ctrl+Enter:interject  │  Ctrl+;:queue
+

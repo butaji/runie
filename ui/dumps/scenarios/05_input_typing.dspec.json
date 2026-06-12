@@ -1,0 +1,183 @@
+{
+  "width": 78,
+  "height": 24,
+  "mock_timestamp": "4:10 PM",
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \ue0a0 feat/grok-redesign",
+            "style": "accent"
+          },
+          {
+            "type": "text",
+            "content": " "
+          },
+          {
+            "type": "text",
+            "content": "~/Code/GitHub/runie",
+            "style": "secondary"
+          },
+          {
+            "type": "fill"
+          },
+          {
+            "type": "text",
+            "content": "\u2502 9.5K / 512K \u2502",
+            "style": "dim"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 2,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "     \u276f",
+              "style": "secondary"
+            },
+            {
+              "type": "text",
+              "content": " "
+            },
+            {
+              "type": "text",
+              "content": "test",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "4:10 PM",
+              "style": "dim"
+            }
+          ]
+        }
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 2,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "text",
+          "content": "     \u25c6 Thought for 0.1s",
+          "style": "muted"
+        }
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 2,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "text",
+          "content": "     \u25c6 List .",
+          "style": "primary"
+        }
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2502 \u276f .hello world                                                           \u2502"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Grok Build \u2500\u256f"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  Enter:send  \u2502  Shift+Tab:mode  \u2502  Ctrl+.:shortcuts",
+            "style": "dim"
+          }
+        ]
+      }
+    ]
+  }
+}

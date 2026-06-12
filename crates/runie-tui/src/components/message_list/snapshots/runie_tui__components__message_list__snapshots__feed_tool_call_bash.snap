@@ -1,0 +1,11 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+                                                                                
+   ❯ Show me the files                                               4:38 AM    
+                                                                                
+                                                                                
+                                                                                
+◆ bash ls -la                                                                   
+   Here are the files in your directory:

@@ -1,0 +1,92 @@
+//! TokyoNight theme builder.
+
+use opaline::{OpalineColor, Theme, ThemeBuilder, ThemeVariant};
+use crate::theme::themes::apply_extra_tokens;
+
+pub fn build_tokyo_night() -> Theme {
+    let mut b = Theme::builder("tokyo-night")
+        .variant(ThemeVariant::Dark)
+        .author("Runie")
+        .description("TokyoNight - deep blue-black theme");
+    b = add_tokyo_night_palettes(b);
+    b = add_tokyo_night_tokens(b);
+    apply_extra_tokens(b).build()
+}
+
+fn add_tokyo_night_palettes(b: ThemeBuilder) -> ThemeBuilder {
+    b.palette("base", OpalineColor::new(0x1A, 0x1B, 0x26))
+        .palette("light", OpalineColor::new(0x24, 0x28, 0x3B))
+        .palette("dark", OpalineColor::new(0x16, 0x16, 0x1E))
+        .palette("user_accent", OpalineColor::new(0x7A, 0xA2, 0xF7))
+        .palette("thinking_accent", OpalineColor::new(0xBB, 0x9A, 0xF7))
+        .palette("tool_accent", OpalineColor::new(0x9E, 0xCE, 0x6A))
+        .palette("error_accent", OpalineColor::new(0xF7, 0x76, 0x8E))
+        .palette("success_accent", OpalineColor::new(0x9E, 0xCE, 0x6A))
+}
+
+const TOKYO_NIGHT_TOKENS: &[(&str, u8, u8, u8)] = &[
+    ("bg.base", 0x1A, 0x1B, 0x26),
+    ("bg.light", 0x24, 0x28, 0x3B),
+    ("bg.dark", 0x16, 0x16, 0x1E),
+    ("bg.highlight", 0x2A, 0x2E, 0x40),
+    ("bg.hover", 0x33, 0x38, 0x4D),
+    ("bg.terminal", 0x0E, 0x0F, 0x17),
+    ("bg.panel", 0x20, 0x1F, 0x26),
+    ("text.primary", 0xC0, 0xCA, 0xD7),
+    ("text.secondary", 0xA9, 0xB1, 0xC6),
+    ("text.muted", 0x56, 0x5F, 0x73),
+    ("text.dim", 0x44, 0x4D, 0x5E),
+    ("accent.primary", 0x7A, 0xA2, 0xF7),
+    ("accent.secondary", 0x9E, 0xCE, 0x6A),
+    ("accent.tertiary", 0xBB, 0x9A, 0xF7),
+    ("accent.user", 0x7A, 0xA2, 0xF7),
+    ("accent.assistant", 0x9E, 0xCE, 0x6A),
+    ("accent.thinking", 0xBB, 0x9A, 0xF7),
+    ("accent.tool", 0x9E, 0xCE, 0x6A),
+    ("accent.system", 0x41, 0x47, 0x5E),
+    ("accent.error", 0xF7, 0x76, 0x8E),
+    ("accent.success", 0x9E, 0xCE, 0x6A),
+    ("accent.running", 0x7A, 0xA2, 0xF7),
+    ("accent.skill", 0xBB, 0x9A, 0xF7),
+    ("accent.plan", 0xBB, 0x9A, 0xF7),
+    ("accent.feedback", 0xF7, 0x76, 0x8E),
+    ("accent.model", 0x9E, 0xCE, 0x6A),
+    ("success", 0x9E, 0xCE, 0x6A),
+    ("warning", 0xFF, 0x9E, 0x64),
+    ("error", 0xF7, 0x76, 0x8E),
+    ("command", 0x7A, 0xA2, 0xF7),
+    ("path", 0x9E, 0xCE, 0x6A),
+    ("running", 0x7A, 0xA2, 0xF7),
+    ("fuzzy.accent", 0x7A, 0xA2, 0xF7),
+    ("feed.user.bar", 0x7A, 0xA2, 0xF7),
+    ("feed.assistant.bar", 0x9E, 0xCE, 0x6A),
+    ("feed.tool.bar", 0x9E, 0xCE, 0x6A),
+    ("feed.agent.bar", 0xBB, 0x9A, 0xF7),
+    ("feed.system.bar", 0x41, 0x47, 0x5E),
+    ("feed.user.bg", 0x12, 0x13, 0x1E),
+    ("feed.separator", 0x56, 0x5F, 0x73),
+    ("code.path", 0x7A, 0xA2, 0xF7),
+    ("code.keyword", 0xBB, 0x9A, 0xF7),
+    ("code.string", 0x9E, 0xCE, 0x6A),
+    ("code.comment", 0x56, 0x5F, 0x73),
+    ("code.type", 0xFF, 0x9E, 0x64),
+    ("diff.removed", 0xF7, 0x76, 0x8E),
+    ("diff.added", 0x9E, 0xCE, 0x6A),
+    ("diff.removed_bg", 0x2A, 0x15, 0x1E),
+    ("diff.added_bg", 0x1A, 0x2A, 0x15),
+    ("text.plan", 0xBB, 0x9A, 0xF7),
+    ("border.unfocused", 0x41, 0x47, 0x5E),
+    ("border.focused", 0x7A, 0xA2, 0xF7),
+];
+
+fn add_tokyo_night_tokens(b: ThemeBuilder) -> ThemeBuilder {
+    add_tokens(b, TOKYO_NIGHT_TOKENS)
+}
+
+fn add_tokens(b: ThemeBuilder, tokens: &[(&str, u8, u8, u8)]) -> ThemeBuilder {
+    let mut builder = b;
+    for (name, r, g, bl) in tokens {
+        builder = builder.token(*name, OpalineColor::new(*r, *g, *bl));
+    }
+    builder
+}

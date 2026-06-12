@@ -1,0 +1,15 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+                                                                                
+   ❯ Show me a hello world                                           4:38 AM    
+                                                                                
+                                                                                
+                                                                                
+   Here is a simple Hello World in Rust:                                        
+   ```rust                                                                      
+   fn main() {                                                                  
+       println!("Hello, world!");                                               
+   }                                                                            
+   ```

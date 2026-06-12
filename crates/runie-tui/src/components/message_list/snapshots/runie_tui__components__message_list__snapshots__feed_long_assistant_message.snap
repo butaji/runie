@@ -1,0 +1,11 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+                                                            
+   ❯ Tell me a story                             4:38 AM    
+                                                            
+                                                            
+                                                            
+   Once upon a time, in a land far, far away, there lived a 
+   young developer who loved writing code. The end.

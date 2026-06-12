@@ -1,0 +1,87 @@
+{
+  "width": 78,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "    ⠼ Starting session… 2.0s"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯                                                                        │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰──────────────────────────────────────────── Grok Build · always-approve ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Shift+Tab:mode  │  Ctrl+.:shortcuts"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

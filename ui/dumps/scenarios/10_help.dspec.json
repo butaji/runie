@@ -1,0 +1,101 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                 │ 42K / 512K │ +2 │"
+      },
+      {
+        "type": "text",
+        "content": " ┌                                                                            ┐"
+      },
+      {
+        "type": "text",
+        "content": " │                                                                            │"
+      },
+      {
+        "type": "text",
+        "content": " │   ❯ //plan     ┌─ Commands ───────────────────────── [✗] ─┐       4:38 PM  │"
+      },
+      {
+        "type": "text",
+        "content": " │                │                                          │                │"
+      },
+      {
+        "type": "text",
+        "content": " └                │   search:                                │                ┘"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  ◆ Thinking…  │──────────────────────────────────────────│"
+      },
+      {
+        "type": "text",
+        "content": "  ┃               │   Session ────────────────────────────  █│"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  The plan.md f│  ◆ New Session                 Ctrl+N   █│t, similar"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  entries inclu│  ◆ New Session in Work…  Ctrl+Shift+N   █│                 █"
+      },
+      {
+        "type": "text",
+        "content": "                  │  ◆ Switch Sessions          /sessions    │                 █"
+      },
+      {
+        "type": "text",
+        "content": "                  │  ◆ Back to Home          Ctrl+Shift+H    │"
+      },
+      {
+        "type": "text",
+        "content": "     #1 extensions│  ◆ Resume Session             /resume    │"
+      },
+      {
+        "type": "text",
+        "content": "     #2 theme     │  ◆ Rename Session            /rename     │"
+      },
+      {
+        "type": "text",
+        "content": "                  │  ◆ Session Info         /session-info    │"
+      },
+      {
+        "type": "text",
+        "content": "    ⠴ Thinking… 0.│  ◆ Send Feedback            /feedback    │  16s ⇣42.2k [✗]"
+      },
+      {
+        "type": "text",
+        "content": "                  │                                          │"
+      },
+      {
+        "type": "text",
+        "content": "  ╭───────────────│  ↑/↓ nav  |  Enter select  |  Esc close  │───────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯ Build anythi└──────────────────────────────────────────┘               │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰────────────────────────────────────────────────────── Grok Build · plan ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

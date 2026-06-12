@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# `runie-rerun <scenario>` — auto-rebuild on save + re-render + diff.
+#
+# The REPL loop for TUI development:
+#   1. Edit a render file in your editor
+#   2. Save
+#   3. Within 1-2s, the new render + diff appears in this terminal
+#   4. Repeat
+#
+# Polls the source files every 200ms. Skips rebuild when the timestamps
+# are unchanged. Uses lld (configured in .cargo/config.toml) for fast
+# linking on macOS.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+NAME="${1:?usage: runie-rerun <scenario-name-or-path>}"
+SCENARIO="$NAME"
+[ ! -f "$SCENARIO" ] && SCENARIO="ui/dumps/scenarios/${NAME%.jsonl}.jsonl"
+[ ! -f "$SCENARIO" ] && { echo "scenario not found: $NAME" >&2; exit 2; }
+
+# Auto-find matching Grok dump
+DUMP=""
+base="$(basename "$SCENARIO" .jsonl)"
+base="${base%_simple}"; base="${base%_basic}"
+for c in \
+  "ui/dumps/grok/${base}.txt" \
+  "ui/dumps/grok/${base}_complete.txt" \
+  "ui/dumps/grok/${base}_view.txt" \
+  "ui/dumps/grok/${base}_user_msg.txt" \
+  "ui/dumps/grok/${base}_clean.txt" \
+  "ui/dumps/grok/${base}_chat.txt" \
+  "ui/dumps/grok/${base}_tools.txt" \
+  "ui/dumps/grok/${base}_input_focused.txt"
+do
+  [ -f "$c" ] && DUMP="$c" && break
+done
+
+# Update last-scenario so the bacon `replay` job tracks it
+echo "$SCENARIO" > .hermes/plans/last-scenario.txt
+
+WATCH_PATHS=(
+  "crates/runie-tui/src"
+  "crates/runie-tui/src/bin/scenario_replay.rs"
+  "ui/dumps/scenarios"
+)
+
+# ANSI colors
+BOLD='\033[1m'
+DIM='\033[2m'
+RED='\033[31m'
+GRN='\033[32m'
+YEL='\033[33m'
+CYA='\033[36m'
+RST='\033[0m'
+
+# Compute the max mtime (epoch seconds) across all watched files.
+# We use a single find invocation per path and let it sort to find the
+# top mtime. This is much faster than spawning stat per file.
+get_max_mtime() {
+  local max=0
+  for p in "${WATCH_PATHS[@]}"; do
+    local m=0
+    if [ -d "$p" ]; then
+      # BSD find on macOS (the default) supports -newer; we compare
+      # against /dev/null's mtime which is always the oldest. We then
+      # stat the file. Faster than -exec stat {} + for many files.
+      # The trick: find with -name *.rs -type f -newer /dev/null is
+      # effectively every file; pipe to xargs stat to get the latest
+      # mtime. Or just use stat -f '%m %N' *.rs which is one-shot.
+      # We use the latter when the directory has the files directly
+      # mounted, fall back to find for nested dirs.
+      if [ -d "$p" ]; then
+        # Use stat on a small batch of the most recently changed files.
+        # BSD find -mtime -1d is too coarse; instead use find -newer
+        # with a marker we touch periodically. Simpler: find ... |
+        # xargs stat. For most TUI projects this is 50-200 files so
+        # 1 xargs call is fine.
+        m=$(find "$p" -name '*.rs' -type f -print0 2>/dev/null \
+            | xargs -0 stat -f '%m %N' 2>/dev/null \
+            | awk '{print $1}' \
+            | sort -nr \
+            | head -1)
+      fi
+    elif [ -f "$p" ]; then
+      m=$(stat -f %m "$p" 2>/dev/null)
+    fi
+    # m may be empty if no .rs files were found
+    [ -n "$m" ] && [ "$m" -gt "$max" ] && max=$m
+  done
+  echo "$max"
+}
+
+run_once() {
+  # cur is the latest source mtime seen by the watch loop. We need it
+  # to decide whether the binary is stale. If $cur isn't set (e.g. the
+  # initial run), assume stale and force a build.
+  local cur="${cur:-0}"
+  # Build only if a watched source file changed since last successful
+  # build. Source mtime is already tracked by the watch loop in $last;
+  # also check the binary's mtime directly so re-running after touching
+  # non-watched files still rebuilds.
+  local bin="target/debug/scenario_replay"
+  local need_build=0
+  if [ ! -x "$bin" ]; then
+    need_build=1
+  else
+    local bin_mtime
+    bin_mtime=$(stat -f %m "$bin" 2>/dev/null || echo 0)
+    if [ "$cur" -gt "$bin_mtime" ]; then
+      need_build=1
+    fi
+  fi
+
+  if [ "$need_build" -eq 1 ]; then
+    local BUILD_LOG
+    BUILD_LOG=$(mktemp)
+    local build_t
+    build_t=$(date +%s%N)
+    if ! RUNIE_SKIP_BUILD_CHECKS=1 cargo build -p runie-tui --bin scenario_replay --quiet 2>"$BUILD_LOG"; then
+      echo -e "${RED}build failed${RST}" >&2
+      tail -20 "$BUILD_LOG" >&2
+      rm -f "$BUILD_LOG"
+      return 1
+    fi
+    local build_ms=$(( ( $(date +%s%N) - build_t ) / 1000000 ))
+    echo -e "${DIM}build ${build_ms}ms${RST}" >&2
+    rm -f "$BUILD_LOG"
+  fi
+
+  echo -e "${BOLD}${CYA}─── $(date +%H:%M:%S) ───${RST}"
+  if [ -n "$DUMP" ]; then
+    target/debug/scenario_replay "$SCENARIO" --diff "$DUMP" 2>&1 | head -40
+  else
+    target/debug/scenario_replay "$SCENARIO" 2>&1 | head -40
+  fi
+  echo
+}
+
+# Initial render
+echo -e "${DIM}watching ${WATCH_PATHS[*]}${RST}"
+echo -e "${DIM}scenario: $SCENARIO${RST}"
+echo -e "${DIM}reference: ${DUMP:-(none)}${RST}"
+echo
+run_once
+
+last=$(get_max_mtime)
+trap 'echo -e "\n${DIM}stopped${RST}"; exit 0' INT TERM
+while true; do
+  sleep 0.05
+  cur=$(get_max_mtime)
+  if [ "$cur" != "$last" ]; then
+    last=$cur
+    # Coalesce: wait a beat in case more changes are coming (e.g. editor
+    # atomic-save writes the file twice)
+    sleep 0.05
+    cur=$(get_max_mtime)
+    [ "$cur" != "$last" ] && last=$cur
+    clear
+    run_once
+  fi
+done

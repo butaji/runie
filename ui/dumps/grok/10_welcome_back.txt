@@ -1,0 +1,24 @@
+
+   feat/grok-redesign ~/Code/GitHub/runie/
+
+
+
+                      New worktree                   ctrl-w
+                      ─────────────────────────────────────
+                      Resume session                 ctrl-s
+                      ─────────────────────────────────────
+                      Quit                           ctrl-q
+
+
+
+
+
+
+  Tip: Press Ctrl-W to start a parallel task in its own worktree.
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯                                                                        │
+  ╰───────────────────────────────────────────────────────────── Grok Build ─╯
+
+                                                                   0.2.16 Beta
+

@@ -1,0 +1,214 @@
+{
+  "width": 78,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \ue0a0 feat/grok-redesign",
+            "style": "accent"
+          },
+          {
+            "type": "text",
+            "content": " "
+          },
+          {
+            "type": "text",
+            "content": "~/Code/GitHub/runie/",
+            "style": "secondary"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 19,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "                      New worktree",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "ctrl-w",
+              "style": "dim"
+            }
+          ]
+        }
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "                      \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+            "style": "dim"
+          }
+        ]
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 19,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "                      Resume session",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "ctrl-s",
+              "style": "dim"
+            }
+          ]
+        }
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "                      \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+            "style": "dim"
+          }
+        ]
+      },
+      {
+        "type": "pad",
+        "top": 0,
+        "right": 19,
+        "bottom": 0,
+        "left": 0,
+        "child": {
+          "type": "row",
+          "fill_trailing": true,
+          "children": [
+            {
+              "type": "text",
+              "content": "                      Quit",
+              "style": "primary"
+            },
+            {
+              "type": "fill"
+            },
+            {
+              "type": "text",
+              "content": "ctrl-q",
+              "style": "dim"
+            }
+          ]
+        }
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Tip: Press Ctrl-W to start a parallel task in its own worktree.",
+        "style": "dim"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2502 \u276f                                                                        \u2502"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "text",
+            "content": "  \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Grok Build \u2500\u256f"
+          }
+        ]
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "row",
+        "fill_trailing": true,
+        "children": [
+          {
+            "type": "fill"
+          },
+          {
+            "type": "text",
+            "content": "0.2.16 Beta",
+            "style": "dim"
+          }
+        ]
+      }
+    ]
+  }
+}

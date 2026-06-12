@@ -1,0 +1,24 @@
+
+   feat/grok-redesign ~/Code/GitHub/runie                      │ 43K / 512K │
+
+
+     ❯ /fork.                                                       12:19 PM
+
+
+     ◆ Read /U/admin/.grok/docs/user-guide/15-agent-mode.md (101-150 of 275)
+     ◆ Thought for 1.7s
+     ◆ Search "fork|session.*fork|fork.*session" (23 matches in 14 files)      █
+     ◆ Thought for 1.7s                                                        █
+     ◆ Read crates/runie-core/src/slash_command.rs                             █
+     ◆ Read crates/runie-tui/src/tui/update/slash.rs                           █
+     ◆ Thought for 0.0s                                                        █
+                                                                               █
+     Turn cancelled by user in 25s.                                            █
+                                                                               █
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯ Shift+Tabsessionsq                                                     │
+  ╰───────────────────────────────────────────────────────────── Grok Build ─╯
+
+  Enter:send  │  Shift+Tab:mode  │  Ctrl+.:shortcuts
+

@@ -1,0 +1,6 @@
+---
+source: crates/runie-tui/src/components/message_list/snapshots.rs
+expression: rendered
+---
+                                                                                
+   ❯ what time is it?                                                4:38 AM

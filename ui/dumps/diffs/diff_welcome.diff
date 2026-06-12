@@ -1,0 +1,24 @@
+--- /Users/admin/Code/GitHub/runie/ui/dumps/compare/grok/01_clean.txt	2026-06-02 21:50:00
++++ /Users/admin/Code/GitHub/runie/ui/dumps/compare/runie/v1_welcome.txt	2026-06-03 03:13:59
+@@ -1,8 +1,7 @@
+ 
+-   feat/grok-redesign ~/Code/GitHub/runie/
++   feat/grok-redesign ~/Code/GitHub/runie
+ 
+ 
+-
+                       New worktree                   ctrl-w
+                       ─────────────────────────────────────
+                       Resume session                 ctrl-s
+@@ -13,9 +12,10 @@
+ 
+ 
+ 
++    Tip: Press Ctrl-W to start a parallel task in its own worktree.
+ 
+-  Tip: Press Ctrl-W to start a parallel task in its own worktree.
+ 
++
+   ╭──────────────────────────────────────────────────────────────────────────╮
+   │ ❯                                                                        │
+   ╰──────────────────────────────────────────── Grok Build · always-approve ─╯

@@ -1,0 +1,96 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                      │ 22K / 512K │"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     ❯ list the files in this directory                              4:37 PM"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     • src/ — Top-level source (lib.rs)"
+      },
+      {
+        "type": "text",
+        "content": "     • target/ — Build artifacts (debug)"
+      },
+      {
+        "type": "text",
+        "content": "     • tmp_config/ — Temporary config / runtime data"
+      },
+      {
+        "type": "text",
+        "content": "     • ui/ — UI-related files (dumps, etc.)"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     Would you like me to list a specific subdirectory (e.g."
+      },
+      {
+        "type": "text",
+        "content": "     crates/runie-tui/src or crates/runie-cli) in more detail?                 █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "     Turn completed in 8.8s.                                                   █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯                                                                        │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰───────────────────────────────────────────────────────────── Grok Build ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Shift+Tab:mode  │  Ctrl+.:shortcuts"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

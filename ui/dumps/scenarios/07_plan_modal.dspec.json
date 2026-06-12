@@ -1,0 +1,95 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                      │ 22K / 512K │"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     ❯ //plan                                                        4:38 PM"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  ◆ Thinking…"
+      },
+      {
+        "type": "text",
+        "content": "  ┃"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  The user sent \"//plan\". Looking at the system prompt and skills, this"
+      },
+      {
+        "type": "text",
+        "content": "  ┃  seems related to the \"design\" skill or the \"execute-plan\" skill."
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "    ⠧ Thinking… 0.6s                                           2.0s ⇣22.7k [✗]"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯                                                                        │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰───────────────────────────────────────────────────────────── Grok Build ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Shift+Tab:mode  │  Ctrl+c:cancel  │  Ctrl+Enter:interject  │  Ctrl+.:"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

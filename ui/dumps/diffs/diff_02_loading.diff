@@ -1,0 +1,20 @@
+--- /Users/admin/Code/GitHub/runie/ui/dumps/compare/grok/02_welcome.txt	2026-06-02 21:45:30
++++ /Users/admin/Code/GitHub/runie/ui/dumps/compare/runie/A_02_loading.txt	2026-06-03 15:05:01
+@@ -1,7 +1,8 @@
+ 
+-   feat/grok-redesign ~/Code/GitHub/runie
++   feat/grok-redesign ~/Code/GitHub/runie/                 │ 4 / 128K │
+ 
+ 
++       ⠴ Starting session… 2.9s
+ 
+ 
+ 
+@@ -14,7 +15,6 @@
+ 
+ 
+ 
+-    ⠼ Starting session… 2.0s
+ 
+   ╭──────────────────────────────────────────────────────────────────────────╮
+   │ ❯                                                                        │

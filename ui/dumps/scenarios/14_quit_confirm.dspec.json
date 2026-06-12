@@ -1,0 +1,99 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                 │ 61K / 512K │ +3 │"
+      },
+      {
+        "type": "text",
+        "content": " ┌                                                                            ┐"
+      },
+      {
+        "type": "text",
+        "content": " │                                                                            │"
+      },
+      {
+        "type": "text",
+        "content": " │   ❯ //plan                                                        4:38 PM  │"
+      },
+      {
+        "type": "text",
+        "content": " │                                                                            │"
+      },
+      {
+        "type": "text",
+        "content": " └                                                                            ┘"
+      },
+      {
+        "type": "text",
+        "content": "     ◆ Thought for 3.9s"
+      },
+      {
+        "type": "text",
+        "content": "  ❙  ◆ Read crates/runie-tui/src/components/plan_modal/mod.rs"
+      },
+      {
+        "type": "text",
+        "content": "  ❙  ◆ Search \"TODO|FIXME|unimplemented|parity|redesign\" in …/src (1 match)"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     #1 extensions"
+      },
+      {
+        "type": "text",
+        "content": "     #2 theme"
+      },
+      {
+        "type": "text",
+        "content": "     #3 settings"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "    ⠙ Waiting… 0.3s                                             35s ⇣61.6k [✗]"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯ Build anything                                                         │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰────────────────────────────────────────────────────── Grok Build · plan ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Ctrl+q:press again to quit"
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}

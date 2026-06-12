@@ -1,0 +1,96 @@
+{
+  "width": 80,
+  "height": 24,
+  "root": {
+    "type": "col",
+    "children": [
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "   feat/grok-redesign ~/Code/GitHub/runie                      │ 25K / 512K │ "
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     ❯ list files                                                    9:52 PM   "
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     • Expand a specific directory (e.g. crates/runie-tui/src or               "
+      },
+      {
+        "type": "text",
+        "content": "     crates/runie-ai)?                                                         "
+      },
+      {
+        "type": "text",
+        "content": "     • Show only source files (ignore target/, tmp_config/, ui/                "
+      },
+      {
+        "type": "text",
+        "content": "     dumps/)?                                                                  "
+      },
+      {
+        "type": "text",
+        "content": "     • List files matching a pattern?                                          "
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "     Just say the word.                                                        "
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "text",
+        "content": "     Turn completed in 7.2s.                                                   █"
+      },
+      {
+        "type": "text",
+        "content": "                                                                               █"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  ╭──────────────────────────────────────────────────────────────────────────╮"
+      },
+      {
+        "type": "text",
+        "content": "  │ ❯                                                                        │"
+      },
+      {
+        "type": "text",
+        "content": "  ╰──────────────────────────────────────────── Grok Build · always-approve ─╯"
+      },
+      {
+        "type": "blank"
+      },
+      {
+        "type": "text",
+        "content": "  Shift+Tab:mode  │  Ctrl+.:shortcuts                                         "
+      },
+      {
+        "type": "blank"
+      }
+    ]
+  }
+}
