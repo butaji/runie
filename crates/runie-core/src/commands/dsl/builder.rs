@@ -313,6 +313,19 @@ mod tests {
         assert!(matches!(cmd.flow, CommandFlow::None));
     }
 
+    fn test_sub_wraps_handler() {
+        // .sub() before .handler() also wraps, so event-based
+        // commands (like login) get back-stack behavior too.
+        fn my_handler(_: &mut crate::model::AppState, _: &str) -> super::super::CommandResult {
+            super::super::CommandResult::None
+        }
+        let cmd = crate::cmd!("custom")
+            .desc("Custom sub command")
+            .sub()
+            .handler(my_handler);
+        assert!(matches!(cmd.flow, super::super::CommandFlow::Sub(_)));
+    }
+
     fn test_form_builder() {
         let fields = FormBuilder::new()
             .field("Name", "session", "name")
