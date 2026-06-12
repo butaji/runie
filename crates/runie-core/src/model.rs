@@ -220,6 +220,10 @@ pub struct AppState {
     pub prompts: Vec<crate::prompts::PromptTemplate>,
     pub current_prompt: String,
     pub image_attachments: Vec<String>,
+    /// Providers with a saved `[model_providers.{name}]` entry in
+    /// `~/.runie/config.toml`. Cached so the snapshot doesn't hit
+    /// the filesystem on every frame.
+    pub configured_providers: Vec<String>,
     pub all_collapsed: bool,
     pub(crate) last_assistant_index: Option<usize>,
     pub(crate) thought_seq: u64,
@@ -276,6 +280,10 @@ impl Default for AppState {
             prompts: Vec::new(),
             current_prompt: String::new(),
             image_attachments: Vec::new(),
+            configured_providers: crate::login_config::list_configured_providers()
+                .into_iter()
+                .map(|(name, _, _)| name)
+                .collect(),
             all_collapsed: false,
             last_assistant_index: None,
             thought_seq: 0,
@@ -620,11 +628,7 @@ impl AppState {
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
-            auth_providers: crate::auth::AuthStorage::load()
-                .tokens
-                .keys()
-                .cloned()
-                .collect(),
+            auth_providers: self.configured_providers.clone(),
             transient_message: self.transient_message.clone(),
             transient_level: self.transient_level,
             tokens_in: self.agent.tokens_in,

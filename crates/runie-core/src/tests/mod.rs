@@ -45,6 +45,8 @@ mod input_cursor;
 #[cfg(test)]
 mod input_flash;
 #[cfg(test)]
+mod login_logout;
+#[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
 mod input_history;

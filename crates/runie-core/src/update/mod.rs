@@ -329,6 +329,7 @@ impl AppState {
             );
         }
         // Save closes the whole dialog (final action).
+        self.refresh_configured_providers();
         self.open_dialog = None;
         self.login_flow = None;
         self.mark_dirty();
@@ -978,11 +979,17 @@ impl AppState {
             self.add_system_msg("Usage: /login provider token".into());
             return;
         }
-        let mut storage = crate::auth::AuthStorage::load();
-        storage.set(provider, token, None);
-        match storage.save() {
-            Ok(()) => self.add_system_msg(format!("Logged in to '{}'.", provider)),
-            Err(e) => self.add_system_msg(format!("Could not save token: {}", e)),
+        let meta = crate::provider_registry::find_provider(provider);
+        let base_url = meta.map(|p| p.base_url.to_string()).unwrap_or_default();
+        let defaults: Vec<String> = meta
+            .map(|p| p.default_models.iter().map(|s| s.to_string()).collect())
+            .unwrap_or_default();
+        match crate::login_config::save_provider_config(provider, &base_url, token, &defaults) {
+            Ok(()) => {
+                self.refresh_configured_providers();
+                self.add_system_msg(format!("Logged in to '{}'.", provider));
+            }
+            Err(e) => self.add_system_msg(format!("Could not save provider config: {}", e)),
         }
     }
 
@@ -991,12 +998,20 @@ impl AppState {
             self.add_system_msg("Usage: /logout provider".into());
             return;
         }
-        let mut storage = crate::auth::AuthStorage::load();
-        storage.remove(provider);
-        match storage.save() {
-            Ok(()) => self.add_system_msg(format!("Logged out from '{}'.", provider)),
-            Err(e) => self.add_system_msg(format!("Could not remove token: {}", e)),
+        match crate::login_config::remove_provider_config(provider) {
+            Ok(()) => {
+                self.refresh_configured_providers();
+                self.add_system_msg(format!("Logged out from '{}'.", provider));
+            }
+            Err(e) => self.add_system_msg(format!("Could not remove provider config: {}", e)),
         }
+    }
+
+    fn refresh_configured_providers(&mut self) {
+        self.configured_providers = crate::login_config::list_configured_providers()
+            .into_iter()
+            .map(|(name, _, _)| name)
+            .collect();
     }
 
     fn run_name_command(&mut self, name: &str) {
