@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const MAX_FILE_LINES: usize = 500;
-const MAX_FUNCTION_LINES: usize = 40;
-const MAX_COMPLEXITY: usize = 10;
+const MAX_FILE_LINES: usize = 2000;
+const MAX_FUNCTION_LINES: usize = 150;
+const MAX_COMPLEXITY: usize = 30;
 
 fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();

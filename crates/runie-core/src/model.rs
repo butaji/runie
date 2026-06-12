@@ -1,11 +1,11 @@
 //! Model — Application State (mutable borrow, no cloning per event)
-
-pub mod app_state;
-
 pub use crate::message::{now, ChatMessage, Role};
+use crate::snapshot::Snapshot;
+use crate::ui::elements::Element;
+use std::sync::Arc;
 
-pub(crate) const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
-pub(crate) const SPINNER_FRAMES: u32 = 12;
+const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
+const SPINNER_FRAMES: u32 = 12;
 
 /// Detect git repo name and current branch from the given directory.
 /// Walks up the tree looking for `.git` (dir or file with `gitdir:` pointer).
@@ -167,8 +167,8 @@ impl ThinkingLevel {
     /// Maps to 3-bit representation: 000=earth, 111=heaven.
     pub fn hexagram(&self) -> &'static str {
         match self {
-            Self::Off => "☷",    // 000 - earth (no thinking)
-            Self::Low => "☵",    // 010 - water (minimal thinking)
+            Self::Off => "☷",   // 000 - earth (no thinking)
+            Self::Low => "☵",   // 010 - water (minimal thinking)
             Self::Medium => "☳", // 100 - thunder (moderate thinking)
             Self::High => "☰",   // 111 - heaven (deep thinking)
         }
@@ -246,7 +246,7 @@ pub struct AppState {
     cached_model_filter: Option<String>,
 }
 
-pub(crate) fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
+fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
     let cwd = std::env::current_dir().ok();
     let cwd_name = cwd
         .as_ref()
@@ -257,7 +257,6 @@ pub(crate) fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
     (git_info, cwd_name)
 }
 
-<<<<<<< HEAD
 impl Default for AppState {
     fn default() -> Self {
         let (git_info, cwd_name) = init_git_and_cwd();
@@ -705,5 +704,3 @@ impl AppState {
         summary
     }
 }
-=======
->>>>>>> review
