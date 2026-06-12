@@ -91,6 +91,7 @@
     "r5-configurable-truncation",
     "r5-subagents",
     "r6-login-dialog-flow",
-    "unify-dialog-panelstack"
+    "unify-dialog-panelstack",
+    "win-keyboard-legacy"
   ]
 }

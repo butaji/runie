@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 mod support;
 mod smoke;
 mod session;
