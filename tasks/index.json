@@ -6,7 +6,17 @@
       "milestone": "MVP",
       "category": "Core Architecture",
       "priority": "P0",
-      "blocks": ["fix-broken-references", "fix-build-lint", "appstate-decomposition", "deduplicate-panel-types", "split-update-mod", "deduplicate-login-flow", "snapshot-dead-code", "clean-dead-modules"]
+      "completed_in": "77a605c3",
+      "blocks": [
+        "fix-broken-references",
+        "fix-build-lint",
+        "appstate-decomposition",
+        "deduplicate-panel-types",
+        "split-update-mod",
+        "deduplicate-login-flow",
+        "snapshot-dead-code",
+        "clean-dead-modules"
+      ]
     },
     {
       "id": "fix-broken-references",
@@ -14,14 +24,20 @@
       "milestone": "MVP",
       "category": "Core Architecture",
       "priority": "P0",
-      "depends_on": ["resolve-merge-conflicts"]
+      "completed_in": "0959861e",
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature \u2014 see sync-docs."
     },
     {
       "id": "wire-orphan-crates",
       "status": "done",
       "milestone": "MVP",
       "category": "Configuration",
-      "priority": "P0"
+      "priority": "P0",
+      "completed_in": "402943c5",
+      "notes": "Archived `runie-ext` and `runie-ext-macros` (broken imports). Workspace members unchanged. 3 orphan crate directories (runie-ai, runie-cli, runie-tools) remain in `crates/` but are not in the workspace \u2014 see archive-remaining-orphans."
     },
     {
       "id": "fix-build-lint",
@@ -29,7 +45,20 @@
       "milestone": "MVP",
       "category": "Core Architecture",
       "priority": "P0",
-      "depends_on": ["resolve-merge-conflicts"]
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ],
+      "completed_in": "5a80a681"
+    },
+    {
+      "id": "archive-remaining-orphans",
+      "status": "todo",
+      "milestone": "MVP",
+      "category": "Configuration",
+      "priority": "P1",
+      "depends_on": [
+        "wire-orphan-crates"
+      ]
     },
     {
       "id": "anyprovider-dynamic-dispatch",
@@ -37,7 +66,9 @@
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P0",
-      "depends_on": ["wire-orphan-crates"]
+      "depends_on": [
+        "wire-orphan-crates"
+      ]
     },
     {
       "id": "appstate-decomposition",
@@ -45,7 +76,9 @@
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P0",
-      "depends_on": ["resolve-merge-conflicts"]
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ]
     },
     {
       "id": "deduplicate-panel-types",
@@ -53,7 +86,21 @@
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P0",
-      "depends_on": ["resolve-merge-conflicts"]
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ]
+    },
+    {
+      "id": "extract-login-flow",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "depends_on": [
+        "resolve-merge-conflicts",
+        "fix-broken-references"
+      ],
+      "supersedes": "deduplicate-login-flow"
     },
     {
       "id": "split-update-mod",
@@ -61,15 +108,19 @@
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1",
-      "depends_on": ["resolve-merge-conflicts", "fix-broken-references", "deduplicate-login-flow"]
+      "depends_on": [
+        "extract-login-flow"
+      ]
     },
     {
-      "id": "deduplicate-login-flow",
+      "id": "clean-archive",
       "status": "todo",
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1",
-      "depends_on": ["resolve-merge-conflicts", "fix-broken-references"]
+      "depends_on": [
+        "archive-remaining-orphans"
+      ]
     },
     {
       "id": "consolidate-tui-tests",
@@ -91,7 +142,9 @@
       "milestone": "R2",
       "category": "Core Architecture",
       "priority": "P1",
-      "depends_on": ["resolve-merge-conflicts"]
+      "depends_on": [
+        "resolve-merge-conflicts"
+      ]
     },
     {
       "id": "clean-dead-modules",
@@ -99,7 +152,10 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
-      "depends_on": ["resolve-merge-conflicts"]
+      "depends_on": [
+        "resolve-merge-conflicts",
+        "clean-archive"
+      ]
     },
     {
       "id": "sync-docs",

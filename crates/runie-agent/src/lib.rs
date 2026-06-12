@@ -15,7 +15,7 @@ pub mod turn;
 pub use tools::{Tool, ToolResult};
 pub use turn::run_agent_turn;
 
-use runie_provider::AnyProvider;
+use runie_provider::DynProvider;
 
 #[derive(Debug, Clone)]
 pub struct AgentCommand {
@@ -31,12 +31,17 @@ pub struct AgentCommand {
     pub truncation: crate::truncate::TruncationPolicy,
 }
 
-pub fn build_provider(provider: &str, model: &str) -> AnyProvider {
-    AnyProvider::new(provider, model)
+/// Build a provider from key and model. Panics on unknown key (callers must validate).
+pub fn build_provider(provider: &str, model: &str) -> DynProvider {
+    runie_provider::build_provider(provider, model)
 }
 
-pub fn build_provider_with_warning(provider: &str, model: &str) -> (AnyProvider, Option<String>) {
-    AnyProvider::new_with_warning(provider, model)
+/// Build a provider, returning an error for unknown or unconfigured providers.
+pub fn build_provider_with_warning(
+    provider: &str,
+    model: &str,
+) -> Result<DynProvider, runie_core::ProviderError> {
+    runie_provider::build_provider_with_warning(provider, model)
 }
 
 #[cfg(test)]
