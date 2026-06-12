@@ -31,7 +31,7 @@ pub fn build_providers_dialog(current_provider: &str, current_model: &str) -> Pa
             };
 
             // Provider header (non-selectable, visual grouping).
-            panel = panel.header(&format!("── {} ──", provider_label));
+            panel = panel.header(format!("── {} ──", provider_label));
 
             // Models for this provider.
             for model in models {
@@ -49,7 +49,7 @@ pub fn build_providers_dialog(current_provider: &str, current_model: &str) -> Pa
             }
 
             // Disconnect option for this provider.
-            let disconnect_label = format!("  ✕ Disconnect");
+            let disconnect_label = "  ✕ Disconnect".to_string();
             let evt = crate::Event::ProvidersDisconnect {
                 provider: provider_name.clone(),
             };
@@ -60,7 +60,10 @@ pub fn build_providers_dialog(current_provider: &str, current_model: &str) -> Pa
     }
 
     // Add new provider option.
-    panel = panel.item("+ Add provider", ItemAction::Emit(crate::Event::ProvidersAdd));
+    panel = panel.item(
+        "+ Add provider",
+        ItemAction::Emit(crate::Event::ProvidersAdd),
+    );
 
     panel = panel.item("Close", ItemAction::Close);
 

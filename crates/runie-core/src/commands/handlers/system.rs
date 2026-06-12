@@ -107,7 +107,7 @@ pub fn register(registry: &mut CommandRegistry) {
             .sub()
             .handler(handle_providers),
     );
-    
+
     // Alias for convenience
     registry.register(
         crate::cmd!("provider")

@@ -224,8 +224,7 @@ fn esc_restores_palette_in_same_state() {
     }
     // Move selection down once so it is non-zero.
     state.update(Event::PaletteDown);
-    let (filter_before, selected_before) =
-        palette_state(&state).expect("palette should be open");
+    let (filter_before, selected_before) = palette_state(&state).expect("palette should be open");
     assert_eq!(filter_before, "thinking");
 
     state.update(Event::PaletteSelect);
@@ -235,8 +234,7 @@ fn esc_restores_palette_in_same_state() {
     );
 
     state.update(Event::DialogBack);
-    let (filter_after, selected_after) =
-        palette_state(&state).expect("palette should be restored");
+    let (filter_after, selected_after) = palette_state(&state).expect("palette should be restored");
     assert_eq!(
         filter_after, filter_before,
         "Esc must preserve palette filter"

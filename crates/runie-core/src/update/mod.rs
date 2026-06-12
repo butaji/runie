@@ -176,10 +176,9 @@ fn scroll_event(state: &mut AppState, event: Event) {
         if let Some(current) = self.open_dialog.take() {
             self.dialog_back_stack.push(current);
         }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(build_providers_dialog(
-            &self.config.current_provider,
-            &self.config.current_model,
-        )));
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(
+            build_providers_dialog(&self.config.current_provider, &self.config.current_model),
+        ));
         self.mark_dirty();
     }
 
@@ -356,14 +355,10 @@ fn input_event(state: &mut AppState, event: Event) {
             let base_url = crate::provider_registry::find_provider(&flow.provider)
                 .map(|p| p.base_url.to_string())
                 .unwrap_or_default();
-            let selected: Vec<String> =
-                flow.selected_models.iter().cloned().collect::<Vec<_>>();
+            let selected: Vec<String> = flow.selected_models.iter().cloned().collect::<Vec<_>>();
             let provider = flow.provider.clone();
             if let Err(e) = crate::login_config::save_provider_config(
-                &provider,
-                &base_url,
-                &flow.key,
-                &selected,
+                &provider, &base_url, &flow.key, &selected,
             ) {
                 self.add_system_msg(format!("Failed to save provider config: {}", e));
                 return;
@@ -1147,7 +1142,10 @@ pub(super) fn model_config_event(state: &mut AppState, event: Event) {
                         self.config.current_model.clear();
                     }
                 }
-                self.add_system_msg(format!("Disconnected '{}'. Use /providers to manage providers.", provider));
+                self.add_system_msg(format!(
+                    "Disconnected '{}'. Use /providers to manage providers.",
+                    provider
+                ));
             }
             Err(e) => self.add_system_msg(format!("Could not remove provider config: {}", e)),
         }
@@ -1524,10 +1522,9 @@ pub(super) fn model_config_event(state: &mut AppState, event: Event) {
     fn process_command_result(&mut self, result: crate::commands::CommandResult) {
         match result {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
-            crate::commands::CommandResult::Warning(msg) => self.notify(
-                msg,
-                crate::event::TransientLevel::Warning,
-            ),
+            crate::commands::CommandResult::Warning(msg) => {
+                self.notify(msg, crate::event::TransientLevel::Warning)
+            }
             crate::commands::CommandResult::Event(evt) => self.update(evt),
             crate::commands::CommandResult::OpenDialog(d) => {
                 // Android-like: if a dialog is already open (e.g. the

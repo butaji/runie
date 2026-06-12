@@ -115,16 +115,6 @@ fn format_k_animated(n: f64) -> String {
     }
 }
 
-pub(crate) fn radial_bar(percent: usize) -> char {
-    match percent {
-        0..=12 => '○',
-        13..=37 => '◔',
-        38..=62 => '◑',
-        63..=87 => '◕',
-        _ => '●',
-    }
-}
-
 pub(crate) struct ContextUsage {
     #[allow(dead_code)]
     pub(crate) used: usize,

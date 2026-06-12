@@ -19,7 +19,9 @@ pub fn command_palette(items: Vec<(String, String, Event)>) -> PanelStack {
     // navigation: selecting a command from the palette pushes the
     // palette onto the global back stack, so Esc on the sub-dialog
     // returns to the palette instead of closing the whole bar.
-    let mut panel = Panel::new("palette", " Commands ").with_filter().keep_open();
+    let mut panel = Panel::new("palette", " Commands ")
+        .with_filter()
+        .keep_open();
     let mut last_category = String::new();
     for (category, label, evt) in items {
         if category != last_category {

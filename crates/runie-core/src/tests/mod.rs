@@ -45,8 +45,6 @@ mod input_cursor;
 #[cfg(test)]
 mod input_flash;
 #[cfg(test)]
-mod login_logout;
-#[cfg(test)]
 mod input_grapheme;
 #[cfg(test)]
 mod input_history;
@@ -58,6 +56,8 @@ mod input_undo;
 mod input_word_nav;
 #[cfg(test)]
 mod line_scroll;
+#[cfg(test)]
+mod login_logout;
 #[cfg(test)]
 mod misc;
 #[cfg(test)]

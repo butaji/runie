@@ -1,6 +1,8 @@
 //! Layer 1 + Layer 3 tests for status line (left: git/folder + thinking, right: context chess piece + token throughput)
 
-use crate::status_bar::{build_left_text, build_right_status, context_piece, context_usage, context_window_for};
+use crate::status_bar::{
+    build_left_text, build_right_status, context_piece, context_usage, context_window_for,
+};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
 use runie_core::{model::ThinkingLevel, snapshot::GitInfo, AppState};
@@ -204,7 +206,10 @@ fn context_window_openai_gpt4o_is_128k() {
 
 #[test]
 fn context_window_anthropic_is_200k() {
-    assert_eq!(context_window_for("anthropic", "claude-sonnet-4-6"), 200_000);
+    assert_eq!(
+        context_window_for("anthropic", "claude-sonnet-4-6"),
+        200_000
+    );
 }
 
 #[test]
@@ -329,10 +334,7 @@ fn status_right_renders_piece_when_idle() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(
-        content.contains('⛀'),
-        "Should show chess piece on right"
-    );
+    assert!(content.contains('⛀'), "Should show chess piece on right");
 }
 
 #[test]
@@ -351,8 +353,5 @@ fn status_right_renders_turn_stats_and_piece_when_active() {
     assert!(content.contains('↑'), "Should show up arrow");
     assert!(content.contains('↓'), "Should show down arrow");
     assert!(content.contains("/s"), "Should show speed");
-    assert!(
-        content.contains('⛀'),
-        "Should show chess piece"
-    );
+    assert!(content.contains('⛀'), "Should show chess piece");
 }
