@@ -47,12 +47,9 @@ fn copy_with_no_assistant_message_shows_error() {
 #[test]
 fn copy_writes_last_assistant_text_to_clipboard_file() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-
-    // Redirect the cache dir to a temp location so we don't pollute $HOME.
     let tmp = std::env::temp_dir().join(format!("runie_copy_test_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::set_var("RUNIE_CACHE_DIR", &tmp);
-
     let mut state = fresh_state();
     state.session.messages.push(crate::model::ChatMessage {
         role: crate::model::Role::Assistant,
@@ -61,11 +58,8 @@ fn copy_writes_last_assistant_text_to_clipboard_file() {
         id: "resp.0".into(),
         ..Default::default()
     });
-
     type_str(&mut state, "/copy");
     state.update(Event::Submit);
-
-    // The handler should have written the text to a clipboard file.
     let clip = tmp.join("clipboard.md");
     assert!(clip.exists(), "clipboard file should exist at {:?}", clip);
     let content = std::fs::read_to_string(&clip).unwrap();
@@ -74,8 +68,6 @@ fn copy_writes_last_assistant_text_to_clipboard_file() {
         "clipboard file should contain assistant text, got: {:?}",
         content
     );
-
-    // And the user is told where the file is.
     let sys: Vec<_> = state
         .session
         .messages
@@ -88,7 +80,6 @@ fn copy_writes_last_assistant_text_to_clipboard_file() {
         "system message should mention the file path, got: {:?}",
         last.content
     );
-
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::remove_var("RUNIE_CACHE_DIR");
 }
@@ -96,11 +87,9 @@ fn copy_writes_last_assistant_text_to_clipboard_file() {
 #[test]
 fn copy_uses_most_recent_assistant_message() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-
     let tmp = std::env::temp_dir().join(format!("runie_copy_recent_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::set_var("RUNIE_CACHE_DIR", &tmp);
-
     let mut state = fresh_state();
     state.session.messages.push(crate::model::ChatMessage {
         role: crate::model::Role::Assistant,
@@ -116,10 +105,8 @@ fn copy_uses_most_recent_assistant_message() {
         id: "resp.1".into(),
         ..Default::default()
     });
-
     type_str(&mut state, "/copy");
     state.update(Event::Submit);
-
     let clip = tmp.join("clipboard.md");
     let content = std::fs::read_to_string(&clip).unwrap();
     assert!(
@@ -131,7 +118,6 @@ fn copy_uses_most_recent_assistant_message() {
         !content.contains("old response"),
         "should NOT copy older messages"
     );
-
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::remove_var("RUNIE_CACHE_DIR");
 }

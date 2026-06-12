@@ -7,6 +7,16 @@ mod tests {
     use crate::ui::elements::Element;
     use crate::ui::LazyCache;
 
+    fn msg(role: Role, content: &str, timestamp: f64, id: &str) -> ChatMessage {
+        ChatMessage {
+            role,
+            content: content.into(),
+            timestamp,
+            id: id.into(),
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn test_rebuild_creates_elements() {
         let mut state = AppState::default();
@@ -75,41 +85,13 @@ mod tests {
     #[test]
     fn test_every_message_has_spacer() {
         let mut state = AppState::default();
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Hello".into(),
-            timestamp: 0.0,
-            id: "req.0".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Thought,
-            content: "Thinking...".into(),
-            timestamp: 0.0,
-            id: "req.0".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content: "Hi".into(),
-            timestamp: 0.0,
-            id: "req.0".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Tool,
-            content: "Ran test 1.0s".into(),
-            timestamp: 0.0,
-            id: "req.0".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::TurnComplete,
-            content: "Turn completed in 2.0s".into(),
-            timestamp: 0.0,
-            id: "req.0".into(),
-            ..Default::default()
-        });
+        state.session.messages.extend([
+            msg(Role::User, "Hello", 0.0, "req.0"),
+            msg(Role::Thought, "Thinking...", 0.0, "req.0"),
+            msg(Role::Assistant, "Hi", 0.0, "req.0"),
+            msg(Role::Tool, "Ran test 1.0s", 0.0, "req.0"),
+            msg(Role::TurnComplete, "Turn completed in 2.0s", 0.0, "req.0"),
+        ]);
 
         let elements = LazyCache::rebuild(&state);
         for (i, elem) in elements.iter().enumerate().step_by(2) {
@@ -144,42 +126,27 @@ mod tests {
         assert!(elements.is_empty());
     }
 
+    fn kind(e: &Element) -> &'static str {
+        match e {
+            Element::UserMessage { .. } => "U",
+            Element::AgentMessage { .. } => "A",
+            Element::ThoughtMarker { .. } => "T",
+            Element::Thinking { .. } => "I",
+            Element::Spacer { .. } => "S",
+            _ => "?",
+        }
+    }
+
     #[test]
     fn test_elements_follow_timestamp_order() {
         let mut state = AppState::default();
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Q1".into(),
-            timestamp: 1.0,
-            id: "u1".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content: "A1".into(),
-            timestamp: 2.0,
-            id: "a1".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Q2".into(),
-            timestamp: 3.0,
-            id: "u2".into(),
-            ..Default::default()
-        });
+        state.session.messages.extend([
+            msg(Role::User, "Q1", 1.0, "u1"),
+            msg(Role::Assistant, "A1", 2.0, "a1"),
+            msg(Role::User, "Q2", 3.0, "u2"),
+        ]);
         state.session.messages[1].timestamp = 4.0;
-        let feed = LazyCache::feed(&state);
-        let kinds: Vec<&str> = feed
-            .elements
-            .iter()
-            .map(|e| match e {
-                Element::UserMessage { .. } => "U",
-                Element::AgentMessage { .. } => "A",
-                Element::Spacer { .. } => "S",
-                _ => "?",
-            })
-            .collect();
+        let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
             vec!["U", "S", "U", "S", "A", "S"],
@@ -190,31 +157,11 @@ mod tests {
     #[test]
     fn test_thought_ordered_by_timestamp() {
         let mut state = AppState::default();
-        state.session.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content: "Hello".into(),
-            timestamp: 1.0,
-            id: "same".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Thought,
-            content: "Thinking...".into(),
-            timestamp: 2.0,
-            id: "same".into(),
-            ..Default::default()
-        });
-        let feed = LazyCache::feed(&state);
-        let kinds: Vec<&str> = feed
-            .elements
-            .iter()
-            .map(|e| match e {
-                Element::ThoughtMarker { .. } => "T",
-                Element::AgentMessage { .. } => "A",
-                Element::Spacer { .. } => "S",
-                _ => "?",
-            })
-            .collect();
+        state.session.messages.extend([
+            msg(Role::Assistant, "Hello", 1.0, "same"),
+            msg(Role::Thought, "Thinking...", 2.0, "same"),
+        ]);
+        let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
             vec!["A", "S", "T", "S"],
@@ -254,40 +201,13 @@ mod tests {
     #[test]
     fn thinking_indicator_after_user_when_no_response_yet() {
         let mut state = AppState::default();
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Q1".into(),
-            timestamp: 0.0,
-            id: "t1".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content: "A1".into(),
-            timestamp: 1.0,
-            id: "t1".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Q2".into(),
-            timestamp: 2.0,
-            id: "t2".into(),
-            ..Default::default()
-        });
+        state.session.messages.extend([
+            msg(Role::User, "Q1", 0.0, "t1"),
+            msg(Role::Assistant, "A1", 1.0, "t1"),
+            msg(Role::User, "Q2", 2.0, "t2"),
+        ]);
         state.thinking_started_at = Some(std::time::Instant::now());
-        let feed = LazyCache::feed(&state);
-        let kinds: Vec<&str> = feed
-            .elements
-            .iter()
-            .map(|e| match e {
-                Element::UserMessage { .. } => "U",
-                Element::AgentMessage { .. } => "A",
-                Element::Thinking { .. } => "I",
-                Element::Spacer { .. } => "S",
-                _ => "?",
-            })
-            .collect();
+        let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
             vec!["U", "S", "A", "S", "U", "S", "I", "S"],
@@ -298,49 +218,15 @@ mod tests {
     #[test]
     fn thinking_indicator_ordered_by_timestamp() {
         let mut state = AppState::default();
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Q1".into(),
-            timestamp: 0.0,
-            id: "t1".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content: "A1".into(),
-            timestamp: 1.0,
-            id: "t1".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::User,
-            content: "Q2".into(),
-            timestamp: 2.0,
-            id: "t2".into(),
-            ..Default::default()
-        });
-        state.session.messages.push(ChatMessage {
-            role: Role::Assistant,
-            content: "A2 partial".into(),
-            timestamp: 3.0,
-            id: "t2".into(),
-            ..Default::default()
-        });
+        state.session.messages.extend([
+            msg(Role::User, "Q1", 0.0, "t1"),
+            msg(Role::Assistant, "A1", 1.0, "t1"),
+            msg(Role::User, "Q2", 2.0, "t2"),
+            msg(Role::Assistant, "A2 partial", 3.0, "t2"),
+        ]);
         state.thinking_started_at = Some(std::time::Instant::now());
         state.agent.current_request_id = Some("t2".into());
-        let feed = LazyCache::feed(&state);
-        let kinds: Vec<&str> = feed
-            .elements
-            .iter()
-            .map(|e| match e {
-                Element::UserMessage { .. } => "U",
-                Element::AgentMessage { .. } => "A",
-                Element::Thinking { .. } => "I",
-                Element::Spacer { .. } => "S",
-                _ => "?",
-            })
-            .collect();
-        // A2 is skipped during thinking (id=t2 matches current_request_id), Thinking at max_ts+1
+        let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
             vec!["U", "S", "A", "S", "U", "S", "I", "S"],

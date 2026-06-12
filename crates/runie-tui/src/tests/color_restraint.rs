@@ -222,7 +222,6 @@ fn thought_expanded_and_collapsed_same_style() {
 #[test]
 fn tool_expanded_and_collapsed_same_style() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    // Expanded tool
     let mut state_exp = AppState::default();
     state_exp.update(Event::AgentToolStart {
         id: "req.0".into(),
@@ -234,8 +233,6 @@ fn tool_expanded_and_collapsed_same_style() {
     });
     let term_exp = draw_state(&mut state_exp);
     let colors_exp = line_colors(&term_exp, |l| l.contains("ls"));
-
-    // Collapsed tool
     let mut state_col = AppState::default();
     state_col.update(Event::AgentToolStart {
         id: "req.0".into(),
@@ -248,7 +245,6 @@ fn tool_expanded_and_collapsed_same_style() {
     state_col.update(Event::ToggleExpand);
     let term_col = draw_state(&mut state_col);
     let colors_col = line_colors(&term_col, |l| l.contains("ls") || l.contains("[+]"));
-
     let success = color_success();
     let bright = color_fg_bright();
     assert!(

@@ -3,17 +3,28 @@ use std::sync::Mutex;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
+fn type_str(state: &mut AppState, text: &str) {
+    for c in text.chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+}
+
 fn render_slash(input: &str) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-    for c in input.chars() {
-        state.update(Event::Input(c));
-    }
-    state.update(Event::Submit);
+    type_str(&mut state, input);
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf = terminal.backend().buffer();
     buf.content.iter().map(|c| c.symbol()).collect()
+}
+
+fn buffer_lines(terminal: &Terminal<TestBackend>) -> Vec<String> {
+    let buf = terminal.backend().buffer();
+    (0..buf.area().height)
+        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect())
+        .collect()
 }
 
 fn save_test_session(store: &runie_core::session::Store, name: &str) {
@@ -52,26 +63,11 @@ fn test_render_sessions_list_on_separate_lines() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let mut state = AppState::default();
-
-    for c in "/sessions".chars() {
-        state.update(Event::Input(c));
-    }
-    state.update(Event::Submit);
+    type_str(&mut state, "/sessions");
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
-    let buf = terminal.backend().buffer();
-    let lines: Vec<String> = (0..buf.area().height)
-        .map(|y| {
-            (0..buf.area().width)
-                .map(|x| buf[(x, y)].symbol())
-                .collect::<String>()
-        })
-        .collect();
-
-    let session_line_count = lines
-        .iter()
-        .filter(|l| l.contains("alpha") || l.contains("beta"))
-        .count();
+    let lines = buffer_lines(&terminal);
+    let session_line_count = lines.iter().filter(|l| l.contains("alpha") || l.contains("beta")).count();
     assert_eq!(
         session_line_count, 2,
         "Sessions should render on 2 separate lines, got: {:?}",
