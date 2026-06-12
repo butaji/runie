@@ -187,6 +187,9 @@ pub enum Event {
     CommandFormDown,
     CommandFormSubmit,
     CommandFormClose,
+    /// ESC / dialog back: pop one panel in a dialog, close at root.
+    /// Distinct from `Abort` (force-close, bypasses stack).
+    DialogBack,
     RunSaveCommand {
         name: String,
     },

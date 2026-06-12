@@ -154,7 +154,13 @@ fn map_shift_key(code: KeyCode) -> Option<CoreEvent> {
 
 fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
-        KeyCode::Esc => Some(CoreEvent::Abort),
+        // Esc acts as a **Back button** in any open dialog (command bar,
+        // settings, login flow, model selector, etc.). The dialog's
+        // panel-stack handler interprets `DialogBack` as stack nav:
+        // pop one panel when deeper, close the dialog when at the root
+        // (the "main menu" of that bar). To force-close from any depth
+        // use `Abort` (Ctrl+\) instead.
+        KeyCode::Esc => Some(CoreEvent::DialogBack),
         KeyCode::Char('\t') | KeyCode::Tab | KeyCode::BackTab => Some(CoreEvent::Input('\t')),
         KeyCode::Char(c) => Some(CoreEvent::Input(c)),
         KeyCode::Backspace => Some(CoreEvent::Backspace),

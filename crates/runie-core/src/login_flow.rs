@@ -133,7 +133,7 @@ pub fn build_provider_picker() -> Panel {
 
     panel = panel
         .separator()
-        .item("Cancel", ItemAction::Emit(Event::LoginFlowCancel));
+        .item("_Cancel", ItemAction::Emit(Event::LoginFlowCancel));
     panel
 }
 
@@ -192,17 +192,13 @@ pub fn build_done_panel(provider_key: &str, model_count: usize) -> Panel {
         .item("Close", ItemAction::Close)
 }
 
-/// Build a PanelStack for the current login flow state.
-pub fn build_login_stack(state: &LoginFlowState) -> PanelStack {
-    match state.step {
-        LoginStep::ProviderPicker => PanelStack::new(build_provider_picker()),
-        LoginStep::KeyInput => PanelStack::new(build_key_input(&state.provider)),
-        LoginStep::ModelSelect => PanelStack::new(build_model_selector(state)),
-        LoginStep::Done => PanelStack::new(build_done_panel(
-            &state.provider,
-            state.selected_models.len(),
-        )),
-    }
+/// Build the root panel of the login dialog. The login flow uses a real
+/// `PanelStack`: this is the root (provider picker). Subsequent steps
+/// (key input, model selector) are pushed onto the stack by the event
+/// handlers in `update/mod.rs`, so ESC / Cancel pops back one level
+/// instead of closing the whole dialog.
+pub fn build_login_root() -> PanelStack {
+    PanelStack::new(build_provider_picker())
 }
 
 // ============================================================================
@@ -388,7 +384,7 @@ mod tests {
         assert!(panel
             .items
             .iter()
-            .any(|i| matches!(i, PanelItem::Action { label, .. } if label == "Cancel")));
+            .any(|i| matches!(i, PanelItem::Action { label, .. } if label == "_Cancel")));
     }
 
     #[test]
@@ -533,21 +529,16 @@ mod tests {
     }
 
     #[test]
-    fn build_login_stack_matches_step() {
-        let state = LoginFlowState::new();
-        let stack = build_login_stack(&state);
+    fn build_login_root_is_provider_picker() {
+        // The login dialog opens with the root panel (provider picker).
+        // Subsequent steps push panels onto this stack rather than
+        // rebuilding a new stack per step.
+        let stack = build_login_root();
         assert_eq!(
             stack.current().map(|p| p.id.as_str()),
             Some("login-provider")
         );
-
-        let state = state.with_provider("minimax".into());
-        let stack = build_login_stack(&state);
-        assert_eq!(stack.current().map(|p| p.id.as_str()), Some("login-key"));
-
-        let state = state.with_key_and_defaults("M3".into(), vec!["M3".into()]);
-        let stack = build_login_stack(&state);
-        assert_eq!(stack.current().map(|p| p.id.as_str()), Some("login-models"));
+        assert_eq!(stack.len(), 1);
     }
 
     // -----------------------------------------------------------------------
@@ -716,14 +707,19 @@ mod tests {
     #[test]
     fn s7_cancel_before_fetch_then_fetch_is_ignored() {
         let mut state = drive_to_model_select("minimax");
+        // Cancel from the model selector pops back to the key input
+        // (the real stack). The dialog remains open at the key step.
         state.update(Event::LoginFlowCancel);
-        assert!(state.login_flow.is_none());
+        assert!(state.login_flow.is_some(), "cancel should pop, not close");
+        let flow = state.login_flow.as_ref().unwrap();
+        assert_eq!(flow.step, LoginStep::KeyInput);
+        // A late fetch event for a step that is no longer ModelSelect
+        // must be ignored: no transient warning, no state change.
         state.update(Event::LoginFlowValidationFailed {
             provider: "minimax".into(),
             key: "sk-test".into(),
             error: "late".into(),
         });
-        assert!(state.login_flow.is_none());
         assert!(
             state.transient_message.is_none(),
             "late failure must not surface"
