@@ -1,31 +1,57 @@
-use crate::{Tool, parser::{parse_tool_calls, has_tool_calls}};
+use crate::{
+    parser::{has_tool_calls, parse_tool_calls},
+    Tool,
+};
 
 #[test]
 fn test_parse_read_file_tool() {
     let tools = parse_tool_calls("TOOL:read_file:Cargo.toml");
     assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0], Tool::ReadFile { path: "Cargo.toml".to_string(), offset: None, limit: None });
+    assert_eq!(
+        tools[0],
+        Tool::ReadFile {
+            path: "Cargo.toml".to_string(),
+            offset: None,
+            limit: None
+        }
+    );
 }
 
 #[test]
 fn test_parse_list_dir_tool() {
     let tools = parse_tool_calls("TOOL:list_dir:src");
     assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0], Tool::ListDir { path: "src".to_string() });
+    assert_eq!(
+        tools[0],
+        Tool::ListDir {
+            path: "src".to_string()
+        }
+    );
 }
 
 #[test]
 fn test_parse_write_file_tool() {
     let tools = parse_tool_calls("TOOL:write_file:hello.txt:Hello World");
     assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0], Tool::WriteFile { path: "hello.txt".to_string(), content: "Hello World".to_string() });
+    assert_eq!(
+        tools[0],
+        Tool::WriteFile {
+            path: "hello.txt".to_string(),
+            content: "Hello World".to_string()
+        }
+    );
 }
 
 #[test]
 fn test_parse_bash_tool() {
     let tools = parse_tool_calls("TOOL:bash:echo hello");
     assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0], Tool::Bash { command: "echo hello".to_string() });
+    assert_eq!(
+        tools[0],
+        Tool::Bash {
+            command: "echo hello".to_string()
+        }
+    );
 }
 
 #[test]
@@ -60,7 +86,13 @@ fn test_has_tool_calls_false() {
 fn test_parse_tool_with_extra_colons_in_content() {
     let tools = parse_tool_calls("TOOL:write_file:test.txt:line1:line2");
     assert_eq!(tools.len(), 1);
-    assert_eq!(tools[0], Tool::WriteFile { path: "test.txt".to_string(), content: "line1:line2".to_string() });
+    assert_eq!(
+        tools[0],
+        Tool::WriteFile {
+            path: "test.txt".to_string(),
+            content: "line1:line2".to_string()
+        }
+    );
 }
 
 #[test]
@@ -68,8 +100,10 @@ fn test_parse_structured_edit_tool() {
     let text = r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
-    assert!(matches!(&tools[0], Tool::EditFile { path, search, replace } if path == "src/main.rs" && search == "old" && replace == "new"
-    ));
+    assert!(
+        matches!(&tools[0], Tool::EditFile { path, search, replace } if path == "src/main.rs" && search == "old" && replace == "new"
+        )
+    );
 }
 
 #[test]
@@ -77,8 +111,10 @@ fn test_parse_structured_bash_tool() {
     let text = r#"{"name": "bash", "arguments": {"command": "echo hello"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
-    assert!(matches!(&tools[0], Tool::Bash { command } if command == "echo hello"
-    ));
+    assert!(
+        matches!(&tools[0], Tool::Bash { command } if command == "echo hello"
+        )
+    );
 }
 
 #[test]
@@ -86,13 +122,16 @@ fn test_parse_structured_read_file() {
     let text = r#"{"name": "read_file", "arguments": {"path": "Cargo.toml"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
-    assert!(matches!(&tools[0], Tool::ReadFile { path, .. } if path == "Cargo.toml"
-    ));
+    assert!(
+        matches!(&tools[0], Tool::ReadFile { path, .. } if path == "Cargo.toml"
+        )
+    );
 }
 
 #[test]
 fn test_parse_mixed_formats() {
-    let text = "TOOL:bash:echo hi\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"Cargo.toml\"}}";
+    let text =
+        "TOOL:bash:echo hi\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"Cargo.toml\"}}";
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 2);
 }

@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::model::AppState;
     use crate::event::Event;
+    use crate::model::AppState;
 
     #[test]
     fn cursor_moves_by_grapheme_not_byte() {
@@ -119,10 +119,10 @@ mod tests {
         // Now at end of "a\nb" (cursor after 'b')
         assert_eq!(state.input.input, "a\nb");
         assert_eq!(state.input.cursor_pos, 3); // After 'a\n' (2 chars) + 'b' (1 char)
-        // Move cursor back to after the newline (start of second line)
+                                               // Move cursor back to after the newline (start of second line)
         state.update(Event::CursorLeft);
         assert_eq!(state.input.cursor_pos, 2); // After 'a\n'
-        // Backspace should remove the newline and join lines
+                                               // Backspace should remove the newline and join lines
         state.update(Event::Backspace);
         assert_eq!(state.input.input, "ab");
         assert_eq!(state.input.cursor_pos, 1); // Cursor at position 1 (after removing newline and 'a')
@@ -173,8 +173,14 @@ mod tests {
         state.update(Event::Input('o'));
         state.update(Event::Submit);
         // Command should have run and added output
-        assert!(state.session.messages.iter().any(|m| m.content.contains("hello")),
-            "Should have hello in output");
+        assert!(
+            state
+                .session
+                .messages
+                .iter()
+                .any(|m| m.content.contains("hello")),
+            "Should have hello in output"
+        );
     }
 
     #[test]
@@ -186,7 +192,10 @@ mod tests {
         state.update(Event::Input('d'));
         state.update(Event::Submit);
         // Should not add to request queue
-        assert!(state.agent.request_queue.is_empty(), "Bash command should not be queued for agent");
+        assert!(
+            state.agent.request_queue.is_empty(),
+            "Bash command should not be queued for agent"
+        );
     }
 
     #[test]
@@ -199,7 +208,10 @@ mod tests {
         state.update(Event::Input('o'));
         state.update(Event::Submit);
         // Should add user message and queue for agent
-        assert!(!state.agent.request_queue.is_empty(), "Regular submit should queue for agent");
+        assert!(
+            !state.agent.request_queue.is_empty(),
+            "Regular submit should queue for agent"
+        );
         assert_eq!(state.session.messages.len(), 1, "Should have one message");
     }
 

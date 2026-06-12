@@ -11,10 +11,9 @@ use crate::markdown::{
     extract_code_blocks, md_to_spans, parse_inline_markdown_with_color, CodeBlock,
 };
 use crate::theme::{
-    color_bg_panel, color_fg, color_fg_bright, style_agent, style_code_header,
-    style_thinking, style_thought, style_timestamp, style_tool_header, style_tool_output,
-    style_tool_running, style_tool_summary, style_turn_complete, style_user, GLYPH_AGENT,
-    GLYPH_INDENT, GLYPH_USER,
+    color_bg_panel, color_fg, color_fg_bright, style_agent, style_thinking, style_thought,
+    style_timestamp, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
+    style_turn_complete, style_user, GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
 };
 
 mod code;
@@ -43,6 +42,7 @@ fn margin_line(width: u16, style: Style) -> Line<'static> {
 
 use wrap::word_wrap;
 
+#[allow(clippy::too_many_arguments)]
 fn build_user_line(
     chunk: &str,
     prefix: &'static str,
@@ -198,7 +198,12 @@ pub fn render_agent_message(
                 }
             }
             CodeBlock::Code { lang, content } => {
-                lines.push(code::render_code_header(&lang, is_first, inner_width, &ts_str));
+                lines.push(code::render_code_header(
+                    &lang,
+                    is_first,
+                    inner_width,
+                    &ts_str,
+                ));
                 is_first = false;
                 lines.extend(code::render_code_block_lines(&content, &lang));
             }

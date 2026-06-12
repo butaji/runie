@@ -84,7 +84,10 @@ mod tests {
     fn trust_sets_decision() {
         let mut tm = TrustManager::default();
         tm.set(Path::new("/foo"), TrustDecision::Trusted);
-        assert_eq!(tm.decision_for(Path::new("/foo")), Some(TrustDecision::Trusted));
+        assert_eq!(
+            tm.decision_for(Path::new("/foo")),
+            Some(TrustDecision::Trusted)
+        );
     }
 
     #[test]
@@ -116,11 +119,16 @@ mod tests {
         let json = serde_json::to_string_pretty(&tm).unwrap();
         std::fs::write(&path, json).unwrap();
 
-        let loaded: TrustManager = serde_json::from_str(
-            &std::fs::read_to_string(&path).unwrap()
-        ).unwrap();
+        let loaded: TrustManager =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
 
-        assert_eq!(loaded.decision_for(Path::new("/project/a")), Some(TrustDecision::Trusted));
-        assert_eq!(loaded.decision_for(Path::new("/project/b")), Some(TrustDecision::Untrusted));
+        assert_eq!(
+            loaded.decision_for(Path::new("/project/a")),
+            Some(TrustDecision::Trusted)
+        );
+        assert_eq!(
+            loaded.decision_for(Path::new("/project/b")),
+            Some(TrustDecision::Untrusted)
+        );
     }
 }

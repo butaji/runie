@@ -39,7 +39,11 @@ fn scrollbar_shows_when_content_overflows() {
     state.messages_changed();
     state.ensure_fresh();
     let (thumb, _offset) = state.scrollbar_metrics(10);
-    assert!(thumb > 0, "Scrollbar thumb should be visible when content overflows, count={}", state.count());
+    assert!(
+        thumb > 0,
+        "Scrollbar thumb should be visible when content overflows, count={}",
+        state.count()
+    );
 }
 
 #[test]
@@ -166,8 +170,20 @@ fn scrollbar_thumb_never_exceeds_track() {
     for scroll in [0, 5, 10, 20, 50, 100] {
         state.view.scroll = scroll;
         let (thumb, offset) = state.scrollbar_metrics(10);
-        assert!(thumb <= 10, "thumb={} must not exceed track=10 at scroll={}", thumb, scroll);
-        assert!(offset + thumb <= 10, "thumb+offset={}+{}={} must not exceed track=10 at scroll={}", thumb, offset, thumb + offset, scroll);
+        assert!(
+            thumb <= 10,
+            "thumb={} must not exceed track=10 at scroll={}",
+            thumb,
+            scroll
+        );
+        assert!(
+            offset + thumb <= 10,
+            "thumb+offset={}+{}={} must not exceed track=10 at scroll={}",
+            thumb,
+            offset,
+            thumb + offset,
+            scroll
+        );
     }
 }
 
@@ -191,7 +207,11 @@ fn scrollbar_consistent_between_offset_and_metrics() {
         let max_scroll = state.view.total_lines.saturating_sub(10);
         let clamped_scroll = scroll.min(max_scroll);
         let expected_offset = max_scroll.saturating_sub(clamped_scroll);
-        assert_eq!(offset, expected_offset, "scroll_offset mismatch at scroll={}", scroll);
+        assert_eq!(
+            offset, expected_offset,
+            "scroll_offset mismatch at scroll={}",
+            scroll
+        );
     }
 }
 
@@ -254,7 +274,10 @@ fn pagedown_scrolls_down_by_five_lines() {
     state.view.scroll = 20;
 
     state.update(Event::PageDown);
-    assert_eq!(state.view.scroll, 15, "PageDown should scroll down by 5 lines");
+    assert_eq!(
+        state.view.scroll, 15,
+        "PageDown should scroll down by 5 lines"
+    );
 
     state.update(Event::PageDown);
     assert_eq!(state.view.scroll, 10, "PageDown should accumulate");
@@ -287,7 +310,10 @@ fn pagedown_stops_at_zero() {
 fn pageup_flashes_when_empty() {
     let mut state = fresh_state();
     state.update(Event::PageUp);
-    assert!(state.input.input_flash > 0, "PageUp on empty feed should flash");
+    assert!(
+        state.input.input_flash > 0,
+        "PageUp on empty feed should flash"
+    );
 }
 
 #[test]
@@ -307,7 +333,10 @@ fn pagedown_flashes_at_bottom() {
     state.view.scroll = 0;
 
     state.update(Event::PageDown);
-    assert!(state.input.input_flash > 0, "PageDown at bottom should flash");
+    assert!(
+        state.input.input_flash > 0,
+        "PageDown at bottom should flash"
+    );
 }
 
 #[test]
@@ -325,9 +354,13 @@ fn scrollbar_with_single_message() {
     let (thumb, offset) = state.scrollbar_metrics(1);
     let total = state.view.total_lines;
     if total > 1 {
-        assert!(thumb > 0, "Should have thumb when total={} > height=1", total);
+        assert!(
+            thumb > 0,
+            "Should have thumb when total={} > height=1",
+            total
+        );
     } else {
         assert_eq!(thumb, 0, "No thumb when content fits");
     }
-    assert_eq!(offset + thumb <= 1, true, "thumb+offset must fit in track");
+    assert!(offset + thumb <= 1, "thumb+offset must fit in track");
 }

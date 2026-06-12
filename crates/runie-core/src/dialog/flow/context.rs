@@ -1,7 +1,7 @@
 //! Flow Context and Results
 
-use std::collections::HashMap;
 use crate::commands::CommandResult;
+use std::collections::HashMap;
 
 /// Flow context - shared state across steps
 #[derive(Debug, Clone, Default)]
@@ -57,12 +57,24 @@ pub enum FlowResult {
 }
 
 impl FlowResult {
-    pub fn next() -> Self { Self::Next }
-    pub fn prev() -> Self { Self::Prev }
-    pub fn jump(i: usize) -> Self { Self::Jump(i) }
-    pub fn branch(name: impl Into<String>) -> Self { Self::Branch(name.into()) }
-    pub fn done(result: CommandResult) -> Self { Self::Done(result) }
-    pub fn error(msg: impl Into<String>) -> Self { Self::Error(msg.into()) }
+    pub fn next() -> Self {
+        Self::Next
+    }
+    pub fn prev() -> Self {
+        Self::Prev
+    }
+    pub fn jump(i: usize) -> Self {
+        Self::Jump(i)
+    }
+    pub fn branch(name: impl Into<String>) -> Self {
+        Self::Branch(name.into())
+    }
+    pub fn done(result: CommandResult) -> Self {
+        Self::Done(result)
+    }
+    pub fn error(msg: impl Into<String>) -> Self {
+        Self::Error(msg.into())
+    }
 }
 
 #[cfg(test)]
@@ -85,7 +97,10 @@ mod tests {
         assert!(matches!(FlowResult::next(), FlowResult::Next));
         assert!(matches!(FlowResult::prev(), FlowResult::Prev));
         assert!(matches!(FlowResult::jump(5), FlowResult::Jump(5)));
-        assert!(matches!(FlowResult::done(CommandResult::None), FlowResult::Done(_)));
+        assert!(matches!(
+            FlowResult::done(CommandResult::None),
+            FlowResult::Done(_)
+        ));
         assert!(matches!(FlowResult::error("fail"), FlowResult::Error(msg) if msg == "fail"));
     }
 }

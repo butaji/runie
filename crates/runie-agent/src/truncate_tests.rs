@@ -4,7 +4,9 @@ use crate::truncate::{truncate_head, truncate_tail, TruncationPolicy};
 fn policy_from_toml() {
     // Configurable from config.toml. This is the parse-side of the new feature.
     #[derive(serde::Deserialize)]
-    struct Wrap { truncation: crate::truncate::TruncationConfig }
+    struct Wrap {
+        truncation: crate::truncate::TruncationConfig,
+    }
     let toml = r#"
 [truncation]
 max_lines = 500
@@ -19,7 +21,10 @@ max_bytes = 10000
 fn policy_from_toml_defaults() {
     // No [truncation] section — fields fall back to defaults.
     #[derive(serde::Deserialize)]
-    struct Wrap { #[serde(default)] truncation: crate::truncate::TruncationConfig }
+    struct Wrap {
+        #[serde(default)]
+        truncation: crate::truncate::TruncationConfig,
+    }
     let parsed: Wrap = toml::from_str("").unwrap();
     assert_eq!(parsed.truncation.max_lines, 2000);
     assert_eq!(parsed.truncation.max_bytes, 50 * 1024);
@@ -43,7 +48,10 @@ fn policy_from_section_zero_means_default() {
 }
 
 fn policy(lines: usize, bytes: usize) -> TruncationPolicy {
-    TruncationPolicy { max_lines: lines, max_bytes: bytes }
+    TruncationPolicy {
+        max_lines: lines,
+        max_bytes: bytes,
+    }
 }
 
 #[test]

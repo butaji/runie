@@ -1,6 +1,6 @@
-use crate::model::AppState;
-use crate::event::Event;
 use crate::commands::DialogState;
+use crate::event::Event;
+use crate::model::AppState;
 
 #[test]
 fn at_ref_opens_file_picker_dialog() {
@@ -22,7 +22,11 @@ fn at_ref_dialog_has_file_items() {
     };
     let panel = stack.current().expect("PanelStack should have a panel");
     let nav_count = panel.navigable_count();
-    assert!(nav_count > 0, "File picker should have at least one file item, got {}", nav_count);
+    assert!(
+        nav_count > 0,
+        "File picker should have at least one file item, got {}",
+        nav_count
+    );
 }
 
 #[test]
@@ -48,14 +52,24 @@ fn at_ref_select_inserts_file_path() {
             _ => panic!("Expected PanelStack dialog"),
         };
         let panel = stack.current().expect("Panel should exist");
-        panel.items.iter().find_map(|item| match item {
-            crate::dialog::PanelItem::Action { label, .. } => Some(label.clone()),
-            _ => None,
-        }).expect("Should have at least one Action item")
+        panel
+            .items
+            .iter()
+            .find_map(|item| match item {
+                crate::dialog::PanelItem::Action { label, .. } => Some(label.clone()),
+                _ => None,
+            })
+            .expect("Should have at least one Action item")
     };
     state.update(Event::Submit);
-    assert_eq!(state.input.input, path, "Should insert filepath after selection");
-    assert!(state.open_dialog.is_none(), "Dialog should close after selection");
+    assert_eq!(
+        state.input.input, path,
+        "Should insert filepath after selection"
+    );
+    assert!(
+        state.open_dialog.is_none(),
+        "Dialog should close after selection"
+    );
 }
 
 #[test]

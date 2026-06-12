@@ -52,17 +52,23 @@ fn config_round_trip() {
     let mut cfg = Config::default();
     cfg.models.default = Some("glm-4.7".to_string());
     let mut providers = HashMap::new();
-    providers.insert("local".to_string(), ModelProvider {
-        provider_type: None,
-        base_url: "http://localhost:11434/v1".to_string(),
-        api_key: "ollama".to_string(),
-    });
+    providers.insert(
+        "local".to_string(),
+        ModelProvider {
+            provider_type: None,
+            base_url: "http://localhost:11434/v1".to_string(),
+            api_key: "ollama".to_string(),
+        },
+    );
     cfg.model_providers = providers;
 
     let serialized = toml::to_string_pretty(&cfg).unwrap();
     let parsed: Config = toml::from_str(&serialized).unwrap();
     assert_eq!(parsed.models.default, Some("glm-4.7".to_string()));
-    assert_eq!(parsed.model_providers.get("local").unwrap().base_url, "http://localhost:11434/v1");
+    assert_eq!(
+        parsed.model_providers.get("local").unwrap().base_url,
+        "http://localhost:11434/v1"
+    );
 }
 
 #[test]
@@ -76,7 +82,9 @@ base_url = "https://openrouter.ai/api/v1"
 api_key = "sk-or-..."
 "#;
     let cfg: Config = toml::from_str(toml).unwrap();
-    let provider = cfg.provider_for_model("openrouter/anthropic/claude-sonnet-4-6").unwrap();
+    let provider = cfg
+        .provider_for_model("openrouter/anthropic/claude-sonnet-4-6")
+        .unwrap();
     assert_eq!(provider.base_url, "https://openrouter.ai/api/v1");
     assert_eq!(provider.api_key, "sk-or-...");
 }
@@ -92,9 +100,7 @@ base_url = "http://localhost:11434/v1"
 api_key = "ollama"
 "#;
     let cfg: Config = toml::from_str(toml).unwrap();
-    let provider = AnyProvider::from_config(&cfg,
-        cfg.default_model().unwrap(),
-    );
+    let provider = AnyProvider::from_config(&cfg, cfg.default_model().unwrap());
     assert_eq!(provider.name(), "openai");
     assert_eq!(provider.model(), "local/llama3.1");
 }

@@ -1,10 +1,15 @@
-use super::{Panel, PanelItem, PanelStack, ItemAction};
+use super::{ItemAction, Panel, PanelItem, PanelStack};
 
 fn sample_panel() -> Panel {
     Panel::new("root", "Settings")
         .header("Appearance")
-        .toggle("Dark mode", true, "dark_mode")
-        .select("Theme", "runie", vec!["runie".into(), "dracula".into(), "nord".into()], "theme")
+        .toggle("Dark mode", true, ItemAction::Toggle("dark_mode".into()))
+        .select(
+            "Theme",
+            "runie",
+            vec!["runie".into(), "dracula".into(), "nord".into()],
+            "theme",
+        )
         .separator()
         .header("Behavior")
         .item("Open advanced", ItemAction::Push("advanced".into()))
@@ -114,7 +119,7 @@ fn panel_selected_item_returns_correct_item() {
 fn panel_builder_chains() {
     let panel = Panel::new("test", "Test")
         .item("Do thing", ItemAction::Close)
-        .toggle("Flag", false, "flag")
+        .toggle("Flag", false, ItemAction::Toggle("flag".into()))
         .select("Choice", "a", vec!["a".into(), "b".into()], "choice")
         .header("Section")
         .separator();
@@ -142,28 +147,50 @@ fn panel_filter_tracks_text() {
 // ─── PanelStack activate ────────────────────────────────────────────────
 
 #[test]
+fn stack_pop_protects_root() {
+    let mut stack = PanelStack::new(Panel::new("root", "Root"));
+    assert_eq!(stack.len(), 1);
+    assert!(stack.pop().is_none(), "pop on root must be a no-op");
+    assert_eq!(stack.len(), 1);
+}
+
+#[test]
+fn stack_push_then_pop_returns_top() {
+    let mut stack = PanelStack::new(Panel::new("root", "Root"));
+    stack.push(Panel::new("child", "Child"));
+    assert_eq!(stack.len(), 2);
+    let popped = stack.pop().expect("must pop child");
+    assert_eq!(popped.id, "child");
+    assert_eq!(stack.len(), 1);
+    assert_eq!(stack.current().unwrap().id, "root");
+}
+
+#[test]
 fn stack_activate_on_toggle_returns_toggle_action() {
-    let mut stack = PanelStack::new(
-        Panel::new("test", "Test").toggle("Flag", false, "flag_key")
-    );
+    let mut stack = PanelStack::new(Panel::new("test", "Test").toggle(
+        "Flag",
+        false,
+        ItemAction::Toggle("flag_key".into()),
+    ));
     let action = stack.activate();
     assert!(matches!(action, Some(ItemAction::Toggle(k)) if k == "flag_key"));
 }
 
 #[test]
 fn stack_activate_on_select_returns_cycle_action() {
-    let mut stack = PanelStack::new(
-        Panel::new("test", "Test").select("Choice", "a", vec!["a".into(), "b".into()], "choice_key")
-    );
+    let mut stack = PanelStack::new(Panel::new("test", "Test").select(
+        "Choice",
+        "a",
+        vec!["a".into(), "b".into()],
+        "choice_key",
+    ));
     let action = stack.activate();
     assert!(matches!(action, Some(ItemAction::Cycle(k)) if k == "choice_key"));
 }
 
 #[test]
 fn stack_activate_on_action_returns_clone() {
-    let mut stack = PanelStack::new(
-        Panel::new("test", "Test").item("Close", ItemAction::Close)
-    );
+    let mut stack = PanelStack::new(Panel::new("test", "Test").item("Close", ItemAction::Close));
     let action = stack.activate();
     assert!(matches!(action, Some(ItemAction::Close)));
 }
@@ -190,9 +217,17 @@ fn panel_filtered_items_hides_non_matching() {
         .item("xyz", ItemAction::Close);
     panel.push_filter('a');
     let filtered = panel.filtered_items();
-    assert_eq!(filtered.len(), 2, "Header + matching 'alpha'");
-    assert!(filtered.iter().any(|i| matches!(i, PanelItem::Action { label, .. } if label == "alpha")));
-    assert!(!filtered.iter().any(|i| matches!(i, PanelItem::Action { label, .. } if label == "xyz")));
+    assert_eq!(
+        filtered.len(),
+        1,
+        "Only matching navigable items when filtering"
+    );
+    assert!(filtered
+        .iter()
+        .any(|i| matches!(i, PanelItem::Action { label, .. } if label == "alpha")));
+    assert!(!filtered
+        .iter()
+        .any(|i| matches!(i, PanelItem::Action { label, .. } if label == "xyz")));
 }
 
 #[test]
@@ -203,11 +238,13 @@ fn panel_filtered_items_is_case_insensitive() {
         .item("beta", ItemAction::Close);
     panel.push_filter('a');
     let filtered = panel.filtered_items();
-    assert!(filtered.iter().any(|i| matches!(i, PanelItem::Action { label, .. } if label == "ALPHA")));
+    assert!(filtered
+        .iter()
+        .any(|i| matches!(i, PanelItem::Action { label, .. } if label == "ALPHA")));
 }
 
 #[test]
-fn panel_filtered_items_keeps_header_with_match() {
+fn panel_filtered_items_drops_headers_when_filtering() {
     let mut panel = Panel::new("test", "Test")
         .with_filter()
         .header("Group A")
@@ -216,6 +253,61 @@ fn panel_filtered_items_keeps_header_with_match() {
         .item("bob", ItemAction::Close);
     panel.push_filter('a');
     let filtered = panel.filtered_items();
-    assert!(filtered.iter().any(|i| matches!(i, PanelItem::Header(t) if t == "Group A")));
-    assert!(!filtered.iter().any(|i| matches!(i, PanelItem::Header(t) if t == "Group B")));
+    assert_eq!(filtered.len(), 1, "Headers dropped when filtering");
+    assert!(filtered
+        .iter()
+        .any(|i| matches!(i, PanelItem::Action { label, .. } if label == "alice")));
+    assert!(!filtered
+        .iter()
+        .any(|i| matches!(i, PanelItem::Header(t) if t == "Group A")));
+    assert!(!filtered
+        .iter()
+        .any(|i| matches!(i, PanelItem::Header(t) if t == "Group B")));
+}
+
+// ─── Accelerator parsing ────────────────────────────────────────────────
+
+#[test]
+fn parse_accel_finds_letter() {
+    assert_eq!(super::parse_accel("_Submit"), Some('S'));
+    assert_eq!(super::parse_accel("_Cancel"), Some('C'));
+    assert_eq!(super::parse_accel("Sa_ve"), Some('v'));
+}
+
+#[test]
+fn parse_accel_none_when_no_underscore() {
+    assert_eq!(super::parse_accel("Submit"), None);
+    assert_eq!(super::parse_accel(""), None);
+}
+
+#[test]
+fn parse_accel_none_when_underscore_last() {
+    assert_eq!(super::parse_accel("Submit_"), None);
+}
+
+#[test]
+fn strip_accel_removes_underscore() {
+    assert_eq!(super::strip_accel("_Submit"), "Submit");
+    assert_eq!(super::strip_accel("_Cancel"), "Cancel");
+    assert_eq!(super::strip_accel("Submit"), "Submit");
+}
+
+#[test]
+fn find_button_by_accel_matches_case_insensitive() {
+    let panel = Panel::new("test", "Test")
+        .item("_Submit", ItemAction::Close)
+        .item("_Cancel", ItemAction::Push("back".into()));
+    assert!(matches!(
+        panel.find_button_by_accel('S'),
+        Some(ItemAction::Close)
+    ));
+    assert!(matches!(
+        panel.find_button_by_accel('s'),
+        Some(ItemAction::Close)
+    ));
+    assert!(matches!(
+        panel.find_button_by_accel('C'),
+        Some(ItemAction::Push(_))
+    ));
+    assert!(panel.find_button_by_accel('X').is_none());
 }

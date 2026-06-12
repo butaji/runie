@@ -37,8 +37,7 @@ pub async fn share_session(
     }
 
     let json: serde_json::Value = resp.json().await?;
-    parse_gist_url(&json)
-        .ok_or_else(|| anyhow::anyhow!("Could not extract gist URL from response"))
+    parse_gist_url(&json).ok_or_else(|| anyhow::anyhow!("Could not extract gist URL from response"))
 }
 
 /// Extract the HTML URL from a GitHub gist creation response.

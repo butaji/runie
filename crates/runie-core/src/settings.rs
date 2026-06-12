@@ -33,7 +33,10 @@ impl SettingsCategory {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SettingValue {
     Bool(bool),
-    Enum { current: String, options: Vec<String> },
+    Enum {
+        current: String,
+        options: Vec<String>,
+    },
 }
 
 /// A single setting item displayed in the dialog.
@@ -47,7 +50,13 @@ pub struct SettingItem {
 }
 
 impl SettingItem {
-    pub fn new(key: &str, label: &str, value: SettingValue, description: &str, category: SettingsCategory) -> Self {
+    pub fn new(
+        key: &str,
+        label: &str,
+        value: SettingValue,
+        description: &str,
+        category: SettingsCategory,
+    ) -> Self {
         Self {
             key: key.into(),
             label: label.into(),

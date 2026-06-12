@@ -1,6 +1,6 @@
-use crate::labels::{thought_with_time, tool_running, tool_done};
-use crate::model::{AppState, ChatMessage, Role};
 use super::{content_has_tool_markers, now, strip_tool_markers};
+use crate::labels::{thought_with_time, tool_done, tool_running};
+use crate::model::{AppState, ChatMessage, Role};
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
@@ -9,7 +9,9 @@ impl AppState {
         self.thinking_started_at = Some(std::time::Instant::now());
         self.agent.turn_active = true;
         self.current_action = Some("Thinking".to_string());
-        self.agent.turn_started_at.get_or_insert_with(std::time::Instant::now);
+        self.agent
+            .turn_started_at
+            .get_or_insert_with(std::time::Instant::now);
         // Init speed tracking for this turn
         self.agent.turn_tokens_out = 0;
         self.agent.last_speed_update = Some(std::time::Instant::now());
@@ -25,7 +27,12 @@ impl AppState {
         self.current_action = None;
         self.thinking_started_at = None;
         let mut insert_idx = self.session.messages.len();
-        let thought_content = if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
+        let thought_content = if let Some(idx) = self
+            .session
+            .messages
+            .iter()
+            .position(|m| m.role == Role::Assistant && m.id == id)
+        {
             let assistant = &self.session.messages[idx];
             let has_tools = content_has_tool_markers(&assistant.content);
             let stripped = strip_tool_markers(&assistant.content);
@@ -67,14 +74,11 @@ impl AppState {
             id: tool_id,
             ..Default::default()
         });
-        self.telemetry.track_event(
-            "tool_usage",
-            {
-                let mut m = std::collections::HashMap::new();
-                m.insert("tool".into(), name);
-                m
-            },
-        );
+        self.telemetry.track_event("tool_usage", {
+            let mut m = std::collections::HashMap::new();
+            m.insert("tool".into(), name);
+            m
+        });
         self.messages_changed();
     }
 
@@ -82,9 +86,12 @@ impl AppState {
         self.current_action = None;
         self.agent.tool_started_at = None;
         if let Some(name) = self.agent.current_tool_name.take() {
-            if let Some(idx) = self.session.messages.iter().rposition(|m| {
-                m.role == Role::Tool && m.content.contains("⠋ Running ")
-            }) {
+            if let Some(idx) = self
+                .session
+                .messages
+                .iter()
+                .rposition(|m| m.role == Role::Tool && m.content.contains("⠋ Running "))
+            {
                 if let Some(last) = self.session.messages.get_mut(idx) {
                     last.content = if output.trim().is_empty() {
                         tool_done(&name, duration_secs)
@@ -120,7 +127,12 @@ impl AppState {
             }
         }
         // Fallback: search for existing message
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::Assistant && m.id == id) {
+        if let Some(idx) = self
+            .session
+            .messages
+            .iter()
+            .position(|m| m.role == Role::Assistant && m.id == id)
+        {
             if let Some(msg) = self.session.messages.get_mut(idx) {
                 if !content.is_empty() {
                     msg.content.push_str(&content);
@@ -150,7 +162,12 @@ impl AppState {
     pub(crate) fn complete_turn(&mut self, id: String, duration_secs: f64) {
         let content = format!("Turn completed in {:.1}s", duration_secs);
         let ts = now();
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == id) {
+        if let Some(idx) = self
+            .session
+            .messages
+            .iter()
+            .position(|m| m.role == Role::TurnComplete && m.id == id)
+        {
             self.session.messages[idx].content = content;
             self.session.messages[idx].timestamp = ts;
         } else {
@@ -186,9 +203,9 @@ impl AppState {
     }
 
     fn remove_empty_assistant(&mut self) {
-        self.session.messages.retain(|msg| {
-            !(msg.role == Role::Assistant && msg.content.trim().is_empty())
-        });
+        self.session
+            .messages
+            .retain(|msg| !(msg.role == Role::Assistant && msg.content.trim().is_empty()));
     }
 
     fn clear_turn_state(&mut self, id: &str) {
@@ -218,8 +235,16 @@ impl AppState {
     }
 
     fn reorder_agent_after_tools(&mut self) {
-        let last_assistant = self.session.messages.iter().rposition(|m| m.role == Role::Assistant);
-        let last_tool = self.session.messages.iter().rposition(|m| m.role == Role::Tool);
+        let last_assistant = self
+            .session
+            .messages
+            .iter()
+            .rposition(|m| m.role == Role::Assistant);
+        let last_tool = self
+            .session
+            .messages
+            .iter()
+            .rposition(|m| m.role == Role::Tool);
         if let (Some(a_idx), Some(t_idx)) = (last_assistant, last_tool) {
             if a_idx < t_idx {
                 let mut agent = self.session.messages.remove(a_idx);
@@ -234,7 +259,12 @@ impl AppState {
     }
 
     fn move_turn_complete_to_end(&mut self, id: &str) {
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == id) {
+        if let Some(idx) = self
+            .session
+            .messages
+            .iter()
+            .position(|m| m.role == Role::TurnComplete && m.id == id)
+        {
             let mut turn_complete = self.session.messages.remove(idx);
             turn_complete.timestamp = now();
             self.session.messages.push(turn_complete);
@@ -256,7 +286,12 @@ impl AppState {
             id: format!("error.{}", id),
             provider: self.config.current_provider.clone(),
         };
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete) {
+        if let Some(idx) = self
+            .session
+            .messages
+            .iter()
+            .position(|m| m.role == Role::TurnComplete)
+        {
             error.timestamp = self.session.messages[idx].timestamp;
             self.session.messages.insert(idx, error);
         } else {

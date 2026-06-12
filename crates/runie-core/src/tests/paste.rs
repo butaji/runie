@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::model::AppState;
     use crate::event::Event;
+    use crate::model::AppState;
 
     #[test]
     fn paste_inserts_text_at_cursor() {
@@ -17,7 +17,10 @@ mod tests {
     fn paste_strips_newlines() {
         let mut state = AppState::default();
         state.update(Event::Paste("line1\nline2".to_string()));
-        assert_eq!(state.input.input, "line1line2", "Newlines should be stripped from paste");
+        assert_eq!(
+            state.input.input, "line1line2",
+            "Newlines should be stripped from paste"
+        );
     }
 
     #[test]
@@ -31,7 +34,10 @@ mod tests {
     fn paste_replaces_tabs_with_spaces() {
         let mut state = AppState::default();
         state.update(Event::Paste("a\tb".to_string()));
-        assert_eq!(state.input.input, "a    b", "Tabs should be replaced with 4 spaces");
+        assert_eq!(
+            state.input.input, "a    b",
+            "Tabs should be replaced with 4 spaces"
+        );
     }
 
     #[test]

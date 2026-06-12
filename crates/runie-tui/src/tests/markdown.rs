@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::markdown::{extract_code_blocks, parse_inline_markdown, CodeBlock};
     use ratatui::style::Modifier;
-    use crate::markdown::{parse_inline_markdown, extract_code_blocks, CodeBlock};
 
     #[test]
     fn bold_text_parsed() {
@@ -55,7 +55,10 @@ mod tests {
         let text = "Here are items:\n- first item\n- second item\n- third item";
         let blocks = extract_code_blocks(text);
         let list = blocks.iter().find_map(|b| match b {
-            CodeBlock::List { ordered: false, items } => Some(items),
+            CodeBlock::List {
+                ordered: false,
+                items,
+            } => Some(items),
             _ => None,
         });
         assert!(list.is_some(), "Should have unordered list");
@@ -71,7 +74,10 @@ mod tests {
         let text = "Steps:\n1. First step\n2. Second step\n3. Third step";
         let blocks = extract_code_blocks(text);
         let list = blocks.iter().find_map(|b| match b {
-            CodeBlock::List { ordered: true, items } => Some(items),
+            CodeBlock::List {
+                ordered: true,
+                items,
+            } => Some(items),
             _ => None,
         });
         assert!(list.is_some(), "Should have ordered list");
@@ -98,6 +104,8 @@ mod tests {
         let text = "Text\n- list item\n```rust\ncode\n```\nmore";
         let blocks = extract_code_blocks(text);
         assert!(blocks.iter().any(|b| matches!(b, CodeBlock::List { .. })));
-        assert!(blocks.iter().any(|b| matches!(b, CodeBlock::Code { lang, .. } if lang == "rust")));
+        assert!(blocks
+            .iter()
+            .any(|b| matches!(b, CodeBlock::Code { lang, .. } if lang == "rust")));
     }
 }

@@ -66,13 +66,11 @@ pub fn build_system_prompt(
     thinking_suffix: &str,
 ) -> String {
     let mut system = base_prompt.to_string();
-    system.push_str(
-        &format!(
-            " Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
+    system.push_str(&format!(
+        " Use structured JSON format: {{\"name\": \"tool_name\", \"arguments\": {{...}}}}. \
             Available tools: {}.",
-            tools_list
-        )
-    );
+        tools_list
+    ));
     if !read_only {
         system.push_str(" \
             Use edit_file for safe changes: {\"name\": \"edit_file\", \"arguments\": {\"path\": \"...\", \"search\": \"...\", \"replace\": \"...\"}}.");
@@ -89,8 +87,8 @@ pub fn build_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use std::io::Write;
+    use tempfile::tempdir;
 
     #[test]
     fn prompt_loaded_from_config() {

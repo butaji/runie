@@ -6,8 +6,15 @@ use std::path::PathBuf;
 /// A pending file mutation.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Mutation {
-    Write { path: PathBuf, content: String },
-    Edit { path: PathBuf, old: String, new: String },
+    Write {
+        path: PathBuf,
+        content: String,
+    },
+    Edit {
+        path: PathBuf,
+        old: String,
+        new: String,
+    },
 }
 
 /// Result of applying a single mutation.
@@ -26,7 +33,9 @@ pub struct FileMutationQueue {
 
 impl FileMutationQueue {
     pub fn new() -> Self {
-        Self { pending: VecDeque::new() }
+        Self {
+            pending: VecDeque::new(),
+        }
     }
 
     pub fn enqueue(&mut self, mutation: Mutation) {
@@ -81,7 +90,11 @@ fn apply_write(path: &std::path::Path, content: &str) -> MutationResult {
         }
     }
     match std::fs::write(path, content) {
-        Ok(()) => MutationResult { path: path.to_path_buf(), success: true, error: None },
+        Ok(()) => MutationResult {
+            path: path.to_path_buf(),
+            success: true,
+            error: None,
+        },
         Err(e) => MutationResult {
             path: path.to_path_buf(),
             success: false,
@@ -100,11 +113,13 @@ fn apply_edit(path: &std::path::Path, old: &str, new: &str) -> MutationResult {
     }
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,
-        Err(e) => return MutationResult {
-            path: path.to_path_buf(),
-            success: false,
-            error: Some(format!("Error reading {}: {}", path.display(), e)),
-        },
+        Err(e) => {
+            return MutationResult {
+                path: path.to_path_buf(),
+                success: false,
+                error: Some(format!("Error reading {}: {}", path.display(), e)),
+            }
+        }
     };
     if let Err(e) = validate_edit(&content, old, path) {
         return e;
@@ -119,7 +134,10 @@ fn validate_edit(content: &str, old: &str, path: &std::path::Path) -> Result<(),
         return Err(MutationResult {
             path: path.to_path_buf(),
             success: false,
-            error: Some(format!("Error: search text not found in {}", path.display())),
+            error: Some(format!(
+                "Error: search text not found in {}",
+                path.display()
+            )),
         });
     }
     if count > 1 {
@@ -128,7 +146,8 @@ fn validate_edit(content: &str, old: &str, path: &std::path::Path) -> Result<(),
             success: false,
             error: Some(format!(
                 "Error: search text appears {} times in {}. Be more specific.",
-                count, path.display()
+                count,
+                path.display()
             )),
         });
     }
@@ -137,7 +156,11 @@ fn validate_edit(content: &str, old: &str, path: &std::path::Path) -> Result<(),
 
 fn write_result(path: &std::path::Path, content: &str) -> MutationResult {
     match std::fs::write(path, content) {
-        Ok(()) => MutationResult { path: path.to_path_buf(), success: true, error: None },
+        Ok(()) => MutationResult {
+            path: path.to_path_buf(),
+            success: true,
+            error: None,
+        },
         Err(e) => MutationResult {
             path: path.to_path_buf(),
             success: false,
@@ -227,7 +250,11 @@ mod tests {
         let results = queue.flush();
         assert_eq!(results.len(), 1);
         assert!(!results[0].success);
-        assert!(results[0].error.as_ref().unwrap().contains("appears 2 times"));
+        assert!(results[0]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("appears 2 times"));
     }
 
     #[test]
@@ -245,7 +272,11 @@ mod tests {
 
         let results = queue.flush();
         assert!(!results[0].success);
-        assert!(results[0].error.as_ref().unwrap().contains("cannot be empty"));
+        assert!(results[0]
+            .error
+            .as_ref()
+            .unwrap()
+            .contains("cannot be empty"));
     }
 
     #[test]

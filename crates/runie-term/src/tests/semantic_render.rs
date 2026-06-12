@@ -14,18 +14,36 @@ fn agent_response_visible_after_large_tool() {
     state.streaming = true;
 
     // Simulate mock provider: agent response BEFORE tool
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Done!".into() });
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
-    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: "Done!".into(),
+    });
+    state.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    let output = (1..=20)
+        .map(|i| format!("file{}.txt", i))
+        .collect::<Vec<_>>()
+        .join("\n");
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output,
+    });
+    state.update(Event::AgentTurnComplete {
+        id: "req.0".into(),
+        duration_secs: 1.0,
+    });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
 
     // Terminal 40x20 -> chat panel ~16 inner rows
     let out = render(&mut state, 40, 20);
-    assert!(out.contains("Done!"), "Final agent 'Done!' must be visible after tool reorder");
+    assert!(
+        out.contains("Done!"),
+        "Final agent 'Done!' must be visible after tool reorder"
+    );
 }
 
 #[test]
@@ -33,11 +51,26 @@ fn agent_at_bottom_tool_files_above() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Here are the files.".into() });
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    let output = (1..=15).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
-    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: "Here are the files.".into(),
+    });
+    state.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    let output = (1..=15)
+        .map(|i| format!("file{}.txt", i))
+        .collect::<Vec<_>>()
+        .join("\n");
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output,
+    });
+    state.update(Event::AgentTurnComplete {
+        id: "req.0".into(),
+        duration_secs: 1.0,
+    });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -64,10 +97,22 @@ fn turn_complete_always_last_visible() {
 
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Done!".into() });
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a\nb\nc".into() });
-    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: "Done!".into(),
+    });
+    state.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "a\nb\nc".into(),
+    });
+    state.update(Event::AgentTurnComplete {
+        id: "req.0".into(),
+        duration_secs: 1.0,
+    });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
     state.view.scroll = 0;
@@ -79,5 +124,8 @@ fn turn_complete_always_last_visible() {
     let agent_pos = out.find("Done!");
     assert!(turn_pos.is_some(), "TurnComplete must be visible");
     assert!(agent_pos.is_some(), "Agent must be visible");
-    assert!(turn_pos.unwrap() > agent_pos.unwrap(), "TurnComplete must be after agent");
+    assert!(
+        turn_pos.unwrap() > agent_pos.unwrap(),
+        "TurnComplete must be after agent"
+    );
 }

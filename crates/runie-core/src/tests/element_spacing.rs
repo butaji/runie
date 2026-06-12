@@ -1,7 +1,7 @@
 //! Tests for empty line between elements in chat feed.
 
-use crate::model::AppState;
 use crate::event::Event;
+use crate::model::AppState;
 use crate::ui::LazyCache;
 
 fn fresh_state() -> AppState {
@@ -20,10 +20,18 @@ fn spacer_contributes_one_line() {
     state.update(Event::Submit);
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
-    let spacers: Vec<_> = feed.elements.iter().filter(|e| matches!(e, crate::ui::Element::Spacer { .. })).collect();
+    let spacers: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, crate::ui::Element::Spacer { .. }))
+        .collect();
     assert!(!spacers.is_empty(), "Feed should have spacers");
     for spacer in spacers {
-        assert_eq!(spacer.line_count(), 1, "Spacer must contribute exactly 1 empty line");
+        assert_eq!(
+            spacer.line_count(),
+            1,
+            "Spacer must contribute exactly 1 empty line"
+        );
     }
 }
 
@@ -36,7 +44,10 @@ fn single_user_message_has_spacer_after() {
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     assert_eq!(feed.elements.len(), 2, "UserMessage + Spacer");
-    assert!(matches!(feed.elements[1], crate::ui::Element::Spacer { .. }));
+    assert!(matches!(
+        feed.elements[1],
+        crate::ui::Element::Spacer { .. }
+    ));
     assert_eq!(feed.elements[1].line_count(), 1);
 }
 
@@ -46,14 +57,23 @@ fn two_messages_have_spacer_between_and_after() {
     state.update(Event::Input('A'));
     state.update(Event::Submit);
     state.streaming = true;
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "B".into() });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: "B".into(),
+    });
     state.update(Event::AgentDone { id: "req.0".into() });
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     // Expected: UserMessage, Spacer, AgentMessage, Spacer
     assert_eq!(feed.elements.len(), 4);
-    assert!(matches!(feed.elements[1], crate::ui::Element::Spacer { .. }));
-    assert!(matches!(feed.elements[3], crate::ui::Element::Spacer { .. }));
+    assert!(matches!(
+        feed.elements[1],
+        crate::ui::Element::Spacer { .. }
+    ));
+    assert!(matches!(
+        feed.elements[3],
+        crate::ui::Element::Spacer { .. }
+    ));
 }
 
 #[test]

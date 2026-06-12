@@ -9,7 +9,10 @@ fn diagnostics_emits_event() {
     let cmd = state.registry.get("diagnostics").unwrap();
     let cmd_name = cmd.name.clone();
     let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
-    assert!(matches!(result, crate::commands::CommandResult::Event(Event::ShowDiagnostics)));
+    assert!(matches!(
+        result,
+        crate::commands::CommandResult::Event(Event::ShowDiagnostics)
+    ));
 }
 
 #[test]
@@ -28,5 +31,9 @@ fn diagnostics_shows_providers() {
     state.config.current_model = "gpt-4o".to_string();
     state.update(Event::ShowDiagnostics);
     let last = state.session.messages.last().unwrap();
-    assert!(last.content.contains("openai/gpt-4o"), "Should show provider/model: {}", last.content);
+    assert!(
+        last.content.contains("openai/gpt-4o"),
+        "Should show provider/model: {}",
+        last.content
+    );
 }

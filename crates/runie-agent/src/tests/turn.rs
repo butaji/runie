@@ -1,5 +1,5 @@
 //! Tests for agent turn execution
-use crate::{AgentCommand, run_agent_turn, turn::build_initial_messages};
+use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand};
 use runie_core::Event;
 
 #[tokio::test]
@@ -16,7 +16,9 @@ async fn test_agent_loop_simple_response() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
+    run_agent_turn(&cmd, |evt| events.push(evt), 5)
+        .await
+        .unwrap();
 
     let thinking = events
         .iter()
@@ -50,7 +52,9 @@ async fn test_agent_loop_with_tool_call() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
+    run_agent_turn(&cmd, |evt| events.push(evt), 5)
+        .await
+        .unwrap();
 
     let tool_starts = events
         .iter()
@@ -104,7 +108,9 @@ async fn test_agent_loop_events_have_correct_id() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 5).await.unwrap();
+    run_agent_turn(&cmd, |evt| events.push(evt), 5)
+        .await
+        .unwrap();
 
     for evt in &events {
         let evt_id = match evt {
@@ -143,8 +149,14 @@ fn read_only_excludes_write_tools() {
     assert!(system.contains("list_dir"), "read-only includes list_dir");
     assert!(system.contains("grep"), "read-only includes grep");
     assert!(system.contains("find"), "read-only includes find");
-    assert!(!system.contains("write_file"), "read-only excludes write_file");
-    assert!(!system.contains("edit_file"), "read-only excludes edit_file");
+    assert!(
+        !system.contains("write_file"),
+        "read-only excludes write_file"
+    );
+    assert!(
+        !system.contains("edit_file"),
+        "read-only excludes edit_file"
+    );
     assert!(!system.contains("bash"), "read-only excludes bash");
 }
 
@@ -166,7 +178,13 @@ fn read_write_includes_all_tools() {
         runie_core::Message::System { content } => content.clone(),
         _ => panic!("expected system message"),
     };
-    assert!(system.contains("write_file"), "read-write includes write_file");
-    assert!(system.contains("edit_file"), "read-write includes edit_file");
+    assert!(
+        system.contains("write_file"),
+        "read-write includes write_file"
+    );
+    assert!(
+        system.contains("edit_file"),
+        "read-write includes edit_file"
+    );
     assert!(system.contains("bash"), "read-write includes bash");
 }

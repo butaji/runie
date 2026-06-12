@@ -2,20 +2,26 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::model::AppState;
     use crate::event::Event;
+    use crate::model::AppState;
 
     #[test]
     fn default_placeholder_is_set() {
         let state = AppState::default();
-        assert!(!state.input.placeholder.is_empty(), "Default placeholder should not be empty");
+        assert!(
+            !state.input.placeholder.is_empty(),
+            "Default placeholder should not be empty"
+        );
     }
 
     #[test]
     fn placeholder_in_snapshot_when_input_empty() {
         let mut state = AppState::default();
         let snap = state.snapshot();
-        assert!(!snap.placeholder.is_empty(), "Snapshot should contain placeholder");
+        assert!(
+            !snap.placeholder.is_empty(),
+            "Snapshot should contain placeholder"
+        );
     }
 
     #[test]

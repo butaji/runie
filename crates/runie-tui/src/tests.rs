@@ -1,29 +1,35 @@
 //! TUI smoke tests — verify view() integrates with core state
 
 #[cfg(test)]
-mod markdown;
-#[cfg(test)]
 mod code_blocks;
+#[cfg(test)]
+mod color_restraint;
 #[cfg(test)]
 mod colors;
 #[cfg(test)]
-mod color_restraint;
+mod markdown;
+#[cfg(test)]
+mod status_right;
 #[cfg(test)]
 mod style_dsl;
 #[cfg(test)]
 mod theme;
-#[cfg(test)]
-mod status_right;
 
-use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::{AppState, Event};
 
 fn draw_state(state: &mut AppState) -> String {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, state)).unwrap();
-    terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect()
+    terminal
+        .backend()
+        .buffer()
+        .content
+        .iter()
+        .map(|c| c.symbol())
+        .collect()
 }
 
 #[test]
@@ -31,7 +37,10 @@ fn empty_state_renders_input_prompt() {
     let mut state = AppState::default();
     let content = draw_state(&mut state);
     // Empty state should show input prompt with $
-    assert!(content.contains("❯ "), "Empty state should show input prompt");
+    assert!(
+        content.contains("❯ "),
+        "Empty state should show input prompt"
+    );
 }
 
 #[test]
@@ -49,9 +58,16 @@ fn user_message_renders() {
 fn agent_response_renders() {
     let mut state = AppState::default();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Hello".to_string(),
+    });
     let content = draw_state(&mut state);
     assert!(content.contains("→ Hello"), "Should render agent prefix");
 }
@@ -59,8 +75,14 @@ fn agent_response_renders() {
 #[test]
 fn tool_done_renders() {
     let mut state = AppState::default();
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_files".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: String::new() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_files".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: String::new(),
+    });
     let content = draw_state(&mut state);
     assert!(content.contains("✓"), "Should render tool done");
     assert!(content.contains("list_files"), "Should show tool name");
@@ -76,7 +98,10 @@ fn reset_clears_messages() {
     // After reset, should only show input prompt, no user messages
     // Count occurrences of "❯ " - should be exactly 1 (input prompt)
     let count = content.matches("❯ ").count();
-    assert_eq!(count, 1, "Reset should clear messages, keep only input prompt");
+    assert_eq!(
+        count, 1,
+        "Reset should clear messages, keep only input prompt"
+    );
 }
 
 #[test]
@@ -84,7 +109,10 @@ fn at_file_picker_panel_renders() {
     let mut state = AppState::default();
     state.update(Event::Input('@'));
     assert!(
-        matches!(state.open_dialog, Some(runie_core::commands::DialogState::PanelStack(_))),
+        matches!(
+            state.open_dialog,
+            Some(runie_core::commands::DialogState::PanelStack(_))
+        ),
         "@ should open PanelStack dialog"
     );
     let backend = TestBackend::new(40, 15);
@@ -123,7 +151,11 @@ fn long_message_wraps_to_multiple_lines() {
             line.contains('a')
         })
         .collect();
-    assert!(content_lines.len() >= 2, "Long message should wrap to multiple lines, got {} lines with content", content_lines.len());
+    assert!(
+        content_lines.len() >= 2,
+        "Long message should wrap to multiple lines, got {} lines with content",
+        content_lines.len()
+    );
 }
 
 #[test]
@@ -145,10 +177,18 @@ fn wrapping_preserves_prefix_on_first_line_only() {
             let line: String = (0..buf.area().width)
                 .map(|x| buf[(x, y as u16)].symbol().to_string())
                 .collect();
-            if line.contains("→ ") { Some(line.trim().to_string()) } else { None }
+            if line.contains("→ ") {
+                Some(line.trim().to_string())
+            } else {
+                None
+            }
         })
         .collect();
-    assert_eq!(lines_with_agent.len(), 1, "Only first wrapped line should contain → prefix");
+    assert_eq!(
+        lines_with_agent.len(),
+        1,
+        "Only first wrapped line should contain → prefix"
+    );
 }
 
 #[test]
@@ -175,7 +215,9 @@ fn wrapping_respects_panel_width() {
             assert!(
                 visible_len <= width as usize,
                 "Wrapped line {} chars exceeds width {}: {:?}",
-                visible_len, width, line
+                visible_len,
+                width,
+                line
             );
         }
     }
@@ -218,8 +260,17 @@ fn context_usage_on_right_side_of_status() {
     }
     let working_pos = working_pos.expect("Should find 'Working' in status bar");
     let ctx_pos = ctx_pos.expect("Should find '/128k' context usage in status bar");
-    assert!(working_pos < ctx_pos, "Working ({}) should be left of context ({})", working_pos, ctx_pos);
-    assert!(ctx_pos > 30, "Context usage should appear on right side of status bar, got pos {}", ctx_pos);
+    assert!(
+        working_pos < ctx_pos,
+        "Working ({}) should be left of context ({})",
+        working_pos,
+        ctx_pos
+    );
+    assert!(
+        ctx_pos > 30,
+        "Context usage should appear on right side of status bar, got pos {}",
+        ctx_pos
+    );
 }
 
 #[test]
@@ -230,11 +281,16 @@ fn empty_state_shows_hint() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
-    assert!(content.contains("Type a message"), "Empty state should show hint text");
+    assert!(
+        content.contains("Type a message"),
+        "Empty state should show hint text"
+    );
 }
 
 #[test]
@@ -257,11 +313,16 @@ fn input_cursor_renders_at_position() {
                 break;
             }
         }
-        if cursor_cell.is_some() { break; }
+        if cursor_cell.is_some() {
+            break;
+        }
     }
     let cell = cursor_cell.expect("should find input line with ❯ he");
     assert_eq!(cell.symbol(), "l", "Cursor should be on 'l' at position 2");
-    assert!(cell.style().bg.is_some(), "Cursor should have background color set");
+    assert!(
+        cell.style().bg.is_some(),
+        "Cursor should have background color set"
+    );
 }
 
 #[test]
@@ -274,9 +335,11 @@ fn status_shows_provider_model() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
     assert!(content.contains("openai"), "Status should show provider");
     assert!(content.contains("gpt-4"), "Status should show model");
@@ -291,11 +354,17 @@ fn status_shows_thinking_badge_when_active() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
-    assert!(content.contains("Think: medium"), "Status should show thinking level badge: {}", content);
+    assert!(
+        content.contains("Think: medium"),
+        "Status should show thinking level badge: {}",
+        content
+    );
 }
 
 #[test]
@@ -307,11 +376,17 @@ fn status_hides_thinking_badge_when_off() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content: String = (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect();
-    assert!(!content.contains("Think:"), "Status should NOT show thinking badge when off: {}", content);
+    assert!(
+        !content.contains("Think:"),
+        "Status should NOT show thinking badge when off: {}",
+        content
+    );
 }
 
 #[test]
@@ -322,13 +397,12 @@ fn palette_renders_centered() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let has_title = (0..buf.area().height)
-        .any(|y| {
-            let line: String = (0..buf.area().width)
-                .map(|x| buf[(x, y)].symbol().to_string())
-                .collect();
-            line.contains("Commands")
-        });
+    let has_title = (0..buf.area().height).any(|y| {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol().to_string())
+            .collect();
+        line.contains("Commands")
+    });
     assert!(has_title, "Palette should render with 'Commands' title");
 }
 
@@ -340,13 +414,12 @@ fn palette_shows_categories() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let has_category = (0..buf.area().height)
-        .any(|y| {
-            let line: String = (0..buf.area().width)
-                .map(|x| buf[(x, y)].symbol().to_string())
-                .collect();
-            line.contains("Session") || line.contains("Model") || line.contains("System")
-        });
+    let has_category = (0..buf.area().height).any(|y| {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol().to_string())
+            .collect();
+        line.contains("Session") || line.contains("Model") || line.contains("System")
+    });
     assert!(has_category, "Palette should show category headers");
 }
 
@@ -360,11 +433,11 @@ fn palette_highlights_selected() {
     let buf = terminal.backend().buffer();
     // The first item should be selected; check that some cell has bg set
     let has_selected_bg = (0..buf.area().height)
-        .any(|y| {
-            (0..buf.area().width)
-                .any(|x| buf[(x, y)].style().bg.is_some())
-        });
-    assert!(has_selected_bg, "Selected palette item should have background color");
+        .any(|y| (0..buf.area().width).any(|x| buf[(x, y)].style().bg.is_some()));
+    assert!(
+        has_selected_bg,
+        "Selected palette item should have background color"
+    );
 }
 
 #[test]
@@ -406,7 +479,10 @@ fn turn_complete_renders_after_tool_flow() {
         ..Default::default()
     });
     let content = draw_state(&mut state);
-    assert!(content.contains("Turn completed in 3.2s"), "TurnComplete should render in TUI after tool flow");
+    assert!(
+        content.contains("Turn completed in 3.2s"),
+        "TurnComplete should render in TUI after tool flow"
+    );
 }
 
 #[cfg(test)]

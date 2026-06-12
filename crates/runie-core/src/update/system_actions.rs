@@ -2,8 +2,7 @@ use crate::model::AppState;
 
 impl AppState {
     pub(crate) fn reload_all(&mut self) {
-        let config = crate::config_reload::Config::load_from(
-            &crate::config_reload::config_path());
+        let config = crate::config_reload::Config::load_from(&crate::config_reload::config_path());
         if let Some(provider) = &config.provider {
             self.config.config_provider = provider.clone();
         }
@@ -19,7 +18,9 @@ impl AppState {
             prompts_section.default.as_deref(),
             prompts_section.custom.as_deref(),
         );
-        self.add_system_msg("Reloaded config, keybindings, theme, skills, and prompts.".to_string());
+        self.add_system_msg(
+            "Reloaded config, keybindings, theme, skills, and prompts.".to_string(),
+        );
     }
 
     pub(crate) fn show_diagnostics(&mut self) {
@@ -48,7 +49,10 @@ impl AppState {
             self.config.current_provider, self.config.current_model
         ));
         lines.push(format!("  Read-only: {}", self.config.read_only));
-        lines.push(format!("  Scoped models: {}", self.config.scoped_models.len()));
+        lines.push(format!(
+            "  Scoped models: {}",
+            self.config.scoped_models.len()
+        ));
         self.add_system_msg(lines.join("\n"));
     }
 }
@@ -60,22 +64,30 @@ mod tests {
     #[test]
     fn reload_all_reloads_skills() {
         let mut state = AppState::default();
-        state.skills = vec![
-            crate::skills::Skill {
-                name: "dummy".into(),
-                description: "dummy".into(),
-                context: "".into(),
-                user_invocable: false,
-                file_path: std::path::PathBuf::from("dummy.md"),
-            }
-        ];
+        state.skills = vec![crate::skills::Skill {
+            name: "dummy".into(),
+            description: "dummy".into(),
+            context: "".into(),
+            user_invocable: false,
+            file_path: std::path::PathBuf::from("dummy.md"),
+        }];
         state.reload_all();
         // In test environment load_all returns empty (no skill dirs exist)
-        assert!(state.skills.is_empty(), "reload_all should reload skills from disk");
+        assert!(
+            state.skills.is_empty(),
+            "reload_all should reload skills from disk"
+        );
         let last = state.session.messages.last().unwrap();
-        assert!(last.content.contains("Reloaded"), "Should confirm reload: {}", last.content);
+        assert!(
+            last.content.contains("Reloaded"),
+            "Should confirm reload: {}",
+            last.content
+        );
         // Prompts should also be reloaded (empty in test env)
-        assert!(!state.prompts.is_empty(), "reload_all should reload prompts");
+        assert!(
+            !state.prompts.is_empty(),
+            "reload_all should reload prompts"
+        );
         assert_eq!(state.prompts[0].name, "default");
     }
 }

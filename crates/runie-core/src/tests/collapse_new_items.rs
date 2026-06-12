@@ -1,7 +1,7 @@
-use crate::model::{AppState, ChatMessage, Role};
 use crate::event::Event;
-use crate::ui::LazyCache;
+use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::Element;
+use crate::ui::LazyCache;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -11,23 +11,45 @@ fn fresh_state() -> AppState {
 fn global_collapse_persists_after_agent_response() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
     // New agent response arrives
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here they are.".to_string() });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Here they are.".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
-    let has_summary = feed.elements.iter().any(|e| matches!(e, Element::ThoughtSummary { .. }));
-    assert!(has_summary, "Thought should stay collapsed after new response arrives");
-    let has_marker = feed.elements.iter().any(|e| matches!(e, Element::ThoughtMarker { .. }));
-    assert!(!has_marker, "ThoughtMarker should not appear when globally collapsed");
+    let has_summary = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtSummary { .. }));
+    assert!(
+        has_summary,
+        "Thought should stay collapsed after new response arrives"
+    );
+    let has_marker = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { .. }));
+    assert!(
+        !has_marker,
+        "ThoughtMarker should not appear when globally collapsed"
+    );
 }
 
 #[test]
@@ -36,24 +58,50 @@ fn global_collapse_persists_after_second_thought() {
     state.streaming = true;
 
     // First thought
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "A".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "A".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
     // Second thought arrives — should ALSO be collapsed
-    state.update(Event::AgentThinking { id: "req.1".to_string() });
-    state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.1".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.1".to_string(),
+        content: "B".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.1".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtSummary { .. })).collect();
-    assert_eq!(summaries.len(), 2, "BOTH thoughts should be collapsed with global flag");
-    let markers: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtMarker { .. })).collect();
+    let summaries: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
+        .collect();
+    assert_eq!(
+        summaries.len(),
+        2,
+        "BOTH thoughts should be collapsed with global flag"
+    );
+    let markers: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
+        .collect();
     assert_eq!(markers.len(), 0, "No thoughts should be expanded");
 }
 
@@ -63,22 +111,46 @@ fn global_collapse_persists_after_second_tool() {
     state.streaming = true;
 
     // First tool
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "a".to_string(),
+    });
 
     // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
     // Second tool arrives — should ALSO be collapsed
-    state.update(Event::AgentToolStart { id: "req.1".to_string(), name: "cat".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.3, output: "b".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.1".to_string(),
+        name: "cat".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.3,
+        output: "b".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ToolSummary { .. })).collect();
-    assert_eq!(summaries.len(), 2, "BOTH tools should be collapsed with global flag");
-    let dones: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ToolDone { .. })).collect();
+    let summaries: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ToolSummary { .. }))
+        .collect();
+    assert_eq!(
+        summaries.len(),
+        2,
+        "BOTH tools should be collapsed with global flag"
+    );
+    let dones: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ToolDone { .. }))
+        .collect();
     assert_eq!(dones.len(), 0, "No tools should be expanded");
 }
 
@@ -87,23 +159,45 @@ fn new_thought_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "A".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "A".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
     // New thought arrives while globally collapsed
-    state.update(Event::AgentThinking { id: "req.1".to_string() });
-    state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.1".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.1".to_string(),
+        content: "B".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.1".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtSummary { .. })).collect();
-    assert_eq!(summaries.len(), 2, "New thought should respect global collapse");
+    let summaries: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
+        .collect();
+    assert_eq!(
+        summaries.len(),
+        2,
+        "New thought should respect global collapse"
+    );
 }
 
 #[test]
@@ -111,21 +205,41 @@ fn new_tool_respects_global_collapse_flag() {
     let mut state = fresh_state();
     state.streaming = true;
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "a".to_string(),
+    });
 
     // Collapse all
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
     // New tool arrives while globally collapsed
-    state.update(Event::AgentToolStart { id: "req.1".to_string(), name: "cat".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.3, output: "b".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.1".to_string(),
+        name: "cat".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.3,
+        output: "b".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ToolSummary { .. })).collect();
-    assert_eq!(summaries.len(), 2, "New tool should respect global collapse");
+    let summaries: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ToolSummary { .. }))
+        .collect();
+    assert_eq!(
+        summaries.len(),
+        2,
+        "New tool should respect global collapse"
+    );
 }
 
 #[test]
@@ -157,14 +271,20 @@ fn expand_then_collapse_then_expand_same_state() {
         Element::ThoughtSummary { .. } => Some(()),
         _ => None,
     });
-    assert!(summary.is_some(), "After 3 toggles thought should be collapsed");
+    assert!(
+        summary.is_some(),
+        "After 3 toggles thought should be collapsed"
+    );
 }
 
 #[test]
 fn running_tool_ignored_by_global_toggle() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
 
     // Toggle while tool is still running
     state.update(Event::ToggleExpand);
@@ -173,8 +293,14 @@ fn running_tool_ignored_by_global_toggle() {
     // But running tool renders as ToolRunning, not ToolSummary
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
-    let has_running = feed.elements.iter().any(|e| matches!(e, Element::ToolRunning { .. }));
-    assert!(has_running, "Running tool should still show as running regardless of global flag");
+    let has_running = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::ToolRunning { .. }));
+    assert!(
+        has_running,
+        "Running tool should still show as running regardless of global flag"
+    );
 }
 
 #[test]
@@ -190,7 +316,10 @@ fn reset_clears_global_collapse() {
     state.all_collapsed = true;
 
     state.update(Event::Reset);
-    assert!(!state.all_collapsed, "Reset should clear global collapse flag");
+    assert!(
+        !state.all_collapsed,
+        "Reset should clear global collapse flag"
+    );
 }
 
 #[test]
@@ -212,7 +341,10 @@ fn global_toggle_does_not_affect_user_or_assistant_messages() {
     });
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Global flag should flip even with no thoughts/tools");
+    assert!(
+        state.all_collapsed,
+        "Global flag should flip even with no thoughts/tools"
+    );
 }
 
 #[test]
@@ -256,17 +388,33 @@ fn add_thought_and_tool(state: &mut AppState) {
 
 fn verify_collapsed_elements(state: &AppState) {
     let feed = LazyCache::feed(state);
-    let elements: Vec<_> = feed.elements.iter().map(|e| match e {
-        Element::ThoughtSummary { .. } => "TS",
-        Element::ThoughtMarker { .. } => "TM",
-        Element::ToolSummary { .. } => "XS",
-        Element::ToolDone { .. } => "XD",
-        Element::AgentMessage { .. } => "AM",
-        Element::Spacer { .. } => "S",
-        _ => "?",
-    }).collect();
+    let elements: Vec<_> = feed
+        .elements
+        .iter()
+        .map(|e| match e {
+            Element::ThoughtSummary { .. } => "TS",
+            Element::ThoughtMarker { .. } => "TM",
+            Element::ToolSummary { .. } => "XS",
+            Element::ToolDone { .. } => "XD",
+            Element::AgentMessage { .. } => "AM",
+            Element::Spacer { .. } => "S",
+            _ => "?",
+        })
+        .collect();
 
-    assert!(elements.contains(&"TS"), "Thought should be collapsed: {:?}", elements);
-    assert!(elements.contains(&"XS"), "Tool should be collapsed: {:?}", elements);
-    assert!(elements.contains(&"AM"), "Assistant message should be present: {:?}", elements);
+    assert!(
+        elements.contains(&"TS"),
+        "Thought should be collapsed: {:?}",
+        elements
+    );
+    assert!(
+        elements.contains(&"XS"),
+        "Tool should be collapsed: {:?}",
+        elements
+    );
+    assert!(
+        elements.contains(&"AM"),
+        "Assistant message should be present: {:?}",
+        elements
+    );
 }

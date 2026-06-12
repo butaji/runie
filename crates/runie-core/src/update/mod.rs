@@ -1,3 +1,4 @@
+use crate::login_flow::LoginStep;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
@@ -7,13 +8,17 @@ pub use crate::tool_markers::strip_tool_markers;
 
 /// What a form panel should do in response to an event.
 #[derive(Debug, Clone)]
-enum FormAction {
+pub enum FormAction {
     /// Keep the form open, persist the panel state.
     KeepOpen,
     /// Close the form (no submit).
     Close,
     /// Close the form and dispatch the submit event.
     Submit(Option<crate::Event>),
+    /// Go back one step: if the stack is deeper than the root, pop the
+    /// current panel and keep the dialog open; if at the root, close
+    /// the dialog. This is the semantic of ESC / back.
+    Back,
 }
 
 mod agent;
@@ -24,14 +29,12 @@ mod input;
 mod input_scroll;
 mod input_text;
 mod line_nav;
-mod model_selector;
 mod path_complete;
 mod queue;
-mod scoped_models;
+pub mod scoped_models;
 mod session;
 pub mod settings_dialog;
 mod system_actions;
-mod palette;
 pub mod tab_complete;
 
 pub(crate) fn now() -> f64 {
@@ -44,59 +47,282 @@ pub(crate) fn now() -> f64 {
 impl AppState {
     /// Main event dispatcher - delegates to specialized handlers based on event type.
     pub fn update(&mut self, event: Event) {
+        // Login flow events bypass dialog routing — they manage their own dialog state.
+        if matches!(
+            event,
+            Event::LoginFlowStart
+                | Event::LoginFlowSelectProvider { .. }
+                | Event::LoginFlowSubmitKey { .. }
+                | Event::LoginFlowValidate { .. }
+                | Event::LoginFlowValidationDone { .. }
+                | Event::LoginFlowValidationFailed { .. }
+                | Event::LoginFlowModelsFetched { .. }
+                | Event::LoginFlowToggleModel { .. }
+                | Event::LoginFlowSave
+                | Event::LoginFlowCancel
+        ) {
+            self.login_flow_event(event);
+            return;
+        }
+
         // Dialog events are handled separately
         if self.open_dialog.is_some() {
             self.update_dialog(event);
             return;
         }
-        
+
         // Dispatch to specialized handlers
         match event {
-            Event::Input(_) | Event::Backspace | Event::Newline | Event::CursorLeft 
-            | Event::CursorRight | Event::CursorStart | Event::CursorEnd 
-            | Event::DeleteWord | Event::DeleteToEnd | Event::DeleteToStart 
-            | Event::KillChar | Event::Undo | Event::Redo | Event::CursorWordLeft 
-            | Event::CursorWordRight | Event::Paste(_) | Event::PasteImage | Event::Submit
-            | Event::HistoryPrev | Event::HistoryNext => self.input_event(event),
-            Event::AgentThinking { .. } | Event::AgentThoughtDone { .. } 
-            | Event::AgentToolStart { .. } | Event::AgentToolEnd { .. } 
-            | Event::AgentResponse { .. } | Event::AgentTurnComplete { .. } 
-            | Event::AgentDone { .. } | Event::AgentError { .. } => self.agent_event(event),
-            Event::ScrollUp | Event::ScrollDown | Event::PageUp | Event::PageDown => self.scroll_event(event),
-            Event::Quit | Event::Reset | Event::Abort | Event::ExternalEditorDone { .. } 
-            | Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => self.control_event(event),
-            Event::SwitchModel { .. } | Event::SwitchTheme { .. } | Event::CycleModelNext 
-            | Event::CycleModelPrev | Event::CycleThinkingLevel | Event::SetThinkingLevel(_) 
-            | Event::ToggleReadOnly | Event::TrustProject | Event::UntrustProject 
-            | Event::FollowUp | Event::Dequeue => self.model_config_event(event),
-            Event::ToggleExpand | Event::ToggleSessionTree | Event::SessionTreeFilterCycle 
-            | Event::ForkSession { .. } | Event::CloneSession => self.session_event(event),
-            Event::ToggleCommandPalette | Event::ToggleModelSelector | Event::ToggleScopedModelsDialog 
-            | Event::ScopedModelToggle { .. } | Event::ScopedModelEnableAll 
-            | Event::ScopedModelDisableAll | Event::ScopedModelToggleProvider { .. }
+            Event::Input(_)
+            | Event::Backspace
+            | Event::Newline
+            | Event::CursorLeft
+            | Event::CursorRight
+            | Event::CursorStart
+            | Event::CursorEnd
+            | Event::DeleteWord
+            | Event::DeleteToEnd
+            | Event::DeleteToStart
+            | Event::KillChar
+            | Event::Undo
+            | Event::Redo
+            | Event::CursorWordLeft
+            | Event::CursorWordRight
+            | Event::Paste(_)
+            | Event::PasteImage
+            | Event::Submit
+            | Event::HistoryPrev
+            | Event::HistoryNext => self.input_event(event),
+            Event::AgentThinking { .. }
+            | Event::AgentThoughtDone { .. }
+            | Event::AgentToolStart { .. }
+            | Event::AgentToolEnd { .. }
+            | Event::AgentResponse { .. }
+            | Event::AgentTurnComplete { .. }
+            | Event::AgentDone { .. }
+            | Event::AgentError { .. } => self.agent_event(event),
+            Event::ScrollUp | Event::ScrollDown | Event::PageUp | Event::PageDown => {
+                self.scroll_event(event)
+            }
+            Event::Quit
+            | Event::Reset
+            | Event::Abort
+            | Event::ExternalEditorDone { .. }
+            | Event::SpawnAgent { .. }
+            | Event::Suspend
+            | Event::ShareSession
+            | Event::OpenExternalEditor => self.control_event(event),
+            Event::SwitchModel { .. }
+            | Event::SwitchTheme { .. }
+            | Event::CycleModelNext
+            | Event::CycleModelPrev
+            | Event::CycleThinkingLevel
+            | Event::SetThinkingLevel(_)
+            | Event::ToggleReadOnly
+            | Event::TrustProject
+            | Event::UntrustProject
+            | Event::FollowUp
+            | Event::Dequeue => self.model_config_event(event),
+            Event::ToggleExpand
+            | Event::ToggleSessionTree
+            | Event::SessionTreeFilterCycle
+            | Event::ForkSession { .. }
+            | Event::CloneSession => self.session_event(event),
+            Event::ToggleCommandPalette
+            | Event::ToggleModelSelector
+            | Event::ToggleScopedModelsDialog
+            | Event::ScopedModelToggle { .. }
+            | Event::ScopedModelEnableAll
+            | Event::ScopedModelDisableAll
+            | Event::ScopedModelToggleProvider { .. }
             | Event::AtFilePicker => self.dialog_toggle_event(event),
             Event::InsertAtRef(_) => self.input_event(event),
-            Event::ToggleSettingsDialog | Event::SettingsUp | Event::SettingsDown 
-            | Event::SettingsLeft | Event::SettingsRight | Event::SettingsSelect | Event::SettingsClose 
-            | Event::PaletteFilter(_) | Event::PaletteBackspace | Event::PaletteUp 
-            | Event::PaletteDown | Event::PaletteSelect | Event::PaletteClose 
-            | Event::ModelSelectorFilter(_) | Event::ModelSelectorBackspace | Event::ModelSelectorUp 
-            | Event::ModelSelectorDown | Event::ModelSelectorSelect | Event::ModelSelectorClose => self.settings_event(event),
-            Event::CommandFormInput(_) | Event::CommandFormBackspace | Event::CommandFormUp 
-            | Event::CommandFormDown | Event::CommandFormSubmit | Event::CommandFormClose => self.form_dialog_event(event),
-            Event::PendingEdit { .. } | Event::ApproveEdit | Event::RejectEdit
-            | Event::ReloadAll | Event::ShowDiagnostics | Event::TogglePathCompletion
-            | Event::PathCompletionUp | Event::PathCompletionDown | Event::PathCompletionSelect
+            Event::ToggleSettingsDialog
+            | Event::SettingsUp
+            | Event::SettingsDown
+            | Event::SettingsLeft
+            | Event::SettingsRight
+            | Event::SettingsSelect
+            | Event::SettingsClose
+            | Event::PaletteFilter(_)
+            | Event::PaletteBackspace
+            | Event::PaletteUp
+            | Event::PaletteDown
+            | Event::PaletteSelect
+            | Event::PaletteClose
+            | Event::ModelSelectorFilter(_)
+            | Event::ModelSelectorBackspace
+            | Event::ModelSelectorUp
+            | Event::ModelSelectorDown
+            | Event::ModelSelectorSelect
+            | Event::ModelSelectorClose => self.settings_event(event),
+            Event::CommandFormInput(_)
+            | Event::CommandFormBackspace
+            | Event::CommandFormUp
+            | Event::CommandFormDown
+            | Event::CommandFormSubmit
+            | Event::CommandFormClose => self.form_dialog_event(event),
+            Event::PendingEdit { .. }
+            | Event::ApproveEdit
+            | Event::RejectEdit
+            | Event::ReloadAll
+            | Event::ShowDiagnostics
+            | Event::TogglePathCompletion
+            | Event::PathCompletionUp
+            | Event::PathCompletionDown
+            | Event::PathCompletionSelect
             | Event::PathCompletionClose
-            | Event::RunSaveCommand { .. } | Event::RunLoadCommand { .. } | Event::RunDeleteCommand { .. }
-            | Event::RunImportCommand { .. } | Event::RunExportCommand { .. }
-            | Event::RunSkillCommand { .. } | Event::RunLoginCommand { .. } | Event::RunLogoutCommand { .. }
-            | Event::RunNameCommand { .. } | Event::RunForkCommand { .. } | Event::RunCompactCommand { .. }
-            | Event::RunPromptCommand { .. } | Event::RunThinkingCommand { .. } => self.edit_event(event),
+            | Event::RunSaveCommand { .. }
+            | Event::RunLoadCommand { .. }
+            | Event::RunDeleteCommand { .. }
+            | Event::RunImportCommand { .. }
+            | Event::RunExportCommand { .. }
+            | Event::RunSkillCommand { .. }
+            | Event::RunLoginCommand { .. }
+            | Event::RunLogoutCommand { .. }
+            | Event::RunNameCommand { .. }
+            | Event::RunForkCommand { .. }
+            | Event::RunCompactCommand { .. }
+            | Event::RunPromptCommand { .. }
+            | Event::RunThinkingCommand { .. }
+            | Event::RunPaletteCommand { .. } => self.edit_event(event),
+            Event::LoginFlowStart
+            | Event::LoginFlowSelectProvider { .. }
+            | Event::LoginFlowSubmitKey { .. }
+            | Event::LoginFlowValidate { .. }
+            | Event::LoginFlowValidationDone { .. }
+            | Event::LoginFlowValidationFailed { .. }
+            | Event::LoginFlowModelsFetched { .. }
+            | Event::LoginFlowToggleModel { .. }
+            | Event::LoginFlowSave
+            | Event::LoginFlowCancel => self.login_flow_event(event),
             Event::SystemMessage { content } => self.add_system_msg(content),
             Event::TransientMessage { content, level } => self.set_transient(content, level),
-            Event::TransientError { content } => self.set_transient(content, crate::event::TransientLevel::Error),
+            Event::TransientError { content } => {
+                self.set_transient(content, crate::event::TransientLevel::Error)
+            }
             Event::ClearTransient => self.clear_transient(),
+            _ => {}
+        }
+    }
+
+    fn login_flow_event(&mut self, event: Event) {
+        match event {
+            Event::LoginFlowStart => self.login_flow_start(),
+            Event::LoginFlowSelectProvider { provider } => {
+                self.login_flow_select_provider(provider)
+            }
+            Event::LoginFlowSubmitKey { provider, key } => {
+                self.login_flow_submit_key(provider, key)
+            }
+            Event::LoginFlowValidationDone { models, .. } => {
+                self.login_flow_validation_done(models)
+            }
+            Event::LoginFlowValidationFailed { error, .. } => {
+                self.login_flow_validation_failed(error)
+            }
+            Event::LoginFlowModelsFetched { models, .. } => self.login_flow_models_fetched(models),
+            Event::LoginFlowToggleModel { model } => self.login_flow_toggle_model(model),
+            Event::LoginFlowSave => self.login_flow_save(),
+            Event::LoginFlowCancel => self.login_flow_cancel(),
+            _ => {}
+        }
+    }
+
+    fn login_flow_start(&mut self) {
+        self.login_flow = Some(crate::login_flow::LoginFlowState::new());
+        self.rebuild_login_dialog();
+    }
+
+    fn login_flow_select_provider(&mut self, provider: String) {
+        if let Some(ref mut flow) = self.login_flow {
+            *flow = flow.clone().with_provider(provider);
+            self.rebuild_login_dialog();
+        }
+    }
+
+    fn login_flow_submit_key(&mut self, provider: String, key: String) {
+        if let Some(ref mut flow) = self.login_flow {
+            let p = if provider.is_empty() {
+                flow.provider.clone()
+            } else {
+                provider
+            };
+            let defaults: Vec<String> = crate::provider_registry::find_provider(&p)
+                .map(|meta| meta.default_models.iter().map(|s| s.to_string()).collect())
+                .unwrap_or_default();
+            *flow = flow.clone().with_key_and_defaults(key, defaults);
+            flow.provider = p;
+            self.rebuild_login_dialog();
+        }
+    }
+
+    fn login_flow_validation_done(&mut self, models: Vec<String>) {
+        if let Some(ref mut flow) = self.login_flow {
+            // Non-blocking: enrich the model list without changing the step.
+            *flow = flow.clone().with_fetched_models(models);
+            self.rebuild_login_dialog();
+        }
+    }
+
+    fn login_flow_models_fetched(&mut self, models: Vec<String>) {
+        if let Some(ref mut flow) = self.login_flow {
+            if flow.step == LoginStep::ModelSelect {
+                *flow = flow.clone().with_fetched_models(models);
+                self.rebuild_login_dialog();
+            }
+        }
+    }
+
+    fn login_flow_validation_failed(&mut self, error: String) {
+        // Non-blocking: surface a transient warning, do NOT change the step.
+        if let Some(ref flow) = self.login_flow {
+            if flow.step == LoginStep::ModelSelect {
+                self.set_transient(
+                    format!("Could not verify key: {}", error),
+                    crate::event::TransientLevel::Warning,
+                );
+                self.mark_dirty();
+            }
+        }
+    }
+
+    fn login_flow_toggle_model(&mut self, model: String) {
+        if let Some(ref mut flow) = self.login_flow {
+            flow.toggle_model(&model);
+            self.rebuild_login_dialog();
+        }
+    }
+
+    fn login_flow_save(&mut self) {
+        if let Some(ref flow) = self.login_flow {
+            let base_url = crate::provider_registry::find_provider(&flow.provider)
+                .map(|p| p.base_url.to_string())
+                .unwrap_or_default();
+            let _ = crate::login_config::save_provider_config(
+                &flow.provider,
+                &base_url,
+                &flow.key,
+                &flow.selected_models.iter().cloned().collect::<Vec<_>>(),
+            );
+        }
+        self.open_dialog = None;
+        self.login_flow = None;
+        self.mark_dirty();
+    }
+
+    fn login_flow_cancel(&mut self) {
+        self.open_dialog = None;
+        self.login_flow = None;
+        self.mark_dirty();
+    }
+
+    fn rebuild_login_dialog(&mut self) {
+        use crate::login_flow::build_login_stack;
+        if let Some(ref flow) = self.login_flow {
+            let stack = build_login_stack(flow);
+            self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+            self.mark_dirty();
         }
     }
 
@@ -155,7 +381,10 @@ impl AppState {
                     self.abort_queue();
                 }
             }
-            Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
+            Event::SpawnAgent { .. }
+            | Event::Suspend
+            | Event::ShareSession
+            | Event::OpenExternalEditor => {}
             Event::ExternalEditorDone { content } => {
                 self.input.input = content;
                 self.input.cursor_pos = self.input.input.len();
@@ -228,7 +457,10 @@ impl AppState {
                 self.start_tool(id, name);
                 self.ensure_turn_complete_last();
             }
-            Event::AgentToolEnd { duration_secs, output } => {
+            Event::AgentToolEnd {
+                duration_secs,
+                output,
+            } => {
                 self.end_tool(duration_secs, output);
                 self.ensure_turn_complete_last();
             }
@@ -269,55 +501,186 @@ impl AppState {
 
     // === Dialog Toggle Event Handler ===
     fn dialog_toggle_event(&mut self, event: Event) {
+        use crate::commands::DialogState;
         match event {
-            Event::ToggleCommandPalette => {
-                self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
-                    filter: String::new(),
-                    selected: 0,
-                });
-                self.mark_dirty();
-            }
-            Event::ToggleModelSelector => {
-                if matches!(self.open_dialog, Some(crate::commands::DialogState::ModelSelector { .. })) {
-                    self.open_dialog = None;
-                } else {
-                    self.open_dialog = Some(crate::commands::DialogState::ModelSelector {
-                        filter: String::new(),
-                        selected: 0,
-                    });
-                }
-                self.mark_dirty();
-            }
-            Event::ToggleScopedModelsDialog => {
-                if matches!(self.open_dialog, Some(crate::commands::DialogState::ScopedModels { .. })) {
-                    self.open_dialog = None;
-                } else {
-                    self.open_dialog = Some(crate::commands::DialogState::ScopedModels { selected: 0 });
-                }
-                self.mark_dirty();
-            }
-            Event::AtFilePicker => {
-                self.open_at_file_picker();
-            }
+            Event::ToggleCommandPalette => self.open_command_palette(),
+            Event::ToggleModelSelector => self.toggle_dialog(
+                matches!(self.open_dialog, Some(DialogState::ModelSelector(_))),
+                Self::open_model_selector,
+            ),
+            Event::ToggleScopedModelsDialog => self.toggle_dialog(
+                matches!(self.open_dialog, Some(DialogState::ScopedModels(_))),
+                Self::open_scoped_models_dialog,
+            ),
+            Event::ToggleSettingsDialog => self.toggle_dialog(
+                matches!(self.open_dialog, Some(DialogState::Settings(_))),
+                Self::open_settings_dialog,
+            ),
+            Event::ToggleSessionTree => self.toggle_dialog(
+                matches!(self.open_dialog, Some(DialogState::SessionTree(_))),
+                Self::open_session_tree_dialog,
+            ),
+            Event::AtFilePicker => self.open_at_file_picker(),
             Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(self, &name),
             Event::ScopedModelEnableAll => scoped_models::enable_all(self),
             Event::ScopedModelDisableAll => scoped_models::disable_all(self),
-            Event::ScopedModelToggleProvider { provider } => scoped_models::toggle_provider(self, &provider),
+            Event::ScopedModelToggleProvider { provider } => {
+                scoped_models::toggle_provider(self, &provider)
+            }
             _ => {}
         }
+    }
+
+    fn toggle_dialog(&mut self, is_same: bool, open: fn(&mut Self)) {
+        if is_same {
+            self.open_dialog = None;
+            self.mark_dirty();
+        } else {
+            open(self);
+        }
+    }
+
+    fn open_command_palette(&mut self) {
+        use crate::dialog::builders::command_palette;
+        let mut items: Vec<(String, String, crate::Event)> = Vec::new();
+        for cmd in self.registry.list() {
+            let evt = crate::Event::RunPaletteCommand {
+                name: cmd.name.clone(),
+                args: String::new(),
+            };
+            items.push((
+                cmd.category.as_str().to_string(),
+                format!("{} {}", cmd.name, cmd.desc),
+                evt,
+            ));
+        }
+        for skill in &self.skills {
+            if skill.user_invocable {
+                let evt = crate::Event::RunSkillCommand {
+                    name: skill.name.clone(),
+                };
+                items.push((
+                    "Skill".to_string(),
+                    format!("{} {}", skill.name, skill.description),
+                    evt,
+                ));
+            }
+        }
+        self.open_dialog = Some(crate::commands::DialogState::CommandPalette(
+            command_palette(items),
+        ));
+        self.mark_dirty();
+    }
+
+    fn open_model_selector(&mut self) {
+        use crate::dialog::builders::model_selector;
+        use crate::model_catalog::{build_model_selector_items, model_catalog};
+        let current = format!(
+            "{}/{}",
+            self.config.current_provider, self.config.current_model
+        );
+        let items = build_model_selector_items(
+            &model_catalog(),
+            &self.recent_models,
+            "",
+            &self.config.current_provider,
+            &self.config.current_model,
+        );
+        let (recent, groups) = partition_model_items(items);
+        self.open_dialog = Some(crate::commands::DialogState::ModelSelector(model_selector(
+            recent, groups, &current,
+        )));
+        self.mark_dirty();
+    }
+
+    fn open_settings_dialog(&mut self) {
+        use crate::dialog::builders::{settings, SettingsRow, SettingsRowKind};
+        use crate::settings::SettingValue;
+        let items = settings_dialog::build_setting_items(self);
+        let mut categories: Vec<(String, Vec<SettingsRow>)> = Vec::new();
+        for item in items {
+            let cat_name = item.category.as_str().to_string();
+            let row = match item.value {
+                SettingValue::Bool(v) => SettingsRow {
+                    label: item.label,
+                    key: item.key,
+                    kind: SettingsRowKind::Bool(v),
+                },
+                SettingValue::Enum { current, options } => SettingsRow {
+                    label: item.label,
+                    key: item.key,
+                    kind: SettingsRowKind::Cycle { current, options },
+                },
+            };
+            if let Some(last) = categories.last_mut() {
+                if last.0 == cat_name {
+                    last.1.push(row);
+                    continue;
+                }
+            }
+            categories.push((cat_name, vec![row]));
+        }
+        self.open_dialog = Some(crate::commands::DialogState::Settings(settings(categories)));
+        self.mark_dirty();
+    }
+
+    fn open_scoped_models_dialog(&mut self) {
+        use crate::dialog::builders::scoped_models;
+        let models: Vec<(String, String, bool)> = self
+            .config
+            .scoped_models
+            .iter()
+            .map(|m| (m.provider.clone(), m.name.clone(), m.enabled))
+            .collect();
+        self.open_dialog = Some(crate::commands::DialogState::ScopedModels(scoped_models(
+            models,
+        )));
+        self.mark_dirty();
+    }
+
+    fn open_session_tree_dialog(&mut self) {
+        use crate::dialog::builders::session_tree;
+        let items: Vec<(usize, String, crate::Event)> = match self.session.session_tree.as_ref() {
+            Some(tree) => tree
+                .filtered_walk(crate::session_tree::SessionTreeFilter::All)
+                .into_iter()
+                .map(|(depth, node)| {
+                    let preview = format!(
+                        "[{}] {}",
+                        node.message.role.as_str(),
+                        node.message.content.chars().take(60).collect::<String>()
+                    );
+                    let evt = crate::Event::SessionTreeSelect {
+                        id: node.message.id.clone(),
+                    };
+                    (depth, preview, evt)
+                })
+                .collect(),
+            None => Vec::new(),
+        };
+        self.open_dialog = Some(crate::commands::DialogState::SessionTree(session_tree(
+            items,
+        )));
+        self.mark_dirty();
     }
 
     // === Settings Event Handler ===
     // === Edit Event Handler ===
     fn edit_event(&mut self, event: Event) {
         match event {
-            Event::PendingEdit { path, original, proposed, diff } => {
-                self.pending_edits.push(crate::edit_preview::EditPreview::new(
-                    std::path::PathBuf::from(path),
-                    original,
-                    proposed,
-                    diff,
-                ));
+            Event::PendingEdit {
+                path,
+                original,
+                proposed,
+                diff,
+            } => {
+                self.pending_edits
+                    .push(crate::edit_preview::EditPreview::new(
+                        std::path::PathBuf::from(path),
+                        original,
+                        proposed,
+                        diff,
+                    ));
                 self.mark_dirty();
             }
             Event::ApproveEdit => self.approve_edits(),
@@ -343,10 +706,22 @@ impl AppState {
             Event::RunCompactCommand { keep, focus } => self.run_compact_command(&keep, &focus),
             Event::RunPromptCommand { name } => self.run_prompt_command(&name),
             Event::RunThinkingCommand { level } => self.run_thinking_command(level),
+            Event::RunPaletteCommand { name, args } => self.run_palette_command(&name, &args),
             _ => {}
         }
     }
-    
+
+    fn run_palette_command(&mut self, name: &str, args: &str) {
+        use crate::commands::CommandResult;
+        let result = if let Some(cmd) = self.registry.get(name) {
+            let cmd_name = cmd.name.clone();
+            cmd.flow.clone().exec(self, &cmd_name, args)
+        } else {
+            CommandResult::Message(format!("Unknown command: /{}", name))
+        };
+        self.process_command_result(result);
+    }
+
     fn run_save_command(&mut self, name: &str) {
         use crate::session::Session;
         let now = crate::update::now();
@@ -371,7 +746,7 @@ impl AppState {
             Err(e) => self.add_system_msg(format!("Could not save '{}': {}", name, e)),
         }
     }
-    
+
     fn run_load_command(&mut self, name: &str) {
         match crate::session::load(name) {
             Ok(session) => {
@@ -394,7 +769,7 @@ impl AppState {
             )),
         }
     }
-    
+
     fn run_delete_command(&mut self, name: &str) {
         match crate::session::delete(name) {
             Ok(()) => self.add_system_msg(format!("Session '{}' deleted.", name)),
@@ -404,11 +779,15 @@ impl AppState {
             )),
         }
     }
-    
+
     fn run_export_command(&mut self, path: &str) {
         use crate::session::Session;
         let session = Session {
-            name: self.session.session_display_name.clone().unwrap_or_else(|| "exported".into()),
+            name: self
+                .session
+                .session_display_name
+                .clone()
+                .unwrap_or_else(|| "exported".into()),
             display_name: self.session.session_display_name.clone(),
             created_at: self.session.session_created_at,
             updated_at: crate::update::now(),
@@ -420,12 +799,15 @@ impl AppState {
             read_only: self.config.read_only,
             session_tree: self.session.session_tree.clone(),
         };
-        match std::fs::write(path, serde_json::to_string_pretty(&session).unwrap_or_default()) {
+        match std::fs::write(
+            path,
+            serde_json::to_string_pretty(&session).unwrap_or_default(),
+        ) {
             Ok(()) => self.add_system_msg(format!("Session exported to '{}'", path)),
             Err(e) => self.add_system_msg(format!("Could not export: {}", e)),
         }
     }
-    
+
     fn run_import_command(&mut self, path: &str) {
         match std::fs::read_to_string(path) {
             Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {
@@ -448,7 +830,7 @@ impl AppState {
             Err(e) => self.add_system_msg(format!("Could not read file: {}", e)),
         }
     }
-    
+
     fn run_skill_command(&mut self, name: &str) {
         match self.skills.iter().find(|s| s.name == name) {
             Some(skill) => {
@@ -467,7 +849,7 @@ impl AppState {
             )),
         }
     }
-    
+
     fn run_login_command(&mut self, provider: &str, token: &str) {
         if provider.is_empty() || token.is_empty() {
             self.add_system_msg("Usage: /login provider token".into());
@@ -480,7 +862,7 @@ impl AppState {
             Err(e) => self.add_system_msg(format!("Could not save token: {}", e)),
         }
     }
-    
+
     fn run_logout_command(&mut self, provider: &str) {
         if provider.is_empty() {
             self.add_system_msg("Usage: /logout provider".into());
@@ -517,82 +899,133 @@ impl AppState {
     /// Handles dialog-specific events.
     /// Esc (Abort) always closes any dialog. Global events pass through.
     fn update_dialog(&mut self, event: Event) {
-        if matches!(event, Event::Abort) { self.open_dialog = None; self.mark_dirty(); return; }
-        if matches!(event, Event::SwitchTheme { .. } | Event::SwitchModel { .. }
-            | Event::CycleModelNext | Event::CycleModelPrev
-            | Event::CycleThinkingLevel | Event::SetThinkingLevel(_)
-            | Event::ToggleReadOnly | Event::TrustProject | Event::UntrustProject) {
-            self.model_config_event(event); return;
-        }
-        if matches!(event, Event::Quit) { self.should_quit = true; return; }
-
-        let Some(dialog) = self.open_dialog.take() else { return };
-        match dialog {
-            crate::commands::DialogState::CommandPalette { filter, selected } => {
-                self.update_palette(event, filter, selected);
-            }
-            crate::commands::DialogState::ScopedModels { selected } => {
-                scoped_models::update_scoped_models(self, event, selected);
-            }
-            crate::commands::DialogState::Settings { category, selected } => {
-                settings_dialog::update_settings_dialog(self, event, category, selected);
-            }
-            crate::commands::DialogState::ModelSelector { filter, selected } => {
-                self.update_model_selector(event, filter, selected);
-            }
-            crate::commands::DialogState::SessionTree { filter, selected } => {
-                self.update_session_tree(event, filter, selected);
-            }
-            crate::commands::DialogState::PanelStack(mut stack) => {
-                self.update_panel_stack(event, &mut stack);
-            }
-        }
-    }
-
-    fn update_panel_stack(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) {
-        use Event::*;
-        
-        // Form dialog handling - check if current panel is a form
-        let is_form = stack.current().map_or(false, |p| p.is_form());
-        
-        if is_form {
-            self.update_form_panel(event, stack);
+        if matches!(event, Event::Abort) {
+            self.open_dialog = None;
+            self.mark_dirty();
             return;
         }
-        
+        if matches!(
+            event,
+            Event::SwitchTheme { .. }
+                | Event::SwitchModel { .. }
+                | Event::CycleModelNext
+                | Event::CycleModelPrev
+                | Event::CycleThinkingLevel
+                | Event::SetThinkingLevel(_)
+                | Event::ToggleReadOnly
+                | Event::TrustProject
+                | Event::UntrustProject
+        ) {
+            self.model_config_event(event);
+            return;
+        }
+        if matches!(event, Event::Quit) {
+            self.should_quit = true;
+            return;
+        }
+
+        let Some(mut dialog) = self.open_dialog.take() else {
+            return;
+        };
+        let stack = dialog.panel_stack_mut();
+        let activated = self.update_panel_stack(event, stack);
+        // If the panel stack activated an item, it may have closed or replaced
+        // the dialog (e.g. opening a settings dialog). Otherwise restore the
+        // original variant so CommandPalette/Settings/etc. identity is preserved.
+        // Exception: if the handler already set `open_dialog` (e.g. login flow
+        // rebuild on keep_open Emit), leave it alone.
+        if !activated && self.open_dialog.is_none() {
+            self.open_dialog = Some(dialog);
+        }
+        self.mark_dirty();
+    }
+
+    /// Update a panel stack in response to an event. Returns `true` if an item
+    /// was activated (which may have closed or replaced the dialog).
+    fn update_panel_stack(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) -> bool {
+        use Event::*;
+
+        // Form dialog handling - check if current panel is a form
+        let is_form = stack.current().is_some_and(|p| p.is_form());
+        if is_form {
+            return self.update_form_panel(event, stack);
+        }
+
         match event {
-            SettingsClose => { self.open_dialog = None; self.mark_dirty(); return; }
+            // ESC / close-key: stack nav. Pop if deeper, close at root.
+            SettingsClose | PaletteClose | ModelSelectorClose => {
+                if stack.len() > 1 {
+                    stack.pop();
+                    // fall through to mark_dirty + return false (keep open
+                    // with the popped stack; update_dialog restores the
+                    // original DialogState variant around the mutated stack)
+                } else {
+                    self.open_dialog = None;
+                    self.mark_dirty();
+                    return true;
+                }
+            }
             HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => stack.select_up(),
             HistoryNext | SettingsDown | PaletteDown | ModelSelectorDown => stack.select_down(),
-            CursorLeft | SettingsLeft => { stack.pop(); }
-            Submit | SettingsSelect | PaletteSelect => {
-                if self.try_activate_panel(stack) { return; }
+            CursorLeft | SettingsLeft => {
+                stack.pop();
+            }
+            Submit | SettingsSelect | PaletteSelect | ModelSelectorSelect => {
+                // Always return after activation: the handler may have
+                // replaced `open_dialog` (e.g. login flow rebuild), and
+                // we must not overwrite it with the pre-activation stack.
+                return self.try_activate_panel(stack);
             }
             PaletteFilter(c) | ModelSelectorFilter(c) | Input(c) => stack.push_filter(c),
             PaletteBackspace | ModelSelectorBackspace | Backspace => stack.pop_filter(),
             _ => {}
         }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
+        // The caller (`update_dialog`) persists the dialog by restoring the
+        // original `DialogState` variant with the modified stack. We must
+        // not overwrite `open_dialog` here, or the original variant
+        // (e.g. CommandPalette, Settings) is lost. Handlers that need to
+        // replace the dialog (e.g. login flow on keep_open Emit) set
+        // `open_dialog` directly and return early via the Submit arm.
         self.mark_dirty();
+        false
     }
 
-    fn update_form_panel(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) {
+    fn update_form_panel(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) -> bool {
         let action = {
             let panel = stack.current_mut().expect("form panel");
             Self::form_panel_action(panel, event)
         };
-        if matches!(action, FormAction::KeepOpen) {
+
+        // Stack navigation: pop if the stack is deeper than the root,
+        // otherwise close the entire dialog.
+        if matches!(&action, FormAction::Back) {
+            if stack.len() > 1 {
+                stack.pop();
+                self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
+                return false; // keep open with popped stack
+            } else {
+                self.open_dialog = None;
+                self.mark_dirty();
+                return true; // closed at root
+            }
+        }
+
+        let keep_open = matches!(&action, FormAction::KeepOpen);
+        if keep_open {
             self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
         }
         self.apply_form_action(action);
+        !keep_open
     }
 
     /// Map a single event to an action on a form panel. Pure: no I/O on `self`.
-    fn form_panel_action(panel: &mut crate::dialog::Panel, event: Event) -> FormAction {
+    pub fn form_panel_action(panel: &mut crate::dialog::Panel, event: Event) -> FormAction {
         use Event::*;
         use FormAction as A;
         match event {
-            SettingsClose | CommandFormClose | Abort => A::Close,
+            // ESC / close-key: stack nav. `update_form_panel` decides
+            // whether to pop (stack deeper) or close (at root).
+            SettingsClose | CommandFormClose | Abort => A::Back,
             CommandFormUp | HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => {
                 let _ = panel.select_up();
                 A::KeepOpen
@@ -602,29 +1035,68 @@ impl AppState {
                 A::KeepOpen
             }
             CommandFormInput(c) | Input(c) => {
-                Self::form_panel_edit_char(panel, c, true);
-                A::KeepOpen
+                // If on a form field, type the character into the field.
+                // If on a button, check for accelerator match instead.
+                if panel.selected_form_field().is_some() {
+                    Self::form_panel_edit_char(panel, c, true);
+                    A::KeepOpen
+                } else if let Some(crate::dialog::ItemAction::Emit(evt)) =
+                    panel.find_button_by_accel(c)
+                {
+                    A::Submit(Some(evt.clone()))
+                } else {
+                    A::KeepOpen
+                }
             }
             CommandFormBackspace | Backspace => {
                 Self::form_panel_edit_char(panel, ' ', false);
                 A::KeepOpen
             }
-            CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => A::Submit(Self::form_build_submit(panel)),
+            CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => {
+                // If the selection is on a button (Action/FormSubmit), activate it
+                // instead of submitting the whole form.
+                if let Some(item) = panel.selected_item() {
+                    match item {
+                        crate::dialog::PanelItem::Action {
+                            action: crate::dialog::ItemAction::Emit(evt),
+                            ..
+                        } => {
+                            return A::Submit(Some(evt.clone()));
+                        }
+                        crate::dialog::PanelItem::Action { .. }
+                        | crate::dialog::PanelItem::FormSubmit => {
+                            return A::Submit(None);
+                        }
+                        _ => {}
+                    }
+                }
+                A::Submit(Self::form_build_submit(panel))
+            }
             _ => A::KeepOpen,
         }
     }
 
     /// Append (push=true) or delete one char (push=false) from the selected form field.
     fn form_panel_edit_char(panel: &mut crate::dialog::Panel, c: char, push: bool) {
-        let Some(idx) = panel.selected_form_field() else { return };
-        let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] else { return };
-        if push { value.push(c); } else { value.pop(); }
+        let Some(idx) = panel.selected_form_field() else {
+            return;
+        };
+        let crate::dialog::PanelItem::FormField { value, key, .. } = &mut panel.items[idx] else {
+            return;
+        };
+        if push {
+            value.push(c);
+        } else {
+            value.pop();
+        }
         panel.form_values.insert(key.clone(), value.clone());
     }
 
     fn try_activate_panel(&mut self, stack: &mut crate::dialog::PanelStack) -> bool {
         if let Some(action) = stack.activate() {
-            if self.handle_panel_action(action, stack) { return true; }
+            if self.handle_panel_action(action, stack) {
+                return true;
+            }
         }
         false
     }
@@ -681,8 +1153,9 @@ impl AppState {
 
     fn panel_cycle_item(&mut self, stack: &mut crate::dialog::PanelStack, key: &str) {
         use crate::dialog::PanelItem;
-        if let Some(PanelItem::Select { current, options, .. }) =
-            stack.current_mut().and_then(|p| p.selected_item_mut())
+        if let Some(PanelItem::Select {
+            current, options, ..
+        }) = stack.current_mut().and_then(|p| p.selected_item_mut())
         {
             if let Some(idx) = options.iter().position(|o| o == current) {
                 let next = (idx + 1) % options.len();
@@ -696,8 +1169,15 @@ impl AppState {
         match key {
             "read_only" => {
                 self.config.read_only = !self.config.read_only;
-                let status = if self.config.read_only { "enabled" } else { "disabled" };
-                self.notify(format!("Read-only mode {}", status), crate::event::TransientLevel::Warning);
+                let status = if self.config.read_only {
+                    "enabled"
+                } else {
+                    "disabled"
+                };
+                self.notify(
+                    format!("Read-only mode {}", status),
+                    crate::event::TransientLevel::Warning,
+                );
             }
             "steering_mode" => {
                 self.steering_mode = match self.steering_mode {
@@ -719,33 +1199,17 @@ impl AppState {
         match result {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
             crate::commands::CommandResult::Event(evt) => self.update(evt),
-            crate::commands::CommandResult::OpenDialog(d) => {
-                self.open_dialog = Some(self.dialog_from_command(d));
-                self.mark_dirty();
-            }
+            crate::commands::CommandResult::OpenDialog(d) => match d {
+                crate::commands::DialogType::CommandPalette => self.open_command_palette(),
+                crate::commands::DialogType::ModelSelector => self.open_model_selector(),
+                crate::commands::DialogType::Settings => self.open_settings_dialog(),
+                crate::commands::DialogType::ScopedModels => self.open_scoped_models_dialog(),
+            },
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
                 self.mark_dirty();
             }
             crate::commands::CommandResult::None => {}
-        }
-    }
-
-    fn dialog_from_command(&self, d: crate::commands::DialogType) -> crate::commands::DialogState {
-        match d {
-            crate::commands::DialogType::CommandPalette => crate::commands::DialogState::CommandPalette {
-                filter: String::new(),
-                selected: 0,
-            },
-            crate::commands::DialogType::ModelSelector => crate::commands::DialogState::ModelSelector {
-                filter: String::new(),
-                selected: 0,
-            },
-            crate::commands::DialogType::Settings => crate::commands::DialogState::Settings {
-                category: crate::settings::SettingsCategory::Models,
-                selected: 0,
-            },
-            crate::commands::DialogType::ScopedModels => crate::commands::DialogState::ScopedModels { selected: 0 },
         }
     }
 
@@ -757,7 +1221,7 @@ impl AppState {
         if entries.is_empty() {
             panel = panel.header("No files found");
         } else {
-            panel = panel.header(&format!("{} files", entries.len()));
+            panel = panel.header(format!("{} files", entries.len()));
             for entry in entries {
                 let label = if entry.is_dir {
                     format!("{}/", entry.name)
@@ -775,7 +1239,9 @@ impl AppState {
                 );
             }
         }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(panel)));
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(PanelStack::new(
+            panel,
+        )));
         self.mark_dirty();
     }
 
@@ -796,33 +1262,42 @@ impl AppState {
         self.config.current_provider = provider.clone();
         self.config.current_model = model.clone();
         self.record_model_usage(&provider, &model);
-        self.telemetry.track_event(
-            "model_switch",
-            {
-                let mut m = std::collections::HashMap::new();
-                m.insert("provider".into(), provider.clone());
-                m.insert("model".into(), model.clone());
-                m
-            },
+        self.telemetry.track_event("model_switch", {
+            let mut m = std::collections::HashMap::new();
+            m.insert("provider".into(), provider.clone());
+            m.insert("model".into(), model.clone());
+            m
+        });
+        self.notify(
+            format!("Switched to {}/{}", provider, model),
+            crate::event::TransientLevel::Success,
         );
-        self.notify(format!("Switched to {}/{}", provider, model), crate::event::TransientLevel::Success);
     }
 
     fn switch_theme(&mut self, name: String) {
         self.config.theme_name = name.clone();
-        self.notify(format!("Theme switched to '{}'", name), crate::event::TransientLevel::Success);
+        self.notify(
+            format!("Theme switched to '{}'", name),
+            crate::event::TransientLevel::Success,
+        );
     }
 
     fn cycle_model(&mut self, delta: isize) {
         let enabled: Vec<usize> = self
-            .config.scoped_models
+            .config
+            .scoped_models
             .iter()
             .enumerate()
             .filter(|(_, m)| m.enabled)
             .map(|(i, _)| i)
             .collect();
-        if enabled.is_empty() { return; }
-        let current_pos = enabled.iter().position(|&i| i == self.config.scoped_index).unwrap_or(0);
+        if enabled.is_empty() {
+            return;
+        }
+        let current_pos = enabled
+            .iter()
+            .position(|&i| i == self.config.scoped_index)
+            .unwrap_or(0);
         let len = enabled.len() as isize;
         let new_pos = ((current_pos as isize + delta).rem_euclid(len)) as usize;
         self.config.scoped_index = enabled[new_pos];
@@ -832,18 +1307,34 @@ impl AppState {
 
     fn cycle_thinking_level(&mut self) {
         self.config.thinking_level = self.config.thinking_level.cycle();
-        self.notify(format!("Thinking level: {}", self.config.thinking_level.as_str()), crate::event::TransientLevel::Info);
+        self.notify(
+            format!("Thinking level: {}", self.config.thinking_level.as_str()),
+            crate::event::TransientLevel::Info,
+        );
     }
 
     fn set_thinking_level(&mut self, level: crate::model::ThinkingLevel) {
         self.config.thinking_level = level;
-        self.notify(format!("Thinking level set to: {}", self.config.thinking_level.as_str()), crate::event::TransientLevel::Info);
+        self.notify(
+            format!(
+                "Thinking level set to: {}",
+                self.config.thinking_level.as_str()
+            ),
+            crate::event::TransientLevel::Info,
+        );
     }
 
     fn toggle_read_only(&mut self) {
         self.config.read_only = !self.config.read_only;
-        let status = if self.config.read_only { "enabled" } else { "disabled" };
-        self.notify(format!("Read-only mode {}", status), crate::event::TransientLevel::Warning);
+        let status = if self.config.read_only {
+            "enabled"
+        } else {
+            "disabled"
+        };
+        self.notify(
+            format!("Read-only mode {}", status),
+            crate::event::TransientLevel::Warning,
+        );
     }
 
     fn trust_project(&mut self) {
@@ -852,7 +1343,10 @@ impl AppState {
         tm.set(&cwd, crate::trust::TrustDecision::Trusted);
         let _ = tm.save();
         self.config.read_only = false;
-        self.notify(format!("Project '{}' trusted. Read-only disabled.", cwd.display()), crate::event::TransientLevel::Success);
+        self.notify(
+            format!("Project '{}' trusted. Read-only disabled.", cwd.display()),
+            crate::event::TransientLevel::Success,
+        );
     }
 
     fn untrust_project(&mut self) {
@@ -861,7 +1355,10 @@ impl AppState {
         tm.set(&cwd, crate::trust::TrustDecision::Untrusted);
         let _ = tm.save();
         self.config.read_only = true;
-        self.notify(format!("Project '{}' untrusted. Read-only enabled.", cwd.display()), crate::event::TransientLevel::Warning);
+        self.notify(
+            format!("Project '{}' untrusted. Read-only enabled.", cwd.display()),
+            crate::event::TransientLevel::Warning,
+        );
     }
 
     pub fn peek_queue(&self) -> Option<&(String, String)> {
@@ -911,57 +1408,21 @@ impl AppState {
     /// or falling back to the last assistant message's id), so earlier turns'
     /// TurnComplete are not affected.
     fn ensure_turn_complete_last(&mut self) {
-        let target_id = self.agent.current_request_id.clone()
-            .or_else(|| self.last_assistant_index
-                .and_then(|idx| self.session.messages.get(idx).map(|m| m.id.clone())));
+        let target_id = self.agent.current_request_id.clone().or_else(|| {
+            self.last_assistant_index
+                .and_then(|idx| self.session.messages.get(idx).map(|m| m.id.clone()))
+        });
         let Some(target_id) = target_id else { return };
-        if let Some(idx) = self.session.messages.iter().position(|m| m.role == Role::TurnComplete && m.id == target_id) {
+        if let Some(idx) = self
+            .session
+            .messages
+            .iter()
+            .position(|m| m.role == Role::TurnComplete && m.id == target_id)
+        {
             let mut tc = self.session.messages.remove(idx);
             tc.timestamp = now();
             self.session.messages.push(tc);
             self.messages_changed();
-        }
-    }
-
-    fn update_session_tree(&mut self, event: Event, filter: crate::session_tree::SessionTreeFilter, selected: usize) {
-        let tree = match self.session.session_tree.as_ref() {
-            Some(t) => t,
-            None => {
-                self.open_dialog = Some(crate::commands::DialogState::SessionTree { filter, selected });
-                return;
-            }
-        };
-        let visible = tree.filtered_walk(filter);
-        let count = visible.len();
-        if let Some(next) = Self::session_tree_next_state(event, filter, selected, count) {
-            self.open_dialog = Some(next);
-            self.mark_dirty();
-        } else {
-            self.open_dialog = None;
-            self.mark_dirty();
-        }
-    }
-
-    fn session_tree_next_state(
-        event: Event,
-        filter: crate::session_tree::SessionTreeFilter,
-        selected: usize,
-        count: usize,
-    ) -> Option<crate::commands::DialogState> {
-        match event {
-            Event::HistoryPrev => Some(crate::commands::DialogState::SessionTree {
-                filter,
-                selected: selected.saturating_sub(1),
-            }),
-            Event::HistoryNext => Some(crate::commands::DialogState::SessionTree {
-                filter,
-                selected: (selected + 1).min(count.saturating_sub(1)),
-            }),
-            Event::SessionTreeFilterCycle => Some(crate::commands::DialogState::SessionTree {
-                filter: filter.cycle(),
-                selected,
-            }),
-            _ => None,
         }
     }
 
@@ -971,17 +1432,27 @@ impl AppState {
     /// `update_form_panel` directly for non-CommandForm events.
     fn form_dialog_event(&mut self, event: Event) {
         let action = {
-            let Some(d) = &mut self.open_dialog else { return };
-            let crate::commands::DialogState::PanelStack(stack) = d else { return };
-            let Some(panel) = stack.current_mut() else { return };
-            if !panel.is_form() { return };
+            let Some(d) = &mut self.open_dialog else {
+                return;
+            };
+            let crate::commands::DialogState::PanelStack(stack) = d else {
+                return;
+            };
+            let Some(panel) = stack.current_mut() else {
+                return;
+            };
+            if !panel.is_form() {
+                return;
+            };
             Self::form_panel_action(panel, event)
         };
         self.apply_form_action(action);
     }
 
     /// Apply a `FormAction` to the current dialog. Mirrors the KeepOpen /
-    /// Close / Submit paths in `update_form_panel`.
+    /// Close / Submit paths in `update_form_panel`. `Back` is handled
+    /// in `update_form_panel` itself (stack-level) and never reaches here;
+    /// we include it to keep the match exhaustive.
     fn apply_form_action(&mut self, action: FormAction) {
         match action {
             FormAction::Close => {
@@ -991,10 +1462,17 @@ impl AppState {
             FormAction::Submit(evt) => {
                 self.open_dialog = None;
                 self.mark_dirty();
-                if let Some(e) = evt { self.update(e); }
+                if let Some(e) = evt {
+                    self.update(e);
+                }
             }
             FormAction::KeepOpen => {
                 self.mark_dirty();
+            }
+            FormAction::Back => {
+                // Handled in `update_form_panel` (pop or close based on
+                // stack depth). This branch is defensive in case future
+                // code paths route a Back action through here.
             }
         }
     }
@@ -1005,29 +1483,86 @@ impl AppState {
         let values = panel.get_form_values().clone();
         let cmd = panel.id.clone();
         match cmd.as_str() {
-            "save" => Some(crate::Event::RunSaveCommand { name: values.get("name").cloned().unwrap_or_default() }),
-            "load" => Some(crate::Event::RunLoadCommand { name: values.get("name").cloned().unwrap_or_default() }),
-            "delete" => Some(crate::Event::RunDeleteCommand { name: values.get("name").cloned().unwrap_or_default() }),
-            "import" => Some(crate::Event::RunImportCommand { path: values.get("path").cloned().unwrap_or_default() }),
-            "export" => Some(crate::Event::RunExportCommand { path: values.get("path").cloned().unwrap_or_default() }),
-            "skill" => Some(crate::Event::RunSkillCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "save" => Some(crate::Event::RunSaveCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
+            }),
+            "load" => Some(crate::Event::RunLoadCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
+            }),
+            "delete" => Some(crate::Event::RunDeleteCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
+            }),
+            "import" => Some(crate::Event::RunImportCommand {
+                path: values.get("path").cloned().unwrap_or_default(),
+            }),
+            "export" => Some(crate::Event::RunExportCommand {
+                path: values.get("path").cloned().unwrap_or_default(),
+            }),
+            "skill" => Some(crate::Event::RunSkillCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
+            }),
             "login" => Some(crate::Event::RunLoginCommand {
                 provider: values.get("provider").cloned().unwrap_or_default(),
                 token: values.get("token").cloned().unwrap_or_default(),
             }),
-            "logout" => Some(crate::Event::RunLogoutCommand { provider: values.get("provider").cloned().unwrap_or_default() }),
-            "name" => Some(crate::Event::RunNameCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "logout" => Some(crate::Event::RunLogoutCommand {
+                provider: values.get("provider").cloned().unwrap_or_default(),
+            }),
+            "name" => Some(crate::Event::RunNameCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
+            }),
             "fork" => {
                 let index = values.get("index").cloned().unwrap_or_default();
-                Some(crate::Event::RunForkCommand { message_index: index })
+                Some(crate::Event::RunForkCommand {
+                    message_index: index,
+                })
             }
             "compact" => {
                 let keep = values.get("keep").cloned().unwrap_or_default();
                 let focus = values.get("focus").cloned().unwrap_or_default();
                 Some(crate::Event::RunCompactCommand { keep, focus })
             }
-            "prompt" => Some(crate::Event::RunPromptCommand { name: values.get("name").cloned().unwrap_or_default() }),
+            "prompt" => Some(crate::Event::RunPromptCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
+            }),
+            "login-key" => Some(crate::Event::LoginFlowSubmitKey {
+                provider: String::new(),
+                key: values.get("key").cloned().unwrap_or_default(),
+            }),
             _ => None,
         }
     }
+}
+
+#[allow(clippy::type_complexity)]
+fn partition_model_items(
+    items: Vec<(String, String, String, bool, bool)>,
+) -> (Vec<String>, Vec<(String, Vec<(String, crate::Event)>)>) {
+    let mut recent: Vec<String> = Vec::new();
+    let mut groups: Vec<(String, Vec<(String, crate::Event)>)> = Vec::new();
+    let mut last_header = String::new();
+    let mut current_group: Vec<(String, crate::Event)> = Vec::new();
+    for (header, name, _cost, _is_selected, _is_current) in items {
+        if header == "Recent" {
+            recent.push(name);
+            continue;
+        }
+        if !header.is_empty() && header != last_header {
+            if !current_group.is_empty() {
+                groups.push((last_header.clone(), std::mem::take(&mut current_group)));
+            }
+            last_header = header.clone();
+        }
+        if let Some((provider, model)) = name.split_once('/') {
+            let evt = crate::Event::SwitchModel {
+                provider: provider.to_string(),
+                model: model.to_string(),
+            };
+            current_group.push((name, evt));
+        }
+    }
+    if !current_group.is_empty() {
+        groups.push((last_header, current_group));
+    }
+    (recent, groups)
 }
