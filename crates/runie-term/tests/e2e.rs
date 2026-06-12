@@ -972,3 +972,90 @@ fn f8b_esc_on_command_bar_main_menu_closes() {
         .unwrap_or_default();
     assert_no_panic(&output);
 }
+
+/// F10: User-reported scenario — Ctrl+P -> select "model" from
+/// the command bar (Main Menu) -> model selector opens (Sub Menu)
+/// -> press Esc -> MUST go back to the palette (Main Menu), not
+/// close the entire bar. Press Esc again -> closes.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn f10_ctrl_p_model_esc_pops_to_palette_not_closes() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    // Open the command bar (Ctrl+P = Main Menu).
+    send(&mut p, "\x10").expect("ctrl-p open");
+    p.flush().expect("flush");
+    // Give the palette time to render (text gets split by ANSI).
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Select "model" from the palette -> model selector (Sub Menu).
+    send_line(&mut p, "model").expect("select model command");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    // Esc on model selector (Sub Menu) MUST pop to palette (Main
+    // Menu), NOT close the entire bar.
+    send_escape(&mut p).expect("esc pops to palette");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Verify palette is active: run another command and confirm it
+    // works. This proves the palette is back, not closed.
+    send_line(&mut p, "model").expect("model again from restored palette");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    // Esc -> palette -> Esc -> close.
+    send_escape(&mut p).expect("esc pops to palette again");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    send_escape(&mut p).expect("esc on main menu closes");
+    p.flush().expect("flush");
+    wait_idle(&mut p);
+
+    send_ctrl_c(&mut p).expect("ctrl-c");
+    p.process_mut().set_kill_timeout(Some(3_000));
+    let output = p
+        .process_mut()
+        .exit()
+        .ok()
+        .map(|_| p.exp_eof().unwrap_or_default())
+        .unwrap_or_default();
+    assert_no_panic(&output);
+}
+
+/// F10b: Same as F10 but for the "settings" command.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn f10b_ctrl_p_settings_esc_pops_to_palette_not_closes() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    send(&mut p, "\x10").expect("ctrl-p open");
+    p.flush().expect("flush");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    send_line(&mut p, "settings").expect("select settings");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    // Esc on settings (Sub Menu) -> palette (Main Menu).
+    send_escape(&mut p).expect("esc pops to palette");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Verify palette is active.
+    send_line(&mut p, "settings").expect("settings again from restored palette");
+    std::thread::sleep(std::time::Duration::from_millis(800));
+
+    send_escape(&mut p).expect("esc pops to palette");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    send_escape(&mut p).expect("esc on main menu closes");
+    p.flush().expect("flush");
+    wait_idle(&mut p);
+
+    send_ctrl_c(&mut p).expect("ctrl-c");
+    p.process_mut().set_kill_timeout(Some(3_000));
+    let output = p
+        .process_mut()
+        .exit()
+        .ok()
+        .map(|_| p.exp_eof().unwrap_or_default())
+        .unwrap_or_default();
+    assert_no_panic(&output);
+}
