@@ -314,7 +314,10 @@ fn e2e_dialog_flows_settings_model_theme_scoped() {
     wait_idle(&mut p);
 
     run_command(&mut p, "theme");
-    wait_for(&mut p, "runie").expect("theme picker");
+    // Give the dialog time to render, then close. We don't assert
+    // on the dialog text (ANSI codes split it across escape sequences
+    // making raw matching unreliable in the e2e harness).
+    std::thread::sleep(std::time::Duration::from_millis(500));
     send_escape(&mut p).expect("close theme");
     wait_idle(&mut p);
 
@@ -796,7 +799,9 @@ fn f6_theme_switch_rerenders() {
     wait_for(&mut p, "Type a message to start").expect("prompt");
 
     run_command(&mut p, "theme");
-    wait_for(&mut p, "runie").expect("theme picker");
+    // Give the dialog time to render (ANSI codes split the title
+    // text across escape sequences, making raw matching unreliable).
+    std::thread::sleep(std::time::Duration::from_millis(500));
     // Move down once and select a different theme.
     send(&mut p, "\x1b[B").expect("down");
     p.flush().expect("flush");

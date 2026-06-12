@@ -436,8 +436,13 @@ impl AppState {
     fn rebuild_login_dialog(&mut self) {
         // Open the login dialog with the root panel (provider picker).
         // Subsequent steps push panels onto this stack instead of
-        // rebuilding it from scratch.
+        // rebuilding it from scratch. If another dialog (e.g. the
+        // command palette) is currently open, push it onto the global
+        // back stack so Esc returns to it (Android-like).
         if self.login_flow.is_some() {
+            if let Some(current) = self.open_dialog.take() {
+                self.dialog_back_stack.push(current);
+            }
             let stack = crate::login_flow::build_login_root();
             self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
             self.mark_dirty();

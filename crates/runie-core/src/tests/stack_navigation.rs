@@ -208,6 +208,55 @@ fn global_dialog_back_stack_palette_pushes_subdialog() {
     );
 }
 
+/// User-reported scenario: open the command bar (palette = Main
+/// Menu), select a command that opens a sub-dialog (e.g. login →
+/// provider picker), press Esc — must go back to the palette
+/// (Main Menu), NOT close the whole bar. Press Esc again — closes.
+#[test]
+fn palette_then_subdialog_esc_back_to_palette_then_esc_closes() {
+    use crate::commands::DialogState;
+    use crate::dialog::{Panel, PanelStack};
+    use crate::event::Event;
+
+    let mut state = AppState::default();
+    // Simulate: palette is open (Main Menu).
+    let palette = Panel::new("palette", "Commands").keep_open();
+    state.open_dialog = Some(DialogState::CommandPalette(PanelStack::new(palette)));
+
+    // Simulate: user selects "login" from the palette. The login
+    // command goes through process_command_result, which pushes the
+    // palette onto the back stack and opens the login dialog.
+    if let Some(current) = state.open_dialog.take() {
+        state.dialog_back_stack.push(current);
+    }
+    let login_root = PanelStack::new(Panel::new("login-provider", "Login").keep_open());
+    state.open_dialog = Some(DialogState::PanelStack(login_root));
+
+    // Verify: palette is on the back stack, login dialog is on top.
+    assert_eq!(state.dialog_back_stack.len(), 1);
+    assert!(matches!(
+        state.open_dialog,
+        Some(DialogState::PanelStack(_))
+    ));
+
+    // Esc on the login dialog (sub-menu) — must pop back to the
+    // palette (Main Menu), NOT close.
+    state.update(Event::DialogBack);
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::CommandPalette(_))),
+        "Esc on sub-menu must return to Main Menu (palette), got {:?}",
+        state.open_dialog
+    );
+    assert!(state.dialog_back_stack.is_empty());
+
+    // Esc on the palette (Main Menu) — must close the bar.
+    state.update(Event::DialogBack);
+    assert!(
+        state.open_dialog.is_none(),
+        "Esc on Main Menu must close the bar"
+    );
+}
+
 #[test]
 fn pushing_via_item_action_grows_the_stack() {
     // The Push action on a list item should grow the stack by one.
