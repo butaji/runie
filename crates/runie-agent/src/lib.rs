@@ -1,69 +1,47 @@
-//! Runie Agent - Agent components
+#![warn(clippy::all)]
 
-#[cfg(test)]
-mod tests;
+pub mod accumulator;
+pub mod context7;
+pub mod diff;
+pub mod mutation_queue;
+pub mod path_utils;
+pub mod parser;
+pub mod safety;
+pub mod subagent;
+pub mod tools;
+pub mod truncate;
+pub mod turn;
 
-use serde::{Deserialize, Serialize};
+pub use tools::{Tool, ToolResult};
+pub use turn::run_agent_turn;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Message {
-    System { content: String },
-    User { content: String },
-    Assistant { content: String },
-}
-
-#[derive(Debug, Clone)]
-pub struct ResponseChunk {
-    pub content: String,
-}
+use runie_provider::AnyProvider;
 
 #[derive(Debug, Clone)]
 pub struct AgentCommand {
     pub content: String,
     pub id: String,
+    pub provider: String,
+    pub model: String,
+    pub thinking_level: runie_core::model::ThinkingLevel,
+    pub read_only: bool,
+    pub skills_context: String,
+    pub system_prompt: String,
+    /// Truncation policy for tool output. Defaults to 2000 lines / 50KB.
+    pub truncation: crate::truncate::TruncationPolicy,
 }
 
-pub trait Provider: Send {
-    fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk>;
+pub fn build_provider(provider: &str, model: &str) -> AnyProvider {
+    AnyProvider::new(provider, model)
 }
 
-#[derive(Default, Clone)]
-pub struct MockProvider;
-
-impl Provider for MockProvider {
-    fn generate(&self, messages: Vec<Message>) -> Vec<ResponseChunk> {
-        let user_input = messages
-            .iter()
-            .rev()
-            .find_map(|m| match m {
-                Message::User { content } => Some(content.clone()),
-                _ => None,
-            })
-            .unwrap_or_default();
-
-        user_input
-            .split_whitespace()
-            .map(|word| ResponseChunk {
-                content: format!("{} ", word),
-            })
-            .collect()
-    }
+pub fn build_provider_with_warning(provider: &str, model: &str) -> (AnyProvider, Option<String>) {
+    AnyProvider::new_with_warning(provider, model)
 }
 
-/// Check if the content is a special command that needs tool execution
-pub fn needs_tool_execution(content: &str) -> bool {
-    content.to_lowercase().contains("list files")
-}
-
-/// Get fake file list for testing
-pub fn get_fake_file_list() -> String {
-    r#"src/
-  main.rs
-  lib.rs
-  Cargo.toml
-tests/
-  test_main.rs
-  test_lib.rs
-README.md
-Cargo.lock"#.to_string()
-}
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+mod grep_find;
+#[cfg(test)]
+mod truncate_tests;

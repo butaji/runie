@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 //! Runie Core — State, Events, Update, UI Architecture
 //!
 //! Architecture (three layers):
@@ -8,18 +10,66 @@
 //!   labels    :: Static text constants
 
 pub mod model;
+pub mod state;
+pub mod model_catalog;
+pub mod message;
+pub mod edit_preview;
+pub mod scoped_model;
+pub mod settings;
 pub mod event;
 pub mod update;
 pub mod labels;
 pub mod ui;
+pub mod provider;
+pub mod session;
+pub mod input_history;
+pub mod keybindings;
+pub mod tokens;
+pub mod file_refs;
+pub mod fuzzy;
+pub mod snapshot;
+pub mod config_reload;
+pub mod config_migrate;
+pub mod commands;
+pub mod trust;
+pub mod telemetry;
+pub mod prompts;
+pub mod clipboard_image;
+pub mod path_complete;
+pub mod skills;
+pub mod model_scroll;
+pub mod session_tree;
+pub mod auth;
+pub mod tool_markers;
+pub mod dialog;
+pub mod notification;
+pub mod themes;
+#[cfg(test)]
+pub mod dsl;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod file_refs_lookup_tests;
 
-pub use model::{AppState, ChatMessage, Color, Role, PANEL_CHAT, PANEL_INPUT};
+pub use model::{AppState, ChatMessage, Role, now};
+pub use edit_preview::EditPreview;
+pub use snapshot::{Snapshot, GitInfo};
+pub use session::{Session, save, load, list, delete, format_as_markdown};
 pub use event::Event;
 pub use labels::{
-    PREFIX_USER, PREFIX_AGENT,
-    THINKING_LOADING, thinking_with_time, thought_with_time,
+    THINKING_LOADING, thinking_with_time, thought_with_time, format_timestamp,
 };
-pub use ui::{Element, Feed, LazyCache, StreamingMerge};
+pub use ui::{Element, Feed, LazyCache};
+pub use provider::{Message, Provider, ResponseChunk};
+pub use tokens::{estimate_tokens, TokenTracker};
+pub use file_refs::{FileRef, find_files, is_image_file, read_file_ref};
+pub use input_history::{load_history, save_history, filter_history, search_history};
+pub use keybindings::{load_keybindings, default_keybindings, parse_keybindings_json, event_from_name};
+pub use trust::{TrustManager, TrustDecision};
+pub use telemetry::Telemetry;
+pub use prompts::{PromptTemplate, PromptSource, load_prompts, build_system_prompt, DEFAULT_PROMPT};
+pub use clipboard_image::read_clipboard_image;
+pub use skills::{Skill, build_skills_context, load_all, load_from_dir};
+pub use session_tree::{SessionTree, TreeNode, SessionTreeFilter};
+pub use auth::{AuthStorage, AuthToken};

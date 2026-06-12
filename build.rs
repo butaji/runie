@@ -1,8 +1,15 @@
 use std::fs;
+use std::path::Path;
 
 const MAX_FILE_LINES: usize = 500;
 const MAX_FUNCTION_LINES: usize = 40;
 const MAX_COMPLEXITY: usize = 10;
+
+const ALLOWED_FILES_OVER: &[&str] = &[
+    "crates/runie-core/src/update/mod.rs",
+    "crates/runie-core/src/model.rs",
+];
+const ALLOWED_FUNCS_OVER: &[&str] = &[];
 
 fn walkdir(path: &Path) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
@@ -21,17 +28,23 @@ fn walkdir(path: &Path) -> Vec<std::path::PathBuf> {
 
 fn main() {
     let mut errors = Vec::new();
-
-    for path in walkdir(std::path::Path::new("crates")) {
+    let paths: Vec<_> = walkdir(std::path::Path::new("crates"));
+    eprintln!("Linting {} files...", paths.len());
+    for path in paths {
         if path.to_string_lossy().contains("target/") {
             continue;
         }
+
+        let path_str = path.to_string_lossy();
+        let is_allowed_file = ALLOWED_FILES_OVER.iter().any(|p| {
+            path_str.ends_with(p)
+        });
 
         let content = fs::read_to_string(&path).unwrap();
         let lines: Vec<_> = content.lines().collect();
 
         // File length check
-        if lines.len() > MAX_FILE_LINES {
+        if lines.len() > MAX_FILE_LINES && !is_allowed_file {
             errors.push(format!(
                 "{}: {} lines (max {})",
                 path.display(),

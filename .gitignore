@@ -1,1 +1,6 @@
 target/
+/SuperAGI
+/autogen
+/crewAI
+.ralph/
+typescript
