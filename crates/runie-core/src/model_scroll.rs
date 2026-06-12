@@ -32,7 +32,10 @@ impl AppState {
     pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
         let cache = self.view.elements_cache.as_ref();
         if cache.is_empty() || visible_height == 0 {
-            return VisibleRegion { elements: &[], skip_lines: 0 };
+            return VisibleRegion {
+                elements: &[],
+                skip_lines: 0,
+            };
         }
 
         let total = self.view.total_lines;

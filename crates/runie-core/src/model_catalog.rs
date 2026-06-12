@@ -55,27 +55,90 @@ pub fn model_catalog() -> Vec<ModelInfo> {
     let mut models = Vec::new();
 
     // Anthropic
-    models.push(ModelInfo::new("anthropic", "claude-sonnet-4-6").with_cost(3.0, 15.0).with_thinking().with_vision());
-    models.push(ModelInfo::new("anthropic", "claude-opus-4-7").with_cost(15.0, 75.0).with_thinking().with_vision());
-    models.push(ModelInfo::new("anthropic", "claude-haiku-4-5").with_cost(0.25, 1.25).with_vision());
+    models.push(
+        ModelInfo::new("anthropic", "claude-sonnet-4-6")
+            .with_cost(3.0, 15.0)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("anthropic", "claude-opus-4-7")
+            .with_cost(15.0, 75.0)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("anthropic", "claude-haiku-4-5")
+            .with_cost(0.25, 1.25)
+            .with_vision(),
+    );
 
     // OpenAI
-    models.push(ModelInfo::new("openai", "gpt-4o").with_cost(5.0, 15.0).with_vision());
-    models.push(ModelInfo::new("openai", "gpt-4o-mini").with_cost(0.15, 0.6).with_vision());
+    models.push(
+        ModelInfo::new("openai", "gpt-4o")
+            .with_cost(5.0, 15.0)
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("openai", "gpt-4o-mini")
+            .with_cost(0.15, 0.6)
+            .with_vision(),
+    );
     models.push(ModelInfo::new("openai", "gpt-5").with_cost(2.5, 10.0));
-    models.push(ModelInfo::new("openai", "o3-mini").with_cost(1.1, 4.4).with_thinking());
-    models.push(ModelInfo::new("openai", "o4-mini").with_cost(1.1, 4.4).with_thinking().with_vision());
-    models.push(ModelInfo::new("openai", "o1").with_cost(15.0, 60.0).with_thinking().with_vision());
-    models.push(ModelInfo::new("openai", "o3").with_cost(10.0, 40.0).with_thinking().with_vision());
+    models.push(
+        ModelInfo::new("openai", "o3-mini")
+            .with_cost(1.1, 4.4)
+            .with_thinking(),
+    );
+    models.push(
+        ModelInfo::new("openai", "o4-mini")
+            .with_cost(1.1, 4.4)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("openai", "o1")
+            .with_cost(15.0, 60.0)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("openai", "o3")
+            .with_cost(10.0, 40.0)
+            .with_thinking()
+            .with_vision(),
+    );
 
     // Google
-    models.push(ModelInfo::new("google", "gemini-2.5-pro").with_cost(1.25, 10.0).with_thinking().with_vision());
-    models.push(ModelInfo::new("google", "gemini-2.5-flash").with_cost(0.15, 0.6).with_thinking().with_vision());
-    models.push(ModelInfo::new("google", "gemini-2.0-flash").with_cost(0.1, 0.4).with_vision());
+    models.push(
+        ModelInfo::new("google", "gemini-2.5-pro")
+            .with_cost(1.25, 10.0)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("google", "gemini-2.5-flash")
+            .with_cost(0.15, 0.6)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("google", "gemini-2.0-flash")
+            .with_cost(0.1, 0.4)
+            .with_vision(),
+    );
 
     // DeepSeek
-    models.push(ModelInfo::new("deepseek", "deepseek-v4-flash").with_cost(0.27, 1.1).with_thinking());
-    models.push(ModelInfo::new("deepseek", "deepseek-v4-pro").with_cost(1.54, 6.16).with_thinking());
+    models.push(
+        ModelInfo::new("deepseek", "deepseek-v4-flash")
+            .with_cost(0.27, 1.1)
+            .with_thinking(),
+    );
+    models.push(
+        ModelInfo::new("deepseek", "deepseek-v4-pro")
+            .with_cost(1.54, 6.16)
+            .with_thinking(),
+    );
 
     // Mistral
     models.push(ModelInfo::new("mistral", "mistral-large-latest").with_cost(2.0, 6.0));
@@ -88,23 +151,65 @@ pub fn model_catalog() -> Vec<ModelInfo> {
     models.push(ModelInfo::new("groq", "mixtral-8x7b-32768").with_cost(0.24, 0.24));
 
     // Together
-    models.push(ModelInfo::new("together", "meta-llama/Llama-3.3-70B-Instruct-Turbo").with_cost(0.88, 0.88));
-    models.push(ModelInfo::new("together", "deepseek-ai/DeepSeek-V4-Pro").with_cost(1.25, 1.25).with_thinking());
+    models.push(
+        ModelInfo::new("together", "meta-llama/Llama-3.3-70B-Instruct-Turbo").with_cost(0.88, 0.88),
+    );
+    models.push(
+        ModelInfo::new("together", "deepseek-ai/DeepSeek-V4-Pro")
+            .with_cost(1.25, 1.25)
+            .with_thinking(),
+    );
 
     // Fireworks
-    models.push(ModelInfo::new("fireworks", "accounts/fireworks/models/deepseek-v4-pro").with_cost(1.25, 1.25).with_thinking());
-    models.push(ModelInfo::new("fireworks", "accounts/fireworks/models/kimi-k2p6").with_cost(2.0, 8.0));
+    models.push(
+        ModelInfo::new("fireworks", "accounts/fireworks/models/deepseek-v4-pro")
+            .with_cost(1.25, 1.25)
+            .with_thinking(),
+    );
+    models.push(
+        ModelInfo::new("fireworks", "accounts/fireworks/models/kimi-k2p6").with_cost(2.0, 8.0),
+    );
 
     // OpenRouter
-    models.push(ModelInfo::new("openrouter", "anthropic/claude-sonnet-4.6").with_cost(3.0, 15.0).with_thinking().with_vision());
-    models.push(ModelInfo::new("openrouter", "openai/gpt-4o").with_cost(5.0, 15.0).with_vision());
-    models.push(ModelInfo::new("openrouter", "google/gemini-2.5-pro").with_cost(1.25, 10.0).with_thinking().with_vision());
-    models.push(ModelInfo::new("openrouter", "deepseek/deepseek-chat").with_cost(0.5, 2.0).with_thinking());
-    models.push(ModelInfo::new("openrouter", "deepseek/deepseek-r1").with_cost(0.55, 2.19).with_thinking());
+    models.push(
+        ModelInfo::new("openrouter", "anthropic/claude-sonnet-4.6")
+            .with_cost(3.0, 15.0)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("openrouter", "openai/gpt-4o")
+            .with_cost(5.0, 15.0)
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("openrouter", "google/gemini-2.5-pro")
+            .with_cost(1.25, 10.0)
+            .with_thinking()
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("openrouter", "deepseek/deepseek-chat")
+            .with_cost(0.5, 2.0)
+            .with_thinking(),
+    );
+    models.push(
+        ModelInfo::new("openrouter", "deepseek/deepseek-r1")
+            .with_cost(0.55, 2.19)
+            .with_thinking(),
+    );
 
     // xAI
-    models.push(ModelInfo::new("xai", "grok-3").with_cost(3.0, 15.0).with_vision());
-    models.push(ModelInfo::new("xai", "grok-4.3").with_cost(5.0, 25.0).with_vision());
+    models.push(
+        ModelInfo::new("xai", "grok-3")
+            .with_cost(3.0, 15.0)
+            .with_vision(),
+    );
+    models.push(
+        ModelInfo::new("xai", "grok-4.3")
+            .with_cost(5.0, 25.0)
+            .with_vision(),
+    );
 
     // Ollama
     models.push(ModelInfo::new("ollama", "llama3.1"));

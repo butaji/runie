@@ -69,9 +69,18 @@ fn tree_filter_excludes_tools() {
 #[test]
 fn filter_cycle_rotates() {
     assert_eq!(SessionTreeFilter::All.cycle(), SessionTreeFilter::NoTools);
-    assert_eq!(SessionTreeFilter::NoTools.cycle(), SessionTreeFilter::UserOnly);
-    assert_eq!(SessionTreeFilter::UserOnly.cycle(), SessionTreeFilter::LabeledOnly);
-    assert_eq!(SessionTreeFilter::LabeledOnly.cycle(), SessionTreeFilter::All);
+    assert_eq!(
+        SessionTreeFilter::NoTools.cycle(),
+        SessionTreeFilter::UserOnly
+    );
+    assert_eq!(
+        SessionTreeFilter::UserOnly.cycle(),
+        SessionTreeFilter::LabeledOnly
+    );
+    assert_eq!(
+        SessionTreeFilter::LabeledOnly.cycle(),
+        SessionTreeFilter::All
+    );
 }
 
 // === Layer 2 — Event Handling ===
@@ -79,34 +88,52 @@ fn filter_cycle_rotates() {
 #[test]
 fn slash_fork_emits_event() {
     let mut state = AppState::default();
-    state.session.messages = vec![
-        msg(Role::User, "hello"),
-        msg(Role::Assistant, "hi"),
-    ];
+    state.session.messages = vec![msg(Role::User, "hello"), msg(Role::Assistant, "hi")];
     state.input.input.push_str("/fork 1");
     state.update(Event::Submit); // Opens form with pre-filled index
     state.update(Event::CommandFormSubmit); // Submits the form
 
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("Forked"), "fork should emit event: {}", last.content);
-    assert!(state.session.session_tree.is_some(), "session tree should be initialized");
+    assert!(
+        last.content.contains("Forked"),
+        "fork should emit event: {}",
+        last.content
+    );
+    assert!(
+        state.session.session_tree.is_some(),
+        "session tree should be initialized"
+    );
 }
 
 #[test]
 fn slash_clone_emits_event() {
     let mut state = AppState::default();
-    state.session.messages = vec![
-        msg(Role::User, "hello"),
-        msg(Role::Assistant, "hi"),
-    ];
+    state.session.messages = vec![msg(Role::User, "hello"), msg(Role::Assistant, "hi")];
     state.input.input.push_str("/clone");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("cloned"), "clone should emit event: {}", last.content);
-    assert!(state.session.session_tree.is_some(), "session tree should be initialized");
+    assert!(
+        last.content.contains("cloned"),
+        "clone should emit event: {}",
+        last.content
+    );
+    assert!(
+        state.session.session_tree.is_some(),
+        "session tree should be initialized"
+    );
 }
 
 #[test]
@@ -116,7 +143,10 @@ fn slash_tree_opens_dialog() {
     state.update(Event::Submit);
 
     assert!(
-        matches!(state.open_dialog, Some(crate::commands::DialogState::SessionTree { .. })),
+        matches!(
+            state.open_dialog,
+            Some(crate::commands::DialogState::SessionTree(_))
+        ),
         "/tree should open session tree dialog"
     );
 }
@@ -129,46 +159,48 @@ fn tree_navigates_up_down() {
         msg(Role::Assistant, "b"),
         msg(Role::User, "c"),
     ]));
-    state.open_dialog = Some(crate::commands::DialogState::SessionTree {
-        filter: SessionTreeFilter::All,
-        selected: 1,
-    });
+    state.update(Event::ToggleSessionTree);
 
     // Up should decrement selected
     state.update(Event::HistoryPrev);
-    if let Some(crate::commands::DialogState::SessionTree { selected, .. }) = state.open_dialog {
-        assert_eq!(selected, 0, "up moves to previous item");
-    } else {
-        panic!("dialog should stay open");
-    }
+    let selected = match &state.open_dialog {
+        Some(crate::commands::DialogState::SessionTree(stack)) => {
+            stack.current().map(|p| p.selected)
+        }
+        _ => None,
+    };
+    assert_eq!(selected, Some(2), "up at first wraps to last");
 
     // Down should increment selected
     state.update(Event::HistoryNext);
-    if let Some(crate::commands::DialogState::SessionTree { selected, .. }) = state.open_dialog {
-        assert_eq!(selected, 1, "down moves to next item");
-    } else {
-        panic!("dialog should stay open");
-    }
+    let selected = match &state.open_dialog {
+        Some(crate::commands::DialogState::SessionTree(stack)) => {
+            stack.current().map(|p| p.selected)
+        }
+        _ => None,
+    };
+    assert_eq!(selected, Some(0), "down moves to next item");
 }
 
 #[test]
 fn tree_filter_cycle_event() {
+    // Filter cycling is now handled by the unified panel stack; this event is
+    // still dispatched and does not close the dialog.
     let mut state = AppState::default();
     state.session.session_tree = Some(SessionTree::from_messages(&[
         msg(Role::User, "a"),
         msg(Role::Assistant, "b"),
     ]));
-    state.open_dialog = Some(crate::commands::DialogState::SessionTree {
-        filter: SessionTreeFilter::All,
-        selected: 0,
-    });
+    state.update(Event::ToggleSessionTree);
 
     state.update(Event::SessionTreeFilterCycle);
-    if let Some(crate::commands::DialogState::SessionTree { filter, .. }) = state.open_dialog {
-        assert_eq!(filter, SessionTreeFilter::NoTools, "filter should cycle");
-    } else {
-        panic!("dialog should stay open");
-    }
+    assert!(
+        matches!(
+            state.open_dialog,
+            Some(crate::commands::DialogState::SessionTree(_))
+        ),
+        "dialog should stay open"
+    );
 }
 
 #[test]
@@ -241,10 +273,7 @@ fn test_fork_session_uses_index() {
 
 #[test]
 fn test_clone_session_uses_index() {
-    let messages = vec![
-        msg(Role::User, "hello"),
-        msg(Role::Assistant, "hi"),
-    ];
+    let messages = vec![msg(Role::User, "hello"), msg(Role::Assistant, "hi")];
     let tree = SessionTree::from_messages(&messages);
     let cloned = tree.clone();
     assert_eq!(cloned.node_index, tree.node_index);

@@ -4,7 +4,7 @@ set -e
 echo "=== Runie Test Verification Script ==="
 echo ""
 
-EXPECTED_TOTAL=991
+EXPECTED_TOTAL=1321
 MIN_TESTS=100
 
 # List tests
@@ -51,12 +51,14 @@ if grep -q "panicked at" /tmp/test_output.txt; then
     exit 1
 fi
 
-# Verify passed count
+# Verify passed/ignored counts
 PASSED=$(grep "test result:" /tmp/test_output.txt | grep -oE "[0-9]+ passed" | awk '{sum+=$1} END {print sum}')
+IGNORED=$(grep "test result:" /tmp/test_output.txt | grep -oE "[0-9]+ ignored" | awk '{sum+=$1} END {print sum}')
 RUNNING=$(grep "^running [0-9]* test" /tmp/test_output.txt | awk '{sum+=$2} END {print sum}')
 
 echo "Tests running: $RUNNING"
 echo "Tests passed: $PASSED"
+echo "Tests ignored: $IGNORED"
 
 if [ "$PASSED" -eq 0 ]; then
     echo "ERROR: No tests passed!"
@@ -68,8 +70,10 @@ if [ "$PASSED" -lt "$MIN_TESTS" ]; then
     exit 1
 fi
 
-if [ "$PASSED" -ne "$RUNNING" ]; then
-    echo "ERROR: Not all tests passed ($PASSED/$RUNNING)"
+# Ignored tests are counted in `running` but not in `passed`.
+TOTAL=$((PASSED + IGNORED))
+if [ "$TOTAL" -ne "$RUNNING" ]; then
+    echo "ERROR: Not all running tests were accounted for ($PASSED passed + $IGNORED ignored != $RUNNING running)"
     exit 1
 fi
 

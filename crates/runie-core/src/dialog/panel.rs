@@ -1,5 +1,15 @@
 use crate::Event;
 
+/// Visual layout of a panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PanelView {
+    /// Scrollable list with fuzzy search.
+    #[default]
+    List,
+    /// Form with labeled fields and bottom button bar.
+    Form,
+}
+
 /// A single panel inside a dialog — title + list of items + selection state.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Panel {
@@ -15,6 +25,8 @@ pub struct Panel {
     pub keep_open_on_activate: bool,
     /// For form panels: stores form values (key -> value)
     pub form_values: std::collections::HashMap<String, String>,
+    /// Visual layout of this panel.
+    pub view: PanelView,
 }
 
 impl Panel {
@@ -30,7 +42,21 @@ impl Panel {
             filterable: true,
             keep_open_on_activate: false,
             form_values: std::collections::HashMap::new(),
+            view: PanelView::List,
         }
+    }
+
+    /// Set the visual layout to a list view.
+    pub fn list(mut self) -> Self {
+        self.view = PanelView::List;
+        self
+    }
+
+    /// Set the visual layout to a form view and disable fuzzy filtering.
+    pub fn form(mut self) -> Self {
+        self.view = PanelView::Form;
+        self.filterable = false;
+        self
     }
 
     pub fn item(mut self, label: impl Into<String>, action: ItemAction) -> Self {
@@ -41,11 +67,15 @@ impl Panel {
         self
     }
 
-    pub fn toggle(mut self, label: impl Into<String>, value: bool, key: impl Into<String>) -> Self {
+    /// Add a toggle (checkbox) item. The action is emitted on activation
+    /// (Enter / space). Use `ItemAction::Toggle(key.into())` for settings
+    /// that mutate app config by key, or `ItemAction::Emit(event)` for
+    /// dialog-specific toggles (e.g. login model selection).
+    pub fn toggle(mut self, label: impl Into<String>, value: bool, action: ItemAction) -> Self {
         self.items.push(PanelItem::Toggle {
             label: label.into(),
             value,
-            key: key.into(),
+            action,
         });
         self
     }
@@ -82,6 +112,7 @@ impl Panel {
         placeholder: impl Into<String>,
         key: impl Into<String>,
     ) -> Self {
+        self.view = PanelView::Form;
         self.items.push(PanelItem::FormField {
             label: label.into(),
             value: String::new(),
@@ -99,6 +130,7 @@ impl Panel {
         key: impl Into<String>,
         value: impl Into<String>,
     ) -> Self {
+        self.view = PanelView::Form;
         let value_str = value.into();
         let key_str = key.into();
         self.items.push(PanelItem::FormField {
@@ -118,6 +150,7 @@ impl Panel {
         // in update/mod.rs, which matches on `panel.id` and reads form values.
         // No need to store an action here — `PanelItem::FormSubmit` is purely
         // the visible "Submit" item.
+        self.view = PanelView::Form;
         self.items.push(PanelItem::FormSubmit);
         self
     }
@@ -188,7 +221,7 @@ impl Panel {
                 Some((i, score))
             })
             .collect();
-        scored.sort_by(|a, b| b.1.cmp(&a.1)); // descending by score
+        scored.sort_by_key(|b| std::cmp::Reverse(b.1)); // descending by score
         scored.into_iter().map(|(i, _)| i).collect()
     }
 
@@ -266,11 +299,9 @@ impl Panel {
         self.selected = 0;
     }
 
-    /// Returns true if this panel contains any form fields.
+    /// Returns true if this panel renders as a form view.
     pub fn is_form(&self) -> bool {
-        self.items
-            .iter()
-            .any(|i| matches!(i, PanelItem::FormField { .. }))
+        matches!(self.view, PanelView::Form)
     }
 
     /// Get the index of the currently selected form field (or None if not on a field).
@@ -389,6 +420,12 @@ pub fn strip_accel(label: &str) -> String {
 }
 
 /// A single row inside a panel.
+///
+/// The DSL is intentionally minimal: every navigable item carries an
+/// `action: ItemAction` that is emitted on activation. Toggle items
+/// render as checkboxes (`[ ]` / `[✓]`) in both list and form views.
+/// Form fields are editable inline. There is no separate "checkbox"
+/// variant — `Toggle` *is* the checkbox.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PanelItem {
     Action {
@@ -398,7 +435,7 @@ pub enum PanelItem {
     Toggle {
         label: String,
         value: bool,
-        key: String,
+        action: ItemAction,
     },
     Select {
         label: String,

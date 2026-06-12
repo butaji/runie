@@ -1,8 +1,8 @@
 //! Markdown parsing for agent messages
 
+use crate::theme::{color_accent, color_code_bg, color_fg_bright};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
-use crate::theme::{color_fg_bright, color_accent, color_code_bg};
 
 /// Parsed inline markdown span for styling.
 #[derive(Debug, Clone, PartialEq)]
@@ -29,7 +29,10 @@ pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<Md
             flush_plain(&mut current, &mut spans, base);
             if let Some((found, inner)) = parse_delimited(&mut chars, "**") {
                 if found {
-                    spans.push(MdSpan { content: inner, style: base.add_modifier(Modifier::BOLD) });
+                    spans.push(MdSpan {
+                        content: inner,
+                        style: base.add_modifier(Modifier::BOLD),
+                    });
                 } else {
                     current.push_str("**");
                     current.push_str(&inner);
@@ -52,7 +55,10 @@ pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<Md
             flush_plain(&mut current, &mut spans, base);
             if let Some((found, inner)) = parse_delimited(&mut chars, "*") {
                 if found {
-                    spans.push(MdSpan { content: inner, style: base.add_modifier(Modifier::ITALIC) });
+                    spans.push(MdSpan {
+                        content: inner,
+                        style: base.add_modifier(Modifier::ITALIC),
+                    });
                 } else {
                     current.push('*');
                     current.push_str(&inner);
@@ -66,7 +72,10 @@ pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<Md
     spans
 }
 
-fn parse_delimited(chars: &mut std::iter::Peekable<impl Iterator<Item = char>>, delim: &str) -> Option<(bool, String)> {
+fn parse_delimited(
+    chars: &mut std::iter::Peekable<impl Iterator<Item = char>>,
+    delim: &str,
+) -> Option<(bool, String)> {
     let mut text = String::new();
     while let Some(c) = chars.next() {
         if delim == "*" && c == '*' {
@@ -123,7 +132,10 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
 
     fn flush_list(items: &mut Vec<String>, blocks: &mut Vec<CodeBlock>, ordered: bool) {
         if !items.is_empty() {
-            blocks.push(CodeBlock::List { ordered, items: std::mem::take(items) });
+            blocks.push(CodeBlock::List {
+                ordered,
+                items: std::mem::take(items),
+            });
         }
     }
 
@@ -148,7 +160,9 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
                 code_lines.clear();
             } else {
                 // Safe because we checked starts_with("```") above
-                let rest = line.strip_prefix("```").expect("already checked starts_with");
+                let rest = line
+                    .strip_prefix("```")
+                    .expect("already checked starts_with");
                 lang = rest.trim().to_string();
             }
             in_code = !in_code;
@@ -177,22 +191,28 @@ pub fn extract_code_blocks(text: &str) -> Vec<CodeBlock> {
 
         // Lists (- item, * item, 1. item, 2. item)
         let is_unordered = line.starts_with("- ") || line.starts_with("* ");
-        let is_ordered = line.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+        let is_ordered = line
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
             && line.contains('.');
 
         if is_unordered || is_ordered {
             flush_text(&mut text_lines, &mut blocks);
             flush_blockquote(&mut blockquote_lines, &mut blocks);
-            
+
             // Check if this continues a list
             let item_text = if is_unordered {
                 line[2..].trim().to_string()
             } else {
                 // "1. item" -> "item"
-                line.split_once('.').map(|(_, rest)| rest.trim().to_string()).unwrap_or_default()
+                line.split_once('.')
+                    .map(|(_, rest)| rest.trim().to_string())
+                    .unwrap_or_default()
             };
             let this_ordered = is_ordered;
-            
+
             if in_list && list_ordered == this_ordered {
                 // Continue current list
                 if !current_list_item.is_empty() {
@@ -300,7 +320,6 @@ mod tests {
         let text = "```rust\nfn main() {}";
         let blocks = extract_code_blocks(text);
         assert_eq!(blocks.len(), 1);
-        assert!(matches!(&blocks[0], CodeBlock::Text(t) if t.contains("fn main"))
-        );
+        assert!(matches!(&blocks[0], CodeBlock::Text(t) if t.contains("fn main")));
     }
 }

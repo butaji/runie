@@ -67,7 +67,6 @@ impl Provider for OpenAiProvider {
             let chunk = chunk.context("SSE stream error")?;
             buffer.push_str(&String::from_utf8_lossy(&chunk));
 
-
             while let Some(pos) = buffer.find('\n') {
                 let line = buffer[..pos].trim().to_string();
                 buffer = buffer[pos + 1..].to_string();

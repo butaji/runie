@@ -1,10 +1,12 @@
 //! Tests for color restraint: only important things get bright colors.
 
-use ratatui::style::Color;
-use runie_core::{AppState, Event};
+use crate::theme::{
+    color_accent, color_dim, color_fg, color_fg_bright, color_success, style_user, TEST_LOCK,
+};
 use crate::ui::view;
+use ratatui::style::Color;
 use ratatui::{backend::TestBackend, Terminal};
-use crate::theme::{color_fg_bright, color_accent, color_success, color_dim, color_fg, style_user, TEST_LOCK};
+use runie_core::{AppState, Event};
 
 fn draw_state(state: &mut AppState) -> Terminal<TestBackend> {
     let backend = TestBackend::new(60, 20);
@@ -42,14 +44,18 @@ fn agent_message_is_low_contrast_not_bright() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello agent".into() });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: "Hello agent".into(),
+    });
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Hello agent"));
     let bright = color_fg_bright();
     assert!(
         !colors.contains(&bright),
-        "Agent message should NOT use fg_bright color, got: {:?}", colors
+        "Agent message should NOT use fg_bright color, got: {:?}",
+        colors
     );
 }
 
@@ -66,7 +72,8 @@ fn thought_is_low_contrast_not_accent() {
     let accent = color_accent();
     assert!(
         !colors.contains(&accent),
-        "Thought should NOT use accent color, got: {:?}", colors
+        "Thought should NOT use accent color, got: {:?}",
+        colors
     );
 }
 
@@ -74,14 +81,21 @@ fn thought_is_low_contrast_not_accent() {
 fn tool_header_is_low_contrast_not_success() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1.txt".into() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1.txt".into(),
+    });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("ls") && l.contains("✓"));
     let success = color_success();
     assert!(
         !colors.contains(&success),
-        "Tool header should NOT use success color, got: {:?}", colors
+        "Tool header should NOT use success color, got: {:?}",
+        colors
     );
 }
 
@@ -90,8 +104,14 @@ fn turn_complete_is_low_contrast() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
     state.streaming = true;
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Done".into() });
-    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content: "Done".into(),
+    });
+    state.update(Event::AgentTurnComplete {
+        id: "req.0".into(),
+        duration_secs: 1.0,
+    });
     state.update(Event::AgentDone { id: "req.0".into() });
     let term = draw_state(&mut state);
     let colors = line_colors(&term, |l| l.contains("Turn completed"));
@@ -99,7 +119,8 @@ fn turn_complete_is_low_contrast() {
     let accent = color_accent();
     assert!(
         !colors.iter().any(|c| *c == bright || *c == accent),
-        "TurnComplete should not be bright or accent, got: {:?}", colors
+        "TurnComplete should not be bright or accent, got: {:?}",
+        colors
     );
 }
 
@@ -115,7 +136,8 @@ fn user_message_is_bright() {
     let user_color = style_user().fg.unwrap();
     assert!(
         colors.contains(&user_color),
-        "User message SHOULD use user style color, got: {:?}", colors
+        "User message SHOULD use user style color, got: {:?}",
+        colors
     );
 }
 
@@ -131,11 +153,13 @@ fn status_active_is_dim_not_success() {
     let success = color_success();
     assert!(
         colors.contains(&dim),
-        "Active status should use dim color, got: {:?}", colors
+        "Active status should use dim color, got: {:?}",
+        colors
     );
     assert!(
         !colors.contains(&success),
-        "Active status should NOT use success color, got: {:?}", colors
+        "Active status should NOT use success color, got: {:?}",
+        colors
     );
 }
 
@@ -151,7 +175,8 @@ fn status_idle_is_dim() {
     let fg = color_fg();
     assert!(
         !colors.contains(&fg),
-        "Idle status should NOT use fg color, got: {:?}", colors
+        "Idle status should NOT use fg color, got: {:?}",
+        colors
     );
 }
 
@@ -184,11 +209,13 @@ fn thought_expanded_and_collapsed_same_style() {
     let bright = color_fg_bright();
     assert!(
         !colors_exp.iter().any(|c| *c == accent || *c == bright),
-        "Expanded thought should be low-contrast, got: {:?}", colors_exp
+        "Expanded thought should be low-contrast, got: {:?}",
+        colors_exp
     );
     assert!(
         !colors_col.iter().any(|c| *c == accent || *c == bright),
-        "Collapsed thought should be low-contrast, got: {:?}", colors_col
+        "Collapsed thought should be low-contrast, got: {:?}",
+        colors_col
     );
 }
 
@@ -197,15 +224,27 @@ fn tool_expanded_and_collapsed_same_style() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     // Expanded tool
     let mut state_exp = AppState::default();
-    state_exp.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    state_exp.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file.txt".into() });
+    state_exp.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    state_exp.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file.txt".into(),
+    });
     let term_exp = draw_state(&mut state_exp);
     let colors_exp = line_colors(&term_exp, |l| l.contains("ls"));
 
     // Collapsed tool
     let mut state_col = AppState::default();
-    state_col.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    state_col.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file.txt".into() });
+    state_col.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    state_col.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file.txt".into(),
+    });
     state_col.update(Event::ToggleExpand);
     let term_col = draw_state(&mut state_col);
     let colors_col = line_colors(&term_col, |l| l.contains("ls") || l.contains("[+]"));
@@ -214,10 +253,12 @@ fn tool_expanded_and_collapsed_same_style() {
     let bright = color_fg_bright();
     assert!(
         !colors_exp.iter().any(|c| *c == success || *c == bright),
-        "Expanded tool should be low-contrast, got: {:?}", colors_exp
+        "Expanded tool should be low-contrast, got: {:?}",
+        colors_exp
     );
     assert!(
         !colors_col.iter().any(|c| *c == success || *c == bright),
-        "Collapsed tool should be low-contrast, got: {:?}", colors_col
+        "Collapsed tool should be low-contrast, got: {:?}",
+        colors_col
     );
 }

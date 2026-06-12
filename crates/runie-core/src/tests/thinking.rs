@@ -1,6 +1,6 @@
 use crate::model::ThinkingLevel;
 use crate::session::{Session, Store};
-use crate::{Event, AppState};
+use crate::{AppState, Event};
 
 #[test]
 fn cycle_rotates() {
@@ -12,28 +12,46 @@ fn cycle_rotates() {
 
 #[test]
 fn all_returns_all_levels_in_order() {
-    assert_eq!(ThinkingLevel::all().to_vec(), vec![
-        ThinkingLevel::Off,
-        ThinkingLevel::Low,
-        ThinkingLevel::Medium,
-        ThinkingLevel::High,
-    ]);
+    assert_eq!(
+        ThinkingLevel::all().to_vec(),
+        vec![
+            ThinkingLevel::Off,
+            ThinkingLevel::Low,
+            ThinkingLevel::Medium,
+            ThinkingLevel::High,
+        ]
+    );
 }
 
 #[test]
 fn prompt_suffix_matches() {
     assert_eq!(ThinkingLevel::Off.prompt_suffix(), "");
-    assert_eq!(ThinkingLevel::Low.prompt_suffix(), "\nThink briefly before responding.");
-    assert_eq!(ThinkingLevel::Medium.prompt_suffix(), "\nThink step by step before responding.");
-    assert_eq!(ThinkingLevel::High.prompt_suffix(), "\nThink deeply and thoroughly. Consider edge cases and alternatives.");
+    assert_eq!(
+        ThinkingLevel::Low.prompt_suffix(),
+        "\nThink briefly before responding."
+    );
+    assert_eq!(
+        ThinkingLevel::Medium.prompt_suffix(),
+        "\nThink step by step before responding."
+    );
+    assert_eq!(
+        ThinkingLevel::High.prompt_suffix(),
+        "\nThink deeply and thoroughly. Consider edge cases and alternatives."
+    );
 }
 
 #[test]
 fn from_str_parses_levels() {
     assert_eq!("off".parse::<ThinkingLevel>().unwrap(), ThinkingLevel::Off);
     assert_eq!("low".parse::<ThinkingLevel>().unwrap(), ThinkingLevel::Low);
-    assert_eq!("medium".parse::<ThinkingLevel>().unwrap(), ThinkingLevel::Medium);
-    assert_eq!("high".parse::<ThinkingLevel>().unwrap(), ThinkingLevel::High);
+    assert_eq!(
+        "medium".parse::<ThinkingLevel>().unwrap(),
+        ThinkingLevel::Medium
+    );
+    assert_eq!(
+        "high".parse::<ThinkingLevel>().unwrap(),
+        ThinkingLevel::High
+    );
     assert!("unknown".parse::<ThinkingLevel>().is_err());
 }
 
@@ -88,8 +106,15 @@ fn slash_thinking_sets() {
     state.update(Event::CommandFormSubmit); // Submits the form
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
-    assert!(sys_msgs.iter().any(|m| m.content.contains("Thinking level set to: high")));
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == crate::model::Role::System)
+        .collect();
+    assert!(sys_msgs
+        .iter()
+        .any(|m| m.content.contains("Thinking level set to: high")));
 }
 
 #[test]
@@ -102,7 +127,12 @@ fn slash_thinking_no_args_shows_panel() {
     // Panel should be open
     assert!(state.open_dialog.is_some(), "panel should be open");
     // No system messages should be generated yet
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == crate::model::Role::System).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == crate::model::Role::System)
+        .collect();
     assert!(sys_msgs.is_empty(), "no system messages yet");
 }
 
@@ -118,12 +148,18 @@ fn thinking_panel_contains_all_levels() {
         panic!("expected PanelStack dialog");
     };
     let panel = stack.current().expect("current panel");
-    let labels: Vec<String> = panel.items.iter()
+    let labels: Vec<String> = panel
+        .items
+        .iter()
         .filter_map(|i| i.label().map(|s| s.to_string()))
         .collect();
 
     // Current level is marked
-    assert!(labels.iter().any(|l| l == "medium (current)"), "current level marked: {:?}", labels);
+    assert!(
+        labels.iter().any(|l| l == "medium (current)"),
+        "current level marked: {:?}",
+        labels
+    );
     // All other levels shown
     assert!(labels.contains(&"off".to_string()));
     assert!(labels.contains(&"low".to_string()));
@@ -149,11 +185,17 @@ fn thinking_panel_has_cli_usage_hint() {
         panic!("expected panel");
     };
     let panel = stack.current().expect("panel");
-    let labels: Vec<String> = panel.items.iter()
+    let labels: Vec<String> = panel
+        .items
+        .iter()
         .filter_map(|i| i.label().map(|s| s.to_string()))
         .collect();
     let hint = labels.iter().find(|l| l.contains("/thinking"));
-    assert!(hint.is_some(), "panel should advertise the CLI form, got labels: {:?}", labels);
+    assert!(
+        hint.is_some(),
+        "panel should advertise the CLI form, got labels: {:?}",
+        labels
+    );
 }
 
 #[test]
@@ -170,7 +212,11 @@ fn thinking_does_not_create_a_form_panel() {
     match result {
         CommandResult::OpenPanelStack(stack) => {
             let panel = stack.current().expect("panel");
-            assert!(!panel.is_form(), "thinking panel must not be a form, got items: {:?}", panel.items);
+            assert!(
+                !panel.is_form(),
+                "thinking panel must not be a form, got items: {:?}",
+                panel.items
+            );
         }
         other => panic!("expected OpenPanelStack, got {:?}", other),
     }

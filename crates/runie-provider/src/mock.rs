@@ -1,6 +1,6 @@
-use std::time::Duration;
 use anyhow::Result;
 use runie_core::provider::{Message, Provider, ResponseChunk};
+use std::time::Duration;
 
 #[derive(Default, Clone)]
 pub struct MockProvider {
@@ -37,11 +37,7 @@ impl MockProvider {
 }
 
 impl Provider for MockProvider {
-    async fn generate<F>(
-        &self,
-        messages: Vec<Message>,
-        mut on_chunk: F,
-    ) -> Result<()>
+    async fn generate<F>(&self, messages: Vec<Message>, mut on_chunk: F) -> Result<()>
     where
         F: FnMut(ResponseChunk) + Send,
     {
@@ -115,8 +111,7 @@ impl Provider for MockProvider {
             return Ok(());
         }
 
-        if user_input.to_lowercase().contains("run") || user_input.to_lowercase().contains("cmd")
-        {
+        if user_input.to_lowercase().contains("run") || user_input.to_lowercase().contains("cmd") {
             self.maybe_sleep().await;
             on_chunk(ResponseChunk {
                 content: "I'll run that command for you.\n".to_string(),
@@ -128,7 +123,8 @@ impl Provider for MockProvider {
             return Ok(());
         }
 
-        if user_input.to_lowercase().contains("grep") || user_input.to_lowercase().contains("search")
+        if user_input.to_lowercase().contains("grep")
+            || user_input.to_lowercase().contains("search")
         {
             self.maybe_sleep().await;
             on_chunk(ResponseChunk {
@@ -149,7 +145,8 @@ impl Provider for MockProvider {
             });
             self.maybe_sleep().await;
             on_chunk(ResponseChunk {
-                content: r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
+                content: r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#
+                    .to_string(),
             });
             return Ok(());
         }
@@ -180,8 +177,8 @@ pub struct MockStreamingProvider {
 impl Default for MockStreamingProvider {
     fn default() -> Self {
         Self {
-            chunk_size: 1,  // Default to char-by-char streaming
-            delay_ms: 10,   // Default 10ms between chunks
+            chunk_size: 1, // Default to char-by-char streaming
+            delay_ms: 10,  // Default 10ms between chunks
             total_chunks: None,
         }
     }
@@ -219,11 +216,7 @@ impl MockStreamingProvider {
 }
 
 impl Provider for MockStreamingProvider {
-    async fn generate<F>(
-        &self,
-        messages: Vec<Message>,
-        mut on_chunk: F,
-    ) -> Result<()>
+    async fn generate<F>(&self, messages: Vec<Message>, mut on_chunk: F) -> Result<()>
     where
         F: FnMut(ResponseChunk) + Send,
     {
@@ -243,9 +236,9 @@ impl Provider for MockStreamingProvider {
         );
 
         // Stream the response in chunks
-        let total_chunks = self.total_chunks.unwrap_or_else(|| {
-            (response.len() + self.chunk_size - 1) / self.chunk_size
-        });
+        let total_chunks = self
+            .total_chunks
+            .unwrap_or_else(|| response.len().div_ceil(self.chunk_size));
 
         for i in 0..total_chunks {
             let start = i * self.chunk_size;

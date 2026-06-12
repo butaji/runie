@@ -23,8 +23,13 @@ fn find_files_empty_pattern() {
 fn find_files_substring_match() {
     let files = find_files("toml", ".", 10);
     assert!(!files.is_empty());
-    assert!(files.iter().any(|f| f.contains("toml") || f.contains("TOML")),
-        "Should find files matching substring 'toml'. Got: {:?}", files);
+    assert!(
+        files
+            .iter()
+            .any(|f| f.contains("toml") || f.contains("TOML")),
+        "Should find files matching substring 'toml'. Got: {:?}",
+        files
+    );
 }
 
 #[test]

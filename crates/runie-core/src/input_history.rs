@@ -53,8 +53,7 @@ pub fn load_history() -> Result<Vec<String>> {
             continue;
         }
         // Each line is a JSON string (escaped content)
-        let entry: String = serde_json::from_str(&line)
-            .unwrap_or(line); // Fallback: use raw line if not valid JSON
+        let entry: String = serde_json::from_str(&line).unwrap_or(line); // Fallback: use raw line if not valid JSON
         entries.push(entry);
     }
 
@@ -67,8 +66,7 @@ pub fn save_history(entries: &[String]) -> Result<()> {
     let dir = ensure_history_dir()?;
     let path = dir.join("history.jsonl");
 
-    let file = File::create(&path)
-        .with_context(|| format!("create history: {:?}", path))?;
+    let file = File::create(&path).with_context(|| format!("create history: {:?}", path))?;
     let mut writer = std::io::BufWriter::new(file);
 
     for entry in entries {
@@ -202,11 +200,7 @@ mod tests {
 
     #[test]
     fn search_history_substring() {
-        let entries = vec![
-            "hello world".into(),
-            "say hello".into(),
-            "goodbye".into(),
-        ];
+        let entries = vec!["hello world".into(), "say hello".into(), "goodbye".into()];
 
         let result = search_history(&entries, "hello");
         assert_eq!(result.len(), 2);

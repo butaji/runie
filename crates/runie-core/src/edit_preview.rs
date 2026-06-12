@@ -13,6 +13,11 @@ pub struct EditPreview {
 
 impl EditPreview {
     pub fn new(path: PathBuf, original: String, proposed: String, diff: String) -> Self {
-        Self { path, original, proposed, diff }
+        Self {
+            path,
+            original,
+            proposed,
+            diff,
+        }
     }
 }

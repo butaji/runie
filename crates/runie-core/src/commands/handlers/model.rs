@@ -1,25 +1,31 @@
 //! Model commands using the new DSL
 
-use crate::commands::{cmd, CommandCategory, CommandRegistry, CommandResult, DialogType};
+use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogType};
+use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
-use crate::dialog::{Panel, PanelStack, ItemAction};
 
 pub fn register(registry: &mut CommandRegistry) {
-    registry.register(crate::cmd!("model")
-        .desc("Switch model")
-        .aliases(&["m"])
-        .category(CommandCategory::Model)
-        .handler(handle_model));
+    registry.register(
+        crate::cmd!("model")
+            .desc("Switch model")
+            .aliases(&["m"])
+            .category(CommandCategory::Model)
+            .handler(handle_model),
+    );
 
-    registry.register(crate::cmd!("thinking")
-        .desc("Set thinking level (off/low/medium/high)")
-        .category(CommandCategory::Model)
-        .handler(handle_thinking));
+    registry.register(
+        crate::cmd!("thinking")
+            .desc("Set thinking level (off/low/medium/high)")
+            .category(CommandCategory::Model)
+            .handler(handle_thinking),
+    );
 
-    registry.register(crate::cmd!("scoped-models")
-        .desc("Enable/disable models for cycling")
-        .category(CommandCategory::Model)
-        .handler(handle_scoped_models));
+    registry.register(
+        crate::cmd!("scoped-models")
+            .desc("Enable/disable models for cycling")
+            .category(CommandCategory::Model)
+            .handler(handle_scoped_models),
+    );
 }
 
 fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
@@ -43,7 +49,10 @@ fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
             ));
         }
     }
-    CommandResult::Message(format!("Switched to {}/{}", state.config.current_provider, state.config.current_model))
+    CommandResult::Message(format!(
+        "Switched to {}/{}",
+        state.config.current_provider, state.config.current_model
+    ))
 }
 
 fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
@@ -54,7 +63,10 @@ fn handle_thinking(state: &mut AppState, args: &str) -> CommandResult {
     match rest.parse::<crate::model::ThinkingLevel>() {
         Ok(level) => {
             state.config.thinking_level = level;
-            CommandResult::Message(format!("Thinking level set to: {}", state.config.thinking_level.as_str()))
+            CommandResult::Message(format!(
+                "Thinking level set to: {}",
+                state.config.thinking_level.as_str()
+            ))
         }
         Err(e) => CommandResult::Message(format!("Error: {e}")),
     }
@@ -83,7 +95,9 @@ fn open_thinking_panel(state: &mut AppState) -> CommandResult {
 
 fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
     if state.config.scoped_models.is_empty() {
-        return CommandResult::Message("No scoped models configured. Add [models.scoped] to config.toml.".into());
+        return CommandResult::Message(
+            "No scoped models configured. Add [models.scoped] to config.toml.".into(),
+        );
     }
     CommandResult::OpenDialog(DialogType::ScopedModels)
 }
@@ -95,5 +109,8 @@ fn handle_scoped_models(state: &mut AppState, _: &str) -> CommandResult {
 /// Set the thinking level (e.g. from the thinking panel selection).
 pub(crate) fn run_thinking(state: &mut AppState, level: crate::model::ThinkingLevel) {
     state.config.thinking_level = level;
-    state.add_system_msg(format!("Thinking level set to: {}", state.config.thinking_level.as_str()));
+    state.add_system_msg(format!(
+        "Thinking level set to: {}",
+        state.config.thinking_level.as_str()
+    ));
 }

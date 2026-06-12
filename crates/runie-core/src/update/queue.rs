@@ -1,5 +1,5 @@
-use crate::model::{AppState, ChatMessage, DeliveryMode, Role};
 use super::now;
+use crate::model::{AppState, ChatMessage, DeliveryMode, Role};
 
 impl AppState {
     pub(crate) fn queue_follow_up(&mut self) {
@@ -52,12 +52,18 @@ impl AppState {
     }
 
     fn has_follow_ups(&self) -> bool {
-        self.agent.message_queue.iter().any(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+        self.agent
+            .message_queue
+            .iter()
+            .any(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
     }
 
     /// Deliver all follow-ups in batch mode.
     fn try_deliver_follow_ups_all(&mut self) {
-        let follow_ups: Vec<String> = self.agent.message_queue.iter()
+        let follow_ups: Vec<String> = self
+            .agent
+            .message_queue
+            .iter()
             .filter(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
             .map(|m| m.content.clone())
             .collect();
@@ -69,7 +75,9 @@ impl AppState {
         let content = follow_ups.join("\n");
 
         // Remove all follow-ups from queue
-        self.agent.message_queue.retain(|m| m.kind != crate::model::QueuedMessageKind::FollowUp);
+        self.agent
+            .message_queue
+            .retain(|m| m.kind != crate::model::QueuedMessageKind::FollowUp);
 
         self.push_user_message(content);
         self.view.scroll = 0;
@@ -91,7 +99,12 @@ impl AppState {
     fn try_deliver_steering(&mut self) -> bool {
         match self.steering_mode {
             DeliveryMode::OneAtATime => {
-                if let Some(idx) = self.agent.message_queue.iter().position(|m| m.kind == crate::model::QueuedMessageKind::Steering) {
+                if let Some(idx) = self
+                    .agent
+                    .message_queue
+                    .iter()
+                    .position(|m| m.kind == crate::model::QueuedMessageKind::Steering)
+                {
                     let content = self.agent.message_queue.remove(idx).content;
                     self.push_user_message(content);
                     self.view.scroll = 0;
@@ -102,7 +115,10 @@ impl AppState {
                 }
             }
             DeliveryMode::All => {
-                let steerings: Vec<String> = self.agent.message_queue.iter()
+                let steerings: Vec<String> = self
+                    .agent
+                    .message_queue
+                    .iter()
                     .filter(|m| m.kind == crate::model::QueuedMessageKind::Steering)
                     .map(|m| m.content.clone())
                     .collect();
@@ -110,7 +126,9 @@ impl AppState {
                     return false;
                 }
                 let content = steerings.join("\n");
-                self.agent.message_queue.retain(|m| m.kind != crate::model::QueuedMessageKind::Steering);
+                self.agent
+                    .message_queue
+                    .retain(|m| m.kind != crate::model::QueuedMessageKind::Steering);
                 self.push_user_message(content);
                 self.view.scroll = 0;
                 self.messages_changed();
@@ -131,7 +149,12 @@ impl AppState {
     }
 
     fn try_deliver_follow_up(&mut self) {
-        if let Some(idx) = self.agent.message_queue.iter().position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp) {
+        if let Some(idx) = self
+            .agent
+            .message_queue
+            .iter()
+            .position(|m| m.kind == crate::model::QueuedMessageKind::FollowUp)
+        {
             let content = self.agent.message_queue.remove(idx).content;
             self.push_user_message(content);
             self.view.scroll = 0;

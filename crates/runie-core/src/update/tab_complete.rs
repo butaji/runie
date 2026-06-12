@@ -28,13 +28,13 @@ impl AppState {
         if let Some(ref stored) = self.input.tab_complete_prefix {
             if stored == prefix && !self.input.tab_complete_matches.is_empty() {
                 let match_count = self.input.tab_complete_matches.len();
-                
+
                 // If only 1 match, accept the ghost (complete the word)
                 if match_count == 1 {
                     self.accept_ghost();
                     return;
                 }
-                
+
                 // Multiple matches: cycle to next
                 let next_idx = (self.input.tab_complete_index + 1) % match_count;
                 let full = self.input.tab_complete_matches[next_idx].clone();
@@ -78,7 +78,7 @@ impl AppState {
         let has_ghost = self.input.ghost_completion.is_some();
         let has_prefix = self.input.tab_complete_prefix.is_some();
         let has_matches = !self.input.tab_complete_matches.is_empty();
-        
+
         if has_ghost || has_prefix || has_matches {
             self.input.ghost_completion = None;
             self.input.tab_complete_prefix = None;
@@ -116,7 +116,9 @@ impl AppState {
 
     fn find_prefix_file_matches(&self, prefix: &str) -> Vec<String> {
         let base = std::env::current_dir().unwrap_or_default();
-        let Ok(entries) = std::fs::read_dir(&base) else { return Vec::new() };
+        let Ok(entries) = std::fs::read_dir(&base) else {
+            return Vec::new();
+        };
 
         let prefix_lower = prefix.to_lowercase();
         let mut matches: Vec<String> = Vec::new();
@@ -126,7 +128,7 @@ impl AppState {
                 continue;
             }
             if name.to_lowercase().starts_with(&prefix_lower) {
-                let is_dir = entry.file_type().map_or(false, |t| t.is_dir());
+                let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
                 let display = if is_dir { format!("{}/", name) } else { name };
                 matches.push(display);
             }

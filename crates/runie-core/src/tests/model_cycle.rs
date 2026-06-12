@@ -1,7 +1,7 @@
 //! Model cycling tests (Layer 1 + Layer 2)
 
 use crate::event::Event;
-use crate::model::{AppState, Role, ScopedModel};
+use crate::model::{AppState, ScopedModel};
 
 fn sm(provider: &str, name: &str, enabled: bool) -> ScopedModel {
     ScopedModel {
@@ -42,10 +42,7 @@ fn cycle_prev_decrements() {
 #[test]
 fn cycle_wraps_forward() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-    ];
+    state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
     state.config.scoped_index = 1;
 
     state.update(Event::CycleModelNext);
@@ -55,10 +52,7 @@ fn cycle_wraps_forward() {
 #[test]
 fn cycle_wraps_backward() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-    ];
+    state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
     state.config.scoped_index = 0;
 
     state.update(Event::CycleModelPrev);
@@ -68,6 +62,8 @@ fn cycle_wraps_backward() {
 #[test]
 fn cycle_empty_noop() {
     let mut state = AppState::default();
+    state.config.current_provider = "mock".into();
+    state.config.current_model = "echo".into();
     state.config.scoped_models = vec![];
     state.config.scoped_index = 0;
 
@@ -80,10 +76,7 @@ fn cycle_empty_noop() {
 #[test]
 fn cycle_emits_switch_model() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", true),
-        sm("openai", "gpt-4o", true),
-    ];
+    state.config.scoped_models = vec![sm("mock", "echo", true), sm("openai", "gpt-4o", true)];
     state.config.scoped_index = 0;
 
     state.update(Event::CycleModelNext);
@@ -91,8 +84,14 @@ fn cycle_emits_switch_model() {
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
 
-    assert_eq!(state.transient_message, Some("Switched to openai/gpt-4o".into()));
-    assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
+    assert_eq!(
+        state.transient_message,
+        Some("Switched to openai/gpt-4o".into())
+    );
+    assert_eq!(
+        state.transient_level,
+        Some(crate::event::TransientLevel::Success)
+    );
 }
 
 #[test]
@@ -116,10 +115,9 @@ fn cycle_skips_disabled_models() {
 #[test]
 fn cycle_all_disabled_noop() {
     let mut state = AppState::default();
-    state.config.scoped_models = vec![
-        sm("mock", "echo", false),
-        sm("openai", "gpt-4o", false),
-    ];
+    state.config.current_provider = "mock".into();
+    state.config.current_model = "echo".into();
+    state.config.scoped_models = vec![sm("mock", "echo", false), sm("openai", "gpt-4o", false)];
     state.config.scoped_index = 0;
 
     state.update(Event::CycleModelNext);

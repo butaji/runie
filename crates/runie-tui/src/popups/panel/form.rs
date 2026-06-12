@@ -8,13 +8,10 @@ use ratatui::{
 };
 use runie_core::dialog::{Panel, PanelItem};
 
-use crate::theme::{color_accent, color_dim, style_hint, style_placeholder, style_thinking};
+use crate::theme::{color_accent, style_hint, style_placeholder, style_thinking};
 use crate::ui::parse_hint_spans;
 
-use super::{
-    circled_number, compute_scrolling, hotkey_area, pad_to_width, setup_popup, style_border,
-    truncate,
-};
+use super::{circled_number, pad_to_width, setup_popup, style_border, truncate};
 
 pub(super) fn render_form(f: &mut Frame, panel: &Panel) {
     let inner = setup_popup(f, &panel.title);
@@ -43,13 +40,13 @@ pub(super) fn render_form(f: &mut Frame, panel: &Panel) {
     );
 }
 
-fn hint_lines(panel: &Panel) -> Vec<Line> {
+fn hint_lines(panel: &Panel) -> Vec<Line<'_>> {
     let on_button = panel
         .selected_item()
-        .map_or(false, |i| matches!(i, PanelItem::Action { .. }));
+        .is_some_and(|i| matches!(i, PanelItem::Action { .. }));
     let on_submit = panel
         .selected_item()
-        .map_or(false, |i| matches!(i, PanelItem::FormSubmit));
+        .is_some_and(|i| matches!(i, PanelItem::FormSubmit));
     let hint_text = if on_button || on_submit {
         "↑↓ navigate · enter activate · esc close"
     } else {
@@ -58,7 +55,7 @@ fn hint_lines(panel: &Panel) -> Vec<Line> {
     vec![Line::from(""), Line::from(parse_hint_spans(hint_text))]
 }
 
-fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line> {
+fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line<'_>> {
     let mut body: Vec<Line> = Vec::new();
     push_header(&mut body, inner_w);
     let mut nav_idx = 0usize;
@@ -79,6 +76,7 @@ fn build_body(panel: &Panel, inner_w: usize) -> Vec<Line> {
     body
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_body_item<'a>(
     body: &mut Vec<Line<'a>>,
     item: &'a PanelItem,
@@ -111,11 +109,31 @@ fn push_body_item<'a>(
             value,
             placeholder,
         ),
+        PanelItem::Toggle { label, value, .. } => {
+            push_toggle_item(body, label, *value, *nav_idx == selected);
+            *nav_idx += 1;
+        }
         PanelItem::Action { .. } | PanelItem::FormSubmit => *nav_idx += 1,
         _ => {}
     }
 }
 
+/// Render a toggle (checkbox) line in the form body. Toggle items are
+/// the universal checkbox in the DSL — no separate Checkbox variant.
+fn push_toggle_item<'a>(body: &mut Vec<Line<'a>>, label: &'a str, checked: bool, is_active: bool) {
+    let mark = if checked { "[✓]" } else { "[ ]" };
+    let text = format!("  {} {}", mark, label);
+    let style = if is_active {
+        Style::default()
+            .fg(color_accent())
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    body.push(Line::from(text).style(style));
+}
+
+#[allow(clippy::too_many_arguments)]
 fn push_form_field_item<'a>(
     body: &mut Vec<Line<'a>>,
     raw_i: usize,
@@ -144,7 +162,7 @@ fn push_form_field_item<'a>(
 }
 
 /// Build spans for a single button label with accelerator underline.
-fn make_button_spans(label: &str, is_active: bool) -> Vec<Span> {
+fn make_button_spans(label: &str, is_active: bool) -> Vec<Span<'_>> {
     use runie_core::dialog::{parse_accel, strip_accel};
     let stripped = strip_accel(label);
     let display = format!("  {}  ", stripped);
@@ -175,7 +193,7 @@ fn make_button_spans(label: &str, is_active: bool) -> Vec<Span> {
 }
 
 /// Build a single right-aligned line containing all form buttons.
-fn build_button_line(panel: &Panel, inner_w: usize) -> Line {
+fn build_button_line(panel: &Panel, inner_w: usize) -> Line<'_> {
     let mut button_spans: Vec<Span> = Vec::new();
     let mut nav_idx = 0usize;
 
@@ -202,7 +220,7 @@ fn build_button_line(panel: &Panel, inner_w: usize) -> Line {
     }
 
     // Trim trailing gap and right-align
-    while button_spans.last().map_or(false, |s| s.content == "  ") {
+    while button_spans.last().is_some_and(|s| s.content == "  ") {
         button_spans.pop();
     }
     let total_chars: usize = button_spans.iter().map(|s| s.content.chars().count()).sum();
@@ -228,6 +246,7 @@ fn field_indices(panel: &Panel) -> Vec<usize> {
         .collect()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_field<'a>(
     lines: &mut Vec<Line<'a>>,
     field_num: usize,

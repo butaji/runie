@@ -87,7 +87,11 @@ fn scroll_offset_halfway() {
     let snap = state.snapshot();
     // total_lines = 40 (10*3 users + 10 spacers), height = 5, max_scroll = 35
     // offset = 35 - 7 = 28
-    assert_eq!(snap.scroll_offset(5), 28, "Halfway scroll gives correct offset");
+    assert_eq!(
+        snap.scroll_offset(5),
+        28,
+        "Halfway scroll gives correct offset"
+    );
 }
 
 #[test]
@@ -112,5 +116,8 @@ fn scrollbar_state_has_viewport_content_length() {
     // total = 10, viewport = 5, thumb = max(1, 5*5/10) = max(1, 2) = 2... but with
     // proper viewport_content_length set, ratatui computes it internally
     // We just check thumb > 0 when content overflows
-    assert!(thumb > 0 || snap.total_lines <= 5, "Thumb should be visible when content overflows");
+    assert!(
+        thumb > 0 || snap.total_lines <= 5,
+        "Thumb should be visible when content overflows"
+    );
 }

@@ -1,8 +1,8 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use runie_agent::{build_provider, Tool};
 use runie_agent::parser::parse_tool_calls;
+use runie_agent::{build_provider, Tool};
 use runie_core::{
     config_reload,
     provider::{Message, Provider, ResponseChunk},
@@ -53,9 +53,7 @@ where
     );
 
     let mut messages = vec![
-        Message::System {
-            content: system,
-        },
+        Message::System { content: system },
         Message::User {
             content: prompt.to_string(),
         },

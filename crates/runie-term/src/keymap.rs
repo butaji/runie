@@ -1,7 +1,7 @@
 //! Crossterm key event → CoreEvent conversion with configurable keybindings.
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use runie_core::{Event as CoreEvent, keybindings};
+use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
 
 pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
@@ -31,7 +31,8 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
 }
 
 fn is_enter_like(code: KeyCode) -> bool {
-    matches!(code,
+    matches!(
+        code,
         KeyCode::Enter
         | KeyCode::F(3)      // tmux sends \e[13;2~ for Shift+Enter
         | KeyCode::F(13)     // some terminals use F13
@@ -179,10 +180,17 @@ mod tests {
 
     #[test]
     fn ctrl_shift_e_converts_to_toggle_expand() {
-        let key = KeyEvent::new(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let key = KeyEvent::new(
+            KeyCode::Char('E'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleExpand)), "Ctrl+Shift+E should map to ToggleExpand, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleExpand)),
+            "Ctrl+Shift+E should map to ToggleExpand, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -190,7 +198,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleExpand)), "Ctrl+E should map to ToggleExpand, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleExpand)),
+            "Ctrl+E should map to ToggleExpand, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -198,7 +210,10 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Quit)), "Ctrl+C should map to Quit");
+        assert!(
+            matches!(result, Some(runie_core::Event::Quit)),
+            "Ctrl+C should map to Quit"
+        );
     }
 
     #[test]
@@ -206,7 +221,10 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::empty());
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Input('e'))), "Plain e should map to Input");
+        assert!(
+            matches!(result, Some(runie_core::Event::Input('e'))),
+            "Plain e should map to Input"
+        );
     }
 
     #[test]
@@ -214,23 +232,42 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(!matches!(result, Some(runie_core::Event::Quit)), "Ctrl+E should NOT map to Quit");
+        assert!(
+            !matches!(result, Some(runie_core::Event::Quit)),
+            "Ctrl+E should NOT map to Quit"
+        );
     }
 
     #[test]
     fn ctrl_shift_e_on_repeat_kind_still_works() {
-        let key = KeyEvent::new_with_kind(KeyCode::Char('E'), KeyModifiers::CONTROL | KeyModifiers::SHIFT, KeyEventKind::Repeat);
+        let key = KeyEvent::new_with_kind(
+            KeyCode::Char('E'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+            KeyEventKind::Repeat,
+        );
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleExpand)), "Ctrl+Shift+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleExpand)),
+            "Ctrl+Shift+E with Repeat kind should still map to ToggleExpand, got {:?}",
+            result
+        );
     }
 
     #[test]
     fn ctrl_e_on_repeat_kind_still_works() {
-        let key = KeyEvent::new_with_kind(KeyCode::Char('e'), KeyModifiers::CONTROL, KeyEventKind::Repeat);
+        let key = KeyEvent::new_with_kind(
+            KeyCode::Char('e'),
+            KeyModifiers::CONTROL,
+            KeyEventKind::Repeat,
+        );
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleExpand)), "Ctrl+E with Repeat kind should still map to ToggleExpand, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleExpand)),
+            "Ctrl+E with Repeat kind should still map to ToggleExpand, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -238,7 +275,10 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Suspend)), "Ctrl+Z should map to Suspend");
+        assert!(
+            matches!(result, Some(runie_core::Event::Suspend)),
+            "Ctrl+Z should map to Suspend"
+        );
     }
 
     #[test]
@@ -246,7 +286,10 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Redo)), "Ctrl+Y should map to Redo");
+        assert!(
+            matches!(result, Some(runie_core::Event::Redo)),
+            "Ctrl+Y should map to Redo"
+        );
     }
 
     #[test]
@@ -254,7 +297,10 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('b'), KeyModifiers::ALT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::CursorWordLeft)), "Alt+B should map to CursorWordLeft");
+        assert!(
+            matches!(result, Some(runie_core::Event::CursorWordLeft)),
+            "Alt+B should map to CursorWordLeft"
+        );
     }
 
     #[test]
@@ -262,14 +308,20 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::ALT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::CursorWordRight)), "Alt+F should map to CursorWordRight");
+        assert!(
+            matches!(result, Some(runie_core::Event::CursorWordRight)),
+            "Alt+F should map to CursorWordRight"
+        );
     }
 
     #[test]
     fn bracketed_paste_converts_to_paste_event() {
         let event = crossterm::event::Event::Paste("hello world".to_string());
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Paste(s)) if s == "hello world"), "Paste event should map to CoreEvent::Paste");
+        assert!(
+            matches!(result, Some(runie_core::Event::Paste(s)) if s == "hello world"),
+            "Paste event should map to CoreEvent::Paste"
+        );
     }
 
     #[test]
@@ -279,7 +331,10 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &bindings);
-        assert!(matches!(result, Some(runie_core::Event::Abort)), "Custom keybinding should override default");
+        assert!(
+            matches!(result, Some(runie_core::Event::Abort)),
+            "Custom keybinding should override default"
+        );
     }
 
     #[test]
@@ -308,7 +363,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Up, KeyModifiers::ALT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Dequeue)), "Alt+Up should map to Dequeue, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Dequeue)),
+            "Alt+Up should map to Dequeue, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -316,7 +375,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::OpenExternalEditor)), "Ctrl+G should map to OpenExternalEditor, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::OpenExternalEditor)),
+            "Ctrl+G should map to OpenExternalEditor, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -324,7 +387,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('l'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleModelSelector)), "Ctrl+L should map to ToggleModelSelector, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleModelSelector)),
+            "Ctrl+L should map to ToggleModelSelector, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -332,15 +399,26 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('p'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleCommandPalette)), "Ctrl+P should map to ToggleCommandPalette, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleCommandPalette)),
+            "Ctrl+P should map to ToggleCommandPalette, got {:?}",
+            result
+        );
     }
 
     #[test]
     fn shift_ctrl_p_emits_toggle_command_palette() {
-        let key = KeyEvent::new(KeyCode::Char('P'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let key = KeyEvent::new(
+            KeyCode::Char('P'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::ToggleCommandPalette)), "Shift+Ctrl+P should map to ToggleCommandPalette, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::ToggleCommandPalette)),
+            "Shift+Ctrl+P should map to ToggleCommandPalette, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -348,15 +426,26 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('m'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::CycleModelNext)), "Ctrl+M should map to CycleModelNext, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::CycleModelNext)),
+            "Ctrl+M should map to CycleModelNext, got {:?}",
+            result
+        );
     }
 
     #[test]
     fn shift_ctrl_m_emits_cycle_model_prev() {
-        let key = KeyEvent::new(KeyCode::Char('M'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
+        let key = KeyEvent::new(
+            KeyCode::Char('M'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::CycleModelPrev)), "Shift+Ctrl+M should map to CycleModelPrev, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::CycleModelPrev)),
+            "Shift+Ctrl+M should map to CycleModelPrev, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -377,7 +466,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::PasteImage)), "Ctrl+V should map to PasteImage, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::PasteImage)),
+            "Ctrl+V should map to PasteImage, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -386,7 +479,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::ALT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::PasteImage)), "Alt+V should map to PasteImage, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::PasteImage)),
+            "Alt+V should map to PasteImage, got {:?}",
+            result
+        );
     }
 
     // ─── Shift+symbol input ─────────────────────────────────────────────────────
@@ -396,7 +493,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('!'), KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Input('!'))), "Shift+! should map to Input('!'), got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Input('!'))),
+            "Shift+! should map to Input('!'), got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -404,7 +505,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('?'), KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Input('?'))), "Shift+? should map to Input('?'), got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Input('?'))),
+            "Shift+? should map to Input('?'), got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -412,7 +517,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('('), KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Input('('))), "Shift+( should map to Input('('), got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Input('('))),
+            "Shift+( should map to Input('('), got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -420,7 +529,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('@'), KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Input('@'))), "Shift+@ should map to Input('@'), got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Input('@'))),
+            "Shift+@ should map to Input('@'), got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -428,7 +541,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Newline)), "Shift+Enter should map to Newline, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Newline)),
+            "Shift+Enter should map to Newline, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -437,7 +554,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::F(3), KeyModifiers::SHIFT);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Newline)), "Shift+F3 should map to Newline for tmux Shift+Enter, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Newline)),
+            "Shift+F3 should map to Newline for tmux Shift+Enter, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -447,7 +568,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::F(3), KeyModifiers::empty());
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Newline)), "F3 without shift should map to Newline for tmux compat, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Newline)),
+            "F3 without shift should map to Newline for tmux compat, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -455,7 +580,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL);
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Newline)), "Ctrl+J should map to Newline, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Newline)),
+            "Ctrl+J should map to Newline, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -464,7 +593,11 @@ mod tests {
         let key = KeyEvent::new(KeyCode::Char('\n'), KeyModifiers::empty());
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
-        assert!(matches!(result, Some(runie_core::Event::Newline)), "LF char should map to Newline, got {:?}", result);
+        assert!(
+            matches!(result, Some(runie_core::Event::Newline)),
+            "LF char should map to Newline, got {:?}",
+            result
+        );
     }
 
     #[test]
@@ -473,6 +606,10 @@ mod tests {
         let event = crossterm::event::Event::Key(key);
         let result = super::convert_event(&event, &default_bindings());
         // Shift+arrow is not a binding, falls through to None
-        assert!(result.is_none(), "Shift+Up should not map (falls through), got {:?}", result);
+        assert!(
+            result.is_none(),
+            "Shift+Up should not map (falls through), got {:?}",
+            result
+        );
     }
 }

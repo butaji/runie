@@ -3,7 +3,18 @@
 use crate::commands::DialogState;
 use crate::event::Event;
 use crate::model::{AppState, DeliveryMode};
-use crate::settings::SettingsCategory;
+use crate::update::settings_dialog::build_setting_items;
+
+fn settings_selected(state: &AppState) -> Option<usize> {
+    match &state.open_dialog {
+        Some(DialogState::Settings(stack)) => stack.current().map(|p| p.selected),
+        _ => None,
+    }
+}
+
+fn settings_count(state: &AppState) -> usize {
+    build_setting_items(state).len()
+}
 
 #[test]
 fn settings_opens_dialog() {
@@ -13,7 +24,7 @@ fn settings_opens_dialog() {
     }
     state.update(Event::Submit);
     assert!(
-        matches!(state.open_dialog, Some(DialogState::Settings { .. })),
+        matches!(state.open_dialog, Some(DialogState::Settings(_))),
         "Expected Settings dialog, got {:?}",
         state.open_dialog
     );
@@ -22,84 +33,58 @@ fn settings_opens_dialog() {
 #[test]
 fn settings_navigates_up() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Models,
-        selected: 1,
-    });
+    state.update(Event::ToggleSettingsDialog);
     state.update(Event::SettingsUp);
-    if let Some(DialogState::Settings { selected, .. }) = state.open_dialog {
-        assert_eq!(selected, 0);
-    } else {
-        panic!("Dialog should still be open");
-    }
+    let selected = settings_selected(&state).expect("Dialog should still be open");
+    assert_eq!(
+        selected,
+        settings_count(&state) - 1,
+        "Up at first wraps to last"
+    );
 }
 
 #[test]
 fn settings_navigates_down_wraps() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Safety,
-        selected: 0,
-    });
-    state.update(Event::SettingsDown);
-    if let Some(DialogState::Settings { selected, .. }) = state.open_dialog {
-        assert_eq!(selected, 0, "Single item should stay at 0");
-    } else {
-        panic!("Dialog should still be open");
+    state.update(Event::ToggleSettingsDialog);
+    let count = settings_count(&state);
+    for _ in 0..count {
+        state.update(Event::SettingsDown);
     }
-}
-
-#[test]
-fn settings_left_changes_category() {
-    let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Models,
-        selected: 0,
-    });
-    state.update(Event::SettingsLeft);
-    if let Some(DialogState::Settings { category, selected }) = state.open_dialog {
-        assert_eq!(category, SettingsCategory::Safety, "Left from first goes to last");
-        assert_eq!(selected, 0);
-    } else {
-        panic!("Dialog should still be open");
-    }
-}
-
-#[test]
-fn settings_right_changes_category() {
-    let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Safety,
-        selected: 0,
-    });
-    state.update(Event::SettingsRight);
-    if let Some(DialogState::Settings { category, selected }) = state.open_dialog {
-        assert_eq!(category, SettingsCategory::Models, "Right from last goes to first");
-        assert_eq!(selected, 0);
-    } else {
-        panic!("Dialog should still be open");
-    }
+    let selected = settings_selected(&state).expect("Dialog should still be open");
+    assert_eq!(selected, 0, "Down wraps to first");
 }
 
 #[test]
 fn settings_select_toggles_read_only() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Safety,
-        selected: 0,
-    });
-    state.update(Event::SettingsSelect);
+    state.update(Event::ToggleSettingsDialog);
+    // Scan for the read-only toggle
+    let count = settings_count(&state);
+    for _ in 0..count {
+        let is_readonly = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
+            stack
+                .current()
+                .and_then(|p| p.selected_item())
+                .and_then(|i| i.label())
+                == Some("Read-Only")
+        } else {
+            false
+        };
+        if is_readonly {
+            state.update(Event::SettingsSelect);
+            break;
+        }
+        state.update(Event::SettingsDown);
+    }
     assert!(state.config.read_only);
 }
 
 #[test]
 fn settings_esc_closes() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Models,
-        selected: 0,
-    });
+    state.update(Event::ToggleSettingsDialog);
     state.update(Event::Abort);
     assert!(state.open_dialog.is_none());
 }
@@ -107,11 +92,25 @@ fn settings_esc_closes() {
 #[test]
 fn settings_select_toggles_steering_mode() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: SettingsCategory::Behavior,
-        selected: 1,
-    });
+    state.update(Event::ToggleSettingsDialog);
+    // Find steering mode row by scanning
+    let count = settings_count(&state);
     assert!(matches!(state.steering_mode, DeliveryMode::OneAtATime));
-    state.update(Event::SettingsSelect);
+    for _ in 0..count {
+        let is_steering = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
+            stack
+                .current()
+                .and_then(|p| p.selected_item())
+                .and_then(|i| i.label())
+                == Some("Steering Mode")
+        } else {
+            false
+        };
+        if is_steering {
+            state.update(Event::SettingsSelect);
+            break;
+        }
+        state.update(Event::SettingsDown);
+    }
     assert!(matches!(state.steering_mode, DeliveryMode::All));
 }

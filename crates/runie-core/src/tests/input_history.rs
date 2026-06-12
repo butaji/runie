@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::model::AppState;
     use crate::event::Event;
+    use crate::model::AppState;
 
     #[test]
     fn history_starts_empty() {
@@ -47,13 +47,19 @@ mod tests {
     fn history_navigates_multiple_items() {
         let mut state = AppState::default();
         // Submit "first"
-        for c in "first".chars() { state.update(Event::Input(c)); }
+        for c in "first".chars() {
+            state.update(Event::Input(c));
+        }
         state.update(Event::Submit);
         // Submit "second"
-        for c in "second".chars() { state.update(Event::Input(c)); }
+        for c in "second".chars() {
+            state.update(Event::Input(c));
+        }
         state.update(Event::Submit);
         // Submit "third"
-        for c in "third".chars() { state.update(Event::Input(c)); }
+        for c in "third".chars() {
+            state.update(Event::Input(c));
+        }
         state.update(Event::Submit);
 
         state.update(Event::HistoryPrev);
@@ -70,7 +76,9 @@ mod tests {
     #[test]
     fn history_next_at_end_is_empty() {
         let mut state = AppState::default();
-        for c in "test".chars() { state.update(Event::Input(c)); }
+        for c in "test".chars() {
+            state.update(Event::Input(c));
+        }
         state.update(Event::Submit);
         state.update(Event::HistoryPrev);
         assert_eq!(state.input.input, "test");
@@ -84,7 +92,9 @@ mod tests {
     #[test]
     fn editing_resets_history_nav() {
         let mut state = AppState::default();
-        for c in "hello".chars() { state.update(Event::Input(c)); }
+        for c in "hello".chars() {
+            state.update(Event::Input(c));
+        }
         state.update(Event::Submit);
         state.update(Event::HistoryPrev);
         assert_eq!(state.input.input, "hello");

@@ -34,10 +34,10 @@ pub struct UnifiedDiff {
 pub fn generate_unified_diff(old_content: &str, new_content: &str) -> UnifiedDiff {
     let old_lines: Vec<&str> = old_content.lines().collect();
     let new_lines: Vec<&str> = new_content.lines().collect();
-    
+
     // Simple LCS-based diff algorithm
     let lcs = longest_common_subsequence(&old_lines, &new_lines);
-    
+
     // If LCS contains all lines, content is identical - return empty diff
     if lcs.len() == old_lines.len() && old_lines.len() == new_lines.len() {
         return UnifiedDiff {
@@ -46,9 +46,9 @@ pub fn generate_unified_diff(old_content: &str, new_content: &str) -> UnifiedDif
             hunks: Vec::new(),
         };
     }
-    
+
     let hunks = build_hunks(&old_lines, &new_lines, &lcs);
-    
+
     UnifiedDiff {
         old_path: "a".to_string(), // Placeholder, will be set by caller
         new_path: "b".to_string(),
@@ -59,10 +59,10 @@ pub fn generate_unified_diff(old_content: &str, new_content: &str) -> UnifiedDif
 fn longest_common_subsequence<'a>(old: &[&'a str], new: &[&'a str]) -> Vec<(usize, usize)> {
     let m = old.len();
     let n = new.len();
-    
+
     // Build DP table
     let mut dp = vec![vec![0usize; n + 1]; m + 1];
-    
+
     for i in 1..=m {
         for j in 1..=n {
             if old[i - 1] == new[j - 1] {
@@ -72,7 +72,7 @@ fn longest_common_subsequence<'a>(old: &[&'a str], new: &[&'a str]) -> Vec<(usiz
             }
         }
     }
-    
+
     // Backtrack to find LCS
     let mut lcs = Vec::new();
     let mut i = m;
@@ -96,14 +96,21 @@ fn build_hunks(old_lines: &[&str], new_lines: &[&str], lcs: &[(usize, usize)]) -
     if lcs.is_empty() {
         return vec![build_complete_replacement_hunk(old_lines, new_lines)];
     }
-    
+
     let mut hunks = Vec::new();
     let mut old_idx = 0;
     let mut new_idx = 0;
-    
+
     for (lcs_old, lcs_new) in lcs {
         if *lcs_old > old_idx || *lcs_new > new_idx {
-            let hunk = collect_changes_between(old_lines, new_lines, *lcs_old, *lcs_new, &mut old_idx, &mut new_idx);
+            let hunk = collect_changes_between(
+                old_lines,
+                new_lines,
+                *lcs_old,
+                *lcs_new,
+                &mut old_idx,
+                &mut new_idx,
+            );
             if let Some(h) = hunk {
                 hunks.push(h);
             }
@@ -112,7 +119,7 @@ fn build_hunks(old_lines: &[&str], new_lines: &[&str], lcs: &[(usize, usize)]) -
             new_idx = *lcs_new;
         }
     }
-    
+
     // Handle trailing changes
     if old_idx < old_lines.len() || new_idx < new_lines.len() {
         let hunk = build_trailing_hunk(old_lines, new_lines, &mut old_idx, &mut new_idx);
@@ -120,7 +127,7 @@ fn build_hunks(old_lines: &[&str], new_lines: &[&str], lcs: &[(usize, usize)]) -
             hunks.push(h);
         }
     }
-    
+
     hunks
 }
 
@@ -139,11 +146,17 @@ fn build_complete_replacement_hunk(old_lines: &[&str], new_lines: &[&str]) -> Di
 }
 
 fn count_removed(lines: &[DiffLine]) -> usize {
-    lines.iter().filter(|l| matches!(l, DiffLine::Removed(_))).count()
+    lines
+        .iter()
+        .filter(|l| matches!(l, DiffLine::Removed(_)))
+        .count()
 }
 
 fn count_added(lines: &[DiffLine]) -> usize {
-    lines.iter().filter(|l| matches!(l, DiffLine::Added(_))).count()
+    lines
+        .iter()
+        .filter(|l| matches!(l, DiffLine::Added(_)))
+        .count()
 }
 
 fn collect_changes_between(
@@ -155,7 +168,7 @@ fn collect_changes_between(
     new_idx: &mut usize,
 ) -> Option<DiffHunk> {
     let mut hunk_lines = Vec::new();
-    
+
     while *old_idx < lcs_old {
         hunk_lines.push(DiffLine::Removed(old_lines[*old_idx].to_string()));
         *old_idx += 1;
@@ -164,16 +177,16 @@ fn collect_changes_between(
         hunk_lines.push(DiffLine::Added(new_lines[*new_idx].to_string()));
         *new_idx += 1;
     }
-    
+
     if hunk_lines.is_empty() {
         return None;
     }
-    
+
     let removed = count_removed(&hunk_lines);
     let added = count_added(&hunk_lines);
     let start_old = (*old_idx - removed).max(1);
     let start_new = (*new_idx - added).max(1);
-    
+
     Some(DiffHunk {
         header: format!("@@ -{},{} +{},{} @@", start_old, removed, start_new, added),
         lines: hunk_lines,
@@ -187,7 +200,7 @@ fn build_trailing_hunk(
     new_idx: &mut usize,
 ) -> Option<DiffHunk> {
     let mut hunk_lines = Vec::new();
-    
+
     while *old_idx < old_lines.len() {
         hunk_lines.push(DiffLine::Removed(old_lines[*old_idx].to_string()));
         *old_idx += 1;
@@ -196,16 +209,16 @@ fn build_trailing_hunk(
         hunk_lines.push(DiffLine::Added(new_lines[*new_idx].to_string()));
         *new_idx += 1;
     }
-    
+
     if hunk_lines.is_empty() {
         return None;
     }
-    
+
     let removed = count_removed(&hunk_lines);
     let added = count_added(&hunk_lines);
     let start_old = (*old_idx - removed).max(1);
     let start_new = (*new_idx - added).max(1);
-    
+
     Some(DiffHunk {
         header: format!("@@ -{},{} +{},{} @@", start_old, removed, start_new, added),
         lines: hunk_lines,
@@ -213,7 +226,11 @@ fn build_trailing_hunk(
 }
 
 /// Generate a preview of an edit without applying it.
-pub fn preview_edit(path: &std::path::Path, old: &str, new: &str) -> anyhow::Result<runie_core::EditPreview> {
+pub fn preview_edit(
+    path: &std::path::Path,
+    old: &str,
+    new: &str,
+) -> anyhow::Result<runie_core::EditPreview> {
     let original = std::fs::read_to_string(path)?;
     let proposed = original.replacen(old, new, 1);
     let diff = generate_unified_diff(&original, &proposed);
@@ -229,10 +246,10 @@ pub fn preview_edit(path: &std::path::Path, old: &str, new: &str) -> anyhow::Res
 /// Renders a unified diff to string format
 pub fn render_diff_to_string(diff: &UnifiedDiff, path: &str) -> String {
     let mut output = Vec::new();
-    
+
     output.push(format!("--- {}", path));
     output.push(format!("+++ {}", path));
-    
+
     for hunk in &diff.hunks {
         output.push(hunk.header.clone());
         for line in &hunk.lines {
@@ -245,7 +262,7 @@ pub fn render_diff_to_string(diff: &UnifiedDiff, path: &str) -> String {
             }
         }
     }
-    
+
     output.join("\n")
 }
 
@@ -258,7 +275,13 @@ mod tests {
         let content = "line1\nline2\nline3";
         let diff = generate_unified_diff(content, content);
         // When content is identical, LCS = all lines, so hunks may be empty
-        assert!(diff.hunks.is_empty() || diff.hunks.iter().all(|h| h.lines.iter().all(|l| matches!(l, DiffLine::Context(_)))));
+        assert!(
+            diff.hunks.is_empty()
+                || diff
+                    .hunks
+                    .iter()
+                    .all(|h| h.lines.iter().all(|l| matches!(l, DiffLine::Context(_))))
+        );
     }
 
     #[test]
@@ -267,8 +290,10 @@ mod tests {
         let new = "line1\nline2\nline3";
         let diff = generate_unified_diff(old, new);
         assert!(!diff.hunks.is_empty());
-        
-        let has_added = diff.hunks.iter()
+
+        let has_added = diff
+            .hunks
+            .iter()
             .flat_map(|h| &h.lines)
             .any(|l| matches!(l, DiffLine::Added(s) if s == "line3"));
         assert!(has_added, "Should have added line3");
@@ -280,8 +305,10 @@ mod tests {
         let new = "line1\nline3";
         let diff = generate_unified_diff(old, new);
         assert!(!diff.hunks.is_empty());
-        
-        let has_removed = diff.hunks.iter()
+
+        let has_removed = diff
+            .hunks
+            .iter()
             .flat_map(|h| &h.lines)
             .any(|l| matches!(l, DiffLine::Removed(s) if s == "line2"));
         assert!(has_removed, "Should have removed line2");
@@ -293,14 +320,18 @@ mod tests {
         let new = "line1\nnew_line\nline3";
         let diff = generate_unified_diff(old, new);
         assert!(!diff.hunks.is_empty());
-        
-        let has_removed = diff.hunks.iter()
+
+        let has_removed = diff
+            .hunks
+            .iter()
             .flat_map(|h| &h.lines)
             .any(|l| matches!(l, DiffLine::Removed(s) if s == "old_line"));
-        let has_added = diff.hunks.iter()
+        let has_added = diff
+            .hunks
+            .iter()
             .flat_map(|h| &h.lines)
             .any(|l| matches!(l, DiffLine::Added(s) if s == "new_line"));
-        
+
         assert!(has_removed, "Should have removed old_line");
         assert!(has_added, "Should have added new_line");
     }
@@ -311,7 +342,7 @@ mod tests {
         let new = "line2";
         let diff = generate_unified_diff(old, new);
         let output = render_diff_to_string(&diff, "test.txt");
-        
+
         assert!(output.contains("--- test.txt"));
         assert!(output.contains("+++ test.txt"));
         assert!(output.contains("-line1"));
@@ -340,7 +371,7 @@ mod tests {
         let new = "line1\nline2\nline3";
         let diff = generate_unified_diff(old, new);
         let output = render_diff_to_string(&diff, "test.txt");
-        
+
         assert!(output.contains("+line2"));
         assert!(output.contains("+line3"));
     }
@@ -354,8 +385,14 @@ mod tests {
         let preview = preview_edit(&path, "world", "universe").unwrap();
         assert!(preview.diff.contains("---"), "diff should have file header");
         assert!(preview.diff.contains("+++"), "diff should have file header");
-        assert!(preview.diff.contains("-hello world"), "diff should show removed line");
-        assert!(preview.diff.contains("+hello universe"), "diff should show added line");
+        assert!(
+            preview.diff.contains("-hello world"),
+            "diff should show removed line"
+        );
+        assert!(
+            preview.diff.contains("+hello universe"),
+            "diff should show added line"
+        );
         assert_eq!(preview.original, "hello world");
         assert_eq!(preview.proposed, "hello universe");
     }
@@ -367,6 +404,9 @@ mod tests {
         std::fs::write(&path, "line1\nline2\nline3").unwrap();
 
         let preview = preview_edit(&path, "line2", "modified").unwrap();
-        assert!(preview.diff.contains("@@"), "diff should have hunk header with line numbers");
+        assert!(
+            preview.diff.contains("@@"),
+            "diff should have hunk header with line numbers"
+        );
     }
 }

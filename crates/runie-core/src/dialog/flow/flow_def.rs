@@ -1,9 +1,9 @@
 //! Flow - A sequence of steps with branching
 
-use std::collections::HashMap;
-use crate::dialog::dsl::panel;
-use crate::commands::CommandResult;
 use super::{FlowContext, Step};
+use crate::commands::CommandResult;
+use crate::dialog::dsl::panel;
+use std::collections::HashMap;
 
 /// A flow is a sequence of steps with branching support
 #[derive(Debug, Clone, Default)]
@@ -26,7 +26,9 @@ impl Flow {
 
     /// Add a step
     pub fn step<F>(mut self, builder: F) -> Self
-    where F: FnOnce(&mut FlowContext) -> Step {
+    where
+        F: FnOnce(&mut FlowContext) -> Step,
+    {
         let mut ctx = FlowContext::new();
         let step = builder(&mut ctx);
         self.steps.push(step);
@@ -35,7 +37,9 @@ impl Flow {
 
     /// Add a named branch
     pub fn branch<F>(mut self, name: &str, builder: F) -> Self
-    where F: FnOnce(&mut FlowContext) -> Step {
+    where
+        F: FnOnce(&mut FlowContext) -> Step,
+    {
         let mut ctx = FlowContext::new();
         let step = builder(&mut ctx);
         self.branches.insert(name.into(), vec![step]);
@@ -44,7 +48,9 @@ impl Flow {
 
     /// Add multiple steps to a branch
     pub fn branch_steps<F>(mut self, name: &str, builder: F) -> Self
-    where F: FnOnce(&mut FlowContext) -> Vec<Step> {
+    where
+        F: FnOnce(&mut FlowContext) -> Vec<Step>,
+    {
         let mut ctx = FlowContext::new();
         let steps = builder(&mut ctx);
         self.branches.insert(name.into(), steps);
@@ -108,7 +114,13 @@ mod tests {
     fn test_flow_builder() {
         let flow = Flow::new("test")
             .step(|_| Step::show(panel("a", "Step A").action("Next", ItemAction::Push("b".into()))))
-            .step(|_| Step::show(panel("b", "Step B").action("Back", ItemAction::Pop).action("Done", ItemAction::Close)));
+            .step(|_| {
+                Step::show(
+                    panel("b", "Step B")
+                        .action("Back", ItemAction::Pop)
+                        .action("Done", ItemAction::Close),
+                )
+            });
 
         assert_eq!(flow.steps.len(), 2);
         assert_eq!(flow.steps[0].id, "a");
@@ -118,12 +130,19 @@ mod tests {
     #[test]
     fn test_flow_with_branch() {
         let flow = Flow::new("decide")
-            .step(|_| Step::show(panel("choice", "Choose")
-                .action("Path A", ItemAction::Push("path_a".into()))
-                .action("Path B", ItemAction::Push("path_b".into()))
-            ))
-            .branch("path_a", |_| Step::show(panel("a", "Path A").action("Done", ItemAction::Close)))
-            .branch("path_b", |_| Step::show(panel("b", "Path B").action("Done", ItemAction::Close)));
+            .step(|_| {
+                Step::show(
+                    panel("choice", "Choose")
+                        .action("Path A", ItemAction::Push("path_a".into()))
+                        .action("Path B", ItemAction::Push("path_b".into())),
+                )
+            })
+            .branch("path_a", |_| {
+                Step::show(panel("a", "Path A").action("Done", ItemAction::Close))
+            })
+            .branch("path_b", |_| {
+                Step::show(panel("b", "Path B").action("Done", ItemAction::Close))
+            });
 
         assert_eq!(flow.steps.len(), 1);
         assert_eq!(flow.branches.len(), 2);

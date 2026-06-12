@@ -1,5 +1,5 @@
+use crate::theme::{style_code_block, style_input_cursor, style_user};
 use ratatui::style::Style;
-use crate::theme::{style_user, style_code_block, style_input_cursor};
 
 #[test]
 fn style_user_has_fg() {
@@ -10,15 +10,27 @@ fn style_user_has_fg() {
 #[test]
 fn style_code_block_has_fg_and_bg() {
     let s: Style = style_code_block();
-    assert!(s.fg.is_some(), "style_code_block should have a foreground color");
-    assert!(s.bg.is_some(), "style_code_block should have a background color");
+    assert!(
+        s.fg.is_some(),
+        "style_code_block should have a foreground color"
+    );
+    assert!(
+        s.bg.is_some(),
+        "style_code_block should have a background color"
+    );
 }
 
 #[test]
 fn style_input_cursor_is_reversible() {
     let s: Style = style_input_cursor();
-    assert!(s.fg.is_some(), "style_input_cursor should have a foreground color");
-    assert!(s.bg.is_some(), "style_input_cursor should have a background color");
+    assert!(
+        s.fg.is_some(),
+        "style_input_cursor should have a foreground color"
+    );
+    assert!(
+        s.bg.is_some(),
+        "style_input_cursor should have a background color"
+    );
 }
 
 #[test]

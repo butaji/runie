@@ -19,10 +19,12 @@ pub struct FileEntry {
 /// Names are returned as-is; callers append `/` for display/insertion.
 pub fn find_file_entries(base: &str, limit: usize) -> Vec<FileEntry> {
     let mut results = Vec::new();
-    let Ok(entries) = std::fs::read_dir(base) else { return results };
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return results;
+    };
     for entry in entries.flatten().take(limit) {
         let name = entry.file_name().to_string_lossy().to_string();
-        let is_dir = entry.file_type().map_or(false, |t| t.is_dir());
+        let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
         results.push(FileEntry { name, is_dir });
     }
     results.sort_by(|a, b| a.name.cmp(&b.name));
@@ -36,9 +38,13 @@ pub fn find_files(pattern: &str, base: &str, limit: usize) -> Vec<String> {
 pub fn find_files_shallow(pattern: &str, base: &str, limit: usize) -> Vec<String> {
     let mut results = Vec::new();
     let pat_lower = pattern.to_lowercase();
-    let Ok(entries) = std::fs::read_dir(base) else { return results };
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return results;
+    };
     for entry in entries.flatten() {
-        if results.len() >= limit { break; }
+        if results.len() >= limit {
+            break;
+        }
         let name = entry.file_name().to_string_lossy().to_string();
         if name.to_lowercase().contains(&pat_lower) {
             results.push(name);
@@ -80,7 +86,9 @@ where
     if out.len() >= limit {
         return;
     }
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         if out.len() >= limit {
             break;
@@ -116,21 +124,30 @@ pub fn is_image_file(path: &str) -> bool {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg")
+    matches!(
+        ext.as_str(),
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "svg"
+    )
 }
 
 pub fn read_file_ref(path: &str) -> Result<FileRef, String> {
     let is_image = is_image_file(path);
     let (text, is_image) = if is_image {
-        let bytes = std::fs::read(path)
-            .map_err(|e| format!("Error reading {}: {}", path, e))?;
-        (base64::engine::general_purpose::STANDARD.encode(&bytes), true)
+        let bytes = std::fs::read(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
+        (
+            base64::engine::general_purpose::STANDARD.encode(&bytes),
+            true,
+        )
     } else {
-        let text = std::fs::read_to_string(path)
-            .map_err(|e| format!("Error reading {}: {}", path, e))?;
+        let text =
+            std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
         (text, false)
     };
-    Ok(FileRef { path: path.to_string(), text, is_image })
+    Ok(FileRef {
+        path: path.to_string(),
+        text,
+        is_image,
+    })
 }
 
 pub fn complete_at_ref(input: &str, base: &str, limit: usize) -> Vec<String> {

@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::model::AppState;
     use crate::event::Event;
+    use crate::model::AppState;
 
     #[test]
     fn flash_increments_on_noop() {
@@ -11,7 +11,10 @@ mod tests {
         assert_eq!(state.input.input_flash, 0);
         // Cursor left at position 0 is a no-op
         state.update(Event::CursorLeft);
-        assert!(state.input.input_flash > 0, "Flash should trigger on no-op cursor move");
+        assert!(
+            state.input.input_flash > 0,
+            "Flash should trigger on no-op cursor move"
+        );
     }
 
     #[test]
@@ -19,7 +22,10 @@ mod tests {
         let mut state = AppState::default();
         state.update(Event::Input('a'));
         state.update(Event::CursorLeft);
-        assert_eq!(state.input.input_flash, 0, "Flash should not trigger on valid cursor move");
+        assert_eq!(
+            state.input.input_flash, 0,
+            "Flash should not trigger on valid cursor move"
+        );
     }
 
     #[test]
@@ -33,7 +39,10 @@ mod tests {
     fn flash_on_scroll_up_when_empty() {
         let mut state = AppState::default();
         state.update(Event::ScrollUp);
-        assert!(state.input.input_flash > 0, "Flash should trigger when scrolling with no content");
+        assert!(
+            state.input.input_flash > 0,
+            "Flash should trigger when scrolling with no content"
+        );
     }
 
     #[test]
@@ -42,6 +51,9 @@ mod tests {
         state.update(Event::CursorLeft);
         let flash1 = state.input.input_flash;
         state.update(Event::CursorLeft);
-        assert_eq!(state.input.input_flash, flash1, "Flash should not accumulate beyond max");
+        assert_eq!(
+            state.input.input_flash, flash1,
+            "Flash should not accumulate beyond max"
+        );
     }
 }

@@ -29,7 +29,15 @@ if ! command -v cargo-watch > /dev/null 2>&1; then
 fi
 
 # Parse flags
+export RUNIE_MOCK=""
 export RUNIE_MOCK_DELAY=""
+case "$mode" in
+  run|run-delay|fast|fast-delay)
+    # dev.sh enables the mock provider. Production (no dev.sh) has no
+    # mock fallback — the app requires a real provider or prompts login.
+    export RUNIE_MOCK=1
+    ;;
+esac
 case "$mode" in
   run-delay|fast-delay)
     export RUNIE_MOCK_DELAY=1
@@ -38,11 +46,11 @@ esac
 
 case "$mode" in
   run|run-delay)
-    echo "[dev] Hot reload (release). Ctrl+C to stop."
+    echo "[dev] Hot reload (release, RUNIE_MOCK=1). Ctrl+C to stop."
     cargo watch -x 'run --release -p runie-term' -w crates
     ;;
   fast|fast-delay)
-    echo "[dev] Hot reload (debug). Ctrl+C to stop."
+    echo "[dev] Hot reload (debug, RUNIE_MOCK=1). Ctrl+C to stop."
     cargo watch -x 'run -p runie-term' -w crates
     ;;
   test)
@@ -59,10 +67,13 @@ case "$mode" in
     echo "Usage: \$0 [run|run-delay|fast|fast-delay|test]"
     echo ""
     echo "Modes:"
-    echo "  run        - release build, no mock delays"
-    echo "  run-delay  - release build, random 0.5s-3s delays between mock chunks"
-    echo "  fast       - debug build, no mock delays"
-    echo "  fast-delay - debug build, random 0.5s-3s delays between mock chunks"
+    echo "  run        - release build, mock enabled, no streaming delays"
+    echo "  run-delay  - release build, mock enabled, 0.5s-3s delays between chunks"
+    echo "  fast       - debug build, mock enabled, no streaming delays"
+    echo "  fast-delay - debug build, mock enabled, 0.5s-3s delays between chunks"
     echo "  test       - run all tests"
+    echo ""
+    echo "Without dev.sh: production mode. No mock provider. The app requires"
+    echo "a real provider configured or auto-opens the login dialog on startup."
     ;;
 esac

@@ -1,5 +1,5 @@
-use crate::model::{AppState, ChatMessage, Role};
 use crate::event::Event;
+use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -78,7 +78,10 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
 fn toggle_all_empty_state_flips_flag() {
     let mut state = fresh_state();
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle on empty state should flip global flag");
+    assert!(
+        state.all_collapsed,
+        "Toggle on empty state should flip global flag"
+    );
 }
 
 #[test]
@@ -116,10 +119,16 @@ fn toggle_all_with_many_items() {
     }
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "All thoughts should be collapsed globally");
+    assert!(
+        state.all_collapsed,
+        "All thoughts should be collapsed globally"
+    );
 
     state.update(Event::ToggleExpand);
-    assert!(!state.all_collapsed, "All thoughts should be expanded globally");
+    assert!(
+        !state.all_collapsed,
+        "All thoughts should be expanded globally"
+    );
 }
 
 #[test]
@@ -127,14 +136,27 @@ fn new_thought_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.all_collapsed = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Reasoning".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Reasoning".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
-    let has_summary = feed.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::ThoughtSummary { .. }));
-    assert!(has_summary, "New thought should be collapsed when all_collapsed=true");
+    let has_summary = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, crate::ui::elements::Element::ThoughtSummary { .. }));
+    assert!(
+        has_summary,
+        "New thought should be collapsed when all_collapsed=true"
+    );
 }
 
 #[test]
@@ -142,14 +164,27 @@ fn new_thought_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.all_collapsed = false;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Reasoning".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Reasoning".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
-    let has_marker = feed.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::ThoughtMarker { .. }));
-    assert!(has_marker, "New thought should be expanded when all_collapsed=false");
+    let has_marker = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, crate::ui::elements::Element::ThoughtMarker { .. }));
+    assert!(
+        has_marker,
+        "New thought should be expanded when all_collapsed=false"
+    );
 }
 
 #[test]
@@ -157,13 +192,25 @@ fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
     state.all_collapsed = true;
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "a".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
-    let has_summary = feed.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::ToolSummary { .. }));
-    assert!(has_summary, "New tool should be collapsed when all_collapsed=true");
+    let has_summary = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, crate::ui::elements::Element::ToolSummary { .. }));
+    assert!(
+        has_summary,
+        "New tool should be collapsed when all_collapsed=true"
+    );
 }
 
 #[test]
@@ -171,11 +218,23 @@ fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
     state.all_collapsed = false;
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "a".to_string(),
+    });
     state.ensure_fresh();
 
     let feed = crate::ui::LazyCache::feed(&state);
-    let has_done = feed.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::ToolDone { .. }));
-    assert!(has_done, "New tool should be expanded when all_collapsed=false");
+    let has_done = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, crate::ui::elements::Element::ToolDone { .. }));
+    assert!(
+        has_done,
+        "New tool should be expanded when all_collapsed=false"
+    );
 }

@@ -18,7 +18,10 @@ fn test_toggle_expand_changes_rendered_output() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_expanded = terminal.backend().buffer().clone();
     let expanded_text: String = buf_expanded.content.iter().map(|c| c.symbol()).collect();
-    assert!(expanded_text.contains("I'll list the files"), "Expanded thought should show reasoning");
+    assert!(
+        expanded_text.contains("I'll list the files"),
+        "Expanded thought should show reasoning"
+    );
 
     // Toggle collapse
     state.update(Event::ToggleExpand);
@@ -27,8 +30,14 @@ fn test_toggle_expand_changes_rendered_output() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_collapsed = terminal.backend().buffer().clone();
     let collapsed_text: String = buf_collapsed.content.iter().map(|c| c.symbol()).collect();
-    assert!(collapsed_text.contains("[+]"), "Collapsed thought should show [+] indicator");
-    assert!(!collapsed_text.contains("I'll list the files"), "Collapsed thought should hide reasoning");
+    assert!(
+        collapsed_text.contains("[+]"),
+        "Collapsed thought should show [+] indicator"
+    );
+    assert!(
+        !collapsed_text.contains("I'll list the files"),
+        "Collapsed thought should hide reasoning"
+    );
 }
 
 #[test]
@@ -49,7 +58,10 @@ fn test_toggle_expand_changes_tool_render() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_expanded = terminal.backend().buffer().clone();
     let expanded_text: String = buf_expanded.content.iter().map(|c| c.symbol()).collect();
-    assert!(expanded_text.contains("file1"), "Expanded tool should show output");
+    assert!(
+        expanded_text.contains("file1"),
+        "Expanded tool should show output"
+    );
 
     // Toggle collapse
     state.update(Event::ToggleExpand);
@@ -58,6 +70,12 @@ fn test_toggle_expand_changes_tool_render() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
     let buf_collapsed = terminal.backend().buffer().clone();
     let collapsed_text: String = buf_collapsed.content.iter().map(|c| c.symbol()).collect();
-    assert!(collapsed_text.contains("[+]"), "Collapsed tool should show [+] indicator");
-    assert!(!collapsed_text.contains("file1"), "Collapsed tool should hide output");
+    assert!(
+        collapsed_text.contains("[+]"),
+        "Collapsed tool should show [+] indicator"
+    );
+    assert!(
+        !collapsed_text.contains("file1"),
+        "Collapsed tool should hide output"
+    );
 }

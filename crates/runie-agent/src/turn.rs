@@ -1,9 +1,9 @@
-use anyhow::Result;
-use runie_core::event::Event;
-use runie_core::provider::{Message, Provider};
 use crate::parser::parse_tool_calls;
 use crate::tools::Tool;
 use crate::AgentCommand;
+use anyhow::Result;
+use runie_core::event::Event;
+use runie_core::provider::{Message, Provider};
 use std::time::Instant;
 
 pub async fn run_agent_turn<F>(
@@ -19,12 +19,18 @@ where
     let mut has_intermediate_steps = false;
 
     for _ in 0..max_iterations {
-        emit(Event::AgentThinking { id: command.id.clone() });
+        emit(Event::AgentThinking {
+            id: command.id.clone(),
+        });
 
         let mut response_text = String::new();
-        let (provider, warning) = crate::build_provider_with_warning(&command.provider, &command.model);
+        let (provider, warning) =
+            crate::build_provider_with_warning(&command.provider, &command.model);
         if let Some(msg) = warning {
-            emit(Event::TransientMessage { content: msg, level: runie_core::event::TransientLevel::Warning });
+            emit(Event::TransientMessage {
+                content: msg,
+                level: runie_core::event::TransientLevel::Warning,
+            });
         }
         provider
             .generate(messages.clone(), |chunk| {
@@ -36,7 +42,9 @@ where
             })
             .await?;
 
-        emit(Event::AgentThoughtDone { id: command.id.clone() });
+        emit(Event::AgentThoughtDone {
+            id: command.id.clone(),
+        });
 
         let tools = parse_tool_calls(&response_text);
         if tools.is_empty() {
@@ -57,7 +65,9 @@ where
         });
     }
 
-    emit(Event::AgentDone { id: command.id.clone() });
+    emit(Event::AgentDone {
+        id: command.id.clone(),
+    });
     Ok(())
 }
 
@@ -118,7 +128,11 @@ fn execute_tools(
 
 fn run_tool_with_preview(tool: &Tool, emit: &mut dyn FnMut(Event)) -> crate::tools::ToolResult {
     match tool {
-        Tool::EditFile { path, search, replace } => {
+        Tool::EditFile {
+            path,
+            search,
+            replace,
+        } => {
             let resolved = crate::path_utils::resolve_path(path);
             match crate::diff::preview_edit(&resolved, search, replace) {
                 Ok(preview) => {

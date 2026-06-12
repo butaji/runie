@@ -1,7 +1,7 @@
 //! Panel Builder - Fluent API for creating panels
 
 use super::{ItemAction, PanelItem};
-use crate::Event;
+use crate::dialog::PanelView;
 use std::collections::HashMap;
 
 /// A panel builder with fluent API
@@ -15,6 +15,7 @@ pub struct Panel {
     pub filterable: bool,
     pub keep_open_on_activate: bool,
     pub form_values: HashMap<String, String>,
+    pub view: PanelView,
 }
 
 impl Panel {
@@ -31,7 +32,21 @@ impl Panel {
             filterable: true,
             keep_open_on_activate: false,
             form_values: HashMap::new(),
+            view: PanelView::List,
         }
+    }
+
+    /// Set the visual layout to a list view.
+    pub fn list(mut self) -> Self {
+        self.view = PanelView::List;
+        self
+    }
+
+    /// Set the visual layout to a form view and disable fuzzy filtering.
+    pub fn form(mut self) -> Self {
+        self.view = PanelView::Form;
+        self.filterable = false;
+        self
     }
 
     /// Add an action item
@@ -50,12 +65,14 @@ impl Panel {
         self
     }
 
-    /// Add a toggle item
-    pub fn toggle(mut self, label: impl Into<String>, value: bool, key: impl Into<String>) -> Self {
+    /// Add a toggle (checkbox) item. The action is emitted on activation.
+    /// Use `ItemAction::Toggle(key.into())` for settings by key, or
+    /// `ItemAction::Emit(event)` for custom dialog toggles.
+    pub fn toggle(mut self, label: impl Into<String>, value: bool, action: ItemAction) -> Self {
         self.items.push(PanelItem::Toggle {
             label: label.into(),
             value,
-            key: key.into(),
+            action,
         });
         self
     }
@@ -96,6 +113,7 @@ impl Panel {
         placeholder: impl Into<String>,
         key: impl Into<String>,
     ) -> Self {
+        self.view = PanelView::Form;
         self.items.push(PanelItem::FormField {
             label: label.into(),
             value: String::new(),
@@ -113,6 +131,7 @@ impl Panel {
         key: impl Into<String>,
         value: impl Into<String>,
     ) -> Self {
+        self.view = PanelView::Form;
         let value = value.into();
         let key_str = key.into();
         self.items.push(PanelItem::FormField {
@@ -158,7 +177,7 @@ impl Panel {
     }
 
     /// Shorthand for grouping items
-    pub fn group<F>(mut self, f: F) -> Self
+    pub fn group<F>(self, f: F) -> Self
     where
         F: FnOnce(Panel) -> Panel,
     {
@@ -209,11 +228,8 @@ impl Panel {
                     pending_headers.push(item);
                 }
                 _ => {
-                    if item
-                        .label()
-                        .map_or(false, |l| l.to_lowercase().contains(&q))
-                    {
-                        result.extend(pending_headers.drain(..));
+                    if item.label().is_some_and(|l| l.to_lowercase().contains(&q)) {
+                        result.append(&mut pending_headers);
                         result.push(item);
                     }
                 }
@@ -269,16 +285,13 @@ impl Panel {
         self.selected = 0;
     }
 
-    /// Check if panel has form fields
+    /// Check if panel renders as a form view.
     pub fn is_form(&self) -> bool {
-        self.items
-            .iter()
-            .any(|i| matches!(i, PanelItem::FormField { .. }))
+        matches!(self.view, PanelView::Form)
     }
 
     /// Get selected form field index
     pub fn selected_form_field(&self) -> Option<usize> {
-        let filtered = self.filtered_items();
         let mut nav = 0;
         for (i, item) in self.items.iter().enumerate() {
             if matches!(item, PanelItem::FormField { .. }) {
@@ -315,11 +328,13 @@ impl Panel {
             filterable: self.filterable,
             keep_open_on_activate: self.keep_open_on_activate,
             form_values: self.form_values,
+            view: self.view,
         }
     }
 }
 
 /// Create a new list-view panel builder. Alias for [`panel`].
+#[allow(dead_code)]
 pub fn list(id: impl Into<String>, title: impl Into<String>) -> Panel {
     Panel::new(id, title)
 }
@@ -343,7 +358,7 @@ mod tests {
         let p = panel("test", "Test")
             .header("Section 1")
             .action("Option A", ItemAction::Close)
-            .toggle("Enable", false, "enabled")
+            .toggle("Enable", false, ItemAction::Toggle("enabled".into()))
             .sep()
             .select("Choice", "a", vec!["a".into(), "b".into()], "choice");
 
@@ -381,8 +396,8 @@ mod tests {
     #[test]
     fn test_panel_section() {
         let p = panel("test", "Test").section("Settings", |p| {
-            p.toggle("Option 1", false, "opt1")
-                .toggle("Option 2", true, "opt2")
+            p.toggle("Option 1", false, ItemAction::Toggle("opt1".into()))
+                .toggle("Option 2", true, ItemAction::Toggle("opt2".into()))
         });
         assert_eq!(p.items.len(), 3);
     }

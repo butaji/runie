@@ -1,6 +1,6 @@
 //! Command Flow Types
 
-use crate::dialog::{Panel as CorePanel, PanelStack as CoreStack, ItemAction};
+use crate::dialog::{Panel as CorePanel, PanelStack as CoreStack};
 use crate::model::AppState;
 use crate::Event;
 
@@ -42,7 +42,11 @@ impl CommandFlow {
             Self::Dynamic(f) => CommandResult::Message(f(state, args)),
             Self::Dialog(d) => CommandResult::OpenDialog(d),
             Self::PanelStack(f) => CommandResult::OpenPanelStack(f(state, args)),
-            Self::Form { title, fields, submit } => {
+            Self::Form {
+                title,
+                fields,
+                submit,
+            } => {
                 let panel = build_form_panel(cmd_name, title, fields, args, submit);
                 CommandResult::OpenPanelStack(CoreStack::new(panel))
             }
@@ -110,7 +114,9 @@ impl CommandResult {
 
     /// Map message content
     pub fn map_message<F>(self, f: F) -> Self
-    where F: FnOnce(String) -> String {
+    where
+        F: FnOnce(String) -> String,
+    {
         match self {
             Self::Message(msg) => Self::Message(f(msg)),
             other => other,
@@ -119,12 +125,20 @@ impl CommandResult {
 }
 
 /// Build a form panel
-fn build_form_panel(id: &str, title: &str, fields: Vec<super::FormField>, args: &str, submit: Event) -> CorePanel {
+fn build_form_panel(
+    id: &str,
+    title: &str,
+    fields: Vec<super::FormField>,
+    args: &str,
+    _submit: Event,
+) -> CorePanel {
     let args_list: Vec<&str> = args.split_whitespace().collect();
     let mut panel = CorePanel::new(id, title).with_filter();
 
     for (i, field) in fields.into_iter().enumerate() {
-        let value = args_list.get(i).map(|s| s.to_string())
+        let value = args_list
+            .get(i)
+            .map(|s| s.to_string())
             .or(field.prefill)
             .unwrap_or_default();
 
@@ -152,10 +166,7 @@ mod tests {
 
     #[test]
     fn test_command_flow_chain() {
-        let flow = CommandFlow::Chain(vec![
-            CommandFlow::None,
-            CommandFlow::Message("fallback"),
-        ]);
+        let flow = CommandFlow::Chain(vec![CommandFlow::None, CommandFlow::Message("fallback")]);
         let mut state = AppState::default();
         let result = flow.exec(&mut state, "test", "");
         assert!(matches!(result, CommandResult::Message(_)));
@@ -163,10 +174,7 @@ mod tests {
 
     #[test]
     fn test_command_flow_when_true() {
-        let flow = CommandFlow::When(
-            |_| true,
-            Box::new(CommandFlow::Message("shown")),
-        );
+        let flow = CommandFlow::When(|_| true, Box::new(CommandFlow::Message("shown")));
         let mut state = AppState::default();
         let result = flow.exec(&mut state, "test", "");
         assert_eq!(result, CommandResult::Message("shown".into()));
@@ -174,10 +182,7 @@ mod tests {
 
     #[test]
     fn test_command_flow_when_false() {
-        let flow = CommandFlow::When(
-            |_| false,
-            Box::new(CommandFlow::Message("hidden")),
-        );
+        let flow = CommandFlow::When(|_| false, Box::new(CommandFlow::Message("hidden")));
         let mut state = AppState::default();
         let result = flow.exec(&mut state, "test", "");
         assert_eq!(result, CommandResult::None);

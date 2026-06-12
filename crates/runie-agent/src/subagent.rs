@@ -25,6 +25,7 @@ pub enum SubagentError {
 /// `prompt` is the user request. The subagent's message buffer is empty
 /// (no parent history leaks in), but it uses the same provider, model,
 /// and skills context as the parent.
+#[allow(clippy::too_many_arguments)]
 pub fn run_subagent(
     prompt: &str,
     provider: &str,
@@ -59,12 +60,16 @@ pub fn run_subagent(
         let mut done = false;
         let mut error: Option<String> = None;
 
-        run_agent_turn(&cmd, |evt| match evt {
-            Event::AgentResponse { content, .. } => responses.push(content),
-            Event::AgentError { message, .. } => error = Some(message),
-            Event::AgentDone { .. } => done = true,
-            _ => {}
-        }, max_iterations)
+        run_agent_turn(
+            &cmd,
+            |evt| match evt {
+                Event::AgentResponse { content, .. } => responses.push(content),
+                Event::AgentError { message, .. } => error = Some(message),
+                Event::AgentDone { .. } => done = true,
+                _ => {}
+            },
+            max_iterations,
+        )
         .await
         .map_err(|e| SubagentError::Agent(e.to_string()))?;
 

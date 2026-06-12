@@ -9,9 +9,9 @@ pub fn register_all(registry: &mut CommandRegistry) {
     help::register(registry);
 }
 
-pub mod session;
-pub mod model;
-pub mod tool;
-pub mod system;
-pub mod subagent;
 pub mod help;
+pub mod model;
+pub mod session;
+pub mod subagent;
+pub mod system;
+pub mod tool;

@@ -37,7 +37,10 @@ impl AppState {
     }
 
     pub(crate) fn path_completion_select(&mut self) {
-        let (path, is_dir) = match (&self.completion.path_suggestions, self.completion.path_selected) {
+        let (path, is_dir) = match (
+            &self.completion.path_suggestions,
+            self.completion.path_selected,
+        ) {
             (Some(items), Some(sel)) if sel < items.len() => {
                 (items[sel].path.clone(), items[sel].is_dir)
             }
@@ -60,7 +63,8 @@ impl AppState {
     fn replace_path_prefix(&mut self, prefix: &str, replacement: &str) {
         let before = &self.input.input[..self.input.cursor_pos];
         if let Some(pos) = before.rfind(prefix) {
-            let mut new_input = String::with_capacity(self.input.input.len() - prefix.len() + replacement.len());
+            let mut new_input =
+                String::with_capacity(self.input.input.len() - prefix.len() + replacement.len());
             new_input.push_str(&self.input.input[..pos]);
             new_input.push_str(replacement);
             new_input.push_str(&self.input.input[self.input.cursor_pos..]);

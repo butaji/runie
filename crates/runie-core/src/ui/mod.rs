@@ -6,9 +6,9 @@
 //!
 //! Rendering (ratatui-dependent) lives in runie-tui crate
 
+pub mod dsl_test;
 pub mod elements;
 pub mod transform;
-pub mod dsl_test;
 
 pub use elements::{Element, Feed};
 pub use transform::LazyCache;

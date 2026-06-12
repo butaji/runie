@@ -1,7 +1,7 @@
-use runie_core::{AppState, Event};
+use super::input::flatten_buffer;
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use super::input::flatten_buffer;
+use runie_core::AppState;
 
 #[test]
 fn transient_success_renders_green_background_with_ok_prefix() {
@@ -13,7 +13,7 @@ fn transient_success_renders_green_background_with_ok_prefix() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content = flatten_buffer(&buf);
+    let content = flatten_buffer(buf);
     assert!(content.contains("\\ok\\ "));
     assert!(content.contains("Theme switched"));
     assert!(!content.contains("ctrl+shift+e"));
@@ -46,8 +46,10 @@ fn transient_success_has_1_symbol_margin_on_both_sides() {
     let badge_bg = crate::theme::darken(green, 0.8);
 
     let transient_y = (0..buf.area().height)
-        .find(|&y| (0..buf.area().width)
-            .any(|x| buf[(x, y)].symbol() == "T" && buf[(x, y)].style().bg == Some(green)))
+        .find(|&y| {
+            (0..buf.area().width)
+                .any(|x| buf[(x, y)].symbol() == "T" && buf[(x, y)].style().bg == Some(green))
+        })
         .expect("Should find transient row");
 
     assert_eq!(buf[(1, transient_y)].style().bg, Some(margin_green));
@@ -55,8 +57,11 @@ fn transient_success_has_1_symbol_margin_on_both_sides() {
     let last = buf.area().width - 2;
     for x in 2..=last {
         let bg = buf[(x, transient_y)].style().bg;
-        assert!(bg == Some(green) || bg == Some(badge_bg) || bg == Some(margin_green),
-            "Column {} should have valid bg", x);
+        assert!(
+            bg == Some(green) || bg == Some(badge_bg) || bg == Some(margin_green),
+            "Column {} should have valid bg",
+            x
+        );
     }
 }
 
@@ -70,7 +75,7 @@ fn transient_warning_renders_amber_background_with_warn_prefix() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content = flatten_buffer(&buf);
+    let content = flatten_buffer(buf);
     assert!(content.contains("\\warn\\ "));
     assert!(content.contains("Read-only on"));
 }
@@ -85,7 +90,7 @@ fn transient_error_renders_red_background_with_error_prefix() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content = flatten_buffer(&buf);
+    let content = flatten_buffer(buf);
     assert!(content.contains("\\err\\ "));
     assert!(content.contains("Failed"));
 }
@@ -99,7 +104,7 @@ fn transient_message_renders_in_hints_line() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    assert!(flatten_buffer(&buf).contains("Test message"));
+    assert!(flatten_buffer(buf).contains("Test message"));
 }
 
 #[test]
@@ -111,5 +116,5 @@ fn default_hints_render_when_no_transient() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    assert!(flatten_buffer(&buf).contains("ctrl+shift+e"));
+    assert!(flatten_buffer(buf).contains("ctrl+shift+e"));
 }

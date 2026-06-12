@@ -19,6 +19,7 @@ const ALLOWED_FILES_OVER: &[&str] = &[
     "runie-core/src/tests/slash.rs",
     "runie-core/src/tests/turn_complete_order.rs",
     "runie-core/src/login_config.rs",
+    "runie-core/src/dialog/panel.rs",
     "runie-term/src/keymap.rs",
     "runie-term/src/main.rs",
     "runie-agent/src/tools.rs",
@@ -44,8 +45,12 @@ fn check_file_length(path: &Path, lines: &[&str], errors: &mut Vec<String>) {
     // Check if file is allowed to exceed limit
     let path_str = path.to_string_lossy();
     let is_allowed = ALLOWED_FILES_OVER.iter().any(|p| path_str.contains(p));
+    // Integration test files (under /tests/) are already exempt from
+    // function-length checks; exempt them from the file-length check too
+    // so adversarial e2e suites can grow without artificial splits.
+    let is_integration_test = path_str.contains("/tests/");
 
-    if lines.len() > MAX_FILE_LINES && !is_allowed {
+    if lines.len() > MAX_FILE_LINES && !is_allowed && !is_integration_test {
         errors.push(format!(
             "{}: {} lines (max {})",
             path.display(),

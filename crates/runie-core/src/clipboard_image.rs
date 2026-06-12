@@ -74,11 +74,17 @@ fn read_linux() -> Option<Vec<u8>> {
     // Try wl-paste (Wayland) first, then xclip (X11)
     let ways = [
         ("wl-paste", vec!["--type", "image/png"]),
-        ("xclip", vec!["-selection", "clipboard", "-t", "image/png", "-o"]),
+        (
+            "xclip",
+            vec!["-selection", "clipboard", "-t", "image/png", "-o"],
+        ),
     ];
     for (cmd, args) in &ways {
         if let Ok(output) = std::process::Command::new(cmd).args(args).output() {
-            if output.status.success() && !output.stdout.is_empty() && output.stdout.len() <= MAX_IMAGE_BYTES {
+            if output.status.success()
+                && !output.stdout.is_empty()
+                && output.stdout.len() <= MAX_IMAGE_BYTES
+            {
                 return Some(output.stdout);
             }
         }
@@ -94,7 +100,7 @@ fn read_windows() -> Option<Vec<u8>> {
 
 /// Encode image bytes as a base64 data URI.
 pub fn to_data_uri(bytes: &[u8]) -> String {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
     let b64 = STANDARD.encode(bytes);
     format!("data:image/png;base64,{}", b64)
 }

@@ -1,5 +1,5 @@
-use crate::model::{AppState, ChatMessage, Role};
 use crate::event::Event;
+use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -40,7 +40,9 @@ fn large_tool_output_bottom_lines_in_viewport() {
     assert!(!region.elements.is_empty(), "Viewport must not be empty");
 
     // The visible region should contain the ToolDone element
-    let tool_elems: Vec<_> = region.elements.iter()
+    let tool_elems: Vec<_> = region
+        .elements
+        .iter()
         .filter(|e| matches!(e, crate::ui::Element::ToolDone { .. }))
         .collect();
     assert!(!tool_elems.is_empty(), "ToolDone must be in viewport");
@@ -76,7 +78,11 @@ fn viewport_never_exceeds_height() {
         }
     }
 
-    assert!(visible_lines <= 5, "Visible lines ({}) must not exceed viewport height (5)", visible_lines);
+    assert!(
+        visible_lines <= 5,
+        "Visible lines ({}) must not exceed viewport height (5)",
+        visible_lines
+    );
 }
 
 #[test]
@@ -89,7 +95,10 @@ fn last_element_lines_clipped_to_fit_viewport() {
 
     let region = state.visible_scroll(5);
     let total_visible = count_visible_lines(&region);
-    assert_eq!(total_visible, 5, "Visible lines must exactly equal viewport height");
+    assert_eq!(
+        total_visible, 5,
+        "Visible lines must exactly equal viewport height"
+    );
 }
 
 fn add_user_and_huge_thought(state: &mut AppState) {
@@ -138,9 +147,18 @@ fn submit_then_large_response_stays_at_bottom() {
     assert_eq!(state.view.scroll, 0, "Scroll must be 0 after submit");
 
     // Agent tool with large output
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
-    let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
+    state.update(Event::AgentToolStart {
+        id: "req.0".into(),
+        name: "ls".into(),
+    });
+    let output = (1..=20)
+        .map(|i| format!("file{}.txt", i))
+        .collect::<Vec<_>>()
+        .join("\n");
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output,
+    });
     state.ensure_fresh();
 
     // Scroll must still be 0 (at bottom) — user didn't scroll
@@ -148,12 +166,19 @@ fn submit_then_large_response_stays_at_bottom() {
 
     // Latest file must be visible
     let region = state.visible_scroll(5);
-    let tool_texts: Vec<String> = region.elements.iter().filter_map(|e| match e {
-        crate::ui::Element::ToolDone { output, .. } => Some(output.clone()),
-        _ => None,
-    }).collect();
+    let tool_texts: Vec<String> = region
+        .elements
+        .iter()
+        .filter_map(|e| match e {
+            crate::ui::Element::ToolDone { output, .. } => Some(output.clone()),
+            _ => None,
+        })
+        .collect();
     assert!(!tool_texts.is_empty(), "Tool must be visible");
-    assert!(tool_texts[0].contains("file20"), "Latest file must be visible");
+    assert!(
+        tool_texts[0].contains("file20"),
+        "Latest file must be visible"
+    );
 }
 
 #[test]
@@ -177,7 +202,10 @@ fn streaming_large_content_scroll_zero_shows_latest() {
     for i in 0..20 {
         content.push_str(&format!("This is line {} of the response\n", i));
     }
-    state.update(Event::AgentResponse { id: "req.0".into(), content });
+    state.update(Event::AgentResponse {
+        id: "req.0".into(),
+        content,
+    });
     state.ensure_fresh();
 
     let region = state.visible_scroll(5);
