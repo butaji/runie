@@ -10,7 +10,7 @@
     },
     {
       "id": "fix-broken-references",
-      "status": "todo",
+      "status": "done",
       "milestone": "MVP",
       "category": "Core Architecture",
       "priority": "P0",
