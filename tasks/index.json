@@ -25,7 +25,7 @@
     },
     {
       "id": "fix-build-lint",
-      "status": "todo",
+      "status": "done",
       "milestone": "MVP",
       "category": "Core Architecture",
       "priority": "P0",
