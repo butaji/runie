@@ -92,6 +92,10 @@
     "r5-subagents",
     "r6-login-dialog-flow",
     "unify-dialog-panelstack",
+
     "r7-providers-refactor"
+
+    "win-keyboard-legacy"
+
   ]
 }
