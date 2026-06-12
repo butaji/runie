@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 
 use crate::keybindings::default_keybindings;
-use crate::message::{ChatMessage, now};
+use crate::message::{now, ChatMessage};
 use crate::model::{QueuedMessage, ThinkingLevel};
 use crate::path_complete::PathCompletion;
 use crate::scoped_model::ScopedModel;
@@ -59,14 +59,20 @@ pub struct SpeedWindow {
 impl Default for SpeedWindow {
     fn default() -> Self {
         // Default to 1000 token window
-        Self { events: Vec::new(), window_tokens: 1000 }
+        Self {
+            events: Vec::new(),
+            window_tokens: 1000,
+        }
     }
 }
 
 impl SpeedWindow {
     /// Create a new window tracking up to `window_tokens` tokens.
     pub fn new(window_tokens: usize) -> Self {
-        Self { events: Vec::new(), window_tokens }
+        Self {
+            events: Vec::new(),
+            window_tokens,
+        }
     }
 
     /// Record tokens arriving at the current time.
@@ -78,9 +84,13 @@ impl SpeedWindow {
 
     /// Remove events outside the window.
     fn evict_old(&mut self) {
-        if self.events.len() <= 1 { return; }
+        if self.events.len() <= 1 {
+            return;
+        }
         // Find oldest event within window_tokens of current count
-        let Some((_, latest)) = self.events.last() else { return; };
+        let Some((_, latest)) = self.events.last() else {
+            return;
+        };
         let cutoff = latest.saturating_sub(self.window_tokens);
         while self.events.len() > 1 && self.events[0].1 < cutoff {
             self.events.remove(0);
@@ -90,12 +100,18 @@ impl SpeedWindow {
     /// Calculate tokens/sec based on the rolling window.
     /// Returns 0.0 if not enough data.
     pub fn speed(&self) -> f64 {
-        if self.events.len() < 2 { return 0.0; }
+        if self.events.len() < 2 {
+            return 0.0;
+        }
         let (start, start_tok) = &self.events[0];
         let (end, end_tok) = self.events.last().unwrap();
-        if start_tok == end_tok { return 0.0; }
+        if start_tok == end_tok {
+            return 0.0;
+        }
         let elapsed = end.duration_since(*start).as_secs_f64();
-        if elapsed < 0.001 { return 0.0; }
+        if elapsed < 0.001 {
+            return 0.0;
+        }
         (end_tok - start_tok) as f64 / elapsed
     }
 
@@ -105,9 +121,13 @@ impl SpeedWindow {
     }
 
     /// Number of events in window.
-    pub fn len(&self) -> usize { self.events.len() }
+    pub fn len(&self) -> usize {
+        self.events.len()
+    }
     /// True if window is empty.
-    pub fn is_empty(&self) -> bool { self.events.is_empty() }
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
+    }
 }
 
 #[derive(Clone, Default)]
@@ -230,11 +250,20 @@ pub struct ConfigState {
 
 impl Default for ConfigState {
     fn default() -> Self {
+        // In production (no RUNIE_MOCK), the app starts with no provider.
+        // The startup hook detects this and auto-opens the login dialog
+        // so the user is immediately productive. In dev (RUNIE_MOCK=1),
+        // the mock provider is the default so the app works out of the box.
+        let (provider, model) = if crate::provider_registry::is_mock_enabled() {
+            ("mock".to_string(), "echo".to_string())
+        } else {
+            (String::new(), String::new())
+        };
         Self {
-            current_provider: "mock".into(),
-            current_model: "echo".into(),
-            config_provider: "mock".into(),
-            config_model: "echo".into(),
+            current_provider: provider.clone(),
+            current_model: model.clone(),
+            config_provider: provider,
+            config_model: model,
             keybindings: default_keybindings(),
             theme_name: "runie".into(),
             thinking_level: ThinkingLevel::Off,
@@ -254,5 +283,3 @@ pub struct CompletionState {
     pub at_selected: Option<usize>,
     pub last_at_query: Option<String>,
 }
-
-

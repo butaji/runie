@@ -6,8 +6,8 @@
 //! state.agent("req.0").think().respond("hi").complete(1.0).done();
 //! ```
 
-use crate::model::AppState;
 use crate::event::Event;
+use crate::model::AppState;
 
 /// Fluent builder for an agent turn sequence.
 pub struct AgentTurn<'a> {
@@ -17,38 +17,60 @@ pub struct AgentTurn<'a> {
 
 impl<'a> AgentTurn<'a> {
     pub fn new(state: &'a mut AppState, id: impl Into<String>) -> Self {
-        Self { state, id: id.into() }
+        Self {
+            state,
+            id: id.into(),
+        }
     }
 
     pub fn think(self) -> Self {
-        self.state.update(Event::AgentThinking { id: self.id.clone() });
+        self.state.update(Event::AgentThinking {
+            id: self.id.clone(),
+        });
         self
     }
 
     pub fn respond(self, content: impl Into<String>) -> Self {
-        self.state.update(Event::AgentResponse { id: self.id.clone(), content: content.into() });
+        self.state.update(Event::AgentResponse {
+            id: self.id.clone(),
+            content: content.into(),
+        });
         self
     }
 
     pub fn thought_done(self) -> Self {
-        self.state.update(Event::AgentThoughtDone { id: self.id.clone() });
+        self.state.update(Event::AgentThoughtDone {
+            id: self.id.clone(),
+        });
         self
     }
 
     pub fn tool(self, name: impl Into<String>, output: impl Into<String>) -> Self {
         let name = name.into();
-        self.state.update(Event::AgentToolStart { id: self.id.clone(), name });
-        self.state.update(Event::AgentToolEnd { duration_secs: 0.5, output: output.into() });
+        self.state.update(Event::AgentToolStart {
+            id: self.id.clone(),
+            name,
+        });
+        self.state.update(Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: output.into(),
+        });
         self
     }
 
     pub fn tool_start(self, name: impl Into<String>) -> Self {
-        self.state.update(Event::AgentToolStart { id: self.id.clone(), name: name.into() });
+        self.state.update(Event::AgentToolStart {
+            id: self.id.clone(),
+            name: name.into(),
+        });
         self
     }
 
     pub fn complete(self, duration_secs: f64) -> Self {
-        self.state.update(Event::AgentTurnComplete { id: self.id.clone(), duration_secs });
+        self.state.update(Event::AgentTurnComplete {
+            id: self.id.clone(),
+            duration_secs,
+        });
         self
     }
 
@@ -57,7 +79,10 @@ impl<'a> AgentTurn<'a> {
     }
 
     pub fn error(self, message: impl Into<String>) {
-        self.state.update(Event::AgentError { id: self.id, message: message.into() });
+        self.state.update(Event::AgentError {
+            id: self.id,
+            message: message.into(),
+        });
     }
 }
 

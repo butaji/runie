@@ -21,7 +21,10 @@ impl AppState {
         }
         // Cursor line index
         let pos = self.input.cursor_pos.min(self.input.input.len());
-        let cursor_line = self.input.input[..pos].chars().filter(|&c| c == '\n').count();
+        let cursor_line = self.input.input[..pos]
+            .chars()
+            .filter(|&c| c == '\n')
+            .count();
         // Ensure cursor_line is within [scroll, scroll + visible_height - 1]
         if cursor_line < self.input.input_scroll {
             self.input.input_scroll = cursor_line;

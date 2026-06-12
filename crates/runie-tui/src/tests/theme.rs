@@ -1,11 +1,10 @@
 //! Tests for the opaline-based theme system
 
-use ratatui::style::Style;
 use crate::theme::{
-    set_current_theme, current_theme, list_builtin_themes,
-    style_user, style_code_block, style_border, style_status_active,
-    color_accent, color_success, TEST_LOCK,
+    color_accent, color_success, current_theme, list_builtin_themes, set_current_theme,
+    style_border, style_code_block, style_status_active, style_user, TEST_LOCK,
 };
+use ratatui::style::Style;
 
 // ─── Layer 1: State/Logic ───────────────────────────────────────────────
 
@@ -60,7 +59,10 @@ fn theme_style_returns_ratatui_style() {
     let theme = current_theme();
     let opaline_style = theme.style("runie.user");
     let ratatui_style: Style = opaline_style.into();
-    assert!(ratatui_style.fg.is_some(), "Converted style should have fg color");
+    assert!(
+        ratatui_style.fg.is_some(),
+        "Converted style should have fg color"
+    );
 }
 
 #[test]
@@ -104,7 +106,10 @@ fn theme_changes_code_block_bg() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let code_style = style_code_block();
-    assert!(code_style.bg.is_some(), "Code block style should have background");
+    assert!(
+        code_style.bg.is_some(),
+        "Code block style should have background"
+    );
 }
 
 #[test]
@@ -112,7 +117,10 @@ fn theme_changes_border_color() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     set_current_theme("silkcircuit-neon");
     let border_style = style_border();
-    assert!(border_style.fg.is_some(), "Border style should have a color");
+    assert!(
+        border_style.fg.is_some(),
+        "Border style should have a color"
+    );
 }
 
 #[test]
@@ -122,7 +130,8 @@ fn theme_status_active_has_success_color() {
     let active = style_status_active();
     let success = color_success();
     assert_eq!(
-        active.fg, Some(success),
+        active.fg,
+        Some(success),
         "Active status should use success color"
     );
 }

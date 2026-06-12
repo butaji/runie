@@ -51,9 +51,7 @@ fn collect_completions(dir: &Path, prefix: &str) -> Vec<PathCompletion> {
             });
         }
     }
-    results.sort_by(|a, b| {
-        b.is_dir.cmp(&a.is_dir).then_with(|| a.path.cmp(&b.path))
-    });
+    results.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then_with(|| a.path.cmp(&b.path)));
     results
 }
 
@@ -66,7 +64,8 @@ mod tests {
 
     fn tmp_dir_with(files: &[(&str, bool)]) -> (std::path::PathBuf, Vec<String>) {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("runie_path_test_{}_{}", std::process::id(), n));
+        let dir =
+            std::env::temp_dir().join(format!("runie_path_test_{}_{}", std::process::id(), n));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let mut names = Vec::new();
@@ -86,7 +85,9 @@ mod tests {
     fn complete_empty_returns_cwd_entries() {
         let (dir, _names) = tmp_dir_with(&[("alpha.txt", false), ("beta", true)]);
         let results = complete_path("", &dir);
-        assert!(results.iter().any(|r| r.path.ends_with("alpha.txt") && !r.is_dir));
+        assert!(results
+            .iter()
+            .any(|r| r.path.ends_with("alpha.txt") && !r.is_dir));
         assert!(results.iter().any(|r| r.path.ends_with("beta") && r.is_dir));
     }
 

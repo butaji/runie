@@ -16,15 +16,24 @@ fn dev_sh_syntax_is_valid() {
         .args(["-n", dev_sh.to_str().unwrap()])
         .output()
         .expect("bash available");
-    assert!(output.status.success(), "dev.sh must have valid bash syntax");
+    assert!(
+        output.status.success(),
+        "dev.sh must have valid bash syntax"
+    );
 }
 
 #[test]
 fn dev_sh_uses_cargo_watch_for_hot_reload() {
     let root = workspace_root();
     let content = std::fs::read_to_string(root.join("dev.sh")).expect("dev.sh readable");
-    assert!(content.contains("cargo watch"), "dev.sh must use cargo-watch");
-    assert!(content.contains("-x") && content.contains("run"), "dev.sh must run the binary via cargo watch");
+    assert!(
+        content.contains("cargo watch"),
+        "dev.sh must use cargo-watch"
+    );
+    assert!(
+        content.contains("-x") && content.contains("run"),
+        "dev.sh must run the binary via cargo watch"
+    );
 }
 
 #[test]

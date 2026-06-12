@@ -1,7 +1,7 @@
 //! Snapshot optimization tests (Layer 1–3)
 
-use crate::model::{AppState, ChatMessage, Role};
 use crate::event::Event;
+use crate::model::{AppState, ChatMessage, Role};
 use crate::snapshot::Snapshot;
 use std::sync::Arc;
 
@@ -22,7 +22,10 @@ fn test_snapshot_contains_expected_fields() {
 
     let snap = state.snapshot();
     assert!(!snap.elements.is_empty(), "elements should be present");
-    assert!(!snap.line_counts.is_empty(), "line_counts should be present");
+    assert!(
+        !snap.line_counts.is_empty(),
+        "line_counts should be present"
+    );
     assert_eq!(snap.input, state.input.input);
     assert_eq!(snap.cursor_pos, state.input.cursor_pos);
     assert_eq!(snap.provider, state.config.current_provider);
@@ -58,7 +61,10 @@ fn test_event_triggers_snapshot_update() {
     let snap2 = state.snapshot();
     let count2 = snap2.elements.len();
 
-    assert!(count2 > count1, "Snapshot should reflect new elements after agent response");
+    assert!(
+        count2 > count1,
+        "Snapshot should reflect new elements after agent response"
+    );
 }
 
 // Layer 3 — Rendering
@@ -105,8 +111,14 @@ fn test_elements_uses_arc() {
     let snap2 = state.snapshot();
 
     // Both snapshots should share the same Arc allocation
-    assert!(Arc::ptr_eq(&snap1.elements, &snap2.elements), "Elements should be Arc-shared between snapshots when unchanged");
-    assert!(Arc::ptr_eq(&snap1.line_counts, &snap2.line_counts), "Line counts should be Arc-shared between snapshots when unchanged");
+    assert!(
+        Arc::ptr_eq(&snap1.elements, &snap2.elements),
+        "Elements should be Arc-shared between snapshots when unchanged"
+    );
+    assert!(
+        Arc::ptr_eq(&snap1.line_counts, &snap2.line_counts),
+        "Line counts should be Arc-shared between snapshots when unchanged"
+    );
 }
 
 #[test]
@@ -133,5 +145,8 @@ fn test_arc_pointer_stability_after_state_mutation() {
     let ptr2 = Arc::as_ptr(&snap2.elements);
 
     // Elements Arc should still point to same allocation because messages didn't change
-    assert_eq!(ptr1, ptr2, "Elements Arc should be stable when messages are unchanged");
+    assert_eq!(
+        ptr1, ptr2,
+        "Elements Arc should be stable when messages are unchanged"
+    );
 }

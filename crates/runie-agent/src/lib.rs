@@ -4,8 +4,8 @@ pub mod accumulator;
 pub mod context7;
 pub mod diff;
 pub mod mutation_queue;
-pub mod path_utils;
 pub mod parser;
+pub mod path_utils;
 pub mod safety;
 pub mod subagent;
 pub mod tools;
@@ -40,8 +40,8 @@ pub fn build_provider_with_warning(provider: &str, model: &str) -> (AnyProvider,
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod grep_find;
+#[cfg(test)]
+mod tests;
 #[cfg(test)]
 mod truncate_tests;

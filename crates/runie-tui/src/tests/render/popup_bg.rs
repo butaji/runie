@@ -1,9 +1,13 @@
-use runie_core::{AppState, Event, ChatMessage, Role};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::{AppState, ChatMessage, Event, Role};
 
 /// Helper: check if the given text string appears anywhere in the rect.
-fn rect_contains_text(buf: &ratatui::buffer::Buffer, rect: ratatui::layout::Rect, text: &str) -> bool {
+fn rect_contains_text(
+    buf: &ratatui::buffer::Buffer,
+    rect: ratatui::layout::Rect,
+    text: &str,
+) -> bool {
     for y in rect.y..rect.y + rect.height {
         let line: String = (rect.x..rect.x + rect.width)
             .map(|x| buf[(x, y)].symbol())
@@ -42,7 +46,10 @@ fn command_palette_hides_underlying_messages() {
 
     // The popup area should NOT contain the underlying message text
     let popup_rect = ratatui::layout::Rect {
-        x: 10, y: 3, width: 60, height: 18,
+        x: 10,
+        y: 3,
+        width: 60,
+        height: 18,
     };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
@@ -73,7 +80,10 @@ fn settings_dialog_hides_underlying_messages() {
     let buf = terminal.backend().buffer();
 
     let popup_rect = ratatui::layout::Rect {
-        x: 10, y: 3, width: 60, height: 18,
+        x: 10,
+        y: 3,
+        width: 60,
+        height: 18,
     };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
@@ -104,7 +114,10 @@ fn model_selector_hides_underlying_messages() {
     let buf = terminal.backend().buffer();
 
     let popup_rect = ratatui::layout::Rect {
-        x: 10, y: 3, width: 60, height: 18,
+        x: 10,
+        y: 3,
+        width: 60,
+        height: 18,
     };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),
@@ -116,7 +129,9 @@ fn find_popup_title(buf: &ratatui::buffer::Buffer, title: &str) -> Option<(u16, 
     let search_len = title.len();
     for y in 0..buf.area().height {
         for x in 0..buf.area().width.saturating_sub(search_len as u16) {
-            let s: String = (x..x + search_len as u16).map(|cx| buf[(cx, y)].symbol()).collect();
+            let s: String = (x..x + search_len as u16)
+                .map(|cx| buf[(cx, y)].symbol())
+                .collect();
             if s == title {
                 return Some((x + 1, y + 1)); // inner: +1 for border
             }
@@ -148,8 +163,8 @@ fn command_palette_has_panel_background_color() {
     let panel_bg = crate::theme::color_bg_panel();
     let app_bg = crate::theme::color_bg();
 
-    let (inner_x, inner_y) = find_popup_title(buf, " Commands")
-        .expect("Should find 'Commands' title");
+    let (inner_x, inner_y) =
+        find_popup_title(buf, " Commands").expect("Should find 'Commands' title");
 
     let mut found_panel_bg = false;
     for y in inner_y..inner_y + 5 {
@@ -158,11 +173,19 @@ fn command_palette_has_panel_background_color() {
             if cell_bg == Some(panel_bg) {
                 found_panel_bg = true;
             }
-            assert_ne!(cell_bg, Some(app_bg),
-                "Popup inner at ({},{}) should not have app bg", x, y);
+            assert_ne!(
+                cell_bg,
+                Some(app_bg),
+                "Popup inner at ({},{}) should not have app bg",
+                x,
+                y
+            );
         }
     }
-    assert!(found_panel_bg, "Should find panel background color in popup");
+    assert!(
+        found_panel_bg,
+        "Should find panel background color in popup"
+    );
 }
 
 /// Panel dialog (e.g. /theme selector) must hide underlying content.
@@ -186,7 +209,10 @@ fn panel_dialog_hides_underlying_messages() {
     state.update(Event::Submit);
 
     assert!(
-        matches!(state.open_dialog, Some(runie_core::commands::DialogState::PanelStack(_))),
+        matches!(
+            state.open_dialog,
+            Some(runie_core::commands::DialogState::PanelStack(_))
+        ),
         "PanelStack dialog should be open"
     );
 
@@ -196,7 +222,10 @@ fn panel_dialog_hides_underlying_messages() {
     let buf = terminal.backend().buffer();
 
     let popup_rect = ratatui::layout::Rect {
-        x: 10, y: 3, width: 60, height: 18,
+        x: 10,
+        y: 3,
+        width: 60,
+        height: 18,
     };
     assert!(
         !rect_contains_text(buf, popup_rect, "XYZZY"),

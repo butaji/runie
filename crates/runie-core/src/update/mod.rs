@@ -1,3 +1,4 @@
+use crate::login_flow::LoginStep;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
@@ -14,6 +15,10 @@ pub enum FormAction {
     Close,
     /// Close the form and dispatch the submit event.
     Submit(Option<crate::Event>),
+    /// Go back one step: if the stack is deeper than the root, pop the
+    /// current panel and keep the dialog open; if at the root, close
+    /// the dialog. This is the semantic of ESC / back.
+    Back,
 }
 
 mod agent;
@@ -51,6 +56,7 @@ impl AppState {
                 | Event::LoginFlowValidate { .. }
                 | Event::LoginFlowValidationDone { .. }
                 | Event::LoginFlowValidationFailed { .. }
+                | Event::LoginFlowModelsFetched { .. }
                 | Event::LoginFlowToggleModel { .. }
                 | Event::LoginFlowSave
                 | Event::LoginFlowCancel
@@ -186,6 +192,7 @@ impl AppState {
             | Event::LoginFlowValidate { .. }
             | Event::LoginFlowValidationDone { .. }
             | Event::LoginFlowValidationFailed { .. }
+            | Event::LoginFlowModelsFetched { .. }
             | Event::LoginFlowToggleModel { .. }
             | Event::LoginFlowSave
             | Event::LoginFlowCancel => self.login_flow_event(event),
@@ -214,6 +221,7 @@ impl AppState {
             Event::LoginFlowValidationFailed { error, .. } => {
                 self.login_flow_validation_failed(error)
             }
+            Event::LoginFlowModelsFetched { models, .. } => self.login_flow_models_fetched(models),
             Event::LoginFlowToggleModel { model } => self.login_flow_toggle_model(model),
             Event::LoginFlowSave => self.login_flow_save(),
             Event::LoginFlowCancel => self.login_flow_cancel(),
@@ -240,7 +248,10 @@ impl AppState {
             } else {
                 provider
             };
-            *flow = flow.clone().with_key(key);
+            let defaults: Vec<String> = crate::provider_registry::find_provider(&p)
+                .map(|meta| meta.default_models.iter().map(|s| s.to_string()).collect())
+                .unwrap_or_default();
+            *flow = flow.clone().with_key_and_defaults(key, defaults);
             flow.provider = p;
             self.rebuild_login_dialog();
         }
@@ -248,15 +259,31 @@ impl AppState {
 
     fn login_flow_validation_done(&mut self, models: Vec<String>) {
         if let Some(ref mut flow) = self.login_flow {
-            *flow = flow.clone().with_validation_result(models);
+            // Non-blocking: enrich the model list without changing the step.
+            *flow = flow.clone().with_fetched_models(models);
             self.rebuild_login_dialog();
         }
     }
 
-    fn login_flow_validation_failed(&mut self, error: String) {
+    fn login_flow_models_fetched(&mut self, models: Vec<String>) {
         if let Some(ref mut flow) = self.login_flow {
-            *flow = flow.clone().with_error(error);
-            self.rebuild_login_dialog();
+            if flow.step == LoginStep::ModelSelect {
+                *flow = flow.clone().with_fetched_models(models);
+                self.rebuild_login_dialog();
+            }
+        }
+    }
+
+    fn login_flow_validation_failed(&mut self, error: String) {
+        // Non-blocking: surface a transient warning, do NOT change the step.
+        if let Some(ref flow) = self.login_flow {
+            if flow.step == LoginStep::ModelSelect {
+                self.set_transient(
+                    format!("Could not verify key: {}", error),
+                    crate::event::TransientLevel::Warning,
+                );
+                self.mark_dirty();
+            }
         }
     }
 
@@ -919,16 +946,24 @@ impl AppState {
         use Event::*;
 
         // Form dialog handling - check if current panel is a form
-        let is_form = stack.current().map_or(false, |p| p.is_form());
+        let is_form = stack.current().is_some_and(|p| p.is_form());
         if is_form {
             return self.update_form_panel(event, stack);
         }
 
         match event {
+            // ESC / close-key: stack nav. Pop if deeper, close at root.
             SettingsClose | PaletteClose | ModelSelectorClose => {
-                self.open_dialog = None;
-                self.mark_dirty();
-                return true;
+                if stack.len() > 1 {
+                    stack.pop();
+                    // fall through to mark_dirty + return false (keep open
+                    // with the popped stack; update_dialog restores the
+                    // original DialogState variant around the mutated stack)
+                } else {
+                    self.open_dialog = None;
+                    self.mark_dirty();
+                    return true;
+                }
             }
             HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => stack.select_up(),
             HistoryNext | SettingsDown | PaletteDown | ModelSelectorDown => stack.select_down(),
@@ -960,6 +995,21 @@ impl AppState {
             let panel = stack.current_mut().expect("form panel");
             Self::form_panel_action(panel, event)
         };
+
+        // Stack navigation: pop if the stack is deeper than the root,
+        // otherwise close the entire dialog.
+        if matches!(&action, FormAction::Back) {
+            if stack.len() > 1 {
+                stack.pop();
+                self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
+                return false; // keep open with popped stack
+            } else {
+                self.open_dialog = None;
+                self.mark_dirty();
+                return true; // closed at root
+            }
+        }
+
         let keep_open = matches!(&action, FormAction::KeepOpen);
         if keep_open {
             self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack.clone()));
@@ -973,7 +1023,9 @@ impl AppState {
         use Event::*;
         use FormAction as A;
         match event {
-            SettingsClose | CommandFormClose | Abort => A::Close,
+            // ESC / close-key: stack nav. `update_form_panel` decides
+            // whether to pop (stack deeper) or close (at root).
+            SettingsClose | CommandFormClose | Abort => A::Back,
             CommandFormUp | HistoryPrev | SettingsUp | PaletteUp | ModelSelectorUp => {
                 let _ = panel.select_up();
                 A::KeepOpen
@@ -1169,7 +1221,7 @@ impl AppState {
         if entries.is_empty() {
             panel = panel.header("No files found");
         } else {
-            panel = panel.header(&format!("{} files", entries.len()));
+            panel = panel.header(format!("{} files", entries.len()));
             for entry in entries {
                 let label = if entry.is_dir {
                     format!("{}/", entry.name)
@@ -1398,7 +1450,9 @@ impl AppState {
     }
 
     /// Apply a `FormAction` to the current dialog. Mirrors the KeepOpen /
-    /// Close / Submit paths in `update_form_panel`.
+    /// Close / Submit paths in `update_form_panel`. `Back` is handled
+    /// in `update_form_panel` itself (stack-level) and never reaches here;
+    /// we include it to keep the match exhaustive.
     fn apply_form_action(&mut self, action: FormAction) {
         match action {
             FormAction::Close => {
@@ -1414,6 +1468,11 @@ impl AppState {
             }
             FormAction::KeepOpen => {
                 self.mark_dirty();
+            }
+            FormAction::Back => {
+                // Handled in `update_form_panel` (pop or close based on
+                // stack depth). This branch is defensive in case future
+                // code paths route a Back action through here.
             }
         }
     }
@@ -1475,6 +1534,7 @@ impl AppState {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn partition_model_items(
     items: Vec<(String, String, String, bool, bool)>,
 ) -> (Vec<String>, Vec<(String, Vec<(String, crate::Event)>)>) {

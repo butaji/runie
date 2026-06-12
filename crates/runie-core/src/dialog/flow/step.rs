@@ -1,13 +1,13 @@
 //! Step - A single step in a flow
 
 use crate::dialog::dsl::Panel;
-use crate::dialog::PanelItem;
 
 /// A single step in a flow
 #[derive(Debug, Clone)]
 pub struct Step {
     pub id: String,
     pub panel: Panel,
+    #[allow(clippy::type_complexity)]
     pub validator: Option<fn(&mut super::FlowContext, &Panel) -> Result<(), String>>,
     pub on_enter: Option<fn(&mut super::FlowContext)>,
     pub on_exit: Option<fn(&mut super::FlowContext)>,
@@ -32,7 +32,10 @@ impl Step {
     }
 
     /// Add validation
-    pub fn validate(mut self, validator: fn(&mut super::FlowContext, &Panel) -> Result<(), String>) -> Self {
+    pub fn validate(
+        mut self,
+        validator: fn(&mut super::FlowContext, &Panel) -> Result<(), String>,
+    ) -> Self {
         self.validator = Some(validator);
         self
     }
@@ -53,11 +56,11 @@ impl Step {
 #[cfg(test)]
 mod tests {
     use super::Step;
-    use crate::dialog::flow::context::FlowContext;
     use crate::dialog::dsl::panel;
+    use crate::dialog::flow::context::FlowContext;
 
-    fn make_enter_true(_: &mut FlowContext) { }
-    fn make_exit_true(_: &mut FlowContext) { }
+    fn make_enter_true(_: &mut FlowContext) {}
+    fn make_exit_true(_: &mut FlowContext) {}
 
     #[test]
     fn test_step_with_callbacks() {

@@ -16,8 +16,16 @@ impl Default for TruncationPolicy {
 impl From<&TruncationConfig> for TruncationPolicy {
     fn from(c: &TruncationConfig) -> Self {
         Self {
-            max_lines: if c.max_lines == 0 { DEFAULT_MAX_LINES } else { c.max_lines },
-            max_bytes: if c.max_bytes == 0 { DEFAULT_MAX_BYTES } else { c.max_bytes },
+            max_lines: if c.max_lines == 0 {
+                DEFAULT_MAX_LINES
+            } else {
+                c.max_lines
+            },
+            max_bytes: if c.max_bytes == 0 {
+                DEFAULT_MAX_BYTES
+            } else {
+                c.max_bytes
+            },
         }
     }
 }
@@ -46,8 +54,16 @@ impl Default for TruncationConfig {
 /// dependency between `runie-core` and `runie-agent`.
 pub fn policy_from_section(max_lines: usize, max_bytes: usize) -> TruncationPolicy {
     TruncationPolicy {
-        max_lines: if max_lines == 0 { DEFAULT_MAX_LINES } else { max_lines },
-        max_bytes: if max_bytes == 0 { DEFAULT_MAX_BYTES } else { max_bytes },
+        max_lines: if max_lines == 0 {
+            DEFAULT_MAX_LINES
+        } else {
+            max_lines
+        },
+        max_bytes: if max_bytes == 0 {
+            DEFAULT_MAX_BYTES
+        } else {
+            max_bytes
+        },
     }
 }
 

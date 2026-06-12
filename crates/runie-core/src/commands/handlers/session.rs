@@ -1,109 +1,184 @@
 //! Session commands using the new DSL
 
-use crate::commands::{
-    CommandCategory, CommandRegistry, CommandResult,
-};
-use crate::model::{AppState, now};
+use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
+use crate::model::{now, AppState};
 
 pub fn register(registry: &mut CommandRegistry) {
     // Form commands (always show dialog, pre-fill from args)
-    registry.register(crate::cmd!("save")
-        .desc("Save current session")
-        .category(CommandCategory::Session)
-        .form("Save Session", |f| f.field("Name", "session-name", "name"), 
-              crate::Event::RunSaveCommand { name: String::new() }));
+    registry.register(
+        crate::cmd!("save")
+            .desc("Save current session")
+            .category(CommandCategory::Session)
+            .form(
+                "Save Session",
+                |f| f.field("Name", "session-name", "name"),
+                crate::Event::RunSaveCommand {
+                    name: String::new(),
+                },
+            ),
+    );
 
-    registry.register(crate::cmd!("load")
-        .desc("Load a saved session")
-        .category(CommandCategory::Session)
-        .form("Load Session", |f| f.field("Name", "session-name", "name"),
-              crate::Event::RunLoadCommand { name: String::new() }));
+    registry.register(
+        crate::cmd!("load")
+            .desc("Load a saved session")
+            .category(CommandCategory::Session)
+            .form(
+                "Load Session",
+                |f| f.field("Name", "session-name", "name"),
+                crate::Event::RunLoadCommand {
+                    name: String::new(),
+                },
+            ),
+    );
 
-    registry.register(crate::cmd!("delete")
-        .desc("Delete a saved session")
-        .category(CommandCategory::Session)
-        .form("Delete Session", |f| f.field("Name", "session-name", "name"),
-              crate::Event::RunDeleteCommand { name: String::new() }));
+    registry.register(
+        crate::cmd!("delete")
+            .desc("Delete a saved session")
+            .category(CommandCategory::Session)
+            .form(
+                "Delete Session",
+                |f| f.field("Name", "session-name", "name"),
+                crate::Event::RunDeleteCommand {
+                    name: String::new(),
+                },
+            ),
+    );
 
-    registry.register(crate::cmd!("export")
-        .desc("Export session to JSON")
-        .category(CommandCategory::Session)
-        .form("Export Session", |f| f.field("Path", "session.json", "path"),
-              crate::Event::RunExportCommand { path: String::new() }));
+    registry.register(
+        crate::cmd!("export")
+            .desc("Export session to JSON")
+            .category(CommandCategory::Session)
+            .form(
+                "Export Session",
+                |f| f.field("Path", "session.json", "path"),
+                crate::Event::RunExportCommand {
+                    path: String::new(),
+                },
+            ),
+    );
 
-    registry.register(crate::cmd!("import")
-        .desc("Import session from JSON")
-        .category(CommandCategory::Session)
-        .form("Import Session", |f| f.field("Path", "session.json", "path"),
-              crate::Event::RunImportCommand { path: String::new() }));
+    registry.register(
+        crate::cmd!("import")
+            .desc("Import session from JSON")
+            .category(CommandCategory::Session)
+            .form(
+                "Import Session",
+                |f| f.field("Path", "session.json", "path"),
+                crate::Event::RunImportCommand {
+                    path: String::new(),
+                },
+            ),
+    );
 
     // Immediate commands
-    registry.register(crate::cmd!("sessions")
-        .desc("List saved sessions")
-        .category(CommandCategory::Session)
-        .handler(handle_sessions));
+    registry.register(
+        crate::cmd!("sessions")
+            .desc("List saved sessions")
+            .category(CommandCategory::Session)
+            .handler(handle_sessions),
+    );
 
-    registry.register(crate::cmd!("new")
-        .desc("Start new session")
-        .category(CommandCategory::Session)
-        .handler(handle_new));
+    registry.register(
+        crate::cmd!("new")
+            .desc("Start new session")
+            .category(CommandCategory::Session)
+            .handler(handle_new),
+    );
 
-    registry.register(crate::cmd!("reset")
-        .desc("Clear all state")
-        .category(CommandCategory::Session)
-        .handler(handle_reset));
+    registry.register(
+        crate::cmd!("reset")
+            .desc("Clear all state")
+            .category(CommandCategory::Session)
+            .handler(handle_reset),
+    );
 
-    registry.register(crate::cmd!("history")
-        .desc("Show recent history")
-        .category(CommandCategory::Session)
-        .handler(handle_history));
+    registry.register(
+        crate::cmd!("history")
+            .desc("Show recent history")
+            .category(CommandCategory::Session)
+            .handler(handle_history),
+    );
 
-    registry.register(crate::cmd!("session")
-        .desc("Show session info")
-        .category(CommandCategory::Session)
-        .handler(handle_session));
+    registry.register(
+        crate::cmd!("session")
+            .desc("Show session info")
+            .category(CommandCategory::Session)
+            .handler(handle_session),
+    );
 
-    registry.register(crate::cmd!("clone")
-        .desc("Clone current session position")
-        .category(CommandCategory::Session)
-        .handler(handle_clone));
+    registry.register(
+        crate::cmd!("clone")
+            .desc("Clone current session position")
+            .category(CommandCategory::Session)
+            .handler(handle_clone),
+    );
 
-    registry.register(crate::cmd!("tree")
-        .desc("Open session tree dialog")
-        .category(CommandCategory::Session)
-        .handler(handle_tree));
+    registry.register(
+        crate::cmd!("tree")
+            .desc("Open session tree dialog")
+            .category(CommandCategory::Session)
+            .handler(handle_tree),
+    );
 
-    registry.register(crate::cmd!("share")
-        .desc("Share session as GitHub gist")
-        .category(CommandCategory::Session)
-        .handler(handle_share));
+    registry.register(
+        crate::cmd!("share")
+            .desc("Share session as GitHub gist")
+            .category(CommandCategory::Session)
+            .handler(handle_share),
+    );
 
-    registry.register(crate::cmd!("resume")
-        .desc("Resume most recent session")
-        .category(CommandCategory::Session)
-        .handler(handle_resume));
+    registry.register(
+        crate::cmd!("resume")
+            .desc("Resume most recent session")
+            .category(CommandCategory::Session)
+            .handler(handle_resume),
+    );
 
-    registry.register(crate::cmd!("compact")
-        .desc("Compact context")
-        .category(CommandCategory::Session)
-        .form("Compact Context", |f| f
-            .field("Keep tokens", "2000", "keep")
-            .field("Focus", "optional focus keyword", "focus"),
-            crate::Event::RunCompactCommand { keep: String::new(), focus: String::new() }));
+    registry.register(
+        crate::cmd!("compact")
+            .desc("Compact context")
+            .category(CommandCategory::Session)
+            .form(
+                "Compact Context",
+                |f| {
+                    f.field("Keep tokens", "2000", "keep").field(
+                        "Focus",
+                        "optional focus keyword",
+                        "focus",
+                    )
+                },
+                crate::Event::RunCompactCommand {
+                    keep: String::new(),
+                    focus: String::new(),
+                },
+            ),
+    );
 
-    registry.register(crate::cmd!("fork")
-        .desc("Fork session from a message")
-        .category(CommandCategory::Session)
-        .form("Fork Session", |f| f
-            .field("Message index", "0", "index"),
-            crate::Event::RunForkCommand { message_index: String::new() }));
+    registry.register(
+        crate::cmd!("fork")
+            .desc("Fork session from a message")
+            .category(CommandCategory::Session)
+            .form(
+                "Fork Session",
+                |f| f.field("Message index", "0", "index"),
+                crate::Event::RunForkCommand {
+                    message_index: String::new(),
+                },
+            ),
+    );
 
-    registry.register(crate::cmd!("name")
-        .desc("Set session display name")
-        .category(CommandCategory::Session)
-        .form("Set Session Name", |f| f
-            .field("Name", "session-name", "name"),
-            crate::Event::RunNameCommand { name: String::new() }));
+    registry.register(
+        crate::cmd!("name")
+            .desc("Set session display name")
+            .category(CommandCategory::Session)
+            .form(
+                "Set Session Name",
+                |f| f.field("Name", "session-name", "name"),
+                crate::Event::RunNameCommand {
+                    name: String::new(),
+                },
+            ),
+    );
 }
 
 // ============================================================================
@@ -112,8 +187,9 @@ pub fn register(registry: &mut CommandRegistry) {
 
 fn handle_sessions(_: &mut AppState, _: &str) -> CommandResult {
     match crate::session::list() {
-        Ok(sessions) if sessions.is_empty() => 
-            CommandResult::Message("No saved sessions. Use /save name to create one.".into()),
+        Ok(sessions) if sessions.is_empty() => {
+            CommandResult::Message("No saved sessions. Use /save name to create one.".into())
+        }
         Ok(sessions) => CommandResult::Message(format!("Saved sessions:\n{}", sessions.join("\n"))),
         Err(e) => CommandResult::Message(format!("Could not list sessions: {}", e)),
     }
@@ -145,20 +221,47 @@ fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
         return CommandResult::Message("No history.".into());
     }
     let count = state.input_history.len();
-    let entries: Vec<_> = state.input_history.iter().rev().take(10)
+    let entries: Vec<_> = state
+        .input_history
+        .iter()
+        .rev()
+        .take(10)
         .enumerate()
         .map(|(i, e)| format!("{}: {}", i + 1, e))
         .collect();
-    CommandResult::Message(format!("History ({} total):\n{}", count, entries.join("\n")))
+    CommandResult::Message(format!(
+        "History ({} total):\n{}",
+        count,
+        entries.join("\n")
+    ))
 }
 
 fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
-    let tokens: usize = state.session.messages.iter()
-        .map(|m| crate::tokens::estimate_tokens(&m.content)).sum();
+    let tokens: usize = state
+        .session
+        .messages
+        .iter()
+        .map(|m| crate::tokens::estimate_tokens(&m.content))
+        .sum();
     let (user, assistant, tool) = (
-        state.session.messages.iter().filter(|m| m.role == crate::model::Role::User).count(),
-        state.session.messages.iter().filter(|m| m.role == crate::model::Role::Assistant).count(),
-        state.session.messages.iter().filter(|m| m.role == crate::model::Role::Tool).count(),
+        state
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.role == crate::model::Role::User)
+            .count(),
+        state
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.role == crate::model::Role::Assistant)
+            .count(),
+        state
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.role == crate::model::Role::Tool)
+            .count(),
     );
     let info = format!(
         "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nCreated: {}\nUpdated: {}",
@@ -172,8 +275,9 @@ fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_clone(state: &mut AppState, _: &str) -> CommandResult {
-    let tree = state.session.session_tree.clone()
-        .unwrap_or_else(|| crate::session_tree::SessionTree::from_messages(&state.session.messages));
+    let tree = state.session.session_tree.clone().unwrap_or_else(|| {
+        crate::session_tree::SessionTree::from_messages(&state.session.messages)
+    });
     state.session.session_tree = Some(tree);
     CommandResult::Message("Session cloned.".into())
 }
@@ -188,25 +292,23 @@ fn handle_share(_: &mut AppState, _: &str) -> CommandResult {
 
 fn handle_resume(state: &mut AppState, _: &str) -> CommandResult {
     match find_most_recent() {
-        Some(name) => {
-            match crate::session::load(&name) {
-                Ok(session) => {
-                    state.session.messages = session.messages;
-                    state.config.current_provider = session.provider;
-                    state.config.current_model = session.model;
-                    state.config.theme_name = session.theme_name;
-                    state.config.thinking_level = session.thinking_level;
-                    state.config.read_only = session.read_only;
-                    state.session.session_display_name = session.display_name.or(Some(session.name));
-                    state.session.session_created_at = session.created_at;
-                    state.session.session_updated_at = session.updated_at;
-                    state.session.session_tree = session.session_tree;
-                    state.messages_changed();
-                    CommandResult::Message(format!("Loaded '{}'.", name))
-                }
-                Err(_) => CommandResult::Message("Could not load session.".into()),
+        Some(name) => match crate::session::load(&name) {
+            Ok(session) => {
+                state.session.messages = session.messages;
+                state.config.current_provider = session.provider;
+                state.config.current_model = session.model;
+                state.config.theme_name = session.theme_name;
+                state.config.thinking_level = session.thinking_level;
+                state.config.read_only = session.read_only;
+                state.session.session_display_name = session.display_name.or(Some(session.name));
+                state.session.session_created_at = session.created_at;
+                state.session.session_updated_at = session.updated_at;
+                state.session.session_tree = session.session_tree;
+                state.messages_changed();
+                CommandResult::Message(format!("Loaded '{}'.", name))
             }
-        }
+            Err(_) => CommandResult::Message("Could not load session.".into()),
+        },
         None => CommandResult::Message("No sessions to resume.".into()),
     }
 }
@@ -231,7 +333,11 @@ fn find_most_recent() -> Option<String> {
 
 pub fn handle_save(state: &mut AppState, name: &str) -> CommandResult {
     let name = if name.is_empty() {
-        state.session.session_display_name.clone().unwrap_or_else(|| "unnamed".into())
+        state
+            .session
+            .session_display_name
+            .clone()
+            .unwrap_or_else(|| "unnamed".into())
     } else {
         name.into()
     };
@@ -280,7 +386,7 @@ pub fn handle_load(state: &mut AppState, name: &str) -> CommandResult {
     }
 }
 
-pub fn handle_delete(state: &mut AppState, name: &str) -> CommandResult {
+pub fn handle_delete(_state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
         return CommandResult::Message("Usage: /delete <session-name>".into());
     }
@@ -324,7 +430,11 @@ pub fn handle_export(state: &mut AppState, path: &str) -> CommandResult {
         return CommandResult::Message("Usage: /export <path>".into());
     }
     let session = crate::session::Session {
-        name: state.session.session_display_name.clone().unwrap_or_else(|| "exported".into()),
+        name: state
+            .session
+            .session_display_name
+            .clone()
+            .unwrap_or_else(|| "exported".into()),
         display_name: state.session.session_display_name.clone(),
         created_at: state.session.session_created_at,
         updated_at: now(),
@@ -336,7 +446,10 @@ pub fn handle_export(state: &mut AppState, path: &str) -> CommandResult {
         read_only: state.config.read_only,
         session_tree: state.session.session_tree.clone(),
     };
-    match std::fs::write(path, serde_json::to_string_pretty(&session).unwrap_or_default()) {
+    match std::fs::write(
+        path,
+        serde_json::to_string_pretty(&session).unwrap_or_default(),
+    ) {
         Ok(()) => CommandResult::Message(format!("Session exported to '{}'", path)),
         Err(e) => CommandResult::Message(format!("Could not export: {}", e)),
     }
@@ -352,7 +465,11 @@ pub fn handle_export(state: &mut AppState, path: &str) -> CommandResult {
 pub(crate) fn run_name(state: &mut AppState, name: &str) {
     let name = name.trim();
     if name.is_empty() {
-        let current = state.session.session_display_name.as_deref().unwrap_or("(unset)");
+        let current = state
+            .session
+            .session_display_name
+            .as_deref()
+            .unwrap_or("(unset)");
         state.add_system_msg(format!("Current display name: {}", current));
         return;
     }
@@ -367,7 +484,11 @@ pub(crate) fn run_name(state: &mut AppState, name: &str) {
 
 /// Default fork index: the most recent user message. 0 if no user messages.
 pub(crate) fn fallback_fork_index(state: &AppState) -> usize {
-    state.session.messages.iter().enumerate()
+    state
+        .session
+        .messages
+        .iter()
+        .enumerate()
         .rfind(|(_, m)| m.role == crate::model::Role::User)
         .map(|(i, _)| i)
         .unwrap_or(0)
@@ -397,8 +518,9 @@ pub(crate) fn run_fork(state: &mut AppState, index_raw: &str) {
         ));
         return;
     }
-    let mut tree = state.session.session_tree.take()
-        .unwrap_or_else(|| crate::session_tree::SessionTree::from_messages(&state.session.messages));
+    let mut tree = state.session.session_tree.take().unwrap_or_else(|| {
+        crate::session_tree::SessionTree::from_messages(&state.session.messages)
+    });
     match tree.fork_at(message_index) {
         Some(path) => {
             tree.navigate_to(&path);
@@ -429,6 +551,10 @@ pub(crate) fn run_compact(state: &mut AppState, keep_raw: &str, focus: &str) {
         }
     };
     let msg = state.compact(keep);
-    let result = if focus.is_empty() { msg } else { format!("{} (focus: {})", msg, focus) };
+    let result = if focus.is_empty() {
+        msg
+    } else {
+        format!("{} (focus: {})", msg, focus)
+    };
     state.add_system_msg(result);
 }

@@ -1,5 +1,5 @@
-use crate::model::{AppState, Role};
 use crate::event::Event;
+use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -15,14 +15,23 @@ fn test_complete_agent_flow() {
     assert!(!state.streaming);
     state.pop_queue();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
     assert!(state.streaming);
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Hello".to_string() });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Hello".to_string(),
+    });
     assert_eq!(state.session.messages.len(), 3);
     assert_eq!(state.session.messages[1].role, Role::Thought);
     assert_eq!(state.session.messages[2].role, Role::Assistant);
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::AgentDone {
+        id: "req.0".to_string(),
+    });
     assert!(!state.streaming);
 }
 
@@ -55,8 +64,16 @@ fn test_second_submit_while_turn_active_queues_message() {
     state.update(Event::Submit);
 
     // Message B should NOT appear in chat yet — queued for next turn
-    assert_eq!(state.session.messages.len(), 1, "Message B should not appear until its turn starts");
-    assert_eq!(state.agent.message_queue.len(), 1, "Message B should be in message_queue");
+    assert_eq!(
+        state.session.messages.len(),
+        1,
+        "Message B should not appear until its turn starts"
+    );
+    assert_eq!(
+        state.agent.message_queue.len(),
+        1,
+        "Message B should be in message_queue"
+    );
     assert_eq!(state.agent.message_queue[0].content, "B");
 }
 
@@ -71,14 +88,26 @@ fn test_queued_message_appears_after_turn_completes() {
     // Submit second message while agent is working
     state.update(Event::Input('B'));
     state.update(Event::Submit);
-    assert_eq!(state.session.messages.len(), 1, "Only message A visible during turn");
+    assert_eq!(
+        state.session.messages.len(),
+        1,
+        "Only message A visible during turn"
+    );
 
     // Agent finishes turn
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::AgentDone {
+        id: "req.0".to_string(),
+    });
 
     // Now message B should appear and be ready for its turn
-    assert!(state.session.messages.iter().any(|m| m.role == Role::User && m.content == "B"),
-        "Message B should appear in chat after previous turn completes");
+    assert!(
+        state
+            .session
+            .messages
+            .iter()
+            .any(|m| m.role == Role::User && m.content == "B"),
+        "Message B should appear in chat after previous turn completes"
+    );
 }
 
 #[test]
@@ -96,25 +125,63 @@ fn test_three_messages_one_at_a_time() {
     state.update(Event::Submit);
 
     // Only message 1 in chat
-    let user_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::User).collect();
-    assert_eq!(user_msgs.len(), 1, "Only first message visible during active turn");
-    assert_eq!(state.agent.message_queue.len(), 2, "Messages 2 and 3 queued");
+    let user_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::User)
+        .collect();
+    assert_eq!(
+        user_msgs.len(),
+        1,
+        "Only first message visible during active turn"
+    );
+    assert_eq!(
+        state.agent.message_queue.len(),
+        2,
+        "Messages 2 and 3 queued"
+    );
 
     // Agent done with message 1
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::AgentDone {
+        id: "req.0".to_string(),
+    });
 
     // Message 2 appears, message 3 still queued
-    let user_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::User).collect();
-    assert_eq!(user_msgs.len(), 2, "Message 2 appears after turn 1 completes");
+    let user_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::User)
+        .collect();
+    assert_eq!(
+        user_msgs.len(),
+        2,
+        "Message 2 appears after turn 1 completes"
+    );
     assert_eq!(state.agent.message_queue.len(), 1, "Message 3 still queued");
 
     // Agent done with message 2
-    state.update(Event::AgentDone { id: "req.1".to_string() });
+    state.update(Event::AgentDone {
+        id: "req.1".to_string(),
+    });
 
     // Message 3 appears
-    let user_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::User).collect();
-    assert_eq!(user_msgs.len(), 3, "Message 3 appears after turn 2 completes");
-    assert!(state.agent.message_queue.is_empty(), "Queue empty after all delivered");
+    let user_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::User)
+        .collect();
+    assert_eq!(
+        user_msgs.len(),
+        3,
+        "Message 3 appears after turn 2 completes"
+    );
+    assert!(
+        state.agent.message_queue.is_empty(),
+        "Queue empty after all delivered"
+    );
 }
 
 #[test]
@@ -152,13 +219,34 @@ fn test_multiple_submits_increment_id() {
 fn test_multiple_thoughts_for_sequential_requests() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "A".to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
-    state.update(Event::AgentThinking { id: "req.1".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
-    state.update(Event::AgentResponse { id: "req.1".to_string(), content: "B".to_string() });
-    let thoughts: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::Thought).collect();
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "A".to_string(),
+    });
+    state.update(Event::AgentDone {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentThinking {
+        id: "req.1".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.1".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.1".to_string(),
+        content: "B".to_string(),
+    });
+    let thoughts: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Thought)
+        .collect();
     assert_eq!(thoughts.len(), 2);
 }

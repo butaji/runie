@@ -137,7 +137,7 @@ fn input_box_single_line() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let (top, bottom) = find_input_box_bounds(&buf);
+    let (top, bottom) = find_input_box_bounds(buf);
     assert!(
         bottom - top + 1 >= 2,
         "input box should be at least 2 rows tall, got top={} bottom={}",
@@ -156,7 +156,7 @@ fn input_box_grows_with_multiline_content() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let (top, bottom) = find_input_box_bounds(&buf);
+    let (top, bottom) = find_input_box_bounds(buf);
     assert!(bottom - top + 1 >= 4);
 }
 
@@ -198,13 +198,13 @@ fn input_box_shrinks_when_content_reduced() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     {
         let buf = terminal.backend().buffer();
-        let (top1, bottom1) = find_input_box_bounds(&buf);
+        let (top1, bottom1) = find_input_box_bounds(buf);
         assert!(bottom1 > top1);
 
         state.input.input = "single".to_string();
         terminal.draw(|f| view(f, &mut state)).unwrap();
         let buf = terminal.backend().buffer();
-        let (top2, bottom2) = find_input_box_bounds(&buf);
+        let (top2, _bottom2) = find_input_box_bounds(buf);
         assert!(
             top2 > top1,
             "top should move down when input shrinks: top1={} top2={}",

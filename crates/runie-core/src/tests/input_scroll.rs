@@ -1,7 +1,7 @@
 //! Layer 1 + Layer 3 tests for input box scrolling and cursor visibility
 
-use crate::model::AppState;
 use crate::event::Event;
+use crate::model::AppState;
 
 // ── Layer 1: Pure logic tests ──────────────────────────────────────────────
 
@@ -20,13 +20,17 @@ fn newline_increases_input_scroll_to_keep_cursor_visible() {
     }
     // Cursor is on line 20, but visible height is ~8 (10 height - 2 borders)
     // Scroll should have adjusted to keep cursor visible
-    assert!(state.input.input_scroll > 0, "Scroll should adjust when cursor goes below visible area");
+    assert!(
+        state.input.input_scroll > 0,
+        "Scroll should adjust when cursor goes below visible area"
+    );
     // Cursor line (20) should be within visible window
     let visible_height = 8usize; // 10 max - 2 borders
     assert!(
         state.input.input_scroll + visible_height > 20,
         "Cursor line 20 should be visible: scroll={}, visible_height={}",
-        state.input.input_scroll, visible_height
+        state.input.input_scroll,
+        visible_height
     );
 }
 
@@ -45,7 +49,10 @@ fn cursor_up_scrolls_up_when_above_visible_window() {
     state.input.cursor_pos = 0;
     state.update(Event::CursorStart);
     // Scroll should adjust up to show cursor at top
-    assert_eq!(state.input.input_scroll, 0, "Should scroll to top when cursor moves to first line");
+    assert_eq!(
+        state.input.input_scroll, 0,
+        "Should scroll to top when cursor moves to first line"
+    );
 }
 
 // ── Ctrl+C behavior tests ──────────────────────────────────────────────────
@@ -65,7 +72,10 @@ fn ctrl_c_with_non_empty_input_clears_input() {
     state.update(Event::Input('i'));
     assert_eq!(state.input.input, "hi");
     state.update(Event::Quit);
-    assert!(!state.should_quit, "Ctrl+C with non-empty input should NOT quit");
+    assert!(
+        !state.should_quit,
+        "Ctrl+C with non-empty input should NOT quit"
+    );
     assert!(state.input.input.is_empty(), "Input should be cleared");
     assert_eq!(state.input.cursor_pos, 0, "Cursor should reset to 0");
 }
@@ -77,8 +87,14 @@ fn ctrl_c_clears_undo_redo_stacks() {
     state.update(Event::Input('b'));
     assert!(!state.input.undo_stack.is_empty());
     state.update(Event::Quit);
-    assert!(state.input.undo_stack.is_empty(), "Undo stack should be cleared");
-    assert!(state.input.redo_stack.is_empty(), "Redo stack should be cleared");
+    assert!(
+        state.input.undo_stack.is_empty(),
+        "Undo stack should be cleared"
+    );
+    assert!(
+        state.input.redo_stack.is_empty(),
+        "Redo stack should be cleared"
+    );
 }
 
 #[test]

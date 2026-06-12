@@ -181,7 +181,10 @@ mod tests {
     #[test]
     fn snapshot_tail_returns_end() {
         let mut acc = OutputAccumulator::new(
-            &TruncationPolicy { max_lines: 3, max_bytes: 50 },
+            &TruncationPolicy {
+                max_lines: 3,
+                max_bytes: 50,
+            },
             TruncateStrategy::Tail,
         );
         for i in 0..10 {
@@ -189,14 +192,23 @@ mod tests {
         }
         let out = acc.snapshot();
         assert!(out.was_truncated);
-        assert!(!out.content.contains("line 0"), "tail should drop early lines");
-        assert!(out.content.contains("line 9"), "tail should keep last lines");
+        assert!(
+            !out.content.contains("line 0"),
+            "tail should drop early lines"
+        );
+        assert!(
+            out.content.contains("line 9"),
+            "tail should keep last lines"
+        );
     }
 
     #[test]
     fn snapshot_head_returns_start() {
         let mut acc = OutputAccumulator::new(
-            &TruncationPolicy { max_lines: 3, max_bytes: 50 },
+            &TruncationPolicy {
+                max_lines: 3,
+                max_bytes: 50,
+            },
             TruncateStrategy::Head,
         );
         for i in 0..10 {
@@ -204,14 +216,23 @@ mod tests {
         }
         let out = acc.snapshot();
         assert!(out.was_truncated);
-        assert!(out.content.contains("line 0"), "head should keep early lines");
-        assert!(!out.content.contains("line 9"), "head should drop late lines");
+        assert!(
+            out.content.contains("line 0"),
+            "head should keep early lines"
+        );
+        assert!(
+            !out.content.contains("line 9"),
+            "head should drop late lines"
+        );
     }
 
     #[test]
     fn never_splits_lines() {
         let mut acc = OutputAccumulator::new(
-            &TruncationPolicy { max_lines: 2, max_bytes: 60 },
+            &TruncationPolicy {
+                max_lines: 2,
+                max_bytes: 60,
+            },
             TruncateStrategy::Tail,
         );
         acc.append(b"first line here\nsecond line here\nthird line here\n");

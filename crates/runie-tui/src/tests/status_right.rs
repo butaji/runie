@@ -1,15 +1,19 @@
 //! Layer 1 + Layer 3 tests for status line (left: git/folder + working state, right: context usage + radial bar)
 
-use runie_core::{AppState, snapshot::GitInfo};
+use crate::status_bar::{
+    build_left_text, build_right_status, context_window_for, radial_bar, ContextUsage,
+};
 use crate::ui::view;
-use crate::status_bar::{radial_bar, context_window_for, build_left_text, build_right_status, ContextUsage};
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::{snapshot::GitInfo, AppState};
 
 fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
     (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect()
 }
 
@@ -30,19 +34,28 @@ fn git_info_format_with_repo_and_branch() {
 
 #[test]
 fn git_info_format_without_git_shows_folder() {
-    let info = GitInfo { repo_name: None, branch: None };
+    let info = GitInfo {
+        repo_name: None,
+        branch: None,
+    };
     assert_eq!(info.format_right("my-project"), "my-project/");
 }
 
 #[test]
 fn git_info_format_only_branch_shows_branch() {
-    let info = GitInfo { repo_name: None, branch: Some("agent-impl".into()) };
+    let info = GitInfo {
+        repo_name: None,
+        branch: Some("agent-impl".into()),
+    };
     assert_eq!(info.format_right("runie"), "agent-impl");
 }
 
 #[test]
 fn git_info_format_only_repo_shows_repo_slash() {
-    let info = GitInfo { repo_name: Some("runie".into()), branch: None };
+    let info = GitInfo {
+        repo_name: Some("runie".into()),
+        branch: None,
+    };
     assert_eq!(info.format_right("runie"), "runie/");
 }
 
@@ -58,7 +71,11 @@ fn build_left_text_idle_shows_git_info_when_available() {
     state.cwd_name = "runie".into();
     let snap = state.snapshot();
     let left = build_left_text(&snap);
-    assert!(left.contains("runie/agent-impl"), "Should show git info on LEFT, got: {}", left);
+    assert!(
+        left.contains("runie/agent-impl"),
+        "Should show git info on LEFT, got: {}",
+        left
+    );
 }
 
 #[test]
@@ -68,7 +85,11 @@ fn build_left_text_idle_shows_folder_when_no_git() {
     state.cwd_name = "my-project".into();
     let snap = state.snapshot();
     let left = build_left_text(&snap);
-    assert!(left.contains("my-project/"), "Should show folder name on LEFT, got: {}", left);
+    assert!(
+        left.contains("my-project/"),
+        "Should show folder name on LEFT, got: {}",
+        left
+    );
 }
 
 #[test]
@@ -82,8 +103,16 @@ fn build_left_text_active_shows_working_not_git() {
     });
     let snap = state.snapshot();
     let left = build_left_text(&snap);
-    assert!(!left.contains("runie/agent-impl"), "Active turn should NOT show git info on LEFT, got: {}", left);
-    assert!(left.contains("Working"), "Should show Working... when active, got: {}", left);
+    assert!(
+        !left.contains("runie/agent-impl"),
+        "Active turn should NOT show git info on LEFT, got: {}",
+        left
+    );
+    assert!(
+        left.contains("Working"),
+        "Should show Working... when active, got: {}",
+        left
+    );
 }
 
 #[test]
@@ -96,8 +125,16 @@ fn build_left_text_idle_shows_thinking_level_when_set() {
     });
     let snap = state.snapshot();
     let left = build_left_text(&snap);
-    assert!(left.contains("runie/agent-impl"), "Should show git info, got: {}", left);
-    assert!(left.contains("Think: low"), "Should show thinking level, got: {}", left);
+    assert!(
+        left.contains("runie/agent-impl"),
+        "Should show git info, got: {}",
+        left
+    );
+    assert!(
+        left.contains("Think: low"),
+        "Should show thinking level, got: {}",
+        left
+    );
 }
 
 // ── Right side tests (no git info here) ────────────────────────────────────
@@ -113,9 +150,21 @@ fn build_right_status_idle_shows_context_and_bar_only() {
     });
     let snap = state.snapshot();
     let right = build_right_status(&snap);
-    assert!(right.contains("0%/128k"), "Should show context usage, got: {}", right);
-    assert!(right.contains('○'), "Should show radial bar, got: {}", right);
-    assert!(!right.contains("runie"), "Right side must NOT show git info, got: {}", right);
+    assert!(
+        right.contains("0%/128k"),
+        "Should show context usage, got: {}",
+        right
+    );
+    assert!(
+        right.contains('○'),
+        "Should show radial bar, got: {}",
+        right
+    );
+    assert!(
+        !right.contains("runie"),
+        "Right side must NOT show git info, got: {}",
+        right
+    );
 }
 
 #[test]
@@ -128,11 +177,20 @@ fn build_right_status_active_shows_turn_stats() {
     let snap = state.snapshot();
     let right = build_right_status(&snap);
     assert!(right.contains("↑"), "Should show up arrow, got: {}", right);
-    assert!(right.contains("↓"), "Should show down arrow, got: {}", right);
+    assert!(
+        right.contains("↓"),
+        "Should show down arrow, got: {}",
+        right
+    );
     assert!(right.contains("/s"), "Should show speed, got: {}", right);
-    assert!(right.contains("0%/128k"), "Should show context, got: {}", right);
+    assert!(
+        right.contains("0%/128k"),
+        "Should show context, got: {}",
+        right
+    );
 }
 
+#[test]
 fn radial_bar_0_percent_is_empty_circle() {
     assert_eq!(radial_bar(0), '○');
 }
@@ -189,7 +247,10 @@ fn context_window_openai_gpt4o_is_128k() {
 
 #[test]
 fn context_window_anthropic_is_200k() {
-    assert_eq!(context_window_for("anthropic", "claude-sonnet-4-6"), 200_000);
+    assert_eq!(
+        context_window_for("anthropic", "claude-sonnet-4-6"),
+        200_000
+    );
 }
 
 #[test]
@@ -209,19 +270,31 @@ fn context_window_openai_o1_is_200k() {
 
 #[test]
 fn limit_k_shows_k_for_thousands() {
-    let ctx = ContextUsage { used: 1000, limit: 128_000, percent: 0 };
+    let ctx = ContextUsage {
+        used: 1000,
+        limit: 128_000,
+        percent: 0,
+    };
     assert_eq!(ctx.limit_k(), "128k");
 }
 
 #[test]
 fn limit_k_shows_m_for_millions() {
-    let ctx = ContextUsage { used: 1000, limit: 1_000_000, percent: 0 };
+    let ctx = ContextUsage {
+        used: 1000,
+        limit: 1_000_000,
+        percent: 0,
+    };
     assert_eq!(ctx.limit_k(), "1M");
 }
 
 #[test]
 fn limit_k_shows_raw_for_small() {
-    let ctx = ContextUsage { used: 100, limit: 500, percent: 0 };
+    let ctx = ContextUsage {
+        used: 100,
+        limit: 500,
+        percent: 0,
+    };
     assert_eq!(ctx.limit_k(), "500");
 }
 
@@ -245,8 +318,15 @@ fn status_left_renders_git_info_when_idle_in_repo() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("runie/agent-impl"), "Should show git info on left, got: {}", content);
-    assert!(content.contains("0%/128k"), "Should show context usage on right");
+    assert!(
+        content.contains("runie/agent-impl"),
+        "Should show git info on left, got: {}",
+        content
+    );
+    assert!(
+        content.contains("0%/128k"),
+        "Should show context usage on right"
+    );
 }
 
 #[test]
@@ -262,8 +342,15 @@ fn status_left_renders_folder_when_idle_no_git() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("my-project/"), "Should show folder name on left, got: {}", content);
-    assert!(content.contains("0%/128k"), "Should show context usage on right");
+    assert!(
+        content.contains("my-project/"),
+        "Should show folder name on left, got: {}",
+        content
+    );
+    assert!(
+        content.contains("0%/128k"),
+        "Should show context usage on right"
+    );
 }
 
 #[test]
@@ -283,8 +370,14 @@ fn status_left_renders_working_when_active() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
     let content = flatten_buffer(buf);
-    assert!(content.contains("Working"), "Should show Working... on left when active");
-    assert!(!content.contains("runie/agent-impl"), "Should NOT show git info when active");
+    assert!(
+        content.contains("Working"),
+        "Should show Working... on left when active"
+    );
+    assert!(
+        !content.contains("runie/agent-impl"),
+        "Should NOT show git info when active"
+    );
 }
 
 #[test]
@@ -334,9 +427,7 @@ fn radial_bar_has_1_cell_right_margin() {
     let w = buf.area().width;
 
     let status_y = (0..buf.area().height)
-        .find(|&y| {
-            (0..buf.area().width).any(|x| buf[(x, y)].symbol() == "○")
-        })
+        .find(|&y| (0..buf.area().width).any(|x| buf[(x, y)].symbol() == "○"))
         .expect("Should find radial bar in status line");
 
     let bar_x = (0..buf.area().width)
@@ -346,7 +437,8 @@ fn radial_bar_has_1_cell_right_margin() {
     assert!(
         bar_x < w - 1,
         "Radial bar at {} should not be at right edge (width={})",
-        bar_x, w
+        bar_x,
+        w
     );
 
     assert_eq!(

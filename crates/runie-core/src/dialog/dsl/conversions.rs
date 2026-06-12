@@ -1,6 +1,6 @@
 //! Extension traits for From conversions
 
-use super::{ItemAction, PanelItem};
+use super::ItemAction;
 use crate::Event;
 
 /// Extension trait for String -> ItemAction

@@ -2,17 +2,24 @@
 //!
 //! # Usage
 //!
-//! ```ignore
-//! use runie_core::notification as n;
+//! ```
+//! use runie_core::notification;
+//! use runie_core::AppState;
+//!
+//! let mut state = AppState::default();
 //!
 //! // Simple one-liners
-//! n::success("Theme switched", state);
-//! n::warn("Read-only mode", state);
-//! n::error("Connection failed", state);
+//! notification::success("Theme switched", &mut state);
+//! notification::warn("Read-only mode", &mut state);
+//! notification::error("Connection failed", &mut state);
 //!
 //! // With duration (seconds)
-//! n::success("Saved").duration(3.0).show(state);
-//! n::error("Failed").persistent(state);  // shown until dismissed
+//! <() as notification::NotificationExt>::success("Saved")
+//!     .duration(3.0)
+//!     .show(&mut state);
+//! <() as notification::NotificationExt>::error("Failed")
+//!     .persistent()
+//!     .show(&mut state); // shown until dismissed
 //! ```
 
 use crate::event::TransientLevel;
@@ -48,9 +55,9 @@ impl Notification {
     fn show_impl(self, state: &mut AppState) {
         state.transient_message = Some(self.message);
         state.transient_level = Some(self.level);
-        state.transient_until = self.duration_secs.map(|secs| {
-            std::time::Instant::now() + std::time::Duration::from_secs_f64(secs)
-        });
+        state.transient_until = self
+            .duration_secs
+            .map(|secs| std::time::Instant::now() + std::time::Duration::from_secs_f64(secs));
         state.mark_dirty();
     }
 }
@@ -64,13 +71,25 @@ pub trait NotificationExt {
 
 impl NotificationExt for () {
     fn success(msg: impl Into<String>) -> Notification {
-        Notification { message: msg.into(), level: TransientLevel::Success, duration_secs: None }
+        Notification {
+            message: msg.into(),
+            level: TransientLevel::Success,
+            duration_secs: None,
+        }
     }
     fn warn(msg: impl Into<String>) -> Notification {
-        Notification { message: msg.into(), level: TransientLevel::Warning, duration_secs: None }
+        Notification {
+            message: msg.into(),
+            level: TransientLevel::Warning,
+            duration_secs: None,
+        }
     }
     fn error(msg: impl Into<String>) -> Notification {
-        Notification { message: msg.into(), level: TransientLevel::Error, duration_secs: None }
+        Notification {
+            message: msg.into(),
+            level: TransientLevel::Error,
+            duration_secs: None,
+        }
     }
 }
 
@@ -93,7 +112,11 @@ pub fn error(msg: impl Into<String>, state: &mut AppState) {
 
 /// Show a neutral notification (panel bg, no badge).
 pub fn info(msg: impl Into<String>, state: &mut AppState) {
-    let n = Notification { message: msg.into(), level: TransientLevel::Info, duration_secs: None };
+    let n = Notification {
+        message: msg.into(),
+        level: TransientLevel::Info,
+        duration_secs: None,
+    };
     n.show(state);
 }
 

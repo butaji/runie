@@ -1,4 +1,4 @@
-use super::{Panel, PanelItem, ItemAction};
+use super::{ItemAction, Panel, PanelItem};
 
 /// Identifier for a panel within a dialog.
 pub type PanelId = String;
@@ -11,9 +11,7 @@ pub struct PanelStack {
 
 impl PanelStack {
     pub fn new(root: Panel) -> Self {
-        Self {
-            panels: vec![root],
-        }
+        Self { panels: vec![root] }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -85,13 +83,15 @@ impl PanelStack {
     }
 
     /// Activate the currently selected item in the current panel.
-    /// Returns the action to be handled by the caller.
+    /// Returns the action to be handled by the caller. For Toggle items,
+    /// the stored action is returned directly (e.g. `ItemAction::Toggle(key)`
+    /// for settings, or `ItemAction::Emit(event)` for custom toggles).
     pub fn activate(&mut self) -> Option<ItemAction> {
         let panel = self.current_mut()?;
         let item = panel.selected_item()?;
         match item {
             PanelItem::Action { action, .. } => Some(action.clone()),
-            PanelItem::Toggle { key, .. } => Some(ItemAction::Toggle(key.clone())),
+            PanelItem::Toggle { action, .. } => Some(action.clone()),
             PanelItem::Select { key, .. } => Some(ItemAction::Cycle(key.clone())),
             _ => None,
         }

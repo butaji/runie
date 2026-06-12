@@ -31,7 +31,7 @@ pub fn parse_tool_calls(text: &str) -> Vec<String> {
         if line.is_empty() {
             continue;
         }
-        
+
         // Check for legacy TOOL: format
         if let Some(rest) = line.strip_prefix("TOOL:") {
             let name = rest.split_whitespace().next().unwrap_or("");
@@ -40,7 +40,7 @@ pub fn parse_tool_calls(text: &str) -> Vec<String> {
             }
             continue;
         }
-        
+
         // Check for structured JSON format
         if line.starts_with('{') {
             if let Ok(value) = serde_json::from_str::<Value>(line) {
@@ -62,16 +62,16 @@ pub fn parse_tool_calls(text: &str) -> Vec<String> {
 pub fn strip_tool_markers(content: &str) -> String {
     let mut result = String::new();
     let mut found_tool = false;
-    
+
     for line in content.lines() {
         let trimmed = line.trim();
-        
+
         // Check for legacy TOOL: format
         if trimmed.starts_with("TOOL:") {
             found_tool = true;
             continue;
         }
-        
+
         // Check for structured JSON tool call
         if trimmed.starts_with('{') {
             if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
@@ -81,14 +81,14 @@ pub fn strip_tool_markers(content: &str) -> String {
                 }
             }
         }
-        
+
         // Keep this line
         if !result.is_empty() {
             result.push('\n');
         }
         result.push_str(line);
     }
-    
+
     // If we found tools, trim trailing whitespace from result
     if found_tool {
         result.trim_end().to_string()
@@ -105,10 +105,12 @@ mod tests {
     fn test_has_tool_markers_positive() {
         // Legacy format
         assert!(has_tool_markers("TOOL:read_file /path/to/file"));
-        
+
         // Structured format
-        assert!(has_tool_markers(r#"{"name": "read_file", "arguments": {"path": "/test"}}"#));
-        
+        assert!(has_tool_markers(
+            r#"{"name": "read_file", "arguments": {"path": "/test"}}"#
+        ));
+
         // Multiple tools
         assert!(has_tool_markers("Some text\nTOOL:bash ls\nAnother tool"));
     }
@@ -117,13 +119,13 @@ mod tests {
     fn test_has_tool_markers_negative() {
         // Regular text
         assert!(!has_tool_markers("Hello, this is regular text."));
-        
+
         // JSON without name/arguments
         assert!(!has_tool_markers(r#"{"foo": "bar"}"#));
-        
+
         // JSON with only name (not a valid tool)
         assert!(!has_tool_markers(r#"{"name": "not_a_tool"}"#));
-        
+
         // JSON with only arguments
         assert!(!has_tool_markers(r#"{"arguments": {}}"#));
     }
@@ -140,7 +142,8 @@ mod tests {
     #[test]
     fn test_strip_tool_markers_handles_valid_tool_call() {
         // JSON tool call should be stripped
-        let input = "Here's the result:\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"/test\"}}";
+        let input =
+            "Here's the result:\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"/test\"}}";
         let result = strip_tool_markers(input);
         assert_eq!(result, "Here's the result:");
     }

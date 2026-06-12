@@ -118,7 +118,7 @@ fn assert_cell_style(
 fn selected_action_uses_inverted_bold_name_and_dim_description() {
     let _lock = crate::theme::test_lock();
     let (buf, y) = render_single_action("new New conversation");
-    let r = content_rect();
+    let _r = content_rect();
 
     let name_x = find_symbol_x(&buf, y, 'n').expect("should locate name 'new'");
     // sanity: next chars are "e", "w"
@@ -151,7 +151,11 @@ fn selected_action_uses_inverted_bold_name_and_dim_description() {
 fn selected_toggle_fills_full_width() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    let panel = Panel::new("settings", "Settings").toggle("Read-only", false, "read_only");
+    let panel = Panel::new("settings", "Settings").toggle(
+        "Read-only",
+        false,
+        runie_core::dialog::ItemAction::Toggle("read_only".into()),
+    );
     open_panel(&mut state, panel);
 
     let buf = render(&mut state);

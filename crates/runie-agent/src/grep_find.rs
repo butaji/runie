@@ -1,11 +1,14 @@
-use crate::{Tool, parser::parse_tool_calls};
+use crate::{parser::parse_tool_calls, Tool};
 
 #[test]
 fn parse_grep_tool_json() {
-    let text = r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": "src", "glob": "*.rs"}}"#;
+    let text =
+        r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": "src", "glob": "*.rs"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
-    assert!(matches!(&tools[0], Tool::Grep { pattern, path, glob, .. } if pattern == "fn main" && path == "src" && *glob == Some("*.rs".to_string())));
+    assert!(
+        matches!(&tools[0], Tool::Grep { pattern, path, glob, .. } if pattern == "fn main" && path == "src" && *glob == Some("*.rs".to_string()))
+    );
 }
 
 #[test]
@@ -13,7 +16,9 @@ fn parse_find_tool_json() {
     let text = r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "src"}}"#;
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
-    assert!(matches!(&tools[0], Tool::Find { pattern, path, .. } if pattern == "*.rs" && path == "src"));
+    assert!(
+        matches!(&tools[0], Tool::Find { pattern, path, .. } if pattern == "*.rs" && path == "src")
+    );
 }
 
 #[test]
@@ -69,8 +74,16 @@ fn find_respects_limit() {
     };
     let result = tool.execute();
     assert!(result.success);
-    let lines: Vec<&str> = result.output.lines().filter(|l| !l.is_empty() && !l.starts_with('[')).collect();
-    assert!(lines.len() <= 3, "Expected at most 3 files, got {}", lines.len());
+    let lines: Vec<&str> = result
+        .output
+        .lines()
+        .filter(|l| !l.is_empty() && !l.starts_with('['))
+        .collect();
+    assert!(
+        lines.len() <= 3,
+        "Expected at most 3 files, got {}",
+        lines.len()
+    );
 }
 
 #[test]

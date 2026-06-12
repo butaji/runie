@@ -19,32 +19,47 @@
 //!
 //! # Unified DSL (dsl module)
 //!
-//! ```ignore
-//! use crate::dialog::dsl::{panel, form, ItemAction};
+//! Every panel has a [`PanelView`] — `List` (default) or `Form`. The view
+//! decides how the panel is rendered and whether keystrokes filter items or
+//! edit fields.
+//!
+//! ```
+//! use runie_core::dialog::dsl::{form, panel, ItemAction};
+//! use runie_core::Event;
 //!
 //! // List view (fuzzy-searchable by default)
-//! let p = panel("settings", "Settings")
-//!     .toggle("Dark Mode", false, "dark")
+//! let _ = panel("settings", "Settings")
+//!     .list()
+//!     .toggle("Dark Mode", false, ItemAction::Toggle("dark".into()))
 //!     .select("Theme", "runie", vec!["runie".into(), "dracula".into()], "theme");
 //!
 //! // Equivalent list-view alias
-//! let p = list("settings", "Settings").action("Done", ItemAction::Close);
+//! let _ = runie_core::dialog::dsl::list("settings", "Settings")
+//!     .action("Done", ItemAction::Close);
 //!
 //! // Form view (filtering disabled, fields editable)
-//! let stack = form("save", "Save Session")
+//! let _ = form("save", "Save Session")
 //!     .field("Name", "session", "name")
-//!     .on_submit(Event::SaveSession)
+//!     .on_submit(Event::RunSaveCommand { name: String::new() })
 //!     .into_stack();
+//!
+//! // Any panel can be switched to form view explicitly, e.g. a loading
+//! // panel with a single Cancel button rendered as a form button.
+//! let _ = panel("validating", "Validating...")
+//!     .form()
+//!     .header("Checking API key...")
+//!     .action("_Cancel", ItemAction::Emit(Event::LoginFlowCancel));
 //! ```
 //!
 //! # Flow Orchestration (flow module)
 //!
 //! For multi-step dialogs, use the `flow` module:
 //!
-//! ```ignore
-//! use crate::dialog::flow::{Flow, Step, push, pop, close};
+//! ```
+//! use runie_core::dialog::dsl::panel;
+//! use runie_core::dialog::flow::{close, pop, push, Flow, Step};
 //!
-//! let wizard = Flow::new("setup")
+//! let _ = Flow::new("setup")
 //!     .step(|_| Step::show(panel("step1", "Step 1").action("Next", push("step2"))))
 //!     .step(|_| Step::show(panel("step2", "Step 2").action("Back", pop()).action("Done", close())));
 //! ```
@@ -62,5 +77,5 @@ pub use builders::{
     command_palette, file_picker, model_selector, scoped_models, session_tree, settings,
     theme_picker, SettingsRow, SettingsRowKind,
 };
-pub use panel::{parse_accel, strip_accel, ItemAction, Panel, PanelItem};
+pub use panel::{parse_accel, strip_accel, ItemAction, Panel, PanelItem, PanelView};
 pub use stack::{PanelId, PanelStack};

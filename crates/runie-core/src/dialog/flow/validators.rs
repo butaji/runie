@@ -1,40 +1,40 @@
 //! Common Validators
 
+use super::FlowContext;
 use crate::dialog::dsl::Panel;
 use crate::dialog::PanelItem;
-use super::FlowContext;
 
-/// Common validation functions
-pub mod validators {
-    use super::*;
+/// Validate that required form fields are not empty
+#[allow(dead_code)]
+pub fn required_fields(ctx: &mut FlowContext, panel: &Panel) -> Result<(), String> {
+    for item in &panel.items {
+        if let PanelItem::FormField {
+            label, key, value, ..
+        } = item
+        {
+            if value.is_empty() {
+                return Err(format!("{} is required", label));
+            }
+            ctx.data.insert(key.clone(), value.clone());
+        }
+    }
+    Ok(())
+}
 
-    /// Validate that required form fields are not empty
-    pub fn required_fields(ctx: &mut FlowContext, panel: &Panel) -> Result<(), String> {
-        for item in &panel.items {
-            if let PanelItem::FormField { label, key, value, .. } = item {
-                if value.is_empty() {
-                    return Err(format!("{} is required", label));
-                }
+/// Validate email format
+#[allow(dead_code)]
+pub fn email(ctx: &mut FlowContext, panel: &Panel) -> Result<(), String> {
+    for item in &panel.items {
+        if let PanelItem::FormField { key, value, .. } = item {
+            if !value.is_empty() && !value.contains('@') {
+                return Err(format!("Invalid email: {}", value));
+            }
+            if !value.is_empty() {
                 ctx.data.insert(key.clone(), value.clone());
             }
         }
-        Ok(())
     }
-
-    /// Validate email format
-    pub fn email(ctx: &mut FlowContext, panel: &Panel) -> Result<(), String> {
-        for item in &panel.items {
-            if let PanelItem::FormField { key, value, .. } = item {
-                if !value.is_empty() && !value.contains('@') {
-                    return Err(format!("Invalid email: {}", value));
-                }
-                if !value.is_empty() {
-                    ctx.data.insert(key.clone(), value.clone());
-                }
-            }
-        }
-        Ok(())
-    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -49,7 +49,7 @@ mod tests {
             .field("Name", "enter name", "name")
             .field("Email", "enter email", "email");
 
-        let result = validators::required_fields(&mut ctx, &p);
+        let result = required_fields(&mut ctx, &p);
         assert!(result.is_err());
     }
 
@@ -60,7 +60,7 @@ mod tests {
             .field_value("Name", "enter name", "name", "Alice")
             .field_value("Email", "enter email", "email", "alice@example.com");
 
-        let result = validators::required_fields(&mut ctx, &p);
+        let result = required_fields(&mut ctx, &p);
         assert!(result.is_ok());
     }
 }

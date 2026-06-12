@@ -3,15 +3,15 @@
 //! Multi-step dialogs and complex interaction patterns.
 
 mod context;
-mod step;
-mod flow;
 mod executor;
-mod validators;
+mod flow_def;
+mod step;
 mod transitions;
+mod validators;
 
 pub use context::{FlowContext, FlowResult};
-pub use step::Step;
-pub use flow::Flow;
 pub use executor::FlowExecutor;
+pub use flow_def::Flow;
+pub use step::Step;
 
-pub use transitions::{push, pop, close, emit, goto_step};
+pub use transitions::{close, emit, goto_step, pop, push};

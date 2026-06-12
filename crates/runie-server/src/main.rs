@@ -12,11 +12,11 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
+use runie_agent::build_provider;
 use runie_core::{
     config_reload,
     provider::{Message, Provider, ResponseChunk},
 };
-use runie_agent::build_provider;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -151,7 +151,9 @@ async fn process_request(line: &str) -> JsonRpcResponse {
     };
 
     let result = match req.method.as_str() {
-        "initialize" => Some(serde_json::json!({ "name": "runie-server", "version": env!("CARGO_PKG_VERSION") })),
+        "initialize" => Some(
+            serde_json::json!({ "name": "runie-server", "version": env!("CARGO_PKG_VERSION") }),
+        ),
         "chat" => match handle_chat(&req.params).await {
             Ok(v) => Some(v),
             Err(e) => {
@@ -189,12 +191,17 @@ fn error_response(id: Option<Value>, code: i32, message: String) -> JsonRpcRespo
         jsonrpc: "2.0".into(),
         id,
         result: None,
-        error: Some(JsonRpcError { code, message, data: None }),
+        error: Some(JsonRpcError {
+            code,
+            message,
+            data: None,
+        }),
     }
 }
 
 async fn handle_chat(params: &Value) -> Result<Value> {
-    let messages: Vec<ChatMessage> = serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
+    let messages: Vec<ChatMessage> =
+        serde_json::from_value(params.get("messages").cloned().unwrap_or_default())?;
     let config = config_reload::Config::load_from(&config_reload::config_path());
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
@@ -210,16 +217,24 @@ async fn handle_chat(params: &Value) -> Result<Value> {
     let mut msgs = vec![Message::System { content: system }];
     for m in &messages {
         msgs.push(match m.role.as_str() {
-            "user" => Message::User { content: m.content.clone() },
-            "assistant" => Message::Assistant { content: m.content.clone() },
-            _ => Message::User { content: m.content.clone() },
+            "user" => Message::User {
+                content: m.content.clone(),
+            },
+            "assistant" => Message::Assistant {
+                content: m.content.clone(),
+            },
+            _ => Message::User {
+                content: m.content.clone(),
+            },
         });
     }
 
     let mut content = String::new();
-    provider.generate(msgs, |chunk: ResponseChunk| {
-        content.push_str(&chunk.content);
-    }).await?;
+    provider
+        .generate(msgs, |chunk: ResponseChunk| {
+            content.push_str(&chunk.content);
+        })
+        .await?;
 
     Ok(serde_json::json!({ "content": content }))
 }
@@ -240,13 +255,17 @@ async fn handle_complete(params: &Value) -> Result<Value> {
 
     let msgs = vec![
         Message::System { content: system },
-        Message::User { content: prompt.to_string() },
+        Message::User {
+            content: prompt.to_string(),
+        },
     ];
 
     let mut content = String::new();
-    provider.generate(msgs, |chunk: ResponseChunk| {
-        content.push_str(&chunk.content);
-    }).await?;
+    provider
+        .generate(msgs, |chunk: ResponseChunk| {
+            content.push_str(&chunk.content);
+        })
+        .await?;
 
     Ok(serde_json::json!({ "content": content }))
 }

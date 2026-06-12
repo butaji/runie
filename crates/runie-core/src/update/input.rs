@@ -1,5 +1,8 @@
+use super::input_text::{
+    find_word_boundary_left, find_word_boundary_right, next_grapheme_boundary,
+    prev_grapheme_boundary,
+};
 use super::*;
-use super::input_text::{prev_grapheme_boundary, next_grapheme_boundary, find_word_boundary_left, find_word_boundary_right};
 
 impl AppState {
     pub fn hint_text(&self) -> String {
@@ -29,7 +32,8 @@ impl AppState {
 
     pub(crate) fn cursor_left(&mut self) {
         if self.input.cursor_pos > 0 {
-            self.input.cursor_pos = prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos =
+                prev_grapheme_boundary(&self.input.input, self.input.cursor_pos);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.mark_dirty();
@@ -45,7 +49,8 @@ impl AppState {
             return;
         }
         if self.input.cursor_pos < self.input.input.len() {
-            self.input.cursor_pos = next_grapheme_boundary(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos =
+                next_grapheme_boundary(&self.input.input, self.input.cursor_pos);
             self.clamp_input_scroll();
             self.mark_dirty();
         } else {
@@ -83,7 +88,8 @@ impl AppState {
 
     pub(crate) fn cursor_word_left(&mut self) {
         if self.input.cursor_pos > 0 {
-            self.input.cursor_pos = find_word_boundary_left(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos =
+                find_word_boundary_left(&self.input.input, self.input.cursor_pos);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.mark_dirty();
@@ -94,7 +100,8 @@ impl AppState {
 
     pub(crate) fn cursor_word_right(&mut self) {
         if self.input.cursor_pos < self.input.input.len() {
-            self.input.cursor_pos = find_word_boundary_right(&self.input.input, self.input.cursor_pos);
+            self.input.cursor_pos =
+                find_word_boundary_right(&self.input.input, self.input.cursor_pos);
             self.clear_ghost();
             self.clamp_input_scroll();
             self.mark_dirty();
@@ -220,7 +227,9 @@ impl AppState {
     // === Undo / Redo ===
 
     fn push_undo(&mut self) {
-        self.input.undo_stack.push((self.input.input.clone(), self.input.cursor_pos));
+        self.input
+            .undo_stack
+            .push((self.input.input.clone(), self.input.cursor_pos));
     }
 
     fn clear_redo(&mut self) {
@@ -229,7 +238,9 @@ impl AppState {
 
     pub(crate) fn undo(&mut self) {
         if let Some((text, pos)) = self.input.undo_stack.pop() {
-            self.input.redo_stack.push((self.input.input.clone(), self.input.cursor_pos));
+            self.input
+                .redo_stack
+                .push((self.input.input.clone(), self.input.cursor_pos));
             self.input.input = text;
             self.input.cursor_pos = pos;
             self.handle_at_trigger();
@@ -240,7 +251,9 @@ impl AppState {
 
     pub(crate) fn redo(&mut self) {
         if let Some((text, pos)) = self.input.redo_stack.pop() {
-            self.input.undo_stack.push((self.input.input.clone(), self.input.cursor_pos));
+            self.input
+                .undo_stack
+                .push((self.input.input.clone(), self.input.cursor_pos));
             self.input.input = text;
             self.input.cursor_pos = pos;
             self.handle_at_trigger();
@@ -291,10 +304,7 @@ impl AppState {
         }
         // Slash opens command palette when input is empty
         if c == '/' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
-            self.open_dialog = Some(crate::commands::DialogState::CommandPalette {
-                filter: String::new(),
-                selected: 0,
-            });
+            self.open_command_palette();
             self.mark_dirty();
             return;
         }
@@ -382,10 +392,12 @@ impl AppState {
             match result {
                 crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
                 crate::commands::CommandResult::Event(evt) => self.update(evt),
-                crate::commands::CommandResult::OpenDialog(d) => {
-                    self.open_dialog = Some(self.dialog_from_command(d));
-                    self.mark_dirty();
-                }
+                crate::commands::CommandResult::OpenDialog(d) => match d {
+                    crate::commands::DialogType::CommandPalette => self.open_command_palette(),
+                    crate::commands::DialogType::ModelSelector => self.open_model_selector(),
+                    crate::commands::DialogType::Settings => self.open_settings_dialog(),
+                    crate::commands::DialogType::ScopedModels => self.open_scoped_models_dialog(),
+                },
                 crate::commands::CommandResult::OpenPanelStack(stack) => {
                     self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
                     self.mark_dirty();

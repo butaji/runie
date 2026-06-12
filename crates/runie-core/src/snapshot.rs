@@ -2,8 +2,8 @@
 //! The event loop builds snapshots; the render actor draws them.
 //! Zero blocking I/O in the event loop by design.
 
-use std::sync::Arc;
 use crate::ui::elements::Element;
+use std::sync::Arc;
 
 /// Git repository info detected from current working directory.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -118,7 +118,10 @@ impl Snapshot {
 
     pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
         if self.elements.is_empty() || visible_height == 0 {
-            return VisibleRegion { elements: &[], skip_lines: 0 };
+            return VisibleRegion {
+                elements: &[],
+                skip_lines: 0,
+            };
         }
 
         let total = self.total_lines;

@@ -1,8 +1,8 @@
 //! Model — Application State (mutable borrow, no cloning per event)
-use std::sync::Arc;
+pub use crate::message::{now, ChatMessage, Role};
 use crate::snapshot::Snapshot;
 use crate::ui::elements::Element;
-pub use crate::message::{ChatMessage, Role, now};
+use std::sync::Arc;
 
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠹', '⠸', '⠴', '⠼'];
 const SPINNER_FRAMES: u32 = 12;
@@ -18,21 +18,26 @@ pub fn detect_git_info(start: &std::path::Path) -> Option<crate::snapshot::GitIn
         }
         if git_path.is_file() {
             // Worktree: `.git` file contains `gitdir: <path>`
-            let gitdir = std::fs::read_to_string(&git_path).ok()
-                .and_then(|content| {
-                    content.trim().strip_prefix("gitdir:")
-                        .map(|s| std::path::PathBuf::from(s.trim()))
-                });
+            let gitdir = std::fs::read_to_string(&git_path).ok().and_then(|content| {
+                content
+                    .trim()
+                    .strip_prefix("gitdir:")
+                    .map(|s| std::path::PathBuf::from(s.trim()))
+            });
             if let Some(worktree_gitdir) = gitdir {
                 // HEAD is in the worktree gitdir; config is in the parent repo
                 let head_path = worktree_gitdir.join("HEAD");
-                let branch = std::fs::read_to_string(&head_path).ok()
+                let branch = std::fs::read_to_string(&head_path)
+                    .ok()
                     .and_then(|content| {
-                        content.trim().strip_prefix("ref: refs/heads/")
+                        content
+                            .trim()
+                            .strip_prefix("ref: refs/heads/")
                             .map(|b| b.to_string())
                     });
                 // Config is one level up from worktrees/<name>
-                let config_path = worktree_gitdir.parent()
+                let config_path = worktree_gitdir
+                    .parent()
                     .and_then(|p| p.parent())
                     .map(|p| p.join("config"));
                 let repo_name = config_path.and_then(|p| read_origin_repo_name(&p));
@@ -46,9 +51,12 @@ pub fn detect_git_info(start: &std::path::Path) -> Option<crate::snapshot::GitIn
 
 fn read_git_info(git_dir: &std::path::Path) -> Option<crate::snapshot::GitInfo> {
     let head_path = git_dir.join("HEAD");
-    let branch = std::fs::read_to_string(&head_path).ok()
+    let branch = std::fs::read_to_string(&head_path)
+        .ok()
         .and_then(|content| {
-            content.trim().strip_prefix("ref: refs/heads/")
+            content
+                .trim()
+                .strip_prefix("ref: refs/heads/")
                 .map(|b| b.to_string())
         });
     let config_path = git_dir.join("config");
@@ -57,16 +65,19 @@ fn read_git_info(git_dir: &std::path::Path) -> Option<crate::snapshot::GitInfo> 
 }
 
 fn read_origin_repo_name(config_path: &std::path::Path) -> Option<String> {
-    std::fs::read_to_string(config_path).ok()
+    std::fs::read_to_string(config_path)
+        .ok()
         .and_then(|config| {
-            config.lines()
+            config
+                .lines()
                 .skip_while(|line| !line.contains("[remote \"origin\"]"))
                 .skip(1)
                 .find(|line| line.trim().starts_with("url"))
                 .and_then(|url_line| {
                     let url = url_line.split('=').nth(1)?;
                     let url = url.trim();
-                    url.rsplit('/').next()
+                    url.rsplit('/')
+                        .next()
                         .map(|name| name.trim_end_matches(".git").to_string())
                 })
         })
@@ -91,8 +102,7 @@ pub enum QueuedMessageKind {
     FollowUp,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum DeliveryMode {
     /// Each message triggers a separate LLM call
     #[default]
@@ -158,15 +168,19 @@ impl std::str::FromStr for ThinkingLevel {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "off" => Ok(Self::Off), "low" => Ok(Self::Low),
-            "medium" => Ok(Self::Medium), "high" => Ok(Self::High),
+            "off" => Ok(Self::Off),
+            "low" => Ok(Self::Low),
+            "medium" => Ok(Self::Medium),
+            "high" => Ok(Self::High),
             _ => Err(format!("Unknown thinking level: {s}")),
         }
     }
 }
 pub use crate::scoped_model::ScopedModel;
 
-pub use crate::model_catalog::{ModelInfo, model_catalog, filter_models, build_model_selector_items};
+pub use crate::model_catalog::{
+    build_model_selector_items, filter_models, model_catalog, ModelInfo,
+};
 #[derive(Clone, Debug)]
 pub struct QueuedMessage {
     pub content: String,
@@ -193,6 +207,7 @@ pub struct AppState {
     pub registry: crate::commands::CommandRegistry,
     pub should_quit: bool,
     pub open_dialog: Option<crate::commands::DialogState>,
+    pub login_flow: Option<crate::login_flow::LoginFlowState>,
     pub recent_models: Vec<String>,
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
     pub skills: Vec<crate::skills::Skill>,
@@ -217,7 +232,8 @@ pub struct AppState {
 
 fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
     let cwd = std::env::current_dir().ok();
-    let cwd_name = cwd.as_ref()
+    let cwd_name = cwd
+        .as_ref()
         .and_then(|p| p.file_name())
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
@@ -235,23 +251,34 @@ impl Default for AppState {
             view: crate::state::ViewState::default(),
             config: crate::state::ConfigState::default(),
             completion: crate::state::CompletionState::default(),
-            streaming: false, thinking_started_at: None,
+            streaming: false,
+            thinking_started_at: None,
             steering_mode: DeliveryMode::OneAtATime,
             follow_up_mode: DeliveryMode::OneAtATime,
-            next_id: 0, intermediate_step_count: 0,
-            animation_frame: 0, current_action: None,
+            next_id: 0,
+            intermediate_step_count: 0,
+            animation_frame: 0,
+            current_action: None,
             registry: crate::commands::CommandRegistry::new(),
-            should_quit: false, open_dialog: None,
-            recent_models: Vec::new(), pending_edits: Vec::new(),
+            should_quit: false,
+            open_dialog: None,
+            login_flow: None,
+            recent_models: Vec::new(),
+            pending_edits: Vec::new(),
             skills: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
-            prompts: Vec::new(), current_prompt: String::new(),
-            image_attachments: Vec::new(), all_collapsed: false,
-            last_assistant_index: None, thought_seq: 0,
+            prompts: Vec::new(),
+            current_prompt: String::new(),
+            image_attachments: Vec::new(),
+            all_collapsed: false,
+            last_assistant_index: None,
+            thought_seq: 0,
             input_history: Vec::new(),
             transient_message: None,
-            transient_until: None, transient_level: None,
-            git_info, cwd_name,
+            transient_until: None,
+            transient_level: None,
+            git_info,
+            cwd_name,
             cached_palette_items: Vec::new(),
             cached_palette_filter: None,
             cached_model_items: Vec::new(),
@@ -266,11 +293,15 @@ impl AppState {
     }
 
     pub fn turn_elapsed_secs(&self) -> Option<f64> {
-        self.agent.turn_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent
+            .turn_started_at
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     pub fn tool_elapsed_secs(&self) -> Option<f64> {
-        self.agent.tool_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent
+            .tool_started_at
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     /// Braille spinner frame (12-frame cycle)
@@ -296,7 +327,11 @@ impl AppState {
 
     fn palette_items(&mut self) -> Vec<(String, String, String)> {
         let filter = match &self.open_dialog {
-            Some(crate::commands::DialogState::CommandPalette { filter, .. }) => filter.clone(),
+            Some(d) => d
+                .panel_stack()
+                .current()
+                .map(|p| p.filter.clone())
+                .unwrap_or_default(),
             _ => {
                 self.cached_palette_filter = None;
                 self.cached_palette_items.clear();
@@ -307,7 +342,13 @@ impl AppState {
             self.cached_palette_filter = Some(filter.clone());
             let mut items: Vec<_> = crate::commands::filter_commands(&self.registry, &filter)
                 .into_iter()
-                .map(|cmd| (cmd.name.clone(), cmd.desc.clone(), cmd.category.as_str().to_string()))
+                .map(|cmd| {
+                    (
+                        cmd.name.clone(),
+                        cmd.desc.clone(),
+                        cmd.category.as_str().to_string(),
+                    )
+                })
                 .collect();
             let f = filter.to_lowercase();
             for skill in &self.skills {
@@ -316,7 +357,11 @@ impl AppState {
                         || skill.name.to_lowercase().contains(&f)
                         || skill.description.to_lowercase().contains(&f))
                 {
-                    items.push((skill.name.clone(), skill.description.clone(), "Skill".to_string()));
+                    items.push((
+                        skill.name.clone(),
+                        skill.description.clone(),
+                        "Skill".to_string(),
+                    ));
                 }
             }
             self.cached_palette_items = items;
@@ -326,14 +371,21 @@ impl AppState {
 
     fn session_tree_items(&self) -> Vec<(usize, String)> {
         let filter = match &self.open_dialog {
-            Some(crate::commands::DialogState::SessionTree { filter, .. }) => *filter,
+            Some(crate::commands::DialogState::SessionTree(_)) => {
+                crate::session_tree::SessionTreeFilter::All
+            }
             _ => return Vec::new(),
         };
         match self.session.session_tree.as_ref() {
-            Some(tree) => tree.filtered_walk(filter)
+            Some(tree) => tree
+                .filtered_walk(filter)
                 .into_iter()
                 .map(|(depth, node)| {
-                    let preview = format!("[{}] {}", node.message.role.as_str(), node.message.content.chars().take(60).collect::<String>());
+                    let preview = format!(
+                        "[{}] {}",
+                        node.message.role.as_str(),
+                        node.message.content.chars().take(60).collect::<String>()
+                    );
                     (depth, preview)
                 })
                 .collect(),
@@ -343,7 +395,11 @@ impl AppState {
 
     fn model_selector_items(&mut self) -> Vec<(String, String, String, bool, bool)> {
         let filter = match &self.open_dialog {
-            Some(crate::commands::DialogState::ModelSelector { filter, .. }) => filter.clone(),
+            Some(d) => d
+                .panel_stack()
+                .current()
+                .map(|p| p.filter.clone())
+                .unwrap_or_default(),
             _ => {
                 self.cached_model_filter = None;
                 self.cached_model_items.clear();
@@ -396,8 +452,12 @@ impl AppState {
         if self.view.elements_cache.is_empty() {
             return &[];
         }
-        let start = skip.min(self.view.element_count).min(self.view.elements_cache.len());
-        let end = (start + take).min(self.view.element_count).min(self.view.elements_cache.len());
+        let start = skip
+            .min(self.view.element_count)
+            .min(self.view.elements_cache.len());
+        let end = (start + take)
+            .min(self.view.element_count)
+            .min(self.view.elements_cache.len());
         &self.view.elements_cache[start..end]
     }
 
@@ -457,7 +517,9 @@ impl AppState {
         let d_out = t_out - self.agent.tokens_out_display;
         let c1 = if d_in.abs() < 0.5 {
             let n = self.agent.tokens_in_display.round() as usize != t_in as usize;
-            if n { self.agent.tokens_in_display = t_in; }
+            if n {
+                self.agent.tokens_in_display = t_in;
+            }
             n
         } else {
             self.agent.tokens_in_display += d_in * 0.15;
@@ -465,7 +527,9 @@ impl AppState {
         };
         let c2 = if d_out.abs() < 0.5 {
             let n = self.agent.tokens_out_display.round() as usize != t_out as usize;
-            if n { self.agent.tokens_out_display = t_out; }
+            if n {
+                self.agent.tokens_out_display = t_out;
+            }
             n
         } else {
             self.agent.tokens_out_display += d_out * 0.15;
@@ -550,7 +614,11 @@ impl AppState {
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
-            auth_providers: crate::auth::AuthStorage::load().tokens.keys().cloned().collect(),
+            auth_providers: crate::auth::AuthStorage::load()
+                .tokens
+                .keys()
+                .cloned()
+                .collect(),
             transient_message: self.transient_message.clone(),
             transient_level: self.transient_level,
             tokens_in: self.agent.tokens_in,
@@ -569,7 +637,11 @@ impl AppState {
     }
 
     pub fn total_tokens(&self) -> usize {
-        self.session.messages.iter().map(|m| crate::tokens::estimate_tokens(&m.content)).sum()
+        self.session
+            .messages
+            .iter()
+            .map(|m| crate::tokens::estimate_tokens(&m.content))
+            .sum()
     }
 
     pub fn compact(&mut self, keep_recent_tokens: usize) -> String {
@@ -597,17 +669,21 @@ impl AppState {
         }
         let removed_count = cut_idx;
         self.session.messages.drain(..cut_idx);
-        let summary = format!("[Compacted: {} earlier messages removed, keeping ~{} tokens]", removed_count, keep_recent_tokens);
-        self.session.messages.insert(0, ChatMessage {
-            role: Role::System,
-            content: summary.clone(),
-            timestamp: now(),
-            id: "compaction".to_string(),
-            ..Default::default()
-        });
+        let summary = format!(
+            "[Compacted: {} earlier messages removed, keeping ~{} tokens]",
+            removed_count, keep_recent_tokens
+        );
+        self.session.messages.insert(
+            0,
+            ChatMessage {
+                role: Role::System,
+                content: summary.clone(),
+                timestamp: now(),
+                id: "compaction".to_string(),
+                ..Default::default()
+            },
+        );
         self.messages_changed();
         summary
     }
 }
-
-
