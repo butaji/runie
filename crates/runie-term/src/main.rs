@@ -61,7 +61,14 @@ async fn main() -> io::Result<()> {
     // processes snapshots in order; with capacity 1, a snapshot arriving
     // while the render task was drawing the previous one would be lost,
     // leaving the UI stuck on the pre-burst frame.
-    let (render_tx, render_rx) = mpsc::channel::<Snapshot>(4);
+    // Render channel: a `watch` channel (single-slot, always-latest).
+    // The sender overwrites on each `send`, so the render task is
+    // guaranteed to see the most recent snapshot — no mpsc dropping
+    // where a burst of state changes (e.g. Esc popping a panel) could
+    // leave the UI stuck on a stale frame. This mirrors Android's
+    // back-stack model: navigation is a single, central stack of
+    // states, and the UI always reflects the top of the stack.
+    let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
@@ -94,18 +101,14 @@ fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
 
 async fn render_task(
     mut terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
-    mut render_rx: mpsc::Receiver<Snapshot>,
+    mut render_rx: watch::Receiver<Snapshot>,
 ) {
     let mut last_size: Option<(u16, u16)> = None;
-    while let Some(mut snap) = render_rx.recv().await {
-        // Coalesce: drain any snapshots that arrived while we were drawing
-        // the previous one. The latest snapshot wins. This makes the
-        // render task always show the most recent state, even if a burst
-        // of events (e.g. ESC popping a panel) produced several snapshots
-        // while the terminal was busy drawing.
-        while let Ok(newer) = render_rx.try_recv() {
-            snap = newer;
-        }
+    loop {
+        // `borrow_and_update` atomically reads the latest snapshot and
+        // marks it seen, so a concurrent `send` that happens during
+        // `draw` will be picked up by the next `changed().await`.
+        let snap = render_rx.borrow_and_update().clone();
         let new_size = terminal
             .size()
             .map(|r| (r.width, r.height))
@@ -118,6 +121,10 @@ async fn render_task(
             last_size = Some(new_size);
         }
         let _ = terminal.draw(|f| runie_tui::ui::draw_snapshot(f, &snap));
+        if render_rx.changed().await.is_err() {
+            // Sender dropped — app shutting down.
+            break;
+        }
     }
 }
 
@@ -214,7 +221,7 @@ async fn event_loop(
     mut input_rx: mpsc::Receiver<CoreEvent>,
     mut agent_rx: mpsc::Receiver<CoreEvent>,
     cmd_tx: mpsc::Sender<AgentCommand>,
-    render_tx: mpsc::Sender<Snapshot>,
+    render_tx: watch::Sender<Snapshot>,
     input_tx: mpsc::Sender<CoreEvent>,
     kb_tx: watch::Sender<HashMap<String, String>>,
 ) -> io::Result<()> {
@@ -223,7 +230,7 @@ async fn event_loop(
     // Initial draw so the user sees the app immediately, without waiting
     // for the first keyboard event.
     state.ensure_fresh();
-    let _ = render_tx.try_send(state.snapshot());
+    let _ = render_tx.send(state.snapshot());
 
     loop {
         tokio::select! {
@@ -285,7 +292,7 @@ async fn event_loop(
 
                         // Force redraw
                         state.ensure_fresh();
-                        let _ = render_tx.try_send(state.snapshot());
+                        let _ = render_tx.send(state.snapshot());
                     }
                 } else if let CoreEvent::LoginFlowSubmitKey { .. } = &evt {
                     // Non-blocking: the state update below immediately
@@ -391,10 +398,10 @@ async fn event_loop(
         }
 
         state.ensure_fresh();
-        let snap = state.snapshot();
-        if render_tx.try_send(snap).is_err() {
-            // Render task is behind — old snapshot dropped, latest will draw
-        }
+        // `watch::Sender::send` overwrites; the render task always
+        // reads the latest snapshot. This guarantees a popped panel
+        // is rendered immediately, not lost in a full mpsc buffer.
+        let _ = render_tx.send(state.snapshot());
     }
 }
 

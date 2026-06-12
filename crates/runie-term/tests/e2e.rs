@@ -229,11 +229,13 @@ fn e2e_login_flow_opens_and_cancel_works() {
 #[ignore = "e2e: requires release binary"]
 fn e2e_login_stack_navigation_esc_pops_and_closes_at_root() {
     // The login flow is a real 3-level stack: provider picker (root) →
-    // key input (pushed) → model selector (pushed). We verify stack
-    // navigation by ESC behavior: from depth 3, three ESCs must land
-    // us back at the main prompt (each pops one level, the last closes
-    // the dialog at the root). This proves the stack works without
-    // depending on rendering intermediate popped states.
+    // key input (pushed) → model selector (pushed). Esc is a Back
+    // button (Android-style): it pops one level, and closes the dialog
+    // only at the root. The watch-channel render actor guarantees the
+    // latest snapshot is always rendered (no mpsc dropping), so
+    // navigation is immediate. We verify the 3-level chain by
+    // asserting that 3 Escs from depth 3 close the dialog — each
+    // pop is observable in the next Esc's effect.
     let mut p = spawn_runie().expect("spawn runie");
     wait_for(&mut p, "Type a message to start").expect("welcome prompt");
 
@@ -248,11 +250,7 @@ fn e2e_login_stack_navigation_esc_pops_and_closes_at_root() {
     send_line(&mut p, "sk-fake").expect("submit key");
     wait_for(&mut p, "Models").expect("model selector pushed");
 
-    // Three ESCs: model → key → provider (close at root). We verify the
-    // final outcome (main prompt visible) which proves the whole chain
-    // of pops happened; intermediate renders are timing-sensitive due
-    // to the async render actor and are covered exhaustively by unit
-    // tests in `tests/stack_navigation.rs`.
+    // Three ESCs: model → key → provider (close at root).
     send_escape(&mut p).expect("esc 1: models → key");
     send_escape(&mut p).expect("esc 2: key → provider");
     send_escape(&mut p).expect("esc 3: provider → close");
@@ -311,7 +309,7 @@ fn e2e_dialog_flows_settings_model_theme_scoped() {
     wait_idle(&mut p);
 
     run_command(&mut p, "scoped-models");
-    wait_for(&mut p, "Enable").expect("scoped models dialog");
+    wait_for(&mut p, "Scoped Models").expect("scoped models dialog");
     send_escape(&mut p).expect("close scoped models");
     wait_idle(&mut p);
 
