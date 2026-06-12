@@ -37,6 +37,7 @@ fn dev_sh_uses_cargo_watch_for_hot_reload() {
 }
 
 #[test]
+#[cfg(unix)]
 fn dev_sh_executable_bit_set() {
     use std::os::unix::fs::PermissionsExt;
     let root = workspace_root();
