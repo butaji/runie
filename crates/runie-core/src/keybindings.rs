@@ -50,7 +50,10 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("alt+f".to_string(), "CursorWordRight".to_string());
 
     // Plain keys
-    map.insert("escape".to_string(), "Abort".to_string());
+    // Esc is a **Back button** in dialogs (Android-style): it pops one
+    // level of the panel stack, closing the dialog only at the root.
+    // For an unconditional force-close, use Ctrl+\ (Abort).
+    map.insert("escape".to_string(), "DialogBack".to_string());
     map.insert("tab".to_string(), "Input:\t".to_string());
     map.insert("backspace".to_string(), "Backspace".to_string());
     map.insert("enter".to_string(), "Submit".to_string());
@@ -176,6 +179,7 @@ pub fn event_from_name(name: &str) -> Option<Event> {
         "CycleModelPrev" => Some(Event::CycleModelPrev),
         "Suspend" => Some(Event::Suspend),
         "PasteImage" => Some(Event::PasteImage),
+        "DialogBack" => Some(Event::DialogBack),
         _ => None,
     }
 }
