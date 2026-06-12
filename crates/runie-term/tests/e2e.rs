@@ -155,6 +155,18 @@ fn run_command(p: &mut PtySession, name: &str) {
     send_line(p, name).unwrap_or_else(|_| panic!("type {name}"));
 }
 
+/// Close a sub-dialog that was opened from the command palette and return
+/// to the idle prompt. With Android-like back navigation, the first Esc
+/// pops back to the palette (Main Menu); the second Esc closes the bar.
+fn close_sub_dialog_and_idle(p: &mut PtySession) {
+    send_escape(p).expect("esc pop to palette");
+    // Give the render actor time to redraw the restored palette before
+    // sending the second Esc, otherwise the key may be swallowed.
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    send_escape(p).expect("esc close palette");
+    wait_idle(p);
+}
+
 /// Assert that the captured output contains no panic indicators.
 fn assert_no_panic(output: &str) {
     assert!(
@@ -303,33 +315,30 @@ fn e2e_dialog_flows_settings_model_theme_scoped() {
 
     run_command(&mut p, "settings");
     wait_for(&mut p, "Models").expect("settings dialog");
-    send_escape(&mut p).expect("close settings");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "model");
     wait_for(&mut p, "Select").expect("model selector");
-    send_line(&mut p, "gpt").expect("filter gpt");
+    // Type a filter but do NOT press Enter; we only want to verify
+    // filtering and the Esc-back behavior, not change the model.
+    send(&mut p, "gpt").expect("filter gpt");
     wait_for(&mut p, "gpt").expect("model fuzzy search");
-    send_escape(&mut p).expect("close model");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "theme");
     // Give the dialog time to render, then close. We don't assert
     // on the dialog text (ANSI codes split it across escape sequences
     // making raw matching unreliable in the e2e harness).
     std::thread::sleep(std::time::Duration::from_millis(500));
-    send_escape(&mut p).expect("close theme");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "scoped-models");
     wait_for(&mut p, "Scoped Models").expect("scoped models dialog");
-    send_escape(&mut p).expect("close scoped models");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "thinking");
     wait_for(&mut p, "off").expect("thinking selector");
-    send_escape(&mut p).expect("close thinking");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     send_ctrl_c(&mut p).expect("ctrl-c");
 }
@@ -343,48 +352,39 @@ fn e2e_session_form_dialogs_open_and_cancel() {
     run_command(&mut p, "save");
     wait_for(&mut p, "Fill in the form").expect("save form");
     send(&mut p, "x").expect("type into session name");
-    send_escape(&mut p).expect("cancel save");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "load");
     wait_for(&mut p, "Fill in the form").expect("load form");
-    send_escape(&mut p).expect("cancel load");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "delete");
     wait_for(&mut p, "Fill in the form").expect("delete form");
-    send_escape(&mut p).expect("cancel delete");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "export");
     wait_for(&mut p, "Path").expect("export form");
-    send_escape(&mut p).expect("cancel export");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "import");
     wait_for(&mut p, "Path").expect("import form");
-    send_escape(&mut p).expect("cancel import");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "prompt");
     wait_for(&mut p, "Prompt name").expect("prompt form");
-    send_escape(&mut p).expect("cancel prompt");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "name");
     wait_for(&mut p, "Fill in the form").expect("name form");
-    send_escape(&mut p).expect("cancel name");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "fork");
     wait_for(&mut p, "Message index").expect("fork form");
-    send_escape(&mut p).expect("cancel fork");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "compact");
     wait_for(&mut p, "Keep tokens").expect("compact form");
-    send_escape(&mut p).expect("cancel compact");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     send_ctrl_c(&mut p).expect("ctrl-c");
 }
@@ -417,8 +417,7 @@ fn e2e_session_commands_no_panic() {
 
     run_command(&mut p, "tree");
     wait_for(&mut p, "Tree").expect("tree dialog");
-    send_escape(&mut p).expect("close tree");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     run_command(&mut p, "skills");
     wait_for(&mut p, "skills").expect("skills listed");
@@ -834,8 +833,7 @@ fn f7_save_session_with_special_chars() {
     run_command(&mut p, "save");
     wait_for(&mut p, "Fill in the form").expect("save form");
     send(&mut p, "my-session (v1)").expect("type name with spaces/parens");
-    send_escape(&mut p).expect("cancel save");
-    wait_idle(&mut p);
+    close_sub_dialog_and_idle(&mut p);
 
     // Try /sessions to ensure the list command works.
     run_command(&mut p, "sessions");
@@ -885,8 +883,12 @@ fn f8_open_close_palette_repeatedly() {
     for _ in 0..10 {
         send(&mut p, "\x10").expect("ctrl-p open");
         p.flush().expect("flush");
+        // Brief pause so the palette has time to render before Esc
+        // tries to close it; without this the close key can be lost.
+        std::thread::sleep(std::time::Duration::from_millis(50));
         send_escape(&mut p).expect("esc close");
         p.flush().expect("flush");
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
     wait_idle(&mut p);
     send_ctrl_c(&mut p).expect("ctrl-c");
@@ -920,11 +922,11 @@ fn f9_global_back_stack_palette_pushes_subdialog_esc_pops_then_closes() {
     // (the palette stays as the previous entry).
     send_line(&mut p, "scoped-models").expect("type and enter");
 
-    // Esc on the sub-dialog must pop back to the palette (main menu).
-    // Assert on a palette body item (always present) rather than the
-    // title text, which can be split by ANSI codes.
+    // Esc on the sub-dialog must pop back to the palette (main menu)
+    // in the exact same state as we left it, so the previous filter
+    // "scoped-models" is still active.
     send_escape(&mut p).expect("esc pops to palette");
-    wait_for(&mut p, "settings").expect("back at palette, popped state visible");
+    wait_for(&mut p, "scoped-models").expect("back at palette with preserved filter");
 
     // Esc on the palette (root of the back stack) must close the bar.
     send_escape(&mut p).expect("esc at root closes");

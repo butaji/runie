@@ -303,7 +303,7 @@ fn global_dialog_back_stack_palette_pushes_subdialog() {
     let sub = Panel::new("sub", "Sub").keep_open();
     let sub_stack = PanelStack::new(sub);
     if let Some(current) = state.open_dialog.take() {
-        state.dialog_back_stack.push(current);
+        state.push_dialog_to_back_stack(current);
     }
     state.open_dialog = Some(DialogState::PanelStack(sub_stack));
 
@@ -351,7 +351,7 @@ fn palette_then_subdialog_esc_back_to_palette_then_esc_closes() {
     // command goes through process_command_result, which pushes the
     // palette onto the back stack and opens the login dialog.
     if let Some(current) = state.open_dialog.take() {
-        state.dialog_back_stack.push(current);
+        state.push_dialog_to_back_stack(current);
     }
     let login_root = PanelStack::new(Panel::new("login-provider", "Login").keep_open());
     state.open_dialog = Some(DialogState::PanelStack(login_root));

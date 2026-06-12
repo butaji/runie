@@ -11,6 +11,15 @@ fn palette_state(state: &AppState) -> Option<(String, usize)> {
     }
 }
 
+fn model_selector_state(state: &AppState) -> Option<(String, usize)> {
+    match &state.open_dialog {
+        Some(DialogState::ModelSelector(stack)) => {
+            stack.current().map(|p| (p.filter.clone(), p.selected))
+        }
+        _ => None,
+    }
+}
+
 #[test]
 fn slash_opens_command_palette_when_input_empty() {
     let mut state = AppState::default();
@@ -60,15 +69,90 @@ fn toggle_opens_palette() {
 }
 
 #[test]
-fn select_closes_then_executes() {
+fn select_pushes_palette_to_back_stack() {
     let mut state = AppState::default();
     state.update(Event::ToggleCommandPalette);
-    // Select the first command
+    // Filter to a command that opens a sub-dialog (thinking).
+    for c in "thinking".chars() {
+        state.update(Event::PaletteFilter(c));
+    }
+    // Select the "thinking" command.
     state.update(Event::PaletteSelect);
     assert!(
-        state.open_dialog.is_none(),
-        "Palette should close after select"
+        state.open_dialog.is_some(),
+        "Activating a palette item should open the command's sub-dialog"
     );
+    assert_eq!(
+        state.dialog_back_stack.len(),
+        1,
+        "Palette should be pushed onto the back stack"
+    );
+}
+
+#[test]
+fn esc_from_subdialog_returns_to_palette() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    // Filter to and open a sub-dialog command.
+    for c in "thinking".chars() {
+        state.update(Event::PaletteFilter(c));
+    }
+    state.update(Event::PaletteSelect);
+
+    assert!(
+        state.open_dialog.is_some(),
+        "Sub-dialog should be open after select"
+    );
+    assert_eq!(state.dialog_back_stack.len(), 1);
+
+    // Esc on the sub-dialog must pop back to the palette, not close.
+    state.update(Event::DialogBack);
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::CommandPalette(_))),
+        "Esc on sub-dialog must return to the palette, got {:?}",
+        state.open_dialog
+    );
+    assert!(state.dialog_back_stack.is_empty());
+
+    // Esc on the palette (root) must close the bar.
+    state.update(Event::DialogBack);
+    assert!(state.open_dialog.is_none(), "Esc on palette must close");
+}
+
+#[test]
+fn message_command_from_palette_closes_palette() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    // Filter to a message-only command (help).
+    for c in "help".chars() {
+        state.update(Event::PaletteFilter(c));
+    }
+    state.update(Event::PaletteSelect);
+
+    assert!(
+        state.open_dialog.is_none(),
+        "Message command should close the palette"
+    );
+    assert!(state.dialog_back_stack.is_empty());
+}
+
+#[test]
+fn submit_on_message_command_closes_palette() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    // Filter to a message-only command (new).
+    for c in "new".chars() {
+        state.update(Event::PaletteFilter(c));
+    }
+    // A real Enter key produces Submit, not PaletteSelect.
+    state.update(Event::Submit);
+
+    assert!(
+        state.open_dialog.is_none(),
+        "Submit on a message command should close the palette, got {:?}",
+        state.open_dialog
+    );
+    assert!(state.dialog_back_stack.is_empty());
 }
 
 #[test]
@@ -98,4 +182,67 @@ fn filter_reduces_selection() {
     let (filter, selected) = palette_state(&state).expect("Palette should be open");
     assert_eq!(filter, "q");
     assert_eq!(selected, 0, "Filter resets selection to 0");
+}
+
+#[test]
+fn typing_in_model_selector_filters_models() {
+    // Regression: typing a character in the model selector must update
+    // the model selector's filter, not pop back to the command palette.
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    // Filter to and open the model selector.
+    for c in "model".chars() {
+        state.update(Event::PaletteFilter(c));
+    }
+    state.update(Event::PaletteSelect);
+
+    assert!(
+        model_selector_state(&state).is_some(),
+        "Model selector should be open after selecting /model"
+    );
+
+    // Type in the model selector.
+    state.update(Event::ModelSelectorFilter('m'));
+
+    assert!(
+        model_selector_state(&state).is_some(),
+        "Typing in model selector must keep it open, got {:?}",
+        state.open_dialog
+    );
+    let (filter, _) = model_selector_state(&state).expect("model selector still open");
+    assert_eq!(filter, "m", "Model selector filter should contain 'm'");
+}
+
+#[test]
+fn esc_restores_palette_in_same_state() {
+    // When Esc pops back from a sub-dialog to the palette, the palette
+    // must be restored with the same filter and selection as before.
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    for c in "thinking".chars() {
+        state.update(Event::PaletteFilter(c));
+    }
+    // Move selection down once so it is non-zero.
+    state.update(Event::PaletteDown);
+    let (filter_before, selected_before) =
+        palette_state(&state).expect("palette should be open");
+    assert_eq!(filter_before, "thinking");
+
+    state.update(Event::PaletteSelect);
+    assert!(
+        !matches!(state.open_dialog, Some(DialogState::CommandPalette(_))),
+        "Sub-dialog should be open"
+    );
+
+    state.update(Event::DialogBack);
+    let (filter_after, selected_after) =
+        palette_state(&state).expect("palette should be restored");
+    assert_eq!(
+        filter_after, filter_before,
+        "Esc must preserve palette filter"
+    );
+    assert_eq!(
+        selected_after, selected_before,
+        "Esc must preserve palette selection"
+    );
 }

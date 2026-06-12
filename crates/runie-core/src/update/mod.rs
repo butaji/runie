@@ -1050,6 +1050,19 @@ impl AppState {
         let Some(mut dialog) = self.open_dialog.take() else {
             return;
         };
+        // For the activation case on the command palette (Main Menu),
+        // push it onto the global back stack BEFORE the handler runs.
+        // The handler dispatches the command, which may open a sub-dialog.
+        // The back stack already has the launcher so Esc pops back to it.
+        // Other keep_open dialogs (theme picker, scoped models) stay open
+        // for live preview/toggles and do NOT participate in back-stack
+        // launcher semantics.
+        use crate::commands::DialogState;
+        let is_palette_activation = matches!(event, Event::Submit | Event::PaletteSelect)
+            && matches!(dialog, DialogState::CommandPalette(_));
+        if is_palette_activation {
+            self.push_dialog_to_back_stack(dialog.clone());
+        }
         let stack = dialog.panel_stack_mut();
         let activated = self.update_panel_stack(event, stack);
         // If the panel stack activated an item, it may have closed or replaced
@@ -1058,14 +1071,15 @@ impl AppState {
         // Exception: if the handler already set `open_dialog` (e.g. login flow
         // rebuild on keep_open Emit), leave it alone.
         if !activated && self.open_dialog.is_none() {
-            // If the panel stack was closed at its root AND the global
-            // back stack has a previous dialog (e.g. the command
-            // palette that pushed this sub-dialog), restore it instead
-            // of closing the whole UI. This is the Android-like Back
-            // behavior: pop one level, close only at the root of all.
-            if let Some(previous) = self.dialog_back_stack.pop() {
-                self.open_dialog = Some(previous);
+            if is_palette_activation {
+                // Command palette activation that did NOT open a sub-dialog
+                // was a message/effect command. Keep the palette closed.
+                self.dialog_back_stack.pop();
             } else {
+                // Filter input, navigation, and intra-stack back events do not
+                // change the dialog; restore the current dialog exactly as it
+                // was. Root-level back navigation is handled inside
+                // update_panel_stack, which already sets open_dialog.
                 self.open_dialog = Some(dialog);
             }
         }
@@ -1276,6 +1290,13 @@ impl AppState {
                     .unwrap_or(false);
                 if !keep_open {
                     self.open_dialog = None;
+                } else {
+                    // Launcher activation: the back stack push is
+                    // already done by `update_dialog` for the
+                    // activation case. We just need to clear
+                    // `open_dialog` here so the nested `update`
+                    // dispatches the event as a command.
+                    self.open_dialog = None;
                 }
                 self.mark_dirty();
                 self.update(evt);
@@ -1349,6 +1370,10 @@ impl AppState {
     fn process_command_result(&mut self, result: crate::commands::CommandResult) {
         match result {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
+            crate::commands::CommandResult::Warning(msg) => self.notify(
+                msg,
+                crate::event::TransientLevel::Warning,
+            ),
             crate::commands::CommandResult::Event(evt) => self.update(evt),
             crate::commands::CommandResult::OpenDialog(d) => {
                 // Android-like: if a dialog is already open (e.g. the
@@ -1356,7 +1381,7 @@ impl AppState {
                 // global back stack so Esc returns to it. The new
                 // dialog becomes the top.
                 if let Some(current) = self.open_dialog.take() {
-                    self.dialog_back_stack.push(current);
+                    self.push_dialog_to_back_stack(current);
                 }
                 match d {
                     crate::commands::DialogType::CommandPalette => self.open_command_palette(),
@@ -1367,13 +1392,20 @@ impl AppState {
             }
             crate::commands::CommandResult::OpenPanelStack(stack) => {
                 if let Some(current) = self.open_dialog.take() {
-                    self.dialog_back_stack.push(current);
+                    self.push_dialog_to_back_stack(current);
                 }
                 self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
                 self.mark_dirty();
             }
             crate::commands::CommandResult::None => {}
         }
+    }
+
+    /// Push a dialog onto the global back stack. The dialog state
+    /// (filter, selection) is preserved so that when it is restored
+    /// via Esc the user returns to exactly the screen they left.
+    pub(crate) fn push_dialog_to_back_stack(&mut self, dialog: crate::commands::DialogState) {
+        self.dialog_back_stack.push(dialog);
     }
 
     /// Open a filterable @-file picker as a PanelStack dialog.
@@ -1422,6 +1454,9 @@ impl AppState {
     }
 
     fn switch_model(&mut self, provider: String, model: String) {
+        if self.config.current_provider == provider && self.config.current_model == model {
+            return;
+        }
         self.config.current_provider = provider.clone();
         self.config.current_model = model.clone();
         self.record_model_usage(&provider, &model);
@@ -1438,6 +1473,9 @@ impl AppState {
     }
 
     fn switch_theme(&mut self, name: String) {
+        if self.config.theme_name == name {
+            return;
+        }
         self.config.theme_name = name.clone();
         self.notify(
             format!("Theme switched to '{}'", name),
