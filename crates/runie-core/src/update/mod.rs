@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 use crate::dialog::{Panel, PanelStack};
 use crate::login_flow::LoginStep;
-=======
->>>>>>> review
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
@@ -28,18 +25,11 @@ pub enum FormAction {
 mod agent;
 mod at_refs;
 mod bash;
-mod control;
-mod dialog;
-mod dialog_actions;
-mod dialog_open;
-mod dialog_update;
-mod edit;
 mod edit_approval;
 mod input;
 mod input_scroll;
 mod input_text;
 mod line_nav;
-mod login_flow;
 mod path_complete;
 mod queue;
 pub mod scoped_models;
@@ -58,14 +48,23 @@ pub(crate) fn now() -> f64 {
 impl AppState {
     /// Main event dispatcher - delegates to specialized handlers based on event type.
     pub fn update(&mut self, event: Event) {
-        use crate::event::EventCategory;
-        if matches!(event.category(), EventCategory::Transient) {
-            return transient_event(self, event);
+        // Login flow events bypass dialog routing — they manage their own dialog state.
+        if matches!(
+            event,
+            Event::LoginFlowStart
+                | Event::LoginFlowSelectProvider { .. }
+                | Event::LoginFlowSubmitKey { .. }
+                | Event::LoginFlowValidate { .. }
+                | Event::LoginFlowValidationDone { .. }
+                | Event::LoginFlowValidationFailed { .. }
+                | Event::LoginFlowModelsFetched { .. }
+                | Event::LoginFlowToggleModel { .. }
+                | Event::LoginFlowSave
+                | Event::LoginFlowCancel
+        ) {
+            self.login_flow_event(event);
+            return;
         }
-        if event.is_login() {
-            return login_flow::update(self, event);
-        }
-<<<<<<< HEAD
 
         // Providers dialog events need special handling even when a dialog is open.
         if matches!(
@@ -91,59 +90,142 @@ impl AppState {
             }
             self.update_dialog(event);
             return;
-=======
-        if self.open_dialog.is_some() {
-            return dialog_update::update(self, event);
->>>>>>> review
         }
-        match event.category() {
-            EventCategory::Input => input_event(self, event),
-            EventCategory::Agent => agent_event(self, event),
-            EventCategory::Scroll => scroll_event(self, event),
-            EventCategory::Control => control::update(self, event),
-            EventCategory::ModelConfig => model_config_event(self, event),
-            EventCategory::DialogToggle => dialog_open::update(self, event),
-            EventCategory::Settings => settings_dialog::update(self, event),
-            EventCategory::Edit => edit::update(self, event),
-            EventCategory::System => system_event(self, event),
-            EventCategory::Transient => unreachable!(),
-        }
-    }
-}
 
-fn transient_event(state: &mut AppState, event: Event) {
-    match event {
-        Event::TransientMessage { content, level } => state.set_transient(content, level),
-        Event::TransientError { content } => {
-            state.set_transient(content, crate::event::TransientLevel::Error)
-        }
-        Event::ClearTransient => state.clear_transient(),
-        _ => {}
-    }
-}
-
-fn system_event(state: &mut AppState, event: Event) {
-    if let Event::SystemMessage { content } = event {
-        state.add_system_msg(content);
-    }
-}
-
-fn scroll_event(state: &mut AppState, event: Event) {
-    let page_size = 5usize;
-    match event {
-        Event::ScrollUp => {
-            if state.session.messages.is_empty() && !state.agent.turn_active {
-                state.input.input_flash = 3;
+        // Dispatch to specialized handlers
+        match event {
+            Event::Input(_)
+            | Event::Backspace
+            | Event::Newline
+            | Event::CursorLeft
+            | Event::CursorRight
+            | Event::CursorStart
+            | Event::CursorEnd
+            | Event::DeleteWord
+            | Event::DeleteToEnd
+            | Event::DeleteToStart
+            | Event::KillChar
+            | Event::Undo
+            | Event::Redo
+            | Event::CursorWordLeft
+            | Event::CursorWordRight
+            | Event::Paste(_)
+            | Event::PasteImage
+            | Event::Submit
+            | Event::HistoryPrev
+            | Event::HistoryNext => self.input_event(event),
+            Event::AgentThinking { .. }
+            | Event::AgentThoughtDone { .. }
+            | Event::AgentToolStart { .. }
+            | Event::AgentToolEnd { .. }
+            | Event::AgentResponse { .. }
+            | Event::AgentTurnComplete { .. }
+            | Event::AgentDone { .. }
+            | Event::AgentError { .. } => self.agent_event(event),
+            Event::ScrollUp | Event::ScrollDown | Event::PageUp | Event::PageDown => {
+                self.scroll_event(event)
             }
-            state.view.scroll = state.view.scroll.saturating_add(1);
-        }
-        Event::ScrollDown => {
-            if state.view.scroll == 0 {
-                state.input.input_flash = 3;
+            Event::Quit
+            | Event::Reset
+            | Event::Abort
+            | Event::ExternalEditorDone { .. }
+            | Event::SpawnAgent { .. }
+            | Event::Suspend
+            | Event::ShareSession
+            | Event::OpenExternalEditor => self.control_event(event),
+            Event::SwitchModel { .. }
+            | Event::SwitchTheme { .. }
+            | Event::CycleModelNext
+            | Event::CycleModelPrev
+            | Event::CycleThinkingLevel
+            | Event::SetThinkingLevel(_)
+            | Event::ToggleReadOnly
+            | Event::TrustProject
+            | Event::UntrustProject
+            | Event::FollowUp
+            | Event::Dequeue => self.model_config_event(event),
+            Event::ToggleExpand
+            | Event::ToggleSessionTree
+            | Event::SessionTreeFilterCycle
+            | Event::ForkSession { .. }
+            | Event::CloneSession
+            | Event::SessionTreeSelect { .. } => self.control_event(event),
+            Event::ToggleCommandPalette
+            | Event::ToggleModelSelector
+            | Event::ToggleScopedModelsDialog
+            | Event::ScopedModelToggle { .. }
+            | Event::ScopedModelEnableAll
+            | Event::ScopedModelDisableAll
+            | Event::ScopedModelToggleProvider { .. }
+            | Event::AtFilePicker => self.dialog_toggle_event(event),
+            Event::InsertAtRef(_) => self.input_event(event),
+            Event::ToggleSettingsDialog
+            | Event::SettingsUp
+            | Event::SettingsDown
+            | Event::SettingsLeft
+            | Event::SettingsRight
+            | Event::SettingsSelect
+            | Event::SettingsClose
+            | Event::PaletteFilter(_)
+            | Event::PaletteBackspace
+            | Event::PaletteUp
+            | Event::PaletteDown
+            | Event::PaletteSelect
+            | Event::PaletteClose
+            | Event::ModelSelectorFilter(_)
+            | Event::ModelSelectorBackspace
+            | Event::ModelSelectorUp
+            | Event::ModelSelectorDown
+            | Event::ModelSelectorSelect
+            | Event::ModelSelectorClose => self.dialog_toggle_event(event),
+            Event::CommandFormInput(_)
+            | Event::CommandFormBackspace
+            | Event::CommandFormUp
+            | Event::CommandFormDown
+            | Event::CommandFormSubmit
+            | Event::CommandFormClose => self.form_dialog_event(event),
+            Event::PendingEdit { .. }
+            | Event::ApproveEdit
+            | Event::RejectEdit
+            | Event::ReloadAll
+            | Event::ShowDiagnostics
+            | Event::TogglePathCompletion
+            | Event::PathCompletionUp
+            | Event::PathCompletionDown
+            | Event::PathCompletionSelect
+            | Event::PathCompletionClose
+            | Event::RunSaveCommand { .. }
+            | Event::RunLoadCommand { .. }
+            | Event::RunDeleteCommand { .. }
+            | Event::RunImportCommand { .. }
+            | Event::RunExportCommand { .. }
+            | Event::RunSkillCommand { .. }
+            | Event::RunLoginCommand { .. }
+            | Event::RunLogoutCommand { .. }
+            | Event::RunNameCommand { .. }
+            | Event::RunForkCommand { .. }
+            | Event::RunCompactCommand { .. }
+            | Event::RunPromptCommand { .. }
+            | Event::RunThinkingCommand { .. }
+            | Event::RunPaletteCommand { .. } => self.edit_event(event),
+            Event::LoginFlowStart
+            | Event::LoginFlowSelectProvider { .. }
+            | Event::LoginFlowSubmitKey { .. }
+            | Event::LoginFlowValidate { .. }
+            | Event::LoginFlowValidationDone { .. }
+            | Event::LoginFlowValidationFailed { .. }
+            | Event::LoginFlowModelsFetched { .. }
+            | Event::LoginFlowToggleModel { .. }
+            | Event::LoginFlowSave
+            | Event::LoginFlowCancel => self.login_flow_event(event),
+            Event::SystemMessage { content } => self.add_system_msg(content),
+            Event::TransientMessage { content, level } => self.set_transient(content, level),
+            Event::TransientError { content } => {
+                self.set_transient(content, crate::event::TransientLevel::Error)
             }
-            state.view.scroll = state.view.scroll.saturating_sub(1);
+            Event::ClearTransient => self.clear_transient(),
+            _ => {}
         }
-<<<<<<< HEAD
     }
 
     // === Providers Dialog Event Handler ===
@@ -176,9 +258,10 @@ fn scroll_event(state: &mut AppState, event: Event) {
         if let Some(current) = self.open_dialog.take() {
             self.dialog_back_stack.push(current);
         }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(
-            build_providers_dialog(&self.config.current_provider, &self.config.current_model),
-        ));
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(build_providers_dialog(
+            &self.config.current_provider,
+            &self.config.current_model,
+        )));
         self.mark_dirty();
     }
 
@@ -222,53 +305,29 @@ fn scroll_event(state: &mut AppState, event: Event) {
             Event::LoginFlowStart => self.login_flow_start(),
             Event::LoginFlowSelectProvider { provider } => {
                 self.login_flow_select_provider(provider)
-=======
-        Event::PageUp => {
-            if state.session.messages.is_empty() && !state.agent.turn_active {
-                state.input.input_flash = 3;
->>>>>>> review
             }
-            state.view.scroll = state.view.scroll.saturating_add(page_size);
-        }
-        Event::PageDown => {
-            if state.view.scroll == 0 {
-                state.input.input_flash = 3;
+            Event::LoginFlowSubmitKey { provider, key } => {
+                self.login_flow_submit_key(provider, key)
             }
-            state.view.scroll = state.view.scroll.saturating_sub(page_size);
+            Event::LoginFlowValidationDone { models, .. } => {
+                self.login_flow_validation_done(models)
+            }
+            Event::LoginFlowValidationFailed { error, .. } => {
+                self.login_flow_validation_failed(error)
+            }
+            Event::LoginFlowModelsFetched { models, .. } => self.login_flow_models_fetched(models),
+            Event::LoginFlowToggleModel { model } => self.login_flow_toggle_model(model),
+            Event::LoginFlowSave => self.login_flow_save(),
+            Event::LoginFlowCancel => self.login_flow_cancel(),
+            _ => {}
         }
-        _ => {}
     }
-}
 
-// === Input Event Handler ===
-fn input_event(state: &mut AppState, event: Event) {
-    match event {
-        Event::Input(c) => state.push_input(c),
-        Event::Backspace => state.pop_input(),
-        Event::Newline => state.insert_newline(),
-        Event::CursorLeft => state.cursor_left(),
-        Event::CursorRight => state.cursor_right(),
-        Event::CursorStart => state.cursor_start(),
-        Event::CursorEnd => state.cursor_end(),
-        Event::DeleteWord => state.delete_word(),
-        Event::DeleteToEnd => state.delete_to_end(),
-        Event::DeleteToStart => state.delete_to_start(),
-        Event::KillChar => state.kill_char(),
-        Event::Undo => state.undo(),
-        Event::Redo => state.redo(),
-        Event::CursorWordLeft => state.cursor_word_left(),
-        Event::CursorWordRight => state.cursor_word_right(),
-        Event::Paste(text) => state.paste(&text),
-        Event::PasteImage => state.paste_image(),
-        Event::Submit => state.submit(),
-        Event::HistoryPrev => handle_history_prev(state),
-        Event::HistoryNext => handle_history_next(state),
-        Event::InsertAtRef(path) => state.insert_at_ref(&path),
-        _ => {}
+    fn login_flow_start(&mut self) {
+        self.login_flow = Some(crate::login_flow::LoginFlowState::new());
+        self.rebuild_login_dialog();
     }
-}
 
-<<<<<<< HEAD
     fn login_flow_select_provider(&mut self, provider: String) {
         let provider_clone = provider.clone();
         if let Some(ref mut flow) = self.login_flow {
@@ -355,10 +414,14 @@ fn input_event(state: &mut AppState, event: Event) {
             let base_url = crate::provider_registry::find_provider(&flow.provider)
                 .map(|p| p.base_url.to_string())
                 .unwrap_or_default();
-            let selected: Vec<String> = flow.selected_models.iter().cloned().collect::<Vec<_>>();
+            let selected: Vec<String> =
+                flow.selected_models.iter().cloned().collect::<Vec<_>>();
             let provider = flow.provider.clone();
             if let Err(e) = crate::login_config::save_provider_config(
-                &provider, &base_url, &flow.key, &selected,
+                &provider,
+                &base_url,
+                &flow.key,
+                &selected,
             ) {
                 self.add_system_msg(format!("Failed to save provider config: {}", e));
                 return;
@@ -382,68 +445,8 @@ fn input_event(state: &mut AppState, event: Event) {
         }
 
         self.mark_dirty();
-=======
-fn handle_history_prev(state: &mut AppState) {
-    if state.completion.path_suggestions.is_some() {
-        state.path_completion_up();
-    } else if state.input.input.contains('\n') {
-        state.move_cursor_up();
-    } else {
-        state.history_prev();
     }
-}
 
-fn handle_history_next(state: &mut AppState) {
-    if state.completion.path_suggestions.is_some() {
-        state.path_completion_down();
-    } else if state.input.input.contains('\n') {
-        state.move_cursor_down();
-    } else {
-        state.history_next();
-    }
-}
-
-// === Agent Event Handler ===
-fn agent_event(state: &mut AppState, event: Event) {
-    match event {
-        Event::AgentThinking { id } => {
-            state.set_thinking(id);
-            state.ensure_turn_complete_last();
-        }
-        Event::AgentThoughtDone { id } => {
-            state.add_thought(id);
-            state.ensure_turn_complete_last();
-        }
-        Event::AgentToolStart { id, name } => {
-            state.start_tool(id, name);
-            state.ensure_turn_complete_last();
-        }
-        Event::AgentToolEnd {
-            duration_secs,
-            output,
-        } => {
-            state.end_tool(duration_secs, output);
-            state.ensure_turn_complete_last();
-        }
-        Event::AgentResponse { id, content } => {
-            state.append_response(id, content);
-            state.ensure_turn_complete_last();
-        }
-        Event::AgentTurnComplete { id, duration_secs } => {
-            state.complete_turn(id, duration_secs);
-            state.ensure_turn_complete_last();
-        }
-        Event::AgentDone { id } => state.finish_turn(id),
-        Event::AgentError { id, message } => {
-            state.add_error(id, message);
-            state.ensure_turn_complete_last();
-        }
-        _ => {}
->>>>>>> review
-    }
-}
-
-<<<<<<< HEAD
     fn login_flow_cancel(&mut self) {
         // Cancel pops one level. At the root (provider picker), the pop
         // is a no-op and we close the dialog. This mirrors the ESC
@@ -563,34 +566,9 @@ fn agent_event(state: &mut AppState, event: Event) {
             let stack = crate::login_flow::build_login_root();
             self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
             self.mark_dirty();
-=======
-// === Model & Config Event Handler ===
-pub(super) fn model_config_event(state: &mut AppState, event: Event) {
-    match event {
-        Event::SwitchModel { provider, model } => state.switch_model(provider, model),
-        Event::SwitchTheme { name } => state.switch_theme(name),
-        Event::CycleModelNext => state.cycle_model(1),
-        Event::CycleModelPrev => state.cycle_model(-1),
-        Event::CycleThinkingLevel => state.cycle_thinking_level(),
-        Event::SetThinkingLevel(level) => state.set_thinking_level(level),
-        Event::ToggleReadOnly => state.toggle_read_only(),
-        Event::TrustProject => state.trust_project(),
-        Event::UntrustProject => state.untrust_project(),
-        Event::FollowUp => state.queue_follow_up(),
-        Event::Dequeue => state.dequeue(),
-        Event::ToggleScopedModelsDialog => state.open_scoped_models_dialog(),
-        Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(state, &name),
-        Event::ScopedModelEnableAll => scoped_models::enable_all(state),
-        Event::ScopedModelDisableAll => scoped_models::disable_all(state),
-        Event::ScopedModelToggleProvider { provider } => {
-            scoped_models::toggle_provider(state, &provider)
->>>>>>> review
         }
-        _ => {}
     }
-}
 
-<<<<<<< HEAD
     // === Scroll Event Handler ===
     fn scroll_event(&mut self, event: Event) {
         let page_size = 5usize;
@@ -655,6 +633,12 @@ pub(super) fn model_config_event(state: &mut AppState, event: Event) {
                 self.input.cursor_pos = self.input.input.len();
                 self.mark_dirty();
             }
+            Event::ToggleExpand => self.toggle_expand_all(),
+            Event::ToggleSessionTree => self.toggle_session_tree_dialog(),
+            Event::SessionTreeFilterCycle => self.cycle_session_tree_filter(),
+            Event::ForkSession { message_index } => self.fork_session_at(message_index),
+            Event::CloneSession => self.clone_session(),
+            Event::SessionTreeSelect { id } => self.session_tree_select(&id),
             _ => {}
         }
     }
@@ -1142,10 +1126,7 @@ pub(super) fn model_config_event(state: &mut AppState, event: Event) {
                         self.config.current_model.clear();
                     }
                 }
-                self.add_system_msg(format!(
-                    "Disconnected '{}'. Use /providers to manage providers.",
-                    provider
-                ));
+                self.add_system_msg(format!("Disconnected '{}'. Use /providers to manage providers.", provider));
             }
             Err(e) => self.add_system_msg(format!("Could not remove provider config: {}", e)),
         }
@@ -1522,9 +1503,10 @@ pub(super) fn model_config_event(state: &mut AppState, event: Event) {
     fn process_command_result(&mut self, result: crate::commands::CommandResult) {
         match result {
             crate::commands::CommandResult::Message(msg) => self.add_system_msg(msg),
-            crate::commands::CommandResult::Warning(msg) => {
-                self.notify(msg, crate::event::TransientLevel::Warning)
-            }
+            crate::commands::CommandResult::Warning(msg) => self.notify(
+                msg,
+                crate::event::TransientLevel::Warning,
+            ),
             crate::commands::CommandResult::Event(evt) => self.update(evt),
             crate::commands::CommandResult::OpenDialog(d) => {
                 // Android-like: if a dialog is already open (e.g. the
@@ -1600,10 +1582,6 @@ pub(super) fn model_config_event(state: &mut AppState, event: Event) {
     }
 
     fn toggle_expand_all(&mut self) {
-=======
-impl AppState {
-    pub(super) fn toggle_expand_all(&mut self) {
->>>>>>> review
         self.all_collapsed = !self.all_collapsed;
         self.messages_changed();
     }
@@ -1782,7 +1760,6 @@ impl AppState {
         }
     }
 
-<<<<<<< HEAD
     /// Handle command form dialog events. Defers to `form_panel_action` after
     /// routing through the panel-stack. This is the entry point for the
     /// legacy `CommandForm*` events; `update_panel_stack` calls
@@ -1921,6 +1898,4 @@ fn partition_model_items(
         groups.push((last_header, current_group));
     }
     (recent, groups)
-=======
->>>>>>> review
 }
