@@ -1,8 +1,8 @@
 //! Flow Executor - Runs a flow with context
 
-use crate::dialog::dsl::{Panel, ItemAction};
-use crate::commands::CommandResult;
 use super::{Flow, FlowContext, FlowResult};
+use crate::commands::CommandResult;
+use crate::dialog::dsl::{ItemAction, Panel};
 
 /// Executes a flow with context
 pub struct FlowExecutor {
@@ -27,7 +27,7 @@ impl FlowExecutor {
     }
 
     /// Move to next panel
-    pub fn next(&mut self) -> Option<&Panel> {
+    pub fn advance(&mut self) -> Option<&Panel> {
         if self.current_panel + 1 < self.flow.steps.len() {
             self.current_panel += 1;
             self.context.step = self.current_panel;
@@ -78,7 +78,7 @@ impl FlowExecutor {
                     }
                 }
                 if let Some(branch_steps) = self.flow.branches.get(id) {
-                    if branch_steps.first().is_some() {
+                    if !branch_steps.is_empty() {
                         self.context.data.insert("_branch".into(), id.clone());
                         return FlowResult::Branch(id.clone());
                     }
@@ -104,7 +104,7 @@ impl FlowExecutor {
 
 #[cfg(test)]
 mod tests {
-    use super::{FlowExecutor, Flow};
+    use super::{Flow, FlowExecutor};
     use crate::dialog::dsl::panel;
     use crate::dialog::flow::Step;
 
@@ -118,17 +118,17 @@ mod tests {
         let mut exec = FlowExecutor::new(flow);
         assert_eq!(exec.current_panel, 0);
 
-        exec.next();
+        exec.advance();
         assert_eq!(exec.current_panel, 1);
 
         exec.jump(0);
         assert_eq!(exec.current_panel, 0);
 
-        exec.next();
-        exec.next();
+        exec.advance();
+        exec.advance();
         assert_eq!(exec.current_panel, 2);
 
-        exec.next();
+        exec.advance();
         assert_eq!(exec.current_panel, 2);
 
         exec.prev();

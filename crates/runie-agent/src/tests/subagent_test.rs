@@ -1,6 +1,6 @@
 //! Tests for the subagent feature.
 
-use crate::subagent::{run_subagent, SubagentError};
+use crate::subagent::run_subagent;
 use runie_core::model::ThinkingLevel;
 
 #[test]
@@ -17,8 +17,11 @@ fn run_subagent_returns_echo_of_prompt() {
         5,
     );
     let out = result.expect("subagent should succeed");
-    assert!(out.contains("hello subagent"),
-        "expected echoed input in output, got: {:?}", out);
+    assert!(
+        out.contains("hello subagent"),
+        "expected echoed input in output, got: {:?}",
+        out
+    );
 }
 
 #[test]
@@ -42,16 +45,7 @@ fn run_subagent_with_skill_context_uses_it() {
 #[test]
 fn run_subagent_empty_prompt_succeeds() {
     // The mock provider should still respond to an empty prompt.
-    let result = run_subagent(
-        "",
-        "mock",
-        "echo",
-        ThinkingLevel::Off,
-        false,
-        "",
-        "",
-        5,
-    );
+    let result = run_subagent("", "mock", "echo", ThinkingLevel::Off, false, "", "", 5);
     let out = result.expect("empty prompt should still produce a result");
     // Don't assert content (mock may or may not echo empty); just that it ran.
     let _ = out;
@@ -71,6 +65,9 @@ fn run_subagent_falls_back_to_mock_for_unknown_provider() {
         "",
         5,
     );
-    assert!(result.is_ok(),
-        "expected fallback to mock to succeed, got: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "expected fallback to mock to succeed, got: {:?}",
+        result
+    );
 }

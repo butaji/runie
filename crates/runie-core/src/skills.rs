@@ -17,7 +17,11 @@ pub struct Skill {
 impl Skill {
     /// Build a one-line summary for listing.
     pub fn summary(&self) -> String {
-        let invocable = if self.user_invocable { " (invocable)" } else { "" };
+        let invocable = if self.user_invocable {
+            " (invocable)"
+        } else {
+            ""
+        };
         format!("{}{} — {}", self.name, invocable, self.description)
     }
 }
@@ -88,9 +92,7 @@ fn extract_section(content: &str, heading: &str) -> Option<String> {
     let after_heading = &content[start + search.len()..];
 
     // Find the next ## heading or end of file
-    let end = after_heading
-        .find("\n## ")
-        .unwrap_or(after_heading.len());
+    let end = after_heading.find("\n## ").unwrap_or(after_heading.len());
 
     let text = after_heading[..end].trim();
     if text.is_empty() {
@@ -142,7 +144,10 @@ mod tests {
     fn skill_not_user_invocable_without_invocation_section() {
         let dir = tempdir().unwrap();
         let mut file = std::fs::File::create(dir.path().join("quiet.md")).unwrap();
-        file.write_all(b"# Quiet\n\n## Description\n\nBe concise.\n\n## Context\n\nKeep answers short.\n").unwrap();
+        file.write_all(
+            b"# Quiet\n\n## Description\n\nBe concise.\n\n## Context\n\nKeep answers short.\n",
+        )
+        .unwrap();
 
         let skills = load_from_dir(dir.path());
         assert_eq!(skills.len(), 1);
@@ -207,10 +212,12 @@ mod tests {
         let project_dir = tempdir().unwrap();
 
         let mut file = std::fs::File::create(user_dir.path().join("user_skill.md")).unwrap();
-        file.write_all(b"# User\n\n## Description\n\nUser skill.\n").unwrap();
+        file.write_all(b"# User\n\n## Description\n\nUser skill.\n")
+            .unwrap();
 
         let mut file = std::fs::File::create(project_dir.path().join("project_skill.md")).unwrap();
-        file.write_all(b"# Project\n\n## Description\n\nProject skill.\n").unwrap();
+        file.write_all(b"# Project\n\n## Description\n\nProject skill.\n")
+            .unwrap();
 
         // load_all uses hardcoded paths, so test merge manually
         let mut skills = load_from_dir(user_dir.path());

@@ -2,15 +2,15 @@
 
 //! Runie Provider - Concrete LLM provider implementations
 
+pub mod config;
 pub mod mock;
 pub mod model;
 pub mod openai;
-pub mod config;
 
+pub use config::Config;
 pub use mock::{MockProvider, MockStreamingProvider};
 pub use model::{ModelId, ModelRegistry};
 pub use openai::OpenAiProvider;
-pub use config::Config;
 
 use anyhow::Result;
 use runie_core::provider::{Message, Provider, ResponseChunk};
@@ -43,7 +43,7 @@ impl AnyProvider {
 
         match provider {
             "openai" => {
-                let warning = format!("OPENAI_API_KEY not set, falling back to mock");
+                let warning = "OPENAI_API_KEY not set, falling back to mock".to_string();
                 let mock = if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
                     MockProvider::with_delay(500, 3000)
                 } else {
@@ -114,7 +114,68 @@ impl Provider for AnyProvider {
     }
 }
 
-#[cfg(test)]
-mod tests;
+/// Default timeout for API key validation requests.
+pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+
+/// Validate an API key by calling the provider's `/models` endpoint.
+/// Returns a list of available model IDs on success.
+///
+/// Fails after [`VALIDATION_TIMEOUT`] so the UI never gets stuck waiting
+/// for an unreachable or unresponsive provider.
+pub async fn validate_api_key(base_url: &str, api_key: &str) -> Result<Vec<String>> {
+    validate_api_key_with_timeout(base_url, api_key, VALIDATION_TIMEOUT).await
+}
+
+/// Validate an API key with a configurable request timeout.
+///
+/// The timeout covers the full request lifecycle: DNS, connect, TLS,
+/// request send, response headers, and response body. It is enforced via
+/// `tokio::time::timeout` around the whole operation, and also via
+/// `reqwest`'s client-level timeout and an explicit connect timeout, so
+/// the UI can never get stuck waiting on a hanging or unreachable host.
+pub async fn validate_api_key_with_timeout(
+    base_url: &str,
+    api_key: &str,
+    timeout: std::time::Duration,
+) -> Result<Vec<String>> {
+    let fut = async move {
+        let client = reqwest::Client::builder()
+            .timeout(timeout)
+            .connect_timeout(timeout)
+            .build()?;
+        let url = format!("{}/models", base_url.trim_end_matches('/'));
+        let resp = client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let text = resp.text().await.unwrap_or_default();
+            anyhow::bail!("API validation failed: {}", text);
+        }
+
+        let json: serde_json::Value = resp.json().await?;
+        let models = json
+            .get("data")
+            .and_then(|d| d.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok::<Vec<String>, anyhow::Error>(models)
+    };
+
+    match tokio::time::timeout(timeout, fut).await {
+        Ok(result) => result,
+        Err(_) => anyhow::bail!("API validation timed out after {}s", timeout.as_secs()),
+    }
+}
+
 #[cfg(test)]
 mod config_tests;
+#[cfg(test)]
+mod tests;

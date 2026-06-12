@@ -22,3 +22,9 @@ nix.workspace = true
 tempfile = "3"
 reqwest.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+libc = "0.2"
+nix.workspace = true
+regex = "1"
+rexpect.workspace = true

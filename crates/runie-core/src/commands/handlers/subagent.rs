@@ -5,10 +5,12 @@ use crate::event::Event;
 use crate::model::AppState;
 
 pub fn register(registry: &mut CommandRegistry) {
-    registry.register(crate::cmd!("spawn")
-        .desc("Run a subagent turn (delegated task)")
-        .category(CommandCategory::System)
-        .handler(handle_spawn));
+    registry.register(
+        crate::cmd!("spawn")
+            .desc("Run a subagent turn (delegated task)")
+            .category(CommandCategory::System)
+            .handler(handle_spawn),
+    );
 }
 
 /// `/spawn <prompt>` — emit a `SpawnAgent` event. The binary layer
@@ -24,5 +26,7 @@ fn handle_spawn(_state: &mut AppState, args: &str) -> CommandResult {
     if prompt.is_empty() {
         return CommandResult::Message("Usage: /spawn <prompt>".into());
     }
-    CommandResult::Event(Event::SpawnAgent { prompt: prompt.to_string() })
+    CommandResult::Event(Event::SpawnAgent {
+        prompt: prompt.to_string(),
+    })
 }

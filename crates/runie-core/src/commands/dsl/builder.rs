@@ -1,10 +1,10 @@
 //! Command Builder
 
+use super::{CommandCategory, CommandFlow, CommandResult, DialogType};
 use crate::dialog::dsl::Panel as DslPanel;
-use crate::dialog::{Panel as CorePanel, PanelStack as CoreStack, ItemAction, PanelItem};
+use crate::dialog::{PanelItem, PanelStack as CoreStack};
 use crate::model::AppState;
 use crate::Event;
-use super::{CommandFlow, CommandResult, DialogType, CommandCategory};
 
 /// A single command definition
 #[derive(Clone)]
@@ -79,17 +79,29 @@ impl CommandDef {
 
     /// Show a form dialog
     pub fn form<F>(self, title: &'static str, build: F, submit: Event) -> Self
-    where F: FnOnce(FormBuilder) -> FormBuilder {
+    where
+        F: FnOnce(FormBuilder) -> FormBuilder,
+    {
         let fields = build(FormBuilder::new()).into_fields();
-        self.with_flow(CommandFlow::Form { title, fields, submit })
+        self.with_flow(CommandFlow::Form {
+            title,
+            fields,
+            submit,
+        })
     }
 
     /// Show a form from a DSL panel
     pub fn dsl_form<F>(self, title: &'static str, panel_fn: F, submit: Event) -> Self
-    where F: FnOnce() -> DslPanel {
+    where
+        F: FnOnce() -> DslPanel,
+    {
         let panel = panel_fn();
         let fields = FormBuilder::from_dsl_panel(&panel).into_fields();
-        self.with_flow(CommandFlow::Form { title, fields, submit })
+        self.with_flow(CommandFlow::Form {
+            title,
+            fields,
+            submit,
+        })
     }
 
     /// Custom handler
@@ -128,8 +140,17 @@ pub struct FormField {
 }
 
 impl FormField {
-    pub fn new(label: impl Into<String>, placeholder: impl Into<String>, key: impl Into<String>) -> Self {
-        Self { label: label.into(), placeholder: placeholder.into(), key: key.into(), prefill: None }
+    pub fn new(
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            placeholder: placeholder.into(),
+            key: key.into(),
+            prefill: None,
+        }
     }
 
     pub fn with_value(mut self, value: impl Into<String>) -> Self {
@@ -150,14 +171,26 @@ impl FormBuilder {
     }
 
     /// Add a text field
-    pub fn field(self, label: impl Into<String>, placeholder: impl Into<String>, key: impl Into<String>) -> Self {
+    pub fn field(
+        self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Self {
         self.field_value(label, placeholder, key, "")
     }
 
     /// Add a field with pre-filled value
-    pub fn field_value(self, label: impl Into<String>, placeholder: impl Into<String>, key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn field_value(
+        self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Self {
         let mut this = self;
-        this.fields.push(FormField::new(label, placeholder, key).with_value(value));
+        this.fields
+            .push(FormField::new(label, placeholder, key).with_value(value));
         this
     }
 
@@ -174,7 +207,13 @@ impl FormBuilder {
     pub fn from_dsl_panel(panel: &DslPanel) -> Self {
         let mut builder = Self::new();
         for item in &panel.items {
-            if let PanelItem::FormField { label, placeholder, key, .. } = item {
+            if let PanelItem::FormField {
+                label,
+                placeholder,
+                key,
+                ..
+            } = item
+            {
                 builder = builder.field(label, placeholder, key);
             }
         }

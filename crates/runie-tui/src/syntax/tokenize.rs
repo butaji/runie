@@ -1,12 +1,11 @@
 //! Tokenizer for syntax highlighting
 
-use ratatui::style::{Color, Modifier, Style};
 use crate::syntax::keywords::{
-    Language, RUST_KEYWORDS, RUST_TYPES, PYTHON_KEYWORDS, PYTHON_BUILTINS, PYTHON_FUNCTIONS,
-    JS_KEYWORDS, JS_TYPES, JS_FUNCTIONS, GO_KEYWORDS, GO_TYPES, GO_FUNCTIONS,
-    JAVA_KEYWORDS, JAVA_TYPES, JAVA_FUNCTIONS, C_KEYWORDS, C_TYPES,
-    SQL_KEYWORDS, BASH_KEYWORDS,
+    Language, BASH_KEYWORDS, C_KEYWORDS, C_TYPES, GO_FUNCTIONS, GO_KEYWORDS, GO_TYPES,
+    JAVA_FUNCTIONS, JAVA_KEYWORDS, JAVA_TYPES, JS_FUNCTIONS, JS_KEYWORDS, JS_TYPES,
+    PYTHON_BUILTINS, PYTHON_FUNCTIONS, PYTHON_KEYWORDS, RUST_KEYWORDS, RUST_TYPES, SQL_KEYWORDS,
 };
+use ratatui::style::{Color, Modifier, Style};
 
 /// A highlighted token with its style.
 #[derive(Debug, Clone, PartialEq)]
@@ -20,7 +19,9 @@ mod highlight_styles {
     use super::*;
 
     pub fn keyword() -> Style {
-        Style::default().fg(Color::Indexed(147)).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Indexed(147))
+            .add_modifier(Modifier::BOLD)
     }
 
     pub fn string() -> Style {
@@ -32,7 +33,9 @@ mod highlight_styles {
     }
 
     pub fn comment() -> Style {
-        Style::default().fg(Color::Indexed(245)).add_modifier(Modifier::ITALIC)
+        Style::default()
+            .fg(Color::Indexed(245))
+            .add_modifier(Modifier::ITALIC)
     }
 
     pub fn type_() -> Style {
@@ -76,7 +79,7 @@ pub fn tokenize_line(line: &str, lang: Language) -> Vec<SyntaxToken> {
         // Handle string literals
         if let Some(quote) = in_string {
             current.push(c);
-            if c == quote && current.len() > 1 && !current[..current.len()-1].ends_with('\\') {
+            if c == quote && current.len() > 1 && !current[..current.len() - 1].ends_with('\\') {
                 flush_and_add!(highlight_styles::string());
                 in_string = None;
             }
@@ -185,8 +188,17 @@ fn classify_word(word: &str, lang: Language) -> Style {
     }
 
     // Check if it looks like a type (PascalCase or starts with uppercase)
-    if word.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
-        && word.chars().nth(1).map(|c| c.is_lowercase()).unwrap_or(false) {
+    if word
+        .chars()
+        .next()
+        .map(|c| c.is_uppercase())
+        .unwrap_or(false)
+        && word
+            .chars()
+            .nth(1)
+            .map(|c| c.is_lowercase())
+            .unwrap_or(false)
+    {
         return type_();
     }
 
@@ -204,8 +216,14 @@ fn is_keyword(word: &str, lang: Language) -> bool {
         Language::C | Language::Cpp => C_KEYWORDS.contains(&word),
         Language::Sql => SQL_KEYWORDS.contains(&word),
         Language::Bash => BASH_KEYWORDS.contains(&word),
-        Language::Json | Language::Yaml | Language::Toml | Language::Html
-        | Language::Xml | Language::Css | Language::Markdown | Language::Plain => false,
+        Language::Json
+        | Language::Yaml
+        | Language::Toml
+        | Language::Html
+        | Language::Xml
+        | Language::Css
+        | Language::Markdown
+        | Language::Plain => false,
     }
 }
 
@@ -218,9 +236,16 @@ fn is_type(word: &str, lang: Language) -> bool {
         Language::Go => GO_TYPES.contains(&word),
         Language::Java => JAVA_TYPES.contains(&word),
         Language::C | Language::Cpp => C_TYPES.contains(&word),
-        Language::Json | Language::Yaml | Language::Toml | Language::Html
-        | Language::Xml | Language::Css | Language::Markdown | Language::Bash
-        | Language::Sql | Language::Plain => false,
+        Language::Json
+        | Language::Yaml
+        | Language::Toml
+        | Language::Html
+        | Language::Xml
+        | Language::Css
+        | Language::Markdown
+        | Language::Bash
+        | Language::Sql
+        | Language::Plain => false,
     }
 }
 
@@ -233,9 +258,16 @@ fn is_function(word: &str, lang: Language) -> bool {
         Language::Go => GO_FUNCTIONS.contains(&word),
         Language::Java => JAVA_FUNCTIONS.contains(&word),
         Language::C | Language::Cpp => false,
-        Language::Json | Language::Yaml | Language::Toml | Language::Html
-        | Language::Xml | Language::Css | Language::Markdown | Language::Bash
-        | Language::Sql | Language::Plain => false,
+        Language::Json
+        | Language::Yaml
+        | Language::Toml
+        | Language::Html
+        | Language::Xml
+        | Language::Css
+        | Language::Markdown
+        | Language::Bash
+        | Language::Sql
+        | Language::Plain => false,
     }
 }
 

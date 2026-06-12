@@ -13,19 +13,35 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     let before = render_content(&mut state);
-    assert!(before.contains("I'll list files"), "Should show reasoning before toggle");
+    assert!(
+        before.contains("I'll list files"),
+        "Should show reasoning before toggle"
+    );
 
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed, "Toggle should set global collapse");
 
     let after = render_content(&mut state);
-    assert!(after.contains("[+]") || !after.contains("I'll list files"), "Should hide reasoning after toggle");
+    assert!(
+        after.contains("[+]") || !after.contains("I'll list files"),
+        "Should hide reasoning after toggle"
+    );
 }
 
 #[test]
@@ -33,21 +49,35 @@ fn e2e_toggle_expands_back_on_second_press() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.\n".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     state.update(Event::ToggleExpand);
     let collapsed = render_content(&mut state);
-    assert!(collapsed.contains("[+]") || !collapsed.contains("I'll list files"),
-        "Collapsed thought should hide reasoning");
+    assert!(
+        collapsed.contains("[+]") || !collapsed.contains("I'll list files"),
+        "Collapsed thought should hide reasoning"
+    );
 
     state.update(Event::ToggleExpand);
     let expanded = render_content(&mut state);
     assert!(!state.all_collapsed, "Second toggle should expand all");
-    assert!(expanded.contains("I'll list files"),
-        "Expanded thought should show reasoning");
+    assert!(
+        expanded.contains("I'll list files"),
+        "Expanded thought should show reasoning"
+    );
 }
 
 #[test]
@@ -55,16 +85,32 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.\n".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
 
     let during_tool = render_content(&mut state);
     assert!(
@@ -82,19 +128,40 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.\n".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1".to_string(),
+    });
 
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Done.".to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Done.".to_string(),
+    });
+    state.update(Event::AgentDone {
+        id: "req.0".to_string(),
+    });
 
     let after_done = render_content(&mut state);
     assert!(
@@ -112,23 +179,39 @@ fn e2e_new_thought_respects_global_collapse() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "First.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "First.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     state.update(Event::ToggleExpand);
     assert!(state.all_collapsed);
 
-    state.update(Event::AgentThinking { id: "req.1".to_string() });
-    state.update(Event::AgentResponse { id: "req.1".to_string(), content: "Second.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.1".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.1".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.1".to_string(),
+        content: "Second.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.1".to_string(),
+    });
 
     let after = render_content(&mut state);
     // Both thoughts should be collapsed — only summary lines visible
     let marker_count = after.matches("Thought").count();
     let summary_count = after.matches("[+]").count();
-    assert!(summary_count >= 2 || marker_count < 2,
-        "Both thoughts should be collapsed with global flag");
+    assert!(
+        summary_count >= 2 || marker_count < 2,
+        "Both thoughts should be collapsed with global flag"
+    );
 }
 
 #[test]
@@ -136,13 +219,22 @@ fn e2e_running_tool_always_expanded() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+    });
     state.update(Event::ToggleExpand);
 
-    assert!(state.all_collapsed, "Global flag should flip even with running tool");
+    assert!(
+        state.all_collapsed,
+        "Global flag should flip even with running tool"
+    );
 
     let out = render_content(&mut state);
-    assert!(out.contains("Running"), "Running tool should still show as running");
+    assert!(
+        out.contains("Running"),
+        "Running tool should still show as running"
+    );
 }
 
 #[test]
@@ -150,15 +242,31 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
     let mut state = AppState::default();
     state.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "A".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "A".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "ls".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1".to_string(),
+    });
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle should collapse ALL thoughts and tools globally");
+    assert!(
+        state.all_collapsed,
+        "Toggle should collapse ALL thoughts and tools globally"
+    );
 
     let out = render_content(&mut state);
     assert!(!out.contains("file1"), "Tool should be collapsed");
@@ -170,38 +278,77 @@ fn e2e_full_turn_with_global_toggle() {
     state.streaming = true;
 
     // Stage 1: Thinking + response with tool → Thought created
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.\n".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     let r1 = render_content(&mut state);
-    assert!(r1.contains("I'll list files"), "Should show reasoning in thought");
+    assert!(
+        r1.contains("I'll list files"),
+        "Should show reasoning in thought"
+    );
 
     // Stage 2: Toggle all → collapsed
     state.update(Event::ToggleExpand);
     let r2 = render_content(&mut state);
-    assert!(r2.contains("[+]") || !r2.contains("I'll list files"), "Thought should collapse");
+    assert!(
+        r2.contains("[+]") || !r2.contains("I'll list files"),
+        "Thought should collapse"
+    );
 
     // Stage 3: Tool executes
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
 
     let r3 = render_content(&mut state);
-    assert!(!r3.contains("file1"), "Tool should be collapsed with global flag");
+    assert!(
+        !r3.contains("file1"),
+        "Tool should be collapsed with global flag"
+    );
 
     // Stage 4: Toggle all → expanded
     state.update(Event::ToggleExpand);
     let r4 = render_content(&mut state);
-    assert!(r4.contains("file1") && r4.contains("file2"), "Tool should be expanded");
-    assert!(r4.contains("I'll list files"), "Thought should also be expanded");
+    assert!(
+        r4.contains("file1") && r4.contains("file2"),
+        "Tool should be expanded"
+    );
+    assert!(
+        r4.contains("I'll list files"),
+        "Thought should also be expanded"
+    );
 
     // Stage 5: Agent final response
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Done.".to_string() });
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Done.".to_string(),
+    });
+    state.update(Event::AgentDone {
+        id: "req.0".to_string(),
+    });
 
     let r5 = render_content(&mut state);
     assert!(r5.contains("Done."), "Agent response should be visible");
-    assert!(r5.contains("I'll list files"), "Thought stays expanded after done");
+    assert!(
+        r5.contains("I'll list files"),
+        "Thought stays expanded after done"
+    );
     assert!(r5.contains("file1"), "Tool stays expanded after done");
 }

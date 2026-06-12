@@ -9,7 +9,10 @@ fn reload_emits_event() {
     let cmd = state.registry.get("reload").unwrap();
     let cmd_name = cmd.name.clone();
     let result = cmd.flow.clone().exec(&mut state, &cmd_name, "");
-    assert!(matches!(result, crate::commands::CommandResult::Event(Event::ReloadAll)));
+    assert!(matches!(
+        result,
+        crate::commands::CommandResult::Event(Event::ReloadAll)
+    ));
 }
 
 #[test]
@@ -19,7 +22,9 @@ fn reload_updates_keybindings() {
     state.update(Event::ReloadAll);
     // After reload, keybindings should be refreshed (same content but new HashMap)
     assert_eq!(state.config.keybindings.len(), initial_bindings.len());
-    assert!(state.session.messages.iter().any(|m| {
-        m.role == crate::model::Role::System && m.content.contains("Reloaded")
-    }));
+    assert!(state
+        .session
+        .messages
+        .iter()
+        .any(|m| { m.role == crate::model::Role::System && m.content.contains("Reloaded") }));
 }

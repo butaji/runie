@@ -30,7 +30,10 @@ fn status_line_shows_spinner_and_timer() {
 
     let out = render_status(&mut state);
     let spinner = state.spinner_frame();
-    assert!(out.contains(&spinner.to_string()), "Status must show spinner frame");
+    assert!(
+        out.contains(&spinner.to_string()),
+        "Status must show spinner frame"
+    );
     assert!(out.contains("Working"), "Status must show 'Working'");
 }
 
@@ -41,7 +44,10 @@ fn status_line_empty_when_turn_inactive() {
     state.ensure_fresh();
 
     let out = render_status(&mut state);
-    assert!(!out.contains("Working"), "Status must not show 'Working' when inactive");
+    assert!(
+        !out.contains("Working"),
+        "Status must not show 'Working' when inactive"
+    );
 }
 
 #[test]

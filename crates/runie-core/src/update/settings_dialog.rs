@@ -3,123 +3,39 @@
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 use crate::Event;
-use crate::commands::DialogState;
 
 impl AppState {
     pub(crate) fn settings_event(&mut self, event: Event) {
+        use crate::commands::DialogState;
         match event {
             Event::ToggleSettingsDialog => {
-                if matches!(self.open_dialog, Some(DialogState::Settings { .. })) {
+                if matches!(self.open_dialog, Some(DialogState::Settings(_))) {
                     self.open_dialog = None;
+                    self.mark_dirty();
                 } else {
-                    self.open_dialog = Some(DialogState::Settings {
-                        category: crate::settings::SettingsCategory::Models,
-                        selected: 0,
-                    });
+                    self.open_settings_dialog();
                 }
-                self.mark_dirty();
             }
-            Event::SettingsUp |
-            Event::SettingsDown |
-            Event::SettingsLeft |
-            Event::SettingsRight |
-            Event::SettingsSelect |
-            Event::SettingsClose => {}
-            Event::PaletteFilter(_) |
-            Event::PaletteBackspace |
-            Event::PaletteUp |
-            Event::PaletteDown |
-            Event::PaletteSelect |
-            Event::PaletteClose => {}
-            Event::ModelSelectorFilter(_) |
-            Event::ModelSelectorBackspace |
-            Event::ModelSelectorUp |
-            Event::ModelSelectorDown |
-            Event::ModelSelectorSelect |
-            Event::ModelSelectorClose => {}
+            Event::SettingsUp
+            | Event::SettingsDown
+            | Event::SettingsLeft
+            | Event::SettingsRight
+            | Event::SettingsSelect
+            | Event::SettingsClose => {}
+            Event::PaletteFilter(_)
+            | Event::PaletteBackspace
+            | Event::PaletteUp
+            | Event::PaletteDown
+            | Event::PaletteSelect
+            | Event::PaletteClose => {}
+            Event::ModelSelectorFilter(_)
+            | Event::ModelSelectorBackspace
+            | Event::ModelSelectorUp
+            | Event::ModelSelectorDown
+            | Event::ModelSelectorSelect
+            | Event::ModelSelectorClose => {}
             _ => {}
         }
-    }
-}
-
-pub fn update_settings_dialog(state: &mut AppState, event: Event, category: SettingsCategory, selected: usize) {
-    let items = build_setting_items(state);
-    let category_items: Vec<_> = items.iter().filter(|i| i.category == category).collect();
-
-    match event {
-        Event::Abort | Event::SettingsClose | Event::ToggleSettingsDialog => {
-            state.open_dialog = None;
-            state.mark_dirty();
-        }
-        Event::HistoryPrev | Event::SettingsUp => {
-            let new_sel = if selected == 0 {
-                category_items.len().saturating_sub(1)
-            } else {
-                selected - 1
-            };
-            state.open_dialog = Some(DialogState::Settings { category, selected: new_sel });
-            state.mark_dirty();
-        }
-        Event::HistoryNext | Event::SettingsDown => {
-            let new_sel = if category_items.is_empty() {
-                0
-            } else {
-                (selected + 1) % category_items.len()
-            };
-            state.open_dialog = Some(DialogState::Settings { category, selected: new_sel });
-            state.mark_dirty();
-        }
-        Event::CursorLeft | Event::SettingsLeft => {
-            let cats = SettingsCategory::all();
-            let cat_idx = cats.iter().position(|&c| c == category).unwrap_or(0);
-            let new_cat = if cat_idx == 0 {
-                cats[cats.len() - 1]
-            } else {
-                cats[cat_idx - 1]
-            };
-            state.open_dialog = Some(DialogState::Settings { category: new_cat, selected: 0 });
-            state.mark_dirty();
-        }
-        Event::CursorRight | Event::SettingsRight => {
-            let cats = SettingsCategory::all();
-            let cat_idx = cats.iter().position(|&c| c == category).unwrap_or(0);
-            let new_cat = cats[(cat_idx + 1) % cats.len()];
-            state.open_dialog = Some(DialogState::Settings { category: new_cat, selected: 0 });
-            state.mark_dirty();
-        }
-        Event::Submit | Event::SettingsSelect => {
-            if let Some(item) = category_items.get(selected) {
-                apply_setting(state, &item.key);
-            }
-            state.open_dialog = Some(DialogState::Settings { category, selected });
-            state.mark_dirty();
-        }
-        _ => {
-            state.open_dialog = Some(DialogState::Settings { category, selected });
-        }
-    }
-}
-
-fn apply_setting(state: &mut AppState, key: &str) {
-    match key {
-        "read_only" => {
-            state.config.read_only = !state.config.read_only;
-            let status = if state.config.read_only { "enabled" } else { "disabled" };
-            state.add_system_msg(format!("Read-only mode {}", status));
-        }
-        "steering_mode" => {
-            state.steering_mode = match state.steering_mode {
-                DeliveryMode::OneAtATime => DeliveryMode::All,
-                DeliveryMode::All => DeliveryMode::OneAtATime,
-            };
-        }
-        "follow_up_mode" => {
-            state.follow_up_mode = match state.follow_up_mode {
-                DeliveryMode::OneAtATime => DeliveryMode::All,
-                DeliveryMode::All => DeliveryMode::OneAtATime,
-            };
-        }
-        _ => {}
     }
 }
 
@@ -130,7 +46,12 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Provider",
             SettingValue::Enum {
                 current: state.config.current_provider.clone(),
-                options: vec!["mock".into(), "openai".into(), "anthropic".into(), "google".into()],
+                options: vec![
+                    "mock".into(),
+                    "openai".into(),
+                    "anthropic".into(),
+                    "google".into(),
+                ],
             },
             "LLM provider",
             SettingsCategory::Models,
@@ -140,7 +61,12 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Model",
             SettingValue::Enum {
                 current: state.config.current_model.clone(),
-                options: state.config.scoped_models.iter().map(|m| m.name.clone()).collect(),
+                options: state
+                    .config
+                    .scoped_models
+                    .iter()
+                    .map(|m| m.name.clone())
+                    .collect(),
             },
             "Active model",
             SettingsCategory::Models,
@@ -150,7 +76,12 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Theme",
             SettingValue::Enum {
                 current: state.config.theme_name.clone(),
-                options: vec!["runie".into(), "silkcircuit-neon".into(), "dracula".into(), "nord".into()],
+                options: vec![
+                    "runie".into(),
+                    "silkcircuit-neon".into(),
+                    "dracula".into(),
+                    "nord".into(),
+                ],
             },
             "UI theme",
             SettingsCategory::Appearance,
@@ -179,7 +110,8 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
                 current: match state.steering_mode {
                     DeliveryMode::OneAtATime => "one-at-a-time",
                     DeliveryMode::All => "all",
-                }.to_string(),
+                }
+                .to_string(),
                 options: vec!["one-at-a-time".into(), "all".into()],
             },
             "How steering messages are delivered",
@@ -192,7 +124,8 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
                 current: match state.follow_up_mode {
                     DeliveryMode::OneAtATime => "one-at-a-time",
                     DeliveryMode::All => "all",
-                }.to_string(),
+                }
+                .to_string(),
                 options: vec!["one-at-a-time".into(), "all".into()],
             },
             "How follow-up messages are delivered",

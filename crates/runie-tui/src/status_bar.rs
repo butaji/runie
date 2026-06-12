@@ -8,17 +8,14 @@ use ratatui::{
 use runie_core::Snapshot;
 
 use crate::theme::{style_status_idle, style_timestamp};
-use crate::ui::{hstack, estimate_element_tokens};
+use crate::ui::{estimate_element_tokens, hstack};
 
 pub fn render(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let left_text = format!(" {}", build_left_text(snap));
     let right_text = format!("{} ", build_right_status(snap));
     let right_width = display_width(&right_text) as u16;
 
-    let h = hstack(area, &[
-        Constraint::Min(0),
-        Constraint::Length(right_width),
-    ]);
+    let h = hstack(area, &[Constraint::Min(0), Constraint::Length(right_width)]);
 
     f.render_widget(Paragraph::new(left_text).style(style_status_idle()), h[0]);
     f.render_widget(Paragraph::new(right_text).style(style_timestamp()), h[1]);
@@ -33,16 +30,16 @@ pub(crate) fn build_left_text(snap: &Snapshot) -> String {
     let mut parts = Vec::new();
     // When idle, show git repo/branch or current folder name
     if !snap.turn_active {
-        let git_or_folder = snap.git_info.as_ref()
+        let git_or_folder = snap
+            .git_info
+            .as_ref()
             .map(|g| g.format_right(&snap.cwd_name))
             .unwrap_or_else(|| format!("{}/", snap.cwd_name));
         parts.push(git_or_folder);
     }
     if snap.turn_active {
         let mut text = if let Some(elapsed) = snap.turn_elapsed_secs {
-            runie_core::labels::action_text(
-                snap.spinner_frame, "Working", elapsed,
-            )
+            runie_core::labels::action_text(snap.spinner_frame, "Working", elapsed)
         } else {
             format!("{} Working...", snap.spinner_frame)
         };
@@ -99,27 +96,13 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
     }
 }
 
-fn format_k(n: usize) -> String {
-    if n >= 1_000 {
-        format!("{:.1}k", n as f64 / 1_000.0)
-    } else {
-        n.to_string()
-    }
-}
-
 /// Format a possibly-animated (floating point) token count for display.
 fn format_k_animated(n: f64) -> String {
+    let n = n.round().max(0.0);
     if n >= 1_000.0 {
         format!("{:.1}k", n / 1_000.0)
     } else {
-        // Show integer part only, removing decimal noise during animation
-        n.round().max(0.0) as usize as f64;
-        let rounded = n.round() as usize;
-        if rounded >= 1_000 {
-            format!("{:.1}k", rounded as f64 / 1_000.0)
-        } else {
-            rounded.to_string()
-        }
+        (n as usize).to_string()
     }
 }
 
@@ -134,6 +117,7 @@ pub(crate) fn radial_bar(percent: usize) -> char {
 }
 
 pub(crate) struct ContextUsage {
+    #[allow(dead_code)]
     pub(crate) used: usize,
     pub(crate) limit: usize,
     pub(crate) percent: usize,
@@ -141,19 +125,27 @@ pub(crate) struct ContextUsage {
 
 pub(crate) fn context_usage(snap: &Snapshot) -> ContextUsage {
     let limit = context_window_for(&snap.provider, &snap.model);
-    let used: usize = snap.elements.iter()
-        .filter(|e| matches!(e,
-            runie_core::Element::UserMessage { .. }
-            | runie_core::Element::AgentMessage { .. }
-        ))
+    let used: usize = snap
+        .elements
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                runie_core::Element::UserMessage { .. } | runie_core::Element::AgentMessage { .. }
+            )
+        })
         .map(estimate_element_tokens)
         .sum();
-    let percent = if limit > 0 {
-        (used * 100 / limit).min(100)
-    } else {
-        0
-    };
-    ContextUsage { used, limit, percent }
+    let percent = used
+        .checked_mul(100)
+        .and_then(|x| x.checked_div(limit))
+        .unwrap_or(0)
+        .min(100);
+    ContextUsage {
+        used,
+        limit,
+        percent,
+    }
 }
 
 impl ContextUsage {

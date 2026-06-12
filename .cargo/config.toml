@@ -1,5 +1,5 @@
 [build]
-rustflags = ["-Zcodegen-backend=cranelift"]
+# rustflags = ["-Zcodegen-backend=cranelift"]
 
 [profile.dev]
 split-debuginfo = "unpacked"

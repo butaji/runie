@@ -7,32 +7,40 @@
 use crate::event::Event;
 use crate::model::AppState;
 
-fn type_str(state: &mut AppState, s: &str) {
-    for c in s.chars() {
-        state.update(Event::Input(c));
-    }
+/// Set input buffer directly and submit — bypasses the command palette.
+fn exec(state: &mut AppState, text: &str) {
+    state.input.input = text.into();
+    state.input.cursor_pos = text.len();
+    state.update(Event::Submit);
 }
 
 #[test]
 fn spawn_command_is_registered() {
-    let mut state = AppState::default();
-    assert!(state.registry.get("spawn").is_some(),
-        "/spawn must be registered in the command registry");
+    let state = AppState::default();
+    assert!(
+        state.registry.get("spawn").is_some(),
+        "/spawn must be registered in the command registry"
+    );
 }
 
 #[test]
 fn spawn_without_args_shows_usage() {
     let mut state = AppState::default();
-    type_str(&mut state, "/spawn");
-    state.update(Event::Submit);
+    exec(&mut state, "/spawn");
 
-    let sys: Vec<_> = state.session.messages.iter()
+    let sys: Vec<_> = state
+        .session
+        .messages
+        .iter()
         .filter(|m| m.role == crate::model::Role::System)
         .collect();
     assert!(!sys.is_empty(), "expected a system message");
     let last = sys.last().unwrap().content.to_lowercase();
-    assert!(last.contains("usage") || last.contains("spawn"),
-        "expected usage hint, got: {:?}", last);
+    assert!(
+        last.contains("usage") || last.contains("spawn"),
+        "expected usage hint, got: {:?}",
+        last
+    );
 }
 
 #[test]
@@ -40,7 +48,10 @@ fn spawn_emits_spawn_agent_event() {
     let mut state = AppState::default();
     let cmd = state.registry.get("spawn").expect("registered");
     let cmd_name = cmd.name.clone();
-    let result = cmd.flow.clone().exec(&mut state, &cmd_name, "find all TODOs");
+    let result = cmd
+        .flow
+        .clone()
+        .exec(&mut state, &cmd_name, "find all TODOs");
     match result {
         crate::commands::CommandResult::Event(Event::SpawnAgent { prompt }) => {
             assert_eq!(prompt, "find all TODOs");
@@ -59,8 +70,7 @@ fn spawn_event_round_trips_through_state() {
     // being dispatched but not producing user-visible output. The
     // important assertion is that no panic occurs.
     let mut state = AppState::default();
-    type_str(&mut state, "/spawn do something");
-    state.update(Event::Submit);
+    exec(&mut state, "/spawn do something");
     // No crash; state is still consistent.
     assert!(state.open_dialog.is_none());
 }

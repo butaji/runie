@@ -4,7 +4,7 @@
 //! `Panel` + `PanelStack` API. Each builder returns a `PanelStack` ready
 //! to be assigned to `AppState::open_dialog`.
 
-use super::{Panel, PanelItem, PanelStack, ItemAction};
+use super::{ItemAction, Panel, PanelItem, PanelStack};
 use crate::Event;
 
 // ============================================================================
@@ -90,14 +90,17 @@ pub struct SettingsRow {
 #[derive(Debug, Clone)]
 pub enum SettingsRowKind {
     Bool(bool),
-    Cycle { current: String, options: Vec<String> },
+    Cycle {
+        current: String,
+        options: Vec<String>,
+    },
     Action(Event),
 }
 
 /// Build a settings dialog panel with category headers.
 pub fn settings(categories: Vec<(String, Vec<SettingsRow>)>) -> PanelStack {
     let mut panel = Panel::new("settings", " Settings ");
-    let cat_count = categories.len();
+    let _cat_count = categories.len();
     for (i, (cat_name, rows)) in categories.into_iter().enumerate() {
         if i > 0 {
             panel = panel.separator();
@@ -105,20 +108,23 @@ pub fn settings(categories: Vec<(String, Vec<SettingsRow>)>) -> PanelStack {
         panel = panel.header(cat_name);
         for row in rows {
             let item = match row.kind {
-                SettingsRowKind::Bool(value) => {
-                    PanelItem::Toggle { label: row.label, value, key: row.key }
-                }
-                SettingsRowKind::Cycle { current, options, .. } => {
-                    PanelItem::Select {
-                        label: row.label,
-                        current,
-                        options,
-                        key: row.key,
-                    }
-                }
-                SettingsRowKind::Action(evt) => {
-                    PanelItem::Action { label: row.label, action: ItemAction::Emit(evt) }
-                }
+                SettingsRowKind::Bool(value) => PanelItem::Toggle {
+                    label: row.label,
+                    value,
+                    action: ItemAction::Toggle(row.key.clone()),
+                },
+                SettingsRowKind::Cycle {
+                    current, options, ..
+                } => PanelItem::Select {
+                    label: row.label,
+                    current,
+                    options,
+                    key: row.key,
+                },
+                SettingsRowKind::Action(evt) => PanelItem::Action {
+                    label: row.label,
+                    action: ItemAction::Emit(evt),
+                },
             };
             panel.items.push(item);
         }
@@ -134,7 +140,7 @@ pub fn settings(categories: Vec<(String, Vec<SettingsRow>)>) -> PanelStack {
 pub fn scoped_models(
     models: Vec<(String, String, bool)>, // (provider, name, enabled)
 ) -> PanelStack {
-    let mut panel = Panel::new("scoped", " Scoped Models ");
+    let mut panel = Panel::new("scoped", " Scoped Models ").keep_open();
     let mut last_provider = String::new();
     for (provider, name, enabled) in models {
         if provider != last_provider {
@@ -200,7 +206,7 @@ pub fn file_picker(entries: Vec<(String, bool, Event)>) -> PanelStack {
     if entries.is_empty() {
         panel = panel.header("No files found");
     } else {
-        panel = panel.header(&format!("{} files", entries.len()));
+        panel = panel.header(format!("{} files", entries.len()));
     }
     for (name, is_dir, evt) in entries {
         let label = if is_dir { format!("{}/", name) } else { name };
@@ -246,7 +252,9 @@ mod tests {
         );
         let panel = stack.current().unwrap();
         // Has headers for both providers
-        let headers: Vec<_> = panel.items.iter()
+        let headers: Vec<_> = panel
+            .items
+            .iter()
             .filter(|i| matches!(i, PanelItem::Header(_)))
             .collect();
         assert_eq!(headers.len(), 2);
@@ -255,19 +263,33 @@ mod tests {
     #[test]
     fn settings_builds_with_categories() {
         let stack = settings(vec![
-            ("Models".into(), vec![
-                SettingsRow { label: "Provider".into(), key: "provider".into(), kind: SettingsRowKind::Cycle {
-                    current: "mock".into(), options: vec!["mock".into(), "openai".into()],
-                }},
-            ]),
-            ("Appearance".into(), vec![
-                SettingsRow { label: "Theme".into(), key: "theme".into(), kind: SettingsRowKind::Cycle {
-                    current: "runie".into(), options: vec!["runie".into(), "dracula".into()],
-                }},
-            ]),
+            (
+                "Models".into(),
+                vec![SettingsRow {
+                    label: "Provider".into(),
+                    key: "provider".into(),
+                    kind: SettingsRowKind::Cycle {
+                        current: "mock".into(),
+                        options: vec!["mock".into(), "openai".into()],
+                    },
+                }],
+            ),
+            (
+                "Appearance".into(),
+                vec![SettingsRow {
+                    label: "Theme".into(),
+                    key: "theme".into(),
+                    kind: SettingsRowKind::Cycle {
+                        current: "runie".into(),
+                        options: vec!["runie".into(), "dracula".into()],
+                    },
+                }],
+            ),
         ]);
         let panel = stack.current().unwrap();
-        let headers: Vec<_> = panel.items.iter()
+        let headers: Vec<_> = panel
+            .items
+            .iter()
             .filter(|i| matches!(i, PanelItem::Header(_)))
             .collect();
         assert_eq!(headers.len(), 2);
@@ -301,7 +323,10 @@ mod tests {
         let panel = stack.current().unwrap();
         assert!(panel.filterable);
         // Has a header about no tree
-        let has_header = panel.items.iter().any(|i| matches!(i, PanelItem::Header(_)));
+        let has_header = panel
+            .items
+            .iter()
+            .any(|i| matches!(i, PanelItem::Header(_)));
         assert!(has_header);
     }
 }

@@ -20,8 +20,8 @@ use runie_core::{Element, Snapshot};
 use crate::message as msg;
 use crate::theme::{
     block_input, color_bg, set_current_theme, style_chevron, style_empty_state, style_hint,
-    style_hint_key, style_input_cursor, style_placeholder, style_scrollbar, style_status_active,
-    style_status_idle, style_timestamp, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
+    style_hint_key, style_input_cursor, style_placeholder, style_scrollbar, SCROLLBAR_THUMB,
+    SCROLLBAR_TRACK,
 };
 
 fn vstack(area: Rect, heights: &[Constraint]) -> Vec<Rect> {
@@ -228,7 +228,7 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
 
 fn render_input_scrollbar(f: &mut Frame, area: Rect, total: usize, scroll: usize, height: usize) {
     let sb_area = Rect {
-        x: area.x + area.width - 1,
+        x: area.x + area.width.saturating_sub(1),
         y: area.y + 1,
         width: 1,
         height: area.height.saturating_sub(2),

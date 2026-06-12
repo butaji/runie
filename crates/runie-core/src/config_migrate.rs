@@ -27,7 +27,10 @@ pub fn migrate(config: &mut toml::Value) -> anyhow::Result<bool> {
     }
 
     if let Some(map) = config.as_table_mut() {
-        map.insert("version".into(), toml::Value::Integer(CURRENT_CONFIG_VERSION as i64));
+        map.insert(
+            "version".into(),
+            toml::Value::Integer(CURRENT_CONFIG_VERSION as i64),
+        );
     }
     Ok(true)
 }
@@ -39,10 +42,7 @@ pub fn backup_config(path: &Path) -> anyhow::Result<PathBuf> {
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("config");
-    let ext = path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("toml");
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("toml");
     let backup_name = format!("{}_backup.{}", stem, ext);
     let backup_path = path.with_file_name(backup_name);
     std::fs::copy(path, &backup_path)?;
@@ -135,15 +135,13 @@ default = "gpt-4"
 
     #[test]
     fn migrate_noop_when_current() {
-        let mut config: toml::Value = toml::from_str(
-            &format!(
-                r#"
+        let mut config: toml::Value = toml::from_str(&format!(
+            r#"
 version = {}
 provider = "openai"
 "#,
-                CURRENT_CONFIG_VERSION
-            ),
-        )
+            CURRENT_CONFIG_VERSION
+        ))
         .unwrap();
 
         let changed = migrate(&mut config).unwrap();

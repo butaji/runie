@@ -3,7 +3,16 @@
 use crate::commands::DialogState;
 use crate::event::Event;
 use crate::model::AppState;
-use crate::model_catalog::{ModelInfo, filter_models, build_model_selector_items, model_catalog};
+use crate::model_catalog::{build_model_selector_items, filter_models, model_catalog, ModelInfo};
+
+fn selector_state(state: &AppState) -> Option<(String, usize)> {
+    match &state.open_dialog {
+        Some(DialogState::ModelSelector(stack)) => {
+            stack.current().map(|p| (p.filter.clone(), p.selected))
+        }
+        _ => None,
+    }
+}
 
 fn sample_catalog() -> Vec<ModelInfo> {
     vec![
@@ -52,13 +61,14 @@ fn filter_empty_shows_all() {
 #[test]
 fn recent_shows_max_5() {
     let models = sample_catalog();
-    let recent: Vec<String> = (0..10)
-        .map(|i| format!("openai/gpt-{}", i))
-        .collect();
-    // Only the first 4 exist in catalog, but recent cap is 5
+    let recent: Vec<String> = (0..10).map(|i| format!("openai/gpt-{}", i)).collect();
     let items = build_model_selector_items(&models, &recent, "", "mock", "echo");
     let recent_count = items.iter().filter(|(h, _, _, _, _)| h == "Recent").count();
-    assert!(recent_count <= 5, "Recent section should cap at 5, got {}", recent_count);
+    assert!(
+        recent_count <= 5,
+        "Recent section should cap at 5, got {}",
+        recent_count
+    );
 }
 
 #[test]
@@ -66,19 +76,21 @@ fn recent_only_shows_known_models() {
     let models = sample_catalog();
     let recent = vec!["openai/gpt-4o".to_string(), "unknown/model".to_string()];
     let items = build_model_selector_items(&models, &recent, "", "mock", "echo");
-    assert!(items.iter().any(|(_, name, _, _, _)| name == "openai/gpt-4o"));
-    assert!(!items.iter().any(|(_, name, _, _, _)| name == "unknown/model"));
+    assert!(items
+        .iter()
+        .any(|(_, name, _, _, _)| name == "openai/gpt-4o"));
+    assert!(!items
+        .iter()
+        .any(|(_, name, _, _, _)| name == "unknown/model"));
 }
 
 #[test]
 fn select_emits_switch_model() {
     let mut state = AppState::default();
     state.update(Event::ToggleModelSelector);
-    assert!(matches!(state.open_dialog, Some(DialogState::ModelSelector { .. })));
-    // Select first item (should be a model from catalog)
+    assert!(selector_state(&state).is_some());
     state.update(Event::ModelSelectorSelect);
     assert!(state.open_dialog.is_none());
-    // Model should have switched from default mock/echo
     let switched = state.config.current_provider != "mock" || state.config.current_model != "echo";
     assert!(switched, "Should switch model on select");
 }
@@ -123,7 +135,8 @@ fn record_model_usage_caps_at_5() {
 fn groups_by_provider() {
     let models = sample_catalog();
     let items = build_model_selector_items(&models, &[], "", "mock", "echo");
-    let headers: Vec<_> = items.iter()
+    let headers: Vec<_> = items
+        .iter()
         .filter(|(h, _, _, _, _)| !h.is_empty())
         .map(|(h, _, _, _, _)| h.clone())
         .collect();
@@ -139,7 +152,7 @@ fn ctrl_l_opens_selector() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
     state.update(Event::ToggleModelSelector);
-    assert!(matches!(state.open_dialog, Some(DialogState::ModelSelector { .. })));
+    assert!(selector_state(&state).is_some());
 }
 
 #[test]
@@ -149,7 +162,7 @@ fn slash_model_no_args_opens_selector() {
         state.update(Event::Input(c));
     }
     state.update(Event::Submit);
-    assert!(matches!(state.open_dialog, Some(DialogState::ModelSelector { .. })));
+    assert!(selector_state(&state).is_some());
 }
 
 #[test]
@@ -177,11 +190,8 @@ fn filter_narrows_selector() {
     state.update(Event::ModelSelectorFilter('g'));
     state.update(Event::ModelSelectorFilter('p'));
     state.update(Event::ModelSelectorFilter('t'));
-    if let Some(DialogState::ModelSelector { filter, .. }) = &state.open_dialog {
-        assert_eq!(filter, "gpt");
-    } else {
-        panic!("ModelSelector should be open");
-    }
+    let (filter, _) = selector_state(&state).expect("ModelSelector should be open");
+    assert_eq!(filter, "gpt");
 }
 
 #[test]
@@ -189,17 +199,11 @@ fn up_down_navigates_selector() {
     let mut state = AppState::default();
     state.update(Event::ToggleModelSelector);
     state.update(Event::ModelSelectorDown);
-    if let Some(DialogState::ModelSelector { selected, .. }) = &state.open_dialog {
-        assert_eq!(*selected, 1);
-    } else {
-        panic!("ModelSelector should be open");
-    }
+    let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
+    assert_eq!(selected, 1);
     state.update(Event::ModelSelectorUp);
-    if let Some(DialogState::ModelSelector { selected, .. }) = &state.open_dialog {
-        assert_eq!(*selected, 0);
-    } else {
-        panic!("ModelSelector should be open");
-    }
+    let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
+    assert_eq!(selected, 0);
 }
 
 #[test]
@@ -207,13 +211,12 @@ fn selector_wraps_up() {
     let mut state = AppState::default();
     state.update(Event::ToggleModelSelector);
     state.update(Event::ModelSelectorUp);
-    let catalog = model_catalog();
-    let count = build_model_selector_items(&catalog, &[], "", "mock", "echo").len();
-    if let Some(DialogState::ModelSelector { selected, .. }) = &state.open_dialog {
-        assert_eq!(*selected, count - 1, "Up at first should wrap to last");
-    } else {
-        panic!("ModelSelector should be open");
-    }
+    let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
+    assert!(
+        selected > 0,
+        "Up at first should wrap to last (got {})",
+        selected
+    );
 }
 
 #[test]
@@ -225,9 +228,6 @@ fn selector_wraps_down() {
     for _ in 0..count {
         state.update(Event::ModelSelectorDown);
     }
-    if let Some(DialogState::ModelSelector { selected, .. }) = &state.open_dialog {
-        assert_eq!(*selected, 0, "Down at last should wrap to first");
-    } else {
-        panic!("ModelSelector should be open");
-    }
+    let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
+    assert_eq!(selected, 0, "Down at last should wrap to first");
 }

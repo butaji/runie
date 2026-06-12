@@ -80,10 +80,7 @@ impl AuthStorage {
         for (provider, tok) in &self.tokens {
             let mut entry = serde_json::Map::new();
             entry.insert("token".into(), encrypt_token(&tok.token).into());
-            entry.insert(
-                "expires_at".into(),
-                tok.expires_at.unwrap_or(0.0).into(),
-            );
+            entry.insert("expires_at".into(), tok.expires_at.unwrap_or(0.0).into());
             obj.insert(provider.clone(), entry.into());
         }
         let json = serde_json::to_string_pretty(&obj)?;
@@ -152,12 +149,12 @@ fn encrypt_token(token: &str) -> String {
     for (i, b) in token.bytes().enumerate() {
         out.push(b ^ key[i % key.len()]);
     }
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
     STANDARD.encode(&out)
 }
 
 fn decrypt_token(encrypted: &str) -> Option<String> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
     let bytes = STANDARD.decode(encrypted).ok()?;
     let key = machine_key();
     let mut out = Vec::with_capacity(bytes.len());
@@ -192,7 +189,8 @@ mod tests {
     fn tmp_storage() -> AuthStorage {
         let n = std::sync::atomic::AtomicU64::new(0);
         let id = n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let path = std::env::temp_dir().join(format!("runie_auth_test_{}_{}", std::process::id(), id));
+        let path =
+            std::env::temp_dir().join(format!("runie_auth_test_{}_{}", std::process::id(), id));
         AuthStorage {
             tokens: HashMap::new(),
             path,

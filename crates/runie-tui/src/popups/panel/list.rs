@@ -70,7 +70,7 @@ pub(super) fn render_list(f: &mut Frame, panel: &Panel, show_breadcrumb: bool) {
     );
 }
 
-fn build_header(panel: &Panel, inner_w: usize) -> (Vec<Line>, u16) {
+fn build_header(panel: &Panel, inner_w: usize) -> (Vec<Line<'_>>, u16) {
     let mut lines: Vec<Line> = Vec::new();
     if panel.filterable {
         lines.push(Line::from(format!("❯ {}", panel.filter)).style(style_user()));
@@ -80,7 +80,7 @@ fn build_header(panel: &Panel, inner_w: usize) -> (Vec<Line>, u16) {
     (lines, h)
 }
 
-fn build_items(panel: &Panel, width: usize) -> (Vec<Line>, Option<usize>) {
+fn build_items(panel: &Panel, width: usize) -> (Vec<Line<'_>>, Option<usize>) {
     let filtered = panel.filtered_items();
     let mut lines: Vec<Line> = Vec::new();
     let mut selected_line: Option<usize> = None;

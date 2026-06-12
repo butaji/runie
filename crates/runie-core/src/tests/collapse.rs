@@ -1,7 +1,7 @@
-use crate::model::{AppState, ChatMessage, Role};
 use crate::event::Event;
-use crate::ui::LazyCache;
+use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::Element;
+use crate::ui::LazyCache;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -11,19 +11,38 @@ fn fresh_state() -> AppState {
 fn thought_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.\n".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
-    assert!(!state.all_collapsed, "Thoughts should be expanded by default");
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.\n".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
+    assert!(
+        !state.all_collapsed,
+        "Thoughts should be expanded by default"
+    );
 }
 
 #[test]
 fn tool_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
     assert!(!state.all_collapsed, "Tools should be expanded by default");
 }
 
@@ -31,25 +50,44 @@ fn tool_created_via_pipeline_is_expanded() {
 fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list files.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list files.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
     assert!(!state.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "ToggleExpand should collapse all thoughts/tools");
+    assert!(
+        state.all_collapsed,
+        "ToggleExpand should collapse all thoughts/tools"
+    );
 }
 
 #[test]
 fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1".to_string(),
+    });
 
     assert!(!state.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "ToggleExpand should collapse all thoughts/tools");
+    assert!(
+        state.all_collapsed,
+        "ToggleExpand should collapse all thoughts/tools"
+    );
 }
 
 #[test]
@@ -63,7 +101,10 @@ fn thought_expanded_by_default() {
         ..Default::default()
     });
     let feed = LazyCache::feed(&state);
-    let has_full = feed.elements.iter().any(|e| matches!(e, Element::ThoughtMarker { .. }));
+    let has_full = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { .. }));
     assert!(has_full, "Thought should render by default");
 }
 
@@ -112,8 +153,14 @@ fn collapsed_thought_renders_one_line_summary() {
         Element::ThoughtSummary { content, .. } => Some(content.as_str()),
         _ => None,
     });
-    assert!(summary.is_some(), "Collapsed thought should render as ThoughtSummary");
-    assert!(summary.unwrap().contains("Deep reasoning"), "Summary should contain first line");
+    assert!(
+        summary.is_some(),
+        "Collapsed thought should render as ThoughtSummary"
+    );
+    assert!(
+        summary.unwrap().contains("Deep reasoning"),
+        "Summary should contain first line"
+    );
 }
 
 #[test]
@@ -161,15 +208,25 @@ fn collapsed_tool_renders_one_line_summary() {
         Element::ToolSummary { name, .. } => Some(name.as_str()),
         _ => None,
     });
-    assert!(summary.is_some(), "Collapsed tool should render as ToolSummary");
-    assert_eq!(summary.unwrap(), "list_files", "Summary should show tool name");
+    assert!(
+        summary.is_some(),
+        "Collapsed tool should render as ToolSummary"
+    );
+    assert_eq!(
+        summary.unwrap(),
+        "list_files",
+        "Summary should show tool name"
+    );
 }
 
 #[test]
 fn toggle_expand_noop_when_empty() {
     let mut state = fresh_state();
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle on empty state should still flip flag");
+    assert!(
+        state.all_collapsed,
+        "Toggle on empty state should still flip flag"
+    );
 }
 
 #[test]
@@ -190,7 +247,10 @@ fn toggle_expand_affects_all_items() {
         ..Default::default()
     });
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle should collapse ALL thoughts and tools globally");
+    assert!(
+        state.all_collapsed,
+        "Toggle should collapse ALL thoughts and tools globally"
+    );
 }
 
 #[test]
@@ -205,13 +265,17 @@ fn toggle_thought_rebuilds_cache() {
     });
     state.ensure_fresh();
     let before = state.view.elements_cache().to_vec();
-    assert!(before.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })));
+    assert!(before
+        .iter()
+        .any(|e| matches!(e, Element::ThoughtMarker { .. })));
 
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
     let after = state.view.elements_cache().to_vec();
     assert!(
-        after.iter().any(|e| matches!(e, Element::ThoughtSummary { .. })),
+        after
+            .iter()
+            .any(|e| matches!(e, Element::ThoughtSummary { .. })),
         "Cache should rebuild to ThoughtSummary after toggle"
     );
 }
@@ -232,7 +296,9 @@ fn toggle_thought_twice_restores_cache() {
     state.ensure_fresh();
     let cache = state.view.elements_cache().to_vec();
     assert!(
-        cache.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })),
+        cache
+            .iter()
+            .any(|e| matches!(e, Element::ThoughtMarker { .. })),
         "Cache should restore ThoughtMarker after second toggle"
     );
 }
@@ -255,7 +321,9 @@ fn toggle_tool_rebuilds_cache() {
     state.ensure_fresh();
     let after = state.view.elements_cache().to_vec();
     assert!(
-        after.iter().any(|e| matches!(e, Element::ToolSummary { .. })),
+        after
+            .iter()
+            .any(|e| matches!(e, Element::ToolSummary { .. })),
         "Cache should rebuild to ToolSummary after toggle"
     );
 }
@@ -285,26 +353,64 @@ fn toggle_tool_twice_restores_cache() {
 fn thought_captures_assistant_reasoning() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "I'll list the files.\n".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "TOOL:list_dir:.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "I'll list the files.\n".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "TOOL:list_dir:.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
-    let thought = state.session.messages.iter().find(|m| m.role == Role::Thought).unwrap();
-    assert!(thought.content.contains("I'll list the files."), "Thought should capture reasoning: {}", thought.content);
-    assert!(!thought.content.contains("TOOL:"), "Thought should have tool markers stripped");
+    let thought = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.role == Role::Thought)
+        .unwrap();
+    assert!(
+        thought.content.contains("I'll list the files."),
+        "Thought should capture reasoning: {}",
+        thought.content
+    );
+    assert!(
+        !thought.content.contains("TOOL:"),
+        "Thought should have tool markers stripped"
+    );
 }
 
 #[test]
 fn assistant_preserved_when_no_tools() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Here is the answer.".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::AgentThinking {
+        id: "req.0".to_string(),
+    });
+    state.update(Event::AgentResponse {
+        id: "req.0".to_string(),
+        content: "Here is the answer.".to_string(),
+    });
+    state.update(Event::AgentThoughtDone {
+        id: "req.0".to_string(),
+    });
 
-    let assistants: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::Assistant).collect();
-    assert_eq!(assistants.len(), 1, "Assistant should be preserved when no tools");
+    let assistants: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::Assistant)
+        .collect();
+    assert_eq!(
+        assistants.len(),
+        1,
+        "Assistant should be preserved when no tools"
+    );
     assert_eq!(assistants[0].content, "Here is the answer.");
 }
 
@@ -312,12 +418,31 @@ fn assistant_preserved_when_no_tools() {
 fn tool_stores_output() {
     let mut state = fresh_state();
     state.streaming = true;
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "list_dir".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".to_string() });
+    state.update(Event::AgentToolStart {
+        id: "req.0".to_string(),
+        name: "list_dir".to_string(),
+    });
+    state.update(Event::AgentToolEnd {
+        duration_secs: 0.5,
+        output: "file1\nfile2".to_string(),
+    });
 
-    let tool = state.session.messages.iter().find(|m| m.role == Role::Tool).unwrap();
-    assert!(tool.content.contains("file1"), "Tool should store output: {}", tool.content);
-    assert!(tool.content.contains("file2"), "Tool should store output: {}", tool.content);
+    let tool = state
+        .session
+        .messages
+        .iter()
+        .find(|m| m.role == Role::Tool)
+        .unwrap();
+    assert!(
+        tool.content.contains("file1"),
+        "Tool should store output: {}",
+        tool.content
+    );
+    assert!(
+        tool.content.contains("file2"),
+        "Tool should store output: {}",
+        tool.content
+    );
 }
 
 #[test]
@@ -338,7 +463,10 @@ fn collapsed_thought_hides_reasoning() {
         _ => None,
     });
     assert!(summary.is_some());
-    assert!(!summary.unwrap().contains("I'll list"), "Collapsed thought should hide reasoning");
+    assert!(
+        !summary.unwrap().contains("I'll list"),
+        "Collapsed thought should hide reasoning"
+    );
 }
 
 #[test]
@@ -358,7 +486,10 @@ fn expanded_thought_shows_reasoning() {
         _ => None,
     });
     assert!(marker.is_some());
-    assert!(marker.unwrap().contains("I'll list"), "Expanded thought should show reasoning");
+    assert!(
+        marker.unwrap().contains("I'll list"),
+        "Expanded thought should show reasoning"
+    );
 }
 
 #[test]
@@ -374,7 +505,10 @@ fn collapsed_tool_hides_output() {
     state.all_collapsed = true;
     let feed = LazyCache::feed(&state);
 
-    let has_tool_done = feed.elements.iter().any(|e| matches!(e, Element::ToolDone { .. }));
+    let has_tool_done = feed
+        .elements
+        .iter()
+        .any(|e| matches!(e, Element::ToolDone { .. }));
     assert!(!has_tool_done, "Collapsed tool should not render ToolDone");
 
     let summary = feed.elements.iter().find_map(|e| match e {
@@ -401,5 +535,8 @@ fn expanded_tool_shows_output() {
         _ => None,
     });
     assert!(tool_done.is_some());
-    assert!(tool_done.unwrap().contains("file1"), "Expanded tool should show output");
+    assert!(
+        tool_done.unwrap().contains("file1"),
+        "Expanded tool should show output"
+    );
 }

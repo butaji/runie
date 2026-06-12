@@ -1,6 +1,6 @@
 //! Form Panel Builder - Fluent API for creating forms with submit handling
 
-use super::{panel, Panel, PanelItem};
+use super::{Panel, PanelItem};
 use crate::Event;
 
 /// Form panel builder with submit handling
@@ -14,7 +14,7 @@ impl FormPanel {
     /// Create a new form panel
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
         // Forms never use fuzzy filtering — keystrokes edit field values.
-        let panel = Panel::new(id, title).filterable(false);
+        let panel = Panel::new(id, title).form();
         Self {
             panel,
             submit_event: None,
@@ -64,6 +64,12 @@ impl FormPanel {
     }
 }
 
+impl From<FormPanel> for Panel {
+    fn from(form: FormPanel) -> Self {
+        form.panel
+    }
+}
+
 /// Create a new form panel builder
 pub fn form(id: impl Into<String>, title: impl Into<String>) -> FormPanel {
     FormPanel::new(id, title)
@@ -75,7 +81,10 @@ pub fn form(id: impl Into<String>, title: impl Into<String>) -> FormPanel {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::form;
+    use crate::dialog::dsl::panel;
+    use crate::dialog::ItemAction;
+    use crate::Event;
 
     #[test]
     fn test_form_panel_builder() {
@@ -102,5 +111,16 @@ mod tests {
 
         assert_eq!(stack.len(), 1);
         assert!(stack.current().unwrap().is_form());
+    }
+
+    #[test]
+    fn test_unified_panel_form_view() {
+        let p = panel("save", "Save")
+            .form()
+            .field("Name", "session", "name")
+            .action("Cancel", ItemAction::Close);
+
+        assert!(p.is_form());
+        assert!(!p.filterable);
     }
 }

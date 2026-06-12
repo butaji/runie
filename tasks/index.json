@@ -89,6 +89,8 @@
     "add-smoke-tests",
     "r5-fix-copy",
     "r5-configurable-truncation",
-    "r5-subagents"
+    "r5-subagents",
+    "r6-login-dialog-flow",
+    "unify-dialog-panelstack"
   ]
 }

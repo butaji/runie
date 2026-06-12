@@ -22,7 +22,10 @@ fn thought_msg(id: &str, n_lines: usize) -> ChatMessage {
 
 // Helper: build a tool with N lines of output
 fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
-    let output = (1..=n_output_lines).map(|i| format!("out{}", i)).collect::<Vec<_>>().join("\n");
+    let output = (1..=n_output_lines)
+        .map(|i| format!("out{}", i))
+        .collect::<Vec<_>>()
+        .join("\n");
     let content = format!("◆ Ran ls 0.5s\n{}", output);
     ChatMessage {
         role: Role::Tool,
@@ -37,13 +40,23 @@ fn tool_msg(id: &str, n_output_lines: usize) -> ChatMessage {
 
 #[test]
 fn user_message_is_one_line() {
-    let msg = ChatMessage { role: Role::User, content: "hello".into(), timestamp: 0.0, id: "u".into(), ..Default::default()};
+    let msg = ChatMessage {
+        role: Role::User,
+        content: "hello".into(),
+        timestamp: 0.0,
+        id: "u".into(),
+        ..Default::default()
+    };
     let mut state = fresh_state();
     state.session.messages.push(msg);
     state.messages_changed();
     state.ensure_fresh();
 
-    assert_eq!(state.view.total_lines(), 4, "UserMessage (3: margins+content) + Spacer (1) = 4 lines");
+    assert_eq!(
+        state.view.total_lines(),
+        4,
+        "UserMessage (3: margins+content) + Spacer (1) = 4 lines"
+    );
 }
 
 #[test]
@@ -56,7 +69,10 @@ fn thought_line_count_matches_content() {
 
     let total = state.view.total_lines();
     // ThoughtMarker has 6 lines (header + 5), + Spacer = 7
-    assert_eq!(total, 7, "Thought with 5 content lines should be 6+1=7 lines total");
+    assert_eq!(
+        total, 7,
+        "Thought with 5 content lines should be 6+1=7 lines total"
+    );
 }
 
 #[test]
@@ -68,7 +84,10 @@ fn tool_line_count_matches_output() {
 
     let total = state.view.total_lines();
     // ToolDone: header (1) + output (3) = 4, + Spacer = 5
-    assert_eq!(total, 5, "Tool with 3 output lines should be 4+1=5 lines total");
+    assert_eq!(
+        total, 5,
+        "Tool with 3 output lines should be 4+1=5 lines total"
+    );
 }
 
 // ── Visible region: latest at bottom ──────────────────────────────────
@@ -90,9 +109,12 @@ fn visible_shows_latest_element_at_bottom() {
     state.view.scroll = 0; // at bottom
 
     let region = state.visible_scroll(3); // 3 lines viewport
-    // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
+                                          // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
         "Latest message (msg2) must be in visible region"
     );
 }
@@ -121,14 +143,23 @@ fn visible_skips_lines_from_first_element_when_overflow() {
     let region = state.visible_scroll(10);
 
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "latest")),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::UserMessage { content, .. } if content == "latest")),
         "Latest message must be visible"
     );
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::ThoughtMarker { .. })),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::ThoughtMarker { .. })),
         "Thought must be partially visible"
     );
-    assert!(region.skip_lines > 0, "Should skip lines from top of first visible element");
+    assert!(
+        region.skip_lines > 0,
+        "Should skip lines from top of first visible element"
+    );
 }
 
 #[test]
@@ -150,11 +181,17 @@ fn scroll_up_shows_older_content() {
     state.view.scroll = 8;
     let region = state.visible_scroll(3);
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg2")),
         "Scroll up should show older message (msg2)"
     );
     assert!(
-        !region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg4")),
+        !region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::UserMessage { content, .. } if content == "msg4")),
         "Scroll up should hide msg4"
     );
 }
@@ -164,7 +201,13 @@ fn scroll_up_shows_older_content() {
 #[test]
 fn scrollbar_no_scrollbar_when_lines_fit() {
     let mut state = fresh_state();
-    state.session.messages.push(ChatMessage { role: Role::User, content: "hi".into(), timestamp: 0.0, id: "u".into(), ..Default::default()});
+    state.session.messages.push(ChatMessage {
+        role: Role::User,
+        content: "hi".into(),
+        timestamp: 0.0,
+        id: "u".into(),
+        ..Default::default()
+    });
     state.messages_changed();
     state.ensure_fresh();
 
@@ -190,7 +233,10 @@ fn scrollbar_shows_when_lines_overflow() {
     state.ensure_fresh();
 
     let (thumb, _offset) = state.scrollbar_metrics(10);
-    assert!(thumb > 0, "Scrollbar thumb should show when line count exceeds viewport");
+    assert!(
+        thumb > 0,
+        "Scrollbar thumb should show when line count exceeds viewport"
+    );
 }
 
 #[test]
@@ -209,7 +255,7 @@ fn scrollbar_thumb_at_bottom_when_not_scrolled() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let (thumb, offset) = state.scrollbar_metrics(10);
+    let (_thumb, offset) = state.scrollbar_metrics(10);
     // 80 lines total (20 msgs × 4), viewport 10, position = 70
     // thumb_start = round(70 * 10 / 80) = 9, thumb_end = round(80 * 10 / 80) = 10
     // thumb = 1, offset = 9 (bottom of 10-row track)
@@ -263,10 +309,17 @@ fn large_thought_overflows_viewport() {
     let region = state.visible_scroll(10);
 
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "after")),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::UserMessage { content, .. } if content == "after")),
         "Latest message must be visible"
     );
-    assert!(region.skip_lines >= 15, "Should skip many lines from large thought: got skip={}", region.skip_lines);
+    assert!(
+        region.skip_lines >= 15,
+        "Should skip many lines from large thought: got skip={}",
+        region.skip_lines
+    );
 }
 
 #[test]
@@ -292,7 +345,10 @@ fn multi_line_tool_at_bottom_visible() {
     let region = state.visible_scroll(5);
 
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::ToolDone { .. })),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::ToolDone { .. })),
         "Tool must be visible at bottom"
     );
 }
@@ -329,7 +385,10 @@ fn new_message_at_bottom_auto_shows() {
 
     let region = state.visible_scroll(5);
     assert!(
-        region.elements.iter().any(|e| matches!(e, Element::UserMessage { content, .. } if content == "newest")),
+        region
+            .elements
+            .iter()
+            .any(|e| matches!(e, Element::UserMessage { content, .. } if content == "newest")),
         "Newest message must be visible when at bottom"
     );
 }
@@ -361,5 +420,8 @@ fn scroll_preserved_when_not_at_bottom() {
     state.ensure_fresh();
 
     // scroll preserved when not at bottom
-    assert_eq!(state.view.scroll, 5, "Scroll position should be preserved when not at bottom");
+    assert_eq!(
+        state.view.scroll, 5,
+        "Scroll position should be preserved when not at bottom"
+    );
 }

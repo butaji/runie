@@ -1,6 +1,6 @@
-use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::AppState;
 
 #[test]
 fn user_message_has_border_bg_color() {
@@ -85,7 +85,11 @@ fn timestamp_right_aligned_on_first_line() {
             .collect();
         if line.contains(&ts_str) {
             let pos = line.find(&ts_str).unwrap();
-            assert!(pos > 60, "Timestamp should be right-aligned, got pos {}", pos);
+            assert!(
+                pos > 60,
+                "Timestamp should be right-aligned, got pos {}",
+                pos
+            );
             found = true;
         }
     }
@@ -102,7 +106,6 @@ fn agent_message_timestamp_appears_once() {
         timestamp: 99999.0,
         id: "msg.1".to_string(),
         provider: "mock".to_string(),
-        ..Default::default()
     });
     state.messages_changed();
     let backend = TestBackend::new(60, 20);
@@ -148,7 +151,10 @@ fn timestamp_never_wraps_even_when_content_is_very_long() {
             .collect();
         if line.contains(&ts_str) {
             if let Some(prev_y) = found_y {
-                panic!("Timestamp wrapped! Found on line {} and again on line {}", prev_y, y);
+                panic!(
+                    "Timestamp wrapped! Found on line {} and again on line {}",
+                    prev_y, y
+                );
             }
             found_y = Some(y);
         }

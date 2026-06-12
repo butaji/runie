@@ -67,11 +67,7 @@ impl Context7Client {
     }
 
     fn search(&self, query: &str) -> anyhow::Result<String> {
-        let resp = self
-            .client
-            .get(SEARCH_URL)
-            .query(&[("q", query)])
-            .send()?;
+        let resp = self.client.get(SEARCH_URL).query(&[("q", query)]).send()?;
 
         let json: serde_json::Value = resp.json()?;
         parse_search_response(&json)

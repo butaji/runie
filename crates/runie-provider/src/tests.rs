@@ -1,14 +1,22 @@
 //! Tests for runie-provider
 
+use crate::{
+    model::{builtin_providers, ModelId, ModelRegistry, ProviderMeta},
+    MockProvider, MockStreamingProvider,
+};
 use runie_core::provider::{Message, Provider};
-use crate::{MockProvider, MockStreamingProvider, model::{ModelId, ModelRegistry, builtin_providers, ProviderMeta}};
 
 #[tokio::test]
 async fn test_mock_provider_generates_chunks() {
     let provider = MockProvider::default();
-    let messages = vec![Message::User { content: "Hello World".to_string() }];
+    let messages = vec![Message::User {
+        content: "Hello World".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 2);
     assert_eq!(chunks[0].content, "Hello ");
@@ -20,7 +28,10 @@ async fn test_mock_provider_empty_input() {
     let provider = MockProvider::default();
     let messages = vec![];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert!(chunks.is_empty());
 }
@@ -28,9 +39,14 @@ async fn test_mock_provider_empty_input() {
 #[tokio::test]
 async fn test_mock_provider_single_word() {
     let provider = MockProvider::default();
-    let messages = vec![Message::User { content: "Hello".to_string() }];
+    let messages = vec![Message::User {
+        content: "Hello".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].content, "Hello ");
@@ -39,9 +55,14 @@ async fn test_mock_provider_single_word() {
 #[tokio::test]
 async fn test_mock_provider_triggers_list_files() {
     let provider = MockProvider::default();
-    let messages = vec![Message::User { content: "list files".to_string() }];
+    let messages = vec![Message::User {
+        content: "list files".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:list_dir"));
@@ -50,9 +71,14 @@ async fn test_mock_provider_triggers_list_files() {
 #[tokio::test]
 async fn test_mock_provider_triggers_read_file() {
     let provider = MockProvider::default();
-    let messages = vec![Message::User { content: "read the readme".to_string() }];
+    let messages = vec![Message::User {
+        content: "read the readme".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:read_file"));
@@ -61,9 +87,14 @@ async fn test_mock_provider_triggers_read_file() {
 #[tokio::test]
 async fn test_mock_provider_triggers_write_file() {
     let provider = MockProvider::default();
-    let messages = vec![Message::User { content: "write something".to_string() }];
+    let messages = vec![Message::User {
+        content: "write something".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:write_file"));
@@ -72,9 +103,14 @@ async fn test_mock_provider_triggers_write_file() {
 #[tokio::test]
 async fn test_mock_provider_triggers_bash() {
     let provider = MockProvider::default();
-    let messages = vec![Message::User { content: "run command".to_string() }];
+    let messages = vec![Message::User {
+        content: "run command".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:bash"));
@@ -84,12 +120,21 @@ async fn test_mock_provider_triggers_bash() {
 async fn test_mock_provider_follows_up_after_tool_result() {
     let provider = MockProvider::default();
     let messages = vec![
-        Message::User { content: "list files".to_string() },
-        Message::Assistant { content: "TOOL:list_dir:.".to_string() },
-        Message::ToolResult { content: "file1.txt (file)".to_string() },
+        Message::User {
+            content: "list files".to_string(),
+        },
+        Message::Assistant {
+            content: "TOOL:list_dir:.".to_string(),
+        },
+        Message::ToolResult {
+            content: "file1.txt (file)".to_string(),
+        },
     ];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
 
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("Done"));
@@ -113,7 +158,10 @@ fn test_model_registry_find_exists() {
     let registry = ModelRegistry::default();
     assert!(registry.find("openai/gpt-4o").is_some());
     assert!(registry.find("anthropic/claude-sonnet-4-6").is_some());
-    assert!(registry.find("mock/echo").is_some());
+    // mock/echo is only present when dev flags enable the mock provider.
+    if runie_core::provider_registry::is_mock_enabled() {
+        assert!(registry.find("mock/echo").is_some());
+    }
 }
 
 #[test]
@@ -187,7 +235,14 @@ async fn mock_provider_default_no_delay() {
     let p = MockProvider::default();
     let start = std::time::Instant::now();
     let mut chunks = Vec::new();
-    p.generate(vec![Message::User { content: "test".to_string() }], |c| chunks.push(c)).await.unwrap();
+    p.generate(
+        vec![Message::User {
+            content: "test".to_string(),
+        }],
+        |c| chunks.push(c),
+    )
+    .await
+    .unwrap();
     assert!(start.elapsed() < std::time::Duration::from_millis(50));
     assert!(!chunks.is_empty());
 }
@@ -205,9 +260,14 @@ fn mock_provider_with_delay_configured() {
 #[tokio::test]
 async fn test_mock_streaming_provider_basic() {
     let provider = MockStreamingProvider::new();
-    let messages = vec![Message::User { content: "Hello".to_string() }];
+    let messages = vec![Message::User {
+        content: "Hello".to_string(),
+    }];
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
     // Should have some chunks
     assert!(!chunks.is_empty());
     // All chunks should have content (default chunk_size=1)
@@ -221,12 +281,17 @@ async fn test_mock_streaming_provider_at_rate() {
     // Create provider streaming at ~100 tokens/sec
     // (4 chars/token = 25 chars/sec = 40ms per char)
     let provider = MockStreamingProvider::with_rate(100.0);
-    let messages = vec![Message::User { content: "test".to_string() }];
+    let messages = vec![Message::User {
+        content: "test".to_string(),
+    }];
     let start = std::time::Instant::now();
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
     let elapsed = start.elapsed();
-    
+
     // Should have streamed some content
     assert!(!chunks.is_empty());
     // With ~100 tokens/sec, should take at least 100ms for reasonable response
@@ -238,25 +303,80 @@ async fn test_mock_streaming_provider_at_rate() {
 async fn test_mock_streaming_provider_no_delay() {
     let mut provider = MockStreamingProvider::new();
     provider.delay_ms = 0; // No delay
-    let messages = vec![Message::User { content: "Hi".to_string() }];
+    let messages = vec![Message::User {
+        content: "Hi".to_string(),
+    }];
     let start = std::time::Instant::now();
     let mut chunks = Vec::new();
-    provider.generate(messages, |c| chunks.push(c)).await.unwrap();
-    
+    provider
+        .generate(messages, |c| chunks.push(c))
+        .await
+        .unwrap();
+
     // Should complete very quickly with no delay
     assert!(start.elapsed() < std::time::Duration::from_millis(50));
     assert!(!chunks.is_empty());
 }
 
 #[tokio::test]
+async fn test_validate_api_key_times_out_on_hanging_server() {
+    use std::time::Duration;
+
+    // Bind a local socket that accepts connections but never responds.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    // Accept connections in a background thread so the listener is live.
+    std::thread::spawn(move || {
+        let (mut _stream, _) = listener.accept().unwrap();
+        std::thread::sleep(Duration::from_secs(30));
+    });
+
+    let start = std::time::Instant::now();
+    let result = crate::validate_api_key_with_timeout(
+        &format!("http://127.0.0.1:{}/v1", port),
+        "sk-test",
+        Duration::from_millis(250),
+    )
+    .await;
+
+    let elapsed = start.elapsed();
+    assert!(result.is_err(), "hanging server should produce an error");
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "should return quickly due to timeout, took {:?}",
+        elapsed
+    );
+}
+
+#[tokio::test]
+async fn test_validate_api_key_rejects_unreachable_port() {
+    use std::time::Duration;
+
+    let result = crate::validate_api_key_with_timeout(
+        "http://127.0.0.1:1/v1",
+        "sk-test",
+        Duration::from_secs(1),
+    )
+    .await;
+
+    assert!(result.is_err(), "unreachable port should produce an error");
+}
+
+#[tokio::test]
 async fn test_mock_streaming_provider_accumulates_content() {
     let provider = MockStreamingProvider::new();
-    let messages = vec![Message::User { content: "test".to_string() }];
+    let messages = vec![Message::User {
+        content: "test".to_string(),
+    }];
     let mut full_content = String::new();
-    provider.generate(messages, |c| {
-        full_content.push_str(&c.content);
-    }).await.unwrap();
-    
+    provider
+        .generate(messages, |c| {
+            full_content.push_str(&c.content);
+        })
+        .await
+        .unwrap();
+
     // Should accumulate to a complete response
     assert!(full_content.contains("test"));
     assert!(full_content.len() > 10);

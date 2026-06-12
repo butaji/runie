@@ -81,8 +81,16 @@ async fn run_json() -> Result<()> {
     let req: JsonRequest = serde_json::from_str(&buf)?;
 
     let config = config_reload::Config::load_from(&config_reload::config_path());
-    let provider_name = req.provider.as_deref().or(config.provider.as_deref()).unwrap_or("mock");
-    let model = req.model.as_deref().or(config.default_model()).unwrap_or("echo");
+    let provider_name = req
+        .provider
+        .as_deref()
+        .or(config.provider.as_deref())
+        .unwrap_or("mock");
+    let model = req
+        .model
+        .as_deref()
+        .or(config.default_model())
+        .unwrap_or("echo");
 
     let tools_list = req.tools.as_ref().map(|t| t.join(", ")).unwrap_or_else(|| {
         "read_file, list_dir, write_file, edit_file, bash, grep, find".to_string()
@@ -97,7 +105,9 @@ async fn run_json() -> Result<()> {
 
     let mut messages = vec![
         Message::System { content: system },
-        Message::User { content: req.prompt.clone() },
+        Message::User {
+            content: req.prompt.clone(),
+        },
     ];
 
     let provider = build_provider(provider_name, model);
@@ -163,11 +173,19 @@ fn execute_tool(tool: &Tool) -> runie_agent::ToolResult {
 
 fn tool_to_json(tool: &Tool) -> serde_json::Value {
     match tool {
-        Tool::ReadFile { path, offset, limit } => {
+        Tool::ReadFile {
+            path,
+            offset,
+            limit,
+        } => {
             let mut m = serde_json::Map::new();
             m.insert("path".into(), path.clone().into());
-            if let Some(o) = offset { m.insert("offset".into(), (*o).into()); }
-            if let Some(l) = limit { m.insert("limit".into(), (*l).into()); }
+            if let Some(o) = offset {
+                m.insert("offset".into(), (*o).into());
+            }
+            if let Some(l) = limit {
+                m.insert("limit".into(), (*l).into());
+            }
             serde_json::Value::Object(m)
         }
         Tool::ListDir { path } => {
@@ -176,24 +194,42 @@ fn tool_to_json(tool: &Tool) -> serde_json::Value {
         Tool::WriteFile { path, content } => {
             serde_json::json!({"path": path, "content": content})
         }
-        Tool::EditFile { path, search, replace } => {
+        Tool::EditFile {
+            path,
+            search,
+            replace,
+        } => {
             serde_json::json!({"path": path, "search": search, "replace": replace})
         }
         Tool::Bash { command } => {
             serde_json::json!({"command": command})
         }
-        Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => {
+        Tool::Grep {
+            pattern,
+            path,
+            glob,
+            ignore_case,
+            literal,
+            context,
+            limit,
+        } => {
             let mut m = serde_json::Map::new();
             m.insert("pattern".into(), pattern.clone().into());
             m.insert("path".into(), path.clone().into());
-            if let Some(g) = glob { m.insert("glob".into(), g.clone().into()); }
+            if let Some(g) = glob {
+                m.insert("glob".into(), g.clone().into());
+            }
             m.insert("ignore_case".into(), (*ignore_case).into());
             m.insert("literal".into(), (*literal).into());
             m.insert("context".into(), (*context).into());
             m.insert("limit".into(), (*limit).into());
             serde_json::Value::Object(m)
         }
-        Tool::Find { pattern, path, limit } => {
+        Tool::Find {
+            pattern,
+            path,
+            limit,
+        } => {
             serde_json::json!({"pattern": pattern, "path": path, "limit": limit})
         }
         Tool::FetchDocs { library } => {

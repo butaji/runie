@@ -26,12 +26,22 @@ fn copy_with_no_assistant_message_shows_error() {
     type_str(&mut state, "/copy");
     state.update(Event::Submit);
 
-    let sys: Vec<_> = state.session.messages.iter()
+    let sys: Vec<_> = state
+        .session
+        .messages
+        .iter()
         .filter(|m| m.role == crate::model::Role::System)
         .collect();
     assert!(!sys.is_empty(), "expected a system message");
-    assert!(sys.last().unwrap().content.to_lowercase().contains("no assistant"),
-        "expected 'no assistant' message, got: {:?}", sys.last().unwrap().content);
+    assert!(
+        sys.last()
+            .unwrap()
+            .content
+            .to_lowercase()
+            .contains("no assistant"),
+        "expected 'no assistant' message, got: {:?}",
+        sys.last().unwrap().content
+    );
 }
 
 #[test]
@@ -59,16 +69,25 @@ fn copy_writes_last_assistant_text_to_clipboard_file() {
     let clip = tmp.join("clipboard.md");
     assert!(clip.exists(), "clipboard file should exist at {:?}", clip);
     let content = std::fs::read_to_string(&clip).unwrap();
-    assert!(content.contains("the answer is 42"),
-        "clipboard file should contain assistant text, got: {:?}", content);
+    assert!(
+        content.contains("the answer is 42"),
+        "clipboard file should contain assistant text, got: {:?}",
+        content
+    );
 
     // And the user is told where the file is.
-    let sys: Vec<_> = state.session.messages.iter()
+    let sys: Vec<_> = state
+        .session
+        .messages
+        .iter()
         .filter(|m| m.role == crate::model::Role::System)
         .collect();
     let last = sys.last().expect("system message after /copy");
-    assert!(last.content.contains("clipboard.md"),
-        "system message should mention the file path, got: {:?}", last.content);
+    assert!(
+        last.content.contains("clipboard.md"),
+        "system message should mention the file path, got: {:?}",
+        last.content
+    );
 
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::remove_var("RUNIE_CACHE_DIR");
@@ -103,8 +122,15 @@ fn copy_uses_most_recent_assistant_message() {
 
     let clip = tmp.join("clipboard.md");
     let content = std::fs::read_to_string(&clip).unwrap();
-    assert!(content.contains("newer response"), "should copy the most recent, got: {:?}", content);
-    assert!(!content.contains("old response"), "should NOT copy older messages");
+    assert!(
+        content.contains("newer response"),
+        "should copy the most recent, got: {:?}",
+        content
+    );
+    assert!(
+        !content.contains("old response"),
+        "should NOT copy older messages"
+    );
 
     let _ = std::fs::remove_dir_all(&tmp);
     std::env::remove_var("RUNIE_CACHE_DIR");
@@ -129,10 +155,16 @@ fn copy_uses_default_cache_dir_when_env_unset() {
 
     // Don't assert the actual path (depends on $HOME); just assert the
     // system message contains a path-like string.
-    let sys: Vec<_> = state.session.messages.iter()
+    let sys: Vec<_> = state
+        .session
+        .messages
+        .iter()
         .filter(|m| m.role == crate::model::Role::System)
         .collect();
     let last = sys.last().expect("system message");
-    assert!(last.content.contains("clipboard.md"),
-        "system message should mention the file path, got: {:?}", last.content);
+    assert!(
+        last.content.contains("clipboard.md"),
+        "system message should mention the file path, got: {:?}",
+        last.content
+    );
 }

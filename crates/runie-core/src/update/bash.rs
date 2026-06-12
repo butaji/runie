@@ -60,8 +60,10 @@ mod tests {
     #[test]
     fn command_not_found() {
         let output = execute_bash("nonexistent_command_xyz");
-        assert!(output.contains("Error") || output.contains("not found"),
-            "Should show error for invalid command");
+        assert!(
+            output.contains("Error") || output.contains("not found"),
+            "Should show error for invalid command"
+        );
     }
 
     #[test]

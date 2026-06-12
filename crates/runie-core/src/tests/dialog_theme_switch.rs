@@ -1,45 +1,46 @@
 //! Tests that global events (theme, model) pass through when dialogs are open.
 
-use crate::model::AppState;
-use crate::event::Event;
 use crate::commands::DialogState;
 use crate::dialog::builders::theme_picker;
+use crate::event::Event;
+use crate::model::AppState;
 
 #[test]
 fn theme_switch_reaches_handler_while_settings_dialog_open() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: crate::settings::SettingsCategory::Models,
-        selected: 0,
+    state.update(Event::ToggleSettingsDialog);
+
+    state.update(Event::SwitchTheme {
+        name: "dracula".into(),
     });
 
-    state.update(Event::SwitchTheme { name: "dracula".into() });
-
     assert_eq!(state.config.theme_name, "dracula");
-    assert!(state.open_dialog.is_some(), "Dialog should remain open after theme switch");
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::Settings(_))),
+        "Dialog should remain open after theme switch"
+    );
 }
 
 #[test]
 fn theme_switch_reaches_handler_while_palette_open() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::CommandPalette {
-        filter: String::new(),
-        selected: 0,
+    state.update(Event::ToggleCommandPalette);
+
+    state.update(Event::SwitchTheme {
+        name: "nord".into(),
     });
 
-    state.update(Event::SwitchTheme { name: "nord".into() });
-
     assert_eq!(state.config.theme_name, "nord");
-    assert!(matches!(state.open_dialog, Some(DialogState::CommandPalette { .. })));
+    assert!(matches!(
+        state.open_dialog,
+        Some(DialogState::CommandPalette(_))
+    ));
 }
 
 #[test]
 fn model_switch_reaches_handler_while_dialog_open() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings {
-        category: crate::settings::SettingsCategory::Models,
-        selected: 0,
-    });
+    state.update(Event::ToggleSettingsDialog);
 
     state.update(Event::SwitchModel {
         provider: "openai".into(),
@@ -48,16 +49,13 @@ fn model_switch_reaches_handler_while_dialog_open() {
 
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
-    assert!(state.open_dialog.is_some());
+    assert!(matches!(state.open_dialog, Some(DialogState::Settings(_))));
 }
 
 #[test]
 fn quit_works_while_dialog_open() {
     let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::CommandPalette {
-        filter: String::new(),
-        selected: 0,
-    });
+    state.update(Event::ToggleCommandPalette);
 
     state.update(Event::Quit);
 
@@ -69,8 +67,18 @@ fn quit_works_while_dialog_open() {
 #[test]
 fn theme_picker_panel_keeps_open_for_preview() {
     let stack = theme_picker(vec![
-        ("runie".into(), Event::SwitchTheme { name: "runie".into() }),
-        ("dracula".into(), Event::SwitchTheme { name: "dracula".into() }),
+        (
+            "runie".into(),
+            Event::SwitchTheme {
+                name: "runie".into(),
+            },
+        ),
+        (
+            "dracula".into(),
+            Event::SwitchTheme {
+                name: "dracula".into(),
+            },
+        ),
     ]);
     let panel = stack.current().expect("panel stack should have a panel");
 
@@ -82,6 +90,12 @@ fn theme_picker_panel_keeps_open_for_preview() {
 
     // Verify the Emit action will be sent
     assert!(panel.items.iter().any(|item| {
-        matches!(item, crate::dialog::PanelItem::Action { action: crate::dialog::ItemAction::Emit(_), .. })
+        matches!(
+            item,
+            crate::dialog::PanelItem::Action {
+                action: crate::dialog::ItemAction::Emit(_),
+                ..
+            }
+        )
     }));
 }

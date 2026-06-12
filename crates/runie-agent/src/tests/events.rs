@@ -3,7 +3,9 @@ use runie_core::Event;
 
 #[test]
 fn test_agent_thinking_event() {
-    let evt = Event::AgentThinking { id: "req.0".to_string() };
+    let evt = Event::AgentThinking {
+        id: "req.0".to_string(),
+    };
     match evt {
         Event::AgentThinking { id } => assert_eq!(id, "req.0"),
         _ => panic!("Expected AgentThinking"),
@@ -60,7 +62,9 @@ fn test_agent_tool_end_event() {
 
 #[test]
 fn test_agent_done_event() {
-    let evt = Event::AgentDone { id: "req.0".to_string() };
+    let evt = Event::AgentDone {
+        id: "req.0".to_string(),
+    };
     match evt {
         Event::AgentDone { id } => assert_eq!(id, "req.0"),
         _ => panic!("Expected AgentDone"),

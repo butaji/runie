@@ -143,9 +143,24 @@ pub fn spawn_config_watcher(
             // Load current config from the specified path
             let config = Config::load_from(&config_path);
 
-            // Extract provider, model, and theme from config
-            let current_provider = config.provider.clone().unwrap_or_else(|| "mock".to_string());
-            let current_model = config.default_model().unwrap_or("echo").to_string();
+            // Extract provider, model, and theme from config. In production
+            // (no RUNIE_MOCK), an absent provider stays empty so the app
+            // auto-opens the login dialog instead of silently using mock.
+            let default_provider = if crate::provider_registry::is_mock_enabled() {
+                "mock"
+            } else {
+                ""
+            };
+            let default_model = if crate::provider_registry::is_mock_enabled() {
+                "echo"
+            } else {
+                ""
+            };
+            let current_provider = config
+                .provider
+                .clone()
+                .unwrap_or_else(|| default_provider.to_string());
+            let current_model = config.default_model().unwrap_or(default_model).to_string();
             let current_theme = config.theme.clone().unwrap_or_else(|| "runie".to_string());
 
             // Check if provider changed
@@ -217,24 +232,35 @@ mod tests {
     fn config_changed_applies_provider() {
         // Layer 2: Verify SwitchModel event updates AppState
         let mut state = AppState::default();
-        
-        // Initial defaults
-        assert_eq!(state.config.current_provider, "mock");
-        assert_eq!(state.config.current_model, "echo");
-        
+
+        // Initial defaults — mock in dev, empty in production.
+        let (def_provider, def_model) = if crate::provider_registry::is_mock_enabled() {
+            ("mock", "echo")
+        } else {
+            ("", "")
+        };
+        assert_eq!(state.config.current_provider, def_provider);
+        assert_eq!(state.config.current_model, def_model);
+
         // Send SwitchModel event
         state.update(Event::SwitchModel {
             provider: "anthropic".to_string(),
             model: "claude-3-sonnet".to_string(),
         });
-        
+
         // Verify provider and model are updated
         assert_eq!(state.config.current_provider, "anthropic");
         assert_eq!(state.config.current_model, "claude-3-sonnet");
-        
+
         // Verify a transient notification was emitted
-        assert_eq!(state.transient_message, Some("Switched to anthropic/claude-3-sonnet".into()));
-        assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
+        assert_eq!(
+            state.transient_message,
+            Some("Switched to anthropic/claude-3-sonnet".into())
+        );
+        assert_eq!(
+            state.transient_level,
+            Some(crate::event::TransientLevel::Success)
+        );
     }
 
     #[test]
@@ -247,8 +273,14 @@ mod tests {
         });
 
         assert_eq!(state.config.theme_name, "dracula");
-        assert_eq!(state.transient_message, Some("Theme switched to 'dracula'".into()));
-        assert_eq!(state.transient_level, Some(crate::event::TransientLevel::Success));
+        assert_eq!(
+            state.transient_message,
+            Some("Theme switched to 'dracula'".into())
+        );
+        assert_eq!(
+            state.transient_level,
+            Some(crate::event::TransientLevel::Success)
+        );
     }
 
     #[tokio::test]
@@ -257,7 +289,9 @@ mod tests {
         let config_path = dir.path().join("config.toml");
 
         // Create initial config with explicit provider/model
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "openai"
 model = "gpt-4"
 
@@ -265,7 +299,9 @@ model = "gpt-4"
 type = "openai"
 base_url = "https://api.openai.com"
 api_key = "test"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         let (tx, mut rx) = mpsc::channel::<Event>(10);
 
@@ -291,7 +327,9 @@ api_key = "test"
         let config_path = dir.path().join("config.toml");
 
         // Create initial config
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "openai"
 model = "gpt-4"
 
@@ -299,7 +337,9 @@ model = "gpt-4"
 type = "openai"
 base_url = "https://api.openai.com"
 api_key = "test"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         let (tx, mut rx) = mpsc::channel::<Event>(10);
         let handle = spawn_config_watcher(tx, config_path.clone());
@@ -311,7 +351,9 @@ api_key = "test"
         while rx.try_recv().is_ok() {}
 
         // Now change the config
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "anthropic"
 model = "claude-3"
 
@@ -319,7 +361,9 @@ model = "claude-3"
 type = "anthropic"
 base_url = "https://api.anthropic.com"
 api_key = "test"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         // Wait for the watcher to detect the change
         tokio::time::sleep(Duration::from_secs(3)).await;
@@ -340,9 +384,14 @@ api_key = "test"
     #[test]
     fn config_path_returns_expected_path() {
         let path = config_path();
-        assert!(path.components().next().is_some(), "Path should not be empty");
-        assert!(path.file_name().is_some_and(|n| n == "config.toml"), 
-                "Path should end with config.toml");
+        assert!(
+            path.components().next().is_some(),
+            "Path should not be empty"
+        );
+        assert!(
+            path.file_name().is_some_and(|n| n == "config.toml"),
+            "Path should end with config.toml"
+        );
     }
 
     #[test]
@@ -351,7 +400,9 @@ api_key = "test"
         let config_path = dir.path().join("config.toml");
 
         // Write a config file
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "test-provider"
 model = "test-model"
 
@@ -359,7 +410,9 @@ model = "test-model"
 type = "test"
 base_url = "http://localhost"
 api_key = "secret"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         // Load the config (migration moves top-level model → models.default)
         let config = Config::load_from(&config_path);
@@ -385,9 +438,13 @@ api_key = "secret"
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("config.toml");
 
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 theme = "dracula"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         let config = Config::load_from(&config_path);
         assert_eq!(config.theme, Some("dracula".to_string()));
@@ -398,12 +455,16 @@ theme = "dracula"
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("config.toml");
 
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "openai"
 
 [models]
 scoped = ["gpt-4o", "claude-3-sonnet", "gemini-1.5-pro"]
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         let config = Config::load_from(&config_path);
         let scoped = config.scoped_models().expect("should have scoped models");
@@ -418,10 +479,14 @@ scoped = ["gpt-4o", "claude-3-sonnet", "gemini-1.5-pro"]
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("config.toml");
 
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "openai"
 model = "gpt-4"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         let config = Config::load_from(&config_path);
         assert!(config.scoped_models().is_none());
@@ -432,7 +497,9 @@ model = "gpt-4"
         let dir = tempdir().unwrap();
         let config_path = dir.path().join("config.toml");
 
-        fs::write(&config_path, r#"
+        fs::write(
+            &config_path,
+            r#"
 provider = "openai"
 model = "gpt-3.5"
 
@@ -443,7 +510,9 @@ default = "gpt-4"
 type = "openai"
 base_url = "https://api.openai.com"
 api_key = "test"
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         let config = Config::load_from(&config_path);
 

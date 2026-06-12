@@ -48,7 +48,6 @@ mod tests {
 
     #[test]
     fn number_highlighting() {
-        
         let line = "let x = 42;";
         let tokens = tokenize::tokenize_line(line, Language::JavaScript);
         let num_token = tokens.iter().find(|t| t.content == "42");
@@ -57,10 +56,11 @@ mod tests {
 
     #[test]
     fn comment_highlighting() {
-        
         let line = "// this is a comment";
         let tokens = tokenize::tokenize_line(line, Language::Rust);
-        let comment_token = tokens.iter().find(|t| t.content.contains("this is a comment"));
+        let comment_token = tokens
+            .iter()
+            .find(|t| t.content.contains("this is a comment"));
         assert!(comment_token.is_some(), "Should have comment token");
     }
 
@@ -132,6 +132,9 @@ mod tests {
     #[test]
     fn empty_line() {
         let tokens = tokenize::tokenize_line("", Language::Rust);
-        assert!(tokens.is_empty() || tokens.len() == 1, "Empty line should have minimal tokens");
+        assert!(
+            tokens.is_empty() || tokens.len() == 1,
+            "Empty line should have minimal tokens"
+        );
     }
 }

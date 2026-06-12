@@ -31,7 +31,10 @@ pub fn default_keybindings() -> HashMap<String, String> {
     map.insert("ctrl+s".to_string(), "Abort".to_string());
     map.insert("ctrl+g".to_string(), "OpenExternalEditor".to_string());
     map.insert("ctrl+p".to_string(), "ToggleCommandPalette".to_string());
-    map.insert("ctrl+shift+p".to_string(), "ToggleCommandPalette".to_string());
+    map.insert(
+        "ctrl+shift+p".to_string(),
+        "ToggleCommandPalette".to_string(),
+    );
     map.insert("ctrl+m".to_string(), "CycleModelNext".to_string());
     map.insert("ctrl+shift+m".to_string(), "CycleModelPrev".to_string());
 
@@ -89,7 +92,8 @@ fn parse_key_combo(combo: &str) -> (Vec<String>, String) {
 pub fn load_keybindings(path: &Option<PathBuf>) -> HashMap<String, String> {
     let path = match path {
         Some(p) => p.clone(),
-        None => default_keybindings_path().unwrap_or_else(|| PathBuf::from("/tmp/runie_keybindings.json")),
+        None => default_keybindings_path()
+            .unwrap_or_else(|| PathBuf::from("/tmp/runie_keybindings.json")),
     };
 
     if !path.exists() {
@@ -110,8 +114,8 @@ pub fn load_keybindings(path: &Option<PathBuf>) -> HashMap<String, String> {
 
 /// Parse keybindings from JSON string
 pub fn parse_keybindings_json(content: &str) -> Result<HashMap<String, String>> {
-    let value: serde_json::Value = serde_json::from_str(content)
-        .context("parse keybindings JSON")?;
+    let value: serde_json::Value =
+        serde_json::from_str(content).context("parse keybindings JSON")?;
 
     let obj = value.as_object().context("keybindings must be an object")?;
 
@@ -189,14 +193,69 @@ pub fn validate_key_combo(combo: &str) -> bool {
     }
     // Last part must be a valid key
     let key = parts[parts.len() - 1];
-    matches!(key,
-        "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m"
-        | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
-        | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-        | "backspace" | "enter" | "escape" | "tab"
-        | "up" | "down" | "left" | "right" | "home" | "end" | "delete"
-        | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
-        | "pageup" | "pagedown" | "atfilepicker"
+    matches!(
+        key,
+        "a" | "b"
+            | "c"
+            | "d"
+            | "e"
+            | "f"
+            | "g"
+            | "h"
+            | "i"
+            | "j"
+            | "k"
+            | "l"
+            | "m"
+            | "n"
+            | "o"
+            | "p"
+            | "q"
+            | "r"
+            | "s"
+            | "t"
+            | "u"
+            | "v"
+            | "w"
+            | "x"
+            | "y"
+            | "z"
+            | "0"
+            | "1"
+            | "2"
+            | "3"
+            | "4"
+            | "5"
+            | "6"
+            | "7"
+            | "8"
+            | "9"
+            | "backspace"
+            | "enter"
+            | "escape"
+            | "tab"
+            | "up"
+            | "down"
+            | "left"
+            | "right"
+            | "home"
+            | "end"
+            | "delete"
+            | "f1"
+            | "f2"
+            | "f3"
+            | "f4"
+            | "f5"
+            | "f6"
+            | "f7"
+            | "f8"
+            | "f9"
+            | "f10"
+            | "f11"
+            | "f12"
+            | "pageup"
+            | "pagedown"
+            | "atfilepicker"
     )
 }
 
@@ -306,12 +365,18 @@ mod tests {
 
     #[test]
     fn event_from_name_input_tab() {
-        assert!(matches!(event_from_name("Input:\t"), Some(Event::Input('\t'))));
+        assert!(matches!(
+            event_from_name("Input:\t"),
+            Some(Event::Input('\t'))
+        ));
     }
 
     #[test]
     fn event_from_name_input_char() {
-        assert!(matches!(event_from_name("Input:a"), Some(Event::Input('a'))));
+        assert!(matches!(
+            event_from_name("Input:a"),
+            Some(Event::Input('a'))
+        ));
     }
 
     #[test]
@@ -351,8 +416,11 @@ mod tests {
         ];
         for (name, expected) in variants {
             let actual = event_from_name(name).expect(name);
-            assert!(std::mem::discriminant(&actual) == std::mem::discriminant(&expected),
-                "event_from_name({:?}) returned wrong variant", name);
+            assert!(
+                std::mem::discriminant(&actual) == std::mem::discriminant(&expected),
+                "event_from_name({:?}) returned wrong variant",
+                name
+            );
         }
     }
 }

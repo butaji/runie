@@ -86,8 +86,6 @@ impl Store {
     }
 }
 
-
-
 pub fn default_store() -> Option<Store> {
     if let Ok(dir) = std::env::var("RUNIE_SESSIONS_DIR") {
         return Some(Store::new(PathBuf::from(dir)));
@@ -164,8 +162,20 @@ mod tests {
             created_at: 1.0,
             updated_at: 2.0,
             messages: vec![
-                ChatMessage { role: Role::User, content: "hi".into(), timestamp: 1.0, id: "req.0".into(), ..Default::default()},
-                ChatMessage { role: Role::Assistant, content: "hello".into(), timestamp: 2.0, id: "resp.0".into(), ..Default::default()},
+                ChatMessage {
+                    role: Role::User,
+                    content: "hi".into(),
+                    timestamp: 1.0,
+                    id: "req.0".into(),
+                    ..Default::default()
+                },
+                ChatMessage {
+                    role: Role::Assistant,
+                    content: "hello".into(),
+                    timestamp: 2.0,
+                    id: "resp.0".into(),
+                    ..Default::default()
+                },
             ],
             provider: "mock".into(),
             model: "echo".into(),
@@ -225,7 +235,9 @@ mod tests {
     #[test]
     fn delete_removes_session() {
         let store = tmp_store();
-        store.save("to_delete", &sample_session("to_delete")).unwrap();
+        store
+            .save("to_delete", &sample_session("to_delete"))
+            .unwrap();
         assert!(store.path("to_delete").exists());
         store.delete("to_delete").unwrap();
         assert!(!store.path("to_delete").exists());
@@ -241,7 +253,13 @@ mod tests {
 
     #[test]
     fn serialize_chat_message_roundtrip() {
-        let msg = ChatMessage { role: Role::User, content: "test".into(), timestamp: 1.5, id: "req.1".into(), ..Default::default()};
+        let msg = ChatMessage {
+            role: Role::User,
+            content: "test".into(),
+            timestamp: 1.5,
+            id: "req.1".into(),
+            ..Default::default()
+        };
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: ChatMessage = serde_json::from_str(&json).unwrap();
         assert_eq!(msg.role, decoded.role);

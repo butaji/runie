@@ -47,8 +47,13 @@ mod tests {
 
     #[test]
     fn test_emit() {
-        let action = emit(Event::RunSaveCommand { name: String::new() });
-        assert!(matches!(action, ItemAction::Emit(Event::RunSaveCommand { .. })));
+        let action = emit(Event::RunSaveCommand {
+            name: String::new(),
+        });
+        assert!(matches!(
+            action,
+            ItemAction::Emit(Event::RunSaveCommand { .. })
+        ));
     }
 
     #[test]

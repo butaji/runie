@@ -1,13 +1,6 @@
 //! Panel dialog rendering — list and form views share the same popup shell.
 
-use ratatui::{
-    layout::Rect,
-    style::Style,
-    text::Line,
-    widgets::{Block, Borders, Paragraph},
-    Frame,
-};
-use runie_core::dialog::Panel;
+use ratatui::{layout::Rect, style::Style, widgets::Paragraph, Frame};
 use runie_core::Snapshot;
 
 use crate::popups::{clear_panel_bg, palette_popup_rect};
@@ -17,8 +10,8 @@ mod form;
 mod list;
 
 pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
-    let stack = match snap.dialog.as_ref().and_then(|d| d.panel_stack()) {
-        Some(s) => s,
+    let stack = match &snap.dialog {
+        Some(d) => d.panel_stack(),
         _ => return,
     };
     let panel = match stack.current() {

@@ -1,6 +1,6 @@
-use runie_core::{AppState, Event};
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::{AppState, Event};
 
 #[test]
 fn input_chevron_is_orange_when_token_held() {
@@ -42,7 +42,9 @@ fn input_chevron_is_gray_when_token_released() {
                 break;
             }
         }
-        if found { break; }
+        if found {
+            break;
+        }
     }
     assert!(found);
 }
@@ -56,7 +58,7 @@ fn palette_filter_uses_chevron_glyph() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content: String = flatten_buffer(&buf);
+    let content: String = flatten_buffer(buf);
     assert!(content.contains("❯"));
     assert!(!content.contains("> "));
 }
@@ -70,7 +72,7 @@ fn model_selector_filter_uses_chevron_glyph() {
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
     let buf = terminal.backend().buffer();
-    let content: String = flatten_buffer(&buf);
+    let content: String = flatten_buffer(buf);
     assert!(content.contains("❯"));
     assert!(!content.contains("> "));
 }
@@ -99,10 +101,8 @@ fn input_cursor_visible_when_empty() {
     let mut found = false;
     for y in 0..buf.area().height {
         for x in 0..buf.area().width.saturating_sub(2) {
-            if buf[(x, y)].symbol() == "❯" {
-                if buf[(x + 2, y)].style().bg == Some(orange) {
-                    found = true;
-                }
+            if buf[(x, y)].symbol() == "❯" && buf[(x + 2, y)].style().bg == Some(orange) {
+                found = true;
             }
         }
     }
@@ -125,10 +125,8 @@ fn input_cursor_hidden_when_token_released() {
     for y in 0..buf.area().height {
         for x in 0..buf.area().width.saturating_sub(4) {
             let prefix: String = (x..x + 4).map(|cx| buf[(cx, y)].symbol()).collect();
-            if prefix == "❯ he" {
-                if buf[(x + 4, y)].style().bg == Some(orange) {
-                    found = true;
-                }
+            if prefix == "❯ he" && buf[(x + 4, y)].style().bg == Some(orange) {
+                found = true;
             }
         }
     }
@@ -156,15 +154,19 @@ fn input_cursor_is_orange_when_token_held() {
                 break;
             }
         }
-        if found { break; }
+        if found {
+            break;
+        }
     }
     assert!(found);
 }
 
 pub(crate) fn flatten_buffer(buf: &ratatui::buffer::Buffer) -> String {
     (0..buf.area().height)
-        .map(|y| (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect()
 }
