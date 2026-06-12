@@ -57,19 +57,28 @@ pub(crate) fn build_left_text(snap: &Snapshot) -> String {
     if snap.read_only {
         parts.push("🔒 RO".to_string());
     }
-    if !snap.auth_providers.is_empty() {
-        parts.push(format!("🔑 {}", snap.auth_providers.join(", ")));
-    }
     parts.join(" · ")
 }
 
 // =============================================================================
-// Right side: context usage + radial bar
+// Right side: token throughput + context usage chess piece
 // =============================================================================
 
+/// Get chess piece for context usage percentage.
+/// 0-25% ⛀ | 26-50% ⛁ | 51-75% ⛂ | 76-100% ⛃
+pub(crate) fn context_piece(percent: usize) -> char {
+    match percent {
+        0..=25 => '⛀',
+        26..=50 => '⛁',
+        51..=75 => '⛂',
+        _ => '⛃',
+    }
+}
+
 pub(crate) fn build_right_status(snap: &Snapshot) -> String {
-    let ctx = context_usage(snap);
-    let bar = radial_bar(ctx.percent);
+    let usage = context_usage(snap);
+    let piece = context_piece(usage.percent);
+    let limit = usage.limit_k();
 
     if snap.turn_active {
         let speed = if snap.speed_tps >= 1.0 {
@@ -87,12 +96,12 @@ pub(crate) fn build_right_status(snap: &Snapshot) -> String {
             format_k_animated(tokens_in_display),
             format_k_animated(tokens_out_display),
             speed,
-            ctx.percent,
-            ctx.limit_k(),
-            bar
+            usage.percent,
+            limit,
+            piece
         )
     } else {
-        format!("{}%/{} {}", ctx.percent, ctx.limit_k(), bar)
+        format!("{}%/{} {}", usage.percent, limit, piece)
     }
 }
 

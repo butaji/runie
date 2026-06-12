@@ -99,21 +99,22 @@ pub fn register(registry: &mut CommandRegistry) {
             .handler(handle_reject),
     );
 
-    // Login/logout dialog flows
+    // Providers dialog (unified provider management)
     registry.register(
-        crate::cmd!("login")
-            .desc("Add a provider via guided dialog")
+        crate::cmd!("providers")
+            .desc("Manage providers: add, disconnect, switch models")
             .category(CommandCategory::System)
             .sub()
-            .handler(handle_login),
+            .handler(handle_providers),
     );
-
+    
+    // Alias for convenience
     registry.register(
-        crate::cmd!("logout")
-            .desc("Remove a configured provider")
+        crate::cmd!("provider")
+            .desc("Manage providers")
+            .aliases(&["providers"])
             .category(CommandCategory::System)
-            .sub()
-            .handler(handle_logout),
+            .handler(handle_providers),
     );
 }
 
@@ -242,50 +243,8 @@ fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
     CommandResult::Event(crate::Event::RejectEdit)
 }
 
-fn handle_login(_: &mut AppState, args: &str) -> CommandResult {
-    let rest = args.trim();
-    if rest.is_empty() {
-        return CommandResult::Event(crate::Event::LoginFlowStart);
-    }
-    let parts: Vec<&str> = rest.split_whitespace().collect();
-    if parts.len() != 2 {
-        return CommandResult::Message("Usage: /login provider token".into());
-    }
-    if !crate::provider_registry::is_known_provider(parts[0]) {
-        return CommandResult::Message(format!(
-            "Unknown provider '{}'. Use /login to see available providers.",
-            parts[0]
-        ));
-    }
-    CommandResult::Event(crate::Event::RunLoginCommand {
-        provider: parts[0].to_string(),
-        token: parts[1].to_string(),
-    })
-}
-
-fn handle_logout(_: &mut AppState, args: &str) -> CommandResult {
-    let rest = args.trim();
-    if rest.is_empty() {
-        use crate::login_config::list_configured_providers;
-        let configured = list_configured_providers();
-        if configured.is_empty() {
-            return CommandResult::Message(
-                "No providers configured. Use /login to add one.".into(),
-            );
-        }
-        let mut panel = Panel::new("logout", "Logout").header("Select a provider to remove");
-        for (name, _, _) in configured {
-            let evt = crate::Event::RunLogoutCommand {
-                provider: name.clone(),
-            };
-            panel = panel.item(&name, ItemAction::Emit(evt));
-        }
-        panel = panel.separator().item("Cancel", ItemAction::Close);
-        return CommandResult::OpenPanelStack(PanelStack::new(panel));
-    }
-    CommandResult::Event(crate::Event::RunLogoutCommand {
-        provider: rest.to_string(),
-    })
+fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::ProvidersDialog)
 }
 
 // ============================================================================

@@ -18,10 +18,6 @@ impl AppState {
             prompts_section.default.as_deref(),
             prompts_section.custom.as_deref(),
         );
-        self.configured_providers = crate::login_config::list_configured_providers()
-            .into_iter()
-            .map(|(name, _, _)| name)
-            .collect();
         self.add_system_msg(
             "Reloaded config, keybindings, theme, skills, and prompts.".to_string(),
         );

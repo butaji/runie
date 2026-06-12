@@ -162,6 +162,17 @@ impl ThinkingLevel {
             Self::High => "high",
         }
     }
+
+    /// Returns the I Ching hexagram for this thinking level.
+    /// Maps to 3-bit representation: 000=earth, 111=heaven.
+    pub fn hexagram(&self) -> &'static str {
+        match self {
+            Self::Off => "☷",   // 000 - earth (no thinking)
+            Self::Low => "☵",   // 010 - water (minimal thinking)
+            Self::Medium => "☳", // 100 - thunder (moderate thinking)
+            Self::High => "☰",   // 111 - heaven (deep thinking)
+        }
+    }
 }
 
 impl std::str::FromStr for ThinkingLevel {
@@ -220,10 +231,6 @@ pub struct AppState {
     pub prompts: Vec<crate::prompts::PromptTemplate>,
     pub current_prompt: String,
     pub image_attachments: Vec<String>,
-    /// Providers with a saved `[model_providers.{name}]` entry in
-    /// `~/.runie/config.toml`. Cached so the snapshot doesn't hit
-    /// the filesystem on every frame.
-    pub configured_providers: Vec<String>,
     pub all_collapsed: bool,
     pub(crate) last_assistant_index: Option<usize>,
     pub(crate) thought_seq: u64,
@@ -280,10 +287,6 @@ impl Default for AppState {
             prompts: Vec::new(),
             current_prompt: String::new(),
             image_attachments: Vec::new(),
-            configured_providers: crate::login_config::list_configured_providers()
-                .into_iter()
-                .map(|(name, _, _)| name)
-                .collect(),
             all_collapsed: false,
             last_assistant_index: None,
             thought_seq: 0,
@@ -628,7 +631,11 @@ impl AppState {
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.image_attachments.clone(),
-            auth_providers: self.configured_providers.clone(),
+            auth_providers: crate::auth::AuthStorage::load()
+                .tokens
+                .keys()
+                .cloned()
+                .collect(),
             transient_message: self.transient_message.clone(),
             transient_level: self.transient_level,
             tokens_in: self.agent.tokens_in,
