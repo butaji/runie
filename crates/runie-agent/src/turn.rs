@@ -2,6 +2,7 @@ use crate::parser::parse_tool_calls;
 use crate::tools::Tool;
 use crate::AgentCommand;
 use anyhow::Result;
+use futures::StreamExt;
 use runie_core::event::Event;
 use runie_core::provider::{Message, Provider};
 use std::time::Instant;
@@ -24,23 +25,16 @@ where
         });
 
         let mut response_text = String::new();
-        let (provider, warning) =
-            crate::build_provider_with_warning(&command.provider, &command.model);
-        if let Some(msg) = warning {
-            emit(Event::TransientMessage {
-                content: msg,
-                level: runie_core::event::TransientLevel::Warning,
+        let provider = crate::build_provider(&command.provider, &command.model);
+        let mut stream = provider.generate(messages.clone());
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result?;
+            response_text.push_str(&chunk.content);
+            emit(Event::AgentResponse {
+                id: command.id.clone(),
+                content: chunk.content,
             });
         }
-        provider
-            .generate(messages.clone(), |chunk| {
-                response_text.push_str(&chunk.content);
-                emit(Event::AgentResponse {
-                    id: command.id.clone(),
-                    content: chunk.content,
-                });
-            })
-            .await?;
 
         emit(Event::AgentThoughtDone {
             id: command.id.clone(),

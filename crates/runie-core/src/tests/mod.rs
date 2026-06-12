@@ -117,6 +117,8 @@ mod toggle_all;
 #[cfg(test)]
 mod toggle_stress;
 #[cfg(test)]
+mod lint_drift;
+#[cfg(test)]
 mod token_counters;
 #[cfg(test)]
 mod tokens;
