@@ -545,6 +545,42 @@ mod tests {
     // Layer 2: event handling through AppState
     // -----------------------------------------------------------------------
 
+    /// User-reported bug regression: `/login` → choose provider → key
+    /// input appears → press Esc. Expected: go back to provider picker.
+    /// Actual (before fix): dialog closed entirely.
+    ///
+    /// Root causes were:
+    /// 1. Default keybinding mapped `escape` to `Abort` (force-close),
+    ///    overriding the Esc → DialogBack mapping.
+    /// 2. `apply_form_action(Submit)` closed the dialog, which made
+    ///    the key input vanish from the back stack when submitted.
+    #[test]
+    fn key_input_esc_pops_to_provider_picker_not_close() {
+        let mut state = AppState::default();
+        state.update(Event::LoginFlowStart);
+        state.update(Event::LoginFlowSelectProvider {
+            provider: "minimax".into(),
+        });
+        // Now the key input should be on top of the stack.
+        match &state.open_dialog {
+            Some(crate::commands::DialogState::PanelStack(s)) => {
+                assert_eq!(s.len(), 2, "stack should be [provider, key_input]");
+                assert_eq!(s.current().unwrap().id, "login-key");
+            }
+            other => panic!("expected PanelStack, got {other:?}"),
+        }
+        // Esc on the key input must pop to the provider picker (root),
+        // NOT close the dialog.
+        state.update(Event::DialogBack);
+        match &state.open_dialog {
+            Some(crate::commands::DialogState::PanelStack(s)) => {
+                assert_eq!(s.len(), 1, "Esc must pop to root, not close");
+                assert_eq!(s.current().unwrap().id, "login-provider");
+            }
+            other => panic!("Esc on key input must leave dialog open at root, got {other:?}"),
+        }
+    }
+
     /// Helper: drive the login flow to the model selector with the given
     /// provider and a known-defaults key. Returns the resulting state.
     fn drive_to_model_select(provider: &str) -> AppState {
@@ -707,12 +743,14 @@ mod tests {
     #[test]
     fn s7_cancel_before_fetch_then_fetch_is_ignored() {
         let mut state = drive_to_model_select("minimax");
-        // Cancel from the model selector pops back to the key input
-        // (the real stack). The dialog remains open at the key step.
+        // Cancel from the model selector pops back to the provider
+        // picker (root). The key input was "consumed" (replaced) when
+        // the user submitted it, so it is no longer in the back stack.
+        // The dialog remains open at the provider step.
         state.update(Event::LoginFlowCancel);
         assert!(state.login_flow.is_some(), "cancel should pop, not close");
         let flow = state.login_flow.as_ref().unwrap();
-        assert_eq!(flow.step, LoginStep::KeyInput);
+        assert_eq!(flow.step, LoginStep::ProviderPicker);
         // A late fetch event for a step that is no longer ModelSelect
         // must be ignored: no transient warning, no state change.
         state.update(Event::LoginFlowValidationFailed {

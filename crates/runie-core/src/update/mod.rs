@@ -264,9 +264,12 @@ impl AppState {
             *flow = flow.clone().with_key_and_defaults(key, defaults);
             flow.provider = final_provider.clone();
         }
-        // Push the model selector panel onto the real login stack.
+        // Replace the key input panel with the model selector on the
+        // real login stack. The key input is "consumed" (submitted) —
+        // it should NOT remain in the back stack, otherwise Esc from
+        // the model selector would pop back to a stale key input.
         if let Some(flow) = self.login_flow.as_ref() {
-            self.push_login_panel(crate::login_flow::build_model_selector(flow));
+            self.replace_top_login_panel_with(crate::login_flow::build_model_selector(flow));
         }
     }
 
@@ -400,6 +403,20 @@ impl AppState {
                 _ => crate::login_flow::build_model_selector(&flow),
             };
         }
+        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
+    }
+
+    /// Replace the top panel of the login stack with `new_top`, popping
+    /// the current top first. Used when a panel is "consumed" (e.g. the
+    /// key input is submitted → model selector). The consumed panel
+    /// is removed from the back stack so Esc from the new top goes to
+    /// the logical parent, not back to the consumed panel.
+    fn replace_top_login_panel_with(&mut self, new_top: crate::dialog::Panel) {
+        let mut stack = self.take_or_create_login_stack();
+        if !stack.is_empty() {
+            stack.pop();
+        }
+        stack.push(new_top);
         self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
     }
 
@@ -1561,7 +1578,12 @@ impl AppState {
                 self.mark_dirty();
             }
             FormAction::Submit(evt) => {
-                self.open_dialog = None;
+                // Do NOT close the dialog here. The submit event handler
+                // owns the dialog lifecycle: it may push a new panel
+                // (login flow submit → model selector), close the dialog
+                // (save-and-close forms), or keep it open. Closing here
+                // would discard the current stack and force the handler
+                // to rebuild from scratch (losing intermediate panels).
                 self.mark_dirty();
                 if let Some(e) = evt {
                     self.update(e);
