@@ -283,6 +283,50 @@ mod tests {
         );
     }
 
+    #[test]
+    fn config_theme_unchanged_does_not_notify() {
+        let mut state = AppState::default();
+        assert_eq!(state.config.theme_name, "runie");
+        state.transient_message = None;
+        state.transient_level = None;
+
+        state.update(Event::SwitchTheme {
+            name: "runie".to_string(),
+        });
+
+        assert_eq!(state.config.theme_name, "runie");
+        assert!(
+            state.transient_message.is_none(),
+            "Switching to the current theme must not emit a transient notification"
+        );
+    }
+
+    #[test]
+    fn config_model_unchanged_does_not_notify() {
+        let mut state = AppState::default();
+        let (def_provider, def_model) = if crate::provider_registry::is_mock_enabled() {
+            ("mock", "echo")
+        } else {
+            ("", "")
+        };
+        assert_eq!(state.config.current_provider, def_provider);
+        assert_eq!(state.config.current_model, def_model);
+        state.transient_message = None;
+        state.transient_level = None;
+
+        state.update(Event::SwitchModel {
+            provider: def_provider.to_string(),
+            model: def_model.to_string(),
+        });
+
+        assert_eq!(state.config.current_provider, def_provider);
+        assert_eq!(state.config.current_model, def_model);
+        assert!(
+            state.transient_message.is_none(),
+            "Switching to the current model must not emit a transient notification"
+        );
+    }
+
     #[tokio::test]
     async fn config_watcher_detects_initial_change() {
         let dir = tempdir().unwrap();

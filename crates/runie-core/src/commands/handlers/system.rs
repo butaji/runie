@@ -164,7 +164,7 @@ fn handle_diagnostics(_: &mut AppState, _: &str) -> CommandResult {
 
 fn handle_skills(state: &mut AppState, _: &str) -> CommandResult {
     if state.skills.is_empty() {
-        return CommandResult::Message("No skills loaded.".into());
+        return CommandResult::Warning("No skills loaded.".into());
     }
     let lines: Vec<_> = std::iter::once("Loaded skills:".into())
         .chain(state.skills.iter().map(|s| format!("  {}", s.summary())))

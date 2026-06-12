@@ -85,7 +85,7 @@ impl CommandFlow {
                 // so Esc returns to it. This is the Android-like
                 // behavior for any sub-dialog command in the menu.
                 if let Some(current) = state.open_dialog.take() {
-                    state.dialog_back_stack.push(current);
+                    state.push_dialog_to_back_stack(current);
                 }
                 inner.exec(state, cmd_name, args)
             }
@@ -106,6 +106,7 @@ pub enum DialogType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum CommandResult {
     Message(String),
+    Warning(String),
     Event(Event),
     OpenDialog(DialogType),
     OpenPanelStack(CoreStack),
@@ -116,7 +117,7 @@ impl CommandResult {
     /// Convert to Option<String> for convenience
     pub fn ok(self) -> Option<String> {
         match self {
-            Self::Message(s) => Some(s),
+            Self::Message(s) | Self::Warning(s) => Some(s),
             _ => None,
         }
     }
@@ -133,6 +134,7 @@ impl CommandResult {
     {
         match self {
             Self::Message(msg) => Self::Message(f(msg)),
+            Self::Warning(msg) => Self::Warning(f(msg)),
             other => other,
         }
     }

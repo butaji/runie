@@ -192,15 +192,38 @@ fn skills_lists_loaded() {
 }
 
 #[test]
-fn skills_empty_shows_no_skills() {
+fn skills_empty_shows_warning() {
     let mut state = AppState::default();
     let cmd = state.registry.get("skills").unwrap();
     let result = (cmd.handler)(&mut state, "");
-    if let CommandResult::Message(msg) = result {
+    if let CommandResult::Warning(msg) = result {
         assert!(msg.contains("No skills loaded"), "got: {}", msg);
     } else {
-        panic!("/skills should return Message, got {:?}", result);
+        panic!("/skills with no skills should return Warning, got {:?}", result);
     }
+}
+
+#[test]
+fn slash_skills_empty_emits_warning_transient() {
+    let mut state = AppState::default();
+    state.transient_message = None;
+    state.transient_level = None;
+    type_str(&mut state, "/skills");
+    state.update(Event::Submit);
+    assert_eq!(
+        state.transient_message,
+        Some("No skills loaded.".into()),
+        "Empty /skills should produce a transient warning"
+    );
+    assert_eq!(
+        state.transient_level,
+        Some(crate::event::TransientLevel::Warning),
+        "Empty /skills should have warning level"
+    );
+    assert!(
+        state.session.messages.is_empty(),
+        "Empty /skills must not publish to the feed"
+    );
 }
 
 #[test]
