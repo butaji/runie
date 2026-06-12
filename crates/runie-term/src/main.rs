@@ -10,8 +10,9 @@
 mod app_init;
 mod keymap;
 mod share;
+mod terminal_setup;
 
-use crossterm::event::{EventStream, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
+use crossterm::event::EventStream;
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{run_agent_turn, AgentCommand};
@@ -37,7 +38,7 @@ impl Drop for Cleanup {
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
-    let terminal = setup_terminal()?;
+    let terminal = terminal_setup::setup_terminal()?;
     let mut state = AppState::default();
     app_init::apply_trust_on_startup(&mut state);
     app_init::init_scoped_models(&mut state);
@@ -72,20 +73,6 @@ async fn main() -> io::Result<()> {
         state, input_rx, agent_rx, cmd_tx, render_tx, input_tx, kb_tx,
     )
     .await
-}
-
-fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<std::io::Stdout>>> {
-    crossterm::terminal::enable_raw_mode()?;
-    crossterm::execute!(
-        std::io::stdout(),
-        crossterm::terminal::EnterAlternateScreen,
-        crossterm::event::EnableBracketedPaste,
-        PushKeyboardEnhancementFlags(
-            KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
-                | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
-        ),
-    )?;
-    Terminal::new(CrosstermBackend::new(std::io::stdout()))
 }
 
 async fn render_task(
@@ -192,15 +179,7 @@ async fn event_loop(
 
                         // After resume, restore terminal
                         let _ = crossterm::terminal::enable_raw_mode();
-                        let _ = crossterm::execute!(
-                            std::io::stdout(),
-                            crossterm::terminal::EnterAlternateScreen,
-                            crossterm::event::EnableBracketedPaste,
-                            PushKeyboardEnhancementFlags(
-                                KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
-                                    | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
-                            ),
-                        );
+                        let _ = terminal_setup::restore_terminal_graphics(&mut std::io::stdout());
 
                         // Force redraw
                         state.ensure_fresh();
