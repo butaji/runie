@@ -10,6 +10,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("settings")
             .desc("Open settings dialog")
             .category(CommandCategory::System)
+            .sub()
             .dialog(DialogType::Settings),
     );
 
@@ -52,6 +53,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("prompt")
             .desc("Switch prompt template")
             .category(CommandCategory::System)
+            .sub()
             .form(
                 "Switch Prompt",
                 |f| f.field("Prompt name", "prompt-name", "name"),
@@ -79,6 +81,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("theme")
             .desc("Switch theme or list available themes")
             .category(CommandCategory::System)
+            .sub()
             .handler(handle_theme),
     );
 
@@ -101,6 +104,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("login")
             .desc("Add a provider via guided dialog")
             .category(CommandCategory::System)
+            .sub()
             .handler(handle_login),
     );
 
@@ -108,6 +112,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("logout")
             .desc("Remove a configured provider")
             .category(CommandCategory::System)
+            .sub()
             .handler(handle_logout),
     );
 }

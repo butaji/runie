@@ -31,6 +31,11 @@ pub enum CommandFlow {
     When(fn(&AppState) -> bool, Box<CommandFlow>),
     /// Message or fallback
     OrMessage(fn(&AppState, &str) -> CommandResult, &'static str),
+    /// Sub-dialog: push the current dialog (e.g. the command palette
+    /// = Main Menu) onto the global back stack before executing the
+    /// inner flow. Esc returns to the previous dialog. Only at the
+    /// absolute root does Esc close the bar. Android-like.
+    Sub(Box<CommandFlow>),
 }
 
 impl CommandFlow {
@@ -74,6 +79,15 @@ impl CommandFlow {
                 } else {
                     result
                 }
+            }
+            Self::Sub(inner) => {
+                // Push the current dialog onto the global back stack
+                // so Esc returns to it. This is the Android-like
+                // behavior for any sub-dialog command in the menu.
+                if let Some(current) = state.open_dialog.take() {
+                    state.dialog_back_stack.push(current);
+                }
+                inner.exec(state, cmd_name, args)
             }
         }
     }

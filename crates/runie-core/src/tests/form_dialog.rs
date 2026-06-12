@@ -174,7 +174,8 @@ fn form_panel_id_maps_to_known_form_command() {
 fn all_form_commands_are_listed() {
     // Regression: every command that has a form-flow should be in the dispatch
     // table. This list is the contract — when a new form command is added,
-    // this test must be updated to include it.
+    // this test must be updated to include it. Commands marked `.sub()`
+    // wrap their flow in `CommandFlow::Sub`; we unwrap to find the Form.
     use crate::commands::{CommandFlow, CommandRegistry};
     let mut reg = CommandRegistry::new();
     crate::commands::handlers::register_all(&mut reg);
@@ -182,7 +183,11 @@ fn all_form_commands_are_listed() {
         .list()
         .iter()
         .filter_map(|def| {
-            if matches!(def.flow, CommandFlow::Form { .. }) {
+            let flow = match &def.flow {
+                CommandFlow::Sub(inner) => inner.as_ref(),
+                other => other,
+            };
+            if matches!(flow, CommandFlow::Form { .. }) {
                 Some(def.name.clone())
             } else {
                 None

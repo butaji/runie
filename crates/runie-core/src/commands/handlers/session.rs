@@ -9,6 +9,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("save")
             .desc("Save current session")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Save Session",
                 |f| f.field("Name", "session-name", "name"),
@@ -22,6 +23,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("load")
             .desc("Load a saved session")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Load Session",
                 |f| f.field("Name", "session-name", "name"),
@@ -35,6 +37,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("delete")
             .desc("Delete a saved session")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Delete Session",
                 |f| f.field("Name", "session-name", "name"),
@@ -48,6 +51,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("export")
             .desc("Export session to JSON")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Export Session",
                 |f| f.field("Path", "session.json", "path"),
@@ -61,6 +65,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("import")
             .desc("Import session from JSON")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Import Session",
                 |f| f.field("Path", "session.json", "path"),
@@ -117,6 +122,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("tree")
             .desc("Open session tree dialog")
             .category(CommandCategory::Session)
+            .sub()
             .handler(handle_tree),
     );
 
@@ -138,6 +144,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("compact")
             .desc("Compact context")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Compact Context",
                 |f| {
@@ -158,6 +165,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("fork")
             .desc("Fork session from a message")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Fork Session",
                 |f| f.field("Message index", "0", "index"),
@@ -171,6 +179,7 @@ pub fn register(registry: &mut CommandRegistry) {
         crate::cmd!("name")
             .desc("Set session display name")
             .category(CommandCategory::Session)
+            .sub()
             .form(
                 "Set Session Name",
                 |f| f.field("Name", "session-name", "name"),
