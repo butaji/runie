@@ -4,32 +4,32 @@ use crate::model::AppState;
 use crate::login_flow::LoginStep;
 use crate::Event;
 
-impl AppState {
-    pub(crate) fn login_flow_event(&mut self, event: Event) {
-        match event {
-            Event::LoginFlowStart => self.login_flow_start(),
-            Event::LoginFlowSelectProvider { provider } => {
-                self.login_flow_select_provider(provider)
-            }
-            Event::LoginFlowSubmitKey { provider, key } => {
-                self.login_flow_submit_key(provider, key)
-            }
-            Event::LoginFlowValidationDone { models, .. } => {
-                self.login_flow_validation_done(models)
-            }
-            Event::LoginFlowValidationFailed { error, .. } => {
-                self.login_flow_validation_failed(error)
-            }
-            Event::LoginFlowModelsFetched { models, .. } => {
-                self.login_flow_models_fetched(models)
-            }
-            Event::LoginFlowToggleModel { model } => self.login_flow_toggle_model(model),
-            Event::LoginFlowSave => self.login_flow_save(),
-            Event::LoginFlowCancel => self.login_flow_cancel(),
-            _ => {}
+pub(crate) fn update(state: &mut AppState, event: Event) {
+    match event {
+        Event::LoginFlowStart => state.login_flow_start(),
+        Event::LoginFlowSelectProvider { provider } => {
+            state.login_flow_select_provider(provider)
         }
+        Event::LoginFlowSubmitKey { provider, key } => {
+            state.login_flow_submit_key(provider, key)
+        }
+        Event::LoginFlowValidationDone { models, .. } => {
+            state.login_flow_validation_done(models)
+        }
+        Event::LoginFlowValidationFailed { error, .. } => {
+            state.login_flow_validation_failed(error)
+        }
+        Event::LoginFlowModelsFetched { models, .. } => {
+            state.login_flow_models_fetched(models)
+        }
+        Event::LoginFlowToggleModel { model } => state.login_flow_toggle_model(model),
+        Event::LoginFlowSave => state.login_flow_save(),
+        Event::LoginFlowCancel => state.login_flow_cancel(),
+        _ => {}
     }
+}
 
+impl AppState {
     fn login_flow_start(&mut self) {
         self.login_flow = Some(crate::login_flow::LoginFlowState::new());
         self.rebuild_login_dialog();

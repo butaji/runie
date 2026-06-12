@@ -19,7 +19,7 @@ impl AppState {
         self.mark_dirty();
     }
 
-    pub(crate) fn abort_queue(&mut self) {
+    pub(super) fn abort_queue(&mut self) {
         if self.completion.at_suggestions.take().is_some() {
             self.completion.at_selected = None;
             self.completion.last_at_query = None;

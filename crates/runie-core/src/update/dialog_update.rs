@@ -4,51 +4,51 @@ use crate::model::AppState;
 use crate::Event;
 use crate::update::FormAction;
 
-impl AppState {
-    pub(crate) fn update_dialog(&mut self, event: Event) {
-        if matches!(event, Event::Abort) {
-            self.open_dialog = None;
-            self.mark_dirty();
-            return;
-        }
-        if matches!(
-            event,
-            Event::SwitchTheme { .. }
-                | Event::SwitchModel { .. }
-                | Event::CycleModelNext
-                | Event::CycleModelPrev
-                | Event::CycleThinkingLevel
-                | Event::SetThinkingLevel(_)
-                | Event::ToggleReadOnly
-                | Event::TrustProject
-                | Event::UntrustProject
-        ) {
-            self.model_config_event(event);
-            return;
-        }
-        if matches!(event, Event::Quit) {
-            self.should_quit = true;
-            return;
-        }
-        let Some(mut dialog) = self.open_dialog.take() else {
-            return;
-        };
-        let stack = dialog.panel_stack_mut();
-        let activated = self.update_panel_stack(event, stack);
-        // If the panel stack activated an item, it may have closed or replaced
-        // the dialog (e.g. opening a settings dialog). Otherwise restore the
-        // original variant so CommandPalette/Settings/etc. identity is preserved.
-        // Exception: if the handler already set `open_dialog` (e.g. login flow
-        // rebuild on keep_open Emit), leave it alone.
-        if !activated && self.open_dialog.is_none() {
-            self.open_dialog = Some(dialog);
-        }
-        self.mark_dirty();
+pub(crate) fn update(state: &mut AppState, event: Event) {
+    if matches!(event, Event::Abort) {
+        state.open_dialog = None;
+        state.mark_dirty();
+        return;
     }
+    if matches!(
+        event,
+        Event::SwitchTheme { .. }
+            | Event::SwitchModel { .. }
+            | Event::CycleModelNext
+            | Event::CycleModelPrev
+            | Event::CycleThinkingLevel
+            | Event::SetThinkingLevel(_)
+            | Event::ToggleReadOnly
+            | Event::TrustProject
+            | Event::UntrustProject
+    ) {
+        super::model_config_event(state, event);
+        return;
+    }
+    if matches!(event, Event::Quit) {
+        state.should_quit = true;
+        return;
+    }
+    let Some(mut dialog) = state.open_dialog.take() else {
+        return;
+    };
+    let stack = dialog.panel_stack_mut();
+    let activated = state.update_panel_stack(event, stack);
+    // If the panel stack activated an item, it may have closed or replaced
+    // the dialog (e.g. opening a settings dialog). Otherwise restore the
+    // original variant so CommandPalette/Settings/etc. identity is preserved.
+    // Exception: if the handler already set `open_dialog` (e.g. login flow
+    // rebuild on keep_open Emit), leave it alone.
+    if !activated && state.open_dialog.is_none() {
+        state.open_dialog = Some(dialog);
+    }
+    state.mark_dirty();
+}
 
+impl AppState {
     /// Update a panel stack in response to an event. Returns `true` if an item
     /// was activated (which may have closed or replaced the dialog).
-    fn update_panel_stack(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) -> bool {
+    pub(super) fn update_panel_stack(&mut self, event: Event, stack: &mut crate::dialog::PanelStack) -> bool {
         use Event::*;
 
         if stack.current().is_some_and(|p| p.is_form()) {
