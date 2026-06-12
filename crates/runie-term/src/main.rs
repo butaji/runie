@@ -56,7 +56,12 @@ async fn main() -> io::Result<()> {
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
-    let (render_tx, render_rx) = mpsc::channel::<Snapshot>(1);
+    // Render channel: capacity > 1 so a burst of state changes (e.g. ESC
+    // popping a panel) doesn't drop the latest snapshot. The render task
+    // processes snapshots in order; with capacity 1, a snapshot arriving
+    // while the render task was drawing the previous one would be lost,
+    // leaving the UI stuck on the pre-burst frame.
+    let (render_tx, render_rx) = mpsc::channel::<Snapshot>(4);
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
     tokio::spawn(agent_loop(cmd_rx, agent_tx));
@@ -92,7 +97,15 @@ async fn render_task(
     mut render_rx: mpsc::Receiver<Snapshot>,
 ) {
     let mut last_size: Option<(u16, u16)> = None;
-    while let Some(snap) = render_rx.recv().await {
+    while let Some(mut snap) = render_rx.recv().await {
+        // Coalesce: drain any snapshots that arrived while we were drawing
+        // the previous one. The latest snapshot wins. This makes the
+        // render task always show the most recent state, even if a burst
+        // of events (e.g. ESC popping a panel) produced several snapshots
+        // while the terminal was busy drawing.
+        while let Ok(newer) = render_rx.try_recv() {
+            snap = newer;
+        }
         let new_size = terminal
             .size()
             .map(|r| (r.width, r.height))

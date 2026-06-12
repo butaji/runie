@@ -89,7 +89,12 @@ fn abort_force_closes_regardless_of_depth() {
 
 #[test]
 fn palette_close_pops_or_closes() {
-    // Same semantics for the command palette's close event.
+    // The command bar (palette) treats Esc as a **Back** button:
+    //   - from a sub-panel: pop one level (stay in the bar)
+    //   - from the main menu (root): close the bar
+    // This is the exact semantic the user requested and is the same
+    // for every dialog backed by PanelStack. We exercise the palette
+    // here because it's the most visible "command bar" in the app.
     let mut root = Panel::new("palette", "Commands");
     root = root.item("Sub", ItemAction::Push("sub".into()));
     let mut child = Panel::new("sub", "Sub");
@@ -99,13 +104,21 @@ fn palette_close_pops_or_closes() {
     let mut state = AppState::default();
     state.open_dialog = Some(DialogState::CommandPalette(stack));
 
+    // First Esc (in sub-panel): pop to root, bar still open.
     state.update(Event::PaletteClose);
     match &state.open_dialog {
-        Some(DialogState::CommandPalette(s)) => assert_eq!(s.len(), 1),
+        Some(DialogState::CommandPalette(s)) => {
+            assert_eq!(s.len(), 1, "Esc in sub-panel must pop, not close");
+            assert_eq!(s.current().unwrap().id, "palette");
+        }
         _ => panic!("popped palette should still be open"),
     }
+    // Second Esc (on main menu / root): close the bar.
     state.update(Event::PaletteClose);
-    assert!(state.open_dialog.is_none());
+    assert!(
+        state.open_dialog.is_none(),
+        "Esc on the main menu must close the command bar"
+    );
 }
 
 #[test]

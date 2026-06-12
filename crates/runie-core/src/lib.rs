@@ -70,8 +70,8 @@ pub use login_config::{
     save_provider_config,
 };
 pub use login_flow::{
-    build_key_input, build_login_stack, build_model_selector, build_provider_picker,
-    LoginFlowState, LoginStep,
+    build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
+    LoginStep,
 };
 pub use model::{now, AppState, ChatMessage, Role};
 pub use prompts::{
