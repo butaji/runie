@@ -63,3 +63,8 @@ Flow: `/login` → choose provider → enter API key → validate key with live 
 - Validation uses `GET {base_url}/models` for OpenAI-compatible providers
 - The `runie-term` event loop spawns async validation tasks and sends results back via event channel
 - `auth.json` and `AuthStorage` are deprecated but kept for backward compatibility; new code uses config.toml only
+- Direct form shortcuts are also unified:
+  - `/login provider token` writes the provider entry directly to `config.toml`
+  - `/logout provider` removes the provider entry directly from `config.toml`
+  - `/logout` with no args still opens the picker dialog
+- The status bar reads connected providers from `config.toml` via a cached list in `AppState`
