@@ -4,27 +4,6 @@ use crate::model::AppState;
 use crate::update::FormAction;
 
 impl AppState {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     /// Apply a `FormAction` to the current dialog. Mirrors the KeepOpen /
     /// Close / Submit paths in `update_form_panel`. `Back` is handled
     /// in `update_form_panel` itself (stack-level) and never reaches here;

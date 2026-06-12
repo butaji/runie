@@ -3,14 +3,14 @@
 use crate::model::AppState;
 use crate::Event;
 
-impl AppState {
-    pub(crate) fn edit_event(&mut self, event: Event) {
-        if let Some(_cmd) = self.edit_misc_event(&event) {
-            return;
-        }
-        self.edit_run_event(event);
+pub(crate) fn update(state: &mut AppState, event: Event) {
+    if let Some(_cmd) = state.edit_misc_event(&event) {
+        return;
     }
+    state.edit_run_event(event);
+}
 
+impl AppState {
     fn edit_misc_event(&mut self, event: &Event) -> Option<()> {
         match event {
             Event::PendingEdit {

@@ -242,6 +242,14 @@ impl SessionTree {
         result
     }
 
+    /// Find the path to the node whose message has the given id.
+    pub fn find_path_by_id(&self, id: &str) -> Option<Vec<usize>> {
+        self.walk_with_paths()
+            .into_iter()
+            .find(|(_, node, _)| node.message.id == id)
+            .map(|(_, _, path)| path)
+    }
+
     fn walk_node_with_paths<'a>(
         node: &'a TreeNode,
         depth: usize,

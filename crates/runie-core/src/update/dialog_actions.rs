@@ -190,7 +190,7 @@ impl AppState {
     }
 
     /// Open a filterable @-file picker as a PanelStack dialog.
-    pub(crate) fn insert_at_ref(&mut self, path: &str) {
+    pub(super) fn insert_at_ref(&mut self, path: &str) {
         self.input.input = path.to_string();
         self.input.cursor_pos = self.input.input.len();
         self.open_dialog = None;

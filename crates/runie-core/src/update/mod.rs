@@ -23,6 +23,7 @@ pub enum FormAction {
 mod agent;
 mod at_refs;
 mod bash;
+mod control;
 mod dialog;
 mod dialog_actions;
 mod dialog_open;
@@ -54,259 +55,191 @@ impl AppState {
     pub fn update(&mut self, event: Event) {
         use crate::event::EventCategory;
         if matches!(event.category(), EventCategory::Transient) {
-            return self.transient_event(event);
+            return transient_event(self, event);
         }
         if event.is_login() {
-            return self.login_flow_event(event);
+            return login_flow::update(self, event);
         }
         if self.open_dialog.is_some() {
-            return self.update_dialog(event);
+            return dialog_update::update(self, event);
         }
         match event.category() {
-            EventCategory::Input => self.input_event(event),
-            EventCategory::Agent => self.agent_event(event),
-            EventCategory::Scroll => self.scroll_event(event),
-            EventCategory::Control => self.control_event(event),
-            EventCategory::ModelConfig => self.model_config_event(event),
-            EventCategory::DialogToggle => self.dialog_toggle_event(event),
-            EventCategory::Settings => self.settings_event(event),
-            EventCategory::Edit => self.edit_event(event),
-            EventCategory::System => self.system_event(event),
+            EventCategory::Input => input_event(self, event),
+            EventCategory::Agent => agent_event(self, event),
+            EventCategory::Scroll => scroll_event(self, event),
+            EventCategory::Control => control::update(self, event),
+            EventCategory::ModelConfig => model_config_event(self, event),
+            EventCategory::DialogToggle => dialog_open::update(self, event),
+            EventCategory::Settings => settings_dialog::update(self, event),
+            EventCategory::Edit => edit::update(self, event),
+            EventCategory::System => system_event(self, event),
             EventCategory::Transient => unreachable!(),
         }
     }
+}
 
-    fn transient_event(&mut self, event: Event) {
-        match event {
-            Event::TransientMessage { content, level } => self.set_transient(content, level),
-            Event::TransientError { content } => {
-                self.set_transient(content, crate::event::TransientLevel::Error)
-            }
-            Event::ClearTransient => self.clear_transient(),
-            _ => {}
+fn transient_event(state: &mut AppState, event: Event) {
+    match event {
+        Event::TransientMessage { content, level } => state.set_transient(content, level),
+        Event::TransientError { content } => {
+            state.set_transient(content, crate::event::TransientLevel::Error)
         }
+        Event::ClearTransient => state.clear_transient(),
+        _ => {}
     }
+}
 
-    fn system_event(&mut self, event: Event) {
-        if let Event::SystemMessage { content } = event {
-            self.add_system_msg(content);
+fn system_event(state: &mut AppState, event: Event) {
+    if let Event::SystemMessage { content } = event {
+        state.add_system_msg(content);
+    }
+}
+
+fn scroll_event(state: &mut AppState, event: Event) {
+    let page_size = 5usize;
+    match event {
+        Event::ScrollUp => {
+            if state.session.messages.is_empty() && !state.agent.turn_active {
+                state.input.input_flash = 3;
+            }
+            state.view.scroll = state.view.scroll.saturating_add(1);
         }
-    }
-
-
-    fn scroll_event(&mut self, event: Event) {
-        let page_size = 5usize;
-        match event {
-            Event::ScrollUp => {
-                if self.session.messages.is_empty() && !self.agent.turn_active {
-                    self.input.input_flash = 3;
-                }
-                self.view.scroll = self.view.scroll.saturating_add(1);
+        Event::ScrollDown => {
+            if state.view.scroll == 0 {
+                state.input.input_flash = 3;
             }
-            Event::ScrollDown => {
-                if self.view.scroll == 0 {
-                    self.input.input_flash = 3;
-                }
-                self.view.scroll = self.view.scroll.saturating_sub(1);
-            }
-            Event::PageUp => {
-                if self.session.messages.is_empty() && !self.agent.turn_active {
-                    self.input.input_flash = 3;
-                }
-                self.view.scroll = self.view.scroll.saturating_add(page_size);
-            }
-            Event::PageDown => {
-                if self.view.scroll == 0 {
-                    self.input.input_flash = 3;
-                }
-                self.view.scroll = self.view.scroll.saturating_sub(page_size);
-            }
-            _ => {}
+            state.view.scroll = state.view.scroll.saturating_sub(1);
         }
-    }
-
-    // === Control Event Handler ===
-    fn control_event(&mut self, event: Event) {
-        match event {
-            Event::Quit => {
-                if !self.input.input.is_empty() {
-                    self.input.input.clear();
-                    self.input.cursor_pos = 0;
-                    self.input.input_scroll = 0;
-                    self.input.undo_stack.clear();
-                    self.input.redo_stack.clear();
-                    self.mark_dirty();
-                } else {
-                    self.should_quit = true;
-                }
+        Event::PageUp => {
+            if state.session.messages.is_empty() && !state.agent.turn_active {
+                state.input.input_flash = 3;
             }
-            Event::Reset => *self = AppState::default(),
-            Event::Abort => {
-                if self.completion.path_suggestions.is_some() {
-                    self.path_completion_close();
-                } else {
-                    self.abort_queue();
-                }
-            }
-            Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
-            Event::ExternalEditorDone { content } => {
-                self.input.input = content;
-                self.input.cursor_pos = self.input.input.len();
-                self.mark_dirty();
-            }
-            Event::ToggleExpand => self.toggle_expand_all(),
-            Event::ForkSession { message_index } => self.fork_session_at(message_index),
-            Event::CloneSession => self.clone_session(),
-            Event::ToggleSessionTree => self.toggle_session_tree_dialog(),
-            Event::SessionTreeFilterCycle => self.cycle_session_tree_filter(),
-            Event::SessionTreeSelect { id } => self.session_tree_select(&id),
-            Event::AtFilePicker => self.open_at_file_picker(),
-            Event::InsertAtRef(path) => self.insert_at_ref(&path),
-            _ => {}
+            state.view.scroll = state.view.scroll.saturating_add(page_size);
         }
-    }
-
-    // === Input Event Handler ===
-    fn input_event(&mut self, event: Event) {
-        match event {
-            Event::Input(c) => self.push_input(c),
-            Event::Backspace => self.pop_input(),
-            Event::Newline => self.insert_newline(),
-            Event::CursorLeft => self.cursor_left(),
-            Event::CursorRight => self.cursor_right(),
-            Event::CursorStart => self.cursor_start(),
-            Event::CursorEnd => self.cursor_end(),
-            Event::DeleteWord => self.delete_word(),
-            Event::DeleteToEnd => self.delete_to_end(),
-            Event::DeleteToStart => self.delete_to_start(),
-            Event::KillChar => self.kill_char(),
-            Event::Undo => self.undo(),
-            Event::Redo => self.redo(),
-            Event::CursorWordLeft => self.cursor_word_left(),
-            Event::CursorWordRight => self.cursor_word_right(),
-            Event::Paste(text) => self.paste(&text),
-            Event::PasteImage => self.paste_image(),
-            Event::Submit => self.submit(),
-            Event::HistoryPrev => self.handle_history_prev(),
-            Event::HistoryNext => self.handle_history_next(),
-            Event::InsertAtRef(path) => self.insert_at_ref(&path),
-            _ => {}
+        Event::PageDown => {
+            if state.view.scroll == 0 {
+                state.input.input_flash = 3;
+            }
+            state.view.scroll = state.view.scroll.saturating_sub(page_size);
         }
+        _ => {}
     }
+}
 
-    fn handle_history_prev(&mut self) {
-        if self.completion.path_suggestions.is_some() {
-            self.path_completion_up();
-        } else if self.input.input.contains('\n') {
-            self.move_cursor_up();
-        } else {
-            self.history_prev();
+// === Input Event Handler ===
+fn input_event(state: &mut AppState, event: Event) {
+    match event {
+        Event::Input(c) => state.push_input(c),
+        Event::Backspace => state.pop_input(),
+        Event::Newline => state.insert_newline(),
+        Event::CursorLeft => state.cursor_left(),
+        Event::CursorRight => state.cursor_right(),
+        Event::CursorStart => state.cursor_start(),
+        Event::CursorEnd => state.cursor_end(),
+        Event::DeleteWord => state.delete_word(),
+        Event::DeleteToEnd => state.delete_to_end(),
+        Event::DeleteToStart => state.delete_to_start(),
+        Event::KillChar => state.kill_char(),
+        Event::Undo => state.undo(),
+        Event::Redo => state.redo(),
+        Event::CursorWordLeft => state.cursor_word_left(),
+        Event::CursorWordRight => state.cursor_word_right(),
+        Event::Paste(text) => state.paste(&text),
+        Event::PasteImage => state.paste_image(),
+        Event::Submit => state.submit(),
+        Event::HistoryPrev => handle_history_prev(state),
+        Event::HistoryNext => handle_history_next(state),
+        Event::InsertAtRef(path) => state.insert_at_ref(&path),
+        _ => {}
+    }
+}
+
+fn handle_history_prev(state: &mut AppState) {
+    if state.completion.path_suggestions.is_some() {
+        state.path_completion_up();
+    } else if state.input.input.contains('\n') {
+        state.move_cursor_up();
+    } else {
+        state.history_prev();
+    }
+}
+
+fn handle_history_next(state: &mut AppState) {
+    if state.completion.path_suggestions.is_some() {
+        state.path_completion_down();
+    } else if state.input.input.contains('\n') {
+        state.move_cursor_down();
+    } else {
+        state.history_next();
+    }
+}
+
+// === Agent Event Handler ===
+fn agent_event(state: &mut AppState, event: Event) {
+    match event {
+        Event::AgentThinking { id } => {
+            state.set_thinking(id);
+            state.ensure_turn_complete_last();
         }
-    }
-
-    fn handle_history_next(&mut self) {
-        if self.completion.path_suggestions.is_some() {
-            self.path_completion_down();
-        } else if self.input.input.contains('\n') {
-            self.move_cursor_down();
-        } else {
-            self.history_next();
+        Event::AgentThoughtDone { id } => {
+            state.add_thought(id);
+            state.ensure_turn_complete_last();
         }
-    }
-
-    // === Agent Event Handler ===
-    fn agent_event(&mut self, event: Event) {
-        match event {
-            Event::AgentThinking { id } => {
-                self.set_thinking(id);
-                self.ensure_turn_complete_last();
-            }
-            Event::AgentThoughtDone { id } => {
-                self.add_thought(id);
-                self.ensure_turn_complete_last();
-            }
-            Event::AgentToolStart { id, name } => {
-                self.start_tool(id, name);
-                self.ensure_turn_complete_last();
-            }
-            Event::AgentToolEnd {
-                duration_secs,
-                output,
-            } => {
-                self.end_tool(duration_secs, output);
-                self.ensure_turn_complete_last();
-            }
-            Event::AgentResponse { id, content } => {
-                self.append_response(id, content);
-                self.ensure_turn_complete_last();
-            }
-            Event::AgentTurnComplete { id, duration_secs } => {
-                self.complete_turn(id, duration_secs);
-                self.ensure_turn_complete_last();
-            }
-            Event::AgentDone { id } => self.finish_turn(id),
-            Event::AgentError { id, message } => {
-                self.add_error(id, message);
-                self.ensure_turn_complete_last();
-            }
-            _ => {}
+        Event::AgentToolStart { id, name } => {
+            state.start_tool(id, name);
+            state.ensure_turn_complete_last();
         }
-    }
-
-    // === Model & Config Event Handler ===
-    fn model_config_event(&mut self, event: Event) {
-        match event {
-            Event::SwitchModel { provider, model } => self.switch_model(provider, model),
-            Event::SwitchTheme { name } => self.switch_theme(name),
-            Event::CycleModelNext => self.cycle_model(1),
-            Event::CycleModelPrev => self.cycle_model(-1),
-            Event::CycleThinkingLevel => self.cycle_thinking_level(),
-            Event::SetThinkingLevel(level) => self.set_thinking_level(level),
-            Event::ToggleReadOnly => self.toggle_read_only(),
-            Event::TrustProject => self.trust_project(),
-            Event::UntrustProject => self.untrust_project(),
-            Event::FollowUp => self.queue_follow_up(),
-            Event::Dequeue => self.dequeue(),
-            Event::ToggleScopedModelsDialog => self.open_scoped_models_dialog(),
-            Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(self, &name),
-            Event::ScopedModelEnableAll => scoped_models::enable_all(self),
-            Event::ScopedModelDisableAll => scoped_models::disable_all(self),
-            Event::ScopedModelToggleProvider { provider } => {
-                scoped_models::toggle_provider(self, &provider)
-            }
-            _ => {}
+        Event::AgentToolEnd {
+            duration_secs,
+            output,
+        } => {
+            state.end_tool(duration_secs, output);
+            state.ensure_turn_complete_last();
         }
+        Event::AgentResponse { id, content } => {
+            state.append_response(id, content);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentTurnComplete { id, duration_secs } => {
+            state.complete_turn(id, duration_secs);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentDone { id } => state.finish_turn(id),
+        Event::AgentError { id, message } => {
+            state.add_error(id, message);
+            state.ensure_turn_complete_last();
+        }
+        _ => {}
     }
+}
 
-    // === Dialog Toggle Event Handler ===
+// === Model & Config Event Handler ===
+pub(super) fn model_config_event(state: &mut AppState, event: Event) {
+    match event {
+        Event::SwitchModel { provider, model } => state.switch_model(provider, model),
+        Event::SwitchTheme { name } => state.switch_theme(name),
+        Event::CycleModelNext => state.cycle_model(1),
+        Event::CycleModelPrev => state.cycle_model(-1),
+        Event::CycleThinkingLevel => state.cycle_thinking_level(),
+        Event::SetThinkingLevel(level) => state.set_thinking_level(level),
+        Event::ToggleReadOnly => state.toggle_read_only(),
+        Event::TrustProject => state.trust_project(),
+        Event::UntrustProject => state.untrust_project(),
+        Event::FollowUp => state.queue_follow_up(),
+        Event::Dequeue => state.dequeue(),
+        Event::ToggleScopedModelsDialog => state.open_scoped_models_dialog(),
+        Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(state, &name),
+        Event::ScopedModelEnableAll => scoped_models::enable_all(state),
+        Event::ScopedModelDisableAll => scoped_models::disable_all(state),
+        Event::ScopedModelToggleProvider { provider } => {
+            scoped_models::toggle_provider(state, &provider)
+        }
+        _ => {}
+    }
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    fn toggle_expand_all(&mut self) {
+impl AppState {
+    pub(super) fn toggle_expand_all(&mut self) {
         self.all_collapsed = !self.all_collapsed;
         self.messages_changed();
     }

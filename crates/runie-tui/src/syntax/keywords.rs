@@ -6,23 +6,21 @@ use std::str;
 
 // Keyword modules
 
-pub mod bash;
-pub mod c;
-pub mod go;
-pub mod java;
-pub mod js;
-pub mod python;
-pub mod rust;
-pub mod sql;
+macro_rules! lang {
+    ($mod:ident, $($item:ident),+ $(,)?) => {
+        pub mod $mod;
+        $(pub use $mod::$item;)+
+    };
+}
 
-pub use bash::BASH_KEYWORDS;
-pub use c::{C_KEYWORDS, C_TYPES};
-pub use go::{GO_FUNCTIONS, GO_KEYWORDS, GO_TYPES};
-pub use java::{JAVA_FUNCTIONS, JAVA_KEYWORDS, JAVA_TYPES};
-pub use js::{JS_FUNCTIONS, JS_KEYWORDS, JS_TYPES};
-pub use python::{PYTHON_BUILTINS, PYTHON_FUNCTIONS, PYTHON_KEYWORDS};
-pub use rust::{RUST_KEYWORDS, RUST_TYPES};
-pub use sql::SQL_KEYWORDS;
+lang!(bash, BASH_KEYWORDS);
+lang!(c, C_KEYWORDS, C_TYPES);
+lang!(go, GO_FUNCTIONS, GO_KEYWORDS, GO_TYPES);
+lang!(java, JAVA_FUNCTIONS, JAVA_KEYWORDS, JAVA_TYPES);
+lang!(js, JS_FUNCTIONS, JS_KEYWORDS, JS_TYPES);
+lang!(python, PYTHON_BUILTINS, PYTHON_FUNCTIONS, PYTHON_KEYWORDS);
+lang!(rust, RUST_KEYWORDS, RUST_TYPES);
+lang!(sql, SQL_KEYWORDS);
 
 /// Language identifiers supported for syntax highlighting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

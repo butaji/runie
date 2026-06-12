@@ -1,50 +1,32 @@
 //! Dialog opening helpers.
 
 use crate::model::AppState;
-use super::{scoped_models, settings_dialog};
+use super::settings_dialog;
 use crate::Event;
 
+pub(crate) fn update(state: &mut AppState, event: Event) {
+    use crate::commands::DialogState;
+    match event {
+        Event::ToggleCommandPalette => state.open_command_palette(),
+        Event::ToggleModelSelector => toggle_dialog(
+            state,
+            matches!(state.open_dialog, Some(DialogState::ModelSelector(_))),
+            AppState::open_model_selector,
+        ),
+        _ => {}
+    }
+}
+
+fn toggle_dialog(state: &mut AppState, is_same: bool, open: fn(&mut AppState)) {
+    if is_same {
+        state.open_dialog = None;
+        state.mark_dirty();
+    } else {
+        open(state);
+    }
+}
+
 impl AppState {
-    pub(crate) fn dialog_toggle_event(&mut self, event: Event) {
-        use crate::commands::DialogState;
-        match event {
-            Event::ToggleCommandPalette => self.open_command_palette(),
-            Event::ToggleModelSelector => self.toggle_dialog(
-                matches!(self.open_dialog, Some(DialogState::ModelSelector(_))),
-                Self::open_model_selector,
-            ),
-            Event::ToggleScopedModelsDialog => self.toggle_dialog(
-                matches!(self.open_dialog, Some(DialogState::ScopedModels(_))),
-                Self::open_scoped_models_dialog,
-            ),
-            Event::ToggleSettingsDialog => self.toggle_dialog(
-                matches!(self.open_dialog, Some(DialogState::Settings(_))),
-                Self::open_settings_dialog,
-            ),
-            Event::ToggleSessionTree => self.toggle_dialog(
-                matches!(self.open_dialog, Some(DialogState::SessionTree(_))),
-                Self::open_session_tree_dialog,
-            ),
-            Event::AtFilePicker => self.open_at_file_picker(),
-            Event::ScopedModelToggle { name } => scoped_models::toggle_scoped_model(self, &name),
-            Event::ScopedModelEnableAll => scoped_models::enable_all(self),
-            Event::ScopedModelDisableAll => scoped_models::disable_all(self),
-            Event::ScopedModelToggleProvider { provider } => {
-                scoped_models::toggle_provider(self, &provider)
-            }
-            _ => {}
-        }
-    }
-
-    fn toggle_dialog(&mut self, is_same: bool, open: fn(&mut Self)) {
-        if is_same {
-            self.open_dialog = None;
-            self.mark_dirty();
-        } else {
-            open(self);
-        }
-    }
-
     pub(crate) fn open_command_palette(&mut self) {
         use crate::dialog::builders::command_palette;
         let mut items: Vec<(String, String, crate::Event)> = Vec::new();
@@ -169,10 +151,7 @@ impl AppState {
         self.mark_dirty();
     }
 
-    // === Settings Event Handler ===
-    // === Edit Event Handler ===
-
-    pub(crate) fn open_at_file_picker(&mut self) {
+    pub(super) fn open_at_file_picker(&mut self) {
         use crate::dialog::{ItemAction, Panel, PanelStack};
         let entries = crate::file_refs::find_file_entries(".", 50);
         let mut panel = Panel::new("at-files", " Files ").with_filter();
