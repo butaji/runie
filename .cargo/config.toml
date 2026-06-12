@@ -1,4 +1,10 @@
+[build]
+rustflags = ["-Zcodegen-backend=cranelift"]
+
 [profile.dev]
 split-debuginfo = "unpacked"
 opt-level = 0
 debug = false
+
+[profile.dev.build-override]
+opt-level = 3

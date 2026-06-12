@@ -1,0 +1,18 @@
+[package]
+name = "runie-print"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "runie-print"
+path = "src/main.rs"
+
+[dependencies]
+runie-core.workspace = true
+runie-agent.workspace = true
+runie-provider.workspace = true
+anyhow.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+tempfile = "3"

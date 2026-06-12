@@ -1,4 +1,13 @@
+#![warn(clippy::all)]
+
 //! Runie TUI - Terminal UI Rendering
+pub mod diff;
+pub mod markdown;
+pub mod message;
+pub mod popups;
+pub mod syntax;
+pub mod status_bar;
+pub mod theme;
 pub mod ui;
 
 #[cfg(test)]
