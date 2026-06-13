@@ -26,6 +26,7 @@ pub mod handlers;
 mod registry;
 #[cfg(test)]
 mod tests;
+pub mod agents_manager;
 
 pub use dsl::{
     CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType, FormBuilder, FormField,

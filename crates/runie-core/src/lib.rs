@@ -13,6 +13,7 @@ pub mod auth;
 pub mod clipboard_image;
 pub mod commands;
 pub mod config_migrate;
+pub mod agent_profiles;
 pub mod config_reload;
 pub mod dialog;
 #[cfg(test)]

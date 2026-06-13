@@ -6,9 +6,11 @@ pub fn register_all(registry: &mut CommandRegistry) {
     tool::register(registry);
     system::register(registry);
     subagent::register(registry);
+    agents::register(registry);
     help::register(registry);
 }
 
+pub mod agents;
 pub mod help;
 pub mod model;
 pub mod session;

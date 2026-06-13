@@ -212,6 +212,20 @@ pub enum Event {
     RunSaveCommand {
         name: String,
     },
+
+    // Agent profile manager events
+    OpenAgentsManager,
+    AgentsManagerSetField {
+        name: String,
+        field: String,
+        value: String,
+    },
+    AgentsManagerSave {
+        name: String,
+    },
+    AgentsManagerDelete {
+        name: String,
+    },
     RunLoadCommand {
         name: String,
     },
@@ -525,6 +539,10 @@ impl Event {
             Event::CommandFormSubmit => "CommandFormSubmit",
             Event::CommandFormClose => "CommandFormClose",
             Event::DialogBack => "DialogBack",
+            Event::OpenAgentsManager => "OpenAgentsManager",
+            Event::AgentsManagerSetField { .. } => return None,
+            Event::AgentsManagerSave { .. } => "AgentsManagerSave",
+            Event::AgentsManagerDelete { .. } => "AgentsManagerDelete",
             Event::RunSaveCommand { .. } => return None,
             Event::RunLoadCommand { .. } => return None,
             Event::RunDeleteCommand { .. } => return None,
