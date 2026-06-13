@@ -1,6 +1,6 @@
 # Delete crates/_archive/ Once Archived Code Is Confirmed Unneeded
 
-**Status**: todo (ready to land)
+**Status**: done
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P1
@@ -44,29 +44,29 @@ Total: ~9,500 lines of dead code.
 
 ## Acceptance Criteria
 
-- [ ] `git grep -rn 'crates/_archive' -- 'crates/' 'build.rs' 'Cargo.toml'`
+- [x] `git grep -rn 'crates/_archive' -- 'crates/' 'build.rs' 'Cargo.toml'`
   returns zero matches
-- [ ] `git log --oneline -- crates/_archive/` shows commits
+- [x] `git log --oneline -- crates/_archive/` shows commits
   `402943c5`, `0959861e`, and `f831dea5` as the only commit
   history (plus any followups)
-- [ ] `git rm -r crates/_archive/` (or `rm -rf` and `git add -A`)
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds (no tests should reference
+- [x] `git rm -r crates/_archive/` (or `rm -rf` and `git add -A`)
+- [x] `cargo build --workspace` succeeds
+- [x] `cargo test --workspace` succeeds (no tests should reference
   the archive; current count is 1,569 tests)
-- [ ] The workspace `Cargo.toml` `members` array is unchanged
+- [x] The workspace `Cargo.toml` `members` array is unchanged
   (8 crates)
-- [ ] `build.rs` lint scans are now 30 files smaller
+- [x] `build.rs` lint scans are now 30 files smaller
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo build --workspace` succeeds after the deletion
-- [ ] `cargo test --workspace` succeeds
-- [ ] `git grep -rn 'crates/_archive' -- 'crates/' 'Cargo.toml' 'build.rs'`
+- [x] `cargo build --workspace` succeeds after the deletion
+- [x] `cargo test --workspace` succeeds
+- [x] `git grep -rn 'crates/_archive' -- 'crates/' 'Cargo.toml' 'build.rs'`
   returns zero matches
 
 ### Layer 4 — Smoke
-- [ ] `cargo build` then `./target/release/runie` (or
+- [x] `cargo build` then `./target/release/runie` (or
   `cargo run -p runie-term --bin runie`) starts the TUI without
   panicking
 
