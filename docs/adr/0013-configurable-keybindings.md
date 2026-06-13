@@ -28,7 +28,8 @@ Default keybindings:
 | PageUp/PageDown | Page scroll | ScrollAgent |
 | Home/End | Scroll top/bottom | ScrollAgent |
 | Mouse wheel | Scroll | ScrollAgent |
-| Ctrl+Shift+E | Collapse/expand | ChatAgent |
+| Ctrl+O | Collapse/expand | ChatAgent |
+| Ctrl+Shift+O | Copy last response | ChatAgent |
 | Ctrl+P | Commands panel | CommandAgent |
 | Ctrl+V | Image paste | ClipboardAgent |
 | Alt+Up | Dequeue | Orchestrator |

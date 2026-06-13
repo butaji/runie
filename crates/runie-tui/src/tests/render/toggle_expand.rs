@@ -1,8 +1,8 @@
-//! Rendering tests for global expand/collapse (Ctrl+Shift+E).
+//! Rendering tests for global expand/collapse (Ctrl+O).
 //!
-//! Ctrl+Shift+E toggles the global collapsed state. Thought and tool posts
-//! in the feed render as one-line summaries when collapsed and expand back
-//! when toggled again.
+//! Ctrl+O toggles the global collapsed state. Thought and tool posts in the
+//! feed render as one-line summaries when collapsed and expand back when
+//! toggled again.
 
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
@@ -57,7 +57,7 @@ fn ctrl_shift_e_collapses_thought_post_in_feed() {
     let after = count_matching_lines(&state, &["line1", "line2", "line3"]);
     assert!(
         after < before,
-        "Ctrl+Shift+E should collapse thought post lines: before={before}, after={after}"
+        "Ctrl+O should collapse thought post lines: before={before}, after={after}"
     );
 }
 
@@ -95,7 +95,7 @@ fn ctrl_shift_e_collapses_tool_post_in_feed() {
     let after = count_matching_lines(&state, &["file1.rs", "file2.rs"]);
     assert!(
         after < before,
-        "Ctrl+Shift+E should collapse tool post output: before={before}, after={after}"
+        "Ctrl+O should collapse tool post output: before={before}, after={after}"
     );
 }
 
@@ -126,6 +126,6 @@ fn ctrl_shift_e_twice_restores_post_lines() {
     let restored = count_matching_lines(&state, &["alpha", "beta"]);
     assert_eq!(
         restored, original,
-        "second Ctrl+Shift+E should restore thought post lines"
+        "second Ctrl+O should restore thought post lines"
     );
 }

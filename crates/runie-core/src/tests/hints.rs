@@ -10,7 +10,7 @@ fn hint_shows_expand_hotkey_by_default() {
     let state = fresh_state();
     let hint = state.hint_text();
     assert!(
-        hint.contains("ctrl+shift+e"),
+        hint.contains("ctrl+o"),
         "Hint should show expand key: {}",
         hint
     );

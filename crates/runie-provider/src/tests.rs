@@ -281,6 +281,9 @@ fn test_dyn_provider_unknown_returns_err() {
 fn test_dyn_provider_missing_api_key_returns_err() {
     // Without RUNIE_MOCK, an unknown provider with no API key returns MissingApiKey.
     // We use a known-but-unconfigured provider to avoid the UnknownProvider path.
+    // Use ENV_LOCK to ensure no other test has left the env var set.
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    std::env::remove_var("OPENAI_API_KEY");
     let result = DynProvider::new("openai", "gpt-4o-mini");
     match result {
         Err(ProviderError::MissingApiKey(var)) => {

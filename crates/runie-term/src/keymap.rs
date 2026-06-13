@@ -102,11 +102,13 @@ fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<C
         }
     }
     if key.modifiers.contains(KeyModifiers::CONTROL) {
-        // Ctrl+Shift+E is expand/collapse; plain Ctrl+E is cursor-end.
+        // Ctrl+O collapses/expands feed posts. Ctrl+Shift+E is intentionally
+        // unbound because many terminals (e.g. tmux without extended keys)
+        // cannot distinguish it from Ctrl+E, which is cursor-end.
         if key.modifiers.contains(KeyModifiers::SHIFT)
             && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E'))
         {
-            return Some(CoreEvent::ToggleExpand);
+            return None;
         }
         map_ctrl_key(key.code)
     } else if key.modifiers.contains(KeyModifiers::ALT) {
@@ -121,6 +123,7 @@ fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<C
 fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
         KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::CursorEnd),
+        KeyCode::Char('o') | KeyCode::Char('O') => Some(CoreEvent::ToggleExpand),
         KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Newline),
         KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
         KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
