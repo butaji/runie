@@ -24,6 +24,8 @@
 mod dsl;
 pub mod handlers;
 mod registry;
+#[cfg(test)]
+mod tests;
 
 pub use dsl::{
     CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType, FormBuilder, FormField,

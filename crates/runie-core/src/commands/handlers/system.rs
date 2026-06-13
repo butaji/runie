@@ -103,17 +103,9 @@ pub fn register(registry: &mut CommandRegistry) {
     registry.register(
         crate::cmd!("providers")
             .desc("Manage providers: add, disconnect, switch models")
+            .aliases(&["provider"])
             .category(CommandCategory::System)
             .sub()
-            .handler(handle_providers),
-    );
-
-    // Alias for convenience
-    registry.register(
-        crate::cmd!("provider")
-            .desc("Manage providers")
-            .aliases(&["providers"])
-            .category(CommandCategory::System)
             .handler(handle_providers),
     );
 }

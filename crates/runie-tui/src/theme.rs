@@ -76,8 +76,6 @@ red_400 = "#EF4444"
 blue_400 = "#60A5FA"
 lime_400 = "#A3E635"
 
-bg_base = "#100C13"
-bg_panel = "#1A151C"
 bg_code = "#1E1920"
 bg_highlight = "#2A202E"
 bg_elevated = "#201820"
@@ -95,8 +93,6 @@ text_dim = "#5C5854"
 "text.muted" = "text_muted"
 "text.dim" = "text_dim"
 
-"bg.base" = "bg_base"
-"bg.panel" = "bg_panel"
 "bg.code" = "bg_code"
 "bg.highlight" = "bg_highlight"
 "bg.elevated" = "bg_elevated"
@@ -204,11 +200,13 @@ fn register_code_styles(theme: &mut opaline::Theme) {
 
 fn register_input_styles(theme: &mut opaline::Theme) {
     let dim = theme.color("text.dim");
-    let bg = theme.color("bg.base");
+    let cursor_fg = theme
+        .try_color("bg.base")
+        .unwrap_or_else(|| theme.color("text.primary"));
     let accent = theme.color("accent.primary");
     theme.register_default_style(
         "runie.input.cursor",
-        opaline::OpalineStyle::fg(bg).with_bg(accent),
+        opaline::OpalineStyle::fg(cursor_fg).with_bg(accent),
     );
     theme.register_default_style("runie.placeholder", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.hint", opaline::OpalineStyle::fg(dim));
@@ -243,10 +241,16 @@ fn register_runie_popup_styles(theme: &mut opaline::Theme) {
 // ── Raw color helpers (for markdown, diff, etc.) ───────────────────────
 
 pub fn color_bg() -> Color {
-    Color::from(current_theme().color("bg.base"))
+    current_theme()
+        .try_color("bg.base")
+        .map(Color::from)
+        .unwrap_or(Color::Reset)
 }
 pub fn color_bg_panel() -> Color {
-    Color::from(current_theme().color("bg.panel"))
+    current_theme()
+        .try_color("bg.panel")
+        .map(Color::from)
+        .unwrap_or(Color::Reset)
 }
 pub fn color_fg() -> Color {
     Color::from(current_theme().color("text.primary"))
@@ -292,7 +296,10 @@ pub fn color_code() -> Color {
     Color::from(current_theme().color("code.function"))
 }
 pub fn color_code_bg() -> Color {
-    Color::from(current_theme().color("bg.code"))
+    current_theme()
+        .try_color("bg.code")
+        .map(Color::from)
+        .unwrap_or(Color::Reset)
 }
 
 // ── Style helpers ──────────────────────────────────────────────────────

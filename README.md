@@ -100,14 +100,14 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | `/fork` | | Fork session from a message |
 | `/help` | `/h`, `/?` | Show available commands |
 | `/history` | | Show recent history |
+| `/hotkeys` | | Show all keyboard shortcuts |
 | `/import` | | Import session from JSON |
 | `/load` | | Load a saved session |
-| `/model` | `/m` | Switch model |
+| `/model` | `/m` | Switch model (opens picker when no args) |
 | `/name` | | Set session display name |
 | `/new` | | Start new session |
-| `/prompt` | | Switch prompt template |
-| `/provider` | `/providers` | Manage providers |
-| `/providers` | | Manage providers: add, disconnect, switch models |
+| `/prompt` | | Switch prompt template (opens form when no args) |
+| `/providers` | `/provider` | Manage providers: add, disconnect, switch models |
 | `/readonly` | `/ro` | Toggle read-only mode |
 | `/reject` | | Cancel pending file edits |
 | `/reload` | | Reload config, keybindings, themes |
@@ -117,6 +117,7 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | `/scoped-models` | | Enable/disable models for cycling |
 | `/session` | | Show session info |
 | `/sessions` | | List saved sessions |
+| `/settings` | | Open settings dialog |
 | `/share` | | Share session as GitHub gist |
 | `/skill` | | Show skill details |
 | `/skills` | | List loaded skills |
