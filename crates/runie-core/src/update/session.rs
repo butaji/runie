@@ -1,4 +1,5 @@
 use crate::model::AppState;
+use super::dialog_stack::open_session_tree_dialog;
 
 impl AppState {
     // === Session Event Handler ===
@@ -9,7 +10,7 @@ impl AppState {
             self.open_dialog = None;
             self.mark_dirty();
         } else {
-            self.open_session_tree_dialog();
+            open_session_tree_dialog(self);
         }
     }
 

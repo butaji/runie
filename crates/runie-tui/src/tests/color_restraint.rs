@@ -187,7 +187,7 @@ fn thought_expanded_and_collapsed_same_style() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     // Expanded thought
     let mut state_exp = AppState::default();
-    state_exp.streaming = true;
+    state_exp.agent.streaming = true;
     state_exp.update(Event::AgentThinking { id: "req.0".into() });
     state_exp.update(Event::AgentThoughtDone { id: "req.0".into() });
     state_exp.update(Event::AgentDone { id: "req.0".into() });
@@ -196,7 +196,7 @@ fn thought_expanded_and_collapsed_same_style() {
 
     // Collapsed thought
     let mut state_col = AppState::default();
-    state_col.streaming = true;
+    state_col.agent.streaming = true;
     state_col.update(Event::AgentThinking { id: "req.0".into() });
     state_col.update(Event::AgentThoughtDone { id: "req.0".into() });
     state_col.update(Event::AgentDone { id: "req.0".into() });

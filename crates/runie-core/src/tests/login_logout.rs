@@ -6,13 +6,16 @@
 //! Flow: /providers → Add → Login flow → Save → Providers dialog → Select model
 
 use crate::event::Event;
-use crate::login_config::{config_path, list_configured_providers};
+use crate::login_config::list_configured_providers;
 use crate::model::AppState;
 
 /// Clear the config file before each test to avoid pollution.
 fn clean_config() {
-    let path = config_path();
+    let dir = std::env::temp_dir().join(format!("runie_login_test_{:?}", std::thread::current().id()));
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
+    crate::login_config::set_test_config_path(path);
 }
 
 // ============================================================================
