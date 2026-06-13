@@ -1,6 +1,6 @@
 # Delete crates/_archive/ Once Archived Code Is Confirmed Unneeded
 
-**Status**: todo
+**Status**: todo (ready to land)
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P1
@@ -8,53 +8,54 @@
 
 ## Description
 
-After commits `402943c5` and `0959861e`, the directory
-`crates/_archive/` contains 28 .rs files + 2 .toml files of dead
-code. The intent was to preserve the broken/unbuildable code in case
-anyone wanted to revive it later. But the archive is:
+After commits `402943c5`, `0959861e`, and `f831dea5`, the directory
+`crates/_archive/` contains 30 files (9 subdirectories + 1 file)
+of dead code. The intent was to preserve the broken/unbuildable
+code in case anyone wanted to revive it later. But the archive is:
 
-1. **Not in the build path** — the lint scans it anyway (see
-   `fix-build-lint`), and a 28-file graveyard makes `git grep`
-   noisier
-2. **Never referenced from the live code** — verified by `git grep`
-   during the review: zero call sites in the live tree
+1. **Not in the build path** — confirmed by `git grep` returning
+   zero hits in the live tree for the archived files
+2. **Never referenced from the live code** — verified during the
+   task reviews
 3. **Causes confusion** — newcomers see `crates/_archive/` and
    wonder "is this used?"
+4. **Inflates the `find crates` results** — `crates/_archive/`
+   contains ~9,500 lines of dead code (1,852 from the
+   about-to-be-deleted `loop_engine` is in the live tree; the
+   archive is mostly broken tests, broken imports, and orphan
+   crates)
 
-The 28 files break down as:
-- `crates/_archive/runie-ext/` (5 files): old extension system
-- `crates/_archive/runie-ext-macros/` (1 file + Cargo.toml): proc
-  macros for the old extension system
-- `crates/_archive/runie-ext-macros/Cargo.toml`: manifest
-- `crates/_archive/runie-agent-tests/` (8 files): old test files
-  that referenced archived crates
-- `crates/_archive/runie-agent-bin/reply_to_scenario.rs`: old binary
-- `crates/_archive/runie-tui-bins/` (5 files): old test binaries
-  (grok_parity_test, scenario_replay, scenario_fasthot, runie-dspec,
-  runie-paint-smoke)
-- `crates/_archive/update-orphans/` (3 files): broken
-  `update/login_flow.rs` that called missing `build_login_stack`,
-  and 2 test files
-- `crates/_archive/wireframe_layout.rs`: old wireframe test file
+The 9 subdirs + 1 file at `crates/_archive/`:
 
-Total: ~6,381 lines of dead code.
+| Entry | Type | Source | Lines |
+|---|---|---|---|
+| `runie-agent-bin/` | directory | `reply_to_scenario.rs` (old binary, broken) | ~120 |
+| `runie-agent-tests/` | directory | 8 test files referencing archived crates | ~880 |
+| `runie-ext/` | directory | Extension system (lib, error, hooks, marketplace, mcp, registry) | ~476 |
+| `runie-ext-macros/` | directory | Proc-macro crate for extensions | ~150 |
+| `runie-tui-bins/` | directory | 5 test binaries (grok_parity_test, scenario_replay, scenario_fasthot, runie-dspec, runie-paint-smoke) | ~3,500 |
+| `update-orphans/` | directory | 3 files (login_flow.rs, state.rs, integration.rs) — broken code archived by 0959861e | ~782 |
+| `wireframe_layout.rs` | file | Old wireframe test file | ~124 |
+| `runie-ai/` | directory | AI provider code (model_fetcher, providers, session_adapter, etc.) | ~600 |
+| `runie-cli/` | directory | Full CLI implementation (4,104 lines) | ~4,104 |
+| `runie-tools/` | directory | Tool implementations (bash, edit_file, read_file, etc.) | ~800 |
+
+Total: ~9,500 lines of dead code.
 
 ## Acceptance Criteria
 
-- [ ] Confirm `git grep` returns zero hits in the live tree for
-  every archived file
-- [ ] Check git history for any of the archived files that were
-  **referenced by recent commits** (e.g. within the last 30 days).
-  If any were, leave them in the archive until the references age
-  out
-- [ ] `rm -rf crates/_archive/` (or `git rm -r crates/_archive/`)
+- [ ] `git grep -rn 'crates/_archive' -- 'crates/' 'build.rs' 'Cargo.toml'`
+  returns zero matches
+- [ ] `git log --oneline -- crates/_archive/` shows commits
+  `402943c5`, `0959861e`, and `f831dea5` as the only commit
+  history (plus any followups)
+- [ ] `git rm -r crates/_archive/` (or `rm -rf` and `git add -A`)
 - [ ] `cargo build --workspace` succeeds
 - [ ] `cargo test --workspace` succeeds (no tests should reference
-  the archive)
-- [ ] `cargo build --workspace --tests` succeeds
+  the archive; current count is 1,569 tests)
 - [ ] The workspace `Cargo.toml` `members` array is unchanged
   (8 crates)
-- [ ] `build.rs` lint scans are now 28 files smaller
+- [ ] `build.rs` lint scans are now 30 files smaller
 
 ## Tests
 
@@ -79,14 +80,12 @@ build will fail.
 
 ```bash
 # Step 1: confirm no live references
-git grep -nE 'crates/_archive|runie_ext::|runie_ext_macros::|runie_tui_bins::' \
-  -- 'crates/runie-core/' 'crates/runie-term/' 'crates/runie-tui/' \
-  'crates/runie-agent/' 'crates/runie-provider/' 'crates/runie-print/' \
-  'crates/runie-json/' 'crates/runie-server/' 'Cargo.toml' 'build.rs'
+git grep -nE 'crates/_archive' -- 'crates/' 'build.rs' 'Cargo.toml' \
+  ':!crates/_archive/*'
 # Expected: zero matches
 
 # Step 2: confirm the archived files are git-tracked (not lost)
-git log --oneline -- crates/_archive/ | head -10
+git log --oneline -- crates/_archive/ | head -5
 
 # Step 3: dry-run the deletion
 git rm -r --dry-run crates/_archive/
@@ -105,21 +104,27 @@ possible), the deletion fails. In that case:
 - Or the archived file should be restored to its original location
   (and the original task that archived it undone)
 
-**The `build.rs` lint will be faster** because it walks 28 fewer
-files. Minor win but real.
+**`runie-cli` is the largest archive entry** (4,104 lines). It
+contains a complete alternative CLI implementation with ACP
+support, headless mode, session management, and event logging. The
+intent appears to have been to replace `runie-term` (which is only
+457 lines). That replacement never happened; `runie-cli` is
+abandoned.
 
-**The `Cargo.lock` may shrink** if any of the archived crates had
-transitive deps. Probably not, since the archived crates were
-already not in the workspace and their deps were not in the lock
-file (or were orphans in the lock file that get pruned).
+**`runie-tui-bins` is the second-largest** (5 binaries, ~3,500
+lines). These were test scaffolding binaries that referenced the
+archived `runie-ext` and other broken code.
 
 **Out of scope:**
 - Restoring any of the archived code to the live tree (separate
-  revival tasks; e.g. "re-enable MCP support")
+  revival tasks; e.g. "re-enable MCP support" or "switch to
+  runie-cli as the main binary")
 - Reorganizing the surviving code (separate refactor tasks)
 - Auditing the git history of each archived file to find the
   last-known-good state (use `git log -- crates/_archive/file.rs`
   before deletion if a revival is anticipated)
+- The `runie-agent/src/loop_engine/` and `runie-agent/src/events.rs`
+  dead code (different task: `delete-abandoned-loop-engine`)
 
 **Verification:**
 ```bash
@@ -129,7 +134,4 @@ file (or were orphans in the lock file that get pruned).
 # Build clean
 cargo build --workspace
 cargo test --workspace
-
-# The lint is faster
-time cargo build  # subjective, but should be slightly faster
 ```

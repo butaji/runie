@@ -78,6 +78,12 @@ pub struct AppState {
 
 That's 33 pub + 4 private = **37 fields** on the outer struct.
 
+The `impl Default for AppState` lives in
+`crates/runie-core/src/model/app_state.rs:12-71` (a separate
+sibling file). The 459-line `app_state.rs` also contains ~20
+`impl AppState` blocks (methods like `tick_animation`, `compact`,
+`snapshot`, `next_id`, `mark_dirty`, etc.).
+
 ## Acceptance Criteria
 
 - [ ] `AppState` has exactly 6 fields: `session`, `input`, `agent`,

@@ -1,17 +1,18 @@
 # Archive Remaining Orphan Crates (runie-ai, runie-cli, runie-tools)
 
 **Status**: done
+**Completed in**: f831dea5 ("archive: move remaining orphan crates to crates/_archive/")
 **Milestone**: MVP
 **Category**: Configuration
 **Priority**: P1
 **Depends on**: wire-orphan-crates
 
-## Description
+## Description (historical)
 
 After `wire-orphan-crates` (commit `402943c5`), three orphan crate
-directories remain in `crates/` but are **not in the workspace** and
-**not in `crates/_archive/`**. They are pure dead code that
-confuses `cargo metadata`, IDEs, and `find` results.
+directories remained in `crates/` but were **not in the
+workspace**. They were pure dead code that confused `cargo
+metadata`, IDEs, and `find` results.
 
 | Directory | Files | Cargo.toml? | Notes |
 |---|---|---|---|
@@ -19,99 +20,46 @@ confuses `cargo metadata`, IDEs, and `find` results.
 | `crates/runie-cli/` | `Cargo.toml` + 5+ .rs files in `src/` + `tests/` | ✅ Yes, but broken | `Cargo.toml` depends on `runie-ai` and `runie-tools`, which have no Cargo.tomls |
 | `crates/runie-tools/` | 8+ .rs files (no manifest) | ❌ No | `bash.rs`, `edit_file.rs`, `read_file.rs`, `registry.rs`, `rig_tools/`, `search.rs`, `workspace.rs`, `write_file.rs` |
 
-Total: 48 .rs files of unbuildable code. The `runie-cli` Cargo.toml
-references them by path:
+## Resolution
 
-```toml
-[dependencies]
-runie-core = { path = "../runie-core" }
-runie-ai = { path = "../runie-ai" }      # ← broken
-runie-agent = { path = "../runie-agent" }
-runie-tools = { path = "../runie-tools" } # ← broken
-```
+The commit `f831dea5` archived all three:
 
-If `runie-cli` were added to the workspace, the build would fail with
-"no Cargo.toml in `../runie-ai`".
+- `crates/runie-ai/` → `crates/_archive/runie-ai/`
+- `crates/runie-cli/` → `crates/_archive/runie-cli/`
+- `crates/runie-tools/` → `crates/_archive/runie-tools/`
 
-## Acceptance Criteria
+`cargo build --workspace` succeeds with the same 8 workspace
+members. The 28 .rs files of orphan code are now in `_archive/`.
 
-- [ ] `crates/runie-ai/` is moved to `crates/_archive/runie-ai/`
-- [ ] `crates/runie-cli/` is moved to `crates/_archive/runie-cli/`
-  (both the `Cargo.toml` and `src/`, `tests/` directories)
-- [ ] `crates/runie-tools/` is moved to `crates/_archive/runie-tools/`
-- [ ] `ls crates/` shows only the 8 workspace-member crate directories
-  plus `crates/_archive/`
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds
-- [ ] `cargo metadata --format-version=1 --no-deps` reports the same
-  number of `workspace_members` as before (8)
-- [ ] The archived `runie-cli` keeps its `Cargo.toml` so the
-  historical record of "what was the intended dependency graph"
-  survives (the file is small, ~50 lines)
+## `crates/_archive/` Final State
 
-## Tests
+After this commit, `crates/_archive/` contains:
 
-### Layer 1 — State/Logic
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds with the same test count as
-  before the move (the archived code is not built, so no tests are
-  lost; but we want to confirm nothing in the live code referenced
-  the to-be-archived code)
-- [ ] `cargo metadata --format-version=1 --no-deps | jq -r '.workspace_members[]' | wc -l` returns 8
+| Entry | Type | Source |
+|---|---|---|
+| `runie-agent-bin/` | directory | `reply_to_scenario.rs` (old binary) |
+| `runie-agent-tests/` | directory | 8 test files (events, tools, turn, safety, subagent_test, parser, mod) |
+| `runie-ext/` | directory | Extension system (lib, error, hooks, marketplace, mcp, registry) |
+| `runie-ext-macros/` | directory | Proc-macro crate for the extension system |
+| `runie-tui-bins/` | directory | 5 test binaries (grok_parity_test, scenario_replay, scenario_fasthot, runie-dspec, runie-paint-smoke) |
+| `update-orphans/` | directory | 3 files (login_flow.rs, state.rs, integration.rs) — broken code archived by 0959861e |
+| `wireframe_layout.rs` | file | Old wireframe test file |
+| `runie-ai/` | directory | 6+ .rs files (model_fetcher, providers, session_adapter, etc.) |
+| `runie-cli/` | directory | Full CLI implementation (4,104 lines, includes tui_run/, acp.rs, headless.rs, etc.) |
+| `runie-tools/` | directory | 8+ .rs files (bash, edit_file, read_file, etc.) |
 
-### Layer 4 — Smoke
-- [ ] `cargo build` then `./target/release/runie` (or `cargo run -p
-  runie-term --bin runie`) starts the TUI without panicking
+Total: 9 subdirs + 1 file = 30 files, ~6,400 lines of dead code
+(plus the `runie-cli` orphan at 4,104 lines and the 3,000+ lines
+of other archive content).
 
-## Notes
+## Status
 
-**Why archive rather than wire:** the missing `Cargo.toml` files for
-`runie-ai` and `runie-tools` are non-trivial to write because the
-code references types from other crates (`runie-core`, `runie-agent`)
-that have evolved. Writing the manifest would require:
-1. Reconciling the `runie-ai` `model_registry.rs` with the actual
-   `runie-provider/src/model.rs` (which is the live version)
-2. Reconciling the `runie-tools` tool implementations with the live
-   `runie-agent/src/tools.rs`
-3. Writing a manifest that depends on the now-current versions of
-   `runie-core` and `runie-agent`
+✅ Done. Workspace builds. Tests pass. Next step: `clean-archive`
+(delete the entire `_archive/` directory).
 
-This is days of work for code that has been sitting in the tree
-unused. The pragmatic call (made by `wire-orphan-crates`) is to
-archive. This task extends that pattern to the remaining three.
+## Followups
 
-**Verify nothing in live code references the to-be-archived files:**
-
-```bash
-# Should return zero matches
-git grep -nE 'runie_ai::|runie_tools::' -- 'crates/runie-core/' \
-  'crates/runie-term/' 'crates/runie-tui/' 'crates/runie-agent/' \
-  'crates/runie-provider/' 'crates/runie-print/' 'crates/runie-json/' \
-  'crates/runie-server/'
-```
-
-**The 4 parity-test binaries in `_archive/runie-tui-bins/` are
-also there** from the previous commit. Not in scope here; they may
-be deleted by `clean-archive` or `clean-dead-modules`.
-
-**Out of scope:**
-- Reconciling `runie-ai` model registry with the live
-  `runie-provider` (would require a separate refactor task; the
-  archived code is a snapshot, not a working artifact)
-- Reconciling `runie-tools` with `runie-agent/src/tools.rs` (same)
-- Restoring the `runie-cli` binary (the live binary is in
-  `runie-term/src/main.rs`; `runie-cli/src/main.rs` is a duplicate
-  of unknown provenance)
-- Adding the 3 archived crates back to the workspace later (a
-  separate "revival" task if/when the code is needed)
-
-**Verification:**
-```bash
-ls crates/
-# Should show: _archive  runie-agent  runie-core  runie-json  runie-print
-#               runie-provider  runie-server  runie-term  runie-tui
-# (8 members + _archive; no runie-ai, no runie-cli, no runie-tools)
-
-cargo build --workspace
-cargo test --workspace
-```
+- `clean-archive` — verify no live refs and delete
+  `crates/_archive/`
+- `sync-docs` — update README and any other doc that referenced
+  `runie-ai`, `runie-cli`, or `runie-tools` as features
