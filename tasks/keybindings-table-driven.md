@@ -1,6 +1,6 @@
 # Make Keybindings Table-Driven Instead of 35-Arm Match
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Input & Commands
 **Priority**: P1
@@ -33,46 +33,46 @@ the 309-line `Event` enum has 100+ variants (139 lines starting with
 
 ## Acceptance Criteria
 
-- [ ] A single source of truth exists for "event name string ↔ Event
+- [x] A single source of truth exists for "event name string ↔ Event
   variant" — a `static EVENT_NAMES: &[(&str, fn() -> Event)]` table
   or a `FromStr` impl on `Event` (preferred)
-- [ ] `event_from_name` is a 3-line lookup: `EVENT_NAMES.iter().find(...).map(...)`
-- [ ] `default_keybindings` uses the same table; bindings are
+- [x] `event_from_name` is a 3-line lookup: `EVENT_NAMES.iter().find(...).map(...)`
+- [x] `default_keybindings` uses the same table; bindings are
   declared as `(combo, event_name)` tuples
-- [ ] `validate_key_combo` derives valid key names from the same
+- [x] `validate_key_combo` derives valid key names from the same
   table (or has a separate small `const VALID_KEYS: &[&str]` that's
   easier to extend)
-- [ ] A `compile-time test` (a `const _: () = ...` block) asserts
+- [x] A `compile-time test` (a `const _: () = ...` block) asserts
   that every `Event` variant has a name in the table — catches
   drift at compile time
-- [ ] Adding a new `Event` variant now requires editing exactly one
+- [x] Adding a new `Event` variant now requires editing exactly one
   place (the event declaration) plus optionally adding a default
   keybinding
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `test_every_event_variant_has_a_name` — iterates all `Event`
+- [x] `test_every_event_variant_has_a_name` — iterates all `Event`
   variants via exhaustive match, asserts each has an entry in
   `EVENT_NAMES`. This is a compile-time test (`const _ = ...`) so
   it can never drift.
-- [ ] `test_every_named_event_roundtrips` — for every entry in
+- [x] `test_every_named_event_roundtrips` — for every entry in
   `EVENT_NAMES`, `event_from_name(name).is_some()` and the resulting
   event matches the expected variant
-- [ ] `test_default_keybindings_resolves` — every entry in
+- [x] `test_default_keybindings_resolves` — every entry in
   `default_keybindings()` produces a valid `Event` via
   `event_from_name`
-- [ ] `test_validate_key_combo_accepts_known_keys` — every key name
+- [x] `test_validate_key_combo_accepts_known_keys` — every key name
   in `default_keybindings()` passes `validate_key_combo`
-- [ ] `test_invalid_event_name_returns_none` —
+- [x] `test_invalid_event_name_returns_none` —
   `event_from_name("Garbage")` is `None`
-- [ ] `test_invalid_key_combo_returns_false` —
+- [x] `test_invalid_key_combo_returns_false` —
   `validate_key_combo("ctrl+💩")` is `false`
 
 ### Layer 2 — Event Handling
-- [ ] `cargo test -p runie-core --lib keybindings::tests` passes
+- [x] `cargo test -p runie-core --lib keybindings::tests` passes
   (existing test cases in `keybindings.rs:268-430`)
-- [ ] `cargo test -p runie-term --lib keymap::tests` passes (uses
+- [x] `cargo test -p runie-term --lib keymap::tests` passes (uses
   `event_from_name` indirectly via `convert_event`)
 
 ## Notes
