@@ -31,10 +31,8 @@ pub fn handle_form_dialog(state: &mut AppState, event: Event) {
 
 /// Insert filepath into input and close any dialog.
 pub fn insert_at_ref(state: &mut AppState, path: &str) {
-    let wrapped = format!("[{}]", path);
-    
     // Check if we have a backup from file picker
-    if let Some((original_input, insert_pos)) = state.file_picker_backup.take() {
+    if let Some((original_input, insert_pos, needs_brackets)) = state.file_picker_backup.take() {
         let input_len = original_input.len();
         
         // Extract text before insert_pos
@@ -45,14 +43,25 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
         };
         
         // Strip trailing whitespace from before if we're replacing at end
-        // This handles cases like "Hello Tes" -> "Hello[file]" (not "Hello [file]")
-        let before = before.trim_end();
+        // But NOT if @ was in the original input (preserve the space before @)
+        let before = if needs_brackets {
+            before.trim_end()
+        } else {
+            before
+        };
         
-        // Combine: before + [path]
-        state.input.input = format!("{}{}", before, wrapped);
+        // Wrap in brackets only if needed (not for @ references in middle of text)
+        let inserted = if needs_brackets {
+            format!("[{}]", path)
+        } else {
+            path.to_string()
+        };
+        
+        // Combine: before + inserted
+        state.input.input = format!("{}{}", before, inserted);
     } else {
-        // Fallback: just set the input
-        state.input.input = wrapped;
+        // Fallback: wrap in brackets
+        state.input.input = format!("[{}]", path);
     }
     
     state.input.cursor_pos = state.input.input.len();
@@ -81,7 +90,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, Event::Abort) {
         // Restore input backup if exists (from file picker)
-        if let Some((input, _)) = state.file_picker_backup.take() {
+        if let Some((input, _, _)) = state.file_picker_backup.take() {
             state.input.input = input;
             state.input.cursor_pos = state.input.input.len();
         }

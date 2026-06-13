@@ -337,8 +337,10 @@ impl AppState {
                     return;
                 }
                 '@' => {
-                    // Save @ as part of the filter/prefix
-                    self.file_picker_backup = Some((self.input.input.clone(), self.input.cursor_pos));
+                    // @ alone at start -> needs brackets
+                    // @ in middle of text -> no brackets
+                    let needs_brackets = self.input.input.is_empty();
+                    self.file_picker_backup = Some((self.input.input.clone(), self.input.cursor_pos, needs_brackets));
                     super::dialog::open_at_file_picker_all(self);
                     return;
                 }

@@ -40,8 +40,12 @@ impl AppState {
             cursor
         };
 
-        // Save: (original input, insert position)
-        self.file_picker_backup = Some((self.input.input.clone(), insert_pos));
+        // Determine if we need brackets (@ references need brackets only when @ is standalone)
+        // If prefix starts with @, we DON'T wrap in brackets (just insert path)
+        let needs_brackets = !prefix.starts_with('@');
+
+        // Save: (original input, insert position, needs brackets)
+        self.file_picker_backup = Some((self.input.input.clone(), insert_pos, needs_brackets));
 
         // Open file picker with the prefix as filter
         super::dialog::open_at_file_picker(self, Some(&prefix));
