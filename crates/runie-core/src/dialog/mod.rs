@@ -51,22 +51,8 @@
 //!     .action("_Cancel", ItemAction::Emit(Event::LoginFlowCancel));
 //! ```
 //!
-//! # Flow Orchestration (flow module)
-//!
-//! For multi-step dialogs, use the `flow` module:
-//!
-//! ```
-//! use runie_core::dialog::dsl::panel;
-//! use runie_core::dialog::flow::{close, pop, push, Flow, Step};
-//!
-//! let _ = Flow::new("setup")
-//!     .step(|_| Step::show(panel("step1", "Step 1").action("Next", push("step2"))))
-//!     .step(|_| Step::show(panel("step2", "Step 2").action("Back", pop()).action("Done", close())));
-//! ```
-
 pub mod builders;
 pub mod dsl;
-pub mod flow;
 mod panel;
 mod stack;
 

@@ -185,14 +185,15 @@
     },
     {
       "id": "clean-dead-modules",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
       "depends_on": [
         "resolve-merge-conflicts",
         "clean-archive"
-      ]
+      ],
+      "completed_in": "ec7eae48"
     },
     {
       "id": "sync-docs",

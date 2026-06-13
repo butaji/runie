@@ -263,10 +263,6 @@ pub enum Event {
         provider: String,
         key: String,
     },
-    LoginFlowValidate {
-        provider: String,
-        key: String,
-    },
     LoginFlowValidationDone {
         provider: String,
         key: String,
@@ -515,7 +511,6 @@ impl Event {
             Event::LoginFlowStart => "LoginFlowStart",
             Event::LoginFlowSelectProvider { .. } => return None,
             Event::LoginFlowSubmitKey { .. } => return None,
-            Event::LoginFlowValidate { .. } => return None,
             Event::LoginFlowValidationDone { .. } => return None,
             Event::LoginFlowValidationFailed { .. } => return None,
             Event::LoginFlowModelsFetched { .. } => return None,
