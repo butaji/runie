@@ -60,6 +60,44 @@ fn registry_get_providers_alias() {
 }
 
 #[test]
+fn registry_does_not_include_clone() {
+    let state = AppState::default();
+    assert!(state.registry.get("clone").is_none(), "/clone should be removed");
+}
+
+#[test]
+fn registry_does_not_include_changelog() {
+    let state = AppState::default();
+    assert!(
+        state.registry.get("changelog").is_none(),
+        "/changelog should be removed"
+    );
+}
+
+#[test]
+fn hotkeys_opens_panel() {
+    let mut state = AppState::default();
+    run_slash(&mut state, "/hotkeys");
+    assert!(
+        matches!(
+            state.open_dialog,
+            Some(DialogState::PanelStack(_))
+        ),
+        "/hotkeys should open a panel"
+    );
+}
+
+#[test]
+fn hotkeys_alias_keys_works() {
+    let mut state = AppState::default();
+    run_slash(&mut state, "/keys");
+    assert!(
+        matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
+        "/keys alias should open hotkeys panel"
+    );
+}
+
+#[test]
 fn registry_list_returns_all() {
     let state = AppState::default();
     let defs = state.registry.list();
@@ -88,16 +126,31 @@ fn handler_model_switches() {
 }
 
 #[test]
-fn handler_help_generates_list() {
+fn handler_help_opens_reference_panel() {
     let mut state = AppState::default();
     let result = exec_handler(&mut state, "help", "");
-    if let CommandResult::Message(msg) = result {
-        assert!(msg.contains("Commands:"));
-        assert!(msg.contains("/model"));
-        assert!(msg.contains("/save"));
-    } else {
-        panic!("help should return Message, got {:?}", result);
-    }
+    assert!(
+        matches!(result, CommandResult::OpenPanelStack(_)),
+        "help should open a reference panel, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn help_panel_lists_commands() {
+    let mut state = AppState::default();
+    run_slash(&mut state, "/help");
+    let stack = match &state.open_dialog {
+        Some(DialogState::PanelStack(s)) => s,
+        other => panic!("expected PanelStack, got {:?}", other),
+    };
+    let panel = stack.current().expect("panel should exist");
+    let has_commands = panel.items.iter().any(|i| match i {
+        crate::dialog::PanelItem::Command { name, .. } => name == "quit",
+        crate::dialog::PanelItem::Action { label, .. } => label.contains("/quit"),
+        _ => false,
+    });
+    assert!(has_commands, "help panel should list /quit command");
 }
 
 #[test]

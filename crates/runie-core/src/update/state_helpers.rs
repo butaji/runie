@@ -109,6 +109,24 @@ impl AppState {
         );
     }
 
+    pub(crate) fn set_provider(&mut self, provider: &str) {
+        if self.config.current_provider == provider {
+            return;
+        }
+        let provider = provider.to_string();
+        let model = first_model_for_provider(&provider)
+            .unwrap_or_else(|| self.config.current_model.clone());
+        self.switch_model(provider, model);
+    }
+
+    pub(crate) fn set_model(&mut self, model: &str) {
+        if self.config.current_model == model {
+            return;
+        }
+        let model = model.to_string();
+        self.switch_model(self.config.current_provider.clone(), model);
+    }
+
     pub(crate) fn switch_theme(&mut self, name: String) {
         if self.config.theme_name == name {
             return;
@@ -194,4 +212,11 @@ impl AppState {
             TransientLevel::Warning,
         );
     }
+}
+
+fn first_model_for_provider(provider: &str) -> Option<String> {
+    crate::model_catalog::model_catalog()
+        .iter()
+        .find(|m| m.provider == provider)
+        .map(|m| m.name.clone())
 }

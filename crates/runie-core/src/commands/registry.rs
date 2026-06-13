@@ -55,25 +55,6 @@ impl CommandRegistry {
         result
     }
 
-    pub fn help_text(&self, provider: &str, model: &str) -> String {
-        let mut lines = vec!["Commands:".into()];
-        for (cat, defs) in self.list_by_category() {
-            lines.push(format!("\n  {}", cat.label()));
-            for def in defs {
-                let aliases = if def.aliases.is_empty() {
-                    String::new()
-                } else {
-                    format!(", {}", def.aliases.join(", "))
-                };
-                lines.push(format!("  /{}{} — {}", def.name, aliases, def.desc));
-            }
-        }
-        lines.push(format!(
-            "\nCurrent model: {}/{}\nUse Up/Down to navigate history.\nEnter — send | Alt+Enter — follow-up | Esc — abort | Ctrl+S — steer",
-            provider, model
-        ));
-        lines.join("\n")
-    }
 }
 
 impl Default for CommandRegistry {

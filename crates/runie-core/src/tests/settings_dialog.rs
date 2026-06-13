@@ -114,3 +114,53 @@ fn settings_select_toggles_steering_mode() {
     }
     assert!(matches!(state.config.steering_mode, DeliveryMode::All));
 }
+
+#[test]
+fn settings_select_cycles_provider() {
+    let mut state = AppState::default();
+    state.config.current_provider = "anthropic".into();
+    state.update(Event::ToggleSettingsDialog);
+    let count = settings_count(&state);
+    for _ in 0..count {
+        let is_provider = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
+            stack
+                .current()
+                .and_then(|p| p.selected_item())
+                .and_then(|i| i.label())
+                == Some("Provider")
+        } else {
+            false
+        };
+        if is_provider {
+            state.update(Event::SettingsSelect);
+            break;
+        }
+        state.update(Event::SettingsDown);
+    }
+    assert_eq!(state.config.current_provider, "openai");
+}
+
+#[test]
+fn settings_select_cycles_theme() {
+    let mut state = AppState::default();
+    state.config.theme_name = "runie".into();
+    state.update(Event::ToggleSettingsDialog);
+    let count = settings_count(&state);
+    for _ in 0..count {
+        let is_theme = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
+            stack
+                .current()
+                .and_then(|p| p.selected_item())
+                .and_then(|i| i.label())
+                == Some("Theme")
+        } else {
+            false
+        };
+        if is_theme {
+            state.update(Event::SettingsSelect);
+            break;
+        }
+        state.update(Event::SettingsDown);
+    }
+    assert_ne!(state.config.theme_name, "runie");
+}

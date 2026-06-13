@@ -90,17 +90,15 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `/approve` | | Apply pending file edits |
-| `/changelog` | | Show changelog |
-| `/clone` | | Clone current session position |
 | `/compact` | | Compact context |
 | `/copy` | | Copy last response to clipboard |
 | `/delete` | | Delete a saved session |
 | `/diagnostics` | | Show resource loading diagnostics |
 | `/export` | | Export session to JSON |
 | `/fork` | | Fork session from a message |
-| `/help` | `/h`, `/?` | Show available commands |
+| `/help` | `/h`, `/?` | Open searchable command reference |
 | `/history` | | Show recent history |
-| `/hotkeys` | | Show all keyboard shortcuts |
+| `/hotkeys` | `/keys`, `/shortcuts` | Open keyboard shortcuts reference |
 | `/import` | | Import session from JSON |
 | `/load` | | Load a saved session |
 | `/model` | `/m` | Switch model (opens picker when no args) |
@@ -115,7 +113,7 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | `/resume` | | Resume most recent session |
 | `/save` | | Save current session |
 | `/scoped-models` | | Enable/disable models for cycling |
-| `/session` | | Show session info |
+| `/session` | | Show current session info |
 | `/sessions` | | List saved sessions |
 | `/settings` | | Open settings dialog |
 | `/share` | | Share session as GitHub gist |
@@ -128,6 +126,8 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | `/trust` | | Trust current project |
 | `/untrust` | | Untrust current project |
 | `/quit` | `/q`, `/exit` | Quit application |
+
+Commands are organized in the palette by category: **Core**, **Session**, **Model**, **Safety**, and **System**. The most common actions are at the top; configuration commands live under `/settings`. Use `/help` to browse the full reference with fuzzy filtering.
 
 ### Tool Execution
 

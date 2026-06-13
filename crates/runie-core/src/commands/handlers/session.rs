@@ -117,13 +117,6 @@ pub fn register(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        crate::cmd!("clone")
-            .desc("Clone current session position")
-            .category(CommandCategory::Session)
-            .handler(handle_clone),
-    );
-
-    registry.register(
         crate::cmd!("tree")
             .desc("Open session tree dialog")
             .category(CommandCategory::Session)
@@ -277,23 +270,36 @@ fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
             .filter(|m| m.role == crate::model::Role::Tool)
             .count(),
     );
+    let prompt = if state.input.current_prompt.is_empty() {
+        "default"
+    } else {
+        &state.input.current_prompt
+    };
+    let read_only = if state.config.read_only { "on" } else { "off" };
+    let trust = project_trust_status(state);
     let info = format!(
-        "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nCreated: {}\nUpdated: {}",
+        "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nPrompt: {}\nThinking: {}\nRead-only: {}\nTrust: {}\nCreated: {}\nUpdated: {}",
         state.session.session_display_name.as_deref().unwrap_or("unnamed"),
         state.session.messages.len(), user, assistant, tool, tokens,
         state.config.current_provider, state.config.current_model,
+        prompt,
+        state.config.thinking_level.as_str(),
+        read_only,
+        trust,
         crate::labels::format_timestamp(state.session.session_created_at),
         crate::labels::format_timestamp(state.session.session_updated_at),
     );
     CommandResult::Message(info)
 }
 
-fn handle_clone(state: &mut AppState, _: &str) -> CommandResult {
-    let tree = state.session.session_tree.clone().unwrap_or_else(|| {
-        crate::session_tree::SessionTree::from_messages(&state.session.messages)
-    });
-    state.session.session_tree = Some(tree);
-    CommandResult::Message("Session cloned.".into())
+fn project_trust_status(_state: &AppState) -> &'static str {
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let tm = crate::trust::TrustManager::load();
+    match tm.decision_for(&cwd) {
+        Some(crate::trust::TrustDecision::Trusted) => "trusted",
+        Some(crate::trust::TrustDecision::Untrusted) => "untrusted",
+        None => "default",
+    }
 }
 
 fn handle_tree(_: &mut AppState, _: &str) -> CommandResult {

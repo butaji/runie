@@ -123,8 +123,8 @@ fn esc_from_subdialog_returns_to_palette() {
 fn message_command_from_palette_closes_palette() {
     let mut state = AppState::default();
     state.update(Event::ToggleCommandPalette);
-    // Filter to a message-only command (help).
-    for c in "help".chars() {
+    // Filter to a message-only command (history).
+    for c in "history".chars() {
         state.update(Event::PaletteFilter(c));
     }
     state.update(Event::PaletteSelect);

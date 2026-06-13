@@ -26,7 +26,7 @@ impl CommandDef {
             name: name.into(),
             desc: String::new(),
             aliases: Vec::new(),
-            category: CommandCategory::Help,
+            category: CommandCategory::System,
             flow: CommandFlow::None,
             is_sub: false,
         }

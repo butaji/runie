@@ -116,7 +116,7 @@ fn push_body_item<'a>(
         PanelItem::Action { .. }
         | PanelItem::Command { .. }
         | PanelItem::FormSubmit => *nav_idx += 1,
-        PanelItem::Select { .. } | PanelItem::Header(_) | PanelItem::Separator => {}
+        PanelItem::Select { .. } => {}
     }
 }
 
