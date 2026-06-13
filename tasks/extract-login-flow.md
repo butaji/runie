@@ -1,6 +1,6 @@
 # Extract Login Flow from update/mod.rs Into a Focused File
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P1

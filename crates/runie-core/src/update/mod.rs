@@ -1,5 +1,3 @@
-use crate::dialog::{Panel, PanelStack};
-use crate::login_flow::LoginStep;
 use crate::model::{AppState, ChatMessage, Role};
 use crate::Event;
 
@@ -30,6 +28,7 @@ mod input;
 mod input_scroll;
 mod input_text;
 mod line_nav;
+mod login_flow;
 mod path_complete;
 mod queue;
 pub mod scoped_models;
@@ -62,7 +61,7 @@ impl AppState {
                 | Event::LoginFlowSave
                 | Event::LoginFlowCancel
         ) {
-            self.login_flow_event(event);
+            login_flow::login_flow_event(self, event);
             return;
         }
 
@@ -74,7 +73,7 @@ impl AppState {
                 | Event::ProvidersDisconnect { .. }
                 | Event::ProvidersAdd
         ) {
-            self.providers_event(event);
+            login_flow::providers_event(self, event);
             return;
         }
 
@@ -85,7 +84,7 @@ impl AppState {
             // the providers dialog) instead of being absorbed by the panel
             // stack handler which would leave the dialog open.
             if self.login_flow.is_some() && event == Event::DialogBack {
-                self.login_flow_cancel();
+                login_flow::login_flow_cancel(self);
                 return;
             }
             self.update_dialog(event);
@@ -217,7 +216,7 @@ impl AppState {
             | Event::LoginFlowModelsFetched { .. }
             | Event::LoginFlowToggleModel { .. }
             | Event::LoginFlowSave
-            | Event::LoginFlowCancel => self.login_flow_event(event),
+            | Event::LoginFlowCancel => login_flow::login_flow_event(self, event),
             Event::SystemMessage { content } => self.add_system_msg(content),
             Event::TransientMessage { content, level } => self.set_transient(content, level),
             Event::TransientError { content } => {
@@ -225,347 +224,6 @@ impl AppState {
             }
             Event::ClearTransient => self.clear_transient(),
             _ => {}
-        }
-    }
-
-    // === Providers Dialog Event Handler ===
-    fn providers_event(&mut self, event: Event) {
-        match event {
-            Event::ProvidersDialog => self.open_providers_dialog(),
-            Event::ProvidersSelectModel { provider, model } => {
-                self.providers_select_model(&provider, &model);
-            }
-            Event::ProvidersDisconnect { provider } => {
-                self.providers_disconnect(&provider);
-            }
-            Event::ProvidersAdd => {
-                // Close the providers dialog and start the login flow.
-                // Push current dialog to back stack so Esc returns here.
-                if let Some(current) = self.open_dialog.take() {
-                    self.dialog_back_stack.push(current);
-                }
-                self.login_flow = Some(crate::login_flow::LoginFlowState::new());
-                self.rebuild_login_dialog();
-            }
-            _ => {}
-        }
-    }
-
-    fn open_providers_dialog(&mut self) {
-        use crate::providers_dialog::build_providers_dialog;
-        // Save the current dialog (e.g. palette) to the back stack so Esc
-        // can restore it after the providers dialog or login flow closes.
-        if let Some(current) = self.open_dialog.take() {
-            self.dialog_back_stack.push(current);
-        }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(build_providers_dialog(
-            &self.config.current_provider,
-            &self.config.current_model,
-        )));
-        self.mark_dirty();
-    }
-
-    fn providers_select_model(&mut self, provider: &str, model: &str) {
-        self.config.current_provider = provider.to_string();
-        self.config.current_model = model.to_string();
-        self.record_model_usage(provider, model);
-        self.open_dialog = None;
-        self.mark_dirty();
-    }
-
-    fn providers_disconnect(&mut self, provider: &str) {
-        match crate::login_config::remove_provider_config(provider) {
-            Ok(()) => {
-                // If this was the active provider, switch to another one or clear.
-                if self.config.current_provider == provider {
-                    // Try to find another configured provider.
-                    let configured = crate::login_config::list_configured_providers();
-                    if let Some((name, _, models)) = configured.first() {
-                        self.config.current_provider = name.clone();
-                        self.config.current_model = models.first().cloned().unwrap_or_default();
-                    } else {
-                        self.config.current_provider.clear();
-                        self.config.current_model.clear();
-                    }
-                }
-                self.open_dialog = None;
-                self.mark_dirty();
-            }
-            Err(e) => {
-                self.set_transient(
-                    format!("Could not disconnect {}: {}", provider, e),
-                    crate::event::TransientLevel::Error,
-                );
-            }
-        }
-    }
-
-    fn login_flow_event(&mut self, event: Event) {
-        match event {
-            Event::LoginFlowStart => self.login_flow_start(),
-            Event::LoginFlowSelectProvider { provider } => {
-                self.login_flow_select_provider(provider)
-            }
-            Event::LoginFlowSubmitKey { provider, key } => {
-                self.login_flow_submit_key(provider, key)
-            }
-            Event::LoginFlowValidationDone { models, .. } => {
-                self.login_flow_validation_done(models)
-            }
-            Event::LoginFlowValidationFailed { error, .. } => {
-                self.login_flow_validation_failed(error)
-            }
-            Event::LoginFlowModelsFetched { models, .. } => self.login_flow_models_fetched(models),
-            Event::LoginFlowToggleModel { model } => self.login_flow_toggle_model(model),
-            Event::LoginFlowSave => self.login_flow_save(),
-            Event::LoginFlowCancel => self.login_flow_cancel(),
-            _ => {}
-        }
-    }
-
-    fn login_flow_start(&mut self) {
-        self.login_flow = Some(crate::login_flow::LoginFlowState::new());
-        self.rebuild_login_dialog();
-    }
-
-    fn login_flow_select_provider(&mut self, provider: String) {
-        let provider_clone = provider.clone();
-        if let Some(ref mut flow) = self.login_flow {
-            *flow = flow.clone().with_provider(provider);
-            self.mark_dirty();
-        }
-        // Push the key input panel onto the real login stack (root +
-        // pushed). ESC / Cancel will pop back to the provider picker.
-        self.push_login_panel(crate::login_flow::build_key_input(&provider_clone));
-    }
-
-    fn login_flow_submit_key(&mut self, provider: String, key: String) {
-        // Compute defaults + final provider first (immutable borrows).
-        let final_provider = if provider.is_empty() {
-            self.login_flow
-                .as_ref()
-                .map(|f| f.provider.clone())
-                .unwrap_or_default()
-        } else {
-            provider.clone()
-        };
-        let defaults: Vec<String> = crate::provider_registry::find_provider(&final_provider)
-            .map(|meta| meta.default_models.iter().map(|s| s.to_string()).collect())
-            .unwrap_or_default();
-        // Update state (mutable borrow).
-        if let Some(ref mut flow) = self.login_flow {
-            *flow = flow.clone().with_key_and_defaults(key, defaults);
-            flow.provider = final_provider.clone();
-        }
-        // Replace the key input panel with the model selector on the
-        // real login stack. The key input is "consumed" (submitted) —
-        // it should NOT remain in the back stack, otherwise Esc from
-        // the model selector would pop back to a stale key input.
-        if let Some(flow) = self.login_flow.as_ref() {
-            self.replace_top_login_panel_with(crate::login_flow::build_model_selector(flow));
-        }
-    }
-
-    fn login_flow_validation_done(&mut self, models: Vec<String>) {
-        if let Some(ref mut flow) = self.login_flow {
-            // Non-blocking: enrich the model list in place on the top
-            // panel (model selector). We do NOT push a new panel.
-            *flow = flow.clone().with_fetched_models(models);
-            self.replace_top_login_panel();
-            self.mark_dirty();
-        }
-    }
-
-    fn login_flow_models_fetched(&mut self, models: Vec<String>) {
-        if let Some(ref mut flow) = self.login_flow {
-            if flow.step == LoginStep::ModelSelect {
-                *flow = flow.clone().with_fetched_models(models);
-                self.replace_top_login_panel();
-                self.mark_dirty();
-            }
-        }
-    }
-
-    fn login_flow_validation_failed(&mut self, error: String) {
-        // Non-blocking: surface a transient warning, do NOT change the step
-        // or the panel stack.
-        if let Some(ref flow) = self.login_flow {
-            if flow.step == LoginStep::ModelSelect {
-                self.set_transient(
-                    format!("Could not verify key: {}", error),
-                    crate::event::TransientLevel::Warning,
-                );
-                self.mark_dirty();
-            }
-        }
-    }
-
-    fn login_flow_toggle_model(&mut self, model: String) {
-        if let Some(ref mut flow) = self.login_flow {
-            flow.toggle_model(&model);
-            // Refresh the top panel to reflect the new toggle state.
-            self.replace_top_login_panel();
-            self.mark_dirty();
-        }
-    }
-
-    fn login_flow_save(&mut self) {
-        let _provider = if let Some(ref flow) = self.login_flow {
-            let base_url = crate::provider_registry::find_provider(&flow.provider)
-                .map(|p| p.base_url.to_string())
-                .unwrap_or_default();
-            let selected: Vec<String> =
-                flow.selected_models.iter().cloned().collect::<Vec<_>>();
-            let provider = flow.provider.clone();
-            if let Err(e) = crate::login_config::save_provider_config(
-                &provider,
-                &base_url,
-                &flow.key,
-                &selected,
-            ) {
-                self.add_system_msg(format!("Failed to save provider config: {}", e));
-                return;
-            }
-            provider
-        } else {
-            return;
-        };
-
-        // Clear the login flow state.
-        self.login_flow = None;
-
-        // Restore the providers dialog (from back stack) so the user can
-        // choose which model to activate. This gives them control over
-        // the active model selection instead of auto-activating the first.
-        if let Some(previous) = self.dialog_back_stack.pop() {
-            self.open_dialog = Some(previous);
-        } else {
-            // Fallback: open the providers dialog directly.
-            self.open_providers_dialog();
-        }
-
-        self.mark_dirty();
-    }
-
-    fn login_flow_cancel(&mut self) {
-        // Cancel pops one level. At the root (provider picker), the pop
-        // is a no-op and we close the dialog. This mirrors the ESC
-        // stack-navigation semantic so the cancel button and ESC behave
-        // identically.
-        self.pop_login_panel_or_close();
-    }
-
-    /// Pop the top panel of the login stack. If we're at the root, close
-    /// the entire dialog (and clear `login_flow`). The pop also updates
-    /// `LoginFlowState::step` to reflect the panel we returned to.
-    fn pop_login_panel_or_close(&mut self) {
-        if self.login_flow.is_none() {
-            return;
-        }
-        let mut stack = self.take_or_create_login_stack();
-        if stack.len() > 1 {
-            stack.pop();
-            // Update step to reflect the panel we returned to.
-            if let Some(flow) = self.login_flow.as_mut() {
-                flow.step = match stack.current().map(|p| p.id.as_str()) {
-                    Some("login-provider") => LoginStep::ProviderPicker,
-                    Some("login-key") => LoginStep::KeyInput,
-                    Some("login-models") => LoginStep::ModelSelect,
-                    _ => flow.step.clone(),
-                };
-            }
-            self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-            self.mark_dirty();
-        } else {
-            // At the root: close the login flow and restore the previous
-            // dialog from the back stack (e.g. the providers dialog that
-            // pushed this login flow).
-            self.login_flow = None;
-            if let Some(previous) = self.dialog_back_stack.pop() {
-                self.open_dialog = Some(previous);
-                self.mark_dirty();
-            } else {
-                self.open_dialog = None;
-                self.mark_dirty();
-            }
-        }
-    }
-
-    /// Push a panel onto the login stack (and set the step on the state).
-    fn push_login_panel(&mut self, panel: Panel) {
-        if let Some(flow) = self.login_flow.as_mut() {
-            flow.step = match panel.id.as_str() {
-                "login-provider" => LoginStep::ProviderPicker,
-                "login-key" => LoginStep::KeyInput,
-                "login-models" => LoginStep::ModelSelect,
-                _ => flow.step.clone(),
-            };
-        }
-        let mut stack = self.take_or_create_login_stack();
-        stack.push(panel);
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-    }
-
-    /// Replace the top panel of the login stack with a freshly built one
-    /// from the current `LoginFlowState`. Used to update the model
-    /// selector when models are fetched or a model is toggled.
-    fn replace_top_login_panel(&mut self) {
-        let flow = self.login_flow.as_ref().cloned();
-        let Some(flow) = flow else {
-            return;
-        };
-        let mut stack = self.take_or_create_login_stack();
-        if let Some(last) = stack.panels.last_mut() {
-            *last = match last.id.as_str() {
-                "login-models" => crate::login_flow::build_model_selector(&flow),
-                "login-key" => crate::login_flow::build_key_input(&flow.provider),
-                "login-provider" => crate::login_flow::build_provider_picker(),
-                _ => crate::login_flow::build_model_selector(&flow),
-            };
-        }
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-    }
-
-    /// Replace the top panel of the login stack with `new_top`, popping
-    /// the current top first. Used when a panel is "consumed" (e.g. the
-    /// key input is submitted → model selector). The consumed panel
-    /// is removed from the back stack so Esc from the new top goes to
-    /// the logical parent, not back to the consumed panel.
-    fn replace_top_login_panel_with(&mut self, new_top: crate::dialog::Panel) {
-        let mut stack = self.take_or_create_login_stack();
-        if !stack.is_empty() {
-            stack.pop();
-        }
-        stack.push(new_top);
-        self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-    }
-
-    /// Take the current login PanelStack out of `open_dialog`, or build a
-    /// fresh root stack if there is no dialog (e.g. we are being called
-    /// from an item activation that took the dialog out, or the dialog
-    /// was never opened). The login flow owns its dialog; rebuilding the
-    /// root is always safe.
-    fn take_or_create_login_stack(&mut self) -> PanelStack {
-        if let Some(crate::commands::DialogState::PanelStack(stack)) = self.open_dialog.take() {
-            stack
-        } else {
-            crate::login_flow::build_login_root()
-        }
-    }
-
-    fn rebuild_login_dialog(&mut self) {
-        // Open the login dialog with the root panel (provider picker).
-        // Subsequent steps push panels onto this stack instead of
-        // rebuilding it from scratch. If another dialog (e.g. the
-        // command palette) is currently open, push it onto the global
-        // back stack so Esc returns to it (Android-like).
-        if self.login_flow.is_some() {
-            if let Some(current) = self.open_dialog.take() {
-                self.dialog_back_stack.push(current);
-            }
-            let stack = crate::login_flow::build_login_root();
-            self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
-            self.mark_dirty();
         }
     }
 
@@ -1103,14 +761,14 @@ impl AppState {
     /// the user through the full login flow.
     fn run_login_command(&mut self, _provider: &str, _token: &str) {
         // Redirect to the providers dialog for a guided flow
-        self.open_providers_dialog();
+        login_flow::providers_event(self, crate::Event::ProvidersDialog);
     }
 
     /// Disconnect a provider programmatically. Removes it from config.toml.
     fn run_logout_command(&mut self, provider: &str) {
         if provider.is_empty() {
             // Redirect to the providers dialog
-            self.open_providers_dialog();
+            login_flow::providers_event(self, crate::Event::ProvidersDialog);
             return;
         }
         match crate::login_config::remove_provider_config(provider) {
