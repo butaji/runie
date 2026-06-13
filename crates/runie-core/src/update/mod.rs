@@ -206,6 +206,9 @@ impl AppState {
             | Event::ScopedModelDisableAll
             | Event::ScopedModelToggleProvider { .. }
             | Event::AtFilePicker => dialog_toggle::dialog_toggle_event(self, event),
+            Event::OpenAgentsManager | Event::AgentsManagerSave { .. } | Event::AgentsManagerDelete { .. } => {
+                crate::commands::agents_manager::agents_manager_event(self, event)
+            }
             Event::InsertAtRef(_) => input_dispatch::input_event(self, event),
             Event::CopyToClipboard(_) | Event::CopyLastResponse => {
                 control::control_event(self, event)
