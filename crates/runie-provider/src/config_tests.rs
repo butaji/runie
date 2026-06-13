@@ -1,5 +1,5 @@
 use crate::config::{Config, ModelProvider};
-use crate::AnyProvider;
+use runie_core::ProviderError;
 use std::collections::HashMap;
 
 #[test]
@@ -90,22 +90,6 @@ api_key = "sk-or-..."
 }
 
 #[test]
-fn any_provider_uses_configured_provider() {
-    let toml = r#"
-[models]
-default = "local/llama3.1"
-
-[model_providers.local]
-base_url = "http://localhost:11434/v1"
-api_key = "ollama"
-"#;
-    let cfg: Config = toml::from_str(toml).unwrap();
-    let provider = AnyProvider::from_config(&cfg, cfg.default_model().unwrap());
-    assert_eq!(provider.name(), "openai");
-    assert_eq!(provider.model(), "local/llama3.1");
-}
-
-#[test]
 fn config_provider_type_determines_api() {
     let toml = r#"
 [model_providers.custom]
@@ -116,4 +100,32 @@ api_key = "dummy"
     let cfg: Config = toml::from_str(toml).unwrap();
     let provider = cfg.model_providers.get("custom").unwrap();
     assert_eq!(provider.provider_type.as_deref(), Some("openai-compatible"));
+}
+
+#[test]
+fn dyn_provider_from_registry_key() {
+    // openai requires OPENAI_API_KEY; without it and without RUNIE_MOCK, we get MissingApiKey.
+    // Save and restore so the test is environment-independent.
+    let saved_key = std::env::var("OPENAI_API_KEY").ok();
+    let saved_mock = std::env::var("RUNIE_MOCK").ok();
+    std::env::remove_var("OPENAI_API_KEY");
+    std::env::remove_var("RUNIE_MOCK");
+    let result = crate::build_provider_with_warning("openai", "gpt-4o");
+    if let Some(v) = saved_key {
+        std::env::set_var("OPENAI_API_KEY", v);
+    }
+    if let Some(v) = saved_mock {
+        std::env::set_var("RUNIE_MOCK", v);
+    }
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(err, ProviderError::MissingApiKey(_)));
+}
+
+#[test]
+fn dyn_provider_unknown_key_returns_error() {
+    let result = crate::build_provider_with_warning("nonexistent-provider", "model-x");
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(err, ProviderError::UnknownProvider(k) if k == "nonexistent-provider"));
 }

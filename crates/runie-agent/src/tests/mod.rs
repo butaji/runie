@@ -7,3 +7,17 @@ mod safety;
 mod subagent_test;
 mod tools;
 mod turn;
+
+use std::sync::Once;
+
+/// Enable mock provider for all tests. Without this, the "mock" provider key is
+/// not registered in the provider registry, causing DynProvider::new("mock", ...)
+/// to return UnknownProvider error.
+static ENABLE_MOCK: Once = Once::new();
+
+/// Call this at the start of each test that uses the "mock" provider.
+pub(crate) fn ensure_mock_provider() {
+    ENABLE_MOCK.call_once(|| {
+        std::env::set_var("RUNIE_MOCK", "1");
+    });
+}

@@ -24,10 +24,11 @@
 //! ```
 
 use anyhow::Result;
+use futures::StreamExt;
 use runie_agent::{build_provider, parser::parse_tool_calls, Tool};
 use runie_core::{
     config_reload,
-    provider::{Message, Provider, ResponseChunk},
+    provider::{Message, Provider},
 };
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
@@ -117,17 +118,17 @@ async fn run_json() -> Result<()> {
 
     for _ in 0..5 {
         let mut response_text = String::new();
-        provider
-            .generate(messages.clone(), |chunk: ResponseChunk| {
-                response_text.push_str(&chunk.content);
-                content.push_str(&chunk.content);
-                let line = serde_json::to_string(&StreamChunk {
-                    chunk: chunk.content,
-                })
-                .unwrap_or_default();
-                println!("{}", line);
+        let mut stream = provider.generate(messages.clone());
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result?;
+            response_text.push_str(&chunk.content);
+            content.push_str(&chunk.content);
+            let line = serde_json::to_string(&StreamChunk {
+                chunk: chunk.content,
             })
-            .await?;
+            .unwrap_or_default();
+            println!("{}", line);
+        }
 
         let tools = parse_tool_calls(&response_text);
         if tools.is_empty() {
@@ -257,22 +258,21 @@ mod tests {
 
     #[tokio::test]
     async fn json_mode_returns_tool_calls() {
+        use runie_core::provider::Provider;
         let provider = runie_provider::MockProvider::default();
         let messages = vec![
-            Message::System {
+            runie_core::provider::Message::System {
                 content: "You are helpful.".into(),
             },
-            Message::User {
+            runie_core::provider::Message::User {
                 content: "list files".into(),
             },
         ];
         let mut response_text = String::new();
-        provider
-            .generate(messages.clone(), |chunk: ResponseChunk| {
-                response_text.push_str(&chunk.content);
-            })
-            .await
-            .unwrap();
+        let mut stream = provider.generate(messages);
+        while let Some(r) = stream.next().await {
+            response_text.push_str(&r.unwrap().content);
+        }
         let _tools = parse_tool_calls(&response_text);
         // MockProvider returns deterministic response; may or may not have tools
         // We just verify the pipeline works

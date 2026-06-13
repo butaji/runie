@@ -4,139 +4,201 @@
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P1
-**Depends on**: resolve-merge-conflicts, fix-broken-references, deduplicate-login-flow
+**Depends on**: extract-login-flow
 
 ## Description
 
-`crates/runie-core/src/update/mod.rs` is 1926 lines — 1426 over the
-project's 500-line cap. It contains:
+`crates/runie-core/src/update/mod.rs` is 1901 lines — 901 over the
+project's relaxed 1000-line cap (raised from 500 in commit `402943c5`).
+It contains:
 
-- The main `AppState::update` dispatcher (lines 60-111)
-- 8 free `fn *_event` dispatchers: `transient_event`, `system_event`,
-  `scroll_event`, `input_event`, `agent_event`, `handle_history_prev`,
-  `handle_history_next`, `model_config_event` (the `*_event` pattern is
-  inconsistent — some are methods, some are free functions)
-- 30+ `impl AppState` methods (model switching, theme switching, thinking
-  level, scoped models, dialog handling, palette, model selector, login
-  flow helpers, form panel, command results, edit approval, etc.)
-- The `FormAction` enum
-- The `partition_model_items` helper
-- A `fn form_panel_action` (70+ lines, 5+ branches)
-- A `fn form_panel_edit_char`
-- A `fn form_build_submit`
-- A `fn try_activate_panel`
-- A `fn handle_panel_action`
-- A `fn panel_toggle_item`
-- A `fn panel_cycle_item`
-- A `fn apply_panel_setting`
-- A `fn process_command_result`
-- A `fn push_dialog_to_back_stack`
-- A `fn open_at_file_picker`
-- A `fn insert_at_ref`
-- A `fn toggle_expand_all`
-- A `fn apply_form_action`
-- A `fn form_dialog_event`
+- The main `AppState::update` dispatcher (lines 41-220, ~180 lines)
+- 11 method dispatchers on `AppState` (all now `&mut self` methods, not
+  the free functions I described in the previous version of this task):
+  - `input_event` (in `update/input.rs:482`, not mod.rs)
+  - `agent_event` (in `update/agent.rs:302`, not mod.rs)
+  - `scroll_event` (mod.rs:573, **110 lines**)
+  - `control_event` (in `update/control.rs:50`)
+  - `model_config_event` (mod.rs:734, ~25 lines)
+  - `dialog_toggle_event` (mod.rs:752, ~40 lines)
+  - `login_flow_event` (mod.rs:303, ~25 lines)
+  - `providers_event` (mod.rs:232, ~25 lines)
+  - `update_dialog` (mod.rs:1157, ~70 lines)
+  - `update_panel_stack` (mod.rs:1224, ~60 lines)
+  - `update_form_panel` (mod.rs:1283, ~40 lines)
+- 21 login flow + providers dialog methods (mod.rs:232-595, ~360 lines) — **already
+  extracted in concept by `extract-login-flow`**, see that task
+- 20+ dialog/form/command-result methods (mod.rs:783-1830, ~1050 lines)
+- The `FormAction` enum (mod.rs:11-26)
+- The `partition_model_items` helper (mod.rs:1893+)
 
-This is 3+ complete subsystems (event dispatch, dialog system, form
-panels) stuffed into one file. The merge conflict region (lines 60-440)
-exacerbates the problem because it duplicates logic with the sibling
-files in `update/` (e.g. `update/login_flow.rs`, `update/palette.rs`,
-`update/model_selector.rs`, `update/scoped_models.rs`).
+The merge resolution in commit `77a605c3` rewrote the dispatcher as a
+single large `match event` (rather than the previous
+`EventCategory`-based routing). This is correct but the file is now
+even more bloated.
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/update/mod.rs` is ≤ 500 lines
-- [ ] The main `AppState::update` dispatcher stays in `mod.rs` but is ≤ 40 lines (just the category match)
-- [ ] The login-flow handlers (currently split between `update/mod.rs` and `update/login_flow.rs`) are consolidated in `update/login_flow.rs` only — see `deduplicate-login-flow` task
-- [ ] Dialog system methods move to a new `update/dialog.rs` (or fold into existing `update/dialog_actions.rs` and `update/dialog_open.rs`)
-- [ ] Form-panel logic (`form_panel_action`, `form_panel_edit_char`, `form_build_submit`, `form_dialog_event`, `apply_form_action`, `FormAction` enum) moves to a new `update/form.rs`
-- [ ] The `partition_model_items` helper and related model-selector glue moves to `update/model_selector.rs` (which already exists)
-- [ ] Free function dispatchers (`transient_event`, `system_event`, `scroll_event`, `input_event`, `agent_event`, `handle_history_*`, `model_config_event`) stay in `mod.rs` because they're called from the dispatcher
-- [ ] `update/scoped_models.rs` keeps all scoped-models methods; the duplicates in `mod.rs` are removed
+- [ ] `crates/runie-core/src/update/mod.rs` is ≤ 500 lines (the
+  original, strict cap)
+- [ ] The main `AppState::update` dispatcher stays in `mod.rs` but is
+  ≤ 200 lines (the dispatcher IS long because it has 12+ match arms,
+  but each arm is small)
+- [ ] The 11 method dispatchers move to focused files. The pattern
+  to follow: `update/scroll.rs` (for `scroll_event`), `update/control.rs`
+  (for `control_event`, may need a rename to `control_event.rs` or
+  be moved into existing files), etc.
+- [ ] The dialog system methods (`update_dialog`, `update_panel_stack`,
+  `update_form_panel`, `form_panel_action`, `form_panel_edit_char`,
+  `form_build_submit`, `form_dialog_event`, `apply_form_action`,
+  `try_activate_panel`, `handle_panel_action`, `panel_toggle_item`,
+  `panel_cycle_item`, `apply_panel_setting`, `process_command_result`,
+  `push_dialog_to_back_stack`, `open_at_file_picker`, `insert_at_ref`)
+  move to a new `update/dialog.rs` (consolidating the existing
+  `update/dialog_actions.rs`, `update/dialog_open.rs`,
+  `update/dialog_update.rs`)
+- [ ] The `FormAction` enum moves to `update/form.rs`
+- [ ] The `partition_model_items` helper moves to
+  `update/model_selector.rs` (which already exists at 106 lines)
+- [ ] Login flow methods (21 of them) are already in
+  `update/login_flow.rs` per `extract-login-flow`
+- [ ] Open-command methods (`open_command_palette`, `open_model_selector`,
+  `open_settings_dialog`, `open_scoped_models_dialog`,
+  `open_session_tree_dialog`, `toggle_dialog`) move to
+  `update/dialog.rs` (they're open-the-dialog glue, not state changes)
+- [ ] `update/scoped_models.rs` keeps all scoped-models methods; the
+  duplicates in `mod.rs` are removed
 - [ ] No function in the split files exceeds 40 lines
 - [ ] No file in `crates/runie-core/src/update/` exceeds 500 lines
+- [ ] `build.rs`'s `ALLOWED_FILES_OVER` is updated to remove
+  `crates/runie-core/src/update/mod.rs` (it's no longer over the cap)
 
 ## Tests
 
 ### Layer 1 — State/Logic
 - [ ] `cargo build --workspace` succeeds after the split
-- [ ] `cargo build --workspace --tests` succeeds (the merge resolution should have produced a buildable state; the split must preserve that)
-- [ ] `cargo test -p runie-core --lib update::mod` passes (the dispatcher still routes events)
-- [ ] `cargo test -p runie-core --lib update::dialog` passes (dialog handlers moved to a new file)
-- [ ] `cargo test -p runie-core --lib update::form` passes (form panel tests move with the form code)
+- [ ] `cargo build --workspace --tests` succeeds
+- [ ] `cargo test -p runie-core --lib update::` passes (the
+  dispatcher still routes events)
+- [ ] `cargo test -p runie-core --lib update::scroll` passes (if
+  scroll tests are added)
+- [ ] `cargo test -p runie-core --lib update::dialog` passes
+- [ ] `cargo test -p runie-core --lib update::form` passes
+- [ ] `cargo test -p runie-core --lib update::login_flow` passes
+  (per `extract-login-flow`)
 
 ### Layer 2 — Event Handling
-- [ ] All 595+ existing `#[test]` annotations in `crates/runie-core/src/tests/` still pass
-- [ ] `cargo test -p runie-core --lib tests::dialog_theme_switch` passes (covers dialog + theme switching)
-- [ ] `cargo test -p runie-core --lib tests::form_dialog` passes (covers form panel logic)
-- [ ] `cargo test -p runie-core --lib tests::model_selector` passes (covers model selector)
+- [ ] All 595+ existing `#[test]` annotations in
+  `crates/runie-core/src/tests/` still pass
+- [ ] `cargo test -p runie-core --lib tests::dialog_theme_switch`
+  passes
+- [ ] `cargo test -p runie-core --lib tests::form_dialog` passes
+- [ ] `cargo test -p runie-core --lib tests::model_selector` passes
 
 ## Notes
+
+**Current file sizes** in `update/` (after `extract-login-flow`
+moves 21 methods out):
+
+```
+1901 crates/runie-core/src/update/mod.rs     ← split target
+ 482 crates/runie-core/src/update/input.rs
+ 302 crates/runie-core/src/update/agent.rs
+ 250 crates/runie-core/src/update/edit.rs
+ 240 crates/runie-core/src/update/line_nav.rs
+ 218 crates/runie-core/src/update/dialog_open.rs
+ 200 crates/runie-core/src/update/dialog_actions.rs
+ 164 crates/runie-core/src/update/queue.rs
+ 152 crates/runie-core/src/update/tab_complete.rs
+ 133 crates/runie-core/src/update/settings_dialog.rs
+ 128 crates/runie-core/src/update/dialog_update.rs
+ 118 crates/runie-core/src/update/palette.rs
+ 106 crates/runie-core/src/update/model_selector.rs
+  93 crates/runie-core/src/update/system_actions.rs
+  90 crates/runie-core/src/update/dialog.rs          ← already exists
+  ... (others under 100 lines)
+```
+
+Even after `extract-login-flow` removes ~360 lines, `mod.rs` is
+~1540 lines. This task is the next step.
 
 **Proposed file layout after the split:**
 
 ```
 crates/runie-core/src/update/
-├── mod.rs              (≤ 300 lines: dispatcher + free event handlers)
-├── at_refs.rs          (existing)
-├── agent.rs            (existing — agent_event stays here, free function)
-├── bash.rs             (existing)
-├── control.rs          (existing)
-├── dialog.rs           (NEW — open_dialog, update_dialog, process_command_result, push_dialog_to_back_stack, open_at_file_picker, insert_at_ref)
-├── dialog_actions.rs   (existing — keep as-is)
-├── dialog_open.rs      (existing — keep as-is)
-├── dialog_update.rs    (existing — keep as-is, used by dialog.rs)
-├── edit.rs             (existing)
-├── edit_approval.rs    (existing)
-├── form.rs             (NEW — FormAction enum, form_panel_action, form_panel_edit_char, form_build_submit, form_dialog_event, apply_form_action, update_form_panel)
-├── input.rs            (existing — input_event stays here, free function)
-├── input_scroll.rs     (existing)
-├── input_text.rs       (existing)
-├── line_nav.rs         (existing)
-├── login_flow.rs       (existing — keep ALL login logic here, per deduplicate-login-flow)
-├── model_selector.rs   (existing — move partition_model_items + handle here)
-├── palette.rs          (existing)
-├── path_complete.rs    (existing)
-├── queue.rs            (existing)
-├── scoped_models.rs    (existing — keep ALL scoped-model logic here)
-├── session.rs          (existing)
-├── settings_dialog.rs  (existing)
-├── system_actions.rs   (existing — system_event stays here, free function)
-└── tab_complete.rs     (existing)
+├── mod.rs              (≤ 500 lines: dispatcher only)
+├── at_refs.rs          (existing, 18 lines)
+├── agent.rs            (existing, 302 lines, +agent_event free fn)
+├── bash.rs             (existing, 93 lines)
+├── control.rs          (existing, 50 lines, +control_event)
+├── dialog.rs           (existing 90 lines, GROW to ~600: all dialog glue)
+├── dialog_actions.rs   (existing, FOLD into dialog.rs)
+├── dialog_open.rs      (existing, FOLD into dialog.rs)
+├── dialog_update.rs    (existing, FOLD into dialog.rs)
+├── edit.rs             (existing, 250 lines)
+├── edit_approval.rs    (existing, 34 lines)
+├── form.rs             (NEW, ~150 lines: FormAction + form_panel_*)
+├── input.rs            (existing, 482 lines, +input_event)
+├── input_scroll.rs     (existing, 49 lines)
+├── input_text.rs       (existing, 62 lines)
+├── line_nav.rs         (existing, 240 lines)
+├── login_flow.rs       (from extract-login-flow, ~360 lines)
+├── model_selector.rs   (existing, 106 lines, +partition_model_items)
+├── palette.rs          (existing, 118 lines)
+├── path_complete.rs    (existing, 75 lines)
+├── queue.rs            (existing, 164 lines)
+├── scroll.rs           (NEW, ~80 lines: scroll_event only)
+├── scoped_models.rs    (existing, 44 lines)
+├── session.rs          (existing, 67 lines)
+├── settings_dialog.rs  (existing, 133 lines)
+├── system_actions.rs   (existing, 93 lines, +system_event)
+└── tab_complete.rs     (existing, 152 lines)
 ```
 
-**The `free function vs method` inconsistency** — the merge left some
-dispatchers as `fn agent_event(state: &mut AppState, event: Event)` and
-others as `AppState::agent_event(&mut self, event: Event)`. The
-refactor commit `7c5063e1` (in the git log) was supposed to make all
-dispatchers free functions, but only some were converted. Pick one
-style and apply it consistently.
+**`scroll_event` is 110 lines** — the longest function in `mod.rs`.
+Splitting it into per-key cases (e.g. `scroll_up`, `scroll_down`,
+`page_up`, `page_down`) would shrink each case to ~10 lines.
 
-**Recommendation:** keep free functions for dispatchers
-(`input_event`, `agent_event`, etc.) because they don't need
-`&mut self` access to anything except the parameter — they could
-operate on `&mut SessionState` if we wanted. Keep methods for things
-that conceptually mutate a single subsystem (e.g.
-`AppState::switch_model` is a method because it touches 5+ fields
-that span multiple inner structs).
+**`update_dialog` is ~70 lines** — a single match with 12+ arms
+across 3 dispatch paths (form panel, list panel, dialog-back). This
+is the dialog system in one function. It should be split into:
+- `route_dialog_event(state, event, stack)` — the top-level switch
+- `route_form_event(state, event, panel)` — form-specific
+- `route_list_event(state, event, panel)` — list-specific
 
-**`scroll_event` is 110 lines** — that's a single match with many arms.
-Each arm is 1-3 lines, but the function is long. Split into
-`update/scroll.rs` and move the page-size constant out of the function.
+**The dispatcher is long but mechanical.** Each arm is
+`Event::Foo | Event::Bar => self.method(event),`. Could be table-
+driven:
+
+```rust
+const INPUT_EVENTS: &[EventCategory] = &[EventCategory::Input, ...];
+match event.category() {
+    EventCategory::Input if INPUT_EVENTS.contains(&event.category()) => input_event(self, event),
+    ...
+}
+```
+
+But the current style (explicit match arms) is more readable and
+catches misspellings at compile time. Don't refactor the dispatcher
+itself; just move the per-category handlers out.
 
 **Out of scope:**
 - Rewriting the dispatch table to use a function-pointer array
+  (would lose the exhaustiveness check)
 - Changing `EventCategory` shape
 - Adding new dispatch categories
+- Consolidating `update/dialog.rs`, `update/dialog_actions.rs`,
+  `update/dialog_open.rs`, `update/dialog_update.rs` into a single
+  `update/dialog.rs` (this IS in scope for this task)
 
 **Verification:**
 ```bash
 # mod.rs is small
 wc -l crates/runie-core/src/update/mod.rs  # should be < 500
 
-# No function in update/ is > 40 lines
+# No function in update/ is > 40 lines (or in the new allow-list)
 for f in crates/runie-core/src/update/*.rs; do
-  awk '/^pub fn |^fn |^pub\(crate\) fn /{...}' "$f" | awk '$1 > 40'
+  awk '...' "$f"
 done
 
 # Build + tests clean

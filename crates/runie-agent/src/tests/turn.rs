@@ -1,9 +1,17 @@
 //! Tests for agent turn execution
+use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand};
 use runie_core::Event;
+use runie_provider::DynProvider;
+
+fn mock_provider() -> DynProvider {
+    DynProvider::new("mock", "echo").expect("mock provider must be available in tests")
+}
 
 #[tokio::test]
 async fn test_agent_loop_simple_response() {
+    ensure_mock_provider();
+    let provider = mock_provider();
     let cmd = AgentCommand {
         content: "Hello World".to_string(),
         id: "req.0".to_string(),
@@ -16,7 +24,7 @@ async fn test_agent_loop_simple_response() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 5)
+    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 5)
         .await
         .unwrap();
 
@@ -40,6 +48,8 @@ async fn test_agent_loop_simple_response() {
 
 #[tokio::test]
 async fn test_agent_loop_with_tool_call() {
+    ensure_mock_provider();
+    let provider = mock_provider();
     let cmd = AgentCommand {
         content: "list files".to_string(),
         id: "req.0".to_string(),
@@ -52,7 +62,7 @@ async fn test_agent_loop_with_tool_call() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 5)
+    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 5)
         .await
         .unwrap();
 
@@ -76,6 +86,8 @@ async fn test_agent_loop_with_tool_call() {
 
 #[tokio::test]
 async fn test_agent_loop_respects_max_iterations() {
+    ensure_mock_provider();
+    let provider = mock_provider();
     let cmd = AgentCommand {
         content: "loop".to_string(),
         id: "req.0".to_string(),
@@ -88,7 +100,7 @@ async fn test_agent_loop_respects_max_iterations() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 3)
+    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 3)
         .await
         .unwrap();
     assert!(!events.is_empty());
@@ -96,6 +108,8 @@ async fn test_agent_loop_respects_max_iterations() {
 
 #[tokio::test]
 async fn test_agent_loop_events_have_correct_id() {
+    ensure_mock_provider();
+    let provider = mock_provider();
     let cmd = AgentCommand {
         content: "test".to_string(),
         id: "req.42".to_string(),
@@ -108,7 +122,7 @@ async fn test_agent_loop_events_have_correct_id() {
         truncation: crate::truncate::TruncationPolicy::default(),
     };
     let mut events = Vec::new();
-    run_agent_turn(&cmd, |evt| events.push(evt), 5)
+    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 5)
         .await
         .unwrap();
 

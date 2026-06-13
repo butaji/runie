@@ -69,31 +69,50 @@ fn report_fn_violation(
 
 fn check_function_violations(path: &Path, lines: &[&str], errors: &mut Vec<String>) {
     let mut in_fn = false;
+    // `in_fn_body` tracks whether we've seen the opening `{` of the current
+    // function. This prevents trait-method `};` (which ends the signature) from
+    // being confused with a function-body closing brace.
+    let mut in_fn_body = false;
     let mut fn_start = 0;
-    let mut brace_depth = 0;
-    let mut fn_complexity = 0;
+    let mut brace_depth = 0usize;
+    let mut fn_complexity = 0usize;
     let mut fn_name = String::new();
 
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
 
         if trimmed.starts_with("fn ") && !trimmed.ends_with(';') {
+            // Entering a new function (signature doesn't end with `;`).
             in_fn = true;
+            in_fn_body = false;
             fn_start = i;
-            brace_depth = 0;
+            // NOTE: do NOT reset brace_depth — we may be inside another
+            // function's body and the outer braces are still open.
             fn_complexity = 1;
             fn_name = trimmed.lines().next().unwrap_or("").to_string();
         }
 
         if in_fn {
-            brace_depth += trimmed.matches('{').count();
-            brace_depth -= trimmed.matches('}').count();
+            let opens = trimmed.matches('{').count();
+            let closes = trimmed.matches('}').count();
+            brace_depth = brace_depth.saturating_add(opens);
+            brace_depth = brace_depth.saturating_sub(closes);
             fn_complexity += count_complexity(trimmed);
 
-            if brace_depth == 0 && trimmed.contains('}') {
+            // Mark that we've entered the function body.
+            if opens > 0 {
+                in_fn_body = true;
+            }
+
+            // Report when we've exited a function body (brace_depth == 0 AND
+            // we had entered one) AND the line contains a `}`.
+            if in_fn_body && brace_depth == 0 && trimmed.contains('}') {
                 let fn_len = i - fn_start + 1;
                 report_fn_violation(path, fn_start, &fn_name, fn_len, fn_complexity, errors);
                 in_fn = false;
+                in_fn_body = false;
+                fn_complexity = 0;
+                fn_name.clear();
             }
         }
     }

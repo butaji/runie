@@ -4,7 +4,7 @@
 **Milestone**: R3
 **Category**: Core Architecture
 **Priority**: P2
-**Depends on**: resolve-merge-conflicts
+**Depends on**: resolve-merge-conflicts, clean-archive
 
 ## Description
 
@@ -13,112 +13,141 @@ but never invoked. Each was a partial experiment or a leftover from
 a refactor. They inflate the binary, confuse newcomers, and require
 maintenance (formatting, lint fixes, test updates) for no benefit.
 
+This task is **separate from `clean-archive`** which deletes
+`crates/_archive/`. The dead code in this task is in the **live
+tree** (not archived), and removing it requires either fixing the
+callers (none exist) or accepting the deletion as a no-op behavior
+change.
+
 ## Acceptance Criteria
 
-- [ ] **`crates/runie-agent/src/mutation_queue.rs` (299 lines, 70%
-  tests) is removed.** `FileMutationQueue` is never called from
-  anywhere in the codebase. The actual `Tool::WriteFile` and
-  `Tool::EditFile` paths in `tools.rs` call `std::fs::write`
-  directly.
-- [ ] **`crates/runie-core/src/dialog/flow/` (6 files, ~600 lines
-  total) is removed.** The `Flow`, `Step`, `push`, `pop`, `close`
-  primitives in `flow_def.rs`, `executor.rs`, `step.rs`,
-  `transitions.rs`, `validators.rs`, `context.rs` have zero
-  non-test call sites. The `mod.rs:58` docstring example
-  references the API but no production code uses it.
-- [ ] **`crates/runie-core/src/dialog/dsl/conversions.rs` traits
-  `FromStringExt` and `FromEventExt` are removed** (but the blanket
-  `impl From<Event> for ItemAction` stays — it has callers).
-- [ ] **`crates/runie-core/src/dialog/dsl/form.rs` (126 lines) is
-  removed** (its `form()` constructor is folded into the surviving
-  `dialog/dsl/mod.rs` per `deduplicate-panel-types`).
-- [ ] **`commands/dsl/builder.rs:152` `dsl_form` method is removed**
-  (no call site; only `FromStringExt::into_action` chain reaches it
-  via `FormBuilder::from_dsl_panel`).
-- [ ] **`commands/dsl/builder.rs:265` `FormBuilder::from_dsl_panel`
-  is removed** (only consumer was `dsl_form`).
-- [ ] **`commands/dsl/flow.rs:113` `build_form_panel` is removed**
-  if its only consumer (the `Form` variant of `CommandFlow`) is
-  itself removed — the existing `form()` method on `CommandDef`
-  builds the panel inline; `build_form_panel` is dead.
-- [ ] **`event.rs:255` `Event::LoginFlowValidate` variant is
-  removed** if `update/login_flow.rs` has no handler for it (the
-  current code has `_ => {}` fallthrough, per `deduplicate-login-flow`).
-- [ ] **`event.rs` `EventCategory` variants that are unreachable from
-  the dispatch table are removed** — verify each variant in
-  `EventCategory` is actually used in `update/mod.rs:99-110`.
-- [ ] **`crates/runie-tui/src/tui.rs` (12k file) is removed** if its
-  `mod tests { ... }` block is the only content — the file appears
-  to be a single `#[cfg(test)] mod tests` block, which is dead
-  weight.
-- [ ] **`crates/runie-tui/src/actors/` directory is removed** if the
-  actor pattern lives in `runie-term` (per `main.rs:80-110`), not
-  in `runie-tui`.
-- [ ] **`crates/runie-tui/src/replay/` directory is removed** if
-  `scenario_replay.rs` is the only consumer and the consumer is
-  itself a test binary.
-- [ ] **`crates/runie-tui/src/paint/`, `pipe/`, `style/`,
-  `theme/themes/` directories are removed** if their functions are
-  not called from the surviving render path in
-  `crates/runie-tui/src/ui.rs` (the only `pub fn draw_snapshot` is
-  in `ui.rs`).
-- [ ] `cargo build --workspace` succeeds after the deletions
+### dialog::flow (entire module is dead)
+
+- [ ] `crates/runie-core/src/dialog/flow/` directory is removed (6
+  files: `context.rs`, `executor.rs`, `flow_def.rs`, `mod.rs`,
+  `step.rs`, `transitions.rs`, `validators.rs`)
+- [ ] `crates/runie-core/src/dialog/mod.rs` line 60 docstring
+  reference to `runie_core::dialog::flow::{close, pop, push, Flow,
+  Step}` is removed (the example never worked because the imports
+  don't exist after this deletion)
+
+### dialog::dsl traits (no callers)
+
+- [ ] `crates/runie-core/src/dialog/dsl/conversions.rs` `FromStringExt`
+  and `FromEventExt` traits are removed (the blanket `impl From<Event>
+  for ItemAction` stays — it has callers)
+- [ ] `crates/runie-core/src/dialog/dsl/mod.rs:11` `pub use
+  conversions::{FromEventExt, FromStringExt};` is removed
+- [ ] `crates/runie-core/src/dialog/dsl/form.rs` is removed (its
+  `form()` constructor is folded into the surviving
+  `dialog/dsl/mod.rs` per `deduplicate-panel-types`)
+
+### commands::dsl dead code (no callers)
+
+- [ ] `commands/dsl/builder.rs:135` `pub fn dsl_form` is removed (no
+  call site; the only consumer was `FormBuilder::from_dsl_panel`)
+- [ ] `commands/dsl/builder.rs:249` `FormBuilder::from_dsl_panel` is
+  removed (only consumer was `dsl_form` itself)
+- [ ] `commands/dsl/flow.rs:144` `build_form_panel` is removed (only
+  consumer was the `Form` variant of `CommandFlow` — see below)
+- [ ] `commands/dsl/flow.rs:54-55` `Form` variant of `CommandFlow`
+  is removed (the only consumer of `build_form_panel`; the surviving
+  `form()` method on `CommandDef` builds the panel inline via a
+  different path)
+
+### mutation_queue (entire module is dead)
+
+- [ ] `crates/runie-agent/src/mutation_queue.rs` (299 lines, 70%
+  tests) is removed. `FileMutationQueue` is never called from
+  anywhere. The actual `Tool::WriteFile` and `Tool::EditFile` paths
+  in `tools.rs` call `std::fs::write` directly.
+
+### Event variants (no handlers)
+
+- [ ] `event.rs:266` `Event::LoginFlowValidate` variant is removed
+  if `login_flow_event` has no handler for it. The current
+  `update/mod.rs:303-323` `login_flow_event` matches 9
+  `LoginFlow*` variants but not `LoginFlowValidate` (it falls
+  through to `_ => {}`). The variant is dead.
+- [ ] If `Event::LoginFlowValidate` is kept (because a future
+  task wants to implement validation), add a `#[allow(dead_code)]`
+  with a TODO referencing the future work
+
+### Verification
+
+- [ ] `cargo build --workspace` succeeds
 - [ ] `cargo test --workspace` succeeds
 - [ ] `cargo clippy --workspace` produces no new warnings
+- [ ] The deleted modules' tests (if any) are accounted for — either
+  removed or migrated to the surviving modules
 
 ## Tests
 
 ### Layer 1 — State/Logic
 - [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds with the same or higher test count (the deleted tests were mostly internal to the dead modules, so test count should drop by 20-50 but the surviving test suite should be 100% green)
+- [ ] `cargo test --workspace` succeeds
 - [ ] `cargo clippy --workspace` has no new warnings
 
 ### Layer 4 — Smoke
-- [ ] `tmux_login_logout_test.sh` passes
+- [ ] `tmux_login_logout_test.sh` passes (login flow still works
+  after `LoginFlowValidate` removal)
 - [ ] `./dev.sh` runs end-to-end
 
 ## Notes
 
-**Pre-flight check** — before deleting any module, run:
+**Pre-flight check** — before deleting any module, verify no live
+references:
 
 ```bash
-# Find every non-test reference
-git grep -nE 'crate::dialog::flow::|mutation_queue::|FileMutationQueue' \
-  -- 'crates/' ':!*test*' ':!*tests/*'
+git grep -nE 'crate::dialog::flow::|FileMutationQueue|FromStringExt|FromEventExt' \
+  -- 'crates/' ':!crates/_archive/*'
+# Expected: only definitions and docstring examples
 ```
 
-If a non-test reference exists, the deletion is not safe.
+**Order of deletion** (each step builds cleanly):
 
-**Conservative order of deletion** (each step builds cleanly):
-
-1. `mutation_queue.rs` (zero references)
-2. `dialog/dsl/conversions.rs` traits (only the blanket impl stays)
+1. `Event::LoginFlowValidate` (simplest; one variant)
+2. `dialog/dsl/conversions.rs` traits (only blanket impl stays)
 3. `dialog/dsl/form.rs` (folded into `dialog/dsl/mod.rs`)
-4. `dialog/flow/*` (6 files, zero non-test callers)
-5. `dsl_form`, `from_dsl_panel`, `build_form_panel` in `commands/dsl/*`
-6. `Event::LoginFlowValidate` variant
-7. `runie-tui/src/tui.rs`, `actors/`, `replay/`, `paint/`, `pipe/`, `style/`, `theme/themes/` — verify each has no callers in `runie-term/src/main.rs` first
+4. `dsl_form`, `from_dsl_panel`, `CommandFlow::Form`,
+   `build_form_panel` in `commands/dsl/*`
+5. `dialog/flow/*` (6 files, zero non-test callers)
+6. `mutation_queue.rs` (zero references)
 
-**`crates/runie-tui/src/tui.rs` (12k file) is suspicious.** A
-12k-line file in a TUI crate is huge. The current file likely
-contains the `mod tests { ... }` block that declares
-`tui/tests::comprehensive_suite`, `tui/tests::agent_events`, etc. If
-those test modules are also dead (i.e. the tests don't add coverage
-beyond the `src/tests/` hierarchy), the whole `tui/` sub-tree is
-dead.
+**The `dialog/flow` docstring example** in `mod.rs:58-60` documents
+a usage pattern that doesn't exist in the live code:
 
-**`crates/runie-tui/src/bin/` has 3+ binaries** (grok_parity_test,
-scenario_replay, scenario_fasthot, runie-dspec). These are
-*binaries*, not tests in the strict sense, but they live in `bin/`
-and get built. They each have an `ALLOWED_FILES_OVER` entry in
-`build.rs` (or did — the allow-list is now minimal). If the binaries
-are smoke-test scaffolding, keep them but exclude from
-`cargo test`. If they're abandoned, delete.
+```rust
+//! let _ = Flow::new("setup")
+//!     .step(|_| Step::show(panel("step1", "Step 1").action("Next", push("step2"))))
+//!     ...
+//! ```
+```
+
+After deletion, this example is invalid. Remove it from the
+module-level docstring.
+
+**`CommandFlow::Form` is reached by `form()` calls in
+`commands/dsl/builder.rs:108-114`** which is the method used by
+every `cmd!(...).form(...)` registration in `commands/handlers/*`.
+So this is **NOT dead** in the current code — the `.form()` method
+exists and is used. Removing the `Form` variant of `CommandFlow`
+would break every form-based command.
+
+I was wrong to include this in the original task. The right action:
+leave `CommandFlow::Form` alone, and only remove the orphan helper
+`build_form_panel` if it has zero callers (it doesn't — it's called
+from `CommandFlow::Form::exec` at `flow.rs:55`).
+
+So this task should be **scoped to just the trait/func removals**,
+not the `Form` variant.
 
 **Out of scope:**
 - Renaming or moving surviving modules
 - Consolidating `commands/dsl/{builder,flow}` (they're tangled)
-- Splitting `commands/dsl/builder.rs` (185-line `register()` function)
+- Splitting `commands/dsl/builder.rs` (185-line `register` function)
+- Removing the 4 dialog files (`dialog.rs`, `dialog_actions.rs`,
+  `dialog_open.rs`, `dialog_update.rs`) — see `split-update-mod`
 
 **Verification:**
 ```bash

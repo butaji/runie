@@ -5,9 +5,11 @@ use anyhow::Result;
 use futures::StreamExt;
 use runie_core::event::Event;
 use runie_core::provider::{Message, Provider};
+use runie_provider::DynProvider;
 use std::time::Instant;
 
 pub async fn run_agent_turn<F>(
+    provider: &DynProvider,
     command: &AgentCommand,
     mut emit: F,
     max_iterations: usize,
@@ -25,7 +27,6 @@ where
         });
 
         let mut response_text = String::new();
-        let provider = crate::build_provider(&command.provider, &command.model);
         let mut stream = provider.generate(messages.clone());
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;

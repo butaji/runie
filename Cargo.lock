@@ -2144,6 +2144,7 @@ name = "runie-json"
 version = "0.2.16"
 dependencies = [
  "anyhow",
+ "futures",
  "runie-agent",
  "runie-core",
  "runie-provider",
@@ -2158,6 +2159,7 @@ name = "runie-print"
 version = "0.2.16"
 dependencies = [
  "anyhow",
+ "futures",
  "runie-agent",
  "runie-core",
  "runie-provider",
@@ -2188,6 +2190,7 @@ version = "0.2.16"
 dependencies = [
  "anyhow",
  "ctrlc",
+ "futures",
  "runie-agent",
  "runie-core",
  "runie-provider",

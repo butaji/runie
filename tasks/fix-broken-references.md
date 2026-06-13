@@ -1,34 +1,69 @@
 # Fix Broken Symbol References After Login Flow Refactor
 
-**Status**: done
+**Status**: done (with caveats)
+**Completed in**: 0959861e ("Archive orphan login_flow modules and tests")
 **Milestone**: MVP
 **Category**: Core Architecture
 **Priority**: P0
-**Depends on**: resolve-merge-conflicts
 
-## Summary
+## Original Description
 
-Fixed broken symbol references by archiving orphan files:
+Three call sites referenced `build_login_stack` which did not exist.
+The function in `crates/runie-core/src/login_flow.rs:200` is named
+`build_login_root`. Plus a docstring example with a stale signature.
 
-### Archived Files
-- `crates/runie-core/src/update/login_flow.rs` - Module references non-existent `build_login_stack` function and is not included in the build
-- `crates/runie-core/src/login_flow/tests/state.rs` - References non-existent `build_login_stack` function
-- `crates/runie-core/src/login_flow/tests/integration.rs` - Archived with state.rs (sibling file, clean separation)
+## Resolution
 
-### Resolution
-The `update/login_flow.rs` module was never included in `update/mod.rs` via `mod login_flow;`, making it dead code. The orphaned test files referenced a function (`build_login_stack`) that was never implemented.
+The fix took the **archive** path rather than the **rename** path I
+originally recommended. Specifically:
 
-The actual login flow logic is properly implemented inline in `update/mod.rs` using `build_login_root()`.
+- The `update/login_flow.rs` file (which called the missing
+  `build_login_stack`) was moved to
+  `crates/_archive/update-orphans/login_flow.rs` (commit `0959861e`).
+- The test file `login_flow/tests/state.rs` (which also called
+  `build_login_stack`) was moved to
+  `crates/_archive/update-orphans/state.rs`.
+- A sibling test file `login_flow/tests/integration.rs` (which was
+  added by the merge but never wired in) was also archived.
 
-## Acceptance Criteria
+This was the minimal-diff approach: the broken code no longer
+participates in the build, so the references are not an error. The
+richer login flow implementation in `update/mod.rs` (which uses
+`build_login_root` correctly) is the surviving version.
 
-- [x] Orphan modules/files referencing non-existent symbols archived
-- [x] `cargo build --workspace` succeeds
-- [x] `cargo test --workspace` succeeds
+## Open Item (NOT done)
 
-## Notes
+**`crates/runie-core/src/commands/dsl/builder.rs:102` docstring
+example still has the buggy signature:**
 
-The actual login flow functionality is correctly implemented in `update/mod.rs`:
-- `build_login_root()` - creates initial login dialog with provider picker
-- `push_login_panel()`, `pop_login_panel_or_close()`, `replace_top_login_panel()` - manage panel stack
-- `rebuild_login_dialog()` - rebuilds the entire login dialog
+```rust
+/// crate::cmd!("login")
+///     .desc("Login to a provider")
+///     .sub()
+///     .panel(|state, _| build_login_root(state))   // ← BUG: takes 0 args
+/// ```
+```
+
+`build_login_root()` takes no arguments, so the closure
+`|state, _| build_login_root(state)` would not compile if anyone
+uncomments the example and runs `cargo test --doc`.
+
+The docstring is not exercised by `cargo test --doc` because it's
+marked `///` (not `//!`) and is in an `impl` block, not a top-level
+item. So the bug is invisible until someone copies the example.
+
+**Action:** add this to `sync-docs` as a cleanup item (or fix it
+inline in any task that touches `commands/dsl/builder.rs`).
+
+## Status
+
+✅ Done for the build-blocking references. ⚠️ Docstring is a known
+followup (see `sync-docs`).
+
+## Followups
+
+- `sync-docs` — fix the `build_login_root(state)` docstring and any
+  other doc drift
+- `extract-login-flow` — when the login flow is moved back out of
+  `mod.rs` into a sibling file, the docstring example can be
+  simplified (no need for the `_` arg)

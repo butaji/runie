@@ -13,109 +13,170 @@ pub use model::{ModelId, ModelRegistry};
 pub use openai::OpenAiProvider;
 
 use anyhow::Result;
-use runie_core::provider::{Message, Provider, ResponseChunk};
-
-/// Runtime provider selection — closed enum for static dispatch.
-pub enum AnyProvider {
-    Mock(MockProvider),
-    OpenAi(OpenAiProvider),
-}
-
-impl AnyProvider {
-    fn build(provider: &str, model: &str) -> (Self, Option<String>) {
-        let config = Config::load();
-        Self::build_with_config(provider, model, &config)
-    }
-
-    fn build_with_config(provider: &str, model: &str, config: &Config) -> (Self, Option<String>) {
-        let resolver = crate::config::ProviderConfigResolver::from_config(config);
-
-        if let Some(api_key) = resolver.resolve_api_key(provider) {
-            if !api_key.is_empty() {
-                let base_url = resolver.resolve_base_url(provider);
-                let mut p = OpenAiProvider::new(api_key, model);
-                if let Some(url) = base_url {
-                    p = p.with_base_url(url);
-                }
-                return (Self::OpenAi(p), None);
-            }
-        }
-
-        match provider {
-            "openai" => {
-                let warning = "OPENAI_API_KEY not set, falling back to mock".to_string();
-                let mock = if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
-                    MockProvider::with_delay(500, 3000)
-                } else {
-                    MockProvider::default()
-                };
-                (Self::Mock(mock), Some(warning))
-            }
-            _ => {
-                if std::env::var("RUNIE_MOCK_DELAY").is_ok() {
-                    (Self::Mock(MockProvider::with_delay(500, 3000)), None)
-                } else {
-                    (Self::Mock(MockProvider::default()), None)
-                }
-            }
-        }
-    }
-
-    pub fn new(provider: &str, model: &str) -> Self {
-        Self::build(provider, model).0
-    }
-
-    pub fn new_with_warning(provider: &str, model: &str) -> (Self, Option<String>) {
-        Self::build(provider, model)
-    }
-
-    pub fn from_env() -> Self {
-        let config = Config::load();
-        Self::from_config(&config, config.default_model().unwrap_or("echo"))
-    }
-
-    pub fn from_config(config: &Config, model: &str) -> Self {
-        let provider = if model.contains('/') {
-            model.split('/').next().unwrap_or("mock")
-        } else {
-            config.provider.as_deref().unwrap_or("mock")
-        };
-        Self::build_with_config(provider, model, config).0
-    }
-
-    pub fn switch(&mut self, provider: &str, model: &str) {
-        *self = Self::build(provider, model).0;
-    }
-
-    pub fn name(&self) -> &'static str {
-        match self {
-            AnyProvider::Mock(_) => "mock",
-            AnyProvider::OpenAi(_) => "openai",
-        }
-    }
-
-    pub fn model(&self) -> String {
-        match self {
-            AnyProvider::Mock(_) => "echo".to_string(),
-            AnyProvider::OpenAi(p) => p.model().to_string(),
-        }
-    }
-}
-
-impl Provider for AnyProvider {
-    async fn generate<F>(&self, messages: Vec<Message>, on_chunk: F) -> Result<()>
-    where
-        F: FnMut(ResponseChunk) + Send,
-    {
-        match self {
-            AnyProvider::Mock(p) => p.generate(messages, on_chunk).await,
-            AnyProvider::OpenAi(p) => p.generate(messages, on_chunk).await,
-        }
-    }
-}
+use runie_core::provider::{Message, Provider, ProviderError};
+use runie_core::provider_registry;
+use std::pin::Pin;
 
 /// Default timeout for API key validation requests.
 pub const VALIDATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+
+// ---------------------------------------------------------------------------
+// DynProvider — dynamic dispatch wrapper
+// ---------------------------------------------------------------------------
+
+/// A provider owned behind a trait object, enabling dynamic dispatch.
+///
+/// All concrete providers (`OpenAiProvider`, `MockProvider`, etc.) implement
+/// `Provider` and can be wrapped here.
+pub struct DynProvider {
+    inner: Box<dyn Provider>,
+    /// The registry key used to build this provider (e.g. "openai", "mock").
+    key: String,
+    /// The model name (e.g. "gpt-4o", "echo").
+    model: String,
+}
+
+impl DynProvider {
+    /// Build a provider by registry key and model name.
+    ///
+    /// Returns `Err(UnknownProvider)` for unknown keys (no silent Mock fallback).
+    /// Returns `Err(MissingApiKey)` when `RUNIE_MOCK` is not set and the key
+    /// requires an API key.
+    pub fn new(key: &str, model: &str) -> Result<Self, ProviderError> {
+        build_dyn_provider(key, model)
+    }
+
+    /// Build a provider, returning the key even on error for better error messages.
+    pub fn new_checked(key: &str, model: &str) -> Result<Self, ProviderError> {
+        build_dyn_provider(key, model)
+    }
+
+    /// Returns the registry key used to build this provider.
+    pub fn key(&self) -> &str {
+        &self.key
+    }
+
+    /// Returns the model name.
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+}
+
+impl std::fmt::Debug for DynProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DynProvider")
+            .field("key", &self.key)
+            .field("model", &self.model)
+            .finish()
+    }
+}
+
+impl Provider for DynProvider {
+    fn generate(
+        &self,
+        messages: Vec<Message>,
+    ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider::ResponseChunk>> + Send + '_>> {
+        self.inner.generate(messages)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Provider construction
+// ---------------------------------------------------------------------------
+
+/// Check whether `key` is known in the registry.
+pub fn is_known(key: &str) -> bool {
+    provider_registry::is_known_provider(key)
+}
+
+/// Check whether `key` is an OpenAI-compatible provider.
+pub fn is_openai_compatible(key: &str) -> bool {
+    provider_registry::find_provider(key)
+        .map(|p| p.api_type == runie_core::provider_registry::ProviderApiType::OpenAiCompatible)
+        .unwrap_or(false)
+}
+
+/// Build a `DynProvider` from a registry key and model name.
+///
+/// **No silent Mock fallback.** Unknown keys return `Err(UnknownProvider)`.
+/// If the API key is not set (and `RUNIE_MOCK` is not enabled), returns
+/// `Err(MissingApiKey)`.
+fn build_dyn_provider(key: &str, model: &str) -> Result<DynProvider, ProviderError> {
+    // Mock is always available in dev mode (RUNIE_MOCK=1 or RUNIE_MOCK_DELAY=1).
+    if key == "mock" && provider_registry::is_mock_enabled() {
+        return Ok(DynProvider {
+            inner: Box::new(MockProvider::default()),
+            key: key.to_string(),
+            model: model.to_string(),
+        });
+    }
+
+    let meta = provider_registry::find_provider(key)
+        .ok_or_else(|| ProviderError::UnknownProvider(key.to_string()))?;
+
+    // Resolve API key from the environment variable.
+    let api_key = if meta.env_var.is_empty() {
+        String::new()
+    } else {
+        std::env::var(meta.env_var).unwrap_or_default()
+    };
+
+    if api_key.is_empty() && !provider_registry::is_mock_enabled() {
+        return Err(ProviderError::MissingApiKey(meta.env_var.to_string()));
+    }
+
+    // All registered providers use OpenAI-compatible API.
+    let provider: Box<dyn Provider> = {
+        let p = OpenAiProvider::new(api_key, model);
+        Box::new(p.with_base_url(meta.base_url))
+    };
+
+    Ok(DynProvider {
+        inner: provider,
+        key: key.to_string(),
+        model: model.to_string(),
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Legacy helpers (kept for API compatibility during migration)
+// ---------------------------------------------------------------------------
+
+/// Build a provider. Returns `DynProvider` or error — no silent fallback.
+pub fn build_provider(provider: &str, model: &str) -> DynProvider {
+    build_provider_with_warning(provider, model)
+        .expect("build_provider_with_warning returns Ok or panic — use new() for explicit errors")
+}
+
+/// Build a provider and return a warning message if a known non-critical condition occurred.
+/// In the new design there is no warning — the error is returned explicitly.
+pub fn build_provider_with_warning(
+    provider: &str,
+    model: &str,
+) -> Result<DynProvider, ProviderError> {
+    build_dyn_provider(provider, model)
+}
+
+/// Build a provider from `Config`.
+pub fn from_config(config: &Config, model: &str) -> DynProvider {
+    let provider_key = if model.contains('/') {
+        model.split('/').next().unwrap_or("mock")
+    } else {
+        config.provider.as_deref().unwrap_or("mock")
+    };
+    build_provider_with_warning(provider_key, model)
+        .expect("from_config: provider key is always known or panic — use new() for explicit errors")
+}
+
+/// Switch a live provider to a new key/model pair.
+pub fn switch_provider(provider: &mut DynProvider, key: &str, model: &str) -> Result<(), ProviderError> {
+    *provider = build_dyn_provider(key, model)?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// API key validation
+// ---------------------------------------------------------------------------
 
 /// Validate an API key by calling the provider's `/models` endpoint.
 /// Returns a list of available model IDs on success.
@@ -127,12 +188,6 @@ pub async fn validate_api_key(base_url: &str, api_key: &str) -> Result<Vec<Strin
 }
 
 /// Validate an API key with a configurable request timeout.
-///
-/// The timeout covers the full request lifecycle: DNS, connect, TLS,
-/// request send, response headers, and response body. It is enforced via
-/// `tokio::time::timeout` around the whole operation, and also via
-/// `reqwest`'s client-level timeout and an explicit connect timeout, so
-/// the UI can never get stuck waiting on a hanging or unreachable host.
 pub async fn validate_api_key_with_timeout(
     base_url: &str,
     api_key: &str,
@@ -174,6 +229,13 @@ pub async fn validate_api_key_with_timeout(
         Err(_) => anyhow::bail!("API validation timed out after {}s", timeout.as_secs()),
     }
 }
+
+// ---------------------------------------------------------------------------
+// Re-exports for consumers
+// ---------------------------------------------------------------------------
+
+/// Re-export so `runie_agent` can use it without a deep dependency.
+pub use runie_core::provider::ProviderError as UnknownProviderError;
 
 #[cfg(test)]
 mod config_tests;
