@@ -7,69 +7,48 @@ impl AppState {
     /// - Second Tab with single match: complete (accept ghost)
     /// - Second Tab with multiple matches: cycle to next
     pub(crate) fn tab_complete(&mut self) {
-        let input = &self.input.input;
+        // If file picker is already open, Tab cycles selection
+        if self.open_dialog.is_some() {
+            return;
+        }
+
+        // Handle @ suggestion cycling if active
+        if self.completion.at_suggestions.is_some() {
+            self.tab_complete_at_ref();
+            return;
+        }
+
         let cursor = self.input.cursor_pos;
 
-        if input.is_empty() || cursor == 0 {
-            self.input.input_flash = 3;
-            return;
-        }
+        // Calculate the prefix (text to replace) and save the input state
+        let (prefix, prefix_start) = if self.input.input.is_empty() || cursor == 0 {
+            (String::new(), 0)
+        } else {
+            let before_cursor = &self.input.input[..cursor.min(self.input.input.len())];
+            let token_start = before_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0);
+            let prefix = self.input.input[token_start..cursor].to_string();
+            (prefix, token_start)
+        };
 
-        let before_cursor = &input[..cursor.min(input.len())];
-        let token_start = before_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0);
-        let prefix = &input[token_start..cursor];
+        // Determine insert position:
+        // - If at end of input and there's a prefix, use prefix_start (replace prefix)
+        // - Otherwise, use cursor position (insert at cursor)
+        let is_at_end = cursor >= self.input.input.len();
+        let insert_pos = if is_at_end && !prefix.is_empty() {
+            prefix_start
+        } else {
+            cursor
+        };
 
-        if prefix.is_empty() {
-            self.input.input_flash = 3;
-            return;
-        }
+        // Save: (original input, insert position)
+        self.file_picker_backup = Some((self.input.input.clone(), insert_pos));
 
-        // Cycle if same prefix
-        if let Some(ref stored) = self.input.tab_complete_prefix {
-            if stored == prefix && !self.input.tab_complete_matches.is_empty() {
-                let match_count = self.input.tab_complete_matches.len();
-
-                // If only 1 match, accept the ghost (complete the word)
-                if match_count == 1 {
-                    self.accept_ghost();
-                    return;
-                }
-
-                // Multiple matches: cycle to next
-                let next_idx = (self.input.tab_complete_index + 1) % match_count;
-                let full = self.input.tab_complete_matches[next_idx].clone();
-                self.input.ghost_completion = Some(suffix_after_prefix(prefix, &full));
-                self.input.tab_complete_index = next_idx;
-                self.mark_dirty();
-                return;
-            }
-        }
-
-        // Find new matches
-        let matches = self.find_prefix_file_matches(prefix);
-        if matches.is_empty() {
-            self.input.input_flash = 3;
-            return;
-        }
-
-        // If only 1 match, complete immediately
-        if matches.len() == 1 {
-            let full = matches[0].clone();
-            self.input.ghost_completion = Some(suffix_after_prefix(prefix, &full));
-            self.input.tab_complete_prefix = Some(prefix.to_string());
-            self.input.tab_complete_matches = matches;
-            self.input.tab_complete_index = 0;
-            self.mark_dirty();
-            return;
-        }
-
-        // Multiple matches: show ghost and wait for cycling
-        let full = matches[0].clone();
-        self.input.ghost_completion = Some(suffix_after_prefix(prefix, &full));
-        self.input.tab_complete_prefix = Some(prefix.to_string());
-        self.input.tab_complete_matches = matches;
-        self.input.tab_complete_index = 0;
-        self.mark_dirty();
+        // Open file picker with the prefix as filter
+        super::dialog::open_at_file_picker(self, Some(&prefix));
+        
+        // Clear the input since we're now in the file picker
+        self.input.input.clear();
+        self.input.cursor_pos = 0;
     }
 
     /// Clear ghost completion (called on typing, backspace, cursor movement, etc.)
@@ -111,6 +90,31 @@ impl AppState {
         self.input.tab_complete_prefix = None;
         self.input.tab_complete_matches.clear();
         self.input.tab_complete_index = 0;
+        self.mark_dirty();
+    }
+
+    /// Handle Tab key for @ file reference suggestions.
+    /// Cycles through the at_suggestions list.
+    pub(crate) fn tab_complete_at_ref(&mut self) {
+        let suggestions = match &self.completion.at_suggestions {
+            Some(s) if !s.is_empty() => s,
+            _ => {
+                // No suggestions available, just flash
+                self.input.input_flash = 3;
+                self.mark_dirty();
+                return;
+            }
+        };
+
+        // Initialize selection to first item if not set
+        if self.completion.at_selected.is_none() {
+            self.completion.at_selected = Some(0);
+        }
+
+        // Cycle to next suggestion
+        let current = self.completion.at_selected.unwrap_or(0);
+        let next = (current + 1) % suggestions.len();
+        self.completion.at_selected = Some(next);
         self.mark_dirty();
     }
 

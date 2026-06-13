@@ -281,10 +281,18 @@ impl Panel {
         if !self.filterable || self.filter.is_empty() {
             return self.items.iter().collect();
         }
-        self.filtered_navigable_indices()
+        let filtered = self
+            .filtered_navigable_indices()
             .iter()
             .map(|&i| &self.items[i])
-            .collect()
+            .collect::<Vec<_>>();
+        // If filter has matches, return filtered results
+        // Otherwise, fall back to all navigable items (no filter)
+        if !filtered.is_empty() {
+            filtered
+        } else {
+            self.items.iter().filter(|i| i.is_navigable()).collect()
+        }
     }
 
     /// Number of items that can receive selection.

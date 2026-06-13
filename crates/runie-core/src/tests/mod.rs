@@ -3,6 +3,10 @@ mod action_text;
 #[cfg(test)]
 mod agent;
 #[cfg(test)]
+mod at_file_picker;
+#[cfg(test)]
+mod tab_file_picker_filter;
+#[cfg(test)]
 mod appstate_structural;
 #[cfg(test)]
 mod autoscroll_bug;

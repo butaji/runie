@@ -251,6 +251,9 @@ pub struct AppState {
     /// When vim_mode Esc was used to abort a turn, the next Esc enters
     /// nav mode. Cleared once consumed or when a turn is no longer active.
     pub vim_nav_pending: bool,
+    /// Backup of input state before opening file picker (for smart insertion on Enter).
+    /// Backup of input state before opening file picker: (original input, insert position).
+    pub file_picker_backup: Option<(String, usize)>,
 }
 
 impl Default for AppState {
@@ -278,6 +281,7 @@ impl Default for AppState {
             input_history: Vec::new(),
             vim_nav_mode: false,
             vim_nav_pending: false,
+            file_picker_backup: None,
         }
     }
 }
