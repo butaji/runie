@@ -24,11 +24,10 @@
       "milestone": "MVP",
       "category": "Core Architecture",
       "priority": "P0",
-      "completed_in": "0959861e",
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature \u2014 see sync-docs."
+      "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature - see sync-docs."
     },
     {
       "id": "wire-orphan-crates",
@@ -48,8 +47,7 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "completed_in": "5a80a681",
-      "notes": "Refactored `crates/runie-core/build.rs` (now 121 lines) to: raise thresholds to 2000/150/30 (so the build always passes), extract helper functions (`check_file_length`, `check_function_violations`, `lint_file`), and fix the function-body brace tracking. The `ALLOWED_FILES_OVER` and `ALLOWED_FUNCS_OVER` allow-lists were removed entirely \u2014 they were the wrong abstraction. The lint no longer scans `target/` but does still scan `crates/_archive/` and tests \u2014 the 2000-line budget makes that fine in practice."
+      "notes": "Refactored `crates/runie-core/build.rs` (now 121 lines) to: raise thresholds to 2000/150/30 (so the build always passes), extract helper functions (`check_file_length`, `check_function_violations`, `lint_file`), and fix the function-body brace tracking. The `ALLOWED_FILES_OVER` and `ALLOWED_FUNCS_OVER` allow-lists were removed entirely - they were the wrong abstraction. The lint no longer scans `target/` but does still scan `crates/_archive/` and tests - the 2000-line budget makes that fine in practice."
     },
     {
       "id": "archive-remaining-orphans",
@@ -60,7 +58,6 @@
       "depends_on": [
         "wire-orphan-crates"
       ],
-      "completed_in": "f831dea5",
       "notes": "Archived `runie-ai` (no Cargo.toml, orphan AI provider code), `runie-cli` (had Cargo.toml but depended on orphan crates), and `runie-tools` (no Cargo.toml). `crates/_archive/` now contains 7 entries: 6 subdirs (`runie-agent-tests`, `runie-agent-bin`, `update-orphans`, `runie-ext-macros`, `runie-tui-bins`, `runie-ext`) and 1 file (`wireframe_layout.rs`). Workspace builds with 8 members. See `clean-archive` for the next step (delete the archive entirely)."
     },
     {
@@ -200,7 +197,8 @@
       "status": "in-progress",
       "milestone": "R1",
       "category": "TUI Rendering",
-      "priority": "P0"
+      "priority": "P0",
+      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (run the release binary in a real terminal / tmux) remains unchecked."
     },
     {
       "id": "osc52-clipboard",
@@ -210,7 +208,8 @@
       "priority": "P0",
       "depends_on": [
         "terminal-detection"
-      ]
+      ],
+      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (copy text to the system clipboard) remains unchecked."
     },
     {
       "id": "vim-navigation-mode",
@@ -231,7 +230,8 @@
       "priority": "P1",
       "depends_on": [
         "terminal-detection"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "sync-docs",
@@ -247,6 +247,92 @@
       "category": "Input & Commands",
       "priority": "P0",
       "completed_in": "current"
+    },
+    {
+      "id": "remove-orphan-modules",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0"
+    },
+    {
+      "id": "fix-event-name-duplicate-arms",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0"
+    },
+    {
+      "id": "extract-term-effect-handlers",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1"
+    },
+    {
+      "id": "complete-agents-manager",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Input & Commands",
+      "priority": "P1"
+    },
+    {
+      "id": "replace-update-wildcard",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1"
+    },
+    {
+      "id": "consolidate-config-reload-types",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1"
+    },
+    {
+      "id": "restore-size-and-lint-discipline",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "depends_on": [
+        "extract-term-effect-handlers"
+      ]
+    },
+    {
+      "id": "remove-test-sleeps",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "depends_on": [
+        "consolidate-config-reload-types"
+      ]
+    },
+    {
+      "id": "cleanup-clippy-dead-code",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "depends_on": [
+        "remove-orphan-modules"
+      ]
+    },
+    {
+      "id": "fix-quality-nits",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P3"
+    },
+    {
+      "id": "archive-done-task-files",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2"
     }
   ]
 }
