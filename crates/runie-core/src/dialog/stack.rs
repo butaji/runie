@@ -90,7 +90,9 @@ impl PanelStack {
         let panel = self.current_mut()?;
         let item = panel.selected_item()?;
         match item {
-            PanelItem::Action { action, .. } => Some(action.clone()),
+            PanelItem::Action { action, .. } | PanelItem::Command { action, .. } => {
+                Some(action.clone())
+            }
             PanelItem::Toggle { action, .. } => Some(action.clone()),
             PanelItem::Select { key, .. } => Some(ItemAction::Cycle(key.clone())),
             _ => None,

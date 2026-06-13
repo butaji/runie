@@ -2,12 +2,6 @@ use super::*;
 use crate::model::AppState;
 use crate::Event;
 
-fn type_str(state: &mut AppState, text: &str) {
-    for c in text.chars() {
-        state.update(Event::Input(c));
-    }
-}
-
 /// Type a slash command directly into the input and submit it.
 /// Bypasses the `/` → command-palette shortcut so tests can exercise
 /// the slash-command dispatcher itself.

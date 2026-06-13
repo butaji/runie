@@ -53,7 +53,9 @@
 //!
 pub mod builders;
 pub mod dsl;
+mod item;
 mod panel;
+mod score;
 mod stack;
 
 #[cfg(test)]
@@ -63,5 +65,6 @@ pub use builders::{
     command_palette, file_picker, model_selector, scoped_models, session_tree, settings,
     theme_picker, SettingsRow, SettingsRowKind,
 };
-pub use panel::{parse_accel, strip_accel, ItemAction, Panel, PanelItem, PanelView};
+pub use item::{parse_accel, strip_accel, ItemAction, PanelItem};
+pub use panel::{Panel, PanelView};
 pub use stack::{PanelId, PanelStack};

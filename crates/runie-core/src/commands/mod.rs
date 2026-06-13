@@ -34,3 +34,32 @@ pub use registry::{filter_commands, CommandRegistry, DialogState};
 
 /// Shorthand for creating commands
 pub use dsl::cmd;
+
+/// One row in the command palette.
+///
+/// Structured like [`dialog::builders::SettingsRow`](crate::dialog::builders::SettingsRow):
+/// the palette builder receives typed rows and decides how to render them,
+/// instead of parsing a combined "name description" string.
+#[derive(Debug, Clone)]
+pub struct CommandRow {
+    pub category: String,
+    pub name: String,
+    pub desc: String,
+    pub event: crate::Event,
+}
+
+impl CommandRow {
+    pub fn new(
+        category: impl Into<String>,
+        name: impl Into<String>,
+        desc: impl Into<String>,
+        event: crate::Event,
+    ) -> Self {
+        Self {
+            category: category.into(),
+            name: name.into(),
+            desc: desc.into(),
+            event,
+        }
+    }
+}

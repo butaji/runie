@@ -62,39 +62,49 @@ pub(super) fn hotkey_area(inner: &Rect) -> Rect {
     }
 }
 
+pub(super) struct ScrollLayout {
+    pub area: Rect,
+    pub bar_area: Rect,
+    pub show_bar: bool,
+    pub offset: usize,
+    pub total: usize,
+}
+
 pub(super) fn compute_scrolling(
     area: &Rect,
     total: usize,
     selected: Option<usize>,
-) -> (Rect, Rect, bool, usize) {
+) -> ScrollLayout {
     let visible = area.height as usize;
-    let show_scrollbar = total > visible;
-    let items_width = if show_scrollbar {
+    let show_bar = total > visible;
+    let items_width = if show_bar {
         area.width.saturating_sub(1)
     } else {
         area.width
     };
-    let scroll_area = Rect {
-        width: items_width,
-        ..*area
-    };
-    let scrollbar_area = Rect {
-        x: area.x + items_width,
-        y: area.y,
-        width: 1,
-        height: area.height,
-    };
-    let scroll_offset = if let Some(sel) = selected {
+    let offset = selected.map_or(0, |sel| {
         if total <= visible {
             0
         } else {
             sel.saturating_sub(visible / 2)
                 .min(total.saturating_sub(visible))
         }
-    } else {
-        0
-    };
-    (scroll_area, scrollbar_area, show_scrollbar, scroll_offset)
+    });
+    ScrollLayout {
+        area: Rect {
+            width: items_width,
+            ..*area
+        },
+        bar_area: Rect {
+            x: area.x + items_width,
+            y: area.y,
+            width: 1,
+            height: area.height,
+        },
+        show_bar,
+        offset,
+        total,
+    }
 }
 
 pub(super) fn style_border() -> Style {
