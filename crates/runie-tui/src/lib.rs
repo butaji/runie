@@ -5,6 +5,7 @@ pub mod diff;
 pub mod markdown;
 pub mod message;
 pub mod popups;
+pub mod quantize;
 pub mod status_bar;
 pub mod syntax;
 pub mod theme;
