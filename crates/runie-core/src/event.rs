@@ -11,6 +11,12 @@ pub enum Event {
     PageUp,
     PageDown,
 
+    // Mouse events
+    MouseClick { row: u16, col: u16, button: String },
+    MouseRelease { row: u16, col: u16, button: String },
+    MouseDrag { row: u16, col: u16, button: String },
+    MouseMove { row: u16, col: u16 },
+
     // Cursor movement (Emacs-style)
     CursorLeft,
     CursorRight,
@@ -502,6 +508,10 @@ impl Event {
             Event::GoToTop => return None,
             Event::GoToBottom => return None,
             Event::ToggleVimMode => return None,
+            Event::MouseClick { .. } => return None,
+            Event::MouseRelease { .. } => return None,
+            Event::MouseDrag { .. } => return None,
+            Event::MouseMove { .. } => return None,
             Event::CommandFormInput(_) => return None,
             Event::CommandFormBackspace => "CommandFormBackspace",
             Event::CommandFormUp => "CommandFormUp",
@@ -543,6 +553,10 @@ impl Event {
             Event::GoToTop => "GoToTop",
             Event::GoToBottom => "GoToBottom",
             Event::ToggleVimMode => "ToggleVimMode",
+            Event::MouseClick { .. } => return None,
+            Event::MouseRelease { .. } => return None,
+            Event::MouseDrag { .. } => return None,
+            Event::MouseMove { .. } => return None,
         })
     }
 

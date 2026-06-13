@@ -2,8 +2,8 @@
 
 use crate::terminal::caps;
 use crossterm::event::{
-    EnableFocusChange, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
-    PushKeyboardEnhancementFlags,
+    DisableMouseCapture, EnableFocusChange, EnableMouseCapture, KeyboardEnhancementFlags,
+    PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
@@ -34,6 +34,9 @@ pub fn setup_terminal() -> io::Result<(
     let _ = push_keyboard_enhancement_flags(&mut stdout);
     if capabilities.focus_tracking {
         let _ = crossterm::execute!(&mut stdout, EnableFocusChange);
+    }
+    if capabilities.mouse != caps::MouseCapability::None {
+        let _ = crossterm::execute!(&mut stdout, EnableMouseCapture);
     }
     let terminal = Terminal::new(CrosstermBackend::new(stdout))?;
     Ok((terminal, capabilities))
@@ -85,5 +88,29 @@ pub fn restore_terminal_graphics<W: io::Write>(
     if capabilities.focus_tracking {
         let _ = crossterm::execute!(writer, EnableFocusChange);
     }
+    if capabilities.mouse != caps::MouseCapability::None {
+        let _ = crossterm::execute!(writer, EnableMouseCapture);
+    }
     Ok(())
+}
+
+/// Enable mouse capture based on terminal capabilities.
+pub fn enable_mouse<W: io::Write>(writer: &mut W, caps: caps::MouseCapability) -> io::Result<()> {
+    match caps {
+        caps::MouseCapability::None => Ok(()),
+        caps::MouseCapability::Legacy => {
+            // Legacy mode: CSI ? 1000 h
+            crossterm::execute!(writer, EnableMouseCapture)
+        }
+        caps::MouseCapability::Sgr | caps::MouseCapability::SgrExtended => {
+            // SGR mode: CSI ? 1006 h
+            // crossterm's EnableMouseCapture uses SGR mode by default
+            crossterm::execute!(writer, EnableMouseCapture)
+        }
+    }
+}
+
+/// Disable mouse capture.
+pub fn disable_mouse<W: io::Write>(writer: &mut W) -> io::Result<()> {
+    crossterm::execute!(writer, DisableMouseCapture)
 }

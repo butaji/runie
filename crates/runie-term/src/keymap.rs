@@ -1,6 +1,8 @@
 //! Crossterm key event → CoreEvent conversion with configurable keybindings.
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{
+    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
 use runie_core::{keybindings, Event as CoreEvent};
 use std::collections::HashMap;
 
@@ -8,6 +10,7 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
     log_key_event(event);
     match event {
         Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
+        Event::Mouse(mouse) => convert_mouse_event(mouse),
         Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
             // Handle Ctrl+J - ASCII 10 (LF) is often sent as just a char
             if let KeyCode::Char(c) = key.code {
@@ -183,6 +186,38 @@ fn map_plain_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::End => Some(CoreEvent::CursorEnd),
         KeyCode::Delete => Some(CoreEvent::KillChar),
         _ => None,
+    }
+}
+
+/// Convert mouse events to CoreEvent.
+fn convert_mouse_event(mouse: &MouseEvent) -> Option<CoreEvent> {
+    match mouse.kind {
+        MouseEventKind::ScrollDown => Some(CoreEvent::ScrollDown),
+        MouseEventKind::ScrollUp => Some(CoreEvent::ScrollUp),
+        MouseEventKind::Down(btn) => Some(CoreEvent::MouseClick {
+            row: mouse.row,
+            col: mouse.column,
+            button: mouse_button_to_string(btn),
+        }),
+        MouseEventKind::Up(btn) => Some(CoreEvent::MouseRelease {
+            row: mouse.row,
+            col: mouse.column,
+            button: mouse_button_to_string(btn),
+        }),
+        MouseEventKind::Drag(btn) => Some(CoreEvent::MouseDrag {
+            row: mouse.row,
+            col: mouse.column,
+            button: mouse_button_to_string(btn),
+        }),
+        _ => None,
+    }
+}
+
+fn mouse_button_to_string(button: MouseButton) -> String {
+    match button {
+        MouseButton::Left => "left".to_string(),
+        MouseButton::Right => "right".to_string(),
+        MouseButton::Middle => "middle".to_string(),
     }
 }
 
