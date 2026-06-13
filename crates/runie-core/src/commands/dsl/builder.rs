@@ -1,8 +1,7 @@
 //! Command Builder
 
 use super::{CommandCategory, CommandFlow, CommandResult, DialogType};
-use crate::dialog::dsl::Panel as DslPanel;
-use crate::dialog::{PanelItem, PanelStack as CoreStack};
+use crate::dialog::{Panel, PanelItem, PanelStack as CoreStack};
 use crate::model::AppState;
 use crate::Event;
 
@@ -134,7 +133,7 @@ impl CommandDef {
     /// Show a form from a DSL panel
     pub fn dsl_form<F>(self, title: &'static str, panel_fn: F, submit: Event) -> Self
     where
-        F: FnOnce() -> DslPanel,
+        F: FnOnce() -> Panel,
     {
         let panel = panel_fn();
         let fields = FormBuilder::from_dsl_panel(&panel).into_fields();
@@ -245,8 +244,8 @@ impl FormBuilder {
         this
     }
 
-    /// Add fields from DSL panel (converts to owned strings)
-    pub fn from_dsl_panel(panel: &DslPanel) -> Self {
+    /// Add fields from a Panel (converts to owned strings)
+    pub fn from_dsl_panel(panel: &Panel) -> Self {
         let mut builder = Self::new();
         for item in &panel.items {
             if let PanelItem::FormField {

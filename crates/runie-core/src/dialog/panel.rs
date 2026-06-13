@@ -67,6 +67,22 @@ impl Panel {
         self
     }
 
+    /// Add an action item. Alias for `item()`.
+    pub fn action(mut self, label: impl Into<String>, action: ItemAction) -> Self {
+        self.items.push(PanelItem::Action {
+            label: label.into(),
+            action,
+        });
+        self
+    }
+
+    /// Add an item with auto-generated label from action's default label.
+    pub fn item_action(mut self, action: ItemAction) -> Self {
+        let label = action.default_label();
+        self.items.push(PanelItem::Action { label, action });
+        self
+    }
+
     /// Add a toggle (checkbox) item. The action is emitted on activation
     /// (Enter / space). Use `ItemAction::Toggle(key.into())` for settings
     /// that mutate app config by key, or `ItemAction::Emit(event)` for
@@ -104,6 +120,30 @@ impl Panel {
     pub fn separator(mut self) -> Self {
         self.items.push(PanelItem::Separator);
         self
+    }
+
+    /// Add a separator. Alias for `separator()`.
+    pub fn sep(self) -> Self {
+        self.separator()
+    }
+
+    /// Add a form field. Alias for `form_field()`.
+    pub fn field(self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Self {
+        self.form_field(label, placeholder, key)
+    }
+
+    /// Add a form field with a pre-filled value. Alias for `form_field_value()`.
+    pub fn field_value(self,
+        label: impl Into<String>,
+        placeholder: impl Into<String>,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Self {
+        self.form_field_value(label, placeholder, key, value)
     }
 
     pub fn form_field(
@@ -160,6 +200,11 @@ impl Panel {
         self
     }
 
+    /// Enable fuzzy filtering. Alias for `with_filter()`.
+    pub fn searchable(self) -> Self {
+        self.with_filter()
+    }
+
     /// Explicitly enable or disable fuzzy filtering for this panel.
     pub fn filterable(mut self, enabled: bool) -> Self {
         self.filterable = enabled;
@@ -171,6 +216,23 @@ impl Panel {
     pub fn keep_open(mut self) -> Self {
         self.keep_open_on_activate = true;
         self
+    }
+
+    /// Add a header followed by items from a closure. Creates a grouped section.
+    pub fn section<F>(mut self, header: impl Into<String>, f: F) -> Self
+    where
+        F: FnOnce(Self) -> Self,
+    {
+        self = self.header(header);
+        f(self)
+    }
+
+    /// Group items within a closure. Shorthand for `section` without a header.
+    pub fn group<F>(self, f: F) -> Self
+    where
+        F: FnOnce(Self) -> Self,
+    {
+        f(self)
     }
 
     /// Move selection up, wrapping around. Returns the new index.
@@ -494,4 +556,36 @@ pub enum ItemAction {
     Toggle(String),
     /// Cycle a multi-choice setting by key.
     Cycle(String),
+}
+
+impl ItemAction {
+    /// Default label for this action (used by `item_action()` builder method).
+    pub fn default_label(&self) -> String {
+        match self {
+            Self::Push(id) => format!("Go to {}", id),
+            Self::Pop => "Back".into(),
+            Self::Close => "Close".into(),
+            Self::Emit(e) => e.default_label(),
+            Self::Toggle(_) => "Toggle".into(),
+            Self::Cycle(_) => "Change".into(),
+        }
+    }
+}
+
+impl Event {
+    pub(crate) fn default_label(&self) -> String {
+        match self {
+            Event::Quit => "Quit".into(),
+            Event::Submit => "Submit".into(),
+            Event::RunSaveCommand { .. } => "Save".into(),
+            Event::RunLoadCommand { .. } => "Load".into(),
+            Event::RunDeleteCommand { .. } => "Delete".into(),
+            Event::RunExportCommand { .. } => "Export".into(),
+            Event::RunImportCommand { .. } => "Import".into(),
+            Event::RunLoginCommand { .. } => "Login".into(),
+            Event::RunLogoutCommand { .. } => "Logout".into(),
+            Event::RunSkillCommand { .. } => "Run Skill".into(),
+            _ => "Action".into(),
+        }
+    }
 }

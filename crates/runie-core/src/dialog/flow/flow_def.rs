@@ -72,22 +72,22 @@ impl Flow {
     /// Build into a PanelStack starting from step 0
     pub fn start(&self) -> crate::dialog::PanelStack {
         if let Some(first) = self.steps.first() {
-            let mut stack = crate::dialog::PanelStack::new(first.panel.clone().into_core());
+            let mut stack = crate::dialog::PanelStack::new(first.panel.clone());
             for step in self.steps.iter().skip(1) {
-                stack.push(step.panel.clone().into_core());
+                stack.push(step.panel.clone());
             }
             stack
         } else {
-            crate::dialog::PanelStack::new(panel("empty", "Empty Flow").into_core())
+            crate::dialog::PanelStack::new(panel("empty", "Empty Flow"))
         }
     }
 
     /// Build from a specific step
     pub fn from_step(&self, index: usize) -> Option<crate::dialog::PanelStack> {
         self.steps.get(index).map(|start| {
-            let mut stack = crate::dialog::PanelStack::new(start.panel.clone().into_core());
+            let mut stack = crate::dialog::PanelStack::new(start.panel.clone());
             for step in self.steps.iter().skip(index + 1) {
-                stack.push(step.panel.clone().into_core());
+                stack.push(step.panel.clone());
             }
             stack
         })

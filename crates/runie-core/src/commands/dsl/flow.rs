@@ -1,6 +1,6 @@
 //! Command Flow Types
 
-use crate::dialog::{Panel as CorePanel, PanelStack as CoreStack};
+use crate::dialog::{Panel, PanelStack};
 use crate::model::AppState;
 use crate::Event;
 
@@ -16,7 +16,7 @@ pub enum CommandFlow {
     /// Open a named dialog
     Dialog(DialogType),
     /// Open a panel stack
-    PanelStack(fn(&mut AppState, &str) -> CoreStack),
+    PanelStack(fn(&mut AppState, &str) -> PanelStack),
     /// Show a form dialog (always shows dialog, args pre-fill fields)
     Form {
         title: &'static str,
@@ -53,7 +53,7 @@ impl CommandFlow {
                 submit,
             } => {
                 let panel = build_form_panel(cmd_name, title, fields, args, submit);
-                CommandResult::OpenPanelStack(CoreStack::new(panel))
+                CommandResult::OpenPanelStack(PanelStack::new(panel))
             }
             Self::Handler(f) => f(state, args),
             Self::Chain(flows) => {
@@ -109,7 +109,7 @@ pub enum CommandResult {
     Warning(String),
     Event(Event),
     OpenDialog(DialogType),
-    OpenPanelStack(CoreStack),
+    OpenPanelStack(PanelStack),
     None,
 }
 
@@ -147,9 +147,9 @@ fn build_form_panel(
     fields: Vec<super::FormField>,
     args: &str,
     _submit: Event,
-) -> CorePanel {
+) -> Panel {
     let args_list: Vec<&str> = args.split_whitespace().collect();
-    let mut panel = CorePanel::new(id, title).with_filter();
+    let mut panel = Panel::new(id, title).with_filter();
 
     for (i, field) in fields.into_iter().enumerate() {
         let value = args_list

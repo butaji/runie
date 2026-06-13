@@ -1,6 +1,6 @@
 //! Form Panel Builder - Fluent API for creating forms with submit handling
 
-use super::{Panel, PanelItem};
+use crate::dialog::Panel;
 use crate::Event;
 
 /// Form panel builder with submit handling
@@ -49,7 +49,7 @@ impl FormPanel {
     /// which reads form values and constructs the final event.
     pub fn on_submit(mut self, event: Event) -> Self {
         self.submit_event = Some(event);
-        self.panel.items.push(PanelItem::FormSubmit);
+        self.panel = self.panel.form_submit();
         self
     }
 
@@ -60,7 +60,7 @@ impl FormPanel {
 
     /// Build into PanelStack
     pub fn into_stack(self) -> super::super::PanelStack {
-        super::super::PanelStack::new(self.panel.into_core())
+        super::super::PanelStack::new(self.panel)
     }
 }
 
