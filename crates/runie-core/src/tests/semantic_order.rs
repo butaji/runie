@@ -84,7 +84,7 @@ fn final_agent_visible_when_tool_overflows() {
     state.agent.streaming = true;
     run_tool_turn(&mut state, "Done!", &big_output());
     state.view.scroll = 0;
-    let region = state.visible_scroll(5);
+    let region = crate::tests::visible_helper::compute_viewport(&state, 5);
     let has_agent = region.elements.iter().any(
         |e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!"),
     );

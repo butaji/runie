@@ -10,6 +10,7 @@ impl AppState {
             self.open_dialog = None;
             self.mark_dirty();
         } else {
+            self.view.cached_session_tree_valid = false;
             open_session_tree_dialog(self);
         }
     }

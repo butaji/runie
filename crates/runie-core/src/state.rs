@@ -191,11 +191,20 @@ pub struct ViewState {
     pub animation_frame: u32,
     pub all_collapsed: bool,
     // Cached palette items (for command palette dialog)
-    pub(crate) cached_palette_items: Vec<(String, String, String)>,
+    pub(crate) cached_palette_items: Arc<[(String, String, String)]>,
     pub(crate) cached_palette_filter: Option<String>,
     // Cached model selector items
-    pub(crate) cached_model_items: Vec<(String, String, String, bool, bool)>,
+    pub(crate) cached_model_items: Arc<[(String, String, String, bool, bool)]>,
     pub(crate) cached_model_filter: Option<String>,
+    // Cached settings items
+    pub(crate) cached_settings_items: Arc<[crate::settings::SettingItem]>,
+    pub(crate) cached_settings_valid: bool,
+    // Cached session tree items
+    pub(crate) cached_session_tree_items: Arc<[(usize, String)]>,
+    pub(crate) cached_session_tree_valid: bool,
+    // Cached auth provider names
+    pub(crate) cached_auth_providers: Arc<[String]>,
+    pub(crate) cached_auth_valid: bool,
 }
 
 impl ViewState {
@@ -229,10 +238,16 @@ impl Default for ViewState {
             element_count: 0,
             animation_frame: 0,
             all_collapsed: false,
-            cached_palette_items: Vec::new(),
+            cached_palette_items: Arc::new([]),
             cached_palette_filter: None,
-            cached_model_items: Vec::new(),
+            cached_model_items: Arc::new([]),
             cached_model_filter: None,
+            cached_settings_items: Arc::new([]),
+            cached_settings_valid: false,
+            cached_session_tree_items: Arc::new([]),
+            cached_session_tree_valid: false,
+            cached_auth_providers: Arc::new([]),
+            cached_auth_valid: false,
         }
     }
 }

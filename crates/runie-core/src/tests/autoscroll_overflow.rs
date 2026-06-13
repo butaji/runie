@@ -23,7 +23,7 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(region.elements.iter().any(|e| matches!(e, crate::ui::Element::UserMessage { content, .. } if content == "list files")),
         "User message must be visible after submit");
 }
@@ -39,7 +39,7 @@ fn verify_thought_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(
         region
             .elements
@@ -65,7 +65,7 @@ fn verify_tool_output_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(
         !region.elements.is_empty(),
         "Visible region must not be empty"
@@ -86,7 +86,7 @@ fn verify_final_done_visible(state: &mut AppState, height: usize) {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(
         region.elements.iter().any(
             |e| matches!(e, crate::ui::Element::AgentMessage { content, .. } if content == "Done!")
@@ -116,7 +116,7 @@ fn large_thought_bottom_lines_visible() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(
         !region.elements.is_empty(),
         "Visible region must not be empty"
@@ -154,7 +154,7 @@ fn viewport_never_empty_when_content_exists() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(
         !region.elements.is_empty(),
         "Visible region must not be empty when content exists"
@@ -180,7 +180,7 @@ fn scroll_zero_always_shows_latest() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     // Latest message (msg2) should be visible
     let has_latest = region
         .elements
@@ -211,7 +211,7 @@ fn tool_output_exceeding_viewport_shows_latest_files() {
 
     // ToolDone: header (1) + 50 output lines = 51 lines total. Viewport = 5.
     // The bottom 5 lines should be visible: file50, file49, file48, file47, header
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!region.elements.is_empty(), "Tool output must be visible");
 
     // The tool element should be in the visible region

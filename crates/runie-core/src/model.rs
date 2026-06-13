@@ -314,7 +314,7 @@ impl AppState {
         self.view.dirty = true;
     }
 
-    fn palette_items(&mut self) -> Vec<(String, String, String)> {
+    fn palette_items(&mut self) -> Arc<[(String, String, String)]> {
         let filter = match &self.open_dialog {
             Some(d) => d
                 .panel_stack()
@@ -323,8 +323,11 @@ impl AppState {
                 .unwrap_or_default(),
             _ => {
                 self.view.cached_palette_filter = None;
-                self.view.cached_palette_items.clear();
-                return Vec::new();
+                if self.view.cached_palette_items.is_empty() {
+                    return Arc::clone(&self.view.cached_palette_items);
+                }
+                self.view.cached_palette_items = Arc::new([]);
+                return Arc::clone(&self.view.cached_palette_items);
             }
         };
         if Some(&filter) != self.view.cached_palette_filter.as_ref() {
@@ -353,36 +356,48 @@ impl AppState {
                     ));
                 }
             }
-            self.view.cached_palette_items = items;
+            self.view.cached_palette_items = items.into();
         }
-        self.view.cached_palette_items.clone()
+        Arc::clone(&self.view.cached_palette_items)
     }
 
-    fn session_tree_items(&self) -> Vec<(usize, String)> {
+    fn session_tree_items(&mut self) -> Arc<[(usize, String)]> {
         let filter = match &self.open_dialog {
             Some(crate::commands::DialogState::SessionTree(_)) => {
                 crate::session_tree::SessionTreeFilter::All
             }
-            _ => return Vec::new(),
+            _ => {
+                self.view.cached_session_tree_valid = false;
+                if self.view.cached_session_tree_items.is_empty() {
+                    return Arc::clone(&self.view.cached_session_tree_items);
+                }
+                self.view.cached_session_tree_items = Arc::new([]);
+                return Arc::clone(&self.view.cached_session_tree_items);
+            }
         };
-        match self.session.session_tree.as_ref() {
-            Some(tree) => tree
-                .filtered_walk(filter)
-                .into_iter()
-                .map(|(depth, node)| {
-                    let preview = format!(
-                        "[{}] {}",
-                        node.message.role.as_str(),
-                        node.message.content.chars().take(60).collect::<String>()
-                    );
-                    (depth, preview)
-                })
-                .collect(),
-            None => Vec::new(),
+        if !self.view.cached_session_tree_valid {
+            self.view.cached_session_tree_items = match self.session.session_tree.as_ref() {
+                Some(tree) => tree
+                    .filtered_walk(filter)
+                    .into_iter()
+                    .map(|(depth, node)| {
+                        let preview = format!(
+                            "[{}] {}",
+                            node.message.role.as_str(),
+                            node.message.content.chars().take(60).collect::<String>()
+                        );
+                        (depth, preview)
+                    })
+                    .collect::<Vec<_>>()
+                    .into(),
+                None => Arc::new([]),
+            };
+            self.view.cached_session_tree_valid = true;
         }
+        Arc::clone(&self.view.cached_session_tree_items)
     }
 
-    fn model_selector_items(&mut self) -> Vec<(String, String, String, bool, bool)> {
+    fn model_selector_items(&mut self) -> Arc<[(String, String, String, bool, bool)]> {
         let filter = match &self.open_dialog {
             Some(d) => d
                 .panel_stack()
@@ -391,8 +406,11 @@ impl AppState {
                 .unwrap_or_default(),
             _ => {
                 self.view.cached_model_filter = None;
-                self.view.cached_model_items.clear();
-                return Vec::new();
+                if self.view.cached_model_items.is_empty() {
+                    return Arc::clone(&self.view.cached_model_items);
+                }
+                self.view.cached_model_items = Arc::new([]);
+                return Arc::clone(&self.view.cached_model_items);
             }
         };
         if Some(&filter) != self.view.cached_model_filter.as_ref() {
@@ -403,9 +421,32 @@ impl AppState {
                 &filter,
                 &self.config.current_provider,
                 &self.config.current_model,
-            );
+            )
+            .into();
         }
-        self.view.cached_model_items.clone()
+        Arc::clone(&self.view.cached_model_items)
+    }
+
+    fn settings_items(&mut self) -> Arc<[crate::settings::SettingItem]> {
+        if !self.view.cached_settings_valid {
+            self.view.cached_settings_items =
+                crate::update::settings_dialog::build_setting_items(self).into();
+            self.view.cached_settings_valid = true;
+        }
+        Arc::clone(&self.view.cached_settings_items)
+    }
+
+    fn auth_providers(&mut self) -> Arc<[String]> {
+        if !self.view.cached_auth_valid {
+            let providers: Vec<String> = crate::auth::AuthStorage::load()
+                .tokens
+                .keys()
+                .cloned()
+                .collect();
+            self.view.cached_auth_providers = providers.into();
+            self.view.cached_auth_valid = true;
+        }
+        Arc::clone(&self.view.cached_auth_providers)
     }
 
     /// Record a model selection in recent history (max 5, no duplicates).
@@ -600,14 +641,10 @@ impl AppState {
             model_selector_items: self.model_selector_items(),
             pending_edits: self.session.pending_edits.clone(),
             scoped_models: self.config.scoped_models.clone(),
-            settings_items: crate::update::settings_dialog::build_setting_items(self),
+            settings_items: self.settings_items(),
             session_tree_items: self.session_tree_items(),
             image_attachments: self.session.image_attachments.clone(),
-            auth_providers: crate::auth::AuthStorage::load()
-                .tokens
-                .keys()
-                .cloned()
-                .collect(),
+            auth_providers: self.auth_providers(),
             transient_message: self.transient_message.clone(),
             transient_level: self.transient_level,
             tokens_in: self.agent.tokens_in,

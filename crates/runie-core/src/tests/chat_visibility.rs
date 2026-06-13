@@ -7,7 +7,7 @@ fn fresh_state() -> AppState {
 
 /// Helper: get element kinds in visible region (no spacer)
 fn visible_kinds(state: &AppState, height: usize) -> Vec<String> {
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     region.elements.iter().map(|e| match e {
         crate::ui::Element::UserMessage { .. } => "User".to_string(),
         crate::ui::Element::AgentMessage { .. } => "Agent".to_string(),
@@ -24,7 +24,7 @@ fn visible_kinds(state: &AppState, height: usize) -> Vec<String> {
 
 /// Helper: check if latest content is visible at bottom
 fn latest_is_visible(state: &AppState, height: usize) -> bool {
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     if region.elements.is_empty() {
         return false;
     }
@@ -104,7 +104,7 @@ fn large_tool_output_bottom_lines_visible() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     let texts: Vec<String> = region.elements.iter().filter_map(|e| match e {
         crate::ui::Element::ToolDone { output, .. } => Some(output.clone()),
         _ => None,
@@ -166,7 +166,7 @@ fn add_huge_thought(state: &mut AppState) {
 }
 
 fn verify_thought_visible(state: &AppState, height: usize) {
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     let has_thought = region.elements.iter().any(|e| matches!(e, crate::ui::Element::ThoughtMarker { .. }));
     assert!(has_thought, "Thought must be visible after overflow");
 
@@ -189,17 +189,17 @@ fn scroll_zero_means_bottom_after_any_event() {
     // Send a bunch of events
     state.update(Event::AgentResponse { id: "req.0".into(), content: "a".into() });
     state.ensure_fresh();
-    let v1 = state.visible_scroll(height);
+    let v1 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v1.elements.is_empty(), "Visible region must not be empty after first response");
 
     state.update(Event::AgentResponse { id: "req.0".into(), content: "b".into() });
     state.ensure_fresh();
-    let v2 = state.visible_scroll(height);
+    let v2 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v2.elements.is_empty(), "Visible region must not be empty after second response");
 
     state.update(Event::AgentResponse { id: "req.0".into(), content: "c".into() });
     state.ensure_fresh();
-    let v3 = state.visible_scroll(height);
+    let v3 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v3.elements.is_empty(), "Visible region must not be empty after third response");
 
     // After many more
@@ -210,7 +210,7 @@ fn scroll_zero_means_bottom_after_any_event() {
         });
     }
     state.ensure_fresh();
-    let v4 = state.visible_scroll(height);
+    let v4 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v4.elements.is_empty(), "Visible region must not be empty after many responses");
 }
 
@@ -224,7 +224,7 @@ fn user_message_visible_after_submit_clears_input() {
     state.ensure_fresh();
     state.view.scroll = 0;
 
-    let region = state.visible_scroll(height);
+    let region = crate::tests::visible_helper::compute_viewport(&state, height);
     let has_user = region.elements.iter().any(|e| match e {
         crate::ui::Element::UserMessage { content, .. } => content == "list files",
         _ => false,

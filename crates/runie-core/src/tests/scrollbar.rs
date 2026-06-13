@@ -144,12 +144,12 @@ fn visible_uses_scroll_offset() {
     // 10 messages = 40 lines (10*3 messages + 10 spacers), max_scroll = 35
 
     // At scroll=0 (bottom), we see newest 5 lines worth of elements
-    let visible_bottom = state.visible_scroll(5);
+    let visible_bottom = crate::tests::visible_helper::compute_viewport(&state, 5);
     assert!(visible_bottom.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg9")), "Bottom should show latest");
 
     // At scroll=35 (top), we see oldest: first is msg0
     state.view.scroll = 35;
-    let visible_top = state.visible_scroll(5);
+    let visible_top = crate::tests::visible_helper::compute_viewport(&state, 5);
     assert!(visible_top.elements.iter().any(|e| matches!(e, crate::ui::elements::Element::UserMessage { content, .. } if content == "msg0")), "Top should show oldest");
 }
 
@@ -216,7 +216,7 @@ fn scrollbar_consistent_between_offset_and_metrics() {
 }
 
 #[test]
-fn visible_scroll_handles_partial_element_at_top() {
+fn compute_viewport_handles_partial_element_at_top() {
     let mut state = fresh_state();
     for i in 0..5 {
         state.session.messages.push(crate::model::ChatMessage {
@@ -230,7 +230,7 @@ fn visible_scroll_handles_partial_element_at_top() {
     state.messages_changed();
     state.ensure_fresh();
     state.view.scroll = state.view.total_lines.saturating_sub(3);
-    let visible = state.visible_scroll(3);
+    let visible = crate::tests::visible_helper::compute_viewport(&state, 3);
     assert!(!visible.elements.is_empty(), "Should have visible elements");
 }
 

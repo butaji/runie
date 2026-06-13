@@ -26,14 +26,6 @@ impl GitInfo {
     }
 }
 
-/// A viewport into the element cache — elements plus how many
-/// lines to skip from the top of the first element.
-#[derive(Clone, Copy)]
-pub struct VisibleRegion<'a> {
-    pub elements: &'a [Element],
-    pub skip_lines: usize,
-}
-
 #[derive(Clone)]
 pub struct Snapshot {
     pub elements: Arc<[Element]>,
@@ -68,21 +60,21 @@ pub struct Snapshot {
     /// Currently open dialog state for rendering overlays.
     pub dialog: Option<crate::commands::DialogState>,
     /// Filtered command list for palette rendering (name, description, category).
-    pub palette_items: Vec<(String, String, String)>,
+    pub palette_items: Arc<[(String, String, String)]>,
     /// Model selector items (provider_header, full_name, cost_str, is_selected, is_current).
-    pub model_selector_items: Vec<(String, String, String, bool, bool)>,
+    pub model_selector_items: Arc<[(String, String, String, bool, bool)]>,
     /// Pending file edits awaiting approval.
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
     /// Scoped models for dialog rendering.
     pub scoped_models: Vec<crate::scoped_model::ScopedModel>,
     /// Settings items for dialog rendering.
-    pub settings_items: Vec<crate::settings::SettingItem>,
+    pub settings_items: Arc<[crate::settings::SettingItem]>,
     /// Session tree items for dialog rendering (depth, content preview).
-    pub session_tree_items: Vec<(usize, String)>,
+    pub session_tree_items: Arc<[(usize, String)]>,
     /// Base64 image attachments pending in the input field.
     pub image_attachments: Vec<String>,
     /// Authenticated providers for status display.
-    pub auth_providers: Vec<String>,
+    pub auth_providers: Arc<[String]>,
     /// Transient notification message shown in hints line.
     pub transient_message: Option<String>,
     /// Severity level of the transient notification.
@@ -114,51 +106,6 @@ impl Snapshot {
         let start = skip.min(self.elements.len());
         let end = (start + take).min(self.elements.len());
         &self.elements[start..end]
-    }
-
-    pub fn visible_scroll(&self, visible_height: usize) -> VisibleRegion<'_> {
-        if self.elements.is_empty() || visible_height == 0 {
-            return VisibleRegion {
-                elements: &[],
-                skip_lines: 0,
-            };
-        }
-
-        let total = self.total_lines;
-        let max_scroll = total.saturating_sub(visible_height);
-        let scroll = self.scroll.min(max_scroll);
-
-        let viewport_end = total.saturating_sub(scroll);
-        let viewport_start = viewport_end.saturating_sub(visible_height);
-
-        let mut cum = 0usize;
-        let mut start_idx = 0;
-        let mut skip_lines = 0;
-
-        for (i, count) in self.line_counts.iter().enumerate() {
-            let next_cum = cum + count;
-            if next_cum > viewport_start {
-                start_idx = i;
-                skip_lines = viewport_start.saturating_sub(cum);
-                break;
-            }
-            cum = next_cum;
-        }
-
-        let mut end_idx = self.elements.len();
-        cum = 0;
-        for (i, count) in self.line_counts.iter().enumerate() {
-            cum += count;
-            if cum >= viewport_end {
-                end_idx = i + 1;
-                break;
-            }
-        }
-
-        VisibleRegion {
-            elements: &self.elements[start_idx..end_idx.min(self.elements.len())],
-            skip_lines,
-        }
     }
 
     pub fn scroll_offset(&self, visible_height: usize) -> u16 {
