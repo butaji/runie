@@ -24,23 +24,21 @@ fn spawn_command_is_registered() {
 }
 
 #[test]
-fn spawn_without_args_shows_usage() {
+fn spawn_without_args_opens_form_no_chat_message() {
     let mut state = AppState::default();
     exec(&mut state, "/spawn");
 
-    let sys: Vec<_> = state
+    // Should NOT add a system message to the chat feed.
+    let sys_count = state
         .session
         .messages
         .iter()
         .filter(|m| m.role == crate::model::Role::System)
-        .collect();
-    assert!(!sys.is_empty(), "expected a system message");
-    let last = sys.last().unwrap().content.to_lowercase();
-    assert!(
-        last.contains("usage") || last.contains("spawn"),
-        "expected usage hint, got: {:?}",
-        last
-    );
+        .count();
+    assert_eq!(sys_count, 0, "/spawn without args should not add chat messages");
+
+    // Should open a dialog (form).
+    assert!(state.open_dialog.is_some(), "/spawn without args should open a form dialog");
 }
 
 #[test]

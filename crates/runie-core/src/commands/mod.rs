@@ -29,7 +29,8 @@ mod tests;
 pub mod agents_manager;
 
 pub use dsl::{
-    CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType, FormBuilder, FormField,
+    build_spawn_form_panel, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType,
+    FormBuilder, FormField,
 };
 pub use registry::{filter_commands, CommandRegistry, DialogState};
 

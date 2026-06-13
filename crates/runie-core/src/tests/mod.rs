@@ -7,6 +7,8 @@ mod focus_events;
 #[cfg(test)]
 mod agents_manager_e2e;
 #[cfg(test)]
+mod command_forms;
+#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod at_file_picker;

@@ -168,6 +168,16 @@ fn build_form_panel(
     panel.form_submit()
 }
 
+/// Build a form panel for the /spawn command when called without arguments.
+/// Collects the prompt via a single text field.
+pub fn build_spawn_form_panel() -> PanelStack {
+    let panel = Panel::new("spawn_form", "Spawn Subagent")
+        .with_filter()
+        .form_field("Prompt", "Describe the task for the subagent", "prompt")
+        .form_submit();
+    PanelStack::new(panel)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
