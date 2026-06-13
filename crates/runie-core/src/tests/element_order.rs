@@ -118,7 +118,7 @@ fn thinking_indicator_is_always_last_when_newest() {
         id: "req.0".into(),
         ..Default::default()
     });
-    state.thinking_started_at = Some(std::time::Instant::now());
+    state.agent.thinking_started_at = Some(std::time::Instant::now());
     state.messages_changed();
     state.ensure_fresh();
 
@@ -283,7 +283,7 @@ fn agent_before_thought_when_agent_newer() {
 #[test]
 fn via_events_appended_assistant_found_anywhere_in_vec() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "hello ".into(),

@@ -87,9 +87,10 @@ pub(crate) fn init_prompts(state: &mut AppState) {
 
 pub(crate) fn init_telemetry(state: &mut AppState) {
     let config = config_reload::Config::load_from(&config_reload::config_path());
-    state.telemetry = runie_core::Telemetry::new(config.telemetry_enabled());
-    if state.telemetry.is_enabled() {
+    state.config.telemetry = runie_core::Telemetry::new(config.telemetry_enabled());
+    if state.config.telemetry.is_enabled() {
         state
+            .config
             .telemetry
             .track_event("startup", std::collections::HashMap::new());
     }

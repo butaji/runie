@@ -55,7 +55,7 @@ fn verify_user_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_thinking_visible(state: &mut AppState, height: usize) {
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "Thinking indicator must be visible");

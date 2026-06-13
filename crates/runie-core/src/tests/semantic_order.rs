@@ -70,7 +70,7 @@ fn agent_turn_complete_kinds(state: &AppState) -> Vec<&'static str> {
 #[test]
 fn final_agent_after_tools_when_turn_completes() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     run_tool_turn(&mut state, "Done!", &big_output());
     let (a, t) = (agent_pos(&state), tool_pos(&state));
     assert!(a.is_some(), "Agent message must exist");
@@ -81,7 +81,7 @@ fn final_agent_after_tools_when_turn_completes() {
 #[test]
 fn final_agent_visible_when_tool_overflows() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     run_tool_turn(&mut state, "Done!", &big_output());
     state.view.scroll = 0;
     let region = state.visible_scroll(5);
@@ -94,7 +94,7 @@ fn final_agent_visible_when_tool_overflows() {
 #[test]
 fn agent_before_tool_preserved_during_turn() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Done!".into(),
@@ -114,7 +114,7 @@ fn agent_before_tool_preserved_during_turn() {
 #[test]
 fn no_reorder_when_no_tools() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
@@ -148,7 +148,7 @@ fn no_reorder_when_no_tools() {
 #[test]
 fn thought_stays_before_tool_after_reorder() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {

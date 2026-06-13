@@ -51,7 +51,7 @@ fn _timestamps_are_monotonic(state: &AppState) -> Result<(), String> {
 #[test]
 fn agent_response_updated_after_tool_stays_after_tool() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -78,7 +78,7 @@ fn agent_response_updated_after_tool_stays_after_tool() {
 #[test]
 fn multiple_response_chunks_preserve_creation_order() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     // First chunk creates assistant
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -118,7 +118,7 @@ fn multiple_response_chunks_preserve_creation_order() {
 #[test]
 fn thought_appears_before_agent_even_when_agent_updated_later() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -147,7 +147,7 @@ fn thought_appears_before_agent_even_when_agent_updated_later() {
 #[test]
 fn turn_complete_last_during_turn_despite_updates() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {

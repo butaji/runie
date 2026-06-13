@@ -25,7 +25,7 @@ fn status_line_shows_spinner_and_timer() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
     state.agent.turn_started_at = Some(std::time::Instant::now());
-    state.animation_frame = 3;
+    state.view.animation_frame = 3;
     state.ensure_fresh();
 
     let out = render_status(&mut state);

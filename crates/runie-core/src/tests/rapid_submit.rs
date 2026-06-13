@@ -60,7 +60,7 @@ fn rapid_submit_turn_active_clears_after_done() {
         .complete(1.0)
         .done();
     assert!(!state.agent.turn_active);
-    assert!(state.current_action.is_none());
+    assert!(state.agent.current_action.is_none());
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn two_full_turns_with_tools_state_correct() {
     run_turn_with_tool(&mut state, "req.0", "list_dir");
     run_turn_with_tool(&mut state, "req.1", "list_dir");
     assert!(!state.agent.turn_active);
-    assert!(state.current_action.is_none());
+    assert!(state.agent.current_action.is_none());
     assert_eq!(state.agent.inflight, 0);
     assert_eq!(
         state

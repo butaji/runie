@@ -24,10 +24,10 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 fn test_reset_clears_state() {
     let mut state = fresh_state();
     state.input.input = "test".to_string();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::Reset);
     assert_eq!(state.input.input, "");
-    assert!(!state.streaming);
+    assert!(!state.agent.streaming);
     assert_eq!(state.session.messages.len(), 0);
 }
 
@@ -57,7 +57,7 @@ fn test_scroll_down_saturates() {
 #[test]
 fn test_tool_flow_creates_two_thoughts() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(&mut state, &[
         Event::AgentThinking { id: "req.0".into() },
         Event::AgentThoughtDone { id: "req.0".into() },
@@ -79,7 +79,7 @@ fn test_tool_flow_creates_two_thoughts() {
 #[test]
 fn test_turn_complete_event() {
     let mut state = fresh_state();
-    state.intermediate_step_count = 1;
+    state.agent.intermediate_step_count = 1;
     state.update(Event::AgentTurnComplete {
         id: "req.0".to_string(),
         duration_secs: 5.1,
@@ -93,7 +93,7 @@ fn test_turn_complete_event() {
 #[test]
 fn test_turn_complete_always_added_when_event_received() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(&mut state, &[
         Event::AgentThinking { id: "req.0".into() },
         Event::AgentThoughtDone { id: "req.0".into() },
@@ -129,7 +129,7 @@ fn test_tool_done_event() {
 #[test]
 fn test_formatted_labels_short_names() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(&mut state, &[
         Event::AgentThinking { id: "req.0".into() },
         Event::AgentThoughtDone { id: "req.0".into() },
@@ -154,7 +154,7 @@ fn test_formatted_labels_short_names() {
 #[test]
 fn test_list_files_full_tool_flow_sequence() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(&mut state, &[
         Event::AgentThinking { id: "req.0".into() },
         Event::AgentThoughtDone { id: "req.0".into() },
@@ -186,7 +186,7 @@ fn test_list_files_full_tool_flow_sequence() {
 #[test]
 fn test_turn_complete_shows_even_if_done_arrives_first() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(&mut state, &[
         Event::AgentThinking { id: "req.0".into() },
         Event::AgentThoughtDone { id: "req.0".into() },
@@ -210,12 +210,12 @@ fn test_turn_complete_shows_even_if_done_arrives_first() {
 #[test]
 fn test_thinking_indicator_shows_for_queued_request() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state
         .agent
         .request_queue
         .push_back(("B".to_string(), "req.1".to_string()));
-    state.thinking_started_at = Some(std::time::Instant::now());
+    state.agent.thinking_started_at = Some(std::time::Instant::now());
     let has_thought = state
         .session
         .messages

@@ -180,7 +180,7 @@ fn submit_then_large_response_stays_at_bottom() {
 #[test]
 fn streaming_large_content_scroll_zero_shows_latest() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.view.scroll = 0;
 
     // Simulate streaming chunks that build up to >1 page

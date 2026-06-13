@@ -72,7 +72,7 @@ fn snapshot_is_immutable_after_creation() {
 fn snapshot_spinner_frame_captured() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.animation_frame = 5;
+    state.view.animation_frame = 5;
     state.ensure_fresh();
     let snap = state.snapshot();
     assert_eq!(

@@ -285,7 +285,7 @@ impl AppState {
         match crate::clipboard_image::read_clipboard_image() {
             Some(bytes) => {
                 let uri = crate::clipboard_image::to_data_uri(&bytes);
-                self.image_attachments.push(uri);
+                self.session.image_attachments.push(uri);
                 self.mark_dirty();
             }
             None => {
@@ -354,16 +354,16 @@ impl AppState {
         self.input.history_pos = None;
         self.input.undo_stack.clear();
         self.input.redo_stack.clear();
-        if content.is_empty() && self.image_attachments.is_empty() {
+        if content.is_empty() && self.session.image_attachments.is_empty() {
             return;
         }
 
         // Append image attachments to content
-        let content = if self.image_attachments.is_empty() {
+        let content = if self.session.image_attachments.is_empty() {
             content
         } else {
             let mut full = content;
-            for uri in std::mem::take(&mut self.image_attachments) {
+            for uri in std::mem::take(&mut self.session.image_attachments) {
                 if !full.is_empty() {
                     full.push('\n');
                 }

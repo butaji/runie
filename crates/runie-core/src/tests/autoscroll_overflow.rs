@@ -29,7 +29,7 @@ fn verify_user_submit_visible(state: &mut AppState, height: usize) {
 }
 
 fn verify_thought_visible(state: &mut AppState, height: usize) {
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {
         id: "req.0".into(),

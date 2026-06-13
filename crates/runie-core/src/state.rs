@@ -187,13 +187,15 @@ pub struct ViewState {
     pub cached_gen: u64,
     pub message_gen: u64,
     pub element_count: usize,
-    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    // Animation/scroll state
     pub animation_frame: u32,
     pub all_collapsed: bool,
-    cached_palette_items: Vec<(String, String, String)>,
-    cached_palette_filter: Option<String>,
-    cached_model_items: Vec<(String, String, String, bool, bool)>,
-    cached_model_filter: Option<String>,
+    // Cached palette items (for command palette dialog)
+    pub(crate) cached_palette_items: Vec<(String, String, String)>,
+    pub(crate) cached_palette_filter: Option<String>,
+    // Cached model selector items
+    pub(crate) cached_model_items: Vec<(String, String, String, bool, bool)>,
+    pub(crate) cached_model_filter: Option<String>,
 }
 
 impl ViewState {
@@ -281,6 +283,8 @@ pub struct ConfigState {
     pub steering_mode: crate::model::DeliveryMode,
     pub follow_up_mode: crate::model::DeliveryMode,
     pub recent_models: Vec<String>,
+    /// Telemetry/analytics tracking.
+    pub telemetry: crate::telemetry::Telemetry,
 }
 
 impl Default for ConfigState {
@@ -309,6 +313,7 @@ impl Default for ConfigState {
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),
+            telemetry: crate::telemetry::Telemetry::new(false),
         }
     }
 }

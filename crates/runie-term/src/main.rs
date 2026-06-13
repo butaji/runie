@@ -385,14 +385,14 @@ async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentComman
         let content = content.clone();
         let id = id.clone();
         state.pop_queue();
-        state.streaming = true;
+        state.agent.streaming = true;
         state.agent.turn_active = true;
         state.agent.inflight += 1;
         let skills_context = runie_core::skills::build_skills_context(&state.skills);
         let system_prompt = state
             .prompts
             .iter()
-            .find(|p| p.name == state.current_prompt)
+            .find(|p| p.name == state.input.current_prompt)
             .map(|p| p.content.clone())
             .unwrap_or_default();
         let _ = cmd_tx

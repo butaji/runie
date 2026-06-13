@@ -57,7 +57,7 @@ fn user_message_renders() {
 #[test]
 fn agent_response_renders() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });

@@ -43,7 +43,7 @@ fn line_colors(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -
 fn agent_message_is_low_contrast_not_bright() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Hello agent".into(),
@@ -63,7 +63,7 @@ fn agent_message_is_low_contrast_not_bright() {
 fn thought_is_low_contrast_not_accent() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentDone { id: "req.0".into() });
@@ -103,7 +103,7 @@ fn tool_header_is_low_contrast_not_success() {
 fn turn_complete_is_low_contrast() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Done".into(),

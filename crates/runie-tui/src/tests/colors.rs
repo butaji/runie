@@ -40,7 +40,7 @@ fn line_colors(term: &Terminal<TestBackend>, predicate: impl Fn(&str) -> bool) -
 fn agent_message_uses_fg() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Hello agent".into(),
@@ -60,7 +60,7 @@ fn agent_message_uses_fg() {
 fn turn_complete_uses_dim() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -132,7 +132,7 @@ fn tool_done_output_uses_fg() {
 fn thought_uses_dim() {
     let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentDone { id: "req.0".into() });

@@ -94,7 +94,7 @@ fn assistant_pure_text_renders_normally() {
 #[test]
 fn no_agent_during_thinking_phase() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -111,7 +111,7 @@ fn no_agent_during_thinking_phase() {
 #[test]
 fn no_agent_during_thinking_even_with_tool() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -130,7 +130,7 @@ fn no_agent_during_thinking_even_with_tool() {
 #[test]
 fn thought_renders_after_thought_done() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -156,7 +156,7 @@ fn thought_renders_after_thought_done() {
 #[test]
 fn post_tool_assistant_renders() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -189,7 +189,7 @@ fn post_tool_assistant_renders() {
 #[test]
 fn full_turn_no_ghost_agent_messages() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     verify_no_agent_before_response(&mut state);
     verify_no_agent_during_thinking(&mut state);
@@ -288,7 +288,7 @@ fn verify_response_persists_after_turn(state: &mut AppState) {
 #[test]
 fn streaming_chunks_no_flicker() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
 
     // Chunk 1: natural language only

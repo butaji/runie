@@ -36,7 +36,7 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
 #[test]
 fn turn_complete_is_last_after_normal_flow() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -74,7 +74,7 @@ fn turn_complete_is_last_after_normal_flow() {
 #[test]
 fn turn_complete_is_last_when_response_after_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -112,7 +112,7 @@ fn turn_complete_is_last_when_response_after_turn_complete() {
 #[test]
 fn turn_complete_is_last_with_multiple_tools() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -154,7 +154,7 @@ fn turn_complete_is_last_with_multiple_tools() {
 #[test]
 fn turn_complete_is_last_when_tool_end_after_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -184,7 +184,7 @@ fn turn_complete_is_last_when_tool_end_after_turn_complete() {
 #[test]
 fn turn_complete_survives_empty_content_timestamp_bump() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -222,7 +222,7 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
 #[test]
 fn turn_complete_before_next_turn_user_message() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -254,7 +254,7 @@ fn turn_complete_before_next_turn_user_message() {
 #[test]
 fn turn_complete_timestamp_is_max_after_done() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Hello".into(),

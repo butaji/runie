@@ -830,7 +830,7 @@ impl AppState {
         );
         let items = build_model_selector_items(
             &model_catalog(),
-            &self.recent_models,
+            &self.config.recent_models,
             "",
             &self.config.current_provider,
             &self.config.current_model,
@@ -923,7 +923,7 @@ impl AppState {
                 proposed,
                 diff,
             } => {
-                self.pending_edits
+                self.session.pending_edits
                     .push(crate::edit_preview::EditPreview::new(
                         std::path::PathBuf::from(path),
                         original,
@@ -1485,13 +1485,13 @@ impl AppState {
                 );
             }
             "steering_mode" => {
-                self.steering_mode = match self.steering_mode {
+                self.config.steering_mode = match self.config.steering_mode {
                     crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
                     crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
                 };
             }
             "follow_up_mode" => {
-                self.follow_up_mode = match self.follow_up_mode {
+                self.config.follow_up_mode = match self.config.follow_up_mode {
                     crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
                     crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
                 };
@@ -1582,7 +1582,7 @@ impl AppState {
     }
 
     fn toggle_expand_all(&mut self) {
-        self.all_collapsed = !self.all_collapsed;
+        self.view.all_collapsed = !self.view.all_collapsed;
         self.messages_changed();
     }
 
@@ -1593,7 +1593,7 @@ impl AppState {
         self.config.current_provider = provider.clone();
         self.config.current_model = model.clone();
         self.record_model_usage(&provider, &model);
-        self.telemetry.track_event("model_switch", {
+        self.config.telemetry.track_event("model_switch", {
             let mut m = std::collections::HashMap::new();
             m.insert("provider".into(), provider.clone());
             m.insert("model".into(), model.clone());
@@ -1743,7 +1743,7 @@ impl AppState {
     /// TurnComplete are not affected.
     fn ensure_turn_complete_last(&mut self) {
         let target_id = self.agent.current_request_id.clone().or_else(|| {
-            self.last_assistant_index
+            self.agent.last_assistant_index
                 .and_then(|idx| self.session.messages.get(idx).map(|m| m.id.clone()))
         });
         let Some(target_id) = target_id else { return };

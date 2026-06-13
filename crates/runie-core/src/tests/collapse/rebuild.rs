@@ -27,7 +27,7 @@ fn toggle_expand_affects_all_items() {
     });
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
     );
 }
@@ -131,7 +131,7 @@ fn toggle_tool_twice_restores_cache() {
 #[test]
 fn thought_captures_assistant_reasoning() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -167,7 +167,7 @@ fn thought_captures_assistant_reasoning() {
 #[test]
 fn assistant_preserved_when_no_tools() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -196,7 +196,7 @@ fn assistant_preserved_when_no_tools() {
 #[test]
 fn tool_stores_output() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
@@ -234,7 +234,7 @@ fn collapsed_thought_hides_reasoning() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
     let feed = LazyCache::feed(&state);
 
     let summary = feed.elements.iter().find_map(|e| match e {
@@ -281,7 +281,7 @@ fn collapsed_tool_hides_output() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
     let feed = LazyCache::feed(&state);
 
     let has_tool_done = feed

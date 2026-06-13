@@ -19,14 +19,14 @@ fn test_agent_thinking_sets_streaming() {
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
-    assert!(state.streaming);
-    assert!(state.thinking_started_at.is_some());
+    assert!(state.agent.streaming);
+    assert!(state.agent.thinking_started_at.is_some());
 }
 
 #[test]
 fn test_agent_response_creates_messages() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -45,7 +45,7 @@ fn test_agent_response_creates_messages() {
 #[test]
 fn test_agent_done_clears_streaming() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -59,7 +59,7 @@ fn test_agent_done_clears_streaming() {
     state.update(Event::AgentDone {
         id: "req.0".to_string(),
     });
-    assert!(!state.streaming);
+    assert!(!state.agent.streaming);
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn test_sequential_fifo_a_then_b() {
     state.update(Event::Input('A'));
     state.update(Event::Submit);
     state.pop_queue();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -104,7 +104,7 @@ fn test_sequential_fifo_a_then_b() {
 #[test]
 fn test_full_list_files_integration() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     simulate_list_files_flow(&mut state);
 
     assert!(state
@@ -113,7 +113,7 @@ fn test_full_list_files_integration() {
         .iter()
         .any(|m| m.role == Role::Thought));
     assert!(state.session.messages.iter().any(|m| m.role == Role::Tool));
-    assert!(!state.streaming, "Streaming should stop after Done");
+    assert!(!state.agent.streaming, "Streaming should stop after Done");
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn test_list_files_command_flow() {
 #[test]
 fn test_list_files_message_content() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -180,7 +180,7 @@ fn test_list_files_message_content() {
 #[test]
 fn test_list_files_full_sequence() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     simulate_list_files_flow(&mut state);
 
     let msg = state

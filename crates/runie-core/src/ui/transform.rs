@@ -94,7 +94,7 @@ impl LazyCache {
             entries.push(Self::msg_to_elem(msg, state));
         }
 
-        if let Some(started) = state.thinking_started_at {
+        if let Some(started) = state.agent.thinking_started_at {
             entries.push(Element::thinking(started).at(Self::thinking_timestamp(state)));
         }
 
@@ -108,7 +108,7 @@ impl LazyCache {
         if crate::update::content_has_tool_markers(&msg.content) {
             return true;
         }
-        state.thinking_started_at.is_some()
+        state.agent.thinking_started_at.is_some()
             && state.agent.current_request_id.as_deref() == Some(&msg.id)
     }
 
@@ -135,7 +135,7 @@ impl LazyCache {
     }
 
     fn thought_elem(msg: &ChatMessage, state: &AppState, ts: f64) -> Element {
-        if state.all_collapsed {
+        if state.view.all_collapsed {
             let first_line = msg
                 .content
                 .lines()
@@ -172,7 +172,7 @@ impl LazyCache {
             .at(ts);
         }
         let (name, dur, output) = Self::parse_tool_content(&msg.content);
-        if state.all_collapsed {
+        if state.view.all_collapsed {
             Element::tool_summary(name, dur).at(ts)
         } else {
             Element::tool_done(name, dur, output).at(ts)

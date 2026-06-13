@@ -7,7 +7,7 @@ fn reset_clears_messages_and_input() {
     let mut state = fresh_state();
     type_str(&mut state, "hello");
     state.update(Event::Submit);
-    state.streaming = true;
+    state.agent.streaming = true;
     state.view.scroll = 5;
 
     type_str(&mut state, "/reset");
@@ -26,7 +26,7 @@ fn reset_clears_messages_and_input() {
         sys_msgs[0].content
     );
     assert!(state.input.input.is_empty(), "input cleared");
-    assert!(!state.streaming, "streaming cleared");
+    assert!(!state.agent.streaming, "streaming cleared");
     assert_eq!(state.view.scroll, 0, "scroll reset");
 }
 

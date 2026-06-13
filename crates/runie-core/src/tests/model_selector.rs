@@ -108,8 +108,8 @@ fn current_model_marked_with_star() {
 fn record_model_usage_tracks_recent() {
     let mut state = AppState::default();
     state.record_model_usage("openai", "gpt-4o");
-    assert_eq!(state.recent_models.len(), 1);
-    assert_eq!(state.recent_models[0], "openai/gpt-4o");
+    assert_eq!(state.config.recent_models.len(), 1);
+    assert_eq!(state.config.recent_models[0], "openai/gpt-4o");
 }
 
 #[test]
@@ -118,8 +118,8 @@ fn record_model_usage_dedupes() {
     state.record_model_usage("openai", "gpt-4o");
     state.record_model_usage("anthropic", "claude");
     state.record_model_usage("openai", "gpt-4o");
-    assert_eq!(state.recent_models.len(), 2);
-    assert_eq!(state.recent_models[1], "openai/gpt-4o");
+    assert_eq!(state.config.recent_models.len(), 2);
+    assert_eq!(state.config.recent_models[1], "openai/gpt-4o");
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn record_model_usage_caps_at_5() {
     for i in 0..10 {
         state.record_model_usage("provider", &format!("model-{}", i));
     }
-    assert_eq!(state.recent_models.len(), 5);
+    assert_eq!(state.config.recent_models.len(), 5);
 }
 
 #[test]

@@ -63,7 +63,7 @@ fn finish_turn_does_not_clear_next_turns_thinking() {
     state.agent("req.1").think();
     state.agent("req.0").done();
     assert!(
-        state.thinking_started_at.is_some(),
+        state.agent.thinking_started_at.is_some(),
         "must NOT clear next turn's thinking"
     );
 }
