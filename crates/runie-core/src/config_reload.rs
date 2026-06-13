@@ -51,10 +51,16 @@ impl Default for TruncationSection {
     }
 }
 
-#[derive(Debug, Clone, Default, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(default)]
 pub struct UiSection {
-    #[serde(default)]
     pub vim_mode: bool,
+}
+
+impl Default for UiSection {
+    fn default() -> Self {
+        Self { vim_mode: true }
+    }
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize)]
@@ -549,9 +555,9 @@ model = "gpt-4"
     }
 
     #[test]
-    fn config_vim_mode_default_false() {
+    fn config_vim_mode_default_true() {
         let config = Config::default();
-        assert!(!config.vim_mode());
+        assert!(config.vim_mode());
     }
 
     #[test]
@@ -586,6 +592,9 @@ vim_mode = true
         .unwrap();
 
         let mut state = AppState::default();
+        // Default is now enabled; reset to false so we can verify the
+        // config file flips it on.
+        state.config.vim_mode = false;
         assert!(!state.config.vim_mode);
         let config = Config::load_from(&config_path);
         if config.vim_mode() {

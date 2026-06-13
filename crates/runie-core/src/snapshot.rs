@@ -51,6 +51,9 @@ pub struct Snapshot {
     pub read_only: bool,
     /// Flash countdown for invalid input feedback.
     pub input_flash: u8,
+    /// True when the user is in vim nav mode (input box is disabled,
+    /// cursor renders in the disabled style).
+    pub vim_nav_mode: bool,
     /// Placeholder text shown when input is empty.
     pub placeholder: String,
     /// Ghost completion suffix shown in gray after cursor.
@@ -95,6 +98,74 @@ pub struct Snapshot {
     pub cwd_name: String,
     /// Top visible line index for multi-line input scrolling.
     pub input_scroll: usize,
+    /// Height of the message viewport (updated by the render actor).
+    pub last_visible_height: u16,
+    /// Index of the element currently at the top of the message
+    /// viewport. `None` if the feed is empty.
+    pub current_top_element: Option<usize>,
+    /// Navigable posts in the feed. Each post groups a logical unit of
+    /// content (e.g. a user message, a thought, a tool result).
+    pub posts: Arc<[crate::ui::elements::Post]>,
+    /// Index of the post selected in vim nav mode. `None` when not in
+    /// nav mode or when the feed is empty. Used by the renderer to draw
+    /// the selection bracket around the selected post.
+    pub selected_post: Option<usize>,
+}
+
+/// Compute the index of the element currently at the top of the
+/// message viewport. Returns None if the feed is empty.
+pub fn compute_current_top_element(
+    elements: &[crate::ui::elements::Element],
+    line_counts: &[usize],
+    total_lines: usize,
+    scroll: usize,
+    visible_height: u16,
+) -> Option<usize> {
+    if elements.is_empty() || total_lines == 0 {
+        return None;
+    }
+    let visible = (visible_height as usize).max(3);
+    let max_scroll = total_lines.saturating_sub(visible);
+    let current = scroll.min(max_scroll);
+    let top_line = max_scroll.saturating_sub(current);
+    // Cumulative line counts: cum[i] = sum(line_counts[0..=i]).
+    let mut cum = 0usize;
+    for (i, &c) in line_counts.iter().enumerate() {
+        cum += c;
+        if cum > top_line {
+            return Some(i);
+        }
+    }
+    Some(line_counts.len().saturating_sub(1))
+}
+
+/// Compute the index of the element currently at the bottom of the
+/// message viewport. Returns None if the feed is empty.
+pub fn compute_current_bottom_element(
+    elements: &[crate::ui::elements::Element],
+    line_counts: &[usize],
+    total_lines: usize,
+    scroll: usize,
+    visible_height: u16,
+) -> Option<usize> {
+    if elements.is_empty() || total_lines == 0 {
+        return None;
+    }
+    let visible = (visible_height as usize).max(3);
+    let max_scroll = total_lines.saturating_sub(visible);
+    let current = scroll.min(max_scroll);
+    let top_line = max_scroll.saturating_sub(current);
+    let bottom_line = (top_line + visible)
+        .saturating_sub(1)
+        .min(total_lines.saturating_sub(1));
+    let mut cum = 0usize;
+    for (i, &c) in line_counts.iter().enumerate() {
+        cum += c;
+        if cum > bottom_line {
+            return Some(i);
+        }
+    }
+    Some(line_counts.len().saturating_sub(1))
 }
 
 impl Snapshot {

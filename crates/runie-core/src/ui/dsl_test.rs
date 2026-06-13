@@ -115,8 +115,9 @@ mod tests {
         let mut state = AppState::default();
         state.agent.thinking_started_at = Some(std::time::Instant::now());
         let elements = LazyCache::rebuild(&state);
-        assert!(matches!(elements[0], Element::Thinking { .. }));
-        assert!(matches!(elements[1], Element::Spacer { .. }));
+        assert!(matches!(elements[0], Element::Spacer { .. }));
+        assert!(matches!(elements[1], Element::Thinking { .. }));
+        assert!(matches!(elements[2], Element::Spacer { .. }));
     }
 
     #[test]
@@ -164,7 +165,7 @@ mod tests {
         let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
-            vec!["A", "S", "T", "S"],
+            vec!["S", "A", "S", "T", "S"],
             "Elements ordered by last update timestamp"
         );
     }

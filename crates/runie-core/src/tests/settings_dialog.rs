@@ -223,25 +223,25 @@ fn settings_includes_vim_mode_toggle() {
 }
 
 #[test]
-fn settings_vim_mode_default_is_false() {
+fn settings_vim_mode_default_is_true() {
     let state = AppState::default();
     let item = build_setting_items(&state)
         .into_iter()
         .find(|i| i.key == "vim_mode")
         .expect("vim_mode item");
-    assert!(matches!(item.value, SettingValue::Bool(false)));
+    assert!(matches!(item.value, SettingValue::Bool(true)));
 }
 
 #[test]
 fn settings_select_toggles_vim_mode() {
     let mut state = AppState::default();
-    assert!(!state.config.vim_mode);
-    state.update(Event::ToggleSettingsDialog);
-    select_by_label(&mut state, "Vim Navigation");
-    assert!(state.config.vim_mode, "select should turn vim_mode on");
+    assert!(state.config.vim_mode);
     state.update(Event::ToggleSettingsDialog);
     select_by_label(&mut state, "Vim Navigation");
     assert!(!state.config.vim_mode, "select should turn vim_mode off");
+    state.update(Event::ToggleSettingsDialog);
+    select_by_label(&mut state, "Vim Navigation");
+    assert!(state.config.vim_mode, "select should turn vim_mode on");
 }
 
 #[test]

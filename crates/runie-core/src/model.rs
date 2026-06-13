@@ -1,6 +1,6 @@
 //! Model — Application State (mutable borrow, no cloning per event)
 pub use crate::message::{now, ChatMessage, Role};
-use crate::snapshot::Snapshot;
+use crate::snapshot::{compute_current_top_element, Snapshot};
 use crate::ui::elements::Element;
 use std::sync::Arc;
 
@@ -322,6 +322,12 @@ impl AppState {
         self.view.dirty = true;
     }
 
+    /// Record the height of the message viewport. Called by the render
+    /// actor on each draw. Used by vim nav mode for element-level jumps.
+    pub fn set_last_visible_height(&mut self, height: u16) {
+        self.view.last_visible_height = height;
+    }
+
     fn palette_items(&mut self) -> Arc<[(String, String, String)]> {
         let filter = match &self.open_dialog {
             Some(d) => d
@@ -474,13 +480,19 @@ impl AppState {
     /// Rebuild cache only when messages changed — O(n) but gated
     pub fn ensure_fresh(&mut self) {
         if self.view.dirty && self.view.message_gen != self.view.cached_gen {
-            let elements = crate::ui::LazyCache::rebuild(self);
-            self.view.element_count = elements.len();
-            let line_counts: Vec<usize> = elements.iter().map(|e| e.line_count()).collect();
+            let feed = crate::ui::LazyCache::feed(self);
+            self.view.element_count = feed.elements.len();
+            let line_counts: Vec<usize> = feed.elements.iter().map(|e| e.line_count()).collect();
             self.view.total_lines = line_counts.iter().sum();
             self.view.line_counts = line_counts.into();
-            self.view.elements_cache = elements.into();
+            self.view.elements_cache = feed.elements.into();
+            self.view.posts = feed.posts.into();
             self.view.cached_gen = self.view.message_gen;
+        }
+        // Keep the nav-mode selection valid after the feed changes.
+        if let Some(sel) = self.view.selected_post {
+            let max = self.view.posts.len().saturating_sub(1);
+            self.view.selected_post = Some(sel.min(max));
         }
         self.view.dirty = false;
     }
@@ -633,6 +645,7 @@ impl AppState {
             path_selected: self.completion.path_selected,
             turn_active: self.agent.turn_active,
             input_flash: self.input.input_flash,
+            vim_nav_mode: self.vim_nav_mode,
             placeholder: self.input.placeholder.clone(),
             ghost_completion: self.input.ghost_completion.clone(),
             spinner_frame: self.spinner_frame(),
@@ -663,6 +676,16 @@ impl AppState {
             git_info: self.git_info.clone(),
             cwd_name: self.cwd_name.clone(),
             input_scroll: self.input.input_scroll,
+            last_visible_height: self.view.last_visible_height,
+            current_top_element: compute_current_top_element(
+                &self.view.elements_cache,
+                &self.view.line_counts,
+                self.view.total_lines,
+                self.view.scroll,
+                self.view.last_visible_height,
+            ),
+            posts: Arc::clone(&self.view.posts),
+            selected_post: self.view.selected_post,
         }
     }
 

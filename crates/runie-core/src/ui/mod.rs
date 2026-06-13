@@ -8,9 +8,11 @@
 
 pub mod dsl_test;
 pub mod elements;
+pub mod posts;
 pub mod transform;
 
-pub use elements::{Element, Feed};
+pub use elements::{Element, Feed, Post, PostKind};
+pub use posts::PostBuilder;
 pub use transform::LazyCache;
 
 #[cfg(test)]

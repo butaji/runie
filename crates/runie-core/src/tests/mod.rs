@@ -128,6 +128,8 @@ mod turn_complete_order;
 #[cfg(test)]
 mod turn_complete_visibility;
 #[cfg(test)]
+mod vim_element_jump;
+#[cfg(test)]
 mod vim_mode;
 #[cfg(test)]
 pub(crate) mod visible_helper;

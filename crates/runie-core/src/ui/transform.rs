@@ -21,12 +21,36 @@ impl LazyCache {
         });
 
         let mut feed = Feed::new();
-        for elem in entries {
+        for elem in entries.into_iter() {
             let ts = elem.timestamp();
-            feed.elements.push(elem);
-            feed.elements.push(Element::spacer().at(ts));
+            let kind = Self::post_kind(&elem);
+            let expanded = !matches!(
+                elem,
+                Element::ThoughtSummary { .. } | Element::ToolSummary { .. }
+            );
+            feed.push_post(
+                crate::ui::posts::PostBuilder::new(kind)
+                    .with_element(elem)
+                    .expanded(expanded)
+                    .at(ts),
+            );
         }
         feed
+    }
+
+    fn post_kind(elem: &Element) -> crate::ui::elements::PostKind {
+        use crate::ui::elements::{Element as E, PostKind};
+        match elem {
+            E::Spacer { .. } => PostKind::System,
+            E::UserMessage { .. } => PostKind::UserInput,
+            E::AgentMessage { .. } => PostKind::AgentResponse,
+            E::Thinking { .. } => PostKind::Thinking,
+            E::ThoughtMarker { .. } | E::ThoughtSummary { .. } => PostKind::Thought,
+            E::ToolRunning { .. } => PostKind::ToolRunning,
+            E::ToolDone { .. } => PostKind::ToolDone,
+            E::ToolSummary { .. } => PostKind::ToolSummary,
+            E::TurnComplete { .. } => PostKind::TurnComplete,
+        }
     }
 
     fn action_turn_id(msg: &crate::model::ChatMessage) -> Option<String> {

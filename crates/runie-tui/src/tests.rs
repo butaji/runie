@@ -403,6 +403,41 @@ fn palette_renders_centered() {
 }
 
 #[test]
+fn dialog_title_has_single_space_inside_border() {
+    let mut state = AppState::default();
+    state.update(Event::ToggleCommandPalette);
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+
+    // Find the top border row of the dialog and check spacing around
+    // the title. It should look like `╭ Commands ───────────╮`, not
+    // `╭  Commands  ─────────╮`.
+    let mut title_row = None;
+    for y in 0..buf.area().height {
+        let line: String = (0..buf.area().width)
+            .map(|x| buf[(x, y)].symbol().to_string())
+            .collect();
+        if line.contains("Commands") {
+            title_row = Some(line);
+            break;
+        }
+    }
+    let row = title_row.expect("dialog title row not found");
+    assert!(
+        row.contains("╭ Commands ") || row.contains(" Commands "),
+        "dialog title should have exactly one space inside the border, got: {:?}",
+        row
+    );
+    assert!(
+        !row.contains("╭  Commands") && !row.contains("Commands  ─"),
+        "dialog title must not have double spaces inside the border, got: {:?}",
+        row
+    );
+}
+
+#[test]
 fn palette_shows_categories() {
     let mut state = AppState::default();
     state.update(Event::ToggleCommandPalette);

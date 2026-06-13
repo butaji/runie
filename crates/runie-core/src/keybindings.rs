@@ -79,7 +79,8 @@ const VALID_KEYS: &[&str] = &[
 
 /// Default bindings as (combo, event_name) tuples.
 const DEFAULT_BINDINGS: &[(&str, &str)] = &[
-    ("ctrl+e", "ToggleExpand"),
+    ("ctrl+e", "CursorEnd"),
+    ("ctrl+shift+e", "ToggleExpand"),
     ("ctrl+j", "Newline"),
     ("ctrl+a", "CursorStart"),
     ("ctrl+b", "CursorLeft"),
@@ -91,6 +92,7 @@ const DEFAULT_BINDINGS: &[(&str, &str)] = &[
     ("ctrl+z", "Suspend"),
     ("ctrl+y", "Redo"),
     ("ctrl+c", "Quit"),
+    ("ctrl+q", "Quit"),
     ("ctrl+s", "Abort"),
     ("ctrl+g", "OpenExternalEditor"),
     ("ctrl+o", "CopyLastResponse"),
@@ -229,6 +231,36 @@ mod tests {
         assert_eq!(bindings.get("ctrl+z"), Some(&"Suspend".to_string()));
         assert_eq!(bindings.get("enter"), Some(&"Submit".to_string()));
         assert_eq!(bindings.get("up"), Some(&"HistoryPrev".to_string()));
+    }
+
+    #[test]
+    fn ctrl_e_defaults_to_cursor_end() {
+        let bindings = default_keybindings();
+        assert_eq!(
+            bindings.get("ctrl+e"),
+            Some(&"CursorEnd".to_string()),
+            "ctrl+e should move cursor to end of input"
+        );
+    }
+
+    #[test]
+    fn ctrl_shift_e_defaults_to_toggle_expand() {
+        let bindings = default_keybindings();
+        assert_eq!(
+            bindings.get("ctrl+shift+e"),
+            Some(&"ToggleExpand".to_string()),
+            "ctrl+shift+e should expand/collapse thoughts"
+        );
+    }
+
+    #[test]
+    fn ctrl_q_defaults_to_quit() {
+        let bindings = default_keybindings();
+        assert_eq!(
+            bindings.get("ctrl+q"),
+            Some(&"Quit".to_string()),
+            "ctrl+q should quit the app"
+        );
     }
 
     #[test]

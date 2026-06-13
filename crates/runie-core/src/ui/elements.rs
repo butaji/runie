@@ -144,6 +144,22 @@ impl Element {
         matches!(self, Element::ThoughtMarker { .. })
     }
 
+    /// Update the timestamp used to order this element in the feed.
+    pub fn set_timestamp(&mut self, timestamp: f64) {
+        match self {
+            Element::Spacer { timestamp: ts } => *ts = timestamp,
+            Element::UserMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::AgentMessage { timestamp: ts, .. } => *ts = timestamp,
+            Element::Thinking { timestamp: ts, .. } => *ts = timestamp,
+            Element::ThoughtMarker { timestamp: ts, .. } => *ts = timestamp,
+            Element::ThoughtSummary { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolRunning { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolDone { timestamp: ts, .. } => *ts = timestamp,
+            Element::ToolSummary { timestamp: ts, .. } => *ts = timestamp,
+            Element::TurnComplete { timestamp: ts, .. } => *ts = timestamp,
+        }
+    }
+
     /// Sort key for ordering elements in the feed.
     pub fn timestamp(&self) -> f64 {
         match self {
@@ -184,14 +200,71 @@ impl Element {
     }
 }
 
+/// The logical kind of a feed post. Used by the app to reason about
+/// the feed in user-facing terms instead of raw elements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostKind {
+    /// System-generated message (e.g. "state cleared").
+    System,
+    /// User input message.
+    UserInput,
+    /// Agent/assistant response.
+    AgentResponse,
+    /// Transient "thinking" indicator while the model is working.
+    Thinking,
+    /// A thought block produced by the model.
+    Thought,
+    /// A tool currently being executed.
+    ToolRunning,
+    /// A completed tool call with output.
+    ToolDone,
+    /// A collapsed tool result.
+    ToolSummary,
+    /// Turn completion marker.
+    TurnComplete,
+}
+
+/// A navigable "post" in the feed — a logical unit that the user
+/// selects with j/k/arrow keys. A post spans a contiguous range of
+/// elements (e.g. a user message plus its following spacer).
+#[derive(Debug, Clone)]
+pub struct Post {
+    pub index: usize,
+    /// Inclusive element index where this post starts.
+    pub start: usize,
+    /// Exclusive element index where this post ends.
+    pub end: usize,
+    /// Logical kind of this post.
+    pub kind: PostKind,
+    /// Whether the post body is expanded (true) or collapsed (false).
+    /// Collapsed posts render a one-line summary instead of full content.
+    pub expanded: bool,
+}
+
+impl Post {
+    pub fn len(&self) -> usize {
+        self.end.saturating_sub(self.start)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.start >= self.end
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Feed {
     pub elements: Vec<Element>,
+    /// Navigable posts in the feed. Each post is a logical unit that
+    /// groups one or more consecutive elements.
+    pub posts: Vec<Post>,
 }
 
 impl Feed {
     pub fn new() -> Self {
-        Self { elements: vec![] }
+        Self {
+            elements: vec![],
+            posts: vec![],
+        }
     }
 
     pub fn push(mut self, element: Element) -> Self {
@@ -210,5 +283,21 @@ impl Feed {
 
     pub fn is_empty(&self) -> bool {
         self.elements.is_empty()
+    }
+
+    /// Number of navigable posts in the feed.
+    pub fn post_count(&self) -> usize {
+        self.posts.len()
+    }
+
+    /// Append a built post to the feed. The builder is consumed and the
+    /// post's element range is recorded automatically.
+    pub fn push_post(&mut self, builder: crate::ui::posts::PostBuilder) {
+        builder.build(self);
+    }
+
+    /// Append a built post and return its index.
+    pub fn push_post_and_index(&mut self, builder: crate::ui::posts::PostBuilder) -> usize {
+        builder.build(self)
     }
 }

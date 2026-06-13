@@ -102,6 +102,12 @@ fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<C
         }
     }
     if key.modifiers.contains(KeyModifiers::CONTROL) {
+        // Ctrl+Shift+E is expand/collapse; plain Ctrl+E is cursor-end.
+        if key.modifiers.contains(KeyModifiers::SHIFT)
+            && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E'))
+        {
+            return Some(CoreEvent::ToggleExpand);
+        }
         map_ctrl_key(key.code)
     } else if key.modifiers.contains(KeyModifiers::ALT) {
         map_alt_key(key.code)
@@ -114,7 +120,7 @@ fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<C
 
 fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
     match code {
-        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::ToggleExpand),
+        KeyCode::Char('e') | KeyCode::Char('E') => Some(CoreEvent::CursorEnd),
         KeyCode::Char('j') | KeyCode::Char('J') => Some(CoreEvent::Newline),
         KeyCode::Char('a') | KeyCode::Char('A') => Some(CoreEvent::CursorStart),
         KeyCode::Char('b') | KeyCode::Char('B') => Some(CoreEvent::CursorLeft),
@@ -126,6 +132,7 @@ fn map_ctrl_key(code: KeyCode) -> Option<CoreEvent> {
         KeyCode::Char('z') | KeyCode::Char('Z') => Some(CoreEvent::Suspend),
         KeyCode::Char('y') | KeyCode::Char('Y') => Some(CoreEvent::Redo),
         KeyCode::Char('c') | KeyCode::Char('C') => Some(CoreEvent::Quit),
+        KeyCode::Char('q') | KeyCode::Char('Q') => Some(CoreEvent::Quit),
         KeyCode::Char('s') | KeyCode::Char('S') => Some(CoreEvent::Abort),
         KeyCode::Char('l') | KeyCode::Char('L') => Some(CoreEvent::ToggleModelSelector),
         _ => None,

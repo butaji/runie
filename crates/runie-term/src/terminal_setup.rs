@@ -1,7 +1,10 @@
 //! Terminal setup and progressive keyboard enhancement helpers.
 
 use crate::terminal::caps;
-use crossterm::event::{EnableFocusChange, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
+use crossterm::event::{
+    EnableFocusChange, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+    PushKeyboardEnhancementFlags,
+};
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 

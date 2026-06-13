@@ -98,6 +98,7 @@ text_dim = "#5C5854"
 "bg.elevated" = "bg_elevated"
 "bg.active" = "bg_active"
 "bg.selection" = "bg_selection"
+"bg.user" = "bg_elevated"
 
 "accent.primary" = "orange_500"
 "accent.secondary" = "amber_400"
@@ -208,6 +209,11 @@ fn register_input_styles(theme: &mut opaline::Theme) {
         "runie.input.cursor",
         opaline::OpalineStyle::fg(cursor_fg).with_bg(accent),
     );
+    // Disabled cursor (vim nav mode): gray block, no accent.
+    theme.register_default_style(
+        "runie.input.cursor.disabled",
+        opaline::OpalineStyle::fg(dim).with_bg(theme.color("text.muted")),
+    );
     theme.register_default_style("runie.placeholder", opaline::OpalineStyle::fg(dim));
     theme.register_default_style("runie.hint", opaline::OpalineStyle::fg(dim));
     theme.register_default_style(
@@ -302,6 +308,42 @@ pub fn color_code_bg() -> Color {
         .unwrap_or(Color::Reset)
 }
 
+/// User message post background. Themes can override `bg.user`;
+/// otherwise we fall back to the elevated surface color.
+pub fn color_user_bg() -> Color {
+    current_theme()
+        .try_color("bg.user")
+        .or_else(|| current_theme().try_color("bg.elevated"))
+        .or_else(|| current_theme().try_color("bg.panel"))
+        .or_else(|| current_theme().try_color("bg.highlight"))
+        .map(Color::from)
+        .unwrap_or(Color::Reset)
+}
+
+/// Accent color blended over the terminal background at the given
+/// opacity (0.0–1.0). Used for the subtle selection highlight behind
+/// the selected post in vim nav mode.
+pub fn color_accent_bg() -> Color {
+    blend(color_bg(), color_accent(), 0.1)
+}
+
+fn blend(bg: Color, fg: Color, opacity: f32) -> Color {
+    let opacity = opacity.clamp(0.0, 1.0);
+    let (br, bg_g, bb) = match bg {
+        Color::Rgb(r, g, b) => (r, g, b),
+        _ => (30, 30, 30),
+    };
+    let (fr, fg_g, fb) = match fg {
+        Color::Rgb(r, g, b) => (r, g, b),
+        _ => return fg,
+    };
+    Color::Rgb(
+        (br as f32 * (1.0 - opacity) + fr as f32 * opacity) as u8,
+        (bg_g as f32 * (1.0 - opacity) + fg_g as f32 * opacity) as u8,
+        (bb as f32 * (1.0 - opacity) + fb as f32 * opacity) as u8,
+    )
+}
+
 // ── Style helpers ──────────────────────────────────────────────────────
 
 macro_rules! style_fn {
@@ -330,6 +372,7 @@ style_fn!(style_border_flash, "runie.border.flash");
 style_fn!(style_code_block, "runie.code.block");
 style_fn!(style_code_header, "runie.code.header");
 style_fn!(style_input_cursor, "runie.input.cursor");
+style_fn!(style_input_cursor_disabled, "runie.input.cursor.disabled");
 style_fn!(style_placeholder, "runie.placeholder");
 style_fn!(style_hint, "runie.hint");
 style_fn!(style_hint_key, "runie.hint.key");
