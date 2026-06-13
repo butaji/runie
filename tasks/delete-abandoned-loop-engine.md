@@ -1,6 +1,6 @@
 # Delete the Abandoned `loop_engine` Module in `runie-agent`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P1
