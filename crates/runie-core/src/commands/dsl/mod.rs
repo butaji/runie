@@ -8,7 +8,7 @@ mod flow;
 
 pub use builder::{cmd, CommandDef, FormBuilder, FormField};
 pub use category::CommandCategory;
-pub use flow::{CommandFlow, CommandResult, DialogType};
+pub use flow::{build_spawn_form_panel, CommandFlow, CommandResult, DialogType};
 
 #[macro_export]
 macro_rules! cmd {

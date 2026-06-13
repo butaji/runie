@@ -125,6 +125,12 @@ fn build_event_for_form_command(
         "skill" => Some(crate::Event::RunSkillCommand {
             name: values.get("name").cloned().unwrap_or_default(),
         }),
+        "spawn" => Some(crate::Event::SpawnAgent {
+            prompt: values.get("prompt").cloned().unwrap_or_default(),
+        }),
+        "spawn_form" => Some(crate::Event::SpawnAgent {
+            prompt: values.get("prompt").cloned().unwrap_or_default(),
+        }),
         "providers" | "provider" => Some(crate::Event::ProvidersDialog),
         "name" => Some(crate::Event::RunNameCommand {
             name: values.get("name").cloned().unwrap_or_default(),
