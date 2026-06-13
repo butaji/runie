@@ -13,45 +13,60 @@ Runie is a terminal-based AI coding harness that provides an interactive TUI for
 
 ## Architecture
 
+Runie is split into focused crates. The `runie-term` binary is the TUI entry point; `runie-core` owns state, events, commands, and provider metadata; `runie-agent` runs the turn loop; and `runie-provider` implements the unified provider client.
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      runie-tui                           │
-│                   (CLI entry point)                     │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-    ┌─────────────────┴─────────────────┐
-    │                                   │
-┌───▼────┐     ┌────────────┐     ┌──────▼──────┐
-│runie-  │     │  runie-    │     │   runie-    │
-│term    │     │  provider  │     │   core      │
-│(term)  │     │(providers) │     │  (types)    │
-└────────┘     └────────────┘     └─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                        runie-term                           │
+│                   (TUI binary / CLI)                        │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+    ┌───────────────────┼───────────────────┐
+    │                   │                   │
+┌───▼─────┐      ┌──────▼──────┐     ┌──────▼──────┐
+│runie-   │      │  runie-     │     │   runie-    │
+│agent    │◄────►│  provider   │     │   core      │
+│(turns)  │      │(OpenAI API) │     │(state/types)│
+└─────────┘      └─────────────┘     └─────────────┘
+                        │
+              ┌─────────▼─────────┐
+              │    runie-tui      │
+              │  (widgets/layout) │
+              └───────────────────┘
 ```
 
 ### Crates
 
 | Crate | Purpose |
 |-------|---------|
-| `runie-core` | Shared types: Message, Tool, Session, Context, SlashCommand |
-| `runie-tui` | Terminal UI: feed, input, global tags, top bar, command palette |
-| `runie-term` | Terminal utilities and helpers |
+| `runie-core` | Shared state, events, commands, keybindings, provider registry |
+| `runie-tui` | Terminal UI widgets, layout, and render helpers |
+| `runie-term` | TUI binary entry point and terminal setup |
 | `runie-agent` | Agent loop engine, event streaming, permission gating |
-| `runie-provider` | Model provider implementations |
-| `runie-print` | Printing utilities |
-| `runie-json` | JSON utilities |
-| `runie-server` | Server components |
+| `runie-provider` | Unified OpenAI-compatible provider client |
+| `runie-print` | Plain-text printing utilities |
+| `runie-json` | JSON output utilities |
+| `runie-server` | Server/RPC mode components |
 
 ## Model Support
 
-Runie supports multiple providers through a unified provider interface:
+All providers use a single OpenAI-compatible API client. You switch provider/model at runtime with `/model <provider>/<model>`; an unknown provider returns an error instead of silently falling back.
 
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4 |
-| **Anthropic** | claude-3-5-sonnet, claude-3-opus, claude-3-sonnet, claude-3-haiku |
-| **Google** | gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-flash-8b, gemini-2.0-flash |
-| **MiniMax** | MiniMax API compatible |
-| **Rig** | OpenRouter-compatible endpoints |
+| Provider | Key | Models |
+|----------|-----|--------|
+| Anthropic | `anthropic` | claude-sonnet-4-6, claude-opus-4-7, claude-haiku-4-5 |
+| OpenAI | `openai` | gpt-4o, gpt-4o-mini, gpt-5, o3-mini, o4-mini |
+| Google Gemini | `google` | gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash |
+| DeepSeek | `deepseek` | deepseek-v4-flash, deepseek-v4-pro |
+| OpenRouter | `openrouter` | anthropic/claude-sonnet-4.6, openai/gpt-4o, google/gemini-2.5-pro |
+| Groq | `groq` | llama-3.3-70b-versatile, gemma2-9b-it, mixtral-8x7b-32768 |
+| Mistral | `mistral` | mistral-large-latest, codestral-latest, devstral-latest |
+| Fireworks | `fireworks` | accounts/fireworks/models/deepseek-v4-pro, accounts/fireworks/models/kimi-k2p6 |
+| Together AI | `together` | meta-llama/Llama-3.3-70B-Instruct-Turbo, deepseek-ai/DeepSeek-V4-Pro |
+| MiniMax | `minimax` | MiniMax-M3, MiniMax-M2.7 |
+| Moonshot AI | `moonshotai` | kimi-k2.5, kimi-k2.6, kimi-k2-thinking |
+| xAI | `xai` | grok-3, grok-4.3 |
+| Ollama | `ollama` | llama3.1, qwen2.5-coder:7b, mistral |
 
 ## Features
 
@@ -64,7 +79,7 @@ Runie supports multiple providers through a unified provider interface:
 | **Global Tags** | Token count, cost display; spinner + status during execution |
 | **Top Bar** | Model indicator, session info, background job status |
 | **Status Bar** | Agent state, thinking indicator, turn counter |
-| **Command Palette** | Fuzzy-matched commands (`Ctrl+K`), usage tracking |
+| **Command Palette** | Fuzzy-matched commands (`Ctrl+P`), usage tracking |
 | **Permission Modal** | Tool execution approval with Allow/Deny/Skip/AllowAlways |
 | **Model Picker** | Switch models mid-session |
 | **Session Tree** | Browse/fork conversation branches |
@@ -74,15 +89,44 @@ Runie supports multiple providers through a unified provider interface:
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
-| `/new` | `/n` | Start new session |
-| `/clear` | `/c` | Clear conversation |
-| `/model <name>` | `/m` | Switch model |
-| `/tree` | `/t` | Open session tree |
-| `/fork` | `/f` | Fork at current position |
-| `/copy` | | Copy last response |
-| `/cost` | | Show cost statistics |
-| `/quit` | `/q`, `/exit` | Exit |
-| `/help` | `/h` | Show help |
+| `/approve` | | Apply pending file edits |
+| `/changelog` | | Show changelog |
+| `/clone` | | Clone current session position |
+| `/compact` | | Compact context |
+| `/copy` | | Copy last response to clipboard |
+| `/delete` | | Delete a saved session |
+| `/diagnostics` | | Show resource loading diagnostics |
+| `/export` | | Export session to JSON |
+| `/fork` | | Fork session from a message |
+| `/help` | `/h`, `/?` | Show available commands |
+| `/history` | | Show recent history |
+| `/import` | | Import session from JSON |
+| `/load` | | Load a saved session |
+| `/model` | `/m` | Switch model |
+| `/name` | | Set session display name |
+| `/new` | | Start new session |
+| `/prompt` | | Switch prompt template |
+| `/provider` | `/providers` | Manage providers |
+| `/providers` | | Manage providers: add, disconnect, switch models |
+| `/readonly` | `/ro` | Toggle read-only mode |
+| `/reject` | | Cancel pending file edits |
+| `/reload` | | Reload config, keybindings, themes |
+| `/reset` | | Clear all state |
+| `/resume` | | Resume most recent session |
+| `/save` | | Save current session |
+| `/scoped-models` | | Enable/disable models for cycling |
+| `/session` | | Show session info |
+| `/sessions` | | List saved sessions |
+| `/share` | | Share session as GitHub gist |
+| `/skill` | | Show skill details |
+| `/skills` | | List loaded skills |
+| `/spawn` | | Run a subagent turn (delegated task) |
+| `/thinking` | | Set thinking level (off/low/medium/high) |
+| `/theme` | | Switch theme or list available themes |
+| `/tree` | | Open session tree dialog |
+| `/trust` | | Trust current project |
+| `/untrust` | | Untrust current project |
+| `/quit` | `/q`, `/exit` | Quit application |
 
 ### Tool Execution
 
@@ -145,7 +189,7 @@ cargo build --release
 ./target/release/runie
 
 # With mock provider (no API key)
-./target/release/runie --mock
+RUNIE_MOCK=1 ./target/release/runie
 
 # CLI one-shot mode
 ./target/release/runie run "Explain this code"
@@ -161,19 +205,49 @@ cargo build --release
 
 | Shortcut | Action |
 |----------|--------|
-| `Enter` | Submit message |
-| `Shift+Enter` | New line in input |
-| `Ctrl+C` | Exit |
-| `Ctrl+O` | Copy last response |
-| `Ctrl+B` | Toggle sidebar |
-| `Ctrl+K` / `Ctrl+P` | Command palette |
-| `Ctrl+N` | New session (via palette) |
-| `Ctrl+L` | Clear chat (via palette) |
+| `Alt+B` | CursorWordLeft |
+| `Alt+Enter` | FollowUp |
+| `Alt+F` | CursorWordRight |
+| `Alt+Up` | Dequeue |
+| `Backspace` | Backspace |
+| `Ctrl+A` | CursorStart |
+| `Ctrl+B` | CursorLeft |
+| `Ctrl+C` | Quit |
+| `Ctrl+D` | KillChar |
+| `Ctrl+E` | ToggleExpand |
+| `Ctrl+F` | CursorRight |
+| `Ctrl+G` | OpenExternalEditor |
+| `Ctrl+J` | Newline |
+| `Ctrl+K` | DeleteToEnd |
+| `Ctrl+M` | CycleModelNext |
+| `Ctrl+P` | ToggleCommandPalette |
+| `Ctrl+S` | Abort |
+| `Ctrl+Shift+M` | CycleModelPrev |
+| `Ctrl+Shift+P` | ToggleCommandPalette |
+| `Ctrl+U` | DeleteToStart |
+| `Ctrl+V` | PasteImage |
+| `Ctrl+W` | DeleteWord |
+| `Ctrl+Y` | Redo |
+| `Ctrl+Z` | Suspend |
+| `Delete` | KillChar |
+| `Down` | HistoryNext |
+| `End` | CursorEnd |
+| `Enter` | Submit |
+| `Escape` | DialogBack |
+| `Home` | CursorStart |
+| `Left` | CursorLeft |
+| `PageDown` | PageDown |
+| `PageUp` | PageUp |
+| `Right` | CursorRight |
+| `Shift+Enter` | Newline |
+| `Shift+Tab` | CycleThinkingLevel |
+| `Tab` | Input:\t |
+| `Up` | HistoryPrev |
 
 ## Development
 
 ```bash
-# Run with dev config
+# Run with dev config and mock provider
 ./dev.sh
 
 # Run tests
@@ -202,7 +276,6 @@ Key dependencies (from `Cargo.lock`):
 - `serde` — serialization
 - `chrono` — timestamps
 - `uuid` — session IDs
-- `genai` / `rig-core` — AI provider integrations
 
 ## License
 
