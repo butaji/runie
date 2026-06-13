@@ -1,6 +1,6 @@
 # Archive Remaining Orphan Crates (runie-ai, runie-cli, runie-tools)
 
-**Status**: todo
+**Status**: done
 **Milestone**: MVP
 **Category**: Configuration
 **Priority**: P1
