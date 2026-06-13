@@ -11,66 +11,71 @@ use anyhow::{Context, Result};
 
 use crate::event::Event;
 
+/// Valid final key names for key combos.
+const VALID_KEYS: &[&str] = &[
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+    "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+    "backspace", "enter", "escape", "tab", "up", "down", "left", "right",
+    "home", "end", "delete", "f1", "f2", "f3", "f4", "f5", "f6", "f7",
+    "f8", "f9", "f10", "f11", "f12", "pageup", "pagedown", "space",
+];
+
+/// Default bindings as (combo, event_name) tuples.
+const DEFAULT_BINDINGS: &[(&str, &str)] = &[
+    ("ctrl+e", "ToggleExpand"),
+    ("ctrl+j", "Newline"),
+    ("ctrl+a", "CursorStart"),
+    ("ctrl+b", "CursorLeft"),
+    ("ctrl+f", "CursorRight"),
+    ("ctrl+w", "DeleteWord"),
+    ("ctrl+k", "DeleteToEnd"),
+    ("ctrl+u", "DeleteToStart"),
+    ("ctrl+d", "KillChar"),
+    ("ctrl+z", "Suspend"),
+    ("ctrl+y", "Redo"),
+    ("ctrl+c", "Quit"),
+    ("ctrl+s", "Abort"),
+    ("ctrl+g", "OpenExternalEditor"),
+    ("ctrl+p", "ToggleCommandPalette"),
+    ("ctrl+shift+p", "ToggleCommandPalette"),
+    ("ctrl+m", "CycleModelNext"),
+    ("ctrl+shift+m", "CycleModelPrev"),
+    ("alt+enter", "FollowUp"),
+    ("alt+up", "Dequeue"),
+    ("alt+b", "CursorWordLeft"),
+    ("alt+f", "CursorWordRight"),
+    ("escape", "DialogBack"),
+    ("tab", "Input:\t"),
+    ("backspace", "Backspace"),
+    ("enter", "Submit"),
+    ("up", "HistoryPrev"),
+    ("down", "HistoryNext"),
+    ("left", "CursorLeft"),
+    ("right", "CursorRight"),
+    ("home", "CursorStart"),
+    ("end", "CursorEnd"),
+    ("delete", "KillChar"),
+    ("shift+enter", "Newline"),
+    ("shift+tab", "CycleThinkingLevel"),
+    ("pageup", "PageUp"),
+    ("pagedown", "PageDown"),
+];
+
 /// Default keybindings map (key combo string → event name)
 pub fn default_keybindings() -> HashMap<String, String> {
     let mut map = HashMap::new();
-
-    // Control key combinations
-    map.insert("ctrl+e".to_string(), "ToggleExpand".to_string());
-    map.insert("ctrl+j".to_string(), "Newline".to_string());
-    map.insert("ctrl+a".to_string(), "CursorStart".to_string());
-    map.insert("ctrl+b".to_string(), "CursorLeft".to_string());
-    map.insert("ctrl+f".to_string(), "CursorRight".to_string());
-    map.insert("ctrl+w".to_string(), "DeleteWord".to_string());
-    map.insert("ctrl+k".to_string(), "DeleteToEnd".to_string());
-    map.insert("ctrl+u".to_string(), "DeleteToStart".to_string());
-    map.insert("ctrl+d".to_string(), "KillChar".to_string());
-    map.insert("ctrl+z".to_string(), "Suspend".to_string());
-    map.insert("ctrl+y".to_string(), "Redo".to_string());
-    map.insert("ctrl+c".to_string(), "Quit".to_string());
-    map.insert("ctrl+s".to_string(), "Abort".to_string());
-    map.insert("ctrl+g".to_string(), "OpenExternalEditor".to_string());
-    map.insert("ctrl+p".to_string(), "ToggleCommandPalette".to_string());
-    map.insert(
-        "ctrl+shift+p".to_string(),
-        "ToggleCommandPalette".to_string(),
-    );
-    map.insert("ctrl+m".to_string(), "CycleModelNext".to_string());
-    map.insert("ctrl+shift+m".to_string(), "CycleModelPrev".to_string());
-
+    for (combo, name) in DEFAULT_BINDINGS {
+        map.insert(combo.to_string(), name.to_string());
+    }
     #[cfg(not(target_os = "windows"))]
-    map.insert("ctrl+v".to_string(), "PasteImage".to_string());
+    {
+        map.insert("ctrl+v".to_string(), "PasteImage".to_string());
+    }
     #[cfg(target_os = "windows")]
-    map.insert("alt+v".to_string(), "PasteImage".to_string());
-
-    // Alt key combinations
-    map.insert("alt+enter".to_string(), "FollowUp".to_string());
-    map.insert("alt+up".to_string(), "Dequeue".to_string());
-    map.insert("alt+b".to_string(), "CursorWordLeft".to_string());
-    map.insert("alt+f".to_string(), "CursorWordRight".to_string());
-
-    // Plain keys
-    // Esc is a **Back button** in dialogs (Android-style): it pops one
-    // level of the panel stack, closing the dialog only at the root.
-    // For an unconditional force-close, use Ctrl+\ (Abort).
-    map.insert("escape".to_string(), "DialogBack".to_string());
-    map.insert("tab".to_string(), "Input:\t".to_string());
-    map.insert("backspace".to_string(), "Backspace".to_string());
-    map.insert("enter".to_string(), "Submit".to_string());
-    map.insert("up".to_string(), "HistoryPrev".to_string());
-    map.insert("down".to_string(), "HistoryNext".to_string());
-    map.insert("left".to_string(), "CursorLeft".to_string());
-    map.insert("right".to_string(), "CursorRight".to_string());
-    map.insert("home".to_string(), "CursorStart".to_string());
-    map.insert("end".to_string(), "CursorEnd".to_string());
-    map.insert("delete".to_string(), "KillChar".to_string());
-
-    // Shift combinations (handled specially)
-    map.insert("shift+enter".to_string(), "Newline".to_string());
-    map.insert("shift+tab".to_string(), "CycleThinkingLevel".to_string());
-    map.insert("pageup".to_string(), "PageUp".to_string());
-    map.insert("pagedown".to_string(), "PageDown".to_string());
-
+    {
+        map.insert("alt+v".to_string(), "PasteImage".to_string());
+    }
     map
 }
 
@@ -138,50 +143,7 @@ pub fn parse_keybindings_json(content: &str) -> Result<HashMap<String, String>> 
 /// Convert an event name string to an Event variant.
 /// Supports simple names (e.g. "Quit", "Submit") and Input prefix (e.g. "Input:\t").
 pub fn event_from_name(name: &str) -> Option<Event> {
-    if let Some(rest) = name.strip_prefix("Input:") {
-        let c = rest.chars().next()?;
-        return Some(Event::Input(c));
-    }
-    match name {
-        "Quit" => Some(Event::Quit),
-        "Reset" => Some(Event::Reset),
-        "Undo" => Some(Event::Undo),
-        "Redo" => Some(Event::Redo),
-        "Submit" => Some(Event::Submit),
-        "Abort" => Some(Event::Abort),
-        "Backspace" => Some(Event::Backspace),
-        "Newline" => Some(Event::Newline),
-        "ScrollUp" => Some(Event::ScrollUp),
-        "ScrollDown" => Some(Event::ScrollDown),
-        "PageUp" => Some(Event::PageUp),
-        "PageDown" => Some(Event::PageDown),
-        "AtFilePicker" => Some(Event::AtFilePicker),
-        "CursorLeft" => Some(Event::CursorLeft),
-        "CursorRight" => Some(Event::CursorRight),
-        "CursorStart" => Some(Event::CursorStart),
-        "CursorEnd" => Some(Event::CursorEnd),
-        "DeleteWord" => Some(Event::DeleteWord),
-        "DeleteToEnd" => Some(Event::DeleteToEnd),
-        "DeleteToStart" => Some(Event::DeleteToStart),
-        "KillChar" => Some(Event::KillChar),
-        "HistoryPrev" => Some(Event::HistoryPrev),
-        "HistoryNext" => Some(Event::HistoryNext),
-        "CursorWordLeft" => Some(Event::CursorWordLeft),
-        "CursorWordRight" => Some(Event::CursorWordRight),
-        "FollowUp" => Some(Event::FollowUp),
-        "ToggleExpand" => Some(Event::ToggleExpand),
-        "CycleThinkingLevel" => Some(Event::CycleThinkingLevel),
-        "Dequeue" => Some(Event::Dequeue),
-        "OpenExternalEditor" => Some(Event::OpenExternalEditor),
-        "ToggleCommandPalette" => Some(Event::ToggleCommandPalette),
-        "ToggleModelSelector" => Some(Event::ToggleModelSelector),
-        "CycleModelNext" => Some(Event::CycleModelNext),
-        "CycleModelPrev" => Some(Event::CycleModelPrev),
-        "Suspend" => Some(Event::Suspend),
-        "PasteImage" => Some(Event::PasteImage),
-        "DialogBack" => Some(Event::DialogBack),
-        _ => None,
-    }
+    Event::from_name(name)
 }
 
 /// Get default keybindings file path
@@ -195,72 +157,8 @@ pub fn validate_key_combo(combo: &str) -> bool {
     if parts.is_empty() || parts.len() > 3 {
         return false;
     }
-    // Last part must be a valid key
     let key = parts[parts.len() - 1];
-    matches!(
-        key,
-        "a" | "b"
-            | "c"
-            | "d"
-            | "e"
-            | "f"
-            | "g"
-            | "h"
-            | "i"
-            | "j"
-            | "k"
-            | "l"
-            | "m"
-            | "n"
-            | "o"
-            | "p"
-            | "q"
-            | "r"
-            | "s"
-            | "t"
-            | "u"
-            | "v"
-            | "w"
-            | "x"
-            | "y"
-            | "z"
-            | "0"
-            | "1"
-            | "2"
-            | "3"
-            | "4"
-            | "5"
-            | "6"
-            | "7"
-            | "8"
-            | "9"
-            | "backspace"
-            | "enter"
-            | "escape"
-            | "tab"
-            | "up"
-            | "down"
-            | "left"
-            | "right"
-            | "home"
-            | "end"
-            | "delete"
-            | "f1"
-            | "f2"
-            | "f3"
-            | "f4"
-            | "f5"
-            | "f6"
-            | "f7"
-            | "f8"
-            | "f9"
-            | "f10"
-            | "f11"
-            | "f12"
-            | "pageup"
-            | "pagedown"
-            | "atfilepicker"
-    )
+    VALID_KEYS.contains(&key)
 }
 
 #[cfg(test)]
@@ -389,36 +287,9 @@ mod tests {
     }
 
     #[test]
-    fn event_from_name_all_simple_variants() {
-        let variants = vec![
-            ("Quit", Event::Quit),
-            ("Reset", Event::Reset),
-            ("Undo", Event::Undo),
-            ("Redo", Event::Redo),
-            ("Submit", Event::Submit),
-            ("Abort", Event::Abort),
-            ("Backspace", Event::Backspace),
-            ("Newline", Event::Newline),
-            ("ScrollUp", Event::ScrollUp),
-            ("ScrollDown", Event::ScrollDown),
-            ("CursorLeft", Event::CursorLeft),
-            ("CursorRight", Event::CursorRight),
-            ("CursorStart", Event::CursorStart),
-            ("CursorEnd", Event::CursorEnd),
-            ("DeleteWord", Event::DeleteWord),
-            ("DeleteToEnd", Event::DeleteToEnd),
-            ("DeleteToStart", Event::DeleteToStart),
-            ("KillChar", Event::KillChar),
-            ("HistoryPrev", Event::HistoryPrev),
-            ("HistoryNext", Event::HistoryNext),
-            ("CursorWordLeft", Event::CursorWordLeft),
-            ("CursorWordRight", Event::CursorWordRight),
-            ("FollowUp", Event::FollowUp),
-            ("ToggleExpand", Event::ToggleExpand),
-            ("Suspend", Event::Suspend),
-            ("PasteImage", Event::PasteImage),
-        ];
-        for (name, expected) in variants {
+    fn event_from_name_all_named_variants() {
+        for (name, ctor) in crate::event::EVENT_NAMES {
+            let expected = ctor();
             let actual = event_from_name(name).expect(name);
             assert!(
                 std::mem::discriminant(&actual) == std::mem::discriminant(&expected),
@@ -426,5 +297,34 @@ mod tests {
                 name
             );
         }
+    }
+
+    #[test]
+    fn default_keybindings_resolve() {
+        let bindings = default_keybindings();
+        for name in bindings.values() {
+            assert!(
+                event_from_name(name).is_some(),
+                "default binding {} does not resolve",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn validate_key_combo_accepts_default_keys() {
+        let bindings = default_keybindings();
+        for combo in bindings.keys() {
+            assert!(
+                validate_key_combo(combo),
+                "default combo {} rejected",
+                combo
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_key_combo_rejected() {
+        assert!(!validate_key_combo("ctrl+💩"));
     }
 }
