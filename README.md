@@ -215,8 +215,9 @@ RUNIE_MOCK=1 ./target/release/runie
 | `Ctrl+B` | CursorLeft |
 | `Ctrl+C` | Quit |
 | `Ctrl+D` | KillChar |
-| `Ctrl+E` | ToggleExpand |
+| `Ctrl+E` | CursorEnd |
 | `Ctrl+F` | CursorRight |
+| `Ctrl+O` | ToggleExpand |
 | `Ctrl+G` | OpenExternalEditor |
 | `Ctrl+J` | Newline |
 | `Ctrl+K` | DeleteToEnd |
@@ -224,6 +225,7 @@ RUNIE_MOCK=1 ./target/release/runie
 | `Ctrl+P` | ToggleCommandPalette |
 | `Ctrl+S` | Abort |
 | `Ctrl+Shift+M` | CycleModelPrev |
+| `Ctrl+Shift+O` | CopyLastResponse |
 | `Ctrl+Shift+P` | ToggleCommandPalette |
 | `Ctrl+U` | DeleteToStart |
 | `Ctrl+V` | PasteImage |

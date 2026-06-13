@@ -1,12 +1,21 @@
 //! All static labels and text constants
 //! Design system (colors, glyphs, borders) lives in runie-tui::theme.
 
-/// Format timestamp from f64 (unix seconds) to HH:MM
+use chrono::{Local, TimeZone};
+
+/// Format timestamp from f64 (unix seconds) to local HH:MM.
 pub fn format_timestamp(unix_secs: f64) -> String {
-    let secs = unix_secs as i64;
-    let hours = (secs / 3600) % 24;
-    let mins = (secs / 60) % 60;
-    format!("{:02}:{:02}", hours, mins)
+    let dt = Local.timestamp_opt(unix_secs as i64, 0);
+    match dt.single() {
+        Some(t) => t.format("%H:%M").to_string(),
+        None => {
+            // Fall back to plain UTC math for out-of-range timestamps.
+            let secs = unix_secs as i64;
+            let hours = (secs / 3600) % 24;
+            let mins = (secs / 60) % 60;
+            format!("{:02}:{:02}", hours, mins)
+        }
+    }
 }
 
 // Legacy labels (deprecated)

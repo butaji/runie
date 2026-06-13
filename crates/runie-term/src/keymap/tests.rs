@@ -5,22 +5,19 @@ fn default_bindings() -> std::collections::HashMap<String, String> {
 }
 
 #[test]
-fn ctrl_shift_e_converts_to_toggle_expand() {
-    let key = KeyEvent::new(
-        KeyCode::Char('E'),
-        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
-    );
+fn ctrl_o_converts_to_toggle_expand() {
+    let key = KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL);
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
         matches!(result, Some(runie_core::Event::ToggleExpand)),
-        "Ctrl+Shift+E should map to ToggleExpand, got {:?}",
+        "Ctrl+O should map to ToggleExpand, got {:?}",
         result
     );
 }
 
 #[test]
-fn ctrl_shift_e_toggles_expand_state() {
+fn ctrl_o_toggles_expand_state() {
     use runie_core::{AppState, ChatMessage, Role};
 
     let mut state = AppState::default();
@@ -36,10 +33,7 @@ fn ctrl_shift_e_toggles_expand_state() {
 
     let before = state.view.all_collapsed;
 
-    let key = KeyEvent::new(
-        KeyCode::Char('E'),
-        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
-    );
+    let key = KeyEvent::new(KeyCode::Char('o'), KeyModifiers::CONTROL);
     let event = crossterm::event::Event::Key(key);
     let core_event = crate::keymap::convert_event(&event, &default_bindings());
     assert!(matches!(core_event, Some(runie_core::Event::ToggleExpand)));
@@ -47,7 +41,53 @@ fn ctrl_shift_e_toggles_expand_state() {
     state.update(core_event.unwrap());
     assert_ne!(
         state.view.all_collapsed, before,
-        "Ctrl+Shift+E should toggle the global collapsed state"
+        "Ctrl+O should toggle the global collapsed state"
+    );
+}
+
+#[test]
+fn ctrl_shift_e_is_unbound() {
+    let key = KeyEvent::new(
+        KeyCode::Char('E'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+    );
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert_eq!(
+        result, None,
+        "Ctrl+Shift+E should be unbound, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn ctrl_shift_e_lowercase_is_unbound_for_tmux() {
+    // tmux sends Ctrl+Shift+E as Char('e') with both modifiers.
+    let key = KeyEvent::new(
+        KeyCode::Char('e'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+    );
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert_eq!(
+        result, None,
+        "Ctrl+Shift+E (lowercase) should be unbound, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn ctrl_shift_o_converts_to_copy_last_response() {
+    let key = KeyEvent::new(
+        KeyCode::Char('O'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+    );
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert!(
+        matches!(result, Some(runie_core::Event::CopyLastResponse)),
+        "Ctrl+Shift+O should map to CopyLastResponse, got {:?}",
+        result
     );
 }
 
@@ -97,22 +137,6 @@ fn ctrl_e_does_not_conflict_with_quit() {
 }
 
 #[test]
-fn ctrl_shift_e_on_repeat_kind_still_works() {
-    let key = KeyEvent::new_with_kind(
-        KeyCode::Char('E'),
-        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
-        KeyEventKind::Repeat,
-    );
-    let event = crossterm::event::Event::Key(key);
-    let result = crate::keymap::convert_event(&event, &default_bindings());
-    assert!(
-        matches!(result, Some(runie_core::Event::ToggleExpand)),
-        "Ctrl+Shift+E with Repeat kind should still map to ToggleExpand, got {:?}",
-        result
-    );
-}
-
-#[test]
 fn ctrl_e_on_repeat_kind_still_works() {
     let key = KeyEvent::new_with_kind(
         KeyCode::Char('e'),
@@ -124,6 +148,22 @@ fn ctrl_e_on_repeat_kind_still_works() {
     assert!(
         matches!(result, Some(runie_core::Event::CursorEnd)),
         "Ctrl+E with Repeat kind should still map to CursorEnd, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn ctrl_shift_e_on_repeat_kind_is_unbound() {
+    let key = KeyEvent::new_with_kind(
+        KeyCode::Char('E'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        KeyEventKind::Repeat,
+    );
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert_eq!(
+        result, None,
+        "Ctrl+Shift+E with Repeat kind should be unbound, got {:?}",
         result
     );
 }

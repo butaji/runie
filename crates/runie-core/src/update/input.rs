@@ -8,7 +8,7 @@ use crate::model::{ChatMessage, Role};
 impl AppState {
     pub fn hint_text(&self) -> String {
         let mut parts = Vec::new();
-        parts.push("ctrl+shift+e expand/collapse".to_string());
+        parts.push("ctrl+o expand/collapse".to_string());
 
         if self.vim_nav_mode {
             parts.push("j down · k up".to_string());
@@ -458,7 +458,7 @@ impl AppState {
             'G' => Some(Event::GoToBottom),
             '/' => Some(Event::ToggleCommandPalette),
             // 'y' is NOT a motion — it's typed normally. Copy-last is
-            // bound to Ctrl+O.
+            // bound to Ctrl+Shift+O.
             _ => None,
         }
     }

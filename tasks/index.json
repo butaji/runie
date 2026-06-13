@@ -239,6 +239,14 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2"
+    },
+    {
+      "id": "ctrl-o-collapse-expand",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Input & Commands",
+      "priority": "P0",
+      "completed_in": "current"
     }
   ]
 }

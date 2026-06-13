@@ -80,7 +80,7 @@ const VALID_KEYS: &[&str] = &[
 /// Default bindings as (combo, event_name) tuples.
 const DEFAULT_BINDINGS: &[(&str, &str)] = &[
     ("ctrl+e", "CursorEnd"),
-    ("ctrl+shift+e", "ToggleExpand"),
+    ("ctrl+o", "ToggleExpand"),
     ("ctrl+j", "Newline"),
     ("ctrl+a", "CursorStart"),
     ("ctrl+b", "CursorLeft"),
@@ -95,7 +95,7 @@ const DEFAULT_BINDINGS: &[(&str, &str)] = &[
     ("ctrl+q", "Quit"),
     ("ctrl+s", "Abort"),
     ("ctrl+g", "OpenExternalEditor"),
-    ("ctrl+o", "CopyLastResponse"),
+    ("ctrl+shift+o", "CopyLastResponse"),
     ("ctrl+p", "ToggleCommandPalette"),
     ("ctrl+shift+p", "ToggleCommandPalette"),
     ("ctrl+m", "CycleModelNext"),
@@ -244,12 +244,31 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_shift_e_defaults_to_toggle_expand() {
+    fn ctrl_o_defaults_to_toggle_expand() {
         let bindings = default_keybindings();
         assert_eq!(
-            bindings.get("ctrl+shift+e"),
+            bindings.get("ctrl+o"),
             Some(&"ToggleExpand".to_string()),
-            "ctrl+shift+e should expand/collapse thoughts"
+            "ctrl+o should collapse/expand feed posts"
+        );
+    }
+
+    #[test]
+    fn ctrl_shift_e_has_no_default_binding() {
+        let bindings = default_keybindings();
+        assert!(
+            !bindings.contains_key("ctrl+shift+e"),
+            "ctrl+shift+e should not have a default binding; use ctrl+o instead"
+        );
+    }
+
+    #[test]
+    fn ctrl_shift_o_defaults_to_copy_last_response() {
+        let bindings = default_keybindings();
+        assert_eq!(
+            bindings.get("ctrl+shift+o"),
+            Some(&"CopyLastResponse".to_string()),
+            "ctrl+shift+o should copy the last assistant response"
         );
     }
 
