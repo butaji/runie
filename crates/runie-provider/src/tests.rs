@@ -6,6 +6,22 @@ use crate::{
 };
 use futures::StreamExt;
 use runie_core::provider::{Message, Provider, ProviderError};
+use std::sync::Mutex;
+
+/// Guards environment variable mutations during parallel test execution.
+static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+/// Helper to run a test closure with the env lock held.
+fn with_env_lock<F, T>(var: &str, value: &str, f: F) -> T
+where
+    F: FnOnce() -> T,
+{
+    let _guard = ENV_LOCK.lock().unwrap();
+    std::env::set_var(var, value);
+    let result = f();
+    std::env::remove_var(var);
+    result
+}
 
 #[tokio::test]
 async fn test_mock_provider_generates_chunks() {
@@ -277,23 +293,21 @@ fn test_dyn_provider_missing_api_key_returns_err() {
 #[test]
 fn test_dyn_provider_known_with_key_succeeds() {
     // With a mocked API key, DynProvider::new succeeds.
-    std::env::set_var("OPENAI_API_KEY", "test-key-123");
-    let result = DynProvider::new("openai", "gpt-4o-mini");
-    std::env::remove_var("OPENAI_API_KEY");
-
-    let provider = result.expect("DynProvider should succeed with API key");
-    assert_eq!(provider.key(), "openai");
-    assert_eq!(provider.model(), "gpt-4o-mini");
+    with_env_lock("OPENAI_API_KEY", "test-key-123", || {
+        let result = DynProvider::new("openai", "gpt-4o-mini");
+        let provider = result.expect("DynProvider should succeed with API key");
+        assert_eq!(provider.key(), "openai");
+        assert_eq!(provider.model(), "gpt-4o-mini");
+    });
 }
 
 #[test]
 fn test_dyn_provider_key_and_model_accessors() {
-    std::env::set_var("OPENAI_API_KEY", "sk-test");
-    let provider = DynProvider::new("openai", "gpt-4o").unwrap();
-    std::env::remove_var("OPENAI_API_KEY");
-
-    assert_eq!(provider.key(), "openai");
-    assert_eq!(provider.model(), "gpt-4o");
+    with_env_lock("OPENAI_API_KEY", "sk-test", || {
+        let provider = DynProvider::new("openai", "gpt-4o").unwrap();
+        assert_eq!(provider.key(), "openai");
+        assert_eq!(provider.model(), "gpt-4o");
+    });
 }
 
 #[test]
@@ -302,10 +316,10 @@ fn test_provider_trait_is_dyn_compatible() {
     let _: Box<dyn Provider> = Box::new(MockProvider::default());
     // Also verify OpenAiProvider (via DynProvider construction since we can't
     // construct it without an API key — use a known mock key).
-    std::env::set_var("OPENAI_API_KEY", "sk-dyn-test");
-    let dp = DynProvider::new("openai", "gpt-4o").unwrap();
-    std::env::remove_var("OPENAI_API_KEY");
-    let _: Box<dyn Provider> = Box::new(dp);
+    with_env_lock("OPENAI_API_KEY", "sk-dyn-test", || {
+        let dp = DynProvider::new("openai", "gpt-4o").unwrap();
+        let _: Box<dyn Provider> = Box::new(dp);
+    });
 }
 
 #[test]
