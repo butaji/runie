@@ -156,31 +156,31 @@ pub fn process_command_result(state: &mut AppState, result: crate::commands::Com
 // ============================================================================
 
 pub fn open_command_palette(state: &mut AppState) {
-    let mut items: Vec<(String, String, crate::Event)> = Vec::new();
+    let mut rows: Vec<crate::commands::CommandRow> = Vec::new();
     for cmd in state.registry.list() {
-        let evt = crate::Event::RunPaletteCommand {
-            name: cmd.name.clone(),
-            args: String::new(),
-        };
-        items.push((
-            cmd.category.as_str().to_string(),
-            format!("{} {}", cmd.name, cmd.desc),
-            evt,
+        rows.push(crate::commands::CommandRow::new(
+            cmd.category.as_str(),
+            &cmd.name,
+            &cmd.desc,
+            crate::Event::RunPaletteCommand {
+                name: cmd.name.clone(),
+                args: String::new(),
+            },
         ));
     }
     for skill in &state.skills {
         if skill.user_invocable {
-            let evt = crate::Event::RunSkillCommand {
-                name: skill.name.clone(),
-            };
-            items.push((
-                "Skill".to_string(),
-                format!("{} {}", skill.name, skill.description),
-                evt,
+            rows.push(crate::commands::CommandRow::new(
+                "Skill",
+                &skill.name,
+                &skill.description,
+                crate::Event::RunSkillCommand {
+                    name: skill.name.clone(),
+                },
             ));
         }
     }
-    state.open_dialog = Some(DialogState::CommandPalette(command_palette(items)));
+    state.open_dialog = Some(DialogState::CommandPalette(command_palette(rows)));
     state.mark_dirty();
 }
 

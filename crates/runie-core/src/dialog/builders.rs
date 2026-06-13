@@ -11,10 +11,11 @@ use crate::Event;
 // Command Palette
 // ============================================================================
 
-/// Build a command palette panel.
+/// Build a command palette panel from structured command rows.
 ///
-/// `items` is a list of `(category, label, event_to_emit)`.
-pub fn command_palette(items: Vec<(String, String, Event)>) -> PanelStack {
+/// Mirrors [`settings`](fn@settings): the caller passes typed rows and the
+/// builder turns them into panel items, avoiding stringly-typed labels.
+pub fn command_palette(items: Vec<crate::commands::CommandRow>) -> PanelStack {
     // keep_open_on_activate is required for Android-like back-stack
     // navigation: selecting a command from the palette pushes the
     // palette onto the global back stack, so Esc on the sub-dialog
@@ -23,15 +24,15 @@ pub fn command_palette(items: Vec<(String, String, Event)>) -> PanelStack {
         .with_filter()
         .keep_open();
     let mut last_category = String::new();
-    for (category, label, evt) in items {
-        if category != last_category {
+    for row in items {
+        if row.category != last_category {
             if !last_category.is_empty() {
                 panel = panel.separator();
             }
-            panel = panel.header(category.clone());
-            last_category = category;
+            panel = panel.header(row.category.clone());
+            last_category = row.category;
         }
-        panel = panel.item(label, ItemAction::Emit(evt));
+        panel = panel.command(row.name, row.desc, ItemAction::Emit(row.event));
     }
     PanelStack::new(panel)
 }
@@ -235,10 +236,11 @@ mod tests {
 
     #[test]
     fn command_palette_builds() {
+        use crate::commands::CommandRow;
         let stack = command_palette(vec![
-            ("Commands".into(), "/save".into(), dummy_evt()),
-            ("Commands".into(), "/load".into(), dummy_evt()),
-            ("Skills".into(), "test-skill".into(), dummy_evt()),
+            CommandRow::new("Commands", "/save", "Save session", dummy_evt()),
+            CommandRow::new("Commands", "/load", "Load session", dummy_evt()),
+            CommandRow::new("Skills", "test-skill", "A skill", dummy_evt()),
         ]);
         assert_eq!(stack.len(), 1);
         let panel = stack.current().unwrap();
@@ -248,6 +250,10 @@ mod tests {
         assert!(
             panel.keep_open_on_activate,
             "command palette must keep open on activation for back-stack navigation"
+        );
+        assert!(
+            panel.items.iter().any(|i| matches!(i, PanelItem::Command { .. })),
+            "command palette items should be Command variants"
         );
     }
 
