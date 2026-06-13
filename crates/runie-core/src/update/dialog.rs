@@ -42,10 +42,15 @@ pub fn insert_at_ref(state: &mut AppState, path: &str) {
             &original_input[..]
         };
         
-        // Strip trailing whitespace from before if we're replacing at end
-        // But NOT if @ was in the original input (preserve the space before @)
-        let before = if needs_brackets {
-            before.trim_end()
+        // Only strip trailing whitespace if the prefix actually ends with whitespace
+        // This preserves intentional spaces in middle of text (e.g., "ca ca")
+        let before = if needs_brackets && !before.is_empty() {
+            let last_char = before.chars().last().unwrap();
+            if last_char.is_whitespace() {
+                before.trim_end()
+            } else {
+                before
+            }
         } else {
             before
         };
