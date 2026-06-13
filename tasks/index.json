@@ -150,10 +150,11 @@
     },
     {
       "id": "consolidate-tui-tests",
-      "status": "todo",
+      "status": "done",
       "milestone": "R2",
       "category": "TUI Rendering",
-      "priority": "P1"
+      "priority": "P1",
+      "completed_in": "c2983698"
     },
     {
       "id": "keybindings-table-driven",

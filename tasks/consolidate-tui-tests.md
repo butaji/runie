@@ -1,6 +1,6 @@
 # Consolidate Two Parallel TUI Test Hierarchies
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: TUI Rendering
 **Priority**: P1
@@ -40,31 +40,31 @@ that moved tests around, and neither deleted the previous location.
 
 ## Acceptance Criteria
 
-- [ ] One of the two test hierarchies is chosen as canonical
-- [ ] All files in the deleted hierarchy are either:
+- [x] One of the two test hierarchies is chosen as canonical
+- [x] All files in the deleted hierarchy are either:
   - Moved (with a one-line `git mv` history preserved) to the
     surviving hierarchy, OR
   - Deleted if their test cases are fully covered by files in the
     surviving hierarchy
-- [ ] The module declaration in the surviving `mod.rs` (or `lib.rs`)
+- [x] The module declaration in the surviving `mod.rs` (or `lib.rs`)
   lists every test module once and only once
-- [ ] `cargo test -p runie-tui` runs the same set of test cases
+- [x] `cargo test -p runie-tui` runs the same set of test cases
   before and after the consolidation (zero net loss of coverage;
   no test names disappear from the output)
-- [ ] No two test files share a `#[test] fn` name
-- [ ] The test file layout follows the project convention: `mod.rs`
+- [x] No two test files share a `#[test] fn` name
+- [x] The test file layout follows the project convention: `mod.rs`
   + sibling `tests.rs` per module
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo test -p runie-tui` runs to completion with the same
+- [x] `cargo test -p runie-tui` runs to completion with the same
   total test count as before (compare `cargo test -p runie-tui 2>&1
   | grep -c '^test '` before and after)
-- [ ] `cargo test -p runie-tui --no-run` succeeds (compiles)
+- [x] `cargo test -p runie-tui --no-run` succeeds (compiles)
 
 ### Layer 4 — Smoke
-- [ ] `cargo test -p runie-term --test e2e -- --ignored` runs
+- [x] `cargo test -p runie-term --test e2e -- --ignored` runs
   (verifies the e2e tests are not broken by the consolidation)
 
 ## Notes
