@@ -14,11 +14,11 @@ sync with every new `Event` variant:
 1. **`default_keybindings()` (lines 15-78)** — 64 lines of `HashMap`
    insertions. Every new key binding requires editing this map.
 
-2. **`event_from_name(name: &str) -> Option<Event>` (lines 144-191)**
+2. **`event_from_name(name: &str) -> Option<Event>` (lines 140-186)**
    — ~45-arm match. Every new `Event` variant requires adding an arm
    here, or the keybinding silently fails to bind.
 
-3. **`validate_key_combo(combo: &str) -> bool` (lines 199-264)** — 65
+3. **`validate_key_combo(combo: &str) -> bool` (lines 194-260)** — 65
    lines of `matches!(key, "a" | "b" | ...)` listing 60+ valid key
    names.
 

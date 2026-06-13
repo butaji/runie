@@ -24,7 +24,7 @@ The commit `402943c5` took the **archive** path:
 - `runie-agent-tests/` and `runie-agent-bin/` (old test files and
   binaries that referenced archived crates) were moved to
   `crates/_archive/`
-- `runie-tui-bins/` (4 binaries: scenario_fasthot, runie-paint-smoke,
+- `runie-tui-bins/` (5 binaries: scenario_fasthot, runie-paint-smoke,
   runie-dspec, grok_parity_test, scenario_replay) was moved to
   `crates/_archive/runie-tui-bins/`
 
@@ -55,9 +55,13 @@ build target. See `archive-remaining-orphans` for the cleanup.
 ✅ Done for the archived crates (5 directories moved). ⚠️ Three
 remaining orphans need a followup task (`archive-remaining-orphans`).
 
+**Update (commit f831dea5, "archive: move remaining orphan crates
+to crates/_archive/"):** the 3 remaining orphan crates
+(`runie-ai`, `runie-cli`, `runie-tools`) have been archived. See
+`archive-remaining-orphans` for the full resolution.
+
 ## Followups
 
-- `archive-remaining-orphans` — move `runie-ai`, `runie-cli`,
-  `runie-tools` to `crates/_archive/`
+- `archive-remaining-orphans` — **done** in commit f831dea5
 - `clean-archive` — eventually delete `crates/_archive/` entirely
   once we're confident nothing in it is needed

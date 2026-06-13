@@ -23,29 +23,31 @@ dyn-compatible. This forced a closed enum.
 
 The refactor is **complete**. The following has landed:
 
-- [x] `crates/runie-core/src/provider.rs:46-58` `Provider` trait is
+- [x] `crates/runie-core/src/provider.rs:58-64` `Provider` trait is
   now dyn-compatible: `generate` returns
-  `Pin<Box<dyn Future<Output = Result<()>> + Send + '_>>` (no
-  `async fn` in body, no `#[allow(async_fn_in_trait)]`)
-- [x] `ProviderError` enum added at `provider.rs:34-55` with
+  `Pin<Box<dyn Stream<Item = Result<ResponseChunk>> + Send + '_>>`
+  (no `async fn` in body, no generic parameters, no
+  `#[allow(async_fn_in_trait)]`)
+- [x] `ProviderError` enum at `provider.rs:34-55` with
   `UnknownProvider(String)`, `MissingApiKey(String)`,
   `Other(String)` variants
-- [x] `crates/runie-provider/src/lib.rs:35-45` `DynProvider` struct
+- [x] `crates/runie-provider/src/lib.rs:31-37` `DynProvider` struct
   replaces the closed `AnyProvider` enum: `inner: Box<dyn Provider>`,
-  `key: String`, `model: String`
+  `key: String`, `model: String`. Also implements `Debug` (added in
+  commit 87052015 for test assertions).
 - [x] `DynProvider::new(key, model) -> Result<Self, ProviderError>`
-  at `lib.rs:46-49` — no silent Mock fallback
-- [x] `build_with_env` (lib.rs:97-130) returns `Result<DynProvider,
+  at `lib.rs:39-49` — no silent Mock fallback
+- [x] `build_with_env` (`lib.rs:97+`) returns `Result<DynProvider,
   ProviderError>`, errors on unknown provider OR missing API key
-- [x] `lib.rs:135-148` `build_provider_with_warning` returns
+- [x] `build_provider_with_warning` returns
   `Result<DynProvider, ProviderError>` (the warning tuple is gone;
   errors are explicit)
-- [x] `lib.rs:166-168` `switch_provider` returns `Result<(), ProviderError>`
+- [x] `switch_provider` returns `Result<(), ProviderError>`
 - [x] All 12 non-Mock providers in the registry route to
-  `OpenAiProvider` parameterized by `base_url` (lib.rs:121-125) — the
+  `OpenAiProvider` parameterized by `base_url` — the
   "12 providers, 1 implementation" pattern works
-- [x] `lib.rs:230-232` re-exports `ProviderError` as
-  `UnknownProviderError` for backward compat
+- [x] `Debug` impl for `DynProvider` so test assertions can compare
+  errors
 
 ## What Was Fixed to Complete the Task
 
