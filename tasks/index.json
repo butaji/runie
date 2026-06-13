@@ -119,7 +119,7 @@
       "depends_on": [
         "extract-login-flow"
       ],
-      "completed_in": "$(git rev-parse --short HEAD)"
+      "completed_in": "fb25553c"
     },
     {
       "id": "delete-abandoned-loop-engine",
