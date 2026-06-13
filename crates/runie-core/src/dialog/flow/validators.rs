@@ -1,7 +1,7 @@
 //! Common Validators
 
 use super::FlowContext;
-use crate::dialog::dsl::Panel;
+use crate::dialog::Panel;
 use crate::dialog::PanelItem;
 
 /// Validate that required form fields are not empty

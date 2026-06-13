@@ -1,6 +1,6 @@
 //! Step - A single step in a flow
 
-use crate::dialog::dsl::Panel;
+use crate::dialog::Panel;
 
 /// A single step in a flow
 #[derive(Debug, Clone)]
@@ -34,7 +34,7 @@ impl Step {
     /// Add validation
     pub fn validate(
         mut self,
-        validator: fn(&mut super::FlowContext, &Panel) -> Result<(), String>,
+        validator: fn(&mut super::FlowContext, &crate::dialog::Panel) -> Result<(), String>,
     ) -> Self {
         self.validator = Some(validator);
         self

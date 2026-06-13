@@ -2,7 +2,8 @@
 
 use super::{Flow, FlowContext, FlowResult};
 use crate::commands::CommandResult;
-use crate::dialog::dsl::{ItemAction, Panel};
+use crate::dialog::dsl::ItemAction;
+use crate::dialog::Panel;
 
 /// Executes a flow with context
 pub struct FlowExecutor {

@@ -1,6 +1,6 @@
 # Deduplicate dialog::Panel and dialog::dsl::Panel
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P0
