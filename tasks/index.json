@@ -138,13 +138,14 @@
     },
     {
       "id": "clean-archive",
-      "status": "todo",
+      "status": "done",
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1",
       "depends_on": [
         "archive-remaining-orphans"
-      ]
+      ],
+      "completed_in": "dc90e429"
     },
     {
       "id": "consolidate-tui-tests",
