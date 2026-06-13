@@ -2,9 +2,10 @@
 
 use crate::{
     model::{builtin_providers, ModelId, ModelRegistry, ProviderMeta},
-    MockProvider, MockStreamingProvider,
+    DynProvider, MockProvider, MockStreamingProvider,
 };
-use runie_core::provider::{Message, Provider};
+use futures::StreamExt;
+use runie_core::provider::{Message, Provider, ProviderError};
 
 #[tokio::test]
 async fn test_mock_provider_generates_chunks() {
@@ -13,10 +14,10 @@ async fn test_mock_provider_generates_chunks() {
         content: "Hello World".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
 
     assert_eq!(chunks.len(), 2);
     assert_eq!(chunks[0].content, "Hello ");
@@ -28,11 +29,10 @@ async fn test_mock_provider_empty_input() {
     let provider = MockProvider::default();
     let messages = vec![];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert!(chunks.is_empty());
 }
 
@@ -43,11 +43,10 @@ async fn test_mock_provider_single_word() {
         content: "Hello".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].content, "Hello ");
 }
@@ -59,11 +58,10 @@ async fn test_mock_provider_triggers_list_files() {
         content: "list files".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:list_dir"));
 }
@@ -75,11 +73,10 @@ async fn test_mock_provider_triggers_read_file() {
         content: "read the readme".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:read_file"));
 }
@@ -91,11 +88,10 @@ async fn test_mock_provider_triggers_write_file() {
         content: "write something".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:write_file"));
 }
@@ -107,11 +103,10 @@ async fn test_mock_provider_triggers_bash() {
         content: "run command".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert_eq!(chunks.len(), 2);
     assert!(chunks[1].content.contains("TOOL:bash"));
 }
@@ -131,11 +126,10 @@ async fn test_mock_provider_follows_up_after_tool_result() {
         },
     ];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert_eq!(chunks.len(), 1);
     assert!(chunks[0].content.contains("Done"));
 }
@@ -235,14 +229,12 @@ async fn mock_provider_default_no_delay() {
     let p = MockProvider::default();
     let start = std::time::Instant::now();
     let mut chunks = Vec::new();
-    p.generate(
-        vec![Message::User {
-            content: "test".to_string(),
-        }],
-        |c| chunks.push(c),
-    )
-    .await
-    .unwrap();
+    let mut stream = p.generate(vec![Message::User {
+        content: "test".to_string(),
+    }]);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert!(start.elapsed() < std::time::Duration::from_millis(50));
     assert!(!chunks.is_empty());
 }
@@ -251,6 +243,98 @@ async fn mock_provider_default_no_delay() {
 fn mock_provider_with_delay_configured() {
     let p = MockProvider::with_delay(500, 3000);
     assert_eq!(p.delay_ms(), Some((500, 3000)));
+}
+
+// =============================================================================
+// DynProvider tests (Layer 1 — state/logic)
+// =============================================================================
+
+#[test]
+fn test_dyn_provider_unknown_returns_err() {
+    // `DynProvider::new` must not silently fall back to Mock for unknown keys.
+    let result = DynProvider::new("bogus-provider-xyz", "gpt-4o");
+    match result {
+        Err(ProviderError::UnknownProvider(key)) => {
+            assert_eq!(key, "bogus-provider-xyz");
+        }
+        other => panic!("expected UnknownProvider error, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_dyn_provider_missing_api_key_returns_err() {
+    // Without RUNIE_MOCK, an unknown provider with no API key returns MissingApiKey.
+    // We use a known-but-unconfigured provider to avoid the UnknownProvider path.
+    let result = DynProvider::new("openai", "gpt-4o-mini");
+    match result {
+        Err(ProviderError::MissingApiKey(var)) => {
+            assert_eq!(var, "OPENAI_API_KEY");
+        }
+        other => panic!("expected MissingApiKey error, got: {:?}", other),
+    }
+}
+
+#[test]
+fn test_dyn_provider_known_with_key_succeeds() {
+    // With a mocked API key, DynProvider::new succeeds.
+    std::env::set_var("OPENAI_API_KEY", "test-key-123");
+    let result = DynProvider::new("openai", "gpt-4o-mini");
+    std::env::remove_var("OPENAI_API_KEY");
+
+    let provider = result.expect("DynProvider should succeed with API key");
+    assert_eq!(provider.key(), "openai");
+    assert_eq!(provider.model(), "gpt-4o-mini");
+}
+
+#[test]
+fn test_dyn_provider_key_and_model_accessors() {
+    std::env::set_var("OPENAI_API_KEY", "sk-test");
+    let provider = DynProvider::new("openai", "gpt-4o").unwrap();
+    std::env::remove_var("OPENAI_API_KEY");
+
+    assert_eq!(provider.key(), "openai");
+    assert_eq!(provider.model(), "gpt-4o");
+}
+
+#[test]
+fn test_provider_trait_is_dyn_compatible() {
+    // Compile-time assertion: concrete providers can be stored behind dyn Provider.
+    let _: Box<dyn Provider> = Box::new(MockProvider::default());
+    // Also verify OpenAiProvider (via DynProvider construction since we can't
+    // construct it without an API key — use a known mock key).
+    std::env::set_var("OPENAI_API_KEY", "sk-dyn-test");
+    let dp = DynProvider::new("openai", "gpt-4o").unwrap();
+    std::env::remove_var("OPENAI_API_KEY");
+    let _: Box<dyn Provider> = Box::new(dp);
+}
+
+#[test]
+fn test_build_provider_with_warning_returns_err_for_unknown() {
+    let result = crate::build_provider_with_warning("not-a-provider", "gpt-4");
+    assert!(
+        result.is_err(),
+        "build_provider_with_warning should return error for unknown provider"
+    );
+    assert!(matches!(result.unwrap_err(), ProviderError::UnknownProvider(_)));
+}
+
+#[test]
+fn test_build_provider_panics_for_unknown() {
+    // `build_provider` panics when the key is unknown (callers must validate).
+    let result = std::panic::catch_unwind(|| {
+        crate::build_provider("totally-invalid-key", "model")
+    });
+    assert!(
+        result.is_err(),
+        "build_provider should panic for unknown provider"
+    );
+}
+
+#[test]
+fn test_is_known_provider() {
+    assert!(crate::is_known("openai"));
+    assert!(crate::is_known("anthropic"));
+    assert!(!crate::is_known("not-a-real-provider"));
 }
 
 // =============================================================================
@@ -264,13 +348,11 @@ async fn test_mock_streaming_provider_basic() {
         content: "Hello".to_string(),
     }];
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-    // Should have some chunks
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert!(!chunks.is_empty());
-    // All chunks should have content (default chunk_size=1)
     for chunk in &chunks {
         assert!(!chunk.content.is_empty());
     }
@@ -278,42 +360,34 @@ async fn test_mock_streaming_provider_basic() {
 
 #[tokio::test]
 async fn test_mock_streaming_provider_at_rate() {
-    // Create provider streaming at ~100 tokens/sec
-    // (4 chars/token = 25 chars/sec = 40ms per char)
     let provider = MockStreamingProvider::with_rate(100.0);
     let messages = vec![Message::User {
         content: "test".to_string(),
     }];
     let start = std::time::Instant::now();
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     let elapsed = start.elapsed();
-
-    // Should have streamed some content
     assert!(!chunks.is_empty());
-    // With ~100 tokens/sec, should take at least 100ms for reasonable response
-    // (but may be fast in test environment)
     assert!(elapsed < std::time::Duration::from_secs(5));
 }
 
 #[tokio::test]
 async fn test_mock_streaming_provider_no_delay() {
     let mut provider = MockStreamingProvider::new();
-    provider.delay_ms = 0; // No delay
+    provider.delay_ms = 0;
     let messages = vec![Message::User {
         content: "Hi".to_string(),
     }];
     let start = std::time::Instant::now();
     let mut chunks = Vec::new();
-    provider
-        .generate(messages, |c| chunks.push(c))
-        .await
-        .unwrap();
-
-    // Should complete very quickly with no delay
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        chunks.push(r.unwrap());
+    }
     assert!(start.elapsed() < std::time::Duration::from_millis(50));
     assert!(!chunks.is_empty());
 }
@@ -322,11 +396,9 @@ async fn test_mock_streaming_provider_no_delay() {
 async fn test_validate_api_key_times_out_on_hanging_server() {
     use std::time::Duration;
 
-    // Bind a local socket that accepts connections but never responds.
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    // Accept connections in a background thread so the listener is live.
     std::thread::spawn(move || {
         let (mut _stream, _) = listener.accept().unwrap();
         std::thread::sleep(Duration::from_secs(30));
@@ -370,14 +442,10 @@ async fn test_mock_streaming_provider_accumulates_content() {
         content: "test".to_string(),
     }];
     let mut full_content = String::new();
-    provider
-        .generate(messages, |c| {
-            full_content.push_str(&c.content);
-        })
-        .await
-        .unwrap();
-
-    // Should accumulate to a complete response
+    let mut stream = provider.generate(messages);
+    while let Some(r) = stream.next().await {
+        full_content.push_str(&r.unwrap().content);
+    }
     assert!(full_content.contains("test"));
     assert!(full_content.len() > 10);
 }

@@ -1,5 +1,6 @@
-use anyhow::Result;
+use futures::Stream;
 use runie_core::provider::{Message, Provider, ResponseChunk};
+use std::pin::Pin;
 use std::time::Duration;
 
 #[derive(Default, Clone)]
@@ -28,30 +29,15 @@ impl MockProvider {
             Duration::from_millis(rand::random::<u64>() % range + min)
         })
     }
-
-    async fn maybe_sleep(&self) {
-        if let Some(delay) = self.random_delay() {
-            tokio::time::sleep(delay).await;
-        }
-    }
 }
 
 impl Provider for MockProvider {
-    async fn generate<F>(&self, messages: Vec<Message>, mut on_chunk: F) -> Result<()>
-    where
-        F: FnMut(ResponseChunk) + Send,
-    {
-        self.maybe_sleep().await;
-
+    fn generate(
+        &self,
+        messages: Vec<Message>,
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ResponseChunk>> + Send + '_>> {
+        let delay = self.random_delay();
         let last = messages.last();
-
-        if matches!(last, Some(Message::ToolResult { .. })) {
-            on_chunk(ResponseChunk {
-                content: "Done. I have the information you requested.".to_string(),
-            });
-            return Ok(());
-        }
-
         let user_input = messages
             .iter()
             .rev()
@@ -61,124 +47,79 @@ impl Provider for MockProvider {
             })
             .unwrap_or_default();
 
-        if user_input.to_lowercase().contains("list files")
-            || user_input.to_lowercase().contains("files")
-        {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "I'll list the files in the current directory.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "TOOL:list_dir:.".to_string(),
-            });
-            return Ok(());
-        }
+        let input_lower = user_input.to_lowercase();
 
-        if user_input.to_lowercase().contains("read") {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "Let me read that file for you.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "TOOL:read_file:README.md".to_string(),
-            });
-            return Ok(());
-        }
+        // Determine response chunks based on input keywords.
+        let chunks: Vec<String> = if matches!(last, Some(Message::ToolResult { .. })) {
+            vec!["Done. I have the information you requested.".to_string()]
+        } else if input_lower.contains("list files") || input_lower.contains("files") {
+            vec![
+                "I'll list the files in the current directory.\n".to_string(),
+                "TOOL:list_dir:.".to_string(),
+            ]
+        } else if input_lower.contains("read") {
+            vec![
+                "Let me read that file for you.\n".to_string(),
+                "TOOL:read_file:README.md".to_string(),
+            ]
+        } else if input_lower.contains("write") {
+            vec![
+                "I'll create that file for you.\n".to_string(),
+                "TOOL:write_file:hello.txt:Hello World".to_string(),
+            ]
+        } else if input_lower.contains("edit") {
+            vec![
+                "I'll make that edit for you.\n".to_string(),
+                r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_string(),
+            ]
+        } else if input_lower.contains("run") || input_lower.contains("cmd") {
+            vec![
+                "I'll run that command for you.\n".to_string(),
+                "TOOL:bash:echo hello".to_string(),
+            ]
+        } else if input_lower.contains("grep") || input_lower.contains("search") {
+            vec![
+                "I'll search for that pattern.\n".to_string(),
+                r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_string(),
+            ]
+        } else if input_lower.contains("find") || input_lower.contains("glob") {
+            vec![
+                "I'll find those files for you.\n".to_string(),
+                r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
+            ]
+        } else {
+            // Echo each word as a chunk.
+            user_input
+                .split_whitespace()
+                .map(|w| format!("{} ", w))
+                .collect()
+        };
 
-        if user_input.to_lowercase().contains("write") {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "I'll create that file for you.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "TOOL:write_file:hello.txt:Hello World".to_string(),
-            });
-            return Ok(());
-        }
-
-        if user_input.to_lowercase().contains("edit") {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "I'll make that edit for you.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_string(),
-            });
-            return Ok(());
-        }
-
-        if user_input.to_lowercase().contains("run") || user_input.to_lowercase().contains("cmd") {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "I'll run that command for you.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "TOOL:bash:echo hello".to_string(),
-            });
-            return Ok(());
-        }
-
-        if user_input.to_lowercase().contains("grep")
-            || user_input.to_lowercase().contains("search")
-        {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "I'll search for that pattern.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_string(),
-            });
-            return Ok(());
-        }
-
-        if user_input.to_lowercase().contains("find") || user_input.to_lowercase().contains("glob")
-        {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: "I'll find those files for you.\n".to_string(),
-            });
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#
-                    .to_string(),
-            });
-            return Ok(());
-        }
-
-        for word in user_input.split_whitespace() {
-            self.maybe_sleep().await;
-            on_chunk(ResponseChunk {
-                content: format!("{} ", word),
-            });
-        }
-
-        Ok(())
+        let delay_ms = delay;
+        Box::pin(async_stream::stream! {
+            for chunk_text in chunks {
+                if let Some(d) = delay_ms {
+                    tokio::time::sleep(d).await;
+                }
+                yield Ok(ResponseChunk { content: chunk_text });
+            }
+        })
     }
 }
 
 /// Mock provider that streams tokens character-by-character for testing animations.
-/// Useful for testing token counter animations and speed calculations.
 #[derive(Clone)]
 pub struct MockStreamingProvider {
-    /// Characters per chunk (default: 1 for char-by-char)
     pub chunk_size: usize,
-    /// Delay between chunks in milliseconds
     pub delay_ms: u64,
-    /// Total chunks to stream (None = based on response length)
     pub total_chunks: Option<usize>,
 }
 
 impl Default for MockStreamingProvider {
     fn default() -> Self {
         Self {
-            chunk_size: 1, // Default to char-by-char streaming
-            delay_ms: 10,  // Default 10ms between chunks
+            chunk_size: 1,
+            delay_ms: 10,
             total_chunks: None,
         }
     }
@@ -189,37 +130,26 @@ impl MockStreamingProvider {
         Self::default()
     }
 
-    /// Create a provider that streams at a specific rate (tokens/sec)
     pub fn with_rate(tokens_per_sec: f64) -> Self {
-        // Assuming ~4 chars per token, calculate delay per chunk
         let chars_per_token = 4.0;
         let delay_ms = if tokens_per_sec > 0.0 {
             ((chars_per_token / tokens_per_sec) * 1000.0) as u64
         } else {
-            50 // Default 50ms
+            50
         };
-        Self {
-            chunk_size: 1,
-            delay_ms,
-            total_chunks: None,
-        }
+        Self { chunk_size: 1, delay_ms, total_chunks: None }
     }
 
-    /// Create a provider that streams at a variable rate for testing animation
     pub fn with_variable_rate() -> Self {
-        Self {
-            chunk_size: 1,
-            delay_ms: 30, // Fast for testing
-            total_chunks: None,
-        }
+        Self { chunk_size: 1, delay_ms: 30, total_chunks: None }
     }
 }
 
 impl Provider for MockStreamingProvider {
-    async fn generate<F>(&self, messages: Vec<Message>, mut on_chunk: F) -> Result<()>
-    where
-        F: FnMut(ResponseChunk) + Send,
-    {
+    fn generate(
+        &self,
+        messages: Vec<Message>,
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ResponseChunk>> + Send + '_>> {
         let user_input = messages
             .iter()
             .rev()
@@ -229,34 +159,28 @@ impl Provider for MockStreamingProvider {
             })
             .unwrap_or_else(|| "This is a test response with multiple words.".to_string());
 
-        // Create a response that echoes the input with some expansion
         let response = format!(
             "You said: '{}'. I understand and will help you with that task. ",
             user_input
         );
 
-        // Stream the response in chunks
         let total_chunks = self
             .total_chunks
             .unwrap_or_else(|| response.len().div_ceil(self.chunk_size));
 
-        for i in 0..total_chunks {
-            let start = i * self.chunk_size;
-            let end = (start + self.chunk_size).min(response.len());
-            let chunk = &response[start..end];
+        let delay_ms = self.delay_ms;
+        let chunk_size = self.chunk_size;
 
-            if !chunk.is_empty() {
-                on_chunk(ResponseChunk {
-                    content: chunk.to_string(),
-                });
+        Box::pin(async_stream::stream! {
+            for i in 0..total_chunks {
+                let start = i * chunk_size;
+                let end = (start + chunk_size).min(response.len());
+                let chunk = String::from_utf8_lossy(response[start..end].as_bytes()).to_string();
+                yield Ok(ResponseChunk { content: chunk });
+                if i < total_chunks - 1 && delay_ms > 0 {
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                }
             }
-
-            // Don't delay after the last chunk
-            if i < total_chunks - 1 && self.delay_ms > 0 {
-                tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
-            }
-        }
-
-        Ok(())
+        })
     }
 }

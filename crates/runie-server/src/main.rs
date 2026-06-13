@@ -12,10 +12,11 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
+use futures::StreamExt;
 use runie_agent::build_provider;
 use runie_core::{
     config_reload,
-    provider::{Message, Provider, ResponseChunk},
+    provider::{Message, Provider},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -230,11 +231,10 @@ async fn handle_chat(params: &Value) -> Result<Value> {
     }
 
     let mut content = String::new();
-    provider
-        .generate(msgs, |chunk: ResponseChunk| {
-            content.push_str(&chunk.content);
-        })
-        .await?;
+    let mut stream = provider.generate(msgs);
+    while let Some(r) = stream.next().await {
+        content.push_str(&r?.content);
+    }
 
     Ok(serde_json::json!({ "content": content }))
 }
@@ -261,11 +261,10 @@ async fn handle_complete(params: &Value) -> Result<Value> {
     ];
 
     let mut content = String::new();
-    provider
-        .generate(msgs, |chunk: ResponseChunk| {
-            content.push_str(&chunk.content);
-        })
-        .await?;
+    let mut stream = provider.generate(msgs);
+    while let Some(r) = stream.next().await {
+        content.push_str(&r?.content);
+    }
 
     Ok(serde_json::json!({ "content": content }))
 }

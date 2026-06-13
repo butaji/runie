@@ -1,6 +1,8 @@
 //! Provider trait and message types
 
 use anyhow::Result;
+use futures::Stream;
+use std::pin::Pin;
 
 /// Message roles for LLM conversations
 #[derive(Debug, Clone, PartialEq)]
@@ -37,11 +39,37 @@ pub struct ResponseChunk {
     pub content: String,
 }
 
+/// Error constructing or operating a provider.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProviderError {
+    /// The provider key was not found in the registry.
+    UnknownProvider(String),
+    /// The API key is missing or invalid for this provider.
+    MissingApiKey(String),
+    /// Some other error during construction or API call.
+    Other(String),
+}
+
+impl std::fmt::Display for ProviderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProviderError::UnknownProvider(k) => write!(f, "Unknown provider: {}", k),
+            ProviderError::MissingApiKey(k) => write!(f, "Missing API key for: {}", k),
+            ProviderError::Other(s) => write!(f, "Provider error: {}", s),
+        }
+    }
+}
+
+impl std::error::Error for ProviderError {}
+
 /// Provider trait — implemented by LLM backends.
-/// Streams chunks via the `on_chunk` callback as they arrive from the API.
+/// Returns a `Stream` of `ResponseChunk`s.
+///
+/// This trait is dyn-compatible (no `async fn`, no generic parameters).
 pub trait Provider: Send + Sync {
-    #[allow(async_fn_in_trait)]
-    async fn generate<F>(&self, messages: Vec<Message>, on_chunk: F) -> Result<()>
-    where
-        F: FnMut(ResponseChunk) + Send;
+    /// Generate a streaming response, returning a stream of chunks.
+    fn generate(
+        &self,
+        messages: Vec<Message>,
+    ) -> Pin<Box<dyn Stream<Item = Result<ResponseChunk>> + Send + '_>>;
 }

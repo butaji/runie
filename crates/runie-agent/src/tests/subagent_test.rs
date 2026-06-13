@@ -1,10 +1,12 @@
 //! Tests for the subagent feature.
 
 use crate::subagent::run_subagent;
+use crate::tests::ensure_mock_provider;
 use runie_core::model::ThinkingLevel;
 
 #[test]
 fn run_subagent_returns_echo_of_prompt() {
+    ensure_mock_provider();
     // The mock provider echoes the user input.
     let result = run_subagent(
         "hello subagent",
@@ -26,6 +28,7 @@ fn run_subagent_returns_echo_of_prompt() {
 
 #[test]
 fn run_subagent_with_skill_context_uses_it() {
+    ensure_mock_provider();
     // Skills context is part of the system prompt; mock just echoes the
     // concatenated content. This asserts the wiring is intact.
     let result = run_subagent(
@@ -44,6 +47,7 @@ fn run_subagent_with_skill_context_uses_it() {
 
 #[test]
 fn run_subagent_empty_prompt_succeeds() {
+    ensure_mock_provider();
     // The mock provider should still respond to an empty prompt.
     let result = run_subagent("", "mock", "echo", ThinkingLevel::Off, false, "", "", 5);
     let out = result.expect("empty prompt should still produce a result");
@@ -52,9 +56,9 @@ fn run_subagent_empty_prompt_succeeds() {
 }
 
 #[test]
-fn run_subagent_falls_back_to_mock_for_unknown_provider() {
-    // Unknown providers fall back to mock (per `AnyProvider::new`).
-    // The subagent must still return a result, not panic.
+fn run_subagent_returns_error_for_unknown_provider() {
+    // Unknown providers now return an explicit error (no silent Mock fallback).
+    // The subagent must propagate this as a SubagentError.
     let result = run_subagent(
         "anything",
         "bogus-provider-xyz",
@@ -66,8 +70,8 @@ fn run_subagent_falls_back_to_mock_for_unknown_provider() {
         5,
     );
     assert!(
-        result.is_ok(),
-        "expected fallback to mock to succeed, got: {:?}",
+        result.is_err(),
+        "expected error for unknown provider, got: {:?}",
         result
     );
 }

@@ -15,7 +15,7 @@ mod terminal_setup;
 use crossterm::event::EventStream;
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_agent::{run_agent_turn, AgentCommand};
+use runie_agent::{run_agent_turn, AgentCommand, build_provider_with_warning};
 use runie_core::{config_reload, AppState, Event as CoreEvent, Snapshot};
 use std::{collections::HashMap, io, io::Write, time::Duration};
 use tokio::sync::{mpsc, watch};
@@ -321,7 +321,23 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
         let agent_tx_clone = agent_tx.clone();
         let cmd_id = cmd.id.clone();
 
+        // Build provider upfront so unknown/misconfigured providers emit an
+        // AgentError event rather than panicking.
+        let provider = match build_provider_with_warning(&cmd.provider, &cmd.model) {
+            Ok(p) => p,
+            Err(e) => {
+                let _ = agent_tx
+                    .send(CoreEvent::AgentError {
+                        id: cmd_id,
+                        message: format!("Provider error: {}", e),
+                    })
+                    .await;
+                continue;
+            }
+        };
+
         let result = run_agent_turn(
+            &provider,
             &cmd,
             |evt| {
                 let tx = agent_tx_clone.clone();

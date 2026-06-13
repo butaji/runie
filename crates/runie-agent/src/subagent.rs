@@ -16,6 +16,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum SubagentError {
+    #[error("provider error: {0}")]
+    Provider(String),
     #[error("agent turn failed: {0}")]
     Agent(String),
 }
@@ -28,7 +30,7 @@ pub enum SubagentError {
 #[allow(clippy::too_many_arguments)]
 pub fn run_subagent(
     prompt: &str,
-    provider: &str,
+    provider_key: &str,
     model: &str,
     thinking_level: ThinkingLevel,
     read_only: bool,
@@ -36,10 +38,14 @@ pub fn run_subagent(
     system_prompt: &str,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
+    // Build and validate the provider upfront — errors propagate as SubagentError.
+    let provider = crate::build_provider_with_warning(provider_key, model)
+        .map_err(|e| SubagentError::Provider(e.to_string()))?;
+
     let cmd = AgentCommand {
         content: prompt.to_string(),
         id: "subagent.0".to_string(),
-        provider: provider.to_string(),
+        provider: provider_key.to_string(),
         model: model.to_string(),
         thinking_level,
         read_only,
@@ -61,6 +67,7 @@ pub fn run_subagent(
         let mut error: Option<String> = None;
 
         run_agent_turn(
+            &provider,
             &cmd,
             |evt| match evt {
                 Event::AgentResponse { content, .. } => responses.push(content),
