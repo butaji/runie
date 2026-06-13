@@ -95,6 +95,13 @@ N/A (planning / documentation task).
   for event in parser { match event { Event::Text(t) => ... } }
   ```
 
+**Follow-up tasks created:**
+- `tasks/adopt-syntect.md`
+- `tasks/adopt-similar.md`
+- `tasks/adopt-pulldown-cmark.md`
+- `tasks/adopt-tiktoken-rs.md`
+- `tasks/spike-nucleo-fuzzy.md`
+
 **Files touched:**
 - `Cargo.toml` workspace / crate files (if adopting crates)
 - `docs/CRATE_DECISIONS.md` (new)

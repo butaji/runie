@@ -543,7 +543,70 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P0",
-      "file": "tasks/crate-replacement-audit.md"
+      "file": "tasks/crate-replacement-audit.md",
+      "blocks": [
+        "adopt-syntect",
+        "adopt-similar",
+        "adopt-pulldown-cmark",
+        "adopt-tiktoken-rs",
+        "spike-nucleo-fuzzy"
+      ]
+    },
+    {
+      "id": "adopt-syntect",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "file": "tasks/adopt-syntect.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
+    },
+    {
+      "id": "adopt-similar",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/adopt-similar.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
+    },
+    {
+      "id": "adopt-pulldown-cmark",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "file": "tasks/adopt-pulldown-cmark.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
+    },
+    {
+      "id": "adopt-tiktoken-rs",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/adopt-tiktoken-rs.md",
+      "depends_on": [
+        "crate-replacement-audit",
+        "model-capability-flags"
+      ]
+    },
+    {
+      "id": "spike-nucleo-fuzzy",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "file": "tasks/spike-nucleo-fuzzy.md",
+      "depends_on": [
+        "crate-replacement-audit"
+      ]
     }
   ]
 }
