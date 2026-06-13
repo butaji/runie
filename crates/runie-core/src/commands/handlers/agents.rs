@@ -29,7 +29,7 @@ pub fn register(registry: &mut CommandRegistry) {
 }
 
 /// Open the agent manager panel.
-fn handle_agents(_state: &mut AppState, _args: &str) -> CommandResult {
+pub fn handle_agents(_state: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::Event(Event::OpenAgentsManager)
 }
 
