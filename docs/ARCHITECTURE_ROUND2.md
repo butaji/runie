@@ -1,10 +1,14 @@
 # Runie TUI Architecture Round 2
 
-> **DRAFT — NOT IMPLEMENTED.** This document describes a proposed redesign of
-> the runie architecture (sub-states, single `Msg` enum, etc.). It is kept here
-> for reference but the code does not yet match this design. See
-> [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the actually-implemented
-> architecture.
+> **DRAFT — BEING ADOPTED IN R3.** This document describes a proposed redesign
+> of the runie architecture (sub-states, single `Msg` enum, etc.). The R3 plan
+> in `tasks/actor-runtime-decision.md`, `tasks/event-bus-jsonl-persistence.md`,
+> and ADRs [0017](adr/0017-actor-runtime-and-event-bus.md),
+> [0018](adr/0018-provider-llm-event-normalization.md), and
+> [0019](adr/0019-tool-registry-and-mcp.md) adopts and refines this design:
+> typed event bus, tokio-task actors, JSONL session persistence, and
+> provider-agnostic `LLMEvent`s. The code is in transition; see `docs/SPEC.md`
+> for the target architecture.
 
 ## Overview
 

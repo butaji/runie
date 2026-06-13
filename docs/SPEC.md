@@ -10,25 +10,31 @@ Terminal coding agent harness in Rust, inspired by [pi](https://pi.dev).
 ### Runtime
 
 ```
-┌─────────────────┐     CoreEvent      ┌─────────────────┐
-│  input_reader   │ ──────────────────>│                 │
-│  (crossterm)    │                    │   event_loop    │
-└─────────────────┘                    │   (owns state)  │
-                                       │                 │
-┌─────────────────┐     CoreEvent      │  ┌───────────┐  │
-│   agent_loop    │ ──────────────────>│  │ AppState  │  │
-│ (run_agent_turn)│                    │  └─────┬─────┘  │
-└─────────────────┘                    │        │        │
-                                       │   snapshot()    │
-┌─────────────────┐     Snapshot       │        │        │
-│  render_task    │ <──────────────────│  ┌─────┴─────┐  │
-│   (ratatui)     │                    │  │ render_tx │  │
-└─────────────────┘                    │  └───────────┘  │
-                                       └─────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           EventBus<CoreEvent>                            │
+│  (tokio::sync::broadcast + bounded replay buffer)                        │
+└─────────────────────────────────────────────────────────────────────────┘
+        ▲            ▲            ▲            ▲            ▲
+        │            │            │            │            │
+┌───────┴────┐ ┌─────┴──────┐ ┌──┴─────────┐ ┌┴───────────┐ ┌───────────┐
+│ InputActor │ │ AgentActor │ │ ConfigActor│ │SessionActor│ │  UiActor  │
+│ (crossterm)│ │(LLM+tools) │ │(TOML watch)│ │(JSONL store)│ │(AppState  │
+└────────────┘ └────────────┘ └────────────┘ └─────────────┘ │ projection)│
+                                                             └─────┬─────┘
+                                                                   │
+                                                             Snapshot
+                                                                   │
+                                                             ┌─────┴─────┐
+                                                             │ RenderActor│
+                                                             │  (ratatui) │
+                                                             └───────────┘
 ```
 
-Three tokio tasks + one event loop. State is owned by the event loop,
-mutated per event. Snapshots are sent to the render task via `mpsc::channel`.
+Actors are tokio tasks that publish and subscribe to a typed `EventBus`.
+`SessionActor` persists durable events to append-only JSONL files.
+`UiActor` projects events into `AppState` and sends snapshots to the render
+actor via a `watch` channel. State is owned by the actors/projection actors,
+not by a central loop.
 
 ### Crates
 
@@ -45,10 +51,18 @@ mutated per event. Snapshots are sent to the render task via `mpsc::channel`.
 
 ### Event model
 
-All events flow through a single `Event` enum in `runie-core/src/event.rs`.
-`AppState::update()` is the single reducer. Synchronous; no separate domain
-bus. Agent work runs in a separate tokio task and pushes events back through
-`mpsc::channel`.
+Events flow through a typed `EventBus<CoreEvent>` in `runie-core/src/bus.rs`.
+Each actor subscribes to the events it cares about:
+
+- `InputActor` publishes `InputEvent`s.
+- `AgentActor` publishes `AgentEvent`s (tool calls, streaming deltas, errors).
+- `ConfigActor` publishes `ConfigEvent`s on TOML changes.
+- `SessionActor` writes durable events to JSONL and loads sessions by replay.
+- `UiActor` subscribes to all events and projects them into `AppState`.
+
+`CoreEvent` is split into durable events (persisted to JSONL) and transient
+events (UI-only). The previous single `Event` enum is being decomposed into
+focused sub-enums (`tasks/event-subenums.md`).
 
 ## Features
 
@@ -74,6 +88,36 @@ bus. Agent work runs in a separate tokio task and pushes events back through
 - Subagents (`/spawn <prompt>`)
 - Modes: interactive TUI, print, JSON, RPC/server
 
+### Roadmap (R3)
+
+Planned architecture and UX improvements based on research in `~/Code/agents`:
+
+- **Event-based actor runtime** — tokio-task actors + `EventBus` + JSONL session
+  persistence (`tasks/actor-runtime-decision.md`,
+  `tasks/event-bus-jsonl-persistence.md`)
+- **Normalized `LLMEvent` stream** — all providers emit the same event
+  vocabulary (`tasks/llm-event-normalization.md`)
+- **Model capability flags** — streaming/vision/tools/reasoning/max-tokens per
+  model (`tasks/model-capability-flags.md`)
+- **`ToolRegistry` trait + MCP client** — built-ins and MCP servers registered
+  uniformly (`tasks/tool-registry-trait.md`, `tasks/mcp-client-integration.md`)
+- **Permission rulesets** — wildcard allow/ask/deny rules, read-only tool
+  classification (`tasks/permission-rulesets.md`)
+- **Context compaction** — token-threshold summarization with message metadata
+  (`tasks/context-compaction.md`)
+- **Streaming stable/tail split** — no tearing during markdown/tool streaming
+  (`tasks/streaming-buffer-tail-split.md`)
+- **Stateful tool-call rendering** — `Pending/Running/Completed/Error` with
+  elapsed time and expand/collapse (`tasks/tool-call-state-rendering.md`)
+- **Status indicator widget** — phase + elapsed + interrupt hint
+  (`tasks/status-indicator-widget.md`)
+- **Semantic theme tokens** — accessible, lintable color system
+  (`tasks/semantic-theme-tokens.md`)
+- **Session list with summaries** — starred, named, auto-summarized sessions
+  (`tasks/session-list-summaries.md`)
+- **Crate replacement audit** — evaluate `syntect`, `similar`, `nucleo`,
+  `tui-textarea`, `ratatui-markdown`, etc. (`tasks/crate-replacement-audit.md`)
+
 ### Test coverage
 
 - ~1,060 automated tests across the workspace, all passing
@@ -88,7 +132,7 @@ bus. Agent work runs in a separate tokio task and pushes events back through
 - **OAuth login flow** — API keys in config.toml suffice
 - **Subagent parallel orchestration / DAG** — single linear subagent
 - **Session tree / branching UI** — `/fork` exists, but no visual tree
-- **Custom syntax-highlighting languages** — uses syntect defaults
+- **Custom syntax-highlighting languages** — limited built-in tokenizers; full grammar support via crate audit (`tasks/crate-replacement-audit.md`)
 - **Web UI / VS Code extension** — terminal-only
 
 ## Code organization
@@ -96,11 +140,20 @@ bus. Agent work runs in a separate tokio task and pushes events back through
 ```
 crates/
 ├── runie-core/src/
-│   ├── event.rs          # All event types
+│   ├── actor.rs          # Minimal Actor trait
+│   ├── bus.rs            # EventBus<CoreEvent> with replay
+│   ├── event.rs          # CoreEvent + durable/transient split
+│   ├── llm_event.rs      # Provider-agnostic LLM event enum
 │   ├── model.rs          # AppState, ChatMessage
 │   ├── state.rs          # Sub-state structs (config, input, ...)
+│   ├── tool.rs           # Tool trait + ToolRegistry
+│   ├── mcp.rs            # MCP client + config types
+│   ├── permissions.rs    # Permission rulesets + ApprovalSink
+│   ├── context_compactor.rs # Token-threshold compaction
+│   ├── streaming_buffer.rs  # Stable region + mutable tail
+│   ├── session_store.rs  # JSONL persistence + session index
 │   ├── config_reload.rs  # TruncationSection + config watcher
-│   ├── session.rs        # Session persistence
+│   ├── session.rs        # Session types (legacy; migrate to session_store)
 │   ├── snapshot.rs       # View projection
 │   ├── skills/           # SKILL.md loading
 │   ├── prompts/          # Prompt templates
@@ -109,14 +162,15 @@ crates/
 │   ├── update/           # Event dispatch (mod, input, agent, ...)
 │   └── telemetry.rs      # Opt-in usage stats
 ├── runie-agent/src/
-│   ├── tools.rs          # Tool enum, execution
-│   ├── turn.rs           # Agent turn loop
+│   ├── tools/            # One module per built-in Tool impl
+│   ├── tools.rs          # Built-in ToolRegistry assembly
+│   ├── turn.rs           # Agent turn loop consuming LLMEvent
 │   ├── subagent.rs       # Nested turn for /spawn
 │   ├── truncate.rs       # TruncationConfig (TOML) + policies
 │   ├── accumulator.rs    # Bounded buffer for streaming
 │   ├── mutation_queue.rs # Serialized file edits
 │   ├── safety.rs         # Bash blacklist
-│   ├── parser.rs         # Tool call parsing
+│   ├── parser.rs         # Tool call parsing (legacy; retire after LLMEvent)
 │   └── grep_find.rs      # rg/find wrappers
 ├── runie-tui/src/
 │   ├── ui.rs             # draw_snapshot
@@ -138,13 +192,22 @@ crates/
 
 ## Reference implementations (in `~/Code/agents/`)
 
-| Project   | Borrowed patterns                              |
-|-----------|------------------------------------------------|
-| pi        | Command registry, dialog DSL, session UX       |
-| crush     | Three-state collapse, lazy render cache        |
-| codex     | Token-aware truncation, structured JSON mode   |
-| aider     | Repo map, edit previews                        |
-| opencode  | Reasoning effort, multi-provider failover      |
+| Project     | Borrowed patterns                                            |
+|-------------|--------------------------------------------------------------|
+| pi          | Command registry, dialog DSL, session UX                     |
+| crush       | Three-state collapse, lazy render cache                      |
+| codex       | Event bus, `HistoryCell` trait, streaming tail buffer        |
+| aider       | Repo map, edit previews, reflection loop, model capability flags |
+| opencode    | Reasoning effort, multi-provider failover, context epochs    |
+| goose       | MCP extension manager, swappable provider, message metadata  |
+| gemini-cli  | Scheduler state machine, semantic theme tokens, tool display |
+| thClaws     | `ViewEvent` abstraction, Braille spinner, append-only JSONL  |
+| openharness | Tool registry, JSONL backend protocol, runtime bundle        |
+| kimi-code   | Streaming UI controller, subagent host, semantic palette     |
+| autogen     | Workbench abstraction, message/event taxonomy                |
+| crewai      | Typed event bus, tool lifecycle events, checkpoint runtime   |
+| gptme       | Immutable log, hook lifecycle, context reduction pipeline    |
+| etienne     | Session summaries, project dot-dir, SSE multiplex            |
 
 ## Configuration
 

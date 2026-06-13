@@ -16,6 +16,11 @@
 | Command registry | ✅ | 🔄 | `tasks/r2-command-registry.md` |
 | Command palette (Ctrl+P) | ✅ | 🔄 | `tasks/r2-command-palette.md` |
 | Dialog state system | ✅ | 🔄 | `tasks/r2-command-palette.md` |
+| Actor runtime (tokio tasks + event bus) | ✅ | 🔄 | `tasks/actor-runtime-decision.md` |
+| Event bus with replay | ✅ | 🔄 | `tasks/event-bus-jsonl-persistence.md` |
+| JSONL session persistence | ✅ | 🔄 | `tasks/event-bus-jsonl-persistence.md` |
+| Event sub-enums | ✅ | 🔄 | `tasks/event-subenums.md` |
+| Crate replacement audit | ✅ | 🔄 | `tasks/crate-replacement-audit.md` |
 | Extensions / plugins | ✅ | ❌ | Excluded by design decision — plugins add complexity without clear daily-use value |
 | SDK / embedding | ✅ | 🔄 | `tasks/r3-rpc-mode.md` |
 | External editor (Ctrl+G) | ✅ | 🔄 | `tasks/r2-external-editor.md` |
@@ -29,6 +34,8 @@
 | Provider count | 35 | 35 | |
 | Model count | ~968 | ~130 | |
 | Runtime model switch | ✅ | ✅ | |
+| Normalized `LLMEvent` stream | ✅ | 🔄 | `tasks/llm-event-normalization.md` |
+| Model capability flags | ✅ | 🔄 | `tasks/model-capability-flags.md` |
 | Model selector (Ctrl+L) | ✅ | 🔄 | `tasks/r2-model-selector.md` |
 | Model cycling (Ctrl+P) | ✅ | 🔄 | `tasks/r2-model-cycling.md` |
 | Scoped model filtering | ✅ | 🔄 | `tasks/r2-scoped-models.md` |
@@ -45,6 +52,8 @@
 |---------|:--:|:-----:|------|
 | Save / load | ✅ | ✅ | |
 | List / delete | ✅ | ✅ | |
+| JSONL event-sourced sessions | ✅ | 🔄 | `tasks/event-bus-jsonl-persistence.md` |
+| Session list with summaries | ✅ | 🔄 | `tasks/session-list-summaries.md` |
 | Session naming (/name) | ✅ | 🔄 | `tasks/r2-session-commands.md` |
 | Export / import | ✅ | 🔄 | `tasks/r2-session-commands.md` |
 | New / resume | ✅ | 🔄 | `tasks/r2-session-commands.md` |
@@ -56,11 +65,21 @@
 
 ---
 
+## Memory & Context
+
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Context compaction | ✅ | 🔄 | `tasks/context-compaction.md` |
+| Message metadata (pinned/hidden/ephemeral) | ✅ | 🔄 | `tasks/context-compaction.md` |
+
+---
+
 ## TUI / Rendering
 
 | Feature | pi | runie | Task |
 |---------|:--:|:-----:|------|
 | Streaming responses | ✅ | ✅ | |
+| Streaming stable/tail split | ✅ | 🔄 | `tasks/streaming-buffer-tail-split.md` |
 | Sort by last update | ✅ | ✅ | |
 | Markdown rendering | ✅ | ✅ | |
 | Syntax highlighting | ✅ | ✅ | |
@@ -68,12 +87,15 @@
 | ANSI colors | ✅ | ✅ | |
 | Scrollbar | ✅ | ✅ | |
 | Footer status | ✅ | ✅ | |
+| Status indicator widget | ✅ | 🔄 | `tasks/status-indicator-widget.md` |
 | Thinking display | ✅ | ✅ | |
 | Tool collapse (Ctrl+O) | ✅ | ✅ | |
+| Tool state machine rendering | ✅ | 🔄 | `tasks/tool-call-state-rendering.md` |
 | Thinking collapse (Ctrl+T) | ✅ | ✅ | |
 | File references (@) | ✅ | ✅ | |
 | Multi-line input | ✅ | ✅ | |
 | Theme system | ✅ | 🔄 | `tasks/r2-theme-system.md` |
+| Semantic theme tokens | ✅ | 🔄 | `tasks/semantic-theme-tokens.md` |
 | Thinking levels | ✅ | 🔄 | `tasks/r2-thinking-levels.md` |
 | Path completion (Tab) | ✅ | 🔄 | `tasks/r2-path-completion.md` |
 | Image paste (Ctrl+V) | ✅ | 🔄 | `tasks/r3-image-paste.md` |
@@ -92,6 +114,8 @@
 | edit, ls, grep, find | ✅ | ✅ | |
 | Safety blacklist | ✅ | ✅ | |
 | Output size limits | ✅ | ✅ | |
+| `ToolRegistry` trait | ✅ | 🔄 | `tasks/tool-registry-trait.md` |
+| MCP client (stdio) | ✅ | 🔄 | `tasks/mcp-client-integration.md` |
 | File mutation queue | ✅ | 🔄 | `tasks/r2-file-mutation-queue.md` |
 | Edit diff preview | ✅ | 🔄 | `tasks/r2-edit-diff-preview.md` |
 | Path utils / cwd | ✅ | 🔄 | `tasks/r2-path-utils.md` |
@@ -127,6 +151,8 @@
 | Output size limits | ✅ | ✅ | |
 | Read-only mode | ✅ | 🔄 | `tasks/r2-safety-commands.md` |
 | Trust system (/trust) | ✅ | 🔄 | `tasks/r2-safety-commands.md` |
+| Permission rulesets (wildcard allow/ask/deny) | ✅ | 🔄 | `tasks/permission-rulesets.md` |
+| Read-only vs mutating tool classification | ✅ | 🔄 | `tasks/permission-rulesets.md` |
 | Output accumulator | ✅ | 🔄 | `tasks/r2-output-accumulator.md` |
 
 ---
@@ -178,6 +204,6 @@
 
 **Implemented (✅):** 40 major features
 
-**Planned (🔄):** 37 major features — all have task files
+**Planned (🔄):** 55 major features — all have task files
 
 **Coverage:** 100% of pi features tracked. Zero gaps.

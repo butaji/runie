@@ -250,14 +250,14 @@
     },
     {
       "id": "remove-orphan-modules",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P0"
     },
     {
       "id": "fix-event-name-duplicate-arms",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P0"
@@ -271,14 +271,14 @@
     },
     {
       "id": "complete-agents-manager",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Input & Commands",
       "priority": "P1"
     },
     {
       "id": "replace-update-wildcard",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1"
@@ -329,7 +329,7 @@
     },
     {
       "id": "archive-done-task-files",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2"
@@ -343,7 +343,8 @@
       "file": "tasks/inline-tool-rendering.md",
       "depends_on": [],
       "blocks": [
-        "mcp-servers-support"
+        "mcp-servers-support",
+        "tool-call-state-rendering"
       ]
     },
     {
@@ -354,8 +355,195 @@
       "priority": "P2",
       "file": "tasks/mcp-servers-support.md",
       "depends_on": [
-        "inline-tool-rendering"
+        "inline-tool-rendering",
+        "mcp-client-integration"
+      ],
+      "notes": "Management UI only. Actual MCP protocol implementation is in mcp-client-integration."
+    },
+    {
+      "id": "event-subenums",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "file": "tasks/event-subenums.md",
+      "depends_on": [
+        "actor-runtime-decision",
+        "event-bus-jsonl-persistence"
+      ],
+      "notes": "Align sub-enum split with durable/transient event taxonomy from event-bus-jsonl-persistence."
+    },
+    {
+      "id": "actor-runtime-decision",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/actor-runtime-decision.md",
+      "blocks": [
+        "event-bus-jsonl-persistence",
+        "event-subenums",
+        "status-indicator-widget"
       ]
+    },
+    {
+      "id": "event-bus-jsonl-persistence",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/event-bus-jsonl-persistence.md",
+      "depends_on": [
+        "actor-runtime-decision"
+      ],
+      "blocks": [
+        "event-subenums",
+        "llm-event-normalization",
+        "tool-registry-trait",
+        "context-compaction",
+        "streaming-buffer-tail-split",
+        "session-list-summaries"
+      ]
+    },
+    {
+      "id": "llm-event-normalization",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Providers & Models",
+      "priority": "P0",
+      "file": "tasks/llm-event-normalization.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [
+        "model-capability-flags"
+      ]
+    },
+    {
+      "id": "model-capability-flags",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Providers & Models",
+      "priority": "P1",
+      "file": "tasks/model-capability-flags.md",
+      "depends_on": [
+        "llm-event-normalization"
+      ]
+    },
+    {
+      "id": "tool-registry-trait",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P0",
+      "file": "tasks/tool-registry-trait.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [
+        "mcp-client-integration",
+        "permission-rulesets"
+      ]
+    },
+    {
+      "id": "mcp-client-integration",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/mcp-client-integration.md",
+      "depends_on": [
+        "tool-registry-trait"
+      ],
+      "blocks": [
+        "mcp-servers-support"
+      ]
+    },
+    {
+      "id": "permission-rulesets",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Safety & Trust",
+      "priority": "P1",
+      "file": "tasks/permission-rulesets.md",
+      "depends_on": [
+        "tool-registry-trait"
+      ]
+    },
+    {
+      "id": "context-compaction",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Memory & Context",
+      "priority": "P1",
+      "file": "tasks/context-compaction.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence",
+        "llm-event-normalization"
+      ]
+    },
+    {
+      "id": "streaming-buffer-tail-split",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "UI / Feed",
+      "priority": "P1",
+      "file": "tasks/streaming-buffer-tail-split.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ]
+    },
+    {
+      "id": "tool-call-state-rendering",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "UI / Feed",
+      "priority": "P1",
+      "file": "tasks/tool-call-state-rendering.md",
+      "depends_on": [
+        "inline-tool-rendering",
+        "tool-registry-trait",
+        "streaming-buffer-tail-split"
+      ]
+    },
+    {
+      "id": "status-indicator-widget",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "UI / Feed",
+      "priority": "P2",
+      "file": "tasks/status-indicator-widget.md",
+      "depends_on": [
+        "actor-runtime-decision",
+        "tool-call-state-rendering"
+      ]
+    },
+    {
+      "id": "semantic-theme-tokens",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P2",
+      "file": "tasks/semantic-theme-tokens.md"
+    },
+    {
+      "id": "session-list-summaries",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P2",
+      "file": "tasks/session-list-summaries.md",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ]
+    },
+    {
+      "id": "crate-replacement-audit",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/crate-replacement-audit.md"
     }
   ]
 }
