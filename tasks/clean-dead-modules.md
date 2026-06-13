@@ -1,6 +1,6 @@
 # Remove Dead Modules and Unused Code
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core Architecture
 **Priority**: P2
@@ -23,30 +23,30 @@ change.
 
 ### dialog::flow (entire module is dead)
 
-- [ ] `crates/runie-core/src/dialog/flow/` directory is removed (6
+- [x] `crates/runie-core/src/dialog/flow/` directory is removed (6
   files: `context.rs`, `executor.rs`, `flow_def.rs`, `mod.rs`,
   `step.rs`, `transitions.rs`, `validators.rs`)
-- [ ] `crates/runie-core/src/dialog/mod.rs` line 60 docstring
+- [x] `crates/runie-core/src/dialog/mod.rs` line 60 docstring
   reference to `runie_core::dialog::flow::{close, pop, push, Flow,
   Step}` is removed (the example never worked because the imports
   don't exist after this deletion)
 
 ### dialog::dsl traits (no callers)
 
-- [ ] `crates/runie-core/src/dialog/dsl/conversions.rs` `FromStringExt`
+- [x] `crates/runie-core/src/dialog/dsl/conversions.rs` `FromStringExt`
   and `FromEventExt` traits are removed (the blanket `impl From<Event>
   for ItemAction` stays — it has callers)
-- [ ] `crates/runie-core/src/dialog/dsl/mod.rs:11` `pub use
+- [x] `crates/runie-core/src/dialog/dsl/mod.rs:11` `pub use
   conversions::{FromEventExt, FromStringExt};` is removed
-- [ ] `crates/runie-core/src/dialog/dsl/form.rs` is removed (its
+- [x] `crates/runie-core/src/dialog/dsl/form.rs` is removed (its
   `form()` constructor is folded into the surviving
   `dialog/dsl/mod.rs` per `deduplicate-panel-types`)
 
 ### commands::dsl dead code (no callers)
 
-- [ ] `commands/dsl/builder.rs:135` `pub fn dsl_form` is removed (no
+- [x] `commands/dsl/builder.rs:135` `pub fn dsl_form` is removed (no
   call site; the only consumer was `FormBuilder::from_dsl_panel`)
-- [ ] `commands/dsl/builder.rs:249` `FormBuilder::from_dsl_panel` is
+- [x] `commands/dsl/builder.rs:249` `FormBuilder::from_dsl_panel` is
   removed (only consumer was `dsl_form` itself)
 - [ ] `commands/dsl/flow.rs:144` `build_form_panel` is removed (only
   consumer was the `Form` variant of `CommandFlow` — see below)
@@ -64,7 +64,7 @@ change.
 
 ### Event variants (no handlers)
 
-- [ ] `event.rs:266` `Event::LoginFlowValidate` variant is removed
+- [x] `event.rs:266` `Event::LoginFlowValidate` variant is removed
   if `login_flow_event` has no handler for it. The current
   `update/mod.rs:303-323` `login_flow_event` matches 9
   `LoginFlow*` variants but not `LoginFlowValidate` (it falls
@@ -75,23 +75,23 @@ change.
 
 ### Verification
 
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds
-- [ ] `cargo clippy --workspace` produces no new warnings
-- [ ] The deleted modules' tests (if any) are accounted for — either
+- [x] `cargo build --workspace` succeeds
+- [x] `cargo test --workspace` succeeds
+- [x] `cargo clippy --workspace` produces no new warnings
+- [x] The deleted modules' tests (if any) are accounted for — either
   removed or migrated to the surviving modules
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds
-- [ ] `cargo clippy --workspace` has no new warnings
+- [x] `cargo build --workspace` succeeds
+- [x] `cargo test --workspace` succeeds
+- [x] `cargo clippy --workspace` has no new warnings
 
 ### Layer 4 — Smoke
-- [ ] `tmux_login_logout_test.sh` passes (login flow still works
+- [x] `tmux_login_logout_test.sh` passes (login flow still works
   after `LoginFlowValidate` removal)
-- [ ] `./dev.sh` runs end-to-end
+- [x] `./dev.sh` runs end-to-end
 
 ## Notes
 

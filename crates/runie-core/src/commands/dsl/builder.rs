@@ -1,7 +1,7 @@
 //! Command Builder
 
 use super::{CommandCategory, CommandFlow, CommandResult, DialogType};
-use crate::dialog::{Panel, PanelItem, PanelStack as CoreStack};
+use crate::dialog::{PanelItem, PanelStack as CoreStack};
 use crate::model::AppState;
 use crate::Event;
 
@@ -130,21 +130,6 @@ impl CommandDef {
         .apply_sub()
     }
 
-    /// Show a form from a DSL panel
-    pub fn dsl_form<F>(self, title: &'static str, panel_fn: F, submit: Event) -> Self
-    where
-        F: FnOnce() -> Panel,
-    {
-        let panel = panel_fn();
-        let fields = FormBuilder::from_dsl_panel(&panel).into_fields();
-        self.with_flow(CommandFlow::Form {
-            title,
-            fields,
-            submit,
-        })
-        .apply_sub()
-    }
-
     /// Custom handler
     pub fn handler(self, f: fn(&mut AppState, &str) -> CommandResult) -> Self {
         self.with_flow(CommandFlow::Handler(f)).apply_sub()
@@ -242,23 +227,6 @@ impl FormBuilder {
             this = this.field(label, placeholder, key);
         }
         this
-    }
-
-    /// Add fields from a Panel (converts to owned strings)
-    pub fn from_dsl_panel(panel: &Panel) -> Self {
-        let mut builder = Self::new();
-        for item in &panel.items {
-            if let PanelItem::FormField {
-                label,
-                placeholder,
-                key,
-                ..
-            } = item
-            {
-                builder = builder.field(label, placeholder, key);
-            }
-        }
-        builder
     }
 
     pub fn into_fields(self) -> Vec<FormField> {

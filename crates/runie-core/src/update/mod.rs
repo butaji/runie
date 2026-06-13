@@ -50,7 +50,6 @@ impl AppState {
             Event::LoginFlowStart
                 | Event::LoginFlowSelectProvider { .. }
                 | Event::LoginFlowSubmitKey { .. }
-                | Event::LoginFlowValidate { .. }
                 | Event::LoginFlowValidationDone { .. }
                 | Event::LoginFlowValidationFailed { .. }
                 | Event::LoginFlowModelsFetched { .. }
