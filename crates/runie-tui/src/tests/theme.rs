@@ -1,10 +1,10 @@
 //! Tests for the opaline-based theme system
 
 use crate::theme::{
-    color_accent, color_success, current_theme, list_builtin_themes, set_current_theme,
-    style_border, style_code_block, style_status_active, style_user, TEST_LOCK,
+    color_accent, color_bg, color_bg_panel, color_success, current_theme, list_builtin_themes,
+    set_current_theme, style_border, style_code_block, style_status_active, style_user, TEST_LOCK,
 };
-use ratatui::style::Style;
+use ratatui::style::{Color, Style};
 
 // ─── Layer 1: State/Logic ───────────────────────────────────────────────
 
@@ -133,5 +133,36 @@ fn theme_status_active_has_success_color() {
         active.fg,
         Some(success),
         "Active status should use success color"
+    );
+}
+
+#[test]
+fn runie_theme_does_not_override_terminal_background() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    set_current_theme("runie");
+    assert_eq!(
+        color_bg(),
+        Color::Reset,
+        "runie theme should use terminal background (bg.base unset)"
+    );
+    assert_eq!(
+        color_bg_panel(),
+        Color::Reset,
+        "runie theme should use terminal background for panels (bg.panel unset)"
+    );
+}
+
+#[test]
+fn runie_theme_does_not_define_background_tokens() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    set_current_theme("runie");
+    let theme = current_theme();
+    assert!(
+        !theme.has_token("bg.base"),
+        "runie theme should not define bg.base"
+    );
+    assert!(
+        !theme.has_token("bg.panel"),
+        "runie theme should not define bg.panel"
     );
 }
