@@ -1,6 +1,6 @@
 # Remove Snapshot Dead Code and Cache Per-Frame Vec Fields
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Core Architecture
 **Priority**: P1
@@ -43,63 +43,63 @@ disk read in `auth_providers`.
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/snapshot.rs` no longer contains:
+- [x] `crates/runie-core/src/snapshot.rs` no longer contains:
   - The `VisibleRegion` struct (line 32-35)
   - The `Snapshot::visible_scroll` method (lines 119-166)
   - The `Snapshot::visible` method (line 90-99) if it returns
     `&[Element]` in the same dead-code pattern
-- [ ] `git grep -n 'VisibleRegion\|visible_scroll' crates/` returns
+- [x] `git grep -n 'VisibleRegion\|visible_scroll' crates/` returns
   zero results (except possibly in `CHANGELOG` or archive dirs)
-- [ ] `AppState::snapshot()` (model.rs:603) does not call
+- [x] `AppState::snapshot()` (model.rs:603) does not call
   `crate::auth::AuthStorage::load()` — the auth provider list is
   cached in `AppState` (or a new `ViewState` field) and refreshed
   only on `LoginFlowSave` / `LoginFlowCancel` events
-- [ ] `AppState::snapshot()` does not call
+- [x] `AppState::snapshot()` does not call
   `settings_dialog::build_setting_items` — settings items are
   cached in `AppState` (or `ViewState`) and invalidated only on
   `Event::SwitchTheme` / `Event::CycleThinkingLevel` /
   `Event::ToggleReadOnly` / `Event::SwitchModel`
-- [ ] `session_tree_items` is cached in `AppState` and invalidated
+- [x] `session_tree_items` is cached in `AppState` and invalidated
   on `Event::ToggleSessionTree` / `Event::ForkSession` /
   `Event::CloneSession`
-- [ ] The `Vec<(String, String, String)>` palette items are wrapped
+- [x] The `Vec<(String, String, String)>` palette items are wrapped
   in `Arc<[…]>` so the snapshot doesn't clone the vec per frame
-- [ ] The 3-line `Arc::clone` cost replaces the 30-line `Vec::clone`
+- [x] The 3-line `Arc::clone` cost replaces the 30-line `Vec::clone`
   cost
-- [ ] `cargo build --workspace` succeeds and the existing test
+- [x] `cargo build --workspace` succeeds and the existing test
   suite still passes
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `test_snapshot_does_not_call_auth_load` — instrument
+- [x] `test_snapshot_does_not_call_auth_load` — instrument
   `AppState::snapshot` with a counter, call it 100 times, assert
   `auth::AuthStorage::load` was called ≤ 1 time
-- [ ] `test_settings_items_cached` — same instrumentation pattern
+- [x] `test_settings_items_cached` — same instrumentation pattern
   for `settings_dialog::build_setting_items`
-- [ ] `test_session_tree_items_cached` — same for
+- [x] `test_session_tree_items_cached` — same for
   `session_tree::SessionTree::filtered_walk`
-- [ ] `test_arc_sharing_works` — `let s1 = state.snapshot(); let s2
+- [x] `test_arc_sharing_works` — `let s1 = state.snapshot(); let s2
   = state.snapshot(); assert!(Arc::ptr_eq(&s1.elements,
   &s2.elements));`
-- [ ] `test_visible_region_removed` — `Snapshot::visible_scroll` no
+- [x] `test_visible_region_removed` — `Snapshot::visible_scroll` no
   longer exists; calling it is a compile error (the test file
   should not reference it)
 
 ### Layer 2 — Event Handling
-- [ ] `cargo test -p runie-core --lib snapshot_optimization` passes
+- [x] `cargo test -p runie-core --lib snapshot_optimization` passes
   (the existing `tests/snapshot_optimization.rs` covers caching
   semantics)
-- [ ] `cargo test -p runie-core --lib tests::palette` passes
-- [ ] `cargo test -p runie-core --lib tests::settings_dialog` passes
-- [ ] `cargo test -p runie-core --lib tests::session_tree` passes
+- [x] `cargo test -p runie-core --lib tests::palette` passes
+- [x] `cargo test -p runie-core --lib tests::settings_dialog` passes
+- [x] `cargo test -p runie-core --lib tests::session_tree` passes
 
 ### Layer 3 — Rendering
-- [ ] `cargo test -p runie-tui --lib` passes (rendering uses
+- [x] `cargo test -p runie-tui --lib` passes (rendering uses
   snapshots; this catches regressions)
 
 ### Layer 4 — Smoke
-- [ ] A tmux script that streams a 1000-token response and measures
+- [x] A tmux script that streams a 1000-token response and measures
   frame time: average frame render < 16ms (60 fps)
 
 ## Notes

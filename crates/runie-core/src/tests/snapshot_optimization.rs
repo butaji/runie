@@ -85,9 +85,9 @@ fn test_render_receives_valid_snapshot() {
     state.ensure_fresh();
 
     let snap = state.snapshot();
-    let region = snap.visible_scroll(5);
+    let region = snap.visible(0, 5);
     assert!(
-        region.elements.len() <= snap.elements.len(),
+        region.len() <= snap.elements.len(),
         "Visible region should not exceed total elements"
     );
 }
@@ -148,5 +148,57 @@ fn test_arc_pointer_stability_after_state_mutation() {
     assert_eq!(
         ptr1, ptr2,
         "Elements Arc should be stable when messages are unchanged"
+    );
+}
+
+#[test]
+fn test_auth_providers_cached() {
+    let mut state = AppState::default();
+    state.ensure_fresh();
+
+    let snap1 = state.snapshot();
+    let snap2 = state.snapshot();
+    assert!(
+        Arc::ptr_eq(&snap1.auth_providers, &snap2.auth_providers),
+        "auth_providers should be Arc-shared across unchanged snapshots"
+    );
+}
+
+#[test]
+fn test_settings_items_cached() {
+    let mut state = AppState::default();
+    state.ensure_fresh();
+
+    let snap1 = state.snapshot();
+    let snap2 = state.snapshot();
+    assert!(
+        Arc::ptr_eq(&snap1.settings_items, &snap2.settings_items),
+        "settings_items should be Arc-shared across unchanged snapshots"
+    );
+}
+
+#[test]
+fn test_session_tree_items_cached() {
+    let mut state = AppState::default();
+    state.ensure_fresh();
+
+    let snap1 = state.snapshot();
+    let snap2 = state.snapshot();
+    assert!(
+        Arc::ptr_eq(&snap1.session_tree_items, &snap2.session_tree_items),
+        "session_tree_items should be Arc-shared across unchanged snapshots"
+    );
+}
+
+#[test]
+fn test_palette_items_cached() {
+    let mut state = AppState::default();
+    state.ensure_fresh();
+
+    let snap1 = state.snapshot();
+    let snap2 = state.snapshot();
+    assert!(
+        Arc::ptr_eq(&snap1.palette_items, &snap2.palette_items),
+        "palette_items should be Arc-shared across unchanged snapshots"
     );
 }

@@ -10,10 +10,19 @@ pub fn control_event(state: &mut AppState, event: Event) {
         Event::Abort => handle_abort(state),
         Event::ExternalEditorDone { content } => handle_editor_done(state, content),
         Event::ToggleExpand => state.toggle_expand_all(),
-        Event::ToggleSessionTree => state.toggle_session_tree_dialog(),
+        Event::ToggleSessionTree => {
+            state.toggle_session_tree_dialog();
+            state.view.cached_session_tree_valid = false;
+        }
         Event::SessionTreeFilterCycle => state.cycle_session_tree_filter(),
-        Event::ForkSession { message_index } => state.fork_session_at(message_index),
-        Event::CloneSession => state.clone_session(),
+        Event::ForkSession { message_index } => {
+            state.fork_session_at(message_index);
+            state.view.cached_session_tree_valid = false;
+        }
+        Event::CloneSession => {
+            state.clone_session();
+            state.view.cached_session_tree_valid = false;
+        }
         Event::SessionTreeSelect { id } => state.session_tree_select(&id),
         Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
         _ => {}

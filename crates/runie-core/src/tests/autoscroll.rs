@@ -105,7 +105,7 @@ fn at_bottom_shows_new_agent_response() {
     state.update(Event::AgentResponse { id: "req.0".to_string(), content: "hi".to_string() });
     state.ensure_fresh();
 
-    let visible = state.visible_scroll(5);
+    let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     match last {
         crate::ui::elements::Element::AgentMessage { content, .. } => {
@@ -126,7 +126,7 @@ fn at_bottom_shows_new_thought() {
     state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
     state.ensure_fresh();
 
-    let visible = state.visible_scroll(5);
+    let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     assert!(
         matches!(last, crate::ui::elements::Element::ThoughtMarker { .. }),
@@ -144,7 +144,7 @@ fn at_bottom_shows_new_tool() {
     state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
     state.ensure_fresh();
 
-    let visible = state.visible_scroll(5);
+    let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     let last = visible.elements.last().unwrap();
     assert!(
         matches!(last, crate::ui::elements::Element::ToolDone { .. }),
@@ -198,7 +198,7 @@ fn scroll_down_cannot_go_below_zero() {
 fn empty_chat_scroll_is_zero() {
     let state = fresh_state();
     assert_eq!(state.view.scroll, 0, "Empty chat should have scroll=0");
-    let visible = state.visible_scroll(5);
+    let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     assert!(visible.is_empty(), "Empty chat should return empty visible");
 }
 
@@ -215,7 +215,7 @@ fn single_message_visible() {
     state.messages_changed();
     state.ensure_fresh();
 
-    let visible = state.visible_scroll(5);
+    let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
     assert_eq!(visible.elements.len(), 1, "Single message should be visible");
 }
 

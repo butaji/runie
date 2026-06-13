@@ -232,6 +232,7 @@ fn login_flow_save(state: &mut crate::model::AppState) {
 pub fn login_flow_cancel(state: &mut crate::model::AppState) {
     // Cancel pops one level. At the root (provider picker), the pop
     // is a no-op and we close the dialog.
+    state.view.cached_auth_valid = false;
     pop_login_panel_or_close(state);
 }
 

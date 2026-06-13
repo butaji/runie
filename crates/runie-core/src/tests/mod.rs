@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod appstate_structural;
 #[cfg(test)]
+pub(crate) mod visible_helper;
+#[cfg(test)]
 mod action_text;
 #[cfg(test)]
 mod agent;
