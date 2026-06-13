@@ -13,8 +13,18 @@ pub fn scroll_event(state: &mut AppState, event: Event) {
         Event::PageDown => page_down(state),
         Event::GoToTop => go_to_top(state),
         Event::GoToBottom => go_to_bottom(state),
+        Event::MouseClick { row, col, .. } => {
+            handle_mouse_click(state, row, col);
+        }
         _ => {}
     }
+}
+
+/// Handle mouse click - can be used for selecting posts/items.
+#[allow(unused_variables)]
+fn handle_mouse_click(state: &mut AppState, row: u16, col: u16) {
+    // TODO: Implement clickable areas based on rendered layout
+    // For now, just scroll to clicked position if in scrollable area
 }
 
 /// Jump to the previous post going UP (older) in the feed.
