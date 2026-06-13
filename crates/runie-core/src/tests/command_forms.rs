@@ -126,6 +126,141 @@ fn no_command_returns_usage_message() {
     }
 }
 
+/// Tests that form-submit handlers (called when user submits an empty
+/// form) never return "Usage:" messages. The form-submit path is:
+///   1. User types /load (no args)
+///   2. Form opens
+///   3. User submits form with empty name
+///   4. handle_load is called with empty name
+///   5. handle_load must NOT return a "Usage:" message
+#[test]
+fn no_form_submit_handler_returns_usage_message() {
+    // All known form-submit handlers that take a single string arg
+    use crate::commands::handlers::session::io as session_io;
+
+    let mut state = AppState::default();
+
+    // /load
+    let result = session_io::handle_load(&mut state, "");
+    if let CommandResult::Message(msg) = &result {
+        assert!(
+            !msg.to_lowercase().contains("usage:"),
+            "handle_load returned Usage: {}",
+            msg
+        );
+    }
+
+    // /delete
+    let result = session_io::handle_delete(&mut state, "");
+    if let CommandResult::Message(msg) = &result {
+        assert!(
+            !msg.to_lowercase().contains("usage:"),
+            "handle_delete returned Usage: {}",
+            msg
+        );
+    }
+
+    // /import
+    let result = session_io::handle_import(&mut state, "");
+    if let CommandResult::Message(msg) = &result {
+        assert!(
+            !msg.to_lowercase().contains("usage:"),
+            "handle_import returned Usage: {}",
+            msg
+        );
+    }
+
+    // /export
+    let result = session_io::handle_export(&mut state, "");
+    if let CommandResult::Message(msg) = &result {
+        assert!(
+            !msg.to_lowercase().contains("usage:"),
+            "handle_export returned Usage: {}",
+            msg
+        );
+    }
+}
+
+/// Test the end-to-end flow: type /load, open form, submit empty
+/// (simulating user pressing Enter without typing).
+/// The result should NOT pollute the chat feed with a Usage message.
+#[test]
+fn load_form_submit_empty_does_not_show_usage() {
+    use crate::commands::handlers::session::io as session_io;
+    let mut state = AppState::default();
+    let initial_msg_count = state.session.messages.len();
+
+    // Simulate form submit with empty name
+    let result = session_io::handle_load(&mut state, "");
+
+    // No "Usage:" message should be added to the feed
+    if let CommandResult::Message(_) = &result {
+        panic!("handle_load with empty arg returned Message, should return dialog or None");
+    }
+
+    // The chat feed should not have new messages
+    assert_eq!(
+        state.session.messages.len(),
+        initial_msg_count,
+        "handle_load should not add messages to chat feed"
+    );
+}
+
+#[test]
+fn delete_form_submit_empty_does_not_show_usage() {
+    use crate::commands::handlers::session::io as session_io;
+    let mut state = AppState::default();
+    let initial_msg_count = state.session.messages.len();
+
+    let result = session_io::handle_delete(&mut state, "");
+    if let CommandResult::Message(_) = &result {
+        panic!("handle_delete with empty arg returned Message");
+    }
+    assert_eq!(state.session.messages.len(), initial_msg_count);
+}
+
+#[test]
+fn import_form_submit_empty_does_not_show_usage() {
+    use crate::commands::handlers::session::io as session_io;
+    let mut state = AppState::default();
+    let initial_msg_count = state.session.messages.len();
+
+    let result = session_io::handle_import(&mut state, "");
+    if let CommandResult::Message(_) = &result {
+        panic!("handle_import with empty arg returned Message");
+    }
+    assert_eq!(state.session.messages.len(), initial_msg_count);
+}
+
+#[test]
+fn export_form_submit_empty_does_not_show_usage() {
+    use crate::commands::handlers::session::io as session_io;
+    let mut state = AppState::default();
+    let initial_msg_count = state.session.messages.len();
+
+    let result = session_io::handle_export(&mut state, "");
+    if let CommandResult::Message(_) = &result {
+        panic!("handle_export with empty arg returned Message");
+    }
+    assert_eq!(state.session.messages.len(), initial_msg_count);
+}
+
+/// Model command with too many slashes also shouldn't show Usage.
+#[test]
+fn model_command_does_not_show_usage() {
+    use crate::commands::handlers::model::handle_model;
+    let mut state = AppState::default();
+    // Too many slashes
+    let result = handle_model(&mut state, "a/b/c");
+    if let CommandResult::Message(msg) = &result {
+        assert!(
+            !msg.to_lowercase().contains("usage:"),
+            "handle_model returned Usage: {}",
+            msg
+        );
+    }
+}
+
 #[test]
 fn no_command_returns_unknown_command_message() {
     // Test that unknown commands don't return "Unknown command" either
