@@ -5,6 +5,8 @@ mod mouse_events;
 #[cfg(test)]
 mod focus_events;
 #[cfg(test)]
+mod agents_manager_e2e;
+#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod at_file_picker;
