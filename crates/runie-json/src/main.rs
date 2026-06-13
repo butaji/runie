@@ -25,7 +25,7 @@
 
 use anyhow::Result;
 use futures::StreamExt;
-use runie_agent::{build_provider, parser::parse_tool_calls, Tool};
+use runie_agent::{build_provider_with_warning, parser::parse_tool_calls, Tool};
 use runie_core::{
     config_reload,
     provider::{Message, Provider},
@@ -111,7 +111,8 @@ async fn run_json() -> Result<()> {
         },
     ];
 
-    let provider = build_provider(provider_name, model);
+    let provider = build_provider_with_warning(provider_name, model)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     let start = Instant::now();
     let mut content = String::new();
     let mut tool_calls: Vec<ToolCall> = Vec::new();
