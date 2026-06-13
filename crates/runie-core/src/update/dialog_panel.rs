@@ -180,6 +180,31 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
                 }
             }
         }
+        "vim_mode" => {
+            state.config.vim_mode = !state.config.vim_mode;
+            state.view.cached_settings_valid = false;
+        }
+        "telemetry_enabled" => {
+            let new_enabled = !state.config.telemetry.is_enabled();
+            state.config.telemetry = crate::telemetry::Telemetry::new(new_enabled);
+            state.view.cached_settings_valid = false;
+        }
+        "truncation_max_lines" => {
+            if let Some(value) = selected_select_value(stack) {
+                if let Ok(n) = value.parse::<usize>() {
+                    state.config.truncation.max_lines = n;
+                    state.view.cached_settings_valid = false;
+                }
+            }
+        }
+        "truncation_max_bytes" => {
+            if let Some(value) = selected_select_value(stack) {
+                if let Ok(n) = value.parse::<usize>() {
+                    state.config.truncation.max_bytes = n;
+                    state.view.cached_settings_valid = false;
+                }
+            }
+        }
         _ => {}
     }
 }

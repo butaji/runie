@@ -83,6 +83,40 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "How follow-up messages are delivered",
             SettingsCategory::Behavior,
         ),
+        SettingItem::new(
+            "vim_mode",
+            "Vim Navigation",
+            SettingValue::Bool(state.config.vim_mode),
+            "Press Esc from the input box to navigate the feed with j/k/g/G",
+            SettingsCategory::Behavior,
+        ),
+        SettingItem::new(
+            "telemetry_enabled",
+            "Telemetry",
+            SettingValue::Bool(state.config.telemetry.is_enabled()),
+            "Anonymous usage analytics",
+            SettingsCategory::Safety,
+        ),
+        SettingItem::new(
+            "truncation_max_lines",
+            "Truncation Max Lines",
+            SettingValue::Enum {
+                current: state.config.truncation.max_lines.to_string(),
+                options: truncation_lines_options(),
+            },
+            "Max lines kept from a single tool output",
+            SettingsCategory::Behavior,
+        ),
+        SettingItem::new(
+            "truncation_max_bytes",
+            "Truncation Max Bytes",
+            SettingValue::Enum {
+                current: state.config.truncation.max_bytes.to_string(),
+                options: truncation_bytes_options(),
+            },
+            "Max bytes kept from a single tool output",
+            SettingsCategory::Behavior,
+        ),
     ]
 }
 
@@ -106,4 +140,17 @@ fn theme_options() -> Vec<String> {
         .iter()
         .map(|t| t.to_string())
         .collect()
+}
+
+fn truncation_lines_options() -> Vec<String> {
+    vec!["1000".into(), "2000".into(), "5000".into(), "10000".into()]
+}
+
+fn truncation_bytes_options() -> Vec<String> {
+    vec![
+        "10240".into(),     // 10 KiB
+        "51200".into(),     // 50 KiB (default)
+        "102400".into(),    // 100 KiB
+        "512000".into(),    // 500 KiB
+    ]
 }
