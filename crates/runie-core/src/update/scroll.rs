@@ -16,6 +16,12 @@ pub fn scroll_event(state: &mut AppState, event: Event) {
         Event::MouseClick { row, col, .. } => {
             handle_mouse_click(state, row, col);
         }
+        Event::FocusGained => {
+            handle_focus_gained(state);
+        }
+        Event::FocusLost => {
+            handle_focus_lost(state);
+        }
         _ => {}
     }
 }
@@ -25,6 +31,18 @@ pub fn scroll_event(state: &mut AppState, event: Event) {
 fn handle_mouse_click(state: &mut AppState, row: u16, col: u16) {
     // TODO: Implement clickable areas based on rendered layout
     // For now, just scroll to clicked position if in scrollable area
+}
+
+/// Handle focus gained event.
+#[allow(unused_variables)]
+fn handle_focus_gained(state: &mut AppState) {
+    // TODO: Clear any "unfocused" indicators, refresh screen
+}
+
+/// Handle focus lost event.
+#[allow(unused_variables)]
+fn handle_focus_lost(state: &mut AppState) {
+    // TODO: Pause any running animations, dim the UI
 }
 
 /// Jump to the previous post going UP (older) in the feed.
