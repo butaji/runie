@@ -448,7 +448,12 @@ fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
         lines
     };
 
-    f.render_widget(Paragraph::new(visible_lines).block(block), area);
+    f.render_widget(
+        Paragraph::new(visible_lines)
+            .block(block)
+            .wrap(Wrap { trim: false }),
+        area,
+    );
 
     if show_scrollbar {
         render_input_scrollbar(f, area, total_lines, scroll, inner_height);

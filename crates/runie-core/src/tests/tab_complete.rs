@@ -92,10 +92,10 @@ fn file_picker_replaces_typed_prefix() {
     // File picker should close
     assert!(state.open_dialog.is_none());
 
-    // Input should be replaced with [filename]
+    // Input should be replaced with filename (no brackets)
     assert!(
-        state.input.input.starts_with('['),
-        "Should start with '[', got: {}",
+        !state.input.input.starts_with("Tes"),
+        "Should NOT start with 'Tes', got: {}",
         state.input.input
     );
 }

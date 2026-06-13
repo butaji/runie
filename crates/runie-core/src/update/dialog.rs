@@ -32,41 +32,52 @@ pub fn handle_form_dialog(state: &mut AppState, event: Event) {
 /// Insert filepath into input and close any dialog.
 pub fn insert_at_ref(state: &mut AppState, path: &str) {
     // Check if we have a backup from file picker
-    if let Some((original_input, insert_pos, needs_brackets)) = state.file_picker_backup.take() {
-        let input_len = original_input.len();
-        
+    if let Some((original_input, insert_pos, cursor, _needs_brackets)) = state.file_picker_backup.take() {
         // Extract text before insert_pos
-        let before = if insert_pos < input_len {
-            &original_input[..insert_pos]
+        let before = if insert_pos > 0 {
+            original_input[..insert_pos].to_string()
         } else {
-            &original_input[..]
+            String::new()
         };
         
-        // Only strip trailing whitespace if the prefix actually ends with whitespace
-        // This preserves intentional spaces in middle of text (e.g., "ca ca")
-        let before = if needs_brackets && !before.is_empty() {
-            let last_char = before.chars().last().unwrap();
-            if last_char.is_whitespace() {
-                before.trim_end()
-            } else {
-                before
-            }
+        let trimmed_before = before.trim_end();
+        
+        // The prefix is the text between insert_pos and cursor
+        let prefix = if cursor > insert_pos && insert_pos < original_input.len() {
+            original_input[insert_pos..cursor].trim()
         } else {
-            before
+            ""
         };
         
-        // Wrap in brackets only if needed (not for @ references in middle of text)
-        let inserted = if needs_brackets {
-            format!("[{}]", path)
+        // Extract text after cursor (to preserve)
+        let after = if cursor < original_input.len() {
+            original_input[cursor..].to_string()
         } else {
-            path.to_string()
+            String::new()
         };
         
-        // Combine: before + inserted
-        state.input.input = format!("{}{}", before, inserted);
+        // Determine if we should strip trailing space:
+        // If there's a space BEFORE the prefix (at insert_pos-1), it's a word boundary - preserve it
+        // If the space is AFTER trimmed_before (trailing whitespace), strip it
+        let has_word_boundary_space = insert_pos > 0 
+            && original_input.chars().nth(insert_pos - 1) == Some(' ');
+        
+        let before = if has_word_boundary_space {
+            // Space before prefix is a word boundary - preserve it
+            before.clone()
+        } else if cursor >= original_input.len() && trimmed_before != prefix {
+            // No word boundary space, and different word before prefix - strip trailing space
+            trimmed_before.to_string()
+        } else {
+            // Cursor in middle or repeated pattern: preserve original
+            before.clone()
+        };
+        
+        // Always insert path directly without brackets, preserve text after cursor
+        state.input.input = format!("{}{}{}", before, path, after);
     } else {
-        // Fallback: wrap in brackets
-        state.input.input = format!("[{}]", path);
+        // Fallback: just insert path
+        state.input.input = path.to_string();
     }
     
     state.input.cursor_pos = state.input.input.len();
@@ -95,7 +106,7 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, Event::Abort) {
         // Restore input backup if exists (from file picker)
-        if let Some((input, _, _)) = state.file_picker_backup.take() {
+        if let Some((input, _, _, _)) = state.file_picker_backup.take() {
             state.input.input = input;
             state.input.cursor_pos = state.input.input.len();
         }

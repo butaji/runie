@@ -340,7 +340,8 @@ impl AppState {
                     // @ alone at start -> needs brackets
                     // @ in middle of text -> no brackets
                     let needs_brackets = self.input.input.is_empty();
-                    self.file_picker_backup = Some((self.input.input.clone(), self.input.cursor_pos, needs_brackets));
+                    let cursor = self.input.cursor_pos;
+                    self.file_picker_backup = Some((self.input.input.clone(), cursor, cursor, needs_brackets));
                     super::dialog::open_at_file_picker_all(self);
                     return;
                 }
