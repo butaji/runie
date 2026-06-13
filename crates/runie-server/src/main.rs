@@ -13,7 +13,7 @@
 
 use anyhow::Result;
 use futures::StreamExt;
-use runie_agent::build_provider;
+use runie_agent::build_provider_with_warning;
 use runie_core::{
     config_reload,
     provider::{Message, Provider},
@@ -206,7 +206,8 @@ async fn handle_chat(params: &Value) -> Result<Value> {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
-    let provider = build_provider(provider_name, model);
+    let provider = build_provider_with_warning(provider_name, model)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
@@ -244,7 +245,8 @@ async fn handle_complete(params: &Value) -> Result<Value> {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
-    let provider = build_provider(provider_name, model);
+    let provider = build_provider_with_warning(provider_name, model)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,

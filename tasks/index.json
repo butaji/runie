@@ -160,10 +160,11 @@
     },
     {
       "id": "fix-dev-tools-error-handling",
-      "status": "todo",
+      "status": "done",
       "milestone": "R2",
       "category": "Tools",
-      "priority": "P2"
+      "priority": "P2",
+      "completed_in": "$(git rev-parse --short HEAD)"
     },
     {
       "id": "clean-dead-modules",

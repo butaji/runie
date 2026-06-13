@@ -1,6 +1,6 @@
 # Fix Dev Tools to Use `build_provider_with_warning` Instead of `build_provider`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R2
 **Category**: Tools
 **Priority**: P2

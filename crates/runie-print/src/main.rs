@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use runie_agent::parser::parse_tool_calls;
-use runie_agent::{build_provider, Tool};
+use runie_agent::{build_provider_with_warning, Tool};
 use futures::StreamExt;
 use runie_core::{
     config_reload,
@@ -29,7 +29,8 @@ async fn run_print(prompt: &str) -> Result<()> {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
-    let provider = build_provider(provider_name, model);
+    let provider = build_provider_with_warning(provider_name, model)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     run_print_with(prompt, &provider).await?;
     println!();
     Ok(())
