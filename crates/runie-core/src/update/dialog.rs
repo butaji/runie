@@ -31,7 +31,30 @@ pub fn handle_form_dialog(state: &mut AppState, event: Event) {
 
 /// Insert filepath into input and close any dialog.
 pub fn insert_at_ref(state: &mut AppState, path: &str) {
-    state.input.input = path.to_string();
+    let wrapped = format!("[{}]", path);
+    
+    // Check if we have a backup from file picker
+    if let Some((original_input, insert_pos)) = state.file_picker_backup.take() {
+        let input_len = original_input.len();
+        
+        // Extract text before insert_pos
+        let before = if insert_pos < input_len {
+            &original_input[..insert_pos]
+        } else {
+            &original_input[..]
+        };
+        
+        // Strip trailing whitespace from before if we're replacing at end
+        // This handles cases like "Hello Tes" -> "Hello[file]" (not "Hello [file]")
+        let before = before.trim_end();
+        
+        // Combine: before + [path]
+        state.input.input = format!("{}{}", before, wrapped);
+    } else {
+        // Fallback: just set the input
+        state.input.input = wrapped;
+    }
+    
     state.input.cursor_pos = state.input.input.len();
     state.open_dialog = None;
     state.mark_dirty();
@@ -57,6 +80,11 @@ pub fn update_dialog(state: &mut AppState, event: Event) {
 
 fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
     if matches!(event, Event::Abort) {
+        // Restore input backup if exists (from file picker)
+        if let Some((input, _)) = state.file_picker_backup.take() {
+            state.input.input = input;
+            state.input.cursor_pos = state.input.input.len();
+        }
         state.open_dialog = None;
         state.mark_dirty();
         return true;
@@ -267,14 +295,29 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
     state.mark_dirty();
 }
 
-pub fn open_at_file_picker(state: &mut AppState) {
+/// Opens the file picker with an optional filter.
+/// The filter is pre-filled with the given text to narrow results.
+pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
     use crate::dialog::{ItemAction, Panel, PanelStack};
     let entries = crate::file_refs::find_file_entries(".", 50);
     let mut panel = Panel::new("at-files", " Files ").with_filter();
+    
+    // Pre-set the filter if provided
+    if let Some(f) = filter {
+        panel.filter = f.to_string();
+    }
+    
     if entries.is_empty() {
         panel = panel.header("No files found");
     } else {
-        panel = panel.header(format!("{} files", entries.len()));
+        let count = entries.len();
+        let filter_active = filter.map(|f| !f.is_empty()).unwrap_or(false);
+        let header = if filter_active {
+            format!("{} files matching '{}'", count, filter.unwrap_or(""))
+        } else {
+            format!("{} files", count)
+        };
+        panel = panel.header(&header);
         for entry in entries {
             let label = if entry.is_dir {
                 format!("{}/", entry.name)
@@ -294,4 +337,9 @@ pub fn open_at_file_picker(state: &mut AppState) {
     }
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
     state.mark_dirty();
+}
+
+/// Opens the file picker without any filter (shows all files).
+pub fn open_at_file_picker_all(state: &mut AppState) {
+    open_at_file_picker(state, None);
 }

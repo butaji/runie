@@ -320,8 +320,10 @@ impl AppState {
             self.handle_vim_nav_char(c);
             return;
         }
-        // When input is empty, single-key shortcuts bypass typing.
-        if self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
+        // When input is empty OR ends with space, single-key shortcuts bypass typing.
+        let is_at_trigger_position = self.input.input.is_empty()
+            || self.input.input.ends_with(' ');
+        if is_at_trigger_position && self.completion.path_suggestions.is_none() {
             if self.config.vim_mode {
                 if let Some(evt) = self.vim_motion_event(c) {
                     self.update(evt);
@@ -335,7 +337,9 @@ impl AppState {
                     return;
                 }
                 '@' => {
-                    super::dialog::open_at_file_picker(self);
+                    // Save @ as part of the filter/prefix
+                    self.file_picker_backup = Some((self.input.input.clone(), self.input.cursor_pos));
+                    super::dialog::open_at_file_picker_all(self);
                     return;
                 }
                 _ => {}

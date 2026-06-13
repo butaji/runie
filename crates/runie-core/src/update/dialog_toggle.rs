@@ -29,7 +29,7 @@ pub fn dialog_toggle_event(state: &mut AppState, event: Event) {
             matches!(state.open_dialog, Some(DialogState::SessionTree(_))),
             dialog::open_session_tree_dialog,
         ),
-        Event::AtFilePicker => dialog::open_at_file_picker(state),
+        Event::AtFilePicker => dialog::open_at_file_picker_all(state),
         Event::ScopedModelToggle { name } => {
             crate::update::scoped_models::toggle_scoped_model(state, &name)
         }

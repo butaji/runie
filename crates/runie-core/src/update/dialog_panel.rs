@@ -29,6 +29,8 @@ pub fn update_panel_stack(state: &mut AppState, event: Event, stack: &mut PanelS
         CursorLeft | SettingsLeft => {
             stack.pop();
         }
+        // Tab cycles selection down in panel
+        Input('\t') => stack.select_down(),
         Submit | SettingsSelect | PaletteSelect | ModelSelectorSelect => {
             return try_activate_panel(state, stack);
         }

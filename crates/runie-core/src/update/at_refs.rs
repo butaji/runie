@@ -10,9 +10,29 @@ impl AppState {
         self.completion.last_at_query = None;
     }
 
+    /// Insert the currently selected @ suggestion into the input.
+    /// Wraps the path in [...] format.
     pub(crate) fn insert_at_suggestion(&mut self) {
-        // Legacy popup disabled — no-op
+        let suggestions = match &self.completion.at_suggestions {
+            Some(s) if !s.is_empty() => s,
+            _ => {
+                // No suggestions, just clear state
+                self.completion.at_suggestions = None;
+                self.completion.at_selected = None;
+                return;
+            }
+        };
+
+        let selected_idx = self.completion.at_selected.unwrap_or(0);
+        if let Some(selected) = suggestions.get(selected_idx) {
+            // Insert the selected suggestion wrapped in [...] 
+            self.input.input.push_str(&format!("[{}]", selected));
+            self.input.cursor_pos = self.input.input.len();
+        }
+
+        // Clear completion state
         self.completion.at_suggestions = None;
         self.completion.at_selected = None;
+        self.mark_dirty();
     }
 }
