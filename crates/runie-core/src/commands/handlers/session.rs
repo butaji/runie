@@ -1,12 +1,81 @@
 //! Session commands using the new DSL
 
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
+use crate::dialog::PanelStack;
 use crate::model::AppState;
 
 pub mod io;
 pub mod run;
 
 pub(crate) use run::{run_compact, run_fork, run_name};
+
+/// Build the /load form panel (used to re-open when submitted empty).
+pub fn build_load_form() -> CommandResult {
+    let stack = build_form_stack(
+        "load",
+        "Load Session",
+        &[
+            ("Name", "session-name", "name"),
+        ],
+        crate::Event::RunLoadCommand {
+            name: String::new(),
+        },
+    );
+    CommandResult::OpenPanelStack(stack)
+}
+
+/// Build the /delete form panel.
+pub fn build_delete_form() -> CommandResult {
+    let stack = build_form_stack(
+        "delete",
+        "Delete Session",
+        &[("Name", "session-name", "name")],
+        crate::Event::RunDeleteCommand {
+            name: String::new(),
+        },
+    );
+    CommandResult::OpenPanelStack(stack)
+}
+
+/// Build the /import form panel.
+pub fn build_import_form() -> CommandResult {
+    let stack = build_form_stack(
+        "import",
+        "Import Session",
+        &[("Path", "session.json", "path")],
+        crate::Event::RunImportCommand {
+            path: String::new(),
+        },
+    );
+    CommandResult::OpenPanelStack(stack)
+}
+
+/// Build the /export form panel.
+pub fn build_export_form() -> CommandResult {
+    let stack = build_form_stack(
+        "export",
+        "Export Session",
+        &[("Path", "session.json", "path")],
+        crate::Event::RunExportCommand {
+            path: String::new(),
+        },
+    );
+    CommandResult::OpenPanelStack(stack)
+}
+
+fn build_form_stack(
+    id: &str,
+    title: &str,
+    fields: &[(&str, &str, &str)],
+    submit: crate::Event,
+) -> PanelStack {
+    use crate::dialog::dsl::form;
+    let mut builder = form(id, title);
+    for (label, placeholder, key) in fields {
+        builder = builder.field(*label, *placeholder, *key);
+    }
+    builder.on_submit(submit).into_stack()
+}
 
 pub fn register(registry: &mut CommandRegistry) {
     // Form commands (always show dialog, pre-fill from args)

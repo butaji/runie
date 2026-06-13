@@ -34,7 +34,8 @@ pub fn handle_save(state: &mut AppState, name: &str) -> CommandResult {
 
 pub fn handle_load(state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
-        return CommandResult::Message("Usage: /load <session-name>".into());
+        // Empty form submission: re-open the form so user can try again.
+        return crate::commands::handlers::session::build_load_form();
     }
     match crate::session::load(name) {
         Ok(session) => {
@@ -60,7 +61,7 @@ pub fn handle_load(state: &mut AppState, name: &str) -> CommandResult {
 
 pub fn handle_delete(_state: &mut AppState, name: &str) -> CommandResult {
     if name.is_empty() {
-        return CommandResult::Message("Usage: /delete <session-name>".into());
+        return crate::commands::handlers::session::build_delete_form();
     }
     match crate::session::delete(name) {
         Ok(_) => CommandResult::Message(format!("Session '{}' deleted.", name)),
@@ -73,7 +74,7 @@ pub fn handle_delete(_state: &mut AppState, name: &str) -> CommandResult {
 
 pub fn handle_import(state: &mut AppState, path: &str) -> CommandResult {
     if path.is_empty() {
-        return CommandResult::Message("Usage: /import <path>".into());
+        return crate::commands::handlers::session::build_import_form();
     }
     match std::fs::read_to_string(path) {
         Ok(json) => match serde_json::from_str::<crate::session::Session>(&json) {
@@ -99,7 +100,7 @@ pub fn handle_import(state: &mut AppState, path: &str) -> CommandResult {
 
 pub fn handle_export(state: &mut AppState, path: &str) -> CommandResult {
     if path.is_empty() {
-        return CommandResult::Message("Usage: /export <path>".into());
+        return crate::commands::handlers::session::build_export_form();
     }
     let session = crate::session::Session {
         name: state

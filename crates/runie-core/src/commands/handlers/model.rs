@@ -31,7 +31,7 @@ pub fn register(registry: &mut CommandRegistry) {
     );
 }
 
-fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
+pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
     let rest = args.trim();
     if rest.is_empty() {
         return CommandResult::OpenDialog(DialogType::ModelSelector);
@@ -46,8 +46,9 @@ fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
             state.config.current_model = parts[0].to_string();
         }
         _ => {
+            // Too many slashes — show current model without "Usage:" wording
             return CommandResult::Message(format!(
-                "Current: {}/{}. Usage: /model provider/model or /model model",
+                "Current: {}/{}. Format: /model provider/model or /model model",
                 state.config.current_provider, state.config.current_model
             ));
         }
