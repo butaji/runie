@@ -287,6 +287,29 @@ fn key_event_to_combo_plain_escape() {
 }
 
 #[test]
+fn plain_escape_emits_dialog_back() {
+    let key = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert!(
+        matches!(result, Some(runie_core::Event::DialogBack)),
+        "Esc should map to DialogBack so the core can decide abort vs. vim nav"
+    );
+}
+
+#[test]
+fn plain_space_emits_input_space() {
+    let key = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::empty());
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert!(
+        matches!(result, Some(runie_core::Event::Input(' '))),
+        "Space should map to Input(' '), got {:?}",
+        result
+    );
+}
+
+#[test]
 #[cfg(not(target_os = "windows"))]
 fn ctrl_v_emits_paste_image() {
     let key = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL);

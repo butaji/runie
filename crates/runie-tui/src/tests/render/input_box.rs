@@ -6,7 +6,11 @@ use runie_core::{AppState, Event};
 fn buffer_content(terminal: &Terminal<TestBackend>) -> String {
     let buf = terminal.backend().buffer();
     (0..buf.area().height)
-        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect::<String>()
+        })
         .collect()
 }
 

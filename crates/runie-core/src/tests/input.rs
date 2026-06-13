@@ -163,7 +163,8 @@ fn thinking_element_stores_instant_not_elapsed() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.agent.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
+    state.agent.thinking_started_at =
+        Some(std::time::Instant::now() - std::time::Duration::from_secs(3));
     state.agent.turn_active = true;
     state.messages_changed();
     state.ensure_fresh();
@@ -225,7 +226,8 @@ fn tool_running_element_stores_instant_not_elapsed() {
 fn timer_advances_without_cache_rebuild() {
     let mut state = fresh_state();
     push_user_msg(&mut state, "hi", "t1");
-    state.agent.thinking_started_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
+    state.agent.thinking_started_at =
+        Some(std::time::Instant::now() - std::time::Duration::from_secs(5));
     state.agent.turn_active = true;
     state.messages_changed();
     state.ensure_fresh();
@@ -236,7 +238,10 @@ fn timer_advances_without_cache_rebuild() {
         gen_before,
         "tick_animation must not bump cache gen"
     );
-    assert!(state.is_dirty(), "tick_animation must mark dirty for render");
+    assert!(
+        state.is_dirty(),
+        "tick_animation must mark dirty for render"
+    );
     let elapsed = thinking_started(&state).elapsed().as_secs_f64();
     assert!(
         elapsed >= 4.9,

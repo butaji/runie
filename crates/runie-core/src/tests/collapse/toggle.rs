@@ -44,7 +44,10 @@ fn tool_created_via_pipeline_is_expanded() {
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
     });
-    assert!(!state.view.all_collapsed, "Tools should be expanded by default");
+    assert!(
+        !state.view.all_collapsed,
+        "Tools should be expanded by default"
+    );
 }
 
 #[test]

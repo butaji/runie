@@ -109,7 +109,7 @@ fn visible_shows_latest_element_at_bottom() {
     state.view.scroll = 0; // at bottom
 
     let region = crate::tests::visible_helper::compute_viewport(&state, 3); // 3 lines viewport
-                                          // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
+                                                                            // 3 messages = 3*3 UserMessage + 3 Spacer = 12 lines total
     assert!(
         region
             .elements

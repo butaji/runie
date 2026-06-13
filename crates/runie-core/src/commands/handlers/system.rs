@@ -117,14 +117,15 @@ fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
     if text.is_empty() {
         return CommandResult::Message("No assistant response to copy".into());
     }
-    match write_clipboard(&text) {
-        Ok(path) => CommandResult::Message(format!("Copied to {}", path.display())),
-        Err(e) => CommandResult::Message(format!("Could not copy: {}", e)),
-    }
+    // Emit an event so the binary layer can write the OSC 52 sequence
+    // directly to the active terminal.
+    CommandResult::Event(crate::Event::CopyToClipboard(text))
 }
 
-/// Write `text` to the clipboard file. Respects `$RUNIE_CACHE_DIR` for
-/// tests; defaults to `<data_dir>/runie/clipboard.md`.
+/// Fallback: write `text` to the clipboard file. Used when OSC 52 is not
+/// supported by the terminal. Respects `$RUNIE_CACHE_DIR` for tests;
+/// defaults to `<data_dir>/runie/clipboard.md`.
+#[allow(dead_code)]
 fn write_clipboard(text: &str) -> std::io::Result<std::path::PathBuf> {
     use std::io::Write;
     let dir = if let Ok(p) = std::env::var("RUNIE_CACHE_DIR") {

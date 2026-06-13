@@ -75,7 +75,13 @@ impl Provider for DynProvider {
     fn generate(
         &self,
         messages: Vec<Message>,
-    ) -> Pin<Box<dyn futures::Stream<Item = anyhow::Result<runie_core::provider::ResponseChunk>> + Send + '_>> {
+    ) -> Pin<
+        Box<
+            dyn futures::Stream<Item = anyhow::Result<runie_core::provider::ResponseChunk>>
+                + Send
+                + '_,
+        >,
+    > {
         self.inner.generate(messages)
     }
 }
@@ -164,12 +170,17 @@ pub fn from_config(config: &Config, model: &str) -> DynProvider {
     } else {
         config.provider.as_deref().unwrap_or("mock")
     };
-    build_provider_with_warning(provider_key, model)
-        .expect("from_config: provider key is always known or panic — use new() for explicit errors")
+    build_provider_with_warning(provider_key, model).expect(
+        "from_config: provider key is always known or panic — use new() for explicit errors",
+    )
 }
 
 /// Switch a live provider to a new key/model pair.
-pub fn switch_provider(provider: &mut DynProvider, key: &str, model: &str) -> Result<(), ProviderError> {
+pub fn switch_provider(
+    provider: &mut DynProvider,
+    key: &str,
+    model: &str,
+) -> Result<(), ProviderError> {
     *provider = build_dyn_provider(key, model)?;
     Ok(())
 }

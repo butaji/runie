@@ -257,6 +257,7 @@ impl AppState {
         self.agent.thought_seq = 0;
         self.agent.turn_active = false;
         self.agent.turn_started_at = None;
+        self.vim_nav_pending = false;
         self.agent.inflight = self.agent.inflight.saturating_sub(1);
         // Reset per-turn speed tracking (but keep speed_window for continuity)
         self.agent.turn_tokens_out = 0;

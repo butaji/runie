@@ -62,7 +62,10 @@ fn registry_get_providers_alias() {
 #[test]
 fn registry_does_not_include_clone() {
     let state = AppState::default();
-    assert!(state.registry.get("clone").is_none(), "/clone should be removed");
+    assert!(
+        state.registry.get("clone").is_none(),
+        "/clone should be removed"
+    );
 }
 
 #[test]
@@ -79,10 +82,7 @@ fn hotkeys_opens_panel() {
     let mut state = AppState::default();
     run_slash(&mut state, "/hotkeys");
     assert!(
-        matches!(
-            state.open_dialog,
-            Some(DialogState::PanelStack(_))
-        ),
+        matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
         "/hotkeys should open a panel"
     );
 }

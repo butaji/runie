@@ -111,8 +111,8 @@ async fn run_json() -> Result<()> {
         },
     ];
 
-    let provider = build_provider_with_warning(provider_name, model)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let provider =
+        build_provider_with_warning(provider_name, model).map_err(|e| anyhow::anyhow!("{}", e))?;
     let start = Instant::now();
     let mut content = String::new();
     let mut tool_calls: Vec<ToolCall> = Vec::new();
@@ -209,10 +209,18 @@ fn grep_json(
 
 fn tool_to_json(tool: &Tool) -> serde_json::Value {
     match tool {
-        Tool::ReadFile { path, offset, limit } => read_file_json(path, offset, limit),
+        Tool::ReadFile {
+            path,
+            offset,
+            limit,
+        } => read_file_json(path, offset, limit),
         Tool::ListDir { path } => serde_json::json!({"path": path}),
         Tool::WriteFile { path, content } => serde_json::json!({"path": path, "content": content}),
-        Tool::EditFile { path, search, replace } => {
+        Tool::EditFile {
+            path,
+            search,
+            replace,
+        } => {
             serde_json::json!({"path": path, "search": search, "replace": replace})
         }
         Tool::Bash { command } => serde_json::json!({"command": command}),
@@ -224,8 +232,20 @@ fn tool_to_json(tool: &Tool) -> serde_json::Value {
             literal,
             context,
             limit,
-        } => grep_json(pattern, path, glob, *ignore_case, *literal, *context, *limit),
-        Tool::Find { pattern, path, limit } => {
+        } => grep_json(
+            pattern,
+            path,
+            glob,
+            *ignore_case,
+            *literal,
+            *context,
+            *limit,
+        ),
+        Tool::Find {
+            pattern,
+            path,
+            limit,
+        } => {
             serde_json::json!({"pattern": pattern, "path": path, "limit": limit})
         }
         Tool::FetchDocs { library } => serde_json::json!({"library": library}),

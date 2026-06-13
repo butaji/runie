@@ -56,12 +56,7 @@ fn render_header(
     f.render_widget(Paragraph::new(header_lines).style(bg), header_area);
 }
 
-fn render_item_list(
-    f: &mut Frame,
-    item_lines: Vec<Line<'_>>,
-    scroll: ScrollLayout,
-    bg: Style,
-) {
+fn render_item_list(f: &mut Frame, item_lines: Vec<Line<'_>>, scroll: ScrollLayout, bg: Style) {
     f.render_widget(
         Paragraph::new(item_lines)
             .style(bg)
@@ -87,7 +82,11 @@ fn render_hotkeys(f: &mut Frame, show_breadcrumb: bool, inner: Rect, bg: Style) 
         "↑↓ navigate · enter select · esc close"
     };
     f.render_widget(
-        Paragraph::new(vec![Line::from(""), Line::from(parse_hint_spans(hotkey_text))]).style(bg),
+        Paragraph::new(vec![
+            Line::from(""),
+            Line::from(parse_hint_spans(hotkey_text)),
+        ])
+        .style(bg),
         hotkey_area(&inner),
     );
 }
@@ -142,9 +141,7 @@ fn push_navigable_item<'a>(
 ) {
     match item {
         PanelItem::Action { label, .. } => push_action(lines, label, selected, width),
-        PanelItem::Command { name, desc, .. } => {
-            push_command(lines, name, desc, selected, width)
-        }
+        PanelItem::Command { name, desc, .. } => push_command(lines, name, desc, selected, width),
         PanelItem::Toggle { label, value, .. } => {
             push_toggle(lines, label, *value, selected, width)
         }

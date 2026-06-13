@@ -131,15 +131,31 @@ fn test_three_messages_one_at_a_time() {
     state.update(Event::Input('3'));
     state.update(Event::Submit);
 
-    assert_eq!(user_count(&state), 1, "Only first message visible during active turn");
-    assert_eq!(state.agent.message_queue.len(), 2, "Messages 2 and 3 queued");
+    assert_eq!(
+        user_count(&state),
+        1,
+        "Only first message visible during active turn"
+    );
+    assert_eq!(
+        state.agent.message_queue.len(),
+        2,
+        "Messages 2 and 3 queued"
+    );
 
     state.update(Event::AgentDone { id: "req.0".into() });
-    assert_eq!(user_count(&state), 2, "Message 2 appears after turn 1 completes");
+    assert_eq!(
+        user_count(&state),
+        2,
+        "Message 2 appears after turn 1 completes"
+    );
     assert_eq!(state.agent.message_queue.len(), 1, "Message 3 still queued");
 
     state.update(Event::AgentDone { id: "req.1".into() });
-    assert_eq!(user_count(&state), 3, "Message 3 appears after turn 2 completes");
+    assert_eq!(
+        user_count(&state),
+        3,
+        "Message 3 appears after turn 2 completes"
+    );
     assert!(
         state.agent.message_queue.is_empty(),
         "Queue empty after all delivered"

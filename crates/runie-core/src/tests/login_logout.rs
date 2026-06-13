@@ -11,7 +11,10 @@ use crate::model::AppState;
 
 /// Clear the config file before each test to avoid pollution.
 fn clean_config() {
-    let dir = std::env::temp_dir().join(format!("runie_login_test_{:?}", std::thread::current().id()));
+    let dir = std::env::temp_dir().join(format!(
+        "runie_login_test_{:?}",
+        std::thread::current().id()
+    ));
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let _ = std::fs::remove_file(&path);
@@ -307,7 +310,11 @@ fn providers_select_model_records_usage() {
 
     // Model usage should be recorded.
     assert!(
-        state.config.recent_models.iter().any(|m| m.contains("minimax")),
+        state
+            .config
+            .recent_models
+            .iter()
+            .any(|m| m.contains("minimax")),
         "model usage should be recorded in recent_models"
     );
 }

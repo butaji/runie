@@ -315,15 +315,16 @@ fn test_build_provider_with_warning_returns_err_for_unknown() {
         result.is_err(),
         "build_provider_with_warning should return error for unknown provider"
     );
-    assert!(matches!(result.unwrap_err(), ProviderError::UnknownProvider(_)));
+    assert!(matches!(
+        result.unwrap_err(),
+        ProviderError::UnknownProvider(_)
+    ));
 }
 
 #[test]
 fn test_build_provider_panics_for_unknown() {
     // `build_provider` panics when the key is unknown (callers must validate).
-    let result = std::panic::catch_unwind(|| {
-        crate::build_provider("totally-invalid-key", "model")
-    });
+    let result = std::panic::catch_unwind(|| crate::build_provider("totally-invalid-key", "model"));
     assert!(
         result.is_err(),
         "build_provider should panic for unknown provider"

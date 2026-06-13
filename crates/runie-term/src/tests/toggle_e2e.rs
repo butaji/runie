@@ -41,7 +41,10 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
     );
 
     state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed, "Toggle should set global collapse");
+    assert!(
+        state.view.all_collapsed,
+        "Toggle should set global collapse"
+    );
 
     let after = render_content(&mut state);
     assert!(
@@ -94,8 +97,14 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
         &mut state,
         &[
             Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "I'll list files.\n".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "TOOL:list_dir:.".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "I'll list files.\n".into(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "TOOL:list_dir:.".into(),
+            },
             Event::AgentThoughtDone { id: "req.0".into() },
         ],
     );
@@ -104,8 +113,14 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
     dispatch(
         &mut state,
         &[
-            Event::AgentToolStart { id: "req.0".into(), name: "list_dir".into() },
-            Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".into() },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_dir".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: "file1\nfile2".into(),
+            },
         ],
     );
     let during_tool = render_content(&mut state);
@@ -127,8 +142,14 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
         &mut state,
         &[
             Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "I'll list files.\n".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "TOOL:list_dir:.".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "I'll list files.\n".into(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "TOOL:list_dir:.".into(),
+            },
             Event::AgentThoughtDone { id: "req.0".into() },
         ],
     );
@@ -137,9 +158,18 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
     dispatch(
         &mut state,
         &[
-            Event::AgentToolStart { id: "req.0".into(), name: "list_dir".into() },
-            Event::AgentToolEnd { duration_secs: 0.5, output: "file1".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "Done.".into() },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_dir".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: "file1".into(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "Done.".into(),
+            },
             Event::AgentDone { id: "req.0".into() },
         ],
     );
@@ -148,7 +178,10 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
         !after_done.contains("I'll list files"),
         "Thought should stay collapsed after agent done"
     );
-    assert!(!after_done.contains("file1"), "Tool should stay collapsed after agent done");
+    assert!(
+        !after_done.contains("file1"),
+        "Tool should stay collapsed after agent done"
+    );
 }
 
 #[test]
@@ -257,32 +290,71 @@ fn e2e_full_turn_with_global_toggle() {
         &mut state,
         &[
             Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "I'll list files.\n".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "TOOL:list_dir:.".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "I'll list files.\n".into(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "TOOL:list_dir:.".into(),
+            },
             Event::AgentThoughtDone { id: "req.0".into() },
         ],
     );
     let r1 = render_content(&mut state);
-    assert!(r1.contains("I'll list files"), "Should show reasoning in thought");
+    assert!(
+        r1.contains("I'll list files"),
+        "Should show reasoning in thought"
+    );
     state.update(Event::ToggleExpand);
     let r2 = render_content(&mut state);
-    assert!(r2.contains("[+]") || !r2.contains("I'll list files"), "Thought should collapse");
-    dispatch(&mut state, &[
-        Event::AgentToolStart { id: "req.0".into(), name: "list_dir".into() },
-        Event::AgentToolEnd { duration_secs: 0.5, output: "file1\nfile2".into() },
-    ]);
+    assert!(
+        r2.contains("[+]") || !r2.contains("I'll list files"),
+        "Thought should collapse"
+    );
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_dir".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: "file1\nfile2".into(),
+            },
+        ],
+    );
     let r3 = render_content(&mut state);
-    assert!(!r3.contains("file1"), "Tool should be collapsed with global flag");
+    assert!(
+        !r3.contains("file1"),
+        "Tool should be collapsed with global flag"
+    );
     state.update(Event::ToggleExpand);
     let r4 = render_content(&mut state);
-    assert!(r4.contains("file1") && r4.contains("file2"), "Tool should be expanded");
-    assert!(r4.contains("I'll list files"), "Thought should also be expanded");
-    dispatch(&mut state, &[
-        Event::AgentResponse { id: "req.0".into(), content: "Done.".into() },
-        Event::AgentDone { id: "req.0".into() },
-    ]);
+    assert!(
+        r4.contains("file1") && r4.contains("file2"),
+        "Tool should be expanded"
+    );
+    assert!(
+        r4.contains("I'll list files"),
+        "Thought should also be expanded"
+    );
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "Done.".into(),
+            },
+            Event::AgentDone { id: "req.0".into() },
+        ],
+    );
     let r5 = render_content(&mut state);
     assert!(r5.contains("Done."), "Agent response should be visible");
-    assert!(r5.contains("I'll list files"), "Thought stays expanded after done");
+    assert!(
+        r5.contains("I'll list files"),
+        "Thought stays expanded after done"
+    );
     assert!(r5.contains("file1"), "Tool stays expanded after done");
 }

@@ -12,6 +12,7 @@ impl AppState {
         if let Some(theme) = &config.theme {
             self.config.theme_name = theme.clone();
         }
+        self.config.vim_mode = config.vim_mode();
         self.skills = crate::skills::load_all();
         let prompts_section = config.prompts();
         self.prompts = crate::prompts::load_prompts(

@@ -1,7 +1,7 @@
 //! Application initialization helpers.
 
-use runie_core::model::AppState;
 use runie_core::config_reload;
+use runie_core::model::AppState;
 
 pub(crate) fn init_scoped_models(state: &mut AppState) {
     let config = config_reload::Config::load_from(&config_reload::config_path());
@@ -101,3 +101,11 @@ pub(crate) fn init_truncation(state: &mut AppState) {
     state.config.truncation = config.truncation;
 }
 
+/// Apply vim_mode and other [ui] settings from the config file at startup.
+/// The config file watcher only emits provider/model/theme change events, so
+/// the initial vim_mode opt-in (and any future [ui] fields) must be loaded
+/// here.
+pub(crate) fn init_ui_config(state: &mut AppState) {
+    let config = config_reload::Config::load_from(&config_reload::config_path());
+    state.config.vim_mode = config.vim_mode();
+}

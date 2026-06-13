@@ -61,7 +61,10 @@ fn global_collapse_persists_after_second_thought() {
         &mut state,
         &[
             Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "A".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "A".into(),
+            },
             Event::AgentThoughtDone { id: "req.0".into() },
         ],
     );
@@ -71,15 +74,30 @@ fn global_collapse_persists_after_second_thought() {
         &mut state,
         &[
             Event::AgentThinking { id: "req.1".into() },
-            Event::AgentResponse { id: "req.1".into(), content: "B".into() },
+            Event::AgentResponse {
+                id: "req.1".into(),
+                content: "B".into(),
+            },
             Event::AgentThoughtDone { id: "req.1".into() },
         ],
     );
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtSummary { .. })).collect();
-    assert_eq!(summaries.len(), 2, "BOTH thoughts should be collapsed with global flag");
-    let markers: Vec<_> = feed.elements.iter().filter(|e| matches!(e, Element::ThoughtMarker { .. })).collect();
+    let summaries: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
+        .collect();
+    assert_eq!(
+        summaries.len(),
+        2,
+        "BOTH thoughts should be collapsed with global flag"
+    );
+    let markers: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ThoughtMarker { .. }))
+        .collect();
     assert_eq!(markers.len(), 0, "No thoughts should be expanded");
 }
 
@@ -253,7 +271,10 @@ fn running_tool_ignored_by_global_toggle() {
 
     // Toggle while tool is still running
     state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed, "Toggle should still flip global flag");
+    assert!(
+        state.view.all_collapsed,
+        "Toggle should still flip global flag"
+    );
 
     // But running tool renders as ToolRunning, not ToolSummary
     state.ensure_fresh();

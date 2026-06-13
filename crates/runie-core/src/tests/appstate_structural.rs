@@ -4,9 +4,7 @@
 //! and that loose fields have been moved to appropriate inner structs.
 
 use crate::model::AppState;
-use crate::state::{
-    AgentState, CompletionState, ConfigState, InputState, SessionState, ViewState,
-};
+use crate::state::{AgentState, CompletionState, ConfigState, InputState, SessionState, ViewState};
 
 /// Verify AppState has exactly the expected top-level fields:
 /// - 6 inner state structs
@@ -17,14 +15,23 @@ fn appstate_has_correct_top_level_fields() {
     // (control flags, UI overlays, startup singletons)
     let state = AppState::default();
     assert!(!state.should_quit, "should_quit should be false by default");
-    assert!(state.open_dialog.is_none(), "open_dialog should be None by default");
+    assert!(
+        state.open_dialog.is_none(),
+        "open_dialog should be None by default"
+    );
     assert!(
         state.dialog_back_stack.is_empty(),
         "dialog_back_stack should be empty by default"
     );
-    assert!(state.login_flow.is_none(), "login_flow should be None by default");
+    assert!(
+        state.login_flow.is_none(),
+        "login_flow should be None by default"
+    );
     // skills and prompts are loaded from disk, may be empty or populated
-    assert!(state.prompts.is_empty() || !state.prompts.is_empty(), "prompts should be on AppState");
+    assert!(
+        state.prompts.is_empty() || !state.prompts.is_empty(),
+        "prompts should be on AppState"
+    );
     assert!(
         state.transient_message.is_none(),
         "transient_message should be None by default"
@@ -38,8 +45,14 @@ fn appstate_has_correct_top_level_fields() {
         "transient_level should be None by default"
     );
     // git_info and cwd_name are detected at startup
-    assert!(state.git_info.is_none() || state.git_info.is_some(), "git_info should be on AppState");
-    assert!(state.cwd_name.is_empty() || !state.cwd_name.is_empty(), "cwd_name should be on AppState");
+    assert!(
+        state.git_info.is_none() || state.git_info.is_some(),
+        "git_info should be on AppState"
+    );
+    assert!(
+        state.cwd_name.is_empty() || !state.cwd_name.is_empty(),
+        "cwd_name should be on AppState"
+    );
     assert!(
         state.input_history.is_empty(),
         "input_history should be empty by default"
@@ -149,7 +162,10 @@ fn moved_field_access_patterns() {
     state.config.steering_mode = crate::model::DeliveryMode::All;
     assert_eq!(state.config.steering_mode, crate::model::DeliveryMode::All);
 
-    state.config.recent_models.push("provider/model".to_string());
+    state
+        .config
+        .recent_models
+        .push("provider/model".to_string());
     assert_eq!(state.config.recent_models.len(), 1);
 
     // SessionState fields
@@ -164,7 +180,8 @@ fn moved_field_access_patterns() {
         ));
     assert_eq!(state.session.pending_edits.len(), 1);
 
-    state.session
+    state
+        .session
         .image_attachments
         .push("image.png".to_string());
     assert_eq!(state.session.image_attachments.len(), 1);
@@ -221,10 +238,7 @@ fn inner_structs_have_expected_fields() {
 
     // ConfigState should have these moved fields
     let config = ConfigState::default();
-    assert_eq!(
-        config.steering_mode,
-        crate::model::DeliveryMode::OneAtATime
-    );
+    assert_eq!(config.steering_mode, crate::model::DeliveryMode::OneAtATime);
     assert_eq!(
         config.follow_up_mode,
         crate::model::DeliveryMode::OneAtATime

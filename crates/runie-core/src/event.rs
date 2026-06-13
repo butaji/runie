@@ -180,6 +180,15 @@ pub enum Event {
     AtFilePicker,
     InsertAtRef(String),
 
+    // Clipboard
+    CopyToClipboard(String),
+    CopyLastResponse,
+
+    // Vim navigation
+    GoToTop,
+    GoToBottom,
+    ToggleVimMode,
+
     // Command form dialog
     CommandFormInput(char),
     CommandFormBackspace,
@@ -322,7 +331,9 @@ pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
     ("Reset", || Event::Reset),
     ("CycleModelNext", || Event::CycleModelNext),
     ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || Event::ToggleScopedModelsDialog),
+    ("ToggleScopedModelsDialog", || {
+        Event::ToggleScopedModelsDialog
+    }),
     ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
     ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
     ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),
@@ -380,6 +391,10 @@ pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
     ("LoginFlowSave", || Event::LoginFlowSave),
     ("LoginFlowCancel", || Event::LoginFlowCancel),
     ("ClearTransient", || Event::ClearTransient),
+    ("CopyLastResponse", || Event::CopyLastResponse),
+    ("GoToTop", || Event::GoToTop),
+    ("GoToBottom", || Event::GoToBottom),
+    ("ToggleVimMode", || Event::ToggleVimMode),
 ];
 
 impl Event {
@@ -482,6 +497,11 @@ impl Event {
             Event::SystemMessage { .. } => return None,
             Event::AtFilePicker => "AtFilePicker",
             Event::InsertAtRef(_) => return None,
+            Event::CopyToClipboard(_) => return None,
+            Event::CopyLastResponse => return None,
+            Event::GoToTop => return None,
+            Event::GoToBottom => return None,
+            Event::ToggleVimMode => return None,
             Event::CommandFormInput(_) => return None,
             Event::CommandFormBackspace => "CommandFormBackspace",
             Event::CommandFormUp => "CommandFormUp",
@@ -520,6 +540,9 @@ impl Event {
             Event::TransientMessage { .. } => return None,
             Event::TransientError { .. } => return None,
             Event::ClearTransient => "ClearTransient",
+            Event::GoToTop => "GoToTop",
+            Event::GoToBottom => "GoToBottom",
+            Event::ToggleVimMode => "ToggleVimMode",
         })
     }
 

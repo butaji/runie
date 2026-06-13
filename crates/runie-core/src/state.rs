@@ -294,6 +294,8 @@ pub struct ConfigState {
     /// Truncation limits for tool output. Loaded from `[truncation]` in
     /// `config.toml`. See `runie-agent::truncate::TruncationPolicy`.
     pub truncation: crate::config_reload::TruncationSection,
+    /// Vim-style scrollback navigation (opt-in).
+    pub vim_mode: bool,
     // Fields moved from AppState (Phase 1: add without removing outer fields)
     pub steering_mode: crate::model::DeliveryMode,
     pub follow_up_mode: crate::model::DeliveryMode,
@@ -325,6 +327,7 @@ impl Default for ConfigState {
             scoped_models: Vec::new(),
             scoped_index: 0,
             truncation: crate::config_reload::TruncationSection::default(),
+            vim_mode: false,
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),

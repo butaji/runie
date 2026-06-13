@@ -9,11 +9,19 @@ fn parse_providers(doc: &toml::Value) -> Vec<(String, String, Vec<String>)> {
             providers
                 .iter()
                 .map(|(name, val)| {
-                    let base_url = val.get("base_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let base_url = val
+                        .get("base_url")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
                     let models = val
                         .get("models")
                         .and_then(|v| v.as_array())
-                        .map(|arr| arr.iter().filter_map(|m| m.as_str().map(String::from)).collect())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|m| m.as_str().map(String::from))
+                                .collect()
+                        })
                         .unwrap_or_default();
                     (name.clone(), base_url, models)
                 })

@@ -1,11 +1,9 @@
 #[cfg(test)]
-mod appstate_structural;
-#[cfg(test)]
-pub(crate) mod visible_helper;
-#[cfg(test)]
 mod action_text;
 #[cfg(test)]
 mod agent;
+#[cfg(test)]
+mod appstate_structural;
 #[cfg(test)]
 mod autoscroll_bug;
 #[cfg(test)]
@@ -121,7 +119,6 @@ mod toggle_all;
 #[cfg(test)]
 mod toggle_stress;
 #[cfg(test)]
-
 #[cfg(test)]
 mod token_counters;
 #[cfg(test)]
@@ -130,6 +127,10 @@ mod tokens;
 mod turn_complete_order;
 #[cfg(test)]
 mod turn_complete_visibility;
+#[cfg(test)]
+mod vim_mode;
+#[cfg(test)]
+pub(crate) mod visible_helper;
 
 #[cfg(test)]
 mod copy;

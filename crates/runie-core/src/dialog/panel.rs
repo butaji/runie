@@ -1,8 +1,8 @@
 //! Panel state and builder methods.
 
-use super::{ItemAction, PanelItem};
-use super::score::match_score;
 use super::item::parse_accel;
+use super::score::match_score;
+use super::{ItemAction, PanelItem};
 
 /// Visual layout of a panel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -107,12 +107,7 @@ impl Panel {
     }
 
     /// Add a toggle (checkbox) item.
-    pub fn toggle(
-        mut self,
-        label: impl Into<String>,
-        value: bool,
-        action: ItemAction,
-    ) -> Self {
+    pub fn toggle(mut self, label: impl Into<String>, value: bool, action: ItemAction) -> Self {
         self.items.push(PanelItem::Toggle {
             label: label.into(),
             value,

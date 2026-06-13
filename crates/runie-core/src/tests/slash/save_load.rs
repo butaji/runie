@@ -1,6 +1,6 @@
+use super::{exec, fresh_state, minimal_session, tmp_store, type_str, ENV_LOCK};
 use crate::event::Event;
 use crate::model::{ChatMessage, Role};
-use super::{exec, fresh_state, minimal_session, tmp_store, type_str, ENV_LOCK};
 
 #[test]
 fn load_restores_conversation() {
@@ -14,8 +14,20 @@ fn load_restores_conversation() {
     session.provider = "anthropic".into();
     session.model = "claude-3".into();
     session.messages = vec![
-        ChatMessage { role: Role::User, content: "hi".into(), timestamp: 1.0, id: "req.0".into(), ..Default::default() },
-        ChatMessage { role: Role::Assistant, content: "hello there".into(), timestamp: 2.0, id: "resp.0".into(), ..Default::default() },
+        ChatMessage {
+            role: Role::User,
+            content: "hi".into(),
+            timestamp: 1.0,
+            id: "req.0".into(),
+            ..Default::default()
+        },
+        ChatMessage {
+            role: Role::Assistant,
+            content: "hello there".into(),
+            timestamp: 2.0,
+            id: "resp.0".into(),
+            ..Default::default()
+        },
     ];
     store.save("restore_me", &session).unwrap();
 
@@ -29,7 +41,12 @@ fn load_restores_conversation() {
     assert_eq!(state.config.current_provider, "anthropic");
     assert_eq!(state.config.current_model, "claude-3");
 
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
     assert!(sys_msgs.iter().any(|m| m.content.contains("loaded")));
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
@@ -97,10 +114,23 @@ fn sessions_lists_saved_sessions() {
     type_str(&mut state, "/sessions");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("alpha"), "lists alpha: {}", last.content);
-    assert!(last.content.contains("beta"), "lists beta: {}", last.content);
+    assert!(
+        last.content.contains("alpha"),
+        "lists alpha: {}",
+        last.content
+    );
+    assert!(
+        last.content.contains("beta"),
+        "lists beta: {}",
+        last.content
+    );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }
@@ -147,9 +177,18 @@ fn delete_removes_session_file() {
 
     assert!(!store.path("gone").exists(), "session file removed");
 
-    let sys_msgs: Vec<_> = state.session.messages.iter().filter(|m| m.role == Role::System).collect();
+    let sys_msgs: Vec<_> = state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect();
     let last = sys_msgs.last().expect("system msg");
-    assert!(last.content.contains("deleted"), "confirmation shown: {}", last.content);
+    assert!(
+        last.content.contains("deleted"),
+        "confirmation shown: {}",
+        last.content
+    );
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

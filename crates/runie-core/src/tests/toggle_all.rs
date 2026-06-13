@@ -25,7 +25,10 @@ fn collapse_all_when_some_expanded() {
 
     assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed, "All expanded => collapse all globally");
+    assert!(
+        state.view.all_collapsed,
+        "All expanded => collapse all globally"
+    );
 }
 
 #[test]
@@ -48,7 +51,10 @@ fn expand_all_when_all_collapsed() {
     state.view.all_collapsed = true;
 
     state.update(Event::ToggleExpand);
-    assert!(!state.view.all_collapsed, "All collapsed => expand all globally");
+    assert!(
+        !state.view.all_collapsed,
+        "All collapsed => expand all globally"
+    );
 }
 
 #[test]

@@ -113,6 +113,24 @@ pub fn send_ctrl_c(p: &mut PtySession) -> Result<(), Error> {
     p.flush()
 }
 
+/// Send Ctrl+U (clear line).
+pub fn send_ctrl_u(p: &mut PtySession) -> Result<(), Error> {
+    p.send_control('u')?;
+    p.flush()
+}
+
+/// Send Tab.
+pub fn send_tab(p: &mut PtySession) -> Result<(), Error> {
+    p.send("\t")?;
+    p.flush()
+}
+
+/// Send a raw CSI sequence (ESC [ <seq> ).
+pub fn send_csi(p: &mut PtySession, seq: &str) -> Result<(), Error> {
+    p.send(&format!("\x1b[{}]", seq))?;
+    p.flush()
+}
+
 /// Resize the PTY to the given dimensions and notify the child.
 pub fn resize(p: &mut PtySession, rows: u16, cols: u16) -> Result<(), Error> {
     use std::os::unix::io::AsRawFd;
@@ -180,4 +198,22 @@ pub fn assert_no_panic(output: &str) {
         "thread panic detected: {}",
         output
     );
+}
+
+/// Assert that no status timer has been stuck for 1000+ seconds.
+pub fn assert_no_stuck_timer(output: &str) {
+    use regex::Regex;
+    let re = Regex::new(r"\d{4}\.\d+s").expect("valid regex");
+    assert!(
+        !re.is_match(output),
+        "stuck timer detected: {}",
+        output
+    );
+}
+
+/// Kill the process gracefully and return the full captured PTY output.
+pub fn capture_output(p: &mut PtySession) -> String {
+    p.process_mut().set_kill_timeout(Some(2_000));
+    p.process_mut().exit().ok();
+    p.exp_eof().unwrap_or_default()
 }

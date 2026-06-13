@@ -24,7 +24,11 @@ pub fn control_event(state: &mut AppState, event: Event) {
             state.view.cached_session_tree_valid = false;
         }
         Event::SessionTreeSelect { id } => state.session_tree_select(&id),
-        Event::SpawnAgent { .. } | Event::Suspend | Event::ShareSession | Event::OpenExternalEditor => {}
+        Event::CopyToClipboard(_) | Event::CopyLastResponse => {}
+        Event::SpawnAgent { .. }
+        | Event::Suspend
+        | Event::ShareSession
+        | Event::OpenExternalEditor => {}
         _ => {}
     }
 }

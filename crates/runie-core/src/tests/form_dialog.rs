@@ -339,13 +339,15 @@ fn form_button_activated_by_accelerator() {
         .item("_Cancel", ItemAction::Emit(crate::Event::LoginFlowCancel));
     // On a form field, typing 'c' should type into the field
     panel.selected = 0;
-    let action = crate::update::dialog_form::form_panel_action(&mut panel, crate::Event::Input('c'));
+    let action =
+        crate::update::dialog_form::form_panel_action(&mut panel, crate::Event::Input('c'));
     assert!(matches!(action, crate::update::FormAction::KeepOpen));
     assert_eq!(panel.form_values.get("name"), Some(&"c".to_string()));
 
     // On a button, typing 'c' should activate Cancel
     panel.selected = 2;
-    let action = crate::update::dialog_form::form_panel_action(&mut panel, crate::Event::Input('c'));
+    let action =
+        crate::update::dialog_form::form_panel_action(&mut panel, crate::Event::Input('c'));
     assert!(matches!(
         action,
         crate::update::FormAction::Submit(Some(crate::Event::LoginFlowCancel))

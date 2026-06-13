@@ -135,7 +135,11 @@ fn export_creates_file() {
 fn import_loads_file() {
     let mut state = fresh_state();
     let tmp = std::env::temp_dir().join(format!("runie_import_{}.json", std::process::id()));
-    std::fs::write(&tmp, serde_json::to_string_pretty(&imported_session()).unwrap()).unwrap();
+    std::fs::write(
+        &tmp,
+        serde_json::to_string_pretty(&imported_session()).unwrap(),
+    )
+    .unwrap();
     let path = tmp.to_string_lossy();
     exec(&mut state, &format!("/import {}", path)); // Opens form with pre-filled path
     state.update(Event::Submit); // Submits the form
@@ -144,9 +148,15 @@ fn import_loads_file() {
     assert_eq!(state.config.current_provider, "openai");
     assert_eq!(state.config.current_model, "gpt-4o");
     assert_eq!(state.config.theme_name, "tokyo-night");
-    assert_eq!(state.config.thinking_level, crate::model::ThinkingLevel::Medium);
+    assert_eq!(
+        state.config.thinking_level,
+        crate::model::ThinkingLevel::Medium
+    );
     assert!(state.config.read_only);
-    assert_eq!(state.session.session_display_name, Some("My Session".to_string()));
+    assert_eq!(
+        state.session.session_display_name,
+        Some("My Session".to_string())
+    );
     let _ = std::fs::remove_file(&tmp);
 }
 

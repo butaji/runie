@@ -138,7 +138,8 @@ fn streaming_bump_moves_assistant_to_end() {
         msg(Role::Assistant, "A1", 2.0, "req.0"),
         msg(Role::User, "Q2", 3.0, "u1"),
     ]);
-    state.session
+    state
+        .session
         .messages
         .iter_mut()
         .find(|m| m.role == Role::Assistant && m.id == "req.0")

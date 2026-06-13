@@ -228,10 +228,22 @@ fn turn_complete_before_next_turn_user_message() {
         &[
             Event::AgentThinking { id: "req.0".into() },
             Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart { id: "req.0".into(), name: "ls".into() },
-            Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "First turn".into() },
-            Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "ls".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: "a".into(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "First turn".into(),
+            },
+            Event::AgentTurnComplete {
+                id: "req.0".into(),
+                duration_secs: 1.0,
+            },
             Event::AgentDone { id: "req.0".into() },
         ],
     );
@@ -246,9 +258,19 @@ fn turn_complete_before_next_turn_user_message() {
     state.ensure_fresh();
 
     let kinds = element_kinds_no_spacer(&state);
-    let turn_pos = kinds.iter().position(|k| k == "Turn").expect("TurnComplete should exist");
-    let user_pos = kinds.iter().position(|k| k == "User").expect("User should exist");
-    assert!(turn_pos < user_pos, "TurnComplete should be before user2: got {:?}", kinds);
+    let turn_pos = kinds
+        .iter()
+        .position(|k| k == "Turn")
+        .expect("TurnComplete should exist");
+    let user_pos = kinds
+        .iter()
+        .position(|k| k == "User")
+        .expect("User should exist");
+    assert!(
+        turn_pos < user_pos,
+        "TurnComplete should be before user2: got {:?}",
+        kinds
+    );
 }
 
 #[test]

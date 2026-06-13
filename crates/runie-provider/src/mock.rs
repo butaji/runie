@@ -137,11 +137,19 @@ impl MockStreamingProvider {
         } else {
             50
         };
-        Self { chunk_size: 1, delay_ms, total_chunks: None }
+        Self {
+            chunk_size: 1,
+            delay_ms,
+            total_chunks: None,
+        }
     }
 
     pub fn with_variable_rate() -> Self {
-        Self { chunk_size: 1, delay_ms: 30, total_chunks: None }
+        Self {
+            chunk_size: 1,
+            delay_ms: 30,
+            total_chunks: None,
+        }
     }
 }
 

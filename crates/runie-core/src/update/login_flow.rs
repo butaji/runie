@@ -5,7 +5,10 @@
 //! back stack for Android-like ESC semantics.
 
 use crate::dialog::{Panel, PanelStack};
-use crate::login_flow::{build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState, LoginStep};
+use crate::login_flow::{
+    build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
+    LoginStep,
+};
 
 /// Event handler for providers dialog (not part of the login flow state machine).
 /// Routes `ProvidersDialog`, `ProvidersSelectModel`, `ProvidersDisconnect`, `ProvidersAdd`.
@@ -38,10 +41,9 @@ fn open_providers_dialog(state: &mut crate::model::AppState) {
     if let Some(current) = state.open_dialog.take() {
         state.dialog_back_stack.push(current);
     }
-    state.open_dialog = Some(crate::commands::DialogState::PanelStack(build_providers_dialog(
-        &state.config.current_provider,
-        &state.config.current_model,
-    )));
+    state.open_dialog = Some(crate::commands::DialogState::PanelStack(
+        build_providers_dialog(&state.config.current_provider, &state.config.current_model),
+    ));
     state.mark_dirty();
 }
 
@@ -200,12 +202,9 @@ fn login_flow_save(state: &mut crate::model::AppState) {
             .unwrap_or_default();
         let selected: Vec<String> = flow.selected_models.iter().cloned().collect::<Vec<_>>();
         let provider = flow.provider.clone();
-        if let Err(e) = crate::login_config::save_provider_config(
-            &provider,
-            &base_url,
-            &flow.key,
-            &selected,
-        ) {
+        if let Err(e) =
+            crate::login_config::save_provider_config(&provider, &base_url, &flow.key, &selected)
+        {
             state.add_system_msg(format!("Failed to save provider config: {}", e));
             return;
         }

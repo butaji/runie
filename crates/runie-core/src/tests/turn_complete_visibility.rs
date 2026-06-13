@@ -223,10 +223,22 @@ fn second_turn_independent_action_count() {
         &[
             Event::AgentThinking { id: "req.0".into() },
             Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart { id: "req.0".into(), name: "ls".into() },
-            Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() },
-            Event::AgentResponse { id: "req.0".into(), content: "First".into() },
-            Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "ls".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: "a".into(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "First".into(),
+            },
+            Event::AgentTurnComplete {
+                id: "req.0".into(),
+                duration_secs: 1.0,
+            },
             Event::AgentDone { id: "req.0".into() },
         ],
     );
@@ -234,10 +246,22 @@ fn second_turn_independent_action_count() {
         &mut state,
         &[
             Event::AgentThinking { id: "req.1".into() },
-            Event::AgentToolStart { id: "req.1".into(), name: "cat".into() },
-            Event::AgentToolEnd { duration_secs: 0.3, output: "b".into() },
-            Event::AgentResponse { id: "req.1".into(), content: "Second".into() },
-            Event::AgentTurnComplete { id: "req.1".into(), duration_secs: 0.8 },
+            Event::AgentToolStart {
+                id: "req.1".into(),
+                name: "cat".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.3,
+                output: "b".into(),
+            },
+            Event::AgentResponse {
+                id: "req.1".into(),
+                content: "Second".into(),
+            },
+            Event::AgentTurnComplete {
+                id: "req.1".into(),
+                duration_secs: 0.8,
+            },
             Event::AgentDone { id: "req.1".into() },
         ],
     );
