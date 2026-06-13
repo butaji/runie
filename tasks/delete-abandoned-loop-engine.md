@@ -93,29 +93,29 @@ None of those steps happened.
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-agent/src/loop_engine/` directory is removed
+- [x] `crates/runie-agent/src/loop_engine/` directory is removed
   (1,623 lines)
-- [ ] `crates/runie-agent/src/events.rs` is removed (205 lines)
-- [ ] `crates/runie-agent/src/state.rs` is removed (24 lines)
-- [ ] `git grep -nE 'loop_engine|use crate::events|use crate::state'`
+- [x] `crates/runie-agent/src/events.rs` is removed (205 lines)
+- [x] `crates/runie-agent/src/state.rs` is removed (24 lines)
+- [x] `git grep -nE 'loop_engine|use crate::events|use crate::state'`
   in `crates/` returns zero hits (except in `crates/_archive/` if
   those references are intentional)
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds (1,569 tests, same as
+- [x] `cargo build --workspace` succeeds
+- [x] `cargo test --workspace` succeeds (1,569 tests, same as
   before)
-- [ ] The deletion is in a single commit with a clear message
+- [x] The deletion is in a single commit with a clear message
   documenting the abandoned refactor
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds with the same test count
+- [x] `cargo build --workspace` succeeds
+- [x] `cargo test --workspace` succeeds with the same test count
   as before the deletion (1,569)
-- [ ] `cargo clippy --workspace` has no new warnings
+- [x] `cargo clippy --workspace` has no new warnings
 
 ### Layer 4 — Smoke
-- [ ] `cargo run -p runie-term --bin runie` starts the TUI without
+- [x] `cargo run -p runie-term --bin runie` starts the TUI without
   panicking (the live `turn.rs` is still wired up)
 
 ## Notes

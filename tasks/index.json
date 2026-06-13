@@ -123,10 +123,11 @@
     },
     {
       "id": "delete-abandoned-loop-engine",
-      "status": "todo",
+      "status": "done",
       "milestone": "R1",
       "category": "Core Architecture",
-      "priority": "P1"
+      "priority": "P1",
+      "completed_in": "ad8ae788"
     },
     {
       "id": "delete-runie-tui-dead-code",
