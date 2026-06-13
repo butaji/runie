@@ -5,6 +5,7 @@ pub mod context7;
 pub mod diff;
 pub mod parser;
 pub mod path_utils;
+pub mod profiles;
 pub mod safety;
 pub mod subagent;
 pub mod tools;
