@@ -3,6 +3,7 @@
 use crate::commands::DialogState;
 use crate::event::Event;
 use crate::model::{AppState, DeliveryMode};
+use crate::settings::{SettingValue, SettingsCategory};
 use crate::update::settings_dialog::build_setting_items;
 
 fn settings_selected(state: &AppState) -> Option<usize> {
@@ -166,4 +167,150 @@ fn settings_select_cycles_theme() {
         state.update(Event::SettingsDown);
     }
     assert_ne!(state.config.theme_name, "runie");
+}
+
+// =========================================================================
+// Coverage: every key in config.toml that is user-tunable must appear
+// in the settings dialog.
+// =========================================================================
+
+fn has_item(state: &AppState, key: &str) -> bool {
+    build_setting_items(state).iter().any(|i| i.key == key)
+}
+
+fn has_label(state: &AppState, label: &str) -> bool {
+    build_setting_items(state).iter().any(|i| i.label == label)
+}
+
+fn find_index(state: &AppState, label: &str) -> Option<usize> {
+    build_setting_items(state)
+        .iter()
+        .position(|i| i.label == label)
+}
+
+fn select_by_label(state: &mut AppState, label: &str) {
+    let count = settings_count(&state);
+    for _ in 0..count {
+        let is_match = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
+            stack
+                .current()
+                .and_then(|p| p.selected_item())
+                .and_then(|i| i.label())
+                == Some(label)
+        } else {
+            false
+        };
+        if is_match {
+            state.update(Event::SettingsSelect);
+            return;
+        }
+        state.update(Event::SettingsDown);
+    }
+    panic!("setting label {:?} not found", label);
+}
+
+#[test]
+fn settings_includes_vim_mode_toggle() {
+    let state = AppState::default();
+    assert!(
+        has_item(&state, "vim_mode"),
+        "settings must expose vim_mode (from [ui] vim_mode)"
+    );
+    assert!(
+        has_label(&state, "Vim Navigation"),
+        "settings must have a 'Vim Navigation' row"
+    );
+}
+
+#[test]
+fn settings_vim_mode_default_is_false() {
+    let state = AppState::default();
+    let item = build_setting_items(&state)
+        .into_iter()
+        .find(|i| i.key == "vim_mode")
+        .expect("vim_mode item");
+    assert!(matches!(item.value, SettingValue::Bool(false)));
+}
+
+#[test]
+fn settings_select_toggles_vim_mode() {
+    let mut state = AppState::default();
+    assert!(!state.config.vim_mode);
+    state.update(Event::ToggleSettingsDialog);
+    select_by_label(&mut state, "Vim Navigation");
+    assert!(state.config.vim_mode, "select should turn vim_mode on");
+    state.update(Event::ToggleSettingsDialog);
+    select_by_label(&mut state, "Vim Navigation");
+    assert!(!state.config.vim_mode, "select should turn vim_mode off");
+}
+
+#[test]
+fn settings_includes_telemetry_toggle() {
+    let state = AppState::default();
+    assert!(
+        has_item(&state, "telemetry_enabled"),
+        "settings must expose telemetry.enabled"
+    );
+}
+
+#[test]
+fn settings_select_toggles_telemetry() {
+    let mut state = AppState::default();
+    assert!(!state.config.telemetry.is_enabled());
+    state.update(Event::ToggleSettingsDialog);
+    select_by_label(&mut state, "Telemetry");
+    assert!(
+        state.config.telemetry.is_enabled(),
+        "select should turn telemetry on"
+    );
+}
+
+#[test]
+fn settings_includes_truncation_fields() {
+    let state = AppState::default();
+    assert!(has_item(&state, "truncation_max_lines"));
+    assert!(has_item(&state, "truncation_max_bytes"));
+}
+
+#[test]
+fn settings_truncation_defaults_match_config() {
+    let state = AppState::default();
+    let lines_item = build_setting_items(&state)
+        .into_iter()
+        .find(|i| i.key == "truncation_max_lines")
+        .expect("truncation_max_lines item");
+    if let SettingValue::Enum { current, options } = &lines_item.value {
+        assert_eq!(current, "2000");
+        assert!(options.iter().any(|o| o == "2000"));
+    } else {
+        panic!("truncation_max_lines should be Enum");
+    }
+}
+
+#[test]
+fn settings_vim_mode_row_in_behavior_category() {
+    let state = AppState::default();
+    let item = build_setting_items(&state)
+        .into_iter()
+        .find(|i| i.key == "vim_mode")
+        .expect("vim_mode item");
+    assert!(matches!(item.category, SettingsCategory::Behavior));
+}
+
+#[test]
+fn settings_contains_every_runtime_tunable_config_key() {
+    // The settings dialog must expose every field that the user can change
+    // at runtime and that comes from config.toml.
+    let state = AppState::default();
+    for key in [
+        "vim_mode",
+        "telemetry_enabled",
+        "truncation_max_lines",
+        "truncation_max_bytes",
+    ] {
+        assert!(
+            has_item(&state, key),
+            "settings must contain config key {key}"
+        );
+    }
 }
