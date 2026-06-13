@@ -9,16 +9,16 @@ fn fresh_state() -> AppState {
 #[test]
 fn test_agent_thinking_sets_streaming() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").think();
-    assert!(state.streaming);
-    assert!(state.thinking_started_at.is_some());
+    assert!(state.agent.streaming);
+    assert!(state.agent.thinking_started_at.is_some());
 }
 
 #[test]
 fn test_agent_response_creates_message() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").think().thought_done().respond("Hello");
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.session.messages[1].role, Role::Assistant);
@@ -28,7 +28,7 @@ fn test_agent_response_creates_message() {
 #[test]
 fn test_agent_response_appends_to_existing() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").think().thought_done();
     state.agent("req.0").respond("Hello ");
     state.agent("req.0").respond("World");
@@ -41,19 +41,19 @@ fn test_agent_response_appends_to_existing() {
 #[test]
 fn test_agent_done_clears_streaming() {
     let mut state = fresh_state();
-    state.streaming = true;
-    state.thinking_started_at = Some(std::time::Instant::now());
+    state.agent.streaming = true;
+    state.agent.thinking_started_at = Some(std::time::Instant::now());
     state.agent("req.0").done();
-    assert!(!state.streaming);
-    assert!(state.thinking_started_at.is_none());
+    assert!(!state.agent.streaming);
+    assert!(state.agent.thinking_started_at.is_none());
 }
 
 #[test]
 fn test_agent_error_creates_error_message() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").error("Something went wrong");
-    assert!(!state.streaming);
+    assert!(!state.agent.streaming);
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::Assistant);
     assert!(state.session.messages[0].content.contains("Error"));
@@ -154,7 +154,7 @@ fn tool_end_updates_timestamp() {
 #[test]
 fn thought_marker_comes_before_response_in_event_order() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").think().respond("Hello").thought_done();
     let roles: Vec<&str> = state
         .session
@@ -169,7 +169,7 @@ fn thought_marker_comes_before_response_in_event_order() {
 fn thought_marker_ordered_by_timestamp_in_feed() {
     use crate::ui::LazyCache;
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").think().respond("Hello").thought_done();
     let feed = LazyCache::feed(&state);
     let kinds: Vec<&str> = feed
@@ -190,7 +190,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
 fn thinking_indicator_ordered_by_timestamp() {
     use crate::ui::LazyCache;
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.agent("req.0").think().respond("Hello");
     let feed = LazyCache::feed(&state);
     let kinds: Vec<&str> = feed

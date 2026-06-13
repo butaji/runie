@@ -17,7 +17,7 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
 #[test]
 fn e2e_toggle_collapses_all_thoughts_and_tools() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
@@ -41,7 +41,7 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
     );
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle should set global collapse");
+    assert!(state.view.all_collapsed, "Toggle should set global collapse");
 
     let after = render_content(&mut state);
     assert!(
@@ -53,7 +53,7 @@ fn e2e_toggle_collapses_all_thoughts_and_tools() {
 #[test]
 fn e2e_toggle_expands_back_on_second_press() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
@@ -79,7 +79,7 @@ fn e2e_toggle_expands_back_on_second_press() {
 
     state.update(Event::ToggleExpand);
     let expanded = render_content(&mut state);
-    assert!(!state.all_collapsed, "Second toggle should expand all");
+    assert!(!state.view.all_collapsed, "Second toggle should expand all");
     assert!(
         expanded.contains("I'll list files"),
         "Expanded thought should show reasoning"
@@ -89,7 +89,7 @@ fn e2e_toggle_expands_back_on_second_press() {
 #[test]
 fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -100,7 +100,7 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
         ],
     );
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed);
+    assert!(state.view.all_collapsed);
     dispatch(
         &mut state,
         &[
@@ -122,7 +122,7 @@ fn e2e_all_collapsed_stays_collapsed_through_tool_execution() {
 #[test]
 fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -133,7 +133,7 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
         ],
     );
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed);
+    assert!(state.view.all_collapsed);
     dispatch(
         &mut state,
         &[
@@ -154,7 +154,7 @@ fn e2e_all_collapsed_stays_collapsed_after_agent_response() {
 #[test]
 fn e2e_new_thought_respects_global_collapse() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
@@ -168,7 +168,7 @@ fn e2e_new_thought_respects_global_collapse() {
     });
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed);
+    assert!(state.view.all_collapsed);
 
     state.update(Event::AgentThinking {
         id: "req.1".to_string(),
@@ -194,7 +194,7 @@ fn e2e_new_thought_respects_global_collapse() {
 #[test]
 fn e2e_running_tool_always_expanded() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),
@@ -203,7 +203,7 @@ fn e2e_running_tool_always_expanded() {
     state.update(Event::ToggleExpand);
 
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Global flag should flip even with running tool"
     );
 
@@ -217,7 +217,7 @@ fn e2e_running_tool_always_expanded() {
 #[test]
 fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
@@ -241,7 +241,7 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
 
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
     );
 
@@ -252,7 +252,7 @@ fn e2e_global_toggle_collapses_mixed_thought_and_tool() {
 #[test]
 fn e2e_full_turn_with_global_toggle() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[

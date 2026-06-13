@@ -140,11 +140,11 @@ fn steering_delivered_before_follow_up() {
 fn delivery_mode_defaults_to_one_at_a_time() {
     let state = AppState::default();
     assert!(matches!(
-        state.steering_mode,
+        state.config.steering_mode,
         crate::model::DeliveryMode::OneAtATime
     ));
     assert!(matches!(
-        state.follow_up_mode,
+        state.config.follow_up_mode,
         crate::model::DeliveryMode::OneAtATime
     ));
 }
@@ -154,7 +154,7 @@ fn steering_mode_all_batches_messages() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.steering_mode = DeliveryMode::All;
+    state.config.steering_mode = DeliveryMode::All;
 
     // Queue three steering messages
     state.update(Event::Input('a'));
@@ -183,7 +183,7 @@ fn follow_up_mode_all_batches_messages() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.follow_up_mode = DeliveryMode::All;
+    state.config.follow_up_mode = DeliveryMode::All;
     // Queue three follow-up messages
     state.update(Event::Input('x'));
     state.update(Event::FollowUp);
@@ -220,7 +220,7 @@ fn one_at_a_time_delivers_separately() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.steering_mode = DeliveryMode::OneAtATime;
+    state.config.steering_mode = DeliveryMode::OneAtATime;
 
     // Queue three steering messages
     state.update(Event::Input('a'));
@@ -254,8 +254,8 @@ fn steering_and_follow_up_modes_independent() {
     use crate::model::DeliveryMode;
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.steering_mode = DeliveryMode::All;
-    state.follow_up_mode = DeliveryMode::OneAtATime;
+    state.config.steering_mode = DeliveryMode::All;
+    state.config.follow_up_mode = DeliveryMode::OneAtATime;
 
     // Queue two steering and two follow-up
     state.update(Event::Input('a'));

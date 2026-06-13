@@ -68,7 +68,7 @@ pub fn simulate_tool_call(state: &mut AppState, i: usize) {
     state.update(Event::Input('l'));
     state.update(Event::Submit);
     state.pop_queue();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: id.clone() });
     state.update(Event::AgentThoughtDone { id: id.clone() });
     state.update(Event::AgentToolStart {

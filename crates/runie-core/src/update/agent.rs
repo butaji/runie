@@ -4,11 +4,11 @@ use crate::model::{AppState, ChatMessage, Role};
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {
-        self.streaming = true;
+        self.agent.streaming = true;
         self.agent.current_request_id = Some(id);
-        self.thinking_started_at = Some(std::time::Instant::now());
+        self.agent.thinking_started_at = Some(std::time::Instant::now());
         self.agent.turn_active = true;
-        self.current_action = Some("Thinking".to_string());
+        self.agent.current_action = Some("Thinking".to_string());
         self.agent
             .turn_started_at
             .get_or_insert_with(std::time::Instant::now);
@@ -24,8 +24,8 @@ impl AppState {
 
     pub(crate) fn add_thought(&mut self, id: String) {
         let duration = self.thinking_elapsed_secs().unwrap_or(0.0);
-        self.current_action = None;
-        self.thinking_started_at = None;
+        self.agent.current_action = None;
+        self.agent.thinking_started_at = None;
         let mut insert_idx = self.session.messages.len();
         let thought_content = if let Some(idx) = self
             .session
@@ -47,8 +47,8 @@ impl AppState {
         } else {
             thought_with_time(duration)
         };
-        let thought_id = format!("{}#thought.{}", id, self.thought_seq);
-        self.thought_seq += 1;
+        let thought_id = format!("{}#thought.{}", id, self.agent.thought_seq);
+        self.agent.thought_seq += 1;
         let thought = ChatMessage {
             role: Role::Thought,
             content: thought_content,
@@ -64,9 +64,9 @@ impl AppState {
         self.agent.current_request_id = Some(id.clone());
         self.agent.current_tool_name = Some(name.clone());
         self.agent.tool_started_at = Some(std::time::Instant::now());
-        self.intermediate_step_count += 1;
-        self.current_action = Some(format!("Running {}", name));
-        let tool_id = format!("tool.{}.{}", id, self.intermediate_step_count);
+        self.agent.intermediate_step_count += 1;
+        self.agent.current_action = Some(format!("Running {}", name));
+        let tool_id = format!("tool.{}.{}", id, self.agent.intermediate_step_count);
         self.session.messages.push(ChatMessage {
             role: Role::Tool,
             content: tool_running(&name),
@@ -74,7 +74,7 @@ impl AppState {
             id: tool_id,
             ..Default::default()
         });
-        self.telemetry.track_event("tool_usage", {
+        self.config.telemetry.track_event("tool_usage", {
             let mut m = std::collections::HashMap::new();
             m.insert("tool".into(), name);
             m
@@ -83,7 +83,7 @@ impl AppState {
     }
 
     pub(crate) fn end_tool(&mut self, duration_secs: f64, output: String) {
-        self.current_action = None;
+        self.agent.current_action = None;
         self.agent.tool_started_at = None;
         if let Some(name) = self.agent.current_tool_name.take() {
             if let Some(idx) = self
@@ -114,7 +114,7 @@ impl AppState {
         }
 
         // O(1) lookup using cached last_assistant_index
-        if let Some(idx) = self.last_assistant_index {
+        if let Some(idx) = self.agent.last_assistant_index {
             if let Some(msg) = self.session.messages.get_mut(idx) {
                 if msg.role == Role::Assistant && msg.id == id {
                     if !content.is_empty() {
@@ -138,7 +138,7 @@ impl AppState {
                     msg.content.push_str(&content);
                 }
                 msg.timestamp = now();
-                self.last_assistant_index = Some(idx);
+                self.agent.last_assistant_index = Some(idx);
                 self.messages_changed();
                 return;
             }
@@ -154,7 +154,7 @@ impl AppState {
                 provider: self.config.current_provider.clone(),
             });
             self.agent.current_request_id = Some(id);
-            self.last_assistant_index = Some(idx);
+            self.agent.last_assistant_index = Some(idx);
             self.messages_changed();
         }
     }
@@ -213,9 +213,9 @@ impl AppState {
             self.agent.current_request_id = None;
         }
         self.agent.current_tool_name = None;
-        self.current_action = None;
-        self.intermediate_step_count = 0;
-        self.thought_seq = 0;
+        self.agent.current_action = None;
+        self.agent.intermediate_step_count = 0;
+        self.agent.thought_seq = 0;
         self.agent.turn_active = false;
         self.agent.turn_started_at = None;
         self.agent.inflight = self.agent.inflight.saturating_sub(1);
@@ -227,9 +227,9 @@ impl AppState {
 
     fn maybe_end_streaming(&mut self) {
         if self.agent.inflight == 0 && self.agent.request_queue.is_empty() {
-            self.streaming = false;
+            self.agent.streaming = false;
             if self.agent.current_request_id.is_none() {
-                self.thinking_started_at = None;
+                self.agent.thinking_started_at = None;
             }
         }
     }
@@ -251,8 +251,8 @@ impl AppState {
                 agent.timestamp = now();
                 self.session.messages.insert(t_idx, agent);
                 // Update cached index if it was affected
-                if self.last_assistant_index == Some(a_idx) {
-                    self.last_assistant_index = Some(t_idx);
+                if self.agent.last_assistant_index == Some(a_idx) {
+                    self.agent.last_assistant_index = Some(t_idx);
                 }
             }
         }
@@ -269,16 +269,16 @@ impl AppState {
             turn_complete.timestamp = now();
             self.session.messages.push(turn_complete);
             // Update cached index if it was affected
-            if let Some(last_idx) = self.last_assistant_index {
+            if let Some(last_idx) = self.agent.last_assistant_index {
                 if last_idx >= idx {
-                    self.last_assistant_index = Some(last_idx.saturating_sub(1));
+                    self.agent.last_assistant_index = Some(last_idx.saturating_sub(1));
                 }
             }
         }
     }
 
     pub(crate) fn add_error(&mut self, id: String, message: String) {
-        self.streaming = false;
+        self.agent.streaming = false;
         let mut error = ChatMessage {
             role: Role::Assistant,
             content: format!("Error: {}", message),

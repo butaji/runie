@@ -23,9 +23,9 @@ fn collapse_all_when_some_expanded() {
         ..Default::default()
     });
 
-    assert!(!state.all_collapsed, "Should start expanded");
+    assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "All expanded => collapse all globally");
+    assert!(state.view.all_collapsed, "All expanded => collapse all globally");
 }
 
 #[test]
@@ -45,10 +45,10 @@ fn expand_all_when_all_collapsed() {
         id: "x1".into(),
         ..Default::default()
     });
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
 
     state.update(Event::ToggleExpand);
-    assert!(!state.all_collapsed, "All collapsed => expand all globally");
+    assert!(!state.view.all_collapsed, "All collapsed => expand all globally");
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn running_tools_always_expanded_regardless_of_global_flag() {
     });
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Global flag should flip");
+    assert!(state.view.all_collapsed, "Global flag should flip");
     // Running tool renders as ToolRunning regardless of global flag
 }
 
@@ -79,7 +79,7 @@ fn toggle_all_empty_state_flips_flag() {
     let mut state = fresh_state();
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Toggle on empty state should flip global flag"
     );
 }
@@ -96,13 +96,13 @@ fn toggle_all_twice_restores_expanded() {
     });
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle 1: collapse all");
+    assert!(state.view.all_collapsed, "Toggle 1: collapse all");
 
     state.update(Event::ToggleExpand);
-    assert!(!state.all_collapsed, "Toggle 2: expand all");
+    assert!(!state.view.all_collapsed, "Toggle 2: expand all");
 
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle 3: collapse all again");
+    assert!(state.view.all_collapsed, "Toggle 3: collapse all again");
 }
 
 #[test]
@@ -120,13 +120,13 @@ fn toggle_all_with_many_items() {
 
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "All thoughts should be collapsed globally"
     );
 
     state.update(Event::ToggleExpand);
     assert!(
-        !state.all_collapsed,
+        !state.view.all_collapsed,
         "All thoughts should be expanded globally"
     );
 }
@@ -134,7 +134,7 @@ fn toggle_all_with_many_items() {
 #[test]
 fn new_thought_respects_global_collapse_when_true() {
     let mut state = fresh_state();
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
 
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
@@ -162,7 +162,7 @@ fn new_thought_respects_global_collapse_when_true() {
 #[test]
 fn new_thought_respects_global_expand_when_false() {
     let mut state = fresh_state();
-    state.all_collapsed = false;
+    state.view.all_collapsed = false;
 
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
@@ -190,7 +190,7 @@ fn new_thought_respects_global_expand_when_false() {
 #[test]
 fn new_tool_respects_global_collapse_when_true() {
     let mut state = fresh_state();
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
 
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),
@@ -216,7 +216,7 @@ fn new_tool_respects_global_collapse_when_true() {
 #[test]
 fn new_tool_respects_global_expand_when_false() {
     let mut state = fresh_state();
-    state.all_collapsed = false;
+    state.view.all_collapsed = false;
 
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),

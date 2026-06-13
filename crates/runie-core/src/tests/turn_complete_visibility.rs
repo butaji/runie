@@ -42,7 +42,7 @@ fn feed_has_turn_complete(state: &AppState) -> bool {
 #[test]
 fn single_thought_hides_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentResponse {
@@ -61,7 +61,7 @@ fn single_thought_hides_turn_complete() {
 #[test]
 fn tool_plus_thought_shows_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -88,7 +88,7 @@ fn tool_plus_thought_shows_turn_complete() {
 #[test]
 fn tool_only_hides_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "start".into(),
@@ -117,7 +117,7 @@ fn tool_only_hides_turn_complete() {
 #[test]
 fn two_thoughts_shows_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentThinking { id: "req.0".into() });
@@ -138,7 +138,7 @@ fn two_thoughts_shows_turn_complete() {
 #[test]
 fn two_tools_shows_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -173,7 +173,7 @@ fn two_tools_shows_turn_complete() {
 #[test]
 fn mixed_thought_tool_shows_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -200,7 +200,7 @@ fn mixed_thought_tool_shows_turn_complete() {
 #[test]
 fn zero_actions_hides_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "Hello".into(),
@@ -217,7 +217,7 @@ fn zero_actions_hides_turn_complete() {
 #[test]
 fn second_turn_independent_action_count() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -254,7 +254,7 @@ fn second_turn_independent_action_count() {
 #[test]
 fn three_mixed_actions_shows_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -283,7 +283,7 @@ fn three_mixed_actions_shows_turn_complete() {
 #[test]
 fn turn_complete_still_in_session_when_hidden() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentResponse {

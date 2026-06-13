@@ -56,7 +56,7 @@ fn two_messages_have_spacer_between_and_after() {
     let mut state = fresh_state();
     state.update(Event::Input('A'));
     state.update(Event::Submit);
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentResponse {
         id: "req.0".into(),
         content: "B".into(),

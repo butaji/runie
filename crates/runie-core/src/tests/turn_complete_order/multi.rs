@@ -36,7 +36,7 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
 #[test]
 fn turn_complete_deduplicated_on_duplicate_events() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     dispatch(
         &mut state,
         &[
@@ -62,7 +62,7 @@ fn turn_complete_deduplicated_on_duplicate_events() {
 #[test]
 fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -100,7 +100,7 @@ fn turn_complete_is_last_when_new_assistant_after_turn_complete() {
 #[test]
 fn turn_complete_is_last_when_error_after_turn_complete() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -137,7 +137,7 @@ fn turn_complete_is_last_when_error_after_turn_complete() {
 #[test]
 fn turn_complete_is_last_when_response_after_done() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -175,7 +175,7 @@ fn turn_complete_is_last_when_response_after_done() {
 #[test]
 fn turn_complete_is_last_when_thinking_after_done() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });
     state.update(Event::AgentToolStart {
@@ -234,7 +234,7 @@ fn run_turn(state: &mut AppState, id: &str, tool_name: &str, agent_content: &str
 #[test]
 fn turn_complete_order_preserved_across_multiple_turns() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     run_turn(&mut state, "req.0", "ls", "First turn");
     run_turn(&mut state, "req.1", "cat", "Second turn");
     state.ensure_fresh();

@@ -11,7 +11,7 @@ fn render(state: &mut AppState, width: u16, height: u16) -> String {
 #[test]
 fn agent_response_visible_after_large_tool() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     // Simulate mock provider: agent response BEFORE tool
     state.update(Event::AgentResponse {
@@ -49,7 +49,7 @@ fn agent_response_visible_after_large_tool() {
 #[test]
 fn agent_at_bottom_tool_files_above() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentResponse {
         id: "req.0".into(),
@@ -91,7 +91,7 @@ fn agent_at_bottom_tool_files_above() {
 #[test]
 fn turn_complete_always_last_visible() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentThoughtDone { id: "req.0".into() });

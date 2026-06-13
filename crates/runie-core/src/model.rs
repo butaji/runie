@@ -187,6 +187,18 @@ impl std::str::FromStr for ThinkingLevel {
         }
     }
 }
+/// Initialize git info and cwd name once at startup.
+pub fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
+    let cwd = std::env::current_dir().ok();
+    let cwd_name = cwd
+        .as_ref()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let git_info = cwd.as_ref().and_then(|p| detect_git_info(p));
+    (git_info, cwd_name)
+}
+
 pub use crate::scoped_model::ScopedModel;
 
 pub use crate::model_catalog::{
@@ -200,6 +212,7 @@ pub struct QueuedMessage {
 
 #[derive(Clone)]
 pub struct AppState {
+    // 6 inner state structs (factored domain state)
     pub session: crate::state::SessionState,
     pub input: crate::state::InputState,
     pub agent: crate::state::AgentState,
@@ -207,59 +220,36 @@ pub struct AppState {
     pub config: crate::state::ConfigState,
     pub completion: crate::state::CompletionState,
 
-    pub streaming: bool,
-    pub thinking_started_at: Option<std::time::Instant>,
-    pub steering_mode: DeliveryMode,
-    pub follow_up_mode: DeliveryMode,
-    pub next_id: u64,
-    pub intermediate_step_count: usize,
-    pub animation_frame: u32,
-    pub current_action: Option<String>,
-    pub registry: crate::commands::CommandRegistry,
+    // Singleton UI/control flags (don't fit a single domain)
+    /// Quit flag read by the main event loop
     pub should_quit: bool,
+    /// Currently open overlay dialog (palette, model selector, etc.)
     pub open_dialog: Option<crate::commands::DialogState>,
-    /// Global dialog back stack (Android-like). When a command from
-    /// the palette (or any dialog) opens a sub-dialog, the current
-    /// dialog is pushed here. Esc pops from this stack, restoring
-    /// the previous dialog. At the root, Esc closes the bar.
+    /// Stack for nested dialog navigation (Esc pops, restoring parent)
     pub dialog_back_stack: Vec<crate::commands::DialogState>,
+    /// Active login/auth flow overlay
     pub login_flow: Option<crate::login_flow::LoginFlowState>,
-    pub recent_models: Vec<String>,
-    pub pending_edits: Vec<crate::edit_preview::EditPreview>,
+    /// Command registry (loaded once, immutable per session)
+    pub registry: crate::commands::CommandRegistry,
+    /// Loaded skill definitions
     pub skills: Vec<crate::skills::Skill>,
-    pub telemetry: crate::telemetry::Telemetry,
+    /// Loaded prompt templates
     pub prompts: Vec<crate::prompts::PromptTemplate>,
-    pub current_prompt: String,
-    pub image_attachments: Vec<String>,
-    pub all_collapsed: bool,
-    pub(crate) last_assistant_index: Option<usize>,
-    pub(crate) thought_seq: u64,
-    pub(crate) input_history: Vec<String>,
+    /// Transient notification message (cleared after timeout)
     pub transient_message: Option<String>,
     pub transient_until: Option<std::time::Instant>,
     pub transient_level: Option<crate::event::TransientLevel>,
+    /// Git info detected at startup (repo name, branch)
     pub git_info: Option<crate::snapshot::GitInfo>,
+    /// Current working directory name (detected at startup)
     pub cwd_name: String,
-    cached_palette_items: Vec<(String, String, String)>,
-    cached_palette_filter: Option<String>,
-    cached_model_items: Vec<(String, String, String, bool, bool)>,
-    cached_model_filter: Option<String>,
-}
-
-fn init_git_and_cwd() -> (Option<crate::snapshot::GitInfo>, String) {
-    let cwd = std::env::current_dir().ok();
-    let cwd_name = cwd
-        .as_ref()
-        .and_then(|p| p.file_name())
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let git_info = cwd.as_ref().and_then(|p| detect_git_info(p));
-    (git_info, cwd_name)
+    /// Command input history (persistent across sessions)
+    pub input_history: Vec<String>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
-        let (git_info, cwd_name) = init_git_and_cwd();
+        let (git_info, cwd_name) = crate::model::init_git_and_cwd();
         Self {
             session: crate::state::SessionState::default(),
             input: crate::state::InputState::default(),
@@ -267,46 +257,28 @@ impl Default for AppState {
             view: crate::state::ViewState::default(),
             config: crate::state::ConfigState::default(),
             completion: crate::state::CompletionState::default(),
-            streaming: false,
-            thinking_started_at: None,
-            steering_mode: DeliveryMode::OneAtATime,
-            follow_up_mode: DeliveryMode::OneAtATime,
-            next_id: 0,
-            intermediate_step_count: 0,
-            animation_frame: 0,
-            current_action: None,
-            registry: crate::commands::CommandRegistry::new(),
             should_quit: false,
             open_dialog: None,
             dialog_back_stack: Vec::new(),
             login_flow: None,
-            recent_models: Vec::new(),
-            pending_edits: Vec::new(),
+            registry: crate::commands::CommandRegistry::new(),
             skills: Vec::new(),
-            telemetry: crate::telemetry::Telemetry::new(false),
             prompts: Vec::new(),
-            current_prompt: String::new(),
-            image_attachments: Vec::new(),
-            all_collapsed: false,
-            last_assistant_index: None,
-            thought_seq: 0,
-            input_history: Vec::new(),
             transient_message: None,
             transient_until: None,
             transient_level: None,
             git_info,
             cwd_name,
-            cached_palette_items: Vec::new(),
-            cached_palette_filter: None,
-            cached_model_items: Vec::new(),
-            cached_model_filter: None,
+            input_history: Vec::new(),
         }
     }
 }
 
 impl AppState {
     pub fn thinking_elapsed_secs(&self) -> Option<f64> {
-        self.thinking_started_at.map(|t| t.elapsed().as_secs_f64())
+        self.agent
+            .thinking_started_at
+            .map(|t| t.elapsed().as_secs_f64())
     }
 
     pub fn turn_elapsed_secs(&self) -> Option<f64> {
@@ -323,12 +295,12 @@ impl AppState {
 
     /// Braille spinner frame (12-frame cycle)
     pub fn spinner_frame(&self) -> char {
-        SPINNER_CHARS[(self.animation_frame % SPINNER_FRAMES) as usize]
+        SPINNER_CHARS[(self.view.animation_frame % SPINNER_FRAMES) as usize]
     }
 
     pub fn next_id(&mut self) -> String {
-        let id = format!("req.{}", self.next_id);
-        self.next_id += 1;
+        let id = format!("req.{}", self.agent.next_id);
+        self.agent.next_id += 1;
         id
     }
 
@@ -350,13 +322,13 @@ impl AppState {
                 .map(|p| p.filter.clone())
                 .unwrap_or_default(),
             _ => {
-                self.cached_palette_filter = None;
-                self.cached_palette_items.clear();
+                self.view.cached_palette_filter = None;
+                self.view.cached_palette_items.clear();
                 return Vec::new();
             }
         };
-        if Some(&filter) != self.cached_palette_filter.as_ref() {
-            self.cached_palette_filter = Some(filter.clone());
+        if Some(&filter) != self.view.cached_palette_filter.as_ref() {
+            self.view.cached_palette_filter = Some(filter.clone());
             let mut items: Vec<_> = crate::commands::filter_commands(&self.registry, &filter)
                 .into_iter()
                 .map(|cmd| {
@@ -381,9 +353,9 @@ impl AppState {
                     ));
                 }
             }
-            self.cached_palette_items = items;
+            self.view.cached_palette_items = items;
         }
-        self.cached_palette_items.clone()
+        self.view.cached_palette_items.clone()
     }
 
     fn session_tree_items(&self) -> Vec<(usize, String)> {
@@ -418,31 +390,31 @@ impl AppState {
                 .map(|p| p.filter.clone())
                 .unwrap_or_default(),
             _ => {
-                self.cached_model_filter = None;
-                self.cached_model_items.clear();
+                self.view.cached_model_filter = None;
+                self.view.cached_model_items.clear();
                 return Vec::new();
             }
         };
-        if Some(&filter) != self.cached_model_filter.as_ref() {
-            self.cached_model_filter = Some(filter.clone());
-            self.cached_model_items = build_model_selector_items(
+        if Some(&filter) != self.view.cached_model_filter.as_ref() {
+            self.view.cached_model_filter = Some(filter.clone());
+            self.view.cached_model_items = build_model_selector_items(
                 &model_catalog(),
-                &self.recent_models,
+                &self.config.recent_models,
                 &filter,
                 &self.config.current_provider,
                 &self.config.current_model,
             );
         }
-        self.cached_model_items.clone()
+        self.view.cached_model_items.clone()
     }
 
     /// Record a model selection in recent history (max 5, no duplicates).
     pub fn record_model_usage(&mut self, provider: &str, model: &str) {
         let full = format!("{}/{}", provider, model);
-        self.recent_models.retain(|m| m != &full);
-        self.recent_models.push(full);
-        if self.recent_models.len() > 5 {
-            self.recent_models.remove(0);
+        self.config.recent_models.retain(|m| m != &full);
+        self.config.recent_models.push(full);
+        if self.config.recent_models.len() > 5 {
+            self.config.recent_models.remove(0);
         }
     }
 
@@ -497,7 +469,7 @@ impl AppState {
     pub fn tick_animation(&mut self) {
         let mut changed = false;
         if self.agent.turn_active {
-            self.animation_frame = self.animation_frame.wrapping_add(1);
+            self.view.animation_frame = self.view.animation_frame.wrapping_add(1);
             self.update_speed();
             changed = true;
         }
@@ -626,11 +598,11 @@ impl AppState {
             dialog: self.open_dialog.clone(),
             palette_items: self.palette_items(),
             model_selector_items: self.model_selector_items(),
-            pending_edits: self.pending_edits.clone(),
+            pending_edits: self.session.pending_edits.clone(),
             scoped_models: self.config.scoped_models.clone(),
             settings_items: crate::update::settings_dialog::build_setting_items(self),
             session_tree_items: self.session_tree_items(),
-            image_attachments: self.image_attachments.clone(),
+            image_attachments: self.session.image_attachments.clone(),
             auth_providers: crate::auth::AuthStorage::load()
                 .tokens
                 .keys()

@@ -11,7 +11,7 @@ fn fresh_state() -> AppState {
 #[test]
 fn thought_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -27,7 +27,7 @@ fn thought_created_via_pipeline_is_expanded() {
         id: "req.0".to_string(),
     });
     assert!(
-        !state.all_collapsed,
+        !state.view.all_collapsed,
         "Thoughts should be expanded by default"
     );
 }
@@ -35,7 +35,7 @@ fn thought_created_via_pipeline_is_expanded() {
 #[test]
 fn tool_created_via_pipeline_is_expanded() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
@@ -44,13 +44,13 @@ fn tool_created_via_pipeline_is_expanded() {
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
     });
-    assert!(!state.all_collapsed, "Tools should be expanded by default");
+    assert!(!state.view.all_collapsed, "Tools should be expanded by default");
 }
 
 #[test]
 fn toggle_expand_collapses_all_thoughts() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
@@ -62,10 +62,10 @@ fn toggle_expand_collapses_all_thoughts() {
         id: "req.0".to_string(),
     });
 
-    assert!(!state.all_collapsed, "Should start expanded");
+    assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "ToggleExpand should collapse all thoughts/tools"
     );
 }
@@ -73,7 +73,7 @@ fn toggle_expand_collapses_all_thoughts() {
 #[test]
 fn toggle_expand_collapses_all_tools() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
@@ -83,10 +83,10 @@ fn toggle_expand_collapses_all_tools() {
         output: "file1".to_string(),
     });
 
-    assert!(!state.all_collapsed, "Should start expanded");
+    assert!(!state.view.all_collapsed, "Should start expanded");
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "ToggleExpand should collapse all thoughts/tools"
     );
 }
@@ -120,7 +120,7 @@ fn toggle_expand_hides_thought() {
         ..Default::default()
     });
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle should set all_collapsed");
+    assert!(state.view.all_collapsed, "Toggle should set all_collapsed");
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn toggle_expand_restores_thought() {
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
-    assert!(!state.all_collapsed, "Second toggle should expand all");
+    assert!(!state.view.all_collapsed, "Second toggle should expand all");
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn collapsed_thought_renders_one_line_summary() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ThoughtSummary { content, .. } => Some(content.as_str()),
@@ -175,7 +175,7 @@ fn tool_collapsed_by_toggle() {
         ..Default::default()
     });
     state.update(Event::ToggleExpand);
-    assert!(state.all_collapsed, "Toggle should set all_collapsed");
+    assert!(state.view.all_collapsed, "Toggle should set all_collapsed");
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn toggle_expand_restores_tool() {
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
-    assert!(!state.all_collapsed, "Second toggle should expand all");
+    assert!(!state.view.all_collapsed, "Second toggle should expand all");
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn collapsed_tool_renders_one_line_summary() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.all_collapsed = true;
+    state.view.all_collapsed = true;
     let feed = LazyCache::feed(&state);
     let summary = feed.elements.iter().find_map(|e| match e {
         Element::ToolSummary { name, .. } => Some(name.as_str()),
@@ -225,7 +225,7 @@ fn toggle_expand_noop_when_empty() {
     let mut state = fresh_state();
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Toggle on empty state should still flip flag"
     );
 }

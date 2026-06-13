@@ -80,7 +80,7 @@ fn toggle_expand_collapses_all_thoughts() {
     });
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "ToggleExpand should set global collapse"
     );
 }
@@ -97,7 +97,7 @@ fn toggle_expand_collapses_all_tools() {
     });
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "ToggleExpand should set global collapse"
     );
 }
@@ -121,7 +121,7 @@ fn toggle_expand_affects_all_elements() {
     });
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
     );
 }
@@ -138,7 +138,7 @@ fn toggle_expand_noop_when_no_collapsible() {
     });
     state.update(Event::ToggleExpand);
     assert!(
-        state.all_collapsed,
+        state.view.all_collapsed,
         "Toggle should still flip global flag even with no thoughts/tools"
     );
 }
@@ -177,7 +177,7 @@ fn toggle_expand_twice_restores() {
     });
     state.update(Event::ToggleExpand);
     state.update(Event::ToggleExpand);
-    assert!(!state.all_collapsed, "Second toggle should expand all");
+    assert!(!state.view.all_collapsed, "Second toggle should expand all");
 }
 
 // ─── Transient messages ─────────────────────────────────────────────────

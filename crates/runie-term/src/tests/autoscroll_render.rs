@@ -51,7 +51,7 @@ fn large_tool_output_latest_visible_at_bottom() {
 #[test]
 fn final_response_visible_after_full_turn() {
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
 
     state.update(Event::AgentThinking { id: "req.0".into() });
     state.update(Event::AgentResponse {

@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_thinking_has_spacer() {
         let mut state = AppState::default();
-        state.thinking_started_at = Some(std::time::Instant::now());
+        state.agent.thinking_started_at = Some(std::time::Instant::now());
         let elements = LazyCache::rebuild(&state);
         assert!(matches!(elements[0], Element::Thinking { .. }));
         assert!(matches!(elements[1], Element::Spacer { .. }));
@@ -206,7 +206,7 @@ mod tests {
             msg(Role::Assistant, "A1", 1.0, "t1"),
             msg(Role::User, "Q2", 2.0, "t2"),
         ]);
-        state.thinking_started_at = Some(std::time::Instant::now());
+        state.agent.thinking_started_at = Some(std::time::Instant::now());
         let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(
             kinds,
@@ -224,7 +224,7 @@ mod tests {
             msg(Role::User, "Q2", 2.0, "t2"),
             msg(Role::Assistant, "A2 partial", 3.0, "t2"),
         ]);
-        state.thinking_started_at = Some(std::time::Instant::now());
+        state.agent.thinking_started_at = Some(std::time::Instant::now());
         state.agent.current_request_id = Some("t2".into());
         let kinds: Vec<&str> = LazyCache::feed(&state).elements.iter().map(kind).collect();
         assert_eq!(

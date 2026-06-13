@@ -1,6 +1,6 @@
 # Decompose AppState God-Object Into Focused State Structs
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P0
@@ -86,10 +86,10 @@ sibling file). The 459-line `app_state.rs` also contains ~20
 
 ## Acceptance Criteria
 
-- [ ] `AppState` has exactly 6 fields: `session`, `input`, `agent`,
+- [x] `AppState` has exactly 6 fields: `session`, `input`, `agent`,
   `view`, `config`, `completion` (matching the existing inner
   structs) **plus** the documented singletons below
-- [ ] All 33 loose fields are moved into the appropriate inner
+- [x] All 33 loose fields are moved into the appropriate inner
   struct. Proposed distribution:
   - **`AgentState`** gets: `request_queue`, `message_queue`,
     `current_request_id`, `turn_started_at`, `turn_active`,
@@ -109,40 +109,40 @@ sibling file). The 459-line `app_state.rs` also contains ~20
     `last_at_query` and the `tab_complete_*` fields from
     `InputState` (which currently own them but logically belong
     here)
-- [ ] New top-level fields on `AppState` (singletons that don't
+- [x] New top-level fields on `AppState` (singletons that don't
   fit any of the 6): `should_quit: bool`, `open_dialog:
   Option<DialogState>`, `dialog_back_stack: Vec<DialogState>`,
   `login_flow: Option<LoginFlowState>`, `registry: CommandRegistry`,
   `skills: Vec<Skill>`, `prompts: Vec<PromptTemplate>`,
   `transient_message/until/level: Transient*`, `git_info`,
   `cwd_name`, `input_history: Vec<String>`
-- [ ] All call sites that access `state.field` are updated to
+- [x] All call sites that access `state.field` are updated to
   `state.session.field` / `state.input.field` / etc.
-- [ ] `impl Default for AppState` is at most 30 lines (one line
+- [x] `impl Default for AppState` is at most 30 lines (one line
   per field, with delegated `..Default::default()`)
-- [ ] No function takes a `&mut AppState` and immediately rebinds
+- [x] No function takes a `&mut AppState` and immediately rebinds
   one of these sub-fields — the inner struct is the unit of
   mutation
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `test_appstate_default_has_no_loose_fields` — iterates
+- [x] `test_appstate_default_has_no_loose_fields` — iterates
   `AppState::default()` and asserts no top-level field is a `Vec`,
   `Option`, or state-bearing primitive outside the 6 inner structs
   and the documented singletons
-- [ ] `test_inner_structs_are_default` — each of `SessionState`,
+- [x] `test_inner_structs_are_default` — each of `SessionState`,
   `InputState`, `AgentState`, `ViewState`, `ConfigState`,
   `CompletionState` derives `Default` and round-trips through
   serialization
-- [ ] `test_moved_field_access_pattern` — every public method on
+- [x] `test_moved_field_access_pattern` — every public method on
   `AppState` that previously read/wrote a now-moved field is
   updated; the existing test suite catches the regressions
 
 ### Layer 2 — Event Handling
-- [ ] All 595+ existing `#[test]` annotations in
+- [x] All 595+ existing `#[test]` annotations in
   `crates/runie-core/src/tests/` still pass
-- [ ] `cargo test -p runie-core --lib update::` passes (event
+- [x] `cargo test -p runie-core --lib update::` passes (event
   dispatch covers all sub-state mutations)
 
 ## Notes

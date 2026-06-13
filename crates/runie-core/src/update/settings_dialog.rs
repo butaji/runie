@@ -105,7 +105,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "steering_mode",
             "Steering Mode",
             SettingValue::Enum {
-                current: match state.steering_mode {
+                current: match state.config.steering_mode {
                     DeliveryMode::OneAtATime => "one-at-a-time",
                     DeliveryMode::All => "all",
                 }
@@ -119,7 +119,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "follow_up_mode",
             "Follow-Up Mode",
             SettingValue::Enum {
-                current: match state.follow_up_mode {
+                current: match state.config.follow_up_mode {
                     DeliveryMode::OneAtATime => "one-at-a-time",
                     DeliveryMode::All => "all",
                 }

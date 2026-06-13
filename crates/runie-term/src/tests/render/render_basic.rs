@@ -105,7 +105,7 @@ fn test_render_agent_response() {
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut state = AppState::default();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });

@@ -21,13 +21,13 @@ fn test_complete_agent_flow() {
     state.update(Event::Submit);
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
-    assert!(!state.streaming);
+    assert!(!state.agent.streaming);
     state.pop_queue();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });
-    assert!(state.streaming);
+    assert!(state.agent.streaming);
     state.update(Event::AgentThoughtDone {
         id: "req.0".to_string(),
     });
@@ -41,7 +41,7 @@ fn test_complete_agent_flow() {
     state.update(Event::AgentDone {
         id: "req.0".to_string(),
     });
-    assert!(!state.streaming);
+    assert!(!state.agent.streaming);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn test_queue_processing() {
     state.update(Event::Submit);
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.agent.request_queue.len(), 2);
-    assert!(!state.streaming);
+    assert!(!state.agent.streaming);
 }
 
 #[test]
@@ -180,7 +180,7 @@ fn test_multiple_submits_increment_id() {
 #[test]
 fn test_multiple_thoughts_for_sequential_requests() {
     let mut state = fresh_state();
-    state.streaming = true;
+    state.agent.streaming = true;
     state.update(Event::AgentThinking {
         id: "req.0".to_string(),
     });

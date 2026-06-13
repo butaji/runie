@@ -1,4 +1,6 @@
 #[cfg(test)]
+mod appstate_structural;
+#[cfg(test)]
 mod action_text;
 #[cfg(test)]
 mod agent;

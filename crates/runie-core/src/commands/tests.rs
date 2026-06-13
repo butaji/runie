@@ -325,7 +325,7 @@ fn prompt_switch_updates() {
     } else {
         panic!("/prompt custom should return Message, got {:?}", result);
     }
-    assert_eq!(state.current_prompt, "custom");
+    assert_eq!(state.input.current_prompt, "custom");
 }
 
 #[test]
@@ -362,7 +362,7 @@ fn prompt_unknown_returns_error() {
 #[test]
 fn session_info_shows_prompt() {
     let mut state = AppState::default();
-    state.current_prompt = "custom".into();
+    state.input.current_prompt = "custom".into();
     let cmd = state.registry.get("session").unwrap();
     let result = (cmd.handler)(&mut state, "");
     if let CommandResult::Message(msg) = result {

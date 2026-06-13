@@ -256,10 +256,10 @@ fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
 pub(crate) fn run_prompt(state: &mut AppState, name: &str) {
     let name = name.trim();
     if name.is_empty() {
-        let current = if state.current_prompt.is_empty() {
+        let current = if state.input.current_prompt.is_empty() {
             "default"
         } else {
-            &state.current_prompt
+            &state.input.current_prompt
         };
         let mut lines = vec![format!("Current prompt: {}", current)];
         if !state.prompts.is_empty() {
@@ -272,7 +272,7 @@ pub(crate) fn run_prompt(state: &mut AppState, name: &str) {
         return;
     }
     if state.prompts.iter().any(|p| p.name == name) {
-        state.current_prompt = name.to_string();
+        state.input.current_prompt = name.to_string();
         state.add_system_msg(format!("Prompt switched to '{}'", name));
     } else {
         state.add_system_msg(format!("Prompt '{}' not found.", name));

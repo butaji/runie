@@ -42,7 +42,7 @@ impl AppState {
         // Try to deliver steering (batch or single depending on mode)
         if self.try_deliver_steering() {
             // Steering delivered - in "All" mode, also try follow-ups
-            if self.follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
+            if self.config.follow_up_mode == DeliveryMode::All && self.has_follow_ups() {
                 self.try_deliver_follow_ups_all();
             }
             return;
@@ -97,7 +97,7 @@ impl AppState {
     }
 
     fn try_deliver_steering(&mut self) -> bool {
-        match self.steering_mode {
+        match self.config.steering_mode {
             DeliveryMode::OneAtATime => {
                 if let Some(idx) = self
                     .agent
