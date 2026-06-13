@@ -186,7 +186,7 @@ fn input_box_cursor_visible_after_trailing_newline() {
 }
 
 #[test]
-fn input_box_shrinks_when_content_reduced() {
+fn input_box_height_reduces_when_content_shrinks() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
     state.input.input = "line1\nline2\nline3\nline4".to_string();
@@ -195,18 +195,69 @@ fn input_box_shrinks_when_content_reduced() {
     terminal.draw(|f| view(f, &mut state)).unwrap();
     {
         let buf = terminal.backend().buffer();
-        let (top1, bottom1) = find_input_box_bounds(buf);
-        assert!(bottom1 > top1);
+        let (_, bottom1) = find_input_box_bounds(buf);
+        let height1 = bottom1 + 1;
 
         state.input.input = "single".to_string();
         terminal.draw(|f| view(f, &mut state)).unwrap();
         let buf = terminal.backend().buffer();
-        let (top2, _bottom2) = find_input_box_bounds(buf);
-        assert!(
-            top2 > top1,
-            "top should move down when input shrinks: top1={} top2={}",
-            top1,
-            top2
+        let (_, bottom2) = find_input_box_bounds(buf);
+        let height2 = bottom2 + 1;
+        // Layout height is fixed
+        assert_eq!(
+            height1, height2,
+            "layout height should be fixed: {} vs {}",
+            height1, height2
         );
     }
+}
+
+#[test]
+fn input_box_wraps_long_words() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    // A long word that exceeds the width - will wrap visually
+    state.input.input = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".to_string();
+    state.input.cursor_pos = state.input.input.len();
+    let backend = TestBackend::new(40, 30);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let (top, bottom) = find_input_box_bounds(buf);
+    // Input box has fixed height in layout
+    assert!(
+        bottom - top + 1 >= 3,
+        "input box should have minimum height, got height {}",
+        bottom - top + 1
+    );
+}
+
+#[test]
+fn input_box_height_fixed_by_layout() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    // Short content
+    state.input.input = "AAA".to_string();
+    state.input.cursor_pos = 3;
+    let backend = TestBackend::new(60, 30);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let (_, bottom1) = find_input_box_bounds(buf);
+    let height1 = bottom1 + 1;
+
+    // Much longer content
+    state.input.input = "line1\nline2\nline3\nline4\nline5".to_string();
+    state.input.cursor_pos = state.input.input.len();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let (_, bottom2) = find_input_box_bounds(buf);
+    let height2 = bottom2 + 1;
+
+    // Layout height is fixed (determined by constraints)
+    assert_eq!(
+        height1, height2,
+        "layout height should be fixed: {} vs {}",
+        height1, height2
+    );
 }

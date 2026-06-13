@@ -62,11 +62,9 @@ fn at_ref_select_inserts_file_path() {
             .expect("Should have at least one Action item")
     };
     state.update(Event::Submit);
-    // Path is wrapped in brackets per new behavior
-    let wrapped = format!("[{}]", path);
     assert_eq!(
-        state.input.input, wrapped,
-        "Should insert filepath wrapped in brackets after selection"
+        state.input.input, path,
+        "Should insert filepath after selection"
     );
     assert!(
         state.open_dialog.is_none(),

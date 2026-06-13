@@ -44,8 +44,8 @@ impl AppState {
         // If prefix starts with @, we DON'T wrap in brackets (just insert path)
         let needs_brackets = !prefix.starts_with('@');
 
-        // Save: (original input, insert position, needs brackets)
-        self.file_picker_backup = Some((self.input.input.clone(), insert_pos, needs_brackets));
+        // Save: (original input, insert position, cursor position, needs brackets)
+        self.file_picker_backup = Some((self.input.input.clone(), insert_pos, cursor, needs_brackets));
 
         // Open file picker with the prefix as filter
         // Input text stays visible - backup has original state for insertion

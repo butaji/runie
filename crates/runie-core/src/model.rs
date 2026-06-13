@@ -252,8 +252,8 @@ pub struct AppState {
     /// nav mode. Cleared once consumed or when a turn is no longer active.
     pub vim_nav_pending: bool,
     /// Backup of input state before opening file picker:
-    /// (original input, insert position, needs brackets for @ references).
-    pub file_picker_backup: Option<(String, usize, bool)>,
+    /// (original input, insert position, cursor position, needs brackets for @ references).
+    pub file_picker_backup: Option<(String, usize, usize, bool)>,
 }
 
 impl Default for AppState {
