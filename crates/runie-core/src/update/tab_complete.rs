@@ -48,11 +48,8 @@ impl AppState {
         self.file_picker_backup = Some((self.input.input.clone(), insert_pos, needs_brackets));
 
         // Open file picker with the prefix as filter
+        // Input text stays visible - backup has original state for insertion
         super::dialog::open_at_file_picker(self, Some(&prefix));
-        
-        // Clear the input since we're now in the file picker
-        self.input.input.clear();
-        self.input.cursor_pos = 0;
     }
 
     /// Clear ghost completion (called on typing, backspace, cursor movement, etc.)
