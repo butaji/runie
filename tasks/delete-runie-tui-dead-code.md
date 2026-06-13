@@ -1,6 +1,6 @@
 # Delete the 41,477 Lines of Dead Code in `runie-tui`
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: TUI Rendering
 **Priority**: P0
@@ -69,40 +69,40 @@ was never finished.
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-tui/src/lib.rs` is the only file that imports
+- [x] `crates/runie-tui/src/lib.rs` is the only file that imports
   from the deleted directories (verify with `git grep`)
-- [ ] `git rm -r crates/runie-tui/src/tui.rs`
-- [ ] `git rm -r crates/runie-tui/src/tui/`
-- [ ] `git rm -r crates/runie-tui/src/components/`
-- [ ] `git rm -r crates/runie-tui/src/pipe/`
-- [ ] `git rm -r crates/runie-tui/src/paint/`
-- [ ] `git rm -r crates/runie-tui/src/plugins/`
-- [ ] `git rm -r crates/runie-tui/src/replay/`
-- [ ] `git rm -r crates/runie-tui/src/actors/`
-- [ ] `git rm -r crates/runie-tui/src/style/`
-- [ ] `git rm -r crates/runie-tui/src/theme/themes/`
-- [ ] `cargo build -p runie-tui` succeeds
-- [ ] `cargo test -p runie-tui` succeeds (with the test count
+- [x] `git rm -r crates/runie-tui/src/tui.rs`
+- [x] `git rm -r crates/runie-tui/src/tui/`
+- [x] `git rm -r crates/runie-tui/src/components/`
+- [x] `git rm -r crates/runie-tui/src/pipe/`
+- [x] `git rm -r crates/runie-tui/src/paint/`
+- [x] `git rm -r crates/runie-tui/src/plugins/`
+- [x] `git rm -r crates/runie-tui/src/replay/`
+- [x] `git rm -r crates/runie-tui/src/actors/`
+- [x] `git rm -r crates/runie-tui/src/style/`
+- [x] `git rm -r crates/runie-tui/src/theme/themes/`
+- [x] `cargo build -p runie-tui` succeeds
+- [x] `cargo test -p runie-tui` succeeds (with the test count
   reduced by ~400-500 since most tests were in the dead
   directories)
-- [ ] The `tests/` directory (declared in `lib.rs`) is preserved
+- [x] The `tests/` directory (declared in `lib.rs`) is preserved
   with all its 159 tests intact
-- [ ] `cargo test --workspace` succeeds
+- [x] `cargo test --workspace` succeeds
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo build -p runie-tui` succeeds after the deletion
-- [ ] `cargo test -p runie-tui` succeeds; test count should drop
+- [x] `cargo build -p runie-tui` succeeds after the deletion
+- [x] `cargo test -p runie-tui` succeeds; test count should drop
   from 669 to ~159 (the count of tests in the active `tests/`
   directory)
-- [ ] `git grep -rn 'crate::tui' crates/runie-tui/src/`
+- [x] `git grep -rn 'crate::tui' crates/runie-tui/src/`
   returns zero hits (no references to deleted modules)
-- [ ] `git grep -rn 'crate::components\|crate::pipe\|crate::paint' crates/runie-tui/src/`
+- [x] `git grep -rn 'crate::components\|crate::pipe\|crate::paint' crates/runie-tui/src/`
   returns zero hits
 
 ### Layer 4 — Smoke
-- [ ] `cargo run -p runie-term --bin runie` starts the TUI without
+- [x] `cargo run -p runie-term --bin runie` starts the TUI without
   panicking (the live render path uses `runie_tui::ui::draw_snapshot`,
   which is in the surviving `ui.rs`)
 
