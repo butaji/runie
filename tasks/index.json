@@ -131,10 +131,11 @@
     },
     {
       "id": "delete-runie-tui-dead-code",
-      "status": "todo",
+      "status": "done",
       "milestone": "R1",
       "category": "TUI Rendering",
-      "priority": "P0"
+      "priority": "P0",
+      "completed_in": "2f2bfcdf"
     },
     {
       "id": "clean-archive",

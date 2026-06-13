@@ -1,5 +1,0 @@
----
-source: crates/runie-tui/src/components/top_bar_snapshots.rs
-expression: rendered
----
-"\u{e0a0} main                                                          │ 0 / 128K │"
