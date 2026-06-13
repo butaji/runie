@@ -214,13 +214,14 @@
     },
     {
       "id": "vim-navigation-mode",
-      "status": "in-progress",
+      "status": "done",
       "milestone": "R1",
       "category": "Input & Commands",
       "priority": "P1",
       "depends_on": [
         "terminal-detection"
-      ]
+      ],
+      "completed_in": "current"
     },
     {
       "id": "shift-enter-newline",

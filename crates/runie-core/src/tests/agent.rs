@@ -183,7 +183,7 @@ fn thought_marker_ordered_by_timestamp_in_feed() {
             _ => "?",
         })
         .collect();
-    assert_eq!(kinds, vec!["A", "S", "T", "S"]);
+    assert_eq!(kinds, vec!["S", "A", "S", "T", "S"]);
 }
 
 #[test]
@@ -205,7 +205,7 @@ fn thinking_indicator_ordered_by_timestamp() {
         .collect();
     assert_eq!(
         kinds,
-        vec!["I", "S"],
+        vec!["S", "I", "S"],
         "Only thinking indicator visible during thinking"
     );
 }

@@ -20,13 +20,45 @@ fn ctrl_shift_e_converts_to_toggle_expand() {
 }
 
 #[test]
-fn ctrl_e_converts_to_toggle_expand_for_terminals_without_shift() {
+fn ctrl_shift_e_toggles_expand_state() {
+    use runie_core::{AppState, ChatMessage, Role};
+
+    let mut state = AppState::default();
+    state.session.messages.push(ChatMessage {
+        role: Role::Thought,
+        content: "deep reasoning\nsecond line".to_string(),
+        timestamp: 1.0,
+        id: "t1".to_string(),
+        ..Default::default()
+    });
+    state.messages_changed();
+    state.ensure_fresh();
+
+    let before = state.view.all_collapsed;
+
+    let key = KeyEvent::new(
+        KeyCode::Char('E'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+    );
+    let event = crossterm::event::Event::Key(key);
+    let core_event = crate::keymap::convert_event(&event, &default_bindings());
+    assert!(matches!(core_event, Some(runie_core::Event::ToggleExpand)));
+
+    state.update(core_event.unwrap());
+    assert_ne!(
+        state.view.all_collapsed, before,
+        "Ctrl+Shift+E should toggle the global collapsed state"
+    );
+}
+
+#[test]
+fn ctrl_e_converts_to_cursor_end() {
     let key = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL);
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::ToggleExpand)),
-        "Ctrl+E should map to ToggleExpand, got {:?}",
+        matches!(result, Some(runie_core::Event::CursorEnd)),
+        "Ctrl+E should map to CursorEnd, got {:?}",
         result
     );
 }
@@ -90,8 +122,20 @@ fn ctrl_e_on_repeat_kind_still_works() {
     let event = crossterm::event::Event::Key(key);
     let result = crate::keymap::convert_event(&event, &default_bindings());
     assert!(
-        matches!(result, Some(runie_core::Event::ToggleExpand)),
-        "Ctrl+E with Repeat kind should still map to ToggleExpand, got {:?}",
+        matches!(result, Some(runie_core::Event::CursorEnd)),
+        "Ctrl+E with Repeat kind should still map to CursorEnd, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn ctrl_q_converts_to_quit() {
+    let key = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL);
+    let event = crossterm::event::Event::Key(key);
+    let result = crate::keymap::convert_event(&event, &default_bindings());
+    assert!(
+        matches!(result, Some(runie_core::Event::Quit)),
+        "Ctrl+Q should map to Quit, got {:?}",
         result
     );
 }

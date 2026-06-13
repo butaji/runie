@@ -148,9 +148,9 @@ fn truncation_lines_options() -> Vec<String> {
 
 fn truncation_bytes_options() -> Vec<String> {
     vec![
-        "10240".into(),     // 10 KiB
-        "51200".into(),     // 50 KiB (default)
-        "102400".into(),    // 100 KiB
-        "512000".into(),    // 500 KiB
+        "10240".into(),  // 10 KiB
+        "51200".into(),  // 50 KiB (default)
+        "102400".into(), // 100 KiB
+        "512000".into(), // 500 KiB
     ]
 }

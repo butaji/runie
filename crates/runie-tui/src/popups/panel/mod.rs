@@ -29,8 +29,7 @@ pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
 pub(super) fn setup_popup(f: &mut Frame, title: &str) -> Rect {
     let popup_area = palette_popup_rect(f.area());
     clear_panel_bg(f, popup_area);
-    let title_owned = format!(" {} ", title);
-    let block = block_popup(&title_owned);
+    let block = block_popup(title);
     let inner = block.inner(popup_area);
     f.render_widget(Paragraph::new("").block(block), popup_area);
     f.buffer_mut()

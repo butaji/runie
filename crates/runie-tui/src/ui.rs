@@ -20,8 +20,8 @@ use runie_core::{Element, Snapshot};
 use crate::message as msg;
 use crate::theme::{
     block_input, color_bg, set_current_theme, style_chevron, style_empty_state, style_hint,
-    style_hint_key, style_input_cursor, style_placeholder, style_scrollbar, SCROLLBAR_THUMB,
-    SCROLLBAR_TRACK,
+    style_hint_key, style_input_cursor, style_input_cursor_disabled, style_placeholder,
+    style_scrollbar, SCROLLBAR_THUMB, SCROLLBAR_TRACK,
 };
 
 fn vstack(area: Rect, heights: &[Constraint]) -> Vec<Rect> {
@@ -77,6 +77,13 @@ pub fn draw_snapshot(f: &mut Frame, snap: &Snapshot) {
 /// Legacy entry point for code that still builds AppState directly.
 pub fn view(f: &mut Frame, state: &mut runie_core::AppState) {
     state.ensure_fresh();
+    // Record the message viewport height so vim nav mode `j`/`k` and
+    // arrow keys can compute element-level jumps. The messages area is
+    // the top chunk of the vertical stack; approximate it as the full
+    // area minus the input box, status, and margins.
+    let full = f.area();
+    let messages_height = full.height.saturating_sub(8).max(3);
+    state.set_last_visible_height(messages_height);
     let snap = state.snapshot();
     draw_snapshot(f, &snap);
 }
@@ -101,10 +108,23 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
         return;
     }
 
-    let show_bar = total_lines > height;
     let content_width = area.width;
-    let lines = build_lines(snap, content_width);
-    let offset = snap.scroll_offset(height);
+    let (lines, row_to_element) = build_lines_with_mapping(snap, content_width);
+    let mut offset = snap.scroll_offset(height);
+
+    // In vim nav mode, keep the selected post actually visible even when
+    // message wrapping makes the logical scroll offset drift. We compute
+    // the real wrapped-row offset of the post and clamp it to the viewport.
+    if snap.vim_nav_mode {
+        if let Some(selected_post) = snap.selected_post {
+            if let Some(post_offset) =
+                post_actual_offset(snap, &row_to_element, area.height as usize, selected_post)
+            {
+                offset = post_offset;
+            }
+        }
+    }
+
     f.render_widget(
         Paragraph::new(lines)
             .scroll((offset, 0))
@@ -112,6 +132,14 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
         area,
     );
 
+    if snap.vim_nav_mode {
+        if let Some(selected_post) = snap.selected_post {
+            draw_post_background(f, snap, area, &row_to_element, offset, selected_post);
+            draw_post_left_line(f, snap, area, &row_to_element, offset, selected_post);
+        }
+    }
+
+    let show_bar = total_lines > height;
     if show_bar {
         // Place scrollbar in the right-margin column (past the content area).
         // With a 1-cell margin this sits flush against the terminal edge.
@@ -126,12 +154,208 @@ fn render_message_content(f: &mut Frame, snap: &Snapshot, area: Rect) {
     }
 }
 
-fn build_lines(snap: &Snapshot, content_width: u16) -> Vec<Line<'_>> {
+/// Flatten the feed into wrapped terminal lines and record which element
+/// each visible row belongs to. This mapping is what the vim-nav selection
+/// highlight uses, so the highlight height matches the *rendered* height of
+/// a post even when message text wraps.
+fn build_lines_with_mapping(snap: &Snapshot, content_width: u16) -> (Vec<Line<'_>>, Vec<usize>) {
     let mut lines = Vec::with_capacity(snap.total_lines);
-    for elem in snap.elements.iter() {
-        lines.extend(to_lines(elem, content_width));
+    let mut mapping = Vec::with_capacity(snap.total_lines);
+    for (idx, elem) in snap.elements.iter().enumerate() {
+        let elem_lines = to_lines(elem, content_width);
+        mapping.extend(std::iter::repeat(idx).take(elem_lines.len()));
+        lines.extend(elem_lines);
     }
-    lines
+    (lines, mapping)
+}
+
+/// Fill the selected post's area with a subtle accent-colored background
+/// at 10% opacity. The highlight spans exactly the same rows as the left
+/// selection line (content + adjacent spacers/margins) so the selection
+/// is readable and visually consistent.
+fn draw_post_background(
+    f: &mut Frame,
+    snap: &Snapshot,
+    area: Rect,
+    row_to_element: &[usize],
+    offset: u16,
+    selected_post: usize,
+) {
+    let visible_start = offset as usize;
+    let visible_end = (offset as usize + area.height as usize).min(row_to_element.len());
+    if visible_start >= visible_end {
+        return;
+    }
+
+    let Some((start, end)) = selected_post_row_range(snap, row_to_element, selected_post) else {
+        return;
+    };
+
+    let bg = crate::theme::color_accent_bg();
+    let first_visible = start.max(visible_start);
+    let last_visible = end.min(visible_end);
+
+    for row in first_visible..last_visible {
+        let y = area.y + (row - visible_start) as u16;
+        if y >= area.y + area.height {
+            break;
+        }
+        // Fill the whole available terminal line, including outer margins,
+        // so the selection highlight spans the full width with no gaps.
+        let full_width = f.area().width;
+        for x in 0..full_width {
+            let cell = &mut f.buffer_mut()[(x, y)];
+            let _ = cell.set_bg(bg);
+        }
+    }
+}
+
+/// Draw a thin accent vertical line in the leftmost terminal column for
+/// every visible row of the selected post. The line spans exactly the same
+/// rows as the accent background, giving the selection a clean left edge.
+fn draw_post_left_line(
+    f: &mut Frame,
+    snap: &Snapshot,
+    area: Rect,
+    row_to_element: &[usize],
+    offset: u16,
+    selected_post: usize,
+) {
+    let visible_start = offset as usize;
+    let visible_end = (offset as usize + area.height as usize).min(row_to_element.len());
+    if visible_start >= visible_end {
+        return;
+    }
+
+    let Some((start, end)) = selected_post_row_range(snap, row_to_element, selected_post) else {
+        return;
+    };
+
+    let first_visible = start.max(visible_start);
+    let last_visible = end.min(visible_end);
+    if first_visible >= last_visible {
+        return;
+    }
+
+    let accent = crate::theme::color_accent();
+
+    for row in first_visible..last_visible {
+        let y = area.y + (row - visible_start) as u16;
+        if y >= area.y + area.height {
+            break;
+        }
+        // Draw the thin selection line one column left of the feed area so
+        // it hugs the terminal edge and does not steal horizontal space
+        // from message content.
+        let x = area.x.saturating_sub(1);
+        let cell = &mut f.buffer_mut()[(x, y)];
+        // Use a thin left-side block so the visual line sits on the left
+        // edge of the cell without looking heavy.
+        let _ = cell.set_char('▎');
+        let _ = cell.set_fg(accent);
+    }
+}
+
+/// Compute the inclusive start and exclusive end rows of the selected
+/// post's highlight area. This includes the post's content rows plus the
+/// adjacent spacer/margin rows that the highlight extends into, so the
+/// returned range is exactly the height of the selection.
+fn selected_post_row_range(
+    snap: &Snapshot,
+    row_to_element: &[usize],
+    selected_post: usize,
+) -> Option<(usize, usize)> {
+    let post = snap.posts.get(selected_post)?;
+    let (elem_start_rows, elem_line_counts) = element_row_map(row_to_element);
+
+    // Base bracket rows: the rendered rows of the post's non-spacer elements.
+    let mut bracket_start: Option<usize> = None;
+    let mut bracket_end: Option<usize> = None;
+    for elem_idx in post.start..post.end {
+        let elem = snap.elements.get(elem_idx)?;
+        if matches!(elem, runie_core::Element::Spacer { .. }) {
+            continue;
+        }
+        let start = elem_start_rows[elem_idx];
+        let end = start + elem_line_counts[elem_idx];
+        bracket_start = Some(bracket_start.map_or(start, |s| s.min(start)));
+        bracket_end = Some(bracket_end.map_or(end, |e| e.max(end)));
+    }
+
+    let (start, end) = (bracket_start?, bracket_end?);
+
+    // For non-user posts, extend the highlight into the adjacent spacers
+    // so a one-line post still gets a three-row selection (content + 2).
+    // User messages already have internal margins, so they naturally get
+    // content + 2 without using spacers.
+    if post.kind == runie_core::ui::elements::PostKind::UserInput {
+        Some((start, end))
+    } else {
+        let new_start = if start > 0 && is_spacer_at_row(snap, row_to_element, start - 1) {
+            start - 1
+        } else {
+            start
+        };
+        let new_end = if end < row_to_element.len() && is_spacer_at_row(snap, row_to_element, end) {
+            end + 1
+        } else {
+            end
+        };
+        Some((new_start, new_end))
+    }
+}
+
+fn is_spacer_at_row(snap: &Snapshot, row_to_element: &[usize], row: usize) -> bool {
+    let elem_idx = row_to_element.get(row).copied().unwrap_or(usize::MAX);
+    matches!(
+        snap.elements.get(elem_idx),
+        Some(runie_core::Element::Spacer { .. })
+    )
+}
+
+/// Compute the actual wrapped-row offset that places the start of the
+/// selected post at the top of the viewport when possible, or keeps it
+/// visible near the bottom when the post is lower in the feed.
+fn post_actual_offset(
+    snap: &Snapshot,
+    row_to_element: &[usize],
+    visible_height: usize,
+    selected_post: usize,
+) -> Option<u16> {
+    let post = snap.posts.get(selected_post)?;
+    let (starts, _) = element_row_map(row_to_element);
+    let first_content = (post.start..post.end).find(|&i| {
+        !matches!(
+            snap.elements.get(i),
+            Some(runie_core::Element::Spacer { .. })
+        )
+    })?;
+    // Scroll so the full bracket is visible. Non-user posts extend into
+    // the spacer above them (leading spacer for the first post, trailing
+    // spacer of the previous post otherwise). User messages already have
+    // internal margins, so their bracket starts at the content element.
+    let target_top = if post.kind == runie_core::ui::elements::PostKind::UserInput {
+        starts[first_content]
+    } else {
+        starts[first_content].saturating_sub(1)
+    };
+    let max_offset = row_to_element.len().saturating_sub(visible_height);
+    Some(target_top.min(max_offset).min(u16::MAX as usize) as u16)
+}
+
+/// From a flat `row -> element` mapping, derive the start row and line
+/// count for each element index.
+fn element_row_map(row_to_element: &[usize]) -> (Vec<usize>, Vec<usize>) {
+    let elem_count = row_to_element.iter().copied().max().map_or(0, |m| m + 1);
+    let mut starts = vec![0usize; elem_count];
+    let mut counts = vec![0usize; elem_count];
+    for (row, &elem_idx) in row_to_element.iter().enumerate() {
+        counts[elem_idx] += 1;
+        if row == 0 || elem_idx != row_to_element[row - 1] {
+            starts[elem_idx] = row;
+        }
+    }
+    (starts, counts)
 }
 
 pub fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: u16, height: usize) {
@@ -172,7 +396,7 @@ fn to_lines<'a>(elem: &'a Element, content_width: u16) -> Vec<Line<'a>> {
             duration_secs,
             ..
         } => msg::render_thought_summary(content, *duration_secs),
-        ThoughtMarker { content, .. } => msg::render_thought_marker(content),
+        ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
         ToolRunning { name, started, .. } => {
             msg::render_tool_running(name, started.elapsed().as_secs_f64())
         }
@@ -205,7 +429,12 @@ pub fn count_input_lines(input: &str) -> usize {
 fn input(f: &mut Frame, snap: &Snapshot, area: Rect) {
     let title = format!(" {}/{} ", snap.provider, snap.model);
     let block = block_input(&title, snap.input_flash > 0);
-    let token_held = snap.dialog.is_none();
+    // Unified "input enabled" flag: the input box is enabled only when
+    // the user is actively typing in it. It is disabled in BOTH vim nav
+    // mode AND when a dialog (command bar, model selector, etc.) is
+    // open. While disabled, no cursor is rendered and the chevron is
+    // dimmed — this keeps the visual treatment consistent.
+    let token_held = !snap.vim_nav_mode && snap.dialog.is_none();
     let lines = build_input_lines(snap, token_held);
     let total_lines = lines.len();
     let inner_height = area.height.saturating_sub(2) as usize;
@@ -272,6 +501,8 @@ fn build_placeholder_line(
     token_held: bool,
 ) -> Line<'static> {
     let mut spans = vec![Span::styled(crate::theme::GLYPH_USER, chevron_style)];
+    // No cursor block while the input box is disabled (vim nav mode or
+    // a dialog is open). `token_held` is the unified enabled flag.
     if token_held {
         spans.push(Span::styled(" ".to_string(), style_input_cursor()));
     }
@@ -353,7 +584,12 @@ fn line_spans<'a>(
         };
         render_cursor_spans(line_content, cursor.col_in_line, token_held, ghost)
     } else {
-        vec![Span::styled(line_content, crate::theme::style_agent())]
+        let text_style = if token_held {
+            crate::theme::style_agent()
+        } else {
+            style_hint()
+        };
+        vec![Span::styled(line_content, text_style)]
     }
 }
 
@@ -369,12 +605,9 @@ fn build_trailing_cursor_line(
         "  "
     };
     let mut spans = vec![Span::styled(prefix, chevron_style)];
-    let cursor_style = if token_held {
-        style_input_cursor()
-    } else {
-        crate::theme::style_agent()
-    };
-    spans.push(Span::styled(" ", cursor_style));
+    if token_held {
+        spans.push(Span::styled(" ", style_input_cursor()));
+    }
     Line::from(spans)
 }
 
@@ -384,10 +617,13 @@ fn render_cursor_spans<'a>(
     token_held: bool,
     ghost: &'a str,
 ) -> Vec<Span<'a>> {
-    let cursor_style = if token_held {
-        style_input_cursor()
+    // While the input box is disabled, render both the text and the
+    // cursor with the dimmed disabled style so the whole field reads
+    // as inactive.
+    let (text_style, cursor_style) = if token_held {
+        (crate::theme::style_agent(), style_input_cursor())
     } else {
-        crate::theme::style_agent()
+        (style_hint(), style_input_cursor_disabled())
     };
     let before = &line_content[..cursor_col_in_line.min(line_content.len())];
     let (at_cursor, after) = if cursor_col_in_line < line_content.len() {
@@ -397,13 +633,15 @@ fn render_cursor_spans<'a>(
             c.to_string(),
             &line_content[cursor_col_in_line + char_len..],
         )
-    } else {
+    } else if token_held {
         (" ".to_string(), "")
+    } else {
+        ("".to_string(), "")
     };
     let mut spans = vec![
-        Span::styled(before, crate::theme::style_agent()),
+        Span::styled(before, text_style),
         Span::styled(at_cursor, cursor_style),
-        Span::styled(after, crate::theme::style_agent()),
+        Span::styled(after, text_style),
     ];
     if !ghost.is_empty() {
         spans.push(Span::styled(ghost, style_hint()));

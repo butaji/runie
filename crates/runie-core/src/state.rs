@@ -190,6 +190,15 @@ pub struct ViewState {
     // Animation/scroll state
     pub animation_frame: u32,
     pub all_collapsed: bool,
+    /// Height of the message viewport in terminal rows, updated by
+    /// the render actor on each draw. Used by vim nav mode to compute
+    /// element-level jumps for `j`/`k`/arrow keys.
+    pub last_visible_height: u16,
+    /// Index of the post currently selected in vim nav mode.
+    /// A post is a logical unit in the feed (e.g. a user message, a
+    /// thought, a tool call). Independent of scroll; used to highlight
+    /// the selected post and to drive post-level navigation.
+    pub selected_post: Option<usize>,
     // Cached palette items (for command palette dialog)
     pub(crate) cached_palette_items: Arc<[(String, String, String)]>,
     pub(crate) cached_palette_filter: Option<String>,
@@ -205,6 +214,8 @@ pub struct ViewState {
     // Cached auth provider names
     pub(crate) cached_auth_providers: Arc<[String]>,
     pub(crate) cached_auth_valid: bool,
+    /// Navigable posts in the feed. Rebuilt alongside `elements_cache`.
+    pub posts: Arc<[crate::ui::elements::Post]>,
 }
 
 impl ViewState {
@@ -238,6 +249,7 @@ impl Default for ViewState {
             element_count: 0,
             animation_frame: 0,
             all_collapsed: false,
+            last_visible_height: 20,
             cached_palette_items: Arc::new([]),
             cached_palette_filter: None,
             cached_model_items: Arc::new([]),
@@ -248,6 +260,8 @@ impl Default for ViewState {
             cached_session_tree_valid: false,
             cached_auth_providers: Arc::new([]),
             cached_auth_valid: false,
+            selected_post: None,
+            posts: Arc::new([]),
         }
     }
 }
@@ -327,7 +341,7 @@ impl Default for ConfigState {
             scoped_models: Vec::new(),
             scoped_index: 0,
             truncation: crate::config_reload::TruncationSection::default(),
-            vim_mode: false,
+            vim_mode: true,
             steering_mode: crate::model::DeliveryMode::default(),
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),

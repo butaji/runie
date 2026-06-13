@@ -19,6 +19,32 @@ for the current mode (idle / active turn / nav mode / typing).
 
 ## What Was Done
 
+- [x] Fixed the orange selection bracket so it matches the *rendered* height of
+  a post, including wrapped system/thought messages (the "random bracket"
+  regression). The bracket now always forms a `[` shape (`╭` top, `│` body,
+  `╰` bottom) that is content + 2 rows tall for every post, including the
+  very first post and one-line posts. The renderer builds a row-to-element
+  mapping from the actual wrapped lines and overrides the scroll offset in
+  nav mode to keep the full bracket visible.
+- [x] Replaced the bracket with a thin accent vertical bar (`▎`) in the
+  leftmost terminal column for every selected-post row. The bar sits on
+  the left edge of the cell and does not steal content space.
+- [x] Added a subtle accent-colored background highlight (10% opacity) behind
+  the selected post. The highlight spans exactly the same rows as the left
+  bar and covers the full terminal width, including outer margins, so there
+  are no uncolored gaps.
+- [x] Restored the background color for user message posts in the feed. The
+  feed renderer applies a `bg.user` background to user message rows, with a
+  fallback chain (`bg.elevated` → `bg.panel` → `bg.highlight`) so it works
+  across the default theme and third-party themes. The input box chevron
+  does **not** inherit this background.
+- [x] Added a first-class `Post` DSL in `crates/runie-core/src/ui/posts.rs`
+  (`PostBuilder`) so the transform layer declares posts by kind
+  (`UserInput`, `AgentResponse`, `Thought`, `ToolRunning`, `ToolDone`, …)
+  and expansion state instead of hand-rolling element indices.
+- [x] Disabled input box now renders entered text and the cursor with the
+  dimmed disabled style (`style_hint` / `style_input_cursor_disabled`) so
+  the whole field reads as inactive.
 - [x] Added `vim_mode: bool` to `ConfigState` and `config_reload::Config`
   (`[ui] vim_mode = false`).
 - [x] Added new events: `Event::GoToTop`, `Event::GoToBottom`,
@@ -110,12 +136,26 @@ for the current mode (idle / active turn / nav mode / typing).
   `j/k scroll · space input`).
 - [x] `vim_mode_scroll_renders_older_content`
 - [x] `vim_mode_page_down_renders_newer_content`
+- [x] `nav_mode_highlights_selected_post_with_orange_bracket`
+- [x] `nav_mode_bracket_matches_wrapped_post_height` (regression guard for
+  wrapped system welcome post; now includes a leading spacer so the top
+  post also gets a full `[` bracket).
+- [x] `nav_mode_bracket_for_one_line_user_post_is_three_rows`.
+- [x] `nav_mode_bracket_for_one_line_non_user_post_is_three_rows`.
+- [x] `nav_mode_renders_input_box_with_disabled_style`
+- [x] Disabled input text and cursor render with dimmed styles.
 
 ### Layer 4 — Smoke
 - [x] `e2e_shift_enter_inserts_newline` (the existing kitty-protocol CSI
   test still passes alongside the new nav-mode logic).
 - [x] All 9 e2e smoke tests in
   `crates/runie-term/tests/e2e/smoke_*.rs` pass with `--ignored`.
+
+> **Note:** Exact-cell nav-mode assertions are covered by the deterministic
+> Layer 3 rendering tests above. The previous tmux-based jk-mode cargo tests
+> were removed because tmux session lifecycle flakiness made them unreliable
+> as part of the automatic suite. The existing rexpect-based smoke tests
+> continue to guard against real-binary crashes and event-loop regressions.
 
 ## Behaviour reference
 

@@ -204,11 +204,7 @@ pub fn assert_no_panic(output: &str) {
 pub fn assert_no_stuck_timer(output: &str) {
     use regex::Regex;
     let re = Regex::new(r"\d{4}\.\d+s").expect("valid regex");
-    assert!(
-        !re.is_match(output),
-        "stuck timer detected: {}",
-        output
-    );
+    assert!(!re.is_match(output), "stuck timer detected: {}", output);
 }
 
 /// Kill the process gracefully and return the full captured PTY output.

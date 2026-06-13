@@ -11,9 +11,9 @@ impl AppState {
         parts.push("ctrl+shift+e expand/collapse".to_string());
 
         if self.vim_nav_mode {
-            parts.push("j/k scroll".to_string());
+            parts.push("j down · k up".to_string());
             parts.push("g/G top/bottom".to_string());
-            parts.push("space input".to_string());
+            parts.push("space/i input".to_string());
             parts.push("esc input".to_string());
         } else if self.completion.at_suggestions.is_some() {
             parts.push("tab cycle".to_string());
@@ -353,6 +353,48 @@ impl AppState {
             self.insert_char(' ');
             return;
         }
+        if c == 'i' {
+            // Vim "insert" key: exit nav mode WITHOUT inserting 'i'.
+            self.vim_nav_mode = false;
+            self.mark_dirty();
+            return;
+        }
+        // Element-level navigation: `j` jumps DOWN (newer, toward
+        // bottom), `k` jumps UP (older, toward top). g/G go to
+        // top/bottom. The non-nav-mode `vim_motion_event` still does
+        // line-level scroll, so we handle nav mode separately here.
+        match c {
+            'j' => {
+                let last = self.view.posts.len().saturating_sub(1);
+                if self.view.selected_post.unwrap_or(0) >= last {
+                    // Already at the lowest post. The "next thing"
+                    // is the input box itself — re-enable it.
+                    self.vim_nav_mode = false;
+                    self.mark_dirty();
+                    return;
+                }
+                super::scroll::element_jump_down(self);
+                return;
+            }
+            'k' => {
+                if self.view.selected_post.unwrap_or(0) == 0 {
+                    self.input.input_flash = 3;
+                    self.mark_dirty();
+                    return;
+                }
+                super::scroll::element_jump_up(self);
+                return;
+            }
+            'g' => {
+                self.update(Event::GoToTop);
+                return;
+            }
+            'G' => {
+                self.update(Event::GoToBottom);
+                return;
+            }
+            _ => {}
+        }
         if let Some(evt) = self.vim_motion_event(c) {
             self.update(evt);
             return;
@@ -367,12 +409,29 @@ impl AppState {
     /// through.
     pub(crate) fn handle_vim_nav_event(&mut self, event: &Event) -> Option<bool> {
         match event {
-            Event::ScrollUp
-            | Event::ScrollDown
-            | Event::PageUp
-            | Event::PageDown
-            | Event::GoToTop
-            | Event::GoToBottom => {
+            // ArrowUp / k => up (older); ArrowDown / j => down (newer).
+            Event::HistoryPrev | Event::ScrollUp => {
+                if self.view.selected_post.unwrap_or(0) == 0 {
+                    self.input.input_flash = 3;
+                    self.mark_dirty();
+                } else {
+                    super::scroll::element_jump_up(self);
+                }
+                Some(false)
+            }
+            Event::HistoryNext | Event::ScrollDown => {
+                let last = self.view.posts.len().saturating_sub(1);
+                if self.view.selected_post.unwrap_or(0) >= last {
+                    // At the lowest post: the next focus is the
+                    // input box. Exit nav mode instead of flashing.
+                    self.vim_nav_mode = false;
+                    self.mark_dirty();
+                } else {
+                    super::scroll::element_jump_down(self);
+                }
+                Some(false)
+            }
+            Event::PageUp | Event::PageDown | Event::GoToTop | Event::GoToBottom => {
                 super::scroll::scroll_event(self, event.clone());
                 Some(false)
             }
@@ -398,7 +457,8 @@ impl AppState {
             'g' => Some(Event::GoToTop),
             'G' => Some(Event::GoToBottom),
             '/' => Some(Event::ToggleCommandPalette),
-            'y' => Some(Event::CopyLastResponse),
+            // 'y' is NOT a motion — it's typed normally. Copy-last is
+            // bound to Ctrl+O.
             _ => None,
         }
     }
@@ -442,6 +502,15 @@ impl AppState {
         self.input.undo_stack.clear();
         self.input.redo_stack.clear();
         if content.is_empty() && self.session.image_attachments.is_empty() {
+            return;
+        }
+
+        // Quit commands: typing these in the input box exits the app.
+        if content.eq_ignore_ascii_case("quit")
+            || content.eq_ignore_ascii_case("exit")
+            || content.eq_ignore_ascii_case(":q")
+        {
+            self.should_quit = true;
             return;
         }
 

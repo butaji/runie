@@ -11,7 +11,7 @@ use crate::markdown::{
     extract_code_blocks, md_to_spans, parse_inline_markdown_with_color, CodeBlock,
 };
 use crate::theme::{
-    color_bg_panel, color_fg, color_fg_bright, style_agent, style_thinking, style_thought,
+    color_accent_bg, color_fg, color_fg_bright, style_agent, style_thinking, style_thought,
     style_timestamp, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
     style_turn_complete, style_user, GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
 };
@@ -119,7 +119,7 @@ pub fn render_user_message(
 ) -> Vec<Line<'static>> {
     let ts_str = format_timestamp(timestamp);
     let base_style = style_user();
-    let bg_style = Style::default().bg(color_bg_panel());
+    let bg_style = Style::default().bg(color_accent_bg());
     let inner_width = content_width.saturating_sub(2);
     let prefix_width = GLYPH_USER.chars().count() as u16;
     let indent_width = GLYPH_INDENT.chars().count() as u16;
@@ -418,12 +418,23 @@ fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
     Line::from(spans).style(style_agent())
 }
 
-pub fn render_thought_marker(content: &str) -> Vec<Line<'static>> {
-    let lines: Vec<Line<'static>> = content
-        .lines()
-        .map(|line| Line::from(line.to_string()).style(style_thought()))
-        .collect();
-    add_lr_margins_to_lines(lines)
+pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'static>> {
+    let inner_width = content_width.saturating_sub(2);
+    let style = style_thought();
+    let mut lines: Vec<Line<'static>> = Vec::new();
+    for raw_line in content.lines() {
+        if raw_line.is_empty() {
+            lines.push(add_lr_margins(Line::from("").style(style)));
+            continue;
+        }
+        for chunk in word_wrap(raw_line, inner_width, inner_width) {
+            lines.push(add_lr_margins(Line::from(chunk.to_string()).style(style)));
+        }
+    }
+    if lines.is_empty() {
+        lines.push(add_lr_margins(Line::from("").style(style)));
+    }
+    lines
 }
 
 pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {

@@ -293,3 +293,100 @@ fn external_editor_done_updates_input() {
     assert_eq!(state.input.input, "new text");
     assert_eq!(state.input.cursor_pos, 8);
 }
+
+#[test]
+fn submit_quit_command_quits_app() {
+    let mut state = fresh_state();
+    for c in "quit".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    assert!(
+        state.should_quit,
+        "typing 'quit' and pressing Enter should quit"
+    );
+}
+
+#[test]
+fn submit_exit_command_quits_app() {
+    let mut state = fresh_state();
+    for c in "exit".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    assert!(
+        state.should_quit,
+        "typing 'exit' and pressing Enter should quit"
+    );
+}
+
+#[test]
+fn submit_colon_q_command_quits_app() {
+    let mut state = fresh_state();
+    for c in ":q".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    assert!(
+        state.should_quit,
+        "typing ':q' and pressing Enter should quit"
+    );
+}
+
+#[test]
+fn submit_quit_with_whitespace_trims_and_quits() {
+    let mut state = fresh_state();
+    for c in "  quit  ".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    assert!(
+        state.should_quit,
+        "typing 'quit' with surrounding whitespace should quit after trim"
+    );
+}
+
+#[test]
+fn submit_quit_is_case_insensitive() {
+    let mut state = fresh_state();
+    for c in "QUIT".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::Submit);
+    assert!(state.should_quit, "typing 'QUIT' should quit");
+}
+
+#[test]
+fn ctrl_q_event_quits_app() {
+    let mut state = fresh_state();
+    state.update(Event::Quit);
+    assert!(state.should_quit, "Event::Quit should set should_quit");
+}
+
+#[test]
+fn cursor_end_moves_to_end_of_input() {
+    let mut state = fresh_state();
+    for c in "hello".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::CursorLeft);
+    state.update(Event::CursorLeft);
+    assert_eq!(state.input.cursor_pos, 3);
+    state.update(Event::CursorEnd);
+    assert_eq!(state.input.cursor_pos, 5, "CursorEnd should move to end");
+}
+
+#[test]
+fn ctrl_e_event_moves_cursor_to_end() {
+    let mut state = fresh_state();
+    for c in "abc".chars() {
+        state.update(Event::Input(c));
+    }
+    state.update(Event::CursorStart);
+    assert_eq!(state.input.cursor_pos, 0);
+    state.update(Event::CursorEnd);
+    assert_eq!(
+        state.input.cursor_pos, 3,
+        "Ctrl+E (CursorEnd) should move to end"
+    );
+}

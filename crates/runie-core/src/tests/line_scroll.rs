@@ -68,10 +68,10 @@ fn thought_line_count_matches_content() {
     state.ensure_fresh();
 
     let total = state.view.total_lines();
-    // ThoughtMarker has 6 lines (header + 5), + Spacer = 7
+    // ThoughtMarker has 6 lines (header + 5), + leading spacer + trailing spacer = 8
     assert_eq!(
-        total, 7,
-        "Thought with 5 content lines should be 6+1=7 lines total"
+        total, 8,
+        "Thought with 5 content lines should be 6+2=8 lines total"
     );
 }
 
@@ -83,10 +83,10 @@ fn tool_line_count_matches_output() {
     state.ensure_fresh();
 
     let total = state.view.total_lines();
-    // ToolDone: header (1) + output (3) = 4, + Spacer = 5
+    // ToolDone: header (1) + output (3) = 4, + leading spacer + trailing spacer = 6
     assert_eq!(
-        total, 5,
-        "Tool with 3 output lines should be 4+1=5 lines total"
+        total, 6,
+        "Tool with 3 output lines should be 4+2=6 lines total"
     );
 }
 

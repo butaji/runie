@@ -106,6 +106,24 @@ impl AppState {
                 return;
             }
             self.vim_nav_mode = true;
+            // Anchor the selection to the post at the bottom of the
+            // viewport (closest to the input box). This matches the
+            // user's expectation that pressing Esc from the input box
+            // selects the newest/lowest post in the feed.
+            self.view.selected_post = crate::snapshot::compute_current_bottom_element(
+                &self.view.elements_cache,
+                &self.view.line_counts,
+                self.view.total_lines,
+                self.view.scroll,
+                self.view.last_visible_height,
+            )
+            .and_then(|elem| {
+                self.view
+                    .posts
+                    .iter()
+                    .find(|p| p.start <= elem && elem < p.end)
+                    .map(|p| p.index)
+            });
             self.mark_dirty();
             return;
         }
