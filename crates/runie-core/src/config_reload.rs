@@ -52,10 +52,18 @@ impl Default for TruncationSection {
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize)]
+pub struct UiSection {
+    #[serde(default)]
+    pub vim_mode: bool,
+}
+
+#[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct Config {
     pub provider: Option<String>,
     model: Option<String>,
     pub theme: Option<String>,
+    #[serde(default)]
+    ui: UiSection,
     #[serde(default)]
     models: ModelsSection,
     #[serde(default)]
@@ -114,6 +122,10 @@ impl Config {
 
     pub fn prompts(&self) -> &PromptsSection {
         &self.prompts
+    }
+
+    pub fn vim_mode(&self) -> bool {
+        self.ui.vim_mode
     }
 }
 
@@ -534,6 +546,52 @@ model = "gpt-4"
 
         let config = Config::load_from(&config_path);
         assert!(config.scoped_models().is_none());
+    }
+
+    #[test]
+    fn config_vim_mode_default_false() {
+        let config = Config::default();
+        assert!(!config.vim_mode());
+    }
+
+    #[test]
+    fn config_vim_mode_true() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+
+        fs::write(
+            &config_path,
+            r#"
+[ui]
+vim_mode = true
+"#,
+        )
+        .unwrap();
+
+        let config = Config::load_from(&config_path);
+        assert!(config.vim_mode());
+    }
+
+    #[test]
+    fn reload_all_applies_vim_mode() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+        fs::write(
+            &config_path,
+            r#"
+[ui]
+vim_mode = true
+"#,
+        )
+        .unwrap();
+
+        let mut state = AppState::default();
+        assert!(!state.config.vim_mode);
+        let config = Config::load_from(&config_path);
+        if config.vim_mode() {
+            state.config.vim_mode = true;
+        }
+        assert!(state.config.vim_mode);
     }
 
     #[test]

@@ -1,9 +1,9 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
+use futures::StreamExt;
 use runie_agent::parser::parse_tool_calls;
 use runie_agent::{build_provider_with_warning, Tool};
-use futures::StreamExt;
 use runie_core::{
     config_reload,
     provider::{Message, Provider},
@@ -29,8 +29,8 @@ async fn run_print(prompt: &str) -> Result<()> {
     let config = config_reload::Config::load_from(&config_reload::config_path());
     let provider_name = config.provider.as_deref().unwrap_or("mock");
     let model = config.default_model().unwrap_or("echo");
-    let provider = build_provider_with_warning(provider_name, model)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let provider =
+        build_provider_with_warning(provider_name, model).map_err(|e| anyhow::anyhow!("{}", e))?;
     run_print_with(prompt, &provider).await?;
     println!();
     Ok(())
@@ -101,7 +101,10 @@ mod tests {
         let provider = runie_provider::MockProvider::default();
         let output = run_print_with("Hello", &provider).await;
         // run_print_with writes to stdout; we just verify it doesn't panic
-        assert!(output.is_ok(), "print mode should not error on mock provider");
+        assert!(
+            output.is_ok(),
+            "print mode should not error on mock provider"
+        );
     }
 
     #[tokio::test]

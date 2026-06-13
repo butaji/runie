@@ -58,15 +58,27 @@ fn test_scroll_down_saturates() {
 fn test_tool_flow_creates_two_thoughts() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(&mut state, &[
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentToolStart { id: "req.0".into(), name: "list_files".into() },
-        Event::AgentToolEnd { duration_secs: 0.5, output: String::new() },
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentResponse { id: "req.0".into(), content: "Here are the files".into() },
-    ]);
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_files".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: String::new(),
+            },
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "Here are the files".into(),
+            },
+        ],
+    );
     let thought_count = state
         .session
         .messages
@@ -94,12 +106,21 @@ fn test_turn_complete_event() {
 fn test_turn_complete_always_added_when_event_received() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(&mut state, &[
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentResponse { id: "req.0".into(), content: "Hi".into() },
-        Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 1.0 },
-    ]);
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "Hi".into(),
+            },
+            Event::AgentTurnComplete {
+                id: "req.0".into(),
+                duration_secs: 1.0,
+            },
+        ],
+    );
     let has_turn_complete = state
         .session
         .messages
@@ -130,13 +151,25 @@ fn test_tool_done_event() {
 fn test_formatted_labels_short_names() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(&mut state, &[
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentToolStart { id: "req.0".into(), name: "list_files".into() },
-        Event::AgentToolEnd { duration_secs: 0.3, output: String::new() },
-        Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 5.1 },
-    ]);
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_files".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.3,
+                output: String::new(),
+            },
+            Event::AgentTurnComplete {
+                id: "req.0".into(),
+                duration_secs: 5.1,
+            },
+        ],
+    );
     let lines = format_messages(&state);
     let content: String = lines
         .iter()
@@ -155,16 +188,31 @@ fn test_formatted_labels_short_names() {
 fn test_list_files_full_tool_flow_sequence() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(&mut state, &[
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentToolStart { id: "req.0".into(), name: "list_files".into() },
-        Event::AgentToolEnd { duration_secs: 0.5, output: String::new() },
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentResponse { id: "req.0".into(), content: "Here are the files:".into() },
-        Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 5.1 },
-    ]);
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_files".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: String::new(),
+            },
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "Here are the files:".into(),
+            },
+            Event::AgentTurnComplete {
+                id: "req.0".into(),
+                duration_secs: 5.1,
+            },
+        ],
+    );
     assert_eq!(state.session.messages.len(), 5);
     assert_eq!(state.session.messages[0].role, Role::Thought);
     assert_eq!(state.session.messages[1].role, Role::Tool);
@@ -187,15 +235,30 @@ fn test_list_files_full_tool_flow_sequence() {
 fn test_turn_complete_shows_even_if_done_arrives_first() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(&mut state, &[
-        Event::AgentThinking { id: "req.0".into() },
-        Event::AgentThoughtDone { id: "req.0".into() },
-        Event::AgentToolStart { id: "req.0".into(), name: "list_files".into() },
-        Event::AgentToolEnd { duration_secs: 0.5, output: String::new() },
-        Event::AgentResponse { id: "req.0".into(), content: "Here are files".into() },
-        Event::AgentDone { id: "req.0".into() },
-        Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 3.2 },
-    ]);
+    dispatch(
+        &mut state,
+        &[
+            Event::AgentThinking { id: "req.0".into() },
+            Event::AgentThoughtDone { id: "req.0".into() },
+            Event::AgentToolStart {
+                id: "req.0".into(),
+                name: "list_files".into(),
+            },
+            Event::AgentToolEnd {
+                duration_secs: 0.5,
+                output: String::new(),
+            },
+            Event::AgentResponse {
+                id: "req.0".into(),
+                content: "Here are files".into(),
+            },
+            Event::AgentDone { id: "req.0".into() },
+            Event::AgentTurnComplete {
+                id: "req.0".into(),
+                duration_secs: 3.2,
+            },
+        ],
+    );
     let has_turn_complete = state
         .session
         .messages

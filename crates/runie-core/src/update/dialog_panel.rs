@@ -91,11 +91,7 @@ fn try_activate_panel(state: &mut AppState, stack: &mut PanelStack) -> bool {
 }
 
 /// Handle a panel item action. Returns `true` if the dialog was closed.
-fn handle_panel_action(
-    state: &mut AppState,
-    action: ItemAction,
-    stack: &mut PanelStack,
-) -> bool {
+fn handle_panel_action(state: &mut AppState, action: ItemAction, stack: &mut PanelStack) -> bool {
     match action {
         ItemAction::Push(_) | ItemAction::Pop => {
             stack.pop();
@@ -107,7 +103,10 @@ fn handle_panel_action(
             true
         }
         ItemAction::Emit(evt) => {
-            let keep_open = stack.current().map(|p| p.keep_open_on_activate).unwrap_or(false);
+            let keep_open = stack
+                .current()
+                .map(|p| p.keep_open_on_activate)
+                .unwrap_or(false);
             if !keep_open {
                 state.open_dialog = None;
             }
@@ -136,8 +135,9 @@ fn panel_toggle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
 }
 
 fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
-    if let Some(PanelItem::Select { current, options, .. }) =
-        stack.current_mut().and_then(|p| p.selected_item_mut())
+    if let Some(PanelItem::Select {
+        current, options, ..
+    }) = stack.current_mut().and_then(|p| p.selected_item_mut())
     {
         if let Some(idx) = options.iter().position(|o| o == current) {
             let next = (idx + 1) % options.len();
@@ -150,8 +150,12 @@ fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
 fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
     match key {
         "read_only" => state.toggle_read_only(),
-        "steering_mode" => state.config.steering_mode = cycle_delivery_mode(state.config.steering_mode),
-        "follow_up_mode" => state.config.follow_up_mode = cycle_delivery_mode(state.config.follow_up_mode),
+        "steering_mode" => {
+            state.config.steering_mode = cycle_delivery_mode(state.config.steering_mode)
+        }
+        "follow_up_mode" => {
+            state.config.follow_up_mode = cycle_delivery_mode(state.config.follow_up_mode)
+        }
         "provider" => {
             if let Some(value) = selected_select_value(stack) {
                 state.set_provider(&value);

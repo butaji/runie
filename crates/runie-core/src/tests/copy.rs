@@ -1,13 +1,14 @@
 //! Tests for the /copy command.
 //!
-//! Regression: previously `/copy` claimed success but did nothing. Now it
-//! persists the last assistant message to a file the user can paste from.
+//! /copy now emits a `CopyToClipboard` event so the binary layer can
+//! write the OSC 52 sequence directly to the terminal. These tests
+//! verify the event is emitted with the correct payload.
 
 use crate::event::Event;
 use crate::model::AppState;
 use std::sync::Mutex;
 
-/// Serializes tests that touch the `RUNIE_CACHE_DIR` env var.
+/// Serializes tests that touch shared env/state.
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 fn fresh_state() -> AppState {
@@ -45,11 +46,8 @@ fn copy_with_no_assistant_message_shows_error() {
 }
 
 #[test]
-fn copy_writes_last_assistant_text_to_clipboard_file() {
+fn copy_emits_clipboard_event_with_last_assistant_text() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    let tmp = std::env::temp_dir().join(format!("runie_copy_test_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&tmp);
-    std::env::set_var("RUNIE_CACHE_DIR", &tmp);
     let mut state = fresh_state();
     state.session.messages.push(crate::model::ChatMessage {
         role: crate::model::Role::Assistant,
@@ -58,38 +56,21 @@ fn copy_writes_last_assistant_text_to_clipboard_file() {
         id: "resp.0".into(),
         ..Default::default()
     });
-    type_str(&mut state, "/copy");
-    state.update(Event::Submit);
-    let clip = tmp.join("clipboard.md");
-    assert!(clip.exists(), "clipboard file should exist at {:?}", clip);
-    let content = std::fs::read_to_string(&clip).unwrap();
+
+    // Capture the event emitted by /copy. Since CopyToClipboard is
+    // routed to control_event (which currently ignores it), we
+    // observe it via the command handler directly.
+    let result = state.handle_slash("/copy");
     assert!(
-        content.contains("the answer is 42"),
-        "clipboard file should contain assistant text, got: {:?}",
-        content
+        matches!(result, Some(crate::commands::CommandResult::Event(Event::CopyToClipboard(ref text))) if text == "the answer is 42"),
+        "expected CopyToClipboard event with last assistant text, got {:?}",
+        result
     );
-    let sys: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == crate::model::Role::System)
-        .collect();
-    let last = sys.last().expect("system message after /copy");
-    assert!(
-        last.content.contains("clipboard.md"),
-        "system message should mention the file path, got: {:?}",
-        last.content
-    );
-    let _ = std::fs::remove_dir_all(&tmp);
-    std::env::remove_var("RUNIE_CACHE_DIR");
 }
 
 #[test]
 fn copy_uses_most_recent_assistant_message() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    let tmp = std::env::temp_dir().join(format!("runie_copy_recent_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&tmp);
-    std::env::set_var("RUNIE_CACHE_DIR", &tmp);
     let mut state = fresh_state();
     state.session.messages.push(crate::model::ChatMessage {
         role: crate::model::Role::Assistant,
@@ -105,52 +86,42 @@ fn copy_uses_most_recent_assistant_message() {
         id: "resp.1".into(),
         ..Default::default()
     });
-    type_str(&mut state, "/copy");
-    state.update(Event::Submit);
-    let clip = tmp.join("clipboard.md");
-    let content = std::fs::read_to_string(&clip).unwrap();
+
+    let result = state.handle_slash("/copy");
     assert!(
-        content.contains("newer response"),
-        "should copy the most recent, got: {:?}",
-        content
+        matches!(result, Some(crate::commands::CommandResult::Event(Event::CopyToClipboard(ref text))) if text == "newer response"),
+        "should copy the most recent assistant message, got {:?}",
+        result
     );
-    assert!(
-        !content.contains("old response"),
-        "should NOT copy older messages"
-    );
-    let _ = std::fs::remove_dir_all(&tmp);
-    std::env::remove_var("RUNIE_CACHE_DIR");
 }
 
 #[test]
-fn copy_uses_default_cache_dir_when_env_unset() {
+fn copy_event_payload_does_not_include_older_messages() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    std::env::remove_var("RUNIE_CACHE_DIR");
-
     let mut state = fresh_state();
     state.session.messages.push(crate::model::ChatMessage {
         role: crate::model::Role::Assistant,
-        content: "default dir test".into(),
+        content: "old response".into(),
         timestamp: 0.0,
         id: "resp.0".into(),
         ..Default::default()
     });
+    state.session.messages.push(crate::model::ChatMessage {
+        role: crate::model::Role::Assistant,
+        content: "newer response".into(),
+        timestamp: 1.0,
+        id: "resp.1".into(),
+        ..Default::default()
+    });
 
-    type_str(&mut state, "/copy");
-    state.update(Event::Submit);
-
-    // Don't assert the actual path (depends on $HOME); just assert the
-    // system message contains a path-like string.
-    let sys: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == crate::model::Role::System)
-        .collect();
-    let last = sys.last().expect("system message");
-    assert!(
-        last.content.contains("clipboard.md"),
-        "system message should mention the file path, got: {:?}",
-        last.content
-    );
+    let result = state.handle_slash("/copy");
+    if let Some(crate::commands::CommandResult::Event(Event::CopyToClipboard(text))) = result {
+        assert!(
+            !text.contains("old response"),
+            "should NOT copy older messages, got: {:?}",
+            text
+        );
+    } else {
+        panic!("expected CopyToClipboard event, got {:?}", result);
+    }
 }

@@ -25,9 +25,7 @@ pub fn form_panel_action(panel: &mut Panel, event: Event) -> FormAction {
             form_panel_edit_char(panel, ' ', false);
             A::KeepOpen
         }
-        CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => {
-            handle_form_submit(panel)
-        }
+        CommandFormSubmit | Submit | SettingsSelect | PaletteSelect => handle_form_submit(panel),
         _ => A::KeepOpen,
     }
 }
@@ -48,7 +46,10 @@ fn handle_form_submit(panel: &mut Panel) -> FormAction {
     use FormAction as A;
     if let Some(item) = panel.selected_item() {
         match item {
-            PanelItem::Action { action: ItemAction::Emit(evt), .. } => {
+            PanelItem::Action {
+                action: ItemAction::Emit(evt),
+                ..
+            } => {
                 return A::Submit(Some(evt.clone()));
             }
             PanelItem::Action { .. } | PanelItem::FormSubmit => {

@@ -102,5 +102,8 @@ fn model_options(provider: &str) -> Vec<String> {
 }
 
 fn theme_options() -> Vec<String> {
-    crate::themes::BUILTIN_THEMES.iter().map(|t| t.to_string()).collect()
+    crate::themes::BUILTIN_THEMES
+        .iter()
+        .map(|t| t.to_string())
+        .collect()
 }

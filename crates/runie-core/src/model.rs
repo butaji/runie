@@ -167,8 +167,8 @@ impl ThinkingLevel {
     /// Maps to 3-bit representation: 000=earth, 111=heaven.
     pub fn hexagram(&self) -> &'static str {
         match self {
-            Self::Off => "☷",   // 000 - earth (no thinking)
-            Self::Low => "☵",   // 010 - water (minimal thinking)
+            Self::Off => "☷",    // 000 - earth (no thinking)
+            Self::Low => "☵",    // 010 - water (minimal thinking)
             Self::Medium => "☳", // 100 - thunder (moderate thinking)
             Self::High => "☰",   // 111 - heaven (deep thinking)
         }
@@ -245,6 +245,12 @@ pub struct AppState {
     pub cwd_name: String,
     /// Command input history (persistent across sessions)
     pub input_history: Vec<String>,
+    /// True while the user is in vim feed-navigation mode (j/k/g/G etc.).
+    /// Only meaningful when `config.vim_mode` is enabled.
+    pub vim_nav_mode: bool,
+    /// When vim_mode Esc was used to abort a turn, the next Esc enters
+    /// nav mode. Cleared once consumed or when a turn is no longer active.
+    pub vim_nav_pending: bool,
 }
 
 impl Default for AppState {
@@ -270,6 +276,8 @@ impl Default for AppState {
             git_info,
             cwd_name,
             input_history: Vec::new(),
+            vim_nav_mode: false,
+            vim_nav_pending: false,
         }
     }
 }

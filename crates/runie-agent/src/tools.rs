@@ -90,9 +90,11 @@ impl Tool {
 
     fn run_inner(&self, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
         match self {
-            Tool::ReadFile { path, offset, limit } => {
-                read_file::read_file(path, *offset, *limit, policy)
-            }
+            Tool::ReadFile {
+                path,
+                offset,
+                limit,
+            } => read_file::read_file(path, *offset, *limit, policy),
             Tool::ListDir { path } => list_dir(path, policy),
             Tool::WriteFile { path, content } => write_file(path, content),
             Tool::EditFile {

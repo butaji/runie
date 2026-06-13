@@ -30,8 +30,8 @@ mod queue;
 pub mod scoped_models;
 mod scroll;
 mod session;
-mod state_helpers;
 pub mod settings_dialog;
+mod state_helpers;
 mod system_actions;
 pub mod tab_complete;
 
@@ -81,6 +81,44 @@ impl AppState {
             return;
         }
 
+        // Vim-mode Esc: with vim enabled, Esc either stops an active turn
+        // (first press) or enters feed-navigation mode (second press / when
+        // idle). Without vim_mode, fall through to the default handler
+        // (which is a no-op for DialogBack when no dialog is open).
+        if event == Event::DialogBack && self.config.vim_mode {
+            if self.vim_nav_mode {
+                self.vim_nav_mode = false;
+                self.mark_dirty();
+                return;
+            }
+            if self.vim_nav_pending {
+                self.vim_nav_pending = false;
+                self.vim_nav_mode = true;
+                self.mark_dirty();
+                return;
+            }
+            if self.agent.turn_active {
+                // First Esc stops the turn; a subsequent Esc enters nav.
+                self.agent.turn_active = false;
+                self.agent.inflight = 0;
+                self.vim_nav_pending = true;
+                self.mark_dirty();
+                return;
+            }
+            self.vim_nav_mode = true;
+            self.mark_dirty();
+            return;
+        }
+
+        // Vim nav mode: route motion keys before generic input handling.
+        if self.vim_nav_mode {
+            if let Some(handled) = self.handle_vim_nav_event(&event) {
+                if !handled {
+                    return;
+                }
+            }
+        }
+
         match event {
             Event::Input(_)
             | Event::Backspace
@@ -110,9 +148,12 @@ impl AppState {
             | Event::AgentTurnComplete { .. }
             | Event::AgentDone { .. }
             | Event::AgentError { .. } => agent::agent_event(self, event),
-            Event::ScrollUp | Event::ScrollDown | Event::PageUp | Event::PageDown => {
-                scroll::scroll_event(self, event)
-            }
+            Event::ScrollUp
+            | Event::ScrollDown
+            | Event::PageUp
+            | Event::PageDown
+            | Event::GoToTop
+            | Event::GoToBottom => scroll::scroll_event(self, event),
             Event::Quit
             | Event::Reset
             | Event::Abort
@@ -131,7 +172,8 @@ impl AppState {
             | Event::TrustProject
             | Event::UntrustProject
             | Event::FollowUp
-            | Event::Dequeue => model_config::model_config_event(self, event),
+            | Event::Dequeue
+            | Event::ToggleVimMode => model_config::model_config_event(self, event),
             Event::ToggleExpand
             | Event::ToggleSessionTree
             | Event::SessionTreeFilterCycle
@@ -147,6 +189,9 @@ impl AppState {
             | Event::ScopedModelToggleProvider { .. }
             | Event::AtFilePicker => dialog_toggle::dialog_toggle_event(self, event),
             Event::InsertAtRef(_) => input_dispatch::input_event(self, event),
+            Event::CopyToClipboard(_) | Event::CopyLastResponse => {
+                control::control_event(self, event)
+            }
             Event::ToggleSettingsDialog
             | Event::SettingsUp
             | Event::SettingsDown

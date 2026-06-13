@@ -10,13 +10,15 @@
 mod app_init;
 mod keymap;
 mod share;
+mod terminal;
 mod terminal_setup;
 
 use crossterm::event::EventStream;
 use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use runie_agent::{run_agent_turn, AgentCommand, build_provider_with_warning};
+use runie_agent::{build_provider_with_warning, run_agent_turn, AgentCommand};
 use runie_core::{config_reload, AppState, Event as CoreEvent, Snapshot};
+use runie_term::terminal::clipboard;
 use std::{collections::HashMap, io, io::Write, time::Duration};
 use tokio::sync::{mpsc, watch};
 
@@ -28,9 +30,10 @@ impl Drop for Cleanup {
     fn drop(&mut self) {
         let _ = crossterm::execute!(
             std::io::stdout(),
-            crossterm::event::PopKeyboardEnhancementFlags,
+            crossterm::event::DisableFocusChange,
             crossterm::terminal::LeaveAlternateScreen,
         );
+        let _ = terminal_setup::reset_keyboard_enhancements(&mut std::io::stdout());
         let _ = crossterm::terminal::disable_raw_mode();
     }
 }
@@ -38,7 +41,7 @@ impl Drop for Cleanup {
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
-    let terminal = terminal_setup::setup_terminal()?;
+    let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     let mut state = AppState::default();
     app_init::apply_trust_on_startup(&mut state);
     app_init::init_scoped_models(&mut state);
@@ -46,6 +49,7 @@ async fn main() -> io::Result<()> {
     app_init::init_prompts(&mut state);
     app_init::init_telemetry(&mut state);
     app_init::init_truncation(&mut state);
+    app_init::init_ui_config(&mut state);
 
     // Production-ready startup: if no provider is configured and the
     // mock provider is not enabled, auto-open the login dialog so the
@@ -82,7 +86,14 @@ async fn main() -> io::Result<()> {
     ));
 
     event_loop(
-        state, input_rx, agent_rx, cmd_tx, render_tx, input_tx, kb_tx,
+        state,
+        input_rx,
+        agent_rx,
+        cmd_tx,
+        render_tx,
+        input_tx,
+        kb_tx,
+        terminal_caps,
     )
     .await
 }
@@ -135,6 +146,7 @@ async fn input_reader(
     }
 }
 
+#[allow(clippy::too_many_arguments)] // channel plumbing is inherent to the actor loop
 async fn event_loop(
     mut state: AppState,
     mut input_rx: mpsc::Receiver<CoreEvent>,
@@ -143,6 +155,7 @@ async fn event_loop(
     render_tx: watch::Sender<Snapshot>,
     input_tx: mpsc::Sender<CoreEvent>,
     kb_tx: watch::Sender<HashMap<String, String>>,
+    terminal_caps: crate::terminal::caps::TerminalCapabilities,
 ) -> io::Result<()> {
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
 
@@ -162,6 +175,25 @@ async fn event_loop(
                     tokio::task::spawn_blocking(move || {
                         let _ = spawn_external_editor_sync(text, tx);
                     });
+                } else if let CoreEvent::CopyToClipboard(ref text) = evt {
+                    let text = text.clone();
+                    if terminal_caps.clipboard {
+                        let _ = clipboard::copy_to_clipboard(&mut std::io::stdout(), &text);
+                    }
+                } else if matches!(evt, CoreEvent::CopyLastResponse) {
+                    if terminal_caps.clipboard {
+                        let text = state
+                            .session
+                            .messages
+                            .iter()
+                            .rev()
+                            .find(|m| m.role == runie_core::model::Role::Assistant)
+                            .map(|m| m.content.clone())
+                            .unwrap_or_default();
+                        if !text.is_empty() {
+                            let _ = clipboard::copy_to_clipboard(&mut std::io::stdout(), &text);
+                        }
+                    }
                 } else if matches!(evt, CoreEvent::ShareSession) {
                     let messages = state.session.messages.clone();
                     let display_name = state.session.session_display_name.clone();
@@ -184,9 +216,11 @@ async fn event_loop(
                     #[cfg(unix)]
                     {
                         // Restore terminal to normal before suspending
+                        let _ = terminal_setup::reset_keyboard_enhancements(
+                            &mut std::io::stdout(),
+                        );
                         let _ = crossterm::execute!(
                             std::io::stdout(),
-                            crossterm::event::PopKeyboardEnhancementFlags,
                             crossterm::terminal::LeaveAlternateScreen,
                         );
                         let _ = crossterm::terminal::disable_raw_mode();
@@ -199,7 +233,10 @@ async fn event_loop(
 
                         // After resume, restore terminal
                         let _ = crossterm::terminal::enable_raw_mode();
-                        let _ = terminal_setup::restore_terminal_graphics(&mut std::io::stdout());
+                        let _ = terminal_setup::restore_terminal_graphics(
+                            &mut std::io::stdout(),
+                            terminal_caps,
+                        );
 
                         // Force redraw
                         state.ensure_fresh();

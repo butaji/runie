@@ -9,18 +9,30 @@ impl AppState {
     pub fn hint_text(&self) -> String {
         let mut parts = Vec::new();
         parts.push("ctrl+shift+e expand/collapse".to_string());
-        if self.completion.at_suggestions.is_some() {
+
+        if self.vim_nav_mode {
+            parts.push("j/k scroll".to_string());
+            parts.push("g/G top/bottom".to_string());
+            parts.push("space input".to_string());
+            parts.push("esc input".to_string());
+        } else if self.completion.at_suggestions.is_some() {
             parts.push("tab cycle".to_string());
             parts.push("enter insert".to_string());
             parts.push("esc close".to_string());
         } else if self.agent.turn_active {
             parts.push("enter steer".to_string());
             parts.push("alt+enter follow-up".to_string());
-            parts.push("esc abort".to_string());
+            parts.push(if self.config.vim_mode {
+                "esc abort·nav".to_string()
+            } else {
+                "esc abort".to_string()
+            });
         } else if !self.input.input.is_empty() {
             parts.push("enter send".to_string());
             parts.push("alt+enter follow-up".to_string());
             parts.push("esc clear".to_string());
+        } else if self.config.vim_mode {
+            parts.push("esc nav".to_string());
         } else {
             parts.push("alt+enter follow-up".to_string());
             parts.push("esc clear".to_string());
@@ -303,18 +315,92 @@ impl AppState {
             self.tab_complete();
             return;
         }
-        // Slash opens command palette when input is empty
-        if c == '/' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
-            super::dialog::open_command_palette(self);
-            self.mark_dirty();
+        // Vim nav mode intercepts printable characters as motions.
+        if self.vim_nav_mode {
+            self.handle_vim_nav_char(c);
             return;
         }
-        // @ opens file picker when input is empty
-        if c == '@' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
-            super::dialog::open_at_file_picker(self);
-            return;
+        // When input is empty, single-key shortcuts bypass typing.
+        if self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
+            if self.config.vim_mode {
+                if let Some(evt) = self.vim_motion_event(c) {
+                    self.update(evt);
+                    return;
+                }
+            }
+            match c {
+                '/' => {
+                    super::dialog::open_command_palette(self);
+                    self.mark_dirty();
+                    return;
+                }
+                '@' => {
+                    super::dialog::open_at_file_picker(self);
+                    return;
+                }
+                _ => {}
+            }
         }
         self.insert_char(c);
+    }
+
+    /// Handle a character while in vim nav mode. Returns true if the char
+    /// was consumed (motion or space-to-leave), false if it should be
+    /// treated as a normal typed character (which also leaves nav mode).
+    fn handle_vim_nav_char(&mut self, c: char) {
+        if c == ' ' {
+            self.vim_nav_mode = false;
+            self.insert_char(' ');
+            return;
+        }
+        if let Some(evt) = self.vim_motion_event(c) {
+            self.update(evt);
+            return;
+        }
+        // Any other printable character exits nav mode and is typed.
+        self.vim_nav_mode = false;
+        self.insert_char(c);
+    }
+
+    /// Called by `update` for non-char events while in nav mode. Returns
+    /// `Some(false)` to fully consume the event, `Some(true)` to fall
+    /// through.
+    pub(crate) fn handle_vim_nav_event(&mut self, event: &Event) -> Option<bool> {
+        match event {
+            Event::ScrollUp
+            | Event::ScrollDown
+            | Event::PageUp
+            | Event::PageDown
+            | Event::GoToTop
+            | Event::GoToBottom => {
+                super::scroll::scroll_event(self, event.clone());
+                Some(false)
+            }
+            Event::ToggleCommandPalette => {
+                super::dialog_toggle::dialog_toggle_event(self, event.clone());
+                Some(false)
+            }
+            Event::CopyLastResponse => {
+                super::control::control_event(self, event.clone());
+                Some(false)
+            }
+            _ => Some(true),
+        }
+    }
+
+    /// Map a single character to a vim motion event when vim_mode is on and
+    /// the input field is empty. Returns None for characters that should be
+    /// inserted normally.
+    fn vim_motion_event(&self, c: char) -> Option<Event> {
+        match c {
+            'j' => Some(Event::ScrollUp),
+            'k' => Some(Event::ScrollDown),
+            'g' => Some(Event::GoToTop),
+            'G' => Some(Event::GoToBottom),
+            '/' => Some(Event::ToggleCommandPalette),
+            'y' => Some(Event::CopyLastResponse),
+            _ => None,
+        }
     }
 
     pub(crate) fn pop_input(&mut self) {
@@ -397,10 +483,18 @@ impl AppState {
                 }
                 crate::commands::CommandResult::Event(evt) => self.update(evt),
                 crate::commands::CommandResult::OpenDialog(d) => match d {
-                    crate::commands::DialogType::CommandPalette => super::dialog::open_command_palette(self),
-                    crate::commands::DialogType::ModelSelector => super::dialog::open_model_selector(self),
-                    crate::commands::DialogType::Settings => super::dialog::open_settings_dialog(self),
-                    crate::commands::DialogType::ScopedModels => super::dialog::open_scoped_models_dialog(self),
+                    crate::commands::DialogType::CommandPalette => {
+                        super::dialog::open_command_palette(self)
+                    }
+                    crate::commands::DialogType::ModelSelector => {
+                        super::dialog::open_model_selector(self)
+                    }
+                    crate::commands::DialogType::Settings => {
+                        super::dialog::open_settings_dialog(self)
+                    }
+                    crate::commands::DialogType::ScopedModels => {
+                        super::dialog::open_scoped_models_dialog(self)
+                    }
                 },
                 crate::commands::CommandResult::OpenPanelStack(stack) => {
                     self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
@@ -480,6 +574,4 @@ impl AppState {
         self.clamp_input_scroll();
         self.mark_dirty();
     }
-
-
 }

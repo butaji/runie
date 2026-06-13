@@ -32,6 +32,10 @@ pub fn model_config_event(state: &mut AppState, event: Event) {
         Event::UntrustProject => state.untrust_project(),
         Event::FollowUp => state.queue_follow_up(),
         Event::Dequeue => state.dequeue(),
+        Event::ToggleVimMode => {
+            state.config.vim_mode = !state.config.vim_mode;
+            invalidate_settings = true;
+        }
         _ => {}
     }
     if invalidate_settings {

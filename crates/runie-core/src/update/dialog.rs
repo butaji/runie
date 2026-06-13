@@ -86,7 +86,6 @@ fn route_global_dialog_event(state: &mut AppState, event: &Event) -> bool {
 fn is_palette_activation(dialog: &DialogState, event: &Event) -> bool {
     matches!(event, Event::Submit | Event::PaletteSelect)
         && matches!(dialog, DialogState::CommandPalette(_))
-
 }
 
 fn restore_or_pop_dialog(
@@ -197,8 +196,9 @@ pub fn open_model_selector(state: &mut AppState) {
         &state.config.current_model,
     );
     let (recent, groups) = partition_model_items(items);
-    state.open_dialog =
-        Some(DialogState::ModelSelector(model_selector(recent, groups, &current)));
+    state.open_dialog = Some(DialogState::ModelSelector(model_selector(
+        recent, groups, &current,
+    )));
     state.mark_dirty();
 }
 

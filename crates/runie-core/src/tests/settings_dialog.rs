@@ -95,7 +95,10 @@ fn settings_select_toggles_steering_mode() {
     state.update(Event::ToggleSettingsDialog);
     // Find steering mode row by scanning
     let count = settings_count(&state);
-    assert!(matches!(state.config.steering_mode, DeliveryMode::OneAtATime));
+    assert!(matches!(
+        state.config.steering_mode,
+        DeliveryMode::OneAtATime
+    ));
     for _ in 0..count {
         let is_steering = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
             stack

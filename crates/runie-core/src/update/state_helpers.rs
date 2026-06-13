@@ -1,8 +1,8 @@
 //! Shared state helpers used by multiple update handlers.
 
-use crate::model::{AppState, ChatMessage, Role};
-use crate::event::TransientLevel;
 use super::now;
+use crate::event::TransientLevel;
+use crate::model::{AppState, ChatMessage, Role};
 
 impl AppState {
     pub(crate) fn push_dialog_to_back_stack(&mut self, dialog: crate::commands::DialogState) {
@@ -56,15 +56,11 @@ impl AppState {
     /// or falling back to the last assistant message's id), so earlier turns'
     /// TurnComplete are not affected.
     pub(crate) fn ensure_turn_complete_last(&mut self) {
-        let target_id = self
-            .agent
-            .current_request_id
-            .clone()
-            .or_else(|| {
-                self.agent
-                    .last_assistant_index
-                    .and_then(|idx| self.session.messages.get(idx).map(|m| m.id.clone()))
-            });
+        let target_id = self.agent.current_request_id.clone().or_else(|| {
+            self.agent
+                .last_assistant_index
+                .and_then(|idx| self.session.messages.get(idx).map(|m| m.id.clone()))
+        });
         let Some(target_id) = target_id else {
             return;
         };
@@ -182,7 +178,11 @@ impl AppState {
 
     pub(crate) fn toggle_read_only(&mut self) {
         self.config.read_only = !self.config.read_only;
-        let status = if self.config.read_only { "enabled" } else { "disabled" };
+        let status = if self.config.read_only {
+            "enabled"
+        } else {
+            "disabled"
+        };
         self.notify(
             format!("Read-only mode {}", status),
             TransientLevel::Warning,

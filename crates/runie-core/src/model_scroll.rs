@@ -27,5 +27,4 @@ impl AppState {
         let thumb = thumb_end.saturating_sub(thumb_start).max(1);
         (thumb, thumb_start)
     }
-
 }

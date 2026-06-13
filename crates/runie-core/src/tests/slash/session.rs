@@ -1,6 +1,6 @@
+use super::{exec, fresh_state, tmp_store, type_str, ENV_LOCK};
 use crate::event::Event;
 use crate::model::Role;
-use super::{exec, fresh_state, tmp_store, type_str, ENV_LOCK};
 
 #[test]
 fn delete_no_args_opens_form() {

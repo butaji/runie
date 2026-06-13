@@ -30,7 +30,9 @@ pub fn dialog_toggle_event(state: &mut AppState, event: Event) {
             dialog::open_session_tree_dialog,
         ),
         Event::AtFilePicker => dialog::open_at_file_picker(state),
-        Event::ScopedModelToggle { name } => crate::update::scoped_models::toggle_scoped_model(state, &name),
+        Event::ScopedModelToggle { name } => {
+            crate::update::scoped_models::toggle_scoped_model(state, &name)
+        }
         Event::ScopedModelEnableAll => crate::update::scoped_models::enable_all(state),
         Event::ScopedModelDisableAll => crate::update::scoped_models::disable_all(state),
         Event::ScopedModelToggleProvider { provider } => {

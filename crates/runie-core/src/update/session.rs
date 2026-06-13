@@ -1,5 +1,5 @@
-use crate::model::AppState;
 use super::dialog::open_session_tree_dialog;
+use crate::model::AppState;
 
 impl AppState {
     // === Session Event Handler ===
@@ -57,7 +57,11 @@ impl AppState {
             .as_mut()
             .and_then(|tree| tree.find_path_by_id(id))
             .map(|path| {
-                self.session.session_tree.as_mut().unwrap().navigate_to(&path);
+                self.session
+                    .session_tree
+                    .as_mut()
+                    .unwrap()
+                    .navigate_to(&path);
                 true
             })
             .unwrap_or(false);

@@ -252,7 +252,10 @@ mod tests {
             "command palette must keep open on activation for back-stack navigation"
         );
         assert!(
-            panel.items.iter().any(|i| matches!(i, PanelItem::Command { .. })),
+            panel
+                .items
+                .iter()
+                .any(|i| matches!(i, PanelItem::Command { .. })),
             "command palette items should be Command variants"
         );
     }

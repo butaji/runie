@@ -113,9 +113,9 @@ fn push_body_item<'a>(
             push_toggle_item(body, label, *value, *nav_idx == selected);
             *nav_idx += 1;
         }
-        PanelItem::Action { .. }
-        | PanelItem::Command { .. }
-        | PanelItem::FormSubmit => *nav_idx += 1,
+        PanelItem::Action { .. } | PanelItem::Command { .. } | PanelItem::FormSubmit => {
+            *nav_idx += 1
+        }
         PanelItem::Select { .. } => {}
     }
 }

@@ -196,6 +196,43 @@
       "completed_in": "cc8a50f6"
     },
     {
+      "id": "terminal-detection",
+      "status": "in-progress",
+      "milestone": "R1",
+      "category": "TUI Rendering",
+      "priority": "P0"
+    },
+    {
+      "id": "osc52-clipboard",
+      "status": "in-progress",
+      "milestone": "R1",
+      "category": "TUI Rendering",
+      "priority": "P0",
+      "depends_on": [
+        "terminal-detection"
+      ]
+    },
+    {
+      "id": "vim-navigation-mode",
+      "status": "in-progress",
+      "milestone": "R1",
+      "category": "Input & Commands",
+      "priority": "P1",
+      "depends_on": [
+        "terminal-detection"
+      ]
+    },
+    {
+      "id": "shift-enter-newline",
+      "status": "done",
+      "milestone": "R1",
+      "category": "Input & Commands",
+      "priority": "P1",
+      "depends_on": [
+        "terminal-detection"
+      ]
+    },
+    {
       "id": "sync-docs",
       "status": "todo",
       "milestone": "R3",

@@ -6,7 +6,10 @@ fn fresh_state() -> AppState {
 }
 
 fn big_output() -> String {
-    (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n")
+    (1..=20)
+        .map(|i| format!("file{}.txt", i))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
@@ -75,7 +78,10 @@ fn final_agent_after_tools_when_turn_completes() {
     let (a, t) = (agent_pos(&state), tool_pos(&state));
     assert!(a.is_some(), "Agent message must exist");
     assert!(t.is_some(), "Tool message must exist");
-    assert!(a.unwrap() > t.unwrap(), "Final agent must appear AFTER tool");
+    assert!(
+        a.unwrap() > t.unwrap(),
+        "Final agent must appear AFTER tool"
+    );
 }
 
 #[test]

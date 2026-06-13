@@ -348,4 +348,3 @@ fn find_most_recent() -> Option<String> {
     }
     most_recent
 }
-

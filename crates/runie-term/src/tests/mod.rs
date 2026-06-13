@@ -19,13 +19,15 @@ mod render_actor;
 #[cfg(test)]
 mod semantic_render;
 #[cfg(test)]
-mod terminal_setup;
-#[cfg(test)]
 mod status_timer;
 #[cfg(test)]
 mod sticky_bottom;
 #[cfg(test)]
+mod terminal_setup;
+#[cfg(test)]
 mod toggle_e2e;
+#[cfg(test)]
+mod vim_mode;
 
 /// Helper: simulate full tool flow
 pub fn simulate_list_files_flow(state: &mut AppState) {

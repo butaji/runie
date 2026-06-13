@@ -54,7 +54,6 @@ impl CommandRegistry {
         }
         result
     }
-
 }
 
 impl Default for CommandRegistry {

@@ -19,12 +19,15 @@ fn edit_misc_event(state: &mut AppState, event: &Event) -> Option<()> {
             proposed,
             diff,
         } => {
-            state.session.pending_edits.push(crate::edit_preview::EditPreview::new(
-                std::path::PathBuf::from(path.clone()),
-                original.clone(),
-                proposed.clone(),
-                diff.clone(),
-            ));
+            state
+                .session
+                .pending_edits
+                .push(crate::edit_preview::EditPreview::new(
+                    std::path::PathBuf::from(path.clone()),
+                    original.clone(),
+                    proposed.clone(),
+                    diff.clone(),
+                ));
             state.mark_dirty();
         }
         Event::ApproveEdit => state.approve_edits(),

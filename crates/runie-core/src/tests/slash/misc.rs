@@ -1,6 +1,6 @@
+use super::{exec, fresh_state, type_str};
 use crate::event::Event;
 use crate::model::Role;
-use super::{exec, fresh_state, type_str};
 
 #[test]
 fn reset_clears_messages_and_input() {

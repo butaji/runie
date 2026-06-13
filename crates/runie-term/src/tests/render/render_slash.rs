@@ -23,7 +23,11 @@ fn render_slash(input: &str) -> String {
 fn buffer_lines(terminal: &Terminal<TestBackend>) -> Vec<String> {
     let buf = terminal.backend().buffer();
     (0..buf.area().height)
-        .map(|y| (0..buf.area().width).map(|x| buf[(x, y)].symbol()).collect())
+        .map(|y| {
+            (0..buf.area().width)
+                .map(|x| buf[(x, y)].symbol())
+                .collect()
+        })
         .collect()
 }
 
@@ -67,7 +71,10 @@ fn test_render_sessions_list_on_separate_lines() {
     terminal.draw(|f| view(f, &mut state)).expect("draw");
 
     let lines = buffer_lines(&terminal);
-    let session_line_count = lines.iter().filter(|l| l.contains("alpha") || l.contains("beta")).count();
+    let session_line_count = lines
+        .iter()
+        .filter(|l| l.contains("alpha") || l.contains("beta"))
+        .count();
     assert_eq!(
         session_line_count, 2,
         "Sessions should render on 2 separate lines, got: {:?}",
