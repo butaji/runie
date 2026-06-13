@@ -3,6 +3,8 @@ mod action_text;
 #[cfg(test)]
 mod mouse_events;
 #[cfg(test)]
+mod focus_events;
+#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod at_file_picker;

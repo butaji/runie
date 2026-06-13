@@ -17,6 +17,10 @@ pub enum Event {
     MouseDrag { row: u16, col: u16, button: String },
     MouseMove { row: u16, col: u16 },
 
+    // Focus events (terminal focus tracking)
+    FocusGained,
+    FocusLost,
+
     // Cursor movement (Emacs-style)
     CursorLeft,
     CursorRight,
@@ -512,6 +516,8 @@ impl Event {
             Event::MouseRelease { .. } => return None,
             Event::MouseDrag { .. } => return None,
             Event::MouseMove { .. } => return None,
+            Event::FocusGained => return None,
+            Event::FocusLost => return None,
             Event::CommandFormInput(_) => return None,
             Event::CommandFormBackspace => "CommandFormBackspace",
             Event::CommandFormUp => "CommandFormUp",
@@ -557,6 +563,8 @@ impl Event {
             Event::MouseRelease { .. } => return None,
             Event::MouseDrag { .. } => return None,
             Event::MouseMove { .. } => return None,
+            Event::FocusGained => "FocusGained",
+            Event::FocusLost => "FocusLost",
         })
     }
 

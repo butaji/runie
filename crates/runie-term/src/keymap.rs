@@ -11,6 +11,8 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
     match event {
         Event::Paste(data) => Some(CoreEvent::Paste(data.clone())),
         Event::Mouse(mouse) => convert_mouse_event(mouse),
+        Event::FocusGained => Some(CoreEvent::FocusGained),
+        Event::FocusLost => Some(CoreEvent::FocusLost),
         Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
             // Handle Ctrl+J - ASCII 10 (LF) is often sent as just a char
             if let KeyCode::Char(c) = key.code {
