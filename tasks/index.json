@@ -88,13 +88,14 @@
     },
     {
       "id": "deduplicate-panel-types",
-      "status": "todo",
+      "status": "done",
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P0",
       "depends_on": [
         "resolve-merge-conflicts"
-      ]
+      ],
+      "completed_in": "bc0bbd22"
     },
     {
       "id": "extract-login-flow",
