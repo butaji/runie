@@ -119,22 +119,20 @@
     },
     {
       "id": "delete-abandoned-loop-engine",
-      "status": "done",
+      "status": "todo",
       "milestone": "R1",
       "category": "Core Architecture",
-      "priority": "P1",
-      "completed_in": "$(git rev-parse --short HEAD)"
+      "priority": "P1"
     },
     {
       "id": "clean-archive",
-      "status": "done",
+      "status": "todo",
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1",
       "depends_on": [
         "archive-remaining-orphans"
-      ],
-      "completed_in": "$(git rev-parse --short HEAD)"
+      ]
     },
     {
       "id": "consolidate-tui-tests",
@@ -159,6 +157,13 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ]
+    },
+    {
+      "id": "fix-dev-tools-error-handling",
+      "status": "todo",
+      "milestone": "R2",
+      "category": "Tools",
+      "priority": "P2"
     },
     {
       "id": "clean-dead-modules",

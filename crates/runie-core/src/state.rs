@@ -26,6 +26,9 @@ pub struct InputState {
     pub tab_complete_index: usize,
     /// Top visible line index for multi-line input scrolling.
     pub input_scroll: usize,
+    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    pub(crate) input_history: Vec<String>,
+    pub current_prompt: String,
 }
 
 impl Default for InputState {
@@ -43,6 +46,8 @@ impl Default for InputState {
             tab_complete_matches: Vec::new(),
             tab_complete_index: 0,
             input_scroll: 0,
+            input_history: Vec::new(),
+            current_prompt: String::new(),
         }
     }
 }
@@ -162,6 +167,14 @@ pub struct AgentState {
     pub tokens_in_prev: usize,
     /// Previous token_out value for detecting changes.
     pub tokens_out_prev: usize,
+    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    pub streaming: bool,
+    pub next_id: u64,
+    pub intermediate_step_count: usize,
+    pub current_action: Option<String>,
+    pub(crate) thought_seq: u64,
+    pub(crate) last_assistant_index: Option<usize>,
+    pub thinking_started_at: Option<std::time::Instant>,
 }
 
 #[derive(Clone)]
@@ -174,6 +187,13 @@ pub struct ViewState {
     pub cached_gen: u64,
     pub message_gen: u64,
     pub element_count: usize,
+    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    pub animation_frame: u32,
+    pub all_collapsed: bool,
+    cached_palette_items: Vec<(String, String, String)>,
+    cached_palette_filter: Option<String>,
+    cached_model_items: Vec<(String, String, String, bool, bool)>,
+    cached_model_filter: Option<String>,
 }
 
 impl ViewState {
@@ -205,6 +225,12 @@ impl Default for ViewState {
             cached_gen: 0,
             message_gen: 1,
             element_count: 0,
+            animation_frame: 0,
+            all_collapsed: false,
+            cached_palette_items: Vec::new(),
+            cached_palette_filter: None,
+            cached_model_items: Vec::new(),
+            cached_model_filter: None,
         }
     }
 }
@@ -216,6 +242,9 @@ pub struct SessionState {
     pub session_display_name: Option<String>,
     pub session_created_at: f64,
     pub session_updated_at: f64,
+    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    pub pending_edits: Vec<crate::edit_preview::EditPreview>,
+    pub image_attachments: Vec<String>,
 }
 
 impl Default for SessionState {
@@ -227,6 +256,8 @@ impl Default for SessionState {
             session_display_name: None,
             session_created_at: t,
             session_updated_at: t,
+            pending_edits: Vec::new(),
+            image_attachments: Vec::new(),
         }
     }
 }
@@ -246,6 +277,10 @@ pub struct ConfigState {
     /// Truncation limits for tool output. Loaded from `[truncation]` in
     /// `config.toml`. See `runie-agent::truncate::TruncationPolicy`.
     pub truncation: crate::config_reload::TruncationSection,
+    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    pub steering_mode: crate::model::DeliveryMode,
+    pub follow_up_mode: crate::model::DeliveryMode,
+    pub recent_models: Vec<String>,
 }
 
 impl Default for ConfigState {
@@ -271,6 +306,9 @@ impl Default for ConfigState {
             scoped_models: Vec::new(),
             scoped_index: 0,
             truncation: crate::config_reload::TruncationSection::default(),
+            steering_mode: crate::model::DeliveryMode::default(),
+            follow_up_mode: crate::model::DeliveryMode::default(),
+            recent_models: Vec::new(),
         }
     }
 }
