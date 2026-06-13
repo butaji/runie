@@ -323,7 +323,7 @@ fn form_button_activated_by_enter() {
         .item("_Cancel", ItemAction::Emit(crate::Event::LoginFlowCancel));
     // Navigate to the first button (index 1, after form field at index 0)
     panel.selected = 1;
-    let action = AppState::form_panel_action(&mut panel, crate::Event::Submit);
+    let action = crate::update::dialog_stack::form_panel_action(&mut panel, crate::Event::Submit);
     assert!(matches!(
         action,
         crate::update::FormAction::Submit(Some(crate::Event::LoginFlowSave))
@@ -339,13 +339,13 @@ fn form_button_activated_by_accelerator() {
         .item("_Cancel", ItemAction::Emit(crate::Event::LoginFlowCancel));
     // On a form field, typing 'c' should type into the field
     panel.selected = 0;
-    let action = AppState::form_panel_action(&mut panel, crate::Event::Input('c'));
+    let action = crate::update::dialog_stack::form_panel_action(&mut panel, crate::Event::Input('c'));
     assert!(matches!(action, crate::update::FormAction::KeepOpen));
     assert_eq!(panel.form_values.get("name"), Some(&"c".to_string()));
 
     // On a button, typing 'c' should activate Cancel
     panel.selected = 2;
-    let action = AppState::form_panel_action(&mut panel, crate::Event::Input('c'));
+    let action = crate::update::dialog_stack::form_panel_action(&mut panel, crate::Event::Input('c'));
     assert!(matches!(
         action,
         crate::update::FormAction::Submit(Some(crate::Event::LoginFlowCancel))
@@ -360,7 +360,7 @@ fn form_field_submit_still_builds_form_values() {
         .item("_Submit", ItemAction::Emit(crate::Event::LoginFlowSave));
     // On the form field, Enter should submit the form
     panel.selected = 0;
-    let action = AppState::form_panel_action(&mut panel, crate::Event::Submit);
+    let action = crate::update::dialog_stack::form_panel_action(&mut panel, crate::Event::Submit);
     assert!(matches!(
         action,
         crate::update::FormAction::Submit(Some(crate::Event::RunSaveCommand { .. }))

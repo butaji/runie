@@ -99,7 +99,7 @@
     },
     {
       "id": "extract-login-flow",
-      "status": "todo",
+      "status": "done",
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1",
@@ -107,7 +107,8 @@
         "resolve-merge-conflicts",
         "fix-broken-references"
       ],
-      "supersedes": "deduplicate-login-flow"
+      "supersedes": "deduplicate-login-flow",
+      "completed_in": "d8dfc5ab"
     },
     {
       "id": "split-update-mod",
@@ -125,6 +126,13 @@
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1"
+    },
+    {
+      "id": "delete-runie-tui-dead-code",
+      "status": "todo",
+      "milestone": "R1",
+      "category": "TUI Rendering",
+      "priority": "P0"
     },
     {
       "id": "clean-archive",

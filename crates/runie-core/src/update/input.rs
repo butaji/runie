@@ -304,13 +304,13 @@ impl AppState {
         }
         // Slash opens command palette when input is empty
         if c == '/' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
-            self.open_command_palette();
+            super::dialog_stack::open_command_palette(self);
             self.mark_dirty();
             return;
         }
         // @ opens file picker when input is empty
         if c == '@' && self.input.input.is_empty() && self.completion.path_suggestions.is_none() {
-            self.open_at_file_picker();
+            super::dialog_stack::open_at_file_picker(self);
             return;
         }
         self.insert_char(c);
@@ -396,10 +396,10 @@ impl AppState {
                 }
                 crate::commands::CommandResult::Event(evt) => self.update(evt),
                 crate::commands::CommandResult::OpenDialog(d) => match d {
-                    crate::commands::DialogType::CommandPalette => self.open_command_palette(),
-                    crate::commands::DialogType::ModelSelector => self.open_model_selector(),
-                    crate::commands::DialogType::Settings => self.open_settings_dialog(),
-                    crate::commands::DialogType::ScopedModels => self.open_scoped_models_dialog(),
+                    crate::commands::DialogType::CommandPalette => super::dialog_stack::open_command_palette(self),
+                    crate::commands::DialogType::ModelSelector => super::dialog_stack::open_model_selector(self),
+                    crate::commands::DialogType::Settings => super::dialog_stack::open_settings_dialog(self),
+                    crate::commands::DialogType::ScopedModels => super::dialog_stack::open_scoped_models_dialog(self),
                 },
                 crate::commands::CommandResult::OpenPanelStack(stack) => {
                     self.open_dialog = Some(crate::commands::DialogState::PanelStack(stack));
