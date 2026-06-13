@@ -333,6 +333,29 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2"
+    },
+    {
+      "id": "inline-tool-rendering",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "UI / Feed",
+      "priority": "P1",
+      "file": "tasks/inline-tool-rendering.md",
+      "depends_on": [],
+      "blocks": [
+        "mcp-servers-support"
+      ]
+    },
+    {
+      "id": "mcp-servers-support",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P2",
+      "file": "tasks/mcp-servers-support.md",
+      "depends_on": [
+        "inline-tool-rendering"
+      ]
     }
   ]
 }
