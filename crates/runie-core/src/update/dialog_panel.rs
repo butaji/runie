@@ -132,7 +132,7 @@ fn panel_toggle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
     {
         *value = !*value;
     }
-    apply_panel_setting(state, key);
+    apply_panel_setting(state, stack, key);
 }
 
 fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
@@ -144,31 +144,55 @@ fn panel_cycle_item(state: &mut AppState, stack: &mut PanelStack, key: &str) {
             *current = options[next].clone();
         }
     }
-    apply_panel_setting(state, key);
+    apply_panel_setting(state, stack, key);
 }
 
-fn apply_panel_setting(state: &mut AppState, key: &str) {
+fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
     match key {
-        "read_only" => {
-            state.config.read_only = !state.config.read_only;
-            let status = if state.config.read_only { "enabled" } else { "disabled" };
-            state.notify(
-                format!("Read-only mode {}", status),
-                crate::event::TransientLevel::Warning,
-            );
+        "read_only" => state.toggle_read_only(),
+        "steering_mode" => state.config.steering_mode = cycle_delivery_mode(state.config.steering_mode),
+        "follow_up_mode" => state.config.follow_up_mode = cycle_delivery_mode(state.config.follow_up_mode),
+        "provider" => {
+            if let Some(value) = selected_select_value(stack) {
+                state.set_provider(&value);
+                state.view.cached_settings_valid = false;
+            }
         }
-        "steering_mode" => {
-            state.config.steering_mode = match state.config.steering_mode {
-                crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
-                crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
-            };
+        "model" => {
+            if let Some(value) = selected_select_value(stack) {
+                state.set_model(&value);
+                state.view.cached_settings_valid = false;
+            }
         }
-        "follow_up_mode" => {
-            state.config.follow_up_mode = match state.config.follow_up_mode {
-                crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
-                crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
-            };
+        "theme" => {
+            if let Some(value) = selected_select_value(stack) {
+                state.switch_theme(value);
+            }
+        }
+        "thinking_level" => {
+            if let Some(value) = selected_select_value(stack) {
+                if let Ok(level) = value.parse::<crate::model::ThinkingLevel>() {
+                    state.set_thinking_level(level);
+                }
+            }
         }
         _ => {}
     }
+}
+
+fn cycle_delivery_mode(mode: crate::model::DeliveryMode) -> crate::model::DeliveryMode {
+    match mode {
+        crate::model::DeliveryMode::OneAtATime => crate::model::DeliveryMode::All,
+        crate::model::DeliveryMode::All => crate::model::DeliveryMode::OneAtATime,
+    }
+}
+
+fn selected_select_value(stack: &mut PanelStack) -> Option<String> {
+    stack
+        .current_mut()
+        .and_then(|p| p.selected_item_mut())
+        .and_then(|item| match item {
+            crate::dialog::PanelItem::Select { current, .. } => Some(current.clone()),
+            _ => None,
+        })
 }

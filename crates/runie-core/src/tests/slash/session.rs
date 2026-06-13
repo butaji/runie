@@ -21,7 +21,7 @@ fn delete_no_args_opens_form() {
 #[test]
 fn slash_command_does_not_queue() {
     let mut state = fresh_state();
-    type_str(&mut state, "/help");
+    type_str(&mut state, "/session");
     state.update(Event::Submit);
     assert!(
         state.agent.request_queue.is_empty(),
@@ -47,7 +47,7 @@ fn unknown_slash_returns_error() {
 #[test]
 fn slash_with_extra_whitespace_trimmed() {
     let mut state = fresh_state();
-    type_str(&mut state, "  /help  ");
+    type_str(&mut state, "  /session  ");
     state.update(Event::Submit);
 
     let sys_msgs: Vec<_> = state

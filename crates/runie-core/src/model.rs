@@ -102,7 +102,7 @@ pub enum QueuedMessageKind {
     FollowUp,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum DeliveryMode {
     /// Each message triggers a separate LLM call
     #[default]

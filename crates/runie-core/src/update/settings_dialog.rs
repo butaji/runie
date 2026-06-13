@@ -1,42 +1,10 @@
-//! Settings dialog update logic
+//! Settings dialog item builder.
+//!
+//! Settings rows are rendered as a generic panel and mutated through
+//! `dialog_panel::apply_panel_setting`, not through this module.
 
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
-use crate::Event;
-use super::dialog::open_settings_dialog;
-
-pub(crate) fn update(state: &mut AppState, event: Event) {
-    use crate::commands::DialogState;
-    match event {
-        Event::ToggleSettingsDialog => {
-            if matches!(state.open_dialog, Some(DialogState::Settings(_))) {
-                state.open_dialog = None;
-                state.mark_dirty();
-            } else {
-                open_settings_dialog(state);
-            }
-        }
-        Event::SettingsUp
-        | Event::SettingsDown
-        | Event::SettingsLeft
-        | Event::SettingsRight
-        | Event::SettingsSelect
-        | Event::SettingsClose => {}
-        Event::PaletteFilter(_)
-        | Event::PaletteBackspace
-        | Event::PaletteUp
-        | Event::PaletteDown
-        | Event::PaletteSelect
-        | Event::PaletteClose => {}
-        Event::ModelSelectorFilter(_)
-        | Event::ModelSelectorBackspace
-        | Event::ModelSelectorUp
-        | Event::ModelSelectorDown
-        | Event::ModelSelectorSelect
-        | Event::ModelSelectorClose => {}
-        _ => {}
-    }
-}
 
 pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
     vec![
@@ -45,12 +13,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Provider",
             SettingValue::Enum {
                 current: state.config.current_provider.clone(),
-                options: vec![
-                    "mock".into(),
-                    "openai".into(),
-                    "anthropic".into(),
-                    "google".into(),
-                ],
+                options: provider_options(),
             },
             "LLM provider",
             SettingsCategory::Models,
@@ -60,12 +23,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Model",
             SettingValue::Enum {
                 current: state.config.current_model.clone(),
-                options: state
-                    .config
-                    .scoped_models
-                    .iter()
-                    .map(|m| m.name.clone())
-                    .collect(),
+                options: model_options(&state.config.current_provider),
             },
             "Active model",
             SettingsCategory::Models,
@@ -75,12 +33,7 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             "Theme",
             SettingValue::Enum {
                 current: state.config.theme_name.clone(),
-                options: vec![
-                    "runie".into(),
-                    "silkcircuit-neon".into(),
-                    "dracula".into(),
-                    "nord".into(),
-                ],
+                options: theme_options(),
             },
             "UI theme",
             SettingsCategory::Appearance,
@@ -131,4 +84,23 @@ pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
             SettingsCategory::Behavior,
         ),
     ]
+}
+
+fn provider_options() -> Vec<String> {
+    crate::provider_registry::known_providers()
+        .iter()
+        .map(|p| p.key.to_string())
+        .collect()
+}
+
+fn model_options(provider: &str) -> Vec<String> {
+    crate::model_catalog::model_catalog()
+        .iter()
+        .filter(|m| m.provider == provider)
+        .map(|m| m.name.clone())
+        .collect()
+}
+
+fn theme_options() -> Vec<String> {
+    crate::themes::BUILTIN_THEMES.iter().map(|t| t.to_string()).collect()
 }

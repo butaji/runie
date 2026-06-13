@@ -43,37 +43,18 @@ fn reset_keeps_default_provider() {
 }
 
 #[test]
-fn help_shows_system_message() {
+fn help_opens_reference_panel() {
     let mut state = fresh_state();
     type_str(&mut state, "/help");
     state.update(Event::Submit);
 
-    let sys_msgs: Vec<_> = state
-        .session
-        .messages
-        .iter()
-        .filter(|m| m.role == Role::System)
-        .collect();
-    assert_eq!(sys_msgs.len(), 1);
     assert!(
-        sys_msgs[0].content.contains("/model"),
-        "help mentions /model"
+        matches!(
+            state.open_dialog,
+            Some(crate::commands::DialogState::PanelStack(_))
+        ),
+        "/help should open the reference panel"
     );
-    assert!(sys_msgs[0].content.contains("/save"), "help mentions /save");
-    assert!(sys_msgs[0].content.contains("/load"), "help mentions /load");
-    assert!(
-        sys_msgs[0].content.contains("/sessions"),
-        "help mentions /sessions"
-    );
-    assert!(
-        sys_msgs[0].content.contains("/delete"),
-        "help mentions /delete"
-    );
-    assert!(
-        sys_msgs[0].content.contains("/reset"),
-        "help mentions /reset"
-    );
-    assert!(sys_msgs[0].content.contains("/help"), "help mentions /help");
 }
 
 #[test]

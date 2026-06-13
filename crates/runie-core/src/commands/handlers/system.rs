@@ -64,17 +64,12 @@ pub fn register(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        crate::cmd!("changelog")
-            .desc("Show changelog")
-            .category(CommandCategory::System)
-            .msg("Changelog: not yet implemented"),
-    );
-
-    registry.register(
         crate::cmd!("hotkeys")
-            .desc("Show all keyboard shortcuts")
+            .desc("Show keyboard shortcuts")
+            .aliases(&["keys", "shortcuts"])
             .category(CommandCategory::System)
-            .msg("Keyboard shortcuts: not yet implemented"),
+            .sub()
+            .handler(handle_hotkeys),
     );
 
     registry.register(
@@ -237,6 +232,28 @@ fn handle_reject(_: &mut AppState, _: &str) -> CommandResult {
 
 fn handle_providers(_: &mut AppState, _args: &str) -> CommandResult {
     CommandResult::Event(crate::Event::ProvidersDialog)
+}
+
+fn handle_hotkeys(state: &mut AppState, _: &str) -> CommandResult {
+    let mut panel = Panel::new("hotkeys", " Keyboard Shortcuts ");
+
+    let mut bindings: Vec<(String, String)> = state
+        .config
+        .keybindings
+        .iter()
+        .map(|(combo, name)| (combo.clone(), name.clone()))
+        .collect();
+    bindings.sort_by(|a, b| a.0.cmp(&b.0));
+
+    if bindings.is_empty() {
+        panel = panel.header("No keybindings configured.");
+    } else {
+        panel = panel.header(format!("{} bindings", bindings.len()));
+        for (combo, name) in bindings {
+            panel = panel.item(format!("{}  →  {}", combo, name), ItemAction::Close);
+        }
+    }
+    CommandResult::OpenPanelStack(PanelStack::new(panel))
 }
 
 // ============================================================================
