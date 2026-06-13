@@ -1,9 +1,9 @@
 //! Tests for Tab key opening file picker with smart insertion.
 //! 
 //! When user presses Enter in file picker:
-//! - If cursor at end of input with typed text, REPLACE the typed text
+//! - If cursor at end of input with typed text (no @), REPLACE with [filename]
 //! - If cursor in middle of input, INSERT at cursor position preserving surrounding text
-//! - @ opens file picker but is not part of final text
+//! - @ opens file picker but inserts path WITHOUT brackets
 
 use crate::{AppState, Event};
 
@@ -116,19 +116,20 @@ fn tab_file_picker_replaces_trailing_prefix() {
     );
 }
 
-/// @ opens file picker and filter can be typed.
-/// Note: @ is consumed when file is selected (not part of final text).
+/// @ in middle of text opens file picker and inserts path without brackets.
 #[test]
-fn tab_file_picker_inserts_after_at() {
+fn tab_file_picker_at_in_middle_inserts_without_brackets() {
     let mut state = AppState::default();
     
-    // Type @ - opens file picker immediately
-    state.update(Event::Input('@'));
-    assert!(state.open_dialog.is_some());
-    
-    // Type more characters to filter
-    state.update(Event::Input('C'));
+    // Type "car @"
+    state.update(Event::Input('c'));
     state.update(Event::Input('a'));
+    state.update(Event::Input('r'));
+    state.update(Event::Input(' '));
+    state.update(Event::Input('@'));
+    
+    // @ opens file picker
+    assert!(state.open_dialog.is_some());
     
     // Submit
     state.update(Event::Submit);
@@ -136,22 +137,22 @@ fn tab_file_picker_inserts_after_at() {
     // File picker should close
     assert!(state.open_dialog.is_none());
     
-    // Should have inserted [filename] (no @)
+    // Should have inserted path WITHOUT brackets (car .cargo/)
     assert!(
-        state.input.input.starts_with('['),
-        "Should start with '[', got: {}",
+        state.input.input.starts_with("car "),
+        "Should start with 'car ', got: {}",
         state.input.input
     );
     assert!(
-        !state.input.input.contains('@'),
-        "Should not contain '@', got: {}",
+        !state.input.input.contains('[') && !state.input.input.contains(']'),
+        "Should NOT contain brackets, got: {}",
         state.input.input
     );
 }
 
-/// @ without typed text inserts [filename].
+/// @ at start inserts [filename] with brackets.
 #[test]
-fn tab_file_picker_only_at_inserts_after_at() {
+fn tab_file_picker_at_at_start_wraps_in_brackets() {
     let mut state = AppState::default();
     
     // Type just @ - opens file picker
@@ -164,7 +165,7 @@ fn tab_file_picker_only_at_inserts_after_at() {
     // File picker should close
     assert!(state.open_dialog.is_none());
     
-    // Should have inserted [filename]
+    // Should have inserted [filename] WITH brackets
     assert!(
         state.input.input.starts_with('['),
         "Should start with '[', got: {}",
