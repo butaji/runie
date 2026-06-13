@@ -1,6 +1,45 @@
 use super::{content_has_tool_markers, now, strip_tool_markers};
 use crate::labels::{thought_with_time, tool_done, tool_running};
 use crate::model::{AppState, ChatMessage, Role};
+use crate::Event;
+
+pub fn agent_event(state: &mut AppState, event: Event) {
+    match event {
+        Event::AgentThinking { id } => {
+            state.set_thinking(id);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentThoughtDone { id } => {
+            state.add_thought(id);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentToolStart { id, name } => {
+            state.start_tool(id, name);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentToolEnd {
+            duration_secs,
+            output,
+        } => {
+            state.end_tool(duration_secs, output);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentResponse { id, content } => {
+            state.append_response(id, content);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentTurnComplete { id, duration_secs } => {
+            state.complete_turn(id, duration_secs);
+            state.ensure_turn_complete_last();
+        }
+        Event::AgentDone { id } => state.finish_turn(id),
+        Event::AgentError { id, message } => {
+            state.add_error(id, message);
+            state.ensure_turn_complete_last();
+        }
+        _ => {}
+    }
+}
 
 impl AppState {
     pub(crate) fn set_thinking(&mut self, id: String) {

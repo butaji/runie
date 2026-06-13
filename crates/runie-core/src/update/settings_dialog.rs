@@ -3,7 +3,7 @@
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 use crate::Event;
-use super::dialog_stack::open_settings_dialog;
+use super::dialog::open_settings_dialog;
 
 pub(crate) fn update(state: &mut AppState, event: Event) {
     use crate::commands::DialogState;

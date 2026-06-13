@@ -1,5 +1,5 @@
 use crate::model::AppState;
-use super::dialog_stack::open_session_tree_dialog;
+use super::dialog::open_session_tree_dialog;
 
 impl AppState {
     // === Session Event Handler ===

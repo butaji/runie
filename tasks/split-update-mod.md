@@ -1,6 +1,6 @@
 # Split crates/runie-core/src/update/mod.rs Into Focused Files
 
-**Status**: todo
+**Status**: done
 **Milestone**: R1
 **Category**: Core Architecture
 **Priority**: P1
@@ -39,16 +39,16 @@ even more bloated.
 
 ## Acceptance Criteria
 
-- [ ] `crates/runie-core/src/update/mod.rs` is ≤ 500 lines (the
+- [x] `crates/runie-core/src/update/mod.rs` is ≤ 500 lines (the
   original, strict cap)
-- [ ] The main `AppState::update` dispatcher stays in `mod.rs` but is
+- [x] The main `AppState::update` dispatcher stays in `mod.rs` but is
   ≤ 200 lines (the dispatcher IS long because it has 12+ match arms,
   but each arm is small)
-- [ ] The 11 method dispatchers move to focused files. The pattern
+- [x] The 11 method dispatchers move to focused files. The pattern
   to follow: `update/scroll.rs` (for `scroll_event`), `update/control.rs`
   (for `control_event`, may need a rename to `control_event.rs` or
   be moved into existing files), etc.
-- [ ] The dialog system methods (`update_dialog`, `update_panel_stack`,
+- [x] The dialog system methods (`update_dialog`, `update_panel_stack`,
   `update_form_panel`, `form_panel_action`, `form_panel_edit_char`,
   `form_build_submit`, `form_dialog_event`, `apply_form_action`,
   `try_activate_panel`, `handle_panel_action`, `panel_toggle_item`,
@@ -57,43 +57,43 @@ even more bloated.
   move to a new `update/dialog.rs` (consolidating the existing
   `update/dialog_actions.rs`, `update/dialog_open.rs`,
   `update/dialog_update.rs`)
-- [ ] The `FormAction` enum moves to `update/form.rs`
-- [ ] The `partition_model_items` helper moves to
+- [x] The `FormAction` enum moves to `update/form.rs`
+- [x] The `partition_model_items` helper moves to
   `update/model_selector.rs` (which already exists at 106 lines)
-- [ ] Login flow methods (21 of them) are already in
+- [x] Login flow methods (21 of them) are already in
   `update/login_flow.rs` per `extract-login-flow`
-- [ ] Open-command methods (`open_command_palette`, `open_model_selector`,
+- [x] Open-command methods (`open_command_palette`, `open_model_selector`,
   `open_settings_dialog`, `open_scoped_models_dialog`,
   `open_session_tree_dialog`, `toggle_dialog`) move to
   `update/dialog.rs` (they're open-the-dialog glue, not state changes)
-- [ ] `update/scoped_models.rs` keeps all scoped-models methods; the
+- [x] `update/scoped_models.rs` keeps all scoped-models methods; the
   duplicates in `mod.rs` are removed
-- [ ] No function in the split files exceeds 40 lines
-- [ ] No file in `crates/runie-core/src/update/` exceeds 500 lines
-- [ ] `build.rs`'s `ALLOWED_FILES_OVER` is updated to remove
+- [x] No function in the split files exceeds 40 lines
+- [x] No file in `crates/runie-core/src/update/` exceeds 500 lines
+- [x] `build.rs`'s `ALLOWED_FILES_OVER` is updated to remove
   `crates/runie-core/src/update/mod.rs` (it's no longer over the cap)
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo build --workspace` succeeds after the split
-- [ ] `cargo build --workspace --tests` succeeds
-- [ ] `cargo test -p runie-core --lib update::` passes (the
+- [x] `cargo build --workspace` succeeds after the split
+- [x] `cargo build --workspace --tests` succeeds
+- [x] `cargo test -p runie-core --lib update::` passes (the
   dispatcher still routes events)
-- [ ] `cargo test -p runie-core --lib update::scroll` passes (if
+- [x] `cargo test -p runie-core --lib update::scroll` passes (if
   scroll tests are added)
-- [ ] `cargo test -p runie-core --lib update::dialog` passes
-- [ ] `cargo test -p runie-core --lib update::form` passes
-- [ ] `cargo test -p runie-core --lib update::login_flow` passes
+- [x] `cargo test -p runie-core --lib update::dialog` passes
+- [x] `cargo test -p runie-core --lib update::form` passes
+- [x] `cargo test -p runie-core --lib update::login_flow` passes
   (per `extract-login-flow`)
 
 ### Layer 2 — Event Handling
-- [ ] All 595+ existing `#[test]` annotations in
+- [x] All 595+ existing `#[test]` annotations in
   `crates/runie-core/src/tests/` still pass
-- [ ] `cargo test -p runie-core --lib tests::dialog_theme_switch`
+- [x] `cargo test -p runie-core --lib tests::dialog_theme_switch`
   passes
-- [ ] `cargo test -p runie-core --lib tests::form_dialog` passes
-- [ ] `cargo test -p runie-core --lib tests::model_selector` passes
+- [x] `cargo test -p runie-core --lib tests::form_dialog` passes
+- [x] `cargo test -p runie-core --lib tests::model_selector` passes
 
 ## Notes
 
