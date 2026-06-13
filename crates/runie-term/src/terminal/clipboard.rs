@@ -1,58 +1,64 @@
 //! Terminal clipboard integration via OSC 52.
 //!
-//! OSC 52 lets a terminal application copy text to the system clipboard
-//! without spawning external tools. It works across SSH and inside tmux
-//! when passthrough is enabled (`set -g allow-passthrough on`).
-//!
-//! This module intentionally writes raw escape sequences to the active
-//! terminal (stdout). It is not unit-testable for actual clipboard
-//! side-effects, but the encoding logic is pure and testable.
+//! OSC 52 (Set clipboard) is supported by most modern terminals:
+//! - iTerm2, WezTerm, Kitty, Alacritty, Windows Terminal, VS Code, etc.
+//! - tmux (with passthrough mode)
 
-use std::io::{self, Write};
+use base64::{engine::general_purpose::STANDARD, Engine};
+use std::io::Write;
 
-/// Encode text as an OSC 52 "set clipboard" sequence targeting the
-/// system clipboard (`c`). Returns the raw bytes so callers can choose
-/// where to write them.
-pub fn osc52_clipboard_sequence(text: &str) -> Vec<u8> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+/// Copy text to the clipboard via OSC 52.
+pub fn copy_to_clipboard<W: Write>(writer: &mut W, text: &str) -> std::io::Result<()> {
     let encoded = STANDARD.encode(text.as_bytes());
-    // OSC 52; set selection clipboard: ESC ] 52 ; c ; <base64> ESC \
-    format!("\x1b]52;c;{}\x1b\\", encoded).into_bytes()
-}
-
-/// Encode text as an OSC 52 "set primary selection" sequence (`p`).
-pub fn osc52_primary_sequence(text: &str) -> Vec<u8> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
-    let encoded = STANDARD.encode(text.as_bytes());
-    format!("\x1b]52;p;{}\x1b\\", encoded).into_bytes()
-}
-
-/// Set the terminal window title via OSC 0/2.
-pub fn set_terminal_title(title: &str) -> Vec<u8> {
-    // OSC 0 is the icon name+window title; OSC 2 is window title only.
-    format!("\x1b]0;{}\x1b\\", title).into_bytes()
-}
-
-/// Copy `text` to the system clipboard by writing the OSC 52 sequence
-/// to `writer`. Best-effort: errors are returned but ignored by callers
-/// in the render path.
-#[allow(dead_code)]
-pub fn copy_to_clipboard<W: Write>(writer: &mut W, text: &str) -> io::Result<()> {
-    writer.write_all(&osc52_clipboard_sequence(text))?;
+    // OSC 52: Copy to clipboard selection
+    // Format: ESC ] 52 ; c ; <base64> BEL ESC \
+    writer.write_all(format!("\x1b]52;c;{}\x07", encoded).as_bytes())?;
     writer.flush()
 }
 
-/// Copy `text` to the primary selection.
-#[allow(dead_code)]
-pub fn copy_to_primary<W: Write>(writer: &mut W, text: &str) -> io::Result<()> {
-    writer.write_all(&osc52_primary_sequence(text))?;
+/// Copy to primary selection (X11/Linux).
+pub fn copy_to_primary<W: Write>(writer: &mut W, text: &str) -> std::io::Result<()> {
+    let encoded = STANDARD.encode(text.as_bytes());
+    // OSC 52 with 'p' for primary selection
+    writer.write_all(format!("\x1b]52;p;{}\x07", encoded).as_bytes())?;
     writer.flush()
 }
 
-/// Update the terminal window title.
-#[allow(dead_code)]
-pub fn update_title<W: Write>(writer: &mut W, title: &str) -> io::Result<()> {
-    writer.write_all(&set_terminal_title(title))?;
+/// Set terminal title via OSC 0/2.
+pub fn set_terminal_title<W: Write>(writer: &mut W, title: &str) -> std::io::Result<()> {
+    // OSC 0: Set window icon name and title
+    writer.write_all(format!("\x1b]0;{}\x07", title).as_bytes())?;
+    writer.flush()
+}
+
+/// Set cursor color via OSC 12.
+pub fn set_cursor_color<W: Write>(writer: &mut W, color: &str) -> std::io::Result<()> {
+    // OSC 12: Set cursor color
+    writer.write_all(format!("\x1b]12;{}\x07", color).as_bytes())?;
+    writer.flush()
+}
+
+/// Clear the terminal screen.
+pub fn clear_screen<W: Write>(writer: &mut W) -> std::io::Result<()> {
+    writer.write_all(b"\x1b[2J")?;
+    writer.flush()
+}
+
+/// Move cursor to home position (1,1).
+pub fn cursor_home<W: Write>(writer: &mut W) -> std::io::Result<()> {
+    writer.write_all(b"\x1b[H")?;
+    writer.flush()
+}
+
+/// Show cursor.
+pub fn show_cursor<W: Write>(writer: &mut W) -> std::io::Result<()> {
+    writer.write_all(b"\x1b[?25h")?;
+    writer.flush()
+}
+
+/// Hide cursor.
+pub fn hide_cursor<W: Write>(writer: &mut W) -> std::io::Result<()> {
+    writer.write_all(b"\x1b[?25l")?;
     writer.flush()
 }
 
@@ -61,56 +67,87 @@ mod tests {
     use super::*;
 
     #[test]
-    fn osc52_clipboard_prefix_and_suffix() {
-        let seq = osc52_clipboard_sequence("hello");
-        let s = String::from_utf8(seq).unwrap();
-        assert!(s.starts_with("\x1b]52;c;"));
-        assert!(s.ends_with("\x1b\\"));
-    }
-
-    #[test]
-    fn osc52_clipboard_base64_payload() {
-        use base64::{engine::general_purpose::STANDARD, Engine};
-        let seq = osc52_clipboard_sequence("hello");
-        let s = String::from_utf8(seq).unwrap();
-        let prefix = "\x1b]52;c;";
-        let suffix = "\x1b\\";
-        let payload = &s[prefix.len()..s.len() - suffix.len()];
-        assert_eq!(payload, STANDARD.encode("hello"));
-    }
-
-    #[test]
-    fn osc52_primary_uses_p_selection() {
-        let seq = osc52_primary_sequence("hello");
-        let s = String::from_utf8(seq).unwrap();
-        assert!(s.starts_with("\x1b]52;p;"));
-    }
-
-    #[test]
-    fn set_terminal_title_emits_osc_0() {
-        let seq = set_terminal_title("runie");
-        let s = String::from_utf8(seq).unwrap();
-        assert_eq!(s, "\x1b]0;runie\x1b\\");
-    }
-
-    #[test]
-    fn copy_to_clipboard_writes_sequence() {
+    fn copy_to_clipboard_writes_osc52_sequence() {
         let mut buf = Vec::new();
-        copy_to_clipboard(&mut buf, "abc").unwrap();
-        assert_eq!(buf, osc52_clipboard_sequence("abc"));
+        copy_to_clipboard(&mut buf, "hello").unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.starts_with("\x1b]52;c;"));
+        assert!(output.ends_with("\x07"));
+        // "hello" is base64 encoded
+        assert!(output.contains("aGVsbG8="));
     }
 
     #[test]
-    fn update_title_writes_sequence() {
+    fn copy_to_primary_writes_osc52_primary_sequence() {
         let mut buf = Vec::new();
-        update_title(&mut buf, "runie").unwrap();
-        assert_eq!(buf, set_terminal_title("runie"));
+        copy_to_primary(&mut buf, "world").unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.starts_with("\x1b]52;p;"));
+        assert!(output.ends_with("\x07"));
     }
 
     #[test]
-    fn empty_string_is_encoded() {
-        let seq = osc52_clipboard_sequence("");
-        let s = String::from_utf8(seq).unwrap();
-        assert_eq!(s, "\x1b]52;c;\x1b\\");
+    fn set_terminal_title_writes_osc0() {
+        let mut buf = Vec::new();
+        set_terminal_title(&mut buf, "My Title").unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.starts_with("\x1b]0;"));
+        assert!(output.ends_with("\x07"));
+        assert!(output.contains("My Title"));
+    }
+
+    #[test]
+    fn set_cursor_color_writes_osc12() {
+        let mut buf = Vec::new();
+        set_cursor_color(&mut buf, "#ff00ff").unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.starts_with("\x1b]12;"));
+        assert!(output.ends_with("\x07"));
+        assert!(output.contains("#ff00ff"));
+    }
+
+    #[test]
+    fn clear_screen_writes_ansi_sequence() {
+        let mut buf = Vec::new();
+        clear_screen(&mut buf).unwrap();
+        assert_eq!(buf, b"\x1b[2J");
+    }
+
+    #[test]
+    fn cursor_home_writes_ansi_sequence() {
+        let mut buf = Vec::new();
+        cursor_home(&mut buf).unwrap();
+        assert_eq!(buf, b"\x1b[H");
+    }
+
+    #[test]
+    fn show_cursor_writes_ansi_sequence() {
+        let mut buf = Vec::new();
+        show_cursor(&mut buf).unwrap();
+        assert_eq!(buf, b"\x1b[?25h");
+    }
+
+    #[test]
+    fn hide_cursor_writes_ansi_sequence() {
+        let mut buf = Vec::new();
+        hide_cursor(&mut buf).unwrap();
+        assert_eq!(buf, b"\x1b[?25l");
+    }
+
+    #[test]
+    fn empty_string_copy() {
+        let mut buf = Vec::new();
+        copy_to_clipboard(&mut buf, "").unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert_eq!(output, "\x1b]52;c;\x07");
+    }
+
+    #[test]
+    fn unicode_copy() {
+        let mut buf = Vec::new();
+        copy_to_clipboard(&mut buf, "🦀").unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.starts_with("\x1b]52;c;"));
+        assert!(output.ends_with("\x07"));
     }
 }
