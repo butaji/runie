@@ -77,13 +77,14 @@
     },
     {
       "id": "appstate-decomposition",
-      "status": "todo",
+      "status": "done",
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P0",
       "depends_on": [
         "resolve-merge-conflicts"
-      ]
+      ],
+      "completed_in": "c10023ed"
     },
     {
       "id": "deduplicate-panel-types",
