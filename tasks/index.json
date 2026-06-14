@@ -16,7 +16,9 @@
         "extract-login-flow",
         "snapshot-dead-code",
         "clean-dead-modules"
-      ]
+      ],
+      "file": "tasks/archive/resolve-merge-conflicts.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "fix-broken-references",
@@ -27,7 +29,8 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature - see sync-docs."
+      "notes": "Resolution was achieved by archiving the broken `update/login_flow.rs` and `login_flow/tests/state.rs` to `crates/_archive/update-orphans/`. The 5 call sites that referenced the missing `build_login_stack` are no longer in the build. The docstring example in `commands/dsl/builder.rs:102` still has the stale `build_login_root(state)` signature - see sync-docs. Archived in tasks/archive/.",
+      "file": "tasks/archive/fix-broken-references.md"
     },
     {
       "id": "wire-orphan-crates",
@@ -36,7 +39,8 @@
       "category": "Configuration",
       "priority": "P0",
       "completed_in": "402943c5",
-      "notes": "Archived `runie-ext` and `runie-ext-macros` (broken imports). 3 additional orphan crates (runie-ai, runie-cli, runie-tools) were archived later in commit f831dea5; see archive-remaining-orphans."
+      "notes": "Archived `runie-ext` and `runie-ext-macros` (broken imports). 3 additional orphan crates (runie-ai, runie-cli, runie-tools) were archived later in commit f831dea5; see archive-remaining-orphans. Archived in tasks/archive/.",
+      "file": "tasks/archive/wire-orphan-crates.md"
     },
     {
       "id": "fix-build-lint",
@@ -47,7 +51,8 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "notes": "Refactored `crates/runie-core/build.rs` (now 121 lines) to: raise thresholds to 2000/150/30 (so the build always passes), extract helper functions (`check_file_length`, `check_function_violations`, `lint_file`), and fix the function-body brace tracking. The `ALLOWED_FILES_OVER` and `ALLOWED_FUNCS_OVER` allow-lists were removed entirely - they were the wrong abstraction. The lint no longer scans `target/` but does still scan `crates/_archive/` and tests - the 2000-line budget makes that fine in practice."
+      "notes": "Refactored `crates/runie-core/build.rs` (now 121 lines) to: raise thresholds to 2000/150/30 (so the build always passes), extract helper functions (`check_file_length`, `check_function_violations`, `lint_file`), and fix the function-body brace tracking. The `ALLOWED_FILES_OVER` and `ALLOWED_FUNCS_OVER` allow-lists were removed entirely - they were the wrong abstraction. The lint no longer scans `target/` but does still scan `crates/_archive/` and tests - the 2000-line budget makes that fine in practice. Archived in tasks/archive/.",
+      "file": "tasks/archive/fix-build-lint.md"
     },
     {
       "id": "archive-remaining-orphans",
@@ -58,7 +63,8 @@
       "depends_on": [
         "wire-orphan-crates"
       ],
-      "notes": "Archived `runie-ai` (no Cargo.toml, orphan AI provider code), `runie-cli` (had Cargo.toml but depended on orphan crates), and `runie-tools` (no Cargo.toml). `crates/_archive/` now contains 7 entries: 6 subdirs (`runie-agent-tests`, `runie-agent-bin`, `update-orphans`, `runie-ext-macros`, `runie-tui-bins`, `runie-ext`) and 1 file (`wireframe_layout.rs`). Workspace builds with 8 members. See `clean-archive` for the next step (delete the archive entirely)."
+      "notes": "Archived `runie-ai` (no Cargo.toml, orphan AI provider code), `runie-cli` (had Cargo.toml but depended on orphan crates), and `runie-tools` (no Cargo.toml). `crates/_archive/` now contains 7 entries: 6 subdirs (`runie-agent-tests`, `runie-agent-bin`, `update-orphans`, `runie-ext-macros`, `runie-tui-bins`, `runie-ext`) and 1 file (`wireframe_layout.rs`). Workspace builds with 8 members. See `clean-archive` for the next step (delete the archive entirely). Archived in tasks/archive/.",
+      "file": "tasks/archive/archive-remaining-orphans.md"
     },
     {
       "id": "anyprovider-dynamic-dispatch",
@@ -70,7 +76,8 @@
         "wire-orphan-crates"
       ],
       "completed_in": "87052015",
-      "notes": "Refactored `Provider` trait to use `Stream<Item = Result<ResponseChunk>>` instead of the `on_chunk` callback. Introduced `DynProvider` struct wrapping `Box<dyn Provider>`, `ProviderError` enum, and `Result<Self, ProviderError>` constructors (no silent Mock fallback). Updated all call sites: `runie-term/src/main.rs` builds provider upfront and emits `AgentError` on failure; `runie-agent/src/turn.rs` takes `&DynProvider`; `runie-agent/src/subagent.rs` returns `SubagentError::Provider` on construction failure; `runie-print`, `runie-json`, `runie-server` use the new Stream API. Tests: `run_subagent_returns_error_for_unknown_provider` (renamed from `_falls_back_to_mock`). `ensure_mock_provider()` uses `std::sync::Once` for test isolation."
+      "notes": "Refactored `Provider` trait to use `Stream<Item = Result<ResponseChunk>>` instead of the `on_chunk` callback. Introduced `DynProvider` struct wrapping `Box<dyn Provider>`, `ProviderError` enum, and `Result<Self, ProviderError>` constructors (no silent Mock fallback). Updated all call sites: `runie-term/src/main.rs` builds provider upfront and emits `AgentError` on failure; `runie-agent/src/turn.rs` takes `&DynProvider`; `runie-agent/src/subagent.rs` returns `SubagentError::Provider` on construction failure; `runie-print`, `runie-json`, `runie-server` use the new Stream API. Tests: `run_subagent_returns_error_for_unknown_provider` (renamed from `_falls_back_to_mock`). `ensure_mock_provider()` uses `std::sync::Once` for test isolation. Archived in tasks/archive/.",
+      "file": "tasks/archive/anyprovider-dynamic-dispatch.md"
     },
     {
       "id": "appstate-decomposition",
@@ -81,7 +88,9 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "completed_in": "c10023ed"
+      "completed_in": "c10023ed",
+      "file": "tasks/archive/appstate-decomposition.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "deduplicate-panel-types",
@@ -92,7 +101,9 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "completed_in": "bc0bbd22"
+      "completed_in": "bc0bbd22",
+      "file": "tasks/archive/deduplicate-panel-types.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "extract-login-flow",
@@ -105,7 +116,9 @@
         "fix-broken-references"
       ],
       "supersedes": "deduplicate-login-flow",
-      "completed_in": "d8dfc5ab"
+      "completed_in": "d8dfc5ab",
+      "file": "tasks/archive/extract-login-flow.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "split-update-mod",
@@ -114,9 +127,12 @@
       "category": "Core Architecture",
       "priority": "P1",
       "depends_on": [
-        "extract-login-flow"
+        "extract-login-flow",
+        "resolve-merge-conflicts"
       ],
-      "completed_in": "fb25553c"
+      "completed_in": "fb25553c",
+      "file": "tasks/archive/split-update-mod.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "delete-abandoned-loop-engine",
@@ -124,7 +140,9 @@
       "milestone": "R1",
       "category": "Core Architecture",
       "priority": "P1",
-      "completed_in": "ad8ae788"
+      "completed_in": "ad8ae788",
+      "file": "tasks/archive/delete-abandoned-loop-engine.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "delete-runie-tui-dead-code",
@@ -132,7 +150,9 @@
       "milestone": "R1",
       "category": "TUI Rendering",
       "priority": "P0",
-      "completed_in": "54f7ce43"
+      "completed_in": "54f7ce43",
+      "file": "tasks/archive/delete-runie-tui-dead-code.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "clean-archive",
@@ -143,7 +163,9 @@
       "depends_on": [
         "archive-remaining-orphans"
       ],
-      "completed_in": "dc90e429"
+      "completed_in": "dc90e429",
+      "file": "tasks/archive/clean-archive.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "consolidate-tui-tests",
@@ -151,7 +173,9 @@
       "milestone": "R2",
       "category": "TUI Rendering",
       "priority": "P1",
-      "completed_in": "c2983698"
+      "completed_in": "c2983698",
+      "file": "tasks/archive/consolidate-tui-tests.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "keybindings-table-driven",
@@ -159,7 +183,9 @@
       "milestone": "R2",
       "category": "Input & Commands",
       "priority": "P1",
-      "completed_in": "dce1243a"
+      "completed_in": "dce1243a",
+      "file": "tasks/archive/keybindings-table-driven.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "snapshot-dead-code",
@@ -170,7 +196,9 @@
       "depends_on": [
         "resolve-merge-conflicts"
       ],
-      "completed_in": "1651fbe4"
+      "completed_in": "1651fbe4",
+      "file": "tasks/archive/snapshot-dead-code.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "fix-dev-tools-error-handling",
@@ -178,7 +206,9 @@
       "milestone": "R2",
       "category": "Tools",
       "priority": "P2",
-      "completed_in": "$(git rev-parse --short HEAD)"
+      "completed_in": "$(git rev-parse --short HEAD)",
+      "file": "tasks/archive/fix-dev-tools-error-handling.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "clean-dead-modules",
@@ -190,7 +220,9 @@
         "resolve-merge-conflicts",
         "clean-archive"
       ],
-      "completed_in": "cc8a50f6"
+      "completed_in": "cc8a50f6",
+      "file": "tasks/archive/clean-dead-modules.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "terminal-detection",
@@ -220,7 +252,9 @@
       "depends_on": [
         "terminal-detection"
       ],
-      "completed_in": "current"
+      "completed_in": "current",
+      "file": "tasks/archive/vim-navigation-mode.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "shift-enter-newline",
@@ -231,7 +265,9 @@
       "depends_on": [
         "terminal-detection"
       ],
-      "completed_in": "current"
+      "completed_in": "current",
+      "file": "tasks/archive/shift-enter-newline.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "sync-docs",
@@ -246,21 +282,27 @@
       "milestone": "R1",
       "category": "Input & Commands",
       "priority": "P0",
-      "completed_in": "current"
+      "completed_in": "current",
+      "file": "tasks/archive/ctrl-o-collapse-expand.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "remove-orphan-modules",
       "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
-      "priority": "P0"
+      "priority": "P0",
+      "file": "tasks/archive/remove-orphan-modules.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "fix-event-name-duplicate-arms",
       "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
-      "priority": "P0"
+      "priority": "P0",
+      "file": "tasks/archive/fix-event-name-duplicate-arms.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "extract-term-effect-handlers",
@@ -274,14 +316,18 @@
       "status": "done",
       "milestone": "R3",
       "category": "Input & Commands",
-      "priority": "P1"
+      "priority": "P1",
+      "file": "tasks/archive/complete-agents-manager.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "replace-update-wildcard",
       "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
-      "priority": "P1"
+      "priority": "P1",
+      "file": "tasks/archive/replace-update-wildcard.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "consolidate-config-reload-types",
@@ -332,7 +378,9 @@
       "status": "done",
       "milestone": "R3",
       "category": "Configuration",
-      "priority": "P2"
+      "priority": "P2",
+      "file": "tasks/archive/archive-done-task-files.md",
+      "notes": "Archived in tasks/archive/."
     },
     {
       "id": "inline-tool-rendering",

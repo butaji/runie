@@ -199,7 +199,7 @@ let count = tokens.len();
 - Try replacing `fuzzy_filter` with `nucleo` in a spike.
 - Keep custom matcher if `nucleo` API is too invasive.
 
-**Follow-up task:** Add evaluation step to `tasks/crate-replacement-audit.md` or create `tasks/spike-nucleo.md`.
+**Follow-up task:** Add evaluation step to `tasks/crate-replacement-audit.md` or create `tasks/spike-nucleo-fuzzy.md`.
 
 ---
 
