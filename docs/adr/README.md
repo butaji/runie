@@ -16,7 +16,7 @@ superseded by the simpler MVU pattern now in use; they are kept in
 | [0014](0014-theme-system-opaline.md) | Theme engine via opaline (39 themes + custom TOML) |
 | [0015](0015-command-registry-and-palette.md) | Command registry, DSL, palette, dialog forms |
 | [0016](0016-unified-action-system.md) | ItemAction enum unifying panel item behavior |
-| [0017](0017-actor-runtime-and-event-bus.md) | Lightweight tokio-task actors + event bus + JSONL session persistence |
+| [0017](0017-actor-runtime.md) | Lightweight tokio-task actors + typed Actor trait + EventBus, no external actor framework |
 | [0018](0018-provider-llm-event-normalization.md) | All providers emit a normalized `LLMEvent` stream |
 | [0019](0019-tool-registry-and-mcp.md) | Tool trait registry, permission rulesets, and in-house MCP client |
 
