@@ -1,14 +1,11 @@
 use crate::accumulator::{OutputAccumulator, TruncateStrategy};
-use crate::safety::check_bash_safety;
 use crate::truncate;
-use std::path::Path;
-use std::process::Command;
-use std::time::{Duration, Instant};
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 
+mod bash;
 mod exec;
 mod read_file;
-
-const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tool {
@@ -58,6 +55,109 @@ pub struct ToolResult {
     pub success: bool,
 }
 
+/// Structured output from a shell execution.
+///
+/// Preserves stdout, stderr, exit code, and timeout information separately.
+/// When output is truncated, the full content is saved to a temp file.
+#[derive(Debug, Clone)]
+pub struct ShellOutput {
+    /// Standard output from the command.
+    pub stdout: String,
+    /// Standard error from the command.
+    pub stderr: String,
+    /// The rendered output shown to the user (already truncated with notice).
+    pub rendered: String,
+    /// Exit code. `None` if the command could not be executed.
+    pub exit_code: Option<i32>,
+    /// Whether the command timed out.
+    pub timed_out: bool,
+    /// Whether output was truncated.
+    pub truncated: bool,
+    /// Path to the full output file when truncated.
+    pub full_output_path: Option<PathBuf>,
+    /// Whether execution was blocked (safety check).
+    pub blocked: Option<String>,
+}
+
+impl ShellOutput {
+    /// Render the shell output as a user-facing string.
+    ///
+    /// Returns the pre-rendered output (already truncated with notice).
+    pub fn render(&self) -> String {
+        self.rendered.clone()
+    }
+
+    /// Returns true if the command succeeded (exit code 0).
+    pub fn is_success(&self) -> bool {
+        self.blocked.is_none()
+            && !self.timed_out
+            && self.exit_code == Some(0)
+    }
+}
+
+/// Build the user-facing rendered string from shell output components.
+///
+/// `truncated_combined` is the output already cut by the accumulator (only
+/// differs from `combined` when `truncated` is true).
+pub(super) fn build_rendered(
+    stdout: String,
+    stderr: String,
+    exit_code: Option<i32>,
+    timed_out: bool,
+    truncated: bool,
+    full_output_path: Option<&PathBuf>,
+    truncated_combined: &str,
+) -> String {
+    let result = combine_for_render(stdout, stderr, truncated, truncated_combined);
+    append_notices(result, exit_code, timed_out, truncated, full_output_path)
+}
+
+fn combine_for_render(stdout: String, stderr: String, truncated: bool, truncated_combined: &str) -> String {
+    if truncated {
+        return truncated_combined.to_string();
+    }
+    if stdout.is_empty() && stderr.is_empty() {
+        return String::new();
+    }
+    if stdout.is_empty() {
+        return stderr.trim_end().to_string();
+    }
+    if stderr.is_empty() {
+        return stdout.trim_end().to_string();
+    }
+    format!("{}\n{}", stdout.trim_end(), stderr.trim_end())
+}
+
+fn append_notices(
+    mut result: String,
+    exit_code: Option<i32>,
+    timed_out: bool,
+    truncated: bool,
+    full_output_path: Option<&PathBuf>,
+) -> String {
+    if result.is_empty() {
+        result = if exit_code == Some(0) || exit_code.is_none() {
+            "(no output)".to_string()
+        } else {
+            "(command failed)".to_string()
+        };
+    }
+    if timed_out {
+        result.push_str("\n\n[Command timed out]");
+    }
+    if truncated {
+        if let Some(path) = full_output_path {
+            let notice = format!(
+                "\n\n[Output truncated. Full output saved to {}. Read it with: head {} | tail -100]",
+                path.display(),
+                path.display()
+            );
+            result.push_str(&notice);
+        }
+    }
+    result
+}
+
 impl Tool {
     pub fn name(&self) -> &'static str {
         match self {
@@ -86,6 +186,29 @@ impl Tool {
             tool: self.clone(),
             output,
             success,
+        }
+    }
+
+    /// Returns true if this tool only reads data and does not modify the filesystem
+    /// or execute arbitrary code.
+    pub fn is_read_only(&self) -> bool {
+        matches!(
+            self,
+            Tool::ReadFile { .. }
+                | Tool::ListDir { .. }
+                | Tool::Grep { .. }
+                | Tool::Find { .. }
+                | Tool::FetchDocs { .. }
+        )
+    }
+
+    /// Execute the tool and return structured shell output if it is a bash command.
+    /// Returns `None` for non-bash tools.
+    pub fn execute_shell(&self, policy: &crate::truncate::TruncationPolicy) -> Option<ShellOutput> {
+        if let Tool::Bash { command } = self {
+            Some(bash::run_bash(command, policy))
+        } else {
+            None
         }
     }
 }
@@ -178,78 +301,6 @@ pub(crate) fn edit_file(path: &str, search: &str, replace: &str) -> (String, boo
             }
         }
         Err(e) => (format!("Error reading {}: {}", path.display(), e), false),
-    }
-}
-
-pub(crate) fn run_bash(
-    command: &str,
-    policy: &crate::truncate::TruncationPolicy,
-) -> (String, bool) {
-    if let Some(reason) = check_bash_safety(command) {
-        return (format!("Blocked: {}", reason), false);
-    }
-
-    let output = match run_command_with_timeout(
-        "bash".to_string(),
-        vec!["-c".to_string(), command.to_string()],
-        Duration::from_secs(DEFAULT_TIMEOUT_SECS),
-    ) {
-        Ok(output) => output,
-        Err(e) => return (format!("Error executing '{}': {}", command, e), false),
-    };
-
-    let mut result = String::new();
-    if !output.stdout.is_empty() {
-        result.push_str(&String::from_utf8_lossy(&output.stdout));
-    }
-    if !output.stderr.is_empty() {
-        if !result.is_empty() {
-            result.push('\n');
-        }
-        result.push_str(&String::from_utf8_lossy(&output.stderr));
-    }
-    let success = output.status.success();
-    if result.is_empty() {
-        result = if success {
-            "(no output)".to_string()
-        } else {
-            "(command failed)".to_string()
-        };
-    }
-    (
-        apply_truncation(result, TruncateStrategy::Tail, policy),
-        success,
-    )
-}
-
-fn run_command_with_timeout(
-    program: String,
-    args: Vec<String>,
-    timeout: Duration,
-) -> Result<std::process::Output, std::io::Error> {
-    use std::sync::mpsc;
-    use std::thread;
-
-    let (tx, rx) = mpsc::channel();
-
-    thread::spawn(move || match Command::new(&program).args(&args).output() {
-        Ok(output) => {
-            let _ = tx.send(Ok(output));
-        }
-        Err(e) => {
-            let _ = tx.send(Err(e));
-        }
-    });
-
-    match rx.recv_timeout(timeout) {
-        Ok(result) => result,
-        Err(mpsc::RecvTimeoutError::Timeout) => Err(std::io::Error::new(
-            std::io::ErrorKind::TimedOut,
-            format!("Command timed out after {:?}", timeout),
-        )),
-        Err(mpsc::RecvTimeoutError::Disconnected) => {
-            Err(std::io::Error::other("Channel disconnected unexpectedly"))
-        }
     }
 }
 

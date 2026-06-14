@@ -1,6 +1,22 @@
 use crate::Tool;
 
 #[test]
+fn tool_is_read_only_read_only_tools() {
+    assert!(Tool::ReadFile { path: "foo".into(), offset: None, limit: None }.is_read_only());
+    assert!(Tool::ListDir { path: "foo".into() }.is_read_only());
+    assert!(Tool::Grep { pattern: "foo".into(), path: ".".into(), glob: None, ignore_case: false, literal: false, context: 0, limit: 100 }.is_read_only());
+    assert!(Tool::Find { pattern: "foo".into(), path: ".".into(), limit: 100 }.is_read_only());
+    assert!(Tool::FetchDocs { library: "foo".into() }.is_read_only());
+}
+
+#[test]
+fn tool_is_read_only_write_tools() {
+    assert!(!Tool::WriteFile { path: "foo".into(), content: "x".into() }.is_read_only());
+    assert!(!Tool::EditFile { path: "foo".into(), search: "a".into(), replace: "b".into() }.is_read_only());
+    assert!(!Tool::Bash { command: "echo hi".into() }.is_read_only());
+}
+
+#[test]
 fn test_tool_read_file_exists() {
     let result = Tool::ReadFile {
         path: "Cargo.toml".to_string(),
@@ -255,4 +271,60 @@ fn test_edit_file_empty_search() {
     .execute();
     assert!(!result.success);
     let _ = std::fs::remove_file(path);
+}
+
+// ─── ShellOutput tests (Layer 1: pure state) ──────────────────────────────────
+
+#[test]
+fn shell_output_records_exit_code() {
+    let out = Tool::Bash { command: "exit 42".to_string() }
+        .execute_shell(&crate::truncate::TruncationPolicy::default())
+        .expect("bash tool");
+    assert_eq!(out.exit_code, Some(42));
+    assert!(!out.is_success());
+}
+
+#[test]
+fn shell_output_splits_stdout_stderr() {
+    let out = Tool::Bash { command: "echo out && echo err >&2".to_string() }
+        .execute_shell(&crate::truncate::TruncationPolicy::default())
+        .expect("bash tool");
+    assert_eq!(out.stdout.trim(), "out");
+    assert_eq!(out.stderr.trim(), "err");
+    assert_eq!(out.exit_code, Some(0));
+}
+
+#[test]
+fn shell_output_notices_truncation() {
+    let policy = crate::truncate::TruncationPolicy {
+        max_lines: 3,
+        max_bytes: 1024 * 1024,
+    };
+    let out = Tool::Bash { command: "seq 1 10".to_string() }
+        .execute_shell(&policy)
+        .expect("bash tool");
+    assert!(out.truncated, "expected truncation for 10 lines with max_lines=3");
+    assert!(out.full_output_path.is_some(), "expected temp file path");
+    assert!(
+        out.render().contains("Output truncated"),
+        "rendered output should contain truncation notice"
+    );
+}
+
+#[test]
+fn shell_output_combines_on_success() {
+    let out = Tool::Bash { command: "echo hello".to_string() }
+        .execute_shell(&crate::truncate::TruncationPolicy::default())
+        .expect("bash tool");
+    assert!(out.is_success(), "exit 0 should be success");
+    assert!(out.render().contains("hello"));
+}
+
+#[test]
+fn shell_output_shows_stderr_on_failure() {
+    let out = Tool::Bash { command: "echo fail >&2 && exit 1".to_string() }
+        .execute_shell(&crate::truncate::TruncationPolicy::default())
+        .expect("bash tool");
+    assert!(!out.is_success(), "exit 1 should not be success");
+    assert!(out.render().contains("fail"), "render should include stderr on failure");
 }

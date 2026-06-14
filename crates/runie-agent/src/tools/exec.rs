@@ -12,7 +12,7 @@ pub(crate) fn run_inner(tool: &Tool, policy: &TruncationPolicy) -> (String, bool
             search,
             replace,
         } => super::edit_file(path, search, replace),
-        Tool::Bash { command } => super::run_bash(command, policy),
+        Tool::Bash { command } => super::bash::run_bash_legacy(command, policy),
         Tool::Grep { .. } => run_grep_tool(tool, policy),
         Tool::Find { .. } => run_find_tool(tool, policy),
         Tool::FetchDocs { library } => super::run_fetch_docs(library),

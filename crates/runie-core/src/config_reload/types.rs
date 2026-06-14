@@ -125,6 +125,43 @@ impl Config {
     pub fn vim_mode(&self) -> bool {
         self.ui.vim_mode
     }
+
+    /// Classify what changed between two configs. Returns `None` if identical.
+    pub fn classify_change(&self, prev: &Config) -> Option<ConfigChange> {
+        let new_vals = current_config_values(self);
+        let old_vals = current_config_values(prev);
+
+        if new_vals.0 != old_vals.0 || new_vals.1 != old_vals.1 {
+            Some(ConfigChange::Model { provider: new_vals.0, model: new_vals.1 })
+        } else if new_vals.2 != old_vals.2 {
+            Some(ConfigChange::Theme { name: new_vals.2 })
+        } else {
+            None
+        }
+    }
+}
+
+/// What changed in the config that the watcher needs to act on.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConfigChange {
+    Model { provider: String, model: String },
+    Theme { name: String },
+}
+
+fn current_config_values(config: &Config) -> (String, String, String) {
+    let (default_provider, default_model) = default_provider_model();
+    let provider = config.provider.clone().unwrap_or_else(|| default_provider.to_string());
+    let model = config.default_model().unwrap_or(default_model).to_string();
+    let theme = config.theme.clone().unwrap_or_else(|| "runie".to_string());
+    (provider, model, theme)
+}
+
+fn default_provider_model() -> (&'static str, &'static str) {
+    if crate::provider_registry::is_mock_enabled() {
+        ("mock", "echo")
+    } else {
+        ("", "")
+    }
 }
 
 /// Get the default config file path
@@ -411,5 +448,28 @@ api_key = "test"
         let config = Config::load_from(&config_path);
 
         assert_eq!(config.default_model(), Some("gpt-4"));
+    }
+
+    #[test]
+    fn classify_change_detects_model_change() {
+        let prev = Config { provider: Some("openai".to_string()), model: None, ..Config::default() };
+        let curr = Config { provider: Some("anthropic".to_string()), model: None, ..Config::default() };
+        let change = curr.classify_change(&prev);
+        assert!(matches!(change, Some(super::ConfigChange::Model { provider, model }) if provider == "anthropic"));
+    }
+
+    #[test]
+    fn classify_change_detects_theme_change() {
+        let prev = Config { theme: Some("dark".to_string()), ..Config::default() };
+        let curr = Config { theme: Some("light".to_string()), ..Config::default() };
+        let change = curr.classify_change(&prev);
+        assert!(matches!(change, Some(super::ConfigChange::Theme { name }) if name == "light"));
+    }
+
+    #[test]
+    fn classify_change_returns_none_when_identical() {
+        let prev = Config { provider: Some("openai".to_string()), theme: Some("dark".to_string()), ..Config::default() };
+        let curr = prev.clone();
+        assert!(curr.classify_change(&prev).is_none());
     }
 }
