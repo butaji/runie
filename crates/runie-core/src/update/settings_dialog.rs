@@ -6,7 +6,7 @@
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 
-pub fn handle_settings_category(state: &mut AppState, category: SettingsCategory) {
+pub fn handle_settings_category(state: &mut AppState, _category: SettingsCategory) {
     state.mark_dirty();
 }
 

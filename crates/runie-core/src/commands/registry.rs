@@ -50,7 +50,7 @@ impl CommandRegistry {
                     continue;
                 }
             }
-            result.push((def.category.clone(), vec![def]));
+            result.push((def.category, vec![def]));
         }
         result
     }

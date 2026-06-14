@@ -1,7 +1,7 @@
 //! Command Builder
 
 use super::{CommandCategory, CommandFlow, CommandResult, DialogType};
-use crate::dialog::{PanelItem, PanelStack as CoreStack};
+use crate::dialog::{PanelStack as CoreStack};
 use crate::model::AppState;
 use crate::Event;
 

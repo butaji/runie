@@ -1,6 +1,6 @@
 //! OpenAI provider — streams Chat Completions via SSE
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use futures::Stream;
 use futures::StreamExt;
 use runie_core::provider::{Message, Provider, ResponseChunk};
