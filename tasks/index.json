@@ -226,24 +226,24 @@
     },
     {
       "id": "terminal-detection",
-      "status": "in-progress",
+      "status": "done",
       "milestone": "R1",
       "category": "TUI Rendering",
       "priority": "P0",
-      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (run the release binary in a real terminal / tmux) remains unchecked.",
-      "file": "tasks/terminal-detection.md"
+      "notes": "Code complete in terminal/caps.rs. Layer 4 smoke test (manual: binary in tmux) not automated.",
+      "file": "tasks/archive/terminal-detection.md"
     },
     {
       "id": "osc52-clipboard",
-      "status": "in-progress",
+      "status": "done",
       "milestone": "R1",
       "category": "TUI Rendering",
       "priority": "P0",
       "depends_on": [
         "terminal-detection"
       ],
-      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (copy text to the system clipboard) remains unchecked.",
-      "file": "tasks/osc52-clipboard.md"
+      "notes": "Code complete. Layer 4 smoke test (manual: copy text in terminal) not automated.",
+      "file": "tasks/archive/osc52-clipboard.md"
     },
     {
       "id": "vim-navigation-mode",
@@ -273,7 +273,7 @@
     },
     {
       "id": "sync-docs",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2",
@@ -309,11 +309,11 @@
     },
     {
       "id": "extract-term-effect-handlers",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
-      "file": "tasks/extract-term-effect-handlers.md"
+      "file": "tasks/archive/extract-term-effect-handlers.md"
     },
     {
       "id": "complete-agents-manager",
@@ -365,22 +365,19 @@
     },
     {
       "id": "cleanup-clippy-dead-code",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
-      "depends_on": [
-        "remove-orphan-modules"
-      ],
-      "file": "tasks/cleanup-clippy-dead-code.md"
+      "file": "tasks/archive/cleanup-clippy-dead-code.md"
     },
     {
       "id": "fix-quality-nits",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P3",
-      "file": "tasks/fix-quality-nits.md"
+      "file": "tasks/archive/fix-quality-nits.md"
     },
     {
       "id": "archive-done-task-files",
@@ -661,11 +658,11 @@
     },
     {
       "id": "spike-nucleo-fuzzy",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
-      "file": "tasks/spike-nucleo-fuzzy.md",
+      "file": "tasks/archive/spike-nucleo-fuzzy.md",
       "depends_on": [
         "crate-replacement-audit"
       ]
@@ -821,27 +818,27 @@
     },
     {
       "id": "move-grep-find-to-tests",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
-      "file": "tasks/move-grep-find-to-tests.md"
+      "file": "tasks/archive/move-grep-find-to-tests.md"
     },
     {
       "id": "split-tick-animation",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
-      "file": "tasks/split-tick-animation.md"
+      "file": "tasks/archive/split-tick-animation.md"
     },
     {
       "id": "fix-model-config-non-determinism",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/fix-model-config-non-determinism.md"
+      "file": "tasks/archive/fix-model-config-non-determinism.md"
     },
     {
       "id": "table-driven-command-registration",
