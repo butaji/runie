@@ -395,6 +395,25 @@ mod tests {
     }
 
     #[test]
+    fn event_name_roundtrip() {
+        for (name, ctor) in crate::event::EVENT_NAMES {
+            let evt = ctor();
+            if let Some(got) = evt.name() {
+                assert_eq!(got, *name, "{}: Event::name() returned wrong name", name);
+            }
+        }
+    }
+
+    #[test]
+    fn mouse_events_have_no_name() {
+        use crate::Event;
+        assert_eq!(Event::MouseClick { row: 0, col: 0, button: "left".into() }.name(), None);
+        assert_eq!(Event::MouseRelease { row: 0, col: 0, button: "left".into() }.name(), None);
+        assert_eq!(Event::MouseDrag { row: 0, col: 0, button: "left".into() }.name(), None);
+        assert_eq!(Event::MouseMove { row: 0, col: 0 }.name(), None);
+    }
+
+    #[test]
     fn event_from_name_all_named_variants() {
         for (name, ctor) in crate::event::EVENT_NAMES {
             let expected = ctor();
