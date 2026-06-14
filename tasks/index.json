@@ -225,27 +225,6 @@
       "notes": "Archived in tasks/archive/."
     },
     {
-      "id": "terminal-detection",
-      "status": "done",
-      "milestone": "R1",
-      "category": "TUI Rendering",
-      "priority": "P0",
-      "notes": "Code complete in terminal/caps.rs. Layer 4 smoke test (manual: binary in tmux) not automated.",
-      "file": "tasks/archive/terminal-detection.md"
-    },
-    {
-      "id": "osc52-clipboard",
-      "status": "done",
-      "milestone": "R1",
-      "category": "TUI Rendering",
-      "priority": "P0",
-      "depends_on": [
-        "terminal-detection"
-      ],
-      "notes": "Code complete. Layer 4 smoke test (manual: copy text in terminal) not automated.",
-      "file": "tasks/archive/osc52-clipboard.md"
-    },
-    {
       "id": "vim-navigation-mode",
       "status": "done",
       "milestone": "R1",
@@ -308,14 +287,6 @@
       "notes": "Archived in tasks/archive/."
     },
     {
-      "id": "extract-term-effect-handlers",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Core Architecture",
-      "priority": "P1",
-      "file": "tasks/archive/extract-term-effect-handlers.md"
-    },
-    {
       "id": "complete-agents-manager",
       "status": "done",
       "milestone": "R3",
@@ -362,22 +333,6 @@
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
-    },
-    {
-      "id": "cleanup-clippy-dead-code",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Core Architecture",
-      "priority": "P2",
-      "file": "tasks/archive/cleanup-clippy-dead-code.md"
-    },
-    {
-      "id": "fix-quality-nits",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Core Architecture",
-      "priority": "P3",
-      "file": "tasks/archive/fix-quality-nits.md"
     },
     {
       "id": "archive-done-task-files",
@@ -657,17 +612,6 @@
       ]
     },
     {
-      "id": "spike-nucleo-fuzzy",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Core Architecture",
-      "priority": "P2",
-      "file": "tasks/archive/spike-nucleo-fuzzy.md",
-      "depends_on": [
-        "crate-replacement-audit"
-      ]
-    },
-    {
       "id": "remove-vendored-reference-repos",
       "status": "done",
       "milestone": "R3",
@@ -803,42 +747,6 @@
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
-    },
-    {
-      "id": "sync-element-line-count",
-      "status": "done",
-      "milestone": "R3",
-      "category": "TUI Rendering",
-      "priority": "P1",
-      "completed_in": "current",
-      "file": "tasks/sync-element-line-count.md",
-      "depends_on": [
-        "fix-clippy-and-test-hygiene"
-      ]
-    },
-    {
-      "id": "move-grep-find-to-tests",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Core Architecture",
-      "priority": "P2",
-      "file": "tasks/archive/move-grep-find-to-tests.md"
-    },
-    {
-      "id": "split-tick-animation",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Core Architecture",
-      "priority": "P2",
-      "file": "tasks/archive/split-tick-animation.md"
-    },
-    {
-      "id": "fix-model-config-non-determinism",
-      "status": "done",
-      "milestone": "R3",
-      "category": "Configuration",
-      "priority": "P2",
-      "file": "tasks/archive/fix-model-config-non-determinism.md"
     },
     {
       "id": "table-driven-command-registration",
