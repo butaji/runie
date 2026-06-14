@@ -1,5 +1,7 @@
 # Configurable keybindings via ConfigAgent
 
+> **Superseded by ADR 0021.** Keybindings now live in the `[keybindings]` table of `~/.runie/config.toml`. This ADR is kept for historical context only.
+
 Keybinding mappings are loaded from `keybindings.json` at startup by ConfigAgent. ConfigAgent emits `KeybindingsLoaded { map }` and watches for file changes to support hot reload.
 
 Actors subscribe to config updates and use the current keybinding map.

@@ -973,7 +973,17 @@
       "category": "Architecture / TUI",
       "priority": "P0",
       "file": "tasks/r4-team-mode-integration.md",
-      "depends_on": ["r4-solo-team-mode-toggle", "r4-orchestrator-actor", "r4-subagent-isolation", "r4-subagent-sidebar"]
+      "depends_on": ["r4-solo-team-mode-toggle", "r4-orchestrator-actor", "r4-subagent-isolation", "r4-subagent-sidebar", "r4-sidebar-task-list"]
+    },
+    {
+      "id": "r4-sidebar-task-list",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/r4-sidebar-task-list.md",
+      "depends_on": ["r4-orchestrator-domain-types", "r4-subagent-sidebar"],
+      "blocks": ["r4-team-mode-integration"]
     },
     {
       "id": "grok-mouse-terminal-init",
@@ -1084,6 +1094,25 @@
       "priority": "P2",
       "file": "tasks/grok-inline-diff-polish.md",
       "depends_on": []
+    },
+    {
+      "id": "skills-subdirectory-frontmatter",
+      "status": "todo",
+      "milestone": "R2",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/skills-subdirectory-frontmatter.md",
+      "depends_on": []
+    },
+    {
+      "id": "consolidate-keybindings-into-config-toml",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/consolidate-keybindings-into-config-toml.md",
+      "depends_on": [],
+      "notes": "Consolidates keybindings from ~/.runie/keybindings.json into ~/.runie/config.toml [keybindings]. Supersedes docs/adr/0013-configurable-keybindings.md."
     }
   ]
 }

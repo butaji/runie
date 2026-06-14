@@ -100,6 +100,14 @@ _Avoid_: command handler, keybinder
 Actor that owns configuration state. Loads TOML at startup, watches for changes, emits ConfigChanged events.
 _Avoid_: settings manager
 
+**Config File**:
+The single TOML file at `~/.runie/config.toml` that holds all user settings: provider, model, theme, UI flags, truncation, prompts, telemetry, and keybindings.
+_Avoid_: config.toml (ambiguous without path), settings file, preferences
+
+**Keybinding**:
+A mapping from a key-combination string to an Event name. Defaults are defined in code; user overrides live in the `[keybindings]` table of the Config File.
+_Avoid_: shortcut, hotkey, keymap
+
 **ToolRegistry**:
 A collection of `Tool` implementations. Built-ins and MCP tools are registered the same way.
 _Avoid_: tool manager, tool list
