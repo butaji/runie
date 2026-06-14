@@ -8,17 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # Expected test counts per crate (update when adding/removing tests)
-  EXPECTED_RUNIE_AGENT_TESTS: 112
-  EXPECTED_RUNIE_CORE_TESTS: 848
-  EXPECTED_RUNIE_JSON_TESTS: 3
-  EXPECTED_RUNIE_PRINT_TESTS: 2
-  EXPECTED_RUNIE_PROVIDER_TESTS: 40
-  EXPECTED_RUNIE_SERVER_TESTS: 3
-  EXPECTED_RUNIE_TERM_TESTS: 136
-  EXPECTED_RUNIE_TUI_TESTS: 177
-  # Total expected: 1321 tests
-  EXPECTED_TOTAL_TESTS: 1321
+  # Total expected tests across the workspace (run `scripts/verify-tests.sh` to update)
+  EXPECTED_TOTAL_TESTS: 1806
 
 jobs:
   test:

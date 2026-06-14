@@ -50,98 +50,147 @@ pub fn is_diff_output(text: &str) -> bool {
 
 /// Parse unified diff format
 pub fn parse_diff(text: &str) -> ParsedDiff {
-    let mut lines = Vec::new();
-    let mut old_path = None;
-    let mut new_path = None;
-    let mut old_line_num: Option<u32> = None;
-    let mut new_line_num: Option<u32> = None;
-
+    let mut state = DiffParseState::default();
     for line in text.lines() {
-        if line.starts_with("--- ") {
-            old_path = Some(line.trim_start_matches("--- ").to_string());
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::FileHeader,
-                content: line.to_string(),
-                line_number: None,
-            });
-        } else if line.starts_with("+++ ") {
-            new_path = Some(line.trim_start_matches("+++ ").to_string());
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::FileHeader,
-                content: line.to_string(),
-                line_number: None,
-            });
-        } else if line.starts_with("@@ ") {
-            // Parse hunk header: @@ -start,count +start,count @@
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 2 {
-                let ranges: Vec<&str> = parts[1].split(',').collect();
-                if ranges[0].starts_with('-') {
-                    old_line_num = ranges[0].trim_start_matches('-').parse().ok();
-                }
-                let new_parts: Vec<&str> = parts.get(2).unwrap_or(&"").split(',').collect();
-                if new_parts[0].starts_with('+') {
-                    new_line_num = Some(new_parts[0].trim_start_matches('+').parse().unwrap_or(1));
-                }
-            }
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::HunkHeader,
-                content: line.to_string(),
-                line_number: None,
-            });
-        } else if line.starts_with('+') && !line.starts_with("+++") {
-            let num = new_line_num.take();
-            if let Some(ref mut n) = new_line_num {
-                *n += 1;
-            }
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::Added,
-                content: line[1..].to_string(),
-                line_number: num,
-            });
-        } else if line.starts_with('-') && !line.starts_with("---") {
-            let num = old_line_num.take();
-            if let Some(ref mut n) = old_line_num {
-                *n += 1;
-            }
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::Removed,
-                content: line[1..].to_string(),
-                line_number: num,
-            });
-        } else if line.starts_with(' ') {
-            let num = match (&old_line_num, &new_line_num) {
-                (Some(o), Some(_n)) => Some(*o),
-                (Some(o), None) => Some(*o),
-                (None, Some(n)) => Some(*n),
-                (None, None) => None,
-            };
-            if let Some(ref mut o) = old_line_num {
-                *o += 1;
-            }
-            if let Some(ref mut n) = new_line_num {
-                *n += 1;
-            }
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::Context,
-                content: line.strip_prefix(' ').unwrap_or(line).to_string(),
-                line_number: num,
-            });
-        } else if line.is_empty() {
-            // Empty line in diff content
-            lines.push(ParsedDiffLine {
-                line_type: DiffLineType::Context,
-                content: String::new(),
-                line_number: None,
-            });
+        state.parse_line(line);
+    }
+    ParsedDiff {
+        lines: state.lines,
+        old_path: state.old_path,
+        new_path: state.new_path,
+    }
+}
+
+#[derive(Default)]
+enum LineKind {
+    OldPath,
+    NewPath,
+    HunkHeader,
+    Added,
+    Removed,
+    Context,
+    Empty,
+    #[default]
+    Other,
+}
+
+fn classify_line(line: &str) -> LineKind {
+    if line.is_empty() {
+        return LineKind::Empty;
+    }
+    match line.as_bytes().first() {
+        Some(b'-') if line.starts_with("--- ") => LineKind::OldPath,
+        Some(b'+') if line.starts_with("+++ ") => LineKind::NewPath,
+        Some(b'@') if line.starts_with("@@ ") => LineKind::HunkHeader,
+        Some(b'+') => LineKind::Added,
+        Some(b'-') => LineKind::Removed,
+        Some(b' ') => LineKind::Context,
+        _ => LineKind::Other,
+    }
+}
+
+#[derive(Default)]
+struct DiffParseState {
+    lines: Vec<ParsedDiffLine>,
+    old_path: Option<String>,
+    new_path: Option<String>,
+    old_line_num: Option<u32>,
+    new_line_num: Option<u32>,
+}
+
+impl DiffParseState {
+    fn parse_line(&mut self, line: &str) {
+        match classify_line(line) {
+            LineKind::OldPath => self.parse_old_path(line),
+            LineKind::NewPath => self.parse_new_path(line),
+            LineKind::HunkHeader => self.parse_hunk_header(line),
+            LineKind::Added => self.parse_added(line),
+            LineKind::Removed => self.parse_removed(line),
+            LineKind::Context => self.parse_context(line),
+            LineKind::Empty => self.parse_empty(),
+            LineKind::Other => {}
         }
-        // Skip any other lines (like \ No newline at end of file)
     }
 
-    ParsedDiff {
-        lines,
-        old_path,
-        new_path,
+    fn parse_old_path(&mut self, line: &str) {
+        self.old_path = Some(line.trim_start_matches("--- ").to_string());
+        self.push_line(DiffLineType::FileHeader, line.to_string(), None);
+    }
+
+    fn parse_new_path(&mut self, line: &str) {
+        self.new_path = Some(line.trim_start_matches("+++ ").to_string());
+        self.push_line(DiffLineType::FileHeader, line.to_string(), None);
+    }
+
+    fn parse_hunk_header(&mut self, line: &str) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        self.old_line_num = parse_old_start(&parts);
+        self.new_line_num = parse_new_start(&parts);
+        self.push_line(DiffLineType::HunkHeader, line.to_string(), None);
+    }
+
+    fn parse_added(&mut self, line: &str) {
+        let num = self.new_line_num.take();
+        if let Some(ref mut n) = self.new_line_num {
+            *n += 1;
+        }
+        self.push_line(DiffLineType::Added, line[1..].to_string(), num);
+    }
+
+    fn parse_removed(&mut self, line: &str) {
+        let num = self.old_line_num.take();
+        if let Some(ref mut n) = self.old_line_num {
+            *n += 1;
+        }
+        self.push_line(DiffLineType::Removed, line[1..].to_string(), num);
+    }
+
+    fn parse_context(&mut self, line: &str) {
+        let num = pick_context_number(self.old_line_num, self.new_line_num);
+        if let Some(ref mut o) = self.old_line_num {
+            *o += 1;
+        }
+        if let Some(ref mut n) = self.new_line_num {
+            *n += 1;
+        }
+        let content = line.strip_prefix(' ').unwrap_or(line).to_string();
+        self.push_line(DiffLineType::Context, content, num);
+    }
+
+    fn parse_empty(&mut self) {
+        self.push_line(DiffLineType::Context, String::new(), None);
+    }
+
+    fn push_line(&mut self, line_type: DiffLineType, content: String, line_number: Option<u32>) {
+        self.lines.push(ParsedDiffLine {
+            line_type,
+            content,
+            line_number,
+        });
+    }
+}
+
+fn parse_old_start(parts: &[&str]) -> Option<u32> {
+    parts
+        .get(1)
+        .and_then(|s| s.split(',').next())
+        .filter(|s| s.starts_with('-'))
+        .and_then(|s| s.trim_start_matches('-').parse().ok())
+}
+
+fn parse_new_start(parts: &[&str]) -> Option<u32> {
+    parts
+        .get(2)
+        .and_then(|s| s.split(',').next())
+        .filter(|s| s.starts_with('+'))
+        .map(|s| s.trim_start_matches('+').parse().unwrap_or(1))
+}
+
+fn pick_context_number(old: Option<u32>, new: Option<u32>) -> Option<u32> {
+    match (old, new) {
+        (Some(o), Some(_)) | (Some(o), None) => Some(o),
+        (None, Some(n)) => Some(n),
+        (None, None) => None,
     }
 }
 

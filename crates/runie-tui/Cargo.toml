@@ -12,3 +12,6 @@ ratatui.workspace = true
 opaline = "0.4"
 dirs.workspace = true
 serde_json.workspace = true
+syntect = "5"
+pulldown-cmark.workspace = true
+unicode-width.workspace = true

@@ -317,17 +317,19 @@ input.handle(InputRequest::DeletePrevWord);
 
 ## Immediate Action Items
 
-1. **Create adoption tasks for high-priority crates:**
-   - `tasks/adopt-syntect.md`
-   - `tasks/adopt-similar.md`
-   - `tasks/adopt-pulldown-cmark.md`
-   - `tasks/adopt-tiktoken-rs.md`
+1. ~~Create adoption tasks for high-priority crates.~~ ✅ Done:
+   - `tasks/adopt-syntect.md` — done
+   - `tasks/adopt-similar.md` — done
+   - `tasks/adopt-pulldown-cmark.md` — done
+   - `tasks/adopt-tiktoken-rs.md` — done
 
-2. **Update `Cargo.toml` files** when implementing each adoption.
+2. ~~Update `Cargo.toml` files when implementing each adoption.~~ ✅ Done.
 
-3. **Update `docs/SPEC.md`** reference implementations table to mention adopted crates.
+3. ~~Update `docs/SPEC.md` reference implementations table to mention adopted crates.~~ ✅
+   `syntect`, `similar`, `pulldown-cmark`, and `tiktoken-rs` are now in use.
 
-4. **Spike `nucleo`** before deciding on fuzzy matching replacement.
+4. **Spike `nucleo`** before deciding on fuzzy matching replacement (tracked in
+   `tasks/spike-nucleo-fuzzy.md`).
 
 ---
 

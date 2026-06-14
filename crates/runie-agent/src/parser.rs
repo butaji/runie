@@ -59,10 +59,11 @@ fn parse_legacy_tool(payload: &str) -> Option<crate::Tool> {
     })
 }
 
-fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
-    let call: ToolCall = serde_json::from_str(line).ok()?;
-    let args = &call.arguments;
-    Some(match call.name.as_str() {
+fn parse_file_tool(
+    name: &str,
+    args: &serde_json::Map<String, serde_json::Value>,
+) -> Option<crate::Tool> {
+    Some(match name {
         "read_file" => crate::Tool::ReadFile {
             path: arg_str(args, "path"),
             offset: arg_opt_usize(args, "offset"),
@@ -80,6 +81,18 @@ fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
             search: arg_str(args, "search"),
             replace: arg_str(args, "replace"),
         },
+        _ => return None,
+    })
+}
+
+fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
+    let call: ToolCall = serde_json::from_str(line).ok()?;
+    let args = &call.arguments;
+    let name = call.name.as_str();
+    if let Some(tool) = parse_file_tool(name, args) {
+        return Some(tool);
+    }
+    Some(match name {
         "bash" => crate::Tool::Bash {
             command: arg_str(args, "command"),
         },
@@ -126,5 +139,5 @@ pub fn parse_tool_calls(text: &str) -> Vec<crate::Tool> {
 }
 
 pub fn has_tool_calls(text: &str) -> bool {
-    !parse_tool_calls(text).is_empty()
+    runie_core::tool_markers::has_tool_markers(text)
 }

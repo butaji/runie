@@ -219,34 +219,35 @@ fn turn_complete_survives_empty_content_timestamp_bump() {
     );
 }
 
+fn first_turn_with_tool_events() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "First turn".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 1.0,
+        },
+        Event::AgentDone { id: "req.0".into() },
+    ]
+}
+
 #[test]
 fn turn_complete_before_next_turn_user_message() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "a".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "First turn".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &first_turn_with_tool_events());
     state.session.messages.push(ChatMessage {
         role: Role::User,
         content: "Next turn".into(),

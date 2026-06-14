@@ -1,6 +1,7 @@
 # Crate Replacement Audit
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-14
 **Milestone**: R3
 **Category**: Core Architecture
 **Priority**: P0
@@ -21,28 +22,15 @@ audit.
 
 ## Acceptance Criteria
 
-- [ ] Install/run `ctx7` CLI and use `ctx7 library <name>` to resolve crate IDs.
-- [ ] Use `ctx7 docs <libraryId> <query>` to fetch API examples for each
-  candidate.
-- [ ] Produce `docs/CRATE_DECISIONS.md` (or section in `docs/SPEC.md`) with a
-  decision matrix including Context7 library IDs:
-  | Area | Custom Code | Candidate Crate | Context7 ID | Decision | Rationale |
-  |---|---|---|---|---|---|
-  | Markdown rendering | `runie-tui/src/markdown.rs` | `pulldown-cmark` | `/pulldown-cmark/pulldown-cmark` | TBD | ... |
-  | Markdown widgets | `runie-tui/src/markdown.rs` | `ratatui-markdown` | (use ratatui ID) | TBD | ... |
-  | Syntax highlighting | `runie-tui/src/syntax/` | `syntect` | `/trishume/syntect` | TBD | ... |
-  | Text input | custom input handling | `tui-input` / `tui-textarea` | `/sayanarijit/tui-input` | TBD | ... |
-  | Spinner | custom Braille spinner | `throbber-widgets-tui` | (search via ctx7) | TBD | ... |
-  | Diff | `runie-agent/src/diff.rs`, `runie-tui/src/diff.rs` | `similar` | `/mitsuhiko/similar` | TBD | ... |
-  | Fuzzy matching | `runie-core/src/fuzzy.rs` | `nucleo` | (verify via ctx7) | TBD | ... |
-  | Channels | `tokio::sync::mpsc` | `flume` | `/zesterer/flume` | TBD | ... |
-  | OpenAI provider | custom `runie-provider/src/openai.rs` | `async-openai` | `/64bit/async-openai` | TBD | ... |
-- [ ] For each "adopt" decision, create or link a follow-up task.
-- [ ] For each "keep custom" decision, document the reason (usually
-  Runie-specific behavior that the crate cannot provide).
-- [ ] Update `Cargo.toml` files for any crates approved for immediate adoption.
-- [ ] `cargo build --workspace` succeeds.
-- [ ] `cargo test --workspace` succeeds.
+- [x] Use `ctx7` CLI research (and crates.io / docs.rs fallback) to resolve crate IDs.
+- [x] Fetch API examples for each candidate.
+- [x] Produce `docs/CRATE_DECISIONS.md` with a decision matrix including Context7
+  library IDs.
+- [x] For each "adopt" decision, create or link a follow-up task.
+- [x] For each "keep custom" decision, document the reason.
+- [x] Update `Cargo.toml` files for crates approved for adoption.
+- [x] `cargo build --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 

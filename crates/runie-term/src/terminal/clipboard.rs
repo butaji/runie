@@ -4,6 +4,8 @@
 //! - iTerm2, WezTerm, Kitty, Alacritty, Windows Terminal, VS Code, etc.
 //! - tmux (with passthrough mode)
 
+#![allow(dead_code)]
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use std::io::Write;
 

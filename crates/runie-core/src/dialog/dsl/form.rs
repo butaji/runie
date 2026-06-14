@@ -7,7 +7,6 @@ use crate::Event;
 #[derive(Debug, Clone)]
 pub struct FormPanel {
     panel: Panel,
-    submit_event: Option<Event>,
 }
 
 impl FormPanel {
@@ -15,10 +14,7 @@ impl FormPanel {
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
         // Forms never use fuzzy filtering — keystrokes edit field values.
         let panel = Panel::new(id, title).form();
-        Self {
-            panel,
-            submit_event: None,
-        }
+        Self { panel }
     }
 
     /// Add a form field
@@ -44,12 +40,12 @@ impl FormPanel {
         self
     }
 
-    /// Set the event to emit on submit. The event is stored only for
-    /// inspection; the dispatch is owned by `form_build_submit` in update/mod.rs
-    /// which reads form values and constructs the final event.
-    pub fn on_submit(mut self, event: Event) -> Self {
-        self.submit_event = Some(event);
-        self.panel = self.panel.form_submit();
+    /// Set the factory that produces the submit event from form values.
+    pub fn on_submit(
+        mut self,
+        factory: fn(&std::collections::HashMap<String, String>) -> Event,
+    ) -> Self {
+        self.panel = self.panel.form_submit_with(factory);
         self
     }
 
@@ -86,27 +82,30 @@ mod tests {
     use crate::dialog::ItemAction;
     use crate::Event;
 
+    fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
+        Event::RunSaveCommand {
+            name: values.get("name").cloned().unwrap_or_default(),
+        }
+    }
+
     #[test]
     fn test_form_panel_builder() {
         let p = form("save", "Save")
             .field("Name", "session", "name")
             .field("Tags", "tag1, tag2", "tags")
-            .on_submit(Event::RunSaveCommand {
-                name: String::new(),
-            })
+            .on_submit(save_submit)
             .build();
 
         assert!(p.is_form());
         assert_eq!(p.items.len(), 3);
+        assert!(p.submit_factory.is_some());
     }
 
     #[test]
     fn test_form_to_stack() {
         let stack = form("save", "Save")
             .field("Name", "session", "name")
-            .on_submit(Event::RunSaveCommand {
-                name: String::new(),
-            })
+            .on_submit(save_submit)
             .into_stack();
 
         assert_eq!(stack.len(), 1);

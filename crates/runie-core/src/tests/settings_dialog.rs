@@ -182,6 +182,7 @@ fn has_label(state: &AppState, label: &str) -> bool {
     build_setting_items(state).iter().any(|i| i.label == label)
 }
 
+#[allow(dead_code)]
 fn find_index(state: &AppState, label: &str) -> Option<usize> {
     build_setting_items(state)
         .iter()
@@ -189,7 +190,7 @@ fn find_index(state: &AppState, label: &str) -> Option<usize> {
 }
 
 fn select_by_label(state: &mut AppState, label: &str) {
-    let count = settings_count(&state);
+    let count = settings_count(state);
     for _ in 0..count {
         let is_match = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
             stack

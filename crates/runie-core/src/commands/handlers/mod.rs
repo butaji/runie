@@ -1,5 +1,8 @@
 use super::CommandRegistry;
 
+pub mod spec;
+pub use spec::{build_cmd, register_commands, CommandKind, CommandSpec};
+
 pub fn register_all(registry: &mut CommandRegistry) {
     session::register(registry);
     model::register(registry);

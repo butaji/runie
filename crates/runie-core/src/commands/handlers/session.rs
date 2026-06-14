@@ -14,12 +14,8 @@ pub fn build_load_form() -> CommandResult {
     let stack = build_form_stack(
         "load",
         "Load Session",
-        &[
-            ("Name", "session-name", "name"),
-        ],
-        crate::Event::RunLoadCommand {
-            name: String::new(),
-        },
+        &[("Name", "session-name", "name")],
+        load_submit,
     );
     CommandResult::OpenPanelStack(stack)
 }
@@ -30,9 +26,7 @@ pub fn build_delete_form() -> CommandResult {
         "delete",
         "Delete Session",
         &[("Name", "session-name", "name")],
-        crate::Event::RunDeleteCommand {
-            name: String::new(),
-        },
+        delete_submit,
     );
     CommandResult::OpenPanelStack(stack)
 }
@@ -43,9 +37,7 @@ pub fn build_import_form() -> CommandResult {
         "import",
         "Import Session",
         &[("Path", "session.json", "path")],
-        crate::Event::RunImportCommand {
-            path: String::new(),
-        },
+        import_submit,
     );
     CommandResult::OpenPanelStack(stack)
 }
@@ -56,9 +48,7 @@ pub fn build_export_form() -> CommandResult {
         "export",
         "Export Session",
         &[("Path", "session.json", "path")],
-        crate::Event::RunExportCommand {
-            path: String::new(),
-        },
+        export_submit,
     );
     CommandResult::OpenPanelStack(stack)
 }
@@ -67,7 +57,7 @@ fn build_form_stack(
     id: &str,
     title: &str,
     fields: &[(&str, &str, &str)],
-    submit: crate::Event,
+    submit: crate::commands::handlers::spec::FormSubmitFn,
 ) -> PanelStack {
     use crate::dialog::dsl::form;
     let mut builder = form(id, title);
@@ -77,184 +67,218 @@ fn build_form_stack(
     builder.on_submit(submit).into_stack()
 }
 
+use crate::commands::handlers::spec::{CommandKind, CommandSpec};
+
+fn save_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunSaveCommand {
+        name: values.get("name").cloned().unwrap_or_default(),
+    }
+}
+fn load_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunLoadCommand {
+        name: values.get("name").cloned().unwrap_or_default(),
+    }
+}
+fn delete_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunDeleteCommand {
+        name: values.get("name").cloned().unwrap_or_default(),
+    }
+}
+fn export_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunExportCommand {
+        path: values.get("path").cloned().unwrap_or_default(),
+    }
+}
+fn import_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunImportCommand {
+        path: values.get("path").cloned().unwrap_or_default(),
+    }
+}
+fn compact_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunCompactCommand {
+        keep: values.get("keep").cloned().unwrap_or_default(),
+        focus: values.get("focus").cloned().unwrap_or_default(),
+    }
+}
+fn fork_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunForkCommand {
+        message_index: values.get("index").cloned().unwrap_or_default(),
+    }
+}
+fn name_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunNameCommand {
+        name: values.get("name").cloned().unwrap_or_default(),
+    }
+}
+
+static SESSION_COMMANDS: &[CommandSpec] = &[
+    CommandSpec {
+        name: "save",
+        desc: "Save current session",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Save Session",
+            fields: &[("Name", "session-name", "name")],
+            submit: save_submit,
+        },
+    },
+    CommandSpec {
+        name: "load",
+        desc: "Load a saved session",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Load Session",
+            fields: &[("Name", "session-name", "name")],
+            submit: load_submit,
+        },
+    },
+    CommandSpec {
+        name: "delete",
+        desc: "Delete a saved session",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Delete Session",
+            fields: &[("Name", "session-name", "name")],
+            submit: delete_submit,
+        },
+    },
+    CommandSpec {
+        name: "export",
+        desc: "Export session to JSON",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Export Session",
+            fields: &[("Path", "session.json", "path")],
+            submit: export_submit,
+        },
+    },
+    CommandSpec {
+        name: "import",
+        desc: "Import session from JSON",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Import Session",
+            fields: &[("Path", "session.json", "path")],
+            submit: import_submit,
+        },
+    },
+    CommandSpec {
+        name: "sessions",
+        desc: "List saved sessions",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_sessions),
+    },
+    CommandSpec {
+        name: "new",
+        desc: "Start new session",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_new),
+    },
+    CommandSpec {
+        name: "reset",
+        desc: "Clear all state",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_reset),
+    },
+    CommandSpec {
+        name: "history",
+        desc: "Show recent history",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_history),
+    },
+    CommandSpec {
+        name: "session",
+        desc: "Show session info",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_session),
+    },
+    CommandSpec {
+        name: "tree",
+        desc: "Open session tree dialog",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Handler(handle_tree),
+    },
+    CommandSpec {
+        name: "share",
+        desc: "Share session as GitHub gist",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_share),
+    },
+    CommandSpec {
+        name: "resume",
+        desc: "Resume most recent session",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: false,
+        kind: CommandKind::Handler(handle_resume),
+    },
+    CommandSpec {
+        name: "compact",
+        desc: "Compact context",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Compact Context",
+            fields: &[
+                ("Keep tokens", "2000", "keep"),
+                ("Focus", "optional focus keyword", "focus"),
+            ],
+            submit: compact_submit,
+        },
+    },
+    CommandSpec {
+        name: "fork",
+        desc: "Fork session from a message",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Fork Session",
+            fields: &[("Message index", "0", "index")],
+            submit: fork_submit,
+        },
+    },
+    CommandSpec {
+        name: "name",
+        desc: "Set session display name",
+        aliases: &[],
+        category: CommandCategory::Session,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Set Session Name",
+            fields: &[("Name", "session-name", "name")],
+            submit: name_submit,
+        },
+    },
+];
+
 pub fn register(registry: &mut CommandRegistry) {
-    // Form commands (always show dialog, pre-fill from args)
-    registry.register(
-        crate::cmd!("save")
-            .desc("Save current session")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Save Session",
-                |f| f.field("Name", "session-name", "name"),
-                crate::Event::RunSaveCommand {
-                    name: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("load")
-            .desc("Load a saved session")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Load Session",
-                |f| f.field("Name", "session-name", "name"),
-                crate::Event::RunLoadCommand {
-                    name: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("delete")
-            .desc("Delete a saved session")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Delete Session",
-                |f| f.field("Name", "session-name", "name"),
-                crate::Event::RunDeleteCommand {
-                    name: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("export")
-            .desc("Export session to JSON")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Export Session",
-                |f| f.field("Path", "session.json", "path"),
-                crate::Event::RunExportCommand {
-                    path: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("import")
-            .desc("Import session from JSON")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Import Session",
-                |f| f.field("Path", "session.json", "path"),
-                crate::Event::RunImportCommand {
-                    path: String::new(),
-                },
-            ),
-    );
-
-    // Immediate commands
-    registry.register(
-        crate::cmd!("sessions")
-            .desc("List saved sessions")
-            .category(CommandCategory::Session)
-            .handler(handle_sessions),
-    );
-
-    registry.register(
-        crate::cmd!("new")
-            .desc("Start new session")
-            .category(CommandCategory::Session)
-            .handler(handle_new),
-    );
-
-    registry.register(
-        crate::cmd!("reset")
-            .desc("Clear all state")
-            .category(CommandCategory::Session)
-            .handler(handle_reset),
-    );
-
-    registry.register(
-        crate::cmd!("history")
-            .desc("Show recent history")
-            .category(CommandCategory::Session)
-            .handler(handle_history),
-    );
-
-    registry.register(
-        crate::cmd!("session")
-            .desc("Show session info")
-            .category(CommandCategory::Session)
-            .handler(handle_session),
-    );
-
-    registry.register(
-        crate::cmd!("tree")
-            .desc("Open session tree dialog")
-            .category(CommandCategory::Session)
-            .sub()
-            .handler(handle_tree),
-    );
-
-    registry.register(
-        crate::cmd!("share")
-            .desc("Share session as GitHub gist")
-            .category(CommandCategory::Session)
-            .handler(handle_share),
-    );
-
-    registry.register(
-        crate::cmd!("resume")
-            .desc("Resume most recent session")
-            .category(CommandCategory::Session)
-            .handler(handle_resume),
-    );
-
-    registry.register(
-        crate::cmd!("compact")
-            .desc("Compact context")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Compact Context",
-                |f| {
-                    f.field("Keep tokens", "2000", "keep").field(
-                        "Focus",
-                        "optional focus keyword",
-                        "focus",
-                    )
-                },
-                crate::Event::RunCompactCommand {
-                    keep: String::new(),
-                    focus: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("fork")
-            .desc("Fork session from a message")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Fork Session",
-                |f| f.field("Message index", "0", "index"),
-                crate::Event::RunForkCommand {
-                    message_index: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("name")
-            .desc("Set session display name")
-            .category(CommandCategory::Session)
-            .sub()
-            .form(
-                "Set Session Name",
-                |f| f.field("Name", "session-name", "name"),
-                crate::Event::RunNameCommand {
-                    name: String::new(),
-                },
-            ),
-    );
+    crate::commands::handlers::spec::register_commands(registry, SESSION_COMMANDS);
 }
 
 // ============================================================================
@@ -279,6 +303,7 @@ fn handle_new(state: &mut AppState, _: &str) -> CommandResult {
     state.agent.request_queue.clear();
     state.config.current_provider = state.config.config_provider.clone();
     state.config.current_model = state.config.config_model.clone();
+    state.configure_token_tracker();
     state.session.session_display_name = None;
     let now = crate::update::now();
     state.session.session_created_at = now;
@@ -313,32 +338,43 @@ fn handle_history(state: &mut AppState, _: &str) -> CommandResult {
 }
 
 fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
-    let tokens: usize = state
+    let tokens = session_token_count(state);
+    let (user, assistant, tool) = count_messages_by_role(state);
+    let info = build_session_info(state, tokens, (user, assistant, tool));
+    CommandResult::Message(info)
+}
+
+fn session_token_count(state: &AppState) -> usize {
+    state
         .session
         .messages
         .iter()
-        .map(|m| crate::tokens::estimate_tokens(&m.content))
-        .sum();
-    let (user, assistant, tool) = (
-        state
-            .session
-            .messages
-            .iter()
-            .filter(|m| m.role == crate::model::Role::User)
-            .count(),
-        state
-            .session
-            .messages
-            .iter()
-            .filter(|m| m.role == crate::model::Role::Assistant)
-            .count(),
-        state
-            .session
-            .messages
-            .iter()
-            .filter(|m| m.role == crate::model::Role::Tool)
-            .count(),
-    );
+        .map(|m| state.agent.token_tracker.estimate_input(&m.content))
+        .sum()
+}
+
+fn count_messages_by_role(state: &AppState) -> (usize, usize, usize) {
+    (
+        count_role(state, crate::model::Role::User),
+        count_role(state, crate::model::Role::Assistant),
+        count_role(state, crate::model::Role::Tool),
+    )
+}
+
+fn count_role(state: &AppState, role: crate::model::Role) -> usize {
+    state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == role)
+        .count()
+}
+
+fn build_session_info(
+    state: &AppState,
+    tokens: usize,
+    (user, assistant, tool): (usize, usize, usize),
+) -> String {
     let prompt = if state.input.current_prompt.is_empty() {
         "default"
     } else {
@@ -346,19 +382,23 @@ fn handle_session(state: &mut AppState, _: &str) -> CommandResult {
     };
     let read_only = if state.config.read_only { "on" } else { "off" };
     let trust = project_trust_status(state);
-    let info = format!(
+    format!(
         "Session: {}\nMessages: {} ({} user, {} assistant, {} tool)\nTokens: {} estimated\nProvider: {}\nModel: {}\nPrompt: {}\nThinking: {}\nRead-only: {}\nTrust: {}\nCreated: {}\nUpdated: {}",
         state.session.session_display_name.as_deref().unwrap_or("unnamed"),
-        state.session.messages.len(), user, assistant, tool, tokens,
-        state.config.current_provider, state.config.current_model,
+        state.session.messages.len(),
+        user,
+        assistant,
+        tool,
+        tokens,
+        state.config.current_provider,
+        state.config.current_model,
         prompt,
         state.config.thinking_level.as_str(),
         read_only,
         trust,
         crate::labels::format_timestamp(state.session.session_created_at),
         crate::labels::format_timestamp(state.session.session_updated_at),
-    );
-    CommandResult::Message(info)
+    )
 }
 
 fn project_trust_status(_state: &AppState) -> &'static str {

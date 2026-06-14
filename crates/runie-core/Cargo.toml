@@ -18,6 +18,9 @@ toml = "0.8"
 tokio.workspace = true
 futures.workspace = true
 chrono = "0.4"
+tiktoken-rs = "0.6"
+pulldown-cmark.workspace = true
+unicode-width.workspace = true
 
 [dev-dependencies]
 tempfile = "3"

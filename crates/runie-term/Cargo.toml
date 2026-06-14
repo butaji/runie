@@ -14,7 +14,6 @@ runie-agent.workspace = true
 runie-provider.workspace = true
 crossterm.workspace = true
 ratatui.workspace = true
-ctrlc.workspace = true
 tokio.workspace = true
 futures.workspace = true
 anyhow.workspace = true

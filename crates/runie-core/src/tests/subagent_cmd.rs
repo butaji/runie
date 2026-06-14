@@ -35,10 +35,16 @@ fn spawn_without_args_opens_form_no_chat_message() {
         .iter()
         .filter(|m| m.role == crate::model::Role::System)
         .count();
-    assert_eq!(sys_count, 0, "/spawn without args should not add chat messages");
+    assert_eq!(
+        sys_count, 0,
+        "/spawn without args should not add chat messages"
+    );
 
     // Should open a dialog (form).
-    assert!(state.open_dialog.is_some(), "/spawn without args should open a form dialog");
+    assert!(
+        state.open_dialog.is_some(),
+        "/spawn without args should open a form dialog"
+    );
 }
 
 #[test]

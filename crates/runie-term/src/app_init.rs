@@ -26,10 +26,8 @@ pub(crate) fn init_scoped_models(state: &mut AppState) {
             })
             .collect();
     } else {
-        // Default: first 10 models from catalog
-        let registry = runie_provider::model::ModelRegistry::default();
-        state.config.scoped_models = registry
-            .list()
+        // Default: first 10 models from the unified catalog.
+        state.config.scoped_models = runie_core::model_catalog::model_catalog()
             .iter()
             .take(10)
             .map(|m| runie_core::model::ScopedModel {

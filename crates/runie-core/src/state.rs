@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::keybindings::default_keybindings;
 use crate::message::{now, ChatMessage};
-use crate::model::{QueuedMessage, ThinkingLevel};
+use crate::model::{ModelSelectorItem, QueuedMessage, ThinkingLevel};
 use crate::path_complete::PathCompletion;
 use crate::scoped_model::ScopedModel;
 use crate::session_tree::SessionTree;
@@ -27,6 +27,7 @@ pub struct InputState {
     /// Top visible line index for multi-line input scrolling.
     pub input_scroll: usize,
     // Fields moved from AppState (Phase 1: add without removing outer fields)
+    #[allow(dead_code)]
     pub(crate) input_history: Vec<String>,
     pub current_prompt: String,
 }
@@ -167,7 +168,9 @@ pub struct AgentState {
     pub tokens_in_prev: usize,
     /// Previous token_out value for detecting changes.
     pub tokens_out_prev: usize,
-    // Fields moved from AppState (Phase 1: add without removing outer fields)
+    /// Token estimation/cost tracker configured for the active model.
+    pub token_tracker: crate::tokens::TokenTracker,
+    // Fields moved from AppState (Phase 1: add without removing outer outer fields)
     pub streaming: bool,
     pub next_id: u64,
     pub intermediate_step_count: usize,
@@ -194,6 +197,10 @@ pub struct ViewState {
     /// the render actor on each draw. Used by vim nav mode to compute
     /// element-level jumps for `j`/`k`/arrow keys.
     pub last_visible_height: u16,
+    /// Width of the message content area in terminal columns, updated by
+    /// the render actor on each draw. Used to compute per-element line
+    /// counts so that scroll math matches the actual wrapped output.
+    pub last_content_width: u16,
     /// Index of the post currently selected in vim nav mode.
     /// A post is a logical unit in the feed (e.g. a user message, a
     /// thought, a tool call). Independent of scroll; used to highlight
@@ -203,7 +210,7 @@ pub struct ViewState {
     pub(crate) cached_palette_items: Arc<[(String, String, String)]>,
     pub(crate) cached_palette_filter: Option<String>,
     // Cached model selector items
-    pub(crate) cached_model_items: Arc<[(String, String, String, bool, bool)]>,
+    pub(crate) cached_model_items: Arc<[ModelSelectorItem]>,
     pub(crate) cached_model_filter: Option<String>,
     // Cached settings items
     pub(crate) cached_settings_items: Arc<[crate::settings::SettingItem]>,
@@ -250,6 +257,7 @@ impl Default for ViewState {
             animation_frame: 0,
             all_collapsed: false,
             last_visible_height: 20,
+            last_content_width: 80,
             cached_palette_items: Arc::new([]),
             cached_palette_filter: None,
             cached_model_items: Arc::new([]),

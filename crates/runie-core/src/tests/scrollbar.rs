@@ -364,3 +364,73 @@ fn scrollbar_with_single_message() {
     }
     assert!(offset + thumb <= 1, "thumb+offset must fit in track");
 }
+
+#[test]
+fn page_down_scrolls_by_rendered_lines() {
+    let mut state = fresh_state();
+    // Fill with enough content that wrapping occurs at the default width.
+    for i in 0..10 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{} {}", i, "x".repeat(100)),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+
+    // Start at the top of the feed so PageDown has room to move.
+    let max_scroll = state.view.total_lines.saturating_sub(10);
+    state.view.scroll = max_scroll;
+
+    let before = state.view.scroll;
+    state.update(Event::PageDown);
+    let after = state.view.scroll;
+    // PageDown moves toward the bottom by PAGE_SIZE rendered lines.
+    assert_eq!(
+        after,
+        before.saturating_sub(5),
+        "PageDown should scroll by 5 rendered lines"
+    );
+}
+
+#[test]
+fn scrollbar_thumb_position_matches_line_count() {
+    let mut state = fresh_state();
+    for i in 0..20 {
+        state.session.messages.push(crate::model::ChatMessage {
+            role: crate::model::Role::User,
+            content: format!("msg{} {}", i, "x".repeat(100)),
+            timestamp: i as f64,
+            id: format!("u{}", i),
+            ..Default::default()
+        });
+    }
+    state.messages_changed();
+    state.ensure_fresh();
+
+    let width = state.view.last_content_width;
+    let expected_total: usize = state
+        .view
+        .elements_cache()
+        .iter()
+        .map(|e| crate::layout::element_line_count(e, width))
+        .sum();
+    assert_eq!(
+        state.view.total_lines, expected_total,
+        "Snapshot total_lines must match sum of rendered element line counts"
+    );
+
+    let visible_height = 10;
+    let (thumb, offset) = state.scrollbar_metrics(visible_height);
+    let max_scroll = state.view.total_lines.saturating_sub(visible_height);
+    let position = max_scroll.saturating_sub(state.view.scroll.min(max_scroll));
+    let track = visible_height as f64;
+    let expected_start = (position as f64 * track / state.view.total_lines as f64)
+        .round()
+        .clamp(0.0, track - 1.0) as usize;
+    assert_eq!(offset, expected_start, "Scrollbar thumb offset mismatch");
+    assert!(thumb >= 1, "Thumb must be at least 1 row");
+}

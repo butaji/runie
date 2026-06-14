@@ -35,21 +35,34 @@ pub fn save_provider_config(
 ) -> anyhow::Result<()> {
     let path = config_path();
     let content = std::fs::read_to_string(&path).unwrap_or_default();
-    let mut doc: toml::Value = if content.trim().is_empty() {
-        toml::Value::Table(toml::map::Map::new())
-    } else {
-        content.parse()?
-    };
+    let mut doc = parse_config_doc(&content)?;
+    let providers = get_or_create_providers_table(&mut doc)?;
+    providers.insert(name.into(), build_provider_value(base_url, api_key, models));
+    write_config_doc(&path, &doc)
+}
 
+fn parse_config_doc(content: &str) -> anyhow::Result<toml::Value> {
+    if content.trim().is_empty() {
+        Ok(toml::Value::Table(toml::map::Map::new()))
+    } else {
+        content.parse().map_err(|e| anyhow::anyhow!("{}", e))
+    }
+}
+
+fn get_or_create_providers_table(
+    doc: &mut toml::Value,
+) -> anyhow::Result<&mut toml::map::Map<String, toml::Value>> {
     let table = doc
         .as_table_mut()
         .ok_or_else(|| anyhow::anyhow!("Invalid config structure"))?;
-    let providers = table
+    table
         .entry("model_providers")
         .or_insert_with(|| toml::Value::Table(toml::map::Map::new()))
         .as_table_mut()
-        .ok_or_else(|| anyhow::anyhow!("Invalid model_providers structure"))?;
+        .ok_or_else(|| anyhow::anyhow!("Invalid model_providers structure"))
+}
 
+fn build_provider_value(base_url: &str, api_key: &str, models: &[String]) -> toml::Value {
     let mut provider = toml::map::Map::new();
     provider.insert("base_url".into(), toml::Value::String(base_url.into()));
     provider.insert("api_key".into(), toml::Value::String(api_key.into()));
@@ -60,13 +73,14 @@ pub fn save_provider_config(
             .collect();
         provider.insert("models".into(), toml::Value::Array(arr));
     }
+    toml::Value::Table(provider)
+}
 
-    providers.insert(name.into(), toml::Value::Table(provider));
-
+fn write_config_doc(path: &std::path::Path, doc: &toml::Value) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(&path, toml::to_string_pretty(&doc)?)?;
+    std::fs::write(path, toml::to_string_pretty(doc)?)?;
     Ok(())
 }
 

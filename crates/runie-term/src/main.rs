@@ -8,6 +8,7 @@
 //!   5. If render is slow, old Snapshots are dropped — event loop never waits
 
 mod app_init;
+mod effects;
 mod keymap;
 mod share;
 mod terminal;
@@ -18,8 +19,7 @@ use futures::StreamExt;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use runie_agent::{build_provider_with_warning, run_agent_turn, AgentCommand};
 use runie_core::{config_reload, AppState, Event as CoreEvent, Snapshot};
-use runie_term::terminal::clipboard;
-use std::{collections::HashMap, io, io::Write, time::Duration};
+use std::{collections::HashMap, io, time::Duration};
 use tokio::sync::{mpsc, watch};
 
 const ANIM_MS: u64 = 200;
@@ -43,37 +43,62 @@ async fn main() -> io::Result<()> {
     let _cleanup = Cleanup;
     let (terminal, terminal_caps) = terminal_setup::setup_terminal()?;
     let mut state = AppState::default();
-    app_init::apply_trust_on_startup(&mut state);
-    app_init::init_scoped_models(&mut state);
-    app_init::init_skills(&mut state);
-    app_init::init_prompts(&mut state);
-    app_init::init_telemetry(&mut state);
-    app_init::init_truncation(&mut state);
-    app_init::init_ui_config(&mut state);
+    init_terminal_state(&mut state);
+    run_init_hooks(&mut state);
+    let channels = spawn_background_tasks(terminal, &mut state, &terminal_caps);
 
-    // Production-ready startup: if no provider is configured and the
-    // mock provider is not enabled, auto-open the login dialog so the
-    // user is immediately productive instead of staring at a broken app.
+    event_loop(
+        state,
+        channels.input_rx,
+        channels.agent_rx,
+        channels.cmd_tx,
+        channels.render_tx,
+        channels.input_tx,
+        channels.kb_tx,
+        terminal_caps,
+    )
+    .await
+}
+
+fn init_terminal_state(state: &mut AppState) {
+    if let Ok((width, height)) = crossterm::terminal::size() {
+        state.set_last_content_width(width);
+        state.set_last_visible_height(height);
+    }
+}
+
+fn run_init_hooks(state: &mut AppState) {
+    app_init::apply_trust_on_startup(state);
+    app_init::init_scoped_models(state);
+    app_init::init_skills(state);
+    app_init::init_prompts(state);
+    app_init::init_telemetry(state);
+    app_init::init_truncation(state);
+    app_init::init_ui_config(state);
+
     if state.config.current_provider.is_empty() && !runie_core::provider_registry::is_mock_enabled()
     {
         state.update(CoreEvent::LoginFlowStart);
     }
+}
 
+struct BackgroundChannels {
+    input_tx: mpsc::Sender<CoreEvent>,
+    input_rx: mpsc::Receiver<CoreEvent>,
+    agent_rx: mpsc::Receiver<CoreEvent>,
+    cmd_tx: mpsc::Sender<AgentCommand>,
+    render_tx: watch::Sender<Snapshot>,
+    kb_tx: watch::Sender<HashMap<String, String>>,
+}
+
+fn spawn_background_tasks(
+    terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
+    state: &mut AppState,
+    _caps: &crate::terminal::caps::TerminalCapabilities,
+) -> BackgroundChannels {
     let (input_tx, input_rx) = mpsc::channel::<CoreEvent>(100);
     let (agent_tx, agent_rx) = mpsc::channel::<CoreEvent>(100);
     let (cmd_tx, cmd_rx) = mpsc::channel::<AgentCommand>(10);
-    // Render channel: capacity > 1 so a burst of state changes (e.g. ESC
-    // popping a panel) doesn't drop the latest snapshot. The render task
-    // processes snapshots in order; with capacity 1, a snapshot arriving
-    // while the render task was drawing the previous one would be lost,
-    // leaving the UI stuck on the pre-burst frame.
-    // Render channel: a `watch` channel (single-slot, always-latest).
-    // The sender overwrites on each `send`, so the render task is
-    // guaranteed to see the most recent snapshot — no mpsc dropping
-    // where a burst of state changes (e.g. Esc popping a panel) could
-    // leave the UI stuck on a stale frame. This mirrors Android's
-    // back-stack model: navigation is a single, central stack of
-    // states, and the UI always reflects the top of the stack.
     let (render_tx, render_rx) = watch::channel(state.snapshot());
     let (kb_tx, kb_rx) = watch::channel(state.config.keybindings.clone());
 
@@ -85,17 +110,14 @@ async fn main() -> io::Result<()> {
         config_reload::config_path(),
     ));
 
-    event_loop(
-        state,
+    BackgroundChannels {
+        input_tx,
         input_rx,
         agent_rx,
         cmd_tx,
         render_tx,
-        input_tx,
         kb_tx,
-        terminal_caps,
-    )
-    .await
+    }
 }
 
 async fn render_task(
@@ -104,24 +126,17 @@ async fn render_task(
 ) {
     let mut last_size: Option<(u16, u16)> = None;
     loop {
-        // `borrow_and_update` atomically reads the latest snapshot and
-        // marks it seen, so a concurrent `send` that happens during
-        // `draw` will be picked up by the next `changed().await`.
         let snap = render_rx.borrow_and_update().clone();
         let new_size = terminal
             .size()
             .map(|r| (r.width, r.height))
             .unwrap_or((0, 0));
-        // Force a full clear when the terminal dimensions change, so that
-        // after a resize to 0×0 (or back from a tiny size) the prompt and
-        // widgets are fully re-emitted instead of the diff being a no-op.
         if last_size != Some(new_size) {
             let _ = terminal.clear();
             last_size = Some(new_size);
         }
         let _ = terminal.draw(|f| runie_tui::ui::draw_snapshot(f, &snap));
         if render_rx.changed().await.is_err() {
-            // Sender dropped — app shutting down.
             break;
         }
     }
@@ -146,7 +161,7 @@ async fn input_reader(
     }
 }
 
-#[allow(clippy::too_many_arguments)] // channel plumbing is inherent to the actor loop
+#[allow(clippy::too_many_arguments)]
 async fn event_loop(
     mut state: AppState,
     mut input_rx: mpsc::Receiver<CoreEvent>,
@@ -159,8 +174,6 @@ async fn event_loop(
 ) -> io::Result<()> {
     let mut anim = tokio::time::interval(Duration::from_millis(ANIM_MS));
 
-    // Initial draw so the user sees the app immediately, without waiting
-    // for the first keyboard event.
     state.ensure_fresh();
     let _ = render_tx.send(state.snapshot());
 
@@ -169,175 +182,13 @@ async fn event_loop(
             biased;
 
             Some(evt) = input_rx.recv() => {
-                if matches!(evt, CoreEvent::OpenExternalEditor) {
-                    let text = state.input.input.clone();
-                    let tx = input_tx.clone();
-                    tokio::task::spawn_blocking(move || {
-                        let _ = spawn_external_editor_sync(text, tx);
-                    });
-                } else if let CoreEvent::CopyToClipboard(ref text) = evt {
-                    let text = text.clone();
-                    if terminal_caps.clipboard {
-                        let _ = clipboard::copy_to_clipboard(&mut std::io::stdout(), &text);
-                    }
-                } else if matches!(evt, CoreEvent::CopyLastResponse) {
-                    if terminal_caps.clipboard {
-                        let text = state
-                            .session
-                            .messages
-                            .iter()
-                            .rev()
-                            .find(|m| m.role == runie_core::model::Role::Assistant)
-                            .map(|m| m.content.clone())
-                            .unwrap_or_default();
-                        if !text.is_empty() {
-                            let _ = clipboard::copy_to_clipboard(&mut std::io::stdout(), &text);
-                        }
-                    }
-                } else if matches!(evt, CoreEvent::ShareSession) {
-                    let messages = state.session.messages.clone();
-                    let display_name = state.session.session_display_name.clone();
-                    let tx = input_tx.clone();
-                    tokio::spawn(async move {
-                        match share::share_session(&messages, display_name.as_deref()).await {
-                            Ok(url) => {
-                                let _ = tx.send(CoreEvent::SystemMessage {
-                                    content: format!("Shared session: {}", url),
-                                }).await;
-                            }
-                            Err(e) => {
-                                let _ = tx.send(CoreEvent::SystemMessage {
-                                    content: format!("Could not share session: {}", e),
-                                }).await;
-                            }
-                        }
-                    });
-                } else if matches!(evt, CoreEvent::Suspend) {
-                    #[cfg(unix)]
-                    {
-                        // Restore terminal to normal before suspending
-                        let _ = terminal_setup::reset_keyboard_enhancements(
-                            &mut std::io::stdout(),
-                        );
-                        let _ = crossterm::execute!(
-                            std::io::stdout(),
-                            crossterm::terminal::LeaveAlternateScreen,
-                        );
-                        let _ = crossterm::terminal::disable_raw_mode();
-
-                        // Send SIGTSTP to ourselves
-                        let _ = nix::sys::signal::kill(
-                            nix::unistd::Pid::this(),
-                            nix::sys::signal::Signal::SIGTSTP,
-                        );
-
-                        // After resume, restore terminal
-                        let _ = crossterm::terminal::enable_raw_mode();
-                        let _ = terminal_setup::restore_terminal_graphics(
-                            &mut std::io::stdout(),
-                            terminal_caps,
-                        );
-
-                        // Force redraw
-                        state.ensure_fresh();
-                        let _ = render_tx.send(state.snapshot());
-                    }
-                } else if let CoreEvent::LoginFlowSubmitKey { .. } = &evt {
-                    // Non-blocking: the state update below immediately
-                    // transitions to the model selector with default
-                    // models. The network fetch runs in the background
-                    // and enriches the list when it returns.
-                    state.update(evt);
-                    if let Some(ref flow) = state.login_flow {
-                        let provider = flow.provider.clone();
-                        let key = flow.key.clone();
-                        if !provider.is_empty() && !key.is_empty() {
-                            let tx = input_tx.clone();
-                            tokio::spawn(async move {
-                                use runie_provider::validate_api_key;
-                                use runie_core::provider_registry::find_provider;
-                                let result = if let Some(meta) = find_provider(&provider) {
-                                    validate_api_key(meta.base_url, &key).await
-                                } else {
-                                    Err(anyhow::anyhow!("Unknown provider: {}", provider))
-                                };
-                                match result {
-                                    Ok(models) => {
-                                        let _ = tx.send(CoreEvent::LoginFlowModelsFetched {
-                                            provider,
-                                            key,
-                                            models,
-                                        }).await;
-                                    }
-                                    Err(e) => {
-                                        let _ = tx.send(CoreEvent::LoginFlowValidationFailed {
-                                            provider,
-                                            key,
-                                            error: e.to_string(),
-                                        }).await;
-                                    }
-                                }
-                            });
-                        }
-                    }
-                } else if let CoreEvent::SpawnAgent { prompt } = &evt {
-                    // Run the subagent in a background task; inject the
-                    // result as a system message when done.
-                    let provider = state.config.current_provider.clone();
-                    let model = state.config.current_model.clone();
-                    let thinking = state.config.thinking_level;
-                    let read_only = state.config.read_only;
-                    let skills = runie_core::skills::build_skills_context(&state.skills);
-                    let preview: String = prompt.chars().take(60).collect();
-                    let preview = if prompt.chars().count() > 60 {
-                        format!("{}…", preview)
-                    } else {
-                        preview
-                    };
-                    let tx = input_tx.clone();
-                    let prompt = prompt.clone();
-                    tokio::task::spawn_blocking(move || {
-                        let result = runie_agent::subagent::run_subagent(
-                            &prompt, &provider, &model,
-                            thinking, read_only, &skills, "", 5,
-                        );
-                        let msg = match result {
-                            Ok(text) => {
-                                let snippet: String = text.chars().take(200).collect();
-                                let snippet = if text.chars().count() > 200 {
-                                    format!("{}…", snippet)
-                                } else {
-                                    snippet
-                                };
-                                format!("Subagent \"{}\" → {}", preview, snippet)
-                            }
-                            Err(e) => format!("Subagent \"{}\" failed: {}", preview, e),
-                        };
-                        let _ = tx.blocking_send(CoreEvent::SystemMessage { content: msg });
-                    });
-                } else {
-                    let was_submit = matches!(evt, CoreEvent::Submit);
-                    let was_followup = matches!(evt, CoreEvent::FollowUp);
-                    let was_reload = matches!(evt, CoreEvent::ReloadAll);
-                    state.update(evt);
-                    if state.should_quit {
-                        return Ok(());
-                    }
-                    if was_reload {
-                        let _ = kb_tx.send(state.config.keybindings.clone());
-                    }
-                    if was_submit || was_followup {
-                        spawn_if_queued(&mut state, &cmd_tx).await;
-                    }
+                if handle_input_with_effects(evt, &mut state, &input_tx, &render_tx, &kb_tx, &cmd_tx, &terminal_caps).await? {
+                    return Ok(());
                 }
             }
 
             Some(evt) = agent_rx.recv() => {
-                let was_done = matches!(evt, CoreEvent::AgentDone { .. } | CoreEvent::AgentError { .. });
-                state.update(evt);
-                if was_done {
-                    spawn_if_queued(&mut state, &cmd_tx).await;
-                }
+                handle_agent_event(evt, &mut state, &cmd_tx).await;
             }
 
             _ = anim.tick() => {
@@ -346,10 +197,61 @@ async fn event_loop(
         }
 
         state.ensure_fresh();
-        // `watch::Sender::send` overwrites; the render task always
-        // reads the latest snapshot. This guarantees a popped panel
-        // is rendered immediately, not lost in a full mpsc buffer.
         let _ = render_tx.send(state.snapshot());
+    }
+}
+
+async fn handle_input_with_effects(
+    evt: CoreEvent,
+    state: &mut AppState,
+    input_tx: &mpsc::Sender<CoreEvent>,
+    render_tx: &watch::Sender<Snapshot>,
+    kb_tx: &watch::Sender<HashMap<String, String>>,
+    cmd_tx: &mpsc::Sender<AgentCommand>,
+    terminal_caps: &crate::terminal::caps::TerminalCapabilities,
+) -> io::Result<bool> {
+    if let Some(cmd) = effects::EffectCommand::try_from_event(&evt, state, terminal_caps) {
+        state.update(evt);
+        cmd.dispatch(input_tx.clone(), render_tx.clone(), state, *terminal_caps);
+        return Ok(false);
+    }
+    handle_input_event(evt, state, kb_tx, cmd_tx).await
+}
+
+async fn handle_input_event(
+    evt: CoreEvent,
+    state: &mut AppState,
+    kb_tx: &watch::Sender<HashMap<String, String>>,
+    cmd_tx: &mpsc::Sender<AgentCommand>,
+) -> io::Result<bool> {
+    let was_submit = matches!(evt, CoreEvent::Submit);
+    let was_followup = matches!(evt, CoreEvent::FollowUp);
+    let was_reload = matches!(evt, CoreEvent::ReloadAll);
+    state.update(evt);
+    if state.should_quit {
+        return Ok(true);
+    }
+    if was_reload {
+        let _ = kb_tx.send(state.config.keybindings.clone());
+    }
+    if was_submit || was_followup {
+        spawn_if_queued(state, cmd_tx).await;
+    }
+    Ok(false)
+}
+
+async fn handle_agent_event(
+    evt: CoreEvent,
+    state: &mut AppState,
+    cmd_tx: &mpsc::Sender<AgentCommand>,
+) {
+    let was_done = matches!(
+        evt,
+        CoreEvent::AgentDone { .. } | CoreEvent::AgentError { .. }
+    );
+    state.update(evt);
+    if was_done {
+        spawn_if_queued(state, cmd_tx).await;
     }
 }
 
@@ -358,8 +260,6 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
         let agent_tx_clone = agent_tx.clone();
         let cmd_id = cmd.id.clone();
 
-        // Build provider upfront so unknown/misconfigured providers emit an
-        // AgentError event rather than panicking.
         let provider = match build_provider_with_warning(&cmd.provider, &cmd.model) {
             Ok(p) => p,
             Err(e) => {
@@ -393,28 +293,6 @@ async fn agent_loop(mut cmd_rx: mpsc::Receiver<AgentCommand>, agent_tx: mpsc::Se
                 .await;
         }
     }
-}
-
-fn spawn_external_editor_sync(text: String, tx: mpsc::Sender<CoreEvent>) -> io::Result<()> {
-    let editor = std::env::var("EDITOR")
-        .unwrap_or_else(|_| if cfg!(windows) { "notepad" } else { "vi" }.to_string());
-
-    let mut tmp = tempfile::NamedTempFile::new()?;
-    tmp.write_all(text.as_bytes())?;
-    tmp.flush()?;
-    let path = tmp.into_temp_path();
-
-    let status = std::process::Command::new(&editor).arg(&path).status()?;
-
-    if status.success() {
-        let content = std::fs::read_to_string(&path).unwrap_or_default();
-        let rt = tokio::runtime::Handle::try_current();
-        if let Ok(handle) = rt {
-            let _ = handle.block_on(tx.send(CoreEvent::ExternalEditorDone { content }));
-        }
-    }
-
-    Ok(())
 }
 
 async fn spawn_if_queued(state: &mut AppState, cmd_tx: &mpsc::Sender<AgentCommand>) {

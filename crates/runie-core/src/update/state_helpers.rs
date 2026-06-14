@@ -86,12 +86,20 @@ impl AppState {
 
     // === Model / Config Helpers ===
 
+    pub(crate) fn configure_token_tracker(&mut self) {
+        self.agent.token_tracker = crate::tokens::token_tracker_for(
+            &self.config.current_provider,
+            &self.config.current_model,
+        );
+    }
+
     pub(crate) fn switch_model(&mut self, provider: String, model: String) {
         if self.config.current_provider == provider && self.config.current_model == model {
             return;
         }
         self.config.current_provider = provider.clone();
         self.config.current_model = model.clone();
+        self.configure_token_tracker();
         self.record_model_usage(&provider, &model);
         self.config.telemetry.track_event("model_switch", {
             let mut m = std::collections::HashMap::new();

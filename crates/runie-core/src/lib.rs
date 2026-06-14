@@ -9,13 +9,14 @@
 //!   ui        :: Elements, Transform (view layer)
 //!   labels    :: Static text constants
 
+pub mod agent_profiles;
 pub mod auth;
 pub mod clipboard_image;
 pub mod commands;
 pub mod config_migrate;
-pub mod agent_profiles;
 pub mod config_reload;
 pub mod dialog;
+pub mod display_width;
 #[cfg(test)]
 pub mod dsl;
 pub mod edit_preview;
@@ -25,8 +26,10 @@ pub mod fuzzy;
 pub mod input_history;
 pub mod keybindings;
 pub mod labels;
+pub mod layout;
 pub mod login_config;
 pub mod login_flow;
+pub mod markdown;
 pub mod message;
 pub mod model;
 pub mod model_catalog;
@@ -77,18 +80,21 @@ pub use login_flow::{
 };
 pub use model::{now, AppState, ChatMessage, Role};
 pub use prompts::{
-    build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT,
+    build_system_prompt, load_prompts, PromptSource, PromptTemplate, DEFAULT_PROMPT, DEFAULT_TOOLS,
 };
 pub use provider::{Message, Provider, ProviderError, ResponseChunk};
 pub use provider_registry::{
     display_name, find_provider, find_provider_by_env_var, is_known_provider, known_providers,
-    ProviderApiType, ProviderMeta,
+    ProviderMeta,
 };
 pub use session::{delete, format_as_markdown, list, load, save, Session};
 pub use session_tree::{SessionTree, SessionTreeFilter, TreeNode};
 pub use skills::{build_skills_context, load_all, load_from_dir, Skill};
 pub use snapshot::{GitInfo, Snapshot};
 pub use telemetry::Telemetry;
-pub use tokens::{estimate_tokens, TokenTracker};
+pub use tokens::{
+    estimate_tokens, estimate_tokens_for_model, estimate_tokens_with_tokenizer, token_tracker_for,
+    TokenTracker, Tokenizer,
+};
 pub use trust::{TrustDecision, TrustManager};
 pub use ui::{Element, Feed, LazyCache};

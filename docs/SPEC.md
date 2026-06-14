@@ -81,12 +81,12 @@ focused sub-enums (`tasks/event-subenums.md`).
 - Output truncation (configurable, head/tail strategies)
 - Theme system (BUILTIN_THEMES + opaline integration)
 - Config hot-reload via polling watcher
-- Diagnostics, reload, suspend, share, external editor
+- Diagnostics, reload
 - TUI features: streaming, markdown, syntax highlight, diff, ANSI, scrollbar,
   input history, undo/redo, multi-line, @-file refs, path completion
-- Image paste (Ctrl+V)
 - Subagents (`/spawn <prompt>`)
-- Modes: interactive TUI, print, JSON, RPC/server
+- Modes: interactive TUI, print, JSON
+- `runie-server` crate exists but is not yet a supported RPC surface
 
 ### Roadmap (R3)
 
@@ -120,11 +120,12 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
 
 ### Test coverage
 
-- ~1,060 automated tests across the workspace, all passing
+- 1,794 automated tests listed across the workspace; 1,716 pass and 78 are
+  intentionally ignored (e2e / platform-specific)
 - 4-layer TDD per `AGENTS.md`: state/logic, event handling, rendering, smoke
-- Lint: zero build violations
-- Pre-existing failures: 4 scrollbar/AT-lookup render tests (unrelated to
-  recent work; tracked in tasks/)
+- Build-time lint guardrails are 2000 lines/file, 150 lines/function,
+  complexity 30 (long-term targets remain 500/40/10; see `AGENTS.md`)
+- Pre-existing failures: none blocking the main suite
 
 ### Out of scope (by design)
 
@@ -140,37 +141,30 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
 ```
 crates/
 ├── runie-core/src/
-│   ├── actor.rs          # Minimal Actor trait
-│   ├── bus.rs            # EventBus<CoreEvent> with replay
-│   ├── event.rs          # CoreEvent + durable/transient split
-│   ├── llm_event.rs      # Provider-agnostic LLM event enum
-│   ├── model.rs          # AppState, ChatMessage
-│   ├── state.rs          # Sub-state structs (config, input, ...)
-│   ├── tool.rs           # Tool trait + ToolRegistry
-│   ├── mcp.rs            # MCP client + config types
-│   ├── permissions.rs    # Permission rulesets + ApprovalSink
-│   ├── context_compactor.rs # Token-threshold compaction
-│   ├── streaming_buffer.rs  # Stable region + mutable tail
-│   ├── session_store.rs  # JSONL persistence + session index
-│   ├── config_reload.rs  # TruncationSection + config watcher
-│   ├── session.rs        # Session types (legacy; migrate to session_store)
+│   ├── event.rs          # Event enum (all state transitions)
+│   ├── model.rs          # ChatMessage, Role, model helpers
+│   ├── state.rs          # AppState + sub-state structs
+│   ├── session.rs        # Session types + JSON persistence
 │   ├── snapshot.rs       # View projection
-│   ├── skills/           # SKILL.md loading
-│   ├── prompts/          # Prompt templates
+│   ├── config_reload.rs  # Config watcher + reload logic
 │   ├── commands/         # CommandRegistry + handlers/
 │   ├── dialog/           # Panel/Form DSL + PanelStack
-│   ├── update/           # Event dispatch (mod, input, agent, ...)
-│   └── telemetry.rs      # Opt-in usage stats
+│   ├── update/           # Event dispatch (input, agent, dialog, ...)
+│   ├── skills/           # SKILL.md loading
+│   ├── prompts/          # Prompt templates
+│   └── (orphaned)        # actor.rs, bus.rs, config.rs, llm_event.rs,
+│                         #   mcp.rs, session_actor.rs, session_store.rs,
+│                         #   streaming_buffer.rs, tool.rs — not wired to lib.rs
 ├── runie-agent/src/
 │   ├── tools/            # One module per built-in Tool impl
-│   ├── tools.rs          # Built-in ToolRegistry assembly
-│   ├── turn.rs           # Agent turn loop consuming LLMEvent
+│   ├── tools.rs          # Built-in tool registry assembly
+│   ├── turn.rs           # Agent turn loop
 │   ├── subagent.rs       # Nested turn for /spawn
 │   ├── truncate.rs       # TruncationConfig (TOML) + policies
 │   ├── accumulator.rs    # Bounded buffer for streaming
 │   ├── mutation_queue.rs # Serialized file edits
 │   ├── safety.rs         # Bash blacklist
-│   ├── parser.rs         # Tool call parsing (legacy; retire after LLMEvent)
+│   ├── parser.rs         # Tool call parsing
 │   └── grep_find.rs      # rg/find wrappers
 ├── runie-tui/src/
 │   ├── ui.rs             # draw_snapshot
@@ -187,7 +181,7 @@ crates/
 │   └── keymap.rs         # Key → Event mapping
 ├── runie-print/          # Print mode binary
 ├── runie-json/           # JSON mode binary
-└── runie-server/         # RPC mode binary
+└── runie-server/         # RPC mode binary (crate exists, not wired)
 ```
 
 ## Reference implementations (in `~/Code/agents/`)
@@ -204,8 +198,6 @@ crates/
 | thClaws     | `ViewEvent` abstraction, Braille spinner, append-only JSONL  |
 | openharness | Tool registry, JSONL backend protocol, runtime bundle        |
 | kimi-code   | Streaming UI controller, subagent host, semantic palette     |
-| autogen     | Workbench abstraction, message/event taxonomy                |
-| crewai      | Typed event bus, tool lifecycle events, checkpoint runtime   |
 | gptme       | Immutable log, hook lifecycle, context reduction pipeline    |
 | etienne     | Session summaries, project dot-dir, SSE multiplex            |
 

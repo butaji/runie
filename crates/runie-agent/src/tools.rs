@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
+mod exec;
 mod read_file;
 
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
@@ -79,54 +80,12 @@ impl Tool {
     /// caller has a configured policy (e.g. from `config.toml`).
     pub fn execute_with_policy(&self, policy: &crate::truncate::TruncationPolicy) -> ToolResult {
         let start = Instant::now();
-        let (output, success) = self.run_inner(policy);
+        let (output, success) = exec::run_inner(self, policy);
         let _elapsed = start.elapsed();
         ToolResult {
             tool: self.clone(),
             output,
             success,
-        }
-    }
-
-    fn run_inner(&self, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
-        match self {
-            Tool::ReadFile {
-                path,
-                offset,
-                limit,
-            } => read_file::read_file(path, *offset, *limit, policy),
-            Tool::ListDir { path } => list_dir(path, policy),
-            Tool::WriteFile { path, content } => write_file(path, content),
-            Tool::EditFile {
-                path,
-                search,
-                replace,
-            } => edit_file(path, search, replace),
-            Tool::Bash { command } => run_bash(command, policy),
-            Tool::Grep {
-                pattern,
-                path,
-                glob,
-                ignore_case,
-                literal,
-                context,
-                limit,
-            } => run_grep(
-                pattern,
-                path,
-                glob.as_deref(),
-                *ignore_case,
-                *literal,
-                *context,
-                *limit,
-                policy,
-            ),
-            Tool::Find {
-                pattern,
-                path,
-                limit,
-            } => run_find(pattern, path, *limit, policy),
-            Tool::FetchDocs { library } => run_fetch_docs(library),
         }
     }
 }
@@ -153,7 +112,7 @@ fn apply_truncation(
     }
 }
 
-fn list_dir(path: &str, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
+pub(crate) fn list_dir(path: &str, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
     let path = crate::path_utils::resolve_path(path);
     let p = Path::new(&path);
     match std::fs::read_dir(p) {
@@ -182,26 +141,7 @@ fn list_dir(path: &str, policy: &crate::truncate::TruncationPolicy) -> (String, 
     }
 }
 
-fn write_file(path: &str, content: &str) -> (String, bool) {
-    let path = crate::path_utils::resolve_path(path);
-    // Create parent directories if needed
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                return (format!("Error creating parent directories: {}", e), false);
-            }
-        }
-    }
-    match std::fs::write(&path, content) {
-        Ok(()) => (
-            format!("Wrote {} bytes to {}", content.len(), path.display()),
-            true,
-        ),
-        Err(e) => (format!("Error writing {}: {}", path.display(), e), false),
-    }
-}
-
-fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
+pub(crate) fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
     let path = crate::path_utils::resolve_path(path);
     if search.is_empty() {
         return ("Error: search text cannot be empty".to_string(), false);
@@ -241,7 +181,10 @@ fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
     }
 }
 
-fn run_bash(command: &str, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
+pub(crate) fn run_bash(
+    command: &str,
+    policy: &crate::truncate::TruncationPolicy,
+) -> (String, bool) {
     if let Some(reason) = check_bash_safety(command) {
         return (format!("Blocked: {}", reason), false);
     }
@@ -380,7 +323,7 @@ fn parse_grep_output(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn run_grep(
+pub(crate) fn run_grep(
     pattern: &str,
     path: &str,
     glob: Option<&str>,
@@ -458,7 +401,7 @@ fn parse_find_output(
     (apply_truncation(out, TruncateStrategy::Head, policy), true)
 }
 
-fn run_find(
+pub(crate) fn run_find(
     pattern: &str,
     path: &str,
     limit: usize,
@@ -487,7 +430,7 @@ fn run_find(
     }
 }
 
-fn run_fetch_docs(library: &str) -> (String, bool) {
+pub(crate) fn run_fetch_docs(library: &str) -> (String, bool) {
     let client = crate::context7::Context7Client::new();
     match client.fetch(library) {
         Ok(output) => (output, true),

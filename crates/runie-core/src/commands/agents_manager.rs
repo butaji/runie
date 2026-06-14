@@ -125,16 +125,18 @@ mod tests {
 
     #[test]
     fn save_empty_name_fails() {
-        let mut state = AppState::default();
-        state.pending_agent_edit = Some(AgentProfile {
-            name: "".into(),
-            description: "".into(),
-            system_prompt: "prompt".into(),
-            tools: vec![],
-            max_turns: None,
-            allowlist_tools: None,
-            denylist_tools: None,
-        });
+        let mut state = AppState {
+            pending_agent_edit: Some(AgentProfile {
+                name: "".into(),
+                description: "".into(),
+                system_prompt: "prompt".into(),
+                tools: vec![],
+                max_turns: None,
+                allowlist_tools: None,
+                denylist_tools: None,
+            }),
+            ..Default::default()
+        };
         agents_manager_event(&mut state, Event::AgentsManagerSave { name: "".into() });
         assert!(state.transient_level == Some(crate::event::TransientLevel::Error));
     }
@@ -143,21 +145,30 @@ mod tests {
     fn save_persists_pending_profile() {
         let dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", dir.path());
-        let mut state = AppState::default();
-        state.pending_agent_edit = Some(AgentProfile {
-            name: "persist_test".into(),
-            description: "desc".into(),
-            system_prompt: "prompt".into(),
-            tools: vec!["read".into()],
-            max_turns: None,
-            allowlist_tools: None,
-            denylist_tools: None,
-        });
-        agents_manager_event(&mut state, Event::AgentsManagerSave { name: "persist_test".into() });
+        std::fs::create_dir_all(agent_profiles::profiles_dir()).unwrap();
+        let mut state = AppState {
+            pending_agent_edit: Some(AgentProfile {
+                name: "persist_test".into(),
+                description: "desc".into(),
+                system_prompt: "prompt".into(),
+                tools: vec!["read".into()],
+                max_turns: None,
+                allowlist_tools: None,
+                denylist_tools: None,
+            }),
+            ..Default::default()
+        };
+        agents_manager_event(
+            &mut state,
+            Event::AgentsManagerSave {
+                name: "persist_test".into(),
+            },
+        );
         assert!(state.pending_agent_edit.is_none());
         let loaded = agent_profiles::load_profile_from_file(
             &agent_profiles::profiles_dir().join("persist_test.toml"),
-        ).expect("profile saved");
+        )
+        .expect("profile saved");
         assert_eq!(loaded.system_prompt, "prompt");
     }
 }

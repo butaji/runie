@@ -31,58 +31,59 @@ pub fn handle_form_dialog(state: &mut AppState, event: Event) {
 
 /// Insert filepath into input and close any dialog.
 pub fn insert_at_ref(state: &mut AppState, path: &str) {
-    // Check if we have a backup from file picker
-    if let Some((original_input, insert_pos, cursor, _needs_brackets)) = state.file_picker_backup.take() {
-        // Extract text before insert_pos
-        let before = if insert_pos > 0 {
-            original_input[..insert_pos].to_string()
-        } else {
-            String::new()
-        };
-        
-        let trimmed_before = before.trim_end();
-        
-        // The prefix is the text between insert_pos and cursor
-        let prefix = if cursor > insert_pos && insert_pos < original_input.len() {
-            original_input[insert_pos..cursor].trim()
-        } else {
-            ""
-        };
-        
-        // Extract text after cursor (to preserve)
-        let after = if cursor < original_input.len() {
-            original_input[cursor..].to_string()
-        } else {
-            String::new()
-        };
-        
-        // Determine if we should strip trailing space:
-        // If there's a space BEFORE the prefix (at insert_pos-1), it's a word boundary - preserve it
-        // If the space is AFTER trimmed_before (trailing whitespace), strip it
-        let has_word_boundary_space = insert_pos > 0 
-            && original_input.chars().nth(insert_pos - 1) == Some(' ');
-        
-        let before = if has_word_boundary_space {
-            // Space before prefix is a word boundary - preserve it
-            before.clone()
-        } else if cursor >= original_input.len() && trimmed_before != prefix {
-            // No word boundary space, and different word before prefix - strip trailing space
-            trimmed_before.to_string()
-        } else {
-            // Cursor in middle or repeated pattern: preserve original
-            before.clone()
-        };
-        
-        // Always insert path directly without brackets, preserve text after cursor
-        state.input.input = format!("{}{}{}", before, path, after);
-    } else {
-        // Fallback: just insert path
-        state.input.input = path.to_string();
-    }
-    
+    state.input.input = build_insert_text(state, path);
     state.input.cursor_pos = state.input.input.len();
     state.open_dialog = None;
     state.mark_dirty();
+}
+
+fn build_insert_text(state: &mut AppState, path: &str) -> String {
+    let Some((original_input, insert_pos, cursor, _)) = state.file_picker_backup.take() else {
+        return path.to_string();
+    };
+    let before = compute_before_text(&original_input, insert_pos, cursor);
+    let after = extract_after(&original_input, cursor);
+    format!("{}{}{}", before, path, after)
+}
+
+fn compute_before_text(original_input: &str, insert_pos: usize, cursor: usize) -> String {
+    let before = extract_before(original_input, insert_pos);
+    let trimmed_before = before.trim_end();
+    let prefix = extract_prefix(original_input, insert_pos, cursor);
+    let has_word_boundary_space =
+        insert_pos > 0 && original_input.chars().nth(insert_pos - 1) == Some(' ');
+
+    if has_word_boundary_space {
+        before
+    } else if cursor >= original_input.len() && trimmed_before != prefix {
+        trimmed_before.to_string()
+    } else {
+        before
+    }
+}
+
+fn extract_before(original_input: &str, insert_pos: usize) -> String {
+    if insert_pos > 0 {
+        original_input[..insert_pos].to_string()
+    } else {
+        String::new()
+    }
+}
+
+fn extract_prefix(original_input: &str, insert_pos: usize, cursor: usize) -> &str {
+    if cursor > insert_pos && insert_pos < original_input.len() {
+        original_input[insert_pos..cursor].trim()
+    } else {
+        ""
+    }
+}
+
+fn extract_after(original_input: &str, cursor: usize) -> String {
+    if cursor < original_input.len() {
+        original_input[cursor..].to_string()
+    } else {
+        String::new()
+    }
 }
 
 /// Handles dialog-specific events. Returns whether the dialog was closed.
@@ -323,45 +324,64 @@ pub fn open_session_tree_dialog(state: &mut AppState) {
 /// Opens the file picker with an optional filter.
 /// The filter is pre-filled with the given text to narrow results.
 pub fn open_at_file_picker(state: &mut AppState, filter: Option<&str>) {
-    use crate::dialog::{ItemAction, Panel, PanelStack};
+    use crate::dialog::{Panel, PanelStack};
     let entries = crate::file_refs::find_file_entries(".", 50);
     let mut panel = Panel::new("at-files", " Files ").with_filter();
-    
-    // Pre-set the filter if provided
+
     if let Some(f) = filter {
         panel.filter = f.to_string();
     }
-    
-    if entries.is_empty() {
-        panel = panel.header("No files found");
+
+    panel = if entries.is_empty() {
+        panel.header("No files found")
     } else {
-        let count = entries.len();
-        let filter_active = filter.map(|f| !f.is_empty()).unwrap_or(false);
-        let header = if filter_active {
-            format!("{} files matching '{}'", count, filter.unwrap_or(""))
-        } else {
-            format!("{} files", count)
-        };
-        panel = panel.header(&header);
-        for entry in entries {
-            let label = if entry.is_dir {
-                format!("{}/", entry.name)
-            } else {
-                entry.name.clone()
-            };
-            let insert_name = if entry.is_dir {
-                format!("{}/", entry.name)
-            } else {
-                entry.name.clone()
-            };
-            panel = panel.item(
-                &label,
-                ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
-            );
-        }
-    }
+        build_file_picker_panel(panel, &entries, filter)
+    };
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
     state.mark_dirty();
+}
+
+fn build_file_picker_panel(
+    mut panel: crate::dialog::Panel,
+    entries: &[crate::file_refs::FileEntry],
+    filter: Option<&str>,
+) -> crate::dialog::Panel {
+    use crate::dialog::ItemAction;
+    let header = file_picker_header(entries.len(), filter);
+    panel = panel.header(&header);
+    for entry in entries {
+        let label = file_picker_label(entry);
+        let insert_name = file_picker_insert_name(entry);
+        panel = panel.item(
+            &label,
+            ItemAction::Emit(crate::Event::InsertAtRef(insert_name)),
+        );
+    }
+    panel
+}
+
+fn file_picker_header(count: usize, filter: Option<&str>) -> String {
+    if filter.map(|f| !f.is_empty()).unwrap_or(false) {
+        format!("{} files matching '{}'", count, filter.unwrap_or(""))
+    } else {
+        format!("{} files", count)
+    }
+}
+
+fn file_picker_label(entry: &crate::file_refs::FileEntry) -> String {
+    if entry.is_dir {
+        format!("{}/", entry.name)
+    } else {
+        entry.name.clone()
+    }
+}
+
+fn file_picker_insert_name(entry: &crate::file_refs::FileEntry) -> String {
+    if entry.is_dir {
+        format!("{}/", entry.name)
+    } else {
+        entry.name.clone()
+    }
 }
 
 /// Opens the file picker without any filter (shows all files).

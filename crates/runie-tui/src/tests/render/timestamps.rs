@@ -138,6 +138,10 @@ fn timestamp_never_wraps_even_when_content_is_very_long() {
         ..Default::default()
     });
     state.messages_changed();
+    // Scroll to the top of the feed so the first (timestamp) line of the
+    // wrapped message is visible. The test asserts the timestamp never
+    // wraps to a second line, not that it is always in the bottom viewport.
+    state.view.scroll = usize::MAX;
     let backend = TestBackend::new(40, 10);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();

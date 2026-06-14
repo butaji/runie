@@ -5,7 +5,7 @@
 //!
 //! Commands with optional arguments can still accept inline args.
 
-use crate::commands::{CommandResult, DialogState};
+use crate::commands::CommandResult;
 use crate::event::Event;
 use crate::model::AppState;
 
@@ -26,10 +26,9 @@ fn spawn_without_args_opens_form() {
             "spawn without args should open form, not show message: {}",
             msg
         ),
-        CommandResult::Warning(msg) => panic!(
-            "spawn without args should open form, not warn: {}",
-            msg
-        ),
+        CommandResult::Warning(msg) => {
+            panic!("spawn without args should open form, not warn: {}", msg)
+        }
         other => panic!("unexpected result: {:?}", other),
     }
 }
@@ -104,7 +103,7 @@ fn no_command_returns_usage_message() {
 
     for def in reg.list() {
         let name = def.name.clone();
-        if let Some(handler) = get_handler(&def) {
+        if let Some(handler) = get_handler(def) {
             let result = handler(&mut state, "");
             if let CommandResult::Message(msg) = &result {
                 assert!(
@@ -133,52 +132,27 @@ fn no_command_returns_usage_message() {
 ///   3. User submits form with empty name
 ///   4. handle_load is called with empty name
 ///   5. handle_load must NOT return a "Usage:" message
+fn assert_no_usage(result: &CommandResult, handler_name: &str) {
+    if let CommandResult::Message(msg) = result {
+        assert!(
+            !msg.to_lowercase().contains("usage:"),
+            "{} returned Usage: {}",
+            handler_name,
+            msg
+        );
+    }
+}
+
 #[test]
 fn no_form_submit_handler_returns_usage_message() {
-    // All known form-submit handlers that take a single string arg
     use crate::commands::handlers::session::io as session_io;
 
     let mut state = AppState::default();
 
-    // /load
-    let result = session_io::handle_load(&mut state, "");
-    if let CommandResult::Message(msg) = &result {
-        assert!(
-            !msg.to_lowercase().contains("usage:"),
-            "handle_load returned Usage: {}",
-            msg
-        );
-    }
-
-    // /delete
-    let result = session_io::handle_delete(&mut state, "");
-    if let CommandResult::Message(msg) = &result {
-        assert!(
-            !msg.to_lowercase().contains("usage:"),
-            "handle_delete returned Usage: {}",
-            msg
-        );
-    }
-
-    // /import
-    let result = session_io::handle_import(&mut state, "");
-    if let CommandResult::Message(msg) = &result {
-        assert!(
-            !msg.to_lowercase().contains("usage:"),
-            "handle_import returned Usage: {}",
-            msg
-        );
-    }
-
-    // /export
-    let result = session_io::handle_export(&mut state, "");
-    if let CommandResult::Message(msg) = &result {
-        assert!(
-            !msg.to_lowercase().contains("usage:"),
-            "handle_export returned Usage: {}",
-            msg
-        );
-    }
+    assert_no_usage(&session_io::handle_load(&mut state, ""), "handle_load");
+    assert_no_usage(&session_io::handle_delete(&mut state, ""), "handle_delete");
+    assert_no_usage(&session_io::handle_import(&mut state, ""), "handle_import");
+    assert_no_usage(&session_io::handle_export(&mut state, ""), "handle_export");
 }
 
 /// Test the end-to-end flow: type /load, open form, submit empty
@@ -279,7 +253,7 @@ fn required_arg_commands_open_forms_or_emit_events() {
     for name in required_arg_commands {
         let reg = crate::commands::CommandRegistry::new();
         if let Some(def) = reg.get(name) {
-            if let Some(handler) = get_handler(&def) {
+            if let Some(handler) = get_handler(def) {
                 let mut state = AppState::default();
                 let result = handler(&mut state, "");
                 let is_form = matches!(result, CommandResult::OpenPanelStack(_));
@@ -304,7 +278,7 @@ fn no_command_with_required_args_shows_message() {
 
     for def in reg.list() {
         let name = def.name.clone();
-        if let Some(handler) = get_handler(&def) {
+        if let Some(handler) = get_handler(def) {
             let result = handler(&mut state, "");
             if let CommandResult::Message(msg) = &result {
                 if msg.to_lowercase().contains("usage:") {
@@ -349,9 +323,10 @@ fn form_panels_have_input_field() {
     if let CommandResult::OpenPanelStack(stack) = result {
         let panel = stack.current().unwrap();
         // Verify the panel has at least one form field
-        let has_field = panel.items.iter().any(|it| {
-            matches!(it, crate::dialog::PanelItem::FormField { .. })
-        });
+        let has_field = panel
+            .items
+            .iter()
+            .any(|it| matches!(it, crate::dialog::PanelItem::FormField { .. }));
         assert!(has_field, "spawn form should have at least one form field");
     } else {
         panic!("expected panel stack");

@@ -33,6 +33,9 @@ impl PromptTemplate {
 /// Default system prompt used when no custom prompt is configured.
 pub const DEFAULT_PROMPT: &str = "You are a helpful assistant with access to tools.";
 
+/// Default tool list advertised to the model.
+pub const DEFAULT_TOOLS: &str = "read_file, list_dir, write_file, edit_file, bash, grep, find";
+
 /// Load prompt templates from config values.
 pub fn load_prompts(default: Option<&str>, custom_path: Option<&str>) -> Vec<PromptTemplate> {
     let mut prompts = Vec::new();

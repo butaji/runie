@@ -4,3 +4,4 @@ target/
 /crewAI
 .ralph/
 typescript
+*.rlib

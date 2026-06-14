@@ -60,18 +60,18 @@ impl AppState {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn reload_all_reloads_skills() {
-        let mut state = AppState::default();
-        state.skills = vec![crate::skills::Skill {
-            name: "dummy".into(),
-            description: "dummy".into(),
-            context: "".into(),
-            user_invocable: false,
-            file_path: std::path::PathBuf::from("dummy.md"),
-        }];
+        let mut state = crate::model::AppState {
+            skills: vec![crate::skills::Skill {
+                name: "dummy".into(),
+                description: "dummy".into(),
+                context: "".into(),
+                user_invocable: false,
+                file_path: std::path::PathBuf::from("dummy.md"),
+            }],
+            ..Default::default()
+        };
         state.reload_all();
         // In test environment load_all returns empty (no skill dirs exist)
         assert!(

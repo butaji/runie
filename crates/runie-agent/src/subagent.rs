@@ -38,11 +38,33 @@ pub fn run_subagent(
     system_prompt: &str,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    // Build and validate the provider upfront — errors propagate as SubagentError.
     let provider = crate::build_provider_with_warning(provider_key, model)
         .map_err(|e| SubagentError::Provider(e.to_string()))?;
 
-    let cmd = AgentCommand {
+    let cmd = build_subagent_command(
+        prompt,
+        provider_key,
+        model,
+        thinking_level,
+        read_only,
+        skills_context,
+        system_prompt,
+    );
+
+    let rt = build_subagent_runtime()?;
+    rt.block_on(run_subagent_turn(&provider, &cmd, max_iterations))
+}
+
+fn build_subagent_command(
+    prompt: &str,
+    provider_key: &str,
+    model: &str,
+    thinking_level: ThinkingLevel,
+    read_only: bool,
+    skills_context: &str,
+    system_prompt: &str,
+) -> AgentCommand {
+    AgentCommand {
         content: prompt.to_string(),
         id: "subagent.0".to_string(),
         provider: provider_key.to_string(),
@@ -52,40 +74,44 @@ pub fn run_subagent(
         skills_context: skills_context.to_string(),
         system_prompt: system_prompt.to_string(),
         truncation: crate::truncate::TruncationPolicy::default(),
-    };
+    }
+}
 
-    // We need a runtime to call the async `run_agent_turn`. We block on
-    // a fresh one — subagents are sync from the caller's perspective.
-    let rt = tokio::runtime::Builder::new_current_thread()
+fn build_subagent_runtime() -> Result<tokio::runtime::Runtime, SubagentError> {
+    tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .map_err(|e| SubagentError::Agent(e.to_string()))?;
+        .map_err(|e| SubagentError::Agent(e.to_string()))
+}
 
-    rt.block_on(async {
-        let mut responses: Vec<String> = Vec::new();
-        let mut done = false;
-        let mut error: Option<String> = None;
+async fn run_subagent_turn(
+    provider: &runie_provider::DynProvider,
+    cmd: &AgentCommand,
+    max_iterations: usize,
+) -> Result<String, SubagentError> {
+    let mut responses: Vec<String> = Vec::new();
+    let mut done = false;
+    let mut error: Option<String> = None;
 
-        run_agent_turn(
-            &provider,
-            &cmd,
-            |evt| match evt {
-                Event::AgentResponse { content, .. } => responses.push(content),
-                Event::AgentError { message, .. } => error = Some(message),
-                Event::AgentDone { .. } => done = true,
-                _ => {}
-            },
-            max_iterations,
-        )
-        .await
-        .map_err(|e| SubagentError::Agent(e.to_string()))?;
+    run_agent_turn(
+        provider,
+        cmd,
+        |evt| match evt {
+            Event::AgentResponse { content, .. } => responses.push(content),
+            Event::AgentError { message, .. } => error = Some(message),
+            Event::AgentDone { .. } => done = true,
+            _ => {}
+        },
+        max_iterations,
+    )
+    .await
+    .map_err(|e| SubagentError::Agent(e.to_string()))?;
 
-        if let Some(msg) = error {
-            return Err(SubagentError::Agent(msg));
-        }
-        if !done {
-            return Err(SubagentError::Agent("subagent did not finish".into()));
-        }
-        Ok(responses.join(""))
-    })
+    if let Some(msg) = error {
+        return Err(SubagentError::Agent(msg));
+    }
+    if !done {
+        return Err(SubagentError::Agent("subagent did not finish".into()));
+    }
+    Ok(responses.join(""))
 }

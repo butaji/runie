@@ -1,5 +1,14 @@
 //! Unified diff generation for file edits
 
+use similar::{Algorithm, ChangeTag, TextDiff};
+use std::time::Duration;
+
+const DIFF_DEADLINE_SECS: u64 = 5;
+
+fn trim_line_end(s: &str) -> &str {
+    s.trim_end_matches(['\n', '\r'])
+}
+
 /// Represents a line in a unified diff
 #[derive(Debug, Clone, PartialEq)]
 pub enum DiffLine {
@@ -32,14 +41,7 @@ pub struct UnifiedDiff {
 
 /// Generates a unified diff between old and new content
 pub fn generate_unified_diff(old_content: &str, new_content: &str) -> UnifiedDiff {
-    let old_lines: Vec<&str> = old_content.lines().collect();
-    let new_lines: Vec<&str> = new_content.lines().collect();
-
-    // Simple LCS-based diff algorithm
-    let lcs = longest_common_subsequence(&old_lines, &new_lines);
-
-    // If LCS contains all lines, content is identical - return empty diff
-    if lcs.len() == old_lines.len() && old_lines.len() == new_lines.len() {
+    if old_content == new_content {
         return UnifiedDiff {
             old_path: "a".to_string(),
             new_path: "b".to_string(),
@@ -47,182 +49,104 @@ pub fn generate_unified_diff(old_content: &str, new_content: &str) -> UnifiedDif
         };
     }
 
-    let hunks = build_hunks(&old_lines, &new_lines, &lcs);
+    let diff = TextDiff::configure()
+        .algorithm(Algorithm::Patience)
+        .timeout(Duration::from_secs(DIFF_DEADLINE_SECS))
+        .diff_lines(old_content, new_content);
+
+    let mut builder = HunkBuilder::new();
+    for change in diff.iter_all_changes() {
+        builder.apply_change(change);
+    }
 
     UnifiedDiff {
-        old_path: "a".to_string(), // Placeholder, will be set by caller
+        old_path: "a".to_string(),
         new_path: "b".to_string(),
-        hunks,
+        hunks: builder.finish(),
     }
 }
 
-fn longest_common_subsequence<'a>(old: &[&'a str], new: &[&'a str]) -> Vec<(usize, usize)> {
-    let m = old.len();
-    let n = new.len();
+struct HunkBuilder {
+    hunks: Vec<DiffHunk>,
+    current: Vec<DiffLine>,
+    old_start: usize,
+    new_start: usize,
+    old_len: usize,
+    new_len: usize,
+    old_line: usize,
+    new_line: usize,
+}
 
-    // Build DP table
-    let mut dp = vec![vec![0usize; n + 1]; m + 1];
-
-    for i in 1..=m {
-        for j in 1..=n {
-            if old[i - 1] == new[j - 1] {
-                dp[i][j] = dp[i - 1][j - 1] + 1;
-            } else {
-                dp[i][j] = dp[i - 1][j].max(dp[i][j - 1]);
-            }
+impl HunkBuilder {
+    fn new() -> Self {
+        Self {
+            hunks: Vec::new(),
+            current: Vec::new(),
+            old_start: 1,
+            new_start: 1,
+            old_len: 0,
+            new_len: 0,
+            old_line: 1,
+            new_line: 1,
         }
     }
 
-    // Backtrack to find LCS
-    let mut lcs = Vec::new();
-    let mut i = m;
-    let mut j = n;
-    while i > 0 && j > 0 {
-        if old[i - 1] == new[j - 1] {
-            lcs.push((i - 1, j - 1));
-            i -= 1;
-            j -= 1;
-        } else if dp[i - 1][j] > dp[i][j - 1] {
-            i -= 1;
-        } else {
-            j -= 1;
-        }
-    }
-    lcs.reverse();
-    lcs
-}
-
-fn build_hunks(old_lines: &[&str], new_lines: &[&str], lcs: &[(usize, usize)]) -> Vec<DiffHunk> {
-    if lcs.is_empty() {
-        return vec![build_complete_replacement_hunk(old_lines, new_lines)];
-    }
-
-    let mut hunks = Vec::new();
-    let mut old_idx = 0;
-    let mut new_idx = 0;
-
-    for (lcs_old, lcs_new) in lcs {
-        if *lcs_old > old_idx || *lcs_new > new_idx {
-            let hunk = collect_changes_between(
-                old_lines,
-                new_lines,
-                *lcs_old,
-                *lcs_new,
-                &mut old_idx,
-                &mut new_idx,
-            );
-            if let Some(h) = hunk {
-                hunks.push(h);
-            }
-        } else {
-            old_idx = *lcs_old;
-            new_idx = *lcs_new;
+    fn apply_change(&mut self, change: similar::Change<&str>) {
+        match change.tag() {
+            ChangeTag::Equal => self.apply_equal(),
+            ChangeTag::Delete => self.apply_delete(change.value()),
+            ChangeTag::Insert => self.apply_insert(change.value()),
         }
     }
 
-    // Handle trailing changes
-    if old_idx < old_lines.len() || new_idx < new_lines.len() {
-        let hunk = build_trailing_hunk(old_lines, new_lines, &mut old_idx, &mut new_idx);
-        if let Some(h) = hunk {
-            hunks.push(h);
+    fn apply_equal(&mut self) {
+        self.flush_current();
+        self.old_line += 1;
+        self.new_line += 1;
+    }
+
+    fn apply_delete(&mut self, value: &str) {
+        self.start_hunk_if_needed();
+        self.current
+            .push(DiffLine::Removed(trim_line_end(value).to_string()));
+        self.old_len += 1;
+        self.old_line += 1;
+    }
+
+    fn apply_insert(&mut self, value: &str) {
+        self.start_hunk_if_needed();
+        self.current
+            .push(DiffLine::Added(trim_line_end(value).to_string()));
+        self.new_len += 1;
+        self.new_line += 1;
+    }
+
+    fn start_hunk_if_needed(&mut self) {
+        if self.current.is_empty() {
+            self.old_start = self.old_line;
+            self.new_start = self.new_line;
         }
     }
 
-    hunks
-}
-
-fn build_complete_replacement_hunk(old_lines: &[&str], new_lines: &[&str]) -> DiffHunk {
-    let mut lines = Vec::new();
-    for line in old_lines {
-        lines.push(DiffLine::Removed((*line).to_string()));
-    }
-    for line in new_lines {
-        lines.push(DiffLine::Added((*line).to_string()));
-    }
-    DiffHunk {
-        header: format!("@@ -1,{} +1,{} @@", old_lines.len(), new_lines.len()),
-        lines,
-    }
-}
-
-fn count_removed(lines: &[DiffLine]) -> usize {
-    lines
-        .iter()
-        .filter(|l| matches!(l, DiffLine::Removed(_)))
-        .count()
-}
-
-fn count_added(lines: &[DiffLine]) -> usize {
-    lines
-        .iter()
-        .filter(|l| matches!(l, DiffLine::Added(_)))
-        .count()
-}
-
-fn collect_changes_between(
-    old_lines: &[&str],
-    new_lines: &[&str],
-    lcs_old: usize,
-    lcs_new: usize,
-    old_idx: &mut usize,
-    new_idx: &mut usize,
-) -> Option<DiffHunk> {
-    let mut hunk_lines = Vec::new();
-
-    while *old_idx < lcs_old {
-        hunk_lines.push(DiffLine::Removed(old_lines[*old_idx].to_string()));
-        *old_idx += 1;
-    }
-    while *new_idx < lcs_new {
-        hunk_lines.push(DiffLine::Added(new_lines[*new_idx].to_string()));
-        *new_idx += 1;
+    fn flush_current(&mut self) {
+        if self.current.is_empty() {
+            return;
+        }
+        self.hunks.push(DiffHunk {
+            header: format!(
+                "@@ -{},{} +{},{} @@",
+                self.old_start, self.old_len, self.new_start, self.new_len
+            ),
+            lines: std::mem::take(&mut self.current),
+        });
+        self.old_len = 0;
+        self.new_len = 0;
     }
 
-    if hunk_lines.is_empty() {
-        return None;
+    fn finish(mut self) -> Vec<DiffHunk> {
+        self.flush_current();
+        self.hunks
     }
-
-    let removed = count_removed(&hunk_lines);
-    let added = count_added(&hunk_lines);
-    let start_old = (*old_idx - removed).max(1);
-    let start_new = (*new_idx - added).max(1);
-
-    Some(DiffHunk {
-        header: format!("@@ -{},{} +{},{} @@", start_old, removed, start_new, added),
-        lines: hunk_lines,
-    })
-}
-
-fn build_trailing_hunk(
-    old_lines: &[&str],
-    new_lines: &[&str],
-    old_idx: &mut usize,
-    new_idx: &mut usize,
-) -> Option<DiffHunk> {
-    let mut hunk_lines = Vec::new();
-
-    while *old_idx < old_lines.len() {
-        hunk_lines.push(DiffLine::Removed(old_lines[*old_idx].to_string()));
-        *old_idx += 1;
-    }
-    while *new_idx < new_lines.len() {
-        hunk_lines.push(DiffLine::Added(new_lines[*new_idx].to_string()));
-        *new_idx += 1;
-    }
-
-    if hunk_lines.is_empty() {
-        return None;
-    }
-
-    let removed = count_removed(&hunk_lines);
-    let added = count_added(&hunk_lines);
-    let start_old = (*old_idx - removed).max(1);
-    let start_new = (*new_idx - added).max(1);
-
-    Some(DiffHunk {
-        header: format!("@@ -{},{} +{},{} @@", start_old, removed, start_new, added),
-        lines: hunk_lines,
-    })
 }
 
 /// Generate a preview of an edit without applying it.
@@ -274,7 +198,6 @@ mod tests {
     fn no_changes_empty_diff() {
         let content = "line1\nline2\nline3";
         let diff = generate_unified_diff(content, content);
-        // When content is identical, LCS = all lines, so hunks may be empty
         assert!(
             diff.hunks.is_empty()
                 || diff
@@ -408,5 +331,14 @@ mod tests {
             preview.diff.contains("@@"),
             "diff should have hunk header with line numbers"
         );
+    }
+
+    #[test]
+    fn diff_large_file_completes() {
+        let old: String = (0..5_000).map(|i| format!("old line {}\n", i)).collect();
+        let new: String = (0..5_000).map(|i| format!("new line {}\n", i)).collect();
+        let diff = generate_unified_diff(&old, &new);
+        // The function must return; hunks are expected for completely different content.
+        assert!(!diff.hunks.is_empty());
     }
 }

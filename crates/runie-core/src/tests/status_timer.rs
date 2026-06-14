@@ -1,6 +1,29 @@
 use crate::model::AppState;
 
 #[test]
+fn spinner_frame_cycles_twelve_times() {
+    let mut state = AppState::default();
+    let first = state.spinner_frame();
+    for i in 1..=12 {
+        state.view.animation_frame = i;
+        if i == 12 {
+            assert_eq!(
+                state.spinner_frame(),
+                first,
+                "spinner should cycle after 12 frames"
+            );
+        } else {
+            assert_ne!(
+                state.spinner_frame(),
+                first,
+                "frame {} should differ from frame 0",
+                i
+            );
+        }
+    }
+}
+
+#[test]
 fn snapshot_has_turn_elapsed_when_active() {
     let mut state = AppState::default();
     state.agent.turn_active = true;

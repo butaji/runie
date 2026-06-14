@@ -4,12 +4,10 @@
 
 pub mod config;
 pub mod mock;
-pub mod model;
 pub mod openai;
 
 pub use config::Config;
 pub use mock::{MockProvider, MockStreamingProvider};
-pub use model::{ModelId, ModelRegistry};
 pub use openai::OpenAiProvider;
 
 use anyhow::Result;
@@ -97,9 +95,7 @@ pub fn is_known(key: &str) -> bool {
 
 /// Check whether `key` is an OpenAI-compatible provider.
 pub fn is_openai_compatible(key: &str) -> bool {
-    provider_registry::find_provider(key)
-        .map(|p| p.api_type == runie_core::provider_registry::ProviderApiType::OpenAiCompatible)
-        .unwrap_or(false)
+    provider_registry::find_provider(key).is_some()
 }
 
 /// Build a `DynProvider` from a registry key and model name.
@@ -204,41 +200,51 @@ pub async fn validate_api_key_with_timeout(
     api_key: &str,
     timeout: std::time::Duration,
 ) -> Result<Vec<String>> {
-    let fut = async move {
-        let client = reqwest::Client::builder()
-            .timeout(timeout)
-            .connect_timeout(timeout)
-            .build()?;
-        let url = format!("{}/models", base_url.trim_end_matches('/'));
-        let resp = client
-            .get(&url)
-            .header("Authorization", format!("Bearer {}", api_key))
-            .send()
-            .await?;
-
-        if !resp.status().is_success() {
-            let text = resp.text().await.unwrap_or_default();
-            anyhow::bail!("API validation failed: {}", text);
-        }
-
-        let json: serde_json::Value = resp.json().await?;
-        let models = json
-            .get("data")
-            .and_then(|d| d.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        Ok::<Vec<String>, anyhow::Error>(models)
-    };
-
+    let fut = fetch_models(base_url, api_key, timeout);
     match tokio::time::timeout(timeout, fut).await {
         Ok(result) => result,
         Err(_) => anyhow::bail!("API validation timed out after {}s", timeout.as_secs()),
     }
+}
+
+async fn fetch_models(
+    base_url: &str,
+    api_key: &str,
+    timeout: std::time::Duration,
+) -> Result<Vec<String>> {
+    let client = build_http_client(timeout)?;
+    let url = format!("{}/models", base_url.trim_end_matches('/'));
+    let resp = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        anyhow::bail!("API validation failed: {}", text);
+    }
+
+    let json: serde_json::Value = resp.json().await?;
+    Ok(extract_model_ids(&json))
+}
+
+fn build_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .timeout(timeout)
+        .connect_timeout(timeout)
+        .build()?)
+}
+
+fn extract_model_ids(json: &serde_json::Value) -> Vec<String> {
+    json.get("data")
+        .and_then(|d| d.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 // ---------------------------------------------------------------------------

@@ -168,7 +168,7 @@ fn all_form_commands_are_listed() {
     // Regression: every command that has a form-flow should be in the dispatch
     // table. This list is the contract — when a new form command is added,
     // this test must be updated to include it. Commands marked `.sub()`
-    // wrap their flow in `CommandFlow::Sub`; we unwrap to find the Form.
+    // wrap their flow in `CommandFlow::Sub`; we unwrap to find the PanelStack.
     use crate::commands::{CommandFlow, CommandRegistry};
     let mut reg = CommandRegistry::new();
     crate::commands::handlers::register_all(&mut reg);
@@ -180,7 +180,7 @@ fn all_form_commands_are_listed() {
                 CommandFlow::Sub(inner) => inner.as_ref(),
                 other => other,
             };
-            if matches!(flow, CommandFlow::Form { .. }) {
+            if matches!(flow, CommandFlow::PanelStack(_)) {
                 Some(def.name.clone())
             } else {
                 None
@@ -207,6 +207,9 @@ fn invalid_fork_index_shows_error_for_out_of_range() {
         ..Default::default()
     });
     let mut panel = Panel::new("fork", "Fork Session").form_field("Message index", "0", "index");
+    panel.submit_factory = Some(|values| crate::Event::RunForkCommand {
+        message_index: values.get("index").cloned().unwrap_or_default(),
+    });
     panel.form_values.insert("index".into(), "999".into());
     state.open_dialog = Some(DialogState::PanelStack(PanelStack::new(panel)));
 
@@ -238,6 +241,10 @@ fn compact_with_invalid_keep_shows_error() {
     let mut panel = Panel::new("compact", "Compact Context")
         .form_field("Keep tokens", "2000", "keep")
         .form_field("Focus", "f", "focus");
+    panel.submit_factory = Some(|values| crate::Event::RunCompactCommand {
+        keep: values.get("keep").cloned().unwrap_or_default(),
+        focus: values.get("focus").cloned().unwrap_or_default(),
+    });
     panel
         .form_values
         .insert("keep".into(), "not-a-number".into());
@@ -360,6 +367,9 @@ fn form_field_submit_still_builds_form_values() {
     let mut panel = Panel::new("save", "Save")
         .form_field("Name", "my-session", "name")
         .item("_Submit", ItemAction::Emit(crate::Event::LoginFlowSave));
+    panel.submit_factory = Some(|values| crate::Event::RunSaveCommand {
+        name: values.get("name").cloned().unwrap_or_default(),
+    });
     // On the form field, Enter should submit the form
     panel.selected = 0;
     let action = crate::update::dialog_form::form_panel_action(&mut panel, crate::Event::Submit);

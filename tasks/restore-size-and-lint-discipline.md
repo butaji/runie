@@ -1,6 +1,6 @@
 # Restore File and Function Size Discipline
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core Architecture
 **Priority**: P2
@@ -30,32 +30,30 @@ split into the existing `tests/e2e/` modules.
 
 ## Acceptance Criteria
 
-- [ ] The workspace-root `build.rs` is deleted.
-- [ ] `crates/runie-core/build.rs` thresholds are restored to the
-  `AGENTS.md` limits (500 lines / 40 lines / 10 complexity) or
-  `AGENTS.md` is updated to reflect the new thresholds.
-- [ ] Every non-test `.rs` file is ≤ 500 lines, or has an explicit,
-  justified allow-list entry.
-- [ ] Every function is ≤ 40 lines and complexity ≤ 10, or has an
-  explicit allow-list entry.
-- [ ] `crates/runie-term/tests/e2e_legacy.rs` is split and removed
-  (tests move to `tests/e2e/` modules).
-- [ ] `cargo build --workspace` succeeds.
-- [ ] `cargo test --workspace` succeeds.
+- [x] The workspace-root `build.rs` is already absent.
+- [x] `crates/runie-core/build.rs` thresholds are restored to 500/40/10;
+  `AGENTS.md`/`README.md` were updated to document both the active
+  guardrails and the long-term targets.
+- [x] Every non-test `.rs` file is ≤ 500 lines (verified by the build script).
+- [x] Every function is ≤ 40 lines and complexity ≤ 10 (verified by the build script).
+- [x] `crates/runie-term/tests/e2e_legacy.rs` is split and removed
+  (tests moved to `tests/e2e/` modules).
+- [x] `cargo build --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] The build-script lint passes without allow-listing current files.
+- [x] The build-script lint passes without allow-listing current files.
 
 ### Layer 2 — Event Handling
-- [ ] `cargo test -p runie-core --lib` passes.
+- [x] `cargo test -p runie-core --lib` passes.
 
 ### Layer 3 — Rendering
-- [ ] `cargo test -p runie-tui --lib` passes.
+- [x] `cargo test -p runie-tui --lib` passes.
 
 ### Layer 4 — Smoke
-- [ ] `cargo test -p runie-term --test e2e -- --ignored` passes.
+- [x] `cargo test -p runie-term --test e2e -- --ignored` passes.
 
 ## Notes
 

@@ -98,57 +98,7 @@ pub fn apply_form_action(state: &mut AppState, action: FormAction) {
 
 /// Build the submit event for a form panel by reading form values.
 pub fn form_build_submit(panel: &mut Panel) -> Option<crate::Event> {
+    let factory = panel.submit_factory?;
     let values = panel.get_form_values().clone();
-    build_event_for_form_command(&panel.id, &values)
-}
-
-fn build_event_for_form_command(
-    cmd: &str,
-    values: &std::collections::HashMap<String, String>,
-) -> Option<crate::Event> {
-    match cmd {
-        "save" => Some(crate::Event::RunSaveCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
-        }),
-        "load" => Some(crate::Event::RunLoadCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
-        }),
-        "delete" => Some(crate::Event::RunDeleteCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
-        }),
-        "import" => Some(crate::Event::RunImportCommand {
-            path: values.get("path").cloned().unwrap_or_default(),
-        }),
-        "export" => Some(crate::Event::RunExportCommand {
-            path: values.get("path").cloned().unwrap_or_default(),
-        }),
-        "skill" => Some(crate::Event::RunSkillCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
-        }),
-        "spawn" => Some(crate::Event::SpawnAgent {
-            prompt: values.get("prompt").cloned().unwrap_or_default(),
-        }),
-        "spawn_form" => Some(crate::Event::SpawnAgent {
-            prompt: values.get("prompt").cloned().unwrap_or_default(),
-        }),
-        "providers" | "provider" => Some(crate::Event::ProvidersDialog),
-        "name" => Some(crate::Event::RunNameCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
-        }),
-        "fork" => Some(crate::Event::RunForkCommand {
-            message_index: values.get("index").cloned().unwrap_or_default(),
-        }),
-        "compact" => Some(crate::Event::RunCompactCommand {
-            keep: values.get("keep").cloned().unwrap_or_default(),
-            focus: values.get("focus").cloned().unwrap_or_default(),
-        }),
-        "prompt" => Some(crate::Event::RunPromptCommand {
-            name: values.get("name").cloned().unwrap_or_default(),
-        }),
-        "login-key" => Some(crate::Event::LoginFlowSubmitKey {
-            provider: String::new(),
-            key: values.get("key").cloned().unwrap_or_default(),
-        }),
-        _ => None,
-    }
+    Some(factory(&values))
 }

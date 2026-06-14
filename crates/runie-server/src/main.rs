@@ -12,12 +12,8 @@
 //! - `listSessions` → `{}` → `{ "sessions": [...] }`
 
 use anyhow::Result;
-use futures::StreamExt;
-use runie_agent::build_provider_with_warning;
-use runie_core::{
-    config_reload,
-    provider::{Message, Provider},
-};
+use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
+use runie_core::{config_reload, provider::Message};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -137,46 +133,12 @@ async fn handle_connection(stream: TcpStream) {
 async fn process_request(line: &str) -> JsonRpcResponse {
     let req = match serde_json::from_str::<JsonRpcRequest>(line) {
         Ok(r) => r,
-        Err(e) => {
-            return JsonRpcResponse {
-                jsonrpc: "2.0".into(),
-                id: None,
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32700,
-                    message: format!("Parse error: {}", e),
-                    data: None,
-                }),
-            };
-        }
+        Err(e) => return parse_error_response(e),
     };
 
-    let result = match req.method.as_str() {
-        "initialize" => Some(
-            serde_json::json!({ "name": "runie-server", "version": env!("CARGO_PKG_VERSION") }),
-        ),
-        "chat" => match handle_chat(&req.params).await {
-            Ok(v) => Some(v),
-            Err(e) => {
-                return error_response(req.id, -32603, format!("Chat error: {}", e));
-            }
-        },
-        "complete" => match handle_complete(&req.params).await {
-            Ok(v) => Some(v),
-            Err(e) => {
-                return error_response(req.id, -32603, format!("Complete error: {}", e));
-            }
-        },
-        "listModels" => Some(handle_list_models()),
-        "listSessions" => match handle_list_sessions() {
-            Ok(v) => Some(v),
-            Err(e) => {
-                return error_response(req.id, -32603, format!("List sessions error: {}", e));
-            }
-        },
-        _ => {
-            return error_response(req.id, -32601, format!("Method not found: {}", req.method));
-        }
+    let result = match dispatch_method(&req).await {
+        Ok(r) => r,
+        Err((code, msg)) => return error_response(req.id, code, msg),
     };
 
     JsonRpcResponse {
@@ -185,6 +147,51 @@ async fn process_request(line: &str) -> JsonRpcResponse {
         result,
         error: None,
     }
+}
+
+fn parse_error_response(e: serde_json::Error) -> JsonRpcResponse {
+    JsonRpcResponse {
+        jsonrpc: "2.0".into(),
+        id: None,
+        result: None,
+        error: Some(JsonRpcError {
+            code: -32700,
+            message: format!("Parse error: {}", e),
+            data: None,
+        }),
+    }
+}
+
+async fn dispatch_method(req: &JsonRpcRequest) -> Result<Option<Value>, (i32, String)> {
+    match req.method.as_str() {
+        "initialize" => Ok(Some(initialize_result())),
+        "chat" => handle_chat(&req.params).await.map(Some).map_err(chat_error),
+        "complete" => handle_complete(&req.params)
+            .await
+            .map(Some)
+            .map_err(complete_error),
+        "listModels" => Ok(Some(handle_list_models())),
+        "listSessions" => handle_list_sessions()
+            .map(Some)
+            .map_err(list_sessions_error),
+        _ => Err((-32601, format!("Method not found: {}", req.method))),
+    }
+}
+
+fn initialize_result() -> Value {
+    serde_json::json!({ "name": "runie-server", "version": env!("CARGO_PKG_VERSION") })
+}
+
+fn chat_error(e: anyhow::Error) -> (i32, String) {
+    (-32603, format!("Chat error: {}", e))
+}
+
+fn complete_error(e: anyhow::Error) -> (i32, String) {
+    (-32603, format!("Complete error: {}", e))
+}
+
+fn list_sessions_error(e: anyhow::Error) -> (i32, String) {
+    (-32603, format!("List sessions error: {}", e))
 }
 
 fn error_response(id: Option<Value>, code: i32, message: String) -> JsonRpcResponse {
@@ -211,7 +218,7 @@ async fn handle_chat(params: &Value) -> Result<Value> {
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
-        "read_file, list_dir, write_file, edit_file, bash, grep, find",
+        runie_core::prompts::DEFAULT_TOOLS,
         false,
         "",
     );
@@ -231,13 +238,10 @@ async fn handle_chat(params: &Value) -> Result<Value> {
         });
     }
 
-    let mut content = String::new();
-    let mut stream = provider.generate(msgs);
-    while let Some(r) = stream.next().await {
-        content.push_str(&r?.content);
-    }
+    let options = HeadlessOptions::stream_only();
+    let result = run_headless_turn(msgs, &provider, options).await?;
 
-    Ok(serde_json::json!({ "content": content }))
+    Ok(serde_json::json!({ "content": result.content }))
 }
 
 async fn handle_complete(params: &Value) -> Result<Value> {
@@ -250,7 +254,7 @@ async fn handle_complete(params: &Value) -> Result<Value> {
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
-        "read_file, list_dir, write_file, edit_file, bash, grep, find",
+        runie_core::prompts::DEFAULT_TOOLS,
         false,
         "",
     );
@@ -262,13 +266,10 @@ async fn handle_complete(params: &Value) -> Result<Value> {
         },
     ];
 
-    let mut content = String::new();
-    let mut stream = provider.generate(msgs);
-    while let Some(r) = stream.next().await {
-        content.push_str(&r?.content);
-    }
+    let options = HeadlessOptions::stream_only();
+    let result = run_headless_turn(msgs, &provider, options).await?;
 
-    Ok(serde_json::json!({ "content": content }))
+    Ok(serde_json::json!({ "content": result.content }))
 }
 
 fn handle_list_models() -> Value {

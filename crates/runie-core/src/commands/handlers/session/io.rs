@@ -49,6 +49,7 @@ pub fn handle_load(state: &mut AppState, name: &str) -> CommandResult {
             state.session.session_created_at = session.created_at;
             state.session.session_updated_at = session.updated_at;
             state.session.session_tree = session.session_tree;
+            state.configure_token_tracker();
             state.messages_changed();
             CommandResult::Message(format!("Session '{}' loaded.", name))
         }
@@ -89,6 +90,7 @@ pub fn handle_import(state: &mut AppState, path: &str) -> CommandResult {
                 state.session.session_created_at = session.created_at;
                 state.session.session_updated_at = session.updated_at;
                 state.session.session_tree = session.session_tree;
+                state.configure_token_tracker();
                 state.messages_changed();
                 CommandResult::Message(format!("Session imported from '{}'", path))
             }

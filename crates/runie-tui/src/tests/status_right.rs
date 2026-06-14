@@ -63,12 +63,14 @@ fn git_info_format_only_repo_shows_repo_slash() {
 
 #[test]
 fn build_left_text_idle_shows_git_info_when_available() {
-    let mut state = AppState::default();
-    state.git_info = Some(GitInfo {
-        repo_name: Some("runie".into()),
-        branch: Some("agent-impl".into()),
-    });
-    state.cwd_name = "runie".into();
+    let mut state = AppState {
+        git_info: Some(GitInfo {
+            repo_name: Some("runie".into()),
+            branch: Some("agent-impl".into()),
+        }),
+        cwd_name: "runie".into(),
+        ..Default::default()
+    };
     let snap = state.snapshot();
     let left = build_left_text(&snap);
     assert!(
@@ -80,9 +82,11 @@ fn build_left_text_idle_shows_git_info_when_available() {
 
 #[test]
 fn build_left_text_idle_shows_folder_when_no_git() {
-    let mut state = AppState::default();
-    state.git_info = None;
-    state.cwd_name = "my-project".into();
+    let mut state = AppState {
+        git_info: None,
+        cwd_name: "my-project".into(),
+        ..Default::default()
+    };
     let snap = state.snapshot();
     let left = build_left_text(&snap);
     assert!(
@@ -111,6 +115,20 @@ fn build_left_text_active_shows_working_not_git() {
     assert!(
         left.contains("Working"),
         "Should show Working... when active, got: {}",
+        left
+    );
+}
+
+#[test]
+fn thinking_indicator_uses_braille_spinner() {
+    let mut state = AppState::default();
+    state.agent.turn_active = true;
+    state.agent.turn_started_at = Some(std::time::Instant::now());
+    let snap = state.snapshot();
+    let left = build_left_text(&snap);
+    assert!(
+        left.chars().any(|c| ('\u{2800}'..='\u{28FF}').contains(&c)),
+        "Thinking indicator should contain a Braille spinner char, got: {}",
         left
     );
 }

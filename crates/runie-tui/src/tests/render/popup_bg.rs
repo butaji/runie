@@ -125,6 +125,22 @@ fn model_selector_hides_underlying_messages() {
     );
 }
 
+fn draw_state_buffer(state: &mut AppState, width: u16, height: u16) -> ratatui::buffer::Buffer {
+    let backend = TestBackend::new(width, height);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, state)).unwrap();
+    terminal.backend().buffer().clone()
+}
+
+fn standard_popup_rect() -> ratatui::layout::Rect {
+    ratatui::layout::Rect {
+        x: 10,
+        y: 3,
+        width: 60,
+        height: 18,
+    }
+}
+
 /// Default theme uses the terminal background for both the app and popup
 /// areas. The popup must still render its own content so underlying
 /// messages are not visible.
@@ -141,12 +157,8 @@ fn command_palette_uses_terminal_background() {
     });
     state.messages_changed();
     state.update(Event::ToggleCommandPalette);
-    let backend = TestBackend::new(80, 24);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|f| view(f, &mut state)).unwrap();
-    let buf = terminal.backend().buffer();
+    let buf = draw_state_buffer(&mut state, 80, 24);
 
-    // Both app and popup backgrounds should be the terminal default (Reset).
     assert_eq!(
         crate::theme::color_bg(),
         ratatui::style::Color::Reset,
@@ -158,15 +170,8 @@ fn command_palette_uses_terminal_background() {
         "Popup background should use terminal default"
     );
 
-    // Underlying message content must still be hidden by the popup widgets.
-    let popup_rect = ratatui::layout::Rect {
-        x: 10,
-        y: 3,
-        width: 60,
-        height: 18,
-    };
     assert!(
-        !rect_contains_text(buf, popup_rect, "XYZZY"),
+        !rect_contains_text(&buf, standard_popup_rect(), "XYZZY"),
         "Popup should hide underlying 'XYZZY_PLUGH' even with transparent bg"
     );
 }

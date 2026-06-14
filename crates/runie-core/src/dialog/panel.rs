@@ -3,6 +3,10 @@
 use super::item::parse_accel;
 use super::score::match_score;
 use super::{ItemAction, PanelItem};
+use crate::Event;
+
+/// Function that builds the submit event from collected form values.
+pub type FormSubmitFn = fn(&std::collections::HashMap<String, String>) -> Event;
 
 /// Visual layout of a panel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -15,6 +19,7 @@ pub enum PanelView {
 }
 
 /// A single panel inside a dialog — title + list of items + selection state.
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Panel {
     pub id: String,
@@ -29,6 +34,8 @@ pub struct Panel {
     pub keep_open_on_activate: bool,
     /// For form panels: stores form values (key -> value)
     pub form_values: std::collections::HashMap<String, String>,
+    /// For form panels: factory that turns form values into the submit event.
+    pub submit_factory: Option<FormSubmitFn>,
     /// Visual layout of this panel.
     pub view: PanelView,
 }
@@ -46,6 +53,7 @@ impl Panel {
             filterable: true,
             keep_open_on_activate: false,
             form_values: std::collections::HashMap::new(),
+            submit_factory: None,
             view: PanelView::List,
         }
     }
@@ -209,6 +217,13 @@ impl Panel {
 
     pub fn form_submit(mut self) -> Self {
         self.view = PanelView::Form;
+        self.items.push(PanelItem::FormSubmit);
+        self
+    }
+
+    pub fn form_submit_with(mut self, factory: FormSubmitFn) -> Self {
+        self.view = PanelView::Form;
+        self.submit_factory = Some(factory);
         self.items.push(PanelItem::FormSubmit);
         self
     }

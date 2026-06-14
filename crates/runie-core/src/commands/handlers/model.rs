@@ -4,31 +4,37 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogTyp
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
+use crate::commands::handlers::spec::{CommandKind, CommandSpec};
+
+static MODEL_COMMANDS: &[CommandSpec] = &[
+    CommandSpec {
+        name: "model",
+        desc: "Switch model",
+        aliases: &["m"],
+        category: CommandCategory::Model,
+        sub: true,
+        kind: CommandKind::Handler(handle_model),
+    },
+    CommandSpec {
+        name: "thinking",
+        desc: "Set thinking level (off/low/medium/high)",
+        aliases: &[],
+        category: CommandCategory::Model,
+        sub: true,
+        kind: CommandKind::Handler(handle_thinking),
+    },
+    CommandSpec {
+        name: "scoped-models",
+        desc: "Enable/disable models for cycling",
+        aliases: &[],
+        category: CommandCategory::Model,
+        sub: true,
+        kind: CommandKind::Handler(handle_scoped_models),
+    },
+];
+
 pub fn register(registry: &mut CommandRegistry) {
-    registry.register(
-        crate::cmd!("model")
-            .desc("Switch model")
-            .aliases(&["m"])
-            .category(CommandCategory::Model)
-            .sub()
-            .handler(handle_model),
-    );
-
-    registry.register(
-        crate::cmd!("thinking")
-            .desc("Set thinking level (off/low/medium/high)")
-            .category(CommandCategory::Model)
-            .sub()
-            .handler(handle_thinking),
-    );
-
-    registry.register(
-        crate::cmd!("scoped-models")
-            .desc("Enable/disable models for cycling")
-            .category(CommandCategory::Model)
-            .sub()
-            .handler(handle_scoped_models),
-    );
+    crate::commands::handlers::spec::register_commands(registry, MODEL_COMMANDS);
 }
 
 pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
@@ -53,6 +59,7 @@ pub fn handle_model(state: &mut AppState, args: &str) -> CommandResult {
             ));
         }
     }
+    state.configure_token_tracker();
     CommandResult::Message(format!(
         "Switched to {}/{}",
         state.config.current_provider, state.config.current_model

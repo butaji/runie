@@ -22,35 +22,10 @@ where
     let mut has_intermediate_steps = false;
 
     for _ in 0..max_iterations {
-        emit(Event::AgentThinking {
-            id: command.id.clone(),
-        });
-
-        let mut response_text = String::new();
-        let mut stream = provider.generate(messages.clone());
-        while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result?;
-            response_text.push_str(&chunk.content);
-            emit(Event::AgentResponse {
-                id: command.id.clone(),
-                content: chunk.content,
-            });
-        }
-
-        emit(Event::AgentThoughtDone {
-            id: command.id.clone(),
-        });
-
-        let tools = parse_tool_calls(&response_text);
-        if tools.is_empty() {
+        if !run_agent_iteration(provider, command, &mut messages, &mut emit).await? {
             break;
         }
-
         has_intermediate_steps = true;
-        messages.push(Message::Assistant {
-            content: response_text.clone(),
-        });
-        execute_tools(&command.id, &tools, &mut emit, &mut messages);
     }
 
     if has_intermediate_steps {
@@ -64,6 +39,58 @@ where
         id: command.id.clone(),
     });
     Ok(())
+}
+
+async fn run_agent_iteration<F>(
+    provider: &DynProvider,
+    command: &AgentCommand,
+    messages: &mut Vec<Message>,
+    emit: &mut F,
+) -> Result<bool>
+where
+    F: FnMut(Event) + Send,
+{
+    emit(Event::AgentThinking {
+        id: command.id.clone(),
+    });
+
+    let response_text = stream_response(provider, command, messages, emit).await?;
+    emit(Event::AgentThoughtDone {
+        id: command.id.clone(),
+    });
+
+    let tools = parse_tool_calls(&response_text);
+    if tools.is_empty() {
+        return Ok(false);
+    }
+
+    messages.push(Message::Assistant {
+        content: response_text,
+    });
+    execute_tools(&command.id, &tools, emit, messages);
+    Ok(true)
+}
+
+async fn stream_response<F>(
+    provider: &DynProvider,
+    command: &AgentCommand,
+    messages: &[Message],
+    emit: &mut F,
+) -> Result<String>
+where
+    F: FnMut(Event) + Send,
+{
+    let mut response_text = String::new();
+    let mut stream = provider.generate(messages.to_vec());
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result?;
+        response_text.push_str(&chunk.content);
+        emit(Event::AgentResponse {
+            id: command.id.clone(),
+            content: chunk.content,
+        });
+    }
+    Ok(response_text)
 }
 
 pub(crate) fn build_initial_messages(command: &AgentCommand) -> Vec<Message> {

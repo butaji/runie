@@ -50,6 +50,7 @@ fn open_providers_dialog(state: &mut crate::model::AppState) {
 fn providers_select_model(state: &mut crate::model::AppState, provider: &str, model: &str) {
     state.config.current_provider = provider.to_string();
     state.config.current_model = model.to_string();
+    state.configure_token_tracker();
     state.record_model_usage(provider, model);
     state.open_dialog = None;
     state.mark_dirty();
@@ -69,6 +70,7 @@ fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
                     state.config.current_provider.clear();
                     state.config.current_model.clear();
                 }
+                state.configure_token_tracker();
             }
             state.open_dialog = None;
             state.mark_dirty();
@@ -136,7 +138,7 @@ fn login_flow_submit_key(state: &mut crate::model::AppState, provider: String, k
         provider.clone()
     };
     let defaults: Vec<String> = crate::provider_registry::find_provider(&final_provider)
-        .map(|meta| meta.default_models.iter().map(|s| s.to_string()).collect())
+        .map(|meta| meta.models.iter().map(|m| m.name.to_string()).collect())
         .unwrap_or_default();
     // Update state (mutable borrow).
     if let Some(ref mut flow) = state.login_flow {

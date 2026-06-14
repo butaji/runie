@@ -25,7 +25,7 @@ impl AppState {
 
         let selected_idx = self.completion.at_selected.unwrap_or(0);
         if let Some(selected) = suggestions.get(selected_idx) {
-            // Insert the selected suggestion wrapped in [...] 
+            // Insert the selected suggestion wrapped in [...]
             self.input.input.push_str(&format!("[{}]", selected));
             self.input.cursor_pos = self.input.input.len();
         }

@@ -1,7 +1,7 @@
 //! Provider registry — metadata for known LLM providers.
 //!
 //! This module is the single source of truth for provider names, display names,
-//! base URLs, and default models shown in the login dialog.
+//! base URLs, API type, environment variable, and the models each provider supports.
 
 use std::sync::OnceLock;
 
@@ -15,11 +15,90 @@ pub fn is_mock_enabled() -> bool {
     std::env::var_os("RUNIE_MOCK").is_some() || std::env::var_os("RUNIE_MOCK_DELAY").is_some()
 }
 
-/// API type for a provider — determines request format and validation endpoint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProviderApiType {
-    /// OpenAI Chat Completions API (most common)
-    OpenAiCompatible,
+/// Metadata for a model supported by a provider.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ModelMeta {
+    pub name: &'static str,
+    pub cost_prompt: Option<f64>,
+    pub cost_completion: Option<f64>,
+    pub supports_thinking: bool,
+    pub supports_vision: bool,
+    pub tokenizer: Option<&'static str>,
+    pub context_window: Option<usize>,
+}
+
+impl ModelMeta {
+    pub const fn new(name: &'static str) -> Self {
+        Self {
+            name,
+            cost_prompt: None,
+            cost_completion: None,
+            supports_thinking: false,
+            supports_vision: false,
+            tokenizer: None,
+            context_window: None,
+        }
+    }
+
+    pub const fn with_cost(self, prompt: f64, completion: f64) -> Self {
+        Self {
+            name: self.name,
+            cost_prompt: Some(prompt),
+            cost_completion: Some(completion),
+            supports_thinking: self.supports_thinking,
+            supports_vision: self.supports_vision,
+            tokenizer: self.tokenizer,
+            context_window: self.context_window,
+        }
+    }
+
+    pub const fn with_thinking(self) -> Self {
+        Self {
+            name: self.name,
+            cost_prompt: self.cost_prompt,
+            cost_completion: self.cost_completion,
+            supports_thinking: true,
+            supports_vision: self.supports_vision,
+            tokenizer: self.tokenizer,
+            context_window: self.context_window,
+        }
+    }
+
+    pub const fn with_vision(self) -> Self {
+        Self {
+            name: self.name,
+            cost_prompt: self.cost_prompt,
+            cost_completion: self.cost_completion,
+            supports_thinking: self.supports_thinking,
+            supports_vision: true,
+            tokenizer: self.tokenizer,
+            context_window: self.context_window,
+        }
+    }
+
+    pub const fn with_tokenizer(self, tokenizer: &'static str) -> Self {
+        Self {
+            name: self.name,
+            cost_prompt: self.cost_prompt,
+            cost_completion: self.cost_completion,
+            supports_thinking: self.supports_thinking,
+            supports_vision: self.supports_vision,
+            tokenizer: Some(tokenizer),
+            context_window: self.context_window,
+        }
+    }
+
+    pub const fn with_context_window(self, context_window: usize) -> Self {
+        Self {
+            name: self.name,
+            cost_prompt: self.cost_prompt,
+            cost_completion: self.cost_completion,
+            supports_thinking: self.supports_thinking,
+            supports_vision: self.supports_vision,
+            tokenizer: self.tokenizer,
+            context_window: Some(context_window),
+        }
+    }
 }
 
 /// Metadata for a known provider.
@@ -28,9 +107,8 @@ pub struct ProviderMeta {
     pub key: &'static str,
     pub display_name: &'static str,
     pub base_url: &'static str,
-    pub api_type: ProviderApiType,
     pub env_var: &'static str,
-    pub default_models: &'static [&'static str],
+    pub models: &'static [ModelMeta],
 }
 
 impl ProviderMeta {
@@ -39,15 +117,14 @@ impl ProviderMeta {
         display_name: &'static str,
         base_url: &'static str,
         env_var: &'static str,
-        models: &'static [&'static str],
+        models: &'static [ModelMeta],
     ) -> Self {
         Self {
             key,
             display_name,
             base_url,
-            api_type: ProviderApiType::OpenAiCompatible,
             env_var,
-            default_models: models,
+            models,
         }
     }
 }
@@ -59,19 +136,15 @@ const MOCK_PROVIDER: ProviderMeta = ProviderMeta::new(
     "Mock (dev only)",
     "http://localhost/mock",
     "",
-    &["echo"],
+    &[ModelMeta::new("echo")],
 );
-
-/// Real providers — the production-safe list. Mock is added conditionally
-/// on top of this.
-const REAL_PROVIDERS: &[ProviderMeta] = KNOWN_PROVIDERS;
 
 /// Cached combined list (real + mock when enabled). The mock entry is
 /// appended on first access if dev flags are set.
 fn providers() -> &'static [ProviderMeta] {
     static CACHE: OnceLock<Vec<ProviderMeta>> = OnceLock::new();
     CACHE.get_or_init(|| {
-        let mut v: Vec<ProviderMeta> = REAL_PROVIDERS.to_vec();
+        let mut v: Vec<ProviderMeta> = KNOWN_PROVIDERS.to_vec();
         if is_mock_enabled() {
             v.push(MOCK_PROVIDER);
         }
@@ -108,117 +181,8 @@ pub fn display_name(key: &str) -> String {
         .unwrap_or_else(|| key.to_string())
 }
 
-static KNOWN_PROVIDERS: &[ProviderMeta] = &[
-    ProviderMeta::new(
-        "anthropic",
-        "Anthropic",
-        "https://api.anthropic.com/v1",
-        "ANTHROPIC_API_KEY",
-        &["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5"],
-    ),
-    ProviderMeta::new(
-        "openai",
-        "OpenAI",
-        "https://api.openai.com/v1",
-        "OPENAI_API_KEY",
-        &["gpt-4o", "gpt-4o-mini", "gpt-5", "o3-mini", "o4-mini"],
-    ),
-    ProviderMeta::new(
-        "google",
-        "Google Gemini",
-        "https://generativelanguage.googleapis.com/v1beta",
-        "GEMINI_API_KEY",
-        &["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
-    ),
-    ProviderMeta::new(
-        "deepseek",
-        "DeepSeek",
-        "https://api.deepseek.com/v1",
-        "DEEPSEEK_API_KEY",
-        &["deepseek-v4-flash", "deepseek-v4-pro"],
-    ),
-    ProviderMeta::new(
-        "openrouter",
-        "OpenRouter",
-        "https://openrouter.ai/api/v1",
-        "OPENROUTER_API_KEY",
-        &[
-            "anthropic/claude-sonnet-4.6",
-            "openai/gpt-4o",
-            "google/gemini-2.5-pro",
-        ],
-    ),
-    ProviderMeta::new(
-        "groq",
-        "Groq",
-        "https://api.groq.com/openai/v1",
-        "GROQ_API_KEY",
-        &[
-            "llama-3.3-70b-versatile",
-            "gemma2-9b-it",
-            "mixtral-8x7b-32768",
-        ],
-    ),
-    ProviderMeta::new(
-        "mistral",
-        "Mistral",
-        "https://api.mistral.ai/v1",
-        "MISTRAL_API_KEY",
-        &[
-            "mistral-large-latest",
-            "codestral-latest",
-            "devstral-latest",
-        ],
-    ),
-    ProviderMeta::new(
-        "fireworks",
-        "Fireworks",
-        "https://api.fireworks.ai/inference/v1",
-        "FIREWORKS_API_KEY",
-        &[
-            "accounts/fireworks/models/deepseek-v4-pro",
-            "accounts/fireworks/models/kimi-k2p6",
-        ],
-    ),
-    ProviderMeta::new(
-        "together",
-        "Together AI",
-        "https://api.together.xyz/v1",
-        "TOGETHER_API_KEY",
-        &[
-            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-            "deepseek-ai/DeepSeek-V4-Pro",
-        ],
-    ),
-    ProviderMeta::new(
-        "minimax",
-        "MiniMax",
-        "https://api.minimaxi.chat/v1",
-        "MINIMAX_API_KEY",
-        &["MiniMax-M3", "MiniMax-M2.7"],
-    ),
-    ProviderMeta::new(
-        "moonshotai",
-        "Moonshot AI",
-        "https://api.moonshot.cn/v1",
-        "MOONSHOT_API_KEY",
-        &["kimi-k2.5", "kimi-k2.6", "kimi-k2-thinking"],
-    ),
-    ProviderMeta::new(
-        "xai",
-        "xAI",
-        "https://api.x.ai/v1",
-        "XAI_API_KEY",
-        &["grok-3", "grok-4.3"],
-    ),
-    ProviderMeta::new(
-        "ollama",
-        "Ollama (local)",
-        "http://localhost:11434/v1",
-        "OLLAMA_HOST",
-        &["llama3.1", "qwen2.5-coder:7b", "mistral"],
-    ),
-];
+mod data;
+pub(crate) use data::KNOWN_PROVIDERS;
 
 // ============================================================================
 // Tests
@@ -244,7 +208,10 @@ mod tests {
         assert_eq!(p.display_name, "MiniMax");
         assert_eq!(p.base_url, "https://api.minimaxi.chat/v1");
         assert_eq!(p.env_var, "MINIMAX_API_KEY");
-        assert_eq!(p.default_models, &["MiniMax-M3", "MiniMax-M2.7"]);
+        assert_eq!(
+            p.models.iter().map(|m| m.name).collect::<Vec<_>>(),
+            vec!["MiniMax-M3", "MiniMax-M2.7"]
+        );
     }
 
     #[test]
@@ -290,10 +257,90 @@ mod tests {
     fn provider_registry_all_have_models() {
         for p in known_providers() {
             assert!(
-                !p.default_models.is_empty(),
+                !p.models.is_empty(),
                 "Provider {} should have default models",
                 p.key
             );
         }
+    }
+
+    #[test]
+    fn provider_registry_model_names_are_unique_per_provider() {
+        for p in known_providers() {
+            let mut names: Vec<_> = p.models.iter().map(|m| m.name).collect();
+            let before = names.len();
+            names.sort_unstable();
+            names.dedup();
+            assert_eq!(
+                names.len(),
+                before,
+                "Provider {} has duplicate model names",
+                p.key
+            );
+        }
+    }
+
+    fn canonical_for_openrouter(model: &ModelMeta) -> &'static ModelMeta {
+        let (provider_key, base_name) = model
+            .name
+            .split_once('/')
+            .expect("OpenRouter model should be provider/name");
+        let provider = find_provider(provider_key).expect("Canonical provider should exist");
+        if let Some(m) = provider.models.iter().find(|m| m.name == base_name) {
+            return m;
+        }
+        provider
+            .models
+            .iter()
+            .find(|m| capabilities_match(m, model))
+            .expect("Canonical model should exist")
+    }
+
+    fn capabilities_match(a: &ModelMeta, b: &ModelMeta) -> bool {
+        a.supports_thinking == b.supports_thinking
+            && a.supports_vision == b.supports_vision
+            && a.context_window == b.context_window
+    }
+
+    #[test]
+    fn openrouter_model_matches_canonical() {
+        let openrouter = find_provider("openrouter").expect("openrouter should exist");
+        for model in openrouter.models {
+            let canonical = canonical_for_openrouter(model);
+            assert!(
+                capabilities_match(model, canonical),
+                "capabilities mismatch for {}",
+                model.name
+            );
+        }
+    }
+
+    #[test]
+    fn context_window_comes_from_registry() {
+        for p in known_providers() {
+            if p.key == "mock" {
+                continue;
+            }
+            for model in p.models {
+                assert!(
+                    model.context_window.is_some(),
+                    "Provider {} model {} should have a context window",
+                    p.key,
+                    model.name
+                );
+            }
+        }
+        assert_eq!(
+            find_provider("openai")
+                .and_then(|p| p.models.iter().find(|m| m.name == "gpt-4o"))
+                .and_then(|m| m.context_window),
+            Some(128_000)
+        );
+        assert_eq!(
+            find_provider("anthropic")
+                .and_then(|p| p.models.iter().find(|m| m.name == "claude-sonnet-4-6"))
+                .and_then(|m| m.context_window),
+            Some(200_000)
+        );
     }
 }

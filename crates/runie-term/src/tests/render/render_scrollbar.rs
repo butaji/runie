@@ -115,9 +115,13 @@ fn test_scrollbar_shows_when_content_overflows_small() {
     let buf = terminal.backend().buffer();
     let area = buf.area();
     let scrollbar_col = area.width - 1;
-    
+
     // With margins and spacers, even short content overflows
-    let has_scrollbar_content = (0..area.height)
-        .any(|y| buf[(scrollbar_col, y)].symbol() == "▐" || buf[(scrollbar_col, y)].symbol() == "│");
-    assert!(has_scrollbar_content, "Scrollbar should show when content has margins");
+    let has_scrollbar_content = (0..area.height).any(|y| {
+        buf[(scrollbar_col, y)].symbol() == "▐" || buf[(scrollbar_col, y)].symbol() == "│"
+    });
+    assert!(
+        has_scrollbar_content,
+        "Scrollbar should show when content has margins"
+    );
 }

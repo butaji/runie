@@ -36,9 +36,9 @@ README.md, but the update is partial. Specific mismatches remaining:
   significantly out of date. Many items it flagged have been
   resolved; new issues have emerged (e.g. `crates/_archive/`
   graveyard, partial `anyprovider-dynamic-dispatch`)
-- `IMPL_PLAN.md` (246 lines), `REFACTOR_PLAN.md` (152 lines),
-  `FEATURE_PARITY.md` (183 lines), `EXECUTE.md` (51 lines) are 4
-  plan docs whose relation to the current state is unclear
+- `FEATURE_PARITY.md` and `EXECUTE.md` are 2 plan docs whose relation
+  to the current state is unclear. `IMPL_PLAN.md` and `REFACTOR_PLAN.md`
+  have been archived in `docs/archive/`.
 
 ## Acceptance Criteria
 
@@ -64,11 +64,12 @@ README.md, but the update is partial. Specific mismatches remaining:
   open, and new issues from the current code review
 - [ ] `commands/dsl/builder.rs:102` docstring example is fixed (the
   `.panel(|state, _| build_login_root(state))` typo)
-- [ ] `EXECUTE.md`, `IMPL_PLAN.md`, `REFACTOR_PLAN.md`,
-  `FEATURE_PARITY.md` are either:
+- [ ] `EXECUTE.md` and `FEATURE_PARITY.md` are either:
   - (a) Updated to reflect the current state, OR
   - (b) Moved to a `docs/archive/` subdirectory with a one-line
     header noting the date and the plan it captured
+- [x] `IMPL_PLAN.md` and `REFACTOR_PLAN.md` have been archived in
+  `docs/archive/`.
 - [ ] `bacon.toml` and `dev.sh` reference only existing files and
   crates
 

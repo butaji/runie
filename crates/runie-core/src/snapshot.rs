@@ -26,7 +26,7 @@ impl GitInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Snapshot {
     pub elements: Arc<[Element]>,
     pub line_counts: Arc<[usize]>,
@@ -65,7 +65,7 @@ pub struct Snapshot {
     /// Filtered command list for palette rendering (name, description, category).
     pub palette_items: Arc<[(String, String, String)]>,
     /// Model selector items (provider_header, full_name, cost_str, is_selected, is_current).
-    pub model_selector_items: Arc<[(String, String, String, bool, bool)]>,
+    pub model_selector_items: Arc<[crate::model::ModelSelectorItem]>,
     /// Pending file edits awaiting approval.
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
     /// Scoped models for dialog rendering.
@@ -100,6 +100,8 @@ pub struct Snapshot {
     pub input_scroll: usize,
     /// Height of the message viewport (updated by the render actor).
     pub last_visible_height: u16,
+    /// Width of the message content area (updated by the render actor).
+    pub content_width: u16,
     /// Index of the element currently at the top of the message
     /// viewport. `None` if the feed is empty.
     pub current_top_element: Option<usize>,

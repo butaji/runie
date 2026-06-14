@@ -184,42 +184,33 @@ fn test_formatted_labels_short_names() {
     );
 }
 
-#[test]
-fn test_list_files_full_tool_flow_sequence() {
-    let mut state = fresh_state();
-    state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "list_files".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: String::new(),
-            },
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "Here are the files:".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 5.1,
-            },
-        ],
-    );
-    assert_eq!(state.session.messages.len(), 5);
-    assert_eq!(state.session.messages[0].role, Role::Thought);
-    assert_eq!(state.session.messages[1].role, Role::Tool);
-    assert_eq!(state.session.messages[2].role, Role::Thought);
-    assert_eq!(state.session.messages[3].role, Role::Assistant);
-    assert_eq!(state.session.messages[4].role, Role::TurnComplete);
-    let lines = format_messages(&state);
+fn full_tool_flow_events() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "list_files".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: String::new(),
+        },
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "Here are the files:".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 5.1,
+        },
+    ]
+}
+
+fn assert_formatted_tool_content(state: &AppState) {
+    let lines = format_messages(state);
     let content: String = lines
         .iter()
         .flat_map(|l| l.spans.iter().map(|s| s.text.clone()).collect::<Vec<_>>())
@@ -229,6 +220,21 @@ fn test_list_files_full_tool_flow_sequence() {
     assert!(content.contains("list_files"));
     assert!(content.contains("→"));
     assert!(content.contains("Turn completed in 5.1s"));
+}
+
+#[test]
+fn test_list_files_full_tool_flow_sequence() {
+    let mut state = fresh_state();
+    state.agent.streaming = true;
+    dispatch(&mut state, &full_tool_flow_events());
+
+    assert_eq!(state.session.messages.len(), 5);
+    assert_eq!(state.session.messages[0].role, Role::Thought);
+    assert_eq!(state.session.messages[1].role, Role::Tool);
+    assert_eq!(state.session.messages[2].role, Role::Thought);
+    assert_eq!(state.session.messages[3].role, Role::Assistant);
+    assert_eq!(state.session.messages[4].role, Role::TurnComplete);
+    assert_formatted_tool_content(&state);
 }
 
 #[test]

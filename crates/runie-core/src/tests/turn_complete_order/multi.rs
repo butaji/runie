@@ -33,38 +33,39 @@ fn element_kinds_no_spacer(state: &AppState) -> Vec<String> {
         .collect()
 }
 
+fn duplicate_turn_complete_events() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "Hello".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 1.0,
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 1.0,
+        },
+        Event::AgentDone { id: "req.0".into() },
+    ]
+}
+
 #[test]
 fn turn_complete_deduplicated_on_duplicate_events() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "a".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "Hello".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &duplicate_turn_complete_events());
     state.ensure_fresh();
 
     let turn_count = state

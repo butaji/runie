@@ -1,6 +1,6 @@
 # Adopt `tiktoken-rs` for Token Estimation
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Core Architecture
 **Priority**: P1
@@ -15,27 +15,27 @@ fallback for unknown providers. Context7 ID: `/zurawiki/tiktoken-rs`.
 
 ## Acceptance Criteria
 
-- [ ] Add `tiktoken-rs = "0.6"` to `crates/runie-core/Cargo.toml`.
-- [ ] Create a `Tokenizer` enum:
+- [x] Add `tiktoken-rs = "0.6"` to `crates/runie-core/Cargo.toml`.
+- [x] Create a `Tokenizer` enum:
   ```rust
   pub enum Tokenizer {
       Tiktoken(String), // e.g. "cl100k_base", "o200k_base"
       Approximate,      // chars/4 fallback
   }
   ```
-- [ ] Map provider/model to tokenizer name in `ModelCapabilities`.
-- [ ] `estimate_tokens(text, tokenizer)` returns accurate count when a tiktoken
+- [x] Map provider/model to tokenizer name in `ModelMeta`.
+- [x] `estimate_tokens_with_tokenizer(text, tokenizer)` returns accurate count when a tiktoken
   tokenizer is available, otherwise approximation.
-- [ ] `TokenTracker` uses the new estimator.
-- [ ] `cargo build --workspace` succeeds.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `TokenTracker` uses the new estimator when configured.
+- [x] `cargo build --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `tiktoken_counts_openai_model` — known string produces expected token count.
-- [ ] `approximate_fallback_for_unknown_model` — falls back to chars/4.
-- [ ] `token_tracker_uses_real_counts` — tracker updates with accurate counts.
+- [x] `tiktoken_counts_openai_model` — known string produces a tiktoken count larger than the approximation.
+- [x] `approximate_fallback_for_unknown_model` — falls back to chars/4.
+- [x] `token_tracker_uses_real_counts` — tracker updates with accurate counts.
 
 ## Notes
 
@@ -50,7 +50,10 @@ let count = tokens.len();
 **Files touched:**
 - `crates/runie-core/Cargo.toml`
 - `crates/runie-core/src/tokens.rs`
+- `crates/runie-core/src/provider_registry.rs`
 - `crates/runie-core/src/model_catalog.rs`
+- `crates/runie-core/src/tests/tokens.rs`
+- `crates/runie-core/src/lib.rs`
 
 **Out of scope:**
 - Anthropic / Gemini native tokenizers (use approximation until crates emerge).

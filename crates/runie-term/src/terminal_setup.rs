@@ -95,6 +95,7 @@ pub fn restore_terminal_graphics<W: io::Write>(
 }
 
 /// Enable mouse capture based on terminal capabilities.
+#[allow(dead_code)]
 pub fn enable_mouse<W: io::Write>(writer: &mut W, caps: caps::MouseCapability) -> io::Result<()> {
     match caps {
         caps::MouseCapability::None => Ok(()),
@@ -111,6 +112,7 @@ pub fn enable_mouse<W: io::Write>(writer: &mut W, caps: caps::MouseCapability) -
 }
 
 /// Disable mouse capture.
+#[allow(dead_code)]
 pub fn disable_mouse<W: io::Write>(writer: &mut W) -> io::Result<()> {
     crossterm::execute!(writer, DisableMouseCapture)
 }

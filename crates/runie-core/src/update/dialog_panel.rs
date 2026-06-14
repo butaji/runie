@@ -158,57 +158,65 @@ fn apply_panel_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) 
         "follow_up_mode" => {
             state.config.follow_up_mode = cycle_delivery_mode(state.config.follow_up_mode)
         }
+        "provider" | "model" | "theme" | "thinking_level" => {
+            apply_select_setting(state, stack, key);
+        }
+        "vim_mode" => toggle_vim_mode(state),
+        "telemetry_enabled" => toggle_telemetry(state),
+        "truncation_max_lines" | "truncation_max_bytes" => {
+            apply_truncation_setting(state, stack, key);
+        }
+        _ => {}
+    }
+}
+
+fn apply_select_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
+    let Some(value) = selected_select_value(stack) else {
+        return;
+    };
+    match key {
         "provider" => {
-            if let Some(value) = selected_select_value(stack) {
-                state.set_provider(&value);
-                state.view.cached_settings_valid = false;
-            }
+            state.set_provider(&value);
+            state.view.cached_settings_valid = false;
         }
         "model" => {
-            if let Some(value) = selected_select_value(stack) {
-                state.set_model(&value);
-                state.view.cached_settings_valid = false;
-            }
+            state.set_model(&value);
+            state.view.cached_settings_valid = false;
         }
-        "theme" => {
-            if let Some(value) = selected_select_value(stack) {
-                state.switch_theme(value);
-            }
-        }
+        "theme" => state.switch_theme(value),
         "thinking_level" => {
-            if let Some(value) = selected_select_value(stack) {
-                if let Ok(level) = value.parse::<crate::model::ThinkingLevel>() {
-                    state.set_thinking_level(level);
-                }
-            }
-        }
-        "vim_mode" => {
-            state.config.vim_mode = !state.config.vim_mode;
-            state.view.cached_settings_valid = false;
-        }
-        "telemetry_enabled" => {
-            let new_enabled = !state.config.telemetry.is_enabled();
-            state.config.telemetry = crate::telemetry::Telemetry::new(new_enabled);
-            state.view.cached_settings_valid = false;
-        }
-        "truncation_max_lines" => {
-            if let Some(value) = selected_select_value(stack) {
-                if let Ok(n) = value.parse::<usize>() {
-                    state.config.truncation.max_lines = n;
-                    state.view.cached_settings_valid = false;
-                }
-            }
-        }
-        "truncation_max_bytes" => {
-            if let Some(value) = selected_select_value(stack) {
-                if let Ok(n) = value.parse::<usize>() {
-                    state.config.truncation.max_bytes = n;
-                    state.view.cached_settings_valid = false;
-                }
+            if let Ok(level) = value.parse::<crate::model::ThinkingLevel>() {
+                state.set_thinking_level(level);
             }
         }
         _ => {}
     }
+}
+
+fn toggle_vim_mode(state: &mut AppState) {
+    state.config.vim_mode = !state.config.vim_mode;
+    state.view.cached_settings_valid = false;
+}
+
+fn toggle_telemetry(state: &mut AppState) {
+    let new_enabled = !state.config.telemetry.is_enabled();
+    state.config.telemetry = crate::telemetry::Telemetry::new(new_enabled);
+    state.view.cached_settings_valid = false;
+}
+
+fn apply_truncation_setting(state: &mut AppState, stack: &mut PanelStack, key: &str) {
+    let Some(value) = selected_select_value(stack) else {
+        return;
+    };
+    let Ok(n) = value.parse::<usize>() else {
+        return;
+    };
+    match key {
+        "truncation_max_lines" => state.config.truncation.max_lines = n,
+        "truncation_max_bytes" => state.config.truncation.max_bytes = n,
+        _ => return,
+    }
+    state.view.cached_settings_valid = false;
 }
 
 fn cycle_delivery_mode(mode: crate::model::DeliveryMode) -> crate::model::DeliveryMode {

@@ -6,14 +6,7 @@
 use crate::model::AppState;
 use crate::state::{AgentState, CompletionState, ConfigState, InputState, SessionState, ViewState};
 
-/// Verify AppState has exactly the expected top-level fields:
-/// - 6 inner state structs
-/// - Documented singletons (UI/control flags)
-#[test]
-fn appstate_has_correct_top_level_fields() {
-    // These are the documented singletons that stay on AppState
-    // (control flags, UI overlays, startup singletons)
-    let state = AppState::default();
+fn assert_singleton_defaults(state: &AppState) {
     assert!(!state.should_quit, "should_quit should be false by default");
     assert!(
         state.open_dialog.is_none(),
@@ -27,11 +20,9 @@ fn appstate_has_correct_top_level_fields() {
         state.login_flow.is_none(),
         "login_flow should be None by default"
     );
-    // skills and prompts are loaded from disk, may be empty or populated
-    assert!(
-        state.prompts.is_empty() || !state.prompts.is_empty(),
-        "prompts should be on AppState"
-    );
+}
+
+fn assert_transient_defaults(state: &AppState) {
     assert!(
         state.transient_message.is_none(),
         "transient_message should be None by default"
@@ -44,7 +35,18 @@ fn appstate_has_correct_top_level_fields() {
         state.transient_level.is_none(),
         "transient_level should be None by default"
     );
-    // git_info and cwd_name are detected at startup
+}
+
+#[test]
+fn appstate_has_correct_top_level_fields() {
+    let state = AppState::default();
+    assert_singleton_defaults(&state);
+    assert_transient_defaults(&state);
+
+    assert!(
+        state.prompts.is_empty() || !state.prompts.is_empty(),
+        "prompts should be on AppState"
+    );
     assert!(
         state.git_info.is_none() || state.git_info.is_some(),
         "git_info should be on AppState"
@@ -59,83 +61,84 @@ fn appstate_has_correct_top_level_fields() {
     );
 }
 
-/// Verify inner structs are properly initialized via Default.
-#[test]
-fn inner_structs_are_default() {
-    let state = AppState::default();
-
-    // AgentState fields that were moved from AppState
-    assert!(
-        !state.agent.streaming,
-        "agent.streaming should default to false"
-    );
-    assert_eq!(state.agent.next_id, 0, "agent.next_id should default to 0");
+fn assert_agent_defaults(agent: &AgentState) {
+    assert!(!agent.streaming, "agent.streaming should default to false");
+    assert_eq!(agent.next_id, 0, "agent.next_id should default to 0");
     assert_eq!(
-        state.agent.intermediate_step_count, 0,
+        agent.intermediate_step_count, 0,
         "agent.intermediate_step_count should default to 0"
     );
     assert!(
-        state.agent.current_action.is_none(),
+        agent.current_action.is_none(),
         "agent.current_action should default to None"
     );
     assert!(
-        state.agent.thinking_started_at.is_none(),
+        agent.thinking_started_at.is_none(),
         "agent.thinking_started_at should default to None"
     );
+}
 
-    // ViewState fields that were moved from AppState
+fn assert_view_defaults(view: &ViewState) {
     assert_eq!(
-        state.view.animation_frame, 0,
+        view.animation_frame, 0,
         "view.animation_frame should default to 0"
     );
     assert!(
-        !state.view.all_collapsed,
+        !view.all_collapsed,
         "view.all_collapsed should default to false"
     );
+}
 
-    // ConfigState fields that were moved from AppState
+fn assert_config_defaults(config: &ConfigState) {
     assert_eq!(
-        state.config.steering_mode,
+        config.steering_mode,
         crate::model::DeliveryMode::OneAtATime,
         "config.steering_mode should default to OneAtATime"
     );
     assert_eq!(
-        state.config.follow_up_mode,
+        config.follow_up_mode,
         crate::model::DeliveryMode::OneAtATime,
         "config.follow_up_mode should default to OneAtATime"
     );
     assert!(
-        state.config.recent_models.is_empty(),
+        config.recent_models.is_empty(),
         "config.recent_models should default to empty"
     );
+}
 
-    // SessionState fields that were moved from AppState
+fn assert_session_defaults(session: &SessionState) {
     assert!(
-        state.session.pending_edits.is_empty(),
+        session.pending_edits.is_empty(),
         "session.pending_edits should default to empty"
     );
     assert!(
-        state.session.image_attachments.is_empty(),
+        session.image_attachments.is_empty(),
         "session.image_attachments should default to empty"
     );
+}
 
-    // InputState fields that were moved from AppState
+fn assert_input_defaults(input: &InputState) {
     assert_eq!(
-        state.input.current_prompt, "",
+        input.current_prompt, "",
         "input.current_prompt should default to empty"
     );
     assert!(
-        state.input.input_history.is_empty(),
+        input.input_history.is_empty(),
         "input.input_history should default to empty"
     );
 }
 
-/// Verify moved fields are accessible through inner structs.
 #[test]
-fn moved_field_access_patterns() {
-    let mut state = AppState::default();
+fn inner_structs_are_default() {
+    let state = AppState::default();
+    assert_agent_defaults(&state.agent);
+    assert_view_defaults(&state.view);
+    assert_config_defaults(&state.config);
+    assert_session_defaults(&state.session);
+    assert_input_defaults(&state.input);
+}
 
-    // AgentState fields
+fn agent_access_patterns(state: &mut AppState) {
     state.agent.streaming = true;
     assert!(state.agent.streaming);
 
@@ -150,15 +153,17 @@ fn moved_field_access_patterns() {
 
     state.agent.thinking_started_at = Some(std::time::Instant::now());
     assert!(state.agent.thinking_started_at.is_some());
+}
 
-    // ViewState fields
+fn view_access_patterns(state: &mut AppState) {
     state.view.animation_frame = 5;
     assert_eq!(state.view.animation_frame, 5);
 
     state.view.all_collapsed = true;
     assert!(state.view.all_collapsed);
+}
 
-    // ConfigState fields
+fn config_access_patterns(state: &mut AppState) {
     state.config.steering_mode = crate::model::DeliveryMode::All;
     assert_eq!(state.config.steering_mode, crate::model::DeliveryMode::All);
 
@@ -167,8 +172,9 @@ fn moved_field_access_patterns() {
         .recent_models
         .push("provider/model".to_string());
     assert_eq!(state.config.recent_models.len(), 1);
+}
 
-    // SessionState fields
+fn session_access_patterns(state: &mut AppState) {
     state
         .session
         .pending_edits
@@ -185,8 +191,9 @@ fn moved_field_access_patterns() {
         .image_attachments
         .push("image.png".to_string());
     assert_eq!(state.session.image_attachments.len(), 1);
+}
 
-    // InputState fields
+fn input_access_patterns(state: &mut AppState) {
     state.input.current_prompt = "custom".to_string();
     assert_eq!(state.input.current_prompt, "custom");
 
@@ -194,28 +201,31 @@ fn moved_field_access_patterns() {
     assert_eq!(state.input.input_history.len(), 1);
 }
 
+#[test]
+fn moved_field_access_patterns() {
+    let mut state = AppState::default();
+    agent_access_patterns(&mut state);
+    view_access_patterns(&mut state);
+    config_access_patterns(&mut state);
+    session_access_patterns(&mut state);
+    input_access_patterns(&mut state);
+}
+
 /// Verify singletons remain on AppState (not moved to inner structs).
 #[test]
 fn singletons_remain_on_appstate() {
-    let mut state = AppState::default();
-
-    // These should remain on AppState per the design
-    state.should_quit = true;
+    let mut state = AppState {
+        should_quit: true,
+        ..Default::default()
+    };
     assert!(state.should_quit);
-
-    // open_dialog and dialog_back_stack are part of the UI overlay state
-    // that should remain on AppState
     assert!(state.open_dialog.is_none());
     assert!(state.dialog_back_stack.is_empty());
-
-    // login_flow is a transient overlay that should remain on AppState
     assert!(state.login_flow.is_none());
 
-    // transient_message is a UI notification that should remain on AppState
     state.transient_message = Some("Test".to_string());
     assert_eq!(state.transient_message, Some("Test".to_string()));
 
-    // input_history is persistent state that should remain on AppState
     state.input_history.push("echo hello".to_string());
     assert_eq!(state.input_history.len(), 1);
 }
@@ -223,39 +233,12 @@ fn singletons_remain_on_appstate() {
 /// Verify inner struct field count matches acceptance criteria.
 #[test]
 fn inner_structs_have_expected_fields() {
-    // AgentState should have these moved fields (plus its original fields)
-    let agent = AgentState::default();
-    assert!(!agent.streaming);
-    assert_eq!(agent.next_id, 0);
-    assert_eq!(agent.intermediate_step_count, 0);
-    assert!(agent.current_action.is_none());
-    assert!(agent.thinking_started_at.is_none());
+    assert_agent_defaults(&AgentState::default());
+    assert_view_defaults(&ViewState::default());
+    assert_config_defaults(&ConfigState::default());
+    assert_session_defaults(&SessionState::default());
+    assert_input_defaults(&InputState::default());
 
-    // ViewState should have these moved fields
-    let view = ViewState::default();
-    assert_eq!(view.animation_frame, 0);
-    assert!(!view.all_collapsed);
-
-    // ConfigState should have these moved fields
-    let config = ConfigState::default();
-    assert_eq!(config.steering_mode, crate::model::DeliveryMode::OneAtATime);
-    assert_eq!(
-        config.follow_up_mode,
-        crate::model::DeliveryMode::OneAtATime
-    );
-    assert!(config.recent_models.is_empty());
-
-    // SessionState should have these moved fields
-    let session = SessionState::default();
-    assert!(session.pending_edits.is_empty());
-    assert!(session.image_attachments.is_empty());
-
-    // InputState should have these moved fields
-    let input = InputState::default();
-    assert_eq!(input.current_prompt, "");
-    assert!(input.input_history.is_empty());
-
-    // CompletionState should exist and be properly structured
     let completion = CompletionState::default();
     assert!(completion.path_suggestions.is_none());
     assert!(completion.path_selected.is_none());

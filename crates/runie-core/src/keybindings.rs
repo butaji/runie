@@ -407,9 +407,33 @@ mod tests {
     #[test]
     fn mouse_events_have_no_name() {
         use crate::Event;
-        assert_eq!(Event::MouseClick { row: 0, col: 0, button: "left".into() }.name(), None);
-        assert_eq!(Event::MouseRelease { row: 0, col: 0, button: "left".into() }.name(), None);
-        assert_eq!(Event::MouseDrag { row: 0, col: 0, button: "left".into() }.name(), None);
+        assert_eq!(
+            Event::MouseClick {
+                row: 0,
+                col: 0,
+                button: "left".into()
+            }
+            .name(),
+            None
+        );
+        assert_eq!(
+            Event::MouseRelease {
+                row: 0,
+                col: 0,
+                button: "left".into()
+            }
+            .name(),
+            None
+        );
+        assert_eq!(
+            Event::MouseDrag {
+                row: 0,
+                col: 0,
+                button: "left".into()
+            }
+            .name(),
+            None
+        );
         assert_eq!(Event::MouseMove { row: 0, col: 0 }.name(), None);
     }
 

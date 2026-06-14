@@ -77,53 +77,8 @@ impl StreamingBuffer {
         let lines: Vec<&str> = current.split('\n').collect();
         let n = lines.len();
 
-        let mut fence_open = self.open_fence.clone();
-        let mut table_open = self.open_table;
-        let mut stable_count = 0usize;
-        let mut in_open_construct = fence_open.is_some() || table_open;
-
-        for (i, line) in lines.iter().enumerate() {
-            let trimmed = line.trim();
-
-            if in_open_construct {
-                if let Some(ref _lang) = fence_open {
-                    if trimmed.starts_with("```") {
-                        fence_open = None;
-                        in_open_construct = false;
-                        stable_count = i + 1;
-                    }
-                    continue;
-                }
-                if table_open {
-                    if trimmed.is_empty() {
-                        table_open = false;
-                        in_open_construct = false;
-                        stable_count = i + 1;
-                    }
-                    continue;
-                }
-            }
-
-            if trimmed.is_empty() {
-                stable_count = i + 1;
-                continue;
-            }
-
-            if trimmed.starts_with("```") {
-                let lang = trimmed.trim_start_matches("```").trim().to_string();
-                fence_open = Some(lang);
-                in_open_construct = true;
-                continue;
-            }
-
-            if is_table_separator(trimmed) {
-                table_open = true;
-                in_open_construct = true;
-                continue;
-            }
-
-            stable_count = i + 1;
-        }
+        let (stable_count, fence_open, table_open) =
+            classify_lines(&lines, self.open_fence.clone(), self.open_table);
 
         self.open_fence = fence_open;
         self.open_table = table_open;
@@ -142,6 +97,81 @@ impl StreamingBuffer {
             }
         }
     }
+}
+
+fn classify_lines(
+    lines: &[&str],
+    mut fence_open: Option<String>,
+    mut table_open: bool,
+) -> (usize, Option<String>, bool) {
+    let mut stable_count = 0usize;
+    let mut in_open_construct = fence_open.is_some() || table_open;
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+
+        if in_open_construct {
+            if try_close_construct(&mut fence_open, &mut table_open, trimmed) {
+                in_open_construct = fence_open.is_some() || table_open;
+                stable_count = i + 1;
+            }
+            continue;
+        }
+
+        if let Some(result) = classify_normal_line(trimmed) {
+            match result {
+                LineClass::Empty | LineClass::Plain => stable_count = i + 1,
+                LineClass::Fence(lang) => {
+                    fence_open = Some(lang);
+                    in_open_construct = true;
+                }
+                LineClass::TableStart => {
+                    table_open = true;
+                    in_open_construct = true;
+                }
+            }
+        }
+    }
+
+    (stable_count, fence_open, table_open)
+}
+
+#[derive(Debug, Clone)]
+enum LineClass {
+    Empty,
+    Plain,
+    Fence(String),
+    TableStart,
+}
+
+fn classify_normal_line(trimmed: &str) -> Option<LineClass> {
+    if trimmed.is_empty() {
+        return Some(LineClass::Empty);
+    }
+    if trimmed.starts_with("```") {
+        let lang = trimmed.trim_start_matches("```").trim().to_string();
+        return Some(LineClass::Fence(lang));
+    }
+    if is_table_separator(trimmed) {
+        return Some(LineClass::TableStart);
+    }
+    Some(LineClass::Plain)
+}
+
+fn try_close_construct(
+    fence_open: &mut Option<String>,
+    table_open: &mut bool,
+    trimmed: &str,
+) -> bool {
+    if fence_open.is_some() && trimmed.starts_with("```") {
+        *fence_open = None;
+        return true;
+    }
+    if *table_open && trimmed.is_empty() {
+        *table_open = false;
+        return true;
+    }
+    false
 }
 
 fn is_table_separator(line: &str) -> bool {

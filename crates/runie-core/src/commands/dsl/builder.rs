@@ -1,9 +1,9 @@
 //! Command Builder
 
 use super::{CommandCategory, CommandFlow, CommandResult, DialogType};
-use crate::dialog::{PanelStack as CoreStack};
+use crate::dialog::dsl::{form, FormPanel};
+use crate::dialog::PanelStack as CoreStack;
 use crate::model::AppState;
-use crate::Event;
 
 /// A single command definition
 #[derive(Clone)]
@@ -76,9 +76,13 @@ impl CommandDef {
         self.with_flow(CommandFlow::Dialog(d)).apply_sub()
     }
 
-    /// Open a panel stack
-    pub fn panel(self, f: fn(&mut AppState, &str) -> CoreStack) -> Self {
-        self.with_flow(CommandFlow::PanelStack(f)).apply_sub()
+    /// Open a panel stack produced at runtime
+    pub fn panel<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut AppState, &str) -> CoreStack + Send + Sync + 'static,
+    {
+        self.with_flow(CommandFlow::PanelStack(std::sync::Arc::new(f)))
+            .apply_sub()
     }
 
     /// Mark this command as opening a sub-dialog. The current dialog
@@ -116,18 +120,15 @@ impl CommandDef {
         self
     }
 
-    /// Show a form dialog
-    pub fn form<F>(self, title: &'static str, build: F, submit: Event) -> Self
+    /// Show a form dialog. Args are split on whitespace and used to
+    /// pre-fill fields in order. The closure must call `.on_submit`.
+    pub fn form<F>(self, title: &'static str, build: F) -> Self
     where
-        F: FnOnce(FormBuilder) -> FormBuilder,
+        F: FnOnce(FormPanel) -> FormPanel + Send + Sync + 'static,
     {
-        let fields = build(FormBuilder::new()).into_fields();
-        self.with_flow(CommandFlow::Form {
-            title,
-            fields,
-            submit,
-        })
-        .apply_sub()
+        let id = self.name.clone();
+        let template = build(form(id, title));
+        self.panel(move |_state, args| build_form_stack_from_template(template.clone(), args))
     }
 
     /// Custom handler
@@ -156,87 +157,39 @@ pub fn cmd(name: &'static str) -> CommandDef {
     CommandDef::new(name)
 }
 
-/// A form field definition
-#[derive(Clone)]
-pub struct FormField {
-    pub label: String,
-    pub placeholder: String,
-    pub key: String,
-    pub prefill: Option<String>,
-}
-
-impl FormField {
-    pub fn new(
-        label: impl Into<String>,
-        placeholder: impl Into<String>,
-        key: impl Into<String>,
-    ) -> Self {
-        Self {
-            label: label.into(),
-            placeholder: placeholder.into(),
-            key: key.into(),
-            prefill: None,
+fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack {
+    let args_list: Vec<&str> = args.split_whitespace().collect();
+    let built = template.build();
+    let mut panel = crate::dialog::Panel::new(built.id, built.title).form();
+    panel.submit_factory = built.submit_factory;
+    let mut arg_idx = 0;
+    for item in built.items {
+        match item {
+            crate::dialog::PanelItem::FormField {
+                label,
+                placeholder,
+                key,
+                value,
+            } => {
+                let val = if arg_idx < args_list.len() {
+                    args_list[arg_idx].to_string()
+                } else {
+                    value
+                };
+                panel = panel.form_field_value(label, placeholder, key, val);
+                arg_idx += 1;
+            }
+            crate::dialog::PanelItem::FormSubmit => panel = panel.form_submit(),
+            _ => {}
         }
     }
-
-    pub fn with_value(mut self, value: impl Into<String>) -> Self {
-        self.prefill = Some(value.into());
-        self
-    }
-}
-
-/// Form builder for declarative field creation
-#[derive(Default)]
-pub struct FormBuilder {
-    fields: Vec<FormField>,
-}
-
-impl FormBuilder {
-    pub fn new() -> Self {
-        Self { fields: Vec::new() }
-    }
-
-    /// Add a text field
-    pub fn field(
-        self,
-        label: impl Into<String>,
-        placeholder: impl Into<String>,
-        key: impl Into<String>,
-    ) -> Self {
-        self.field_value(label, placeholder, key, "")
-    }
-
-    /// Add a field with pre-filled value
-    pub fn field_value(
-        self,
-        label: impl Into<String>,
-        placeholder: impl Into<String>,
-        key: impl Into<String>,
-        value: impl Into<String>,
-    ) -> Self {
-        let mut this = self;
-        this.fields
-            .push(FormField::new(label, placeholder, key).with_value(value));
-        this
-    }
-
-    /// Add multiple fields at once
-    pub fn fields(self, fields: &[(String, String, String)]) -> Self {
-        let mut this = self;
-        for (label, placeholder, key) in fields {
-            this = this.field(label, placeholder, key);
-        }
-        this
-    }
-
-    pub fn into_fields(self) -> Vec<FormField> {
-        self.fields
-    }
+    CoreStack::new(panel)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Event;
 
     #[test]
     fn test_cmd_macro() {
@@ -263,9 +216,6 @@ mod tests {
     #[test]
     fn test_sub_wraps_flow() {
         use super::super::{CommandFlow, DialogType};
-        // .sub() wraps the flow in CommandFlow::Sub so the current
-        // dialog (e.g. the palette = Main Menu) is pushed onto the
-        // back stack before the command runs.
         let cmd = crate::cmd!("settings")
             .desc("Open settings")
             .category(CommandCategory::System)
@@ -276,15 +226,12 @@ mod tests {
 
     #[test]
     fn test_sub_is_noop_for_empty_flow() {
-        // .sub() on a command with no flow should be a no-op.
         let cmd = crate::cmd!("nothing").sub();
         assert!(matches!(cmd.flow, CommandFlow::None));
     }
 
     #[test]
     fn test_sub_wraps_handler() {
-        // .sub() before .handler() also wraps, so event-based
-        // commands (like login) get back-stack behavior too.
         fn my_handler(_: &mut crate::model::AppState, _: &str) -> super::super::CommandResult {
             super::super::CommandResult::None
         }
@@ -295,15 +242,35 @@ mod tests {
         assert!(matches!(cmd.flow, super::super::CommandFlow::Sub(_)));
     }
 
-    #[test]
-    fn test_form_builder() {
-        let fields = FormBuilder::new()
-            .field("Name", "session", "name")
-            .field("Path", "file.json", "path")
-            .field_value("Default", "placeholder", "key", "value")
-            .into_fields();
+    fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
+        Event::RunSaveCommand {
+            name: values.get("name").cloned().unwrap_or_default(),
+        }
+    }
 
-        assert_eq!(fields.len(), 3);
-        assert_eq!(fields[2].prefill, Some("value".into()));
+    #[test]
+    fn command_form_builds_panel_stack() {
+        let cmd = crate::cmd!("save").desc("Save session").form("save", |f| {
+            f.field("Name", "session", "name").on_submit(save_submit)
+        });
+        assert!(matches!(cmd.flow, CommandFlow::PanelStack(_)));
+    }
+
+    #[test]
+    fn form_prefills_args() {
+        let cmd = crate::cmd!("save").form("save", |f| {
+            f.field("Name", "session", "name").on_submit(save_submit)
+        });
+        let mut state = AppState::default();
+        let result = cmd.flow.exec(&mut state, "save", "mysession");
+        if let CommandResult::OpenPanelStack(stack) = result {
+            let panel = stack.current().unwrap();
+            assert_eq!(
+                panel.form_values.get("name"),
+                Some(&"mysession".to_string())
+            );
+        } else {
+            panic!("expected panel stack");
+        }
     }
 }

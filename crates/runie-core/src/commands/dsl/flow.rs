@@ -1,8 +1,11 @@
 //! Command Flow Types
 
-use crate::dialog::{Panel, PanelStack};
+use crate::dialog::PanelStack;
 use crate::model::AppState;
 use crate::Event;
+
+/// Type alias for a function that produces a panel stack at runtime.
+pub type PanelStackFn = std::sync::Arc<dyn Fn(&mut AppState, &str) -> PanelStack + Send + Sync>;
 
 /// What happens when a command is invoked.
 #[derive(Clone)]
@@ -15,14 +18,8 @@ pub enum CommandFlow {
     Dynamic(fn(&AppState, &str) -> String),
     /// Open a named dialog
     Dialog(DialogType),
-    /// Open a panel stack
-    PanelStack(fn(&mut AppState, &str) -> PanelStack),
-    /// Show a form dialog (always shows dialog, args pre-fill fields)
-    Form {
-        title: &'static str,
-        fields: Vec<super::FormField>,
-        submit: Event,
-    },
+    /// Open a panel stack produced at runtime
+    PanelStack(PanelStackFn),
     /// Execute a handler function
     Handler(fn(&mut AppState, &str) -> CommandResult),
     /// Chain multiple flows (tries each until one succeeds)
@@ -40,56 +37,78 @@ pub enum CommandFlow {
 
 impl CommandFlow {
     /// Execute this flow
-    pub fn exec(self, state: &mut AppState, cmd_name: &str, args: &str) -> CommandResult {
+    pub fn exec(&self, state: &mut AppState, _cmd_name: &str, args: &str) -> CommandResult {
         match self {
             Self::None => CommandResult::None,
-            Self::Message(msg) => CommandResult::Message(msg.into()),
+            Self::Message(msg) => CommandResult::Message((*msg).into()),
             Self::Dynamic(f) => CommandResult::Message(f(state, args)),
-            Self::Dialog(d) => CommandResult::OpenDialog(d),
+            Self::Dialog(d) => CommandResult::OpenDialog(d.clone()),
             Self::PanelStack(f) => CommandResult::OpenPanelStack(f(state, args)),
-            Self::Form {
-                title,
-                fields,
-                submit,
-            } => {
-                let panel = build_form_panel(cmd_name, title, fields, args, submit);
-                CommandResult::OpenPanelStack(PanelStack::new(panel))
-            }
             Self::Handler(f) => f(state, args),
-            Self::Chain(flows) => {
-                for flow in flows {
-                    let result = flow.clone().exec(state, cmd_name, args);
-                    if !matches!(result, CommandResult::None) {
-                        return result;
-                    }
-                }
-                CommandResult::None
-            }
+            Self::Chain(flows) => Self::exec_chain(flows, state, _cmd_name, args),
             Self::When(predicate, flow) => {
-                if predicate(state) {
-                    flow.exec(state, cmd_name, args)
-                } else {
-                    CommandResult::None
-                }
+                Self::exec_when(*predicate, flow, state, _cmd_name, args)
             }
             Self::OrMessage(handler, fallback) => {
-                let result = handler(state, args);
-                if matches!(result, CommandResult::None) {
-                    CommandResult::Message(fallback.into())
-                } else {
-                    result
-                }
+                Self::exec_or_message(*handler, fallback, state, args)
             }
-            Self::Sub(inner) => {
-                // Push the current dialog onto the global back stack
-                // so Esc returns to it. This is the Android-like
-                // behavior for any sub-dialog command in the menu.
-                if let Some(current) = state.open_dialog.take() {
-                    state.push_dialog_to_back_stack(current);
-                }
-                inner.exec(state, cmd_name, args)
+            Self::Sub(inner) => Self::exec_sub(inner, state, _cmd_name, args),
+        }
+    }
+
+    fn exec_chain(
+        flows: &[CommandFlow],
+        state: &mut AppState,
+        cmd_name: &str,
+        args: &str,
+    ) -> CommandResult {
+        for flow in flows {
+            let result = flow.exec(state, cmd_name, args);
+            if !matches!(result, CommandResult::None) {
+                return result;
             }
         }
+        CommandResult::None
+    }
+
+    fn exec_when(
+        predicate: fn(&AppState) -> bool,
+        flow: &CommandFlow,
+        state: &mut AppState,
+        cmd_name: &str,
+        args: &str,
+    ) -> CommandResult {
+        if predicate(state) {
+            flow.exec(state, cmd_name, args)
+        } else {
+            CommandResult::None
+        }
+    }
+
+    fn exec_or_message(
+        handler: fn(&AppState, &str) -> CommandResult,
+        fallback: &'static str,
+        state: &AppState,
+        args: &str,
+    ) -> CommandResult {
+        let result = handler(state, args);
+        if matches!(result, CommandResult::None) {
+            CommandResult::Message(fallback.into())
+        } else {
+            result
+        }
+    }
+
+    fn exec_sub(
+        inner: &CommandFlow,
+        state: &mut AppState,
+        cmd_name: &str,
+        args: &str,
+    ) -> CommandResult {
+        if let Some(current) = state.open_dialog.take() {
+            state.push_dialog_to_back_stack(current);
+        }
+        inner.exec(state, cmd_name, args)
     }
 }
 
@@ -140,42 +159,20 @@ impl CommandResult {
     }
 }
 
-/// Build a form panel
-fn build_form_panel(
-    id: &str,
-    title: &str,
-    fields: Vec<super::FormField>,
-    args: &str,
-    _submit: Event,
-) -> Panel {
-    let args_list: Vec<&str> = args.split_whitespace().collect();
-    let mut panel = Panel::new(id, title).with_filter();
-
-    for (i, field) in fields.into_iter().enumerate() {
-        let value = args_list
-            .get(i)
-            .map(|s| s.to_string())
-            .or(field.prefill)
-            .unwrap_or_default();
-
-        panel = if value.is_empty() {
-            panel.form_field(field.label, field.placeholder, field.key)
-        } else {
-            panel.form_field_value(field.label, field.placeholder, field.key, value)
-        };
-    }
-
-    panel.form_submit()
-}
-
 /// Build a form panel for the /spawn command when called without arguments.
 /// Collects the prompt via a single text field.
+fn spawn_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::SpawnAgent {
+        prompt: values.get("prompt").cloned().unwrap_or_default(),
+    }
+}
+
 pub fn build_spawn_form_panel() -> PanelStack {
-    let panel = Panel::new("spawn_form", "Spawn Subagent")
-        .with_filter()
-        .form_field("Prompt", "Describe the task for the subagent", "prompt")
-        .form_submit();
-    PanelStack::new(panel)
+    use crate::dialog::dsl::form;
+    form("spawn", "Spawn Subagent")
+        .field("Prompt", "Describe the task for the subagent", "prompt")
+        .on_submit(spawn_submit)
+        .into_stack()
 }
 
 #[cfg(test)]

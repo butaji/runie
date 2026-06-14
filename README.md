@@ -263,12 +263,13 @@ cargo clippy --workspace
 cargo fmt
 ```
 
-Build enforces:
-- Max 500 lines per file
-- Max 40 lines per function
-- Max complexity 10 per function
+Build enforces (via `crates/runie-core/build.rs`):
+- Max 2000 lines per file
+- Max 150 lines per function
+- Max complexity 30 per function
 
-Set `RUNIE_SKIP_BUILD_CHECKS=1` to bypass.
+The project's long-term targets are still 500 lines/file, 40 lines/function,
+complexity 10. `RUNIE_SKIP_BUILD_CHECKS=1` bypasses the build-time guardrail.
 
 ## Dependencies
 

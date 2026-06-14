@@ -1,9 +1,9 @@
-//! Fuzzy string matching for @-ref completions
+//! Fuzzy string matching for @-ref completions and panel filtering.
 
-/// Score a fuzzy match between query and candidate.
-/// Returns Some(score) if query chars appear in order in candidate,
-/// None otherwise. Higher scores are better.
-pub fn fuzzy_match(query: &str, candidate: &str) -> Option<i32> {
+/// Score a fuzzy match between `query` and `candidate`.
+/// Returns `Some(score)` if every query char appears in order in the candidate,
+/// `None` otherwise. Higher scores are better.
+pub fn score(query: &str, candidate: &str) -> Option<i32> {
     if query.is_empty() {
         return Some(0);
     }
@@ -13,32 +13,43 @@ pub fn fuzzy_match(query: &str, candidate: &str) -> Option<i32> {
     let mut ci = 0usize;
 
     for (qi, qc) in query_lower.chars().enumerate() {
-        if let Some(pos) = cand_lower[ci..].find(qc) {
-            let abs_pos = ci + pos;
-            ci = abs_pos + 1;
-            score += 10;
-            // Bonus for matching at start of string
-            if abs_pos == 0 {
-                score += 5;
-            }
-            // Bonus for matching after word boundary (. / - _)
-            if abs_pos > 0 {
-                let prev = cand_lower.as_bytes()[abs_pos - 1];
-                if prev == b'.' || prev == b'/' || prev == b'-' || prev == b'_' {
-                    score += 10;
-                }
-            }
-            // Small penalty for distance from previous match
-            if qi > 0 {
-                score -= pos as i32;
-            }
-        } else {
-            return None;
-        }
+        let (new_ci, step) = score_query_char(qc, qi, ci, &cand_lower)?;
+        ci = new_ci;
+        score += step;
     }
-    // Penalty for length difference
     score -= (cand_lower.len() - query_lower.len()) as i32;
     Some(score)
+}
+
+fn score_query_char(qc: char, qi: usize, ci: usize, cand_lower: &str) -> Option<(usize, i32)> {
+    let pos = cand_lower[ci..].find(qc)?;
+    let abs_pos = ci + pos;
+    let mut step = 10i32;
+    if abs_pos == 0 {
+        step += 5;
+    }
+    step += word_boundary_bonus(cand_lower, abs_pos);
+    if qi > 0 {
+        step -= pos as i32;
+    }
+    Some((abs_pos + 1, step))
+}
+
+fn word_boundary_bonus(cand_lower: &str, abs_pos: usize) -> i32 {
+    if abs_pos == 0 {
+        return 0;
+    }
+    let prev = cand_lower.as_bytes()[abs_pos - 1];
+    if matches!(prev, b'.' | b'/' | b'-' | b'_') {
+        10
+    } else {
+        0
+    }
+}
+
+/// Backward-compatible alias for `score`.
+pub fn fuzzy_match(query: &str, candidate: &str) -> Option<i32> {
+    score(query, candidate)
 }
 
 /// Filter and rank candidates by fuzzy match score.

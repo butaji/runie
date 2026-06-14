@@ -1,6 +1,7 @@
 # Adopt `pulldown-cmark` for Markdown Parsing
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-14
 **Milestone**: R3
 **Category**: TUI Rendering
 **Priority**: P1
@@ -16,25 +17,25 @@ because tool-call interleaving is Runie-specific. Context7 ID:
 
 ## Acceptance Criteria
 
-- [ ] Add `pulldown-cmark = "0.13"` to `crates/runie-tui/Cargo.toml`.
-- [ ] Replace inline parsing (`parse_inline_markdown`) with `pulldown_cmark::Parser`.
-- [ ] Replace block extraction (`extract_code_blocks`) with event-based block
+- [x] Add `pulldown-cmark = "0.13"` to `crates/runie-tui/Cargo.toml`.
+- [x] Replace inline parsing (`parse_inline_markdown`) with `pulldown_cmark::Parser`.
+- [x] Replace block extraction (`extract_code_blocks`) with event-based block
   collection from `Parser`.
-- [ ] Enable GFM extensions: tables, strikethrough, task lists.
-- [ ] Existing `MdSpan` and `CodeBlock` types remain the public interface so
+- [x] Enable GFM extensions: tables, strikethrough, task lists.
+- [x] Existing `MdSpan` and `CodeBlock` types remain the public interface so
   callers do not change.
-- [ ] `cargo build --workspace` succeeds.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `cargo build --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `parse_bold_italic_code` — same spans as current parser.
-- [ ] `extract_code_blocks_fenced` — code blocks extracted correctly.
-- [ ] `parse_table` — GFM table parsed (new capability).
+- [x] `parse_bold_italic_code` — same spans as current parser.
+- [x] `extract_code_blocks_fenced` — code blocks extracted correctly.
+- [x] `parse_table` — GFM table parsed (new capability).
 
 ### Layer 3 — Rendering
-- [ ] `markdown_block_renders_table` — table appears in TestBackend output.
+- [x] `markdown_block_renders_table` — table appears in TestBackend output.
 
 ## Notes
 

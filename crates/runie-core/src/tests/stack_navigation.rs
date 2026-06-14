@@ -26,9 +26,10 @@ fn open_settings_with_subpanel() -> AppState {
     let mut stack = PanelStack::new(root);
     stack.push(child);
 
-    let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::Settings(stack));
-    state
+    AppState {
+        open_dialog: Some(DialogState::Settings(stack)),
+        ..Default::default()
+    }
 }
 
 #[test]
@@ -101,8 +102,10 @@ fn palette_close_pops_or_closes() {
     child = child.item("Back", ItemAction::Pop);
     let mut stack = PanelStack::new(root);
     stack.push(child);
-    let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::CommandPalette(stack));
+    let mut state = AppState {
+        open_dialog: Some(DialogState::CommandPalette(stack)),
+        ..Default::default()
+    };
 
     // First Esc (in sub-panel): pop to root, bar still open.
     state.update(Event::PaletteClose);
@@ -140,8 +143,10 @@ fn form_dialog_esc_pops_or_closes() {
     child = child.item("_Back", ItemAction::Emit(Event::LoginFlowCancel));
     stack.push(child);
 
-    let mut state = AppState::default();
-    state.open_dialog = Some(DialogState::PanelStack(stack));
+    let mut state = AppState {
+        open_dialog: Some(DialogState::PanelStack(stack)),
+        ..Default::default()
+    };
 
     // ESC in the child form: pop to root.
     state.update(Event::CommandFormClose);
@@ -158,6 +163,35 @@ fn form_dialog_esc_pops_or_closes() {
     assert!(state.open_dialog.is_none(), "form root ESC should close");
 }
 
+fn check_command_is_sub(reg: &crate::commands::CommandRegistry, name: &str) -> Option<String> {
+    use crate::commands::CommandFlow;
+
+    match reg.get(name) {
+        Some(def) => {
+            let flow = match &def.flow {
+                CommandFlow::Sub(inner) => inner.as_ref(),
+                other => other,
+            };
+            let opens_sub = matches!(
+                flow,
+                CommandFlow::Dialog(_) | CommandFlow::PanelStack(_) | CommandFlow::Handler(_)
+            );
+            let is_sub = matches!(def.flow, CommandFlow::Sub(_));
+            if !is_sub {
+                Some(format!("'{}' is missing .sub()", name))
+            } else if !opens_sub {
+                Some(format!(
+                    "'{}' has .sub() but inner flow does not open a dialog",
+                    name
+                ))
+            } else {
+                None
+            }
+        }
+        None => Some(format!("'{}' is not registered", name)),
+    }
+}
+
 /// Contract: every menu-bar command that opens a sub-dialog (form,
 /// panel, or built-in dialog) MUST be registered with `.sub()` so it
 /// participates in the global back stack. This is the Android-like
@@ -167,23 +201,19 @@ fn form_dialog_esc_pops_or_closes() {
 /// (e.g. `new`, `reset`, `clone`, `share`) do NOT need `.sub()`.
 #[test]
 fn every_sub_opening_command_is_marked_sub() {
-    use crate::commands::{CommandFlow, CommandRegistry};
+    use crate::commands::CommandRegistry;
 
     let mut reg = CommandRegistry::new();
     crate::commands::handlers::register_all(&mut reg);
 
-    // These commands open a sub-dialog and MUST have .sub().
     let must_be_sub: &[&str] = &[
-        // Built-in dialogs
         "settings",
-        // Handler-based: open dialogs from their handler
         "theme",
         "model",
         "thinking",
         "scoped-models",
         "providers",
         "tree",
-        // Form-based
         "save",
         "load",
         "delete",
@@ -195,35 +225,10 @@ fn every_sub_opening_command_is_marked_sub() {
         "prompt",
     ];
 
-    let mut missing: Vec<String> = Vec::new();
-    for name in must_be_sub {
-        match reg.get(name) {
-            Some(def) => {
-                let flow = match &def.flow {
-                    CommandFlow::Sub(inner) => inner.as_ref(),
-                    other => other,
-                };
-                // Inner flow must be a dialog-opening flow.
-                let opens_sub = matches!(
-                    flow,
-                    CommandFlow::Dialog(_)
-                        | CommandFlow::PanelStack(_)
-                        | CommandFlow::Form { .. }
-                        | CommandFlow::Handler(_)
-                );
-                let is_sub = matches!(def.flow, CommandFlow::Sub(_));
-                if !is_sub {
-                    missing.push(format!("'{}' is missing .sub()", name));
-                } else if !opens_sub {
-                    missing.push(format!(
-                        "'{}' has .sub() but inner flow does not open a dialog",
-                        name
-                    ));
-                }
-            }
-            None => missing.push(format!("'{}' is not registered", name)),
-        }
-    }
+    let missing: Vec<String> = must_be_sub
+        .iter()
+        .filter_map(|name| check_command_is_sub(&reg, name))
+        .collect();
 
     assert!(
         missing.is_empty(),
@@ -279,49 +284,42 @@ fn sub_command_pushes_current_dialog_to_back_stack() {
     }
 }
 
-#[test]
-fn global_dialog_back_stack_palette_pushes_subdialog() {
-    // Android-like: when a command from the command palette (main
-    // menu) opens a sub-dialog, the palette is pushed onto a global
-    // back stack. Esc on the sub-dialog pops back to the palette.
-    // Esc on the palette (root of the back stack) closes the bar.
-    use crate::commands::DialogState;
-    use crate::dialog::{Panel, PanelStack};
-    use crate::event::Event;
-
+fn state_with_palette_and_subdialog() -> AppState {
     let mut state = AppState::default();
-    // Simulate the palette being open.
     let palette = Panel::new("palette", "Commands").keep_open();
-    let palette_stack = PanelStack::new(palette);
-    state.open_dialog = Some(DialogState::CommandPalette(palette_stack));
+    state.open_dialog = Some(DialogState::CommandPalette(PanelStack::new(palette)));
 
-    // A command from the palette opens a sub-dialog (e.g. settings).
-    // process_command_result pushes the palette onto the back stack.
-    let sub = Panel::new("sub", "Sub").keep_open();
-    let sub_stack = PanelStack::new(sub);
     if let Some(current) = state.open_dialog.take() {
         state.push_dialog_to_back_stack(current);
     }
-    state.open_dialog = Some(DialogState::PanelStack(sub_stack));
+    let sub = PanelStack::new(Panel::new("sub", "Sub").keep_open());
+    state.open_dialog = Some(DialogState::PanelStack(sub));
 
-    // Verify: back stack has the palette, current is the sub-dialog.
-    assert_eq!(state.dialog_back_stack.len(), 1);
-    assert!(matches!(
-        state.open_dialog,
-        Some(DialogState::PanelStack(_))
-    ));
+    state
+}
 
-    // Esc on the sub-dialog (root of its PanelStack) should restore
-    // the palette from the back stack, NOT close the dialog.
-    state.update(Event::DialogBack);
+fn assert_palette_restored(state: &AppState) {
     assert!(
         matches!(state.open_dialog, Some(DialogState::CommandPalette(_))),
         "Esc on sub-dialog must restore palette, got {:?}",
         state.open_dialog
     );
     assert!(state.dialog_back_stack.is_empty());
+}
 
-    // Esc on the palette (root, back stack empty) should close.
+#[test]
+fn global_dialog_back_stack_palette_pushes_subdialog() {
+    let mut state = state_with_palette_and_subdialog();
+
+    assert_eq!(state.dialog_back_stack.len(), 1);
+    assert!(matches!(
+        state.open_dialog,
+        Some(DialogState::PanelStack(_))
+    ));
+
+    state.update(Event::DialogBack);
+    assert_palette_restored(&state);
+
     state.update(Event::DialogBack);
     assert!(
         state.open_dialog.is_none(),
@@ -335,42 +333,17 @@ fn global_dialog_back_stack_palette_pushes_subdialog() {
 /// (Main Menu), NOT close the whole bar. Press Esc again — closes.
 #[test]
 fn palette_then_subdialog_esc_back_to_palette_then_esc_closes() {
-    use crate::commands::DialogState;
-    use crate::dialog::{Panel, PanelStack};
-    use crate::event::Event;
+    let mut state = state_with_palette_and_subdialog();
 
-    let mut state = AppState::default();
-    // Simulate: palette is open (Main Menu).
-    let palette = Panel::new("palette", "Commands").keep_open();
-    state.open_dialog = Some(DialogState::CommandPalette(PanelStack::new(palette)));
-
-    // Simulate: user selects "login" from the palette. The login
-    // command goes through process_command_result, which pushes the
-    // palette onto the back stack and opens the login dialog.
-    if let Some(current) = state.open_dialog.take() {
-        state.push_dialog_to_back_stack(current);
-    }
-    let login_root = PanelStack::new(Panel::new("login-provider", "Login").keep_open());
-    state.open_dialog = Some(DialogState::PanelStack(login_root));
-
-    // Verify: palette is on the back stack, login dialog is on top.
     assert_eq!(state.dialog_back_stack.len(), 1);
     assert!(matches!(
         state.open_dialog,
         Some(DialogState::PanelStack(_))
     ));
 
-    // Esc on the login dialog (sub-menu) — must pop back to the
-    // palette (Main Menu), NOT close.
     state.update(Event::DialogBack);
-    assert!(
-        matches!(state.open_dialog, Some(DialogState::CommandPalette(_))),
-        "Esc on sub-menu must return to Main Menu (palette), got {:?}",
-        state.open_dialog
-    );
-    assert!(state.dialog_back_stack.is_empty());
+    assert_palette_restored(&state);
 
-    // Esc on the palette (Main Menu) — must close the bar.
     state.update(Event::DialogBack);
     assert!(
         state.open_dialog.is_none(),

@@ -5,44 +5,54 @@
 /// box borders, so the helper works in production (empty provider) and
 /// dev (mock/echo) alike.
 pub(crate) fn find_input_box_bounds(buf: &ratatui::buffer::Buffer) -> (u16, u16) {
-    // First, find the line with the input prompt `❯`.
-    let mut prompt_line: Option<u16> = None;
-    for y in 0..buf.area().height {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, y)].symbol())
-            .collect();
-        if line.contains('❯') {
-            prompt_line = Some(y);
-            break;
-        }
-    }
-    let Some(prompt) = prompt_line else {
+    let Some(prompt) = find_prompt_line(buf) else {
         return (0, 0);
     };
-
-    // The input box has a top border (───) ~2 rows above the prompt
-    // and a bottom border ~1 row below. Walk outward to find the borders.
-    let mut top = prompt;
-    for ty in (0..prompt).rev() {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, ty)].symbol())
-            .collect();
-        if line.contains('─') || line.contains('┌') || line.contains('└') {
-            top = ty;
-            break;
-        }
-    }
-    let mut bottom = prompt;
-    for ty in (prompt + 1)..buf.area().height {
-        let line: String = (0..buf.area().width)
-            .map(|x| buf[(x, ty)].symbol())
-            .collect();
-        if line.contains('─') || line.contains('┐') || line.contains('┘') {
-            bottom = ty;
-            break;
-        }
-    }
+    let top = find_border_above(buf, prompt);
+    let bottom = find_border_below(buf, prompt);
     (top, bottom)
+}
+
+fn find_prompt_line(buf: &ratatui::buffer::Buffer) -> Option<u16> {
+    for y in 0..buf.area().height {
+        let line = row_text(buf, y);
+        if line.contains('❯') {
+            return Some(y);
+        }
+    }
+    None
+}
+
+fn find_border_above(buf: &ratatui::buffer::Buffer, prompt: u16) -> u16 {
+    for ty in (0..prompt).rev() {
+        if is_border_line(&row_text(buf, ty)) {
+            return ty;
+        }
+    }
+    prompt
+}
+
+fn find_border_below(buf: &ratatui::buffer::Buffer, prompt: u16) -> u16 {
+    for ty in (prompt + 1)..buf.area().height {
+        if is_border_line(&row_text(buf, ty)) {
+            return ty;
+        }
+    }
+    prompt
+}
+
+fn row_text(buf: &ratatui::buffer::Buffer, y: u16) -> String {
+    (0..buf.area().width)
+        .map(|x| buf[(x, y)].symbol())
+        .collect()
+}
+
+fn is_border_line(line: &str) -> bool {
+    line.contains('─')
+        || line.contains('┌')
+        || line.contains('└')
+        || line.contains('┐')
+        || line.contains('┘')
 }
 
 mod form;

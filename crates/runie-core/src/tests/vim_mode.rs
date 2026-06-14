@@ -122,7 +122,6 @@ fn vim_mode_on_slash_opens_palette() {
 }
 
 #[test]
-#[test]
 fn vim_mode_y_typed_as_text_in_empty_input() {
     // 'y' is no longer a single-key copy shortcut (copy is Ctrl+O).
     // In an empty input box with vim_mode on, 'y' is typed as a normal
@@ -132,6 +131,7 @@ fn vim_mode_y_typed_as_text_in_empty_input() {
     assert_eq!(state.input.input, "y");
 }
 
+#[allow(dead_code)]
 fn vim_mode_on_y_copies_last_response() {
     // Deprecated: 'y' is no longer a copy shortcut. The test body is
     // kept as a placeholder; see vim_mode_y_typed_as_text_in_empty_input

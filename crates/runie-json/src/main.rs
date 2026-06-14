@@ -24,12 +24,8 @@
 //! ```
 
 use anyhow::Result;
-use futures::StreamExt;
-use runie_agent::{build_provider_with_warning, parser::parse_tool_calls, Tool};
-use runie_core::{
-    config_reload,
-    provider::{Message, Provider},
-};
+use runie_agent::{build_provider_with_warning, run_headless_turn, tool_to_json, HeadlessOptions};
+use runie_core::{config_reload, provider::Message};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
@@ -74,28 +70,51 @@ async fn main() {
 }
 
 async fn run_json() -> Result<()> {
+    let req = read_json_request().await?;
+    let config = config_reload::Config::load_from(&config_reload::config_path());
+    let (provider_name, model) = resolve_provider_and_model(&req, &config);
+    let messages = build_json_messages(&req);
+    let provider = build_provider_with_warning(&provider_name, &model)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let start = Instant::now();
+
+    let result = run_json_turn(messages, &provider).await?;
+    let response = build_json_response(result, start.elapsed().as_millis() as u64);
+    println!("{}", serde_json::to_string(&response)?);
+    Ok(())
+}
+
+async fn read_json_request() -> Result<JsonRequest> {
     let mut stdin = tokio::io::stdin();
     let mut buf = String::new();
     use tokio::io::AsyncReadExt;
     stdin.read_to_string(&mut buf).await?;
+    serde_json::from_str(&buf).map_err(|e| anyhow::anyhow!("{}", e))
+}
 
-    let req: JsonRequest = serde_json::from_str(&buf)?;
-
-    let config = config_reload::Config::load_from(&config_reload::config_path());
+fn resolve_provider_and_model(
+    req: &JsonRequest,
+    config: &config_reload::Config,
+) -> (String, String) {
     let provider_name = req
         .provider
-        .as_deref()
-        .or(config.provider.as_deref())
-        .unwrap_or("mock");
+        .clone()
+        .or_else(|| config.provider.clone())
+        .unwrap_or_else(|| "mock".to_string());
     let model = req
         .model
-        .as_deref()
-        .or(config.default_model())
-        .unwrap_or("echo");
+        .clone()
+        .or_else(|| config.default_model().map(String::from))
+        .unwrap_or_else(|| "echo".to_string());
+    (provider_name, model)
+}
 
-    let tools_list = req.tools.as_ref().map(|t| t.join(", ")).unwrap_or_else(|| {
-        "read_file, list_dir, write_file, edit_file, bash, grep, find".to_string()
-    });
+fn build_json_messages(req: &JsonRequest) -> Vec<Message> {
+    let tools_list = req
+        .tools
+        .as_ref()
+        .map(|t| t.join(", "))
+        .unwrap_or_else(|| runie_core::prompts::DEFAULT_TOOLS.to_string());
 
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
@@ -104,151 +123,49 @@ async fn run_json() -> Result<()> {
         "",
     );
 
-    let mut messages = vec![
+    vec![
         Message::System { content: system },
         Message::User {
             content: req.prompt.clone(),
         },
-    ];
+    ]
+}
 
-    let provider =
-        build_provider_with_warning(provider_name, model).map_err(|e| anyhow::anyhow!("{}", e))?;
-    let start = Instant::now();
-    let mut content = String::new();
-    let mut tool_calls: Vec<ToolCall> = Vec::new();
-
-    for _ in 0..5 {
-        let mut response_text = String::new();
-        let mut stream = provider.generate(messages.clone());
-        while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result?;
-            response_text.push_str(&chunk.content);
-            content.push_str(&chunk.content);
+async fn run_json_turn(
+    messages: Vec<Message>,
+    provider: &runie_provider::DynProvider,
+) -> Result<runie_agent::HeadlessResult> {
+    let options = HeadlessOptions {
+        execute_tools: true,
+        max_tool_rounds: 5,
+        on_chunk: Some(&mut |chunk: &str| {
             let line = serde_json::to_string(&StreamChunk {
-                chunk: chunk.content,
+                chunk: chunk.to_string(),
             })
             .unwrap_or_default();
             println!("{}", line);
-        }
-
-        let tools = parse_tool_calls(&response_text);
-        if tools.is_empty() {
-            break;
-        }
-
-        messages.push(Message::Assistant {
-            content: response_text.clone(),
-        });
-
-        for tool in &tools {
-            let result = execute_tool(tool);
-            tool_calls.push(ToolCall {
-                name: tool.name().to_string(),
-                arguments: tool_to_json(tool),
-                output: result.output.clone(),
-            });
-            messages.push(Message::ToolResult {
-                content: format!("{} result:\n{}", tool.name(), result.output),
-            });
-        }
-    }
-
-    let duration_ms = start.elapsed().as_millis() as u64;
-    let tokens_used = runie_core::tokens::estimate_tokens(&content);
-
-    let response = JsonResponse {
-        content,
-        tool_calls,
-        tokens_used,
-        duration_ms,
+        }),
+        tool_to_json: Some(&tool_to_json),
     };
-    println!("{}", serde_json::to_string(&response)?);
-    Ok(())
+
+    run_headless_turn(messages, provider, options).await
 }
 
-fn execute_tool(tool: &Tool) -> runie_agent::ToolResult {
-    match tool {
-        Tool::EditFile { .. } => tool.execute(),
-        _ => tool.execute(),
-    }
-}
-
-fn read_file_json(path: &str, offset: &Option<usize>, limit: &Option<usize>) -> serde_json::Value {
-    let mut m = serde_json::Map::new();
-    m.insert("path".into(), path.into());
-    if let Some(o) = offset {
-        m.insert("offset".into(), (*o).into());
-    }
-    if let Some(l) = limit {
-        m.insert("limit".into(), (*l).into());
-    }
-    serde_json::Value::Object(m)
-}
-
-fn grep_json(
-    pattern: &str,
-    path: &str,
-    glob: &Option<String>,
-    ignore_case: bool,
-    literal: bool,
-    context: usize,
-    limit: usize,
-) -> serde_json::Value {
-    let mut m = serde_json::Map::new();
-    m.insert("pattern".into(), pattern.into());
-    m.insert("path".into(), path.into());
-    if let Some(g) = glob {
-        m.insert("glob".into(), g.clone().into());
-    }
-    m.insert("ignore_case".into(), ignore_case.into());
-    m.insert("literal".into(), literal.into());
-    m.insert("context".into(), context.into());
-    m.insert("limit".into(), limit.into());
-    serde_json::Value::Object(m)
-}
-
-fn tool_to_json(tool: &Tool) -> serde_json::Value {
-    match tool {
-        Tool::ReadFile {
-            path,
-            offset,
-            limit,
-        } => read_file_json(path, offset, limit),
-        Tool::ListDir { path } => serde_json::json!({"path": path}),
-        Tool::WriteFile { path, content } => serde_json::json!({"path": path, "content": content}),
-        Tool::EditFile {
-            path,
-            search,
-            replace,
-        } => {
-            serde_json::json!({"path": path, "search": search, "replace": replace})
-        }
-        Tool::Bash { command } => serde_json::json!({"command": command}),
-        Tool::Grep {
-            pattern,
-            path,
-            glob,
-            ignore_case,
-            literal,
-            context,
-            limit,
-        } => grep_json(
-            pattern,
-            path,
-            glob,
-            *ignore_case,
-            *literal,
-            *context,
-            *limit,
-        ),
-        Tool::Find {
-            pattern,
-            path,
-            limit,
-        } => {
-            serde_json::json!({"pattern": pattern, "path": path, "limit": limit})
-        }
-        Tool::FetchDocs { library } => serde_json::json!({"library": library}),
+fn build_json_response(result: runie_agent::HeadlessResult, duration_ms: u64) -> JsonResponse {
+    let tool_calls: Vec<ToolCall> = result
+        .tool_outputs
+        .iter()
+        .map(|output| ToolCall {
+            name: output.name.clone(),
+            arguments: output.arguments.clone(),
+            output: output.output.clone(),
+        })
+        .collect();
+    JsonResponse {
+        content: result.content.clone(),
+        tool_calls,
+        tokens_used: runie_core::tokens::estimate_tokens(&result.content),
+        duration_ms,
     }
 }
 
@@ -279,6 +196,8 @@ mod tests {
 
     #[tokio::test]
     async fn json_mode_returns_tool_calls() {
+        use futures::StreamExt;
+        use runie_agent::parser::parse_tool_calls;
         use runie_core::provider::Provider;
         let provider = runie_provider::MockProvider::default();
         let messages = vec![

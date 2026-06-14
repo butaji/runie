@@ -7,9 +7,9 @@ use crate::{AppState, Event};
 fn at_opens_file_picker_when_input_empty() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
-    
+
     state.update(Event::Input('@'));
-    
+
     assert!(
         state.open_dialog.is_some(),
         "Typing @ should open file picker when input is empty"
@@ -22,10 +22,10 @@ fn at_opens_file_picker_after_space() {
     let mut state = AppState::default();
     state.input.input = " ".to_string();
     state.input.cursor_pos = 1;
-    
+
     assert!(state.open_dialog.is_none());
     state.update(Event::Input('@'));
-    
+
     assert!(
         state.open_dialog.is_some(),
         "Typing @ after space should open file picker"
@@ -38,9 +38,9 @@ fn at_does_not_open_file_picker_in_middle_of_text() {
     let mut state = AppState::default();
     state.input.input = "Hello @".to_string();
     state.input.cursor_pos = 6;
-    
+
     state.update(Event::Input('@'));
-    
+
     // @ should be inserted as a character, not open file picker
     assert!(
         state.open_dialog.is_none(),
@@ -58,7 +58,7 @@ fn at_opens_file_picker_for_at_ref_suggestion() {
     let mut state = AppState::default();
     state.input.input = "@Car".to_string();
     state.input.cursor_pos = 4;
-    
+
     // This should trigger at_ref suggestions based on the prefix
     // Currently the test just verifies the input state
     assert!(state.input.input.starts_with('@'));
@@ -68,20 +68,20 @@ fn at_opens_file_picker_for_at_ref_suggestion() {
 #[test]
 fn tab_cycles_panel_selection_in_file_picker() {
     let mut state = AppState::default();
-    
+
     // Open file picker
     state.update(Event::Input('@'));
-    
+
     // Verify dialog is open
     assert!(state.open_dialog.is_some(), "File picker should be open");
-    
+
     // Get initial selection (should be 0)
     let initial_selection = get_panel_selection(&state);
     assert_eq!(initial_selection, 0, "Initial selection should be 0");
-    
+
     // Tab should cycle to next
     state.update(Event::Input('\t'));
-    
+
     let after_tab = get_panel_selection(&state);
     assert_eq!(after_tab, 1, "Tab should cycle to next selection");
 }
@@ -90,21 +90,25 @@ fn tab_cycles_panel_selection_in_file_picker() {
 #[test]
 fn tab_wraps_around_panel_selection() {
     let mut state = AppState::default();
-    
+
     // Open file picker
     state.update(Event::Input('@'));
-    
+
     // Get panel to check number of items
     let items_count = get_panel_items_count(&state);
     if items_count < 2 {
         // Skip test if not enough files
         return;
     }
-    
+
     // First Tab moves from 0 to 1
     state.update(Event::Input('\t'));
-    assert_eq!(get_panel_selection(&state), 1, "First Tab should move to index 1");
-    
+    assert_eq!(
+        get_panel_selection(&state),
+        1,
+        "First Tab should move to index 1"
+    );
+
     // Second Tab moves from 1 to 2 (or wraps if only 2 items)
     state.update(Event::Input('\t'));
     let second_tab = get_panel_selection(&state);
@@ -119,25 +123,25 @@ fn tab_wraps_around_panel_selection() {
 #[test]
 fn submit_inserts_selected_file() {
     let mut state = AppState::default();
-    
+
     // Open file picker
     state.update(Event::Input('@'));
-    
+
     // Navigate to a specific item if there are files
     let items_count = get_panel_items_count(&state);
     if items_count > 1 {
         state.update(Event::HistoryNext);
     }
-    
+
     // Submit (Enter)
     state.update(Event::Submit);
-    
+
     // File picker should close
     assert!(
         state.open_dialog.is_none(),
         "File picker should close after submit"
     );
-    
+
     // Input should contain the selected file wrapped in []
     assert!(
         !state.input.input.is_empty() || state.input.input.contains('['),

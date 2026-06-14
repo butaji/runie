@@ -7,9 +7,10 @@ use ratatui::layout::Alignment;
 use ratatui::style::{Color, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, BorderType, Borders, TitlePosition};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 static CURRENT_THEME: RwLock<Option<Arc<opaline::Theme>>> = RwLock::new(None);
+static CURRENT_THEME_NAME: Mutex<String> = Mutex::new(String::new());
 
 #[cfg(test)]
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -20,13 +21,29 @@ pub fn test_lock() -> std::sync::MutexGuard<'static, ()> {
 }
 
 /// Set the active theme by name. Called by `draw_snapshot` at frame start.
+/// This is a no-op when the requested theme is already active.
 pub fn set_current_theme(name: &str) {
+    {
+        let mut current = CURRENT_THEME_NAME.lock().unwrap_or_else(|e| e.into_inner());
+        if current.as_str() == name {
+            return;
+        }
+        *current = name.to_string();
+    }
     let theme = load_theme(name);
     let mut guard = CURRENT_THEME.write().unwrap_or_else(|e| e.into_inner());
     *guard = Some(Arc::new(theme));
 }
 
 pub const DEFAULT_THEME_NAME: &str = "runie";
+
+/// Get the name of the currently active theme.
+pub fn current_theme_name() -> String {
+    CURRENT_THEME_NAME
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+}
 
 /// Get the currently active theme (falls back to default).
 pub fn current_theme() -> Arc<opaline::Theme> {
@@ -426,10 +443,11 @@ pub fn block_popup(title: &str) -> Block<'_> {
 
 // ── Glyphs and formatting helpers (unchanged) ──────────────────────────
 
-pub const GLYPH_USER: &str = "❯ ";
-pub const GLYPH_AGENT: &str = "→ ";
+// Re-export from core so the layout helper and renderer always agree on
+// prefix widths.
+pub use runie_core::layout::{GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER};
+
 pub const GLYPH_TOOL: &str = "✓ ";
-pub const GLYPH_INDENT: &str = "  ";
 pub const GLYPH_SELECTED: &str = "▸ ";
 pub const GLYPH_UNSELECTED: &str = "  ";
 pub const GLYPH_THINKING: char = '◐';

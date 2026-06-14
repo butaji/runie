@@ -13,26 +13,30 @@ pub fn convert_event(event: &Event, bindings: &HashMap<String, String>) -> Optio
         Event::Mouse(mouse) => convert_mouse_event(mouse),
         Event::FocusGained => Some(CoreEvent::FocusGained),
         Event::FocusLost => Some(CoreEvent::FocusLost),
-        Event::Key(key) if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat => {
-            // Handle Ctrl+J - ASCII 10 (LF) is often sent as just a char
-            if let KeyCode::Char(c) = key.code {
-                if key.modifiers.is_empty() && c == '\n' {
-                    return Some(CoreEvent::Newline);
-                }
-            }
-            // Broad Shift+Enter detection for various terminals (tmux, Warp, iTerm, etc.)
-            if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
-                return Some(CoreEvent::Newline);
-            }
-            // tmux sends \e[13;2~ for Shift+Enter — some crossterm versions report this as
-            // F(3) without the SHIFT modifier bit set. Always treat F(3) as Newline.
-            if key.code == KeyCode::F(3) {
-                return Some(CoreEvent::Newline);
-            }
-            map_key_event(key, bindings)
-        }
+        Event::Resize(width, height) => Some(CoreEvent::TerminalSize {
+            width: *width,
+            height: *height,
+        }),
+        Event::Key(key) if is_press_or_repeat(key) => convert_key_event(key, bindings),
         _ => None,
     }
+}
+
+fn is_press_or_repeat(key: &KeyEvent) -> bool {
+    key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
+}
+
+fn convert_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+    if key.modifiers.is_empty() && key.code == KeyCode::Char('\n') {
+        return Some(CoreEvent::Newline);
+    }
+    if key.modifiers.contains(KeyModifiers::SHIFT) && is_enter_like(key.code) {
+        return Some(CoreEvent::Newline);
+    }
+    if key.code == KeyCode::F(3) {
+        return Some(CoreEvent::Newline);
+    }
+    map_key_event(key, bindings)
 }
 
 fn is_enter_like(code: KeyCode) -> bool {
@@ -98,18 +102,23 @@ pub fn key_event_to_combo(key: &KeyEvent) -> String {
 }
 
 fn map_key_event(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
-    let combo = key_event_to_combo(key);
-    if !combo.is_empty() {
-        if let Some(event_name) = bindings.get(&combo) {
-            if let Some(evt) = keybindings::event_from_name(event_name) {
-                return Some(evt);
-            }
-        }
+    if let Some(evt) = lookup_binding(key, bindings) {
+        return Some(evt);
     }
+    map_by_modifier(key)
+}
+
+fn lookup_binding(key: &KeyEvent, bindings: &HashMap<String, String>) -> Option<CoreEvent> {
+    let combo = key_event_to_combo(key);
+    if combo.is_empty() {
+        return None;
+    }
+    let event_name = bindings.get(&combo)?;
+    keybindings::event_from_name(event_name)
+}
+
+fn map_by_modifier(key: &KeyEvent) -> Option<CoreEvent> {
     if key.modifiers.contains(KeyModifiers::CONTROL) {
-        // Ctrl+O collapses/expands feed posts. Ctrl+Shift+E is intentionally
-        // unbound because many terminals (e.g. tmux without extended keys)
-        // cannot distinguish it from Ctrl+E, which is cursor-end.
         if key.modifiers.contains(KeyModifiers::SHIFT)
             && matches!(key.code, KeyCode::Char('e') | KeyCode::Char('E'))
         {

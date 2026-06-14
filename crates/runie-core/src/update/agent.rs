@@ -145,57 +145,70 @@ impl AppState {
     }
 
     pub(crate) fn append_response(&mut self, id: String, content: String) {
-        // Count output tokens from this chunk
-        if !content.is_empty() {
-            let n = crate::model::count_tokens(&content);
-            self.agent.tokens_out += n;
-            self.agent.turn_tokens_out += n;
+        self.track_response_tokens(&content);
+        if let Some(idx) = self.find_cached_assistant_index(&id) {
+            self.append_to_message(idx, &content);
+            return;
         }
+        if let Some(idx) = self.find_assistant_by_id(&id) {
+            self.agent.last_assistant_index = Some(idx);
+            self.append_to_message(idx, &content);
+            return;
+        }
+        self.create_assistant_message(id, content);
+    }
 
-        // O(1) lookup using cached last_assistant_index
-        if let Some(idx) = self.agent.last_assistant_index {
-            if let Some(msg) = self.session.messages.get_mut(idx) {
-                if msg.role == Role::Assistant && msg.id == id {
-                    if !content.is_empty() {
-                        msg.content.push_str(&content);
-                    }
-                    msg.timestamp = now();
-                    self.messages_changed();
-                    return;
-                }
-            }
+    fn track_response_tokens(&mut self, content: &str) {
+        if content.is_empty() {
+            return;
         }
-        // Fallback: search for existing message
-        if let Some(idx) = self
-            .session
+        let n = self.agent.token_tracker.estimate_output(content);
+        self.agent.tokens_out += n;
+        self.agent.turn_tokens_out += n;
+    }
+
+    fn find_cached_assistant_index(&self, id: &str) -> Option<usize> {
+        let idx = self.agent.last_assistant_index?;
+        let msg = self.session.messages.get(idx)?;
+        if msg.role == Role::Assistant && msg.id == id {
+            Some(idx)
+        } else {
+            None
+        }
+    }
+
+    fn find_assistant_by_id(&self, id: &str) -> Option<usize> {
+        self.session
             .messages
             .iter()
             .position(|m| m.role == Role::Assistant && m.id == id)
-        {
-            if let Some(msg) = self.session.messages.get_mut(idx) {
-                if !content.is_empty() {
-                    msg.content.push_str(&content);
-                }
-                msg.timestamp = now();
-                self.agent.last_assistant_index = Some(idx);
-                self.messages_changed();
-                return;
+    }
+
+    fn append_to_message(&mut self, idx: usize, content: &str) {
+        if let Some(msg) = self.session.messages.get_mut(idx) {
+            if !content.is_empty() {
+                msg.content.push_str(content);
             }
-        }
-        // New message
-        if !content.is_empty() {
-            let idx = self.session.messages.len();
-            self.session.messages.push(ChatMessage {
-                role: Role::Assistant,
-                content,
-                timestamp: now(),
-                id: id.clone(),
-                provider: self.config.current_provider.clone(),
-            });
-            self.agent.current_request_id = Some(id);
-            self.agent.last_assistant_index = Some(idx);
+            msg.timestamp = now();
             self.messages_changed();
         }
+    }
+
+    fn create_assistant_message(&mut self, id: String, content: String) {
+        if content.is_empty() {
+            return;
+        }
+        let idx = self.session.messages.len();
+        self.session.messages.push(ChatMessage {
+            role: Role::Assistant,
+            content,
+            timestamp: now(),
+            id: id.clone(),
+            provider: self.config.current_provider.clone(),
+        });
+        self.agent.current_request_id = Some(id);
+        self.agent.last_assistant_index = Some(idx);
+        self.messages_changed();
     }
 
     pub(crate) fn complete_turn(&mut self, id: String, duration_secs: f64) {

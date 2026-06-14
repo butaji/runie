@@ -4,105 +4,119 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult, DialogTyp
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
+use crate::commands::handlers::spec::{CommandKind, CommandSpec};
+
+fn prompt_submit(values: &std::collections::HashMap<String, String>) -> crate::Event {
+    crate::Event::RunPromptCommand {
+        name: values.get("name").cloned().unwrap_or_default(),
+    }
+}
+
+static SYSTEM_COMMANDS: &[CommandSpec] = &[
+    CommandSpec {
+        name: "settings",
+        desc: "Open settings dialog",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: true,
+        kind: CommandKind::Dialog(DialogType::Settings),
+    },
+    CommandSpec {
+        name: "copy",
+        desc: "Copy last response to clipboard",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_copy),
+    },
+    CommandSpec {
+        name: "reload",
+        desc: "Reload config, keybindings, themes",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_reload),
+    },
+    CommandSpec {
+        name: "diagnostics",
+        desc: "Show resource loading diagnostics",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_diagnostics),
+    },
+    CommandSpec {
+        name: "skills",
+        desc: "List loaded skills",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_skills),
+    },
+    CommandSpec {
+        name: "skill",
+        desc: "Show skill details",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_skill),
+    },
+    CommandSpec {
+        name: "prompt",
+        desc: "Switch prompt template",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: true,
+        kind: CommandKind::Form {
+            title: "Switch Prompt",
+            fields: &[("Prompt name", "prompt-name", "name")],
+            submit: prompt_submit,
+        },
+    },
+    CommandSpec {
+        name: "hotkeys",
+        desc: "Show keyboard shortcuts",
+        aliases: &["keys", "shortcuts"],
+        category: CommandCategory::System,
+        sub: true,
+        kind: CommandKind::Handler(handle_hotkeys),
+    },
+    CommandSpec {
+        name: "theme",
+        desc: "Switch theme or list available themes",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: true,
+        kind: CommandKind::Handler(handle_theme),
+    },
+    CommandSpec {
+        name: "approve",
+        desc: "Apply pending file edits",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_approve),
+    },
+    CommandSpec {
+        name: "reject",
+        desc: "Cancel pending file edits",
+        aliases: &[],
+        category: CommandCategory::System,
+        sub: false,
+        kind: CommandKind::Handler(handle_reject),
+    },
+    CommandSpec {
+        name: "providers",
+        desc: "Manage providers: add, disconnect, switch models",
+        aliases: &["provider"],
+        category: CommandCategory::System,
+        sub: true,
+        kind: CommandKind::Handler(handle_providers),
+    },
+];
+
 pub fn register(registry: &mut CommandRegistry) {
-    // Dialog commands
-    registry.register(
-        crate::cmd!("settings")
-            .desc("Open settings dialog")
-            .category(CommandCategory::System)
-            .sub()
-            .dialog(DialogType::Settings),
-    );
-
-    registry.register(
-        crate::cmd!("copy")
-            .desc("Copy last response to clipboard")
-            .category(CommandCategory::System)
-            .handler(handle_copy),
-    );
-
-    registry.register(
-        crate::cmd!("reload")
-            .desc("Reload config, keybindings, themes")
-            .category(CommandCategory::System)
-            .handler(handle_reload),
-    );
-
-    registry.register(
-        crate::cmd!("diagnostics")
-            .desc("Show resource loading diagnostics")
-            .category(CommandCategory::System)
-            .handler(handle_diagnostics),
-    );
-
-    registry.register(
-        crate::cmd!("skills")
-            .desc("List loaded skills")
-            .category(CommandCategory::System)
-            .handler(handle_skills),
-    );
-
-    registry.register(
-        crate::cmd!("skill")
-            .desc("Show skill details")
-            .category(CommandCategory::System)
-            .handler(handle_skill),
-    );
-
-    registry.register(
-        crate::cmd!("prompt")
-            .desc("Switch prompt template")
-            .category(CommandCategory::System)
-            .sub()
-            .form(
-                "Switch Prompt",
-                |f| f.field("Prompt name", "prompt-name", "name"),
-                crate::Event::RunPromptCommand {
-                    name: String::new(),
-                },
-            ),
-    );
-
-    registry.register(
-        crate::cmd!("hotkeys")
-            .desc("Show keyboard shortcuts")
-            .aliases(&["keys", "shortcuts"])
-            .category(CommandCategory::System)
-            .sub()
-            .handler(handle_hotkeys),
-    );
-
-    registry.register(
-        crate::cmd!("theme")
-            .desc("Switch theme or list available themes")
-            .category(CommandCategory::System)
-            .sub()
-            .handler(handle_theme),
-    );
-
-    registry.register(
-        crate::cmd!("approve")
-            .desc("Apply pending file edits")
-            .category(CommandCategory::System)
-            .handler(handle_approve),
-    );
-
-    registry.register(
-        crate::cmd!("reject")
-            .desc("Cancel pending file edits")
-            .category(CommandCategory::System)
-            .handler(handle_reject),
-    );
-
-    // Providers dialog (unified provider management)
-    registry.register(
-        crate::cmd!("providers")
-            .desc("Manage providers: add, disconnect, switch models")
-            .aliases(&["provider"])
-            .category(CommandCategory::System)
-            .sub()
-            .handler(handle_providers),
-    );
+    crate::commands::handlers::spec::register_commands(registry, SYSTEM_COMMANDS);
 }
 
 fn handle_copy(state: &mut AppState, _: &str) -> CommandResult {
@@ -167,8 +181,8 @@ fn handle_skill(state: &mut AppState, args: &str) -> CommandResult {
         use crate::dialog::dsl::form;
         let stack = form("skill", "Show Skill")
             .field("Name", "skill-name", "name")
-            .on_submit(crate::Event::RunSkillCommand {
-                name: String::new(),
+            .on_submit(|values| crate::Event::RunSkillCommand {
+                name: values.get("name").cloned().unwrap_or_default(),
             })
             .into_stack();
         return CommandResult::OpenPanelStack(stack);

@@ -19,10 +19,7 @@ fn tab_opens_file_picker_with_filter() {
     // Tab should open file picker
     state.update(Event::Input('\t'));
 
-    assert!(
-        state.open_dialog.is_some(),
-        "Tab should open file picker"
-    );
+    assert!(state.open_dialog.is_some(), "Tab should open file picker");
 }
 
 /// Tab with empty input opens file picker without filter
@@ -50,7 +47,7 @@ fn tab_cycles_wraps_around() {
 
     // First Tab cycles to next
     state.update(Event::Input('\t'));
-    
+
     // Get selection
     let selection = get_panel_selection(&state);
     assert!(

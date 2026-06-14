@@ -9,212 +9,210 @@ fn dispatch(state: &mut AppState, events: &[Event]) {
     }
 }
 
-#[test]
-fn global_collapse_persists_through_rapid_events() {
-    let mut state = AppState::default();
-    state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "I'll list files.\n".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "TOOL:list_dir:.".into(),
-            },
-            Event::AgentThoughtDone { id: "req.0".into() },
-        ],
-    );
-    state.update(Event::ToggleExpand);
-    assert!(state.view.all_collapsed, "Global flag should be set");
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "list_dir".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "file1\nfile2".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "Done.".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
-    state.ensure_fresh();
-    let feed = LazyCache::feed(&state);
-    let thought_elems: Vec<_> = feed
+fn first_turn_before_collapse() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "I'll list files.\n".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "TOOL:list_dir:.".into(),
+        },
+        Event::AgentThoughtDone { id: "req.0".into() },
+    ]
+}
+
+fn first_turn_after_collapse() -> Vec<Event> {
+    vec![
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "list_dir".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "file1\nfile2".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "Done.".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 1.0,
+        },
+        Event::AgentDone { id: "req.0".into() },
+    ]
+}
+
+fn turn_events(id: &str, content: &str, tool: &str, output: &str) -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: id.into() },
+        Event::AgentResponse {
+            id: id.into(),
+            content: content.into(),
+        },
+        Event::AgentResponse {
+            id: id.into(),
+            content: format!("TOOL:{}.", tool),
+        },
+        Event::AgentThoughtDone { id: id.into() },
+        Event::AgentToolStart {
+            id: id.into(),
+            name: tool.into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: output.into(),
+        },
+        Event::AgentDone { id: id.into() },
+    ]
+}
+
+fn multiple_tool_first_half() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "I'll do two things.\n".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "TOOL:list_dir:.".into(),
+        },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
+    ]
+}
+
+fn multiple_tool_second_half() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "Now grep.\n".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "TOOL:grep:fn main:.".into(),
+        },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "grep".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.3,
+            output: "result".into(),
+        },
+        Event::AgentDone { id: "req.0".into() },
+    ]
+}
+
+fn single_thought_events(id: &str, reasoning: &str, output: &str) -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: id.into() },
+        Event::AgentResponse {
+            id: id.into(),
+            content: format!("{}\n", reasoning),
+        },
+        Event::AgentResponse {
+            id: id.into(),
+            content: "TOOL:ls.".into(),
+        },
+        Event::AgentThoughtDone { id: id.into() },
+        Event::AgentToolStart {
+            id: id.into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.1,
+            output: output.into(),
+        },
+        Event::AgentDone { id: id.into() },
+    ]
+}
+
+fn assert_summary_count(state: &AppState, expected: usize, msg: &str) {
+    let feed = LazyCache::feed(state);
+    let summaries: Vec<_> = feed
         .elements
         .iter()
         .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
         .collect();
-    assert_eq!(
-        thought_elems.len(),
-        1,
-        "Thought should be collapsed after rapid events"
-    );
-    let tool_elems: Vec<_> = feed
+    assert_eq!(summaries.len(), expected, "{}", msg);
+}
+
+#[test]
+fn global_collapse_persists_through_rapid_events() {
+    let mut state = AppState::default();
+    state.agent.streaming = true;
+    dispatch(&mut state, &first_turn_before_collapse());
+    state.update(Event::ToggleExpand);
+    assert!(state.view.all_collapsed, "Global flag should be set");
+    dispatch(&mut state, &first_turn_after_collapse());
+    state.ensure_fresh();
+
+    let feed = LazyCache::feed(&state);
+    let thoughts: Vec<_> = feed
+        .elements
+        .iter()
+        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
+        .collect();
+    assert_eq!(thoughts.len(), 1, "Thought should be collapsed");
+    let tools: Vec<_> = feed
         .elements
         .iter()
         .filter(|e| matches!(e, Element::ToolSummary { .. }))
         .collect();
-    assert_eq!(tool_elems.len(), 1, "Tool should also be collapsed");
+    assert_eq!(tools.len(), 1, "Tool should also be collapsed");
 }
 
 #[test]
 fn global_collapse_persists_when_second_turn_starts() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "A".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "TOOL:ls.".into(),
-            },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "a".into(),
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &turn_events("req.0", "A", "ls", "a"));
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.1".into() },
-            Event::AgentResponse {
-                id: "req.1".into(),
-                content: "B".into(),
-            },
-            Event::AgentResponse {
-                id: "req.1".into(),
-                content: "TOOL:grep.".into(),
-            },
-            Event::AgentThoughtDone { id: "req.1".into() },
-            Event::AgentToolStart {
-                id: "req.1".into(),
-                name: "grep".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.3,
-                output: "b".into(),
-            },
-            Event::AgentDone { id: "req.1".into() },
-        ],
-    );
+    dispatch(&mut state, &turn_events("req.1", "B", "grep", "b"));
     state.ensure_fresh();
+
+    assert_summary_count(&state, 2, "Both turns' thoughts should be collapsed");
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed
-        .elements
-        .iter()
-        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
-        .collect();
-    assert_eq!(
-        summaries.len(),
-        2,
-        "Both turns' thoughts should be collapsed"
-    );
-    let tool_summaries: Vec<_> = feed
+    let tools: Vec<_> = feed
         .elements
         .iter()
         .filter(|e| matches!(e, Element::ToolSummary { .. }))
         .collect();
-    assert_eq!(
-        tool_summaries.len(),
-        2,
-        "Both turns' tools should be collapsed"
-    );
+    assert_eq!(tools.len(), 2, "Both turns' tools should be collapsed");
 }
 
 #[test]
 fn global_collapse_persists_through_multiple_tools_in_one_turn() {
     let mut state = AppState::default();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "I'll do two things.\n".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "TOOL:list_dir:.".into(),
-            },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "a".into(),
-            },
-        ],
-    );
+    dispatch(&mut state, &multiple_tool_first_half());
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "Now grep.\n".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "TOOL:grep:fn main:.".into(),
-            },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "grep".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.3,
-                output: "result".into(),
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &multiple_tool_second_half());
     state.ensure_fresh();
+
     let feed = LazyCache::feed(&state);
-    let tool_summaries: Vec<_> = feed
+    let tools: Vec<_> = feed
         .elements
         .iter()
         .filter(|e| matches!(e, Element::ToolSummary { .. }))
         .collect();
-    assert_eq!(
-        tool_summaries.len(),
-        2,
-        "BOTH tools should be collapsed with global flag"
-    );
+    assert_eq!(tools.len(), 2, "BOTH tools should be collapsed");
 }
 
 #[test]
@@ -222,41 +220,20 @@ fn multiple_thoughts_all_follow_global_flag() {
     let mut state = AppState::default();
     state.agent.streaming = true;
     for n in 0..3 {
-        let id = format!("req.{}", n);
         dispatch(
             &mut state,
-            &[
-                Event::AgentThinking { id: id.clone() },
-                Event::AgentResponse {
-                    id: id.clone(),
-                    content: format!("reasoning {}\n", n),
-                },
-                Event::AgentResponse {
-                    id: id.clone(),
-                    content: "TOOL:ls.".into(),
-                },
-                Event::AgentThoughtDone { id: id.clone() },
-                Event::AgentToolStart {
-                    id: id.clone(),
-                    name: "ls".into(),
-                },
-                Event::AgentToolEnd {
-                    duration_secs: 0.1,
-                    output: format!("out{}", n),
-                },
-                Event::AgentDone { id: id.clone() },
-            ],
+            &single_thought_events(
+                &format!("req.{}", n),
+                &format!("reasoning {}", n),
+                &format!("out{}", n),
+            ),
         );
     }
     state.update(Event::ToggleExpand);
     state.ensure_fresh();
+
+    assert_summary_count(&state, 3, "All three thoughts should be collapsed");
     let feed = LazyCache::feed(&state);
-    let summaries: Vec<_> = feed
-        .elements
-        .iter()
-        .filter(|e| matches!(e, Element::ThoughtSummary { .. }))
-        .collect();
-    assert_eq!(summaries.len(), 3, "All three thoughts should be collapsed");
     let markers: Vec<_> = feed
         .elements
         .iter()

@@ -1,14 +1,9 @@
 use super::{exec, fresh_state, minimal_session, tmp_store, type_str, ENV_LOCK};
 use crate::event::Event;
 use crate::model::{ChatMessage, Role};
+use crate::session::Session;
 
-#[test]
-fn load_restores_conversation() {
-    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-
-    let store = tmp_store();
-    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
-
+fn restored_session() -> Session {
     let mut session = minimal_session("restore_me");
     session.updated_at = 2.0;
     session.provider = "anthropic".into();
@@ -29,7 +24,26 @@ fn load_restores_conversation() {
             ..Default::default()
         },
     ];
-    store.save("restore_me", &session).unwrap();
+    session
+}
+
+fn system_messages(state: &crate::model::AppState) -> Vec<&ChatMessage> {
+    state
+        .session
+        .messages
+        .iter()
+        .filter(|m| m.role == Role::System)
+        .collect()
+}
+
+#[test]
+fn load_restores_conversation() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    let store = tmp_store();
+    std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
+
+    store.save("restore_me", &restored_session()).unwrap();
 
     let mut state = fresh_state();
     exec(&mut state, "/load restore_me");
@@ -40,14 +54,9 @@ fn load_restores_conversation() {
     assert_eq!(state.session.messages[1].content, "hello there");
     assert_eq!(state.config.current_provider, "anthropic");
     assert_eq!(state.config.current_model, "claude-3");
-
-    let sys_msgs: Vec<_> = state
-        .session
-        .messages
+    assert!(system_messages(&state)
         .iter()
-        .filter(|m| m.role == Role::System)
-        .collect();
-    assert!(sys_msgs.iter().any(|m| m.content.contains("loaded")));
+        .any(|m| m.content.contains("loaded")));
 
     std::env::remove_var("RUNIE_SESSIONS_DIR");
 }

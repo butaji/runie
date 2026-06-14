@@ -12,6 +12,7 @@ use crate::model::{AppState, ChatMessage, Role};
 fn state_with_vim_and_messages() -> AppState {
     let mut state = AppState::default();
     state.config.vim_mode = true;
+    state.view.last_content_width = 80;
     for i in 0..20 {
         state.session.messages.push(ChatMessage {
             role: Role::User,
@@ -149,6 +150,7 @@ fn g_goes_to_top_of_feed() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn capital_G_goes_to_bottom() {
     let mut state = state_with_vim_and_messages();
     state.view.last_visible_height = 10;
@@ -196,7 +198,7 @@ fn arrow_up_in_nav_mode_moves_toward_older() {
     state.view.last_visible_height = 10;
     enter_nav(&mut state);
     state.update(Event::Input('g'));
-    let top = state.view.scroll;
+    let _top = state.view.scroll;
     state.update(Event::Input('j'));
     let mid = state.view.scroll;
     state.update(Event::HistoryPrev);
@@ -386,11 +388,10 @@ fn j_and_arrow_down_visit_identical_posts() {
     }
 }
 
-#[test]
-fn long_system_welcome_post_is_selectable() {
+fn state_with_welcome_post() -> AppState {
     let mut state = AppState::default();
     state.config.vim_mode = true;
-    // Simulate the untrusted-project welcome message.
+    state.view.last_content_width = 80;
     state.session.messages.push(ChatMessage {
         role: Role::System,
         content: "Welcome to runie in someproject.\n\nThis project is not yet trusted. \
@@ -410,9 +411,14 @@ fn long_system_welcome_post_is_selectable() {
     state.messages_changed();
     state.ensure_fresh();
     state.view.last_visible_height = 10;
+    state
+}
+
+#[test]
+fn long_system_welcome_post_is_selectable() {
+    let mut state = state_with_welcome_post();
 
     enter_nav(&mut state);
-    // The newest post is the user message; the system welcome is one post above.
     assert_eq!(state.view.selected_post, Some(1));
 
     state.update(Event::Input('k'));

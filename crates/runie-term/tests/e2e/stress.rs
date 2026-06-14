@@ -232,3 +232,23 @@ fn f4_login_is_non_blocking() {
     p.process_mut().set_kill_timeout(Some(3_000));
     p.process_mut().exit().ok();
 }
+
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_stress_resize_and_rapid_submit() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    for (rows, cols) in [(12, 40), (24, 80), (5, 20), (30, 120), (24, 80)] {
+        resize(&mut p, rows, cols).expect("resize");
+    }
+
+    for _ in 0..3 {
+        send_line(&mut p, "list files").expect("rapid submit");
+    }
+
+    p.process_mut().set_kill_timeout(Some(5_000));
+    let output = capture_output(&mut p);
+    assert_no_panic(&output);
+    assert_no_stuck_timer(&output);
+}

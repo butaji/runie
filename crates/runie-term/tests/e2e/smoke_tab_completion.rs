@@ -1,84 +1,127 @@
 use super::support::*;
 
-#[test]
-#[ignore = "e2e: requires release binary"]
-fn e2e_tab_file_completion_no_panic() {
+fn sleep(ms: u64) {
+    std::thread::sleep(std::time::Duration::from_millis(ms));
+}
+
+fn spawn_and_wait() -> IsolatedSession {
     let mut p = spawn_runie().expect("spawn runie");
     wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+    p
+}
 
-    // Simple prefix completion.
+fn tab_twice(p: &mut IsolatedSession) {
+    send_tab(p).expect("first tab");
+    sleep(300);
+    send_tab(p).expect("second tab");
+    sleep(300);
+}
+
+fn clear_line(p: &mut IsolatedSession) {
+    send_ctrl_u(p).expect("clear line");
+    sleep(200);
+}
+
+fn assert_clean_shutdown(p: &mut IsolatedSession) {
+    let output = capture_output(p);
+    assert_no_panic(&output);
+    assert_no_stuck_timer(&output);
+}
+
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_simple_prefix_completion() {
+    let mut p = spawn_and_wait();
     send(&mut p, "Cargo").expect("type Cargo");
-    send_tab(&mut p).expect("first tab");
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    send_tab(&mut p).expect("second tab");
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    send_ctrl_u(&mut p).expect("clear line");
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    tab_twice(&mut p);
+    clear_line(&mut p);
+}
 
-    // Folder completion.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_folder_completion() {
+    let mut p = spawn_and_wait();
     send(&mut p, "crate").expect("type crate");
-    send_tab(&mut p).expect("tab");
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    send_tab(&mut p).expect("accept");
-    std::thread::sleep(std::time::Duration::from_millis(200));
-    send_ctrl_u(&mut p).expect("clear");
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    tab_twice(&mut p);
+    clear_line(&mut p);
+}
 
-    // Relative path.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_relative_path_completion() {
+    let mut p = spawn_and_wait();
     send(&mut p, "./scr").expect("type ./scr");
-    send_tab(&mut p).expect("tab");
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    send_tab(&mut p).expect("complete");
-    std::thread::sleep(std::time::Duration::from_millis(200));
-    send_ctrl_u(&mut p).expect("clear");
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    tab_twice(&mut p);
+    clear_line(&mut p);
+}
 
-    // Multiple cycles.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_multiple_cycles() {
+    let mut p = spawn_and_wait();
     send(&mut p, "C").expect("type C");
     for _ in 0..4 {
         send_tab(&mut p).expect("cycle");
-        std::thread::sleep(std::time::Duration::from_millis(200));
+        sleep(200);
     }
-    send_ctrl_u(&mut p).expect("clear");
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    clear_line(&mut p);
+}
 
-    // Tab on empty input.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_empty_input() {
+    let mut p = spawn_and_wait();
     send_tab(&mut p).expect("tab empty");
-    std::thread::sleep(std::time::Duration::from_millis(300));
+    sleep(300);
+}
 
-    // Tab with no match.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_no_match() {
+    let mut p = spawn_and_wait();
     send(&mut p, "zzzzzzzxyz").expect("type no-match");
     send_tab(&mut p).expect("tab no-match");
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    send_ctrl_u(&mut p).expect("clear");
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    sleep(300);
+    clear_line(&mut p);
+}
 
-    // Submit with ghost completion.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_submit_with_ghost_completion() {
+    let mut p = spawn_and_wait();
     send(&mut p, "Cargo").expect("type Cargo");
     send_tab(&mut p).expect("tab");
-    std::thread::sleep(std::time::Duration::from_millis(300));
+    sleep(300);
     send_line(&mut p, "").expect("submit");
-    std::thread::sleep(std::time::Duration::from_secs(1));
+    sleep(1000);
+    assert_clean_shutdown(&mut p);
+}
 
-    // Resize stress during completion.
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_resize_stress() {
+    let mut p = spawn_and_wait();
+    send(&mut p, "Cargo").expect("type Cargo");
+    send_tab(&mut p).expect("tab");
+    sleep(300);
+
     for i in 1..=5 {
         resize(&mut p, 20 + i, 60 + i * 4).expect("resize");
         send_tab(&mut p).expect("tab after resize");
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        sleep(100);
     }
+    assert_clean_shutdown(&mut p);
+}
 
-    // Rapid tab submissions.
-    send(&mut p, "crate").expect("type crate");
-    send_tab(&mut p).expect("tab");
-    send_line(&mut p, "").expect("submit");
-    std::thread::sleep(std::time::Duration::from_secs(1));
-
-    send(&mut p, "C").expect("type C");
-    send_tab(&mut p).expect("tab");
-    send_line(&mut p, "").expect("submit");
-    std::thread::sleep(std::time::Duration::from_secs(1));
-
-    let output = capture_output(&mut p);
-    assert_no_panic(&output);
-    assert_no_stuck_timer(&output);
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_tab_rapid_submissions() {
+    for (prefix, wait_secs) in [("crate", 1), ("C", 1)] {
+        let mut p = spawn_and_wait();
+        send(&mut p, prefix).expect("type prefix");
+        send_tab(&mut p).expect("tab");
+        send_line(&mut p, "").expect("submit");
+        sleep(wait_secs * 1000);
+        assert_clean_shutdown(&mut p);
+    }
 }

@@ -6,7 +6,7 @@ mod builder;
 mod category;
 mod flow;
 
-pub use builder::{cmd, CommandDef, FormBuilder, FormField};
+pub use builder::{cmd, CommandDef};
 pub use category::CommandCategory;
 pub use flow::{build_spawn_form_panel, CommandFlow, CommandResult, DialogType};
 

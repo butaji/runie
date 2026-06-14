@@ -53,34 +53,25 @@ fn global_collapse_persists_after_agent_response() {
     );
 }
 
+fn thought_events(id: &str, content: &str) -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: id.into() },
+        Event::AgentResponse {
+            id: id.into(),
+            content: content.into(),
+        },
+        Event::AgentThoughtDone { id: id.into() },
+    ]
+}
+
 #[test]
 fn global_collapse_persists_after_second_thought() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "A".into(),
-            },
-            Event::AgentThoughtDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &thought_events("req.0", "A"));
     state.update(Event::ToggleExpand);
     assert!(state.view.all_collapsed);
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.1".into() },
-            Event::AgentResponse {
-                id: "req.1".into(),
-                content: "B".into(),
-            },
-            Event::AgentThoughtDone { id: "req.1".into() },
-        ],
-    );
+    dispatch(&mut state, &thought_events("req.1", "B"));
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
     let summaries: Vec<_> = feed

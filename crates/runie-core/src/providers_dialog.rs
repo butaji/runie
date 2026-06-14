@@ -13,59 +13,79 @@ pub fn build_providers_dialog(current_provider: &str, current_model: &str) -> Pa
     let has_providers = !configured.is_empty();
 
     let mut panel = Panel::new("providers", "Providers")
-        .header(if has_providers {
-            "Select a model to activate"
-        } else {
-            "No providers configured — add one to get started"
-        })
+        .header(providers_header(has_providers))
         .keep_open();
 
     if has_providers {
-        // List each configured provider with its models.
         for (provider_name, _, models) in &configured {
-            let is_active = *provider_name == current_provider;
-            let provider_label = if is_active {
-                format!("{} (active)", provider_name)
-            } else {
-                provider_name.clone()
-            };
-
-            // Provider header (non-selectable, visual grouping).
-            panel = panel.header(format!("── {} ──", provider_label));
-
-            // Models for this provider.
-            for model in models {
-                let is_current = is_active && *model == current_model;
-                let label = if is_current {
-                    format!("  {} ←", model)
-                } else {
-                    format!("  {}", model)
-                };
-                let evt = crate::Event::ProvidersSelectModel {
-                    provider: provider_name.clone(),
-                    model: model.clone(),
-                };
-                panel = panel.item(&label, ItemAction::Emit(evt));
-            }
-
-            // Disconnect option for this provider.
-            let disconnect_label = "  ✕ Disconnect".to_string();
-            let evt = crate::Event::ProvidersDisconnect {
-                provider: provider_name.clone(),
-            };
-            panel = panel.item(&disconnect_label, ItemAction::Emit(evt));
-
-            panel = panel.separator();
+            panel = add_provider_section(
+                panel,
+                provider_name,
+                models,
+                current_provider,
+                current_model,
+            );
         }
     }
 
-    // Add new provider option.
-    panel = panel.item(
-        "+ Add provider",
-        ItemAction::Emit(crate::Event::ProvidersAdd),
-    );
-
-    panel = panel.item("Close", ItemAction::Close);
+    panel = panel
+        .item(
+            "+ Add provider",
+            ItemAction::Emit(crate::Event::ProvidersAdd),
+        )
+        .item("Close", ItemAction::Close);
 
     PanelStack::new(panel)
+}
+
+fn providers_header(has_providers: bool) -> &'static str {
+    if has_providers {
+        "Select a model to activate"
+    } else {
+        "No providers configured — add one to get started"
+    }
+}
+
+fn add_provider_section(
+    mut panel: Panel,
+    provider_name: &str,
+    models: &[String],
+    current_provider: &str,
+    current_model: &str,
+) -> Panel {
+    let is_active = provider_name == current_provider;
+    let provider_label = provider_label(provider_name, is_active);
+    panel = panel.header(format!("── {} ──", provider_label));
+
+    for model in models {
+        let label = model_label(model, is_active, model == current_model);
+        let evt = crate::Event::ProvidersSelectModel {
+            provider: provider_name.to_string(),
+            model: model.clone(),
+        };
+        panel = panel.item(&label, ItemAction::Emit(evt));
+    }
+
+    let disconnect_evt = crate::Event::ProvidersDisconnect {
+        provider: provider_name.to_string(),
+    };
+    panel
+        .item("  ✕ Disconnect", ItemAction::Emit(disconnect_evt))
+        .separator()
+}
+
+fn provider_label(name: &str, is_active: bool) -> String {
+    if is_active {
+        format!("{} (active)", name)
+    } else {
+        name.to_string()
+    }
+}
+
+fn model_label(model: &str, is_active: bool, is_current: bool) -> String {
+    if is_active && is_current {
+        format!("  {} ←", model)
+    } else {
+        format!("  {}", model)
+    }
 }

@@ -86,27 +86,26 @@ pub enum DialogState {
     PanelStack(PanelStack),
 }
 
+macro_rules! with_panel_stack {
+    ($self:expr, $stack:ident, $body:expr) => {
+        match $self {
+            DialogState::CommandPalette($stack) => $body,
+            DialogState::ModelSelector($stack) => $body,
+            DialogState::Settings($stack) => $body,
+            DialogState::ScopedModels($stack) => $body,
+            DialogState::SessionTree($stack) => $body,
+            DialogState::PanelStack($stack) => $body,
+        }
+    };
+}
+
 impl DialogState {
     pub fn panel_stack(&self) -> &PanelStack {
-        match self {
-            DialogState::CommandPalette(s) => s,
-            DialogState::ModelSelector(s) => s,
-            DialogState::Settings(s) => s,
-            DialogState::ScopedModels(s) => s,
-            DialogState::SessionTree(s) => s,
-            DialogState::PanelStack(s) => s,
-        }
+        with_panel_stack!(self, s, s)
     }
 
     pub fn panel_stack_mut(&mut self) -> &mut PanelStack {
-        match self {
-            DialogState::CommandPalette(s) => s,
-            DialogState::ModelSelector(s) => s,
-            DialogState::Settings(s) => s,
-            DialogState::ScopedModels(s) => s,
-            DialogState::SessionTree(s) => s,
-            DialogState::PanelStack(s) => s,
-        }
+        with_panel_stack!(self, s, s)
     }
 }
 
@@ -126,8 +125,8 @@ impl AppState {
 
         match self.registry.get(name) {
             Some(cmd) => {
-                let cmd_name = cmd.name.clone();
-                let result = cmd.flow.clone().exec(self, &cmd_name, args);
+                let (cmd_name, flow) = (cmd.name.clone(), cmd.flow.clone());
+                let result = flow.exec(self, &cmd_name, args);
                 if matches!(result, CommandResult::None) {
                     None
                 } else {

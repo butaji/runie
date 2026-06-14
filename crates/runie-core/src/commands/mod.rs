@@ -14,23 +14,24 @@
 //!     .desc("Save session")
 //!     .alias("s")
 //!     .category(CommandCategory::Session)
-//!     .form(
-//!         "Save",
-//!         |f| f.field("Name", "session", "name"),
-//!         Event::RunSaveCommand { name: String::new() },
-//!     );
+//!     .form("Save", |f| {
+//!         f.field("Name", "session", "name").on_submit(|values| {
+//!             Event::RunSaveCommand {
+//!                 name: values.get("name").cloned().unwrap_or_default(),
+//!             }
+//!         })
+//!     });
 //! ```
 
+pub mod agents_manager;
 mod dsl;
 pub mod handlers;
 mod registry;
 #[cfg(test)]
 mod tests;
-pub mod agents_manager;
 
 pub use dsl::{
     build_spawn_form_panel, CommandCategory, CommandDef, CommandFlow, CommandResult, DialogType,
-    FormBuilder, FormField,
 };
 pub use registry::{filter_commands, CommandRegistry, DialogState};
 

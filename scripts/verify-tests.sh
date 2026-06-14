@@ -1,16 +1,16 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "=== Runie Test Verification Script ==="
 echo ""
 
-EXPECTED_TOTAL=1321
+EXPECTED_TOTAL=1829
 MIN_TESTS=100
 
 # List tests
 echo "Listing tests..."
-cargo test -- --list 2>&1 | tee /tmp/test_list.txt
-TEST_COUNT=$(grep "test$" /tmp/test_list.txt | wc -l)
+cargo test --workspace -- --list > /tmp/test_list.txt 2>&1
+TEST_COUNT=$(grep -c "test$" /tmp/test_list.txt || true)
 
 echo ""
 echo "=== Test Count Verification ==="
@@ -32,22 +32,31 @@ fi
 # Run tests
 echo ""
 echo "=== Running Tests ==="
-cargo test 2>&1 | tee /tmp/test_output.txt
+set +e
+cargo test --workspace > /tmp/test_output.txt 2>&1
+TEST_EXIT=$?
+set -e
 
 echo ""
 echo "=== Verifying Results ==="
 
-# Check for failures
-if grep -q "FAILED" /tmp/test_output.txt; then
-    echo "ERROR: Some tests failed!"
-    grep "FAILED" /tmp/test_output.txt
+if [ "$TEST_EXIT" -ne 0 ]; then
+    echo "ERROR: cargo test exited with status $TEST_EXIT"
+    tail -n 40 /tmp/test_output.txt
     exit 1
 fi
 
-# Check for panics
-if grep -q "panicked at" /tmp/test_output.txt; then
-    echo "ERROR: Test panic detected!"
-    grep "panicked at" /tmp/test_output.txt
+# Check for failures (non-zero failed count)
+if grep -qE "FAILED|^test result:.*[1-9][0-9]* failed" /tmp/test_output.txt; then
+    echo "ERROR: Some tests failed!"
+    grep -E "FAILED|^test result:.*[1-9][0-9]* failed" /tmp/test_output.txt
+    exit 1
+fi
+
+# Check for compilation errors from doc tests / harness
+if grep -qE "^error:|panicked at" /tmp/test_output.txt; then
+    echo "ERROR: Test run contained errors or panics!"
+    grep -E "^error:|panicked at" /tmp/test_output.txt
     exit 1
 fi
 

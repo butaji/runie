@@ -165,9 +165,21 @@ fn decrypt_token(encrypted: &str) -> Option<String> {
 }
 
 fn machine_key() -> Vec<u8> {
+    // Tests can pin the key so they are not affected by other tests mutating
+    // `HOME` or the hostname command failing.
+    if let Ok(key) = std::env::var("RUNIE_MACHINE_KEY") {
+        return key.into_bytes();
+    }
+
     let mut parts = Vec::new();
     if let Ok(hostname) = std::process::Command::new("hostname").output() {
-        parts.push(hostname.stdout);
+        let stdout = hostname.stdout;
+        let trimmed = stdout
+            .strip_suffix(b"\n")
+            .unwrap_or(&stdout)
+            .strip_suffix(b"\r")
+            .unwrap_or(&stdout);
+        parts.push(trimmed.to_vec());
     }
     if let Some(home) = dirs::home_dir() {
         parts.push(home.to_string_lossy().as_bytes().to_vec());
@@ -186,6 +198,10 @@ fn machine_key() -> Vec<u8> {
 mod tests {
     use super::*;
 
+    fn set_test_machine_key() {
+        std::env::set_var("RUNIE_MACHINE_KEY", "runie-test-key-16bytes");
+    }
+
     fn tmp_storage() -> AuthStorage {
         let n = std::sync::atomic::AtomicU64::new(0);
         let id = n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -199,6 +215,7 @@ mod tests {
 
     #[test]
     fn auth_storage_save_load() {
+        set_test_machine_key();
         let mut store = tmp_storage();
         store.set("openai", "sk-test", Some(1_000_000_000.0));
         store.save().unwrap();
@@ -242,6 +259,7 @@ mod tests {
 
     #[test]
     fn encrypt_decrypt_roundtrip() {
+        set_test_machine_key();
         let original = "hello-world-token-123";
         let enc = encrypt_token(original);
         let dec = decrypt_token(&enc).unwrap();

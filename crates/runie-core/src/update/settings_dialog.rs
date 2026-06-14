@@ -12,116 +12,159 @@ pub fn handle_settings_category(state: &mut AppState, _category: SettingsCategor
 
 pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
     vec![
-        SettingItem::new(
-            "provider",
-            "Provider",
-            SettingValue::Enum {
-                current: state.config.current_provider.clone(),
-                options: provider_options(),
-            },
-            "LLM provider",
-            SettingsCategory::Models,
-        ),
-        SettingItem::new(
-            "model",
-            "Model",
-            SettingValue::Enum {
-                current: state.config.current_model.clone(),
-                options: model_options(&state.config.current_provider),
-            },
-            "Active model",
-            SettingsCategory::Models,
-        ),
-        SettingItem::new(
-            "theme",
-            "Theme",
-            SettingValue::Enum {
-                current: state.config.theme_name.clone(),
-                options: theme_options(),
-            },
-            "UI theme",
-            SettingsCategory::Appearance,
-        ),
-        SettingItem::new(
-            "thinking_level",
-            "Thinking Level",
-            SettingValue::Enum {
-                current: state.config.thinking_level.as_str().to_string(),
-                options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
-            },
-            "Agent reasoning depth",
-            SettingsCategory::Behavior,
-        ),
-        SettingItem::new(
-            "read_only",
-            "Read-Only",
-            SettingValue::Bool(state.config.read_only),
-            "Restrict to safe tools",
-            SettingsCategory::Safety,
-        ),
-        SettingItem::new(
-            "steering_mode",
-            "Steering Mode",
-            SettingValue::Enum {
-                current: match state.config.steering_mode {
-                    DeliveryMode::OneAtATime => "one-at-a-time",
-                    DeliveryMode::All => "all",
-                }
-                .to_string(),
-                options: vec!["one-at-a-time".into(), "all".into()],
-            },
-            "How steering messages are delivered",
-            SettingsCategory::Behavior,
-        ),
-        SettingItem::new(
-            "follow_up_mode",
-            "Follow-Up Mode",
-            SettingValue::Enum {
-                current: match state.config.follow_up_mode {
-                    DeliveryMode::OneAtATime => "one-at-a-time",
-                    DeliveryMode::All => "all",
-                }
-                .to_string(),
-                options: vec!["one-at-a-time".into(), "all".into()],
-            },
-            "How follow-up messages are delivered",
-            SettingsCategory::Behavior,
-        ),
-        SettingItem::new(
-            "vim_mode",
-            "Vim Navigation",
-            SettingValue::Bool(state.config.vim_mode),
-            "Press Esc from the input box to navigate the feed with j/k/g/G",
-            SettingsCategory::Behavior,
-        ),
-        SettingItem::new(
-            "telemetry_enabled",
-            "Telemetry",
-            SettingValue::Bool(state.config.telemetry.is_enabled()),
-            "Anonymous usage analytics",
-            SettingsCategory::Safety,
-        ),
-        SettingItem::new(
-            "truncation_max_lines",
-            "Truncation Max Lines",
-            SettingValue::Enum {
-                current: state.config.truncation.max_lines.to_string(),
-                options: truncation_lines_options(),
-            },
-            "Max lines kept from a single tool output",
-            SettingsCategory::Behavior,
-        ),
-        SettingItem::new(
-            "truncation_max_bytes",
-            "Truncation Max Bytes",
-            SettingValue::Enum {
-                current: state.config.truncation.max_bytes.to_string(),
-                options: truncation_bytes_options(),
-            },
-            "Max bytes kept from a single tool output",
-            SettingsCategory::Behavior,
-        ),
+        provider_item(state),
+        model_item(state),
+        theme_item(state),
+        thinking_level_item(state),
+        read_only_item(state),
+        steering_mode_item(state),
+        follow_up_mode_item(state),
+        vim_mode_item(state),
+        telemetry_item(state),
+        truncation_max_lines_item(state),
+        truncation_max_bytes_item(state),
     ]
+}
+
+fn provider_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "provider",
+        "Provider",
+        SettingValue::Enum {
+            current: state.config.current_provider.clone(),
+            options: provider_options(),
+        },
+        "LLM provider",
+        SettingsCategory::Models,
+    )
+}
+
+fn model_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "model",
+        "Model",
+        SettingValue::Enum {
+            current: state.config.current_model.clone(),
+            options: model_options(&state.config.current_provider),
+        },
+        "Active model",
+        SettingsCategory::Models,
+    )
+}
+
+fn theme_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "theme",
+        "Theme",
+        SettingValue::Enum {
+            current: state.config.theme_name.clone(),
+            options: theme_options(),
+        },
+        "UI theme",
+        SettingsCategory::Appearance,
+    )
+}
+
+fn thinking_level_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "thinking_level",
+        "Thinking Level",
+        SettingValue::Enum {
+            current: state.config.thinking_level.as_str().to_string(),
+            options: vec!["off".into(), "low".into(), "medium".into(), "high".into()],
+        },
+        "Agent reasoning depth",
+        SettingsCategory::Behavior,
+    )
+}
+
+fn read_only_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "read_only",
+        "Read-Only",
+        SettingValue::Bool(state.config.read_only),
+        "Restrict to safe tools",
+        SettingsCategory::Safety,
+    )
+}
+
+fn steering_mode_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "steering_mode",
+        "Steering Mode",
+        SettingValue::Enum {
+            current: delivery_mode_str(state.config.steering_mode).to_string(),
+            options: vec!["one-at-a-time".into(), "all".into()],
+        },
+        "How steering messages are delivered",
+        SettingsCategory::Behavior,
+    )
+}
+
+fn follow_up_mode_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "follow_up_mode",
+        "Follow-Up Mode",
+        SettingValue::Enum {
+            current: delivery_mode_str(state.config.follow_up_mode).to_string(),
+            options: vec!["one-at-a-time".into(), "all".into()],
+        },
+        "How follow-up messages are delivered",
+        SettingsCategory::Behavior,
+    )
+}
+
+fn delivery_mode_str(mode: DeliveryMode) -> &'static str {
+    match mode {
+        DeliveryMode::OneAtATime => "one-at-a-time",
+        DeliveryMode::All => "all",
+    }
+}
+
+fn vim_mode_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "vim_mode",
+        "Vim Navigation",
+        SettingValue::Bool(state.config.vim_mode),
+        "Press Esc from the input box to navigate the feed with j/k/g/G",
+        SettingsCategory::Behavior,
+    )
+}
+
+fn telemetry_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "telemetry_enabled",
+        "Telemetry",
+        SettingValue::Bool(state.config.telemetry.is_enabled()),
+        "Anonymous usage analytics",
+        SettingsCategory::Safety,
+    )
+}
+
+fn truncation_max_lines_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "truncation_max_lines",
+        "Truncation Max Lines",
+        SettingValue::Enum {
+            current: state.config.truncation.max_lines.to_string(),
+            options: truncation_lines_options(),
+        },
+        "Max lines kept from a single tool output",
+        SettingsCategory::Behavior,
+    )
+}
+
+fn truncation_max_bytes_item(state: &AppState) -> SettingItem {
+    SettingItem::new(
+        "truncation_max_bytes",
+        "Truncation Max Bytes",
+        SettingValue::Enum {
+            current: state.config.truncation.max_bytes.to_string(),
+            options: truncation_bytes_options(),
+        },
+        "Max bytes kept from a single tool output",
+        SettingsCategory::Behavior,
+    )
 }
 
 fn provider_options() -> Vec<String> {

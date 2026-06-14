@@ -117,3 +117,34 @@ fn e2e_dialog_flows_settings_model_theme_scoped() {
 
     send_ctrl_c(&mut p).expect("ctrl-c");
 }
+
+#[test]
+#[ignore = "e2e: requires release binary"]
+fn e2e_login_stack_navigation_esc_pops_and_closes_at_root() {
+    let mut p = spawn_runie().expect("spawn runie");
+    wait_for(&mut p, "Type a message to start").expect("welcome prompt");
+
+    run_command(&mut p, "providers");
+    wait_for(&mut p, "No providers").expect("providers dialog");
+
+    send_line(&mut p, "").expect("select Add provider");
+    wait_for(&mut p, "Login").expect("login dialog");
+
+    send_escape(&mut p).expect("esc pops to providers");
+    wait_for(&mut p, "No providers").expect("back at providers dialog");
+
+    send_line(&mut p, "").expect("select Add provider again");
+    wait_for(&mut p, "Login").expect("login dialog again");
+    send_line(&mut p, "").expect("select first provider");
+    wait_for(&mut p, "API Key").expect("key input");
+    send_line(&mut p, "sk-fake").expect("submit key");
+    wait_for(&mut p, "Models").expect("model selector");
+
+    send_escape(&mut p).expect("esc closes login flow");
+    wait_for(&mut p, "No providers").expect("back at providers dialog");
+
+    send_escape(&mut p).expect("esc at root closes");
+    let _ = wait_for(&mut p, "Type a message to start");
+
+    send_ctrl_c(&mut p).expect("ctrl-c");
+}

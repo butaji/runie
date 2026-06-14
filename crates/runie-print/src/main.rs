@@ -1,9 +1,7 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use futures::StreamExt;
-use runie_agent::parser::parse_tool_calls;
-use runie_agent::{build_provider_with_warning, Tool};
+use runie_agent::{build_provider_with_warning, run_headless_turn, tool_to_json, HeadlessOptions};
 use runie_core::{
     config_reload,
     provider::{Message, Provider},
@@ -39,57 +37,30 @@ async fn run_print(prompt: &str) -> Result<()> {
 async fn run_print_with(prompt: &str, provider: &dyn Provider) -> Result<()> {
     let system = runie_core::prompts::build_system_prompt(
         runie_core::prompts::DEFAULT_PROMPT,
-        "read_file, list_dir, write_file, edit_file, bash, grep, find",
+        runie_core::prompts::DEFAULT_TOOLS,
         false,
         "",
     );
 
-    let mut messages = vec![
+    let messages = vec![
         Message::System { content: system },
         Message::User {
             content: prompt.to_string(),
         },
     ];
 
-    for _ in 0..5 {
-        let mut response_text = String::new();
-        let mut stream = provider.generate(messages.clone());
-        while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result?;
-            response_text.push_str(&chunk.content);
-            print!("{}", chunk.content);
+    let options = HeadlessOptions {
+        execute_tools: true,
+        max_tool_rounds: 5,
+        on_chunk: Some(&mut |chunk: &str| {
+            print!("{}", chunk);
             let _ = std::io::Write::flush(&mut std::io::stdout());
-        }
+        }),
+        tool_to_json: Some(&tool_to_json),
+    };
 
-        let tools = parse_tool_calls(&response_text);
-        if tools.is_empty() {
-            break;
-        }
-
-        println!();
-        messages.push(Message::Assistant {
-            content: response_text,
-        });
-
-        for tool in &tools {
-            let result = execute_tool(tool);
-            messages.push(Message::ToolResult {
-                content: format!("{} result:\n{}", tool.name(), result.output),
-            });
-        }
-    }
-
+    run_headless_turn(messages, provider, options).await?;
     Ok(())
-}
-
-fn execute_tool(tool: &Tool) -> runie_agent::ToolResult {
-    match tool {
-        Tool::EditFile { .. } => {
-            // In print mode, execute edit directly without preview
-            tool.execute()
-        }
-        _ => tool.execute(),
-    }
 }
 
 #[cfg(test)]

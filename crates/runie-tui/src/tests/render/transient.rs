@@ -6,9 +6,11 @@ use runie_core::AppState;
 #[test]
 fn transient_success_renders_green_background_with_ok_prefix() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.transient_message = Some("Theme switched".to_string());
-    state.transient_level = Some(runie_core::event::TransientLevel::Success);
+    let mut state = AppState {
+        transient_message: Some("Theme switched".to_string()),
+        transient_level: Some(runie_core::event::TransientLevel::Success),
+        ..Default::default()
+    };
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -33,9 +35,11 @@ fn transient_success_renders_green_background_with_ok_prefix() {
 #[test]
 fn transient_success_has_1_symbol_margin_on_both_sides() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.transient_message = Some("Test".to_string());
-    state.transient_level = Some(runie_core::event::TransientLevel::Success);
+    let mut state = AppState {
+        transient_message: Some("Test".to_string()),
+        transient_level: Some(runie_core::event::TransientLevel::Success),
+        ..Default::default()
+    };
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -68,9 +72,11 @@ fn transient_success_has_1_symbol_margin_on_both_sides() {
 #[test]
 fn transient_warning_renders_amber_background_with_warn_prefix() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.transient_message = Some("Read-only on".to_string());
-    state.transient_level = Some(runie_core::event::TransientLevel::Warning);
+    let mut state = AppState {
+        transient_message: Some("Read-only on".to_string()),
+        transient_level: Some(runie_core::event::TransientLevel::Warning),
+        ..Default::default()
+    };
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -83,9 +89,11 @@ fn transient_warning_renders_amber_background_with_warn_prefix() {
 #[test]
 fn transient_error_renders_red_background_with_error_prefix() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.transient_message = Some("Failed".to_string());
-    state.transient_level = Some(runie_core::event::TransientLevel::Error);
+    let mut state = AppState {
+        transient_message: Some("Failed".to_string()),
+        transient_level: Some(runie_core::event::TransientLevel::Error),
+        ..Default::default()
+    };
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -98,8 +106,10 @@ fn transient_error_renders_red_background_with_error_prefix() {
 #[test]
 fn transient_message_renders_in_hints_line() {
     let _lock = crate::theme::test_lock();
-    let mut state = AppState::default();
-    state.transient_message = Some("Test message".to_string());
+    let mut state = AppState {
+        transient_message: Some("Test message".to_string()),
+        ..Default::default()
+    };
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -111,7 +121,6 @@ fn transient_message_renders_in_hints_line() {
 fn default_hints_render_when_no_transient() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.transient_message = None;
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();

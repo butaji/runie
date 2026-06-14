@@ -117,18 +117,7 @@ fn form_shows_progress_indicator() {
     let buf = render(&mut state);
     let lines = all_lines(&buf);
 
-    // Look for some kind of progress indicator
-    let has_progress = lines.iter().any(|l|
-        // Numeric: "1/2", "1 of 2", "(1/2)", etc.
-        l.contains("1/2") || l.contains("2/2") || l.contains("1 of 2") || l.contains("2 of 2") ||
-        l.contains("(1)") || l.contains("(2)") ||
-        // Circled numbers: ① ② ③
-        l.contains('①') || l.contains('②') || l.contains('③') ||
-        // Step: "Step 1", "Field 1", etc.
-        l.contains("Step 1") || l.contains("Field 1") || l.contains("Step 2") || l.contains("Field 2") ||
-        // Just "of 2" or similar
-        (l.contains("of 2") && l.chars().any(|c| c.is_ascii_digit()))
-    );
+    let has_progress = lines.iter().any(|l| has_progress_indicator(l));
     assert!(
         has_progress,
         "Form should show a progress indicator (e.g. ① ②, 1/2, 'Field 1 of 2'), got: {:?}",
@@ -138,6 +127,37 @@ fn form_shows_progress_indicator() {
 
 /// Form must have a visually prominent Submit button — centered, with
 /// box-drawing or arrow markers, distinct from regular items.
+fn has_progress_indicator(line: &str) -> bool {
+    has_numeric_progress(line)
+        || has_circled_number(line)
+        || has_step_label(line)
+        || has_of_two_with_digit(line)
+}
+
+fn has_numeric_progress(line: &str) -> bool {
+    line.contains("1/2")
+        || line.contains("2/2")
+        || line.contains("1 of 2")
+        || line.contains("2 of 2")
+        || line.contains("(1)")
+        || line.contains("(2)")
+}
+
+fn has_circled_number(line: &str) -> bool {
+    line.contains('①') || line.contains('②') || line.contains('③')
+}
+
+fn has_step_label(line: &str) -> bool {
+    line.contains("Step 1")
+        || line.contains("Field 1")
+        || line.contains("Step 2")
+        || line.contains("Field 2")
+}
+
+fn has_of_two_with_digit(line: &str) -> bool {
+    line.contains("of 2") && line.chars().any(|c| c.is_ascii_digit())
+}
+
 #[test]
 fn form_has_prominent_submit_button() {
     let _lock = crate::theme::test_lock();

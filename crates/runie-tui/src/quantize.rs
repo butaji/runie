@@ -104,70 +104,24 @@ pub fn quantize_to_16(r: u8, g: u8, b: u8) -> Color {
     Color::Indexed(ansi256_to_16(ansi256))
 }
 
+/// Lookup table mapping each ANSI 256 color index to the nearest basic
+/// ANSI 16 color. Generated from the original range-based heuristic.
+const ANSI256_TO_16: [u8; 256] = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 12, 12, 12, 0, 0, 4, 12, 12, 12,
+    0, 2, 6, 12, 12, 12, 10, 10, 10, 14, 12, 12, 10, 10, 10, 10, 14, 12, 10, 10, 10, 10, 10, 14, 0,
+    0, 4, 12, 12, 12, 0, 3, 4, 12, 12, 12, 2, 2, 3, 12, 12, 12, 10, 10, 10, 11, 12, 12, 10, 10, 10,
+    10, 11, 12, 10, 10, 10, 10, 10, 11, 0, 1, 5, 12, 12, 12, 1, 1, 3, 12, 12, 12, 3, 3, 3, 12, 12,
+    12, 10, 10, 10, 11, 12, 12, 10, 10, 10, 10, 11, 12, 10, 10, 10, 10, 10, 11, 9, 9, 9, 13, 12,
+    12, 9, 9, 9, 11, 12, 12, 9, 9, 9, 11, 12, 12, 11, 11, 11, 11, 12, 12, 10, 10, 10, 10, 11, 12,
+    10, 10, 10, 10, 10, 11, 9, 9, 9, 9, 13, 12, 9, 9, 9, 9, 11, 12, 9, 9, 9, 9, 11, 12, 9, 9, 9, 9,
+    11, 12, 11, 11, 11, 11, 11, 12, 10, 10, 10, 10, 10, 11, 9, 9, 9, 9, 9, 13, 9, 9, 9, 9, 9, 11,
+    9, 9, 9, 9, 9, 11, 9, 9, 9, 9, 9, 11, 9, 9, 9, 9, 9, 11, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 15, 15,
+];
+
 /// Map an ANSI 256 color index to one of the 16 basic ANSI colors.
 fn ansi256_to_16(idx: u8) -> u8 {
-    match idx {
-        0..=15 => idx,
-        232..=255 => {
-            if idx < 244 {
-                0
-            } else if idx < 250 {
-                8
-            } else if idx < 254 {
-                7
-            } else {
-                15
-            }
-        }
-        _ => {
-            let cube_idx = idx - 16;
-            let ri = cube_idx / 36;
-            let gi = (cube_idx / 6) % 6;
-            let bi = cube_idx % 6;
-            let avg = (ri + gi + bi) / 3;
-            if avg < 1 {
-                0
-            } else if ri > gi && ri > bi {
-                if ri > 2 {
-                    9
-                } else {
-                    1
-                }
-            } else if gi > ri && gi > bi {
-                if gi > 2 {
-                    10
-                } else {
-                    2
-                }
-            } else if bi > ri && bi > gi {
-                if bi > 2 {
-                    12
-                } else {
-                    4
-                }
-            } else if ri > 0 && gi > 0 {
-                if ri > 2 || gi > 2 {
-                    11
-                } else {
-                    3
-                }
-            } else if ri > 0 && bi > 0 {
-                if ri > 2 || bi > 2 {
-                    13
-                } else {
-                    5
-                }
-            } else if gi > 0 && bi > 0 {
-                if gi > 2 || bi > 2 {
-                    14
-                } else {
-                    6
-                }
-            } else {
-                7
-            }
-        }
-    }
+    ANSI256_TO_16[idx as usize]
 }
 
 #[cfg(test)]
@@ -333,7 +287,12 @@ mod tests {
         let levels = [0u8, 95, 135, 175, 215, 255];
         for &c in &levels {
             let result = rgb_to_cube_channel(c);
-            assert!(result <= 5, "cube channel for {} should be <= 5, got {}", c, result);
+            assert!(
+                result <= 5,
+                "cube channel for {} should be <= 5, got {}",
+                c,
+                result
+            );
         }
     }
 }

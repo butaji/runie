@@ -7,49 +7,32 @@ impl AppState {
     /// - Second Tab with single match: complete (accept ghost)
     /// - Second Tab with multiple matches: cycle to next
     pub(crate) fn tab_complete(&mut self) {
-        // If file picker is already open, Tab cycles selection
         if self.open_dialog.is_some() {
             return;
         }
-
-        // Handle @ suggestion cycling if active
         if self.completion.at_suggestions.is_some() {
             self.tab_complete_at_ref();
             return;
         }
 
         let cursor = self.input.cursor_pos;
-
-        // Calculate the prefix (text to replace) and save the input state
-        let (prefix, prefix_start) = if self.input.input.is_empty() || cursor == 0 {
-            (String::new(), 0)
-        } else {
-            let before_cursor = &self.input.input[..cursor.min(self.input.input.len())];
-            let token_start = before_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0);
-            let prefix = self.input.input[token_start..cursor].to_string();
-            (prefix, token_start)
-        };
-
-        // Determine insert position:
-        // - If at end of input and there's a prefix, use prefix_start (replace prefix)
-        // - Otherwise, use cursor position (insert at cursor)
-        let is_at_end = cursor >= self.input.input.len();
-        let insert_pos = if is_at_end && !prefix.is_empty() {
-            prefix_start
-        } else {
-            cursor
-        };
-
-        // Determine if we need brackets (@ references need brackets only when @ is standalone)
-        // If prefix starts with @, we DON'T wrap in brackets (just insert path)
+        let (prefix, prefix_start) = self.compute_tab_prefix(cursor);
+        let insert_pos = choose_insert_pos(cursor, prefix_start, &prefix, self.input.input.len());
         let needs_brackets = !prefix.starts_with('@');
 
-        // Save: (original input, insert position, cursor position, needs brackets)
-        self.file_picker_backup = Some((self.input.input.clone(), insert_pos, cursor, needs_brackets));
-
-        // Open file picker with the prefix as filter
-        // Input text stays visible - backup has original state for insertion
+        self.file_picker_backup =
+            Some((self.input.input.clone(), insert_pos, cursor, needs_brackets));
         super::dialog::open_at_file_picker(self, Some(&prefix));
+    }
+
+    fn compute_tab_prefix(&self, cursor: usize) -> (String, usize) {
+        if self.input.input.is_empty() || cursor == 0 {
+            return (String::new(), 0);
+        }
+        let before_cursor = &self.input.input[..cursor.min(self.input.input.len())];
+        let token_start = before_cursor.rfind(' ').map(|i| i + 1).unwrap_or(0);
+        let prefix = self.input.input[token_start..cursor].to_string();
+        (prefix, token_start)
     }
 
     /// Clear ghost completion (called on typing, backspace, cursor movement, etc.)
@@ -119,6 +102,7 @@ impl AppState {
         self.mark_dirty();
     }
 
+    #[allow(dead_code)]
     fn find_prefix_file_matches(&self, prefix: &str) -> Vec<String> {
         let base = std::env::current_dir().unwrap_or_default();
         let Ok(entries) = std::fs::read_dir(&base) else {
@@ -143,6 +127,16 @@ impl AppState {
     }
 }
 
+fn choose_insert_pos(cursor: usize, prefix_start: usize, prefix: &str, len: usize) -> usize {
+    let is_at_end = cursor >= len;
+    if is_at_end && !prefix.is_empty() {
+        prefix_start
+    } else {
+        cursor
+    }
+}
+
+#[allow(dead_code)]
 fn suffix_after_prefix(prefix: &str, full: &str) -> String {
     if prefix.is_empty() {
         return full.to_string();

@@ -1,5 +1,7 @@
 //! Model catalog for the model selector dialog.
 
+use crate::model::ModelSelectorItem;
+
 /// Information about a model for the model selector dialog.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ModelInfo {
@@ -10,6 +12,8 @@ pub struct ModelInfo {
     pub cost_completion: Option<f64>,
     pub supports_thinking: bool,
     pub supports_vision: bool,
+    pub tokenizer: Option<String>,
+    pub context_window: Option<usize>,
 }
 
 impl ModelInfo {
@@ -24,6 +28,8 @@ impl ModelInfo {
             cost_completion: None,
             supports_thinking: false,
             supports_vision: false,
+            tokenizer: None,
+            context_window: None,
         }
     }
 
@@ -49,176 +55,24 @@ impl ModelInfo {
 }
 
 /// Static catalog of known models for the model selector.
-/// Derived from the provider registry but kept in core to avoid cross-crate deps.
-#[allow(clippy::vec_init_then_push)]
+/// Derived from the provider registry so provider and model metadata stay in sync.
 pub fn model_catalog() -> Vec<ModelInfo> {
     let mut models = Vec::new();
-
-    // Anthropic
-    models.push(
-        ModelInfo::new("anthropic", "claude-sonnet-4-6")
-            .with_cost(3.0, 15.0)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("anthropic", "claude-opus-4-7")
-            .with_cost(15.0, 75.0)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("anthropic", "claude-haiku-4-5")
-            .with_cost(0.25, 1.25)
-            .with_vision(),
-    );
-
-    // OpenAI
-    models.push(
-        ModelInfo::new("openai", "gpt-4o")
-            .with_cost(5.0, 15.0)
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("openai", "gpt-4o-mini")
-            .with_cost(0.15, 0.6)
-            .with_vision(),
-    );
-    models.push(ModelInfo::new("openai", "gpt-5").with_cost(2.5, 10.0));
-    models.push(
-        ModelInfo::new("openai", "o3-mini")
-            .with_cost(1.1, 4.4)
-            .with_thinking(),
-    );
-    models.push(
-        ModelInfo::new("openai", "o4-mini")
-            .with_cost(1.1, 4.4)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("openai", "o1")
-            .with_cost(15.0, 60.0)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("openai", "o3")
-            .with_cost(10.0, 40.0)
-            .with_thinking()
-            .with_vision(),
-    );
-
-    // Google
-    models.push(
-        ModelInfo::new("google", "gemini-2.5-pro")
-            .with_cost(1.25, 10.0)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("google", "gemini-2.5-flash")
-            .with_cost(0.15, 0.6)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("google", "gemini-2.0-flash")
-            .with_cost(0.1, 0.4)
-            .with_vision(),
-    );
-
-    // DeepSeek
-    models.push(
-        ModelInfo::new("deepseek", "deepseek-v4-flash")
-            .with_cost(0.27, 1.1)
-            .with_thinking(),
-    );
-    models.push(
-        ModelInfo::new("deepseek", "deepseek-v4-pro")
-            .with_cost(1.54, 6.16)
-            .with_thinking(),
-    );
-
-    // Mistral
-    models.push(ModelInfo::new("mistral", "mistral-large-latest").with_cost(2.0, 6.0));
-    models.push(ModelInfo::new("mistral", "codestral-latest").with_cost(2.0, 6.0));
-    models.push(ModelInfo::new("mistral", "devstral-latest").with_cost(2.0, 6.0));
-
-    // Groq
-    models.push(ModelInfo::new("groq", "llama-3.3-70b-versatile").with_cost(0.59, 0.79));
-    models.push(ModelInfo::new("groq", "gemma2-9b-it").with_cost(0.2, 0.2));
-    models.push(ModelInfo::new("groq", "mixtral-8x7b-32768").with_cost(0.24, 0.24));
-
-    // Together
-    models.push(
-        ModelInfo::new("together", "meta-llama/Llama-3.3-70B-Instruct-Turbo").with_cost(0.88, 0.88),
-    );
-    models.push(
-        ModelInfo::new("together", "deepseek-ai/DeepSeek-V4-Pro")
-            .with_cost(1.25, 1.25)
-            .with_thinking(),
-    );
-
-    // Fireworks
-    models.push(
-        ModelInfo::new("fireworks", "accounts/fireworks/models/deepseek-v4-pro")
-            .with_cost(1.25, 1.25)
-            .with_thinking(),
-    );
-    models.push(
-        ModelInfo::new("fireworks", "accounts/fireworks/models/kimi-k2p6").with_cost(2.0, 8.0),
-    );
-
-    // OpenRouter
-    models.push(
-        ModelInfo::new("openrouter", "anthropic/claude-sonnet-4.6")
-            .with_cost(3.0, 15.0)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("openrouter", "openai/gpt-4o")
-            .with_cost(5.0, 15.0)
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("openrouter", "google/gemini-2.5-pro")
-            .with_cost(1.25, 10.0)
-            .with_thinking()
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("openrouter", "deepseek/deepseek-chat")
-            .with_cost(0.5, 2.0)
-            .with_thinking(),
-    );
-    models.push(
-        ModelInfo::new("openrouter", "deepseek/deepseek-r1")
-            .with_cost(0.55, 2.19)
-            .with_thinking(),
-    );
-
-    // xAI
-    models.push(
-        ModelInfo::new("xai", "grok-3")
-            .with_cost(3.0, 15.0)
-            .with_vision(),
-    );
-    models.push(
-        ModelInfo::new("xai", "grok-4.3")
-            .with_cost(5.0, 25.0)
-            .with_vision(),
-    );
-
-    // Ollama
-    models.push(ModelInfo::new("ollama", "llama3.1"));
-    models.push(ModelInfo::new("ollama", "qwen2.5-coder:7b"));
-    models.push(ModelInfo::new("ollama", "mistral"));
-
-    // Mock
-    models.push(ModelInfo::new("mock", "echo"));
-
+    for provider in crate::provider_registry::known_providers() {
+        for model in provider.models {
+            models.push(ModelInfo {
+                provider: provider.key.to_string(),
+                name: model.name.to_string(),
+                display_name: model.name.to_string(),
+                cost_prompt: model.cost_prompt,
+                cost_completion: model.cost_completion,
+                supports_thinking: model.supports_thinking,
+                supports_vision: model.supports_vision,
+                tokenizer: model.tokenizer.map(String::from),
+                context_window: model.context_window,
+            });
+        }
+    }
     models
 }
 
@@ -245,46 +99,97 @@ pub fn build_model_selector_items(
     filter: &str,
     current_provider: &str,
     current_model: &str,
-) -> Vec<(String, String, String, bool, bool)> {
-    let indices = if filter.is_empty() {
+) -> Vec<ModelSelectorItem> {
+    let indices = model_indices(models, filter);
+    let mut items = build_recent_items(models, recent, filter, current_provider, current_model);
+    let main_items = build_main_items(
+        models,
+        &indices,
+        recent,
+        filter,
+        current_provider,
+        current_model,
+    );
+    items.extend(main_items);
+    items
+}
+
+fn model_indices(models: &[ModelInfo], filter: &str) -> Vec<usize> {
+    if filter.is_empty() {
         (0..models.len()).collect()
     } else {
         filter_models(models, filter)
-    };
-
-    let mut items: Vec<(String, String, String, bool, bool)> = Vec::new();
-
-    // Show recent section when no filter
-    if filter.is_empty() && !recent.is_empty() {
-        for r in recent.iter().rev().take(5) {
-            if let Some(idx) = models.iter().position(|m| m.full() == *r) {
-                let m = &models[idx];
-                let cost = format_cost(m.cost_prompt, m.cost_completion);
-                let is_current = m.provider == current_provider && m.name == current_model;
-                items.push(("Recent".to_string(), m.full(), cost, false, is_current));
-            }
-        }
     }
+}
 
+fn build_recent_items(
+    models: &[ModelInfo],
+    recent: &[String],
+    filter: &str,
+    current_provider: &str,
+    current_model: &str,
+) -> Vec<ModelSelectorItem> {
+    if !filter.is_empty() || recent.is_empty() {
+        return Vec::new();
+    }
+    recent
+        .iter()
+        .rev()
+        .take(5)
+        .filter_map(|r| models.iter().position(|m| m.full() == *r))
+        .map(|idx| {
+            let m = &models[idx];
+            model_item("Recent", m, current_provider, current_model, false)
+        })
+        .collect()
+}
+
+fn build_main_items(
+    models: &[ModelInfo],
+    indices: &[usize],
+    recent: &[String],
+    filter: &str,
+    current_provider: &str,
+    current_model: &str,
+) -> Vec<ModelSelectorItem> {
+    let mut items = Vec::new();
     let mut last_provider = String::new();
-    for &idx in &indices {
+    for &idx in indices {
         let m = &models[idx];
-        // Skip recent items in the main list to avoid duplication
         if filter.is_empty() && recent.contains(&m.full()) {
             continue;
         }
-        let header = if m.provider != last_provider {
-            last_provider = m.provider.clone();
-            m.provider.clone()
-        } else {
-            String::new()
-        };
-        let cost = format_cost(m.cost_prompt, m.cost_completion);
-        let is_current = m.provider == current_provider && m.name == current_model;
-        items.push((header, m.full(), cost, false, is_current));
+        let header = provider_header(&mut last_provider, &m.provider);
+        items.push(model_item(
+            &header,
+            m,
+            current_provider,
+            current_model,
+            false,
+        ));
     }
-
     items
+}
+
+fn provider_header(last_provider: &mut String, provider: &str) -> String {
+    if provider != *last_provider {
+        *last_provider = provider.to_string();
+        provider.to_string()
+    } else {
+        String::new()
+    }
+}
+
+fn model_item(
+    header: &str,
+    m: &ModelInfo,
+    current_provider: &str,
+    current_model: &str,
+    selected: bool,
+) -> ModelSelectorItem {
+    let cost = format_cost(m.cost_prompt, m.cost_completion);
+    let is_current = m.provider == current_provider && m.name == current_model;
+    (header.to_string(), m.full(), cost, selected, is_current)
 }
 
 fn format_cost(prompt: Option<f64>, completion: Option<f64>) -> String {
@@ -293,5 +198,100 @@ fn format_cost(prompt: Option<f64>, completion: Option<f64>) -> String {
         (Some(p), None) => format!("${:.2}/?", p),
         (None, Some(c)) => format!("?/${:.2}", c),
         (None, None) => String::new(),
+    }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn model_catalog_is_not_empty() {
+        assert!(!model_catalog().is_empty());
+    }
+
+    #[test]
+    fn model_catalog_contains_all_provider_default_models() {
+        let catalog = model_catalog();
+        for provider in crate::provider_registry::known_providers() {
+            for model in provider.models {
+                assert!(
+                    catalog
+                        .iter()
+                        .any(|m| m.provider == provider.key && m.name == model.name),
+                    "model catalog missing {}/{}",
+                    provider.key,
+                    model.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn registry_model_has_consistent_provider() {
+        for provider in crate::provider_registry::known_providers() {
+            for model in provider.models {
+                let info = ModelInfo {
+                    provider: provider.key.to_string(),
+                    name: model.name.to_string(),
+                    display_name: model.name.to_string(),
+                    cost_prompt: model.cost_prompt,
+                    cost_completion: model.cost_completion,
+                    supports_thinking: model.supports_thinking,
+                    supports_vision: model.supports_vision,
+                    tokenizer: model.tokenizer.map(String::from),
+                    context_window: model.context_window,
+                };
+                assert_eq!(info.provider, provider.key);
+                assert_eq!(info.full(), format!("{}/{}", provider.key, model.name));
+            }
+        }
+    }
+
+    #[test]
+    fn model_catalog_preserves_costs_and_flags() {
+        let catalog = model_catalog();
+        let gpt4o = catalog
+            .iter()
+            .find(|m| m.provider == "openai" && m.name == "gpt-4o")
+            .expect("gpt-4o should exist");
+        assert_eq!(gpt4o.cost_prompt, Some(5.0));
+        assert_eq!(gpt4o.cost_completion, Some(15.0));
+        assert!(gpt4o.supports_vision);
+        assert!(!gpt4o.supports_thinking);
+
+        let o1 = catalog
+            .iter()
+            .find(|m| m.provider == "openai" && m.name == "o1")
+            .expect("o1 should exist");
+        assert!(o1.supports_thinking);
+        assert!(o1.supports_vision);
+    }
+
+    #[test]
+    fn model_catalog_groups_by_provider() {
+        let catalog = model_catalog();
+        let mut provider_positions: std::collections::HashMap<String, Vec<usize>> =
+            std::collections::HashMap::new();
+        for (i, m) in catalog.iter().enumerate() {
+            provider_positions
+                .entry(m.provider.clone())
+                .or_default()
+                .push(i);
+        }
+        for (provider, positions) in provider_positions {
+            let min = *positions.iter().min().unwrap();
+            let max = *positions.iter().max().unwrap();
+            assert_eq!(
+                max - min + 1,
+                positions.len(),
+                "provider {} models should be contiguous",
+                provider
+            );
+        }
     }
 }

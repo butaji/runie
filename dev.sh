@@ -1,14 +1,11 @@
 #!/bin/bash
 mode="${1:-run}"
 
-# Ensure we use the rustup-managed toolchain (project requires nightly for
-# the cranelift codegen flag in .cargo/config.toml). If the active `cargo`
-# isn't the rustup proxy, prepend the toolchain bin from rustup settings.
-# Override via RUNIE_TOOLCHAIN env var.
-TOOLCHAIN="${RUNIE_TOOLCHAIN:-nightly}"
+# Default to the stable toolchain. Override via RUNIE_TOOLCHAIN env var.
+TOOLCHAIN="${RUNIE_TOOLCHAIN:-stable}"
 RUSTUP_TOOLCHAIN="$TOOLCHAIN" cargo --version >/dev/null 2>&1 || true
 
-# Resolve the actual toolchain bin dir from rustup (e.g. nightly-aarch64-apple-darwin/bin)
+# Resolve the actual toolchain bin dir from rustup.
 RUSTUP_BIN=""
 if command -v rustup >/dev/null 2>&1; then
     TC_DIR=$(rustup which --toolchain "$TOOLCHAIN" cargo 2>/dev/null | xargs dirname 2>/dev/null)
@@ -17,10 +14,10 @@ if command -v rustup >/dev/null 2>&1; then
     fi
 fi
 
-# Prepend toolchain bin (so nightly cargo wins) and $HOME/.cargo/bin (for cargo-watch).
+# Prepend toolchain bin (so selected cargo wins) and $HOME/.cargo/bin (for cargo-watch).
 export PATH="$RUSTUP_BIN:$HOME/.cargo/bin:$PATH"
 
-# Tell cargo to use the nightly toolchain even if invoked via a non-proxy binary.
+# Tell cargo to use the selected toolchain even if invoked via a non-proxy binary.
 export RUSTUP_TOOLCHAIN="$TOOLCHAIN"
 
 if ! command -v cargo-watch > /dev/null 2>&1; then
@@ -59,12 +56,11 @@ case "$mode" in
   smoke)
     echo "[dev] Running smoke tests..."
     cargo build --release -p runie-term 2>&1 | tail -2
-    ./scripts/smoke-tab-completion.sh
-    ./scripts/smoke-turn-complete.sh
+    ./scripts/smoke-tmux.sh
     echo "[dev] All smoke tests passed!"
     ;;
   *)
-    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test]"
+    echo "Usage: \$0 [run|run-delay|fast|fast-delay|test|smoke]"
     echo ""
     echo "Modes:"
     echo "  run        - release build, mock enabled, no streaming delays"
@@ -72,6 +68,7 @@ case "$mode" in
     echo "  fast       - debug build, mock enabled, no streaming delays"
     echo "  fast-delay - debug build, mock enabled, 0.5s-3s delays between chunks"
     echo "  test       - run all tests"
+    echo "  smoke      - release build + tmux smoke test"
     echo ""
     echo "Without dev.sh: production mode. No mock provider. The app requires"
     echo "a real provider configured or auto-opens the login dialog on startup."

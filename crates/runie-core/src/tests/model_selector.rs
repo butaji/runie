@@ -2,7 +2,7 @@
 
 use crate::commands::DialogState;
 use crate::event::Event;
-use crate::model::AppState;
+use crate::model::{AppState, ScopedModel};
 use crate::model_catalog::{build_model_selector_items, filter_models, model_catalog, ModelInfo};
 
 fn selector_state(state: &AppState) -> Option<(String, usize)> {
@@ -230,4 +230,70 @@ fn selector_wraps_down() {
     }
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 0, "Down at last should wrap to first");
+}
+
+#[test]
+fn cycle_model_next_uses_unified_catalog() {
+    let catalog = model_catalog();
+    assert!(
+        catalog.len() >= 2,
+        "unified catalog must have at least two models"
+    );
+
+    let mut state = AppState::default();
+    state.config.scoped_models = catalog
+        .iter()
+        .take(10)
+        .map(|m| ScopedModel {
+            provider: m.provider.clone(),
+            name: m.name.clone(),
+            enabled: true,
+        })
+        .collect();
+    state.config.scoped_index = 0;
+    let first = &state.config.scoped_models[0];
+    state.config.current_provider = first.provider.clone();
+    state.config.current_model = first.name.clone();
+
+    state.cycle_model(1);
+
+    let second = &state.config.scoped_models[1];
+    assert_eq!(state.config.current_provider, second.provider);
+    assert_eq!(state.config.current_model, second.name);
+}
+
+#[test]
+fn model_selector_renders_grouped_models() {
+    let catalog = model_catalog();
+    let items = build_model_selector_items(&catalog, &[], "", "mock", "echo");
+    let providers: std::collections::HashSet<String> = items
+        .iter()
+        .filter(|(header, _, _, _, _)| !header.is_empty() && header != "Recent")
+        .map(|(header, _, _, _, _)| header.clone())
+        .collect();
+
+    assert!(
+        providers.contains("openai"),
+        "selector should render an openai group"
+    );
+    assert!(
+        providers.contains("anthropic"),
+        "selector should render an anthropic group"
+    );
+
+    // Every item belongs to a provider present in the catalog.
+    for (_, full, _, _, _) in &items {
+        if full == "Recent" {
+            continue;
+        }
+        let (provider, name) = full
+            .split_once('/')
+            .expect("model name should be provider/name");
+        assert!(
+            catalog
+                .iter()
+                .any(|m| m.provider == provider && m.name == name),
+            "rendered model {full} must exist in unified catalog"
+        );
+    }
 }

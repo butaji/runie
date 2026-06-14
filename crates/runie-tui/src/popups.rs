@@ -30,36 +30,9 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
         .path_selected
         .unwrap_or(0)
         .min(items.len().saturating_sub(1));
-    let area = f.area();
-    let display_count = items.len().min(8) as u16;
-    let max_height = display_count + 4;
-    let popup_area = Rect {
-        x: area.x + 1,
-        y: area.y + area.height.saturating_sub(4 + max_height),
-        width: area.width.saturating_sub(2).max(20),
-        height: max_height,
-    };
-    let mut lines: Vec<Line> = items
-        .iter()
-        .take(8)
-        .enumerate()
-        .map(|(i, item)| {
-            let prefix = if i == selected {
-                GLYPH_SELECTED
-            } else {
-                GLYPH_UNSELECTED
-            };
-            let style = if i == selected {
-                style_popup_selected()
-            } else {
-                style_popup_unselected()
-            };
-            let suffix = if item.is_dir { "/" } else { "" };
-            Line::from(format!("{}{}{}", prefix, item.path, suffix)).style(style)
-        })
-        .collect();
-    lines.push(Line::from(""));
-    lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
+    let popup_area = path_popup_area(f.area(), items.len());
+    let lines = build_path_suggestion_lines(items, selected);
+
     clear_panel_bg(f, popup_area);
     f.render_widget(
         Paragraph::new(lines)
@@ -67,6 +40,50 @@ pub fn path_suggestions(f: &mut Frame, snap: &Snapshot) {
             .block(block_popup(&format!(" paths ({}) ", items.len()))),
         popup_area,
     );
+}
+
+fn path_popup_area(area: Rect, item_count: usize) -> Rect {
+    let display_count = item_count.min(8) as u16;
+    let max_height = display_count + 4;
+    Rect {
+        x: area.x + 1,
+        y: area.y + area.height.saturating_sub(4 + max_height),
+        width: area.width.saturating_sub(2).max(20),
+        height: max_height,
+    }
+}
+
+fn build_path_suggestion_lines(
+    items: &[runie_core::path_complete::PathCompletion],
+    selected: usize,
+) -> Vec<Line<'_>> {
+    let mut lines: Vec<Line<'_>> = items
+        .iter()
+        .take(8)
+        .enumerate()
+        .map(|(i, item)| path_suggestion_line(item, i == selected))
+        .collect();
+    lines.push(Line::from(""));
+    lines.push(Line::from("↑/↓=nav Enter=select Esc=close").style(style_hint()));
+    lines
+}
+
+fn path_suggestion_line(
+    item: &runie_core::path_complete::PathCompletion,
+    is_selected: bool,
+) -> Line<'_> {
+    let prefix = if is_selected {
+        GLYPH_SELECTED
+    } else {
+        GLYPH_UNSELECTED
+    };
+    let style = if is_selected {
+        style_popup_selected()
+    } else {
+        style_popup_unselected()
+    };
+    let suffix = if item.is_dir { "/" } else { "" };
+    Line::from(format!("{}{}{}", prefix, item.path, suffix)).style(style)
 }
 
 pub fn palette_popup_rect(area: Rect) -> Rect {

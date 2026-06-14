@@ -5,9 +5,7 @@
 //! - Edit: form with name/description/system_prompt/tools/max_turns fields
 //! - Confirm delete: confirm before deleting a profile
 
-use crate::agent_profiles::{
-    self, AgentProfile, ProfileError,
-};
+use crate::agent_profiles::{self, AgentProfile, ProfileError};
 use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::event::Event;
@@ -18,14 +16,20 @@ fn profiles_dir() -> std::path::PathBuf {
     agent_profiles::profiles_dir()
 }
 
+use crate::commands::handlers::spec::{CommandKind, CommandSpec};
+
+static AGENTS_COMMANDS: &[CommandSpec] = &[CommandSpec {
+    name: "agents",
+    desc: "Manage agent profiles (CRUD)",
+    aliases: &[],
+    category: CommandCategory::System,
+    sub: false,
+    kind: CommandKind::Handler(handle_agents),
+}];
+
 /// Register the `/agents` command.
 pub fn register(registry: &mut CommandRegistry) {
-    registry.register(
-        crate::cmd!("agents")
-            .desc("Manage agent profiles (CRUD)")
-            .category(CommandCategory::System)
-            .handler(handle_agents),
-    );
+    crate::commands::handlers::spec::register_commands(registry, AGENTS_COMMANDS);
 }
 
 /// Open the agent manager panel.
@@ -36,8 +40,7 @@ pub fn handle_agents(_state: &mut AppState, _args: &str) -> CommandResult {
 /// Build the root panel showing all profiles.
 pub fn build_root_panel() -> PanelStack {
     let dir = profiles_dir();
-    let profiles = agent_profiles::load_profiles_from_dir(&dir)
-        .unwrap_or_default();
+    let profiles = agent_profiles::load_profiles_from_dir(&dir).unwrap_or_default();
 
     let mut panel = Panel::new("agents_root", "Agent Profiles")
         .item("+ New profile", ItemAction::Push("agents_edit_new".into()));
@@ -71,33 +74,60 @@ pub fn build_view_panel(name: &str) -> PanelStack {
     let path = dir.join(format!("{}.toml", name));
     let profile = agent_profiles::load_profile_from_file(&path).ok();
 
-    let mut panel = Panel::new(format!("agents_view:{}", name), format!("Profile: {}", name));
+    let mut panel = Panel::new(
+        format!("agents_view:{}", name),
+        format!("Profile: {}", name),
+    );
 
-    if let Some(p) = profile {
-        let tools_str = p.tools.join(", ");
-        let allowed = p.allowlist_tools.as_ref().map(|v| v.join(", ")).unwrap_or_default();
-        let denied = p.denylist_tools.as_ref().map(|v| v.join(", ")).unwrap_or_default();
-        let max = p.max_turns.map(|n| n.to_string()).unwrap_or_default();
-
-        panel = panel
-            .item(format!("Name: {}", p.name), ItemAction::Close)
-            .item(format!("Description: {}", p.description), ItemAction::Close)
-            .item(format!("System prompt: {}", truncate(&p.system_prompt, 60)), ItemAction::Close)
-            .item(format!("Tools: {}", tools_str), ItemAction::Close)
-            .item(format!("Allowlist: {}", allowed), ItemAction::Close)
-            .item(format!("Denylist: {}", denied), ItemAction::Close)
-            .item(format!("Max turns: {}", max), ItemAction::Close)
-            .item("─ Edit ─", ItemAction::Push(format!("agents_edit:{}", name)))
-            .item("─ Delete ─", ItemAction::Push(format!("agents_delete:{}", name)))
-            .item("Back", ItemAction::Pop)
-            .item("Close", ItemAction::Close);
+    panel = if let Some(p) = profile {
+        build_profile_view_items(panel, name, &p)
     } else {
-        panel = panel
-            .item(format!("(could not load {})", path.display()), ItemAction::Close)
-            .item("Back", ItemAction::Pop);
-    }
+        build_profile_missing_items(panel, &path)
+    };
 
     PanelStack::new(panel)
+}
+
+fn build_profile_view_items(panel: Panel, name: &str, p: &AgentProfile) -> Panel {
+    let tools_str = p.tools.join(", ");
+    let allowed = join_optional(&p.allowlist_tools);
+    let denied = join_optional(&p.denylist_tools);
+    let max = p.max_turns.map(|n| n.to_string()).unwrap_or_default();
+
+    panel
+        .item(format!("Name: {}", p.name), ItemAction::Close)
+        .item(format!("Description: {}", p.description), ItemAction::Close)
+        .item(
+            format!("System prompt: {}", truncate(&p.system_prompt, 60)),
+            ItemAction::Close,
+        )
+        .item(format!("Tools: {}", tools_str), ItemAction::Close)
+        .item(format!("Allowlist: {}", allowed), ItemAction::Close)
+        .item(format!("Denylist: {}", denied), ItemAction::Close)
+        .item(format!("Max turns: {}", max), ItemAction::Close)
+        .item(
+            "─ Edit ─",
+            ItemAction::Push(format!("agents_edit:{}", name)),
+        )
+        .item(
+            "─ Delete ─",
+            ItemAction::Push(format!("agents_delete:{}", name)),
+        )
+        .item("Back", ItemAction::Pop)
+        .item("Close", ItemAction::Close)
+}
+
+fn build_profile_missing_items(panel: Panel, path: &std::path::Path) -> Panel {
+    panel
+        .item(
+            format!("(could not load {})", path.display()),
+            ItemAction::Close,
+        )
+        .item("Back", ItemAction::Pop)
+}
+
+fn join_optional(list: &Option<Vec<String>>) -> String {
+    list.as_ref().map(|v| v.join(", ")).unwrap_or_default()
 }
 
 /// Build the edit panel for a profile (or new profile).
@@ -107,98 +137,95 @@ pub fn build_edit_panel(name: &str) -> PanelStack {
     let profile = agent_profiles::load_profile_from_file(&path)
         .unwrap_or_else(|_| AgentProfile::new(name, ""));
 
-    let title = if path.exists() {
+    let title = edit_panel_title(name, &path);
+    let panel = Panel::new(format!("agents_edit:{}", name), title);
+    let panel = add_edit_field_items(panel, name, &profile);
+    PanelStack::new(add_edit_actions(panel, name))
+}
+
+fn edit_panel_title(name: &str, path: &std::path::Path) -> String {
+    if path.exists() {
         format!("Edit: {}", name)
     } else {
         format!("New profile: {}", name)
-    };
+    }
+}
 
+fn add_edit_field_items(panel: Panel, name: &str, profile: &AgentProfile) -> Panel {
     let tools_csv = profile.tools.join(",");
-    let allowed_csv = profile
-        .allowlist_tools
-        .as_ref()
-        .map(|v| v.join(","))
-        .unwrap_or_default();
-    let denied_csv = profile
-        .denylist_tools
-        .as_ref()
-        .map(|v| v.join(","))
-        .unwrap_or_default();
+    let allowed_csv = join_optional_csv(&profile.allowlist_tools);
+    let denied_csv = join_optional_csv(&profile.denylist_tools);
     let max_str = profile.max_turns.map(|n| n.to_string()).unwrap_or_default();
 
-    let panel = Panel::new(format!("agents_edit:{}", name), title)
+    panel
         .item(
             format!("Name: {}", profile.name),
-            ItemAction::Emit(Event::AgentsManagerSetField {
-                name: name.to_string(),
-                field: "name".into(),
-                value: profile.name.clone(),
-            }),
+            edit_field_event(name, "name", &profile.name),
         )
         .item(
             format!("Description: {}", profile.description),
-            ItemAction::Emit(Event::AgentsManagerSetField {
-                name: name.to_string(),
-                field: "description".into(),
-                value: profile.description.clone(),
-            }),
+            edit_field_event(name, "description", &profile.description),
         )
         .item(
             format!("System prompt: {}", truncate(&profile.system_prompt, 40)),
-            ItemAction::Emit(Event::AgentsManagerSetField {
-                name: name.to_string(),
-                field: "system_prompt".into(),
-                value: profile.system_prompt.clone(),
-            }),
+            edit_field_event(name, "system_prompt", &profile.system_prompt),
         )
         .item(
             format!("Tools (csv): {}", tools_csv),
-            ItemAction::Emit(Event::AgentsManagerSetField {
-                name: name.to_string(),
-                field: "tools".into(),
-                value: tools_csv,
-            }),
+            edit_field_event(name, "tools", &tools_csv),
         )
         .item(
             format!("Allowlist (csv): {}", allowed_csv),
-            ItemAction::Emit(Event::AgentsManagerSetField {
-                name: name.to_string(),
-                field: "allowlist_tools".into(),
-                value: allowed_csv,
-            }),
+            edit_field_event(name, "allowlist_tools", &allowed_csv),
         )
         .item(
             format!("Denylist (csv): {}", denied_csv),
-            ItemAction::Emit(Event::AgentsManagerSetField {
-                name: name.to_string(),
-                field: "denylist_tools".into(),
-                value: denied_csv,
-            }),
+            edit_field_event(name, "denylist_tools", &denied_csv),
         )
         .item(
             format!("Max turns: {}", max_str),
-            ItemAction::Emit(Event::AgentsManagerSetField {
+            edit_field_event(name, "max_turns", &max_str),
+        )
+}
+
+fn join_optional_csv(list: &Option<Vec<String>>) -> String {
+    list.as_ref().map(|v| v.join(",")).unwrap_or_default()
+}
+
+fn edit_field_event(name: &str, field: &str, value: &str) -> ItemAction {
+    ItemAction::Emit(Event::AgentsManagerSetField {
+        name: name.to_string(),
+        field: field.into(),
+        value: value.to_string(),
+    })
+}
+
+fn add_edit_actions(panel: Panel, name: &str) -> Panel {
+    panel
+        .item(
+            "─ Save ─",
+            ItemAction::Emit(Event::AgentsManagerSave {
                 name: name.to_string(),
-                field: "max_turns".into(),
-                value: max_str,
             }),
         )
-        .item("─ Save ─", ItemAction::Emit(Event::AgentsManagerSave { name: name.to_string() }))
         .item("Back", ItemAction::Pop)
-        .item("Close", ItemAction::Close);
-
-    PanelStack::new(panel)
+        .item("Close", ItemAction::Close)
 }
 
 /// Build the confirm-delete panel.
 pub fn build_delete_panel(name: &str) -> PanelStack {
-    let panel = Panel::new(format!("agents_delete:{}", name), format!("Delete {}?", name))
-        .item(
-            format!("Yes, delete {}", name),
-            ItemAction::Emit(Event::AgentsManagerDelete { name: name.to_string() }),
-        )
-        .item("No, go back", ItemAction::Pop)
-        .item("Close", ItemAction::Close);
+    let panel = Panel::new(
+        format!("agents_delete:{}", name),
+        format!("Delete {}?", name),
+    )
+    .item(
+        format!("Yes, delete {}", name),
+        ItemAction::Emit(Event::AgentsManagerDelete {
+            name: name.to_string(),
+        }),
+    )
+    .item("No, go back", ItemAction::Pop)
+    .item("Close", ItemAction::Close);
     PanelStack::new(panel)
 }
 
@@ -226,7 +253,6 @@ pub fn delete_profile(name: &str) -> Result<(), ProfileError> {
 mod tests {
     use super::*;
     use crate::commands::registry::CommandRegistry;
-    use std::collections::HashMap;
 
     fn make_registry() -> CommandRegistry {
         CommandRegistry::new()
@@ -292,12 +318,16 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let name = "testagent";
         let path = dir.path().join(format!("{}.toml", name));
-        std::fs::write(&path, r#"
+        std::fs::write(
+            &path,
+            r#"
             name = "testagent"
             description = "Test description"
             system_prompt = "You are a test."
             tools = ["read", "write"]
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
 
         let profile = agent_profiles::load_profile_from_file(&path).unwrap();
         assert_eq!(profile.name, "testagent");
@@ -306,7 +336,7 @@ mod tests {
 
     #[test]
     fn build_edit_panel_handles_new_profile() {
-        let _ = std::env::set_var("HOME", "/tmp/_nonexistent_");
+        std::env::set_var("HOME", "/tmp/_nonexistent_");
         let panel_stack = build_edit_panel("newagent");
         let panel = panel_stack.current().unwrap();
         assert!(panel.items.len() >= 8);
@@ -330,7 +360,7 @@ mod tests {
     #[test]
     fn save_profile_writes_toml() {
         let dir = tempfile::tempdir().unwrap();
-        let _ = std::env::set_var("HOME", dir.path());
+        std::env::set_var("HOME", dir.path());
 
         let mut profile = AgentProfile::new("myagent", "You are a test.");
         profile.description = "Test".into();
@@ -349,7 +379,11 @@ mod tests {
         // Write a file to a temp dir, then delete it via the agent_profiles API
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("todelete.toml");
-        std::fs::write(&path, "name = \"todelete\"\ndescription = \"x\"\nsystem_prompt = \"x\"\ntools = []\n").unwrap();
+        std::fs::write(
+            &path,
+            "name = \"todelete\"\ndescription = \"x\"\nsystem_prompt = \"x\"\ntools = []\n",
+        )
+        .unwrap();
         assert!(path.exists());
 
         // Verify we can load it
@@ -360,7 +394,7 @@ mod tests {
     #[test]
     fn delete_nonexistent_profile_is_ok() {
         let dir = tempfile::tempdir().unwrap();
-        let _ = std::env::set_var("HOME", dir.path());
+        std::env::set_var("HOME", dir.path());
         let result = delete_profile("doesnotexist");
         assert!(result.is_ok());
     }
@@ -368,7 +402,7 @@ mod tests {
     #[test]
     fn round_trip_profile() {
         let dir = tempfile::tempdir().unwrap();
-        let _ = std::env::set_var("HOME", dir.path());
+        std::env::set_var("HOME", dir.path());
 
         let original = AgentProfile {
             name: "roundtrip".into(),

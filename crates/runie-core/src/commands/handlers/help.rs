@@ -4,23 +4,33 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::dialog::{ItemAction, Panel, PanelStack};
 use crate::model::AppState;
 
-pub fn register(registry: &mut CommandRegistry) {
-    registry.register(
-        crate::cmd!("help")
-            .desc("Show command reference")
-            .aliases(&["h", "?"])
-            .category(CommandCategory::Core)
-            .sub()
-            .handler(handle_help),
-    );
+use crate::commands::handlers::spec::{CommandKind, CommandSpec};
 
-    registry.register(
-        crate::cmd!("quit")
-            .desc("Quit application")
-            .aliases(&["q", "exit"])
-            .category(CommandCategory::Core)
-            .handler(|_, _| CommandResult::Event(crate::Event::Quit)),
-    );
+fn quit(_: &mut AppState, _: &str) -> CommandResult {
+    CommandResult::Event(crate::Event::Quit)
+}
+
+static CORE_COMMANDS: &[CommandSpec] = &[
+    CommandSpec {
+        name: "help",
+        desc: "Show command reference",
+        aliases: &["h", "?"],
+        category: CommandCategory::Core,
+        sub: true,
+        kind: CommandKind::Handler(handle_help),
+    },
+    CommandSpec {
+        name: "quit",
+        desc: "Quit application",
+        aliases: &["q", "exit"],
+        category: CommandCategory::Core,
+        sub: false,
+        kind: CommandKind::Handler(quit),
+    },
+];
+
+pub fn register(registry: &mut CommandRegistry) {
+    crate::commands::handlers::spec::register_commands(registry, CORE_COMMANDS);
 }
 
 fn handle_help(state: &mut AppState, _: &str) -> CommandResult {

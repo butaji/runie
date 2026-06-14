@@ -92,31 +92,71 @@ fn push_body_item<'a>(
             body.push(Line::from(format!("  {}", text)).style(style_thinking()))
         }
         PanelItem::Separator => body.push(Line::from("")),
-        PanelItem::FormField {
-            label,
-            value,
-            placeholder,
-            ..
-        } => push_form_field_item(
-            body,
-            raw_i,
-            selected,
-            inner_w,
-            field_indices,
-            field_count,
-            nav_idx,
-            label,
-            value,
-            placeholder,
-        ),
-        PanelItem::Toggle { label, value, .. } => {
-            push_toggle_item(body, label, *value, *nav_idx == selected);
-            *nav_idx += 1;
+        PanelItem::FormField { .. } => {
+            push_form_field_body(
+                body,
+                raw_i,
+                selected,
+                inner_w,
+                field_indices,
+                field_count,
+                nav_idx,
+                item,
+            );
+        }
+        PanelItem::Toggle { .. } => {
+            push_toggle_body(body, selected, nav_idx, item);
         }
         PanelItem::Action { .. } | PanelItem::Command { .. } | PanelItem::FormSubmit => {
             *nav_idx += 1
         }
         PanelItem::Select { .. } => {}
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn push_form_field_body<'a>(
+    body: &mut Vec<Line<'a>>,
+    raw_i: usize,
+    selected: usize,
+    inner_w: usize,
+    field_indices: &[usize],
+    field_count: usize,
+    nav_idx: &mut usize,
+    item: &'a PanelItem,
+) {
+    if let PanelItem::FormField {
+        label,
+        value,
+        placeholder,
+        ..
+    } = item
+    {
+        let field_pos = field_indices.iter().position(|&i| i == raw_i).unwrap_or(0);
+        push_field(
+            body,
+            field_pos + 1,
+            field_count,
+            label,
+            value,
+            placeholder,
+            *nav_idx == selected,
+            inner_w,
+        );
+        body.push(Line::from(""));
+        *nav_idx += 1;
+    }
+}
+
+fn push_toggle_body<'a>(
+    body: &mut Vec<Line<'a>>,
+    selected: usize,
+    nav_idx: &mut usize,
+    item: &'a PanelItem,
+) {
+    if let PanelItem::Toggle { label, value, .. } = item {
+        push_toggle_item(body, label, *value, *nav_idx == selected);
+        *nav_idx += 1;
     }
 }
 
@@ -133,34 +173,6 @@ fn push_toggle_item<'a>(body: &mut Vec<Line<'a>>, label: &'a str, checked: bool,
         Style::default()
     };
     body.push(Line::from(text).style(style));
-}
-
-#[allow(clippy::too_many_arguments)]
-fn push_form_field_item<'a>(
-    body: &mut Vec<Line<'a>>,
-    raw_i: usize,
-    selected: usize,
-    inner_w: usize,
-    field_indices: &[usize],
-    field_count: usize,
-    nav_idx: &mut usize,
-    label: &'a str,
-    value: &str,
-    placeholder: &str,
-) {
-    let field_pos = field_indices.iter().position(|&i| i == raw_i).unwrap_or(0);
-    push_field(
-        body,
-        field_pos + 1,
-        field_count,
-        label,
-        value,
-        placeholder,
-        *nav_idx == selected,
-        inner_w,
-    );
-    body.push(Line::from(""));
-    *nav_idx += 1;
 }
 
 /// Build spans for a single button label with accelerator underline.

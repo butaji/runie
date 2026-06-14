@@ -40,7 +40,9 @@
 //! // Form view (filtering disabled, fields editable)
 //! let _ = form("save", "Save Session")
 //!     .field("Name", "session", "name")
-//!     .on_submit(Event::RunSaveCommand { name: String::new() })
+//!     .on_submit(|values| Event::RunSaveCommand {
+//!         name: values.get("name").cloned().unwrap_or_default(),
+//!     })
 //!     .into_stack();
 //!
 //! // Any panel can be switched to form view explicitly, e.g. a loading
@@ -55,7 +57,7 @@ pub mod builders;
 pub mod dsl;
 mod item;
 mod panel;
-mod score;
+pub(crate) mod score;
 mod stack;
 
 #[cfg(test)]
@@ -66,5 +68,5 @@ pub use builders::{
     theme_picker, SettingsRow, SettingsRowKind,
 };
 pub use item::{parse_accel, strip_accel, ItemAction, PanelItem};
-pub use panel::{Panel, PanelView};
+pub use panel::{FormSubmitFn, Panel, PanelView};
 pub use stack::{PanelId, PanelStack};

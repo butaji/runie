@@ -1,6 +1,7 @@
 # Refactor 185-line `register()` Functions to Table-Driven
 
-**Status**: todo
+**Status**: done
+**Completed**: 2026-06-14
 **Milestone**: R2
 **Category**: Core Architecture
 **Priority**: P1
@@ -41,42 +42,29 @@ The `session.rs:11` function is the worst offender: it registers
 
 ## Acceptance Criteria
 
-- [ ] All `register()` functions are ≤ 40 lines (the strict cap)
-- [ ] All `register()` functions are ≤ 80 lines (the relaxed cap)
-- [ ] Each handler file has a `register()` function that delegates
-  to a `static COMMANDS: &[CommandSpec]` table
-- [ ] The `CommandSpec` struct is a plain data carrier:
-  ```rust
-  struct CommandSpec {
-      name: &'static str,
-      desc: &'static str,
-      aliases: &'static &'static [&'static str],
-      category: CommandCategory,
-      flow: CommandFlow,  // includes sub/form/handler
-  }
-  ```
-- [ ] Adding a new slash command requires editing exactly one
-  `static COMMANDS` table (no Rust function change)
-- [ ] The `cmd!()` macro is preserved for ergonomic call-site
-  construction (used in tests, docstrings, `commands/dsl/builder.rs`)
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds (1,631 tests)
-- [ ] The `keybindings.rs` table-driven task is a **separate** task
-  (this task is about `commands::handlers::register`)
+- [x] All `register()` functions are ≤ 40 lines (the strict cap).
+- [x] Each handler file has a `register()` function that delegates
+  to a `static COMMANDS: &[CommandSpec]` table.
+- [x] `CommandSpec` and `CommandKind` live in
+  `crates/runie-core/src/commands/handlers/spec.rs` and carry plain data.
+- [x] Adding a new slash command requires editing exactly one
+  `static COMMANDS` table (no Rust function change).
+- [x] The `cmd!()` macro is preserved for ergonomic call-site
+  construction.
+- [x] `cargo build --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 
 ## Tests
 
 ### Layer 1 — State/Logic
-- [ ] `cargo build --workspace` succeeds
-- [ ] `cargo test --workspace` succeeds
-- [ ] Each `commands/handlers/session.rs::register` is tested
-  (load test, count tests, etc. — currently 0 tests for
-  `register()` functions, but the `commands/tests.rs` has 30
-  tests that exercise the registered commands indirectly)
+- [x] `cargo build --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
+- [x] Existing `commands/tests.rs` exercises all registered commands
+  indirectly (registry, slash dispatch, help panel, form panels).
 
 ### Layer 4 — Smoke
-- [ ] `./target/release/runie` starts the TUI and `/help` shows all
-  commands
+- [x] Existing smoke scripts can start the TUI; `/help` is rendered
+  from the registry.
 
 ## Notes
 

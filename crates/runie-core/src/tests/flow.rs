@@ -119,17 +119,19 @@ fn test_queued_message_appears_after_turn_completes() {
     );
 }
 
+fn submit_queued_message(state: &mut AppState, ch: char) {
+    state.update(Event::Input(ch));
+    state.update(Event::Submit);
+}
+
 #[test]
 fn test_three_messages_one_at_a_time() {
     let mut state = fresh_state();
-    state.update(Event::Input('1'));
-    state.update(Event::Submit);
+    submit_queued_message(&mut state, '1');
     state.agent.turn_active = true;
 
-    state.update(Event::Input('2'));
-    state.update(Event::Submit);
-    state.update(Event::Input('3'));
-    state.update(Event::Submit);
+    submit_queued_message(&mut state, '2');
+    submit_queued_message(&mut state, '3');
 
     assert_eq!(
         user_count(&state),

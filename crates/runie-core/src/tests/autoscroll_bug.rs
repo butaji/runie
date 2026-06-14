@@ -1,4 +1,5 @@
 use crate::event::Event;
+use crate::layout::element_line_count;
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -70,7 +71,7 @@ fn viewport_never_exceeds_height() {
     // Count visible lines (accounting for skip_lines on first element)
     let mut visible_lines = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
-        let count = elem.line_count();
+        let count = element_line_count(elem, state.view.last_content_width);
         if i == 0 && region.skip_lines > 0 {
             visible_lines += count.saturating_sub(region.skip_lines);
         } else {
@@ -94,7 +95,7 @@ fn last_element_lines_clipped_to_fit_viewport() {
     state.ensure_fresh();
 
     let region = crate::tests::visible_helper::compute_viewport(&state, 5);
-    let total_visible = count_visible_lines(&region);
+    let total_visible = count_visible_lines(&region, state.view.last_content_width);
     assert_eq!(
         total_visible, 5,
         "Visible lines must exactly equal viewport height"
@@ -123,10 +124,10 @@ fn add_user_and_huge_thought(state: &mut AppState) {
     state.messages_changed();
 }
 
-fn count_visible_lines(region: &crate::tests::visible_helper::TestViewport) -> usize {
+fn count_visible_lines(region: &crate::tests::visible_helper::TestViewport, width: u16) -> usize {
     let mut total = 0usize;
     for (i, elem) in region.elements.iter().enumerate() {
-        let count = elem.line_count();
+        let count = element_line_count(elem, width);
         if i == 0 && region.skip_lines > 0 {
             total += count.saturating_sub(region.skip_lines);
         } else {

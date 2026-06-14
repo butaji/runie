@@ -230,7 +230,8 @@
       "milestone": "R1",
       "category": "TUI Rendering",
       "priority": "P0",
-      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (run the release binary in a real terminal / tmux) remains unchecked."
+      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (run the release binary in a real terminal / tmux) remains unchecked.",
+      "file": "tasks/terminal-detection.md"
     },
     {
       "id": "osc52-clipboard",
@@ -241,7 +242,8 @@
       "depends_on": [
         "terminal-detection"
       ],
-      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (copy text to the system clipboard) remains unchecked."
+      "notes": "Code is complete and all automatic tests pass. Only the manual Layer 4 smoke test (copy text to the system clipboard) remains unchecked.",
+      "file": "tasks/osc52-clipboard.md"
     },
     {
       "id": "vim-navigation-mode",
@@ -274,7 +276,8 @@
       "status": "todo",
       "milestone": "R3",
       "category": "Configuration",
-      "priority": "P2"
+      "priority": "P2",
+      "file": "tasks/sync-docs.md"
     },
     {
       "id": "ctrl-o-collapse-expand",
@@ -309,7 +312,8 @@
       "status": "todo",
       "milestone": "R3",
       "category": "Core Architecture",
-      "priority": "P1"
+      "priority": "P1",
+      "file": "tasks/extract-term-effect-handlers.md"
     },
     {
       "id": "complete-agents-manager",
@@ -334,17 +338,19 @@
       "status": "todo",
       "milestone": "R3",
       "category": "Configuration",
-      "priority": "P1"
+      "priority": "P1",
+      "file": "tasks/consolidate-config-reload-types.md"
     },
     {
       "id": "restore-size-and-lint-discipline",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
       "depends_on": [
         "extract-term-effect-handlers"
-      ]
+      ],
+      "file": "tasks/restore-size-and-lint-discipline.md"
     },
     {
       "id": "remove-test-sleeps",
@@ -352,8 +358,9 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
+      "file": "tasks/remove-test-sleeps.md",
       "depends_on": [
-        "consolidate-config-reload-types"
+        "fix-clippy-and-test-hygiene"
       ]
     },
     {
@@ -364,14 +371,16 @@
       "priority": "P2",
       "depends_on": [
         "remove-orphan-modules"
-      ]
+      ],
+      "file": "tasks/cleanup-clippy-dead-code.md"
     },
     {
       "id": "fix-quality-nits",
       "status": "todo",
       "milestone": "R3",
       "category": "Core Architecture",
-      "priority": "P3"
+      "priority": "P3",
+      "file": "tasks/fix-quality-nits.md"
     },
     {
       "id": "archive-done-task-files",
@@ -587,10 +596,11 @@
     },
     {
       "id": "crate-replacement-audit",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P0",
+      "completed_in": "current",
       "file": "tasks/crate-replacement-audit.md",
       "blocks": [
         "adopt-syntect",
@@ -602,10 +612,11 @@
     },
     {
       "id": "adopt-syntect",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P1",
+      "completed_in": "current",
       "file": "tasks/adopt-syntect.md",
       "depends_on": [
         "crate-replacement-audit"
@@ -613,10 +624,11 @@
     },
     {
       "id": "adopt-similar",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Tools",
       "priority": "P1",
+      "completed_in": "current",
       "file": "tasks/adopt-similar.md",
       "depends_on": [
         "crate-replacement-audit"
@@ -624,10 +636,11 @@
     },
     {
       "id": "adopt-pulldown-cmark",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P1",
+      "completed_in": "current",
       "file": "tasks/adopt-pulldown-cmark.md",
       "depends_on": [
         "crate-replacement-audit"
@@ -635,10 +648,11 @@
     },
     {
       "id": "adopt-tiktoken-rs",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
+      "completed_in": "current",
       "file": "tasks/adopt-tiktoken-rs.md",
       "depends_on": [
         "crate-replacement-audit",
@@ -655,6 +669,306 @@
       "depends_on": [
         "crate-replacement-audit"
       ]
+    },
+    {
+      "id": "remove-vendored-reference-repos",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/remove-vendored-reference-repos.md"
+    },
+    {
+      "id": "delete-committed-rlib",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/delete-committed-rlib.md"
+    },
+    {
+      "id": "fix-clippy-and-test-hygiene",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/fix-clippy-and-test-hygiene.md",
+      "depends_on": [
+        "delete-committed-rlib"
+      ]
+    },
+    {
+      "id": "cleanup-stale-docs",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/cleanup-stale-docs.md"
+    },
+    {
+      "id": "consolidate-overlapping-tasks",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "file": "tasks/consolidate-overlapping-tasks.md"
+    },
+    {
+      "id": "unify-token-counter",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/unify-token-counter.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "unify-fuzzy-scorer",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/unify-fuzzy-scorer.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "unify-spinner-frames",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P2",
+      "file": "tasks/unify-spinner-frames.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "unify-tool-markers",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tools",
+      "priority": "P1",
+      "file": "tasks/unify-tool-markers.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "dedupe-agent-profiles",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/dedupe-agent-profiles.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "extract-headless-runner",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/extract-headless-runner.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene",
+        "unify-tool-markers"
+      ]
+    },
+    {
+      "id": "unify-provider-model-registry",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Providers & Models",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/unify-provider-model-registry.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ],
+      "blocks": [
+        "adopt-tiktoken-rs"
+      ]
+    },
+    {
+      "id": "merge-dialog-command-dsl",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input & Commands",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/merge-dialog-command-dsl.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "sync-element-line-count",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/sync-element-line-count.md",
+      "depends_on": [
+        "fix-clippy-and-test-hygiene"
+      ]
+    },
+    {
+      "id": "move-grep-find-to-tests",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "file": "tasks/move-grep-find-to-tests.md"
+    },
+    {
+      "id": "split-tick-animation",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "file": "tasks/split-tick-animation.md"
+    },
+    {
+      "id": "fix-model-config-non-determinism",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P2",
+      "file": "tasks/fix-model-config-non-determinism.md"
+    },
+    {
+      "id": "table-driven-command-registration",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/table-driven-command-registration.md"
+    },
+    {
+      "id": "fix-build-script-linter",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tooling",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/fix-build-script-linter.md",
+      "blocks": [
+        "fix-code-formatting",
+        "harden-test-verification-and-dev-sh",
+        "self-contained-form-submit",
+        "command-flow-exec-borrow",
+        "fix-provider-model-registry-drift",
+        "remove-dead-dsl-surface",
+        "unify-markdown-line-counts",
+        "cache-feed-rendering",
+        "wire-tokenizer-cost-tracking",
+        "display-width-wrapping",
+        "fix-vim-nav-wrap-mapping"
+      ]
+    },
+    {
+      "id": "fix-code-formatting",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tooling",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/fix-code-formatting.md"
+    },
+    {
+      "id": "harden-test-verification-and-dev-sh",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Tooling",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/harden-test-verification-and-dev-sh.md"
+    },
+    {
+      "id": "self-contained-form-submit",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input & Commands",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/self-contained-form-submit.md",
+      "depends_on": [
+        "command-flow-exec-borrow"
+      ]
+    },
+    {
+      "id": "command-flow-exec-borrow",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Input & Commands",
+      "priority": "P0",
+      "completed_in": "current",
+      "file": "tasks/command-flow-exec-borrow.md"
+    },
+    {
+      "id": "fix-provider-model-registry-drift",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Providers & Models",
+      "priority": "P1",
+      "file": "tasks/fix-provider-model-registry-drift.md"
+    },
+    {
+      "id": "remove-dead-dsl-surface",
+      "status": "done",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "completed_in": "current",
+      "file": "tasks/remove-dead-dsl-surface.md"
+    },
+    {
+      "id": "unify-markdown-line-counts",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "file": "tasks/unify-markdown-line-counts.md"
+    },
+    {
+      "id": "cache-feed-rendering",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "file": "tasks/cache-feed-rendering.md"
+    },
+    {
+      "id": "wire-tokenizer-cost-tracking",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/wire-tokenizer-cost-tracking.md"
+    },
+    {
+      "id": "display-width-wrapping",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "file": "tasks/display-width-wrapping.md"
+    },
+    {
+      "id": "fix-vim-nav-wrap-mapping",
+      "status": "done",
+      "milestone": "R3",
+      "category": "TUI Rendering",
+      "priority": "P1",
+      "file": "tasks/fix-vim-nav-wrap-mapping.md"
     }
   ]
 }

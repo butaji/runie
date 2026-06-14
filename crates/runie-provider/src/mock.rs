@@ -31,12 +31,81 @@ impl MockProvider {
     }
 }
 
+fn file_tool_chunks(input: &str) -> Option<Vec<String>> {
+    if input.contains("list files") || input.contains("files") {
+        return Some(vec![
+            "I'll list the files in the current directory.\n".to_string(),
+            "TOOL:list_dir:.".to_string(),
+        ]);
+    }
+    if input.contains("read") {
+        return Some(vec![
+            "Let me read that file for you.\n".to_string(),
+            "TOOL:read_file:README.md".to_string(),
+        ]);
+    }
+    if input.contains("write") {
+        return Some(vec![
+            "I'll create that file for you.\n".to_string(),
+            "TOOL:write_file:hello.txt:Hello World".to_string(),
+        ]);
+    }
+    if input.contains("edit") {
+        return Some(vec![
+            "I'll make that edit for you.\n".to_string(),
+            r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#
+                .to_string(),
+        ]);
+    }
+    None
+}
+
+fn command_tool_chunks(input: &str) -> Option<Vec<String>> {
+    if input.contains("run") || input.contains("cmd") {
+        return Some(vec![
+            "I'll run that command for you.\n".to_string(),
+            "TOOL:bash:echo hello".to_string(),
+        ]);
+    }
+    if input.contains("grep") || input.contains("search") {
+        return Some(vec![
+            "I'll search for that pattern.\n".to_string(),
+            r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#
+                .to_string(),
+        ]);
+    }
+    if input.contains("find") || input.contains("glob") {
+        return Some(vec![
+            "I'll find those files for you.\n".to_string(),
+            r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
+        ]);
+    }
+    None
+}
+
+fn response_chunks(last: Option<&Message>, user_input: &str) -> Vec<String> {
+    if matches!(last, Some(Message::ToolResult { .. })) {
+        return vec!["Done. I have the information you requested.".to_string()];
+    }
+    let input_lower = user_input.to_lowercase();
+    if let Some(chunks) = file_tool_chunks(&input_lower) {
+        return chunks;
+    }
+    if let Some(chunks) = command_tool_chunks(&input_lower) {
+        return chunks;
+    }
+    user_input
+        .split_whitespace()
+        .map(|w| format!("{} ", w))
+        .collect()
+}
+
 impl Provider for MockProvider {
     fn generate(
         &self,
         messages: Vec<Message>,
     ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ResponseChunk>> + Send + '_>> {
-        let delay = self.random_delay();
+        let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = messages
             .iter()
@@ -47,55 +116,8 @@ impl Provider for MockProvider {
             })
             .unwrap_or_default();
 
-        let input_lower = user_input.to_lowercase();
+        let chunks = response_chunks(last, &user_input);
 
-        // Determine response chunks based on input keywords.
-        let chunks: Vec<String> = if matches!(last, Some(Message::ToolResult { .. })) {
-            vec!["Done. I have the information you requested.".to_string()]
-        } else if input_lower.contains("list files") || input_lower.contains("files") {
-            vec![
-                "I'll list the files in the current directory.\n".to_string(),
-                "TOOL:list_dir:.".to_string(),
-            ]
-        } else if input_lower.contains("read") {
-            vec![
-                "Let me read that file for you.\n".to_string(),
-                "TOOL:read_file:README.md".to_string(),
-            ]
-        } else if input_lower.contains("write") {
-            vec![
-                "I'll create that file for you.\n".to_string(),
-                "TOOL:write_file:hello.txt:Hello World".to_string(),
-            ]
-        } else if input_lower.contains("edit") {
-            vec![
-                "I'll make that edit for you.\n".to_string(),
-                r#"{"name": "edit_file", "arguments": {"path": "src/main.rs", "search": "old", "replace": "new"}}"#.to_string(),
-            ]
-        } else if input_lower.contains("run") || input_lower.contains("cmd") {
-            vec![
-                "I'll run that command for you.\n".to_string(),
-                "TOOL:bash:echo hello".to_string(),
-            ]
-        } else if input_lower.contains("grep") || input_lower.contains("search") {
-            vec![
-                "I'll search for that pattern.\n".to_string(),
-                r#"{"name": "grep", "arguments": {"pattern": "fn main", "path": ".", "glob": "*.rs"}}"#.to_string(),
-            ]
-        } else if input_lower.contains("find") || input_lower.contains("glob") {
-            vec![
-                "I'll find those files for you.\n".to_string(),
-                r#"{"name": "find", "arguments": {"pattern": "*.rs", "path": "."}}"#.to_string(),
-            ]
-        } else {
-            // Echo each word as a chunk.
-            user_input
-                .split_whitespace()
-                .map(|w| format!("{} ", w))
-                .collect()
-        };
-
-        let delay_ms = delay;
         Box::pin(async_stream::stream! {
             for chunk_text in chunks {
                 if let Some(d) = delay_ms {
@@ -183,7 +205,7 @@ impl Provider for MockStreamingProvider {
             for i in 0..total_chunks {
                 let start = i * chunk_size;
                 let end = (start + chunk_size).min(response.len());
-                let chunk = String::from_utf8_lossy(response[start..end].as_bytes()).to_string();
+                let chunk = String::from_utf8_lossy(&response.as_bytes()[start..end]).to_string();
                 yield Ok(ResponseChunk { content: chunk });
                 if i < total_chunks - 1 && delay_ms > 0 {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;

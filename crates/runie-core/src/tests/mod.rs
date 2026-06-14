@@ -1,21 +1,13 @@
 #[cfg(test)]
 mod action_text;
 #[cfg(test)]
-mod mouse_events;
-#[cfg(test)]
-mod focus_events;
+mod agent;
 #[cfg(test)]
 mod agents_manager_e2e;
 #[cfg(test)]
-mod command_forms;
-#[cfg(test)]
-mod agent;
+mod appstate_structural;
 #[cfg(test)]
 mod at_file_picker;
-#[cfg(test)]
-mod tab_file_picker_filter;
-#[cfg(test)]
-mod appstate_structural;
 #[cfg(test)]
 mod autoscroll_bug;
 #[cfg(test)]
@@ -24,6 +16,8 @@ mod autoscroll_overflow;
 mod collapse;
 #[cfg(test)]
 mod collapse_new_items;
+#[cfg(test)]
+mod command_forms;
 #[cfg(test)]
 mod compaction;
 #[cfg(test)]
@@ -44,6 +38,8 @@ mod element_spacing;
 mod file_refs;
 #[cfg(test)]
 mod flow;
+#[cfg(test)]
+mod focus_events;
 #[cfg(test)]
 mod form_dialog;
 #[cfg(test)]
@@ -78,6 +74,8 @@ mod misc;
 mod model_cycle;
 #[cfg(test)]
 mod model_selector;
+#[cfg(test)]
+mod mouse_events;
 #[cfg(test)]
 mod no_ghost_agent;
 #[cfg(test)]
@@ -120,6 +118,8 @@ mod status_timer;
 mod subagent_cmd;
 #[cfg(test)]
 mod tab_complete;
+#[cfg(test)]
+mod tab_file_picker_filter;
 #[cfg(test)]
 mod theme_slash;
 #[cfg(test)]

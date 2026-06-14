@@ -1,8 +1,11 @@
 //! Tests for empty line between elements in chat feed.
 
 use crate::event::Event;
+use crate::layout::element_line_count;
 use crate::model::AppState;
 use crate::ui::LazyCache;
+
+const TEST_WIDTH: u16 = 80;
 
 fn fresh_state() -> AppState {
     AppState::default()
@@ -10,7 +13,10 @@ fn fresh_state() -> AppState {
 
 fn _feed_lines(state: &AppState) -> usize {
     let feed = LazyCache::feed(state);
-    feed.elements.iter().map(|e| e.line_count()).sum()
+    feed.elements
+        .iter()
+        .map(|e| element_line_count(e, TEST_WIDTH))
+        .sum()
 }
 
 #[test]
@@ -28,7 +34,7 @@ fn spacer_contributes_one_line() {
     assert!(!spacers.is_empty(), "Feed should have spacers");
     for spacer in spacers {
         assert_eq!(
-            spacer.line_count(),
+            element_line_count(spacer, TEST_WIDTH),
             1,
             "Spacer must contribute exactly 1 empty line"
         );
@@ -48,7 +54,7 @@ fn single_user_message_has_spacer_after() {
         feed.elements[1],
         crate::ui::Element::Spacer { .. }
     ));
-    assert_eq!(feed.elements[1].line_count(), 1);
+    assert_eq!(element_line_count(&feed.elements[1], TEST_WIDTH), 1);
 }
 
 #[test]
@@ -83,7 +89,11 @@ fn total_lines_includes_spacers() {
     state.update(Event::Submit);
     state.ensure_fresh();
     let feed = LazyCache::feed(&state);
-    let total: usize = feed.elements.iter().map(|e| e.line_count()).sum();
+    let total: usize = feed
+        .elements
+        .iter()
+        .map(|e| element_line_count(e, TEST_WIDTH))
+        .sum();
     // UserMessage is 1 content line + 2 margin lines = 3, Spacer is 1 line = 4 total
     assert_eq!(total, 4, "Total lines should include spacer empty line");
 }

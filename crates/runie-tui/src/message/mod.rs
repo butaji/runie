@@ -5,19 +5,25 @@ use ratatui::{
     text::{Line, Span},
 };
 
+use runie_core::display_width;
 use runie_core::format_timestamp;
 
 use crate::markdown::{
     extract_code_blocks, md_to_spans, parse_inline_markdown_with_color, CodeBlock,
 };
 use crate::theme::{
-    color_accent_bg, color_fg, color_fg_bright, style_agent, style_thinking, style_thought,
-    style_timestamp, style_tool_header, style_tool_output, style_tool_running, style_tool_summary,
-    style_turn_complete, style_user, GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
+    color_accent_bg, color_fg, color_fg_bright, style_agent, style_timestamp, style_user,
+    GLYPH_AGENT, GLYPH_INDENT, GLYPH_USER,
 };
 
 mod code;
+mod support;
 mod wrap;
+
+pub use support::{
+    render_thinking, render_thought_marker, render_thought_summary, render_tool_done,
+    render_tool_running, render_tool_summary, render_turn_complete,
+};
 
 const MARGIN_SYMBOL: &str = " ";
 
@@ -33,7 +39,7 @@ fn add_lr_margins_to_lines(lines: Vec<Line<'static>>) -> Vec<Line<'static>> {
 }
 
 fn span_width(spans: &[Span<'_>]) -> u16 {
-    spans.iter().map(|s| s.content.chars().count() as u16).sum()
+    spans.iter().map(|s| display_width::width(&s.content)).sum()
 }
 
 fn margin_line(width: u16, style: Style) -> Line<'static> {
@@ -53,7 +59,7 @@ fn build_user_line(
     bg_style: Style,
     with_ts: bool,
 ) -> Line<'static> {
-    let p_width = prefix.chars().count() as u16;
+    let p_width = display_width::width(prefix);
     let mut spans = vec![
         Span::styled(" ", bg_style),
         Span::styled(prefix, base_style),
@@ -121,47 +127,22 @@ pub fn render_user_message(
     let base_style = style_user();
     let bg_style = Style::default().bg(color_accent_bg());
     let inner_width = content_width.saturating_sub(2);
-    let prefix_width = GLYPH_USER.chars().count() as u16;
-    let indent_width = GLYPH_INDENT.chars().count() as u16;
-    let ts_width = ts_str.len() as u16 + 1;
+    let prefix_width = display_width::width(GLYPH_USER);
+    let indent_width = display_width::width(GLYPH_INDENT);
+    let ts_width = display_width::width(&ts_str) + 1;
 
     let mut lines = Vec::new();
     lines.push(margin_line(content_width, bg_style));
-
-    let explicit_lines: Vec<&str> = content.lines().collect();
-    let mut is_first = true;
-
-    for explicit_line in explicit_lines.iter() {
-        let first_w = if is_first {
-            inner_width
-                .saturating_sub(prefix_width)
-                .saturating_sub(ts_width)
-        } else {
-            inner_width.saturating_sub(indent_width)
-        };
-        let rest_w = inner_width.saturating_sub(indent_width);
-
-        let wrapped = word_wrap(explicit_line, first_w, rest_w);
-        for (j, chunk) in wrapped.iter().enumerate() {
-            let prefix = if is_first && j == 0 {
-                GLYPH_USER
-            } else {
-                GLYPH_INDENT
-            };
-            let with_ts = is_first && j == 0;
-            lines.push(build_user_line(
-                chunk,
-                prefix,
-                inner_width,
-                &ts_str,
-                ts_width,
-                base_style,
-                bg_style,
-                with_ts,
-            ));
-        }
-        is_first = false;
-    }
+    lines.extend(build_user_body(
+        content,
+        inner_width,
+        prefix_width,
+        indent_width,
+        ts_width,
+        &ts_str,
+        base_style,
+        bg_style,
+    ));
 
     if lines.len() == 1 {
         lines.push(empty_user_line(
@@ -178,59 +159,183 @@ pub fn render_user_message(
     lines
 }
 
+#[allow(clippy::too_many_arguments)]
+fn build_user_body(
+    content: &str,
+    inner_width: u16,
+    prefix_width: u16,
+    indent_width: u16,
+    ts_width: u16,
+    ts_str: &str,
+    base_style: Style,
+    bg_style: Style,
+) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    let explicit_lines: Vec<&str> = content.lines().collect();
+    let mut is_first = true;
+
+    for explicit_line in explicit_lines.iter() {
+        append_user_wrapped(
+            explicit_line,
+            &mut lines,
+            &mut is_first,
+            inner_width,
+            prefix_width,
+            indent_width,
+            ts_width,
+            ts_str,
+            base_style,
+            bg_style,
+        );
+    }
+    lines
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_user_wrapped(
+    line: &str,
+    lines: &mut Vec<Line<'static>>,
+    is_first: &mut bool,
+    inner_width: u16,
+    prefix_width: u16,
+    indent_width: u16,
+    ts_width: u16,
+    ts_str: &str,
+    base_style: Style,
+    bg_style: Style,
+) {
+    let rest_w = inner_width.saturating_sub(indent_width);
+    let first_w = if *is_first {
+        inner_width
+            .saturating_sub(prefix_width)
+            .saturating_sub(ts_width)
+    } else {
+        rest_w
+    };
+    for (j, chunk) in word_wrap(line, first_w, rest_w).iter().enumerate() {
+        let (prefix, with_ts) = if *is_first && j == 0 {
+            (GLYPH_USER, true)
+        } else {
+            (GLYPH_INDENT, false)
+        };
+        lines.push(build_user_line(
+            chunk,
+            prefix,
+            inner_width,
+            ts_str,
+            ts_width,
+            base_style,
+            bg_style,
+            with_ts,
+        ));
+    }
+    *is_first = false;
+}
+
 pub fn render_agent_message(
     content: &str,
     timestamp: f64,
     content_width: u16,
 ) -> Vec<Line<'static>> {
     let blocks = extract_code_blocks(content);
-    let mut lines = Vec::new();
-    let mut is_first = true;
     let ts_str = format_timestamp(timestamp);
     let inner_width = content_width.saturating_sub(2);
-
-    for block in blocks {
-        match block {
-            CodeBlock::Text(text) => {
-                for line in text.lines() {
-                    lines.extend(render_msg_line(line, is_first, inner_width, &ts_str));
-                    is_first = false;
-                }
-            }
-            CodeBlock::Code { lang, content } => {
-                lines.push(code::render_code_header(
-                    &lang,
-                    is_first,
-                    inner_width,
-                    &ts_str,
-                ));
-                is_first = false;
-                lines.extend(code::render_code_block_lines(&content, &lang));
-            }
-            CodeBlock::List { ordered, items } => {
-                for (i, item) in items.iter().enumerate() {
-                    lines.push(render_list_item(
-                        item,
-                        ordered,
-                        i,
-                        is_first,
-                        inner_width,
-                        &ts_str,
-                    ));
-                    is_first = false;
-                }
-            }
-            CodeBlock::Blockquote(text) => {
-                lines.extend(render_blockquote_lines(&text));
-                is_first = false;
-            }
-        }
-    }
+    let mut lines = build_agent_body(&blocks, &ts_str, inner_width);
 
     if lines.is_empty() {
         lines.push(render_empty_agent_line(inner_width, &ts_str));
     }
     add_lr_margins_to_lines(lines)
+}
+
+fn build_agent_body(blocks: &[CodeBlock], ts_str: &str, inner_width: u16) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    let mut is_first = true;
+
+    for block in blocks {
+        is_first = render_agent_block(block, ts_str, inner_width, is_first, &mut lines);
+    }
+    lines
+}
+
+fn render_agent_block(
+    block: &CodeBlock,
+    ts_str: &str,
+    inner_width: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    match block {
+        CodeBlock::Text(text) => {
+            render_agent_text_block(text, ts_str, inner_width, is_first, lines)
+        }
+        CodeBlock::Code { lang, content } => {
+            render_agent_code_block(lang, content, ts_str, inner_width, is_first, lines)
+        }
+        CodeBlock::List { ordered, items } => {
+            render_agent_list_block(items, *ordered, ts_str, inner_width, is_first, lines)
+        }
+        CodeBlock::Blockquote(text) => {
+            lines.extend(support::render_blockquote_lines(text));
+            false
+        }
+    }
+}
+
+fn render_agent_text_block(
+    text: &str,
+    ts_str: &str,
+    inner_width: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    let mut is_first = is_first;
+    for line in text.lines() {
+        lines.extend(render_msg_line(line, is_first, inner_width, ts_str));
+        is_first = false;
+    }
+    is_first
+}
+
+fn render_agent_code_block(
+    lang: &str,
+    content: &str,
+    ts_str: &str,
+    inner_width: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    lines.push(code::render_code_header(
+        lang,
+        is_first,
+        inner_width,
+        ts_str,
+    ));
+    lines.extend(code::render_code_block_lines(content, lang));
+    false
+}
+
+fn render_agent_list_block(
+    items: &[String],
+    ordered: bool,
+    ts_str: &str,
+    inner_width: u16,
+    is_first: bool,
+    lines: &mut Vec<Line<'static>>,
+) -> bool {
+    let mut is_first = is_first;
+    for (i, item) in items.iter().enumerate() {
+        lines.push(support::render_list_item(
+            item,
+            ordered,
+            i,
+            is_first,
+            inner_width,
+            ts_str,
+        ));
+        is_first = false;
+    }
+    is_first
 }
 
 fn build_agent_line(
@@ -268,8 +373,12 @@ fn render_msg_line(
     content_width: u16,
     ts_str: &str,
 ) -> Vec<Line<'static>> {
-    let prefix_width = GLYPH_AGENT.chars().count() as u16;
-    let ts_width = if is_first { ts_str.len() as u16 + 1 } else { 0 };
+    let prefix_width = display_width::width(GLYPH_AGENT);
+    let ts_width = if is_first {
+        display_width::width(ts_str) + 1
+    } else {
+        0
+    };
     let (first_w, rest_w) = msg_line_widths(content_width, prefix_width, ts_width, is_first);
 
     let wrapped = word_wrap(line, first_w, rest_w);
@@ -335,80 +444,13 @@ fn msg_chunk_line(
     line
 }
 
-fn render_list_item(
-    item: &str,
-    ordered: bool,
-    idx: usize,
-    is_first: bool,
-    content_width: u16,
-    ts_str: &str,
-) -> Line<'static> {
-    let bullet = if ordered {
-        format!("{}.", idx + 1)
-    } else {
-        "•".to_string()
-    };
-    let first_line_prefix = if is_first {
-        format!("{} {}", GLYPH_AGENT, bullet)
-    } else {
-        format!("{} {}", GLYPH_INDENT, bullet)
-    };
-    let rest_prefix = format!("{}   ", GLYPH_INDENT);
-    let lines: Vec<&str> = item.lines().collect();
-    let mut result_spans: Vec<Span<'static>> = Vec::new();
-    let mut text_len = 0u16;
-
-    for (j, line) in lines.iter().enumerate() {
-        let prefix = if j == 0 {
-            &first_line_prefix
-        } else {
-            &rest_prefix
-        };
-        if j > 0 {
-            result_spans.push(Span::raw("\n".to_string()));
-        }
-        result_spans.push(Span::styled(prefix.clone(), style_agent()));
-        result_spans.push(Span::styled(line.to_string(), style_agent()));
-        text_len = prefix.chars().count() as u16 + line.chars().count() as u16;
-    }
-
-    push_list_timestamp(&mut result_spans, is_first, content_width, ts_str, text_len);
-    Line::from(result_spans).style(style_agent())
-}
-
-fn push_list_timestamp(
-    spans: &mut Vec<Span<'static>>,
-    is_first: bool,
-    content_width: u16,
-    ts_str: &str,
-    text_len: u16,
-) {
-    if !is_first || content_width == 0 {
-        return;
-    }
-    let ts_width = ts_str.len() as u16 + 1;
-    let padding = content_width
-        .saturating_sub(text_len)
-        .saturating_sub(ts_width);
-    if padding > 0 {
-        spans.push(Span::raw(" ".repeat(padding as usize)));
-    }
-    spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
-}
-
-fn render_blockquote_lines(text: &str) -> Vec<Line<'static>> {
-    text.lines()
-        .map(|line| Line::from(format!("{}│ {}", GLYPH_INDENT, line)).style(style_agent()))
-        .collect()
-}
-
 fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
     let text = GLYPH_AGENT.to_string();
     let mut spans = vec![Span::styled(text.clone(), style_agent())];
     if content_width > 0 {
-        let ts_width = ts_str.len() as u16 + 1;
+        let ts_width = display_width::width(ts_str) + 1;
         let padding = content_width
-            .saturating_sub(text.chars().count() as u16)
+            .saturating_sub(display_width::width(&text))
             .saturating_sub(ts_width);
         if padding > 0 {
             spans.push(Span::raw(" ".repeat(padding as usize)));
@@ -416,78 +458,4 @@ fn render_empty_agent_line(content_width: u16, ts_str: &str) -> Line<'static> {
         spans.push(Span::styled(format!(" {}", ts_str), style_timestamp()));
     }
     Line::from(spans).style(style_agent())
-}
-
-pub fn render_thought_marker(content: &str, content_width: u16) -> Vec<Line<'static>> {
-    let inner_width = content_width.saturating_sub(2);
-    let style = style_thought();
-    let mut lines: Vec<Line<'static>> = Vec::new();
-    for raw_line in content.lines() {
-        if raw_line.is_empty() {
-            lines.push(add_lr_margins(Line::from("").style(style)));
-            continue;
-        }
-        for chunk in word_wrap(raw_line, inner_width, inner_width) {
-            lines.push(add_lr_margins(Line::from(chunk.to_string()).style(style)));
-        }
-    }
-    if lines.is_empty() {
-        lines.push(add_lr_margins(Line::from("").style(style)));
-    }
-    lines
-}
-
-pub fn render_thinking(started: std::time::Instant) -> Vec<Line<'static>> {
-    let lines = vec![
-        Line::from(crate::theme::thinking_line(started.elapsed().as_secs_f64()))
-            .style(style_thinking()),
-    ];
-    add_lr_margins_to_lines(lines)
-}
-
-pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'static>> {
-    let first_line = content.lines().next().unwrap_or(content);
-    let lines = vec![Line::from(format!("{} [+]", first_line)).style(style_thought())];
-    add_lr_margins_to_lines(lines)
-}
-
-pub fn render_tool_running(name: &str, duration_secs: f64) -> Vec<Line<'static>> {
-    let lines = vec![
-        Line::from(format!("{} Running {}... {:.1}s", "⠋", name, duration_secs))
-            .style(style_tool_running()),
-    ];
-    add_lr_margins_to_lines(lines)
-}
-
-pub fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'static>> {
-    let mut lines =
-        vec![Line::from(tool_done_header(name, duration_secs)).style(style_tool_header())];
-    if !output.is_empty() {
-        if crate::diff::is_diff_output(output) {
-            lines.extend(crate::diff::render_diff_text(output));
-        } else {
-            for line in output.lines() {
-                lines.push(Line::from(line.to_string()).style(style_tool_output()));
-            }
-        }
-    }
-    add_lr_margins_to_lines(lines)
-}
-
-fn tool_done_header(name: &str, duration_secs: f64) -> String {
-    format!("✓ {} {:.1}s", name, duration_secs)
-}
-
-pub fn render_tool_summary(name: &str, duration_secs: f64) -> Vec<Line<'static>> {
-    let lines = vec![
-        Line::from(format!("✓ {} {:.1}s [+]", name, duration_secs)).style(style_tool_summary())
-    ];
-    add_lr_margins_to_lines(lines)
-}
-
-pub fn render_turn_complete(duration_secs: f64) -> Vec<Line<'static>> {
-    let lines = vec![
-        Line::from(format!("Turn completed in {:.1}s", duration_secs)).style(style_turn_complete()),
-    ];
-    add_lr_margins_to_lines(lines)
 }

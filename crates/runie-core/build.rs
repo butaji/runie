@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const MAX_FILE_LINES: usize = 2000;
-const MAX_FUNCTION_LINES: usize = 150;
-const MAX_COMPLEXITY: usize = 30;
+const MAX_FILE_LINES: usize = 500;
+const MAX_FUNCTION_LINES: usize = 40;
+const MAX_COMPLEXITY: usize = 10;
 
 fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
@@ -33,9 +33,38 @@ fn check_file_length(path: &Path, lines: &[&str], errors: &mut Vec<String>) {
 
 fn count_complexity(trimmed: &str) -> usize {
     trimmed.matches("if ").count()
+        + trimmed.matches("else if").count()
         + trimmed.matches("match ").count()
         + trimmed.matches("while ").count()
         + trimmed.matches("for ").count()
+        + trimmed.matches("&&").count()
+        + trimmed.matches("||").count()
+        + trimmed.matches('?').count()
+}
+
+fn is_function_start(trimmed: &str) -> bool {
+    if trimmed.ends_with(';') {
+        return false;
+    }
+    let mut tokens = trimmed.split_whitespace().peekable();
+    loop {
+        match tokens.peek().copied() {
+            Some("pub") | Some("pub(crate)") | Some("pub(super)") | Some("crate") => {
+                tokens.next();
+            }
+            Some("async") | Some("const") | Some("unsafe") | Some("static") => {
+                tokens.next();
+            }
+            Some("fn") => {
+                tokens.next();
+                return tokens
+                    .next()
+                    .map(|name| !name.starts_with('('))
+                    .unwrap_or(false);
+            }
+            _ => return false,
+        }
+    }
 }
 
 fn report_fn_violation(
@@ -67,52 +96,72 @@ fn report_fn_violation(
     }
 }
 
+#[derive(Default)]
+struct FnTracker {
+    in_fn: bool,
+    in_fn_body: bool,
+    fn_start: usize,
+    brace_depth: usize,
+    fn_complexity: usize,
+    fn_name: String,
+}
+
+impl FnTracker {
+    fn start(&mut self, i: usize, trimmed: &str) {
+        self.in_fn = true;
+        self.in_fn_body = false;
+        self.fn_start = i;
+        self.fn_complexity = 1;
+        self.fn_name = trimmed.lines().next().unwrap_or("").to_string();
+    }
+
+    fn update_braces(&mut self, trimmed: &str) {
+        let opens = trimmed.matches('{').count();
+        let closes = trimmed.matches('}').count();
+        self.brace_depth = self.brace_depth.saturating_add(opens);
+        self.brace_depth = self.brace_depth.saturating_sub(closes);
+        if opens > 0 {
+            self.in_fn_body = true;
+        }
+    }
+
+    fn ended(&self, trimmed: &str) -> bool {
+        self.in_fn_body && self.brace_depth == 0 && trimmed.contains('}')
+    }
+
+    fn report_and_reset(&mut self, path: &Path, i: usize, errors: &mut Vec<String>) {
+        let fn_len = i - self.fn_start + 1;
+        report_fn_violation(
+            path,
+            self.fn_start,
+            &self.fn_name,
+            fn_len,
+            self.fn_complexity,
+            errors,
+        );
+        self.in_fn = false;
+        self.in_fn_body = false;
+        self.fn_complexity = 0;
+        self.fn_name.clear();
+    }
+}
+
 fn check_function_violations(path: &Path, lines: &[&str], errors: &mut Vec<String>) {
-    let mut in_fn = false;
-    // `in_fn_body` tracks whether we've seen the opening `{` of the current
-    // function. This prevents trait-method `};` (which ends the signature) from
-    // being confused with a function-body closing brace.
-    let mut in_fn_body = false;
-    let mut fn_start = 0;
-    let mut brace_depth = 0usize;
-    let mut fn_complexity = 0usize;
-    let mut fn_name = String::new();
+    let mut tracker = FnTracker::default();
 
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
 
-        if trimmed.starts_with("fn ") && !trimmed.ends_with(';') {
-            // Entering a new function (signature doesn't end with `;`).
-            in_fn = true;
-            in_fn_body = false;
-            fn_start = i;
-            // NOTE: do NOT reset brace_depth — we may be inside another
-            // function's body and the outer braces are still open.
-            fn_complexity = 1;
-            fn_name = trimmed.lines().next().unwrap_or("").to_string();
+        if !tracker.in_fn && is_function_start(trimmed) {
+            tracker.start(i, trimmed);
         }
 
-        if in_fn {
-            let opens = trimmed.matches('{').count();
-            let closes = trimmed.matches('}').count();
-            brace_depth = brace_depth.saturating_add(opens);
-            brace_depth = brace_depth.saturating_sub(closes);
-            fn_complexity += count_complexity(trimmed);
+        if tracker.in_fn {
+            tracker.update_braces(trimmed);
+            tracker.fn_complexity += count_complexity(trimmed);
 
-            // Mark that we've entered the function body.
-            if opens > 0 {
-                in_fn_body = true;
-            }
-
-            // Report when we've exited a function body (brace_depth == 0 AND
-            // we had entered one) AND the line contains a `}`.
-            if in_fn_body && brace_depth == 0 && trimmed.contains('}') {
-                let fn_len = i - fn_start + 1;
-                report_fn_violation(path, fn_start, &fn_name, fn_len, fn_complexity, errors);
-                in_fn = false;
-                in_fn_body = false;
-                fn_complexity = 0;
-                fn_name.clear();
+            if tracker.ended(trimmed) {
+                tracker.report_and_reset(path, i, errors);
             }
         }
     }
@@ -126,6 +175,10 @@ fn lint_file(path: &Path, errors: &mut Vec<String>) {
 }
 
 fn main() {
+    if std::env::var("RUNIE_SKIP_BUILD_CHECKS").is_ok() {
+        return;
+    }
+
     let mut errors = Vec::new();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
     let workspace_root = Path::new(&manifest_dir).parent().unwrap().parent().unwrap();

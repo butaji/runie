@@ -19,6 +19,7 @@ toml.workspace = true
 thiserror = "1"
 tokio = { workspace = true, features = ["rt", "macros", "rt-multi-thread"] }
 futures.workspace = true
+similar = "3"
 
 [dev-dependencies]
 runie-provider.workspace = true

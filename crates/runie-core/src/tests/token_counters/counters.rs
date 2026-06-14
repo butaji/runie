@@ -11,13 +11,13 @@ fn fresh_state() -> AppState {
 // =============================================================================
 
 #[test]
-fn count_tokens_chars_divided_by_four() {
-    // Approximation: 4 chars ≈ 1 token
-    assert_eq!(crate::model::count_tokens("hello"), 1); // 5/4 = 1
-    assert_eq!(crate::model::count_tokens("hello world"), 2); // 11/4 = 2
-    assert_eq!(crate::model::count_tokens(""), 0); // 0 chars = 0 tokens
-    assert_eq!(crate::model::count_tokens("🎉"), 0); // 1 char / 4 = 0
-    assert_eq!(crate::model::count_tokens("test"), 1); // 4 chars / 4 = 1
+fn estimate_tokens_chars_divided_by_four_ceil() {
+    // Approximation: 4 chars ≈ 1 token, rounding up.
+    assert_eq!(crate::tokens::estimate_tokens("hello"), 2); // 5 chars ceil = 2
+    assert_eq!(crate::tokens::estimate_tokens("hello world"), 3); // 11 chars ceil = 3
+    assert_eq!(crate::tokens::estimate_tokens(""), 0); // 0 chars = 0 tokens
+    assert_eq!(crate::tokens::estimate_tokens("🎉"), 1); // 1 char ceil = 1
+    assert_eq!(crate::tokens::estimate_tokens("test"), 1); // 4 chars = 1
 }
 
 #[test]
@@ -26,8 +26,8 @@ fn submit_increments_tokens_in() {
     state.input.input = "hello world".to_string();
     state.update(Event::Submit);
     assert_eq!(
-        state.agent.tokens_in, 2,
-        "Input 'hello world' = 11 chars ≈ 2 tokens"
+        state.agent.tokens_in, 3,
+        "Input 'hello world' = 11 chars ≈ 3 tokens"
     );
 }
 
@@ -40,10 +40,10 @@ fn agent_response_increments_tokens_out() {
         content: "hello".to_string(),
     });
     assert_eq!(
-        state.agent.tokens_out, 1,
-        "Output 'hello' = 5 chars ≈ 1 token"
+        state.agent.tokens_out, 2,
+        "Output 'hello' = 5 chars ≈ 2 tokens"
     );
-    assert_eq!(state.agent.turn_tokens_out, 1, "Turn tokens should track");
+    assert_eq!(state.agent.turn_tokens_out, 2, "Turn tokens should track");
 }
 
 #[test]
@@ -59,8 +59,8 @@ fn multiple_responses_accumulate_tokens_out() {
         content: " world".to_string(),
     });
     assert_eq!(
-        state.agent.tokens_out, 2,
-        "'hello' + ' world' = 11 chars ≈ 2 tokens"
+        state.agent.tokens_out, 4,
+        "'hello' (2) + ' world' (2) = 4 tokens"
     );
 }
 
@@ -73,7 +73,7 @@ fn finish_turn_resets_turn_tokens() {
         id: "r1".to_string(),
         content: "hello world".to_string(),
     });
-    assert_eq!(state.agent.turn_tokens_out, 2);
+    assert_eq!(state.agent.turn_tokens_out, 3);
 
     state.update(Event::AgentDone {
         id: "r1".to_string(),
@@ -82,7 +82,7 @@ fn finish_turn_resets_turn_tokens() {
         state.agent.turn_tokens_out, 0,
         "Turn tokens reset on finish"
     );
-    assert_eq!(state.agent.tokens_out, 2, "Cumulative tokens preserved");
+    assert_eq!(state.agent.tokens_out, 3, "Cumulative tokens preserved");
 }
 
 // =============================================================================

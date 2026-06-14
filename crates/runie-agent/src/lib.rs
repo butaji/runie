@@ -3,6 +3,7 @@
 pub mod accumulator;
 pub mod context7;
 pub mod diff;
+pub mod headless;
 pub mod parser;
 pub mod path_utils;
 pub mod profiles;
@@ -12,6 +13,7 @@ pub mod tools;
 pub mod truncate;
 pub mod turn;
 
+pub use headless::{run_headless_turn, tool_to_json, HeadlessOptions, HeadlessResult, ToolOutput};
 pub use tools::{Tool, ToolResult};
 pub use turn::run_agent_turn;
 

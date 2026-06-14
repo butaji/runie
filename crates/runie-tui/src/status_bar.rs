@@ -159,33 +159,34 @@ impl ContextUsage {
     }
 }
 
+const DEFAULT_CONTEXT_WINDOW: usize = 128_000;
+
 pub(crate) fn context_window_for(provider: &str, model: &str) -> usize {
-    match provider {
-        "openai" => match model {
-            "o1" | "o3" | "o4-mini" => 200_000,
-            _ => 128_000,
-        },
-        "anthropic" => 200_000,
-        "google" => 1_000_000,
-        "deepseek" => 64_000,
-        "mistral" => 128_000,
-        "groq" => 128_000,
-        "xai" => 128_000,
-        "together" => 128_000,
-        "fireworks" => 128_000,
-        "openrouter" => 128_000,
-        "moonshotai" | "kimi-coding" => 256_000,
-        "zai" => 128_000,
-        "minimax" => 256_000,
-        "xiaomi" => 128_000,
-        "opencode" => 128_000,
-        "azure-openai-responses" => 128_000,
-        "amazon-bedrock" => 200_000,
-        "cerebras" => 128_000,
-        "github-copilot" => 128_000,
-        "huggingface" => 128_000,
-        "nvidia" => 128_000,
-        "ollama" => 128_000,
-        _ => 128_000,
+    runie_core::provider_registry::find_provider(provider)
+        .and_then(|p| p.models.iter().find(|m| m.name == model))
+        .and_then(|m| m.context_window)
+        .unwrap_or(DEFAULT_CONTEXT_WINDOW)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::context_window_for;
+
+    #[test]
+    fn status_bar_context_window_matches_registry() {
+        assert_eq!(context_window_for("openai", "gpt-4o"), 128_000);
+        assert_eq!(
+            context_window_for("anthropic", "claude-sonnet-4-6"),
+            200_000
+        );
+        assert_eq!(context_window_for("google", "gemini-2.5-pro"), 1_000_000);
+    }
+
+    #[test]
+    fn status_bar_context_window_falls_back_to_default() {
+        assert_eq!(
+            context_window_for("unknown", "model"),
+            super::DEFAULT_CONTEXT_WINDOW
+        );
     }
 }

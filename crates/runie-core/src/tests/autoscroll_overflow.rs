@@ -1,3 +1,5 @@
+#![allow(clippy::needless_borrow)]
+
 use crate::event::Event;
 use crate::model::{AppState, ChatMessage, Role};
 

@@ -54,6 +54,11 @@ impl AgentProfile {
         }
         self.tools.iter().any(|t| t == tool_name)
     }
+
+    /// Get the effective max_turns (defaults to None = unlimited).
+    pub fn effective_max_turns(&self) -> Option<u32> {
+        self.max_turns
+    }
 }
 
 /// Default profiles directory.
@@ -99,7 +104,8 @@ pub fn save_profile(profile: &AgentProfile) -> Result<std::path::PathBuf, Profil
     let dir = profiles_dir();
     std::fs::create_dir_all(&dir).map_err(|e| ProfileError::Io(e.to_string()))?;
     let path = dir.join(format!("{}.toml", profile.name));
-    let toml_str = toml::to_string_pretty(profile).map_err(|e| ProfileError::Parse(e.to_string()))?;
+    let toml_str =
+        toml::to_string_pretty(profile).map_err(|e| ProfileError::Parse(e.to_string()))?;
     std::fs::write(&path, toml_str).map_err(|e| ProfileError::Io(e.to_string()))?;
     Ok(path)
 }
@@ -181,5 +187,197 @@ mod tests {
             denylist_tools: Some(vec!["read".into()]),
         };
         assert!(!p.is_tool_allowed("read"));
+    }
+
+    #[test]
+    fn parse_profile_with_optional_fields() {
+        let toml_str = r#"
+            name = "advanced"
+            description = "An advanced profile"
+            system_prompt = "You are advanced."
+            tools = ["read", "write", "bash"]
+            max_turns = 50
+            allowlist_tools = ["read", "write"]
+        "#;
+        let profile = parse_profile(toml_str).unwrap();
+        assert_eq!(profile.max_turns, Some(50));
+        assert_eq!(
+            profile.allowlist_tools,
+            Some(vec!["read".to_string(), "write".to_string()])
+        );
+    }
+
+    #[test]
+    fn parse_profile_with_denylist() {
+        let toml_str = r#"
+            name = "safe"
+            description = "Safe profile"
+            system_prompt = "Be safe."
+            tools = ["read", "write", "bash"]
+            denylist_tools = ["bash"]
+        "#;
+        let profile = parse_profile(toml_str).unwrap();
+        assert_eq!(profile.denylist_tools, Some(vec!["bash".to_string()]));
+    }
+
+    #[test]
+    fn parse_invalid_toml_returns_error() {
+        let result = parse_profile("this is = not valid toml ===");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn missing_required_field_returns_error() {
+        let toml_str = r#"
+            description = "Missing name"
+            system_prompt = "x"
+            tools = []
+        "#;
+        assert!(parse_profile(toml_str).is_err());
+    }
+
+    #[test]
+    fn new_profile_has_empty_tools() {
+        let p = AgentProfile::new("test", "prompt");
+        assert!(p.tools.is_empty());
+        assert_eq!(p.max_turns, None);
+    }
+
+    #[test]
+    fn tool_allowed_in_tools_list() {
+        let p = AgentProfile {
+            name: "test".into(),
+            description: "".into(),
+            system_prompt: "".into(),
+            tools: vec!["read".into(), "write".into()],
+            max_turns: None,
+            allowlist_tools: None,
+            denylist_tools: None,
+        };
+        assert!(p.is_tool_allowed("read"));
+        assert!(!p.is_tool_allowed("bash"));
+    }
+
+    #[test]
+    fn tool_denied_by_denylist() {
+        let p = AgentProfile {
+            name: "test".into(),
+            description: "".into(),
+            system_prompt: "".into(),
+            tools: vec!["read".into(), "bash".into()],
+            max_turns: None,
+            allowlist_tools: None,
+            denylist_tools: Some(vec!["bash".into()]),
+        };
+        assert!(p.is_tool_allowed("read"));
+        assert!(!p.is_tool_allowed("bash"));
+    }
+
+    #[test]
+    fn tool_allowlist_overrides_tools_list() {
+        let p = AgentProfile {
+            name: "test".into(),
+            description: "".into(),
+            system_prompt: "".into(),
+            tools: vec!["read".into(), "write".into(), "bash".into()],
+            max_turns: None,
+            allowlist_tools: Some(vec!["read".into()]),
+            denylist_tools: None,
+        };
+        assert!(p.is_tool_allowed("read"));
+        assert!(!p.is_tool_allowed("write"));
+    }
+
+    #[test]
+    fn denylist_overrides_allowlist() {
+        let p = AgentProfile {
+            name: "test".into(),
+            description: "".into(),
+            system_prompt: "".into(),
+            tools: vec![],
+            max_turns: None,
+            allowlist_tools: Some(vec!["read".into(), "bash".into()]),
+            denylist_tools: Some(vec!["bash".into()]),
+        };
+        assert!(p.is_tool_allowed("read"));
+        assert!(!p.is_tool_allowed("bash"));
+    }
+
+    #[test]
+    fn effective_max_turns() {
+        let mut p = AgentProfile::new("test", "");
+        assert_eq!(p.effective_max_turns(), None);
+        p.max_turns = Some(100);
+        assert_eq!(p.effective_max_turns(), Some(100));
+    }
+
+    #[test]
+    fn load_profile_from_file_works() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.toml");
+        std::fs::write(
+            &path,
+            r#"
+            name = "fromfile"
+            description = "Loaded from file"
+            system_prompt = "Hi"
+            tools = ["read"]
+        "#,
+        )
+        .unwrap();
+
+        let profile = load_profile_from_file(&path).unwrap();
+        assert_eq!(profile.name, "fromfile");
+    }
+
+    #[test]
+    fn load_profiles_from_dir_with_files() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("a.toml"),
+            r#"
+            name = "alpha"
+            description = "First"
+            system_prompt = "x"
+            tools = []
+        "#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("b.toml"),
+            r#"
+            name = "bravo"
+            description = "Second"
+            system_prompt = "y"
+            tools = []
+        "#,
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("c.txt"), "ignored").unwrap();
+
+        let profiles = load_profiles_from_dir(dir.path()).unwrap();
+        assert_eq!(profiles.len(), 2);
+        assert_eq!(profiles[0].name, "alpha");
+        assert_eq!(profiles[1].name, "bravo");
+    }
+
+    #[test]
+    fn load_profiles_skips_invalid_files() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("good.toml"),
+            r#"
+            name = "good"
+            description = "x"
+            system_prompt = "y"
+            tools = []
+        "#,
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("bad.toml"), "this is invalid toml ====").unwrap();
+
+        let profiles = load_profiles_from_dir(dir.path()).unwrap();
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0].name, "good");
     }
 }

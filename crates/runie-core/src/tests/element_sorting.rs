@@ -46,38 +46,39 @@ fn _timestamps_are_monotonic(state: &AppState) -> Result<(), String> {
     Ok(())
 }
 
+fn response_after_tool_events() -> Vec<Event> {
+    vec![
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "Let me ".into(),
+        },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "file.txt".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "check files.".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 2.0,
+        },
+        Event::AgentDone { id: "req.0".into() },
+    ]
+}
+
 // ─── Scenario 1: Streaming response after tool ─────────────────────────
 
 #[test]
 fn agent_response_updated_after_tool_stays_after_tool() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "Let me ".into(),
-            },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "file.txt".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "check files.".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 2.0,
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &response_after_tool_events());
     state.ensure_fresh();
 
     let kinds: Vec<_> = element_kinds(&state)
@@ -135,40 +136,41 @@ fn multiple_response_chunks_preserve_creation_order() {
     );
 }
 
+fn thought_before_agent_events() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "Result".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: " done".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 1.0,
+        },
+        Event::AgentDone { id: "req.0".into() },
+    ]
+}
+
 // ─── Scenario 3: Thought before agent, agent updated later ─────────────
 
 #[test]
 fn thought_appears_before_agent_even_when_agent_updated_later() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "a".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "Result".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: " done".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
-            Event::AgentDone { id: "req.0".into() },
-        ],
-    );
+    dispatch(&mut state, &thought_before_agent_events());
     state.ensure_fresh();
 
     let kinds: Vec<_> = element_kinds(&state)
@@ -229,37 +231,38 @@ fn turn_complete_last_during_turn_despite_updates() {
     );
 }
 
+fn turn_then_user_events() -> Vec<Event> {
+    vec![
+        Event::AgentThinking { id: "req.0".into() },
+        Event::AgentThoughtDone { id: "req.0".into() },
+        Event::AgentToolStart {
+            id: "req.0".into(),
+            name: "ls".into(),
+        },
+        Event::AgentToolEnd {
+            duration_secs: 0.5,
+            output: "a".into(),
+        },
+        Event::AgentResponse {
+            id: "req.0".into(),
+            content: "T1".into(),
+        },
+        Event::AgentTurnComplete {
+            id: "req.0".into(),
+            duration_secs: 1.0,
+        },
+        Event::AgentDone { id: "req.0".into() },
+        Event::Input('H'),
+        Event::Submit,
+    ]
+}
+
 // ─── Scenario 5: Cross-turn ordering ───────────────────────────────────
 
 #[test]
 fn previous_turn_complete_before_next_turn_user() {
     let mut state = fresh_state();
-    dispatch(
-        &mut state,
-        &[
-            Event::AgentThinking { id: "req.0".into() },
-            Event::AgentThoughtDone { id: "req.0".into() },
-            Event::AgentToolStart {
-                id: "req.0".into(),
-                name: "ls".into(),
-            },
-            Event::AgentToolEnd {
-                duration_secs: 0.5,
-                output: "a".into(),
-            },
-            Event::AgentResponse {
-                id: "req.0".into(),
-                content: "T1".into(),
-            },
-            Event::AgentTurnComplete {
-                id: "req.0".into(),
-                duration_secs: 1.0,
-            },
-            Event::AgentDone { id: "req.0".into() },
-            Event::Input('H'),
-            Event::Submit,
-        ],
-    );
+    dispatch(&mut state, &turn_then_user_events());
     state.ensure_fresh();
 
     let kinds: Vec<_> = element_kinds(&state)

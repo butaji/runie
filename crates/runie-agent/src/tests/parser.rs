@@ -3,6 +3,10 @@ use crate::{
     Tool,
 };
 
+fn tool_names(tools: &[Tool]) -> Vec<String> {
+    tools.iter().map(|t| t.name().to_string()).collect()
+}
+
 #[test]
 fn test_parse_read_file_tool() {
     let tools = parse_tool_calls("TOOL:read_file:Cargo.toml");
@@ -154,4 +158,20 @@ fn test_parse_structured_fetch_docs() {
     let tools = parse_tool_calls(text);
     assert_eq!(tools.len(), 1);
     assert!(matches!(&tools[0], Tool::FetchDocs { library } if library == "tokio"));
+}
+
+#[test]
+fn parse_tool_calls_legacy_and_json_agree_with_core() {
+    let text =
+        "TOOL:bash:echo hi\n{\"name\": \"read_file\", \"arguments\": {\"path\": \"Cargo.toml\"}}";
+    let typed = parse_tool_calls(text);
+    let core = runie_core::tool_markers::parse_tool_calls(text);
+    assert_eq!(tool_names(&typed), core);
+}
+
+#[test]
+fn core_strip_tool_markers_removes_only_tool_lines() {
+    let input = "Before\nTOOL:bash ls\n{\"name\": \"read_file\", \"arguments\": {}}\nAfter";
+    let result = runie_core::tool_markers::strip_tool_markers(input);
+    assert_eq!(result, "Before\nAfter");
 }

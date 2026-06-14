@@ -4,13 +4,19 @@ use crate::commands::{CommandCategory, CommandRegistry, CommandResult};
 use crate::event::Event;
 use crate::model::AppState;
 
+use crate::commands::handlers::spec::{CommandKind, CommandSpec};
+
+static SUBAGENT_COMMANDS: &[CommandSpec] = &[CommandSpec {
+    name: "spawn",
+    desc: "Run a subagent turn (delegated task)",
+    aliases: &[],
+    category: CommandCategory::System,
+    sub: false,
+    kind: CommandKind::Handler(handle_spawn),
+}];
+
 pub fn register(registry: &mut CommandRegistry) {
-    registry.register(
-        crate::cmd!("spawn")
-            .desc("Run a subagent turn (delegated task)")
-            .category(CommandCategory::System)
-            .handler(handle_spawn),
-    );
+    crate::commands::handlers::spec::register_commands(registry, SUBAGENT_COMMANDS);
 }
 
 /// `/spawn <prompt>` — if a prompt is provided as an argument, emit

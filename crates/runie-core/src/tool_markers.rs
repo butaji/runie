@@ -34,7 +34,10 @@ pub fn parse_tool_calls(text: &str) -> Vec<String> {
 
         // Check for legacy TOOL: format
         if let Some(rest) = line.strip_prefix("TOOL:") {
-            let name = rest.split_whitespace().next().unwrap_or("");
+            let name = rest
+                .split(|c: char| c == ':' || c.is_whitespace())
+                .next()
+                .unwrap_or("");
             if !name.is_empty() {
                 tools.push(name.to_string());
             }
