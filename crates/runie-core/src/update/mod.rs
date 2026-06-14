@@ -206,7 +206,10 @@ impl AppState {
             | Event::ScopedModelDisableAll
             | Event::ScopedModelToggleProvider { .. }
             | Event::AtFilePicker => dialog_toggle::dialog_toggle_event(self, event),
-            Event::OpenAgentsManager | Event::AgentsManagerSave { .. } | Event::AgentsManagerDelete { .. } => {
+            Event::OpenAgentsManager
+            | Event::AgentsManagerSetField { .. }
+            | Event::AgentsManagerSave { .. }
+            | Event::AgentsManagerDelete { .. } => {
                 crate::commands::agents_manager::agents_manager_event(self, event)
             }
             Event::InsertAtRef(_) => input_dispatch::input_event(self, event),
@@ -268,7 +271,30 @@ impl AppState {
                 self.set_transient(content, crate::event::TransientLevel::Error)
             }
             Event::ClearTransient => self.clear_transient(),
-            _ => {}
+            Event::MouseClick { .. }
+            | Event::MouseRelease { .. }
+            | Event::MouseDrag { .. }
+            | Event::MouseMove { .. }
+            | Event::FocusGained
+            | Event::FocusLost
+            | Event::DialogBack => {}
+            Event::SettingsSwitchCategory { category } => {
+                settings_dialog::handle_settings_category(self, category)
+            }
+            // Handled by early returns above; unreachable here.
+            Event::ProvidersDialog
+            | Event::ProvidersSelectModel { .. }
+            | Event::ProvidersDisconnect { .. }
+            | Event::ProvidersAdd
+            | Event::LoginFlowStart
+            | Event::LoginFlowSelectProvider { .. }
+            | Event::LoginFlowSubmitKey { .. }
+            | Event::LoginFlowValidationDone { .. }
+            | Event::LoginFlowValidationFailed { .. }
+            | Event::LoginFlowModelsFetched { .. }
+            | Event::LoginFlowToggleModel { .. }
+            | Event::LoginFlowSave
+            | Event::LoginFlowCancel => unreachable!(),
         }
     }
 }

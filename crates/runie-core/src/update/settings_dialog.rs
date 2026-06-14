@@ -6,6 +6,10 @@
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingItem, SettingValue, SettingsCategory};
 
+pub fn handle_settings_category(state: &mut AppState, category: SettingsCategory) {
+    state.mark_dirty();
+}
+
 pub fn build_setting_items(state: &AppState) -> Vec<SettingItem> {
     vec![
         SettingItem::new(

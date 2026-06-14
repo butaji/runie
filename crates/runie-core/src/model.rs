@@ -254,6 +254,7 @@ pub struct AppState {
     /// Backup of input state before opening file picker:
     /// (original input, insert position, cursor position, needs brackets for @ references).
     pub file_picker_backup: Option<(String, usize, usize, bool)>,
+    pub pending_agent_edit: Option<crate::agent_profiles::AgentProfile>,
 }
 
 impl Default for AppState {
@@ -282,6 +283,7 @@ impl Default for AppState {
             vim_nav_mode: false,
             vim_nav_pending: false,
             file_picker_backup: None,
+            pending_agent_edit: None,
         }
     }
 }
