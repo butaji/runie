@@ -64,8 +64,7 @@ split into the existing `tests/e2e/` modules.
   `login_flow/validation.rs`.
 - `update/input.rs` → `update/input_text.rs`, `update/input_history.rs`,
   `update/input_nav.rs`.
-- `runie-term/src/main.rs` → move effect handlers to `effects/` (see
-  `extract-term-effect-handlers.md`).
+- `runie-term/src/main.rs` → move effect handlers to `effects/`.
 
 **Out of scope:**
 - Rewriting functionality (only move/split code).

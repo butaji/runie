@@ -19,6 +19,7 @@ superseded by the simpler MVU pattern now in use; they are kept in
 | [0017](0017-actor-runtime-and-event-bus.md) | Lightweight tokio-task actors + typed Actor trait + EventBus, no external actor framework |
 | [0018](0018-provider-llm-event-normalization.md) | All providers emit a normalized `LLMEvent` stream |
 | [0019](0019-tool-registry-and-mcp.md) | Tool trait registry, permission rulesets, and in-house MCP client |
+| [0020](0020-team-mode-orchestration.md) | Solo/Team execution modes and Orchestrator-Harness Protocol |
 
 ## For the current architectural overview
 

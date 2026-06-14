@@ -88,7 +88,6 @@ N/A (planning / documentation task).
 - `tasks/adopt-similar.md`
 - `tasks/adopt-pulldown-cmark.md`
 - `tasks/adopt-tiktoken-rs.md`
-- `tasks/spike-nucleo-fuzzy.md`
 
 **Files touched:**
 - `Cargo.toml` workspace / crate files (if adopting crates)

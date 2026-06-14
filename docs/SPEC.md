@@ -10,24 +10,26 @@ Terminal coding agent harness in Rust, inspired by [pi](https://pi.dev).
 ### Runtime
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           EventBus<CoreEvent>                            │
-│  (tokio::sync::broadcast + bounded replay buffer)                        │
-└─────────────────────────────────────────────────────────────────────────┘
-        ▲            ▲            ▲            ▲            ▲
-        │            │            │            │            │
-┌───────┴────┐ ┌─────┴──────┐ ┌──┴─────────┐ ┌┴───────────┐ ┌───────────┐
-│ InputActor │ │ AgentActor │ │ ConfigActor│ │SessionActor│ │  UiActor  │
-│ (crossterm)│ │(LLM+tools) │ │(TOML watch)│ │(JSONL store)│ │(AppState  │
-└────────────┘ └────────────┘ └────────────┘ └─────────────┘ │ projection)│
-                                                             └─────┬─────┘
-                                                                   │
-                                                             Snapshot
-                                                                   │
-                                                             ┌─────┴─────┐
-                                                             │ RenderActor│
-                                                             │  (ratatui) │
-                                                             └───────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            EventBus<CoreEvent>                                │
+│   (tokio::sync::broadcast + bounded replay buffer)                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+         ▲            ▲             ▲            ▲            ▲
+         │            │             │            │            │
+┌────────┴───┐ ┌──────┴──────┐ ┌────┴────────┐ ┌┴────────────┐ ┌────────────┐
+│ InputActor │ │Orchestrator │ │ ConfigActor │ │SessionActor │ │  UiActor   │
+│ (crossterm)│ │Actor        │ │(TOML watch) │ │(JSONL store)│ │(AppState   │
+└────────────┘ │(Team mode)  │ └─────────────┘ └─────────────┘ │ projection)│
+               └──────┬──────┘                                   └─────┬──────┘
+                      │                                                │
+                      │ spawns                                         │
+                      ▼                                                │
+               ┌──────────────┐                                  Snapshot
+               │ AgentActor   │                                        │
+               │ (Solo +      │                                  ┌──────┴──────┐
+               │  subagents)  │                                  │ RenderActor │
+               └──────────────┘                                  │  (ratatui)  │
+                                                                  └─────────────┘
 ```
 
 Actors are tokio tasks that publish and subscribe to a typed `EventBus`.
@@ -36,15 +38,19 @@ Actors are tokio tasks that publish and subscribe to a typed `EventBus`.
 actor via a `watch` channel. State is owned by the actors/projection actors,
 not by a central loop.
 
+In **Team mode**, the `OrchestratorActor` designs and executes multi-agent
+workflows. In **Solo mode**, the user prompt goes directly to `AgentActor`.
+See `docs/MULTI.md` for the full conceptual vision.
+
 ### Crates
 
 | Crate            | Role                                                        |
 |------------------|-------------------------------------------------------------|
 | `runie-core`     | Events, AppState, sessions, config, commands                |
-| `runie-agent`    | Tool implementations, agent turn, subagent, truncation      |
+| `runie-agent`    | Tool implementations, agent turn, subagent runner, truncation |
 | `runie-provider` | LLM providers, model catalog                                |
 | `runie-tui`      | Ratatui rendering, panels/forms, theme                      |
-| `runie-term`     | CLI entry, subagent dispatcher, smoke harness               |
+| `runie-term`     | CLI entry, task dispatch, smoke harness                     |
 | `runie-print`    | Non-interactive print mode (separate binary)                |
 | `runie-json`     | Non-interactive JSON mode                                   |
 | `runie-server`   | RPC / server mode                                           |
@@ -83,8 +89,8 @@ focused sub-enums (`tasks/event-subenums.md`).
 - Config hot-reload via polling watcher
 - Diagnostics, reload
 - TUI features: streaming, markdown, syntax highlight, diff, ANSI, scrollbar,
-  input history, undo/redo, multi-line, @-file refs, path completion
-- Subagents (`/spawn <prompt>`)
+  input history, undo/redo, multi-line, @-file refs, path completion,
+  contextual footer hints, mode suffix in input title, block-level copy (`y`/`Y`)
 - Modes: interactive TUI, print, JSON
 - `runie-server` crate exists but is not yet a supported RPC surface
 
@@ -118,6 +124,33 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
 - **Crate replacement audit** — evaluate `syntect`, `similar`, `nucleo`,
   `tui-textarea`, `ratatui-markdown`, etc. (`tasks/crate-replacement-audit.md`)
 
+### Roadmap (R4 — Multi-Agent Orchestration)
+
+Solo/Team execution modes based on the design in `docs/MULTI.md`:
+
+- **Solo/Team toggle** — per-session UI mode; Solo is the default; `/spawn`
+  removed (`tasks/r4-solo-team-mode-toggle.md`)
+- **OrchestratorActor** — designs and executes dynamic Team workflows
+  (`tasks/r4-orchestrator-actor.md`)
+- **Orchestrator-Harness Protocol (OHP)** — typed workflow plan with roles,
+  sequential/parallel steps, and model trait preferences
+  (`tasks/r4-orchestrator-domain-types.md`)
+- **Alignment Q&A** — `ask_user` tool in the Dialog Panel; Autopilot and
+  `/plan` command (`tasks/r4-ask-user-tool.md`)
+- **One-shot orchestrator LLM** — emits OHP plans after alignment
+  (`tasks/r4-one-shot-orchestrator-llm.md`)
+- **Model trait resolution** — relative ranking + global priority list + fallback
+  chains (`tasks/r4-model-trait-resolution.md`)
+- **Isolated subagent sessions** — structured JSON results, tool-policy filtering
+  (`tasks/r4-subagent-isolation.md`)
+- **Subagent sidebar** — per-agent feeds with `Ctrl+0`..`Ctrl+9` hotkeys
+  (`tasks/r4-subagent-sidebar.md`)
+- **Team mode integration** — end-to-end Q&A → plan → execute → result
+  (`tasks/r4-team-mode-integration.md`)
+- **Grok Build TUI parity** — mouse support, contextual hints, richer status bar,
+  command palette ranking, `@file` line ranges, theme quantization, welcome
+  screen (`docs/grok-parity/GROK.md`, `tasks/grok-*.md`)
+
 ### Test coverage
 
 - 1,794 automated tests listed across the workspace; 1,716 pass and 78 are
@@ -131,7 +164,8 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
 
 - **Plugins/extensions** — adds complexity without daily-use value
 - **OAuth login flow** — API keys in config.toml suffice
-- **Subagent parallel orchestration / DAG** — single linear subagent
+- **General DAG workflows with cycles** — Team mode uses sequential + parallel
+  groups; arbitrary cycles are out of scope
 - **Session tree / branching UI** — `/fork` exists, but no visual tree
 - **Custom syntax-highlighting languages** — limited built-in tokenizers; full grammar support via crate audit (`tasks/crate-replacement-audit.md`)
 - **Web UI / VS Code extension** — terminal-only
@@ -159,7 +193,7 @@ crates/
 │   ├── tools/            # One module per built-in Tool impl
 │   ├── tools.rs          # Built-in tool registry assembly
 │   ├── turn.rs           # Agent turn loop
-│   ├── subagent.rs       # Nested turn for /spawn
+│   ├── subagent.rs       # Isolated nested turn for subagents
 │   ├── truncate.rs       # TruncationConfig (TOML) + policies
 │   ├── accumulator.rs    # Bounded buffer for streaming
 │   ├── mutation_queue.rs # Serialized file edits
@@ -177,7 +211,7 @@ crates/
 │   ├── model.rs          # Model catalog
 │   └── config.rs         # Provider config
 ├── runie-term/src/
-│   ├── main.rs           # Event loop, subagent dispatch
+│   ├── main.rs           # Event loop, task dispatch
 │   └── keymap.rs         # Key → Event mapping
 ├── runie-print/          # Print mode binary
 ├── runie-json/           # JSON mode binary

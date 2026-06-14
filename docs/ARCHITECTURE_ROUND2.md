@@ -9,6 +9,10 @@
 > typed event bus, tokio-task actors, JSONL session persistence, and
 > provider-agnostic `LLMEvent`s. The code is in transition; see `docs/SPEC.md`
 > for the target architecture.
+>
+> Round 2 laid the groundwork for event-sourced actors. The multi-agent vision
+> in `docs/MULTI.md` builds on this by adding an `OrchestratorActor` that
+> designs and executes **Team** workflows using isolated subagent sessions.
 
 ## Overview
 

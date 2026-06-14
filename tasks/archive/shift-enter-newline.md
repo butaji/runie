@@ -4,7 +4,6 @@
 **Milestone**: R1
 **Category**: Input & Commands
 **Priority**: P1
-**Depends on**: terminal-detection
 
 ## Description
 

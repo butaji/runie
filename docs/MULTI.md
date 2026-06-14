@@ -1,547 +1,475 @@
 # Multi-Agent Multi-Model Orchestration — Conceptual Vision
 
-> **Status**: Brainstorming / Conceptual. Not yet a task or implementation plan.
+> **Status**: Conceptual design after a grilling session. Not yet a task or implementation plan.
+>
+> **Scope**: Defines how Runie can evolve from a single-agent terminal harness into a system with two execution modes — **Solo** (default) and **Team** (dynamic multi-agent workflows) — while keeping cognitive load on the user minimal.
 
 ---
 
 ## TL;DR
 
-The multi-agent multi-model research across 20+ frameworks reveals a clear consensus:
+Runie should add a **Team execution mode** alongside the existing **Solo** mode:
 
-- **Orchestration is the hard part**, model routing is the easy part.
-- The dominant pattern is a **central supervisor/coordinator** that decomposes tasks, delegates to **specialized sub-agents**, and synthesizes results — not peer-to-peer negotiation.
-- **6 core patterns** dominate: Sequential, Supervisor, Fan-out, Debate, Dynamic Handoff, Graph (DAG). The right one depends on task predictability and coordination cost.
-- **Context isolation per sub-agent** (each sees only task+shared context, not full conversation) prevents context pollution and reduces token waste — this is the most critical design decision.
-- **MCP (Model Context Protocol)** handles agent→tool communication (tools as resources). **A2A (Agent2Agent)** handles agent→agent communication. These are complementary, not competing. Runie already has MCP integration; A2A is a future direction.
-- **Multi-model routing** is well-solved by LiteLLM-style cascades (fast→slow based on confidence), cost-aware Pareto routing, or task-specific static assignment. Runie's `runie-provider` crate already has model selection; the question is how to make it agent-aware.
-- **Human-in-the-loop** is not optional at scale — it must be designed in, not bolted on. Checkpoint interrupts, approval gates, and escalation tiers are the standard approaches.
-- **The worst failure modes** are: infinite loops (handoff loops, debate loops), context loss across transfers, and token duplication (72-86% in naive multi-agent systems).
-- Runie's existing `/spawn` and `Orchestrator` actor are a solid foundation. The gap is: **sequential/parallel task orchestration**, **agent-aware model routing**, and **structured inter-agent result passing**.
-
----
-
-## 1. What the Research Landscape Looks Like
-
-### 1.1 The Frameworks and Their Philosophies
-
-| Framework | Core Metaphor | State Model | Best For | Runie's Closest Analog |
-|-----------|-------------|-------------|----------|------------------------|
-| **LangGraph** | StateGraph (DAG) | Explicit shared state | Complex workflows, cycles | `runie-core` event bus |
-| **CrewAI** | Role-based Crew | Task output → next agent | Business automation | `/spawn` subagent |
-| **OpenAI Agents SDK** | Handoff chain | Conversation history | Lightweight routing | `Orchestrator` actor |
-| **AutoGen** | Pub/sub + Topic | CloudEvents | Research, negotiation | `EventBus` |
-| **Claude Code** | Orchestrator + subagents | Isolated per-agent context | Coding agents | `runie-agent` |
-| **Kimi Code** | Main→subagent swarm | Isolated, merged results | Parallel tasks | `/spawn` |
-| **OpenCode** | Session + System Context | Per-session context isolation | TUI coding | `runie-agent` |
-| **gptme** | File leases + message bus | File-based claiming | Multi-developer agents | — |
-| **CowAgent** | Channel routing | Memory + knowledge base | Modular harness | Skills |
-| **SuperAGI** | Toolkit + concurrent agents | Agent memory | Parallel execution | `ToolActor` |
-| **LiteLLM** | LLM gateway | Per-request routing | Multi-model proxy | `runie-provider` |
-| **Factory/Droid** | Coordinator + droids | Per-droid + shared | Enterprise dev | — |
-| **Microsoft Agent Framework** | A2A + MCP | CloudEvents + topics | Production multi-agent | Future |
-
-### 1.2 The Six Orchestration Patterns
-
-Every framework uses some combination of these:
-
-```
-Pattern 1: Sequential Pipeline
-  A → B → C → D
-  Linear, deterministic, easy to debug. Good for well-defined multi-step tasks.
-  Used by: CrewAI sequential, Claude Code sequential workflows
-
-Pattern 2: Supervisor / Orchestrator
-           ┌──────────────────┐
-           │    Supervisor    │
-           │  (central coord) │
-           └────────┬─────────┘
-       ┌───────────┼───────────┐
-       ▼           ▼           ▼
-    Worker A    Worker B    Worker C
-  Central coordinator decomposes tasks, assigns to specialists, aggregates results.
-  Used by: LangGraph supervisor, OpenAI Agents SDK, Factory/droids, Claude Code operator
-
-Pattern 3: Fan-out / Parallel
-         ┌──────────┐
-         │ Splitter │
-         └────┬─────┘
-       ┌──────┼──────┐
-       ▼      ▼      ▼
-    Worker  Worker  Worker
-       └──────┼──────┘
-              ▼
-         ┌────────┐
-         │ Merge  │
-         └────────┘
-  Parallel execution of independent tasks, results aggregated.
-  Used by: LangGraph parallel nodes, Claude Code split-and-merge
-
-Pattern 4: Multi-Agent Debate / Maker-Checker
-         Agent A ←→ Agent B ←→ Agent C
-         (generator)  (critic)   (evaluator)
-  Agents challenge each other, iterate toward consensus. Research shows 70% hallucination
-  reduction vs single-agent but sycophancy cascading is the hard failure mode.
-  Used by: AutoGen GroupChat, Microsoft Agent Framework
-
-Pattern 5: Dynamic Handoff
-    A → B → C → A (loop risk!)
-  Each agent decides whether to handle or transfer. Emergent routing.
-  40% faster resolution in customer support (HCLTech). Failure: infinite loops.
-  Used by: OpenAI Agents SDK handoffs, Kimi Code AgentSwarm
-
-Pattern 6: Graph Composition (DAG/Cycles)
-         ┌───────┐
-         │ Node  │ ← Agent or tool
-         └───┬───┘
-       ┌─────┴─────┐
-       ▼           ▼
-    ┌─────┐     ┌─────┐
-    │     │     │     │
-    └──┬──┘     └──┬──┘
-       └─────┬─────┘
-             ▼
-         ┌───────┐
-  Cycles allowed for revision loops. State is explicit and typed.
-  Used by: LangGraph StateGraph, Semantic Kernel
-```
-
-### 1.3 The Two Protocols: MCP + A2A
-
-These are **complementary**, not competing:
-
-```
-MCP (Model Context Protocol) — Anthropic, 2024
-  Purpose: Agent → Tool/Data
-  Scope: How an agent connects to external tools, databases, files
-  Analogy: USB-C for AI — standardized tool access
-  Status: Widely adopted (Google, OpenAI, Microsoft, Anthropic all support)
-  Runie: Already has MCP integration (tasks/adopt-pulldown-cmark.md)
-
-A2A (Agent2Agent Protocol) — Google, April 2025
-  Purpose: Agent → Agent
-  Scope: How agents discover each other, negotiate tasks, share results
-  Key concepts:
-    - Agent Cards: JSON metadata for capability discovery
-    - Task Management: structured task lifecycle
-    - Long-running support: hours/days tasks with SSE streaming
-    - Built on: HTTP + JSON-RPC + SSE (no new infrastructure)
-    - Backers: 50+ companies including Microsoft, Salesforce, SAP, ServiceNow
-  Status: Growing adoption; Microsoft adopted it for Azure AI Foundry + Copilot Studio
-  Relevance: Foundation for future Runie↔external agent interop
-```
-
-### 1.4 Multi-Model Routing Strategies
-
-Multi-model is **orthogonal** to multi-agent — every framework handles it differently:
-
-```
-Strategy 1: Cascade (fast→slow on low confidence)
-  Query → SmallModel → confidence < threshold? → LargeModel
-  Cheapest tokens first, escalate only when needed.
-
-Strategy 2: Task-Specific Static Assignment
-  | Task Type          | Recommended Model           |
-  |--------------------|------------------------------|
-  | Planning/Architecture| Claude Opus, Gemini 2M ctx   |
-  | Code generation     | Claude Sonnet, GPT-4.1        |
-  | Research/search     | Perplexity Sonar, GPT-4       |
-  | Testing             | GPT-4, Claude Sonnet           |
-  | Documentation       | Claude models                 |
-  | Cost-sensitive ops | DeepSeek, Kimi, MiniMax       |
-
-Strategy 3: Cost-Aware Pareto Routing (MoMA paper, 2025)
-  Balance cost and performance under budget constraint.
-  Route to best model available within budget.
-
-Strategy 4: Model Fallback Chains
-  "claude-opus-4-6" → "kimi-k2.5" → "gpt-5.4" → "glm-5"
-  Provider-agnostic chains with automatic failover.
-
-Strategy 5: LiteLLM-style Routing Groups
-  Routing groups with different strategies per group:
-    latency-sensitive: latency-based-routing
-    cost-optimized: cost-based-routing
-    balanced: simple-shuffle
-```
-
-### 1.5 Key Failure Modes (from production deployments)
-
-| Failure Mode | Cause | Mitigation |
-|-------------|-------|-----------|
-| **Infinite handoff loops** | No central ownership; everyone keeps deferring | Max transfer count, escalation at N loops |
-| **Context loss on transfer** | Full context too large; summarization degrades quality | Structured context passing with schema |
-| **Token duplication** | 72-86% redundancy in naive multi-agent | Shared context projection, selective admission |
-| **Sycophancy cascading** | Agents agree with majority even when wrong | Limit debate rounds, use critic model |
-| **Single point of failure** | Central supervisor dies | Checkpoint + resume; distributed orchestration |
-| **Non-deterministic routing** | Same input → different agent chain | Deterministic routing rules; log all decisions |
+- **Solo** = one agent turn with the configured model (today's default behavior).
+- **Team** = the **Orchestrator** first runs an **alignment Q&A** in the Dialog Panel, then generates a one-shot workflow plan via the **Orchestrator-Harness Protocol (OHP)**, and executes it using isolated subagent sessions.
+- The user chooses Solo or Team through a **per-session UI toggle**; `/spawn` is removed as too technical.
+- A **Task** is the unit of work. **Roles** are generated dynamically by the Orchestrator per Task.
+- Models are selected by **traits** (`fast`, `capable`, `reasoning`, `cheap`) derived via **relative ranking** against connected models. The user can optionally provide a global **model priority list** to override ranking and drain underutilized providers.
+- Subagent sessions are **fully isolated** and see only the tools they are given. They output **structured JSON**. Intermediate results are passed as extracted fields, not raw conversation history, to keep token usage low.
+- The Orchestrator is a **new component** to be built, not an existing actor. **MCP is not yet integrated**; only a stub config loader exists today.
+- A2A is a future direction for external agent interop, not part of the MVP.
 
 ---
 
-## 2. Conceptual Vision for Runie
+## 1. What We Learned From the Research
 
-### 2.1 Where Runie Stands Today
+A survey of 20+ frameworks (OpenCode, Kimi Code, Claude Code, LangGraph, CrewAI, AutoGen, OpenAI Agents SDK, LiteLLM, Factory/Droid, Google A2A, etc.) revealed a few durable patterns:
 
-From `docs/SPEC.md` and `docs/CONTEXT.md`:
+### 1.1 Six Orchestration Patterns
 
-- ✅ **`/spawn`** — linear subagent, runs one at a time after parent completes
-- ✅ **`Orchestrator` actor** — designed for "future sequential and parallel flow orchestration"
-- ✅ **`runie-provider`** — multi-model support via provider abstraction
-- ✅ **MCP integration** — tool access standardized
-- ✅ **`EventBus`** — pub/sub foundation for actor communication
-- ✅ **Session JSONL persistence** — durable state across restarts
-- ✅ **ToolActor** — async tool execution model
-- ❌ **No task decomposition** — spawn is a flat nested session
-- ❌ **No model routing per task** — model selection is global
-- ❌ **No structured result passing** — subagent output is raw text
-- ❌ **No fan-out / parallel** — sequential only
-- ❌ **No A2A** — no agent-to-agent protocol
-- ❌ **No checkpoint/HITL** — no human interrupt points
+| Pattern | Shape | Best For | Runie Relevance |
+|---------|-------|----------|-----------------|
+| **Sequential** | A → B → C | Document pipelines, predictable steps | Supported via OHP steps |
+| **Supervisor/Orchestrator** | Central coord → workers | Complex tasks needing aggregation | Core of Team mode |
+| **Fan-out/Parallel** | Split → workers → merge | Independent subtasks, speed | Supported via OHP parallel groups |
+| **Debate/Maker-Checker** | Generator ↔ Critic ↔ Evaluator | Quality assurance, hallucination reduction | Future, not MVP |
+| **Dynamic Handoff** | A → B → C (emergent) | Conversational routing, support bots | Avoided — loop risk |
+| **Graph (DAG/Cycles)** | StateGraph with cycles | Revision loops, complex branching | Avoided for MVP |
 
-### 2.2 The Vision: Layered Multi-Agent Architecture
+Runie's MVP uses **Supervisor + Sequential + Fan-out**. Debate and graph cycles add coordination cost that is unnecessary for a terminal coding harness.
 
-The vision is NOT to become LangGraph or CrewAI. It's to extend Runie's existing **Orchestrator** + **EventBus** + **Session** foundations into a principled multi-agent system:
+### 1.2 Protocols: MCP and A2A
+
+| Protocol | Layer | Status in Runie |
+|----------|-------|-----------------|
+| **MCP** (Model Context Protocol) | Agent ↔ Tool | Planned, not implemented. `crates/runie-core/src/mcp.rs` is a stub. Tracked in `tasks/mcp-client-integration.md`. |
+| **A2A** (Agent2Agent Protocol) | Agent ↔ Agent | Future direction. Useful when Runie collaborates with external agents. Not MVP. |
+
+MCP and A2A are complementary. Runie should adopt MCP for tool access first, then A2A for external agent interop later.
+
+### 1.3 Multi-Model Strategies
+
+The research shows three viable strategies:
+
+1. **Trait-based routing** (Runie's choice): Models expose traits; roles request traits; harness resolves.
+2. **Cascade routing**: Fast model first, escalate to capable model on low confidence.
+3. **Cost-aware Pareto routing**: Pick the best model under a budget constraint.
+
+Runie uses trait-based routing as the primary mechanism, with the global priority list handling provider utilization and fallback.
+
+### 1.4 Failure Modes to Avoid
+
+| Failure Mode | Mitigation in Runie |
+|--------------|---------------------|
+| Infinite handoff loops | No peer-to-peer handoffs; Orchestrator owns the plan |
+| Context loss on transfer | Structured JSON results; no raw conversation passing |
+| Token duplication (72-86% in naive systems) | Fully isolated subagents; only extracted fields flow forward |
+| Sycophancy cascading | No debate pattern in MVP |
+| Non-deterministic routing | Trait resolution is deterministic; plan is logged |
+
+---
+
+## 2. Domain Model
+
+These terms are now in `docs/CONTEXT.md`:
+
+- **Task**: A unit of work requested by the user, independent from execution mode.
+- **Solo**: Single-agent execution mode (default).
+- **Team**: Multi-agent workflow mode generated by the Orchestrator.
+- **Role**: A dynamically defined participant in a Team workflow.
+- **Model Trait**: A capability or cost characteristic of a connected model.
+- **Orchestrator-Harness Protocol (OHP)**: The structured contract by which the Orchestrator LLM emits a Team workflow plan and the harness executes it.
+- **Orchestrator**: The component that designs and executes Team workflows.
+
+---
+
+## 3. UX: Solo vs Team
+
+### 3.1 User Interaction
+
+The user chooses the mode through a UI toggle near the input area:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          USER INTERFACE                               │
-│         TUI (interactive), CLI (headless), JSON (API)               │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────────┐
-│                      ORCHESTRATOR ACTOR                              │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Task Board: explicit task queue with dependencies            │  │
-│  │  Routing: deterministic rule → agent model + toolset          │  │
-│  │  Lifecycle: spawn → monitor → aggregate → complete            │  │
-│  │  Checkpoints: human interrupt at configurable boundaries       │  │
-│  │  Failure recovery: retry with exponential backoff             │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└──────┬─────────────────┬──────────────────┬────────────────────────┘
+[Solo ●—○ Team]   input box   [Send]
+```
+
+- **Solo** is the default for every new session.
+- **Team** is per-session.
+- No `/do` or `/team` slash commands.
+- `/spawn` is removed; it is too technical.
+
+### 3.2 Solo Mode
+
+When the toggle is **Solo**, a normal prompt runs a single agent turn with the session's configured model. This is today's behavior.
+
+### 3.3 Team Mode — Alignment First
+
+When the toggle is **Team**, the prompt becomes a Task for the Orchestrator. The Orchestrator enters an **alignment Q&A** in the Dialog Panel (Duolingo-style):
+
+1. The Orchestrator asks a question with predefined answers and a preferred option.
+2. The user selects an answer, or clicks **Autopilot** to accept all remaining preferred answers.
+3. The user can type `/plan` at any time to force the Orchestrator to stop asking and emit the plan.
+4. The final Q&A round may be a confirmation question summarizing the aligned goal.
+5. The Orchestrator emits an OHP workflow plan.
+6. The harness executes the plan.
+7. The final synthesized response appears in the main chat.
+
+Example Dialog Panel flow:
+
+```
+┌─────────────────────────────────────────┐
+│  Align: "Refactor auth module"          │
+│                                         │
+│  What should the refactor prioritize?   │
+│                                         │
+│  [ ] Performance                        │
+│  [✓] Readability (recommended)          │
+│  [ ] Minimal diff                       │
+│                                         │
+│  [Autopilot]  [Plan now]                │
+└─────────────────────────────────────────┘
+```
+
+### 3.4 Subagent Sidebar
+
+During Team execution, active subagents appear in the sidebar next to the main feed:
+
+```
+┌──────────┬──────────────────────────────┐
+│ Feed     │ Main chat / agent feed       │
+│ ─────────┤                              │
+│ Orchestr │ Ctrl+0                       │
+│ researcher 1 │ Ctrl+1                 │
+│ researcher 2 │ Ctrl+2                 │
+│ synthesizer  │ Ctrl+3                 │
+│          │                              │
+│ Status: 2/3 done • 1 failed             │
+└──────────┴──────────────────────────────┘
+```
+
+- `Ctrl+0` switches to the Orchestrator feed.
+- `Ctrl+1`..`Ctrl+9` switch to the Nth subagent feed.
+- Each feed shows that agent's messages, tool calls, and errors.
+- The sidebar shows compact status: done, running, failed.
+
+### 3.5 Plan Approval
+
+After Q&A, the Orchestrator emits a plan. The TUI shows a compact summary card:
+
+```
+┌─────────────────────────────────────────┐
+│ Team workflow: "Refactor auth module"   │
+│ 3 roles • 5 steps • 2 parallel groups   │
+│ Est. cost: $0.12  Est. time: 30s        │
+│ [Run] [Inspect] [Cancel]                │
+└─────────────────────────────────────────┘
+```
+
+`[Inspect]` shows the full OHP plan; `[Cancel]` aborts.
+
+---
+
+## 4. Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         UI Layer                             │
+│  Solo/Team toggle • Dialog Panel Q&A • Subagent sidebar      │
+│  Plan summary card • Per-agent feed                          │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                       Orchestrator                           │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Alignment LLM (multi-round Q&A via ask_user tool)   │  │
+│  │  Emits: TeamWorkflow via OHP                          │  │
+│  └───────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Task Board                                            │  │
+│  │  Validates plan → resolves roles → monitors steps     │  │
+│  └───────────────────────────────────────────────────────┘  │
+└──────┬─────────────────┬──────────────────┬─────────────────┘
        │                 │                  │
-  ┌────▼────┐     ┌──────▼─────┐    ┌──────▼──────┐
-  │ MAIN    │     │  SUBAGENT  │    │  SUBAGENT    │
-  │ SESSION │     │  SESSION A │    │  SESSION B   │
-  │         │     │  (parallel)│    │  (parallel)  │
-  └─────────┘     └────────────┘    └──────────────┘
+   ┌───▼───┐      ┌──────▼─────┐     ┌──────▼──────┐
+   │ Solo  │      │ Subagent A │     │ Subagent B  │
+   │ Turn  │      │ (role X)   │     │ (role Y)    │
+   └───────┘      └────────────┘     └──────────────┘
 ```
 
-### 2.3 Three Implementation Phases
+### 4.1 Key Components
 
-#### Phase 1: Structured Subagent Orchestration (Next, Low Risk)
-Extend `/spawn` from flat nesting to **sequential + fan-out**:
+| Component | Responsibility | Status |
+|-----------|---------------|--------|
+| `OrchestratorActor` | Owns Task Board, executes Team workflows | To be built |
+| `Orchestrator LLM` | Multi-round alignment, then one-shot OHP plan | New provider call |
+| `ask_user` tool | Allows Orchestrator to ask predefined questions in the Dialog Panel | New tool |
+| `ModelResolver` | Maps role trait preferences to concrete models using ranking + priority list | To be built |
+| `SubagentRunner` | Executes isolated subagent sessions | Extend existing `/spawn` backend |
+| `EventBus` | Pub/sub for progress events | Exists |
+| `Session Store` | Persists Task lineage in JSONL | Exists |
+
+---
+
+## 5. Orchestrator Tools
+
+The Orchestrator LLM is an agent loop during alignment. It has two tools:
+
+### 5.1 `ask_user`
+
+Presents a question in the Dialog Panel with predefined answers.
 
 ```rust
-// Vision: /spawn supports structured input
-/spawn [mode: sequential|parallel] <task description>
+struct AskUserInput {
+    question: String,
+    options: Vec<AskUserOption>,
+}
 
-// Example: fan-out research
-/spawn parallel
-Research the Rust async ecosystem
-  - Task 1: tokio docs
-  - Task 2: async-std comparison
-  - Task 3: smol + embassy
+struct AskUserOption {
+    label: String,
+    description: Option<String>,
+    preferred: bool,
+}
 
-// Orchestrator aggregates results into a structured report
+struct AskUserResult {
+    selected_index: usize,
+    autopilot: bool, // true if user chose Autopilot
+}
 ```
 
-**Key changes:**
-- `Orchestrator` actor gains a `TaskBoard` — explicit tasks with status
-- Subagent sessions get **structured context injection** (task schema, not raw prompt)
-- Fan-out uses `tokio::join!` or structured concurrency
-- Results are **typed**, not raw text — JSON schema for task output
-- Session JSONL records task lineage (parent → child relationships)
+If `autopilot` is true, all subsequent `ask_user` calls in the same alignment session receive the preferred option automatically.
 
-**Why this first**: Minimal new concepts. Reuses existing Orchestrator, EventBus, Session. No protocol changes.
+### 5.2 `plan_workflow`
 
-#### Phase 2: Agent-Aware Model Routing (Medium Complexity)
-Make model selection **task-aware**, not just global:
-
-```toml
-# config.toml
-[orchestration]
-default_model = "claude-sonnet-4-7"
-
-[orchestration.model_routing]
-planning = "claude-opus-4-6"
-code_generation = "claude-sonnet-4-7"
-research = "openai/gpt-4.1"
-fast_lookup = "openai/gpt-4o-mini"
-cost_ceiling = 0.10  # per-task budget
-
-[orchestration.task_model_overrides]
-"/research" = "perplexity/sonar"
-"/docs" = "anthropic/claude-3-5-sonnet"
-```
-
-**Key changes:**
-- `Orchestrator` resolves model per task type before spawning
-- Provider routing in `runie-provider` becomes task-scoped
-- Cascade fallback within task (small → large on low confidence)
-- Cost tracking per task, not just per session
-
-**Why this second**: Provider abstraction already exists. Just need task-type → model mapping.
-
-#### Phase 3: A2A and External Agent Interop (Future)
-Enable Runie to collaborate with external agents:
+Emits the final `TeamWorkflow` plan.
 
 ```rust
-// A2A Agent Card (discovered at /.well-known/agent.json)
+struct PlanWorkflowInput {
+    goal: String,
+    aligned_requirements: Vec<String>,
+}
+```
+
+The Orchestrator calls `plan_workflow` when it has enough context, or when the user types `/plan`.
+
+---
+
+## 6. Orchestrator-Harness Protocol (OHP)
+
+The OHP is the contract between the planning LLM and the harness. It is a typed Rust struct serialized as JSON.
+
+### 6.1 Schema
+
+```rust
+struct TeamWorkflow {
+    goal: String,
+    roles: Vec<RoleDefinition>,
+    steps: Vec<WorkflowStep>,
+}
+
+struct RoleDefinition {
+    role_id: String,
+    system_prompt: String,
+    model_traits: Vec<String>, // e.g. ["reasoning"], ["fast", "cheap"]
+    tool_policy: ToolPolicy,   // ReadOnly | Standard | All
+    optional: bool,            // Can be skipped if no model matches traits
+}
+
+enum WorkflowStep {
+    Sequential {
+        id: String,
+        role_id: String,
+        prompt: String,
+        output_schema: JsonSchema,
+    },
+    Parallel {
+        group_id: String,
+        steps: Vec<WorkflowStep>,
+    },
+    Reduce {
+        id: String,
+        depends_on: Vec<String>, // group_ids or step_ids
+        role_id: String,
+        prompt: String,
+        output_schema: JsonSchema,
+    },
+}
+```
+
+### 6.2 Trait Derivation
+
+The `ModelResolver` converts role trait preferences into a concrete model:
+
+```rust
+fn resolve_model(
+    traits: &[String],
+    catalog: &[ModelInfo],
+    priority_list: &[ModelRef],
+) -> Option<ModelRef> {
+    // 1. If user configured a priority list, walk it and return
+    //    the first model that satisfies all required traits.
+    // 2. Otherwise, score connected models by relative ranking
+    //    (cost, context window, features) and return the best match.
+}
+```
+
+Traits are derived from model metadata by **relative ranking**:
+- `cheap` / `expensive` — bottom/top third by cost
+- `fast` / `slow` — bottom/top third by estimated latency
+- `capable` — top third by context window + known capable families
+- `reasoning` — models with `supports_thinking` or reasoning-oriented names
+- `vision` — models with `supports_vision`
+
+If no model matches the required traits:
+1. Try the next matching model in the priority list.
+2. If the priority list is exhausted, degrade traits and log a warning.
+3. Fail only if the role is marked non-optional.
+
+### 6.3 Fallback Chain
+
+When a model fails (rate limit, quota, API error), the harness retries with the next model in the priority list that matches the role's traits. This naturally drains underutilized providers if the user put them first.
+
+### 6.4 Example Workflow
+
+User prompt (Team mode): *"Research Rust async runtimes"*
+
+After alignment, the Orchestrator emits:
+
+```json
 {
-  "name": "runie",
-  "description": "Terminal coding agent for Rust/TypeScript projects",
-  "capabilities": ["code-generation", "testing", "refactoring"],
-  "a2a_url": "http://localhost:7890/a2a",
-  "skills": ["rust", "typescript", "tui", "ratatui"]
-}
-
-// Runie as A2A server: external agents can delegate tasks to Runie
-// Runie as A2A client: can delegate to specialized agents (e.g., Claude Code for reasoning)
-```
-
-**Key changes:**
-- `runie-server` crate becomes an A2A server
-- Agent Card registry for capability discovery
-- Task delegation protocol over HTTP + JSON-RPC
-- Long-running task support via SSE streaming
-- MCP remains for tool access; A2A handles agent→agent
-
-**Why this last**: Requires protocol design, security model, and is lower priority than core orchestration.
-
-### 2.4 Key Design Decisions
-
-#### Context Isolation Strategy
-**Decision**: Each subagent sees only:
-1. The task description (structured schema)
-2. Shared project context (CLAUDE.md-equivalent, via System Context)
-3. Permission set (inherited from parent, possibly narrowed)
-
-Each subagent does **NOT** see:
-- Full parent conversation history
-- Other subagent conversations
-- Unrelated task context
-
-This matches Claude Code's isolated subagent boundaries and Kimi Code's AgentSwarm. It's the most token-efficient and prevents cross-task contamination.
-
-#### Result Passing Strategy
-**Decision**: Structured JSON schema, not raw text.
-
-```rust
-// Subagent outputs a typed result
-struct SubagentResult {
-    task_id: Uuid,
-    status: TaskStatus,       // Completed, Failed, Escalated
-    output: serde_json::Value, // Typed output, not raw text
-    confidence: f32,           // 0.0-1.0 for routing decisions
-    cost_tokens: u64,
-    duration_ms: u64,
-}
-
-// Orchestrator aggregates with a synthesis prompt
-let synthesis = orchestrator.synthesize(results: Vec<SubagentResult>, goal: &str);
-```
-
-This prevents the 72-86% token duplication seen in systems that pass raw conversation history between agents.
-
-#### Human-in-the-Loop Strategy
-**Decision**: Checkpoint-based, not approval-gate-based.
-
-```
-Task lifecycle with checkpoints:
-
-  /spawn parallel research
-         │
-         ▼
-    ┌─────────┐
-    │ Phase 1 │ ← auto, no checkpoint
-    └────┬────┘
-         │ Checkpoint: results ready
-         ▼
-    ┌─────────────────────────┐
-    │  Human review (TUI)     │  ← interrupt here
-    │  - Accept results       │
-    │  - Ask subagent to redo │
-    │  - Escalate to human    │
-    └─────────┬────────────────┘
-              │
-         ┌────▼────┐
-         │ Phase 2 │
-         └────┬────┘
-              │ Checkpoint
-              ▼
-         Final synthesis
-```
-
-Checkpoints are:
-- Configurable per task type (`[orchestration.checkpoints]
-research = "always"
-code_generation = "on_failure_only"
-fast_lookup = "never"`)
-- Surface in TUI as a blocking panel
-- Emitted as `CheckpointReached` events on the bus
-- Resumed via `CheckpointApproved` / `CheckpointRejected` events
-
-This matches LangGraph's `interrupt()` pattern but integrated into the existing EventBus.
-
-#### Failure Recovery Strategy
-**Decision**: Exponential backoff with task-level retry budget.
-
-```rust
-struct TaskConfig {
-    max_retries: u8,         // default: 2
-    retry_backoff_ms: u64,   // default: 1000
-    escalation_threshold: u8, // escalate after N failures
-    escalate_to: EscalationTarget, // Human, or fallback model
+  "goal": "Research Rust async runtimes",
+  "roles": [
+    {
+      "role_id": "researcher",
+      "system_prompt": "You are a concise technical researcher...",
+      "model_traits": ["fast", "cheap"],
+      "tool_policy": "read_only"
+    },
+    {
+      "role_id": "synthesizer",
+      "system_prompt": "You synthesize technical research into a clear comparison...",
+      "model_traits": ["capable"],
+      "tool_policy": "read_only"
+    }
+  ],
+  "steps": [
+    {
+      "parallel": {
+        "group_id": "research",
+        "steps": [
+          { "sequential": { "id": "tokio", "role_id": "researcher", "prompt": "Summarize tokio...", "output_schema": {...} } },
+          { "sequential": { "id": "async_std", "role_id": "researcher", "prompt": "Summarize async-std...", "output_schema": {...} } },
+          { "sequential": { "id": "smol", "role_id": "researcher", "prompt": "Summarize smol...", "output_schema": {...} } }
+        ]
+      }
+    },
+    {
+      "reduce": {
+        "id": "compare",
+        "depends_on": ["research"],
+        "role_id": "synthesizer",
+        "prompt": "Compare the three runtimes...",
+        "output_schema": {...}
+      }
+    }
+  ]
 }
 ```
 
-Task failures are:
-- Emitted as `TaskFailed` events with `error: TaskError` (typed, not string)
-- Logged in session JSONL with full lineage
-- Aggregated by Orchestrator for synthesis ("3 of 5 research tasks failed")
+---
 
-### 2.5 What NOT to Build
+## 7. Execution Semantics
 
-Based on the research, these are premature or wrong for Runie:
+### 7.1 Isolation
+
+Each subagent session:
+- Sees only its own task prompt and role system prompt.
+- Sees the original user goal and aligned requirements.
+- Inherits project context (`AGENTS.md`, skills context).
+- Sees only the tools allowed by its `tool_policy`.
+- Does **not** see the parent conversation history.
+- Does **not** see other subagent conversations.
+
+### 7.2 Result Passing
+
+- Each subagent outputs structured JSON matching its `output_schema`.
+- The harness validates JSON.
+- Downstream steps receive only the extracted JSON fields, not raw text.
+- If JSON is invalid, the harness retries once with a stronger prompt. If still invalid, the step fails.
+
+### 7.3 Failure Handling
+
+| Failure | Behavior |
+|---------|----------|
+| Step returns invalid JSON | Retry once; then fail step |
+| Model unavailable (rate limit/quota) | Fall back to next matching model in priority list |
+| No matching model for role | Degrade traits with warning; fail if role is non-optional |
+| Critical step fails | Abort workflow, return partial results + error summary |
+| Non-critical step fails | Continue with partial results, mark workflow degraded |
+| User cancels | Stop all running subagents, emit `TaskCancelled` |
+
+### 7.4 Persistence
+
+Session JSONL records:
+- `TaskStarted { task_id, mode, goal }`
+- `UserAsked { task_id, question, options }`
+- `UserAnswered { task_id, selected_index, autopilot }`
+- `TeamPlanApproved { task_id, plan_hash, roles, steps }`
+- `SubagentSpawned { task_id, subagent_session_id, role_id, model }`
+- `SubagentCompleted { task_id, subagent_session_id, result_json }`
+- `SubagentFailed { task_id, subagent_session_id, error }`
+- `TaskCompleted { task_id, final_result }`
+
+Subagent sessions are children of the parent session, forming a session tree.
+
+---
+
+## 8. Implementation Phases
+
+### Phase 1: Foundation (Highest Priority)
+
+1. Remove `/spawn` command and its tests.
+2. Add Solo/Team UI toggle (per-session, Solo default).
+3. Introduce `Task`, `TeamWorkflow`, `RoleDefinition`, `ModelTrait` types.
+4. Build `OrchestratorActor` with a minimal Task Board.
+5. Implement `ask_user` tool and Dialog Panel Q&A flow.
+6. Implement one-shot planning LLM call that emits OHP JSON.
+7. Implement basic sequential + parallel execution.
+8. Implement `ModelResolver` with relative trait ranking + priority list fallback.
+9. Implement structured JSON result passing.
+10. Persist Task lineage in session JSONL.
+11. Add subagent sidebar with `Ctrl+0`..`Ctrl+9` hotkeys.
+
+### Phase 2: Optimization
+
+1. Cost estimation before execution.
+2. Per-role tool policies enforced at the ToolRegistry level.
+3. Cascade routing within priority list.
+4. Plan inspection UI.
+5. Retry failed subagents individually from the sidebar.
+
+### Phase 3: External Interop
+
+1. MCP client integration (prerequisite from `tasks/mcp-client-integration.md`).
+2. A2A server/client for collaborating with external agents.
+3. Agent Card registry.
+
+---
+
+## 9. What NOT to Build
 
 | Don't Build | Reason |
 |-------------|--------|
-| Peer-to-peer agent negotiation | Coordination overhead too high for CLI tool |
-| Persistent agent memory (long-term) | Session is the unit; cross-session memory is a separate problem |
-| Full LangGraph-style DAG with cycles | Overkill for terminal use; sequential + fan-out covers 80% of cases |
-| Full A2A server (Phase 3) | Only needed when Runie collaborates with external agents |
-| CrewAI-style role-based crews | Runie's `/spawn` with structured tasks is sufficient |
-| Prompt versioning | Not relevant for CLI tool; session is the unit |
-| Built-in guardrails | Can be added as skills later |
+| Peer-to-peer handoffs | Too complex, loop risk, no clear ownership |
+| Dynamic debate / maker-checker loops | Token-heavy, sycophancy risk, not needed for coding |
+| Full LangGraph-style DAG with cycles | Overkill for terminal use |
+| Persistent cross-session agent memory | Session is the persistence unit; memory is a separate problem |
+| User-defined model tags | Cognitive load; relative ranking + priority list suffice |
+| User-facing optimization toggle | Fixed tri-objective: quality + speed + minimize tokens |
+| A2A in MVP | External interop is Phase 3 |
 
 ---
 
-## 3. Reference Architecture (from Research)
-
-### 3.1 Orchestrator Pattern (most applicable to Runie)
-
-```
-┌──────────────────────────────────────────────────────┐
-│                    Orchestrator                        │
-│  Responsibilities:                                     │
-│  1. Decompose user goal into tasks                    │
-│  2. Assign model + toolset per task                   │
-│  3. Monitor progress via EventBus                     │
-│  4. Aggregate results                                 │
-│  5. Handle failures + retries                        │
-│  6. Surface checkpoints to user                      │
-└───────────────────────┬──────────────────────────────┘
-                        │
-         ┌──────────────┼──────────────┐
-         ▼              ▼              ▼
-    ┌─────────┐    ┌─────────┐    ┌─────────┐
-    │ Task A  │    │ Task B  │    │ Task C  │
-    │ (spawn) │    │ (spawn) │    │ (spawn) │
-    └────┬────┘    └────┬────┘    └────┬────┘
-         │              │              │
-         └──────────────┼──────────────┘
-                        ▼
-              ┌─────────────────┐
-              │   Aggregator    │
-              │ (synthesis LLM) │
-              └────────┬────────┘
-                       │
-                       ▼
-              ┌─────────────────┐
-              │ Final Response  │
-              └─────────────────┘
-```
-
-### 3.2 Session Lineage Model
-
-Each session tracks parent-child relationships:
-
-```
-Session Root (user session)
-  │
-  ├── Subagent Session A (task_id: uuid, parent: root)
-  │     ├── Sub-subagent A1 (task_id: uuid, parent: A)
-  │     └── Sub-subagent A2 (task_id: uuid, parent: A)
-  │
-  ├── Subagent Session B (task_id: uuid, parent: root, parallel_with: [A])
-  │
-  └── Subagent Session C (task_id: uuid, parent: root, sequential_after: [B])
-```
-
-Session JSONL records:
-- `TaskSpawned { task_id, parent_id, task_schema, model, tools }`
-- `TaskProgress { task_id, phase, tokens_spent }`
-- `TaskCompleted { task_id, result: JSON, cost, duration }`
-- `TaskFailed { task_id, error, retries }`
-
-### 3.3 Model Routing Cascade
-
-```rust
-// In Orchestrator::resolve_model
-fn resolve_model(task: &TaskSpec) -> ModelRef {
-    // 1. Check explicit override (e.g., /spawn --model claude-opus)
-    if let Some(m) = task.model_override { return m; }
-
-    // 2. Check task-type routing table
-    if let Some(m) = routing_table.get(&task.task_type) { return m; }
-
-    // 3. Check cost ceiling — use cheapest that fits budget
-    let candidates = model_catalog.query_by_cost_ceiling(task.budget);
-    if !candidates.is_empty() { return candidates[0]; }
-
-    // 4. Fallback to default
-    return config.default_model
-}
-
-// Cascade: try small first, escalate on failure
-async fn execute_with_cascade(task: Task, mut model: ModelRef) -> Result<TaskResult> {
-    loop {
-        match execute(task, model).await {
-            Ok(r) if r.confidence >= 0.7 => return Ok(r),
-            Ok(r) => {
-                // Low confidence — escalate to better model if available
-                model = model_catalog.upgrade(model)?;
-                if model == current { return Ok(r); }
-            }
-            Err(e) if retries < MAX_RETRIES => {
-                retries += 1;
-                sleep(backoff_ms * 2_u64.pow(retries)).await;
-            }
-            Err(e) => return Err(e),
-        }
-    }
-}
-```
-
----
-
-## 4. Open Questions
-
-1. **Should subagent sessions share the same EventBus or have isolated buses?**  
-   Shared bus enables cross-agent observation; isolated prevents noise.  
-   Most frameworks use shared state (LangGraph, CrewAI) but isolated context (Claude Code, Kimi Code).
-
-2. **Should the Orchestrator be an LLM-driven router or a deterministic rule engine?**  
-   LLM router is more flexible but non-deterministic and harder to debug.  
-   Rule engine is predictable but requires explicit rules for every task type.  
-   Hybrid (rules for common paths, LLM for edge cases) seems right.
-
-3. **How should A2A discovery work?**  
-   Standard A2A uses `.well-known/agent.json` for capability discovery.  
-   For CLI tool, a local registry file (`~/.runie/agents.json`) may be simpler.
-
-4. **Should checkpoint interrupts block the EventBus or use async yields?**  
-   Blocking the bus is simpler but stops all progress.  
-   Async yields allow other tasks to continue while waiting for human.  
-   Most frameworks use interrupt-with-yield.
-
-5. **Should task output schema be enforced or flexible?**  
-   Strict JSON schema ensures reliable aggregation.  
-   Flexible (any JSON) allows simpler subagent prompts.  
-   Best approach: optional schema, fallback to raw text extraction.
-
----
-
-## 5. Key Reading
+## 10. Research References
 
 | Source | URL |
 |--------|-----|
@@ -553,10 +481,6 @@ async fn execute_with_cascade(task: Task, mut model: ModelRef) -> Result<TaskRes
 | MCP vs A2A | https://www.blott.studio/blog/post/mcp-vs-a2a-which-protocol-is-better-for-ai-agents |
 | Claude Code Workflow Patterns | https://www.mindstudio.ai/blog/claude-code-agentic-workflow-patterns |
 | Zylos Research: Multi-Agent 2026 | https://zylos.ai/research/multi-agent-orchestration-2025 |
-| OmniParser Multi-Agent Survey | https://arxiv.org/pdf/2602.08009 |
 | OpenCode Docs | https://opencode.ai/docs/agents/ |
 | LiteLLM Routing | https://docs.litellm.ai/docs/routing |
 | Factory Missions | https://docs.factory.ai/cli/features/missions |
-| Kimi Code AGENTS.md | `/Users/admin/Code/agents/kimi-code/AGENTS.md` |
-| OpenCode CONTEXT.md | `/Users/admin/Code/agents/opencode/CONTEXT.md` |
-| LangGraph AGENTS.md | `/Users/admin/Code/agents/langgraph/AGENTS.md` |

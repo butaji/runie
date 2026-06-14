@@ -230,9 +230,6 @@
       "milestone": "R1",
       "category": "Input & Commands",
       "priority": "P1",
-      "depends_on": [
-        "terminal-detection"
-      ],
       "completed_in": "current",
       "file": "tasks/archive/vim-navigation-mode.md",
       "notes": "Archived in tasks/archive/."
@@ -243,9 +240,6 @@
       "milestone": "R1",
       "category": "Input & Commands",
       "priority": "P1",
-      "depends_on": [
-        "terminal-detection"
-      ],
       "completed_in": "current",
       "file": "tasks/archive/shift-enter-newline.md",
       "notes": "Archived in tasks/archive/."
@@ -256,7 +250,7 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P2",
-      "file": "tasks/sync-docs.md"
+      "file": "tasks/archive/sync-docs.md"
     },
     {
       "id": "ctrl-o-collapse-expand",
@@ -318,10 +312,7 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
-      "depends_on": [
-        "extract-term-effect-handlers"
-      ],
-      "file": "tasks/restore-size-and-lint-discipline.md"
+      "file": "tasks/archive/restore-size-and-lint-discipline.md"
     },
     {
       "id": "remove-test-sleeps",
@@ -553,13 +544,12 @@
       "category": "Core Architecture",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/crate-replacement-audit.md",
+      "file": "tasks/archive/crate-replacement-audit.md",
       "blocks": [
         "adopt-syntect",
         "adopt-similar",
         "adopt-pulldown-cmark",
-        "adopt-tiktoken-rs",
-        "spike-nucleo-fuzzy"
+        "adopt-tiktoken-rs"
       ]
     },
     {
@@ -569,7 +559,7 @@
       "category": "TUI Rendering",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/adopt-syntect.md",
+      "file": "tasks/archive/adopt-syntect.md",
       "depends_on": [
         "crate-replacement-audit"
       ]
@@ -581,7 +571,7 @@
       "category": "Tools",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/adopt-similar.md",
+      "file": "tasks/archive/adopt-similar.md",
       "depends_on": [
         "crate-replacement-audit"
       ]
@@ -593,7 +583,7 @@
       "category": "TUI Rendering",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/adopt-pulldown-cmark.md",
+      "file": "tasks/archive/adopt-pulldown-cmark.md",
       "depends_on": [
         "crate-replacement-audit"
       ]
@@ -605,7 +595,7 @@
       "category": "Core Architecture",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/adopt-tiktoken-rs.md",
+      "file": "tasks/archive/adopt-tiktoken-rs.md",
       "depends_on": [
         "crate-replacement-audit",
         "model-capability-flags"
@@ -617,7 +607,7 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
-      "file": "tasks/remove-vendored-reference-repos.md"
+      "file": "tasks/archive/remove-vendored-reference-repos.md"
     },
     {
       "id": "delete-committed-rlib",
@@ -625,7 +615,7 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P0",
-      "file": "tasks/delete-committed-rlib.md"
+      "file": "tasks/archive/delete-committed-rlib.md"
     },
     {
       "id": "fix-clippy-and-test-hygiene",
@@ -633,7 +623,7 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P0",
-      "file": "tasks/fix-clippy-and-test-hygiene.md",
+      "file": "tasks/archive/fix-clippy-and-test-hygiene.md",
       "depends_on": [
         "delete-committed-rlib"
       ]
@@ -644,7 +634,7 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/cleanup-stale-docs.md"
+      "file": "tasks/archive/cleanup-stale-docs.md"
     },
     {
       "id": "consolidate-overlapping-tasks",
@@ -652,7 +642,7 @@
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/consolidate-overlapping-tasks.md"
+      "file": "tasks/archive/consolidate-overlapping-tasks.md"
     },
     {
       "id": "unify-token-counter",
@@ -660,7 +650,7 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
-      "file": "tasks/unify-token-counter.md",
+      "file": "tasks/archive/unify-token-counter.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
@@ -671,7 +661,7 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
-      "file": "tasks/unify-fuzzy-scorer.md",
+      "file": "tasks/archive/unify-fuzzy-scorer.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
@@ -682,7 +672,7 @@
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P2",
-      "file": "tasks/unify-spinner-frames.md",
+      "file": "tasks/archive/unify-spinner-frames.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
@@ -693,7 +683,7 @@
       "milestone": "R3",
       "category": "Tools",
       "priority": "P1",
-      "file": "tasks/unify-tool-markers.md",
+      "file": "tasks/archive/unify-tool-markers.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
@@ -704,7 +694,7 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
-      "file": "tasks/dedupe-agent-profiles.md",
+      "file": "tasks/archive/dedupe-agent-profiles.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
@@ -715,7 +705,7 @@
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
-      "file": "tasks/extract-headless-runner.md",
+      "file": "tasks/archive/extract-headless-runner.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene",
         "unify-tool-markers"
@@ -728,7 +718,7 @@
       "category": "Providers & Models",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/unify-provider-model-registry.md",
+      "file": "tasks/archive/unify-provider-model-registry.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ],
@@ -743,7 +733,7 @@
       "category": "Input & Commands",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/merge-dialog-command-dsl.md",
+      "file": "tasks/archive/merge-dialog-command-dsl.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
       ]
@@ -755,7 +745,7 @@
       "category": "Core Architecture",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/table-driven-command-registration.md"
+      "file": "tasks/archive/table-driven-command-registration.md"
     },
     {
       "id": "fix-build-script-linter",
@@ -764,7 +754,7 @@
       "category": "Tooling",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/fix-build-script-linter.md",
+      "file": "tasks/archive/fix-build-script-linter.md",
       "blocks": [
         "fix-code-formatting",
         "harden-test-verification-and-dev-sh",
@@ -786,7 +776,7 @@
       "category": "Tooling",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/fix-code-formatting.md"
+      "file": "tasks/archive/fix-code-formatting.md"
     },
     {
       "id": "harden-test-verification-and-dev-sh",
@@ -795,7 +785,7 @@
       "category": "Tooling",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/harden-test-verification-and-dev-sh.md"
+      "file": "tasks/archive/harden-test-verification-and-dev-sh.md"
     },
     {
       "id": "self-contained-form-submit",
@@ -804,7 +794,7 @@
       "category": "Input & Commands",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/self-contained-form-submit.md",
+      "file": "tasks/archive/self-contained-form-submit.md",
       "depends_on": [
         "command-flow-exec-borrow"
       ]
@@ -816,11 +806,11 @@
       "category": "Input & Commands",
       "priority": "P0",
       "completed_in": "current",
-      "file": "tasks/command-flow-exec-borrow.md"
+      "file": "tasks/archive/command-flow-exec-borrow.md"
     },
     {
       "id": "fix-provider-model-registry-drift",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Providers & Models",
       "priority": "P1",
@@ -833,11 +823,11 @@
       "category": "Core Architecture",
       "priority": "P1",
       "completed_in": "current",
-      "file": "tasks/remove-dead-dsl-surface.md"
+      "file": "tasks/archive/remove-dead-dsl-surface.md"
     },
     {
       "id": "unify-markdown-line-counts",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P1",
@@ -845,7 +835,7 @@
     },
     {
       "id": "cache-feed-rendering",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P1",
@@ -853,7 +843,7 @@
     },
     {
       "id": "wire-tokenizer-cost-tracking",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P1",
@@ -861,7 +851,7 @@
     },
     {
       "id": "display-width-wrapping",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P1",
@@ -873,7 +863,227 @@
       "milestone": "R3",
       "category": "TUI Rendering",
       "priority": "P1",
-      "file": "tasks/fix-vim-nav-wrap-mapping.md"
+      "file": "tasks/archive/fix-vim-nav-wrap-mapping.md"
+    },
+    {
+      "id": "r4-adr-team-mode-orchestration",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/r4-adr-team-mode-orchestration.md",
+      "depends_on": [],
+      "blocks": ["r4-orchestrator-domain-types"],
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-docs-update-multi-agent",
+      "status": "done",
+      "milestone": "R4",
+      "category": "Documentation",
+      "priority": "P1",
+      "file": "tasks/r4-docs-update-multi-agent.md",
+      "depends_on": ["r4-adr-team-mode-orchestration"],
+      "completed_in": "current"
+    },
+    {
+      "id": "r4-orchestrator-domain-types",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/r4-orchestrator-domain-types.md",
+      "depends_on": ["r4-adr-team-mode-orchestration"],
+      "blocks": ["r4-model-trait-resolution", "r4-ask-user-tool", "r4-one-shot-orchestrator-llm"]
+    },
+    {
+      "id": "r4-solo-team-mode-toggle",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Sessions",
+      "priority": "P0",
+      "file": "tasks/r4-solo-team-mode-toggle.md",
+      "depends_on": ["actor-runtime-decision", "event-bus-jsonl-persistence"],
+      "blocks": ["r4-team-mode-integration"]
+    },
+    {
+      "id": "r4-model-trait-resolution",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/r4-model-trait-resolution.md",
+      "depends_on": ["model-capability-flags", "r4-orchestrator-domain-types"],
+      "blocks": ["r4-orchestrator-actor", "r4-one-shot-orchestrator-llm"]
+    },
+    {
+      "id": "r4-ask-user-tool",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Tools / State",
+      "priority": "P0",
+      "file": "tasks/r4-ask-user-tool.md",
+      "depends_on": ["tool-registry-trait", "r4-orchestrator-domain-types"],
+      "blocks": ["r4-one-shot-orchestrator-llm"]
+    },
+    {
+      "id": "r4-one-shot-orchestrator-llm",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Providers & Models",
+      "priority": "P0",
+      "file": "tasks/r4-one-shot-orchestrator-llm.md",
+      "depends_on": ["llm-event-normalization", "r4-model-trait-resolution", "r4-ask-user-tool"],
+      "blocks": ["r4-orchestrator-actor"]
+    },
+    {
+      "id": "r4-orchestrator-actor",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Actors",
+      "priority": "P0",
+      "file": "tasks/r4-orchestrator-actor.md",
+      "depends_on": ["actor-runtime-decision", "r4-orchestrator-domain-types", "r4-one-shot-orchestrator-llm"],
+      "blocks": ["r4-subagent-isolation", "r4-subagent-sidebar", "r4-team-mode-integration"]
+    },
+    {
+      "id": "r4-subagent-isolation",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / Security",
+      "priority": "P0",
+      "file": "tasks/r4-subagent-isolation.md",
+      "depends_on": ["r4-orchestrator-actor", "permission-rulesets"],
+      "blocks": ["r4-team-mode-integration"]
+    },
+    {
+      "id": "r4-subagent-sidebar",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Rendering",
+      "priority": "P0",
+      "file": "tasks/r4-subagent-sidebar.md",
+      "depends_on": ["r4-orchestrator-actor", "r4-subagent-isolation"],
+      "blocks": ["r4-team-mode-integration"]
+    },
+    {
+      "id": "r4-team-mode-integration",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "Architecture / TUI",
+      "priority": "P0",
+      "file": "tasks/r4-team-mode-integration.md",
+      "depends_on": ["r4-solo-team-mode-toggle", "r4-orchestrator-actor", "r4-subagent-isolation", "r4-subagent-sidebar"]
+    },
+    {
+      "id": "grok-mouse-terminal-init",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Terminal",
+      "priority": "P0",
+      "file": "tasks/grok-mouse-terminal-init.md",
+      "depends_on": [],
+      "blocks": ["grok-mouse-hit-testing"]
+    },
+    {
+      "id": "grok-mouse-hit-testing",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Input",
+      "priority": "P0",
+      "file": "tasks/grok-mouse-hit-testing.md",
+      "depends_on": ["grok-mouse-terminal-init"],
+      "blocks": ["grok-contextual-hints"]
+    },
+    {
+      "id": "grok-contextual-hints",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Chrome",
+      "priority": "P0",
+      "file": "tasks/grok-contextual-hints.md",
+      "depends_on": ["grok-mouse-hit-testing", "r4-solo-team-mode-toggle"]
+    },
+    {
+      "id": "grok-input-title-modes",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Chrome",
+      "priority": "P0",
+      "file": "tasks/grok-input-title-modes.md",
+      "depends_on": ["r4-solo-team-mode-toggle"]
+    },
+    {
+      "id": "grok-status-bar-richer",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Chrome",
+      "priority": "P1",
+      "file": "tasks/grok-status-bar-richer.md",
+      "depends_on": ["r4-team-mode-integration"]
+    },
+    {
+      "id": "grok-block-copy",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Clipboard",
+      "priority": "P1",
+      "file": "tasks/grok-block-copy.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-palette-ranking",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Commands",
+      "priority": "P1",
+      "file": "tasks/grok-palette-ranking.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-tool-block-status",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Feed",
+      "priority": "P1",
+      "file": "tasks/grok-tool-block-status.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-file-ref-ranges",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Input",
+      "priority": "P2",
+      "file": "tasks/grok-file-ref-ranges.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-theme-quantization",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Theme",
+      "priority": "P2",
+      "file": "tasks/grok-theme-quantization.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-welcome-screen",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Onboarding",
+      "priority": "P2",
+      "file": "tasks/grok-welcome-screen.md",
+      "depends_on": []
+    },
+    {
+      "id": "grok-inline-diff-polish",
+      "status": "todo",
+      "milestone": "R4",
+      "category": "TUI / Diff",
+      "priority": "P2",
+      "file": "tasks/grok-inline-diff-polish.md",
+      "depends_on": []
     }
   ]
 }
