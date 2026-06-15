@@ -147,6 +147,8 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
   enrichment (`tasks/harness-skill-*`)
 - **Native `fff-search` backend** — unified file/content search and `@` picker
   powered by a long-lived indexer (`tasks/fff-*`)
+- **Crate replacements** — custom code replaced by maintained crates where it
+  reduces complexity and improves correctness (`docs/CRATE_DECISIONS.md`)
 - **Normalized `LLMEvent` stream** — all providers emit the same event
   vocabulary (`tasks/llm-event-normalization.md`)
 - **Model capability flags** — streaming/vision/tools/reasoning/max-tokens per

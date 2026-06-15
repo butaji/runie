@@ -48,4 +48,5 @@ Replace the separate `grep`, `find`, and `list_dir` tools with a single `search`
 
 - Constraint syntax (`*.rs !test/`) should be documented in tool examples.
 - The legacy tools may be kept as thin aliases initially for compatibility.
-- See `docs/adr/0023-fff-search-integration.md`.
+- `ignore` + `globset` are intentionally not used; FFF covers `.gitignore`-aware traversal and glob matching.
+- See `docs/adr/0023-fff-search-integration.md` and `docs/CRATE_DECISIONS.md`.

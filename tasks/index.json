@@ -1,6 +1,88 @@
 {
   "tasks": [
     {
+      "id": "adopt-redb-session-store",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Sessions",
+      "priority": "P2",
+      "depends_on": [
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [],
+      "file": "tasks/adopt-redb-session-store.md"
+    },
+    {
+      "id": "adopt-textwrap-word-wrap",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-textwrap-word-wrap.md"
+    },
+    {
+      "id": "adopt-nucleo-non-file-fuzzy",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-nucleo-non-file-fuzzy.md"
+    },
+    {
+      "id": "adopt-palette-theme-colors",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-palette-theme-colors.md"
+    },
+    {
+      "id": "adopt-serde-yaml-skills",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P2",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-serde-yaml-skills.md"
+    },
+    {
+      "id": "adopt-patch-diff-parser",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-patch-diff-parser.md"
+    },
+    {
+      "id": "adopt-arboard-clipboard",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-arboard-clipboard.md"
+    },
+    {
+      "id": "adopt-notify-config-watcher",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P1",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/adopt-notify-config-watcher.md"
+    },
+    {
       "id": "fff-location-parser",
       "status": "todo",
       "milestone": "R3",
@@ -169,7 +251,7 @@
     },
     {
       "id": "harness-skill-framework",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Architecture / Actors",
       "priority": "P0",
@@ -183,7 +265,8 @@
         "harness-skill-loop-detector",
         "harness-skill-tool-schema-enricher"
       ],
-      "file": "tasks/harness-skill-framework.md"
+      "file": "tasks/harness-skill-framework.md",
+      "notes": "Core framework implemented: HarnessSkill trait, SkillRegistry, config types, turn.rs hooks."
     },
     {
       "id": "fix-harness-crate-or-archive",
@@ -197,7 +280,7 @@
     },
     {
       "id": "fix-session-store-atomic-writes",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Sessions",
       "priority": "P1",
@@ -205,7 +288,8 @@
       "blocks": [
         "event-bus-jsonl-persistence"
       ],
-      "file": "tasks/fix-session-store-atomic-writes.md"
+      "file": "tasks/fix-session-store-atomic-writes.md",
+      "notes": "Removed sync_all() overhead. Improved crash survival test to actually simulate crash."
     },
     {
       "id": "fix-diff-line-numbers",
@@ -555,14 +639,15 @@
     },
     {
       "id": "remove-test-sleeps",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Core / State",
       "priority": "P2",
       "file": "tasks/remove-test-sleeps.md",
       "depends_on": [
         "fix-clippy-and-test-hygiene"
-      ]
+      ],
+      "notes": "Removed sleeps from bus.rs drain(), actor.rs drain_events(), session_actor.rs tests. Added try_recv() to ReplayReceiver. Gated file polling tests with #[ignore]."
     },
     {
       "id": "archive-done-task-files",
@@ -686,7 +771,7 @@
     },
     {
       "id": "mcp-client-integration",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Tools",
       "priority": "P1",
@@ -696,7 +781,8 @@
       ],
       "blocks": [
         "mcp-servers-support"
-      ]
+      ],
+      "notes": "Implemented McpClientManager with connect/disconnect/list_tools/call_tool. Added namespacing, env var injection, stdio transport types."
     },
     {
       "id": "permission-rulesets",
@@ -767,14 +853,15 @@
     },
     {
       "id": "session-list-summaries",
-      "status": "todo",
+      "status": "done",
       "milestone": "R3",
       "category": "Sessions",
       "priority": "P2",
       "file": "tasks/session-list-summaries.md",
       "depends_on": [
         "event-bus-jsonl-persistence"
-      ]
+      ],
+      "notes": "Core implementation complete: session index, dialog builder, control events. UI wiring and LLM summaries deferred."
     },
     {
       "id": "crate-replacement-audit",
@@ -1410,7 +1497,7 @@
     },
     {
       "id": "skills-subdirectory-frontmatter",
-      "status": "todo",
+      "status": "done",
       "milestone": "R2",
       "category": "Configuration",
       "priority": "P1",
