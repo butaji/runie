@@ -1,8 +1,8 @@
 # Complete the Agent Profile Manager
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
-**Category**: Input & Commands
+**Category**: Input / Commands
 **Priority**: P1
 
 ## Description

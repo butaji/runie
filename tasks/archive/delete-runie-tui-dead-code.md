@@ -2,7 +2,7 @@
 
 **Status**: done
 **Milestone**: R1
-**Category**: TUI Rendering
+**Category**: TUI / Rendering
 **Priority**: P0
 
 ## Description

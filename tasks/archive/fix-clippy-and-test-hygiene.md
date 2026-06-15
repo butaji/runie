@@ -2,7 +2,7 @@
 
 **Status**: done
 **Milestone**: R3
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P0
 
 ## Description

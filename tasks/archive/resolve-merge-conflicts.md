@@ -3,7 +3,7 @@
 **Status**: done
 **Completed in**: 77a605c3 ("Fix broken event routing in update dispatcher")
 **Milestone**: MVP
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P0
 
 ## Original Description

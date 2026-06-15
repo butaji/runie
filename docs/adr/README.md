@@ -17,6 +17,9 @@ context, options considered, and the decision made.
 | [0018](0018-provider-llm-event-normalization.md) | All providers emit a normalized `LLMEvent` stream |
 | [0019](0019-tool-registry-and-mcp.md) | Tool trait registry, permission rulesets, and in-house MCP client |
 | [0020](0020-team-mode-orchestration.md) | Solo/Team execution modes and Orchestrator-Harness Protocol |
+| [0021](0021-keybindings-in-config-toml.md) | Keybindings live in `~/.runie/config.toml` |
+| [0022](0022-harness-middleware-plugins.md) | Harness middleware plugins (edit tool, verification, context, loop detection) |
+| [0023](0023-fff-search-integration.md) | Native `fff-search` integration for file/content search and the `@` picker |
 
 ## For the current architectural overview
 

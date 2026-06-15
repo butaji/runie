@@ -3,7 +3,7 @@
 **Status**: done (with caveats)
 **Completed in**: 0959861e ("Archive orphan login_flow modules and tests")
 **Milestone**: MVP
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P0
 
 ## Original Description

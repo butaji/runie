@@ -5,7 +5,7 @@
 **Category**: Architecture / Security
 **Priority**: P0
 
-**Depends on**: r4-orchestrator-actor, r3-permission-rulesets
+**Depends on**: r4-orchestrator-actor, permission-rulesets
 **Blocks**: r4-team-mode-integration
 
 ## Description

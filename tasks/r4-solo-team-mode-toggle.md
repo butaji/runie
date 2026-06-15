@@ -2,10 +2,10 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Sessions
+**Category**: Sessions
 **Priority**: P0
 
-**Depends on**: r3-actor-runtime-decision, r3-event-bus-jsonl-persistence
+**Depends on**: actor-runtime-decision, event-bus-jsonl-persistence
 **Blocks**: r4-team-mode-integration
 
 ## Description

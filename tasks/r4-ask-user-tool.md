@@ -2,10 +2,10 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: Tools / State
+**Category**: Tools
 **Priority**: P0
 
-**Depends on**: r3-tool-registry-trait, r4-orchestrator-domain-types
+**Depends on**: tool-registry-trait, r4-orchestrator-domain-types
 **Blocks**: r4-one-shot-orchestrator-llm
 
 ## Description

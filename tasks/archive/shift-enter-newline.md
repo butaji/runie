@@ -2,7 +2,7 @@
 
 **Status**: done
 **Milestone**: R1
-**Category**: Input & Commands
+**Category**: Input / Commands
 **Priority**: P1
 
 ## Description

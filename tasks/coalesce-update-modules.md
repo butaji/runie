@@ -2,10 +2,10 @@
 
 **Status**: todo
 **Milestone**: R3
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P1
 
-**Depends on**: `flatten-event-system`, `complete-appstate-refactor`
+**Depends on**: flatten-event-system, complete-appstate-refactor
 **Blocks**: (none)
 
 ## Description

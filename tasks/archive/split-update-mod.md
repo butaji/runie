@@ -2,9 +2,9 @@
 
 **Status**: done
 **Milestone**: R1
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P1
-**Depends on**: extract-login-flow
+**Depends on**: extract-login-flow, resolve-merge-conflicts
 
 ## Description
 

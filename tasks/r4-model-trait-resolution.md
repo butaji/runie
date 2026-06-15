@@ -5,7 +5,7 @@
 **Category**: Core / State
 **Priority**: P0
 
-**Depends on**: r3-model-capability-flags, r4-orchestrator-domain-types
+**Depends on**: model-capability-flags, r4-orchestrator-domain-types
 **Blocks**: r4-orchestrator-actor, r4-one-shot-orchestrator-llm
 
 ## Description

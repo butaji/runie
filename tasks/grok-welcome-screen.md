@@ -2,7 +2,7 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Onboarding
+**Category**: TUI / Rendering
 **Priority**: P2
 
 **Depends on**: (none)

@@ -5,7 +5,7 @@
 **Category**: TUI / Rendering
 **Priority**: P2
 
-**Depends on**: `unify-rendering-pipeline`
+**Depends on**: unify-rendering-pipeline
 **Blocks**: (none)
 
 ## Description

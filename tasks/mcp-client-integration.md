@@ -77,6 +77,7 @@ lifecycles, discovers tools/resources, and exposes them through the same
 - `crates/runie-tui/src/components/extensions_modal/` (consume MCP events)
 
 **Out of scope:**
+- FFF integration — file search uses the native `fff-search` crate (see `docs/adr/0023-fff-search-integration.md`).
 - MCP resources/prompts (tools only for now).
 - OAuth for MCP servers.
 - Marketplace / discovery UI.

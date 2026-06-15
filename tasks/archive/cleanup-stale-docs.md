@@ -1,6 +1,6 @@
 # Clean Up Stale and Contradictory Documentation
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
 **Category**: Configuration
 **Priority**: P1

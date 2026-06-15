@@ -152,11 +152,9 @@ and no test ACs. Every feature must be verifiable by `cargo test`.
 
 ## Linter Rules
 
-> The active build script at `crates/runie-core/build.rs` currently enforces
-> higher guardrails (2000 lines/file, 150 lines/function, 30 complexity) so the
-> project can compile during the simplification pass. The targets below are the
-> desired long-term discipline; tightening `build.rs` back to these numbers is
-> tracked in `tasks/restore-size-and-lint-discipline.md`.
+> The active build script at `crates/runie-core/build.rs` enforces the targets
+> below. Because the R3 simplification pass is incomplete, `cargo test` is
+> currently blocked by oversized files (see `tasks/unblock-workspace-build.md`).
 
 - File max: 500 lines
 - Function max: 40 lines, 10 complexity

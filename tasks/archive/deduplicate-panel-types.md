@@ -2,7 +2,7 @@
 
 **Status**: done
 **Milestone**: R1
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P0
 **Depends on**: resolve-merge-conflicts
 

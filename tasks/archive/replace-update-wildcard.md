@@ -1,8 +1,8 @@
 # Replace `update` Dispatcher Wildcard with Explicit No-Op List
 
-**Status**: todo
+**Status**: done
 **Milestone**: R3
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P1
 
 ## Description

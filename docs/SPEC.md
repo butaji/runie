@@ -73,6 +73,44 @@ Each actor subscribes to the events it cares about:
 events (UI-only). The `Event` enum is being flattened and its dispatcher
 simplified (`tasks/flatten-event-system.md`).
 
+### Harness Skills
+
+Skills are default-on, configurable interceptors on the event bus (see
+`docs/adr/0022-harness-middleware-plugins.md`). They implement harness-level
+behaviors that measurably improve agent output without changing the base model:
+
+- **Hashline Edit Skill** — line-addressed edits with content hashes, replacing
+  brittle exact-string `search`/`replace`.
+- **Verification Loop Skill** — runs a configurable verification command after
+  the model claims completion and feeds failures back for a fix pass.
+- **Startup Context Injector Skill** — discovers cwd, tools, and environment
+  before the turn and injects the result into the system prompt.
+- **Loop Detector Skill** — detects repeated failed tool patterns and prompts
+  the model to reconsider.
+- **Tool Schema Enricher Skill** — adds examples to tool schemas to reduce
+  tool-usage failures.
+
+Skills are toggled and configured under `[harness.skills]` in
+`~/.runie/config.toml`.
+
+### Search Backend (`fff-search`)
+
+File and content search are backed by the native `fff-search` Rust crate
+instead of shelling out to `rg`/`fd`/`find`. A long-lived `FffIndexerActor`
+keeps the index, frecency tracker, and query tracker in memory and serves
+both agent tools and the TUI `@` picker (see
+`docs/adr/0023-fff-search-integration.md`).
+
+Capabilities:
+
+- Unified `search` tool with `mode = files | content | mixed`.
+- Typo-resistant fuzzy matching and constraint queries (`*.rs !test/`).
+- Frecency ranking based on recent/frequent file access.
+- Git-status awareness (`git:modified`, `git:untracked`).
+- Definition classifier for `find_definitions`.
+- Fast glob and `file:line:col` location parsing.
+- Legacy `rg`/`fd` fallback for memory-constrained sessions.
+
 ## Features
 
 ### Always-on
@@ -104,6 +142,11 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
 - **Event-based actor runtime** — tokio-task actors + `EventBus` + JSONL session
   persistence (`tasks/actor-runtime-decision.md`,
   `tasks/event-bus-jsonl-persistence.md`)
+- **Harness Skills** — default-on, togglable middleware for edit tools,
+  verification loops, context injection, loop detection, and tool-schema
+  enrichment (`tasks/harness-skill-*`)
+- **Native `fff-search` backend** — unified file/content search and `@` picker
+  powered by a long-lived indexer (`tasks/fff-*`)
 - **Normalized `LLMEvent` stream** — all providers emit the same event
   vocabulary (`tasks/llm-event-normalization.md`)
 - **Model capability flags** — streaming/vision/tools/reasoning/max-tokens per

@@ -2,7 +2,7 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Commands
+**Category**: Input / Commands
 **Priority**: P1
 
 **Depends on**: (none)

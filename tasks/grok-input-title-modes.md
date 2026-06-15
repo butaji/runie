@@ -2,7 +2,7 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Chrome
+**Category**: TUI / Rendering
 **Priority**: P0
 
 **Depends on**: r4-solo-team-mode-toggle

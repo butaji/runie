@@ -2,10 +2,10 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: Architecture / TUI
+**Category**: Architecture / Actors
 **Priority**: P0
 
-**Depends on**: r4-solo-team-mode-toggle, r4-orchestrator-actor, r4-subagent-isolation, r4-subagent-sidebar
+**Depends on**: r4-solo-team-mode-toggle, r4-orchestrator-actor, r4-subagent-isolation, r4-subagent-sidebar, r4-sidebar-task-list
 **Blocks**: (none)
 
 ## Description

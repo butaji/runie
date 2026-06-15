@@ -5,7 +5,7 @@
 **Category**: Architecture / Actors
 **Priority**: P0
 
-**Depends on**: r3-actor-runtime-decision, r4-orchestrator-domain-types, r4-one-shot-orchestrator-llm
+**Depends on**: actor-runtime-decision, r4-orchestrator-domain-types, r4-one-shot-orchestrator-llm
 **Blocks**: r4-subagent-isolation, r4-subagent-sidebar, r4-team-mode-integration
 
 ## Description

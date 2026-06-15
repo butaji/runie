@@ -2,7 +2,7 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Chrome
+**Category**: TUI / Rendering
 **Priority**: P1
 
 **Depends on**: r4-team-mode-integration

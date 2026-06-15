@@ -6,7 +6,7 @@
 **Priority**: P1
 
 **Depends on**: (none)
-**Blocks**: `unify-rendering-pipeline`
+**Blocks**: unify-rendering-pipeline
 
 ## Description
 

@@ -2,7 +2,7 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Input
+**Category**: Input / Commands
 **Priority**: P0
 
 **Depends on**: grok-mouse-terminal-init

@@ -2,11 +2,11 @@
 
 **Status**: todo
 **Milestone**: R3
-**Category**: Safety & Trust
+**Category**: Architecture / Security
 **Priority**: P1
 
 **Depends on**: tool-registry-trait
-**Blocks**: (enables `r2-safety-commands.md`)
+**Blocks**: (none)
 
 ## Description
 

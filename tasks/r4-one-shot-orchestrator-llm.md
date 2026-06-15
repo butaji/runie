@@ -2,10 +2,10 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: Provider / Agents
+**Category**: Configuration
 **Priority**: P0
 
-**Depends on**: r4-model-trait-resolution, r4-ask-user-tool, r3-llm-event-normalization
+**Depends on**: llm-event-normalization, r4-model-trait-resolution, r4-ask-user-tool
 **Blocks**: r4-orchestrator-actor
 
 ## Description

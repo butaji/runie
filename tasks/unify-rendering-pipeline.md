@@ -5,7 +5,7 @@
 **Category**: TUI / Rendering
 **Priority**: P1
 
-**Depends on**: `merge-runie-term-into-tui`
+**Depends on**: merge-runie-term-into-tui
 **Blocks**: (none)
 
 ## Description

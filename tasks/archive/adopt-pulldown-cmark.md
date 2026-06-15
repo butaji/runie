@@ -3,7 +3,7 @@
 **Status**: done
 **Completed**: 2026-06-14
 **Milestone**: R3
-**Category**: TUI Rendering
+**Category**: TUI / Rendering
 **Priority**: P1
 
 **Depends on**: crate-replacement-audit

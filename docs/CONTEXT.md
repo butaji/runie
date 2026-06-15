@@ -57,7 +57,7 @@ The JSONL persistence layer. Owns file paths, advisory locking, atomic writes, a
 _Avoid_: database, repository
 
 **Skill**:
-A self-describing interceptor on the event bus. Subscribes to events, can inject context, modify tool calls, or preprocess input.
+A self-describing interceptor on the event bus. Subscribes to events, can inject context, modify tool calls, preprocess input, or implement harness-level middleware such as verification loops and loop detection. Skills are default-on, configurable via `~/.runie/config.toml`, and can be disabled.
 _Avoid_: plugin, extension, module
 
 **AgentLoop**:

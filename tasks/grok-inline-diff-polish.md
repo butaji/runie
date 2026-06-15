@@ -2,7 +2,7 @@
 
 **Status**: todo
 **Milestone**: R4
-**Category**: TUI / Diff
+**Category**: TUI / Rendering
 **Priority**: P2
 
 **Depends on**: (none)

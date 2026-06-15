@@ -3,7 +3,7 @@
 **Status**: done
 **Completed**: 2026-06-14
 **Milestone**: R2
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P1
 
 ## Description

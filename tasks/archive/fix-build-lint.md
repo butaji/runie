@@ -3,7 +3,7 @@
 **Status**: done
 **Completed in**: 5a80a681 ("Fix build.rs lint: archive skip, test budgets, keyword complexity, allow-list drift test")
 **Milestone**: MVP
-**Category**: Core Architecture
+**Category**: Core / State
 **Priority**: P0
 **Depends on**: resolve-merge-conflicts
 
