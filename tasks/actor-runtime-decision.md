@@ -19,7 +19,7 @@ Research of `~/Code/agents` showed two camps:
   full actor runtime.
 
 Given Runie’s `AGENTS.md` rule to keep it stupidly simple and the prior dead
-actor-framework code (`ARCHITECTURE_ROUND2.md` §1.2), we will stay lightweight.
+actor-framework code (`docs/archive/ARCHITECTURE_ROUND2.md` §1.2), we will stay lightweight.
 This task makes that decision explicit and defines the minimal actor traits
 we actually need.
 

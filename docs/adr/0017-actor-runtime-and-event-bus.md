@@ -4,7 +4,7 @@
 
 Runie grew from a single event loop with ad-hoc `mpsc` channels into a system
 where agent work, input handling, config watching, rendering, and session
-persistence are all coupled through `AppState`. `docs/ARCHITECTURE_ROUND2.md`
+persistence are all coupled through `AppState`. `docs/archive/ARCHITECTURE_ROUND2.md`
 proposed a pipe-based redesign to fix this, but it was never implemented.
 
 Research of `~/Code/agents` (Goose, Codex, OpenHarness, thClaws, Kimi Code,

@@ -1,6 +1,6 @@
 # Runie
 
-**Agentic Harness with TUI.** You just register all the models you use, it makes sure you use them the most efficient way.
+**Agentic Harness with TUI.** Register all the models you use; Runie routes each task to the most efficient one. Team mode lets an orchestrator design multi-agent workflows on the fly.
 
 ```bash
 cargo build --release
@@ -79,7 +79,9 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | **Global Tags** | Token count, cost display; spinner + status during execution |
 | **Top Bar** | Model indicator, session info, background job status |
 | **Status Bar** | Agent state, thinking indicator, turn counter |
-| **Command Palette** | Fuzzy-matched commands (`Ctrl+P`), usage tracking |
+| **Command Palette** | Fuzzy-matched commands (`Ctrl+P`), recency + usage ranking |
+| **Mouse** | Scroll, click-to-expand, prompt focus (SGR mode) |
+| **Footer Hints** | Context-aware shortcuts that change with focus and mode |
 | **Permission Modal** | Tool execution approval with Allow/Deny/Skip/AllowAlways |
 | **Model Picker** | Switch models mid-session |
 | **Session Tree** | Browse/fork conversation branches |
@@ -119,7 +121,6 @@ All providers use a single OpenAI-compatible API client. You switch provider/mod
 | `/share` | | Share session as GitHub gist |
 | `/skill` | | Show skill details |
 | `/skills` | | List loaded skills |
-| `/spawn` | | Run a subagent turn (delegated task) |
 | `/thinking` | | Set thinking level (off/low/medium/high) |
 | `/theme` | | Switch theme or list available themes |
 | `/tree` | | Open session tree dialog |
@@ -147,20 +148,16 @@ Permission decisions:
 - **Skip** — skip this tool call
 - **Deny** — reject
 
-### Multi-Agent Orchestration
+### Multi-Agent Orchestration (Team Mode)
 
-```rust
-// Spawn subagents for parallel tasks
-let handle = orchestrator.spawn(task, &context).await?;
+Runie is moving toward **Team mode**: a per-session toggle where an orchestrator designs a workflow of specialized roles, routes each role to the best connected model by traits, and executes steps in parallel or sequence.
 
-// Handoff context between agents
-orchestrator.handoff(from, to, &context).await?;
+- **Solo** — one agent turn with the configured model (default).
+- **Team** — alignment Q&A in the Dialog Panel, then a one-shot workflow plan executed by isolated subagents.
+- **Model traits** — `fast`, `capable`, `reasoning`, `cheap`, etc., derived by relative ranking; optional global priority list for fallback and provider utilization.
+- **Subagent sidebar** — `Ctrl+0` for the orchestrator, `Ctrl+1`..`Ctrl+9` for active agents, each with its own feed.
 
-// Collect results
-let results = orchestrator.collect(handles).await?;
-```
-
-Features: task priorities (Low/Medium/High/Critical), max turns limits, tool allowlists, read-only mode.
+See `docs/SPEC.md` and `docs/adr/0020-team-mode-orchestration.md` for the design.
 
 ### Configuration
 
@@ -179,6 +176,11 @@ provider = "openai"
 max_turns = 10
 enable_thinking = true
 ```
+
+## Roadmap
+
+- **R3** — Event-sourced actor runtime, normalized `LLMEvent`, model capability flags, `ToolRegistry` + MCP client, permission rulesets.
+- **R4** — Solo/Team execution modes, OrchestratorActor, model trait routing, subagent sidebar, and TUI parity work. See `docs/SPEC.md`.
 
 ## Quick Start
 

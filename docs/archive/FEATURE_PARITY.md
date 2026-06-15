@@ -122,6 +122,36 @@
 
 ---
 
+## Agents & Orchestration
+
+| Feature | pi | runie | Task |
+|---------|:--:|:-----:|------|
+| Solo execution mode (default) | ✅ | ✅ | |
+| Subagents (`/spawn`) | ✅ | ✅ | Legacy; being replaced by Team mode |
+| Team execution mode | ❌ | 🔄 | `tasks/r4-solo-team-mode-toggle.md` |
+| Alignment Q&A in Dialog Panel | ❌ | 🔄 | `tasks/r4-ask-user-tool.md` |
+| Dynamic multi-agent workflows | ❌ | 🔄 | `tasks/r4-orchestrator-actor.md` |
+| Model trait-based routing | ❌ | 🔄 | `tasks/r4-model-trait-resolution.md` |
+| Subagent sidebar + per-agent feeds | ❌ | 🔄 | `tasks/r4-subagent-sidebar.md` |
+
+## Grok Build TUI Parity
+
+Research and gap analysis live in `docs/grok-parity/GROK.md`.
+
+| Feature | Grok | runie | Task |
+|---------|:--:|:-----:|------|
+| Mouse support (SGR, scroll, click) | ✅ | 🔄 | `tasks/grok-mouse-terminal-init.md`, `tasks/grok-mouse-hit-testing.md` |
+| Contextual footer hints | ✅ | 🔄 | `tasks/grok-contextual-hints.md` |
+| Mode suffix in input title | ✅ | 🔄 | `tasks/grok-input-title-modes.md` |
+| Richer status bar (worktree, orchestrator state) | ✅ | 🔄 | `tasks/grok-status-bar-richer.md` |
+| Block-level copy (`y`/`Y`) | ✅ | 🔄 | `tasks/grok-block-copy.md` |
+| Palette ranking (recency × usage) | ✅ | 🔄 | `tasks/grok-palette-ranking.md` |
+| Tool block inline status | ✅ | 🔄 | `tasks/grok-tool-block-status.md` |
+| `@file` line ranges | ✅ | 🔄 | `tasks/grok-file-ref-ranges.md` |
+| Theme quantization | ✅ | 🔄 | `tasks/grok-theme-quantization.md` |
+| Welcome / launcher screen | ✅ | 🔄 | `tasks/grok-welcome-screen.md` |
+| Inline diff polish | ✅ | 🔄 | `tasks/grok-inline-diff-polish.md` |
+
 ## Input & Commands
 
 | Feature | pi | runie | Task |
@@ -202,9 +232,9 @@
 
 ## Summary
 
-**Implemented (✅):** 82 major features
+**Implemented (✅):** 84 major features
 
-**Planned (🔄):** 18 major features — all have task files
+**Planned (🔄):** 23 major features — all have task files
 
 **Excluded (❌):** 15 major features (not targeted by design)
 

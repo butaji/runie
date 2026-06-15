@@ -2,8 +2,12 @@
 
 Terminal coding agent harness in Rust, inspired by [pi](https://pi.dev).
 
-> **Snapshot: 2026-06-11.** For historical design rationale, see `docs/archive/`
+> **Snapshot: 2026-06-14.** For historical design rationale, see `docs/archive/`
 > and the ADRs. For task history, see `tasks/`.
+>
+> The project is currently executing an R3 simplification pass: unify duplicated
+> types, flatten the event system, finish the AppState refactor, and consolidate
+> the TUI/term crates. See the [Simplification plan](#simplification-plan-r3).
 
 ## Architecture
 
@@ -40,7 +44,7 @@ not by a central loop.
 
 In **Team mode**, the `OrchestratorActor` designs and executes multi-agent
 workflows. In **Solo mode**, the user prompt goes directly to `AgentActor`.
-See `docs/MULTI.md` for the full conceptual vision.
+See `docs/adr/0020-team-mode-orchestration.md` for the design.
 
 ### Crates
 
@@ -67,8 +71,8 @@ Each actor subscribes to the events it cares about:
 - `UiActor` subscribes to all events and projects them into `AppState`.
 
 `CoreEvent` is split into durable events (persisted to JSONL) and transient
-events (UI-only). The previous single `Event` enum is being decomposed into
-focused sub-enums (`tasks/event-subenums.md`).
+events (UI-only). The `Event` enum is being flattened and its dispatcher
+simplified (`tasks/flatten-event-system.md`).
 
 ## Features
 
@@ -126,7 +130,7 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
 
 ### Roadmap (R4 — Multi-Agent Orchestration)
 
-Solo/Team execution modes based on the design in `docs/MULTI.md`:
+Solo/Team execution modes based on the design in `docs/adr/0020-team-mode-orchestration.md`:
 
 - **Solo/Team toggle** — per-session UI mode; Solo is the default; `/spawn`
   removed (`tasks/r4-solo-team-mode-toggle.md`)
@@ -149,7 +153,32 @@ Solo/Team execution modes based on the design in `docs/MULTI.md`:
   (`tasks/r4-team-mode-integration.md`)
 - **Grok Build TUI parity** — mouse support, contextual hints, richer status bar,
   command palette ranking, `@file` line ranges, theme quantization, welcome
-  screen (`docs/grok-parity/GROK.md`, `tasks/grok-*.md`)
+  screen (reference material archived at `docs/archive/grok-parity/`,
+  `tasks/grok-*.md`)
+
+### Simplification plan (R3)
+
+The codebase accumulated duplicated types, a fragmented event system, and an
+incomplete state refactor. R3 prioritizes consolidation before adding new
+features:
+
+| Priority | Task | Goal |
+|----------|------|------|
+| P0 | `tasks/unify-config-types.md` | One config TOML schema |
+| P0 | `tasks/unify-message-types.md` | One `ChatMessage`/`Role` type |
+| P0 | `tasks/unify-tool-result-types.md` | One tool-result type |
+| P1 | `tasks/flatten-event-system.md` | Flat `Event` enum, generated name mapping |
+| P1 | `tasks/complete-appstate-refactor.md` | Finish sub-state migration |
+| P1 | `tasks/coalesce-update-modules.md` | Merge 27 update modules by domain |
+| P1 | `tasks/unify-command-dsl.md` | One command definition + execution path |
+| P1 | `tasks/merge-runie-term-into-tui.md` | Single TUI crate |
+| P1 | `tasks/unify-diff-model.md` | Shared diff type |
+| P1 | `tasks/adopt-or-remove-actor-framework.md` | Resolve EventBus/Actor dead code |
+| P1 | `tasks/unify-rendering-pipeline.md` | Core AST + TUI renderer only |
+| P2 | `tasks/unify-markdown-pipeline.md` | Single markdown pass |
+| P2 | `tasks/cleanup-state-helpers.md` | Remove duplicated helpers and dead code |
+
+Historical design documents are in `docs/archive/`.
 
 ### Test coverage
 

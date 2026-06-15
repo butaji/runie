@@ -17,6 +17,12 @@ in `tasks/` for completed work.
 | `STATUS_REVIEW.md` | 2026-06-08 | Task/doc review — 707 tests, 0 clippy errors |
 | `STATUS_REVIEW_CHANGES.md` | 2026-06-08 | Tasks created or updated from the review |
 | `TASK_REVIEW.md` | 2026-06-08 | Process review of the tasks/ directory |
+| `ARCHITECTURE_ROUND2.md` | 2026-06-14 | Draft R2 pipe-based actor redesign, superseded by current ADRs |
+| `MULTI.md` | 2026-06-14 | Conceptual multi-agent / Team mode vision |
+| `CRATE_DECISIONS.md` | 2026-06-14 | Crate replacement research notes |
+| `FEATURE_PARITY.md` | 2026-06-14 | pi feature parity matrix |
+| `REVIEW.md` | 2026-06-14 | Old architecture and code review |
+| `grok-parity/` | 2026-06-14 | Grok Build TUI parity dumps and reports |
 
 These are kept for historical reference, not for current guidance. If a
 design decision in here conflicts with the current code, the code wins.

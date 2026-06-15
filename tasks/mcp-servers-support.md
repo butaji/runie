@@ -67,7 +67,7 @@ Grok Build TUI shows MCP servers in:
 - `crates/runie-core/src/config.rs` — config loader (extend for `[mcp.servers]`)
 - `crates/runie-tui/src/components/extensions_modal/` — modal with tab system
 
-**Grok reference** (`docs/grok-parity/GROK.md` #11 + #15):
+**Grok reference** (archived at `docs/archive/grok-parity/GROK.md` #11 + #15):
 > [Hooks] [Plugins] [Marketplace] [Skills] [MCP Servers]
 > ⛔ 6 MCP servers unavailable
 

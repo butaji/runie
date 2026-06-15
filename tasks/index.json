@@ -300,11 +300,12 @@
     },
     {
       "id": "consolidate-config-reload-types",
-      "status": "todo",
+      "status": "superseded",
       "milestone": "R3",
       "category": "Configuration",
       "priority": "P1",
-      "file": "tasks/consolidate-config-reload-types.md"
+      "file": "tasks/consolidate-config-reload-types.md",
+      "notes": "Superseded by `unify-config-types`."
     },
     {
       "id": "restore-size-and-lint-discipline",
@@ -362,7 +363,7 @@
     },
     {
       "id": "event-subenums",
-      "status": "todo",
+      "status": "superseded",
       "milestone": "R3",
       "category": "Core Architecture",
       "priority": "P2",
@@ -371,7 +372,7 @@
         "actor-runtime-decision",
         "event-bus-jsonl-persistence"
       ],
-      "notes": "Align sub-enum split with durable/transient event taxonomy from event-bus-jsonl-persistence."
+      "notes": "Superseded by `flatten-event-system`. Align sub-enum split with durable/transient event taxonomy from event-bus-jsonl-persistence."
     },
     {
       "id": "actor-runtime-decision",
@@ -873,7 +874,9 @@
       "priority": "P0",
       "file": "tasks/r4-adr-team-mode-orchestration.md",
       "depends_on": [],
-      "blocks": ["r4-orchestrator-domain-types"],
+      "blocks": [
+        "r4-orchestrator-domain-types"
+      ],
       "completed_in": "current"
     },
     {
@@ -883,7 +886,9 @@
       "category": "Documentation",
       "priority": "P1",
       "file": "tasks/r4-docs-update-multi-agent.md",
-      "depends_on": ["r4-adr-team-mode-orchestration"],
+      "depends_on": [
+        "r4-adr-team-mode-orchestration"
+      ],
       "completed_in": "current"
     },
     {
@@ -893,8 +898,14 @@
       "category": "Core Architecture",
       "priority": "P0",
       "file": "tasks/r4-orchestrator-domain-types.md",
-      "depends_on": ["r4-adr-team-mode-orchestration"],
-      "blocks": ["r4-model-trait-resolution", "r4-ask-user-tool", "r4-one-shot-orchestrator-llm"]
+      "depends_on": [
+        "r4-adr-team-mode-orchestration"
+      ],
+      "blocks": [
+        "r4-model-trait-resolution",
+        "r4-ask-user-tool",
+        "r4-one-shot-orchestrator-llm"
+      ]
     },
     {
       "id": "r4-solo-team-mode-toggle",
@@ -903,8 +914,13 @@
       "category": "TUI / Sessions",
       "priority": "P0",
       "file": "tasks/r4-solo-team-mode-toggle.md",
-      "depends_on": ["actor-runtime-decision", "event-bus-jsonl-persistence"],
-      "blocks": ["r4-team-mode-integration"]
+      "depends_on": [
+        "actor-runtime-decision",
+        "event-bus-jsonl-persistence"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ]
     },
     {
       "id": "r4-model-trait-resolution",
@@ -913,8 +929,14 @@
       "category": "Core Architecture",
       "priority": "P0",
       "file": "tasks/r4-model-trait-resolution.md",
-      "depends_on": ["model-capability-flags", "r4-orchestrator-domain-types"],
-      "blocks": ["r4-orchestrator-actor", "r4-one-shot-orchestrator-llm"]
+      "depends_on": [
+        "model-capability-flags",
+        "r4-orchestrator-domain-types"
+      ],
+      "blocks": [
+        "r4-orchestrator-actor",
+        "r4-one-shot-orchestrator-llm"
+      ]
     },
     {
       "id": "r4-ask-user-tool",
@@ -923,8 +945,13 @@
       "category": "Tools / State",
       "priority": "P0",
       "file": "tasks/r4-ask-user-tool.md",
-      "depends_on": ["tool-registry-trait", "r4-orchestrator-domain-types"],
-      "blocks": ["r4-one-shot-orchestrator-llm"]
+      "depends_on": [
+        "tool-registry-trait",
+        "r4-orchestrator-domain-types"
+      ],
+      "blocks": [
+        "r4-one-shot-orchestrator-llm"
+      ]
     },
     {
       "id": "r4-one-shot-orchestrator-llm",
@@ -933,8 +960,14 @@
       "category": "Providers & Models",
       "priority": "P0",
       "file": "tasks/r4-one-shot-orchestrator-llm.md",
-      "depends_on": ["llm-event-normalization", "r4-model-trait-resolution", "r4-ask-user-tool"],
-      "blocks": ["r4-orchestrator-actor"]
+      "depends_on": [
+        "llm-event-normalization",
+        "r4-model-trait-resolution",
+        "r4-ask-user-tool"
+      ],
+      "blocks": [
+        "r4-orchestrator-actor"
+      ]
     },
     {
       "id": "r4-orchestrator-actor",
@@ -943,8 +976,16 @@
       "category": "Architecture / Actors",
       "priority": "P0",
       "file": "tasks/r4-orchestrator-actor.md",
-      "depends_on": ["actor-runtime-decision", "r4-orchestrator-domain-types", "r4-one-shot-orchestrator-llm"],
-      "blocks": ["r4-subagent-isolation", "r4-subagent-sidebar", "r4-team-mode-integration"]
+      "depends_on": [
+        "actor-runtime-decision",
+        "r4-orchestrator-domain-types",
+        "r4-one-shot-orchestrator-llm"
+      ],
+      "blocks": [
+        "r4-subagent-isolation",
+        "r4-subagent-sidebar",
+        "r4-team-mode-integration"
+      ]
     },
     {
       "id": "r4-subagent-isolation",
@@ -953,8 +994,13 @@
       "category": "Architecture / Security",
       "priority": "P0",
       "file": "tasks/r4-subagent-isolation.md",
-      "depends_on": ["r4-orchestrator-actor", "permission-rulesets"],
-      "blocks": ["r4-team-mode-integration"]
+      "depends_on": [
+        "r4-orchestrator-actor",
+        "permission-rulesets"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ]
     },
     {
       "id": "r4-subagent-sidebar",
@@ -963,8 +1009,13 @@
       "category": "TUI / Rendering",
       "priority": "P0",
       "file": "tasks/r4-subagent-sidebar.md",
-      "depends_on": ["r4-orchestrator-actor", "r4-subagent-isolation"],
-      "blocks": ["r4-team-mode-integration"]
+      "depends_on": [
+        "r4-orchestrator-actor",
+        "r4-subagent-isolation"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ]
     },
     {
       "id": "r4-team-mode-integration",
@@ -973,7 +1024,13 @@
       "category": "Architecture / TUI",
       "priority": "P0",
       "file": "tasks/r4-team-mode-integration.md",
-      "depends_on": ["r4-solo-team-mode-toggle", "r4-orchestrator-actor", "r4-subagent-isolation", "r4-subagent-sidebar", "r4-sidebar-task-list"]
+      "depends_on": [
+        "r4-solo-team-mode-toggle",
+        "r4-orchestrator-actor",
+        "r4-subagent-isolation",
+        "r4-subagent-sidebar",
+        "r4-sidebar-task-list"
+      ]
     },
     {
       "id": "r4-sidebar-task-list",
@@ -982,8 +1039,13 @@
       "category": "TUI / Rendering",
       "priority": "P1",
       "file": "tasks/r4-sidebar-task-list.md",
-      "depends_on": ["r4-orchestrator-domain-types", "r4-subagent-sidebar"],
-      "blocks": ["r4-team-mode-integration"]
+      "depends_on": [
+        "r4-orchestrator-domain-types",
+        "r4-subagent-sidebar"
+      ],
+      "blocks": [
+        "r4-team-mode-integration"
+      ]
     },
     {
       "id": "grok-mouse-terminal-init",
@@ -993,7 +1055,9 @@
       "priority": "P0",
       "file": "tasks/grok-mouse-terminal-init.md",
       "depends_on": [],
-      "blocks": ["grok-mouse-hit-testing"]
+      "blocks": [
+        "grok-mouse-hit-testing"
+      ]
     },
     {
       "id": "grok-mouse-hit-testing",
@@ -1002,8 +1066,12 @@
       "category": "TUI / Input",
       "priority": "P0",
       "file": "tasks/grok-mouse-hit-testing.md",
-      "depends_on": ["grok-mouse-terminal-init"],
-      "blocks": ["grok-contextual-hints"]
+      "depends_on": [
+        "grok-mouse-terminal-init"
+      ],
+      "blocks": [
+        "grok-contextual-hints"
+      ]
     },
     {
       "id": "grok-contextual-hints",
@@ -1012,7 +1080,10 @@
       "category": "TUI / Chrome",
       "priority": "P0",
       "file": "tasks/grok-contextual-hints.md",
-      "depends_on": ["grok-mouse-hit-testing", "r4-solo-team-mode-toggle"]
+      "depends_on": [
+        "grok-mouse-hit-testing",
+        "r4-solo-team-mode-toggle"
+      ]
     },
     {
       "id": "grok-input-title-modes",
@@ -1021,7 +1092,9 @@
       "category": "TUI / Chrome",
       "priority": "P0",
       "file": "tasks/grok-input-title-modes.md",
-      "depends_on": ["r4-solo-team-mode-toggle"]
+      "depends_on": [
+        "r4-solo-team-mode-toggle"
+      ]
     },
     {
       "id": "grok-status-bar-richer",
@@ -1030,7 +1103,9 @@
       "category": "TUI / Chrome",
       "priority": "P1",
       "file": "tasks/grok-status-bar-richer.md",
-      "depends_on": ["r4-team-mode-integration"]
+      "depends_on": [
+        "r4-team-mode-integration"
+      ]
     },
     {
       "id": "grok-block-copy",
@@ -1113,6 +1188,149 @@
       "file": "tasks/consolidate-keybindings-into-config-toml.md",
       "depends_on": [],
       "notes": "Consolidates keybindings from ~/.runie/keybindings.json into ~/.runie/config.toml [keybindings]. Supersedes docs/adr/0013-configurable-keybindings.md."
+    },
+    {
+      "id": "unify-config-types",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Configuration",
+      "priority": "P0",
+      "file": "tasks/unify-config-types.md",
+      "depends_on": [],
+      "blocks": [
+        "unify-message-types"
+      ]
+    },
+    {
+      "id": "unify-message-types",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/unify-message-types.md",
+      "depends_on": [
+        "unify-config-types"
+      ],
+      "blocks": [
+        "unify-tool-result-types"
+      ]
+    },
+    {
+      "id": "unify-tool-result-types",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P0",
+      "file": "tasks/unify-tool-result-types.md",
+      "depends_on": [
+        "unify-message-types"
+      ]
+    },
+    {
+      "id": "flatten-event-system",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/flatten-event-system.md",
+      "depends_on": [],
+      "blocks": [
+        "coalesce-update-modules"
+      ]
+    },
+    {
+      "id": "complete-appstate-refactor",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/complete-appstate-refactor.md",
+      "depends_on": [],
+      "blocks": [
+        "coalesce-update-modules"
+      ]
+    },
+    {
+      "id": "coalesce-update-modules",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/coalesce-update-modules.md",
+      "depends_on": [
+        "flatten-event-system",
+        "complete-appstate-refactor"
+      ]
+    },
+    {
+      "id": "unify-command-dsl",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/unify-command-dsl.md",
+      "depends_on": []
+    },
+    {
+      "id": "merge-runie-term-into-tui",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/merge-runie-term-into-tui.md",
+      "depends_on": [],
+      "blocks": [
+        "unify-rendering-pipeline"
+      ]
+    },
+    {
+      "id": "unify-diff-model",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/unify-diff-model.md",
+      "depends_on": []
+    },
+    {
+      "id": "adopt-or-remove-actor-framework",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P1",
+      "file": "tasks/adopt-or-remove-actor-framework.md",
+      "depends_on": []
+    },
+    {
+      "id": "unify-rendering-pipeline",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P1",
+      "file": "tasks/unify-rendering-pipeline.md",
+      "depends_on": [
+        "merge-runie-term-into-tui"
+      ]
+    },
+    {
+      "id": "unify-markdown-pipeline",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "TUI / Rendering",
+      "priority": "P2",
+      "file": "tasks/unify-markdown-pipeline.md",
+      "depends_on": [
+        "unify-rendering-pipeline"
+      ]
+    },
+    {
+      "id": "cleanup-state-helpers",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core Architecture",
+      "priority": "P2",
+      "file": "tasks/cleanup-state-helpers.md",
+      "depends_on": []
     }
   ]
 }

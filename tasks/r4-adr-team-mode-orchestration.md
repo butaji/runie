@@ -20,7 +20,7 @@ R4 multi-agent work.
 - [ ] `docs/adr/0020-team-mode-orchestration.md` exists and follows the ADR format.
 - [ ] ADR explains why Supervisor + isolated subagents was chosen over
   peer-to-peer handoffs, role-based crews, and graph workflows.
-- [ ] ADR references `docs/MULTI.md` for the full conceptual vision.
+- [ ] ADR references `docs/archive/MULTI.md` for the full conceptual vision.
 - [ ] `docs/adr/README.md` table includes the new ADR.
 - [ ] `cargo build --workspace` succeeds (no code changes).
 

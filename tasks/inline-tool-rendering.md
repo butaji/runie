@@ -75,7 +75,7 @@ Components:
 - `crates/runie-tui/src/ui.rs:400-413` — dispatch from `Element` to render functions
 - `crates/runie-core/src/snapshot.rs` — `ToolRunning`, `ToolDone`, `ToolSummary` data types
 
-**Grok reference** (`docs/grok-parity/GROK.md` #9):
+**Grok reference** (archived at `docs/archive/grok-parity/GROK.md` #9):
 > ⠴ Run List \`.\` 1.8s                                         5.7s ⇣21.2k [✗]
 
 **Existing tests:**

@@ -1,9 +1,11 @@
 # Split `Event` Enum (80+ Variants) into Focused Sub-Enums
 
-**Status**: todo
+**Status**: superseded
 **Milestone**: R3
 **Category**: Core Architecture
 **Priority**: P2
+
+**Superseded by**: `flatten-event-system`
 
 ## Description
 

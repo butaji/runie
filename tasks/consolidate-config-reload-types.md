@@ -1,9 +1,11 @@
 # Consolidate Config Types and Remove Polling Sleeps
 
-**Status**: todo
+**Status**: superseded
 **Milestone**: R3
 **Category**: Configuration
 **Priority**: P1
+
+**Superseded by**: `unify-config-types`
 
 ## Description
 
