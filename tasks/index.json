@@ -1,6 +1,16 @@
 {
   "tasks": [
     {
+      "id": "r3-implementation-roadmap",
+      "status": "todo",
+      "milestone": "R3",
+      "category": "Core / State",
+      "priority": "P0",
+      "depends_on": [],
+      "blocks": [],
+      "file": "tasks/r3-implementation-roadmap.md"
+    },
+    {
       "id": "adopt-redb-session-store",
       "status": "todo",
       "milestone": "R3",

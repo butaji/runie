@@ -149,6 +149,8 @@ Planned architecture and UX improvements based on research in `~/Code/agents`:
   powered by a long-lived indexer (`tasks/fff-*`)
 - **Crate replacements** — custom code replaced by maintained crates where it
   reduces complexity and improves correctness (`docs/CRATE_DECISIONS.md`)
+- **Implementation roadmap** — dependency-ordered phases for R3/R4 work
+  (`docs/ROADMAP.md`)
 - **Normalized `LLMEvent` stream** — all providers emit the same event
   vocabulary (`tasks/llm-event-normalization.md`)
 - **Model capability flags** — streaming/vision/tools/reasoning/max-tokens per
