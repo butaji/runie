@@ -10,8 +10,8 @@
 
 ## Description
 
-`docs/archive/ARCHITECTURE_ROUND2.md` and some in-code comments describe a typed
-actor runtime (`Actor` trait, `EventBus`, `InputActor`, `AgentActor`, etc.).
+Earlier design documents and some in-code comments describe a typed actor
+runtime (`Actor` trait, `EventBus`, `InputActor`, `AgentActor`, etc.).
 In practice, `runie-term/src/main.rs` uses ad-hoc tokio tasks and direct
 channels. The `EventBus` in `runie-core/src/bus.rs` and related actor
 abstractions may be dead code or only partially wired.

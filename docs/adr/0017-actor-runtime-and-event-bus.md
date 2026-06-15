@@ -4,8 +4,8 @@
 
 Runie grew from a single event loop with ad-hoc `mpsc` channels into a system
 where agent work, input handling, config watching, rendering, and session
-persistence are all coupled through `AppState`. `docs/archive/ARCHITECTURE_ROUND2.md`
-proposed a pipe-based redesign to fix this, but it was never implemented.
+persistence are all coupled through `AppState`. An earlier pipe-based
+redesign was proposed to fix this but was never implemented.
 
 Research of `~/Code/agents` (Goose, Codex, OpenHarness, thClaws, Kimi Code,
 Gemini CLI) shows a clear convergence: keep the runtime lightweight with tokio

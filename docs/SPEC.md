@@ -2,8 +2,7 @@
 
 Terminal coding agent harness in Rust, inspired by [pi](https://pi.dev).
 
-> **Snapshot: 2026-06-14.** For historical design rationale, see `docs/archive/`
-> and the ADRs. For task history, see `tasks/`.
+> **Snapshot: 2026-06-14.** For task history, see `tasks/`.
 >
 > The project is currently executing an R3 simplification pass: unify duplicated
 > types, flatten the event system, finish the AppState refactor, and consolidate
@@ -153,8 +152,7 @@ Solo/Team execution modes based on the design in `docs/adr/0020-team-mode-orches
   (`tasks/r4-team-mode-integration.md`)
 - **Grok Build TUI parity** — mouse support, contextual hints, richer status bar,
   command palette ranking, `@file` line ranges, theme quantization, welcome
-  screen (reference material archived at `docs/archive/grok-parity/`,
-  `tasks/grok-*.md`)
+  screen (`tasks/grok-*.md`)
 
 ### Simplification plan (R3)
 
@@ -178,7 +176,7 @@ features:
 | P2 | `tasks/unify-markdown-pipeline.md` | Single markdown pass |
 | P2 | `tasks/cleanup-state-helpers.md` | Remove duplicated helpers and dead code |
 
-Historical design documents are in `docs/archive/`.
+Historical design documents have been removed; current decisions are captured in ADRs and tasks.
 
 ### Test coverage
 

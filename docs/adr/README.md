@@ -1,10 +1,7 @@
 # Architecture Decision Records
 
 ADRs document the design decisions that shaped runie. Each one captures the
-context, options considered, and the decision made. The ones numbered
-0001-0010 were written for an early actor-based architecture that was
-superseded by the simpler MVU pattern now in use; they are kept in
-`archive/` for historical reference.
+context, options considered, and the decision made.
 
 ## Current architecture (in use)
 
