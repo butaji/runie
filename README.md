@@ -33,12 +33,12 @@ No browser. No paste dance. No wasted credits.
 
 |  |  |
 |---|---|
-| 🧠 **Multi-model routing** | Switch provider/model mid-session with `/model anthropic/claude-sonnet-4` |
-| 🛡️ **Permission-gated tools** | `read`, `write`, `edit`, `bash`, `grep`, `find` only with your approval |
+| 🧠 **Multi-model routing** | Switch provider/model mid-session with `/model anthropic/claude-sonnet-4-6` |
+| 🛡️ **Permission-gated tools** | `ReadFile`, `ListDir`, `WriteFile`, `EditFile`, `Bash`, `Grep`, `Find`, `FetchDocs` only with your approval |
 | 💾 **Forkable sessions** | Save, load, fork, branch. Your history is local JSONL you own |
 | ⚡ **Terminal-native** | Keyboard-driven TUI next to your editor |
 | 🔄 **Scoped model cycling** | Rotate your configured shortlist with one hotkey |
-| 🤖 **Team mode** | Orchestrator designs multi-agent workflows and routes roles to the best models |
+| 🤖 **Team mode (R4)** | Orchestrator designs multi-agent workflows and routes roles to the best models |
 
 ## Features
 
@@ -51,7 +51,7 @@ No browser. No paste dance. No wasted credits.
 /approve
 [Runie applies it]
 
-/model deepseek-v4-pro
+/model deepseek/deepseek-chat
 > write a regression test
 [Cheaper model writes the test]
 
@@ -62,7 +62,7 @@ Use the right brain for the right job—and finally spend the credits you alread
 
 ### Tools that ask first
 
-Runie can touch your filesystem and shell, but never silently. Every write shows a diff. Every shell command asks. `/readonly` disables edits entirely.
+Runie can read, list, write, edit, run shell commands, grep, find, and fetch docs—but never silently. Every write shows a diff. Every shell command asks. `/readonly` disables edits entirely.
 
 ### Sessions you own
 
@@ -95,7 +95,7 @@ Your context survives restarts, branches, and forks. It lives on your disk, not 
 /approve
 [applies edit]
 
-/model groq/llama-3.3-70b
+/model groq/llama-3.3-70b-versatile
 > write a regression test
 [switches model, writes test]
 
@@ -117,7 +117,7 @@ cargo build --release
 RUNIE_MOCK=1 ./target/release/runie
 
 # One-shot CLI
-./target/release/runie run "find unused imports" < src/main.rs
+./target/release/runie-print "find unused imports" < src/main.rs
 ```
 
 Add keys in `~/.runie/config.toml`:
@@ -129,8 +129,8 @@ model = "gpt-4o"
 [models]
 scoped = [
   "gpt-4o",
-  "anthropic/claude-sonnet-4",
-  "deepseek-v4-pro",
+  "anthropic/claude-sonnet-4-6",
+  "deepseek/deepseek-chat",
 ]
 ```
 
@@ -138,7 +138,7 @@ Config hot-reloads while you type.
 
 ## Providers
 
-Anthropic · OpenAI · Google Gemini · DeepSeek · OpenRouter · Groq · Fireworks · Together · Moonshot AI · xAI · Mistral · Ollama
+Anthropic · OpenAI · Google Gemini · DeepSeek · OpenRouter · Groq · Fireworks · Together · MiniMax · Moonshot AI · xAI · Mistral · Ollama
 
 If you have credits there, Runie helps you use them.
 
@@ -147,9 +147,9 @@ If you have credits there, Runie helps you use them.
 | Mode | Command |
 |---|---|
 | TUI | `./target/release/runie` |
-| Print | `./target/release/runie print "..."` |
-| JSON | `./target/release/runie json "..."` |
-| Server | `./target/release/runie server` |
+| Print | `./target/release/runie-print "..."` |
+| JSON | `./target/release/runie-json "..."` |
+| Server | `./target/release/runie-server` |
 
 ## Development
 
@@ -164,7 +164,7 @@ See `AGENTS.md` for conventions.
 
 ## Roadmap
 
-- **R3** — Unify types, flatten events, finish state refactor, merge `runie-term` into `runie-tui`. See `tasks/`.
+- **R3** — Unify types, flatten events, finish state refactor, consolidate TUI crates. See `tasks/`.
 - **R4** — Team mode: orchestrated multi-agent workflows. See `docs/adr/0020-team-mode-orchestration.md`.
 
 ## License
@@ -187,7 +187,7 @@ Key differentiators:
 - **Scoped model cycling** — rotate a configured shortlist to compare answers in context.
 - **Persistent, forkable sessions** — conversations become reusable assets.
 - **Terminal-native workflow** — keyboard shortcuts, inline file references, fuzzy command palette.
-- **Team mode** — orchestrator designs workflows of specialized roles and routes them to the best models.
+- **Team mode (R4)** — orchestrator designs workflows of specialized roles and routes them to the best models.
 - **Four layers of tests** — state logic, event handling, TestBackend rendering, and tmux smoke tests.
 
 Runie is built for developers who refuse to leave the terminal and want every model they pay for to pull its weight.
