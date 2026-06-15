@@ -1,8 +1,18 @@
 # Runie
 
-> **Stop letting your AI credits rot.**
->
-> Runie is the terminal-native coding harness that routes every task to the right model, executes tools with your permission, and turns scattered API credits into shipped code.
+<p align="center">
+  <b>Stop letting your AI credits rot.</b><br>
+  One terminal. Every model. Zero waste.
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#why-runie">Why</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#the-loop">The loop</a> ·
+  <a href="#providers">Providers</a> ·
+  <a href="#development">Dev</a>
+</p>
 
 ```bash
 cargo build --release
@@ -11,143 +21,88 @@ cargo build --release
 
 ---
 
-## The quiet waste nobody talks about
+## Why Runie
 
-You have OpenAI credits. Anthropic credits. Groq, OpenRouter, DeepSeek, maybe Gemini. Some are expiring. Most are sitting there while you default to whatever chat window is already open.
+You pay for OpenAI, Anthropic, Groq, OpenRouter, Gemini, DeepSeek. Most of those credits sit unused while you default to whatever chat tab is already open.
 
-That is not a preference problem. It is an interface problem.
+Runie fixes the interface problem. It lives in your terminal, talks to every provider, and lets you swap models mid-task without losing context.
 
-Every coding assistant forces you into its lane: one provider, one model, one conversation, one browser tab. Switching costs more than the click. It costs context, history, and the mental map of what you were doing. So you stay in the lane. And your other credits quietly evaporate.
+No browser. No paste dance. No wasted credits.
 
-Runie removes the lane.
+## What it does
 
-## One terminal. Every model. Zero waste.
+|  |  |
+|---|---|
+| 🧠 **Multi-model routing** | Switch provider/model mid-session with `/model anthropic/claude-sonnet-4` |
+| 🛡️ **Permission-gated tools** | `read`, `write`, `edit`, `bash`, `grep`, `find` only with your approval |
+| 💾 **Forkable sessions** | Save, load, fork, branch. Your history is local JSONL you own |
+| ⚡ **Terminal-native** | Keyboard-driven TUI next to your editor |
+| 🔄 **Scoped model cycling** | Rotate your configured shortlist with one hotkey |
+| 🤖 **Team mode** | Orchestrator designs multi-agent workflows and routes roles to the best models |
 
-Runie is a keyboard-driven command center for AI-assisted coding. It lives in your terminal, reads your actual files, runs real shell commands, and lets you swap models mid-task without losing the thread.
+## Features
 
-No browser. No paste dance. No copy-paste diff tennis. Just you, your codebase, and every model you have access to—routed by task, not by habit.
-
-## What makes Runie different
-
-Most agents ask you to adapt to them. Runie adapts to you.
-
-| Ordinary agents | Runie |
-|-----------------|-------|
-| One provider, one model per chat | Any provider, any model, swapped with one command |
-| Cloud history you cannot see | Sessions as local JSONL files you own |
-| Pasted code, guessed context | Direct file reads, edits, grep, bash inside your repo |
-| Binary trust or no tools | Per-action permission gating with diff previews |
-| One-shot chat with no memory | Fork, branch, save, and resume conversations |
-| GUI you leave to use your editor | Terminal UI that stays next to your editor |
-
-## Features that change how you work
-
-### Multi-model routing in one session
-
-Type `/model openai/gpt-4o` for speed. Switch to `/model anthropic/claude-sonnet-4` for reasoning. Use `/model groq/llama-3.3-70b` for cheap inference. The same conversation keeps its context; only the brain changes.
-
-**Why it matters:** You finally use the model that fits the job—and the credits you already paid for.
-
-### Permission-gated tool execution
-
-Runie can `read_file`, `write_file`, `edit_file`, `bash`, `grep`, `find`, and `ls`. But it cannot do any of them without your say. Every write shows a diff first. Every shell command asks once. Every approval can be scoped to the session.
-
-**Why it matters:** The agent gets real power, but you keep real control.
-
-### Scoped model cycling
-
-Configure a shortlist of models under `[models.scoped]` in `~/.runie/config.toml` and cycle them with a hotkey. Compare how three different models answer the same prompt without leaving the TUI.
-
-**Why it matters:** Stop guessing which model is best. Test them in context.
-
-### Persistent, forkable sessions
-
-Save a conversation with `/save refactor-auth`. Resume it tomorrow with `/load refactor-auth`. Fork it from any message with `/fork 12`. Branch it with `/tree`. Your history is a structured JSONL file on disk, not a server log you cannot export.
-
-**Why it matters:** Your best prompts and reasoning become reusable assets.
-
-### Terminal-native workflow
-
-- `@path/to/file` references files inline.
-- `/` commands open a fuzzy palette.
-- `Ctrl+P` jumps to any command.
-- `Ctrl+L` switches models.
-- `Shift+Tab` cycles thinking levels.
-- Config hot-reloads while you edit `~/.runie/config.toml`.
-
-**Why it matters:** You never leave the keyboard flow you already trained for.
-
-### Team mode (R4)
-
-Solo mode is one agent, one model. Team mode spins up an orchestrator that designs a workflow of specialized roles, routes each role to the best connected model, and executes steps in parallel or sequence. One human prompt becomes a coordinated team of agents.
-
-**Why it matters:** Hard problems get decomposed automatically and executed by the right models for each piece.
-
-### Four layers of tests
-
-Runie is built under a strict test discipline: pure state logic, event handling, `TestBackend` rendering, and tmux smoke tests. Features do not ship without coverage.
-
-**Why it matters:** A harness that breaks while you are relying on it is worse than useless.
-
-## The cred-maximization loop
-
-```toml
-# ~/.runie/config.toml
-provider = "openai"
-model = "gpt-4o"
-
-[models]
-scoped = [
-  "gpt-4o",
-  "anthropic/claude-sonnet-4",
-  "groq/llama-3.3-70b-versatile",
-  "deepseek-v4-pro",
-]
-```
+### One session. Every model.
 
 ```text
-> @src/lib.rs why does this retry logic never back off?
-[Runie reads the file and explains the bug]
-
-> rewrite it with exponential backoff
+> refactor error handling to use thiserror
 [Runie proposes a diff]
 
 /approve
-[Runie applies the edit]
+[Runie applies it]
 
 /model deepseek-v4-pro
-> write a regression test for this
-[Runie switches to the cheaper model and writes the test]
+> write a regression test
+[Cheaper model writes the test]
 
 /save retry-backoff-fix
 ```
 
-That is the loop: inspect, edit, approve, route to the right model, save. No tab switching. No credit waste.
+Use the right brain for the right job—and finally spend the credits you already bought.
 
-## Supported providers
+### Tools that ask first
 
-Runie speaks the OpenAI-compatible API, so it connects to almost every hosted and local provider:
+Runie can touch your filesystem and shell, but never silently. Every write shows a diff. Every shell command asks. `/readonly` disables edits entirely.
 
-| Provider | What you use it for |
-|----------|---------------------|
-| Anthropic | Long-context reasoning, careful code review |
-| OpenAI | General coding, fast responses |
-| Google Gemini | Huge context windows |
-| DeepSeek | Cost-efficient deep coding |
-| OpenRouter | One key, many backends |
-| Groq / Fireworks / Together | Low-latency inference |
-| Ollama | Private, local models |
+### Sessions you own
 
-If you have credits there, Runie helps you spend them on actual work.
+- `/save refactor-auth`
+- `/load refactor-auth`
+- `/fork 12`
+- `/tree`
 
-## Modes
+Your context survives restarts, branches, and forks. It lives on your disk, not a server.
 
-| Mode | When to use | Command |
-|------|-------------|---------|
-| **TUI** | Interactive coding sessions | `./target/release/runie` |
-| **Print** | Scriptable plain-text output | `./target/release/runie print "..."` |
-| **JSON** | Programmatic consumption | `./target/release/runie json "..."` |
-| **Server** | RPC surface (experimental) | `./target/release/runie server` |
+### Terminal commands
+
+| Shortcut / command | Action |
+|---|---|
+| `Ctrl+P` | Open command palette |
+| `Ctrl+L` | Switch model |
+| `Shift+Tab` | Cycle thinking level |
+| `@path/to/file` | Reference a file inline |
+| `/` | Slash command palette |
+
+## The loop
+
+```text
+> @src/lib.rs why does this retry never back off?
+[explains the bug]
+
+> rewrite with exponential backoff
+[proposes diff]
+
+/approve
+[applies edit]
+
+/model groq/llama-3.3-70b
+> write a regression test
+[switches model, writes test]
+
+/save retry-backoff
+```
+
+Inspect. Edit. Approve. Route. Save.
 
 ## Quick start
 
@@ -155,44 +110,85 @@ If you have credits there, Runie helps you spend them on actual work.
 # Build
 cargo build --release
 
-# Launch the TUI
+# Interactive TUI
 ./target/release/runie
 
-# Try it without an API key
+# No API key? Use the mock provider
 RUNIE_MOCK=1 ./target/release/runie
 
-# One-shot CLI mode
-./target/release/runie run "find all unused imports" < src/main.rs
+# One-shot CLI
+./target/release/runie run "find unused imports" < src/main.rs
 ```
 
-Add your API keys through the onboarding flow or directly in `~/.runie/config.toml`. Your config is hot-reloadable; change it and keep typing.
+Add keys in `~/.runie/config.toml`:
 
-## Built for developers who refuse to leave the terminal
+```toml
+provider = "openai"
+model = "gpt-4o"
 
-Runie is not another chat app trying to replace your editor. It is the missing control layer between you, your codebase, and every model you have access to.
+[models]
+scoped = [
+  "gpt-4o",
+  "anthropic/claude-sonnet-4",
+  "deepseek-v4-pro",
+]
+```
 
-If you have been paying for AI credits and only using one provider because switching is too annoying, Runie fixes that.
+Config hot-reloads while you type.
 
-If you have been copying code out of browser tabs and pasting it back, Runie fixes that.
+## Providers
 
-If you have been starting from zero context every time you open a new chat, Runie fixes that.
+Anthropic · OpenAI · Google Gemini · DeepSeek · OpenRouter · Groq · Fireworks · Together · Moonshot AI · xAI · Mistral · Ollama
+
+If you have credits there, Runie helps you use them.
+
+## Modes
+
+| Mode | Command |
+|---|---|
+| TUI | `./target/release/runie` |
+| Print | `./target/release/runie print "..."` |
+| JSON | `./target/release/runie json "..."` |
+| Server | `./target/release/runie server` |
 
 ## Development
 
 ```bash
-./dev.sh                    # Run with mock provider
-cargo test --workspace      # Four-layer test suite
-cargo clippy --workspace    # Lint
-cargo fmt                   # Format
+./dev.sh                 # mock provider
+cargo test --workspace   # four-layer test suite
+cargo clippy --workspace
+cargo fmt
 ```
 
-See `AGENTS.md` for contributor conventions.
+See `AGENTS.md` for conventions.
 
 ## Roadmap
 
-- **R3** — Consolidate the codebase: unify duplicated types, flatten the event system, finish the state refactor, and merge `runie-term` into `runie-tui`. See `tasks/`.
-- **R4** — Team mode: orchestrated multi-agent workflows with model trait routing. See `docs/adr/0020-team-mode-orchestration.md`.
+- **R3** — Unify types, flatten events, finish state refactor, merge `runie-term` into `runie-tui`. See `tasks/`.
+- **R4** — Team mode: orchestrated multi-agent workflows. See `docs/adr/0020-team-mode-orchestration.md`.
 
 ## License
 
 MIT
+
+---
+
+<details>
+<summary><b>For robots and detail lovers</b></summary>
+
+Runie is a terminal-native harness for LLM-powered coding agents. It is not a chat website and not tied to one provider. It is a local control surface for models that can read, write, edit, search, and run shell commands inside your project.
+
+Most coding agents force you to leave your terminal: open a browser, paste context, watch a spinner, copy code back by hand. Every switch costs focus and context. Runie keeps you in the shell, next to your editor, with direct access to the codebase, shell, and git history.
+
+Key differentiators:
+
+- **Multi-model routing in one session** — pick the model that fits the task and the credits you want to spend.
+- **Permission-gated tool execution** — real power, real control.
+- **Scoped model cycling** — rotate a configured shortlist to compare answers in context.
+- **Persistent, forkable sessions** — conversations become reusable assets.
+- **Terminal-native workflow** — keyboard shortcuts, inline file references, fuzzy command palette.
+- **Team mode** — orchestrator designs workflows of specialized roles and routes them to the best models.
+- **Four layers of tests** — state logic, event handling, TestBackend rendering, and tmux smoke tests.
+
+Runie is built for developers who refuse to leave the terminal and want every model they pay for to pull its weight.
+</details>
