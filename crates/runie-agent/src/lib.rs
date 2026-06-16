@@ -10,7 +10,6 @@ pub mod tools;
 // Core agent architecture
 pub mod events;
 pub mod loop_engine;
-pub mod harness;
 
 pub use config::{AgentConfig, ToolExecutionMode};
 pub use hook::{Hook, HookDecision, HookError, SafetyHook};

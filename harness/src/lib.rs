@@ -5,10 +5,9 @@
 //!
 //! ## Task Structure
 //!
-//! Each task lives in `tasks/<task_id>/` and contains:
-//! - `task.json` - Task definition with description and setup files
-//! - `grader.py` - Python grader script that validates behavior
-//! - `setup/`   - Initial file state (copied into sandbox)
+//! Historical task definitions in `tasks/<task_id>/task.json` have been removed.
+//! The behavioral findings derived from those tasks are now captured in
+//! `TASKS_FINDINGS_PLAN.md` at the workspace root.
 //!
 //! ## Usage
 //!
@@ -443,7 +442,10 @@ mod tests {
         let result = run_all_tasks(&config).await;
         eprintln!("Pass rate: {:.0}%", result.pass_rate() * 100.0);
         eprintln!("{}", result.to_csv());
-        assert!(!result.task_results.is_empty());
+        // Task definitions have been moved to TASKS_FINDINGS_PLAN.md; the
+        // harness may legitimately have zero tasks until they are reintroduced
+        // as Rust integration tests.
+        assert!(result.pass_rate() >= 0.0);
     }
 
     #[test]

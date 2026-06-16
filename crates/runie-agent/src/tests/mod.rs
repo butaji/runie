@@ -4,8 +4,6 @@ use crate::events::{PermissionDecision, ContentPart, AgentEvent, AgentMessage};
 use crate::hook::{Hook, HookDecision, SafetyHook};
 use crate::loop_engine::AgentLoopConfig;
 use crate::state::AgentState;
-use crate::harness::compaction::find_cut_point;
-use crate::harness::types::CompactionSettings;
 use futures::StreamExt;
 use runie_core::{Message, Session, Context, ToolCall, ToolOutput};
 use std::sync::Arc;

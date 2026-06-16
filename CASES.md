@@ -1068,41 +1068,43 @@
 
 ## HAR — Harness / Tasks (P0)
 
+> **Status:** The JSON task definitions under `harness/tasks/` and `crates/runie-agent/src/harness/tasks/` have been removed. The behavioral requirements previously encoded in those tasks are now captured in `TASKS_FINDINGS_PLAN.md`.
+
 ### HAR-01: List Tasks
 - **Given** harness directory exists
 - **When** `list_tasks()` called
-- **Then** discovers all `task.json` files under `tasks/`
-- **Files**: `harness/runner.rs`
+- **Then** discovers task directories under `tests/` (Rust integration tests) or returns empty if no tasks are defined
+- **Files**: `harness/src/lib.rs`
 
 ### HAR-02: Run Task (Pass)
-- **Given** task with valid setup and grader
-- **When** task executed
-- **Then** sandbox created, setup copied, grader run, `TaskStatus::Pass` if all checks pass
-- **Files**: `harness/runner.rs`, `harness/lib.rs`
+- **Given** a Rust integration test under `harness/tests/`
+- **When** test executed
+- **Then** test passes and reports status via standard `cargo test` output
+- **Files**: `harness/tests/*.rs`
 
 ### HAR-03: Run Task (Fail)
-- **Given** task with failing checks
-- **When** task executed
-- **Then** `TaskStatus::Fail` with details
-- **Files**: `harness/runner.rs`
+- **Given** a failing Rust integration test
+- **When** test executed
+- **Then** test fails with details in stderr
+- **Files**: `harness/tests/*.rs`
 
 ### HAR-04: Run Task (Skipped)
-- **Given** task without grader
-- **When** task executed
-- **Then** `TaskStatus::Skipped` returned (not Error)
-- **Files**: `harness/lib.rs`
+- **Given** a test marked `#[ignore]`
+- **When** test executed
+- **Then** test is skipped (not counted as failure)
+- **Files**: `harness/tests/*.rs`
 
 ### HAR-05: Run All Tasks
-- **Given** multiple tasks exist
-- **When** `run_all_tasks()` called
-- **Then** all tasks executed sequentially, aggregated results with `pass_rate()`
-- **Files**: `harness/runner.rs`
+- **Given** zero or more integration tests exist
+- **When** `cargo test -p runie-harness` called
+- **Then** all tests executed, aggregated results reported by cargo
+- **Files**: `harness/tests/`, `harness/src/lib.rs`
 
-### HAR-06: Compaction Task
+### HAR-06: Context Compaction
 - **Given** context window exceeded
-- **When** compaction task executed
-- **Then** messages compacted according to `CompactionSettings`
-- **Files**: `harness/compaction.rs`
+- **When** compaction runs
+- **Then** messages compacted according to `AgentLoopConfig`/thresholds in `loop_engine/context.rs`
+- **Files**: `crates/runie-agent/src/loop_engine/context.rs`
 
 ---
 
@@ -1434,13 +1436,13 @@
 - **Paste**: Direct passthrough, NO mode check — BUG-03
 
 #### HAR Edge Cases
-- **list_tasks**: Hardcoded path in runie-agent; CWD-relative in harness/lib
-- **No task.json validation**: Just checks if directory
-- **Sandbox**: Created in `/tmp/runie-harness/{task_id}/`
-- **Cleanup**: Silently ignored on failure (`let _ = fs::remove_dir_all`)
-- **Grader output**: Parses "PASS:" / "FAIL:" prefixes from stdout
-- **CSV**: `task_id,status,elapsed_ms,checks_passed,checks_total` — no detail column
-- **pass_rate**: Only Pass counts; Skipped/Fail not counted as passing
+- **list_tasks**: CWD-relative path in `harness/src/lib.rs`; returns empty when no tasks exist
+- **No task.json validation**: JSON task definitions removed; tasks are now Rust tests
+- **Sandbox**: Historical harness created sandboxes in `/tmp/runie-harness/{task_id}/`
+- **Cleanup**: Historical harness cleanup silently ignored failure (`let _ = fs::remove_dir_all`)
+- **Grader output**: Historical Python graders parsed "PASS:" / "FAIL:" prefixes from stdout
+- **CSV**: `harness/src/lib.rs` still exposes `to_csv()` for programmatic result formatting
+- **pass_rate**: Only `Pass` counts; `Skipped`/`Fail` not counted as passing
 
 #### Model Registry Edge Cases
 - **Two ModelInfo structs**: `model_fetcher.rs` {id,name} vs `model_registry.rs` {id,name,provider,context_window,pricing,tools,vision}
@@ -1483,7 +1485,7 @@
 - `crates/runie-tui/src/tui/tests/reducer.rs` — add STT/CHT/INP tests
 - `crates/runie-tui/src/tui/tests/render_tests.rs` — add REN tests (NEW)
 - `crates/runie-agent/src/permission.rs` — add PER tests
-- `crates/runie-agent/src/harness/runner.rs` — add HAR tests
+- `crates/runie-agent/src/loop_engine/context.rs` — add context compaction tests
 - `crates/runie-cli/src/settings.rs` — add CFG tests
 - `.github/workflows/ci.yml` — CI workflow (already created)
 
