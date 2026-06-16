@@ -107,7 +107,49 @@ pub(crate) fn build_lines_with_mapping(
         mapping.extend(std::iter::repeat_n(idx, wrapped_rows));
         lines.extend(elem_lines);
     }
+
+    // Append streaming tail when a turn is active
+    if snap.turn_active && !snap.streaming_tail.is_empty() {
+        let streaming_lines = wrap_text_to_lines(&snap.streaming_tail, content_width);
+        let last_idx = snap.elements.len().saturating_sub(1);
+        for line in streaming_lines {
+            mapping.push(last_idx);
+            lines.push(line);
+        }
+    }
+
     (lines, mapping)
+}
+
+/// Wrap text to lines respecting content width.
+fn wrap_text_to_lines(text: &str, width: u16) -> Vec<Line<'_>> {
+    use ratatui::text::Line;
+    use std::borrow::Cow;
+
+    let mut result = Vec::new();
+    for line in text.lines() {
+        if line.is_empty() {
+            result.push(Line::from(""));
+            continue;
+        }
+
+        // Simple word wrap at width boundary
+        let chars_per_line = width as usize;
+        let chars: Vec<char> = line.chars().collect();
+
+        if chars.len() <= chars_per_line {
+            result.push(Line::from(Cow::Borrowed(line)));
+            continue;
+        }
+
+        // Break into chunks of chars_per_line
+        for chunk in chars.chunks(chars_per_line) {
+            let wrapped: String = chunk.iter().collect();
+            result.push(Line::from(Cow::Owned(wrapped)));
+        }
+    }
+
+    result
 }
 
 /// Fill the selected post's area with a subtle accent-colored background
@@ -410,9 +452,9 @@ mod tests {
         assert_count_matches(Element::spacer().at(0.0), 80);
         assert_count_matches(Element::thinking(started).at(0.0), 80);
         assert_count_matches(Element::thought_summary("summary", 1.0).at(0.0), 80);
-        assert_count_matches(Element::tool_running("ls", started).at(0.0), 80);
+        assert_count_matches(Element::tool_running("ls", ".", started).at(0.0), 80);
         assert_count_matches(
-            Element::tool_done("ls", 0.5, "out1\nout2\nout3").at(0.0),
+            Element::tool_done("ls", ".", 0.5, "out1\nout2\nout3", None, false).at(0.0),
             80,
         );
         assert_count_matches(Element::tool_summary("ls", 0.5).at(0.0), 80);

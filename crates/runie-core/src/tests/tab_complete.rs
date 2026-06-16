@@ -1,4 +1,5 @@
 use crate::event::Event;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::model::AppState;
 
 fn fresh_state() -> AppState {
@@ -17,7 +18,7 @@ fn tab_opens_file_picker_with_filter() {
     state.input.cursor_pos = 3;
 
     // Tab should open file picker
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
 
     assert!(state.open_dialog.is_some(), "Tab should open file picker");
 }
@@ -28,7 +29,7 @@ fn tab_opens_file_picker_empty_input() {
     let mut state = fresh_state();
 
     // Tab should open file picker
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
 
     assert!(
         state.open_dialog.is_some(),
@@ -42,11 +43,11 @@ fn tab_cycles_wraps_around() {
     let mut state = fresh_state();
 
     // Open file picker
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // First Tab cycles to next
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
 
     // Get selection
     let selection = get_panel_selection(&state);
@@ -56,7 +57,7 @@ fn tab_cycles_wraps_around() {
     );
 
     // Second Tab should wrap or continue
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
 }
 
 /// Tab with no matches shows empty file picker
@@ -68,7 +69,7 @@ fn tab_with_no_matches_shows_empty_picker() {
     state.input.cursor_pos = text.len();
 
     // Tab opens file picker with non-matching filter
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 }
 
@@ -80,11 +81,11 @@ fn file_picker_replaces_typed_prefix() {
     state.input.cursor_pos = 3;
 
     // Tab opens file picker
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Enter selects
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());

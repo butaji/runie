@@ -1,6 +1,16 @@
 use super::{exec, fresh_state, tmp_store, type_str, ENV_LOCK};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
 use crate::model::Role;
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+}
 
 #[test]
 fn model_m3_just_model_name() {
@@ -71,8 +81,7 @@ fn model_only_slashes_shows_usage() {
 #[test]
 fn model_no_args_opens_selector() {
     let mut state = fresh_state();
-    type_str(&mut state, "/model");
-    state.update(Event::Submit);
+    palette_select(&mut state, "model");
 
     assert!(
         matches!(
@@ -92,9 +101,9 @@ fn save_creates_session_file() {
 
     let mut state = fresh_state();
     type_str(&mut state, "hello world");
-    state.update(Event::Submit);
+    state.update(Event::submit());
     exec(&mut state, "/save mysession"); // Opens form with pre-filled name
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
 
     assert!(store.path("mysession").exists(), "session file created");
 
@@ -121,9 +130,9 @@ fn save_preserves_messages_provider_model() {
     state.config.current_provider = "openai".to_string();
     state.config.current_model = "gpt-4o".to_string();
     type_str(&mut state, "test message");
-    state.update(Event::Submit);
+    state.update(Event::submit());
     exec(&mut state, "/save preserved"); // Opens form with pre-filled name
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
 
     let loaded = store.load("preserved").unwrap();
     assert_eq!(loaded.provider, "openai");
@@ -138,8 +147,7 @@ fn save_preserves_messages_provider_model() {
 #[test]
 fn save_no_args_opens_form() {
     let mut state = fresh_state();
-    type_str(&mut state, "/save");
-    state.update(Event::Submit);
+    palette_select(&mut state, "save");
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");

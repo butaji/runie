@@ -1,52 +1,65 @@
-use crate::dsl::TestHarness;
-use crate::{AgentEvent, ControlEvent, DialogEvent, EditEvent, Event, InputEvent, ModelConfigEvent, ScrollEvent, SystemEvent};
+//! Tests for the streaming buffer logic (Layer 1 tests).
+
+use crate::streaming_buffer::StreamingBuffer;
 
 #[test]
-fn response_delta_updates_tail() {
-    let mut h = TestHarness::new();
-    // Send a response delta — it should feed the buffer and update tail
-    h.state.update(Event::Agent(AgentEvent::ResponseDelta {
-        id: "req.1".to_string(),
-        content: "Hello".to_string(),
-    });
-    // The tail is set, message may or may not be flushed (debounce)
-    let tail = h.state.agent.streaming_buffer.tail();
-    assert!(tail.contains("Hello"));
+fn buffer_flushes_complete_paragraph() {
+    let mut buf = StreamingBuffer::new();
+    buf.push_delta("Hello, world!\n\n");
+    let flushed = buf.force_flush();
+    // Split on \n gives ["Hello, world!", "", ""]
+    assert_eq!(flushed, vec!["Hello, world!", "", ""]);
+    assert!(buf.tail().is_empty());
+    assert!(buf.is_stable());
 }
 
 #[test]
-fn agent_response_feeds_buffer() {
-    let mut h = TestHarness::new();
-    h.state.update(Event::Agent(AgentEvent::AgentResponse {
-        id: "req.1".to_string(),
-        content: "Hello, world!\n\n".to_string(),
-    });
-    // Stable paragraph should be committed to the message
-    let flushed = h.state.agent.streaming_buffer.force_flush();
+fn buffer_holds_incomplete_code_fence() {
+    let mut buf = StreamingBuffer::new();
+    buf.push_delta("Some text.\n```python\nprint('hello')");
+    let flushed = buf.force_flush();
+    assert_eq!(flushed, vec!["Some text."]);
+    assert_eq!(buf.tail(), "```python\nprint('hello')");
+    assert!(!buf.is_stable());
+}
+
+#[test]
+fn buffer_completes_code_fence() {
+    let mut buf = StreamingBuffer::new();
+    buf.push_delta("Some text.\n```python\nprint('hello')\n```");
+    let flushed = buf.force_flush();
+    assert_eq!(flushed, vec!["Some text.", "```python", "print('hello')", "```"]);
+    assert!(buf.tail().is_empty());
+    assert!(buf.is_stable());
+}
+
+#[test]
+fn buffer_batches_deltas() {
+    let mut buf = StreamingBuffer::new();
+    for i in 0..10 {
+        buf.push_delta(&format!("word{} ", i));
+    }
+    buf.push_delta("\n\n");
+
+    // After \n\n, content should be in stable buffer (not tail)
+    // The tail should be empty after complete paragraph
+    assert!(buf.is_stable(), "Buffer should be stable after \n\n");
+    assert!(buf.tail().is_empty(), "Tail should be empty");
+
+    // force_flush returns the stable content
+    let flushed = buf.force_flush();
     assert!(!flushed.is_empty());
-    let tail = h.state.agent.streaming_buffer.tail();
-    assert!(tail.is_empty());
+    let content = flushed.join("");
+    assert!(content.contains("word0"));
+    assert!(content.contains("word9"));
 }
 
 #[test]
-fn turn_complete_flushes_buffer() {
-    let mut h = TestHarness::new();
-    h.state.update(Event::Agent(AgentEvent::AgentResponse {
-        id: "req.1".to_string(),
-        content: "Some text\n\n".to_string(),
-    });
-    h.state.update(Event::Agent(AgentEvent::AgentTurnComplete {
-        id: "req.1".to_string(),
-        duration_secs: 1.0,
-    });
-    // Buffer should be reset after turn completion
-    assert!(h.state.agent.streaming_buffer.is_stable());
-}
-
-#[test]
-fn streaming_buffer_in_state() {
-    let h = TestHarness::new();
-    // Streaming buffer exists and is initialized
-    assert!(h.state.agent.streaming_buffer.tail().is_empty());
-    assert!(h.state.agent.streaming_buffer.is_stable());
+fn buffer_reset_clears_all() {
+    let mut buf = StreamingBuffer::new();
+    buf.push_delta("hello\n");
+    buf.reset();
+    assert!(buf.tail().is_empty());
+    assert!(buf.stable_len() == 0);
+    assert!(buf.is_stable());
 }

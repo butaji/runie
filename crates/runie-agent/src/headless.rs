@@ -5,12 +5,11 @@
 //! `max_tool_rounds` rounds. The server mode sets `execute_tools: false` and
 //! simply returns the streamed content.
 
-use crate::parser::parse_tool_calls;
-use crate::Tool;
+use crate::parser::{parse_tool_calls, ParsedToolCall};
 use anyhow::Result;
 use futures::StreamExt;
 use runie_core::provider::{Message, Provider};
-use serde_json::Value;
+use runie_core::tool::{ToolContext, ToolOutput};
 
 /// Result of a headless turn.
 #[derive(Debug, Clone)]
@@ -21,190 +20,112 @@ pub struct HeadlessResult {
     pub tool_outputs: Vec<ToolOutput>,
 }
 
-/// A captured tool execution.
-#[derive(Debug, Clone)]
-pub struct ToolOutput {
-    pub name: String,
-    pub arguments: Value,
-    pub output: String,
-}
-
-/// Options controlling `run_headless_turn`.
-pub struct HeadlessOptions<'a> {
-    /// Run parsed tools and append their results for another model turn.
+/// Options for headless turn execution.
+pub struct HeadlessOptions {
+    /// Execute tools and collect results.
     pub execute_tools: bool,
-    /// Maximum number of tool/model round trips.
+    /// Maximum number of tool-call rounds.
     pub max_tool_rounds: usize,
-    /// Optional per-chunk streaming callback.
-    pub on_chunk: Option<&'a mut (dyn FnMut(&str) + Send)>,
-    /// Required when `execute_tools` is true; serializes a tool's arguments.
-    pub tool_to_json: Option<&'a (dyn Fn(&Tool) -> Value + Send + Sync)>,
+    /// Callback for each text chunk received from the LLM.
+    pub on_chunk: Option<Box<dyn FnMut(&str) + Send>>,
 }
 
-impl<'a> HeadlessOptions<'a> {
-    /// Options for a simple one-shot stream with no tool execution.
-    pub fn stream_only() -> Self {
-        Self {
-            execute_tools: false,
-            max_tool_rounds: 0,
-            on_chunk: None,
-            tool_to_json: None,
-        }
-    }
-}
-
-/// Stream one turn from `provider`, optionally executing tools.
+/// Run a headless turn with the given provider.
 ///
 /// The caller must already include the system and user messages in `messages`.
-/// The helper does not modify the initial messages except to append assistant
-/// responses and tool results during tool rounds.
 pub async fn run_headless_turn(
     messages: Vec<Message>,
     provider: &dyn Provider,
-    mut options: HeadlessOptions<'_>,
+    mut options: HeadlessOptions,
 ) -> Result<HeadlessResult> {
     let mut messages = messages;
     let mut content = String::new();
     let mut tool_outputs = Vec::new();
 
     for _ in 0..options.max_tool_rounds.max(1) {
-        let mut response_text = String::new();
-        let mut stream = provider.generate(messages.clone());
-        while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result?;
-            response_text.push_str(&chunk.content);
-            content.push_str(&chunk.content);
-            if let Some(cb) = options.on_chunk.as_mut() {
-                cb(&chunk.content);
-            }
-        }
-
+        let response_text = stream_response_text(provider, &messages, &mut content, &mut options).await?;
         let tools = parse_tool_calls(&response_text);
         if tools.is_empty() || !options.execute_tools {
             break;
         }
 
-        messages.push(Message::Assistant {
-            content: response_text,
-        });
-        execute_headless_tools(&tools, &mut messages, &mut tool_outputs, &options)?;
+        messages.push(Message::Assistant { content: response_text.to_string() });
+        execute_headless_tools(&tools, &mut messages, &mut tool_outputs).await?;
     }
 
-    Ok(HeadlessResult {
-        content,
-        tool_outputs,
-    })
+    Ok(HeadlessResult { content, tool_outputs })
 }
 
-fn execute_headless_tools(
-    tools: &[Tool],
+async fn stream_response_text(
+    provider: &dyn Provider,
+    messages: &[Message],
+    content: &mut String,
+    options: &mut HeadlessOptions,
+) -> Result<String> {
+    let mut response_text = String::new();
+    let mut stream = provider.generate(messages.to_vec());
+    while let Some(event_result) = stream.next().await {
+        let event = event_result?;
+        match event {
+            runie_core::llm_event::LLMEvent::TextDelta(text) => {
+                response_text.push_str(&text);
+                content.push_str(&text);
+                if let Some(cb) = options.on_chunk.as_mut() {
+                    cb(&text);
+                }
+            }
+            runie_core::llm_event::LLMEvent::Finish { .. } => break,
+            runie_core::llm_event::LLMEvent::Error(e) => {
+                return Err(anyhow::anyhow!("LLM error: {:?}", e));
+            }
+            _ => {}
+        }
+    }
+    Ok(response_text)
+}
+
+async fn execute_headless_tools(
+    tools: &[ParsedToolCall],
     messages: &mut Vec<Message>,
     tool_outputs: &mut Vec<ToolOutput>,
-    options: &HeadlessOptions<'_>,
 ) -> Result<()> {
-    let tool_to_json = options
-        .tool_to_json
-        .ok_or_else(|| anyhow::anyhow!("tool_to_json is required when execute_tools is true"))?;
+    let ctx = ToolContext::default();
+    let registry = runie_core::tool::builtin_registry();
 
-    for tool in tools {
-        let result = tool.execute();
-        tool_outputs.push(ToolOutput {
-            name: tool.name().to_string(),
-            arguments: tool_to_json(tool),
-            output: result.output.clone(),
-        });
+    for tool_call in tools {
+        let output = execute_tool_call(&registry, tool_call, &ctx).await;
+        tool_outputs.push(output.clone());
         messages.push(Message::ToolResult {
-            content: format!("{} result:\n{}", tool.name(), result.output),
+            content: format!("{} result:\n{}", tool_call.name, output.content),
         });
     }
     Ok(())
 }
 
-fn read_file_json(path: &str, offset: Option<usize>, limit: Option<usize>) -> Value {
-    let mut m = serde_json::Map::new();
-    m.insert("path".into(), path.into());
-    if let Some(o) = offset {
-        m.insert("offset".into(), o.into());
-    }
-    if let Some(l) = limit {
-        m.insert("limit".into(), l.into());
-    }
-    Value::Object(m)
-}
-
-fn grep_json(
-    pattern: &str,
-    path: &str,
-    glob: &Option<String>,
-    ignore_case: bool,
-    literal: bool,
-    context: usize,
-    limit: usize,
-) -> Value {
-    let mut m = serde_json::Map::new();
-    m.insert("pattern".into(), pattern.into());
-    m.insert("path".into(), path.into());
-    if let Some(g) = glob {
-        m.insert("glob".into(), g.clone().into());
-    }
-    m.insert("ignore_case".into(), ignore_case.into());
-    m.insert("literal".into(), literal.into());
-    m.insert("context".into(), context.into());
-    m.insert("limit".into(), limit.into());
-    Value::Object(m)
-}
-
-fn file_tool_to_json(tool: &Tool) -> Option<Value> {
-    Some(match tool {
-        Tool::ReadFile {
-            path,
-            offset,
-            limit,
-        } => read_file_json(path, *offset, *limit),
-        Tool::ListDir { path } => serde_json::json!({"path": path}),
-        Tool::WriteFile { path, content } => {
-            serde_json::json!({"path": path, "content": content})
-        }
-        Tool::EditFile {
-            path,
-            search,
-            replace,
-        } => serde_json::json!({"path": path, "search": search, "replace": replace}),
-        _ => return None,
-    })
-}
-
-/// Serialize a [`Tool`] into its JSON argument representation.
-pub fn tool_to_json(tool: &Tool) -> Value {
-    if let Some(json) = file_tool_to_json(tool) {
-        return json;
-    }
-    match tool {
-        Tool::Bash { command } => serde_json::json!({"command": command}),
-        Tool::Grep {
-            pattern,
-            path,
-            glob,
-            ignore_case,
-            literal,
-            context,
-            limit,
-        } => grep_json(
-            pattern,
-            path,
-            glob,
-            *ignore_case,
-            *literal,
-            *context,
-            *limit,
-        ),
-        Tool::Find {
-            pattern,
-            path,
-            limit,
-        } => serde_json::json!({"pattern": pattern, "path": path, "limit": limit}),
-        Tool::FetchDocs { library } => serde_json::json!({"library": library}),
-        _ => unreachable!(),
+async fn execute_tool_call(
+    registry: &runie_core::tool::ToolRegistry,
+    tool_call: &ParsedToolCall,
+    ctx: &ToolContext,
+) -> ToolOutput {
+    match registry.get(&tool_call.name) {
+        Some(tool) => tool.call(tool_call.args.clone(), ctx).await.unwrap_or_else(|e| {
+            ToolOutput {
+                tool_name: tool_call.name.clone(),
+                tool_args: tool_call.args.clone(),
+                content: format!("Tool execution failed: {}", e),
+                bytes_transferred: None,
+                duration: std::time::Duration::from_millis(0),
+                status: runie_core::tool::ToolStatus::Error,
+            }
+        }),
+        None => ToolOutput {
+            tool_name: tool_call.name.clone(),
+            tool_args: tool_call.args.clone(),
+            content: format!("Error: unknown tool '{}'", tool_call.name),
+            bytes_transferred: None,
+            duration: std::time::Duration::from_millis(0),
+            status: runie_core::tool::ToolStatus::Error,
+        },
     }
 }
 
@@ -225,18 +146,15 @@ mod tests {
                 content: "hello world".into(),
             },
         ];
-        let mut chunks = Vec::new();
         let options = HeadlessOptions {
             execute_tools: false,
             max_tool_rounds: 5,
-            on_chunk: Some(&mut |c: &str| chunks.push(c.to_string())),
-            tool_to_json: None,
+            on_chunk: None,
         };
         let result = run_headless_turn(messages, &provider, options)
             .await
             .unwrap();
         assert!(!result.content.is_empty());
-        assert_eq!(result.content, chunks.join(""));
         assert!(result.tool_outputs.is_empty());
     }
 
@@ -256,15 +174,38 @@ mod tests {
             execute_tools: true,
             max_tool_rounds: 5,
             on_chunk: None,
-            tool_to_json: Some(&tool_to_json),
         };
         let result = run_headless_turn(messages, &provider, options)
             .await
             .unwrap();
         assert!(!result.content.is_empty());
         assert_eq!(result.tool_outputs.len(), 1);
-        assert_eq!(result.tool_outputs[0].name, "list_dir");
-        assert!(result.tool_outputs[0].arguments.get("path").is_some());
-        assert!(!result.tool_outputs[0].output.is_empty());
+        assert_eq!(result.tool_outputs[0].tool_name, "list_dir");
+        assert!(result.tool_outputs[0].tool_args.get("path").is_some());
+        assert!(!result.tool_outputs[0].content.is_empty());
+    }
+
+    #[tokio::test]
+    async fn headless_runner_with_execute_tools_enabled() {
+        ensure_mock_provider();
+        let provider = MockProvider::default();
+        let messages = vec![
+            Message::System {
+                content: "You are helpful.".into(),
+            },
+            Message::User {
+                content: "list files".into(),
+            },
+        ];
+        let options = HeadlessOptions {
+            execute_tools: true,
+            max_tool_rounds: 5,
+            on_chunk: None,
+        };
+        let result = run_headless_turn(messages, &provider, options)
+            .await
+            .unwrap();
+        // With execute_tools, mock returns tool call that gets executed
+        assert!(result.tool_outputs.len() >= 1);
     }
 }

@@ -4,8 +4,10 @@
 //! tool, `after_call` runs after (with the result).
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::tools::{Tool, ToolResult};
+use runie_core::tool::{ToolOutput, ToolStatus};
 
 /// A single hook in the inspector pipeline.
 pub trait Inspector: Send + Sync {
@@ -43,8 +45,14 @@ impl ToolPipeline {
             if let Err(msg) = insp.before_call(tool) {
                 return ToolResult {
                     tool: tool.clone(),
-                    output: format!("Inspector blocked: {}", msg),
-                    success: false,
+                    output: ToolOutput {
+                        tool_name: tool.name().to_string(),
+                        tool_args: tool.to_args(),
+                        content: format!("Inspector blocked: {}", msg),
+                        bytes_transferred: None,
+                        duration: Instant::now().elapsed(),
+                        status: ToolStatus::Blocked,
+                    },
                 };
             }
         }
@@ -140,8 +148,8 @@ mod tests {
         let pipeline = ToolPipeline::new(vec![Arc::new(FailInspector)]);
         let tool = Tool::Bash { command: "echo hi".to_string() };
         let result = pipeline.call(&tool);
-        assert!(!result.success);
-        assert!(result.output.contains("blocked by inspector"));
+        assert!(!result.is_success());
+        assert!(result.output.content.contains("blocked by inspector"));
     }
 
     #[test]
@@ -155,7 +163,7 @@ mod tests {
             limit: None,
         };
         let result = pipeline.call(&tool);
-        assert!(!result.success);
+        assert!(!result.is_success());
         assert!(spy.was_called(), "after_call should run even on error");
     }
 
@@ -176,8 +184,8 @@ mod tests {
         let pipeline = ToolPipeline::new(vec![]);
         let tool = Tool::Bash { command: "echo hello".to_string() };
         let result = pipeline.call(&tool);
-        assert!(result.success);
-        assert!(result.output.contains("hello"));
+        assert!(result.is_success());
+        assert!(result.output.content.contains("hello"));
     }
 
     #[test]

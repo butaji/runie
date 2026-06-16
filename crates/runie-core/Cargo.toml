@@ -10,21 +10,40 @@ path = "src/lib.rs"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json.workspace = true
+serde_yaml.workspace = true
 anyhow.workspace = true
+similar.workspace = true
 dirs.workspace = true
 base64 = "0.22"
 unicode-segmentation = "1.10"
 toml = "0.8"
 tokio.workspace = true
 futures.workspace = true
+parking_lot.workspace = true
 chrono = "0.4"
 tiktoken-rs = "0.6"
 pulldown-cmark.workspace = true
 unicode-width.workspace = true
+textwrap.workspace = true
+nucleo-matcher.workspace = true
+arboard = "3.6"
+png = "0.17"
+notify = "7.0"
+notify-debouncer-mini = "0.5"
+reqwest.workspace = true
+async-trait = "0.1"
+glob = "0.3"
+strum = { version = "0.26", features = ["derive"] }
+redb.workspace = true
+fff-search.workspace = true
+git2.workspace = true
+tracing = "0.1"
+
 
 [dev-dependencies]
 tempfile = "3"
 criterion = "0.5"
+parking_lot.workspace = true
 
 [[bench]]
 name = "snapshot"

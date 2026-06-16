@@ -25,6 +25,11 @@ pub struct ModelMeta {
     pub supports_vision: bool,
     pub tokenizer: Option<&'static str>,
     pub context_window: Option<usize>,
+    pub streaming: bool,
+    pub supports_tools: bool,
+    pub supports_reasoning: bool,
+    pub max_output_tokens: usize,
+    pub cache_control: bool,
 }
 
 impl ModelMeta {
@@ -37,6 +42,11 @@ impl ModelMeta {
             supports_vision: false,
             tokenizer: None,
             context_window: None,
+            streaming: true,
+            supports_tools: true,
+            supports_reasoning: false,
+            max_output_tokens: 0,
+            cache_control: false,
         }
     }
 
@@ -49,6 +59,11 @@ impl ModelMeta {
             supports_vision: self.supports_vision,
             tokenizer: self.tokenizer,
             context_window: self.context_window,
+            streaming: self.streaming,
+            supports_tools: self.supports_tools,
+            supports_reasoning: self.supports_reasoning,
+            max_output_tokens: self.max_output_tokens,
+            cache_control: self.cache_control,
         }
     }
 
@@ -61,6 +76,11 @@ impl ModelMeta {
             supports_vision: self.supports_vision,
             tokenizer: self.tokenizer,
             context_window: self.context_window,
+            streaming: self.streaming,
+            supports_tools: self.supports_tools,
+            supports_reasoning: self.supports_reasoning,
+            max_output_tokens: self.max_output_tokens,
+            cache_control: self.cache_control,
         }
     }
 
@@ -73,6 +93,11 @@ impl ModelMeta {
             supports_vision: true,
             tokenizer: self.tokenizer,
             context_window: self.context_window,
+            streaming: self.streaming,
+            supports_tools: self.supports_tools,
+            supports_reasoning: self.supports_reasoning,
+            max_output_tokens: self.max_output_tokens,
+            cache_control: self.cache_control,
         }
     }
 
@@ -85,6 +110,11 @@ impl ModelMeta {
             supports_vision: self.supports_vision,
             tokenizer: Some(tokenizer),
             context_window: self.context_window,
+            streaming: self.streaming,
+            supports_tools: self.supports_tools,
+            supports_reasoning: self.supports_reasoning,
+            max_output_tokens: self.max_output_tokens,
+            cache_control: self.cache_control,
         }
     }
 
@@ -97,7 +127,32 @@ impl ModelMeta {
             supports_vision: self.supports_vision,
             tokenizer: self.tokenizer,
             context_window: Some(context_window),
+            streaming: self.streaming,
+            supports_tools: self.supports_tools,
+            supports_reasoning: self.supports_reasoning,
+            max_output_tokens: self.max_output_tokens,
+            cache_control: self.cache_control,
         }
+    }
+
+    pub const fn with_streaming(self, streaming: bool) -> Self {
+        Self { streaming, ..self }
+    }
+
+    pub const fn with_tools(self, supports_tools: bool) -> Self {
+        Self { supports_tools, ..self }
+    }
+
+    pub const fn with_reasoning(self) -> Self {
+        Self { supports_reasoning: true, ..self }
+    }
+
+    pub const fn with_output_limit(self, max_output_tokens: usize) -> Self {
+        Self { max_output_tokens, ..self }
+    }
+
+    pub const fn with_cache_control(self) -> Self {
+        Self { cache_control: true, ..self }
     }
 }
 

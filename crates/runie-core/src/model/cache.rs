@@ -4,12 +4,15 @@ use std::sync::Arc;
 
 use crate::model::state::AppState;
 use crate::model::{build_model_selector_items, model_catalog, ModelSelectorItem};
-use crate::snapshot::{compute_current_top_element, Snapshot};
+use crate::snapshot::{
+    compute_current_top_element, compute_hovered_element, compute_mouse_target, MouseTarget,
+    Snapshot,
+};
 
 impl AppState {
     fn palette_filter(&self) -> Option<String> {
         match &self.open_dialog {
-            Some(d) => d.panel_stack().current().map(|p| p.filter.clone()),
+            Some(d) => d.panel_stack().and_then(|s| s.current()).map(|p| p.filter.clone()),
             _ => None,
         }
     }
@@ -106,7 +109,7 @@ impl AppState {
         let filter = match &self.open_dialog {
             Some(d) => d
                 .panel_stack()
-                .current()
+                .and_then(|s| s.current())
                 .map(|p| p.filter.clone())
                 .unwrap_or_default(),
             _ => {
@@ -279,6 +282,7 @@ impl AppState {
         self.fill_snapshot_config(&mut s);
         self.fill_snapshot_dialog(&mut s);
         self.fill_snapshot_meta(&mut s);
+        self.fill_snapshot_sidebar(&mut s);
         s
     }
 
@@ -290,6 +294,21 @@ impl AppState {
     }
 
     fn snapshot_feed(&self) -> Snapshot {
+        let mouse_target = compute_mouse_target(
+            self.view.mouse_position,
+            self.view.last_content_width,
+            self.view.last_visible_height,
+            &self.input.input,
+        );
+        let hovered_element = compute_hovered_element(
+            self.view.mouse_position,
+            self.view.last_content_width,
+            self.view.last_visible_height,
+            &self.input.input,
+            &self.view.elements_cache,
+            &self.view.line_counts,
+            self.view.total_lines,
+        );
         Snapshot {
             elements: Arc::clone(&self.view.elements_cache),
             line_counts: Arc::clone(&self.view.line_counts),
@@ -305,6 +324,10 @@ impl AppState {
             ),
             posts: Arc::clone(&self.view.posts),
             selected_post: self.view.selected_post,
+            last_visible_height: self.view.last_visible_height,
+            mouse_target,
+            hovered_element,
+            mouse_position: self.view.mouse_position,
             ..Default::default()
         }
     }
@@ -332,14 +355,24 @@ impl AppState {
         s.speed_tps = self.agent.speed_tps;
         s.tokens_in_display = self.agent.tokens_in_display;
         s.tokens_out_display = self.agent.tokens_out_display;
+        s.streaming_tail = self.agent.streaming_buffer.tail().to_string();
     }
 
     fn fill_snapshot_config(&self, s: &mut Snapshot) {
         s.provider = self.config.current_provider.clone();
         s.model = self.config.current_model.clone();
+        s.execution_mode = self.config.execution_mode;
         s.theme_name = self.config.theme_name.clone();
         s.thinking_level = self.config.thinking_level;
         s.read_only = self.config.read_only;
+        s.orchestrator_state = Some(self.orchestrator_state.clone());
+        // Build input title: "provider/model · mode · ..."
+        s.input_title = build_input_title(
+            &self.config.current_provider,
+            &self.config.current_model,
+            &self.config.execution_mode,
+            self.config.read_only,
+        );
     }
 
     fn fill_snapshot_dialog(&mut self, s: &mut Snapshot) {
@@ -360,5 +393,79 @@ impl AppState {
         s.scoped_models = self.config.scoped_models.clone();
         s.image_attachments = self.session.image_attachments.clone();
         s.last_visible_height = self.view.last_visible_height;
+    }
+
+    fn fill_snapshot_sidebar(&self, s: &mut Snapshot) {
+        s.sidebar = crate::snapshot::SidebarData::from(&self.sidebar);
+    }
+}
+
+/// Build the input box title string.
+/// Format: `provider/model · mode · ...`
+/// Mode suffixes are shown only when not the default (Solo, read-write).
+fn build_input_title(
+    provider: &str,
+    model: &str,
+    mode: &crate::orchestrator::ExecutionMode,
+    read_only: bool,
+) -> String {
+    use crate::orchestrator::ExecutionMode;
+    let base = format!("{}/{}", provider, model);
+    match (mode, read_only) {
+        (ExecutionMode::Solo, false) => base,
+        (ExecutionMode::Team, false) => format!("{} · Team", base),
+        (ExecutionMode::Solo, true) => format!("{} · read-only", base),
+        (ExecutionMode::Team, true) => format!("{} · Team · read-only", base),
+    }
+}
+
+#[cfg(test)]
+mod input_title_tests {
+    use super::*;
+
+    fn solo() -> crate::orchestrator::ExecutionMode {
+        crate::orchestrator::ExecutionMode::Solo
+    }
+    fn team() -> crate::orchestrator::ExecutionMode {
+        crate::orchestrator::ExecutionMode::Team
+    }
+
+    #[test]
+    fn input_title_default_is_base() {
+        let title = build_input_title("openai", "gpt-4o", &solo(), false);
+        assert_eq!(title, "openai/gpt-4o");
+    }
+
+    #[test]
+    fn input_title_includes_team_mode() {
+        let title = build_input_title("openai", "gpt-4o", &team(), false);
+        assert!(title.contains("Team"), "title should contain Team: {title}");
+    }
+
+    #[test]
+    fn input_title_includes_read_only() {
+        let title = build_input_title("openai", "gpt-4o", &solo(), true);
+        assert!(title.contains("read-only"), "title should contain read-only: {title}");
+    }
+
+    #[test]
+    fn input_title_includes_team_and_read_only() {
+        let title = build_input_title("openai", "gpt-4o", &team(), true);
+        assert!(title.contains("Team"), "title should contain Team: {title}");
+        assert!(title.contains("read-only"), "title should contain read-only: {title}");
+    }
+
+    #[test]
+    fn input_title_no_mode_suffix_for_default() {
+        let title = build_input_title("anthropic", "claude-3-5-sonnet", &solo(), false);
+        assert!(!title.contains("Solo"), "Solo mode should not appear: {title}");
+        assert!(!title.contains("read-only"), "read-only should not appear: {title}");
+    }
+
+    #[test]
+    fn input_title_uses_provider_and_model() {
+        let title = build_input_title("google", "gemini-2.5", &solo(), false);
+        assert!(title.starts_with("google/"), "title should start with provider: {title}");
+        assert!(title.contains("gemini-2.5"), "title should contain model: {title}");
     }
 }

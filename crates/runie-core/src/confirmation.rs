@@ -11,7 +11,7 @@
 //!   - `Bash`        — shell command: show command + confirm/cancel
 
 use crate::edit_preview::EditPreview;
-use crate::event::Event;
+use crate::event::{EditEvent, Event};
 
 /// What kind of user confirmation is required for a tool call.
 #[derive(Debug, Clone, PartialEq)]
@@ -70,13 +70,12 @@ pub struct ConfirmationRouter;
 
 impl ConfirmationRouter {
     /// Route an edit-file tool to `ConfirmationKind::Diff`.
-    pub fn for_edit(path: &str, original: &str, proposed: &str, diff: &str) -> ConfirmationKind {
+    pub fn for_edit(path: &str, original: &str, proposed: &str) -> ConfirmationKind {
         ConfirmationKind::Diff {
             preview: EditPreview::new(
                 std::path::PathBuf::from(path),
                 original.to_string(),
                 proposed.to_string(),
-                diff.to_string(),
             ),
         }
     }
@@ -107,7 +106,7 @@ impl ConfirmationRouter {
     /// Build the event to emit when the user approves this confirmation kind.
     pub fn approval_event(kind: &ConfirmationKind) -> Option<Event> {
         match kind {
-            ConfirmationKind::Diff { .. } => Some(Event::ApproveEdit),
+            ConfirmationKind::Diff { .. } => Some(Event::Edit(EditEvent::ApproveEdit)),
             _ => None,
         }
     }
@@ -115,7 +114,7 @@ impl ConfirmationRouter {
     /// Build the event to emit when the user rejects this confirmation kind.
     pub fn rejection_event(kind: &ConfirmationKind) -> Option<Event> {
         match kind {
-            ConfirmationKind::Diff { .. } => Some(Event::RejectEdit),
+            ConfirmationKind::Diff { .. } => Some(Event::Edit(EditEvent::RejectEdit)),
             _ => None,
         }
     }
@@ -137,7 +136,6 @@ mod tests {
             "/tmp/foo.txt",
             "hello",
             "hello world",
-            "-hello\n+hello world",
         );
         match kind {
             ConfirmationKind::Diff { preview } => {
@@ -177,7 +175,7 @@ mod tests {
     fn confirmation_kind_summary() {
         assert_eq!(ConfirmationRouter::for_read_only().summary(), "No confirmation needed");
 
-        let diff = ConfirmationRouter::for_edit("/a.txt", "a", "b", "-a\n+b");
+        let diff = ConfirmationRouter::for_edit("/a.txt", "a", "b");
         assert!(diff.summary().contains("Edit"));
 
         let write = ConfirmationRouter::for_write("/b.txt", "hi");
@@ -190,16 +188,16 @@ mod tests {
     #[test]
     fn diff_is_blocking() {
         assert!(ConfirmationRouter::for_read_only().is_blocking() == false);
-        assert!(ConfirmationRouter::for_edit("/a", "a", "b", "-a\n+b").is_blocking());
+        assert!(ConfirmationRouter::for_edit("/a", "a", "b").is_blocking());
         assert!(ConfirmationRouter::for_write("/a", "x").is_blocking());
         assert!(ConfirmationRouter::for_bash("echo hi", None).is_blocking());
     }
 
     #[test]
     fn approval_rejection_events() {
-        let diff = ConfirmationRouter::for_edit("/a", "a", "b", "-a\n+b");
-        assert_eq!(ConfirmationRouter::approval_event(&diff), Some(Event::ApproveEdit));
-        assert_eq!(ConfirmationRouter::rejection_event(&diff), Some(Event::RejectEdit));
+        let diff = ConfirmationRouter::for_edit("/a", "a", "b");
+        assert_eq!(ConfirmationRouter::approval_event(&diff), Some(Event::Edit(EditEvent::ApproveEdit)));
+        assert_eq!(ConfirmationRouter::rejection_event(&diff), Some(Event::Edit(EditEvent::RejectEdit)));
 
         let write = ConfirmationRouter::for_write("/a", "x");
         assert_eq!(ConfirmationRouter::approval_event(&write), None);

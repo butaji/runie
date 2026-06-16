@@ -1,9 +1,12 @@
 //! Markdown parsing for agent messages.
+//!
+//! Uses the unified AST from `runie_core::markdown`. Inline spans are parsed
+//! once by core and reused here for styling — no double-parsing.
 
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
 
-pub use runie_core::markdown::{extract_code_blocks, CodeBlock};
+pub use runie_core::markdown::{extract_code_blocks, parse_inline_spans, CodeBlock, MdInline};
 
 use crate::theme::{color_accent, color_code_bg, color_fg_bright};
 
@@ -14,95 +17,62 @@ pub struct MdSpan {
     pub style: Style,
 }
 
-/// Parse inline markdown bold (**text**), italic (*text*), and code (`text`) into styled spans.
-pub fn parse_inline_markdown(text: &str) -> Vec<MdSpan> {
-    parse_inline_markdown_with_color(text, color_fg_bright())
-}
-
-fn md_options() -> pulldown_cmark::Options {
-    pulldown_cmark::Options::ENABLE_STRIKETHROUGH
-        | pulldown_cmark::Options::ENABLE_TABLES
-        | pulldown_cmark::Options::ENABLE_TASKLISTS
-}
-
-/// Parse inline markdown with a custom base foreground color.
-pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<MdSpan> {
-    let parser = pulldown_cmark::Parser::new_ext(text, md_options());
+/// Apply a base color to pre-parsed inline spans from core's unified AST,
+/// producing styled `MdSpan`s for rendering. This avoids re-parsing the text.
+pub fn apply_color_to_inlines(inlines: &[MdInline], base_color: Color) -> Vec<MdSpan> {
     let base = Style::default().fg(base_color);
     let code_style = Style::default().fg(color_accent()).bg(color_code_bg());
-    let mut spans: Vec<MdSpan> = Vec::new();
+    let mut spans = Vec::new();
     let mut style_stack: Vec<Style> = vec![base];
 
-    let mut writer = SpanWriter::new(&mut spans);
-
-    for event in parser {
-        handle_inline_event(event, &mut style_stack, &mut writer, code_style);
+    for inline in inlines {
+        match inline {
+            MdInline::Text(s) => push_span(&mut spans, s, *style_stack.last().unwrap()),
+            MdInline::Bold(s) => {
+                let bold = style_stack.last().unwrap().add_modifier(Modifier::BOLD);
+                push_span(&mut spans, s, bold);
+            }
+            MdInline::Italic(s) => {
+                let italic = style_stack.last().unwrap().add_modifier(Modifier::ITALIC);
+                push_span(&mut spans, s, italic);
+            }
+            MdInline::Code(s) => push_span(&mut spans, s, code_style),
+            MdInline::Strike(s) => {
+                let strike = style_stack.last().unwrap().add_modifier(Modifier::CROSSED_OUT);
+                push_span(&mut spans, s, strike);
+            }
+            MdInline::SoftBreak | MdInline::HardBreak => {
+                push_span(&mut spans, "\n", *style_stack.last().unwrap());
+            }
+        }
     }
     spans
 }
 
-fn handle_inline_event(
-    event: pulldown_cmark::Event<'_>,
-    style_stack: &mut Vec<Style>,
-    writer: &mut SpanWriter<'_>,
-    code_style: Style,
-) {
-    match event {
-        pulldown_cmark::Event::Text(text) => writer.push(&text, current_style(style_stack)),
-        pulldown_cmark::Event::Code(code) => writer.push(&code, code_style),
-        pulldown_cmark::Event::SoftBreak | pulldown_cmark::Event::HardBreak => {
-            writer.push("\n", current_style(style_stack))
-        }
-        pulldown_cmark::Event::Start(tag) => {
-            style_stack.push(style_for_tag(tag, current_style(style_stack)));
-        }
-        pulldown_cmark::Event::End(_) => {
-            style_stack.pop();
-        }
-        _ => {}
+fn push_span(spans: &mut Vec<MdSpan>, text: &str, style: Style) {
+    if text.is_empty() {
+        return;
     }
-}
-
-fn current_style(stack: &[Style]) -> Style {
-    *stack.last().unwrap_or(&Style::default())
-}
-
-fn style_for_tag(tag: pulldown_cmark::Tag<'_>, current: Style) -> Style {
-    match tag {
-        pulldown_cmark::Tag::Strong => current.add_modifier(Modifier::BOLD),
-        pulldown_cmark::Tag::Emphasis => current.add_modifier(Modifier::ITALIC),
-        pulldown_cmark::Tag::Strikethrough => current.add_modifier(Modifier::CROSSED_OUT),
-        _ => current,
-    }
-}
-
-struct SpanWriter<'a> {
-    spans: &'a mut Vec<MdSpan>,
-}
-
-impl<'a> SpanWriter<'a> {
-    fn new(spans: &'a mut Vec<MdSpan>) -> Self {
-        Self { spans }
-    }
-
-    fn push(&mut self, text: &str, style: Style) {
-        if text.is_empty() {
+    if let Some(last) = spans.last_mut() {
+        if last.style == style {
+            last.content.push_str(text);
             return;
         }
-        if let Some(last) = self.spans.last_mut() {
-            if last.style == style {
-                last.content.push_str(text);
-                return;
-            }
-        }
-        self.spans.push(MdSpan {
-            content: text.to_string(),
-            style,
-        });
     }
+    spans.push(MdSpan { content: text.to_string(), style });
 }
 
-/// Convert MdSpan slices to ratatui Spans.
+/// Parse inline markdown into styled spans (delegates to core + color application).
+pub fn parse_inline_markdown(text: &str) -> Vec<MdSpan> {
+    apply_color_to_inlines(&parse_inline_spans(text), color_fg_bright())
+}
+
+/// Parse inline markdown with a custom base foreground color.
+pub fn parse_inline_markdown_with_color(text: &str, base_color: Color) -> Vec<MdSpan> {
+    apply_color_to_inlines(&parse_inline_spans(text), base_color)
+}
+
+/// Convert `MdSpan` slices to ratatui `Span`s.
 pub fn md_to_spans(md_spans: &[MdSpan]) -> Vec<Span<'static>> {
     md_spans
         .iter()

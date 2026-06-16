@@ -5,6 +5,7 @@
 //! back stack for Android-like ESC semantics.
 
 use crate::dialog::{Panel, PanelStack};
+use crate::event::LoginFlowEvent;
 use crate::login_flow::{
     build_key_input, build_login_root, build_model_selector, build_provider_picker, LoginFlowState,
     LoginStep,
@@ -14,14 +15,16 @@ use crate::login_flow::{
 /// Routes `ProvidersDialog`, `ProvidersSelectModel`, `ProvidersDisconnect`, `ProvidersAdd`.
 pub fn providers_event(state: &mut crate::model::AppState, event: crate::Event) {
     match event {
-        crate::Event::ProvidersDialog => open_providers_dialog(state),
-        crate::Event::ProvidersSelectModel { provider, model } => {
+        crate::Event::Dialog(crate::event::DialogEvent::ProvidersDialog) => {
+            open_providers_dialog(state)
+        }
+        crate::Event::Dialog(crate::event::DialogEvent::ProvidersSelectModel { provider, model }) => {
             providers_select_model(state, &provider, &model);
         }
-        crate::Event::ProvidersDisconnect { provider } => {
+        crate::Event::Dialog(crate::event::DialogEvent::ProvidersDisconnect { provider }) => {
             providers_disconnect(state, &provider);
         }
-        crate::Event::ProvidersAdd => {
+        crate::Event::Dialog(crate::event::DialogEvent::ProvidersAdd) => {
             // Close the providers dialog and start the login flow.
             // Push current dialog to back stack so Esc returns here.
             if let Some(current) = state.open_dialog.take() {
@@ -85,28 +88,27 @@ fn providers_disconnect(state: &mut crate::model::AppState, provider: &str) {
 }
 
 /// Top-level login flow dispatcher.
-pub fn login_flow_event(state: &mut crate::model::AppState, event: crate::Event) {
+pub fn login_flow_event(state: &mut crate::model::AppState, event: LoginFlowEvent) {
     match event {
-        crate::Event::LoginFlowStart => login_flow_start(state),
-        crate::Event::LoginFlowSelectProvider { provider } => {
+        LoginFlowEvent::Start => login_flow_start(state),
+        LoginFlowEvent::SelectProvider { provider } => {
             login_flow_select_provider(state, provider)
         }
-        crate::Event::LoginFlowSubmitKey { provider, key } => {
+        LoginFlowEvent::SubmitKey { provider, key } => {
             login_flow_submit_key(state, provider, key)
         }
-        crate::Event::LoginFlowValidationDone { models, .. } => {
+        LoginFlowEvent::ValidationDone { models, .. } => {
             login_flow_validation_done(state, models)
         }
-        crate::Event::LoginFlowValidationFailed { error, .. } => {
+        LoginFlowEvent::ValidationFailed { error, .. } => {
             login_flow_validation_failed(state, error)
         }
-        crate::Event::LoginFlowModelsFetched { models, .. } => {
+        LoginFlowEvent::ModelsFetched { models, .. } => {
             login_flow_models_fetched(state, models)
         }
-        crate::Event::LoginFlowToggleModel { model } => login_flow_toggle_model(state, model),
-        crate::Event::LoginFlowSave => login_flow_save(state),
-        crate::Event::LoginFlowCancel => login_flow_cancel(state),
-        _ => {}
+        LoginFlowEvent::ToggleModel { model } => login_flow_toggle_model(state, model),
+        LoginFlowEvent::Save => login_flow_save(state),
+        LoginFlowEvent::Cancel => login_flow_cancel(state),
     }
 }
 

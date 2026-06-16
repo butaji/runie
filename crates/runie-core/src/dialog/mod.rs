@@ -26,6 +26,7 @@
 //! ```
 //! use runie_core::dialog::dsl::{form, panel, ItemAction};
 //! use runie_core::Event;
+//! use runie_core::event::{CommandEvent, LoginFlowEvent};
 //!
 //! // List view (fuzzy-searchable by default)
 //! let _ = panel("settings", "Settings")
@@ -40,9 +41,9 @@
 //! // Form view (filtering disabled, fields editable)
 //! let _ = form("save", "Save Session")
 //!     .field("Name", "session", "name")
-//!     .on_submit(|values| Event::RunSaveCommand {
+//!     .on_submit(|values| Event::Command(CommandEvent::RunSaveCommand {
 //!         name: values.get("name").cloned().unwrap_or_default(),
-//!     })
+//!     }))
 //!     .into_stack();
 //!
 //! // Any panel can be switched to form view explicitly, e.g. a loading
@@ -50,7 +51,7 @@
 //! let _ = panel("validating", "Validating...")
 //!     .form()
 //!     .header("Checking API key...")
-//!     .action("_Cancel", ItemAction::Emit(Event::LoginFlowCancel));
+//!     .action("_Cancel", ItemAction::Emit(Event::LoginFlow(LoginFlowEvent::Cancel)));
 //! ```
 //!
 pub mod builders;
@@ -64,8 +65,8 @@ mod stack;
 mod tests;
 
 pub use builders::{
-    command_palette, file_picker, model_selector, scoped_models, session_tree, settings,
-    theme_picker, SettingsRow, SettingsRowKind,
+    command_palette, file_picker, model_selector, scoped_models, session_list, session_tree,
+    settings, theme_picker, SettingsRow, SettingsRowKind,
 };
 pub use item::{parse_accel, strip_accel, ItemAction, PanelItem};
 pub use panel::{FormSubmitFn, Panel, PanelView};

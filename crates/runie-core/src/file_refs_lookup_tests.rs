@@ -1,11 +1,11 @@
 use crate::commands::DialogState;
-use crate::event::Event;
+use crate::event::{ControlEvent, Event, InputEvent};
 use crate::model::AppState;
 
 #[test]
 fn at_ref_opens_file_picker_dialog() {
     let mut state = AppState::default();
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('@')));
     assert!(
         matches!(state.open_dialog, Some(DialogState::PanelStack(_))),
         "@ should open a PanelStack file picker dialog"
@@ -15,7 +15,7 @@ fn at_ref_opens_file_picker_dialog() {
 #[test]
 fn at_ref_dialog_has_file_items() {
     let mut state = AppState::default();
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('@')));
     let stack = match &state.open_dialog {
         Some(DialogState::PanelStack(s)) => s,
         _ => panic!("Expected PanelStack dialog"),
@@ -32,7 +32,7 @@ fn at_ref_dialog_has_file_items() {
 #[test]
 fn at_ref_dialog_is_filterable() {
     let mut state = AppState::default();
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('@')));
     let stack = match &state.open_dialog {
         Some(DialogState::PanelStack(s)) => s,
         _ => panic!("Expected PanelStack dialog"),
@@ -44,7 +44,7 @@ fn at_ref_dialog_is_filterable() {
 #[test]
 fn at_ref_select_inserts_file_path() {
     let mut state = AppState::default();
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('@')));
     // Find a file item and select it
     let path = {
         let stack = match &state.open_dialog {
@@ -61,7 +61,7 @@ fn at_ref_select_inserts_file_path() {
             })
             .expect("Should have at least one Action item")
     };
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Submit));
     assert_eq!(
         state.input.input, path,
         "Should insert filepath after selection"
@@ -75,9 +75,9 @@ fn at_ref_select_inserts_file_path() {
 #[test]
 fn at_ref_escape_closes_dialog() {
     let mut state = AppState::default();
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('@')));
     assert!(state.open_dialog.is_some(), "Dialog should be open");
-    state.update(Event::Abort);
+    state.update(Event::Control(ControlEvent::Abort));
     assert!(state.open_dialog.is_none(), "Escape should close dialog");
 }
 

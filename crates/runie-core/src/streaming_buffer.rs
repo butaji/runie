@@ -59,6 +59,16 @@ impl StreamingBuffer {
         self.tail.is_empty() && self.open_fence.is_none() && !self.open_table
     }
 
+    /// Returns true if there's incomplete content being streamed (tail is non-empty).
+    pub fn has_pending_content(&self) -> bool {
+        !self.tail.is_empty() || self.open_fence.is_some() || self.open_table
+    }
+
+    #[cfg(test)]
+    pub fn stable_len(&self) -> usize {
+        self.stable.len()
+    }
+
     pub fn reset(&mut self) {
         self.stable.clear();
         self.tail.clear();
@@ -183,91 +193,4 @@ fn is_table_separator(line: &str) -> bool {
     inner
         .split('|')
         .all(|cell| cell.trim().chars().all(|c| c == '-' || c == ':'))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn buffer_flushes_complete_paragraph() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("Hello, world!\n\n");
-        let flushed = buf.force_flush();
-        assert_eq!(flushed, vec!["Hello, world!", ""]);
-        assert!(buf.tail().is_empty());
-        assert!(buf.is_stable());
-    }
-
-    #[test]
-    fn buffer_holds_incomplete_code_fence() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("Some text.\n```python\nprint('hello')");
-        let flushed = buf.force_flush();
-        assert_eq!(flushed, vec!["Some text."]);
-        assert_eq!(buf.tail(), "```python\nprint('hello')");
-        assert!(!buf.is_stable());
-    }
-
-    #[test]
-    fn buffer_completes_code_fence() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("Some text.\n```python\nprint('hello')\n```");
-        let flushed = buf.force_flush();
-        assert_eq!(flushed, vec!["Some text.", "```python", "print('hello')", "```"]);
-        assert!(buf.tail().is_empty());
-        assert!(buf.is_stable());
-    }
-
-    #[test]
-    fn buffer_batches_deltas() {
-        let mut buf = StreamingBuffer::new();
-        for i in 0..10 {
-            buf.push_delta(&format!("word{} ", i));
-        }
-        buf.push_delta("\n\n");
-
-        let first = buf.flush();
-        assert!(first.is_empty(), "debounce should suppress early flush");
-
-        buf.last_flush = None;
-
-        let flushed = buf.flush();
-        assert_eq!(flushed.len(), 2);
-        assert!(flushed[0].contains("word0"));
-        assert!(flushed[0].contains("word9"));
-    }
-
-    #[test]
-    fn buffer_tracks_table_open() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("| Header |\n| --- |\n| cell |");
-        let flushed = buf.force_flush();
-        assert_eq!(flushed, vec!["| Header |"]);
-        assert_eq!(buf.tail(), "| --- |\n| cell |");
-        assert!(buf.open_table);
-    }
-
-    #[test]
-    fn buffer_table_ends_at_blank_line() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("| Header |\n| --- |\n| cell |\n\n");
-        let flushed = buf.force_flush();
-        assert_eq!(
-            flushed,
-            vec!["| Header |", "| --- |", "| cell |", ""]
-        );
-        assert!(buf.tail().is_empty());
-        assert!(!buf.open_table);
-    }
-
-    #[test]
-    fn buffer_reset_clears_all() {
-        let mut buf = StreamingBuffer::new();
-        buf.push_delta("hello\n");
-        buf.reset();
-        assert!(buf.tail().is_empty());
-        assert!(buf.stable.is_empty());
-        assert!(buf.is_stable());
-    }
 }

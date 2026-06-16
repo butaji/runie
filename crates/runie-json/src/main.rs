@@ -24,8 +24,8 @@
 //! ```
 
 use anyhow::Result;
-use runie_agent::{build_provider_with_warning, run_headless_turn, tool_to_json, HeadlessOptions};
-use runie_core::{config_reload, provider::Message};
+use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
+use runie_core::{config_reload, llm_event::LLMEvent, provider::Message};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
@@ -138,14 +138,13 @@ async fn run_json_turn(
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
-        on_chunk: Some(&mut |chunk: &str| {
+        on_chunk: Some(Box::new(|chunk: &str| {
             let line = serde_json::to_string(&StreamChunk {
                 chunk: chunk.to_string(),
             })
             .unwrap_or_default();
             println!("{}", line);
-        }),
-        tool_to_json: Some(&tool_to_json),
+        })),
     };
 
     run_headless_turn(messages, provider, options).await
@@ -156,9 +155,9 @@ fn build_json_response(result: runie_agent::HeadlessResult, duration_ms: u64) ->
         .tool_outputs
         .iter()
         .map(|output| ToolCall {
-            name: output.name.clone(),
-            arguments: output.arguments.clone(),
-            output: output.output.clone(),
+            name: output.tool_name.clone(),
+            arguments: output.tool_args.clone(),
+            output: output.content.clone(),
         })
         .collect();
     JsonResponse {
@@ -211,7 +210,10 @@ mod tests {
         let mut response_text = String::new();
         let mut stream = provider.generate(messages);
         while let Some(r) = stream.next().await {
-            response_text.push_str(&r.unwrap().content);
+            match r.unwrap() {
+                LLMEvent::TextDelta(t) => response_text.push_str(&t),
+                _ => {}
+            }
         }
         let _tools = parse_tool_calls(&response_text);
         // MockProvider returns deterministic response; may or may not have tools

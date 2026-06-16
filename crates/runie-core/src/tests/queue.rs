@@ -1,4 +1,5 @@
 use crate::event::Event;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 #[test]
@@ -11,9 +12,9 @@ fn queue_empty_by_default() {
 fn submit_during_turn_queues_steering() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('h'));
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('h')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
     assert_eq!(state.agent.message_queue[0].content, "hi");
     assert!(matches!(
@@ -27,9 +28,9 @@ fn submit_during_turn_queues_steering() {
 fn submit_when_idle_sends_immediately() {
     let mut state = AppState::default();
     state.agent.turn_active = false;
-    state.update(Event::Input('h'));
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('h')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
@@ -40,9 +41,9 @@ fn submit_when_idle_sends_immediately() {
 fn follow_up_queues_for_later() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('b'));
-    state.update(Event::Input('y'));
-    state.update(Event::FollowUp);
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::Input(InputEvent::Input('y')));
+    state.update(Event::Control(ControlEvent::FollowUp));
     assert_eq!(state.agent.message_queue.len(), 1);
     assert!(matches!(
         state.agent.message_queue[0].kind,
@@ -54,14 +55,14 @@ fn follow_up_queues_for_later() {
 fn deliver_queue_at_turn_end() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('h'));
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('h')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
 
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].content, "hi");
@@ -71,10 +72,10 @@ fn deliver_queue_at_turn_end() {
 fn queue_multiple_messages() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('a'));
-    state.update(Event::Submit);
-    state.update(Event::Input('b'));
-    state.update(Event::FollowUp);
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::Control(ControlEvent::FollowUp));
     assert_eq!(state.agent.message_queue.len(), 2);
     assert!(matches!(
         state.agent.message_queue[0].kind,
@@ -90,12 +91,12 @@ fn queue_multiple_messages() {
 fn escape_clears_queue_and_restores() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('h'));
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('h')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
 
-    state.update(Event::Abort);
+    state.update(Event::Control(ControlEvent::Abort));
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.input.input, "hi");
 }
@@ -104,14 +105,14 @@ fn escape_clears_queue_and_restores() {
 fn steering_delivered_before_follow_up() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('s'));
-    state.update(Event::Submit);
-    state.update(Event::Input('f'));
-    state.update(Event::FollowUp);
+    state.update(Event::Input(InputEvent::Input('s')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('f')));
+    state.update(Event::Control(ControlEvent::FollowUp));
 
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
     let user_msgs: Vec<&ChatMessage> = state
         .session
         .messages
@@ -121,9 +122,9 @@ fn steering_delivered_before_follow_up() {
     assert_eq!(user_msgs.len(), 1);
     assert_eq!(user_msgs[0].content, "s");
 
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.1".to_string(),
-    });
+    }));
     let user_msgs: Vec<&ChatMessage> = state
         .session
         .messages
@@ -157,19 +158,19 @@ fn steering_mode_all_batches_messages() {
     state.config.steering_mode = DeliveryMode::All;
 
     // Queue three steering messages
-    state.update(Event::Input('a'));
-    state.update(Event::Submit);
-    state.update(Event::Input('b'));
-    state.update(Event::Submit);
-    state.update(Event::Input('c'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('c')));
+    state.update(Event::submit());
 
     assert_eq!(state.agent.message_queue.len(), 3);
 
     // Trigger delivery
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
 
     // All three should be batched into one request
     assert!(state.agent.message_queue.is_empty());
@@ -185,25 +186,25 @@ fn follow_up_mode_all_batches_messages() {
     state.agent.turn_active = true;
     state.config.follow_up_mode = DeliveryMode::All;
     // Queue three follow-up messages
-    state.update(Event::Input('x'));
-    state.update(Event::FollowUp);
-    state.update(Event::Input('y'));
-    state.update(Event::FollowUp);
-    state.update(Event::Input('z'));
-    state.update(Event::FollowUp);
+    state.update(Event::Input(InputEvent::Input('x')));
+    state.update(Event::Control(ControlEvent::FollowUp));
+    state.update(Event::Input(InputEvent::Input('y')));
+    state.update(Event::Control(ControlEvent::FollowUp));
+    state.update(Event::Input(InputEvent::Input('z')));
+    state.update(Event::Control(ControlEvent::FollowUp));
     assert_eq!(state.agent.message_queue.len(), 3);
     // First complete a turn to trigger delivery
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
     // After submit, message_queue should have [x, y, z, "i"]
     assert_eq!(
         state.agent.message_queue.len(),
         4,
         "Expected 4 queued messages before turn done"
     );
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
     // All three follow-ups should be batched into one request
     assert!(
         state.agent.message_queue.is_empty(),
@@ -223,28 +224,28 @@ fn one_at_a_time_delivers_separately() {
     state.config.steering_mode = DeliveryMode::OneAtATime;
 
     // Queue three steering messages
-    state.update(Event::Input('a'));
-    state.update(Event::Submit);
-    state.update(Event::Input('b'));
-    state.update(Event::Submit);
-    state.update(Event::Input('c'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('c')));
+    state.update(Event::submit());
 
     assert_eq!(state.agent.message_queue.len(), 3);
 
     // Trigger first delivery
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
 
     // Only one should be delivered
     assert_eq!(state.agent.message_queue.len(), 2);
     assert_eq!(state.agent.request_queue.len(), 1);
 
     // Second delivery
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.1".to_string(),
-    });
+    }));
     assert_eq!(state.agent.message_queue.len(), 1);
     assert_eq!(state.agent.request_queue.len(), 2);
 }
@@ -258,28 +259,28 @@ fn steering_and_follow_up_modes_independent() {
     state.config.follow_up_mode = DeliveryMode::OneAtATime;
 
     // Queue two steering and two follow-up
-    state.update(Event::Input('a'));
-    state.update(Event::Submit);
-    state.update(Event::Input('b'));
-    state.update(Event::Submit);
-    state.update(Event::Input('x'));
-    state.update(Event::FollowUp);
-    state.update(Event::Input('y'));
-    state.update(Event::FollowUp);
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('x')));
+    state.update(Event::Control(ControlEvent::FollowUp));
+    state.update(Event::Input(InputEvent::Input('y')));
+    state.update(Event::Control(ControlEvent::FollowUp));
 
     // Complete a turn - steering should batch, follow-up should not
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
 
     assert_eq!(state.agent.message_queue.len(), 2); // Two follow-ups still queued
     assert_eq!(state.agent.request_queue.len(), 1); // One batched steering
     assert_eq!(state.agent.request_queue[0].0, "a\nb"); // Batched content
 
     // Complete second turn - first follow-up delivered
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.1".to_string(),
-    });
+    }));
     assert_eq!(state.agent.message_queue.len(), 1); // One follow-up left
     assert_eq!(state.agent.request_queue.len(), 2);
 }
@@ -290,12 +291,12 @@ fn steering_and_follow_up_modes_independent() {
 fn dequeue_restores_last() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('h'));
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('h')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
     assert_eq!(state.agent.message_queue.len(), 1);
 
-    state.update(Event::Dequeue);
+    state.update(Event::Control(ControlEvent::Dequeue));
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.input.input, "hi");
 }
@@ -304,11 +305,11 @@ fn dequeue_restores_last() {
 fn dequeue_sets_cursor_end() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('a'));
-    state.update(Event::Input('b'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::submit());
 
-    state.update(Event::Dequeue);
+    state.update(Event::Control(ControlEvent::Dequeue));
     assert_eq!(state.input.cursor_pos, 2);
 }
 
@@ -316,17 +317,17 @@ fn dequeue_sets_cursor_end() {
 fn dequeue_replaces_input() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('o'));
-    state.update(Event::Input('l'));
-    state.update(Event::Input('d'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('o')));
+    state.update(Event::Input(InputEvent::Input('l')));
+    state.update(Event::Input(InputEvent::Input('d')));
+    state.update(Event::submit());
 
-    state.update(Event::Input('n'));
-    state.update(Event::Input('e'));
-    state.update(Event::Input('w'));
+    state.update(Event::Input(InputEvent::Input('n')));
+    state.update(Event::Input(InputEvent::Input('e')));
+    state.update(Event::Input(InputEvent::Input('w')));
     assert_eq!(state.input.input, "new");
 
-    state.update(Event::Dequeue);
+    state.update(Event::Control(ControlEvent::Dequeue));
     assert_eq!(state.input.input, "old");
 }
 
@@ -336,7 +337,7 @@ fn dequeue_empty_flashes() {
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.input.input_flash, 0);
 
-    state.update(Event::Dequeue);
+    state.update(Event::Control(ControlEvent::Dequeue));
     assert_eq!(state.input.input_flash, 3);
 }
 
@@ -344,17 +345,17 @@ fn dequeue_empty_flashes() {
 fn dequeue_lifo() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.update(Event::Input('a'));
-    state.update(Event::Submit);
-    state.update(Event::Input('b'));
-    state.update(Event::FollowUp);
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('b')));
+    state.update(Event::Control(ControlEvent::FollowUp));
     assert_eq!(state.agent.message_queue.len(), 2);
 
-    state.update(Event::Dequeue);
+    state.update(Event::Control(ControlEvent::Dequeue));
     assert_eq!(state.agent.message_queue.len(), 1);
     assert_eq!(state.input.input, "b");
 
-    state.update(Event::Dequeue);
+    state.update(Event::Control(ControlEvent::Dequeue));
     assert!(state.agent.message_queue.is_empty());
     assert_eq!(state.input.input, "a");
 }

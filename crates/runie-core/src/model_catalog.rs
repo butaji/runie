@@ -2,6 +2,54 @@
 
 use crate::model::ModelSelectorItem;
 
+/// Model capability flags — drives runtime adaptation and UI filtering.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ModelCapabilities {
+    pub streaming: bool,
+    pub supports_vision: bool,
+    pub supports_tools: bool,
+    pub supports_reasoning: bool,
+    pub max_context_tokens: usize,
+    pub max_output_tokens: usize,
+    pub cache_control: bool,
+}
+
+impl ModelCapabilities {
+    pub fn streaming() -> Self {
+        Self { streaming: true, ..Default::default() }
+    }
+
+    pub fn with_vision(mut self) -> Self {
+        self.supports_vision = true;
+        self
+    }
+
+    pub fn with_tools(mut self) -> Self {
+        self.supports_tools = true;
+        self
+    }
+
+    pub fn with_reasoning(mut self) -> Self {
+        self.supports_reasoning = true;
+        self
+    }
+
+    pub fn with_context(mut self, max_context: usize) -> Self {
+        self.max_context_tokens = max_context;
+        self
+    }
+
+    pub fn with_output_limit(mut self, max_output: usize) -> Self {
+        self.max_output_tokens = max_output;
+        self
+    }
+
+    pub fn with_cache_control(mut self) -> Self {
+        self.cache_control = true;
+        self
+    }
+}
+
 /// Information about a model for the model selector dialog.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ModelInfo {
@@ -14,6 +62,7 @@ pub struct ModelInfo {
     pub supports_vision: bool,
     pub tokenizer: Option<String>,
     pub context_window: Option<usize>,
+    pub capabilities: ModelCapabilities,
 }
 
 impl ModelInfo {
@@ -30,6 +79,7 @@ impl ModelInfo {
             supports_vision: false,
             tokenizer: None,
             context_window: None,
+            capabilities: ModelCapabilities::default(),
         }
     }
 
@@ -60,6 +110,15 @@ pub fn model_catalog() -> Vec<ModelInfo> {
     let mut models = Vec::new();
     for provider in crate::provider_registry::known_providers() {
         for model in provider.models {
+            let capabilities = ModelCapabilities {
+                streaming: model.streaming,
+                supports_vision: model.supports_vision,
+                supports_tools: model.supports_tools,
+                supports_reasoning: model.supports_reasoning,
+                max_context_tokens: model.context_window.unwrap_or(0),
+                max_output_tokens: model.max_output_tokens,
+                cache_control: model.cache_control,
+            };
             models.push(ModelInfo {
                 provider: provider.key.to_string(),
                 name: model.name.to_string(),
@@ -70,6 +129,7 @@ pub fn model_catalog() -> Vec<ModelInfo> {
                 supports_vision: model.supports_vision,
                 tokenizer: model.tokenizer.map(String::from),
                 context_window: model.context_window,
+                capabilities,
             });
         }
     }
@@ -245,6 +305,15 @@ mod tests {
                     supports_vision: model.supports_vision,
                     tokenizer: model.tokenizer.map(String::from),
                     context_window: model.context_window,
+                    capabilities: ModelCapabilities {
+                        streaming: model.streaming,
+                        supports_vision: model.supports_vision,
+                        supports_tools: model.supports_tools,
+                        supports_reasoning: model.supports_reasoning,
+                        max_context_tokens: model.context_window.unwrap_or(0),
+                        max_output_tokens: model.max_output_tokens,
+                        cache_control: model.cache_control,
+                    },
                 };
                 assert_eq!(info.provider, provider.key);
                 assert_eq!(info.full(), format!("{}/{}", provider.key, model.name));
@@ -270,6 +339,35 @@ mod tests {
             .expect("o1 should exist");
         assert!(o1.supports_thinking);
         assert!(o1.supports_vision);
+    }
+
+    #[test]
+    fn model_capabilities_derives_from_registry() {
+        let catalog = model_catalog();
+        // Default streaming=true, tools=true
+        let gpt4o = catalog.iter().find(|m| m.provider == "openai" && m.name == "gpt-4o").unwrap();
+        assert!(gpt4o.capabilities.streaming);
+        assert!(gpt4o.capabilities.supports_tools);
+        assert!(gpt4o.capabilities.supports_vision);
+        assert!(!gpt4o.capabilities.supports_reasoning);
+    }
+
+    #[test]
+    fn model_capabilities_builder() {
+        let caps = ModelCapabilities::streaming()
+            .with_vision()
+            .with_tools()
+            .with_reasoning()
+            .with_context(200_000)
+            .with_output_limit(40_000)
+            .with_cache_control();
+        assert!(caps.streaming);
+        assert!(caps.supports_vision);
+        assert!(caps.supports_tools);
+        assert!(caps.supports_reasoning);
+        assert_eq!(caps.max_context_tokens, 200_000);
+        assert_eq!(caps.max_output_tokens, 40_000);
+        assert!(caps.cache_control);
     }
 
     #[test]

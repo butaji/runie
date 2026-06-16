@@ -190,6 +190,7 @@ fn build_form_stack_from_template(template: FormPanel, args: &str) -> CoreStack 
 mod tests {
     use super::*;
     use crate::Event;
+    use crate::event::CommandEvent;
 
     #[test]
     fn test_cmd_macro() {
@@ -243,9 +244,9 @@ mod tests {
     }
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
-        Event::RunSaveCommand {
+        Event::Command(CommandEvent::RunSaveCommand {
             name: values.get("name").cloned().unwrap_or_default(),
-        }
+        })
     }
 
     #[test]

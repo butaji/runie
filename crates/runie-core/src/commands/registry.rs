@@ -18,7 +18,7 @@ impl CommandRegistry {
             commands: HashMap::new(),
             aliases: HashMap::new(),
         };
-        super::handlers::register_all(&mut registry);
+        super::dsl::handlers::register_all(&mut registry);
         registry
     }
 
@@ -78,6 +78,7 @@ pub fn filter_commands<'a>(reg: &'a CommandRegistry, query: &str) -> Vec<&'a Com
 /// Active dialog state — all variants backed by PanelStack.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DialogState {
+    Welcome,
     CommandPalette(PanelStack),
     ModelSelector(PanelStack),
     Settings(PanelStack),
@@ -89,22 +90,23 @@ pub enum DialogState {
 macro_rules! with_panel_stack {
     ($self:expr, $stack:ident, $body:expr) => {
         match $self {
-            DialogState::CommandPalette($stack) => $body,
-            DialogState::ModelSelector($stack) => $body,
-            DialogState::Settings($stack) => $body,
-            DialogState::ScopedModels($stack) => $body,
-            DialogState::SessionTree($stack) => $body,
-            DialogState::PanelStack($stack) => $body,
+            DialogState::Welcome => None,
+            DialogState::CommandPalette($stack) => Some($body),
+            DialogState::ModelSelector($stack) => Some($body),
+            DialogState::Settings($stack) => Some($body),
+            DialogState::ScopedModels($stack) => Some($body),
+            DialogState::SessionTree($stack) => Some($body),
+            DialogState::PanelStack($stack) => Some($body),
         }
     };
 }
 
 impl DialogState {
-    pub fn panel_stack(&self) -> &PanelStack {
+    pub fn panel_stack(&self) -> Option<&PanelStack> {
         with_panel_stack!(self, s, s)
     }
 
-    pub fn panel_stack_mut(&mut self) -> &mut PanelStack {
+    pub fn panel_stack_mut(&mut self) -> Option<&mut PanelStack> {
         with_panel_stack!(self, s, s)
     }
 }
@@ -126,6 +128,8 @@ impl AppState {
         match self.registry.get(name) {
             Some(cmd) => {
                 let (cmd_name, flow) = (cmd.name.clone(), cmd.flow.clone());
+                // Track usage for ranking
+                self.record_command_usage(&cmd_name);
                 let result = flow.exec(self, &cmd_name, args);
                 if matches!(result, CommandResult::None) {
                     None

@@ -1,4 +1,5 @@
 use crate::model::{AppState, ChatMessage, Role};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
 
 fn fresh_state() -> AppState {
@@ -27,9 +28,9 @@ fn submit_resets_scroll_to_bottom() {
     add_messages(&mut state, 20);
     state.view.scroll = 10; // scrolled up
 
-    state.update(Event::Input('h'));
-    state.update(Event::Input('i'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('h')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::submit());
 
     assert_eq!(state.view.scroll, 0, "Submit must reset scroll to bottom");
 }
@@ -40,12 +41,12 @@ fn submit_when_turn_active_resets_scroll() {
     state.agent.turn_active = true;
     state.view.scroll = 5;
 
-    state.update(Event::Input('s'));
-    state.update(Event::Input('t'));
-    state.update(Event::Input('e'));
-    state.update(Event::Input('e'));
-    state.update(Event::Input('r'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('s')));
+    state.update(Event::Input(InputEvent::Input('t')));
+    state.update(Event::Input(InputEvent::Input('e')));
+    state.update(Event::Input(InputEvent::Input('e')));
+    state.update(Event::Input(InputEvent::Input('r')));
+    state.update(Event::submit());
 
     assert_eq!(state.view.scroll, 0, "Steering submit must reset scroll to bottom");
 }
@@ -59,7 +60,7 @@ fn follow_up_resets_scroll_to_bottom() {
     state.view.scroll = 5;
     state.input.input = "follow".to_string();
 
-    state.update(Event::FollowUp);
+    state.update(Event::Control(ControlEvent::FollowUp));
 
     assert_eq!(state.view.scroll, 0, "FollowUp must reset scroll to bottom");
 }
@@ -102,7 +103,7 @@ fn at_bottom_shows_new_agent_response() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "hi".to_string() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".to_string(), content: "hi".to_string() }));
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
@@ -121,9 +122,9 @@ fn at_bottom_shows_new_thought() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(Event::AgentThinking { id: "req.0".to_string() });
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "Thinking...".to_string() });
-    state.update(Event::AgentThoughtDone { id: "req.0".to_string() });
+    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".to_string() }));
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".to_string(), content: "Thinking...".to_string() }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".to_string() }));
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
@@ -140,8 +141,8 @@ fn at_bottom_shows_new_tool() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(Event::AgentToolStart { id: "req.0".to_string(), name: "ls".to_string() });
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "file1".to_string() });
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".to_string(), name: "ls".to_string() }));
+    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output: "file1".to_string() }));
     state.ensure_fresh();
 
     let visible = crate::tests::visible_helper::compute_viewport(&state, 5);
@@ -160,7 +161,7 @@ fn scrolled_up_stays_scrolled_up_on_agent_response() {
     add_messages(&mut state, 20);
     state.view.scroll = 10;
 
-    state.update(Event::AgentResponse { id: "req.0".to_string(), content: "new".to_string() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".to_string(), content: "new".to_string() }));
     state.ensure_fresh();
 
     assert_eq!(state.view.scroll, 10, "Manual scroll should be preserved when agent responds");
@@ -172,14 +173,14 @@ fn scroll_up_and_down_returns_to_bottom() {
     add_messages(&mut state, 20);
     state.view.scroll = 0;
 
-    state.update(Event::ScrollUp);
-    state.update(Event::ScrollUp);
-    state.update(Event::ScrollUp);
+    state.update(Event::Scroll(ScrollEvent::Up));
+    state.update(Event::Scroll(ScrollEvent::Up));
+    state.update(Event::Scroll(ScrollEvent::Up));
     assert_eq!(state.view.scroll, 3, "ScrollUp should increase scroll");
 
-    state.update(Event::ScrollDown);
-    state.update(Event::ScrollDown);
-    state.update(Event::ScrollDown);
+    state.update(Event::Scroll(ScrollEvent::Down));
+    state.update(Event::Scroll(ScrollEvent::Down));
+    state.update(Event::Scroll(ScrollEvent::Down));
     assert_eq!(state.view.scroll, 0, "ScrollDown should return to bottom");
 }
 
@@ -187,8 +188,8 @@ fn scroll_up_and_down_returns_to_bottom() {
 fn scroll_down_cannot_go_below_zero() {
     let mut state = fresh_state();
     state.view.scroll = 0;
-    state.update(Event::ScrollDown);
-    state.update(Event::ScrollDown);
+    state.update(Event::Scroll(ScrollEvent::Down));
+    state.update(Event::Scroll(ScrollEvent::Down));
     assert_eq!(state.view.scroll, 0, "ScrollDown at bottom should stay at 0");
 }
 
@@ -226,7 +227,7 @@ fn slash_command_shows_at_bottom() {
     state.view.scroll = 5;
 
     state.input.input = "/help".to_string();
-    state.update(Event::Submit);
+    state.update(Event::submit());
     state.ensure_fresh();
 
     assert_eq!(state.view.scroll, 0, "Slash command output should be visible at bottom");
@@ -238,7 +239,7 @@ fn agent_done_keeps_bottom_when_already_there() {
     add_messages(&mut state, 10);
     state.view.scroll = 0;
 
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::Agent(AgentEvent::Done { id: "req.0".to_string() }));
     state.ensure_fresh();
 
     assert_eq!(state.view.scroll, 0, "AgentDone should keep user at bottom when already there");
@@ -250,7 +251,7 @@ fn agent_done_preserves_scroll_when_not_at_bottom() {
     add_messages(&mut state, 10);
     state.view.scroll = 5;
 
-    state.update(Event::AgentDone { id: "req.0".to_string() });
+    state.update(Event::Agent(AgentEvent::Done { id: "req.0".to_string() }));
     state.ensure_fresh();
 
     assert_eq!(state.view.scroll, 5, "AgentDone should not change scroll when user is not at bottom");

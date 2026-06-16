@@ -1,6 +1,6 @@
 //! Slash command tests — ensure all /commands work as users expect
 
-use crate::event::Event;
+use crate::event::{Event, InputEvent};
 use crate::model::AppState;
 use crate::session::Store;
 use std::sync::Mutex;
@@ -13,7 +13,7 @@ pub fn fresh_state() -> AppState {
 
 pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
 }
 
@@ -22,7 +22,7 @@ pub fn type_str(state: &mut AppState, text: &str) {
 pub fn exec(state: &mut AppState, text: &str) {
     state.input.input = text.into();
     state.input.cursor_pos = text.len();
-    state.update(Event::Submit);
+    state.update(Event::submit());
 }
 
 pub fn tmp_store() -> Store {

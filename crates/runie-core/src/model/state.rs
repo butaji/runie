@@ -1,11 +1,30 @@
 //! Core application state types and simple accessors.
 
+use std::collections::HashMap;
+
 use crate::ui::elements::Element;
+
+/// A file entry from the FFF indexer for the file picker.
+#[derive(Clone, Debug)]
+pub struct FffFileEntry {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub score: f64,
+    pub git_status: Option<String>,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QueuedMessageKind {
     Steering,
     FollowUp,
+}
+
+/// Tracks usage count and last-used timestamp for a command.
+#[derive(Clone, Debug)]
+pub struct CommandUsage {
+    pub count: u32,
+    pub last_used: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -109,6 +128,10 @@ pub struct AppState {
     pub view: crate::state::ViewState,
     pub config: crate::state::ConfigState,
     pub completion: crate::state::CompletionState,
+    /// Sidebar state (Team mode subagent panel).
+    pub sidebar: crate::state::SidebarState,
+    /// Current orchestrator state (Team mode) for status bar display.
+    pub orchestrator_state: crate::orchestrator_actor::OrchestratorState,
 
     // Singleton UI/control flags (don't fit a single domain)
     /// Quit flag read by the main event loop
@@ -133,8 +156,6 @@ pub struct AppState {
     pub git_info: Option<crate::snapshot::GitInfo>,
     /// Current working directory name (detected at startup)
     pub cwd_name: String,
-    /// Command input history (persistent across sessions)
-    pub input_history: Vec<String>,
     /// True while the user is in vim feed-navigation mode (j/k/g/G etc.).
     /// Only meaningful when `config.vim_mode` is enabled.
     pub vim_nav_mode: bool,
@@ -144,7 +165,18 @@ pub struct AppState {
     /// Backup of input state before opening file picker:
     /// (original input, insert position, cursor position, needs brackets for @ references).
     pub file_picker_backup: Option<(String, usize, usize, bool)>,
+    /// The `:start-end` range suffix to append when inserting a file reference.
+    /// Set when opening the picker from `@path:10-50`.
+    pub file_picker_range_suffix: Option<String>,
+    /// FFF search results for the current file picker query.
+    /// Set when FFF indexer returns results (populated asynchronously).
+    pub fff_file_results: Vec<FffFileEntry>,
+    /// Counter incremented each time the user types in the file picker.
+    /// Used to detect stale FFF results (result counter != current counter means ignore).
+    pub fff_debounce: u32,
     pub pending_agent_edit: Option<crate::agent_profiles::AgentProfile>,
+    /// Per-session command usage tracking for palette ranking.
+    pub command_usage: HashMap<String, CommandUsage>,
 }
 
 impl Default for AppState {
@@ -157,6 +189,8 @@ impl Default for AppState {
             view: crate::state::ViewState::default(),
             config: crate::state::ConfigState::default(),
             completion: crate::state::CompletionState::default(),
+            sidebar: crate::state::SidebarState::default(),
+            orchestrator_state: crate::orchestrator_actor::OrchestratorState::default(),
             should_quit: false,
             open_dialog: None,
             dialog_back_stack: Vec::new(),
@@ -169,11 +203,14 @@ impl Default for AppState {
             transient_level: None,
             git_info,
             cwd_name,
-            input_history: Vec::new(),
             vim_nav_mode: false,
             vim_nav_pending: false,
             file_picker_backup: None,
+            file_picker_range_suffix: None,
+            fff_file_results: Vec::new(),
+            fff_debounce: 0,
             pending_agent_edit: None,
+            command_usage: HashMap::new(),
         }
     }
 }
@@ -280,5 +317,181 @@ impl AppState {
 
     pub fn is_dirty(&self) -> bool {
         self.view.dirty
+    }
+
+    /// Record that a command was invoked for palette ranking.
+    pub fn record_command_usage(&mut self, name: &str) {
+        let now = crate::update::now();
+        let entry = self.command_usage.entry(name.to_string()).or_insert_with(|| CommandUsage {
+            count: 0,
+            last_used: now,
+        });
+        entry.count += 1;
+        entry.last_used = now;
+    }
+
+    /// Rank commands by fuzzy match score, recency boost, and usage count.
+    /// Returns commands in ranked order, limited to `limit`.
+    pub fn rank_commands(&self, query: &str, limit: usize) -> Vec<(&crate::commands::CommandDef, i32)> {
+        let all: Vec<_> = self.registry.list();
+        if query.is_empty() {
+            // No query: sort by usage + recency (most recently used first), then category/name
+            let mut ranked: Vec<_> = all
+                .iter()
+                .map(|cmd| {
+                    let usage = self.command_usage.get(&cmd.name);
+                    let score = compute_ranking_score(query, cmd, usage);
+                    (cmd, score)
+                })
+                .collect();
+            ranked.sort_by_key(|(cmd, score)| {
+                (std::cmp::Reverse(*score), &cmd.category, &cmd.name)
+            });
+            return ranked.into_iter().take(limit).map(|(&cmd, s)| (cmd, s)).collect();
+        }
+
+        let mut ranked: Vec<_> = all
+            .iter()
+            .filter_map(|cmd| {
+                let base = crate::fuzzy::fuzzy_match(query, &cmd.name)
+                    .or_else(|| crate::fuzzy::fuzzy_match(query, &cmd.desc))?;
+                let usage = self.command_usage.get(&cmd.name);
+                let score = compute_ranking_score(query, cmd, usage) + base * 100;
+                Some((cmd, score))
+            })
+            .collect();
+        ranked.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
+        ranked.into_iter().take(limit).map(|(&cmd, s)| (cmd, s)).collect()
+    }
+
+    /// Extract plain text from the currently selected post for `y` (copy).
+    /// Returns None if no post is selected or if the selection is empty.
+    pub fn copy_selected_post_text(&self) -> Option<String> {
+        let post_idx = self.view.selected_post?;
+        let post = self.view.posts.get(post_idx)?;
+        let elements = &self.view.elements_cache;
+        let mut lines = Vec::new();
+        for i in post.start..post.end {
+            if let Some(elem) = elements.get(i) {
+                if let Some(text) = element_text(elem) {
+                    lines.push(text);
+                }
+            }
+        }
+        if lines.is_empty() {
+            None
+        } else {
+            Some(lines.join("\n"))
+        }
+    }
+
+    /// Extract metadata from the currently selected post for `Y` (copy metadata).
+    pub fn copy_selected_post_metadata(&self) -> Option<String> {
+        let post_idx = self.view.selected_post?;
+        let post = self.view.posts.get(post_idx)?;
+        let elements = &self.view.elements_cache;
+        let mut parts = Vec::new();
+        for i in post.start..post.end.min(elements.len()) {
+            if let Some(elem) = elements.get(i) {
+                if let Some(meta) = element_metadata(elem) {
+                    parts.push(meta);
+                }
+            }
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
+    }
+}
+
+/// Compute a ranking score boost from usage count and recency.
+/// Score is scaled so it doesn't dominate the fuzzy score.
+fn compute_ranking_score(
+    _query: &str,
+    cmd: &crate::commands::CommandDef,
+    usage: Option<&CommandUsage>,
+) -> i32 {
+    let usage_boost = usage.map(|u| u.count as i32).unwrap_or(0);
+    // Recency: commands used in the last 5 minutes get a bonus that decays.
+    // Stored as Unix timestamp; compare against current time.
+    let now = crate::update::now();
+    let recency_boost = usage.map(|u| {
+        let age = now - u.last_used;
+        if age < 300.0 {
+            // Exponential decay: max bonus at t=0, zero at t=300s
+            ((300.0 - age) / 300.0 * 10.0) as i32
+        } else {
+            0
+        }
+    }).unwrap_or(0);
+
+    // Usage boosts are small (1–10), recency boosts also small.
+    // This is added to fuzzy score * 100, so it only breaks ties.
+    usage_boost + recency_boost
+}
+
+// ── Post copy helpers ───────────────────────────────────────────────────────────
+
+/// Extract plain text from an Element for `y` copy.
+fn element_text(elem: &Element) -> Option<String> {
+    match elem {
+        Element::UserMessage { content, .. } => Some(content.clone()),
+        Element::AgentMessage { content, .. } => Some(content.clone()),
+        Element::ThoughtSummary { content, .. } => Some(content.clone()),
+        Element::ThoughtMarker { content, .. } => Some(content.clone()),
+        Element::ToolRunning { name, args, .. } => {
+            if args.is_empty() {
+                Some(name.clone())
+            } else {
+                Some(format!("{} {}", name, args))
+            }
+        }
+        Element::ToolDone { name, args, output, .. } => {
+            let head = if args.is_empty() {
+                name.clone()
+            } else {
+                format!("{} {}", name, args)
+            };
+            if output.is_empty() {
+                Some(head)
+            } else {
+                Some(format!("{} {}\n{}", head, output,
+                    if output.ends_with('\n') { "" } else { "\n" }))
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Extract short metadata string from an Element for `Y` (copy metadata).
+fn element_metadata(elem: &Element) -> Option<String> {
+    match elem {
+        Element::UserMessage { timestamp, .. } => {
+            Some(format!("user {:.0}s", timestamp))
+        }
+        Element::AgentMessage { provider, timestamp, .. } => {
+            Some(format!("{} {:.0}s", provider, timestamp))
+        }
+        Element::Thinking { timestamp, .. } => {
+            Some(format!("thinking {:.0}s", timestamp))
+        }
+        Element::ThoughtSummary { duration_secs, timestamp, .. } => {
+            Some(format!("thought {:.0}s → {:.1}s", timestamp, duration_secs))
+        }
+        Element::ToolRunning { name, timestamp, .. } => {
+            Some(format!("{} running at {:.0}s", name, timestamp))
+        }
+        Element::ToolDone { name, duration_secs, timestamp, .. } => {
+            Some(format!("{} done in {:.1}s at {:.0}s", name, duration_secs, timestamp))
+        }
+        Element::ToolSummary { name, duration_secs, timestamp, .. } => {
+            Some(format!("{} {:.1}s at {:.0}s", name, duration_secs, timestamp))
+        }
+        Element::TurnComplete { duration_secs, timestamp, .. } => {
+            Some(format!("turn {:.1}s at {:.0}s", duration_secs, timestamp))
+        }
+        _ => None,
     }
 }

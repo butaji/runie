@@ -1,5 +1,5 @@
 //! Ghost completion tests — tab shows rest of filename in gray.
-use crate::event::Event;
+
 use crate::model::AppState;
 
 fn fresh_state() -> AppState {
@@ -37,7 +37,7 @@ fn submit_with_ghost_includes_full_filename() {
     state.input.cursor_pos = 4;
     state.input.ghost_completion = Some("file.rs".to_string());
 
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // Ghost should be appended before submission
     assert!(
@@ -88,3 +88,6 @@ fn ghost_shows_directory_suffix() {
     );
     assert!(state.input.ghost_completion.unwrap().contains('/'));
 }
+
+use crate::event::Event;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};

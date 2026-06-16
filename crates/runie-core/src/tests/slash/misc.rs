@@ -1,17 +1,26 @@
 use super::{exec, fresh_state, type_str};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
 use crate::model::Role;
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+}
 
 #[test]
 fn reset_clears_messages_and_input() {
     let mut state = fresh_state();
     type_str(&mut state, "hello");
-    state.update(Event::Submit);
+    state.update(Event::submit());
     state.agent.streaming = true;
     state.view.scroll = 5;
 
-    type_str(&mut state, "/reset");
-    state.update(Event::Submit);
+    palette_select(&mut state, "reset");
 
     let sys_msgs: Vec<_> = state
         .session
@@ -35,8 +44,7 @@ fn reset_keeps_default_provider() {
     let mut state = fresh_state();
     let initial_provider = state.config.current_provider.clone();
     let initial_model = state.config.current_model.clone();
-    type_str(&mut state, "/reset");
-    state.update(Event::Submit);
+    palette_select(&mut state, "reset");
     // /reset must not change the current provider/model.
     assert_eq!(state.config.current_provider, initial_provider);
     assert_eq!(state.config.current_model, initial_model);
@@ -45,8 +53,7 @@ fn reset_keeps_default_provider() {
 #[test]
 fn help_opens_reference_panel() {
     let mut state = fresh_state();
-    type_str(&mut state, "/help");
-    state.update(Event::Submit);
+    palette_select(&mut state, "help");
 
     assert!(
         matches!(
@@ -60,8 +67,7 @@ fn help_opens_reference_panel() {
 #[test]
 fn help_clears_input() {
     let mut state = fresh_state();
-    type_str(&mut state, "/help");
-    state.update(Event::Submit);
+    palette_select(&mut state, "help");
     assert!(state.input.input.is_empty());
 }
 

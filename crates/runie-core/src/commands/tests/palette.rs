@@ -1,5 +1,5 @@
 use crate::commands::filter_commands;
-use crate::event::Event;
+use crate::event::{DialogEvent, Event};
 use crate::model::AppState;
 
 use super::palette_stack;
@@ -44,8 +44,8 @@ fn filter_case_insensitive() {
 #[test]
 fn select_wraps_up() {
     let mut state = AppState::default();
-    state.update(Event::ToggleCommandPalette);
-    state.update(Event::PaletteUp);
+    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
+    state.update(Event::Dialog(DialogEvent::PaletteUp));
     let count = filter_commands(&state.registry, "").len();
     let stack = palette_stack(&state).expect("Palette should be open");
     assert_eq!(
@@ -58,10 +58,10 @@ fn select_wraps_up() {
 #[test]
 fn select_wraps_down() {
     let mut state = AppState::default();
-    state.update(Event::ToggleCommandPalette);
+    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
     let count = filter_commands(&state.registry, "").len();
     for _ in 0..count {
-        state.update(Event::PaletteDown);
+        state.update(Event::Dialog(DialogEvent::PaletteDown));
     }
     let stack = palette_stack(&state).expect("Palette should be open");
     assert_eq!(

@@ -1,6 +1,6 @@
 use crate::commands::handlers::agents::build_edit_panel;
 use crate::dialog::{ItemAction, PanelItem};
-use crate::event::Event;
+use crate::event::{DialogEvent, Event};
 
 #[test]
 fn edit_panel_has_at_least_eight_field_items() {
@@ -43,7 +43,7 @@ fn edit_panel_save_emits_agents_manager_save_event() {
         _ => panic!("expected Action"),
     };
     match action {
-        ItemAction::Emit(Event::AgentsManagerSave { name }) => {
+        ItemAction::Emit(Event::Dialog(DialogEvent::AgentsManagerSave { name })) => {
             assert_eq!(*name, "testname");
         }
         other => panic!("expected AgentsManagerSave event, got {:?}", other),
@@ -75,7 +75,7 @@ fn edit_panel_field_items_emit_set_field_event() {
             if let PanelItem::Action { action, .. } = it {
                 matches!(
                     action,
-                    ItemAction::Emit(Event::AgentsManagerSetField { .. })
+                    ItemAction::Emit(Event::Dialog(DialogEvent::AgentsManagerSetField { .. }))
                 )
             } else {
                 false

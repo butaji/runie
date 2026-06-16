@@ -12,16 +12,13 @@ pub fn set_test_config_path(path: PathBuf) {
     TEST_CONFIG_PATH.with(|p| *p.borrow_mut() = Some(path));
 }
 
-/// Get the default config file path.
+/// Get the default config file path (from canonical config module).
 pub fn config_path() -> PathBuf {
     TEST_CONFIG_PATH.with(|p| {
         if let Some(ref path) = *p.borrow() {
             return path.clone();
         }
-        dirs::home_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(".runie")
-            .join("config.toml")
+        crate::config::config_path()
     })
 }
 

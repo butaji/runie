@@ -1,13 +1,14 @@
 //! Bash execution with timeout and truncation.
 
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::accumulator::{OutputAccumulator, TruncateStrategy};
 use crate::safety::check_bash_safety;
 use crate::truncate::TruncationPolicy;
+use runie_core::tool::{ToolOutput, ToolStatus};
 
-use super::ShellOutput;
+use super::{BashStatus, ShellOutput, Tool};
 
 /// Default timeout for bash commands in seconds.
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
@@ -30,11 +31,26 @@ pub fn run_bash(command: &str, policy: &TruncationPolicy) -> ShellOutput {
     run_bash_output(&output.stdout, &output.stderr, output.status.code(), policy)
 }
 
-/// Run bash and return the rendered output string and success flag.
-/// Used by exec.rs for callers that expect (String, bool).
-pub fn run_bash_legacy(command: &str, policy: &TruncationPolicy) -> (String, bool) {
+/// Run bash and return ToolOutput for exec.rs.
+pub fn run_bash_legacy(tool: &Tool, policy: &TruncationPolicy) -> ToolOutput {
+    let start = Instant::now();
+    let command = if let Tool::Bash { command } = tool { command } else { unreachable!() };
+    let name = tool.name();
+    let args = tool.to_args();
     let out = run_bash(command, policy);
-    (out.render(), out.is_success())
+    ToolOutput {
+        tool_name: name.to_string(),
+        tool_args: args,
+        content: out.render(),
+        bytes_transferred: out.bytes_transferred(),
+        duration: start.elapsed(),
+        status: match out.status() {
+            BashStatus::Success => ToolStatus::Success,
+            BashStatus::Error => ToolStatus::Error,
+            BashStatus::Timeout => ToolStatus::TimedOut,
+            BashStatus::Blocked => ToolStatus::Blocked,
+        },
+    }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

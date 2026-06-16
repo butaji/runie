@@ -2,6 +2,102 @@ use crate::commands::handlers::session::io as session_io;
 use crate::commands::{CommandDef, CommandFlow, CommandResult};
 use crate::model::AppState;
 
+// ── Palette Ranking ─────────────────────────────────────────────────────────────
+
+#[test]
+fn frequently_used_command_ranks_higher() {
+    let mut state = AppState::default();
+    // Invoke /compact twice to record usage
+    state.record_command_usage("compact");
+    state.record_command_usage("compact");
+
+    let ranked = state.rank_commands("com", 10);
+    // compact should outrank model (m-o-d-e-l) for "com"
+    let names: Vec<_> = ranked.iter().map(|(cmd, _)| cmd.name.as_str()).collect();
+    assert!(
+        names.contains(&"compact"),
+        "compact should appear in ranking for 'com'"
+    );
+}
+
+#[test]
+fn recent_command_gets_recency_boost() {
+    let mut state = AppState::default();
+    // model then compact
+    state.record_command_usage("model");
+    state.record_command_usage("compact");
+
+    let ranked = state.rank_commands("", 10);
+    let names: Vec<_> = ranked.iter().map(|(cmd, _)| cmd.name.as_str()).collect();
+    // compact was used most recently, should appear before model for empty query
+    let compact_pos = names.iter().position(|&n| n == "compact");
+    let model_pos = names.iter().position(|&n| n == "model");
+    assert!(
+        compact_pos.is_some() && model_pos.is_some(),
+        "both compact and model should be ranked"
+    );
+    // compact was used last, so it should come before model in the list
+    assert!(
+        compact_pos.unwrap() < model_pos.unwrap(),
+        "compact (used last) should rank before model for empty query"
+    );
+}
+
+#[test]
+fn invoking_command_records_usage() {
+    let mut state = AppState::default();
+    let result = state.handle_slash("/compact");
+    // handle_slash returns None for commands with no message output
+    let _ = result;
+    assert!(
+        state.command_usage.contains_key("compact"),
+        "invoking /compact should record usage"
+    );
+    assert_eq!(state.command_usage.get("compact").unwrap().count, 1);
+}
+
+#[test]
+fn unknown_command_does_not_record_usage() {
+    let mut state = AppState::default();
+    let result = state.handle_slash("/does_not_exist_xyz");
+    assert!(
+        result.is_some(),
+        "unknown command should return Some(Message)"
+    );
+    assert!(
+        state.command_usage.get("does_not_exist_xyz").is_none(),
+        "unknown command should not record usage"
+    );
+}
+
+#[test]
+fn rank_commands_empty_query_returns_all() {
+    let state = AppState::default();
+    let ranked = state.rank_commands("", 50);
+    assert!(
+        ranked.len() >= 20,
+        "empty query should return all commands"
+    );
+}
+
+#[test]
+fn rank_commands_with_query_filters() {
+    let state = AppState::default();
+    let ranked = state.rank_commands("model", 10);
+    // At least some results should be model-related (new commands may also appear).
+    let model_hits: usize = ranked
+        .iter()
+        .take(5)
+        .filter(|(cmd, _)| {
+            cmd.name.contains("model") || cmd.desc.contains("model")
+        })
+        .count();
+    assert!(
+        model_hits >= 2,
+        "query 'model' should surface model-related commands near the top, got {model_hits} hits in top 5"
+    );
+}
+
 fn get_handler(def: &CommandDef) -> Option<fn(&mut AppState, &str) -> CommandResult> {
     match &def.flow {
         CommandFlow::Handler(f) => Some(*f),

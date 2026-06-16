@@ -1,8 +1,10 @@
 //! Session tree tests — fork, clone, filter
-use crate::event::Event;
+
 use crate::message::{ChatMessage, Role};
 use crate::model::AppState;
 use crate::session_tree::{SessionTree, SessionTreeFilter};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+use crate::event::Event;
 
 fn msg(role: Role, content: &str) -> ChatMessage {
     ChatMessage {
@@ -12,6 +14,15 @@ fn msg(role: Role, content: &str) -> ChatMessage {
         id: "test".into(),
         ..Default::default()
     }
+}
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
 }
 
 // === Layer 1 — State/Logic ===
@@ -90,8 +101,8 @@ fn slash_fork_emits_event() {
     let mut state = AppState::default();
     state.session.messages = vec![msg(Role::User, "hello"), msg(Role::Assistant, "hi")];
     state.input.input.push_str("/fork 1");
-    state.update(Event::Submit); // Opens form with pre-filled index
-    state.update(Event::CommandFormSubmit); // Submits the form
+    state.update(Event::submit()); // Opens form with pre-filled index
+    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
 
     let sys_msgs: Vec<_> = state
         .session
@@ -114,8 +125,7 @@ fn slash_fork_emits_event() {
 #[test]
 fn slash_tree_opens_dialog() {
     let mut state = AppState::default();
-    state.input.input.push_str("/tree");
-    state.update(Event::Submit);
+    palette_select(&mut state, "tree");
 
     assert!(
         matches!(
@@ -134,10 +144,10 @@ fn tree_navigates_up_down() {
         msg(Role::Assistant, "b"),
         msg(Role::User, "c"),
     ]));
-    state.update(Event::ToggleSessionTree);
+    state.update(Event::Session(SessionEvent::ToggleSessionTree));
 
     // Up should decrement selected
-    state.update(Event::HistoryPrev);
+    state.update(Event::Input(InputEvent::HistoryPrev));
     let selected = match &state.open_dialog {
         Some(crate::commands::DialogState::SessionTree(stack)) => {
             stack.current().map(|p| p.selected)
@@ -147,7 +157,7 @@ fn tree_navigates_up_down() {
     assert_eq!(selected, Some(2), "up at first wraps to last");
 
     // Down should increment selected
-    state.update(Event::HistoryNext);
+    state.update(Event::Input(InputEvent::HistoryNext));
     let selected = match &state.open_dialog {
         Some(crate::commands::DialogState::SessionTree(stack)) => {
             stack.current().map(|p| p.selected)
@@ -166,9 +176,9 @@ fn tree_filter_cycle_event() {
         msg(Role::User, "a"),
         msg(Role::Assistant, "b"),
     ]));
-    state.update(Event::ToggleSessionTree);
+    state.update(Event::Session(SessionEvent::ToggleSessionTree));
 
-    state.update(Event::SessionTreeFilterCycle);
+    state.update(Event::Session(SessionEvent::SessionTreeFilterCycle));
     assert!(
         matches!(
             state.open_dialog,

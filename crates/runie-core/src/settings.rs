@@ -1,7 +1,7 @@
 //! Settings dialog state and items.
 
 /// Category for grouping settings in the dialog.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SettingsCategory {
     Models,
     Appearance,

@@ -5,6 +5,7 @@
 //! ```
 //! use runie_core::commands::CommandCategory;
 //! use runie_core::Event;
+//! use runie_core::event::{CommandEvent, LoginFlowEvent};
 //!
 //! // Simple message command
 //! let _ = runie_core::cmd!("hello", "Hello!");
@@ -16,16 +17,16 @@
 //!     .category(CommandCategory::Session)
 //!     .form("Save", |f| {
 //!         f.field("Name", "session", "name").on_submit(|values| {
-//!             Event::RunSaveCommand {
+//!             Event::Command(CommandEvent::RunSaveCommand {
 //!                 name: values.get("name").cloned().unwrap_or_default(),
-//!             }
+//!             })
 //!         })
 //!     });
 //! ```
 
 pub mod agents_manager;
-mod dsl;
-pub mod handlers;
+pub mod dsl;
+pub mod handlers; // exposed for dispatch.rs to reach session.* and system.*
 mod registry;
 #[cfg(test)]
 mod tests;
@@ -39,10 +40,6 @@ pub use registry::{filter_commands, CommandRegistry, DialogState};
 pub use dsl::cmd;
 
 /// One row in the command palette.
-///
-/// Structured like [`dialog::builders::SettingsRow`](crate::dialog::builders::SettingsRow):
-/// the palette builder receives typed rows and decides how to render them,
-/// instead of parsing a combined "name description" string.
 #[derive(Debug, Clone)]
 pub struct CommandRow {
     pub category: String,

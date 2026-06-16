@@ -1,5 +1,6 @@
 use futures::Stream;
-use runie_core::provider::{Message, Provider, ResponseChunk};
+use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::provider::{Message, Provider};
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -104,7 +105,7 @@ impl Provider for MockProvider {
     fn generate(
         &self,
         messages: Vec<Message>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ResponseChunk>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
         let delay_ms = self.random_delay();
         let last = messages.last();
         let user_input = messages
@@ -123,8 +124,9 @@ impl Provider for MockProvider {
                 if let Some(d) = delay_ms {
                     tokio::time::sleep(d).await;
                 }
-                yield Ok(ResponseChunk { content: chunk_text });
+                yield Ok(LLMEvent::TextDelta(chunk_text));
             }
+            yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
         })
     }
 }
@@ -179,7 +181,7 @@ impl Provider for MockStreamingProvider {
     fn generate(
         &self,
         messages: Vec<Message>,
-    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<ResponseChunk>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = anyhow::Result<LLMEvent>> + Send + '_>> {
         let user_input = messages
             .iter()
             .rev()
@@ -206,11 +208,12 @@ impl Provider for MockStreamingProvider {
                 let start = i * chunk_size;
                 let end = (start + chunk_size).min(response.len());
                 let chunk = String::from_utf8_lossy(&response.as_bytes()[start..end]).to_string();
-                yield Ok(ResponseChunk { content: chunk });
+                yield Ok(LLMEvent::TextDelta(chunk));
                 if i < total_chunks - 1 && delay_ms > 0 {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                 }
             }
+            yield Ok(LLMEvent::Finish { reason: StopReason::Stop });
         })
     }
 }

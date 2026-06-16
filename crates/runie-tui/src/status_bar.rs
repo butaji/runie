@@ -51,6 +51,13 @@ pub(crate) fn build_left_text(snap: &Snapshot) -> String {
     if snap.thinking_level != runie_core::model::ThinkingLevel::Off {
         parts.push(format!("Think: {}", snap.thinking_level.as_str()));
     }
+    if snap.execution_mode.uses_orchestrator() {
+        if let Some(ref state) = snap.orchestrator_state {
+            parts.push(state.label().to_string());
+        } else {
+            parts.push("[Team]".to_string());
+        }
+    }
     if !snap.pending_edits.is_empty() {
         parts.push(format!("{} pending", snap.pending_edits.len()));
     }
@@ -187,6 +194,69 @@ mod tests {
         assert_eq!(
             context_window_for("unknown", "model"),
             super::DEFAULT_CONTEXT_WINDOW
+        );
+    }
+
+    #[test]
+    fn status_bar_shows_worktree_label() {
+        let snap = runie_core::Snapshot {
+            git_info: Some(runie_core::snapshot::GitInfo {
+                repo_name: Some("runie".to_string()),
+                branch: Some("main".to_string()),
+                is_worktree: true,
+                worktree_source: Some("/Users/admin/Code/GitHub/runie".to_string()),
+            }),
+            cwd_name: "agent-impl".to_string(),
+            ..Default::default()
+        };
+        let left = super::build_left_text(&snap);
+        assert!(
+            left.contains("worktree"),
+            "left text should contain worktree: {left}"
+        );
+    }
+
+    #[test]
+    fn status_bar_shows_orchestrator_state_in_team_mode() {
+        use runie_core::orchestrator_actor::OrchestratorState;
+        let snap = runie_core::Snapshot {
+            execution_mode: runie_core::orchestrator::ExecutionMode::Team,
+            orchestrator_state: Some(OrchestratorState::Planning),
+            git_info: Some(runie_core::snapshot::GitInfo {
+                repo_name: Some("runie".to_string()),
+                branch: Some("main".to_string()),
+                is_worktree: false,
+                worktree_source: None,
+            }),
+            cwd_name: "agent-impl".to_string(),
+            ..Default::default()
+        };
+        let left = super::build_left_text(&snap);
+        assert!(
+            left.contains("Planning"),
+            "left text should contain Planning: {left}"
+        );
+    }
+
+    #[test]
+    fn status_bar_hides_orchestrator_in_solo_mode() {
+        use runie_core::orchestrator_actor::OrchestratorState;
+        let snap = runie_core::Snapshot {
+            execution_mode: runie_core::orchestrator::ExecutionMode::Solo,
+            orchestrator_state: Some(OrchestratorState::Executing),
+            git_info: Some(runie_core::snapshot::GitInfo {
+                repo_name: Some("runie".to_string()),
+                branch: Some("main".to_string()),
+                is_worktree: false,
+                worktree_source: None,
+            }),
+            cwd_name: "agent-impl".to_string(),
+            ..Default::default()
+        };
+        let left = super::build_left_text(&snap);
+        assert!(
+            !left.contains("Executing"),
+            "solo mode should not show orchestrator state: {left}"
         );
     }
 }

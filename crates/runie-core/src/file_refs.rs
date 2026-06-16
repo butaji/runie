@@ -1,5 +1,91 @@
 use base64::Engine;
+use std::ops::RangeInclusive;
 use std::path::Path;
+
+/// Parsed result from a `@path` or `@path:start-end` reference.
+#[derive(Debug, Clone)]
+pub struct ParsedFileRef {
+    /// The file path (range suffix stripped if present).
+    pub path: String,
+    /// The line range if `:start-end` suffix was present.
+    pub range: Option<RangeInclusive<u32>>,
+    /// The original input string (used to preserve range suffix on insertion).
+    pub original: String,
+}
+
+/// Parse a file reference string, supporting optional `:start-end` line range suffix.
+///
+/// Examples:
+/// - `"src/main.rs"` → `("src/main.rs", None)`
+/// - `"src/main.rs:10-50"` → `("src/main.rs", Some(10..=50))`
+/// - `"src/main.rs:10"` → `("src/main.rs:10", None)` — trailing colon not a range
+pub fn parse_file_ref(input: &str) -> Option<ParsedFileRef> {
+    if input.is_empty() {
+        return None;
+    }
+
+    let Some(colon_pos) = find_range_separator(input) else {
+        return Some(plain_ref(input, input));
+    };
+
+    let path = input[..colon_pos].to_string();
+    let range_str = &input[colon_pos + 1..];
+
+    if !is_valid_range_str(range_str) {
+        return Some(plain_ref(input, input));
+    }
+
+    // Try to parse the range.
+    let parts: Vec<&str> = range_str.split('-').collect();
+    let start: u32 = match parts[0].trim().parse() {
+        Ok(n) if n != 0 => n,
+        _ => return None, // unparseable or zero — unrecoverable
+    };
+    let end: u32 = match parts[1].trim().parse() {
+        Ok(n) if n != 0 => n,
+        _ => return None,
+    };
+
+    if start > end {
+        // Inverted range — path is the part before the colon.
+        return Some(plain_ref(&path, input));
+    }
+
+    Some(ParsedFileRef {
+        path,
+        range: Some(start..=end),
+        original: input.to_string(),
+    })
+}
+
+/// Return a plain ParsedFileRef with an explicit path and the original input preserved.
+fn plain_ref(path: &str, original: &str) -> ParsedFileRef {
+    ParsedFileRef {
+        path: path.to_string(),
+        range: None,
+        original: original.to_string(),
+    }
+}
+
+/// Check if a range suffix string has exactly one hyphen (valid for range parsing).
+fn is_valid_range_str(s: &str) -> bool {
+    s.matches('-').count() == 1 && !s.starts_with('-') && !s.ends_with('-')
+}
+
+/// Find the position of the `:` that separates the path from a line range suffix.
+/// Requires a `:` followed by at least one digit (valid range start).
+fn find_range_separator(input: &str) -> Option<usize> {
+    // Find the last `:` in the string.
+    let last_colon = input.rfind(':')?;
+
+    // It must be followed by at least one digit (start of line number).
+    let after = input.get(last_colon + 1..)?;
+    if !after.starts_with(|c: char| c.is_ascii_digit()) {
+        return None;
+    }
+
+    Some(last_colon)
+}
 
 #[derive(Debug, Clone)]
 pub struct FileRef {
@@ -131,23 +217,71 @@ pub fn is_image_file(path: &str) -> bool {
 }
 
 pub fn read_file_ref(path: &str) -> Result<FileRef, String> {
+    read_file_ref_with_range(path, None)
+}
+
+/// Read a file reference, optionally extracting only the given line range.
+/// Returns only those lines (1-indexed, inclusive), clamped to the file's actual bounds.
+pub fn read_file_ref_with_range(
+    path: &str,
+    range: Option<RangeInclusive<u32>>,
+) -> Result<FileRef, String> {
     let is_image = is_image_file(path);
-    let (text, is_image) = if is_image {
+
+    if is_image {
+        // Images are always read whole — ranges don't apply.
         let bytes = std::fs::read(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
-        (
-            base64::engine::general_purpose::STANDARD.encode(&bytes),
-            true,
-        )
-    } else {
-        let text =
-            std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
-        (text, false)
+        return Ok(FileRef {
+            path: path.to_string(),
+            text: base64::engine::general_purpose::STANDARD.encode(&bytes),
+            is_image: true,
+        });
+    }
+
+    let full_text =
+        std::fs::read_to_string(path).map_err(|e| format!("Error reading {}: {}", path, e))?;
+
+    let text = match range {
+        None => full_text,
+        Some(r) => extract_lines(&full_text, r)?,
     };
+
     Ok(FileRef {
         path: path.to_string(),
         text,
-        is_image,
+        is_image: false,
     })
+}
+
+/// Extract lines from a text string, given a 1-indexed inclusive range.
+/// Returns an error for invalid ranges (start > end).
+pub fn extract_lines(text: &str, range: RangeInclusive<u32>) -> Result<String, String> {
+    let total_lines = text.lines().count();
+    if total_lines == 0 {
+        return Ok(String::new());
+    }
+
+    let total_lines_u32 = total_lines as u32;
+    let start = *range.start();
+    let end = *range.end();
+
+    if start > end {
+        return Err(format!(
+            "Invalid range: start ({}) > end ({})",
+            start, end
+        ));
+    }
+
+    // Clamp to file bounds.
+    let start = start.min(total_lines_u32);
+    let end = end.min(total_lines_u32);
+
+    // Convert from 1-indexed to 0-indexed.
+    let start_idx = (start - 1) as usize;
+    let end_idx = (end - 1) as usize;
+
+    let lines: Vec<&str> = text.lines().skip(start_idx).take(end_idx - start_idx + 1).collect();
+    Ok(lines.join("\n"))
 }
 
 pub fn complete_at_ref(input: &str, base: &str, limit: usize) -> Vec<String> {

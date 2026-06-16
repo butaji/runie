@@ -1,4 +1,5 @@
 use crate::model::ThinkingLevel;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::session::{Session, Store};
 use crate::{AppState, Event};
 
@@ -85,16 +86,16 @@ fn shift_tab_cycles() {
     let mut state = AppState::default();
     assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 
-    state.update(Event::CycleThinkingLevel);
+    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
     assert_eq!(state.config.thinking_level, ThinkingLevel::Low);
 
-    state.update(Event::CycleThinkingLevel);
+    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
     assert_eq!(state.config.thinking_level, ThinkingLevel::Medium);
 
-    state.update(Event::CycleThinkingLevel);
+    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
-    state.update(Event::CycleThinkingLevel);
+    state.update(Event::ModelConfig(ModelConfigEvent::CycleThinkingLevel));
     assert_eq!(state.config.thinking_level, ThinkingLevel::Off);
 }
 
@@ -102,8 +103,8 @@ fn shift_tab_cycles() {
 fn slash_thinking_sets() {
     let mut state = AppState::default();
     state.input.input.push_str("/thinking high");
-    state.update(Event::Submit); // Opens form with pre-filled level
-    state.update(Event::CommandFormSubmit); // Submits the form
+    state.update(Event::submit()); // Opens form with pre-filled level
+    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 
     let sys_msgs: Vec<_> = state
@@ -122,7 +123,7 @@ fn slash_thinking_no_args_shows_panel() {
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
     state.input.input.push_str("/thinking");
-    state.update(Event::Submit); // Opens the thinking level selector panel
+    state.update(Event::submit()); // Opens the thinking level selector panel
 
     // Panel should be open
     assert!(state.open_dialog.is_some(), "panel should be open");
@@ -142,7 +143,7 @@ fn thinking_panel_contains_all_levels() {
     let mut state = AppState::default();
     state.config.thinking_level = ThinkingLevel::Medium;
     state.input.input.push_str("/thinking");
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     let Some(DialogState::PanelStack(stack)) = &state.open_dialog else {
         panic!("expected PanelStack dialog");
@@ -180,7 +181,7 @@ fn thinking_panel_has_cli_usage_hint() {
     use crate::commands::DialogState;
     let mut state = AppState::default();
     state.input.input.push_str("/thinking");
-    state.update(Event::Submit);
+    state.update(Event::submit());
     let Some(DialogState::PanelStack(stack)) = &state.open_dialog else {
         panic!("expected panel");
     };
@@ -225,6 +226,6 @@ fn thinking_does_not_create_a_form_panel() {
 #[test]
 fn set_thinking_level_event_updates_state() {
     let mut state = AppState::default();
-    state.update(Event::SetThinkingLevel(ThinkingLevel::High));
+    state.update(Event::ModelConfig(ModelConfigEvent::SetThinkingLevel(crate::model::ThinkingLevel::High)));
     assert_eq!(state.config.thinking_level, ThinkingLevel::High);
 }

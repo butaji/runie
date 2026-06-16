@@ -1,7 +1,7 @@
 //! runie-print — Non-interactive CLI for single-turn LLM execution.
 
 use anyhow::Result;
-use runie_agent::{build_provider_with_warning, run_headless_turn, tool_to_json, HeadlessOptions};
+use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
 use runie_core::{
     config_reload,
     provider::{Message, Provider},
@@ -52,11 +52,10 @@ async fn run_print_with(prompt: &str, provider: &dyn Provider) -> Result<()> {
     let options = HeadlessOptions {
         execute_tools: true,
         max_tool_rounds: 5,
-        on_chunk: Some(&mut |chunk: &str| {
+        on_chunk: Some(Box::new(|chunk: &str| {
             print!("{}", chunk);
             let _ = std::io::Write::flush(&mut std::io::stdout());
-        }),
-        tool_to_json: Some(&tool_to_json),
+        })),
     };
 
     run_headless_turn(messages, provider, options).await?;

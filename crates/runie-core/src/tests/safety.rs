@@ -1,6 +1,6 @@
 //! Safety command tests — read-only mode and trust system
 use super::slash::exec;
-use crate::event::Event;
+use crate::event::{Event, InputEvent, ModelConfigEvent, DialogEvent};
 use crate::model::AppState;
 
 pub fn fresh_state() -> AppState {
@@ -9,17 +9,26 @@ pub fn fresh_state() -> AppState {
 
 pub fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
+}
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
 }
 
 #[test]
 fn toggle_flips_read_only() {
     let mut state = fresh_state();
     assert!(!state.config.read_only, "default is read-write");
-    state.update(Event::ToggleReadOnly);
+    state.update(Event::ModelConfig(ModelConfigEvent::ToggleReadOnly));
     assert!(state.config.read_only, "toggled to read-only");
-    state.update(Event::ToggleReadOnly);
+    state.update(Event::ModelConfig(ModelConfigEvent::ToggleReadOnly));
     assert!(!state.config.read_only, "toggled back to read-write");
 }
 
@@ -27,8 +36,7 @@ fn toggle_flips_read_only() {
 fn slash_readonly_toggles() {
     let mut state = fresh_state();
     assert!(!state.config.read_only);
-    type_str(&mut state, "/readonly");
-    state.update(Event::Submit);
+    palette_select(&mut state, "readonly");
     assert!(state.config.read_only, "/readonly toggles read_only");
     assert!(
         state
@@ -56,8 +64,7 @@ fn slash_ro_alias_toggles() {
 fn slash_trust_sets_trusted() {
     let mut state = fresh_state();
     state.config.read_only = true;
-    type_str(&mut state, "/trust");
-    state.update(Event::Submit);
+    palette_select(&mut state, "trust");
     assert!(!state.config.read_only, "/trust disables read-only");
     assert!(
         state
@@ -77,8 +84,7 @@ fn slash_trust_sets_trusted() {
 #[test]
 fn slash_untrust_sets_untrusted() {
     let mut state = fresh_state();
-    type_str(&mut state, "/untrust");
-    state.update(Event::Submit);
+    palette_select(&mut state, "untrust");
     assert!(state.config.read_only, "/untrust enables read-only");
     assert!(
         state

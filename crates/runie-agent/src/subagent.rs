@@ -10,8 +10,10 @@
 //! Errors (network, parse, etc.) are returned as a structured `SubagentError`.
 
 use crate::{run_agent_turn, AgentCommand};
+use runie_core::event::AgentEvent;
 use runie_core::event::Event;
 use runie_core::model::ThinkingLevel;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -89,29 +91,40 @@ async fn run_subagent_turn(
     cmd: &AgentCommand,
     max_iterations: usize,
 ) -> Result<String, SubagentError> {
-    let mut responses: Vec<String> = Vec::new();
-    let mut done = false;
-    let mut error: Option<String> = None;
+    let responses = Arc::new(Mutex::new(Vec::new()));
+    let done = Arc::new(Mutex::new(false));
+    let error = Arc::new(Mutex::new(None::<String>));
+
+    let responses_clone = responses.clone();
+    let done_clone = done.clone();
+    let error_clone = error.clone();
 
     run_agent_turn(
         provider,
         cmd,
-        |evt| match evt {
-            Event::AgentResponse { content, .. } => responses.push(content),
-            Event::AgentError { message, .. } => error = Some(message),
-            Event::AgentDone { .. } => done = true,
-            _ => {}
-        },
+        Arc::new(Mutex::new(move |evt: runie_core::Event| {
+            match evt {
+                // Collect both ResponseDelta (streaming) and Response (complete)
+                Event::Agent(AgentEvent::ResponseDelta { content, .. })
+                | Event::Agent(AgentEvent::Response { content, .. }) => {
+                    responses_clone.lock().unwrap().push(content)
+                }
+                Event::Agent(AgentEvent::Error { message, .. }) => *error_clone.lock().unwrap() = Some(message),
+                Event::Agent(AgentEvent::Done { .. }) => *done_clone.lock().unwrap() = true,
+                _ => {}
+            }
+        })),
         max_iterations,
     )
     .await
     .map_err(|e| SubagentError::Agent(e.to_string()))?;
 
-    if let Some(msg) = error {
+    if let Some(msg) = error.lock().unwrap().take() {
         return Err(SubagentError::Agent(msg));
     }
-    if !done {
+    if !*done.lock().unwrap() {
         return Err(SubagentError::Agent("subagent did not finish".into()));
     }
-    Ok(responses.join(""))
+    let result = responses.lock().unwrap().join("");
+    Ok(result)
 }

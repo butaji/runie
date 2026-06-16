@@ -1,43 +1,48 @@
 use super::{content_has_tool_markers, now, strip_tool_markers};
+use crate::event::AgentEvent;
 use crate::labels::{thought_with_time, tool_done, tool_running};
 use crate::model::{AppState, ChatMessage, Role};
-use crate::Event;
+use crate::update::dialog::dialog_toggle_event;
 
-pub fn agent_event(state: &mut AppState, event: Event) {
+pub fn agent_event(state: &mut AppState, event: AgentEvent) {
     match event {
-        Event::AgentThinking { id } => {
+        AgentEvent::Thinking { id } => {
             state.set_thinking(id);
             state.ensure_turn_complete_last();
         }
-        Event::AgentThoughtDone { id } => {
+        AgentEvent::ThoughtDone { id } => {
             state.add_thought(id);
             state.ensure_turn_complete_last();
         }
-        Event::AgentToolStart { id, name } => {
+        AgentEvent::ToolStart { id, name } => {
             state.start_tool(id, name);
             state.ensure_turn_complete_last();
         }
-        Event::AgentToolEnd {
+        AgentEvent::ToolEnd {
             duration_secs,
             output,
         } => {
             state.end_tool(duration_secs, output);
             state.ensure_turn_complete_last();
         }
-        Event::AgentResponse { id, content } => {
+        // Transient streaming delta — update buffer, don't persist
+        AgentEvent::ResponseDelta { id, content } => {
+            state.append_response_delta(id, content);
+        }
+        // Complete response — append to message list
+        AgentEvent::Response { id, content } => {
             state.append_response(id, content);
             state.ensure_turn_complete_last();
         }
-        Event::AgentTurnComplete { id, duration_secs } => {
+        AgentEvent::TurnComplete { id, duration_secs } => {
             state.complete_turn(id, duration_secs);
             state.ensure_turn_complete_last();
         }
-        Event::AgentDone { id } => state.finish_turn(id),
-        Event::AgentError { id, message } => {
+        AgentEvent::Done { id } => state.finish_turn(id),
+        AgentEvent::Error { id, message } => {
             state.add_error(id, message);
             state.ensure_turn_complete_last();
         }
-        _ => {}
     }
 }
 
@@ -51,6 +56,8 @@ impl AppState {
         self.agent
             .turn_started_at
             .get_or_insert_with(std::time::Instant::now);
+        // Reset streaming buffer for new turn
+        self.agent.streaming_buffer.reset();
         // Init speed tracking for this turn
         self.agent.turn_tokens_out = 0;
         self.agent.last_speed_update = Some(std::time::Instant::now());
@@ -158,6 +165,24 @@ impl AppState {
         self.create_assistant_message(id, content);
     }
 
+    pub(crate) fn append_response_delta(&mut self, id: String, content: String) {
+        self.track_response_tokens(&content);
+        self.agent.streaming_buffer.push_delta(&content);
+        // Find existing assistant message and append stable content, or create new one
+        let stable_lines = self.agent.streaming_buffer.flush();
+        if !stable_lines.is_empty() {
+            let stable = stable_lines.join("");
+            if let Some(idx) = self.find_cached_assistant_index(&id) {
+                self.append_to_message(idx, &stable);
+            } else if let Some(idx) = self.find_assistant_by_id(&id) {
+                self.agent.last_assistant_index = Some(idx);
+                self.append_to_message(idx, &stable);
+            } else {
+                self.create_assistant_message(id.clone(), stable);
+            }
+        }
+    }
+
     fn track_response_tokens(&mut self, content: &str) {
         if content.is_empty() {
             return;
@@ -205,6 +230,7 @@ impl AppState {
             timestamp: now(),
             id: id.clone(),
             provider: self.config.current_provider.clone(),
+            ..Default::default()
         });
         self.agent.current_request_id = Some(id);
         self.agent.last_assistant_index = Some(idx);
@@ -236,6 +262,14 @@ impl AppState {
     }
 
     pub(crate) fn finish_turn(&mut self, id: String) {
+        // Flush any remaining tail content from streaming buffer
+        let remaining_tail = self.agent.streaming_buffer.force_flush().join("");
+        if !remaining_tail.is_empty() {
+            if let Some(idx) = self.agent.last_assistant_index {
+                self.append_to_message(idx, &remaining_tail);
+            }
+        }
+        self.agent.streaming_buffer.reset();
         self.strip_tools_from_assistant();
         self.remove_empty_assistant();
         self.clear_turn_state(&id);
@@ -338,6 +372,7 @@ impl AppState {
             timestamp: now(),
             id: format!("error.{}", id),
             provider: self.config.current_provider.clone(),
+            ..Default::default()
         };
         if let Some(idx) = self
             .session
@@ -352,4 +387,206 @@ impl AppState {
         }
         self.messages_changed();
     }
+}
+
+// ── @-ref handling (merged from at_refs.rs) ───────────────────────────────────
+
+impl AppState {
+    /// Legacy @-trigger popup disabled — file picker now uses PanelStack dialog.
+    /// Clears stale state and ghost completions on any text change.
+    pub(crate) fn handle_at_trigger(&mut self) {
+        self.clear_ghost();
+        self.completion.at_suggestions = None;
+        self.completion.at_selected = None;
+        self.completion.last_at_query = None;
+    }
+
+    /// Insert the currently selected @ suggestion into the input.
+    /// Wraps the path in [...] format.
+    pub(crate) fn insert_at_suggestion(&mut self) {
+        let suggestions = match &self.completion.at_suggestions {
+            Some(s) if !s.is_empty() => s,
+            _ => {
+                // No suggestions, just clear state
+                self.completion.at_suggestions = None;
+                self.completion.at_selected = None;
+                return;
+            }
+        };
+
+        let selected_idx = self.completion.at_selected.unwrap_or(0);
+        if let Some(selected) = suggestions.get(selected_idx) {
+            // Insert the selected suggestion wrapped in [...]
+            self.input.input.push_str(&format!("[{}]", selected));
+            self.input.cursor_pos = self.input.input.len();
+        }
+
+        // Clear completion state
+        self.completion.at_suggestions = None;
+        self.completion.at_selected = None;
+        self.mark_dirty();
+    }
+}
+
+// ── Model config events (merged from model_config.rs) ─────────────────────────
+
+use crate::event::ModelConfigEvent;
+use crate::Event;
+
+pub fn model_config_event(state: &mut AppState, event: ModelConfigEvent) {
+    let invalidate = handle_main_events(state, &event)
+        || handle_scoped_events(state, &event)
+        || handle_settings_events(state, &event);
+    if invalidate {
+        state.view.cached_settings_valid = false;
+    }
+}
+
+fn handle_main_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
+    match event {
+        ModelConfigEvent::SwitchModel { provider, model } => {
+            state.switch_model(provider.clone(), model.clone());
+            true
+        }
+        ModelConfigEvent::SwitchTheme { name } => {
+            state.switch_theme(name.clone());
+            true
+        }
+        ModelConfigEvent::CycleModelNext => {
+            state.cycle_model(1);
+            false
+        }
+        ModelConfigEvent::CycleModelPrev => {
+            state.cycle_model(-1);
+            false
+        }
+        ModelConfigEvent::CycleThinkingLevel => {
+            state.cycle_thinking_level();
+            true
+        }
+        ModelConfigEvent::SetThinkingLevel(level) => {
+            state.set_thinking_level(*level);
+            true
+        }
+        ModelConfigEvent::ToggleReadOnly => {
+            state.toggle_read_only();
+            true
+        }
+        _ => false,
+    }
+}
+
+fn handle_scoped_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
+    match event {
+        ModelConfigEvent::TrustProject => {
+            state.trust_project();
+            false
+        }
+        ModelConfigEvent::UntrustProject => {
+            state.untrust_project();
+            false
+        }
+        ModelConfigEvent::ReloadAll => {
+            state.reload_all();
+            false
+        }
+        ModelConfigEvent::ScopedModelToggle { name } => {
+            toggle_scoped_model(state, name);
+            false
+        }
+        ModelConfigEvent::ScopedModelEnableAll => {
+            enable_all(state);
+            false
+        }
+        ModelConfigEvent::ScopedModelDisableAll => {
+            disable_all(state);
+            false
+        }
+        ModelConfigEvent::ScopedModelToggleProvider { provider } => {
+            toggle_provider(state, provider);
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Handle settings dialog navigation and selection events.
+/// When a dialog is open, delegate to update_dialog for proper panel stack handling.
+fn handle_settings_events(state: &mut AppState, event: &ModelConfigEvent) -> bool {
+    match event {
+        ModelConfigEvent::ToggleSettingsDialog => {
+            dialog_toggle_event(
+                state,
+                crate::event::DialogEvent::ToggleSettingsDialog,
+            );
+            true
+        }
+        ModelConfigEvent::ToggleScopedModelsDialog => {
+            dialog_toggle_event(
+                state,
+                crate::event::DialogEvent::ToggleScopedModelsDialog,
+            );
+            true
+        }
+        ModelConfigEvent::SettingsClose => {
+            crate::update::dialog::update_dialog(state, Event::ModelConfig(event.clone()));
+            true
+        }
+        ModelConfigEvent::SettingsSelect
+        | ModelConfigEvent::SettingsDown
+        | ModelConfigEvent::SettingsUp
+        | ModelConfigEvent::SettingsLeft
+        | ModelConfigEvent::SettingsRight => {
+            if state.open_dialog.is_some() {
+                crate::update::dialog::update_dialog(state, Event::ModelConfig(event.clone()));
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
+// ── Scoped models (merged from scoped_models.rs) ─────────────────────────────
+
+use crate::model::AppState as AppState2;
+
+pub fn toggle_scoped_model(state: &mut AppState, name: &str) {
+    if let Some(idx) = state
+        .config
+        .scoped_models
+        .iter()
+        .position(|m| m.name == name)
+    {
+        state.config.scoped_models[idx].enabled = !state.config.scoped_models[idx].enabled;
+        state.mark_dirty();
+    }
+}
+
+pub fn enable_all(state: &mut AppState) {
+    for m in &mut state.config.scoped_models {
+        m.enabled = true;
+    }
+    state.mark_dirty();
+}
+
+pub fn disable_all(state: &mut AppState) {
+    for m in &mut state.config.scoped_models {
+        m.enabled = false;
+    }
+    state.mark_dirty();
+}
+
+pub fn toggle_provider(state: &mut AppState, provider: &str) {
+    let all_enabled = state
+        .config
+        .scoped_models
+        .iter()
+        .filter(|m| m.provider == provider)
+        .all(|m| m.enabled);
+    for m in &mut state.config.scoped_models {
+        if m.provider == provider {
+            m.enabled = !all_enabled;
+        }
+    }
+    state.mark_dirty();
 }

@@ -1,7 +1,9 @@
 //! Skills System — Load SKILL.md files from user and project directories.
 //!
-//! Skills inject context into the system prompt and can be user-invocable.
+//! Supports both flat layout (`name.md`) and nested layout (`name/SKILL.md`).
+//! YAML frontmatter is optional and takes precedence over markdown sections.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 /// A loaded skill parsed from a SKILL.md file.
@@ -41,9 +43,37 @@ pub fn load_all() -> Vec<Skill> {
     skills
 }
 
-/// Load all SKILL.md files from a directory.
+/// Load all skills from a directory.
+/// Scans for subdirectories with SKILL.md files first, then flat .md files.
+/// Subdirectory skills take precedence over flat files with the same name.
 pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return Vec::new(),
+    };
+
+    // Track which skill names we've loaded from subdirectories
+    let mut subdir_names: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut skills = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+
+        // Check for subdirectory with SKILL.md
+        if path.is_dir() {
+            let skill_md = path.join("SKILL.md");
+            if skill_md.exists() {
+                if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                    subdir_names.insert(name.to_string());
+                }
+                if let Some(skill) = parse_skill_md(&skill_md) {
+                    skills.push(skill);
+                }
+            }
+        }
+    }
+
+    // Now scan for flat .md files, skipping those already loaded from subdirectories
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
         Err(_) => return skills,
@@ -52,8 +82,11 @@ pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) == Some("md") {
-            if let Some(skill) = parse_skill_md(&path) {
-                skills.push(skill);
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("unnamed");
+            if !subdir_names.contains(stem) {
+                if let Some(skill) = parse_skill_md(&path) {
+                    skills.push(skill);
+                }
             }
         }
     }
@@ -61,18 +94,39 @@ pub fn load_from_dir(dir: &Path) -> Vec<Skill> {
     skills
 }
 
-/// Parse a single SKILL.md file.
+/// Parse a single SKILL.md file, optionally with YAML frontmatter.
 fn parse_skill_md(path: &Path) -> Option<Skill> {
     let content = std::fs::read_to_string(path).ok()?;
-    let name = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("unnamed")
-        .to_string();
 
-    let description = extract_section(&content, "Description").unwrap_or_default();
-    let context = extract_section(&content, "Context").unwrap_or_default();
-    let invocation = extract_section(&content, "Invocation").unwrap_or_default();
+    // Parse optional YAML frontmatter using serde_yaml
+    let frontmatter = extract_frontmatter(&content);
+
+    let name = frontmatter
+        .get("name")
+        .cloned()
+        .or_else(|| {
+            // Derive name from path: for subdir/SKILL.md use dir name, else file stem
+            if path.file_name().and_then(|s| s.to_str()) == Some("SKILL.md") {
+                path.parent()?.file_name()?.to_str().map(|s| s.to_string())
+            } else {
+                path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string())
+            }
+        })
+        .unwrap_or_else(|| "unnamed".to_string());
+
+    let description = frontmatter
+        .get("description")
+        .cloned()
+        .unwrap_or_else(|| extract_section(&content, "Description").unwrap_or_default());
+
+    let context = frontmatter
+        .get("context")
+        .cloned()
+        .unwrap_or_else(|| extract_section(&content, "Context").unwrap_or_default());
+    let invocation = frontmatter
+        .get("invocation")
+        .cloned()
+        .unwrap_or_else(|| extract_section(&content, "Invocation").unwrap_or_default());
     let user_invocable = invocation.to_lowercase().contains("user can invoke")
         || invocation.to_lowercase().contains("/skill");
 
@@ -83,6 +137,47 @@ fn parse_skill_md(path: &Path) -> Option<Skill> {
         user_invocable,
         file_path: path.to_owned(),
     })
+}
+
+/// Extract YAML frontmatter from content if present, using serde_yaml.
+/// Returns a HashMap of key-value pairs suitable for the skill frontmatter schema.
+fn extract_frontmatter(content: &str) -> HashMap<String, String> {
+    // Only recognize frontmatter if content starts with "---"
+    if !content.starts_with("---\n") {
+        return HashMap::new();
+    }
+
+    // Find the closing "---"
+    let after_opening = match content.strip_prefix("---\n") {
+        Some(s) => s,
+        None => return HashMap::new(),
+    };
+
+    let end_pos = match after_opening.find("\n---") {
+        Some(p) => p,
+        None => return HashMap::new(),
+    };
+
+    let fm_text = &after_opening[..end_pos];
+    // Body starts after the closing "---\n"
+    let _body = &after_opening[end_pos + 4..];
+
+    // Parse YAML with serde_yaml
+    match serde_yaml::from_str::<serde_yaml::Value>(fm_text) {
+        Ok(serde_yaml::Value::Mapping(mapping)) => {
+            let mut result = HashMap::new();
+            for (k, v) in mapping {
+                if let serde_yaml::Value::String(key) = k {
+                    if let serde_yaml::Value::String(val) = v {
+                        result.insert(key, val);
+                    }
+                }
+            }
+            result
+        }
+        // Non-mapping values (e.g. a bare string) are treated as no frontmatter
+        _ => HashMap::new(),
+    }
 }
 
 /// Extract text under a markdown `## Section` heading.
@@ -233,5 +328,207 @@ mod tests {
 
         let skills = load_from_dir(dir.path());
         assert!(skills.is_empty());
+    }
+
+    #[test]
+    fn subdirectory_skill_loads() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("rust");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        file.write_all(
+            b"# Rust Skill\n\n## Description\n\nBest practices for Rust.\n\n## Context\n\nUse clippy.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "rust");
+        assert_eq!(skills[0].description, "Best practices for Rust.");
+    }
+
+    #[test]
+    fn subdirectory_prefers_over_flat_file() {
+        let dir = tempdir().unwrap();
+
+        // Flat file
+        let mut flat = std::fs::File::create(dir.path().join("rust.md")).unwrap();
+        flat.write_all(b"# Flat Rust\n\n## Description\n\nFlat description.\n")
+            .unwrap();
+
+        // Subdirectory version (should win)
+        let skill_dir = dir.path().join("rust");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut subdir = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        subdir.write_all(
+            b"# Subdir Rust\n\n## Description\n\nSubdir description.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "rust");
+        assert_eq!(skills[0].description, "Subdir description.");
+    }
+
+    #[test]
+    fn yaml_frontmatter_overrides_name_and_description() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("my-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        file.write_all(
+            b"---\nname: custom-name\ndescription: From frontmatter\ncontext: Some context.\n---\n\n## Description\n\nFrom section.\n\n## Context\n\nSome section context.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "custom-name");
+        assert_eq!(skills[0].description, "From frontmatter");
+        assert_eq!(skills[0].context, "Some context.");
+    }
+
+    #[test]
+    fn yaml_frontmatter_falls_back_to_sections() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("my-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        file.write_all(
+            b"---\ndescription: Frontmatter desc\n---\n\n## Description\n\nSection desc.\n\n## Context\n\nSome context.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        // Name from dir, description from frontmatter
+        assert_eq!(skills[0].name, "my-skill");
+        assert_eq!(skills[0].description, "Frontmatter desc");
+        assert_eq!(skills[0].context, "Some context.");
+    }
+
+    #[test]
+    fn flat_md_file_still_works() {
+        let dir = tempdir().unwrap();
+        let mut file = std::fs::File::create(dir.path().join("flat.md")).unwrap();
+        file.write_all(
+            b"# Flat Skill\n\n## Description\n\nA flat skill.\n\n## Context\n\nFlat context.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "flat");
+        assert_eq!(skills[0].description, "A flat skill.");
+    }
+
+    #[test]
+    fn build_skills_context_includes_subdir_skill() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("code-review");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        file.write_all(
+            b"# Code Review\n\n## Description\n\nReview code.\n\n## Context\n\nRun clippy before review.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        let ctx = build_skills_context(&skills);
+        assert!(ctx.contains("Run clippy before review."));
+    }
+
+    // ── serde_yaml-specific tests ────────────────────────────────────────────────
+
+    #[test]
+    fn serde_yaml_frontmatter_parses_quoted_strings() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("quoted");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        // Quoted strings: double-quoted handles colons, single-quoted preserves literal
+        file.write_all(
+            b"---\nname: \"quoted-name\"\ndescription: \"Desc with colon: inside\"\ncontext: 'Context with single quotes'\n---\n\n## Description\n\nNot used.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "quoted-name");
+        assert_eq!(skills[0].description, "Desc with colon: inside");
+        assert_eq!(skills[0].context, "Context with single quotes");
+    }
+
+    #[test]
+    fn serde_yaml_frontmatter_parses_multiline_context() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("multiline");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        // Multiline using | (literal block scalar)
+        file.write_all(
+            b"---\nname: multiline-skill\ndescription: A skill\ncontext: |\n  Line one\n  Line two\n  Line three\n---\n\n## Description\n\nNot used.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].context, "Line one\nLine two\nLine three");
+    }
+
+    #[test]
+    fn serde_yaml_frontmatter_parses_multiline_with_indentation() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("folded");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        // Multiline using > (folded block scalar)
+        file.write_all(
+            b"---\nname: folded-skill\ndescription: A skill\ncontext: >\n  This is\n  folded into\n  a single line\n---\n\n## Description\n\nNot used.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        // Folded scalars replace newlines with spaces
+        assert!(skills[0].context.contains("folded into"));
+    }
+
+    #[test]
+    fn serde_yaml_frontmatter_ignores_non_string_values() {
+        let dir = tempdir().unwrap();
+        let skill_dir = dir.path().join("mixed");
+        std::fs::create_dir(&skill_dir).unwrap();
+        let mut file = std::fs::File::create(skill_dir.join("SKILL.md")).unwrap();
+        // A list value (not a string) should be ignored, plain string should be kept
+        file.write_all(
+            b"---\nname: mixed-skill\ntags:\n  - rust\n  - tool\ndescription: Plain string description\n---\n\n## Description\n\nNot used.\n",
+        )
+        .unwrap();
+
+        let skills = load_from_dir(dir.path());
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "mixed-skill");
+        assert_eq!(skills[0].description, "Plain string description");
+    }
+
+    #[test]
+    fn serde_yaml_frontmatter_no_frontmatter_returns_empty() {
+        let fm = extract_frontmatter("# No frontmatter\n\n## Description\n\nJust text.\n");
+        assert!(fm.is_empty());
+    }
+
+    #[test]
+    fn serde_yaml_frontmatter_empty_frontmatter_returns_empty() {
+        let fm = extract_frontmatter("---\n---\n\n## Description\n\nNo keys.\n");
+        assert!(fm.is_empty());
+    }
+
+    #[test]
+    fn serde_yaml_frontmatter_single_quoted_values() {
+        let fm = extract_frontmatter("---\nname: 'single quoted'\ndescription: 'also single'\n---\n");
+        assert_eq!(fm.get("name"), Some(&"single quoted".to_string()));
+        assert_eq!(fm.get("description"), Some(&"also single".to_string()));
     }
 }

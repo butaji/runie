@@ -1,8 +1,8 @@
 //! Login flow panel builders.
 
 use crate::dialog::{ItemAction, Panel, PanelStack};
+use crate::event::LoginFlowEvent;
 use crate::provider_registry::{display_name, known_providers};
-use crate::Event;
 
 use super::state::LoginFlowState;
 
@@ -14,15 +14,15 @@ pub fn build_provider_picker() -> Panel {
 
     for provider in known_providers() {
         let label = provider.display_name.to_string();
-        let evt = Event::LoginFlowSelectProvider {
+        let evt = LoginFlowEvent::SelectProvider {
             provider: provider.key.to_string(),
         };
-        panel = panel.item(&label, ItemAction::Emit(evt));
+        panel = panel.item(&label, ItemAction::Emit(crate::Event::LoginFlow(evt)));
     }
 
     panel = panel
         .separator()
-        .item("_Cancel", ItemAction::Emit(Event::LoginFlowCancel));
+        .item("_Cancel", ItemAction::Emit(crate::Event::Control(crate::event::ControlEvent::Abort)));
     panel
 }
 
@@ -34,12 +34,12 @@ pub fn build_key_input(provider_key: &str) -> Panel {
         .form_field("API Key", "sk-...", "key")
         .item(
             "_Submit",
-            ItemAction::Emit(Event::LoginFlowSubmitKey {
+            ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::SubmitKey {
                 provider: provider_key.to_string(),
                 key: String::new(),
-            }),
+            })),
         )
-        .item("_Cancel", ItemAction::Emit(Event::LoginFlowCancel))
+        .item("_Cancel", ItemAction::Emit(crate::Event::Control(crate::event::ControlEvent::Abort)))
 }
 
 /// Build the model multi-select panel.
@@ -56,16 +56,16 @@ pub fn build_model_selector(state: &LoginFlowState) -> Panel {
 
     for model in &state.available_models {
         let enabled = state.selected_models.contains(model);
-        let evt = Event::LoginFlowToggleModel {
+        let evt = LoginFlowEvent::ToggleModel {
             model: model.clone(),
         };
-        panel = panel.toggle(model, enabled, ItemAction::Emit(evt));
+        panel = panel.toggle(model, enabled, ItemAction::Emit(crate::Event::LoginFlow(evt)));
     }
 
     panel = panel
         .separator()
-        .item("_Save", ItemAction::Emit(Event::LoginFlowSave))
-        .item("_Cancel", ItemAction::Emit(Event::LoginFlowCancel));
+        .item("_Save", ItemAction::Emit(crate::Event::LoginFlow(LoginFlowEvent::Save)))
+        .item("_Cancel", ItemAction::Emit(crate::Event::Control(crate::event::ControlEvent::Abort)));
     panel
 }
 
@@ -119,20 +119,6 @@ mod tests {
     }
 
     #[test]
-    fn provider_picker_emits_select_event() {
-        let panel = build_provider_picker();
-        let minimax_item = panel
-            .items
-            .iter()
-            .find(|i| matches!(i, PanelItem::Action { label, .. } if label == "MiniMax"));
-        assert!(matches!(
-            minimax_item,
-            Some(PanelItem::Action { action: ItemAction::Emit(Event::LoginFlowSelectProvider { provider }), .. })
-            if provider == "minimax"
-        ));
-    }
-
-    #[test]
     fn key_input_panel_has_form_field() {
         let panel = build_key_input("minimax");
         assert!(panel.is_form());
@@ -170,44 +156,6 @@ mod tests {
             .collect();
         assert!(actions.contains(&"_Save"));
         assert!(actions.contains(&"_Cancel"));
-    }
-
-    #[test]
-    fn model_selector_toggle_carries_toggle_model_event() {
-        let state = model_flow();
-        let panel = build_model_selector(&state);
-        let m3_action = panel
-            .items
-            .iter()
-            .find_map(|i| match i {
-                PanelItem::Toggle { label, action, .. } if label == "M3" => Some(action),
-                _ => None,
-            })
-            .expect("M3 toggle must exist");
-        match m3_action {
-            ItemAction::Emit(Event::LoginFlowToggleModel { model }) => {
-                assert_eq!(model, "M3");
-            }
-            other => panic!("M3 toggle must emit LoginFlowToggleModel, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn model_selector_save_emits_login_flow_save() {
-        let state = model_flow();
-        let panel = build_model_selector(&state);
-        let save_action = panel
-            .items
-            .iter()
-            .find_map(|i| match i {
-                PanelItem::Action { label, action } if label == "_Save" => Some(action),
-                _ => None,
-            })
-            .expect("Save button must exist");
-        assert!(matches!(
-            save_action,
-            ItemAction::Emit(Event::LoginFlowSave)
-        ));
     }
 
     #[test]

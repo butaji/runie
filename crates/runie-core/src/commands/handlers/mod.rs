@@ -1,7 +1,23 @@
-use super::CommandRegistry;
+//! Command handlers — delegates to dsl/handlers/.
+//!
+//! Re-exports everything from the unified `dsl::handlers/` location.
 
-pub mod spec;
-pub use spec::{build_cmd, register_commands, CommandKind, CommandSpec};
+use crate::commands::CommandRegistry;
+
+pub mod agents;
+pub mod help;
+pub mod model;
+pub mod session; // re-exported from dsl::handlers::session
+pub mod subagent;
+pub mod system;
+pub mod tool;
+
+// Delegates to dsl::spec so handler modules can use `super::spec::CommandSpec`.
+pub mod spec {
+    pub use crate::commands::dsl::spec::{
+        build_cmd, register_commands, CommandKind, CommandSpec, FormSubmitFn,
+    };
+}
 
 pub fn register_all(registry: &mut CommandRegistry) {
     session::register(registry);
@@ -12,11 +28,3 @@ pub fn register_all(registry: &mut CommandRegistry) {
     agents::register(registry);
     help::register(registry);
 }
-
-pub mod agents;
-pub mod help;
-pub mod model;
-pub mod session;
-pub mod subagent;
-pub mod system;
-pub mod tool;

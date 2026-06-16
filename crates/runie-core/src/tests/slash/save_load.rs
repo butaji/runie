@@ -1,7 +1,17 @@
 use super::{exec, fresh_state, minimal_session, tmp_store, type_str, ENV_LOCK};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
 use crate::model::{ChatMessage, Role};
 use crate::session::Session;
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+}
 
 fn restored_session() -> Session {
     let mut session = minimal_session("restore_me");
@@ -47,7 +57,7 @@ fn load_restores_conversation() {
 
     let mut state = fresh_state();
     exec(&mut state, "/load restore_me");
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     assert_eq!(state.session.messages.len(), 3);
     assert_eq!(state.session.messages[0].content, "hi");
@@ -70,7 +80,7 @@ fn load_missing_session_shows_error() {
 
     let mut state = fresh_state();
     exec(&mut state, "/load nope"); // Opens form with pre-filled name
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
 
     let sys_msgs: Vec<_> = state
         .session
@@ -96,8 +106,7 @@ fn load_missing_session_shows_error() {
 #[test]
 fn load_no_args_opens_form() {
     let mut state = fresh_state();
-    type_str(&mut state, "/load");
-    state.update(Event::Submit);
+    palette_select(&mut state, "load");
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
@@ -120,8 +129,7 @@ fn sessions_lists_saved_sessions() {
     store.save("beta", &minimal_session("beta")).unwrap();
 
     let mut state = fresh_state();
-    type_str(&mut state, "/sessions");
-    state.update(Event::Submit);
+    palette_select(&mut state, "sessions");
 
     let sys_msgs: Vec<_> = state
         .session
@@ -152,8 +160,7 @@ fn sessions_empty_shows_no_sessions() {
     std::env::set_var("RUNIE_SESSIONS_DIR", store.dir.clone());
 
     let mut state = fresh_state();
-    type_str(&mut state, "/sessions");
-    state.update(Event::Submit);
+    palette_select(&mut state, "sessions");
 
     let sys_msgs: Vec<_> = state
         .session
@@ -182,7 +189,7 @@ fn delete_removes_session_file() {
 
     let mut state = fresh_state();
     exec(&mut state, "/delete gone");
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     assert!(!store.path("gone").exists(), "session file removed");
 
@@ -211,7 +218,7 @@ fn delete_missing_session_shows_error() {
 
     let mut state = fresh_state();
     exec(&mut state, "/delete missing"); // Opens form with pre-filled name
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
 
     let sys_msgs: Vec<_> = state
         .session

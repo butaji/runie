@@ -1,6 +1,8 @@
 //! rebuild tests.
 
 use crate::event::Event;
+
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::model::{AppState, ChatMessage, Role};
 use crate::ui::elements::Element;
 use crate::ui::LazyCache;
@@ -25,7 +27,7 @@ fn toggle_expand_affects_all_items() {
         id: "new".into(),
         ..Default::default()
     });
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     assert!(
         state.view.all_collapsed,
         "Toggle should collapse ALL thoughts and tools globally"
@@ -48,7 +50,7 @@ fn toggle_thought_rebuilds_cache() {
         .iter()
         .any(|e| matches!(e, Element::ThoughtMarker { .. })));
 
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     state.ensure_fresh();
     let after = state.view.elements_cache().to_vec();
     assert!(
@@ -69,9 +71,9 @@ fn toggle_thought_twice_restores_cache() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     state.ensure_fresh();
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     state.ensure_fresh();
     let cache = state.view.elements_cache().to_vec();
     assert!(
@@ -96,7 +98,7 @@ fn toggle_tool_rebuilds_cache() {
     let before = state.view.elements_cache().to_vec();
     assert!(before.iter().any(|e| matches!(e, Element::ToolDone { .. })));
 
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     state.ensure_fresh();
     let after = state.view.elements_cache().to_vec();
     assert!(
@@ -117,9 +119,9 @@ fn toggle_tool_twice_restores_cache() {
         id: "t1".into(),
         ..Default::default()
     });
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     state.ensure_fresh();
-    state.update(Event::ToggleExpand);
+    state.update(Event::Control(ControlEvent::ToggleExpand));
     state.ensure_fresh();
     let cache = state.view.elements_cache().to_vec();
     assert!(
@@ -132,20 +134,20 @@ fn toggle_tool_twice_restores_cache() {
 fn thought_captures_assistant_reasoning() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::AgentThinking {
+    state.update(Event::Agent(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "I'll list the files.\n".to_string(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "TOOL:list_dir:.".to_string(),
-    });
-    state.update(Event::AgentThoughtDone {
+    }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    });
+    }));
 
     let thought = state
         .session
@@ -168,16 +170,16 @@ fn thought_captures_assistant_reasoning() {
 fn assistant_preserved_when_no_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::AgentThinking {
+    state.update(Event::Agent(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Here is the answer.".to_string(),
-    });
-    state.update(Event::AgentThoughtDone {
+    }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    });
+    }));
 
     let assistants: Vec<_> = state
         .session
@@ -197,14 +199,14 @@ fn assistant_preserved_when_no_tools() {
 fn tool_stores_output() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::AgentToolStart {
+    state.update(Event::Agent(AgentEvent::ToolStart {
         id: "req.0".to_string(),
         name: "list_dir".to_string(),
-    });
-    state.update(Event::AgentToolEnd {
+    }));
+    state.update(Event::Agent(AgentEvent::ToolEnd {
         duration_secs: 0.5,
         output: "file1\nfile2".to_string(),
-    });
+    }));
 
     let tool = state
         .session

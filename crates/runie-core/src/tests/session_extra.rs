@@ -1,5 +1,5 @@
 //! Extra session command tests — export, import, display name
-use crate::event::Event;
+use crate::event::{DialogEvent, Event, InputEvent};
 use crate::model::{AppState, ChatMessage, Role};
 
 fn fresh_state() -> AppState {
@@ -8,7 +8,7 @@ fn fresh_state() -> AppState {
 
 fn type_str(state: &mut AppState, text: &str) {
     for c in text.chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
 }
 
@@ -16,7 +16,16 @@ fn type_str(state: &mut AppState, text: &str) {
 fn exec(state: &mut AppState, text: &str) {
     state.input.input = text.into();
     state.input.cursor_pos = text.len();
-    state.update(Event::Submit);
+    state.update(Event::submit());
+}
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
 }
 
 fn imported_session() -> crate::session::Session {
@@ -45,7 +54,7 @@ fn imported_session() -> crate::session::Session {
 fn name_sets_display_name() {
     let mut state = fresh_state();
     exec(&mut state, "/name my-project"); // Opens form with pre-filled name
-    state.update(Event::CommandFormSubmit); // Submits the form
+    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
     assert_eq!(
         state.session.session_display_name,
         Some("my-project".to_string())
@@ -56,7 +65,7 @@ fn name_sets_display_name() {
 fn name_form_submit_via_submit_event_also_works() {
     let mut state = fresh_state();
     exec(&mut state, "/name via-submit-event"); // Opens form
-    state.update(Event::Submit); // Submits the form (PaletteSelect path)
+    state.update(Event::submit()); // Submits the form (PaletteSelect path)
     assert_eq!(
         state.session.session_display_name,
         Some("via-submit-event".to_string())
@@ -67,7 +76,7 @@ fn name_form_submit_via_submit_event_also_works() {
 fn name_form_submit_via_palette_select_event_works() {
     let mut state = fresh_state();
     exec(&mut state, "/name via-palette"); // Opens form
-    state.update(Event::PaletteSelect); // Submits the form (panel-stack path)
+    state.update(Event::Dialog(DialogEvent::PaletteSelect)); // Submits the form (panel-stack path)
     assert_eq!(
         state.session.session_display_name,
         Some("via-palette".to_string())
@@ -78,10 +87,9 @@ fn name_form_submit_via_palette_select_event_works() {
 fn name_shows_current_when_no_args() {
     let mut state = fresh_state();
     state.session.session_display_name = Some("existing".to_string());
-    type_str(&mut state, "/name");
-    state.update(Event::Submit); // Opens form
-                                 // Form shows with current value pre-filled, submit to see behavior
-    state.update(Event::CommandFormSubmit);
+    palette_select(&mut state, "name");
+    // Form shows with current value pre-filled, submit to see behavior
+    state.update(Event::Dialog(DialogEvent::CommandFormSubmit));
     let sys_msgs: Vec<_> = state
         .session
         .messages
@@ -102,8 +110,8 @@ fn name_truncates_long_input() {
     let long_name = "a".repeat(100);
     state.input.input.push_str("/name ");
     state.input.input.push_str(&long_name);
-    state.update(Event::Submit); // Opens form with pre-filled name
-    state.update(Event::CommandFormSubmit); // Submits the form
+    state.update(Event::submit()); // Opens form with pre-filled name
+    state.update(Event::Dialog(DialogEvent::CommandFormSubmit)); // Submits the form
     let name = state.session.session_display_name.as_ref().unwrap();
     assert_eq!(name.chars().count(), 65, "truncated to 64 + ellipsis");
     assert!(name.ends_with('…'), "ends with ellipsis");
@@ -122,7 +130,7 @@ fn export_creates_file() {
     let tmp = std::env::temp_dir().join(format!("runie_export_{}.json", std::process::id()));
     let path = tmp.to_string_lossy();
     exec(&mut state, &format!("/export {}", path)); // Opens form with pre-filled path
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
     assert!(tmp.exists(), "export file created");
     let json = std::fs::read_to_string(&tmp).unwrap();
     let session: crate::session::Session = serde_json::from_str(&json).unwrap();
@@ -142,7 +150,7 @@ fn import_loads_file() {
     .unwrap();
     let path = tmp.to_string_lossy();
     exec(&mut state, &format!("/import {}", path)); // Opens form with pre-filled path
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
     assert_eq!(state.session.messages.len(), 2); // imported + system confirmation
     assert_eq!(state.session.messages[0].content, "imported msg");
     assert_eq!(state.config.current_provider, "openai");

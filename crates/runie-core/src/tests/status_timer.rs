@@ -54,22 +54,22 @@ fn snapshot_turn_elapsed_none_when_inactive() {
 }
 
 #[test]
-fn snapshot_turn_elapsed_increases_over_time() {
+fn snapshot_turn_elapsed_calculates_correctly() {
     let mut state = AppState::default();
     state.agent.turn_active = true;
-    state.agent.turn_started_at = Some(std::time::Instant::now());
+    // Set started_at to 500ms in the past
+    let started = std::time::Instant::now() - std::time::Duration::from_millis(500);
+    state.agent.turn_started_at = Some(started);
     state.ensure_fresh();
 
-    let snap1 = state.snapshot();
-    let e1 = snap1.turn_elapsed_secs.unwrap();
-
-    // Small delay to let time pass
-    std::thread::sleep(std::time::Duration::from_millis(50));
-
-    let snap2 = state.snapshot();
-    let e2 = snap2.turn_elapsed_secs.unwrap();
-
-    assert!(e2 > e1, "Elapsed time must increase: e1={} e2={}", e1, e2);
+    let snap = state.snapshot();
+    let elapsed = snap.turn_elapsed_secs.unwrap();
+    // Elapsed should be approximately 0.5s (within 50ms tolerance)
+    assert!(
+        (elapsed - 0.5).abs() < 0.05,
+        "Elapsed should be ~0.5s, got {}",
+        elapsed
+    );
 }
 
 #[test]

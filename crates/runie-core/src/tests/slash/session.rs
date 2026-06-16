@@ -1,12 +1,21 @@
 use super::{exec, fresh_state, tmp_store, type_str, ENV_LOCK};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
 use crate::model::Role;
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut crate::model::AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+}
 
 #[test]
 fn delete_no_args_opens_form() {
     let mut state = fresh_state();
-    type_str(&mut state, "/delete");
-    state.update(Event::Submit);
+    palette_select(&mut state, "delete");
 
     // Should open form dialog
     assert!(state.open_dialog.is_some(), "should open dialog");
@@ -21,8 +30,7 @@ fn delete_no_args_opens_form() {
 #[test]
 fn slash_command_does_not_queue() {
     let mut state = fresh_state();
-    type_str(&mut state, "/session");
-    state.update(Event::Submit);
+    palette_select(&mut state, "session");
     assert!(
         state.agent.request_queue.is_empty(),
         "slash commands are not queued"
@@ -47,8 +55,7 @@ fn unknown_slash_returns_error() {
 #[test]
 fn slash_with_extra_whitespace_trimmed() {
     let mut state = fresh_state();
-    type_str(&mut state, "  /session  ");
-    state.update(Event::Submit);
+    palette_select(&mut state, "session");
 
     let sys_msgs: Vec<_> = state
         .session
@@ -68,7 +75,7 @@ fn save_trims_whitespace() {
 
     let mut state = fresh_state();
     exec(&mut state, "/save  trimmed"); // Opens form with pre-filled name
-    state.update(Event::Submit); // Submits the form
+    state.update(Event::submit()); // Submits the form
 
     // Should save with trimmed name
     assert!(

@@ -36,17 +36,17 @@ fn thought_summary_builder() {
 #[test]
 fn tool_running_builder() {
     let started = std::time::Instant::now();
-    let e = Element::tool_running("ls", started).at(5.0);
-    assert!(matches!(e, Element::ToolRunning { name, timestamp, .. }
-        if name == "ls" && timestamp == 5.0));
+    let e = Element::tool_running("ls", ".", started).at(5.0);
+    assert!(matches!(e, Element::ToolRunning { name, args, timestamp, .. }
+        if name == "ls" && args == "." && timestamp == 5.0));
 }
 
 #[test]
 fn tool_done_builder() {
-    let e = Element::tool_done("ls", 0.5, "file1").at(6.0);
+    let e = Element::tool_done("ls", ".", 0.5, "file1", None, false).at(6.0);
     assert!(
-        matches!(e, Element::ToolDone { name, duration_secs, output, timestamp }
-        if name == "ls" && duration_secs == 0.5 && output == "file1" && timestamp == 6.0)
+        matches!(e, Element::ToolDone { name, args, duration_secs, output, bytes_transferred, error, timestamp }
+        if name == "ls" && args == "." && duration_secs == 0.5 && output == "file1" && timestamp == 6.0 && bytes_transferred.is_none() && !error)
     );
 }
 

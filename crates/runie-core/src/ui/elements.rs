@@ -29,13 +29,17 @@ pub enum Element {
     },
     ToolRunning {
         name: String,
+        args: String,
         started: std::time::Instant,
         timestamp: f64,
     },
     ToolDone {
         name: String,
+        args: String,
         duration_secs: f64,
         output: String,
+        bytes_transferred: Option<u64>,
+        error: bool,
         timestamp: f64,
     },
     ToolSummary {
@@ -104,22 +108,33 @@ impl Element {
             timestamp: 0.0,
         })
     }
-    pub fn tool_running(name: impl Into<String>, started: std::time::Instant) -> ElementBuilder {
+    pub fn tool_running(
+        name: impl Into<String>,
+        args: impl Into<String>,
+        started: std::time::Instant,
+    ) -> ElementBuilder {
         ElementBuilder(Element::ToolRunning {
             name: name.into(),
+            args: args.into(),
             started,
             timestamp: 0.0,
         })
     }
     pub fn tool_done(
         name: impl Into<String>,
+        args: impl Into<String>,
         duration_secs: f64,
         output: impl Into<String>,
+        bytes_transferred: Option<u64>,
+        error: bool,
     ) -> ElementBuilder {
         ElementBuilder(Element::ToolDone {
             name: name.into(),
+            args: args.into(),
             duration_secs,
             output: output.into(),
+            bytes_transferred,
+            error,
             timestamp: 0.0,
         })
     }

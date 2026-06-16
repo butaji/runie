@@ -1,10 +1,11 @@
 //! Session compaction and token accounting.
 
-use crate::message::{now, ChatMessage};
+use crate::message::{now, ChatMessage, MessageMetadata};
 use crate::model::state::AppState;
 use crate::model::Role;
 
 impl AppState {
+    /// Total tokens across all messages.
     pub fn total_tokens(&self) -> usize {
         self.session
             .messages
@@ -13,6 +14,8 @@ impl AppState {
             .sum()
     }
 
+    /// Compact messages, keeping approximately `keep_recent_tokens` worth of recent content.
+    /// Pinned messages are preserved. Returns a summary of what was compacted.
     pub fn compact(&mut self, keep_recent_tokens: usize) -> String {
         let total = self.total_tokens();
         if total <= keep_recent_tokens {
@@ -37,6 +40,10 @@ impl AppState {
                 content: summary.clone(),
                 timestamp: now(),
                 id: "compaction".to_string(),
+                metadata: MessageMetadata {
+                    compacted: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         );
@@ -48,6 +55,10 @@ impl AppState {
         let mut accumulated = 0usize;
         let mut cut_idx = 0usize;
         for (i, msg) in self.session.messages.iter().enumerate().rev() {
+            // Skip pinned messages
+            if msg.metadata.pinned {
+                continue;
+            }
             accumulated += self.agent.token_tracker.estimate_input(&msg.content);
             if accumulated >= keep_recent_tokens {
                 cut_idx = i;

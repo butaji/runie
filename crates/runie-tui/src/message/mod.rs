@@ -266,8 +266,8 @@ fn render_agent_block(
     lines: &mut Vec<Line<'static>>,
 ) -> bool {
     match block {
-        CodeBlock::Text(text) => {
-            render_agent_text_block(text, ts_str, inner_width, is_first, lines)
+        CodeBlock::Text { content, .. } => {
+            render_agent_text_block(content, ts_str, inner_width, is_first, lines)
         }
         CodeBlock::Code { lang, content } => {
             render_agent_code_block(lang, content, ts_str, inner_width, is_first, lines)

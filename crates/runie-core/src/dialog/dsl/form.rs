@@ -1,6 +1,7 @@
 //! Form Panel Builder - Fluent API for creating forms with submit handling
 
 use crate::dialog::Panel;
+use crate::event::CommandEvent;
 use crate::Event;
 
 /// Form panel builder with submit handling
@@ -80,12 +81,13 @@ mod tests {
     use super::form;
     use crate::dialog::dsl::panel;
     use crate::dialog::ItemAction;
+    use crate::event::CommandEvent;
     use crate::Event;
 
     fn save_submit(values: &std::collections::HashMap<String, String>) -> Event {
-        Event::RunSaveCommand {
+        Event::Command(CommandEvent::RunSaveCommand {
             name: values.get("name").cloned().unwrap_or_default(),
-        }
+        })
     }
 
     #[test]

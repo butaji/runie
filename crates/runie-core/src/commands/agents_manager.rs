@@ -1,24 +1,24 @@
 //! Event handler for the agent profile manager UI.
 
 use crate::agent_profiles::{self, AgentProfile};
-use crate::commands::handlers::agents;
+use crate::commands::dsl::handlers::agents;
 use crate::commands::DialogState;
-use crate::event::Event;
+use crate::event::{DialogEvent, Event};
 use crate::model::AppState;
 
 /// Handle agents-manager related events.
 pub fn agents_manager_event(state: &mut AppState, event: Event) {
     match event {
-        Event::OpenAgentsManager => {
+        Event::Dialog(DialogEvent::OpenAgentsManager) => {
             open_root(state);
         }
-        Event::AgentsManagerSetField { name, field, value } => {
+        Event::Dialog(DialogEvent::AgentsManagerSetField { name, field, value }) => {
             handle_set_field(state, &name, &field, value);
         }
-        Event::AgentsManagerSave { name } => {
+        Event::Dialog(DialogEvent::AgentsManagerSave { name }) => {
             handle_save(state, &name);
         }
-        Event::AgentsManagerDelete { name } => {
+        Event::Dialog(DialogEvent::AgentsManagerDelete { name }) => {
             handle_delete(state, &name);
         }
         _ => {}
@@ -112,11 +112,11 @@ mod tests {
         let mut state = AppState::default();
         agents_manager_event(
             &mut state,
-            Event::AgentsManagerSetField {
+            Event::Dialog(DialogEvent::AgentsManagerSetField {
                 name: "test".into(),
                 field: "system_prompt".into(),
                 value: "You are helpful.".into(),
-            },
+            }),
         );
         let edit = state.pending_agent_edit.as_ref().expect("pending edit");
         assert_eq!(edit.name, "test");
@@ -137,7 +137,10 @@ mod tests {
             }),
             ..Default::default()
         };
-        agents_manager_event(&mut state, Event::AgentsManagerSave { name: "".into() });
+        agents_manager_event(
+            &mut state,
+            Event::Dialog(DialogEvent::AgentsManagerSave { name: "".into() }),
+        );
         assert!(state.transient_level == Some(crate::event::TransientLevel::Error));
     }
 
@@ -160,9 +163,9 @@ mod tests {
         };
         agents_manager_event(
             &mut state,
-            Event::AgentsManagerSave {
+            Event::Dialog(DialogEvent::AgentsManagerSave {
                 name: "persist_test".into(),
-            },
+            }),
         );
         assert!(state.pending_agent_edit.is_none());
         let loaded = agent_profiles::load_profile_from_file(

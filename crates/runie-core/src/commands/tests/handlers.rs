@@ -1,5 +1,5 @@
 use crate::commands::{CommandResult, DialogState};
-use crate::event::Event;
+use crate::event::{CommandEvent, ControlEvent, Event};
 use crate::model::AppState;
 
 use super::{exec_handler, run_slash};
@@ -44,8 +44,8 @@ fn help_panel_lists_commands() {
 fn handler_quit_sets_flag() {
     let mut state = AppState::default();
     let result = exec_handler(&mut state, "quit", "");
-    assert!(matches!(result, CommandResult::Event(Event::Quit)));
-    state.update(Event::Quit);
+    assert!(matches!(result, CommandResult::Event(Event::Control(ControlEvent::Quit))));
+    state.update(Event::Control(ControlEvent::Quit));
     assert!(state.should_quit);
 }
 

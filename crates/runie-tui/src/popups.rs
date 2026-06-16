@@ -13,6 +13,7 @@ use crate::theme::{
 };
 
 pub mod panel;
+pub mod welcome;
 
 /// Clear the given rect with the panel background color.
 pub fn clear_panel_bg(f: &mut Frame, area: Rect) {

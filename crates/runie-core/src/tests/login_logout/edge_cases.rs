@@ -1,4 +1,4 @@
-use crate::event::Event;
+use crate::event::{Event, LoginFlowEvent, DialogEvent};
 use crate::model::AppState;
 
 use super::clean_config;
@@ -8,14 +8,14 @@ fn login_flow_with_unknown_provider() {
     clean_config();
     let mut state = AppState::default();
 
-    state.update(Event::LoginFlowStart);
-    state.update(Event::LoginFlowSelectProvider {
+    state.update(Event::LoginFlow(LoginFlowEvent::Start));
+    state.update(Event::LoginFlow(LoginFlowEvent::SelectProvider {
         provider: "unknown".into(),
-    });
-    state.update(Event::LoginFlowSubmitKey {
+    }));
+    state.update(Event::LoginFlow(LoginFlowEvent::SubmitKey {
         provider: "unknown".into(),
         key: "sk-test".into(),
-    });
+    }));
 
     let flow = state.login_flow.as_ref().unwrap();
     assert_eq!(flow.step, crate::login_flow::LoginStep::ModelSelect);
@@ -27,7 +27,7 @@ fn login_flow_with_unknown_provider() {
 fn providers_dialog_empty_state() {
     clean_config();
     let mut state = AppState::default();
-    state.update(Event::ProvidersDialog);
+    state.update(Event::Dialog(DialogEvent::ProvidersDialog));
 
     assert!(state.open_dialog.is_some());
 }

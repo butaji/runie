@@ -1,8 +1,10 @@
 //! Tests for agent turn execution
 use crate::tests::ensure_mock_provider;
 use crate::{run_agent_turn, turn::build_initial_messages, AgentCommand};
+use runie_core::event::AgentEvent;
 use runie_core::Event;
 use runie_provider::DynProvider;
+use std::sync::{Arc, Mutex};
 
 fn mock_provider() -> DynProvider {
     DynProvider::new("mock", "echo").expect("mock provider must be available in tests")
@@ -23,26 +25,33 @@ async fn test_agent_loop_simple_response() {
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
     };
-    let mut events = Vec::new();
-    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 5)
-        .await
-        .unwrap();
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        5,
+    )
+    .await
+    .unwrap();
 
+    let events = events.lock().unwrap();
     let thinking = events
         .iter()
-        .filter(|e| matches!(e, Event::AgentThinking { .. }))
+        .filter(|e| matches!(e, Event::Agent(AgentEvent::Thinking { .. })))
         .count();
-    let responses = events
+    let deltas = events
         .iter()
-        .filter(|e| matches!(e, Event::AgentResponse { .. }))
+        .filter(|e| matches!(e, Event::Agent(AgentEvent::ResponseDelta { .. })))
         .count();
     let done = events
         .iter()
-        .filter(|e| matches!(e, Event::AgentDone { .. }))
+        .filter(|e| matches!(e, Event::Agent(AgentEvent::Done { .. })))
         .count();
 
     assert_eq!(thinking, 1);
-    assert_eq!(responses, 2);
+    assert_eq!(deltas, 2); // streaming deltas
     assert_eq!(done, 1);
 }
 
@@ -61,22 +70,29 @@ async fn test_agent_loop_with_tool_call() {
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
     };
-    let mut events = Vec::new();
-    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 5)
-        .await
-        .unwrap();
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        5,
+    )
+    .await
+    .unwrap();
 
+    let events = events.lock().unwrap();
     let tool_starts = events
         .iter()
-        .filter(|e| matches!(e, Event::AgentToolStart { .. }))
+        .filter(|e| matches!(e, Event::Agent(AgentEvent::ToolStart { .. })))
         .count();
     let tool_ends = events
         .iter()
-        .filter(|e| matches!(e, Event::AgentToolEnd { .. }))
+        .filter(|e| matches!(e, Event::Agent(AgentEvent::ToolEnd { .. })))
         .count();
     let completes = events
         .iter()
-        .filter(|e| matches!(e, Event::AgentTurnComplete { .. }))
+        .filter(|e| matches!(e, Event::Agent(AgentEvent::TurnComplete { .. })))
         .count();
 
     assert!(tool_starts >= 1);
@@ -99,11 +115,17 @@ async fn test_agent_loop_respects_max_iterations() {
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
     };
-    let mut events = Vec::new();
-    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 3)
-        .await
-        .unwrap();
-    assert!(!events.is_empty());
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        3,
+    )
+    .await
+    .unwrap();
+    assert!(!events.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -121,20 +143,26 @@ async fn test_agent_loop_events_have_correct_id() {
         system_prompt: String::new(),
         truncation: crate::truncate::TruncationPolicy::default(),
     };
-    let mut events = Vec::new();
-    run_agent_turn(&provider, &cmd, |evt| events.push(evt), 5)
-        .await
-        .unwrap();
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let events_clone = events.clone();
+    run_agent_turn(
+        &provider,
+        &cmd,
+        Arc::new(Mutex::new(move |evt| events_clone.lock().unwrap().push(evt))),
+        5,
+    )
+    .await
+    .unwrap();
 
-    for evt in &events {
+    for evt in events.lock().unwrap().iter() {
         let evt_id = match evt {
-            Event::AgentThinking { id } => id.clone(),
-            Event::AgentThoughtDone { id } => id.clone(),
-            Event::AgentToolStart { id, .. } => id.clone(),
-            Event::AgentResponse { id, .. } => id.clone(),
-            Event::AgentTurnComplete { id, .. } => id.clone(),
-            Event::AgentDone { id } => id.clone(),
-            Event::AgentError { id, .. } => id.clone(),
+            Event::Agent(AgentEvent::Thinking { id }) => id.clone(),
+            Event::Agent(AgentEvent::ThoughtDone { id }) => id.clone(),
+            Event::Agent(AgentEvent::ToolStart { id, .. }) => id.clone(),
+            Event::Agent(AgentEvent::Response { id, .. }) => id.clone(),
+            Event::Agent(AgentEvent::TurnComplete { id, .. }) => id.clone(),
+            Event::Agent(AgentEvent::Done { id }) => id.clone(),
+            Event::Agent(AgentEvent::Error { id, .. }) => id.clone(),
             _ => continue,
         };
         assert_eq!(evt_id, "req.42");

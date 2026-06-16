@@ -3,7 +3,8 @@
 use anyhow::Result;
 use futures::Stream;
 use futures::StreamExt;
-use runie_core::provider::{Message, Provider, ResponseChunk};
+use runie_core::llm_event::{LLMEvent, StopReason};
+use runie_core::provider::{Message, Provider};
 use std::pin::Pin;
 
 pub struct OpenAiProvider {
@@ -89,7 +90,7 @@ fn openai_stream(
     model: String,
     base_url: String,
     messages: Vec<Message>,
-) -> Pin<Box<dyn Stream<Item = Result<ResponseChunk>> + Send>> {
+) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send>> {
     Box::pin(async_stream::stream! {
         let client = reqwest::Client::new();
         let response = match send_openai_request(&client, &api_key, &model, &base_url, &messages).await {
@@ -106,14 +107,9 @@ fn openai_stream(
             match chunk_result {
                 Ok(chunk) => {
                     buffer.push_str(&String::from_utf8_lossy(&chunk));
-                    while let Some(pos) = buffer.find('\n') {
-                        let line = buffer[..pos].trim().to_string();
-                        buffer = buffer[pos + 1..].to_string();
-                        match parse_sse_event(&line) {
-                            Some(SseEvent::Done) => return,
-                            Some(SseEvent::Content(content)) => yield Ok(ResponseChunk { content }),
-                            None => {}
-                        }
+                    let events = drain_buffer(&mut buffer);
+                    for event in events {
+                        yield Ok(event);
                     }
                 }
                 Err(e) => {
@@ -125,11 +121,30 @@ fn openai_stream(
     })
 }
 
+fn drain_buffer(buffer: &mut String) -> Vec<LLMEvent> {
+    let mut events = Vec::new();
+    while let Some(pos) = buffer.find('\n') {
+        let line = buffer[..pos].trim().to_string();
+        *buffer = buffer[pos + 1..].to_string();
+        match parse_sse_event(&line) {
+            Some(SseEvent::Done) => {
+                events.push(LLMEvent::Finish { reason: StopReason::Stop });
+                break;
+            }
+            Some(SseEvent::Content(content)) => {
+                events.push(LLMEvent::TextDelta(content));
+            }
+            None => {}
+        }
+    }
+    events
+}
+
 impl Provider for OpenAiProvider {
     fn generate(
         &self,
         messages: Vec<Message>,
-    ) -> Pin<Box<dyn Stream<Item = Result<ResponseChunk>> + Send + '_>> {
+    ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>> {
         openai_stream(
             self.api_key.clone(),
             self.model.clone(),

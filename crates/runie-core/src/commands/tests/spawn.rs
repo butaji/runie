@@ -1,7 +1,7 @@
 use crate::commands::handlers::subagent::handle_spawn;
 use crate::commands::CommandResult;
 use crate::dialog::PanelItem;
-use crate::event::Event;
+use crate::event::{ControlEvent, Event};
 use crate::model::AppState;
 
 #[test]
@@ -37,7 +37,7 @@ fn spawn_with_args_emits_event() {
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "list files in /tmp");
     match result {
-        CommandResult::Event(Event::SpawnAgent { prompt }) => {
+        CommandResult::Event(Event::Control(ControlEvent::SpawnAgent { prompt })) => {
             assert_eq!(prompt, "list files in /tmp");
         }
         other => panic!("expected SpawnAgent event, got {:?}", other),
@@ -49,7 +49,7 @@ fn spawn_trims_whitespace_from_args() {
     let mut state = AppState::default();
     let result = handle_spawn(&mut state, "  hello world  ");
     match result {
-        CommandResult::Event(Event::SpawnAgent { prompt }) => {
+        CommandResult::Event(Event::Control(ControlEvent::SpawnAgent { prompt })) => {
             assert_eq!(prompt, "hello world");
         }
         other => panic!("expected event, got {:?}", other),

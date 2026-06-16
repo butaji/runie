@@ -1,7 +1,8 @@
 //! Configurable keybindings module.
 //!
-//! Loads keybindings from `~/.runie/keybindings.json` and provides
-//! fallback defaults if file doesn't exist or is invalid.
+//! Keybindings are loaded from the `[keybindings]` table in `~/.runie/config.toml`
+//! and merged with defaults from this module. The legacy `keybindings.json` is
+//! auto-migrated to `config.toml` by the config migration system (v2→v3).
 
 use std::collections::HashMap;
 use std::fs;
@@ -9,7 +10,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
-use crate::event::Event;
+use crate::event::{ControlEvent, Event, InputEvent};
 
 /// Valid final key names for key combos.
 const VALID_KEYS: &[&str] = &[
@@ -98,6 +99,8 @@ const DEFAULT_BINDINGS: &[(&str, &str)] = &[
     ("ctrl+shift+o", "CopyLastResponse"),
     ("ctrl+p", "ToggleCommandPalette"),
     ("ctrl+shift+p", "ToggleCommandPalette"),
+    ("ctrl+n", "NewSession"),
+    ("ctrl+r", "ResumeSession"),
     ("ctrl+m", "CycleModelNext"),
     ("ctrl+shift+m", "CycleModelPrev"),
     ("alt+enter", "FollowUp"),
@@ -155,28 +158,41 @@ fn parse_key_combo(combo: &str) -> (Vec<String>, String) {
     (modifiers, key)
 }
 
-/// Load keybindings from file, falling back to defaults
-pub fn load_keybindings(path: &Option<PathBuf>) -> HashMap<String, String> {
-    let path = match path {
-        Some(p) => p.clone(),
-        None => default_keybindings_path()
-            .unwrap_or_else(|| PathBuf::from("/tmp/runie_keybindings.json")),
-    };
-
-    if !path.exists() {
-        return default_keybindings();
-    }
-
-    match fs::read_to_string(&path) {
-        Ok(content) => parse_keybindings_json(&content).unwrap_or_else(|e| {
-            eprintln!("Failed to parse keybindings: {}, using defaults", e);
-            default_keybindings()
-        }),
-        Err(e) => {
-            eprintln!("Failed to read keybindings file: {}, using defaults", e);
-            default_keybindings()
+/// Load keybindings from an optional config, falling back to defaults.
+/// User entries in `config.keybindings` override defaults; all other defaults remain.
+pub fn load_keybindings(config: Option<&crate::config::Config>) -> HashMap<String, String> {
+    match config {
+        Some(cfg) => merged_keybindings(cfg),
+        None => {
+            // Legacy path: try loading from keybindings.json if it exists
+            let json_path = default_keybindings_path()
+                .unwrap_or_else(|| PathBuf::from("/tmp/runie_keybindings.json"));
+            if json_path.exists() {
+                match fs::read_to_string(&json_path) {
+                    Ok(content) => parse_keybindings_json(&content).unwrap_or_else(|e| {
+                        eprintln!("Failed to parse keybindings: {}, using defaults", e);
+                        default_keybindings()
+                    }),
+                    Err(e) => {
+                        eprintln!("Failed to read keybindings file: {}, using defaults", e);
+                        default_keybindings()
+                    }
+                }
+            } else {
+                default_keybindings()
+            }
         }
     }
+}
+
+/// Merge user keybinding overrides with defaults.
+/// User entries take precedence; unspecified keys use defaults.
+pub fn merged_keybindings(config: &crate::config::Config) -> HashMap<String, String> {
+    let mut bindings = default_keybindings();
+    for (combo, event) in &config.keybindings {
+        bindings.insert(combo.to_lowercase(), event.clone());
+    }
+    bindings
 }
 
 /// Parse keybindings from JSON string
@@ -312,9 +328,8 @@ mod tests {
 
     #[test]
     fn load_keybindings_falls_back_to_defaults() {
-        // Non-existent path should return defaults
-        let path = PathBuf::from("/non/existent/path.json");
-        let bindings = load_keybindings(&Some(path));
+        // No config → falls back to defaults
+        let bindings = load_keybindings(None);
         assert_eq!(bindings.get("ctrl+c"), Some(&"Quit".to_string()));
     }
 
@@ -357,27 +372,26 @@ mod tests {
 
     #[test]
     fn keybindings_load_default_when_file_missing() {
-        // Test that load_keybindings returns defaults when file doesn't exist
-        let bindings = load_keybindings(&Some(PathBuf::from("/tmp/nonexistent_keybindings.json")));
-        // Should contain default bindings
+        // No config → load_keybindings uses defaults
+        let bindings = load_keybindings(None);
         assert!(bindings.contains_key("ctrl+c"));
     }
 
     #[test]
     fn event_from_name_quit() {
-        assert!(matches!(event_from_name("Quit"), Some(Event::Quit)));
+        assert!(matches!(event_from_name("Quit"), Some(Event::Control(ControlEvent::Quit))));
     }
 
     #[test]
     fn event_from_name_submit() {
-        assert!(matches!(event_from_name("Submit"), Some(Event::Submit)));
+        assert!(matches!(event_from_name("Submit"), Some(Event::Input(InputEvent::Submit))));
     }
 
     #[test]
     fn event_from_name_input_tab() {
         assert!(matches!(
             event_from_name("Input:\t"),
-            Some(Event::Input('\t'))
+            Some(Event::Input(InputEvent::Input('\t')))
         ));
     }
 
@@ -385,7 +399,7 @@ mod tests {
     fn event_from_name_input_char() {
         assert!(matches!(
             event_from_name("Input:a"),
-            Some(Event::Input('a'))
+            Some(Event::Input(InputEvent::Input('a')))
         ));
     }
 
@@ -408,33 +422,30 @@ mod tests {
     fn mouse_events_have_no_name() {
         use crate::Event;
         assert_eq!(
-            Event::MouseClick {
+            Event::Input(InputEvent::MouseClick {
                 row: 0,
                 col: 0,
                 button: "left".into()
-            }
-            .name(),
+            }).name(),
             None
         );
         assert_eq!(
-            Event::MouseRelease {
+            Event::Input(InputEvent::MouseRelease {
                 row: 0,
                 col: 0,
                 button: "left".into()
-            }
-            .name(),
+            }).name(),
             None
         );
         assert_eq!(
-            Event::MouseDrag {
+            Event::Input(InputEvent::MouseDrag {
                 row: 0,
                 col: 0,
                 button: "left".into()
-            }
-            .name(),
+            }).name(),
             None
         );
-        assert_eq!(Event::MouseMove { row: 0, col: 0 }.name(), None);
+        assert_eq!(Event::Input(InputEvent::MouseMove { row: 0, col: 0 }).name(), None);
     }
 
     #[test]
@@ -472,6 +483,82 @@ mod tests {
                 combo
             );
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Layer 1 tests: config keybindings integration
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn config_keybindings_override_defaults() {
+        use std::collections::HashMap;
+        let mut config = crate::config::Config::default();
+        config.keybindings.insert("ctrl+c".to_string(), "Abort".to_string());
+
+        let bindings = merged_keybindings(&config);
+
+        // Overridden binding resolves to Abort
+        assert_eq!(
+            bindings.get("ctrl+c"),
+            Some(&"Abort".to_string()),
+            "ctrl+c should be overridden to Abort"
+        );
+        // Other defaults remain unchanged
+        assert_eq!(
+            bindings.get("ctrl+z"),
+            Some(&"Suspend".to_string()),
+            "ctrl+z default should remain"
+        );
+    }
+
+    #[test]
+    fn config_keybindings_merge_with_defaults() {
+        let config = crate::config::Config::default();
+        let bindings = merged_keybindings(&config);
+
+        // All defaults are present
+        assert_eq!(bindings.get("ctrl+c"), Some(&"Quit".to_string()));
+        assert_eq!(bindings.get("enter"), Some(&"Submit".to_string()));
+        assert_eq!(bindings.get("ctrl+o"), Some(&"ToggleExpand".to_string()));
+    }
+
+    #[test]
+    fn config_keybindings_empty_map_uses_all_defaults() {
+        let mut config = crate::config::Config::default();
+        config.keybindings = std::collections::HashMap::new();
+        let bindings = merged_keybindings(&config);
+
+        assert_eq!(
+            bindings.len(),
+            default_keybindings().len(),
+            "empty keybindings map should leave all defaults"
+        );
+    }
+
+    #[test]
+    fn keybindings_json_migration() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+        let json_path = dir.path().join("keybindings.json");
+
+        // Write legacy JSON file
+        let json = r#"{"ctrl+x": "Quit", "ctrl+q": "Undo"}"#;
+        std::fs::write(&json_path, json).unwrap();
+
+        // Write initial config (v2 so migration triggers)
+        std::fs::write(&config_path, "version = 2\nprovider = \"openai\"\n").unwrap();
+
+        // Parse and migrate with the temp config path
+        let mut value: toml::Value = toml::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+        crate::config_migrate::migrate_with_path(&mut value, Some(config_path.clone())).unwrap();
+
+        // After migration, keybindings should be in config
+        assert!(
+            value.get("keybindings").is_some(),
+            "migrated config should contain [keybindings] table"
+        );
+        // And JSON file should be renamed to .bak
+        assert!(json_path.with_extension("json.bak").exists(), "keybindings.json should be renamed to .bak");
     }
 
     #[test]

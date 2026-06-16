@@ -13,7 +13,7 @@
 
 use anyhow::Result;
 use runie_agent::{build_provider_with_warning, run_headless_turn, HeadlessOptions};
-use runie_core::{config_reload, provider::Message};
+use runie_core::{config_reload, message::ChatMessage, provider::Message};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -225,20 +225,14 @@ async fn handle_chat(params: &Value) -> Result<Value> {
 
     let mut msgs = vec![Message::System { content: system }];
     for m in &messages {
-        msgs.push(match m.role.as_str() {
-            "user" => Message::User {
-                content: m.content.clone(),
-            },
-            "assistant" => Message::Assistant {
-                content: m.content.clone(),
-            },
-            _ => Message::User {
-                content: m.content.clone(),
-            },
-        });
+        msgs.push(m.to_provider_message());
     }
 
-    let options = HeadlessOptions::stream_only();
+    let options = HeadlessOptions {
+        execute_tools: false,
+        max_tool_rounds: 1,
+        on_chunk: None,
+    };
     let result = run_headless_turn(msgs, &provider, options).await?;
 
     Ok(serde_json::json!({ "content": result.content }))
@@ -266,7 +260,11 @@ async fn handle_complete(params: &Value) -> Result<Value> {
         },
     ];
 
-    let options = HeadlessOptions::stream_only();
+    let options = HeadlessOptions {
+        execute_tools: false,
+        max_tool_rounds: 1,
+        on_chunk: None,
+    };
     let result = run_headless_turn(msgs, &provider, options).await?;
 
     Ok(serde_json::json!({ "content": result.content }))
@@ -290,12 +288,6 @@ fn handle_list_models() -> Value {
 fn handle_list_sessions() -> Result<Value> {
     let sessions = runie_core::session::list()?;
     Ok(serde_json::json!({ "sessions": sessions }))
-}
-
-#[derive(Debug, Deserialize)]
-struct ChatMessage {
-    role: String,
-    content: String,
 }
 
 #[cfg(test)]

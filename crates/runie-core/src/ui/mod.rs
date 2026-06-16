@@ -14,8 +14,3 @@ pub mod transform;
 pub use elements::{Element, Feed, Post, PostKind};
 pub use posts::PostBuilder;
 pub use transform::LazyCache;
-
-#[cfg(test)]
-pub mod format_test {
-    pub use super::transform::format_test::*;
-}

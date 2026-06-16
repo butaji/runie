@@ -1,5 +1,6 @@
 use crate::accumulator::{OutputAccumulator, TruncateStrategy};
 use crate::truncate;
+use runie_core::tool::{ToolOutput, ToolStatus};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -48,11 +49,25 @@ pub enum Tool {
     },
 }
 
+/// Tool execution result — wraps the canonical ToolOutput from runie-core.
 #[derive(Debug, Clone)]
 pub struct ToolResult {
+    /// The tool that was executed.
     pub tool: Tool,
-    pub output: String,
-    pub success: bool,
+    /// Canonical output from runie-core.
+    pub output: runie_core::tool::ToolOutput,
+}
+
+impl ToolResult {
+    /// Returns the output content.
+    pub fn content(&self) -> &str {
+        &self.output.content
+    }
+
+    /// Returns whether the tool succeeded.
+    pub fn is_success(&self) -> bool {
+        self.output.status == runie_core::tool::ToolStatus::Success
+    }
 }
 
 /// Structured output from a shell execution.
@@ -79,6 +94,15 @@ pub struct ShellOutput {
     pub blocked: Option<String>,
 }
 
+/// Bash execution status for ToolOutput conversion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BashStatus {
+    Success,
+    Error,
+    Timeout,
+    Blocked,
+}
+
 impl ShellOutput {
     /// Render the shell output as a user-facing string.
     ///
@@ -92,6 +116,26 @@ impl ShellOutput {
         self.blocked.is_none()
             && !self.timed_out
             && self.exit_code == Some(0)
+    }
+
+    /// Returns bytes transferred (stdout + stderr length).
+    pub fn bytes_transferred(&self) -> Option<u64> {
+        let stdout_len = self.stdout.len() as u64;
+        let stderr_len = self.stderr.len() as u64;
+        Some(stdout_len + stderr_len)
+    }
+
+    /// Returns the bash execution status.
+    pub fn status(&self) -> BashStatus {
+        if self.blocked.is_some() {
+            BashStatus::Blocked
+        } else if self.timed_out {
+            BashStatus::Timeout
+        } else if self.exit_code == Some(0) {
+            BashStatus::Success
+        } else {
+            BashStatus::Error
+        }
     }
 }
 
@@ -172,6 +216,30 @@ impl Tool {
         }
     }
 
+    /// Convert the tool to JSON arguments for ToolOutput.
+    pub fn to_args(&self) -> serde_json::Value {
+        match self {
+            Tool::ReadFile { path, offset, limit } => {
+                serde_json::json!({ "path": path, "offset": offset, "limit": limit })
+            }
+            Tool::ListDir { path } => serde_json::json!({ "path": path }),
+            Tool::WriteFile { path, content } => {
+                serde_json::json!({ "path": path, "content": "<redacted>" })
+            }
+            Tool::EditFile { path, search, replace } => {
+                serde_json::json!({ "path": path, "search": search, "replace": replace })
+            }
+            Tool::Bash { command } => serde_json::json!({ "command": command }),
+            Tool::Grep { pattern, path, glob, ignore_case, literal, context, limit } => {
+                serde_json::json!({ "pattern": pattern, "path": path, "glob": glob, "ignore_case": ignore_case, "literal": literal, "context": context, "limit": limit })
+            }
+            Tool::Find { pattern, path, limit } => {
+                serde_json::json!({ "pattern": pattern, "path": path, "limit": limit })
+            }
+            Tool::FetchDocs { library } => serde_json::json!({ "library": library }),
+        }
+    }
+
     pub fn execute(&self) -> ToolResult {
         self.execute_with_policy(&crate::truncate::TruncationPolicy::default())
     }
@@ -179,13 +247,10 @@ impl Tool {
     /// Execute the tool with a specific truncation policy. Use this when the
     /// caller has a configured policy (e.g. from `config.toml`).
     pub fn execute_with_policy(&self, policy: &crate::truncate::TruncationPolicy) -> ToolResult {
-        let start = Instant::now();
-        let (output, success) = exec::run_inner(self, policy);
-        let _elapsed = start.elapsed();
+        let output = exec::run_inner(self, policy);
         ToolResult {
             tool: self.clone(),
             output,
-            success,
         }
     }
 
@@ -235,9 +300,13 @@ fn apply_truncation(
     }
 }
 
-pub(crate) fn list_dir(path: &str, policy: &crate::truncate::TruncationPolicy) -> (String, bool) {
-    let path = crate::path_utils::resolve_path(path);
-    let p = Path::new(&path);
+pub(crate) fn list_dir(tool: &Tool, policy: &crate::truncate::TruncationPolicy) -> ToolOutput {
+    let start = Instant::now();
+    let name = tool.name();
+    let args = tool.to_args();
+    let path = if let Tool::ListDir { path } = tool { path } else { unreachable!() };
+    let resolved = crate::path_utils::resolve_path(path);
+    let p = Path::new(&resolved);
     match std::fs::read_dir(p) {
         Ok(entries) => {
             let mut lines = Vec::new();
@@ -250,57 +319,85 @@ pub(crate) fn list_dir(path: &str, policy: &crate::truncate::TruncationPolicy) -
                 };
                 lines.push(format!("{} ({})", name, typ));
             }
-            let output = if lines.is_empty() {
+            let content = if lines.is_empty() {
                 "(empty directory)".to_string()
             } else {
                 lines.join("\n")
             };
-            (
-                apply_truncation(output, TruncateStrategy::Head, policy),
-                true,
-            )
+            ToolOutput {
+                tool_name: name.to_string(),
+                tool_args: args,
+                content: apply_truncation(content, TruncateStrategy::Head, policy),
+                bytes_transferred: None,
+                duration: start.elapsed(),
+                status: ToolStatus::Success,
+            }
         }
-        Err(e) => (format!("Error listing {}: {}", path.display(), e), false),
+        Err(e) => ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: args,
+            content: format!("Error listing {}: {}", resolved.display(), e),
+            bytes_transferred: None,
+            duration: start.elapsed(),
+            status: ToolStatus::Error,
+        },
     }
 }
 
-pub(crate) fn edit_file(path: &str, search: &str, replace: &str) -> (String, bool) {
-    let path = crate::path_utils::resolve_path(path);
+pub(crate) fn edit_file(tool: &Tool, _policy: &crate::truncate::TruncationPolicy) -> ToolOutput {
+    let start = Instant::now();
+    let name = tool.name().to_string();
+    let args = tool.to_args();
+    let (path, search, replace) = if let Tool::EditFile { path, search, replace } = tool {
+        (path, search, replace)
+    } else {
+        unreachable!()
+    };
+    let resolved = crate::path_utils::resolve_path(path);
+
     if search.is_empty() {
-        return ("Error: search text cannot be empty".to_string(), false);
+        return edit_error(&name, &args, "search text cannot be empty", start.elapsed());
     }
-    match std::fs::read_to_string(&path) {
-        Ok(content) => {
-            let count = content.matches(search).count();
-            if count == 0 {
-                return (
-                    format!("Error: search text not found in {}", path.display()),
-                    false,
-                );
-            }
-            if count > 1 {
-                return (
-                    format!(
-                        "Error: search text appears {} times in {}. Be more specific.",
-                        count,
-                        path.display()
-                    ),
-                    false,
-                );
-            }
-            let new_content = content.replacen(search, replace, 1);
-            match std::fs::write(&path, &new_content) {
-                Ok(()) => {
-                    // Generate diff output for display
-                    let diff = crate::diff::generate_unified_diff(&content, &new_content);
-                    let diff_output =
-                        crate::diff::render_diff_to_string(&diff, &path.to_string_lossy());
-                    (diff_output, true)
-                }
-                Err(e) => (format!("Error writing {}: {}", path.display(), e), false),
+    match std::fs::read_to_string(&resolved) {
+        Ok(content) => apply_edit(&name, &args, &resolved, &content, search, replace, start.elapsed()),
+        Err(e) => edit_error(&name, &args, &format!("Error reading {}: {}", resolved.display(), e), start.elapsed()),
+    }
+}
+
+fn apply_edit(name: &str, args: &serde_json::Value, path: &std::path::Path, content: &str, search: &str, replace: &str, elapsed: std::time::Duration) -> ToolOutput {
+    let count = content.matches(search).count();
+    if count == 0 {
+        return edit_error(name, args, &format!("search text not found in {}", path.display()), elapsed);
+    }
+    if count > 1 {
+        return edit_error(name, args, &format!("search text appears {} times. Be more specific.", count), elapsed);
+    }
+    let new_content = content.replacen(search, replace, 1);
+    match std::fs::write(path, &new_content) {
+        Ok(()) => {
+            let diff = crate::diff::Diff::generate(content, &new_content);
+            let diff_output = diff.to_unified_string();
+            ToolOutput {
+                tool_name: name.to_string(),
+                tool_args: args.clone(),
+                content: diff_output,
+                bytes_transferred: Some(new_content.len() as u64),
+                duration: elapsed,
+                status: ToolStatus::Success,
             }
         }
-        Err(e) => (format!("Error reading {}: {}", path.display(), e), false),
+        Err(e) => edit_error(name, args, &format!("Error writing {}: {}", path.display(), e), elapsed),
+    }
+}
+
+fn edit_error(name: &str, args: &serde_json::Value, msg: &str, elapsed: std::time::Duration) -> ToolOutput {
+    ToolOutput {
+        tool_name: name.to_string(),
+        tool_args: args.clone(),
+        content: msg.to_string(),
+        bytes_transferred: None,
+        duration: elapsed,
+        status: ToolStatus::Error,
     }
 }
 
@@ -481,13 +578,27 @@ pub(crate) fn run_find(
     }
 }
 
-pub(crate) fn run_fetch_docs(library: &str) -> (String, bool) {
+pub(crate) fn run_fetch_docs(tool: &Tool, start: Instant) -> ToolOutput {
+    let name = tool.name();
+    let args = tool.to_args();
+    let library = if let Tool::FetchDocs { library } = tool { library } else { unreachable!() };
     let client = crate::context7::Context7Client::new();
     match client.fetch(library) {
-        Ok(output) => (output, true),
-        Err(e) => (
-            format!("Error fetching docs for '{}': {}", library, e),
-            false,
-        ),
+        Ok(content) => ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: args,
+            content,
+            bytes_transferred: None,
+            duration: start.elapsed(),
+            status: ToolStatus::Success,
+        },
+        Err(e) => ToolOutput {
+            tool_name: name.to_string(),
+            tool_args: args,
+            content: format!("Error fetching docs for '{}': {}", library, e),
+            bytes_transferred: None,
+            duration: start.elapsed(),
+            status: ToolStatus::Error,
+        },
     }
 }

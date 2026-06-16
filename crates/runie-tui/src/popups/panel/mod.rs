@@ -10,9 +10,18 @@ mod form;
 mod list;
 
 pub fn panel_dialog(f: &mut Frame, snap: &Snapshot) {
-    let stack = match &snap.dialog {
-        Some(d) => d.panel_stack(),
+    let dialog = match &snap.dialog {
+        Some(d) => d,
         _ => return,
+    };
+    // Welcome screen has no panel stack
+    if matches!(dialog, runie_core::commands::DialogState::Welcome) {
+        crate::popups::welcome::render_welcome(f, snap);
+        return;
+    }
+    let stack = match dialog.panel_stack() {
+        Some(s) => s,
+        None => return,
     };
     let panel = match stack.current() {
         Some(p) => p,

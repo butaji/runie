@@ -5,6 +5,7 @@
 //! to be assigned to `AppState::open_dialog`.
 
 use super::{ItemAction, Panel, PanelItem, PanelStack};
+use crate::event::{ControlEvent, ModelConfigEvent};
 use crate::Event;
 
 // ============================================================================
@@ -54,10 +55,10 @@ pub fn model_selector(
     if !recent.is_empty() {
         panel = panel.header("Recent");
         for model in recent {
-            let evt = Event::SwitchModel {
+            let evt = Event::ModelConfig(ModelConfigEvent::SwitchModel {
                 provider: model.split('/').next().unwrap_or("").into(),
                 model: model.clone(),
-            };
+            });
             let label = if model == current {
                 format!("★ {}", model)
             } else {
@@ -158,7 +159,7 @@ pub fn scoped_models(
             last_provider = provider;
         }
         // Emit a toggle event for each model — the state will mutate.
-        let evt = Event::ScopedModelToggle { name: name.clone() };
+        let evt = Event::ModelConfig(ModelConfigEvent::ScopedModelToggle { name: name.clone() });
         let label = format!("{} {}", if enabled { "[x]" } else { "[ ]" }, name);
         panel = panel.item(label, ItemAction::Emit(evt));
     }
@@ -185,6 +186,89 @@ pub fn session_tree(items: Vec<(usize, String, Event)>) -> PanelStack {
         panel = panel.item(label, ItemAction::Emit(evt));
     }
     PanelStack::new(panel)
+}
+
+// ============================================================================
+// Session List
+// ============================================================================
+
+/// A single session row for the session list dialog.
+pub struct SessionRow {
+    pub id: String,
+    pub display_name: String,
+    pub summary: Option<String>,
+    pub message_count: usize,
+    pub is_starred: bool,
+    pub is_system: bool,
+}
+
+/// Build a session list panel with fuzzy search, star/unstar, rename, delete, and resume.
+pub fn session_list(sessions: Vec<SessionRow>) -> PanelStack {
+    if sessions.is_empty() {
+        let panel = Panel::new("session-list", " Sessions ")
+            .with_filter()
+            .header("No sessions yet. Start a new conversation to create one.");
+        return PanelStack::new(panel);
+    }
+
+    let mut panel = Panel::new("session-list", " Sessions ").with_filter().keep_open();
+    panel = add_session_section(panel, &sessions, true, false, Some("System"));
+    panel = add_session_section(panel, &sessions, false, true, Some("Starred"));
+    let show_recent_header = sessions.iter().any(|s| s.is_system) || sessions.iter().any(|s| s.is_starred && !s.is_system);
+    panel = add_session_section(panel, &sessions, false, false, if show_recent_header { Some("Recent") } else { None });
+
+    PanelStack::new(panel)
+}
+
+fn add_session_section(panel: Panel, sessions: &[SessionRow], is_system: bool, is_starred: bool, header: Option<&str>) -> Panel {
+    let mut panel = panel;
+    let mut first = true;
+    for session in sessions {
+        let matches = if is_system {
+            session.is_system
+        } else if is_starred {
+            session.is_starred && !session.is_system
+        } else {
+            !session.is_starred && !session.is_system
+        };
+
+        if matches {
+            if first {
+                if let Some(h) = header {
+                    panel = panel.header(h);
+                }
+                first = false;
+            }
+            add_session_item(&mut panel, session);
+        }
+    }
+    if !first && (is_system || is_starred) {
+        panel = panel.separator();
+    }
+    panel
+}
+
+fn add_session_item(panel: &mut Panel, session: &SessionRow) {
+    let star = if session.is_starred { "★" } else { "☆" };
+    let count_label = format!("[{} msgs]", session.message_count);
+
+    // Format: ☆ name [N msgs] — summary
+    let label = if let Some(summary) = &session.summary {
+        if summary.is_empty() {
+            format!("{} {} {}", star, session.display_name, count_label)
+        } else {
+            format!("{} {} {} — {}", star, session.display_name, count_label, summary)
+        }
+    } else {
+        format!("{} {} {}", star, session.display_name, count_label)
+    };
+
+    let id = session.id.clone();
+    let evt = Event::Control(ControlEvent::SelectSession { id });
+    panel.items.push(PanelItem::Action {
+        label,
+        action: ItemAction::Emit(evt),
+    });
 }
 
 // ============================================================================
@@ -231,7 +315,7 @@ mod tests {
     use super::*;
 
     fn dummy_evt() -> Event {
-        Event::Abort
+        Event::Control(ControlEvent::Abort)
     }
 
     #[test]
@@ -343,6 +427,69 @@ mod tests {
         let panel = stack.current().unwrap();
         assert!(panel.filterable);
         // Has a header about no tree
+        let has_header = panel
+            .items
+            .iter()
+            .any(|i| matches!(i, PanelItem::Header(_)));
+        assert!(has_header);
+    }
+
+    #[test]
+    fn session_list_builds_with_sections() {
+        let sessions = vec![
+            SessionRow {
+                id: "sys1".into(),
+                display_name: "Scheduled Tasks".into(),
+                summary: Some("Periodic automation".into()),
+                message_count: 10,
+                is_starred: false,
+                is_system: true,
+            },
+            SessionRow {
+                id: "star1".into(),
+                display_name: "Important Chat".into(),
+                summary: Some("Key discussion".into()),
+                message_count: 5,
+                is_starred: true,
+                is_system: false,
+            },
+            SessionRow {
+                id: "reg1".into(),
+                display_name: "Regular Session".into(),
+                summary: Some("Just a chat".into()),
+                message_count: 3,
+                is_starred: false,
+                is_system: false,
+            },
+        ];
+
+        let stack = session_list(sessions);
+        let panel = stack.current().unwrap();
+        assert!(panel.filterable);
+        assert!(panel.keep_open_on_activate);
+
+        // Has 3 headers: System, Starred, Recent
+        let headers: Vec<_> = panel
+            .items
+            .iter()
+            .filter(|i| matches!(i, PanelItem::Header(_)))
+            .collect();
+        assert_eq!(headers.len(), 3);
+
+        // Has 3 session items (Action variants)
+        let actions: Vec<_> = panel
+            .items
+            .iter()
+            .filter(|i| matches!(i, PanelItem::Action { .. }))
+            .collect();
+        assert_eq!(actions.len(), 3);
+    }
+
+    #[test]
+    fn session_list_empty_shows_message() {
+        let stack = session_list(vec![]);
+        let panel = stack.current().unwrap();
+        assert!(panel.filterable);
         let has_header = panel
             .items
             .iter()

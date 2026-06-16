@@ -188,6 +188,7 @@ impl LazyCache {
                 .trim_end_matches("...");
             return Element::tool_running(
                 name,
+                "",
                 state
                     .agent
                     .tool_started_at
@@ -199,7 +200,7 @@ impl LazyCache {
         if state.view.all_collapsed {
             Element::tool_summary(name, dur).at(ts)
         } else {
-            Element::tool_done(name, dur, output).at(ts)
+            Element::tool_done(name, String::new(), dur, output, None, false).at(ts)
         }
     }
 
@@ -225,181 +226,5 @@ impl LazyCache {
             .last()
             .and_then(|s| s.trim_end_matches('s').parse().ok())
             .unwrap_or(0.0)
-    }
-}
-
-#[cfg(test)]
-pub mod format_test {
-    use crate::labels::format_timestamp;
-    use crate::ui::elements::{Element, Feed};
-
-    #[derive(Debug, Clone)]
-    pub struct DisplayLine {
-        pub spans: Vec<DisplaySpan>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct DisplaySpan {
-        pub text: String,
-    }
-
-    pub fn format_messages(state: &crate::model::AppState) -> Vec<DisplayLine> {
-        let feed = super::LazyCache::feed(state);
-        render_feed(&feed, state)
-    }
-
-    pub fn render_feed(feed: &Feed, state: &crate::model::AppState) -> Vec<DisplayLine> {
-        feed.elements
-            .iter()
-            .flat_map(|e| render_element(e, state))
-            .collect()
-    }
-
-    fn render_element(element: &Element, state: &crate::model::AppState) -> Vec<DisplayLine> {
-        match element {
-            Element::Spacer { .. } => vec![DisplayLine { spans: vec![] }],
-            Element::UserMessage { content, .. } => render_user(content),
-            Element::AgentMessage { content, .. } => render_agent(content),
-            Element::Thinking { started, .. } => render_thinking(state, *started),
-            Element::ThoughtMarker { content, .. } => render_thought_marker(content),
-            Element::ThoughtSummary { content, .. } => render_thought_summary(content),
-            Element::ToolRunning { name, started, .. } => {
-                render_tool_running(state, name, *started)
-            }
-            Element::ToolDone {
-                name,
-                duration_secs,
-                output,
-                ..
-            } => render_tool_done(name, *duration_secs, output),
-            Element::ToolSummary {
-                name,
-                duration_secs,
-                ..
-            } => render_tool_summary(name, *duration_secs),
-            Element::TurnComplete { duration_secs, .. } => render_turn_complete(*duration_secs),
-        }
-    }
-
-    fn render_user(content: &str) -> Vec<DisplayLine> {
-        let ts = format_timestamp(0.0);
-        vec![DisplayLine {
-            spans: vec![
-                DisplaySpan {
-                    text: "$".to_string(),
-                },
-                DisplaySpan {
-                    text: " ".to_string(),
-                },
-                DisplaySpan {
-                    text: content.to_string(),
-                },
-                DisplaySpan {
-                    text: format!(" {}", ts),
-                },
-            ],
-        }]
-    }
-
-    fn render_agent(content: &str) -> Vec<DisplayLine> {
-        let ts = format_timestamp(0.0);
-        vec![DisplayLine {
-            spans: vec![
-                DisplaySpan {
-                    text: "→".to_string(),
-                },
-                DisplaySpan {
-                    text: " ".to_string(),
-                },
-                DisplaySpan {
-                    text: content.to_string(),
-                },
-                DisplaySpan {
-                    text: format!(" {}", ts),
-                },
-            ],
-        }]
-    }
-
-    fn render_thinking(
-        state: &crate::model::AppState,
-        started: std::time::Instant,
-    ) -> Vec<DisplayLine> {
-        vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: crate::labels::action_text(
-                    state.spinner_frame(),
-                    "Thinking",
-                    started.elapsed().as_secs_f64(),
-                ),
-            }],
-        }]
-    }
-
-    fn render_thought_marker(content: &str) -> Vec<DisplayLine> {
-        vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: content.to_string(),
-            }],
-        }]
-    }
-
-    fn render_thought_summary(content: &str) -> Vec<DisplayLine> {
-        vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: format!("{} [+]", content.lines().next().unwrap_or(content)),
-            }],
-        }]
-    }
-
-    fn render_tool_running(
-        state: &crate::model::AppState,
-        name: &str,
-        started: std::time::Instant,
-    ) -> Vec<DisplayLine> {
-        vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: format!(
-                    "{} Running {}... {:.1}s",
-                    state.spinner_frame(),
-                    name,
-                    started.elapsed().as_secs_f64()
-                ),
-            }],
-        }]
-    }
-
-    fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<DisplayLine> {
-        let mut lines = vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: format!("✓ {} {:.1}s", name, duration_secs),
-            }],
-        }];
-        if !output.is_empty() {
-            for line in output.lines() {
-                lines.push(DisplayLine {
-                    spans: vec![DisplaySpan {
-                        text: line.to_string(),
-                    }],
-                });
-            }
-        }
-        lines
-    }
-
-    fn render_tool_summary(name: &str, duration_secs: f64) -> Vec<DisplayLine> {
-        vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: format!("✓ {} {:.1}s [+]", name, duration_secs),
-            }],
-        }]
-    }
-
-    fn render_turn_complete(duration_secs: f64) -> Vec<DisplayLine> {
-        vec![DisplayLine {
-            spans: vec![DisplaySpan {
-                text: format!("Turn completed in {:.1}s", duration_secs),
-            }],
-        }]
     }
 }

@@ -24,8 +24,8 @@ fn test_tool_read_file_exists() {
         limit: None,
     }
     .execute();
-    assert!(result.success);
-    assert!(result.output.contains("runie-agent"));
+    assert!(result.is_success());
+    assert!(result.output.content.contains("runie-agent"));
 }
 
 #[test]
@@ -36,8 +36,8 @@ fn test_tool_read_file_missing() {
         limit: None,
     }
     .execute();
-    assert!(!result.success);
-    assert!(result.output.contains("Error"));
+    assert!(!result.is_success());
+    assert!(result.output.content.contains("Error"));
 }
 
 #[test]
@@ -46,8 +46,8 @@ fn test_tool_list_dir() {
         path: ".".to_string(),
     }
     .execute();
-    assert!(result.success);
-    assert!(!result.output.is_empty());
+    assert!(result.is_success());
+    assert!(!result.output.content.is_empty());
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn test_tool_write_file_roundtrip() {
         content: "test content 42".to_string(),
     }
     .execute();
-    assert!(write_result.success);
+    assert!(write_result.is_success());
 
     let read_result = Tool::ReadFile {
         path: path.to_string(),
@@ -66,8 +66,8 @@ fn test_tool_write_file_roundtrip() {
         limit: None,
     }
     .execute();
-    assert!(read_result.success);
-    assert_eq!(read_result.output, "test content 42");
+    assert!(read_result.is_success());
+    assert_eq!(read_result.output.content, "test content 42");
     let _ = std::fs::remove_file(path);
 }
 
@@ -79,8 +79,8 @@ fn test_tool_read_file_with_offset_and_limit() {
         limit: Some(5),
     }
     .execute();
-    assert!(result.success);
-    assert!(result.output.contains("[Lines"));
+    assert!(result.is_success());
+    assert!(result.output.content.contains("[Lines"));
 }
 
 #[test]
@@ -89,8 +89,8 @@ fn test_tool_bash_echo() {
         command: "echo hello_agent".to_string(),
     }
     .execute();
-    assert!(result.success);
-    assert!(result.output.contains("hello_agent"));
+    assert!(result.is_success());
+    assert!(result.output.content.contains("hello_agent"));
 }
 
 #[test]
@@ -104,29 +104,29 @@ fn test_bash_truncation_uses_configured_policy() {
         command: "seq 1 50".to_string(),
     }
     .execute_with_policy(&policy);
-    assert!(result.success);
+    assert!(result.is_success());
     assert!(
-        result.output.contains("Output truncated"),
+        result.output.content.contains("Output truncated"),
         "expected truncation marker, got: {:?}",
-        result.output
+        result.output.content
     );
     // Tail strategy: keep last N lines.
     assert!(
-        result.output.contains("46"),
+        result.output.content.contains("46"),
         "tail should keep the latest lines: {:?}",
-        result.output
+        result.output.content
     );
     // The earliest kept line is "41" (lines 41-50 of 50 = 10 lines).
     // Lines 1-40 should not appear in the truncated output.
     assert!(
-        !result.output.contains("\n1\n"),
+        !result.output.content.contains("\n1\n"),
         "head lines should be dropped: {:?}",
-        result.output
+        result.output.content
     );
     assert!(
-        !result.output.contains("20\n"),
+        !result.output.content.contains("20\n"),
         "mid lines should be dropped: {:?}",
-        result.output
+        result.output.content
     );
 }
 
@@ -137,11 +137,11 @@ fn test_bash_no_truncation_when_under_policy() {
         command: "seq 1 50".to_string(),
     }
     .execute();
-    assert!(result.success);
+    assert!(result.is_success());
     assert!(
-        !result.output.contains("Output truncated"),
+        !result.output.content.contains("Output truncated"),
         "small output should not be truncated: {:?}",
-        result.output
+        result.output.content
     );
 }
 
@@ -151,7 +151,7 @@ fn test_tool_bash_invalid_command() {
         command: "not_a_real_command_12345".to_string(),
     }
     .execute();
-    assert!(!result.success);
+    assert!(!result.is_success());
 }
 
 #[test]
@@ -160,8 +160,8 @@ fn test_tool_bash_blocked_dangerous() {
         command: "rm -rf /".to_string(),
     }
     .execute();
-    assert!(!result.success);
-    assert!(result.output.contains("Blocked"));
+    assert!(!result.is_success());
+    assert!(result.output.content.contains("Blocked"));
 }
 
 #[test]
@@ -171,7 +171,7 @@ fn test_tool_result_structure() {
     }
     .execute();
     assert_eq!(result.tool.name(), "bash");
-    assert!(result.success);
+    assert!(result.is_success());
 }
 
 #[test]
@@ -182,8 +182,8 @@ fn test_tool_write_creates_parent_dirs() {
         content: "nested content".to_string(),
     }
     .execute();
-    assert!(result.success);
-    assert!(result.output.contains("bytes"));
+    assert!(result.is_success());
+    assert!(result.output.content.contains("bytes"));
 
     // Verify file was created
     let read_result = Tool::ReadFile {
@@ -192,8 +192,8 @@ fn test_tool_write_creates_parent_dirs() {
         limit: None,
     }
     .execute();
-    assert!(read_result.success);
-    assert_eq!(read_result.output, "nested content");
+    assert!(read_result.is_success());
+    assert_eq!(read_result.output.content, "nested content");
 
     // Cleanup
     let _ = std::fs::remove_file(path);
@@ -209,8 +209,8 @@ fn test_tool_bash_timeout() {
         command: "echo timeout_test_ok".to_string(),
     }
     .execute();
-    assert!(result.success);
-    assert!(result.output.contains("timeout_test_ok"));
+    assert!(result.is_success());
+    assert!(result.output.content.contains("timeout_test_ok"));
 }
 
 #[test]
@@ -223,7 +223,7 @@ fn test_edit_file_success() {
         replace: "new".to_string(),
     }
     .execute();
-    assert!(result.success);
+    assert!(result.is_success());
     let content = std::fs::read_to_string(path).unwrap();
     assert_eq!(content, "line1\nnew\nline3");
     let _ = std::fs::remove_file(path);
@@ -239,8 +239,8 @@ fn test_edit_file_search_not_found() {
         replace: "new".to_string(),
     }
     .execute();
-    assert!(!result.success);
-    assert!(result.output.contains("not found"));
+    assert!(!result.is_success());
+    assert!(result.output.content.contains("not found"));
     let _ = std::fs::remove_file(path);
 }
 
@@ -254,8 +254,8 @@ fn test_edit_file_multiple_matches() {
         replace: "new".to_string(),
     }
     .execute();
-    assert!(!result.success);
-    assert!(result.output.contains("appears"));
+    assert!(!result.is_success());
+    assert!(result.output.content.contains("appears"));
     let _ = std::fs::remove_file(path);
 }
 
@@ -269,7 +269,7 @@ fn test_edit_file_empty_search() {
         replace: "x".to_string(),
     }
     .execute();
-    assert!(!result.success);
+    assert!(!result.is_success());
     let _ = std::fs::remove_file(path);
 }
 

@@ -142,13 +142,13 @@ impl super::model::AppState {
     /// Load history from disk into AppState.
     pub fn load_input_history(&mut self) {
         if let Ok(entries) = load_history() {
-            self.input_history = entries;
+            self.input.input_history = entries;
         }
     }
 
     /// Save current history to disk.
     pub fn save_input_history(&self) {
-        if let Err(e) = save_history(&self.input_history) {
+        if let Err(e) = save_history(&self.input.input_history) {
             eprintln!("Failed to save input history: {}", e);
         }
     }
@@ -157,8 +157,8 @@ impl super::model::AppState {
     /// Call this when adding a new history entry.
     pub fn add_to_input_history(&mut self, entry: String) {
         // Avoid duplicates: remove if already exists
-        self.input_history.retain(|h| h != &entry);
-        self.input_history.push(entry);
+        self.input.input_history.retain(|h| h != &entry);
+        self.input.input_history.push(entry);
         self.save_input_history();
     }
 }

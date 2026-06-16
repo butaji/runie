@@ -20,6 +20,7 @@ mod hints;
 mod input;
 mod layout;
 pub(crate) mod messages;
+mod mouse;
 mod render_lines;
 mod scroll;
 

@@ -1,7 +1,7 @@
 //! Settings dialog tests (Layer 2 + Layer 3)
 
 use crate::commands::DialogState;
-use crate::event::Event;
+use crate::event::{ControlEvent, Event, InputEvent, ModelConfigEvent, DialogEvent};
 use crate::model::{AppState, DeliveryMode};
 use crate::settings::{SettingValue, SettingsCategory};
 use crate::update::settings_dialog::build_setting_items;
@@ -17,13 +17,19 @@ fn settings_count(state: &AppState) -> usize {
     build_setting_items(state).len()
 }
 
+/// Open palette and select a command by name
+fn palette_select(state: &mut AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
+}
+
 #[test]
 fn settings_opens_dialog() {
     let mut state = AppState::default();
-    for c in "/settings".chars() {
-        state.update(Event::Input(c));
-    }
-    state.update(Event::Submit);
+    palette_select(&mut state, "settings");
     assert!(
         matches!(state.open_dialog, Some(DialogState::Settings(_))),
         "Expected Settings dialog, got {:?}",
@@ -34,8 +40,8 @@ fn settings_opens_dialog() {
 #[test]
 fn settings_navigates_up() {
     let mut state = AppState::default();
-    state.update(Event::ToggleSettingsDialog);
-    state.update(Event::SettingsUp);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
+    state.update(Event::ModelConfig(ModelConfigEvent::SettingsUp));
     let selected = settings_selected(&state).expect("Dialog should still be open");
     assert_eq!(
         selected,
@@ -47,10 +53,10 @@ fn settings_navigates_up() {
 #[test]
 fn settings_navigates_down_wraps() {
     let mut state = AppState::default();
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     let count = settings_count(&state);
     for _ in 0..count {
-        state.update(Event::SettingsDown);
+        state.update(Event::ModelConfig(ModelConfigEvent::SettingsDown));
     }
     let selected = settings_selected(&state).expect("Dialog should still be open");
     assert_eq!(selected, 0, "Down wraps to first");
@@ -60,7 +66,7 @@ fn settings_navigates_down_wraps() {
 fn settings_select_toggles_read_only() {
     let mut state = AppState::default();
     state.config.read_only = false;
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     // Scan for the read-only toggle
     let count = settings_count(&state);
     for _ in 0..count {
@@ -74,10 +80,10 @@ fn settings_select_toggles_read_only() {
             false
         };
         if is_readonly {
-            state.update(Event::SettingsSelect);
+            state.update(Event::ModelConfig(ModelConfigEvent::SettingsSelect));
             break;
         }
-        state.update(Event::SettingsDown);
+        state.update(Event::ModelConfig(ModelConfigEvent::SettingsDown));
     }
     assert!(state.config.read_only);
 }
@@ -85,15 +91,15 @@ fn settings_select_toggles_read_only() {
 #[test]
 fn settings_esc_closes() {
     let mut state = AppState::default();
-    state.update(Event::ToggleSettingsDialog);
-    state.update(Event::Abort);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
+    state.update(Event::Control(ControlEvent::Abort));
     assert!(state.open_dialog.is_none());
 }
 
 #[test]
 fn settings_select_toggles_steering_mode() {
     let mut state = AppState::default();
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     // Find steering mode row by scanning
     let count = settings_count(&state);
     assert!(matches!(
@@ -111,10 +117,10 @@ fn settings_select_toggles_steering_mode() {
             false
         };
         if is_steering {
-            state.update(Event::SettingsSelect);
+            state.update(Event::ModelConfig(ModelConfigEvent::SettingsSelect));
             break;
         }
-        state.update(Event::SettingsDown);
+        state.update(Event::ModelConfig(ModelConfigEvent::SettingsDown));
     }
     assert!(matches!(state.config.steering_mode, DeliveryMode::All));
 }
@@ -123,7 +129,7 @@ fn settings_select_toggles_steering_mode() {
 fn settings_select_cycles_provider() {
     let mut state = AppState::default();
     state.config.current_provider = "anthropic".into();
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     let count = settings_count(&state);
     for _ in 0..count {
         let is_provider = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
@@ -136,10 +142,10 @@ fn settings_select_cycles_provider() {
             false
         };
         if is_provider {
-            state.update(Event::SettingsSelect);
+            state.update(Event::ModelConfig(ModelConfigEvent::SettingsSelect));
             break;
         }
-        state.update(Event::SettingsDown);
+        state.update(Event::ModelConfig(ModelConfigEvent::SettingsDown));
     }
     assert_eq!(state.config.current_provider, "openai");
 }
@@ -148,7 +154,7 @@ fn settings_select_cycles_provider() {
 fn settings_select_cycles_theme() {
     let mut state = AppState::default();
     state.config.theme_name = "runie".into();
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     let count = settings_count(&state);
     for _ in 0..count {
         let is_theme = if let Some(DialogState::Settings(stack)) = &state.open_dialog {
@@ -161,10 +167,10 @@ fn settings_select_cycles_theme() {
             false
         };
         if is_theme {
-            state.update(Event::SettingsSelect);
+            state.update(Event::ModelConfig(ModelConfigEvent::SettingsSelect));
             break;
         }
-        state.update(Event::SettingsDown);
+        state.update(Event::ModelConfig(ModelConfigEvent::SettingsDown));
     }
     assert_ne!(state.config.theme_name, "runie");
 }
@@ -202,10 +208,10 @@ fn select_by_label(state: &mut AppState, label: &str) {
             false
         };
         if is_match {
-            state.update(Event::SettingsSelect);
+            state.update(Event::ModelConfig(ModelConfigEvent::SettingsSelect));
             return;
         }
-        state.update(Event::SettingsDown);
+        state.update(Event::ModelConfig(ModelConfigEvent::SettingsDown));
     }
     panic!("setting label {:?} not found", label);
 }
@@ -237,10 +243,10 @@ fn settings_vim_mode_default_is_true() {
 fn settings_select_toggles_vim_mode() {
     let mut state = AppState::default();
     assert!(state.config.vim_mode);
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     select_by_label(&mut state, "Vim Navigation");
     assert!(!state.config.vim_mode, "select should turn vim_mode off");
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     select_by_label(&mut state, "Vim Navigation");
     assert!(state.config.vim_mode, "select should turn vim_mode on");
 }
@@ -258,7 +264,7 @@ fn settings_includes_telemetry_toggle() {
 fn settings_select_toggles_telemetry() {
     let mut state = AppState::default();
     assert!(!state.config.telemetry.is_enabled());
-    state.update(Event::ToggleSettingsDialog);
+    state.update(Event::Dialog(DialogEvent::ToggleSettingsDialog));
     select_by_label(&mut state, "Telemetry");
     assert!(
         state.config.telemetry.is_enabled(),

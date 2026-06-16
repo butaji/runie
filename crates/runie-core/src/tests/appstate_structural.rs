@@ -55,10 +55,6 @@ fn appstate_has_correct_top_level_fields() {
         state.cwd_name.is_empty() || !state.cwd_name.is_empty(),
         "cwd_name should be on AppState"
     );
-    assert!(
-        state.input_history.is_empty(),
-        "input_history should be empty by default"
-    );
 }
 
 fn assert_agent_defaults(agent: &AgentState) {
@@ -182,7 +178,6 @@ fn session_access_patterns(state: &mut AppState) {
             std::path::PathBuf::from("test.rs"),
             "old".to_string(),
             "new".to_string(),
-            "+new".to_string(),
         ));
     assert_eq!(state.session.pending_edits.len(), 1);
 
@@ -226,8 +221,8 @@ fn singletons_remain_on_appstate() {
     state.transient_message = Some("Test".to_string());
     assert_eq!(state.transient_message, Some("Test".to_string()));
 
-    state.input_history.push("echo hello".to_string());
-    assert_eq!(state.input_history.len(), 1);
+    state.input.input_history.push("echo hello".to_string());
+    assert_eq!(state.input.input_history.len(), 1);
 }
 
 /// Verify inner struct field count matches acceptance criteria.

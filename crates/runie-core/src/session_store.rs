@@ -1,406 +1,435 @@
-//! JSONL session store — append-only event log per session,
-//! plus a session metadata index (index.jsonl) for browsing.
+//! redb-based session persistence.
+//!
+//! Each session gets its own redb database file: `<dir>/<id>.redb`.
+//! Tables:
+//!   - `meta`    (key=u32::MAX) → JSON-serialized SessionMetadata
+//!   - `events`  (key=u32)       → JSON-serialized DurableCoreEvent
+//!
+//! Provides atomic batch appends and automatic JSONL migration on open.
+//! Wrap `SessionStore` methods in `tokio::task::spawn_blocking` for async contexts.
 
-use crate::event::DurableCoreEvent;
-use serde::{Deserialize, Serialize};
-use std::io::{BufRead, Write};
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+/// Alias for backward compatibility with SessionActor.
+pub use crate::session_index::SessionMetadata as SessionMeta;
 
-/// Metadata for a single session, persisted in the session index.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SessionMeta {
-    pub id: String,
-    #[serde(default)]
-    pub display_name: String,
-    pub created_at: f64,
-    pub updated_at: f64,
-    #[serde(default)]
-    pub message_count: usize,
-    #[serde(default)]
-    pub summary: String,
-    #[serde(default)]
-    pub is_starred: bool,
-    #[serde(default)]
-    pub is_system: bool,
-}
+use crate::event::durable::DurableCoreEvent;
+use crate::session_index::{SessionIndex, SessionMetadata};
+use redb::{Database, ReadableTable, TableDefinition};
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
 
-/// A thread-safe session store backed by JSONL files.
-#[derive(Clone)]
+const SCHEMA_VERSION: u64 = 1;
+
+// Table definitions
+const TABLE_META: TableDefinition<u32, &str> = TableDefinition::new("meta");
+const TABLE_EVENTS: TableDefinition<u32, &str> = TableDefinition::new("events");
+
+/// redb-backed session store — each session has its own `.redb` file.
+#[derive(Debug, Clone)]
 pub struct SessionStore {
-    data_dir: PathBuf,
-    lock: Arc<Mutex<()>>,
+    dir: PathBuf,
 }
 
 impl SessionStore {
-    /// Create a new session store rooted at `data_dir`.
-    /// Sessions are stored at `data_dir/runie/sessions/<session_id>.jsonl`.
-    pub fn new(data_dir: PathBuf) -> Self {
-        Self {
-            data_dir,
-            lock: Arc::new(Mutex::new(())),
-        }
+    /// Create a new store at the given directory.
+    pub fn new(dir: PathBuf) -> Self {
+        Self { dir }
     }
 
-    /// Create a default session store in the OS data directory.
-    pub fn default_store() -> Option<Self> {
+    /// Get the default store location.
+    pub fn default() -> Option<Self> {
         dirs::data_dir().map(|d| Self::new(d.join("runie").join("sessions")))
     }
 
-    fn session_dir(&self) -> PathBuf {
-        self.data_dir.clone()
+    /// Path to the redb file for a session.
+    pub fn path(&self, session_id: &str) -> PathBuf {
+        self.dir.join(format!("{}.redb", session_id))
     }
 
-    fn session_path(&self, session_id: &str) -> PathBuf {
-        self.session_dir().join(format!("{}.jsonl", session_id))
-    }
+    /// Open (or create) a session database, migrating from JSONL if needed.
+    ///
+    /// Returns the database and a flag indicating whether migration occurred.
+    fn open_db(path: &Path) -> anyhow::Result<(Database, bool)> {
+        let jsonl_path = path.with_extension("jsonl");
+        let db_existed = path.exists();
 
-    fn ensure_dir(&self) -> std::io::Result<()> {
-        std::fs::create_dir_all(self.session_dir())
-    }
-
-    /// Append a durable event to the session's JSONL file.
-    /// Uses atomic write (write to temp file, rename) to prevent partial writes.
-    pub fn append(&self, session_id: &str, event: &DurableCoreEvent) -> std::io::Result<()> {
-        let _guard = self.lock.lock().unwrap();
-        self.ensure_dir()?;
-
-        let path = self.session_path(session_id);
-        let line = serde_json::to_string(event).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-        })?;
-
-        let tmp_dir = self.session_dir();
-        let mut tmp = tempfile::NamedTempFile::new_in(&tmp_dir)?;
-
-        if path.exists() {
-            let existing = std::fs::read_to_string(&path)?;
-            tmp.write_all(existing.as_bytes())?;
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
         }
-        writeln!(tmp, "{}", line)?;
-        tmp.flush()?;
-        tmp.persist(&path).map_err(|e| e.error)?;
+        let db = Database::create(path)?;
+        let mut migrated = false;
 
+        // Initialize schema
+        {
+            let tx = db.begin_write()?;
+            let _ = tx.open_table(TABLE_META)?;
+            let _ = tx.open_table(TABLE_EVENTS)?;
+            tx.commit()?;
+        }
+
+        // Migrate JSONL if it exists and the DB was just created
+        if jsonl_path.exists() && !db_existed {
+            let content = fs::read_to_string(&jsonl_path)?;
+            let mut seq = 0u32;
+            let tx = db.begin_write()?;
+            {
+                let mut table = tx.open_table(TABLE_EVENTS)?;
+                for line in content.lines() {
+                    let line = line.trim();
+                    if line.is_empty() {
+                        continue;
+                    }
+                    if serde_json::from_str::<DurableCoreEvent>(line).is_ok() {
+                        table.insert(&seq, line)?;
+                        seq += 1;
+                    }
+                }
+            }
+            tx.commit()?;
+            // Rename JSONL to .jsonl.migrated so it won't be re-imported
+            let backup = path.with_extension("jsonl.migrated");
+            fs::rename(&jsonl_path, backup).ok();
+            migrated = true;
+        }
+
+        Ok((db, migrated))
+    }
+
+    /// Internal: get max event sequence number in a db.
+    fn max_seq(db: &Database) -> anyhow::Result<u32> {
+        let tx = db.begin_read()?;
+        let table = tx.open_table(TABLE_EVENTS)?;
+        let mut max = 0u32;
+        for entry in table.iter()? {
+            let (k, _) = entry?;
+            let seq = k.value();
+            if seq > max {
+                max = seq;
+            }
+        }
+        Ok(max)
+    }
+
+    /// Append a durable event to the session's redb store.
+    ///
+    /// Wraps in a write transaction. Caller should wrap in `spawn_blocking`
+    /// for async contexts.
+    pub fn append(&self, session_id: &str, event: &DurableCoreEvent) -> anyhow::Result<()> {
+        let path = self.path(session_id);
+        let (db, _) = Self::open_db(&path)?;
+        let seq = Self::max_seq(&db)? + 1;
+        let tx = db.begin_write()?;
+        {
+            let mut table = tx.open_table(TABLE_EVENTS)?;
+            let val = serde_json::to_string(event)?;
+            table.insert(&seq, &*val)?;
+        }
+        tx.commit()?;
         Ok(())
     }
 
-    /// Load all durable events from a session's JSONL file.
-    pub fn load_events(&self, session_id: &str) -> std::io::Result<Vec<DurableCoreEvent>> {
-        let path = self.session_path(session_id);
+    /// Append multiple events in a single atomic batch.
+    pub fn append_batch(
+        &self,
+        session_id: &str,
+        events: &[DurableCoreEvent],
+    ) -> anyhow::Result<()> {
+        if events.is_empty() {
+            return Ok(());
+        }
+        let path = self.path(session_id);
+        let (db, _) = Self::open_db(&path)?;
+        let start_seq = Self::max_seq(&db)? + 1;
+        let tx = db.begin_write()?;
+        {
+            let mut table = tx.open_table(TABLE_EVENTS)?;
+            for (i, event) in events.iter().enumerate() {
+                let val = serde_json::to_string(event)?;
+                table.insert(&(start_seq + i as u32), &*val)?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Load all events from a session's redb store in order.
+    pub fn load_events(&self, session_id: &str) -> anyhow::Result<Vec<DurableCoreEvent>> {
+        let path = self.path(session_id);
+        if !path.exists() {
+            // Fall back to JSONL for sessions created before migration
+            return self.load_events_jsonl(session_id);
+        }
+
+        let (db, _) = Self::open_db(&path)?;
+        let tx = db.begin_read()?;
+        let table = tx.open_table(TABLE_EVENTS)?;
+
+        let mut events = Vec::new();
+        let mut keys: Vec<u32> = Vec::new();
+
+        for entry in table.iter()? {
+            let (k, v) = entry?;
+            keys.push(k.value());
+            let val = v.value();
+            if let Ok(event) = serde_json::from_str::<DurableCoreEvent>(val) {
+                events.push(event);
+            }
+        }
+
+        // Sort events by their sequence key
+        // Rebuild with original keys preserved
+        let mut paired: Vec<_> = keys.into_iter().zip(events.into_iter()).collect();
+        paired.sort_by_key(|(k, _)| *k);
+        events = paired.into_iter().map(|(_, e)| e).collect();
+
+        Ok(events)
+    }
+
+    /// Fallback: load events from a JSONL file.
+    fn load_events_jsonl(&self, session_id: &str) -> anyhow::Result<Vec<DurableCoreEvent>> {
+        let path = self.dir.join(format!("{}.jsonl", session_id));
         if !path.exists() {
             return Ok(Vec::new());
         }
-
-        let file = std::fs::File::open(&path)?;
-        let reader = std::io::BufReader::new(file);
-
+        let file = fs::File::open(&path)?;
+        let reader = BufReader::new(file);
         let mut events = Vec::new();
         for line in reader.lines() {
             let line = line?;
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
+            if line.trim().is_empty() {
                 continue;
             }
-            let event: DurableCoreEvent = serde_json::from_str(trimmed).map_err(|e| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-            })?;
-            events.push(event);
+            if let Ok(event) = serde_json::from_str::<DurableCoreEvent>(&line) {
+                events.push(event);
+            }
         }
         Ok(events)
     }
 
-    /// Delete a session's JSONL file.
-    pub fn delete(&self, session_id: &str) -> std::io::Result<()> {
-        let path = self.session_path(session_id);
+    /// Delete a session's redb file.
+    pub fn delete(&self, session_id: &str) -> anyhow::Result<()> {
+        let path = self.path(session_id);
         if path.exists() {
-            std::fs::remove_file(&path)?;
+            // Redb requires exclusive access — drop the file handle by dropping
+            // any existing db handles first (we open fresh each time)
+            fs::remove_file(&path)?;
         }
+        // Also clean up migrated JSONL backup
+        let backup = path.with_extension("jsonl.migrated");
+        fs::remove_file(&backup).ok();
         Ok(())
     }
 
-    // ── Session Index ────────────────────────────────────────────────────────
-
-    fn session_index_path(&self) -> PathBuf {
-        self.session_dir().join("index.jsonl")
-    }
-
-    /// Load all session metadata from the index.
-    pub fn load_index(&self) -> std::io::Result<Vec<SessionMeta>> {
-        let path = self.session_index_path();
-        if !path.exists() {
+    /// List all session IDs (from .redb files, falling back to .jsonl).
+    pub fn list(&self) -> anyhow::Result<Vec<String>> {
+        if !self.dir.exists() {
             return Ok(Vec::new());
         }
-        let file = std::fs::File::open(&path)?;
-        let reader = std::io::BufReader::new(file);
-        let mut sessions = Vec::new();
-        for line in reader.lines() {
-            let line = line?;
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
+        let mut ids = Vec::new();
+        for entry in fs::read_dir(&self.dir)? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            if let Some(id) = name.strip_suffix(".redb") {
+                ids.push(id.to_string());
+            } else if let Some(id) = name.strip_suffix(".jsonl") {
+                ids.push(id.to_string());
             }
-            sessions.push(serde_json::from_str(trimmed).map_err(|e| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-            })?);
         }
-        Ok(sessions)
+        ids.sort();
+        Ok(ids)
     }
 
-    /// Save the entire session index (replaces existing atomically).
-    pub fn save_index(&self, sessions: &[SessionMeta]) -> std::io::Result<()> {
-        let _guard = self.lock.lock().unwrap();
-        self.ensure_dir()?;
-        let path = self.session_index_path();
-        let tmp_dir = self.session_dir();
-        let mut tmp = tempfile::NamedTempFile::new_in(&tmp_dir)?;
-        for s in sessions {
-            let line = serde_json::to_string(s).map_err(|e| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, e)
-            })?;
-            writeln!(tmp, "{}", line)?;
+    /// Update a session's metadata in the redb store.
+    pub fn update_index(&self, meta: &SessionMetadata) -> anyhow::Result<()> {
+        let path = self.path(&meta.id);
+        let (db, _) = Self::open_db(&path)?;
+        let tx = db.begin_write()?;
+        {
+            let mut table = tx.open_table(TABLE_META)?;
+            let val = serde_json::to_string(meta)?;
+            table.insert(&u32::MAX, &*val)?;
         }
-        tmp.flush()?;
-        tmp.persist(&path).map_err(|e| e.error)?;
-        Ok(())
-    }
+        tx.commit()?;
 
-    /// Update (insert or replace) a single entry in the session index.
-    pub fn update_index(&self, meta: &SessionMeta) -> std::io::Result<()> {
-        let mut sessions = self.load_index()?;
-        if let Some(pos) = sessions.iter().position(|s| s.id == meta.id) {
-            sessions[pos] = meta.clone();
-        } else {
-            sessions.push(meta.clone());
-        }
-        self.save_index(&sessions)
+        // Also sync to the JSON index for backward compat
+        let data_dir = self.dir.parent().unwrap_or(&self.dir).to_path_buf();
+        let mut index = SessionIndex::load(&data_dir).unwrap_or_default();
+        index.upsert(meta.clone());
+        index.save(&data_dir)
     }
 
     /// Remove a session from the index.
-    pub fn remove_from_index(&self, session_id: &str) -> std::io::Result<()> {
-        let mut sessions = self.load_index()?;
-        sessions.retain(|s| s.id != session_id);
-        self.save_index(&sessions)
+    pub fn remove_from_index(&self, session_id: &str) -> anyhow::Result<()> {
+        self.delete(session_id)?;
+        let data_dir = self.dir.parent().unwrap_or(&self.dir).to_path_buf();
+        let mut index = SessionIndex::load(&data_dir).unwrap_or_default();
+        index.remove(session_id);
+        index.save(&data_dir)
     }
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::event::DurableCoreEvent;
 
-    fn tmp_store() -> (SessionStore, tempfile::TempDir) {
+    fn test_store() -> SessionStore {
         let dir = tempfile::tempdir().unwrap();
-        let store = SessionStore::new(dir.path().to_path_buf());
-        (store, dir)
+        SessionStore::new(dir.path().to_path_buf())
     }
 
-    fn sample_event_1() -> DurableCoreEvent {
-        DurableCoreEvent::MessageSent {
-            id: "msg.1".into(),
-            role: "user".into(),
-            content: "hello".into(),
-            timestamp: 1000.0,
-        }
-    }
-
-    fn sample_event_2() -> DurableCoreEvent {
-        DurableCoreEvent::MessageSent {
-            id: "msg.2".into(),
-            role: "assistant".into(),
-            content: "world".into(),
-            timestamp: 1001.0,
-        }
-    }
-
-    fn sample_event_3() -> DurableCoreEvent {
-        DurableCoreEvent::ToolCalled {
-            id: "tool.1".into(),
-            name: "bash".into(),
-            input: "ls".into(),
-        }
+    fn append_msg(store: &SessionStore, sid: &str, mid: &str, role: &str, content: &str, ts: f64) {
+        store.append(sid, &DurableCoreEvent::MessageSent {
+            id: mid.into(),
+            role: role.into(),
+            content: content.into(),
+            timestamp: ts,
+        }).unwrap();
     }
 
     #[test]
-    fn session_store_appends_and_replays_events() {
-        let (store, _dir) = tmp_store();
-        let session_id = "test_session_1";
+    fn redb_appends_and_replays_events() {
+        let store = test_store();
+        let sid = "test-replay";
 
-        store.append(session_id, &sample_event_1()).unwrap();
-        store.append(session_id, &sample_event_2()).unwrap();
-        store.append(session_id, &sample_event_3()).unwrap();
+        append_msg(&store, sid, "msg1", "user", "Hello", 1.0);
+        append_msg(&store, sid, "msg2", "assistant", "Hi there!", 2.0);
+        store.append(sid, &DurableCoreEvent::ModelSwitched {
+            provider: "anthropic".into(),
+            model: "claude-3".into(),
+        }).unwrap();
 
-        let events = store.load_events(session_id).unwrap();
+        let events = store.load_events(sid).unwrap();
         assert_eq!(events.len(), 3);
-        assert_eq!(events[0], sample_event_1());
-        assert_eq!(events[1], sample_event_2());
-        assert_eq!(events[2], sample_event_3());
+        assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "msg1"));
+        assert!(matches!(&events[2], DurableCoreEvent::ModelSwitched { provider, .. } if provider == "anthropic"));
     }
 
     #[test]
-    fn session_store_atomic_write_survives_crash() {
-        let (store, _dir) = tmp_store();
-        let session_id = "crash_test";
+    fn redb_atomic_batch_survives_crash() {
+        let store = test_store();
+        let sid = "test-crash";
 
-        store.append(session_id, &sample_event_1()).unwrap();
-        store.append(session_id, &sample_event_2()).unwrap();
+        let batch = vec![
+            DurableCoreEvent::MessageSent { id: "1".into(), role: "user".into(), content: "First".into(), timestamp: 1.0 },
+            DurableCoreEvent::MessageSent { id: "2".into(), role: "user".into(), content: "Second".into(), timestamp: 2.0 },
+            DurableCoreEvent::MessageSent { id: "3".into(), role: "user".into(), content: "Third".into(), timestamp: 3.0 },
+        ];
 
-        let path = store.session_path(session_id);
-        let raw = std::fs::read_to_string(&path).unwrap();
-        let lines: Vec<&str> = raw.lines().collect();
-        assert_eq!(lines.len(), 2);
+        store.append_batch(sid, &batch).unwrap();
 
-        for line in &lines {
-            let parsed: DurableCoreEvent = serde_json::from_str(line).unwrap();
-            let _ = parsed;
-        }
+        // Verify all events persisted
+        let events = store.load_events(sid).unwrap();
+        assert_eq!(events.len(), 3);
+        assert!(events.iter().all(|e| matches!(e, DurableCoreEvent::MessageSent { .. })));
     }
 
     #[test]
-    fn jsonl_line_is_valid_json() {
-        let (store, _dir) = tmp_store();
-        let session_id = "json_valid";
+    fn redb_migrates_jsonl_session() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir_path = dir.path().to_path_buf();
 
-        store.append(session_id, &sample_event_1()).unwrap();
-        store.append(session_id, &sample_event_2()).unwrap();
-        store.append(session_id, &sample_event_3()).unwrap();
+        // Create a legacy JSONL file
+        let jsonl_path = dir_path.join("legacy-session.jsonl");
+        let jsonl_content = concat!(
+            r#"{"event":"messageSent","id":"m1","role":"user","content":"Hello","timestamp":1.0}"#,
+            "\n",
+            r#"{"event":"messageSent","id":"m2","role":"assistant","content":"Hi!","timestamp":2.0}"#,
+            "\n"
+        );
+        std::fs::write(&jsonl_path, jsonl_content).unwrap();
 
-        let path = store.session_path(session_id);
-        let raw = std::fs::read_to_string(&path).unwrap();
-        for line in raw.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            let parsed: serde_json::Value = serde_json::from_str(trimmed)
-                .expect("Each line must be valid JSON");
-            assert!(parsed.is_object(), "Each line must be a JSON object");
-            assert!(
-                parsed.get("event").is_some(),
-                "Each line must have an 'event' tag"
-            );
-        }
+        // Open via SessionStore — should trigger migration
+        let store = SessionStore::new(dir_path);
+        let events = store.load_events("legacy-session").unwrap();
+
+        assert_eq!(events.len(), 2);
+        assert!(matches!(&events[0], DurableCoreEvent::MessageSent { id, .. } if id == "m1"));
+        assert!(matches!(&events[1], DurableCoreEvent::MessageSent { id, .. } if id == "m2"));
     }
 
     #[test]
-    fn session_store_load_nonexistent_returns_empty() {
-        let (store, _dir) = tmp_store();
+    fn redb_empty_when_no_file() {
+        let store = test_store();
         let events = store.load_events("nonexistent").unwrap();
         assert!(events.is_empty());
     }
 
     #[test]
-    fn session_store_delete_removes_file() {
-        let (store, _dir) = tmp_store();
-        store.append("deletable", &sample_event_1()).unwrap();
-        assert!(store.session_path("deletable").exists());
-        store.delete("deletable").unwrap();
-        assert!(!store.session_path("deletable").exists());
+    fn redb_delete() {
+        let store = test_store();
+        let sid = "test-delete";
+
+        append_msg(&store, sid, "msg1", "user", "Test", 1.0);
+        assert!(store.path(sid).exists());
+        store.delete(sid).unwrap();
+        assert!(!store.path(sid).exists());
     }
 
-    // ── Index Tests ──────────────────────────────────────────────────────────
+    #[test]
+    fn redb_list() {
+        let store = test_store();
 
-    fn sample_meta(id: &str, name: &str, msg_count: usize) -> SessionMeta {
-        SessionMeta {
-            id: id.into(),
-            display_name: name.into(),
+        append_msg(&store, "session-a", "m1", "user", "A", 1.0);
+        append_msg(&store, "session-b", "m2", "user", "B", 2.0);
+
+        let list = store.list().unwrap();
+        assert!(list.contains(&"session-a".into()));
+        assert!(list.contains(&"session-b".into()));
+    }
+
+    #[test]
+    fn redb_meta_round_trips() {
+        let store = test_store();
+        let sid = "test-meta";
+
+        let meta = SessionMetadata {
+            id: sid.into(),
+            display_name: "My Session".into(),
             created_at: 1000.0,
             updated_at: 2000.0,
-            message_count: msg_count,
-            summary: format!("summary of {}", name),
-            is_starred: false,
+            message_count: 5,
+            summary: Some("A summary".into()),
+            is_starred: true,
             is_system: false,
-        }
-    }
-
-    #[test]
-    fn session_index_round_trips() {
-        let (store, _dir) = tmp_store();
-        let meta = sample_meta("s1", "Session One", 5);
+        };
 
         store.update_index(&meta).unwrap();
 
-        let loaded = store.load_index().unwrap();
-        assert_eq!(loaded.len(), 1);
-        assert_eq!(loaded[0].id, "s1");
-        assert_eq!(loaded[0].display_name, "Session One");
-        assert_eq!(loaded[0].message_count, 5);
-        assert_eq!(loaded[0].summary, "summary of Session One");
-        assert_eq!(loaded[0].created_at, 1000.0);
-        assert_eq!(loaded[0].updated_at, 2000.0);
-        assert!(!loaded[0].is_starred);
-
-        let mut updated = meta.clone();
-        updated.message_count = 10;
-        updated.is_starred = true;
-        store.update_index(&updated).unwrap();
-
-        let loaded = store.load_index().unwrap();
-        assert_eq!(loaded.len(), 1);
-        assert_eq!(loaded[0].message_count, 10);
-        assert!(loaded[0].is_starred);
+        // Reload via load_events path (meta is stored in redb, load it back)
+        let (db, _) = SessionStore::open_db(&store.path(sid)).unwrap();
+        let tx = db.begin_read().unwrap();
+        let table = tx.open_table(TABLE_META).unwrap();
+        let val = table.get(&u32::MAX).unwrap().unwrap();
+        let loaded: SessionMetadata = serde_json::from_str(val.value()).unwrap();
+        assert_eq!(loaded.display_name, "My Session");
+        assert_eq!(loaded.message_count, 5);
+        assert!(loaded.is_starred);
     }
 
     #[test]
-    fn summary_generated_for_long_session() {
-        let (store, _dir) = tmp_store();
-        let mut meta = sample_meta("s2", "Long Session", 10);
-        meta.summary = "first 500 chars of session content".into();
-        store.update_index(&meta).unwrap();
+    fn redb_multiple_sessions_isolated() {
+        let store = test_store();
 
-        let loaded = store.load_index().unwrap();
-        assert_eq!(loaded.len(), 1);
-        assert_eq!(loaded[0].summary, "first 500 chars of session content");
-    }
+        store.append("s1", &DurableCoreEvent::MessageSent {
+            id: "1".into(), role: "user".into(), content: "S1".into(), timestamp: 1.0,
+        }).unwrap();
+        store.append("s2", &DurableCoreEvent::MessageSent {
+            id: "2".into(), role: "user".into(), content: "S2".into(), timestamp: 2.0,
+        }).unwrap();
 
-    #[test]
-    fn starred_session_sorts_to_top() {
-        let (store, _dir) = tmp_store();
-        let s1 = sample_meta("a", "Alpha", 1);
-        let mut s2 = sample_meta("b", "Beta", 2);
-        let mut s3 = sample_meta("c", "Gamma", 3);
-        s2.is_starred = true;
-        s3.is_starred = true;
-        s3.is_system = true;
+        let ev1 = store.load_events("s1").unwrap();
+        let ev2 = store.load_events("s2").unwrap();
 
-        store.update_index(&s1).unwrap();
-        store.update_index(&s2).unwrap();
-        store.update_index(&s3).unwrap();
+        assert_eq!(ev1.len(), 1);
+        assert_eq!(ev2.len(), 1);
 
-        let loaded = store.load_index().unwrap();
-        let mut sorted = loaded.clone();
-        sorted.sort_by(|a, b| {
-            b.is_starred.cmp(&a.is_starred).then(a.display_name.cmp(&b.display_name))
-        });
-
-        assert_eq!(sorted[0].id, "b", "starred sorts first");
-        assert!(sorted[0].is_starred);
-        assert!(!sorted[2].is_starred);
-    }
-
-    #[test]
-    fn session_renamed_event_updates_index() {
-        let (store, _dir) = tmp_store();
-        let mut meta = sample_meta("rename_me", "Old Name", 3);
-        store.update_index(&meta).unwrap();
-
-        meta.display_name = "New Name".into();
-        meta.updated_at = 3000.0;
-        store.update_index(&meta).unwrap();
-
-        let loaded = store.load_index().unwrap();
-        assert_eq!(loaded.len(), 1);
-        assert_eq!(loaded[0].display_name, "New Name");
-        assert_eq!(loaded[0].updated_at, 3000.0);
-    }
-
-    #[test]
-    fn session_list_renders_summary() {
-        let meta = sample_meta("list_test", "Test Session", 7);
-        let row = format!(
-            "{} — {} ({} msgs)",
-            meta.display_name, meta.summary, meta.message_count
-        );
-        assert!(row.contains("Test Session"));
-        assert!(row.contains("summary of Test Session"));
-        assert!(row.contains("7 msgs"));
+        let list = store.list().unwrap();
+        assert!(list.contains(&"s1".into()));
+        assert!(list.contains(&"s2".into()));
     }
 }

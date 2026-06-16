@@ -2,7 +2,7 @@
 
 pub use crate::message::{now, ChatMessage, Role};
 pub use crate::model::state::{
-    AppState, DeliveryMode, QueuedMessage, QueuedMessageKind, ThinkingLevel,
+    AppState, DeliveryMode, FffFileEntry, QueuedMessage, QueuedMessageKind, ThinkingLevel,
 };
 pub use crate::model_catalog::{
     build_model_selector_items, filter_models, model_catalog, ModelInfo,
@@ -39,7 +39,7 @@ fn read_git_info(git_dir: &std::path::Path) -> Option<crate::snapshot::GitInfo> 
     let branch = read_branch(&head_path);
     let config_path = git_dir.join("config");
     let repo_name = read_origin_repo_name(&config_path);
-    Some(crate::snapshot::GitInfo { repo_name, branch })
+    Some(crate::snapshot::GitInfo { repo_name, branch, is_worktree: false, worktree_source: None })
 }
 
 fn read_worktree_git_info(git_file: &std::path::Path) -> Option<crate::snapshot::GitInfo> {
@@ -57,7 +57,12 @@ fn read_worktree_git_info(git_file: &std::path::Path) -> Option<crate::snapshot:
         .and_then(|p| p.parent())
         .map(|p| p.join("config"));
     let repo_name = config_path.and_then(|p| read_origin_repo_name(&p));
-    Some(crate::snapshot::GitInfo { repo_name, branch })
+    let worktree_source = worktree_gitdir
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .map(|p| p.to_string_lossy().to_string());
+    Some(crate::snapshot::GitInfo { repo_name, branch, is_worktree: true, worktree_source })
 }
 
 fn read_branch(head_path: &std::path::Path) -> Option<String> {

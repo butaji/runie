@@ -1,5 +1,7 @@
 //! Model selector tests (Layer 1 + Layer 2)
 
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+
 use crate::commands::DialogState;
 use crate::event::Event;
 use crate::model::{AppState, ScopedModel};
@@ -12,6 +14,15 @@ fn selector_state(state: &AppState) -> Option<(String, usize)> {
         }
         _ => None,
     }
+}
+
+/// Open palette and select a command by name
+fn palette_select(state: &mut AppState, cmd: &str) {
+    state.update(Event::Input(InputEvent::Input('/')));
+    for c in cmd.chars() {
+        state.update(Event::Dialog(DialogEvent::PaletteFilter(c)));
+    }
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
 }
 
 fn sample_catalog() -> Vec<ModelInfo> {
@@ -87,9 +98,9 @@ fn recent_only_shows_known_models() {
 #[test]
 fn select_emits_switch_model() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
     assert!(selector_state(&state).is_some());
-    state.update(Event::ModelSelectorSelect);
+    state.update(Event::Dialog(DialogEvent::ModelSelectorSelect));
     assert!(state.open_dialog.is_none());
     let switched = state.config.current_provider != "mock" || state.config.current_model != "echo";
     assert!(switched, "Should switch model on select");
@@ -151,45 +162,42 @@ fn groups_by_provider() {
 fn ctrl_l_opens_selector() {
     let mut state = AppState::default();
     assert!(state.open_dialog.is_none());
-    state.update(Event::ToggleModelSelector);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
     assert!(selector_state(&state).is_some());
 }
 
 #[test]
 fn slash_model_no_args_opens_selector() {
     let mut state = AppState::default();
-    for c in "/model".chars() {
-        state.update(Event::Input(c));
-    }
-    state.update(Event::Submit);
+    palette_select(&mut state, "model");
     assert!(selector_state(&state).is_some());
 }
 
 #[test]
 fn esc_closes_selector() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
     assert!(state.open_dialog.is_some());
-    state.update(Event::ModelSelectorClose);
+    state.update(Event::Dialog(DialogEvent::ModelSelectorClose));
     assert!(state.open_dialog.is_none());
 }
 
 #[test]
 fn abort_closes_selector() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
     assert!(state.open_dialog.is_some());
-    state.update(Event::Abort);
+    state.update(Event::Control(ControlEvent::Abort));
     assert!(state.open_dialog.is_none());
 }
 
 #[test]
 fn filter_narrows_selector() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
-    state.update(Event::ModelSelectorFilter('g'));
-    state.update(Event::ModelSelectorFilter('p'));
-    state.update(Event::ModelSelectorFilter('t'));
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
+    state.update(Event::Dialog(DialogEvent::ModelSelectorFilter('g')));
+    state.update(Event::Dialog(DialogEvent::ModelSelectorFilter('p')));
+    state.update(Event::Dialog(DialogEvent::ModelSelectorFilter('t')));
     let (filter, _) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(filter, "gpt");
 }
@@ -197,11 +205,11 @@ fn filter_narrows_selector() {
 #[test]
 fn up_down_navigates_selector() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
-    state.update(Event::ModelSelectorDown);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
+    state.update(Event::Dialog(DialogEvent::ModelSelectorDown));
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 1);
-    state.update(Event::ModelSelectorUp);
+    state.update(Event::Dialog(DialogEvent::ModelSelectorUp));
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 0);
 }
@@ -209,8 +217,8 @@ fn up_down_navigates_selector() {
 #[test]
 fn selector_wraps_up() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
-    state.update(Event::ModelSelectorUp);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
+    state.update(Event::Dialog(DialogEvent::ModelSelectorUp));
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert!(
         selected > 0,
@@ -222,11 +230,11 @@ fn selector_wraps_up() {
 #[test]
 fn selector_wraps_down() {
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
     let catalog = model_catalog();
     let count = build_model_selector_items(&catalog, &[], "", "mock", "echo").len();
     for _ in 0..count {
-        state.update(Event::ModelSelectorDown);
+        state.update(Event::Dialog(DialogEvent::ModelSelectorDown));
     }
     let (_, selected) = selector_state(&state).expect("ModelSelector should be open");
     assert_eq!(selected, 0, "Down at last should wrap to first");

@@ -15,7 +15,9 @@ pub mod tools;
 pub mod truncate;
 pub mod turn;
 
-pub use headless::{run_headless_turn, tool_to_json, HeadlessOptions, HeadlessResult, ToolOutput};
+pub use headless::{run_headless_turn, HeadlessOptions, HeadlessResult};
+pub use parser::{has_tool_calls, parse_tool_calls, ParsedToolCall};
+pub use runie_core::tool::ToolOutput;
 pub use tools::{Tool, ToolResult};
 pub use turn::run_agent_turn;
 

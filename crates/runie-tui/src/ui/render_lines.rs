@@ -77,20 +77,23 @@ fn render_element(elem: &Element, content_width: u16) -> Vec<Line<'static>> {
             ..
         } => msg::render_thought_summary(content, *duration_secs),
         ThoughtMarker { content, .. } => msg::render_thought_marker(content, content_width),
-        ToolRunning { name, started, .. } => {
-            msg::render_tool_running(name, started.elapsed().as_secs_f64())
+        ToolRunning { name, args, started, .. } => {
+            msg::render_tool_running(name, args, started.elapsed().as_secs_f64())
         }
         ToolDone {
             name,
+            args,
             duration_secs,
             output,
+            bytes_transferred,
+            error,
             ..
-        } => msg::render_tool_done(name, *duration_secs, output),
+        } => msg::render_tool_done(name, args, *duration_secs, output, *bytes_transferred, *error),
         ToolSummary {
             name,
             duration_secs,
             ..
-        } => msg::render_tool_summary(name, *duration_secs),
+        } => msg::render_tool_summary(name, "", *duration_secs),
         TurnComplete { duration_secs, .. } => msg::render_turn_complete(*duration_secs),
     }
 }
@@ -116,8 +119,11 @@ fn cache_key(elem: &Element) -> Option<u64> {
         } => hash_summary(&mut hasher, content, *timestamp, *duration_secs),
         Element::ToolDone {
             name,
+            args: _,
             duration_secs,
             output,
+            bytes_transferred: _,
+            error: _,
             timestamp,
         } => hash_tool_done(&mut hasher, name, *timestamp, output, *duration_secs),
         _ => return None,

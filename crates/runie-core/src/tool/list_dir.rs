@@ -1,0 +1,104 @@
+//! ListDir tool — lists directory contents.
+
+use crate::tool::{Tool, ToolContext, ToolOutput, ToolStatus};
+use anyhow::Result;
+use async_trait::async_trait;
+use serde_json::Value;
+use std::time::Instant;
+
+pub struct ListDirTool;
+
+#[async_trait]
+impl Tool for ListDirTool {
+    fn name(&self) -> &str {
+        "list_dir"
+    }
+
+    fn description(&self) -> &str {
+        "List files and directories at a given path."
+    }
+
+    fn input_schema(&self) -> Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Directory path to list (default: current directory)"
+                }
+            }
+        })
+    }
+
+    fn is_read_only(&self) -> bool {
+        true
+    }
+
+    fn requires_approval(&self, _input: &Value) -> bool {
+        false
+    }
+
+    async fn call(&self, input: Value, ctx: &ToolContext) -> Result<ToolOutput> {
+        let start = Instant::now();
+        let path = input["path"].as_str().unwrap_or(".");
+        let full_path = resolve_path(path, &ctx.working_dir);
+        list_dir_impl(&full_path, start)
+    }
+}
+
+fn list_dir_impl(path: &std::path::Path, start: Instant) -> Result<ToolOutput> {
+    let entries = match std::fs::read_dir(path) {
+        Ok(e) => e,
+        Err(e) => {
+            return Ok(error_output(path, e, start));
+        }
+    };
+
+    let lines: Vec<String> = entries
+        .flatten()
+        .map(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            let typ = if e.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                "dir"
+            } else {
+                "file"
+            };
+            format!("{} ({})", name, typ)
+        })
+        .collect();
+
+    let content = if lines.is_empty() {
+        "(empty directory)".to_string()
+    } else {
+        lines.join("\n")
+    };
+
+    Ok(ToolOutput {
+        tool_name: "list_dir".to_string(),
+        tool_args: serde_json::json!({ "path": path }),
+        content,
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Success,
+    })
+}
+
+fn error_output(path: &std::path::Path, e: std::io::Error, start: Instant) -> ToolOutput {
+    ToolOutput {
+        tool_name: "list_dir".to_string(),
+        tool_args: serde_json::json!({ "path": path.to_string_lossy() }),
+        content: format!("Error listing {}: {}", path.display(), e),
+        bytes_transferred: None,
+        duration: start.elapsed(),
+        status: ToolStatus::Error,
+    }
+}
+
+fn resolve_path(path: &str, working_dir: &std::path::Path) -> std::path::PathBuf {
+    let p = std::path::Path::new(path);
+    if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        working_dir.join(p)
+    }
+}

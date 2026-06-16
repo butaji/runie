@@ -1,4 +1,5 @@
 use crate::event::Event;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::model::AppState;
 
 fn fresh_state() -> AppState {
@@ -13,23 +14,23 @@ fn big_output() -> String {
 }
 
 fn run_tool_turn(state: &mut AppState, response: &str, tool_output: &str) {
-    state.update(Event::AgentResponse {
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),
         content: response.into(),
-    });
-    state.update(Event::AgentToolStart {
+    }));
+    state.update(Event::Agent(AgentEvent::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
-    });
-    state.update(Event::AgentToolEnd {
+    }));
+    state.update(Event::Agent(AgentEvent::ToolEnd {
         duration_secs: 0.5,
         output: tool_output.into(),
-    });
-    state.update(Event::AgentTurnComplete {
+    }));
+    state.update(Event::Agent(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    });
-    state.update(Event::AgentDone { id: "req.0".into() });
+    }));
+    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
     state.ensure_fresh();
 }
 
@@ -101,18 +102,18 @@ fn final_agent_visible_when_tool_overflows() {
 fn agent_before_tool_preserved_during_turn() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::AgentResponse {
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),
         content: "Done!".into(),
-    });
-    state.update(Event::AgentToolStart {
+    }));
+    state.update(Event::Agent(AgentEvent::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
-    });
-    state.update(Event::AgentToolEnd {
+    }));
+    state.update(Event::Agent(AgentEvent::ToolEnd {
         duration_secs: 0.5,
         output: "a".into(),
-    });
+    }));
     state.ensure_fresh();
     assert!(agent_pos(&state).is_some() && tool_pos(&state).is_some());
 }
@@ -122,25 +123,25 @@ fn no_reorder_when_no_tools() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".into() });
-    state.update(Event::AgentThoughtDone { id: "req.0".into() });
-    state.update(Event::AgentToolStart {
+    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
+    state.update(Event::Agent(AgentEvent::ToolStart {
         id: "req.0".into(),
         name: "ls".into(),
-    });
-    state.update(Event::AgentToolEnd {
+    }));
+    state.update(Event::Agent(AgentEvent::ToolEnd {
         duration_secs: 0.5,
         output: "a".into(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),
         content: "Hello".into(),
-    });
-    state.update(Event::AgentTurnComplete {
+    }));
+    state.update(Event::Agent(AgentEvent::TurnComplete {
         id: "req.0".into(),
         duration_secs: 1.0,
-    });
-    state.update(Event::AgentDone { id: "req.0".into() });
+    }));
+    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
     state.ensure_fresh();
     let kinds = agent_turn_complete_kinds(&state);
     assert!(
@@ -156,12 +157,12 @@ fn thought_stays_before_tool_after_reorder() {
     let mut state = fresh_state();
     state.agent.streaming = true;
 
-    state.update(Event::AgentThinking { id: "req.0".into() });
-    state.update(Event::AgentResponse {
+    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".into(),
         content: "I'll list files.\nTOOL:list_dir:.".into(),
-    });
-    state.update(Event::AgentThoughtDone { id: "req.0".into() });
+    }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone { id: "req.0".into() }));
     run_tool_turn(&mut state, "Done!", "file1");
 
     let (t, o, a) = (thought_pos(&state), tool_pos(&state), agent_pos(&state));

@@ -5,6 +5,8 @@
 //! - Cursor in middle of input -> inserts at cursor position preserving surrounding text
 //! - @ opens file picker but inserts path without brackets
 
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
+
 use crate::{AppState, Event};
 
 /// "ca ca" -> Tab -> pick -> "ca filename" (space preserved, NO brackets).
@@ -15,11 +17,11 @@ fn tab_file_picker_preserves_space_in_middle() {
     state.input.cursor_pos = 5; // cursor after "ca ca"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -46,11 +48,11 @@ fn tab_file_picker_preserves_space_before_prefix() {
     state.input.cursor_pos = 7; // cursor after "car dev"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -83,11 +85,11 @@ fn tab_file_picker_empty_input() {
     assert_eq!(state.input.input, "");
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -112,11 +114,11 @@ fn tab_file_picker_replaces_typed_prefix() {
     state.input.cursor_pos = 3;
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -143,11 +145,11 @@ fn tab_file_picker_replaces_last_word_at_end() {
     state.input.cursor_pos = 11; // cursor after "Hello World"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -174,11 +176,11 @@ fn tab_file_picker_inserts_at_cursor_middle() {
     state.input.cursor_pos = 5; // cursor after "Hello"
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -202,11 +204,11 @@ fn tab_file_picker_at_alone_no_brackets() {
     let mut state = AppState::default();
 
     // Type just @
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('@')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -225,17 +227,17 @@ fn tab_file_picker_at_with_prefix_no_brackets() {
     let mut state = AppState::default();
 
     // Type "car @"
-    state.update(Event::Input('c'));
-    state.update(Event::Input('a'));
-    state.update(Event::Input('r'));
-    state.update(Event::Input(' '));
-    state.update(Event::Input('@'));
+    state.update(Event::Input(InputEvent::Input('c')));
+    state.update(Event::Input(InputEvent::Input('a')));
+    state.update(Event::Input(InputEvent::Input('r')));
+    state.update(Event::Input(InputEvent::Input(' ')));
+    state.update(Event::Input(InputEvent::Input('@')));
 
     // @ opens file picker
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -259,18 +261,18 @@ fn escape_closes_file_picker_restores_input() {
     let mut state = AppState::default();
 
     // Type some characters
-    state.update(Event::Input('T'));
-    state.update(Event::Input('e'));
-    state.update(Event::Input('s'));
+    state.update(Event::Input(InputEvent::Input('T')));
+    state.update(Event::Input(InputEvent::Input('e')));
+    state.update(Event::Input(InputEvent::Input('s')));
 
     let original_input = state.input.input.clone();
 
     // Press Tab to open file picker
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Press Escape to close
-    state.update(Event::Abort);
+    state.update(Event::Control(ControlEvent::Abort));
 
     // File picker should close
     assert!(state.open_dialog.is_none());
@@ -291,11 +293,11 @@ fn tab_file_picker_preserves_trailing_space() {
     state.input.cursor_pos = 5;
 
     // Press Tab
-    state.update(Event::Input('\t'));
+    state.update(Event::Input(InputEvent::Input('\t')));
     assert!(state.open_dialog.is_some());
 
     // Submit
-    state.update(Event::Submit);
+    state.update(Event::submit());
 
     // File picker should close
     assert!(state.open_dialog.is_none());

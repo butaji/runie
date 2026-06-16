@@ -1,123 +1,19 @@
-#[derive(Debug, serde::Deserialize)]
-struct ToolCall {
-    name: String,
-    arguments: serde_json::Map<String, serde_json::Value>,
+//! Tool call parser — extracts tool invocations from LLM text output.
+//!
+//! Returns `(name, arguments)` tuples for use with `ToolRegistry`.
+
+use serde_json::{Map, Value};
+
+/// A parsed tool invocation: name and JSON arguments.
+#[derive(Debug, Clone)]
+pub struct ParsedToolCall {
+    pub name: String,
+    pub args: Value,
 }
 
-fn arg_str(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
-    args.get(key)
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string()
-}
-
-fn arg_opt_str(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<String> {
-    args.get(key)
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-}
-
-fn arg_bool(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> bool {
-    args.get(key).and_then(|v| v.as_bool()).unwrap_or(false)
-}
-
-fn arg_usize(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> usize {
-    args.get(key).and_then(|v| v.as_u64()).unwrap_or(0) as usize
-}
-
-fn arg_opt_usize(args: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<usize> {
-    let v = args.get(key)?;
-    v.as_u64().map(|n| n as usize)
-}
-
-fn parse_legacy_tool(payload: &str) -> Option<crate::Tool> {
-    let parts: Vec<&str> = payload.splitn(3, ':').collect();
-    if parts.len() < 2 {
-        return None;
-    }
-    let tool_name = parts[0];
-    let arg1 = parts.get(1).unwrap_or(&"");
-    let arg2 = parts.get(2).unwrap_or(&"");
-    Some(match tool_name {
-        "read_file" => crate::Tool::ReadFile {
-            path: arg1.to_string(),
-            offset: None,
-            limit: None,
-        },
-        "list_dir" => crate::Tool::ListDir {
-            path: arg1.to_string(),
-        },
-        "write_file" => crate::Tool::WriteFile {
-            path: arg1.to_string(),
-            content: arg2.to_string(),
-        },
-        "bash" => crate::Tool::Bash {
-            command: arg1.to_string(),
-        },
-        _ => return None,
-    })
-}
-
-fn parse_file_tool(
-    name: &str,
-    args: &serde_json::Map<String, serde_json::Value>,
-) -> Option<crate::Tool> {
-    Some(match name {
-        "read_file" => crate::Tool::ReadFile {
-            path: arg_str(args, "path"),
-            offset: arg_opt_usize(args, "offset"),
-            limit: arg_opt_usize(args, "limit"),
-        },
-        "list_dir" => crate::Tool::ListDir {
-            path: arg_str(args, "path"),
-        },
-        "write_file" => crate::Tool::WriteFile {
-            path: arg_str(args, "path"),
-            content: arg_str(args, "content"),
-        },
-        "edit_file" => crate::Tool::EditFile {
-            path: arg_str(args, "path"),
-            search: arg_str(args, "search"),
-            replace: arg_str(args, "replace"),
-        },
-        _ => return None,
-    })
-}
-
-fn parse_structured_tool(line: &str) -> Option<crate::Tool> {
-    let call: ToolCall = serde_json::from_str(line).ok()?;
-    let args = &call.arguments;
-    let name = call.name.as_str();
-    if let Some(tool) = parse_file_tool(name, args) {
-        return Some(tool);
-    }
-    Some(match name {
-        "bash" => crate::Tool::Bash {
-            command: arg_str(args, "command"),
-        },
-        "grep" => crate::Tool::Grep {
-            pattern: arg_str(args, "pattern"),
-            path: arg_str(args, "path"),
-            glob: arg_opt_str(args, "glob"),
-            ignore_case: arg_bool(args, "ignore_case"),
-            literal: arg_bool(args, "literal"),
-            context: arg_usize(args, "context"),
-            limit: arg_usize(args, "limit").max(1),
-        },
-        "find" => crate::Tool::Find {
-            pattern: arg_str(args, "pattern"),
-            path: arg_str(args, "path"),
-            limit: arg_usize(args, "limit").max(1),
-        },
-        "fetch_docs" => crate::Tool::FetchDocs {
-            library: arg_str(args, "library"),
-        },
-        _ => return None,
-    })
-}
-
-pub fn parse_tool_calls(text: &str) -> Vec<crate::Tool> {
+/// Parse tool calls from LLM text output.
+/// Returns a list of `(tool_name, arguments)` tuples.
+pub fn parse_tool_calls(text: &str) -> Vec<ParsedToolCall> {
     let mut tools = Vec::new();
     for line in text.lines() {
         let line = line.trim();
@@ -138,6 +34,103 @@ pub fn parse_tool_calls(text: &str) -> Vec<crate::Tool> {
     tools
 }
 
+/// Check if text contains tool call markers.
 pub fn has_tool_calls(text: &str) -> bool {
     runie_core::tool_markers::has_tool_markers(text)
+}
+
+// ─── Parsers ────────────────────────────────────────────────────────────────
+
+fn parse_legacy_tool(payload: &str) -> Option<ParsedToolCall> {
+    let parts: Vec<&str> = payload.splitn(3, ':').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let tool_name = parts[0];
+    let arg1 = parts.get(1).unwrap_or(&"");
+    let arg2 = parts.get(2).unwrap_or(&"");
+
+    let mut args = Map::new();
+    match tool_name {
+        "read_file" => {
+            args.insert("path".to_string(), Value::String(arg1.to_string()));
+        }
+        "list_dir" => {
+            args.insert("path".to_string(), Value::String(arg1.to_string()));
+        }
+        "write_file" => {
+            args.insert("path".to_string(), Value::String(arg1.to_string()));
+            args.insert("content".to_string(), Value::String(arg2.to_string()));
+        }
+        "bash" => {
+            args.insert("command".to_string(), Value::String(arg1.to_string()));
+        }
+        _ => return None,
+    }
+    Some(ParsedToolCall {
+        name: tool_name.to_string(),
+        args: Value::Object(args),
+    })
+}
+
+fn parse_structured_tool(line: &str) -> Option<ParsedToolCall> {
+    #[derive(Debug, serde::Deserialize)]
+    struct ToolCall {
+        name: String,
+        arguments: Map<String, Value>,
+    }
+    let call: ToolCall = serde_json::from_str(line).ok()?;
+
+    // Only parse known tool names
+    let known_tools = ["read_file", "list_dir", "write_file", "edit_file", "bash", "grep", "find", "fetch_docs"];
+    if !known_tools.contains(&call.name.as_str()) {
+        return None;
+    }
+
+    Some(ParsedToolCall {
+        name: call.name,
+        args: Value::Object(call.arguments),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_legacy_bash_tool() {
+        let result = parse_tool_calls("TOOL:bash:ls -la");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "bash");
+        assert_eq!(result[0].args["command"], "ls -la");
+    }
+
+    #[test]
+    fn parse_legacy_read_file() {
+        let result = parse_tool_calls("TOOL:read_file:src/main.rs");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "read_file");
+        assert_eq!(result[0].args["path"], "src/main.rs");
+    }
+
+    #[test]
+    fn parse_json_tool_call() {
+        let json = r#"{"name": "bash", "arguments": {"command": "echo hi"}}"#;
+        let result = parse_tool_calls(json);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "bash");
+        assert_eq!(result[0].args["command"], "echo hi");
+    }
+
+    #[test]
+    fn parse_multiple_tool_calls() {
+        let text = r#"
+TOOL:bash:ls
+{"name": "read_file", "arguments": {"path": "Cargo.toml"}}
+"#;
+        let result = parse_tool_calls(text);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].name, "bash");
+        assert_eq!(result[1].name, "read_file");
+    }
 }

@@ -1,4 +1,5 @@
 use crate::model::{AppState, ChatMessage, Role};
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::event::Event;
 
 fn fresh_state() -> AppState {
@@ -49,45 +50,45 @@ fn list_files_full_turn_latest_always_visible() {
 
 fn verify_user_visible(state: &mut AppState, height: usize) {
     state.input.input = "list files".to_string();
-    state.update(Event::Submit);
+    state.update(Event::submit());
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "User message must be visible after submit");
 }
 
 fn verify_thinking_visible(state: &mut AppState, height: usize) {
     state.agent.streaming = true;
-    state.update(Event::AgentThinking { id: "req.0".into() });
+    state.update(Event::Agent(AgentEvent::Thinking { id: "req.0".into() }));
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "Thinking indicator must be visible");
 }
 
 fn verify_agent_response_visible(state: &mut AppState, height: usize) {
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "I'll list the files.".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "I'll list the files.".into() }));
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "Agent response must be visible during streaming");
 }
 
 fn verify_tool_output_visible(state: &mut AppState, height: usize) {
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "list_dir".into() });
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "list_dir".into() }));
     state.ensure_fresh();
     assert!(latest_is_visible(state, height), "Tool running must be visible");
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
+    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output }));
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(kinds.contains(&"ToolDone".to_string()), "Tool result must be visible. Got: {:?}", kinds);
 }
 
 fn verify_final_response_visible(state: &mut AppState, height: usize) {
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Done!".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "Done!".into() }));
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(kinds.contains(&"Agent".to_string()), "Final response must be visible. Got: {:?}", kinds);
 }
 
 fn verify_turn_complete_last(state: &mut AppState, height: usize) {
-    state.update(Event::AgentTurnComplete { id: "req.0".into(), duration_secs: 2.0 });
-    state.update(Event::AgentDone { id: "req.0".into() });
+    state.update(Event::Agent(AgentEvent::TurnComplete { id: "req.0".into(), duration_secs: 2.0 }));
+    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
     state.ensure_fresh();
     let kinds = visible_kinds(state, height);
     assert!(kinds.last() == Some(&"Turn".to_string()), "TurnComplete must be last. Got: {:?}", kinds);
@@ -98,9 +99,9 @@ fn large_tool_output_bottom_lines_visible() {
     let mut state = fresh_state();
     let height = 5;
 
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into() }));
     let output = (1..=20).map(|i| format!("file{}.txt", i)).collect::<Vec<_>>().join("\n");
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output });
+    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output }));
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -187,27 +188,27 @@ fn scroll_zero_means_bottom_after_any_event() {
     state.view.scroll = 0;
 
     // Send a bunch of events
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "a".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "a".into() }));
     state.ensure_fresh();
     let v1 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v1.elements.is_empty(), "Visible region must not be empty after first response");
 
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "b".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "b".into() }));
     state.ensure_fresh();
     let v2 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v2.elements.is_empty(), "Visible region must not be empty after second response");
 
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "c".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "c".into() }));
     state.ensure_fresh();
     let v3 = crate::tests::visible_helper::compute_viewport(&state, height);
     assert!(!v3.elements.is_empty(), "Visible region must not be empty after third response");
 
     // After many more
     for i in 0..20 {
-        state.update(Event::AgentResponse {
+        state.update(Event::Agent(AgentEvent::Response {
             id: format!("req.{}", i),
             content: format!("msg{}", i),
-        });
+        }));
     }
     state.ensure_fresh();
     let v4 = crate::tests::visible_helper::compute_viewport(&state, height);
@@ -220,7 +221,7 @@ fn user_message_visible_after_submit_clears_input() {
     let height = 5;
 
     state.input.input = "list files".to_string();
-    state.update(Event::Submit);
+    state.update(Event::submit());
     state.ensure_fresh();
     state.view.scroll = 0;
 
@@ -236,8 +237,8 @@ fn user_message_visible_after_submit_clears_input() {
 fn streaming_response_appends_not_replaces() {
     let mut state = fresh_state();
 
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "Hello ".into() });
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "world".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "Hello ".into() }));
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "world".into() }));
     state.ensure_fresh();
 
     let assistant_msgs: Vec<_> = state.session.messages.iter()
@@ -251,9 +252,9 @@ fn streaming_response_appends_not_replaces() {
 fn tool_end_does_not_duplicate_messages() {
     let mut state = fresh_state();
 
-    state.update(Event::AgentToolStart { id: "req.0".into(), name: "ls".into() });
+    state.update(Event::Agent(AgentEvent::ToolStart { id: "req.0".into(), name: "ls".into() }));
     let before_count = state.session.messages.len();
-    state.update(Event::AgentToolEnd { duration_secs: 0.5, output: "a".into() });
+    state.update(Event::Agent(AgentEvent::ToolEnd { duration_secs: 0.5, output: "a".into() }));
     let after_count = state.session.messages.len();
 
     assert_eq!(before_count, after_count, "Tool end should update existing message, not create new one");
@@ -264,12 +265,12 @@ fn total_lines_increases_with_each_event() {
     let mut state = fresh_state();
 
     let t0 = state.view.total_lines();
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "a".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "a".into() }));
     state.ensure_fresh();
     let t1 = state.view.total_lines();
     assert!(t1 > t0, "total_lines should increase after response");
 
-    state.update(Event::AgentResponse { id: "req.0".into(), content: "b".into() });
+    state.update(Event::Agent(AgentEvent::Response { id: "req.0".into(), content: "b".into() }));
     state.ensure_fresh();
     let t2 = state.view.total_lines();
     assert!(t2 >= t1, "total_lines should not decrease after append");

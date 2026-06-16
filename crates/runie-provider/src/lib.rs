@@ -5,6 +5,7 @@
 pub mod config;
 pub mod mock;
 pub mod openai;
+pub mod planner;
 
 pub use config::Config;
 pub use mock::{MockProvider, MockStreamingProvider};
@@ -75,7 +76,7 @@ impl Provider for DynProvider {
         messages: Vec<Message>,
     ) -> Pin<
         Box<
-            dyn futures::Stream<Item = anyhow::Result<runie_core::provider::ResponseChunk>>
+            dyn futures::Stream<Item = anyhow::Result<runie_core::llm_event::LLMEvent>>
                 + Send
                 + '_,
         >,

@@ -1,6 +1,6 @@
 use crate::commands::handlers::agents::build_delete_panel;
 use crate::dialog::{ItemAction, PanelItem};
-use crate::event::Event;
+use crate::event::{DialogEvent, Event};
 
 #[test]
 fn delete_panel_has_yes_and_no() {
@@ -40,7 +40,7 @@ fn delete_panel_yes_emits_delete_event() {
         _ => panic!("expected Action"),
     };
     match action {
-        ItemAction::Emit(Event::AgentsManagerDelete { name }) => {
+        ItemAction::Emit(Event::Dialog(DialogEvent::AgentsManagerDelete { name })) => {
             assert_eq!(*name, "killme");
         }
         other => panic!("expected AgentsManagerDelete event, got {:?}", other),

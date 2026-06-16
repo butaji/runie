@@ -7,6 +7,7 @@ use crate::theme::{
     style_tool_output, style_tool_running, style_tool_summary, style_turn_complete, GLYPH_AGENT,
 };
 use runie_core::display_width;
+use runie_core::tool::{format_bytes, format_duration, format_tool_label};
 
 use super::{add_lr_margins, add_lr_margins_to_lines, word_wrap, GLYPH_INDENT};
 
@@ -43,17 +44,31 @@ pub fn render_thought_summary(content: &str, _duration_secs: f64) -> Vec<Line<'s
     add_lr_margins_to_lines(lines)
 }
 
-pub fn render_tool_running(name: &str, duration_secs: f64) -> Vec<Line<'static>> {
+pub fn render_tool_running(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
+    let label = format_tool_label(name, args);
     let lines = vec![
-        Line::from(format!("{} Running {}... {:.1}s", "⠋", name, duration_secs))
+        Line::from(format!("{} {} {:.1}s", "⠋", label, duration_secs))
             .style(style_tool_running()),
     ];
     add_lr_margins_to_lines(lines)
 }
 
-pub fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Line<'static>> {
-    let mut lines =
-        vec![Line::from(tool_done_header(name, duration_secs)).style(style_tool_header())];
+pub fn render_tool_done(
+    name: &str,
+    args: &str,
+    duration_secs: f64,
+    output: &str,
+    bytes_transferred: Option<u64>,
+    error: bool,
+) -> Vec<Line<'static>> {
+    let label = format_tool_label(name, args);
+    let status_icon = if error { "✗" } else { "✓" };
+    let duration = format_duration(duration_secs);
+    let bytes_str = bytes_transferred
+        .map(|b| format!(" ⇣{}", format_bytes(b)))
+        .unwrap_or_default();
+    let header = format!("{} {} {} {}{}", status_icon, label, duration, bytes_str, if error { " [✗]" } else { "" });
+    let mut lines = vec![Line::from(header).style(style_tool_header())];
     if !output.is_empty() {
         if crate::diff::is_diff_output(output) {
             lines.extend(crate::diff::render_diff_text(output));
@@ -66,13 +81,11 @@ pub fn render_tool_done(name: &str, duration_secs: f64, output: &str) -> Vec<Lin
     add_lr_margins_to_lines(lines)
 }
 
-fn tool_done_header(name: &str, duration_secs: f64) -> String {
-    format!("✓ {} {:.1}s", name, duration_secs)
-}
-
-pub fn render_tool_summary(name: &str, duration_secs: f64) -> Vec<Line<'static>> {
+pub fn render_tool_summary(name: &str, args: &str, duration_secs: f64) -> Vec<Line<'static>> {
+    let label = format_tool_label(name, args);
+    let duration = format_duration(duration_secs);
     let lines = vec![
-        Line::from(format!("✓ {} {:.1}s [+]", name, duration_secs)).style(style_tool_summary())
+        Line::from(format!("✓ {} {} [+]", label, duration)).style(style_tool_summary())
     ];
     add_lr_margins_to_lines(lines)
 }

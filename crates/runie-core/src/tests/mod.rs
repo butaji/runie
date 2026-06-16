@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod action_text;
 #[cfg(test)]
+mod streaming_buffer;
+#[cfg(test)]
 mod agent;
 #[cfg(test)]
 mod agents_manager_e2e;
@@ -38,6 +40,8 @@ mod element_spacing;
 mod file_refs;
 #[cfg(test)]
 mod flow;
+#[cfg(test)]
+mod harness_skills;
 #[cfg(test)]
 mod focus_events;
 #[cfg(test)]

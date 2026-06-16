@@ -1,5 +1,6 @@
 //! Panel item types and activation actions.
 
+use crate::event::{ControlEvent, InputEvent, CommandEvent};
 use crate::Event;
 
 /// A single row inside a panel.
@@ -107,16 +108,16 @@ impl ItemAction {
 impl Event {
     pub(crate) fn default_label(&self) -> String {
         match self {
-            Event::Quit => "Quit".into(),
-            Event::Submit => "Submit".into(),
-            Event::RunSaveCommand { .. } => "Save".into(),
-            Event::RunLoadCommand { .. } => "Load".into(),
-            Event::RunDeleteCommand { .. } => "Delete".into(),
-            Event::RunExportCommand { .. } => "Export".into(),
-            Event::RunImportCommand { .. } => "Import".into(),
-            Event::RunLoginCommand { .. } => "Login".into(),
-            Event::RunLogoutCommand { .. } => "Logout".into(),
-            Event::RunSkillCommand { .. } => "Run Skill".into(),
+            Event::Control(ControlEvent::Quit) => "Quit".into(),
+            Event::Input(InputEvent::Submit) => "Submit".into(),
+            Event::Command(CommandEvent::RunSaveCommand { .. }) => "Save".into(),
+            Event::Command(CommandEvent::RunLoadCommand { .. }) => "Load".into(),
+            Event::Command(CommandEvent::RunDeleteCommand { .. }) => "Delete".into(),
+            Event::Command(CommandEvent::RunExportCommand { .. }) => "Export".into(),
+            Event::Command(CommandEvent::RunImportCommand { .. }) => "Import".into(),
+            Event::Command(CommandEvent::RunLoginCommand { .. }) => "Login".into(),
+            Event::Command(CommandEvent::RunLogoutCommand { .. }) => "Logout".into(),
+            Event::Command(CommandEvent::RunSkillCommand { .. }) => "Run Skill".into(),
             _ => "Action".into(),
         }
     }

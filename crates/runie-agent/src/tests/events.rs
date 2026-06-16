@@ -1,87 +1,88 @@
 //! Tests for event types - now uses runie_core::Event directly
+use runie_core::event::AgentEvent;
 use runie_core::Event;
 
 #[test]
 fn test_agent_thinking_event() {
-    let evt = Event::AgentThinking {
+    let evt = Event::Agent(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    };
+    });
     match evt {
-        Event::AgentThinking { id } => assert_eq!(id, "req.0"),
-        _ => panic!("Expected AgentThinking"),
+        Event::Agent(AgentEvent::Thinking { id }) => assert_eq!(id, "req.0"),
+        _ => panic!("Expected Agent(AgentEvent::Thinking)"),
     }
 }
 
 #[test]
 fn test_agent_response_event() {
-    let evt = Event::AgentResponse {
+    let evt = Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "hello".to_string(),
-    };
+    });
     match evt {
-        Event::AgentResponse { id, content } => {
+        Event::Agent(AgentEvent::Response { id, content }) => {
             assert_eq!(id, "req.0");
             assert_eq!(content, "hello");
         }
-        _ => panic!("Expected AgentResponse"),
+        _ => panic!("Expected Agent(AgentEvent::Response)"),
     }
 }
 
 #[test]
 fn test_agent_tool_start_event() {
-    let evt = Event::AgentToolStart {
+    let evt = Event::Agent(AgentEvent::ToolStart {
         id: "req.0".to_string(),
         name: "bash".to_string(),
-    };
+    });
     match evt {
-        Event::AgentToolStart { id, name } => {
+        Event::Agent(AgentEvent::ToolStart { id, name }) => {
             assert_eq!(id, "req.0");
             assert_eq!(name, "bash");
         }
-        _ => panic!("Expected AgentToolStart"),
+        _ => panic!("Expected Agent(AgentEvent::ToolStart)"),
     }
 }
 
 #[test]
 fn test_agent_tool_end_event() {
-    let evt = Event::AgentToolEnd {
+    let evt = Event::Agent(AgentEvent::ToolEnd {
         duration_secs: 1.5,
         output: "result".to_string(),
-    };
+    });
     match evt {
-        Event::AgentToolEnd {
+        Event::Agent(AgentEvent::ToolEnd {
             duration_secs,
             output,
-        } => {
+        }) => {
             assert!((duration_secs - 1.5).abs() < 0.001);
             assert_eq!(output, "result");
         }
-        _ => panic!("Expected AgentToolEnd"),
+        _ => panic!("Expected Agent(AgentEvent::ToolEnd)"),
     }
 }
 
 #[test]
 fn test_agent_done_event() {
-    let evt = Event::AgentDone {
+    let evt = Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    };
+    });
     match evt {
-        Event::AgentDone { id } => assert_eq!(id, "req.0"),
-        _ => panic!("Expected AgentDone"),
+        Event::Agent(AgentEvent::Done { id }) => assert_eq!(id, "req.0"),
+        _ => panic!("Expected Agent(AgentEvent::Done)"),
     }
 }
 
 #[test]
 fn test_agent_turn_complete_event() {
-    let evt = Event::AgentTurnComplete {
+    let evt = Event::Agent(AgentEvent::TurnComplete {
         id: "req.0".to_string(),
         duration_secs: 2.5,
-    };
+    });
     match evt {
-        Event::AgentTurnComplete { id, duration_secs } => {
+        Event::Agent(AgentEvent::TurnComplete { id, duration_secs }) => {
             assert_eq!(id, "req.0");
             assert!((duration_secs - 2.5).abs() < 0.001);
         }
-        _ => panic!("Expected AgentTurnComplete"),
+        _ => panic!("Expected Agent(AgentEvent::TurnComplete)"),
     }
 }

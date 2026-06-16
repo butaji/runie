@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::event::Event;
+    use crate::event::{AgentEvent, Event};
     use crate::model::{AppState, ChatMessage, Role};
     use crate::ui::elements::Element;
     use crate::ui::LazyCache;
@@ -61,14 +61,14 @@ mod tests {
     #[test]
     fn test_feed_merges_consecutive_agent_messages() {
         let mut state = AppState::default();
-        state.update(Event::AgentResponse {
+        state.update(Event::Agent(AgentEvent::Response {
             id: "req.0".to_string(),
             content: "Hello ".to_string(),
-        });
-        state.update(Event::AgentResponse {
+        }));
+        state.update(Event::Agent(AgentEvent::Response {
             id: "req.0".to_string(),
             content: "World".to_string(),
-        });
+        }));
 
         let feed = LazyCache::feed(&state);
         let agent_msgs: Vec<_> = feed

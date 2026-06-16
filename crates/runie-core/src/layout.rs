@@ -7,6 +7,7 @@
 use crate::display_width;
 use crate::markdown::{extract_code_blocks, CodeBlock};
 use crate::ui::elements::Element;
+use textwrap::wrap;
 
 /// User message prefix glyph (must match `runie_tui::theme::GLYPH_USER`).
 pub const GLYPH_USER: &str = "❯ ";
@@ -124,8 +125,8 @@ fn markdown_block_line_count(
     is_first: &mut bool,
 ) -> usize {
     let lines = match block {
-        CodeBlock::Text(text) => text_block_line_count(
-            text,
+        CodeBlock::Text { content, .. } => text_block_line_count(
+            content,
             inner_width,
             prefix_width,
             indent_width,
@@ -196,82 +197,11 @@ fn glyph_width(s: &str) -> u16 {
 /// Word-wrap `text` into lines using display-cell width so wide characters
 /// (CJK, emoji) count as two cells and are never split.
 pub fn word_wrap(text: &str, first_width: u16, _rest_width: u16) -> Vec<String> {
-    let mut state = WrapState::new(first_width);
-    for word in text.split_whitespace() {
-        state.consume_word(word);
-    }
-    state.finish(text)
-}
-
-struct WrapState {
-    result: Vec<String>,
-    current: String,
-    width: u16,
-    max: u16,
-}
-
-impl WrapState {
-    fn new(first_width: u16) -> Self {
-        Self {
-            result: Vec::new(),
-            current: String::new(),
-            width: 0,
-            max: first_width.max(1),
-        }
-    }
-
-    fn consume_word(&mut self, word: &str) {
-        let w = display_width::width(word);
-        let need_space = !self.current.is_empty();
-        if need_space && self.width + 1 + w > self.max {
-            self.flush();
-        }
-        if self.current.is_empty() && w > self.max {
-            self.split_word(word);
-            return;
-        }
-        if need_space && !self.current.is_empty() {
-            self.current.push(' ');
-            self.width += 1;
-        }
-        self.current.push_str(word);
-        self.width += w;
-    }
-
-    fn split_word(&mut self, word: &str) {
-        let mut remaining = word;
-        while !remaining.is_empty() {
-            let (chunk, rest) = display_width::split_at_width(remaining, self.max);
-            if chunk.is_empty() {
-                let mut chars = remaining.chars();
-                if let Some(ch) = chars.next() {
-                    self.result.push(ch.to_string());
-                    remaining = chars.as_str();
-                    continue;
-                }
-                break;
-            }
-            self.result.push(chunk.to_string());
-            remaining = rest;
-        }
-    }
-
-    fn flush(&mut self) {
-        if !self.current.is_empty() {
-            self.result.push(std::mem::take(&mut self.current));
-            self.width = 0;
-        }
-    }
-
-    fn finish(mut self, text: &str) -> Vec<String> {
-        if !self.current.is_empty() {
-            self.result.push(self.current);
-        }
-        if self.result.is_empty() && text.is_empty() {
-            self.result.push(String::new());
-        }
-        self.result
-    }
+    if text.is_empty() { return vec![String::new()]; }
+    let width = first_width.max(1) as usize;
+    if width == 0 { return vec![String::new()]; }
+    let wrapped = wrap(text, width);
+    if wrapped.is_empty() { vec![String::new()] } else { wrapped.into_iter().map(|s| s.into_owned()).collect() }
 }
 
 #[cfg(test)]

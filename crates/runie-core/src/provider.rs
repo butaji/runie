@@ -1,5 +1,6 @@
 //! Provider trait and message types
 
+use crate::llm_event::LLMEvent;
 use anyhow::Result;
 use futures::Stream;
 use std::pin::Pin;
@@ -33,10 +34,16 @@ impl Message {
     }
 }
 
-/// A chunk of streaming response
+/// A chunk of streaming response (legacy type, prefer LLMEvent).
 #[derive(Debug, Clone)]
 pub struct ResponseChunk {
     pub content: String,
+}
+
+impl From<ResponseChunk> for LLMEvent {
+    fn from(chunk: ResponseChunk) -> Self {
+        LLMEvent::TextDelta(chunk.content)
+    }
 }
 
 /// Error constructing or operating a provider.
@@ -63,13 +70,13 @@ impl std::fmt::Display for ProviderError {
 impl std::error::Error for ProviderError {}
 
 /// Provider trait — implemented by LLM backends.
-/// Returns a `Stream` of `ResponseChunk`s.
+/// Returns a `Stream` of `LLMEvent`s.
 ///
 /// This trait is dyn-compatible (no `async fn`, no generic parameters).
 pub trait Provider: Send + Sync {
-    /// Generate a streaming response, returning a stream of chunks.
+    /// Generate a streaming response, returning a stream of LLM events.
     fn generate(
         &self,
         messages: Vec<Message>,
-    ) -> Pin<Box<dyn Stream<Item = Result<ResponseChunk>> + Send + '_>>;
+    ) -> Pin<Box<dyn Stream<Item = Result<LLMEvent>> + Send + '_>>;
 }

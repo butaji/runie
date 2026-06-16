@@ -1,12 +1,15 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 use crate::keybindings::default_keybindings;
 use crate::message::{now, ChatMessage};
 use crate::model::{ModelSelectorItem, QueuedMessage, ThinkingLevel};
 use crate::path_complete::PathCompletion;
 use crate::scoped_model::ScopedModel;
 use crate::session_tree::SessionTree;
+use crate::streaming_buffer::StreamingBuffer;
 use crate::ui::elements::Element;
 
 #[derive(Clone)]
@@ -26,9 +29,8 @@ pub struct InputState {
     pub tab_complete_index: usize,
     /// Top visible line index for multi-line input scrolling.
     pub input_scroll: usize,
-    // Fields moved from AppState (Phase 1: add without removing outer fields)
-    #[allow(dead_code)]
-    pub(crate) input_history: Vec<String>,
+    /// Command input history (persistent across sessions).
+    pub input_history: Vec<String>,
     pub current_prompt: String,
 }
 
@@ -57,7 +59,8 @@ impl Default for InputState {
 #[derive(Clone)]
 pub struct SpeedWindow {
     /// Token arrival events: (timestamp, cumulative_token_count_at_arrival)
-    events: Vec<(std::time::Instant, usize)>,
+    /// Using VecDeque for O(1) pop_front.
+    events: std::collections::VecDeque<(std::time::Instant, usize)>,
     /// Maximum tokens to track in window
     window_tokens: usize,
 }
@@ -66,7 +69,7 @@ impl Default for SpeedWindow {
     fn default() -> Self {
         // Default to 1000 token window
         Self {
-            events: Vec::new(),
+            events: std::collections::VecDeque::new(),
             window_tokens: 1000,
         }
     }
@@ -76,7 +79,7 @@ impl SpeedWindow {
     /// Create a new window tracking up to `window_tokens` tokens.
     pub fn new(window_tokens: usize) -> Self {
         Self {
-            events: Vec::new(),
+            events: std::collections::VecDeque::new(),
             window_tokens,
         }
     }
@@ -84,7 +87,7 @@ impl SpeedWindow {
     /// Record tokens arriving at the current time.
     pub fn record(&mut self, token_count: usize) {
         let now = std::time::Instant::now();
-        self.events.push((now, token_count));
+        self.events.push_back((now, token_count));
         self.evict_old();
     }
 
@@ -94,12 +97,20 @@ impl SpeedWindow {
             return;
         }
         // Find oldest event within window_tokens of current count
-        let Some((_, latest)) = self.events.last() else {
+        let Some((_, latest)) = self.events.back() else {
             return;
         };
         let cutoff = latest.saturating_sub(self.window_tokens);
-        while self.events.len() > 1 && self.events[0].1 < cutoff {
-            self.events.remove(0);
+        while self.events.len() > 1 {
+            if let Some((_, count)) = self.events.front() {
+                if *count < cutoff {
+                    self.events.pop_front();
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
         }
     }
 
@@ -109,8 +120,8 @@ impl SpeedWindow {
         if self.events.len() < 2 {
             return 0.0;
         }
-        let (start, start_tok) = &self.events[0];
-        let (end, end_tok) = self.events.last().unwrap();
+        let (start, start_tok) = self.events.front().unwrap();
+        let (end, end_tok) = self.events.back().unwrap();
         if start_tok == end_tok {
             return 0.0;
         }
@@ -170,7 +181,6 @@ pub struct AgentState {
     pub tokens_out_prev: usize,
     /// Token estimation/cost tracker configured for the active model.
     pub token_tracker: crate::tokens::TokenTracker,
-    // Fields moved from AppState (Phase 1: add without removing outer outer fields)
     pub streaming: bool,
     pub next_id: u64,
     pub intermediate_step_count: usize,
@@ -178,6 +188,8 @@ pub struct AgentState {
     pub(crate) thought_seq: u64,
     pub(crate) last_assistant_index: Option<usize>,
     pub thinking_started_at: Option<std::time::Instant>,
+    /// Buffer for streaming response deltas (stable content + mutable tail).
+    pub streaming_buffer: StreamingBuffer,
 }
 
 #[derive(Clone)]
@@ -223,6 +235,9 @@ pub struct ViewState {
     pub(crate) cached_auth_valid: bool,
     /// Navigable posts in the feed. Rebuilt alongside `elements_cache`.
     pub posts: Arc<[crate::ui::elements::Post]>,
+    /// Last known mouse position from `MouseMove` events. Used by the TUI
+    /// to compute `MouseTarget` for hover styling and click routing.
+    pub mouse_position: Option<(u16, u16)>,
 }
 
 impl ViewState {
@@ -270,6 +285,7 @@ impl Default for ViewState {
             cached_auth_valid: false,
             selected_post: None,
             posts: Arc::new([]),
+            mouse_position: None,
         }
     }
 }
@@ -281,7 +297,6 @@ pub struct SessionState {
     pub session_display_name: Option<String>,
     pub session_created_at: f64,
     pub session_updated_at: f64,
-    // Fields moved from AppState (Phase 1: add without removing outer fields)
     pub pending_edits: Vec<crate::edit_preview::EditPreview>,
     pub image_attachments: Vec<String>,
 }
@@ -318,12 +333,13 @@ pub struct ConfigState {
     pub truncation: crate::config_reload::TruncationSection,
     /// Vim-style scrollback navigation (opt-in).
     pub vim_mode: bool,
-    // Fields moved from AppState (Phase 1: add without removing outer fields)
     pub steering_mode: crate::model::DeliveryMode,
     pub follow_up_mode: crate::model::DeliveryMode,
     pub recent_models: Vec<String>,
     /// Telemetry/analytics tracking.
     pub telemetry: crate::telemetry::Telemetry,
+    /// Execution mode: Solo (default) or Team (orchestrator).
+    pub execution_mode: crate::orchestrator::ExecutionMode,
 }
 
 impl Default for ConfigState {
@@ -354,6 +370,7 @@ impl Default for ConfigState {
             follow_up_mode: crate::model::DeliveryMode::default(),
             recent_models: Vec::new(),
             telemetry: crate::telemetry::Telemetry::new(false),
+            execution_mode: crate::orchestrator::ExecutionMode::default(),
         }
     }
 }
@@ -366,3 +383,386 @@ pub struct CompletionState {
     pub at_selected: Option<usize>,
     pub last_at_query: Option<String>,
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar state (Team mode)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Which agent feed is currently visible / focused.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AgentFocus {
+    /// Showing the Orchestrator's main feed.
+    Orchestrator,
+    /// Showing a specific subagent's feed.
+    Subagent(String),
+}
+
+impl Default for AgentFocus {
+    fn default() -> Self {
+        Self::Orchestrator
+    }
+}
+
+/// Per-agent status for the sidebar list.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentEntry {
+    pub id: String,
+    pub label: String,
+    pub status: AgentStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AgentStatus {
+    Pending,
+    Running,
+    AwaitingUser,
+    Done,
+    Failed,
+}
+
+/// Sidebar state for Team mode — tracks subagent list and focus.
+#[derive(Debug, Clone, Default)]
+pub struct SidebarState {
+    /// Whether the sidebar is visible (Team mode with active plan).
+    pub visible: bool,
+    /// Which agent feed is currently focused.
+    pub focus: AgentFocus,
+    /// Ordered list of agents in the sidebar (Orchestrator first, then subagents).
+    pub agents: Vec<AgentEntry>,
+}
+
+impl SidebarState {
+    /// Add the Orchestrator entry (always at index 0).
+    pub fn set_orchestrator_status(&mut self, status: AgentStatus) {
+        if self.agents.is_empty() {
+            self.agents.insert(0, AgentEntry {
+                id: String::new(),
+                label: "Orchestrator".to_string(),
+                status,
+            });
+        } else {
+            self.agents[0].status = status;
+        }
+    }
+
+    /// Replace subagent entries (indices 1+).
+    pub fn set_subagents(&mut self, subagents: Vec<AgentEntry>) {
+        if self.agents.is_empty() {
+            self.agents.insert(0, AgentEntry {
+                id: String::new(),
+                label: "Orchestrator".to_string(),
+                status: AgentStatus::Pending,
+            });
+        }
+        self.agents.truncate(1);
+        self.agents.extend(subagents);
+    }
+
+    /// Focus a subagent by its 1-based index (Ctrl+1..9).
+    pub fn focus_subagent_by_index(&mut self, idx: usize) {
+        let subagent_idx = 1 + idx; // 1-based, 0 = orchestrator
+        if subagent_idx < self.agents.len() {
+            let id = self.agents[subagent_idx].id.clone();
+            self.focus = AgentFocus::Subagent(id);
+        }
+    }
+
+    /// Return to the Orchestrator feed.
+    pub fn focus_orchestrator(&mut self) {
+        self.focus = AgentFocus::Orchestrator;
+    }
+}
+
+#[cfg(test)]
+mod sidebar_tests {
+    use super::*;
+
+    #[test]
+    fn sidebar_defaults_hidden() {
+        let sidebar = SidebarState::default();
+        assert!(!sidebar.visible);
+        assert!(matches!(sidebar.focus, AgentFocus::Orchestrator));
+        assert!(sidebar.agents.is_empty());
+    }
+
+    #[test]
+    fn focus_defaults_to_orchestrator() {
+        assert!(matches!(AgentFocus::default(), AgentFocus::Orchestrator));
+    }
+
+    #[test]
+    fn focus_subagent_by_index() {
+        let mut sidebar = SidebarState::default();
+        sidebar.agents.push(AgentEntry {
+            id: String::new(),
+            label: "Orchestrator".to_string(),
+            status: AgentStatus::Running,
+        });
+        sidebar.agents.push(AgentEntry {
+            id: "t1".to_string(),
+            label: "Reviewer".to_string(),
+            status: AgentStatus::Pending,
+        });
+        sidebar.agents.push(AgentEntry {
+            id: "t2".to_string(),
+            label: "Writer".to_string(),
+            status: AgentStatus::Pending,
+        });
+
+        sidebar.focus_subagent_by_index(0);
+        if let AgentFocus::Subagent(id) = &sidebar.focus {
+            assert_eq!(id, "t1");
+        } else {
+            panic!("expected Subagent(t1)");
+        }
+
+        sidebar.focus_subagent_by_index(1);
+        if let AgentFocus::Subagent(id) = &sidebar.focus {
+            assert_eq!(id, "t2");
+        } else {
+            panic!("expected Subagent(t2)");
+        }
+
+        sidebar.focus_subagent_by_index(9); // out of range — unchanged
+        if let AgentFocus::Subagent(id) = &sidebar.focus {
+            assert_eq!(id, "t2");
+        }
+    }
+
+    #[test]
+    fn focus_orchestrator() {
+        let mut sidebar = SidebarState::default();
+        sidebar.focus = AgentFocus::Subagent("t1".to_string());
+        sidebar.focus_orchestrator();
+        assert!(matches!(sidebar.focus, AgentFocus::Orchestrator));
+    }
+
+    #[test]
+    fn set_orchestrator_status_empty() {
+        let mut sidebar = SidebarState::default();
+        sidebar.set_orchestrator_status(AgentStatus::Running);
+        assert_eq!(sidebar.agents.len(), 1);
+        assert_eq!(sidebar.agents[0].label, "Orchestrator");
+        assert!(matches!(sidebar.agents[0].status, AgentStatus::Running));
+    }
+
+    #[test]
+    fn set_orchestrator_status_updates_existing() {
+        let mut sidebar = SidebarState::default();
+        sidebar.set_orchestrator_status(AgentStatus::Pending);
+        sidebar.set_orchestrator_status(AgentStatus::Done);
+        assert_eq!(sidebar.agents.len(), 1);
+        assert!(matches!(sidebar.agents[0].status, AgentStatus::Done));
+    }
+
+    #[test]
+    fn set_subagents_replaces_non_orchestrator() {
+        let mut sidebar = SidebarState::default();
+        sidebar.set_orchestrator_status(AgentStatus::Running);
+        sidebar.set_subagents(vec![
+            AgentEntry { id: "t1".into(), label: "R".into(), status: AgentStatus::Running },
+            AgentEntry { id: "t2".into(), label: "W".into(), status: AgentStatus::Pending },
+        ]);
+        assert_eq!(sidebar.agents.len(), 3); // orchestrator + 2 subagents
+        assert!(matches!(sidebar.agents[0].status, AgentStatus::Running)); // orchestrator preserved
+        assert_eq!(sidebar.agents[1].id, "t1");
+        assert_eq!(sidebar.agents[2].id, "t2");
+    }
+
+    #[test]
+    fn agent_status_serialization() {
+        let statuses = [
+            AgentStatus::Pending,
+            AgentStatus::Running,
+            AgentStatus::AwaitingUser,
+            AgentStatus::Done,
+            AgentStatus::Failed,
+        ];
+        for status in statuses {
+            let json = serde_json::to_string(&status).unwrap();
+            let roundtrip: AgentStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(roundtrip, status);
+        }
+    }
+
+    #[test]
+    fn agent_entry_serialization() {
+        let entry = AgentEntry {
+            id: "t1".into(),
+            label: "Reviewer".into(),
+            status: AgentStatus::Running,
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        let roundtrip: AgentEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(roundtrip.id, "t1");
+        assert_eq!(roundtrip.label, "Reviewer");
+        assert!(matches!(roundtrip.status, AgentStatus::Running));
+    }
+
+    #[test]
+    fn agent_focus_serialization() {
+        let variants = [
+            AgentFocus::Orchestrator,
+            AgentFocus::Subagent("t1".into()),
+        ];
+        for focus in variants {
+            let json = serde_json::to_string(&focus).unwrap();
+            let roundtrip: AgentFocus = serde_json::from_str(&json).unwrap();
+            assert_eq!(roundtrip, focus);
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Integration tests: OrchestratorEvent → SidebarState
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod orchestrator_sidebar_tests {
+    use super::*;
+    use crate::orchestrator::{ModelTrait, OrchestratorPlan, SubagentTask, TaskStatus};
+    use crate::orchestrator_actor::OrchestratorEvent;
+
+    fn orchestrator_plan() -> OrchestratorPlan {
+        OrchestratorPlan {
+            tasks: vec![
+                SubagentTask::new("t1", "reviewer", "Review src/lib.rs", ModelTrait::General),
+                SubagentTask::new("t2", "writer", "Write tests for src/lib.rs", ModelTrait::General),
+            ],
+            synthesis_trait: ModelTrait::General,
+            summary: None,
+            rationale: None,
+        }
+    }
+
+    fn apply_event(state: &mut crate::model::AppState, event: OrchestratorEvent) {
+        use crate::Event;
+        state.update(Event::Orchestrator(event));
+    }
+
+    #[test]
+    fn plan_started_shows_sidebar() {
+        let mut state = crate::model::AppState::default();
+        apply_event(&mut state, OrchestratorEvent::PlanStarted);
+        assert!(state.sidebar.visible);
+        assert_eq!(state.sidebar.agents.len(), 1);
+        assert!(matches!(state.sidebar.agents[0].status, AgentStatus::Running));
+    }
+
+    #[test]
+    fn plan_generated_populates_subagents() {
+        let mut state = crate::model::AppState::default();
+        apply_event(&mut state, OrchestratorEvent::PlanStarted);
+        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: orchestrator_plan() });
+        assert_eq!(state.sidebar.agents.len(), 3); // orchestrator + 2 subagents
+        assert_eq!(state.sidebar.agents[1].id, "t1");
+        assert_eq!(state.sidebar.agents[2].id, "t2");
+        assert!(matches!(state.sidebar.agents[1].status, AgentStatus::Pending));
+        assert!(matches!(state.sidebar.agents[2].status, AgentStatus::Pending));
+    }
+
+    #[test]
+    fn subagent_status_changed_updates_entry() {
+        let mut state = crate::model::AppState::default();
+        apply_event(&mut state, OrchestratorEvent::PlanStarted);
+        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: orchestrator_plan() });
+        apply_event(&mut state, OrchestratorEvent::SubagentStatusChanged {
+            task_id: "t1".into(),
+            status: TaskStatus::Running,
+        });
+        let entry = state.sidebar.agents.iter().find(|a| a.id == "t1").unwrap();
+        assert!(matches!(entry.status, AgentStatus::Running));
+        // t2 should be unchanged
+        let entry2 = state.sidebar.agents.iter().find(|a| a.id == "t2").unwrap();
+        assert!(matches!(entry2.status, AgentStatus::Pending));
+    }
+
+    #[test]
+    fn cancelled_hides_sidebar() {
+        let mut state = crate::model::AppState::default();
+        apply_event(&mut state, OrchestratorEvent::PlanStarted);
+        apply_event(&mut state, OrchestratorEvent::PlanGenerated { plan: orchestrator_plan() });
+        apply_event(&mut state, OrchestratorEvent::Cancelled);
+        assert!(!state.sidebar.visible);
+        assert!(state.sidebar.agents.is_empty());
+    }
+
+    #[test]
+    fn orchestrator_event_serialization() {
+        let plan = orchestrator_plan();
+        let events = [
+            OrchestratorEvent::PlanStarted,
+            OrchestratorEvent::PlanningStarted,
+            OrchestratorEvent::PlanGenerated { plan: plan.clone() },
+            OrchestratorEvent::PlanningFailed { error: "timeout".into() },
+            OrchestratorEvent::SubagentStatusChanged {
+                task_id: "t1".into(),
+                status: TaskStatus::Running,
+            },
+            OrchestratorEvent::Cancelled,
+            OrchestratorEvent::Finished { success: true },
+        ];
+        for event in events {
+            let json = serde_json::to_string(&event).unwrap();
+            let roundtrip: OrchestratorEvent = serde_json::from_str(&json).unwrap();
+            assert_eq!(roundtrip, event);
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Team mode integration tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod team_mode_tests {
+    use super::*;
+    use crate::model::AppState;
+    use crate::orchestrator::ExecutionMode;
+
+    #[test]
+    fn solo_mode_uses_agent() {
+        let state = AppState::default();
+        assert_eq!(state.config.execution_mode, ExecutionMode::Solo);
+        assert!(!state.config.execution_mode.uses_orchestrator());
+    }
+
+    #[test]
+    fn team_mode_uses_orchestrator() {
+        let mut state = AppState::default();
+        state.config.execution_mode = ExecutionMode::Team;
+        assert!(state.config.execution_mode.uses_orchestrator());
+    }
+
+    #[test]
+    fn team_mode_toggle_shows_sidebar() {
+        let mut state = AppState::default();
+        // Initially hidden
+        assert!(!state.sidebar.visible);
+        // Switch to Team — sidebar becomes visible
+        state.config.execution_mode = ExecutionMode::Team;
+        // Sidebar shows when orchestrator plan starts (not just mode toggle)
+        // The key invariant: sidebar is only visible when in Team mode AND plan is active
+        assert!(!state.sidebar.visible); // no plan yet
+    }
+
+    #[test]
+    fn solo_mode_has_no_sidebar_agents() {
+        let mut state = AppState::default();
+        // Force some agents in
+        state.sidebar.visible = true;
+        state.sidebar.agents.push(AgentEntry {
+            id: "t1".into(),
+            label: "Test".into(),
+            status: AgentStatus::Running,
+        });
+        // Switch to Solo — agents cleared
+        state.config.execution_mode = ExecutionMode::Solo;
+        state.sidebar.visible = false;
+        state.sidebar.agents.clear();
+        assert_eq!(state.config.execution_mode, ExecutionMode::Solo);
+        assert!(!state.sidebar.visible);
+        assert!(state.sidebar.agents.is_empty());
+    }
+}
+

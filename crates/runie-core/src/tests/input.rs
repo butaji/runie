@@ -1,4 +1,5 @@
 use crate::event::Event;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::model::AppState;
 
 fn fresh_state() -> AppState {
@@ -31,44 +32,47 @@ fn thinking_started(state: &AppState) -> std::time::Instant {
 #[test]
 fn test_input_adds_character() {
     let mut state = fresh_state();
-    state.update(Event::Input('H'));
-    state.update(Event::Input('i'));
+    state.update(Event::Input(InputEvent::Input('H')));
+    state.update(Event::Input(InputEvent::Input('i')));
     assert_eq!(state.input.input, "Hi");
 }
 
 #[test]
 fn test_backspace_removes_character() {
     let mut state = fresh_state();
-    state.update(Event::Input('H'));
-    state.update(Event::Input('i'));
-    state.update(Event::Backspace);
+    state.update(Event::Input(InputEvent::Input('H')));
+    state.update(Event::Input(InputEvent::Input('i')));
+    state.update(Event::Input(InputEvent::Backspace));
     assert_eq!(state.input.input, "H");
 }
 
 #[test]
 fn test_backspace_empty_input() {
     let mut state = fresh_state();
-    state.update(Event::Backspace);
+    state.update(Event::Input(InputEvent::Backspace));
     assert_eq!(state.input.input, "");
 }
 
 #[test]
 fn test_submit_empty_input() {
     let mut state = fresh_state();
-    state.update(Event::Submit);
+    state.update(Event::submit());
     assert_eq!(state.input.input, "");
 }
 
 #[test]
 fn test_submit_reset_command() {
     let mut state = fresh_state();
-    state.update(Event::Input('/'));
-    state.update(Event::Input('r'));
-    state.update(Event::Input('e'));
-    state.update(Event::Input('s'));
-    state.update(Event::Input('e'));
-    state.update(Event::Input('t'));
-    state.update(Event::Submit);
+    // Type '/' to open the command palette
+    state.update(Event::Input(InputEvent::Input('/')));
+    // Filter the palette with 'reset' using PaletteFilter events
+    state.update(Event::Dialog(DialogEvent::PaletteFilter('r')));
+    state.update(Event::Dialog(DialogEvent::PaletteFilter('e')));
+    state.update(Event::Dialog(DialogEvent::PaletteFilter('s')));
+    state.update(Event::Dialog(DialogEvent::PaletteFilter('e')));
+    state.update(Event::Dialog(DialogEvent::PaletteFilter('t')));
+    // Select the reset command from the palette
+    state.update(Event::Dialog(DialogEvent::PaletteSelect));
 
     assert_eq!(state.session.messages.len(), 1);
     assert!(
@@ -83,7 +87,7 @@ fn test_submit_reset_command() {
 fn typing_without_at_does_not_open_dialog() {
     let mut state = fresh_state();
     for c in "hello".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
     assert!(
         state.completion.at_suggestions.is_none(),
@@ -104,7 +108,7 @@ fn input_change_marks_dirty_but_does_not_bump_cache_gen() {
     });
     state.ensure_fresh();
     let gen_before = state.cache_generation();
-    state.update(Event::Input('x'));
+    state.update(Event::Input(InputEvent::Input('x')));
     assert!(
         state.is_dirty(),
         "Input change should mark dirty for render"
@@ -121,10 +125,10 @@ fn message_change_bumps_cache_gen() {
     let mut state = fresh_state();
     state.ensure_fresh();
     let gen_before = state.cache_generation();
-    state.update(Event::AgentResponse {
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    });
+    }));
     assert!(
         state.cache_generation() > gen_before,
         "Message change must bump cache generation"
@@ -143,7 +147,7 @@ fn ensure_fresh_skips_rebuild_when_only_input_changed() {
     });
     state.ensure_fresh();
     let cache_before = state.view.elements_cache().len();
-    state.update(Event::Input('x'));
+    state.update(Event::Input(InputEvent::Input('x')));
     state.ensure_fresh();
     assert_eq!(
         state.view.elements_cache().len(),
@@ -254,7 +258,7 @@ fn timer_advances_without_cache_rebuild() {
 fn input_not_delayed_by_animation_when_idle() {
     let mut state = fresh_state();
     state.agent.turn_active = false;
-    state.update(Event::Input('x'));
+    state.update(Event::Input(InputEvent::Input('x')));
     assert!(state.is_dirty(), "Input must mark dirty immediately");
     assert!(
         !state.agent.turn_active,
@@ -266,7 +270,7 @@ fn input_not_delayed_by_animation_when_idle() {
 fn tick_animation_noop_when_not_turn_active() {
     let mut state = fresh_state();
     state.agent.turn_active = false;
-    state.update(Event::Input('x'));
+    state.update(Event::Input(InputEvent::Input('x')));
     state.ensure_fresh();
     let was_dirty = state.is_dirty();
 
@@ -281,15 +285,15 @@ fn tick_animation_noop_when_not_turn_active() {
 #[test]
 fn external_editor_done_updates_input() {
     let mut state = fresh_state();
-    state.update(Event::Input('o'));
-    state.update(Event::Input('l'));
-    state.update(Event::Input('d'));
+    state.update(Event::Input(InputEvent::Input('o')));
+    state.update(Event::Input(InputEvent::Input('l')));
+    state.update(Event::Input(InputEvent::Input('d')));
     assert_eq!(state.input.input, "old");
     assert_eq!(state.input.cursor_pos, 3);
 
-    state.update(Event::ExternalEditorDone {
+    state.update(Event::Control(ControlEvent::ExternalEditorDone {
         content: "new text".to_string(),
-    });
+    }));
     assert_eq!(state.input.input, "new text");
     assert_eq!(state.input.cursor_pos, 8);
 }
@@ -298,9 +302,9 @@ fn external_editor_done_updates_input() {
 fn submit_quit_command_quits_app() {
     let mut state = fresh_state();
     for c in "quit".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::Submit);
+    state.update(Event::submit());
     assert!(
         state.should_quit,
         "typing 'quit' and pressing Enter should quit"
@@ -311,9 +315,9 @@ fn submit_quit_command_quits_app() {
 fn submit_exit_command_quits_app() {
     let mut state = fresh_state();
     for c in "exit".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::Submit);
+    state.update(Event::submit());
     assert!(
         state.should_quit,
         "typing 'exit' and pressing Enter should quit"
@@ -324,9 +328,9 @@ fn submit_exit_command_quits_app() {
 fn submit_colon_q_command_quits_app() {
     let mut state = fresh_state();
     for c in ":q".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::Submit);
+    state.update(Event::submit());
     assert!(
         state.should_quit,
         "typing ':q' and pressing Enter should quit"
@@ -337,9 +341,9 @@ fn submit_colon_q_command_quits_app() {
 fn submit_quit_with_whitespace_trims_and_quits() {
     let mut state = fresh_state();
     for c in "  quit  ".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::Submit);
+    state.update(Event::submit());
     assert!(
         state.should_quit,
         "typing 'quit' with surrounding whitespace should quit after trim"
@@ -350,29 +354,29 @@ fn submit_quit_with_whitespace_trims_and_quits() {
 fn submit_quit_is_case_insensitive() {
     let mut state = fresh_state();
     for c in "QUIT".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::Submit);
+    state.update(Event::submit());
     assert!(state.should_quit, "typing 'QUIT' should quit");
 }
 
 #[test]
 fn ctrl_q_event_quits_app() {
     let mut state = fresh_state();
-    state.update(Event::Quit);
-    assert!(state.should_quit, "Event::Quit should set should_quit");
+    state.update(Event::Control(ControlEvent::Quit));
+    assert!(state.should_quit, "Event::Control(ControlEvent::Quit) should set should_quit");
 }
 
 #[test]
 fn cursor_end_moves_to_end_of_input() {
     let mut state = fresh_state();
     for c in "hello".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::CursorLeft);
-    state.update(Event::CursorLeft);
+    state.update(Event::Input(InputEvent::CursorLeft));
+    state.update(Event::Input(InputEvent::CursorLeft));
     assert_eq!(state.input.cursor_pos, 3);
-    state.update(Event::CursorEnd);
+    state.update(Event::Input(InputEvent::CursorEnd));
     assert_eq!(state.input.cursor_pos, 5, "CursorEnd should move to end");
 }
 
@@ -380,11 +384,11 @@ fn cursor_end_moves_to_end_of_input() {
 fn ctrl_e_event_moves_cursor_to_end() {
     let mut state = fresh_state();
     for c in "abc".chars() {
-        state.update(Event::Input(c));
+        state.update(Event::Input(InputEvent::Input(c)));
     }
-    state.update(Event::CursorStart);
+    state.update(Event::Input(InputEvent::CursorStart));
     assert_eq!(state.input.cursor_pos, 0);
-    state.update(Event::CursorEnd);
+    state.update(Event::Input(InputEvent::CursorEnd));
     assert_eq!(
         state.input.cursor_pos, 3,
         "Ctrl+E (CursorEnd) should move to end"

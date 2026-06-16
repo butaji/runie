@@ -1,4 +1,5 @@
 use crate::event::Event;
+use crate::event::{InputEvent, ControlEvent, ModelConfigEvent, SystemEvent, DialogEvent, ScrollEvent, AgentEvent, SessionEvent, EditEvent, CommandEvent, DurableCoreEvent};
 use crate::model::{AppState, Role};
 
 fn fresh_state() -> AppState {
@@ -17,40 +18,40 @@ fn user_count(state: &AppState) -> usize {
 #[test]
 fn test_complete_agent_flow() {
     let mut state = fresh_state();
-    state.update(Event::Input('H'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('H')));
+    state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
     assert!(!state.agent.streaming);
     state.pop_queue();
     state.agent.streaming = true;
-    state.update(Event::AgentThinking {
+    state.update(Event::Agent(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    });
+    }));
     assert!(state.agent.streaming);
-    state.update(Event::AgentThoughtDone {
+    state.update(Event::Agent(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "Hello".to_string(),
-    });
+    }));
     assert_eq!(state.session.messages.len(), 3);
     assert_eq!(state.session.messages[1].role, Role::Thought);
     assert_eq!(state.session.messages[2].role, Role::Assistant);
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
     assert!(!state.agent.streaming);
 }
 
 #[test]
 fn test_queue_processing() {
     let mut state = fresh_state();
-    state.update(Event::Input('A'));
-    state.update(Event::Submit);
-    state.update(Event::Input('B'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('A')));
+    state.update(Event::submit());
+    state.update(Event::Input(InputEvent::Input('B')));
+    state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 2);
     assert_eq!(state.agent.request_queue.len(), 2);
     assert!(!state.agent.streaming);
@@ -60,8 +61,8 @@ fn test_queue_processing() {
 fn test_second_submit_while_turn_active_queues_message() {
     let mut state = fresh_state();
     // First message submitted and sent to agent
-    state.update(Event::Input('A'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('A')));
+    state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].content, "A");
 
@@ -69,8 +70,8 @@ fn test_second_submit_while_turn_active_queues_message() {
     state.agent.turn_active = true;
 
     // Second message while turn is active
-    state.update(Event::Input('B'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('B')));
+    state.update(Event::submit());
 
     // Message B should NOT appear in chat yet — queued for next turn
     assert_eq!(
@@ -90,13 +91,13 @@ fn test_second_submit_while_turn_active_queues_message() {
 fn test_queued_message_appears_after_turn_completes() {
     let mut state = fresh_state();
     // Submit first message and simulate agent start
-    state.update(Event::Input('A'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('A')));
+    state.update(Event::submit());
     state.agent.turn_active = true;
 
     // Submit second message while agent is working
-    state.update(Event::Input('B'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('B')));
+    state.update(Event::submit());
     assert_eq!(
         state.session.messages.len(),
         1,
@@ -104,9 +105,9 @@ fn test_queued_message_appears_after_turn_completes() {
     );
 
     // Agent finishes turn
-    state.update(Event::AgentDone {
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
+    }));
 
     // Now message B should appear and be ready for its turn
     assert!(
@@ -120,8 +121,8 @@ fn test_queued_message_appears_after_turn_completes() {
 }
 
 fn submit_queued_message(state: &mut AppState, ch: char) {
-    state.update(Event::Input(ch));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input(ch)));
+    state.update(Event::submit());
 }
 
 #[test]
@@ -144,7 +145,7 @@ fn test_three_messages_one_at_a_time() {
         "Messages 2 and 3 queued"
     );
 
-    state.update(Event::AgentDone { id: "req.0".into() });
+    state.update(Event::Agent(AgentEvent::Done { id: "req.0".into() }));
     assert_eq!(
         user_count(&state),
         2,
@@ -152,7 +153,7 @@ fn test_three_messages_one_at_a_time() {
     );
     assert_eq!(state.agent.message_queue.len(), 1, "Message 3 still queued");
 
-    state.update(Event::AgentDone { id: "req.1".into() });
+    state.update(Event::Agent(AgentEvent::Done { id: "req.1".into() }));
     assert_eq!(
         user_count(&state),
         3,
@@ -167,8 +168,8 @@ fn test_three_messages_one_at_a_time() {
 #[test]
 fn test_submit_adds_message_to_queue() {
     let mut state = fresh_state();
-    state.update(Event::Input('H'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('H')));
+    state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert_eq!(state.session.messages[0].role, Role::User);
     assert_eq!(state.agent.request_queue.len(), 1);
@@ -177,8 +178,8 @@ fn test_submit_adds_message_to_queue() {
 #[test]
 fn test_messages_have_correlation_id() {
     let mut state = fresh_state();
-    state.update(Event::Input('H'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('H')));
+    state.update(Event::submit());
     assert_eq!(state.session.messages.len(), 1);
     assert!(state.session.messages[0].id.starts_with("req."));
 }
@@ -186,11 +187,11 @@ fn test_messages_have_correlation_id() {
 #[test]
 fn test_multiple_submits_increment_id() {
     let mut state = fresh_state();
-    state.update(Event::Input('A'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('A')));
+    state.update(Event::submit());
     let first_id = state.session.messages[0].id.clone();
-    state.update(Event::Input('B'));
-    state.update(Event::Submit);
+    state.update(Event::Input(InputEvent::Input('B')));
+    state.update(Event::submit());
     let second_id = state.session.messages[1].id.clone();
     assert_ne!(first_id, second_id);
 }
@@ -199,29 +200,29 @@ fn test_multiple_submits_increment_id() {
 fn test_multiple_thoughts_for_sequential_requests() {
     let mut state = fresh_state();
     state.agent.streaming = true;
-    state.update(Event::AgentThinking {
+    state.update(Event::Agent(AgentEvent::Thinking {
         id: "req.0".to_string(),
-    });
-    state.update(Event::AgentThoughtDone {
+    }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone {
         id: "req.0".to_string(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.0".to_string(),
         content: "A".to_string(),
-    });
-    state.update(Event::AgentDone {
+    }));
+    state.update(Event::Agent(AgentEvent::Done {
         id: "req.0".to_string(),
-    });
-    state.update(Event::AgentThinking {
+    }));
+    state.update(Event::Agent(AgentEvent::Thinking {
         id: "req.1".to_string(),
-    });
-    state.update(Event::AgentThoughtDone {
+    }));
+    state.update(Event::Agent(AgentEvent::ThoughtDone {
         id: "req.1".to_string(),
-    });
-    state.update(Event::AgentResponse {
+    }));
+    state.update(Event::Agent(AgentEvent::Response {
         id: "req.1".to_string(),
         content: "B".to_string(),
-    });
+    }));
     let thoughts: Vec<_> = state
         .session
         .messages
