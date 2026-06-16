@@ -1,0 +1,35 @@
+[package]
+name = "runie-term"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "runie"
+path = "src/main.rs"
+
+[dependencies]
+runie-core.workspace = true
+runie-tui.workspace = true
+runie-agent.workspace = true
+runie-provider.workspace = true
+crossterm.workspace = true
+ratatui.workspace = true
+tokio.workspace = true
+futures.workspace = true
+anyhow.workspace = true
+base64 = "0.22"
+tempfile = "3"
+reqwest.workspace = true
+serde_json.workspace = true
+dirs.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+
+[dev-dependencies]
+regex = "1"
+
+[target.'cfg(unix)'.dev-dependencies]
+libc = "0.2"
+nix.workspace = true
+rexpect.workspace = true

@@ -106,6 +106,7 @@ fn agent_message_timestamp_appears_once() {
         timestamp: 99999.0,
         id: "msg.1".to_string(),
         provider: "mock".to_string(),
+        ..Default::default()
     });
     state.messages_changed();
     let backend = TestBackend::new(60, 20);

@@ -6,87 +6,89 @@ This roadmap sequences the active R3/R4 work in dependency order. It is a living
 
 Goal: get `cargo test --workspace` green and land low-risk crate adoptions.
 
-- [ ] `tasks/archive/unblock-workspace-build.md` — split/simplify files violating the 500/40/10 lint.
-- [ ] `tasks/adopt-notify-config-watcher.md` — replace config polling with `notify`.
-- [ ] `tasks/adopt-arboard-clipboard.md` — replace clipboard subprocesses with `arboard`.
-- [ ] `tasks/adopt-patch-diff-parser.md` — replace hand-rolled diff parser with `patch`.
-- [ ] `tasks/adopt-serde-yaml-skills.md` — parse skill frontmatter with `serde_yml`.
-- [ ] `tasks/adopt-palette-theme-colors.md` — replace theme color helpers with `palette`.
-- [ ] `tasks/fix-session-store-atomic-writes.md` — atomic `SessionStore::append`.
+- [x] ~~`tasks/archive/unblock-workspace-build.md`~~ — done
+- [x] ~~`tasks/adopt-notify-config-watcher.md`~~ — done
+- [x] ~~`tasks/adopt-arboard-clipboard.md`~~ — done
+- [x] ~~`tasks/adopt-patch-diff-parser.md`~~ — done
+- [x] ~~`tasks/adopt-serde-yaml-skills.md`~~ — done (serde_yaml 0.9 for skill frontmatter)
+- [ ] `tasks/adopt-palette-theme-colors.md` — replace theme color helpers with `palette` crate
+- [x] ~~`tasks/fix-session-store-atomic-writes.md`~~ — done
 
 ## Phase 1 — Actor/EventBus & Core Abstractions
 
 Goal: complete the actor/runtime foundation and simplify the core event/state model.
 
-- [ ] `tasks/adopt-or-remove-actor-framework.md` (done) — EventBus wired in `runie-term`.
-- [ ] `tasks/event-bus-jsonl-persistence.md` (done) — JSONL session persistence.
-- [ ] `tasks/tool-registry-trait.md` (done) — unified `Tool` trait in agent turn.
-- [ ] `tasks/harness-skill-framework.md` — skill lifecycle hooks on the event bus.
-- [ ] `tasks/complete-appstate-refactor.md` — remove duplicated state fields.
-- [ ] `tasks/flatten-event-system.md` — flatten `Event` sub-enums where possible.
-- [ ] `tasks/fff-indexer-actor.md` — long-lived `FffIndexerActor`.
+- [x] ~~`tasks/adopt-or-remove-actor-framework.md`~~ — done
+- [x] ~~`tasks/event-bus-jsonl-persistence.md`~~ — done
+- [x] ~~`tasks/tool-registry-trait.md`~~ — done
+- [x] ~~`tasks/harness-skill-framework.md`~~ — done
+- [x] ~~`tasks/complete-appstate-refactor.md`~~ — done
+- [x] ~~`tasks/flatten-event-system.md`~~ — done
+- [ ] `tasks/fff-indexer-actor.md` — long-lived FFFIndexerActor (P0, blocks all FFF tools)
 
 ## Phase 2 — Tools, Search & Skills
 
 Goal: land FFF-powered search and the harness skill suite.
 
-- [ ] `tasks/fff-unified-search-tool.md` — replace `grep`/`find`/`list_dir`.
-- [ ] `tasks/fff-tui-file-picker.md` — FFF-backed `@` picker.
-- [ ] `tasks/fff-find-definitions-tool.md` — definition classifier tool.
-- [ ] `tasks/fff-query-syntax-and-examples.md` — agent query syntax.
-- [ ] `tasks/fff-frecency-and-git-status.md` — frecency + git filtering.
-- [ ] `tasks/fff-glob-tool.md` — fast glob tool.
-- [ ] `tasks/fff-location-parser.md` — `file:line:col` parsing.
-- [ ] `tasks/harness-skill-hashline-edit.md` — hashline edit tool.
-- [ ] `tasks/harness-skill-verification-loop.md` — post-completion verification.
-- [ ] `tasks/harness-skill-loop-detector.md` — loop detection/recovery.
-- [ ] `tasks/harness-skill-startup-context.md` — startup context injection.
-- [ ] `tasks/harness-skill-tool-schema-enricher.md` — schema examples.
-- [ ] `tasks/permission-rulesets.md` — tool permission rules.
-- [ ] `tasks/mcp-client-integration.md` — MCP client for external tools.
+### FFF Tools (blocked on fff-indexer-actor)
+- [ ] `tasks/fff-unified-search-tool.md` — replace grep/find/list_dir (P0)
+- [ ] `tasks/fff-tui-file-picker.md` — FFF-backed @ picker (P0)
+- [ ] `tasks/fff-find-definitions-tool.md` — definition classifier tool (P1)
+- [ ] `tasks/fff-query-syntax-and-examples.md` — agent query syntax (P1)
+- [ ] `tasks/fff-frecency-and-git-status.md` — frecency + git filtering (P1)
+- [ ] `tasks/fff-glob-tool.md` — fast glob tool (P2)
+- [ ] `tasks/fff-location-parser.md` — file:line:col parsing (P2)
+
+### Harness Skills (independent of FFF)
+- [ ] `tasks/harness-skill-verification-loop.md` — post-completion verification (P0)
+- [ ] `tasks/harness-skill-hashline-edit.md` — hashline edit tool (P0)
 
 ## Phase 3 — TUI & Rendering Polish
 
 Goal: consolidate the TUI layer and adopt remaining rendering crates.
 
-- [ ] `tasks/merge-runie-term-into-tui.md` — move terminal setup into `runie-tui`.
-- [ ] `tasks/unify-rendering-pipeline.md` — single rendering path.
-- [ ] `tasks/adopt-nucleo-non-file-fuzzy.md` — fuzzy matching for panels.
-- [ ] `tasks/adopt-textwrap-word-wrap.md` — Unicode word wrapping.
-- [ ] `tasks/grok-*` — UI/UX polish tasks.
-- [ ] `tasks/unify-markdown-pipeline.md` — consolidate markdown rendering.
+- [ ] `tasks/merge-runie-term-into-tui.md` — move terminal setup into runie-tui (P1)
+- [x] ~~`tasks/unify-rendering-pipeline.md`~~ — deleted core format_test; TUI sole renderer (done)
+- [x] ~~`tasks/adopt-nucleo-non-file-fuzzy.md`~~ — done
+- [x] ~~`tasks/adopt-textwrap-word-wrap.md`~~ — done
+- [x] ~~`tasks/adopt-syntect.md`~~ — done
+- [x] ~~`tasks/adopt-pulldown-cmark.md`~~ — done
+- [x] ~~`tasks/adopt-tiktoken-rs.md`~~ — done
+- [ ] `tasks/unify-markdown-pipeline.md` — consolidate core + TUI markdown parsing (P2, depends on unify-rendering-pipeline ✅)
+- [ ] `tasks/adopt-palette-theme-colors.md` — palette crate for theme colors (P2)
 
 ## Phase 4 — R4 Team / Orchestrator
 
 Goal: add solo/team execution modes and the orchestrator actor.
 
-- [ ] `tasks/r4-orchestrator-domain-types.md`
-- [ ] `tasks/r4-model-trait-resolution.md`
-- [ ] `tasks/r4-ask-user-tool.md`
-- [ ] `tasks/r4-one-shot-orchestrator-llm.md`
-- [ ] `tasks/r4-orchestrator-actor.md`
-- [ ] `tasks/r4-subagent-isolation.md`
-- [ ] `tasks/r4-subagent-sidebar.md`
-- [ ] `tasks/r4-sidebar-task-list.md`
-- [ ] `tasks/r4-solo-team-mode-toggle.md`
-- [ ] `tasks/r4-team-mode-integration.md`
+- [ ] `tasks/r4-orchestrator-domain-types.md` (P0, blocks r4-*)
+- [ ] `tasks/r4-model-trait-resolution.md` (P0)
+- [ ] `tasks/r4-ask-user-tool.md` (P0)
+- [ ] `tasks/r4-one-shot-orchestrator-llm.md` (P0)
+- [ ] `tasks/r4-orchestrator-actor.md` (P0)
+- [ ] `tasks/r4-subagent-isolation.md` (P0)
+- [ ] `tasks/r4-subagent-sidebar.md` (P0)
+- [ ] `tasks/r4-sidebar-task-list.md` (P1)
+- [ ] `tasks/r4-solo-team-mode-toggle.md` (P0)
+- [ ] `tasks/r4-team-mode-integration.md` (P0)
 
 ## Phase 5 — R3 Simplification Cleanup
 
 Goal: finish the R3 simplification pass.
 
-- [ ] `tasks/coalesce-update-modules.md` — reduce 33 update modules to ≤8.
-- [ ] `tasks/unify-command-dsl.md`
-- [ ] `tasks/unify-diff-model.md`
-- [ ] `tasks/cleanup-state-helpers.md`
+- [x] ~~`tasks/coalesce-update-modules.md`~~ — reduced update/ to 8 flat + 2 subdirs (done)
+- [x] ~~`tasks/unify-command-dsl.md`~~ — done
+- [x] ~~`tasks/unify-diff-model.md`~~ — done
+- [x] ~~`tasks/cleanup-state-helpers.md`~~ — SpeedWindow VecDeque, stubs removed (done)
+- [ ] `tasks/session-list-summaries.md` — core done; UI wiring and LLM summaries (P2)
 
 ## Phase 6 — Persistence & Advanced Features
 
 Goal: upgrade session persistence and enable long-running features.
 
-- [ ] `tasks/adopt-redb-session-store.md` — migrate sessions to `redb`.
-- [ ] `tasks/remove-test-sleeps.md` — deterministic tests.
-- [ ] `tasks/fix-harness-crate-or-archive.md` — resolve `harness/` crate.
+- [ ] `tasks/adopt-redb-session-store.md` — migrate sessions to redb (P2, depends on event-bus-jsonl-persistence ✅)
+- [x] ~~`tasks/remove-test-sleeps.md`~~ — done
+- [x] ~~`tasks/fix-harness-crate-or-archive.md`~~ — done
 
 ## Decision Records
 

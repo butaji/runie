@@ -1,351 +1,382 @@
-//! Event enum variants.
+//! Event enum — top-level wrapper over focused sub-enums.
+//!
+//! The flat `Event` enum was split into sub-enums to keep match arms small,
+//! improve error messages, and make the dispatcher more readable. Each sub-enum
+//! lives in its own file under `event/`.
 
-#[derive(Debug, Clone, PartialEq)]
+use serde::{Deserialize, Serialize};
+use super::names::EVENT_NAMES;
+
+use super::{
+    AgentEvent, CommandEvent, ControlEvent, DialogEvent, EditEvent, InputEvent,
+    LoginFlowEvent, ModelConfigEvent, OrchestratorEvent, ScrollEvent, SessionEvent,
+    SidebarEvent, SystemEvent,
+};
+
+/// The top-level event type for the entire application.
+///
+/// Variants wrap sub-enums so that the compiler enforces exhaustive handling
+/// at each dispatch layer. Call sites construct events with the sub-enum,
+/// e.g. `Event::Input(InputEvent::Submit)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
 pub enum Event {
-    Input(char),
-    Backspace,
-    Newline, // Shift+Enter or Ctrl+J for multi-line input
-    Submit,
-    ScrollUp,
-    ScrollDown,
-    PageUp,
-    PageDown,
+    Input(InputEvent),
+    Agent(AgentEvent),
+    Scroll(ScrollEvent),
+    Control(ControlEvent),
+    ModelConfig(ModelConfigEvent),
+    Dialog(DialogEvent),
+    Edit(EditEvent),
+    System(SystemEvent),
+    Session(SessionEvent),
+    LoginFlow(LoginFlowEvent),
+    Command(CommandEvent),
+    Sidebar(SidebarEvent),
+    Orchestrator(OrchestratorEvent),
+}
 
-    // Mouse events
-    MouseClick {
-        row: u16,
-        col: u16,
-        button: String,
-    },
-    MouseRelease {
-        row: u16,
-        col: u16,
-        button: String,
-    },
-    MouseDrag {
-        row: u16,
-        col: u16,
-        button: String,
-    },
-    MouseMove {
-        row: u16,
-        col: u16,
-    },
+impl Event {
+    /// Convert this event to a durable core event for JSONL persistence.
+    /// Returns `None` for transient-only events (keystrokes, scroll, streaming deltas).
+    pub fn to_durable(&self) -> Option<super::DurableCoreEvent> {
+        use super::DurableCoreEvent;
+        match self {
+            // ResponseDelta is transient — not persisted
+            Event::Agent(AgentEvent::ResponseDelta { .. }) => None,
+            // Complete Response is persisted
+            Event::Agent(AgentEvent::Response { id, content }) => {
+                Some(DurableCoreEvent::MessageSent {
+                    id: id.clone(),
+                    role: "assistant".into(),
+                    content: content.clone(),
+                    timestamp: crate::model::now(),
+                })
+            }
+            Event::Agent(AgentEvent::ToolStart { id, name }) => {
+                Some(DurableCoreEvent::ToolCalled {
+                    id: id.clone(),
+                    name: name.clone(),
+                    input: serde_json::Value::Null,
+                })
+            }
+            Event::Agent(AgentEvent::ToolEnd { output, .. }) => {
+                Some(DurableCoreEvent::ToolResult {
+                    id: String::new(),
+                    output: output.clone(),
+                    success: true,
+                })
+            }
+            Event::ModelConfig(ModelConfigEvent::SwitchModel { provider, model }) => {
+                Some(DurableCoreEvent::ModelSwitched {
+                    provider: provider.clone(),
+                    model: model.clone(),
+                })
+            }
+            Event::Command(CommandEvent::RunNameCommand { name }) => {
+                Some(DurableCoreEvent::SessionRenamed { name: name.clone() })
+            }
+            // SidebarEvent is transient UI state — not persisted
+            Event::Sidebar(_) => None,
+            // OrchestratorEvent drives sidebar state — not persisted
+            Event::Orchestrator(_) => None,
+            _ => None,
+        }
+    }
 
-    // Focus events (terminal focus tracking)
-    FocusGained,
-    FocusLost,
+    /// Canonical string name for bindable variants (those in EVENT_NAMES).
+    pub fn name(&self) -> Option<&'static str> {
+        match self {
+            Event::Input(i) => i.variant_name(),
+            Event::Control(c) => c.variant_name(),
+            Event::Dialog(d) => d.variant_name(),
+            Event::ModelConfig(m) => m.variant_name(),
+            Event::System(s) => s.variant_name(),
+            _ => None,
+        }
+    }
 
-    /// Terminal resize event. Carries the full terminal dimensions; core
-    /// uses the width to compute per-element line counts.
-    TerminalSize {
-        width: u16,
-        height: u16,
-    },
+    /// Build an Event from its canonical name. Supports `Input:<char>` prefix.
+    pub fn from_name(name: &str) -> Option<Event> {
+        if let Some(rest) = name.strip_prefix("Input:") {
+            let c = rest.chars().next()?;
+            return Some(Event::Input(InputEvent::Input(c)));
+        }
+        for (n, ctor) in EVENT_NAMES {
+            if *n == name {
+                return Some(ctor());
+            }
+        }
+        None
+    }
+}
 
-    // Cursor movement (Emacs-style)
-    CursorLeft,
-    CursorRight,
-    CursorStart,
-    CursorEnd,
+// ── Convenience constructors ───────────────────────────────────────────────────
 
-    // Text editing (Emacs-style)
-    DeleteWord,    // Ctrl+W - delete word before cursor
-    DeleteToEnd,   // Ctrl+K - delete from cursor to end
-    DeleteToStart, // Ctrl+U - delete from start to cursor
-    KillChar,      // Ctrl+D - delete char at cursor (if not empty)
+impl Event {
+    pub fn input(c: char) -> Self {
+        Event::Input(InputEvent::Input(c))
+    }
+    pub fn backspace() -> Self {
+        Event::Input(InputEvent::Backspace)
+    }
+    pub fn newline() -> Self {
+        Event::Input(InputEvent::Newline)
+    }
+    pub fn submit() -> Self {
+        Event::Input(InputEvent::Submit)
+    }
+    pub fn scroll_up() -> Self {
+        Event::Scroll(ScrollEvent::Up)
+    }
+    pub fn scroll_down() -> Self {
+        Event::Scroll(ScrollEvent::Down)
+    }
+    pub fn page_up() -> Self {
+        Event::Scroll(ScrollEvent::PageUp)
+    }
+    pub fn page_down() -> Self {
+        Event::Scroll(ScrollEvent::PageDown)
+    }
+    pub fn go_to_top() -> Self {
+        Event::Scroll(ScrollEvent::GoToTop)
+    }
+    pub fn go_to_bottom() -> Self {
+        Event::Scroll(ScrollEvent::GoToBottom)
+    }
+    pub fn quit() -> Self {
+        Event::Control(ControlEvent::Quit)
+    }
+    pub fn reset() -> Self {
+        Event::Control(ControlEvent::Reset)
+    }
+    pub fn abort() -> Self {
+        Event::Control(ControlEvent::Abort)
+    }
+    pub fn switch_model(provider: String, model: String) -> Self {
+        Event::ModelConfig(ModelConfigEvent::SwitchModel { provider, model })
+    }
+    pub fn switch_theme(name: String) -> Self {
+        Event::ModelConfig(ModelConfigEvent::SwitchTheme { name })
+    }
+    pub fn agent_thinking(id: String) -> Self {
+        Event::Agent(AgentEvent::Thinking { id })
+    }
+    pub fn agent_thought_done(id: String) -> Self {
+        Event::Agent(AgentEvent::ThoughtDone { id })
+    }
+    pub fn agent_tool_start(id: String, name: String) -> Self {
+        Event::Agent(AgentEvent::ToolStart { id, name })
+    }
+    pub fn agent_tool_end(duration_secs: f64, output: String) -> Self {
+        Event::Agent(AgentEvent::ToolEnd { duration_secs, output })
+    }
+    pub fn agent_response(id: String, content: String) -> Self {
+        Event::Agent(AgentEvent::Response { id, content })
+    }
+    pub fn agent_turn_complete(id: String, duration_secs: f64) -> Self {
+        Event::Agent(AgentEvent::TurnComplete { id, duration_secs })
+    }
+    pub fn agent_done(id: String) -> Self {
+        Event::Agent(AgentEvent::Done { id })
+    }
+    pub fn agent_error(id: String, message: String) -> Self {
+        Event::Agent(AgentEvent::Error { id, message })
+    }
 
-    // Input history
-    HistoryPrev, // Up arrow - previous history item
-    HistoryNext, // Down arrow - next history item
+    // Additional convenience constructors
+    pub fn paste(s: String) -> Self {
+        Event::Input(InputEvent::Paste(s))
+    }
+    pub fn set_thinking_level(level: crate::model::ThinkingLevel) -> Self {
+        Event::ModelConfig(ModelConfigEvent::SetThinkingLevel(level))
+    }
+    pub fn palette_select() -> Self {
+        Event::Dialog(DialogEvent::PaletteSelect)
+    }
+    pub fn palette_filter(c: char) -> Self {
+        Event::Dialog(DialogEvent::PaletteFilter(c))
+    }
+    pub fn palette_close() -> Self {
+        Event::Dialog(DialogEvent::PaletteClose)
+    }
+    pub fn palette_down() -> Self {
+        Event::Dialog(DialogEvent::PaletteDown)
+    }
+    pub fn settings_close() -> Self {
+        Event::ModelConfig(ModelConfigEvent::SettingsClose)
+    }
+    pub fn show_diagnostics() -> Self {
+        Event::System(SystemEvent::ShowDiagnostics)
+    }
+    pub fn dialog(event: DialogEvent) -> Self {
+        Event::Dialog(event)
+    }
+    pub fn toggle_command_palette() -> Self {
+        Event::Dialog(DialogEvent::ToggleCommandPalette)
+    }
+    pub fn dialog_back() -> Self {
+        Event::Dialog(DialogEvent::DialogBack)
+    }
+}
 
-    // Undo/redo
-    Undo, // Ctrl+Z
-    Redo, // Ctrl+Shift+Z
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::event::DurableCoreEvent;
 
-    // Word navigation
-    CursorWordLeft,  // Alt+B - word backward
-    CursorWordRight, // Alt+F - word forward
+    #[test]
+    fn event_input_equality() {
+        assert_eq!(
+            Event::Input(InputEvent::Input('a')),
+            Event::Input(InputEvent::Input('a')),
+        );
+        assert_ne!(
+            Event::Input(InputEvent::Input('a')),
+            Event::Input(InputEvent::Input('b')),
+        );
+    }
 
-    // Bracketed paste
-    Paste(String), // Terminal paste event
-    PasteImage,    // Ctrl+V paste image from clipboard
+    #[test]
+    fn event_agent_equality() {
+        let id = "test.1".to_string();
+        assert_eq!(
+            Event::Agent(AgentEvent::Thinking { id: id.clone() }),
+            Event::Agent(AgentEvent::Thinking { id: "test.1".to_string() }),
+        );
+    }
 
-    Quit,
-    Reset,
+    #[test]
+    fn event_scroll_equality() {
+        assert_eq!(Event::Scroll(ScrollEvent::Up), Event::Scroll(ScrollEvent::Up));
+        assert_ne!(Event::Scroll(ScrollEvent::Up), Event::Scroll(ScrollEvent::Down));
+    }
 
-    AgentThinking {
-        id: String,
-    },
-    AgentThoughtDone {
-        id: String,
-    },
-    AgentToolStart {
-        id: String,
-        name: String,
-    },
-    AgentToolEnd {
-        duration_secs: f64,
-        output: String,
-    },
-    AgentResponse {
-        id: String,
-        content: String,
-    },
-    AgentTurnComplete {
-        id: String,
-        duration_secs: f64,
-    },
-    AgentDone {
-        id: String,
-    },
-    AgentError {
-        id: String,
-        message: String,
-    },
+    #[test]
+    fn durable_conversion_message_sent() {
+        let evt = Event::Agent(AgentEvent::Response {
+            id: "r1".into(),
+            content: "hello".into(),
+        });
+        let durable = evt.to_durable();
+        assert!(matches!(durable, Some(DurableCoreEvent::MessageSent { .. })));
+    }
 
-    SwitchModel {
-        provider: String,
-        model: String,
-    },
-    SwitchTheme {
-        name: String,
-    },
-    CycleModelNext,
-    CycleModelPrev,
-    ToggleScopedModelsDialog,
-    ScopedModelToggle {
-        name: String,
-    },
-    ScopedModelEnableAll,
-    ScopedModelDisableAll,
-    ScopedModelToggleProvider {
-        provider: String,
-    },
-    ToggleSettingsDialog,
-    SettingsUp,
-    SettingsDown,
-    SettingsLeft,
-    SettingsRight,
-    SettingsSelect,
-    SettingsClose,
-    CycleThinkingLevel,
-    SetThinkingLevel(crate::model::ThinkingLevel),
-    ToggleReadOnly,
-    TrustProject,
-    UntrustProject,
-    FollowUp,
-    Abort,
+    #[test]
+    fn durable_conversion_tool_call() {
+        let evt = Event::Agent(AgentEvent::ToolStart {
+            id: "t1".into(),
+            name: "bash".into(),
+        });
+        let durable = evt.to_durable();
+        assert!(matches!(durable, Some(DurableCoreEvent::ToolCalled { .. })));
+    }
 
-    SpawnAgent {
-        prompt: String,
-    },
-    ToggleExpand,
-    Dequeue,
-    OpenExternalEditor,
-    ExternalEditorDone {
-        content: String,
-    },
+    #[test]
+    fn durable_conversion_non_durable_returns_none() {
+        let evt = Event::Control(ControlEvent::Quit);
+        assert!(evt.to_durable().is_none());
+    }
 
-    // Command palette
-    ToggleCommandPalette,
-    PaletteFilter(char),
-    PaletteBackspace,
-    PaletteUp,
-    PaletteDown,
-    PaletteSelect,
-    PaletteClose,
+    #[test]
+    fn all_sub_enums_have_variants() {
+        // Smoke test: each sub-enum can be constructed
+        let _ = Event::Input(InputEvent::Submit);
+        let _ = Event::Agent(AgentEvent::Done { id: "x".into() });
+        let _ = Event::Scroll(ScrollEvent::Up);
+        let _ = Event::Control(ControlEvent::Quit);
+        let _ = Event::ModelConfig(ModelConfigEvent::SwitchModel {
+            provider: "openai".into(),
+            model: "gpt-4".into(),
+        });
+        let _ = Event::Dialog(DialogEvent::ToggleCommandPalette);
+        let _ = Event::Edit(EditEvent::PendingEdit {
+            path: "x".into(),
+            original: "a".into(),
+            proposed: "b".into(),
+        });
+        let _ = Event::System(SystemEvent::ClearTransient);
+        let _ = Event::Session(SessionEvent::CloneSession);
+        let _ = Event::Command(CommandEvent::RunNameCommand { name: "test".into() });
+    }
 
-    // Model selector
-    ToggleModelSelector,
-    ModelSelectorFilter(char),
-    ModelSelectorBackspace,
-    ModelSelectorUp,
-    ModelSelectorDown,
-    ModelSelectorSelect,
-    ModelSelectorClose,
+    #[test]
+    fn convenience_constructors() {
+        assert!(matches!(Event::input('x'), Event::Input(InputEvent::Input('x'))));
+        assert!(matches!(Event::submit(), Event::Input(InputEvent::Submit)));
+        assert!(matches!(Event::scroll_up(), Event::Scroll(ScrollEvent::Up)));
+        assert!(matches!(Event::quit(), Event::Control(ControlEvent::Quit)));
+        assert!(matches!(
+            Event::switch_model("anthropic".into(), "claude-3".into()),
+            Event::ModelConfig(ModelConfigEvent::SwitchModel { .. })
+        ));
+        assert!(matches!(
+            Event::switch_theme("dracula".into()),
+            Event::ModelConfig(ModelConfigEvent::SwitchTheme { .. })
+        ));
+        assert!(matches!(
+            Event::agent_thinking("x".into()),
+            Event::Agent(AgentEvent::Thinking { .. })
+        ));
+        assert!(matches!(
+            Event::agent_tool_start("t1".into(), "bash".into()),
+            Event::Agent(AgentEvent::ToolStart { .. })
+        ));
+        assert!(matches!(
+            Event::agent_response("r1".into(), "hi".into()),
+            Event::Agent(AgentEvent::Response { .. })
+        ));
+    }
 
-    // Edit preview / approval
-    PendingEdit {
-        path: String,
-        original: String,
-        proposed: String,
-        diff: String,
-    },
-    ApproveEdit,
-    RejectEdit,
+    /// Layer 1: every event that claims a name round-trips correctly.
+    /// (Some EVENT_NAMES entries have no stable name — skip those silently,
+    /// matching the existing keybindings::event_name_roundtrip test.)
+    #[test]
+    fn event_name_round_trip() {
+        for (name, ctor) in super::EVENT_NAMES {
+            let evt = ctor();
+            if let Some(got) = evt.name() {
+                assert_eq!(got, *name, "{}: Event::name() returned wrong name", name);
+            }
+            // from_name must resolve for every entry in EVENT_NAMES
+            let roundtrip = Event::from_name(name);
+            assert!(
+                roundtrip.is_some(),
+                "{}: Event::from_name({:?}) returned None",
+                name,
+                name
+            );
+        }
+    }
 
-    // Config reload
-    ReloadAll,
-
-    // Diagnostics
-    ShowDiagnostics,
-
-    // Session tree
-    ForkSession {
-        message_index: usize,
-    },
-    CloneSession,
-    ToggleSessionTree,
-    SessionTreeFilterCycle,
-    SessionTreeSelect {
-        id: String,
-    },
-
-    // Suspend to background (Unix only)
-    Suspend,
-
-    // Path completion
-    TogglePathCompletion,
-    PathCompletionUp,
-    PathCompletionDown,
-    PathCompletionSelect,
-    PathCompletionClose,
-
-    // Session sharing
-    ShareSession,
-    SystemMessage {
-        content: String,
-    },
-
-    // @-file picker dialog
-    AtFilePicker,
-    InsertAtRef(String),
-
-    // Clipboard
-    CopyToClipboard(String),
-    CopyLastResponse,
-
-    // Vim navigation
-    GoToTop,
-    GoToBottom,
-    ToggleVimMode,
-
-    // Command form dialog
-    CommandFormInput(char),
-    CommandFormBackspace,
-    CommandFormUp,
-    CommandFormDown,
-    CommandFormSubmit,
-    CommandFormClose,
-    /// ESC / dialog back: pop one panel in a dialog, close at root.
-    /// Distinct from `Abort` (force-close, bypasses stack).
-    DialogBack,
-    RunSaveCommand {
-        name: String,
-    },
-
-    // Agent profile manager events
-    OpenAgentsManager,
-    AgentsManagerSetField {
-        name: String,
-        field: String,
-        value: String,
-    },
-    AgentsManagerSave {
-        name: String,
-    },
-    AgentsManagerDelete {
-        name: String,
-    },
-    RunLoadCommand {
-        name: String,
-    },
-    RunDeleteCommand {
-        name: String,
-    },
-    RunImportCommand {
-        path: String,
-    },
-    RunExportCommand {
-        path: String,
-    },
-    RunSkillCommand {
-        name: String,
-    },
-    RunLoginCommand {
-        provider: String,
-        token: String,
-    },
-    RunLogoutCommand {
-        provider: String,
-    },
-    RunNameCommand {
-        name: String,
-    },
-    RunForkCommand {
-        message_index: String,
-    },
-    RunCompactCommand {
-        keep: String,
-        focus: String,
-    },
-    RunPromptCommand {
-        name: String,
-    },
-    RunThinkingCommand {
-        level: crate::model::ThinkingLevel,
-    },
-
-    // Unified palette command execution
-    RunPaletteCommand {
-        name: String,
-        args: String,
-    },
-
-    // Settings category switching
-    SettingsSwitchCategory {
-        category: crate::settings::SettingsCategory,
-    },
-
-    // Providers dialog (unified login/logout/select)
-    ProvidersDialog,
-    ProvidersSelectModel {
-        provider: String,
-        model: String,
-    },
-    ProvidersDisconnect {
-        provider: String,
-    },
-    ProvidersAdd,
-
-    // Login dialog flow
-    LoginFlowStart,
-    LoginFlowSelectProvider {
-        provider: String,
-    },
-    LoginFlowSubmitKey {
-        provider: String,
-        key: String,
-    },
-    LoginFlowValidationDone {
-        provider: String,
-        key: String,
-        models: Vec<String>,
-    },
-    LoginFlowValidationFailed {
-        provider: String,
-        key: String,
-        error: String,
-    },
-    LoginFlowModelsFetched {
-        provider: String,
-        key: String,
-        models: Vec<String>,
-    },
-    LoginFlowToggleModel {
-        model: String,
-    },
-    LoginFlowSave,
-    LoginFlowCancel,
-
-    // Transient notifications (shown in hints line)
-    TransientMessage {
-        content: String,
-        level: super::TransientLevel,
-    },
-    TransientError {
-        content: String,
-    },
-    ClearTransient,
+    /// Layer 1: the Event enum has an exhaustive match arm for every variant.
+    /// If a new variant is added but the match is not updated, this will fail to compile.
+    #[test]
+    fn dispatcher_handles_all_variants() {
+        fn assert_exhaustive(e: Event) -> Event {
+            match e {
+                Event::Input(_) => Event::Input(InputEvent::Submit),
+                Event::Agent(_) => Event::Agent(AgentEvent::Done { id: "x".into() }),
+                Event::Scroll(_) => Event::Scroll(ScrollEvent::Up),
+                Event::Control(_) => Event::Control(ControlEvent::Quit),
+                Event::ModelConfig(_) => {
+                    Event::ModelConfig(ModelConfigEvent::CycleModelNext)
+                }
+                Event::Dialog(_) => Event::Dialog(DialogEvent::PaletteClose),
+                Event::Edit(_) => Event::Edit(EditEvent::RejectEdit),
+                Event::System(_) => Event::System(SystemEvent::ClearTransient),
+                Event::Session(_) => Event::Session(SessionEvent::CloneSession),
+                Event::LoginFlow(_) => Event::LoginFlow(LoginFlowEvent::Cancel),
+                Event::Command(_) => Event::Command(CommandEvent::RunNameCommand {
+                    name: "test".into(),
+                }),
+                Event::Sidebar(_) => Event::Sidebar(SidebarEvent::Hide),
+                Event::Orchestrator(_) => {
+                    Event::Orchestrator(OrchestratorEvent::Cancelled)
+                }
+            }
+        }
+        // Compile-time check: the match is exhaustive for all Event variants
+        let _ = assert_exhaustive(Event::Input(InputEvent::Submit));
+    }
 }

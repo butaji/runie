@@ -1,0 +1,21 @@
+{
+  "tasks": [
+    {
+      "id": "read-files",
+      "role_prompt": "You are a code reviewer. Review the provided files for style, correctness, and performance issues.",
+      "task_description": "Read all Rust source files in the src/ directory and list any obvious issues.",
+      "tool_filter": ["read_file", "grep"],
+      "model_trait": "code"
+    },
+    {
+      "id": "analyze-structure",
+      "role_prompt": "You are a software architect. Analyze the overall structure of the codebase.",
+      "task_description": "List the top-level modules and describe how they interact with each other.",
+      "tool_filter": ["list_dir", "read_file"],
+      "model_trait": "reasoning"
+    }
+  ],
+  "synthesis_trait": "general",
+  "summary": "Review code quality and architecture in parallel.",
+  "rationale": "Two independent concerns (style review vs. architecture) can be checked concurrently by separate agents, then synthesized."
+}

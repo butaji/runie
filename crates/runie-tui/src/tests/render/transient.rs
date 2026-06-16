@@ -127,3 +127,38 @@ fn default_hints_render_when_no_transient() {
     let buf = terminal.backend().buffer();
     assert!(flatten_buffer(buf).contains("ctrl+o"));
 }
+
+#[test]
+fn streaming_tail_renders_when_turn_active() {
+    let _lock = crate::theme::test_lock();
+    let mut state = AppState::default();
+    // Add a message so there's content in the feed
+    state.update(runie_core::Event::Agent(
+        runie_core::event::AgentEvent::Response {
+            id: "test.1".into(),
+            content: "Hello world".into(),
+        },
+    ));
+    // Add streaming tail
+    state.update(runie_core::Event::Agent(
+        runie_core::event::AgentEvent::ResponseDelta {
+            id: "test.1".into(),
+            content: " and more".into(),
+        },
+    ));
+    // Set turn_active to show streaming cell
+    state.agent.turn_active = true;
+
+    let backend = TestBackend::new(60, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| view(f, &mut state)).unwrap();
+    let buf = terminal.backend().buffer();
+    let content = flatten_buffer(buf);
+
+    // The tail content should appear in the rendered output
+    assert!(
+        content.contains("Hello world and more") || content.contains("and more"),
+        "streaming tail should appear: {}",
+        content
+    );
+}

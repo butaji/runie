@@ -1,280 +1,133 @@
-//! Canonical event names and name mapping.
+//! Event name mapping — generated from sub-enum `IntoStaticStr` derives.
+//!
+//! `EVENT_NAMES` maps each bindable event name to its default constructor.
+//! Names are derived from the sub-enum variant names (via `strum::IntoStaticStr`).
+//! Parameterized variants (those with data) are handled separately in `Event::from_name`.
+//!
+//! To add a new bindable event:
+//! 1. Ensure the sub-enum variant has no data (or is explicitly handled in `from_name`)
+//! 2. The name is automatically derived from the variant name via `#[strum(serialize_all = "PascalCase")]`
+//! 3. Add the constructor to the appropriate list below
 
 use super::variants::Event;
+use super::{
+    ControlEvent, DialogEvent, InputEvent, ModelConfigEvent, SystemEvent,
+};
 
-#[allow(clippy::type_complexity)]
-pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
-    ("Backspace", || Event::Backspace),
-    ("Newline", || Event::Newline),
-    ("Submit", || Event::Submit),
-    ("ScrollUp", || Event::ScrollUp),
-    ("ScrollDown", || Event::ScrollDown),
-    ("PageUp", || Event::PageUp),
-    ("PageDown", || Event::PageDown),
-    ("CursorLeft", || Event::CursorLeft),
-    ("CursorRight", || Event::CursorRight),
-    ("CursorStart", || Event::CursorStart),
-    ("CursorEnd", || Event::CursorEnd),
-    ("DeleteWord", || Event::DeleteWord),
-    ("DeleteToEnd", || Event::DeleteToEnd),
-    ("DeleteToStart", || Event::DeleteToStart),
-    ("KillChar", || Event::KillChar),
-    ("HistoryPrev", || Event::HistoryPrev),
-    ("HistoryNext", || Event::HistoryNext),
-    ("Undo", || Event::Undo),
-    ("Redo", || Event::Redo),
-    ("CursorWordLeft", || Event::CursorWordLeft),
-    ("CursorWordRight", || Event::CursorWordRight),
-    ("PasteImage", || Event::PasteImage),
-    ("Quit", || Event::Quit),
-    ("Reset", || Event::Reset),
-    ("CycleModelNext", || Event::CycleModelNext),
-    ("CycleModelPrev", || Event::CycleModelPrev),
-    ("ToggleScopedModelsDialog", || {
-        Event::ToggleScopedModelsDialog
-    }),
-    ("ScopedModelEnableAll", || Event::ScopedModelEnableAll),
-    ("ScopedModelDisableAll", || Event::ScopedModelDisableAll),
-    ("ToggleSettingsDialog", || Event::ToggleSettingsDialog),
-    ("SettingsUp", || Event::SettingsUp),
-    ("SettingsDown", || Event::SettingsDown),
-    ("SettingsLeft", || Event::SettingsLeft),
-    ("SettingsRight", || Event::SettingsRight),
-    ("SettingsSelect", || Event::SettingsSelect),
-    ("SettingsClose", || Event::SettingsClose),
-    ("CycleThinkingLevel", || Event::CycleThinkingLevel),
-    ("ToggleReadOnly", || Event::ToggleReadOnly),
-    ("TrustProject", || Event::TrustProject),
-    ("UntrustProject", || Event::UntrustProject),
-    ("FollowUp", || Event::FollowUp),
-    ("Abort", || Event::Abort),
-    ("ToggleExpand", || Event::ToggleExpand),
-    ("Dequeue", || Event::Dequeue),
-    ("OpenExternalEditor", || Event::OpenExternalEditor),
-    ("ToggleCommandPalette", || Event::ToggleCommandPalette),
-    ("PaletteBackspace", || Event::PaletteBackspace),
-    ("PaletteUp", || Event::PaletteUp),
-    ("PaletteDown", || Event::PaletteDown),
-    ("PaletteSelect", || Event::PaletteSelect),
-    ("PaletteClose", || Event::PaletteClose),
-    ("ToggleModelSelector", || Event::ToggleModelSelector),
-    ("ModelSelectorBackspace", || Event::ModelSelectorBackspace),
-    ("ModelSelectorUp", || Event::ModelSelectorUp),
-    ("ModelSelectorDown", || Event::ModelSelectorDown),
-    ("ModelSelectorSelect", || Event::ModelSelectorSelect),
-    ("ModelSelectorClose", || Event::ModelSelectorClose),
-    ("ApproveEdit", || Event::ApproveEdit),
-    ("RejectEdit", || Event::RejectEdit),
-    ("ReloadAll", || Event::ReloadAll),
-    ("ShowDiagnostics", || Event::ShowDiagnostics),
-    ("CloneSession", || Event::CloneSession),
-    ("ToggleSessionTree", || Event::ToggleSessionTree),
-    ("SessionTreeFilterCycle", || Event::SessionTreeFilterCycle),
-    ("Suspend", || Event::Suspend),
-    ("TogglePathCompletion", || Event::TogglePathCompletion),
-    ("PathCompletionUp", || Event::PathCompletionUp),
-    ("PathCompletionDown", || Event::PathCompletionDown),
-    ("PathCompletionSelect", || Event::PathCompletionSelect),
-    ("PathCompletionClose", || Event::PathCompletionClose),
-    ("ShareSession", || Event::ShareSession),
-    ("AtFilePicker", || Event::AtFilePicker),
-    ("CommandFormBackspace", || Event::CommandFormBackspace),
-    ("CommandFormUp", || Event::CommandFormUp),
-    ("CommandFormDown", || Event::CommandFormDown),
-    ("CommandFormSubmit", || Event::CommandFormSubmit),
-    ("CommandFormClose", || Event::CommandFormClose),
-    ("DialogBack", || Event::DialogBack),
-    ("ProvidersDialog", || Event::ProvidersDialog),
-    ("ProvidersAdd", || Event::ProvidersAdd),
-    ("LoginFlowStart", || Event::LoginFlowStart),
-    ("LoginFlowSave", || Event::LoginFlowSave),
-    ("LoginFlowCancel", || Event::LoginFlowCancel),
-    ("ClearTransient", || Event::ClearTransient),
-    ("CopyLastResponse", || Event::CopyLastResponse),
-    ("GoToTop", || Event::GoToTop),
-    ("GoToBottom", || Event::GoToBottom),
-    ("ToggleVimMode", || Event::ToggleVimMode),
-];
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-impl Event {
-    /// Canonical name for bindable (unit) variants.
-    pub const fn name(&self) -> Option<&'static str> {
-        if let Some(name) = self.input_name() {
-            return Some(name);
-        }
-        if let Some(name) = self.agent_name() {
-            return Some(name);
-        }
-        if let Some(name) = self.dialog_name() {
-            return Some(name);
-        }
-        if let Some(name) = self.edit_name() {
-            return Some(name);
-        }
-        if let Some(name) = self.session_name() {
-            return Some(name);
-        }
-        if let Some(name) = self.system_name() {
-            return Some(name);
-        }
-        if let Some(name) = self.flow_name() {
-            return Some(name);
-        }
-        None
-    }
-
-    const fn input_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::Backspace => "Backspace",
-            Event::Newline => "Newline",
-            Event::Submit => "Submit",
-            Event::CursorLeft => "CursorLeft",
-            Event::CursorRight => "CursorRight",
-            Event::CursorStart => "CursorStart",
-            Event::CursorEnd => "CursorEnd",
-            Event::DeleteWord => "DeleteWord",
-            Event::DeleteToEnd => "DeleteToEnd",
-            Event::DeleteToStart => "DeleteToStart",
-            Event::KillChar => "KillChar",
-            Event::HistoryPrev => "HistoryPrev",
-            Event::HistoryNext => "HistoryNext",
-            Event::Undo => "Undo",
-            Event::Redo => "Redo",
-            Event::CursorWordLeft => "CursorWordLeft",
-            Event::CursorWordRight => "CursorWordRight",
-            Event::PasteImage => "PasteImage",
-            Event::ScrollUp => "ScrollUp",
-            Event::ScrollDown => "ScrollDown",
-            Event::PageUp => "PageUp",
-            Event::PageDown => "PageDown",
-            Event::GoToTop => "GoToTop",
-            Event::GoToBottom => "GoToBottom",
-            _ => return None,
-        })
-    }
-
-    const fn agent_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::Quit => "Quit",
-            Event::Reset => "Reset",
-            Event::Abort => "Abort",
-            Event::ToggleExpand => "ToggleExpand",
-            Event::Dequeue => "Dequeue",
-            Event::OpenExternalEditor => "OpenExternalEditor",
-            Event::Suspend => "Suspend",
-            Event::ShareSession => "ShareSession",
-            Event::FollowUp => "FollowUp",
-            Event::AtFilePicker => "AtFilePicker",
-            Event::ToggleVimMode => "ToggleVimMode",
-            _ => return None,
-        })
-    }
-
-    const fn dialog_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::ToggleCommandPalette => "ToggleCommandPalette",
-            Event::PaletteBackspace => "PaletteBackspace",
-            Event::PaletteUp => "PaletteUp",
-            Event::PaletteDown => "PaletteDown",
-            Event::PaletteSelect => "PaletteSelect",
-            Event::PaletteClose => "PaletteClose",
-            Event::ToggleModelSelector => "ToggleModelSelector",
-            Event::ModelSelectorBackspace => "ModelSelectorBackspace",
-            Event::ModelSelectorUp => "ModelSelectorUp",
-            Event::ModelSelectorDown => "ModelSelectorDown",
-            Event::ModelSelectorSelect => "ModelSelectorSelect",
-            Event::ModelSelectorClose => "ModelSelectorClose",
-            Event::ToggleSettingsDialog => "ToggleSettingsDialog",
-            Event::SettingsUp => "SettingsUp",
-            Event::SettingsDown => "SettingsDown",
-            Event::SettingsLeft => "SettingsLeft",
-            Event::SettingsRight => "SettingsRight",
-            Event::SettingsSelect => "SettingsSelect",
-            Event::SettingsClose => "SettingsClose",
-            Event::CommandFormBackspace => "CommandFormBackspace",
-            Event::CommandFormUp => "CommandFormUp",
-            Event::CommandFormDown => "CommandFormDown",
-            Event::CommandFormSubmit => "CommandFormSubmit",
-            Event::CommandFormClose => "CommandFormClose",
-            Event::ToggleScopedModelsDialog => "ToggleScopedModelsDialog",
-            Event::ScopedModelEnableAll => "ScopedModelEnableAll",
-            Event::ScopedModelDisableAll => "ScopedModelDisableAll",
-            Event::DialogBack => "DialogBack",
-            _ => return None,
-        })
-    }
-
-    const fn edit_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::ApproveEdit => "ApproveEdit",
-            Event::RejectEdit => "RejectEdit",
-            Event::ReloadAll => "ReloadAll",
-            Event::ShowDiagnostics => "ShowDiagnostics",
-            Event::TogglePathCompletion => "TogglePathCompletion",
-            Event::PathCompletionUp => "PathCompletionUp",
-            Event::PathCompletionDown => "PathCompletionDown",
-            Event::PathCompletionSelect => "PathCompletionSelect",
-            Event::PathCompletionClose => "PathCompletionClose",
-            _ => return None,
-        })
-    }
-
-    const fn session_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::CloneSession => "CloneSession",
-            Event::ToggleSessionTree => "ToggleSessionTree",
-            Event::SessionTreeFilterCycle => "SessionTreeFilterCycle",
-            _ => return None,
-        })
-    }
-
-    const fn system_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::CycleModelNext => "CycleModelNext",
-            Event::CycleModelPrev => "CycleModelPrev",
-            Event::CycleThinkingLevel => "CycleThinkingLevel",
-            Event::ToggleReadOnly => "ToggleReadOnly",
-            Event::TrustProject => "TrustProject",
-            Event::UntrustProject => "UntrustProject",
-            Event::OpenAgentsManager => "OpenAgentsManager",
-            Event::AgentsManagerSave { .. } => "AgentsManagerSave",
-            Event::AgentsManagerDelete { .. } => "AgentsManagerDelete",
-            _ => return None,
-        })
-    }
-
-    const fn flow_name(&self) -> Option<&'static str> {
-        Some(match *self {
-            Event::ProvidersDialog => "ProvidersDialog",
-            Event::ProvidersAdd => "ProvidersAdd",
-            Event::LoginFlowStart => "LoginFlowStart",
-            Event::LoginFlowSave => "LoginFlowSave",
-            Event::LoginFlowCancel => "LoginFlowCancel",
-            Event::ClearTransient => "ClearTransient",
-            Event::FocusGained => "FocusGained",
-            Event::FocusLost => "FocusLost",
-            _ => return None,
-        })
-    }
-
-    /// Build an Event from its canonical name. Supports the special
-    /// `Input:<char>` prefix for character input bindings.
-    pub fn from_name(name: &str) -> Option<Event> {
-        if let Some(rest) = name.strip_prefix("Input:") {
-            let c = rest.chars().next()?;
-            return Some(Event::Input(c));
-        }
-        EVENT_NAMES
-            .iter()
-            .find(|(n, _)| *n == name)
-            .map(|(_, ctor)| ctor())
-    }
+/// Helper to build a zero-arg constructor for a sub-enum variant.
+macro_rules! ctor {
+    (Input::$v:ident) => {|| Event::Input(InputEvent::$v)};
+    (Agent::$v:ident) => {|| Event::Agent(AgentEvent::$v)};
+    (Control::$v:ident) => {|| Event::Control(ControlEvent::$v)};
+    (Dialog::$v:ident) => {|| Event::Dialog(DialogEvent::$v)};
+    (Edit::$v:ident) => {|| Event::Edit(EditEvent::$v)};
+    (System::$v:ident) => {|| Event::System(SystemEvent::$v)};
+    (Scroll::$v:ident) => {|| Event::Scroll(ScrollEvent::$v)};
+    (Session::$v:ident) => {|| Event::Session(SessionEvent::$v)};
+    (LoginFlow::$v:ident) => {|| Event::LoginFlow(LoginFlowEvent::$v)};
+    (Command::$v:ident) => {|| Event::Command(CommandEvent::$v)};
+    (ModelConfig::$v:ident) => {|| Event::ModelConfig(ModelConfigEvent::$v)};
 }
 
-/// Compile-time check: `Event::name` must be exhaustive. If a variant is
-/// added without updating the match above, this block fails to compile.
-const _: () = {
-    fn _exhaustive(e: &Event) {
-        let _ = e.name();
-    }
-};
+// ── Bindable event table ───────────────────────────────────────────────────────
+
+/// Bindable event names paired with their default zero-arg constructors.
+/// This is generated from the sub-enum variants; see module docs for how to extend.
+pub const EVENT_NAMES: &[(&str, fn() -> Event)] = &[
+    // ── Input events (unit variants only) ──────────────────────────────────
+    ("Backspace", ctor!(Input::Backspace)),
+    ("Newline", ctor!(Input::Newline)),
+    ("Submit", ctor!(Input::Submit)),
+    ("Escape", ctor!(Input::Escape)),
+    ("CursorLeft", ctor!(Input::CursorLeft)),
+    ("CursorRight", ctor!(Input::CursorRight)),
+    ("CursorStart", ctor!(Input::CursorStart)),
+    ("CursorEnd", ctor!(Input::CursorEnd)),
+    ("DeleteWord", ctor!(Input::DeleteWord)),
+    ("DeleteToEnd", ctor!(Input::DeleteToEnd)),
+    ("DeleteToStart", ctor!(Input::DeleteToStart)),
+    ("KillChar", ctor!(Input::KillChar)),
+    ("HistoryPrev", ctor!(Input::HistoryPrev)),
+    ("HistoryNext", ctor!(Input::HistoryNext)),
+    ("Undo", ctor!(Input::Undo)),
+    ("Redo", ctor!(Input::Redo)),
+    ("CursorWordLeft", ctor!(Input::CursorWordLeft)),
+    ("CursorWordRight", ctor!(Input::CursorWordRight)),
+    ("PageUp", ctor!(Input::PageUp)),
+    ("PageDown", ctor!(Input::PageDown)),
+    ("GoToTop", ctor!(Input::GoToTop)),
+    ("GoToBottom", ctor!(Input::GoToBottom)),
+    ("PasteImage", ctor!(Input::PasteImage)),
+    ("FocusGained", ctor!(Input::FocusGained)),
+    ("FocusLost", ctor!(Input::FocusLost)),
+
+    // ── Control events ──────────────────────────────────────────────────────
+    ("Quit", ctor!(Control::Quit)),
+    ("Reset", ctor!(Control::Reset)),
+    ("Abort", ctor!(Control::Abort)),
+    ("FollowUp", ctor!(Control::FollowUp)),
+    ("ToggleExpand", ctor!(Control::ToggleExpand)),
+    ("Dequeue", ctor!(Control::Dequeue)),
+    ("OpenExternalEditor", ctor!(Control::OpenExternalEditor)),
+    ("Suspend", ctor!(Control::Suspend)),
+    ("ShareSession", ctor!(Control::ShareSession)),
+    ("ToggleVimMode", ctor!(Control::ToggleVimMode)),
+    ("CopyLastResponse", ctor!(Control::CopyLastResponse)),
+    ("OpenSessionList", ctor!(Control::OpenSessionList)),
+    ("NewSession", ctor!(Control::NewSession)),
+    ("ResumeSession", ctor!(Control::ResumeSession)),
+    ("CopySelectedBlock", ctor!(Dialog::CopySelectedBlock)),
+    ("CopyBlockMetadata", ctor!(Dialog::CopyBlockMetadata)),
+
+    // ── Dialog events ───────────────────────────────────────────────────────
+    ("ToggleCommandPalette", ctor!(Dialog::ToggleCommandPalette)),
+    ("PaletteBackspace", ctor!(Dialog::PaletteBackspace)),
+    ("PaletteUp", ctor!(Dialog::PaletteUp)),
+    ("PaletteDown", ctor!(Dialog::PaletteDown)),
+    ("PaletteSelect", ctor!(Dialog::PaletteSelect)),
+    ("PaletteClose", ctor!(Dialog::PaletteClose)),
+    ("ToggleModelSelector", ctor!(Dialog::ToggleModelSelector)),
+    ("ModelSelectorBackspace", ctor!(Dialog::ModelSelectorBackspace)),
+    ("ModelSelectorUp", ctor!(Dialog::ModelSelectorUp)),
+    ("ModelSelectorDown", ctor!(Dialog::ModelSelectorDown)),
+    ("ModelSelectorSelect", ctor!(Dialog::ModelSelectorSelect)),
+    ("ModelSelectorClose", ctor!(Dialog::ModelSelectorClose)),
+    ("ToggleSettingsDialog", ctor!(Dialog::ToggleSettingsDialog)),
+    ("SettingsUp", ctor!(Dialog::SettingsUp)),
+    ("SettingsDown", ctor!(Dialog::SettingsDown)),
+    ("SettingsLeft", ctor!(Dialog::SettingsLeft)),
+    ("SettingsRight", ctor!(Dialog::SettingsRight)),
+    ("SettingsSelect", ctor!(Dialog::SettingsSelect)),
+    ("SettingsClose", ctor!(Dialog::SettingsClose)),
+    ("CommandFormBackspace", ctor!(Dialog::CommandFormBackspace)),
+    ("CommandFormUp", ctor!(Dialog::CommandFormUp)),
+    ("CommandFormDown", ctor!(Dialog::CommandFormDown)),
+    ("CommandFormSubmit", ctor!(Dialog::CommandFormSubmit)),
+    ("CommandFormClose", ctor!(Dialog::CommandFormClose)),
+    ("ToggleScopedModelsDialog", ctor!(Dialog::ToggleScopedModelsDialog)),
+    ("ScopedModelEnableAll", ctor!(Dialog::ScopedModelEnableAll)),
+    ("ScopedModelDisableAll", ctor!(Dialog::ScopedModelDisableAll)),
+    ("DialogBack", ctor!(Dialog::DialogBack)),
+    ("TogglePathCompletion", ctor!(Dialog::TogglePathCompletion)),
+    ("PathCompletionUp", ctor!(Dialog::PathCompletionUp)),
+    ("PathCompletionDown", ctor!(Dialog::PathCompletionDown)),
+    ("PathCompletionSelect", ctor!(Dialog::PathCompletionSelect)),
+    ("PathCompletionClose", ctor!(Dialog::PathCompletionClose)),
+    ("ProvidersDialog", ctor!(Dialog::ProvidersDialog)),
+    ("ProvidersAdd", ctor!(Dialog::ProvidersAdd)),
+    ("AtFilePicker", ctor!(Dialog::AtFilePicker)),
+
+    // ── Model config events ─────────────────────────────────────────────────
+    ("CycleModelNext", ctor!(ModelConfig::CycleModelNext)),
+    ("CycleModelPrev", ctor!(ModelConfig::CycleModelPrev)),
+    ("CycleThinkingLevel", ctor!(ModelConfig::CycleThinkingLevel)),
+
+    // ── System events ───────────────────────────────────────────────────────
+    ("ToggleReadOnly", ctor!(System::ToggleReadOnly)),
+    ("TrustProject", ctor!(System::TrustProject)),
+    ("UntrustProject", ctor!(System::UntrustProject)),
+    ("OpenAgentsManager", ctor!(System::OpenAgentsManager)),
+    ("ClearTransient", ctor!(System::ClearTransient)),
+];

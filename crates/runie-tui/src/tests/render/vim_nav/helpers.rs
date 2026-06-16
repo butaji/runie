@@ -2,6 +2,7 @@
 
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
+use runie_core::event::{DialogEvent, InputEvent};
 use runie_core::{AppState, ChatMessage, Event, Role};
 
 pub(crate) fn accent() -> ratatui::style::Color {
@@ -48,13 +49,13 @@ pub(crate) fn enter_vim_nav(state: &mut AppState) {
     state.config.vim_mode = true;
     state.messages_changed();
     state.ensure_fresh();
-    state.update(Event::DialogBack);
+    state.update(Event::Dialog(DialogEvent::DialogBack));
     assert!(state.vim_nav_mode);
 }
 
 pub(crate) fn enter_vim_nav_and_select_top(state: &mut AppState) {
     enter_vim_nav(state);
-    state.update(Event::Input('g'));
+    state.update(Event::Input(InputEvent::Input('g')));
 }
 
 pub(crate) fn assert_bracket_one_cell_wide(buf: &ratatui::buffer::Buffer, rows: &[u16]) {
@@ -109,7 +110,7 @@ pub(crate) fn state_with_wrapped_welcome() -> AppState {
     state.ensure_fresh();
     state.view.last_visible_height = 12;
     enter_vim_nav(&mut state);
-    state.update(Event::Input('k'));
+    state.update(Event::Input(InputEvent::Input('k')));
     assert_eq!(state.view.selected_post, Some(0));
     state
 }
@@ -130,6 +131,7 @@ pub(crate) fn state_with_selected_post() -> AppState {
         timestamp: 1.0,
         id: "resp.0".to_string(),
         provider: "mock".to_string(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();

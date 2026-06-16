@@ -103,13 +103,29 @@ both agent tools and the TUI `@` picker (see
 
 Capabilities:
 
-- Unified `search` tool with `mode = files | content | mixed`.
+- Unified `search` tool with `mode = files | content | mixed | glob`.
 - Typo-resistant fuzzy matching and constraint queries (`*.rs !test/`).
 - Frecency ranking based on recent/frequent file access.
 - Git-status awareness (`git:modified`, `git:untracked`).
 - Definition classifier for `find_definitions`.
 - Fast glob and `file:line:col` location parsing.
 - Legacy `rg`/`fd` fallback for memory-constrained sessions.
+
+#### Query Syntax
+
+The `search` tool accepts a unified query string combining free-text with
+constraint tokens:
+
+| Syntax | Example | Effect |
+|--------|---------|--------|
+| Fuzzy text | `mylib` | Typo-tolerant filename/content search |
+| Glob | `*.rs`, `**/*.test.ts` | Filter by file extension or pattern |
+| Negation | `!test/`, `!vendor/` | Exclude files matching pattern |
+| Git filter | `git:modified`, `git:untracked`, `git:staged` | Show only files with given git status |
+| Location | `lib.rs:42`, `lib.rs:42:5` | Jump to specific line/column |
+| Quoted | `"exact phrase"` | Match exact phrase (content search) |
+
+Constraints can be combined: `config yaml !test/ git:modified *.rs`
 
 ## Features
 

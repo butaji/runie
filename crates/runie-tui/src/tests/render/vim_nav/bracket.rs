@@ -4,6 +4,7 @@ use super::helpers::{
     add_message, assert_bracket_one_cell_wide, bracket_rows, draw, enter_vim_nav,
     state_with_wrapped_welcome,
 };
+use runie_core::event::InputEvent;
 use runie_core::{AppState, ChatMessage, Event, Role};
 
 #[test]
@@ -54,7 +55,7 @@ fn vim_nav_mode_bracket_around_long_system_welcome_post() {
     state.view.last_visible_height = 10;
 
     enter_vim_nav(&mut state);
-    state.update(Event::Input('k'));
+    state.update(Event::Input(InputEvent::Input('k')));
     assert_eq!(state.view.selected_post, Some(0));
 
     let buf = draw(&mut state, 60, 20);
@@ -131,6 +132,7 @@ fn nav_mode_bracket_for_one_line_non_user_post_is_three_rows() {
         timestamp: 1.0,
         id: "resp.0".to_string(),
         provider: "mock".to_string(),
+        ..Default::default()
     });
     state.messages_changed();
     state.ensure_fresh();

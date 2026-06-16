@@ -1,6 +1,6 @@
 use crate::ui::view;
 use ratatui::{backend::TestBackend, Terminal};
-use runie_core::{AppState, Event};
+use runie_core::{AppState, DialogEvent, Event};
 
 #[test]
 fn input_chevron_is_orange_when_token_held() {
@@ -27,7 +27,7 @@ fn input_chevron_is_orange_when_token_held() {
 fn input_chevron_is_gray_when_token_released() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.update(Event::ToggleCommandPalette);
+    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
     let backend = TestBackend::new(60, 40);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -53,7 +53,7 @@ fn input_chevron_is_gray_when_token_released() {
 fn palette_filter_uses_chevron_glyph() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.update(Event::ToggleCommandPalette);
+    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -67,7 +67,7 @@ fn palette_filter_uses_chevron_glyph() {
 fn model_selector_filter_uses_chevron_glyph() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.update(Event::ToggleModelSelector);
+    state.update(Event::Dialog(DialogEvent::ToggleModelSelector));
     let backend = TestBackend::new(60, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| view(f, &mut state)).unwrap();
@@ -113,7 +113,7 @@ fn input_cursor_visible_when_empty() {
 fn input_cursor_hidden_when_token_released() {
     let _lock = crate::theme::test_lock();
     let mut state = AppState::default();
-    state.update(Event::ToggleCommandPalette);
+    state.update(Event::Dialog(DialogEvent::ToggleCommandPalette));
     state.input.input = "hello".to_string();
     state.input.cursor_pos = 2;
     let backend = TestBackend::new(60, 40);

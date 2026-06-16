@@ -1,5 +1,12 @@
 //! TUI rendering tests — visuals, margins, styling
 
+mod render_at;
+mod render_basic;
+mod render_model_selector;
+mod render_scrollbar;
+mod render_slash;
+mod render_toggle;
+
 /// Find the top and bottom rows of the input box. Provider-agnostic: we
 /// locate the `❯` input prompt (always present) and walk outward to the
 /// box borders, so the helper works in production (empty provider) and
@@ -64,5 +71,7 @@ mod scoped_models;
 mod scrollbar;
 mod timestamps;
 mod toggle_expand;
+mod flow;
+mod tools;
 mod transient;
 mod vim_nav;
