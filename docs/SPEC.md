@@ -331,6 +331,20 @@ crates/
 └── runie-server/         # RPC mode binary (crate exists, not wired)
 ```
 
+## Lint Rules (Strict Enforcement)
+
+**All code must comply with these limits — no exceptions:**
+
+| Metric | Limit |
+|--------|-------|
+| File lines | **500** |
+| Function lines | **40** |
+| Complexity | **10** |
+
+Enforced by `crates/runie-core/build.rs`. Build fails on any violation.
+
+**Breaking the rules is not acceptable.** Fix violations before committing.
+
 ## Reference implementations (in `~/Code/agents/`)
 
 | Project     | Borrowed patterns                                            |

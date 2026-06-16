@@ -90,6 +90,18 @@ Goal: upgrade session persistence and enable long-running features.
 - [x] ~~`tasks/remove-test-sleeps.md`~~ — done
 - [x] ~~`tasks/fix-harness-crate-or-archive.md`~~ — done
 
+## Lint Rules (Strict Enforcement)
+
+**All code must comply with these limits — no exceptions:**
+
+| Metric | Limit |
+|--------|-------|
+| File lines | 500 |
+| Function lines | 40 |
+| Complexity | 10 |
+
+Enforced by `crates/runie-core/build.rs`. Build fails on violations.
+
 ## Decision Records
 
 - `docs/adr/0017-actor-runtime-and-event-bus.md`

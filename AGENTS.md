@@ -152,11 +152,18 @@ and no test ACs. Every feature must be verifiable by `cargo test`.
 
 ## Linter Rules
 
-> The active build script at `crates/runie-core/build.rs` currently enforces
-> **1000 lines/file, 120 lines/function, 25 complexity** while the R3
-> simplification pass is in progress. The long-term targets remain:
+**STRICT ENFORCEMENT — NO EXCEPTIONS**
 
-- File max: 500 lines
-- Function max: 40 lines, 10 complexity
+The build script at `crates/runie-core/build.rs` enforces these limits:
 
-See `tasks/align-build-rs-lint-thresholds.md`.
+| Metric | Limit |
+|--------|-------|
+| File lines | **500** |
+| Function lines | **40** |
+| Complexity | **10** |
+
+**No exceptions allowed.** Any violation fails `cargo build`. There are no allow-lists.
+
+Current violations: 80 (see `tasks/align-build-rs-lint-thresholds.md` for fix plan)
+
+**Breaking the rules is not acceptable.** If your change introduces a violation, you must fix it before committing.
